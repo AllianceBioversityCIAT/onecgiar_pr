@@ -65,4 +65,34 @@ describe('ResultsToUpdateModalComponent', () => {
   it('viewResultHref builds result detail URL with phase', () => {
     expect(component.viewResultHref({ result_code: 9088, version_id: 36 })).toBe('/result/result-detail/9088?phase=36');
   });
+
+  describe('mobile card pagination', () => {
+    const list = Array.from({ length: 25 }, (_, i) => ({ result_code: i + 1, title: `R${i + 1}` }));
+
+    it('slices results for the active mobile page', () => {
+      component.mobileRows = 10;
+      component.mobilePage = 1;
+      expect(component.mobileSlice(list)).toHaveLength(10);
+      expect(component.mobileSlice(list)[0].result_code).toBe(11);
+    });
+
+    it('resets mobile page when search changes', () => {
+      component.mobilePage = 2;
+      component.onSearchChange('sp13');
+      expect(component.mobilePage).toBe(0);
+      expect(component.text_to_search).toBe('sp13');
+    });
+
+    it('reports mobile range label and next/prev availability', () => {
+      component.mobileRows = 10;
+      component.mobilePage = 0;
+      expect(component.mobileRangeLabel(list)).toBe('1–10 of 25');
+      expect(component.canMobilePrev()).toBe(false);
+      expect(component.canMobileNext(list)).toBe(true);
+
+      component.mobileNext(list);
+      expect(component.mobileRangeLabel(list)).toBe('11–20 of 25');
+      expect(component.canMobilePrev()).toBe(true);
+    });
+  });
 });
