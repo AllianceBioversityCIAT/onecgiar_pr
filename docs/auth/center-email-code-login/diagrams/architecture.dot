@@ -1,0 +1,126 @@
+digraph CenterEmailCodeLoginArchitecture {
+  rankdir=TB;
+  newrank=true;
+  bgcolor="white";
+  fontname="Helvetica";
+  labelloc="t";
+  fontsize=18;
+  label="Center email-code login — logical flow (PRMS)\nverified 2026-09-11/12";
+  nodesep=0.3;
+  ranksep=0.4;
+
+  node [fontname="Helvetica" shape=box style="rounded,filled" fillcolor="#ffffff" color="#333333" fontsize=12];
+  edge [fontname="Courier" fontsize=11 color="#555555" penwidth=1.2];
+
+  /* ---------- PRMS client (Angular) — row 1 ---------- */
+  subgraph cluster_client {
+    label="PRMS client (Angular)";
+    style="filled,rounded";
+    fillcolor="#eef3fb";
+    color="#7a9cc6";
+    fontsize=13;
+
+    Login [label="LoginComponent\nSAML · Center · password"];
+    OtpPanel [label="CenterOtpPanelComponent\nemail → code step"];
+    CognitoAuth [label="CognitoService\n+ AuthService" fontname="Courier"];
+
+    { rank=same; Login; OtpPanel; CognitoAuth; }
+    Login -> OtpPanel [label="1 click Center"];
+    OtpPanel -> CognitoAuth;
+  }
+
+  /* ---------- PRMS server (NestJS) — row 2 ---------- */
+  subgraph cluster_server {
+    label="PRMS server (NestJS)";
+    style="filled,rounded";
+    fillcolor="#e9f5ea";
+    color="#7ab894";
+    fontsize=13;
+
+    StartNode [label="otp/start\nThrottler + allow-list + decoy" style="rounded,filled" fillcolor="#fdf3d6" color="#c9a227"];
+    VerifyNode [label="otp/verify\nauto-provision + JWT"];
+    MsClient [label="AuthMicroserviceService" fontname="Courier"];
+
+    { rank=same; StartNode; VerifyNode; MsClient; }
+    StartNode -> MsClient [label="3 throttle/allow-list/decoy"];
+    VerifyNode -> MsClient;
+  }
+
+  /* ---------- AUTH microservice — row 3 ---------- */
+  subgraph cluster_authms {
+    label="AUTH microservice (NestJS)\nauthtest-ibd / auth-ibd";
+    style="filled,rounded";
+    fillcolor="#f3e9f7";
+    color="#a67ac0";
+    fontsize=13;
+
+    MsStart [label="otp/start\n→ startEmailOtp" fontname="Courier"];
+    MsVerify [label="otp/verify\n→ verifyEmailOtp" fontname="Courier"];
+    UtilNote [label="OtpHttpExceptionFilter +\nLoggingInterceptor (redacts)" fontsize=11 style="rounded,filled" fillcolor="#fdf3d6" color="#c9a227"];
+
+    { rank=same; MsStart; MsVerify; UtilNote; }
+    MsStart -> UtilNote [style=dashed arrowhead=none color="#999999"];
+    MsVerify -> UtilNote [style=dashed arrowhead=none color="#999999"];
+  }
+
+  /* ---------- Cognito user pool — row 4 ---------- */
+  subgraph cluster_cognito {
+    label="Cognito user pool OST-TOC (shared by 10 apps)";
+    style="filled,rounded";
+    fillcolor="#e7eef9";
+    color="#5a7fb0";
+    fontsize=13;
+
+    AppClient [label="general-client\nCUSTOM_AUTH" fontname="Courier"];
+    Triggers [label="Lambda triggers\nDefine → Create → Verify" fontname="Courier"];
+
+    { rank=same; AppClient; Triggers; }
+    AppClient -> Triggers [label="6"];
+  }
+
+  /* ---------- PRMS email pipeline — row 5 ---------- */
+  subgraph cluster_email {
+    label="PRMS email pipeline";
+    style="filled,rounded";
+    fillcolor="#fdeeee";
+    color="#c67a7a";
+    fontsize=13;
+
+    Queue [label="RabbitMQ queue\n(auth envelope)" fontname="Courier"];
+    Pipeline [label="notification-microservice →\nSMTP → mailbox"];
+
+    { rank=same; Queue; Pipeline; }
+    Queue -> Pipeline;
+  }
+
+  /* ---------- Numbered flow edges across rows (top-to-bottom) ---------- */
+  CognitoAuth -> StartNode [label="2 start" color="#1a1a1a" penwidth=1.6];
+  MsClient -> MsStart [label="4 start" color="#1a1a1a" penwidth=1.6];
+  MsStart -> AppClient [label="5 InitiateAuth" color="#1a1a1a" penwidth=1.6];
+  Triggers -> Queue [label="7 email" color="#1a1a1a" penwidth=1.6];
+
+  /* verify forward chain (dashed to distinguish from start chain) */
+  CognitoAuth -> VerifyNode [label="9 verify" color="#1a1a1a" penwidth=1.4 style=dashed];
+  MsClient -> MsVerify [label="9 verify" color="#1a1a1a" penwidth=1.4 style=dashed];
+  MsVerify -> Triggers [label="9 RespondToAuthChallenge" color="#1a1a1a" penwidth=1.4 style=dashed];
+
+  /* backward edges — drawn without affecting rank order */
+  Pipeline -> OtpPanel [label="8 user enters code" style=dashed color="#1a1a1a" penwidth=1.6 constraint=false];
+  Triggers -> VerifyNode [label="10 tokens → session" style=dashed color="#1a1a1a" penwidth=1.6 constraint=false];
+
+  /* ---------- Key rules + Legend, below everything ---------- */
+  subgraph cluster_notes {
+    label="";
+    style=invis;
+    { rank=same; KeyRules; LegendNote; }
+
+    KeyRules [shape=note style="filled" fillcolor="#fbfbe0" color="#b8b85a" fontsize=11 fontname="Helvetica"
+      label="Key rules\lAllow-list: OTP_ALLOWED_EMAIL_DOMAINS (global_parameters)\lThrottling: 5 start / 10 verify per 15 min (per email+IP)\lCode validity: Cognito AuthSessionValidity 5 min\lWrong code: 401 CODE_MISMATCH + rotated session\lLog hygiene: LoggingInterceptor redacts session/tokens\l"];
+
+    LegendNote [shape=note style="filled" fillcolor="#ffffff" color="#999999" fontsize=11 fontname="Helvetica"
+      label="Legend\lUnknown users: Cognito + triggers answer with a fake\lchallenge (no email).\lInactive PRMS users: decoy session.\lNothing logs the code, email, session or tokens.\l"];
+  }
+
+  Pipeline -> KeyRules [style=invis];
+  VerifyNode -> LegendNote [style=invis];
+}

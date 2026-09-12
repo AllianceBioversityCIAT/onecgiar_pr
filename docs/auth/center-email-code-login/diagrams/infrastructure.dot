@@ -1,0 +1,174 @@
+digraph CenterEmailCodeLoginInfrastructure {
+  rankdir=TB;
+  bgcolor="white";
+  fontname="Helvetica";
+  labelloc="t";
+  fontsize=20;
+  label="Center email-code login — deployment view\nverified 2026-09-11/12";
+  nodesep=0.5;
+  ranksep=0.7;
+  compound=true;
+
+  node [fontname="Helvetica" shape=box style="rounded,filled" fillcolor="#ffffff" color="#333333" fontsize=11];
+  edge [fontname="Courier" fontsize=9 color="#555555" penwidth=1.2];
+
+  /* ---------- AWS account IBD-DEV (TEST, deployed) ---------- */
+  subgraph cluster_aws_dev {
+    label="AWS account IBD-DEV (569113802249)\nregion us-east-1 — TEST (deployed 2026-09-11)";
+    style="filled,rounded";
+    fillcolor="#eef3fb";
+    color="#4c6fa5";
+    fontsize=12;
+
+    subgraph cluster_sam_stack {
+      label="CloudFormation stack\nprms-cognito-otp-triggers-test (SAM)";
+      style="filled,rounded";
+      fillcolor="#dfe9f7";
+      color="#5a7fb0";
+      fontsize=11;
+
+      DefineFn [label="…-define-auth-challenge\nNode 22, Timeout 5s\nIAM role: logs-only" fontname="Courier"];
+      CreateFn [label="…-create-auth-challenge\nNode 22, Timeout 5s\nIAM role: logs-only" fontname="Courier"];
+      VerifyFn [label="…-verify-auth-challenge\nNode 22, Timeout 5s\nIAM role: logs-only" fontname="Courier"];
+      InvokePerm [label="lambda:InvokeFunction permission\nprincipal: cognito-idp.amazonaws.com\nscoped to pool ARN" shape=note style="filled" fillcolor="#fdf3d6" color="#c9a227" fontsize=9];
+      LogGroups [label="CloudWatch log groups\n(one per function)" shape=cylinder style="filled" fillcolor="#ffffff" color="#5a7fb0"];
+
+      DefineFn -> LogGroups [style=dotted arrowhead=none color="#999999"];
+      CreateFn -> LogGroups [style=dotted arrowhead=none color="#999999"];
+      VerifyFn -> LogGroups [style=dotted arrowhead=none color="#999999"];
+    }
+
+    CognitoPool [label="Cognito user pool\nus-east-1_o9y9Yq5pO\n(OST-TOC, domain: ost-toc)" fontname="Courier" style="rounded,filled" fillcolor="#e7eef9" color="#5a7fb0"];
+
+    CognitoPool -> DefineFn [label="LambdaConfig"];
+    CognitoPool -> CreateFn [style=invis];
+    CognitoPool -> VerifyFn [style=invis];
+    InvokePerm -> CognitoPool [style=dashed arrowhead=none color="#999999"];
+
+    NotifLambda [label="email-notifications-microservice-dev-main\n(Lambda)\nAPI Gateway: dev-email-notifications-microservice\nconsumes RabbitMQ" fontname="Courier"];
+    PrstagingLambda [label="prstaging-dev-main\n(Lambda)\nenv source of trigger parameters" fontname="Courier"];
+
+    PrstagingLambda -> DefineFn [label="env params" style=dashed color="#777777"];
+    PrstagingLambda -> CreateFn [style=invis];
+    PrstagingLambda -> VerifyFn [style=invis];
+  }
+
+  /* ---------- Outside / managed ---------- */
+  subgraph cluster_managed {
+    label="Outside / managed";
+    style="filled,rounded";
+    fillcolor="#f2f2f2";
+    color="#888888";
+    fontsize=12;
+
+    RabbitBroker [label="RabbitMQ broker\nAMQPS\nMS_NOTIFICATION_HOST" fontname="Courier"];
+    SmtpRelay [label="CGIAR SMTP relay" fontname="Courier"];
+  }
+
+  /* ---------- PRMS TEST ---------- */
+  subgraph cluster_prms_test {
+    label="PRMS TEST";
+    style="filled,rounded";
+    fillcolor="#e9f5ea";
+    color="#7ab894";
+    fontsize=12;
+
+    PrmsClientTest [label="prtest.ciat.cgiar.org\n(nginx)" fontname="Courier"];
+    PrmsServerTest [label="prtest-back.ciat.cgiar.org\n(container, Jenkins)" fontname="Courier"];
+    PrmsDbTest [label="prdb (MySQL)\nglobal_parameters.\nOTP_ALLOWED_EMAIL_DOMAINS" fontname="Courier" shape=cylinder style="filled" fillcolor="#ffffff" color="#7ab894"];
+
+    PrmsClientTest -> PrmsServerTest;
+    PrmsServerTest -> PrmsDbTest;
+  }
+
+  /* ---------- AUTH microservice TEST ---------- */
+  subgraph cluster_authms_test {
+    label="AUTH microservice TEST";
+    style="filled,rounded";
+    fillcolor="#f3e9f7";
+    color="#a67ac0";
+    fontsize=12;
+
+    AuthMsTest [label="authtest-ibd.prms.cgiar.org\n(container, Jenkins job\nauth-microservice-dev-auth)\nenv: PASSWORDLESS_DOMAINS,\nCOGNITO_CLIENT_ID/SECRET,\nMS_NOTIFICATION_*" fontname="Courier"];
+  }
+
+  /* ---------- PROD (planned, mirror of TEST) ---------- */
+  subgraph cluster_aws_prod {
+    label="AWS account (TBD — OTP-OQ-1)\nregion us-east-1 — PROD (planned — mirror of TEST)";
+    style="filled,rounded,dashed";
+    fillcolor="#f7f2f2";
+    color="#a55a5a";
+    fontsize=12;
+
+    subgraph cluster_sam_stack_prod {
+      label="CloudFormation stack\nprms-cognito-otp-triggers-prod (planned)";
+      style="filled,rounded,dashed";
+      fillcolor="#f5e8e8";
+      color="#a55a5a";
+      fontsize=11;
+      DefineFnProd [label="…-define-auth-challenge\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
+      CreateFnProd [label="…-create-auth-challenge\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
+      VerifyFnProd [label="…-verify-auth-challenge\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
+    }
+
+    CognitoPoolProd [label="Cognito user pool\n(PROD, account TBD)\nOTP-OQ-1" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
+    CognitoPoolProd -> DefineFnProd [style=dashed color="#a55a5a" label="LambdaConfig"];
+    CognitoPoolProd -> CreateFnProd [style=invis];
+    CognitoPoolProd -> VerifyFnProd [style=invis];
+  }
+
+  subgraph cluster_authms_prod {
+    label="AUTH microservice PROD (planned)";
+    style="filled,rounded,dashed";
+    fillcolor="#f5e8f0";
+    color="#a55a8f";
+    fontsize=12;
+    AuthMsProd [label="auth-ibd.prms.cgiar.org\nmain-auth\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a8f"];
+  }
+
+  subgraph cluster_prms_prod {
+    label="PRMS PROD (planned)";
+    style="filled,rounded,dashed";
+    fillcolor="#eaf5ea";
+    color="#5a9f6e";
+    fontsize=12;
+    PrmsProd [label="PRMS PROD\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#5a9f6e"];
+  }
+
+  /* ---------- Cross-cluster runtime relationships (TEST, solid = deployed) ---------- */
+  PrmsServerTest -> AuthMsTest [label="auth header\n(MIS creds)" color="#1a1a1a" penwidth=1.4];
+  AuthMsTest -> CognitoPool [label="InitiateAuth /\nRespondToAuthChallenge" color="#1a1a1a" penwidth=1.4];
+  CreateFn -> RabbitBroker [label="publish\n(auth envelope)" color="#1a1a1a" penwidth=1.4];
+  RabbitBroker -> NotifLambda [color="#1a1a1a" penwidth=1.4];
+  NotifLambda -> SmtpRelay [color="#1a1a1a" penwidth=1.4];
+
+  /* ---------- Cross-cluster runtime relationships (PROD, dashed = planned) ---------- */
+  PrmsProd -> AuthMsProd [style=dashed color="#a55a5a"];
+  AuthMsProd -> CognitoPoolProd [style=dashed color="#a55a5a"];
+  CreateFnProd -> RabbitBroker [style=dashed color="#a55a5a" label="planned"];
+
+  /* ---------- Deploy path ---------- */
+  subgraph cluster_deploy {
+    label="Deploy path (SAM stacks)";
+    style="filled,rounded";
+    fillcolor="#fbfbe0";
+    color="#b8b85a";
+    fontsize=11;
+    DeployBuild [label="npm run build" fontname="Courier" shape=box style="rounded,filled" fillcolor="#ffffff"];
+    DeploySamBuild [label="sam build" fontname="Courier" shape=box style="rounded,filled" fillcolor="#ffffff"];
+    DeploySamDeploy [label="sam deploy\n(Docker required\nby SAM CLI)" fontname="Courier" shape=box style="rounded,filled" fillcolor="#ffffff"];
+    DeployBuild -> DeploySamBuild -> DeploySamDeploy;
+  }
+  DeploySamDeploy -> DefineFn [style=dotted color="#999999" constraint=false];
+  DeploySamDeploy -> DefineFnProd [style=dotted color="#999999" constraint=false];
+
+  /* ---------- Legend ---------- */
+  subgraph cluster_legend {
+    label="Legend";
+    style="filled,rounded";
+    fillcolor="#f7f7f7";
+    color="#999999";
+    fontsize=11;
+    LegendNote [shape=note style="filled" fillcolor="#ffffff" color="#999999" fontsize=9 label="Solid = deployed 2026-09-11 (TEST).\nDashed = planned (PROD, account TBD).\nDeploy path: npm run build → sam build →\nsam deploy (Docker required by SAM CLI)."];
+  }
+}
