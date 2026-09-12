@@ -3,7 +3,8 @@
   class="fixed inset-0 z-[1100] flex items-center justify-center bg-[rgba(15,23,42,0.65)] backdrop-blur-xs p-3 sm:p-6"
   role="presentation"
   data-testid="reporting-video-modal"
-  (click)="close()">
+  (click)="close()"
+  (keydown.escape)="close()">
   <div
     class="relative flex flex-col w-full max-w-[960px] max-h-[90vh] bg-white rounded-[20px] border border-slate-200/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden"
     role="dialog"
