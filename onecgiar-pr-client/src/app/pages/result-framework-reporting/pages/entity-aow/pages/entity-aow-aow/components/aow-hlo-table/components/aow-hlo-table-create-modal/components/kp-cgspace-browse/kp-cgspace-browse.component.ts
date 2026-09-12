@@ -219,6 +219,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
 
   // Inputs
   readonly busy = input<boolean>(false);
+  /** When false, the parent paints the full-pane overlay (e.g. indicator drawer) — keep busy for disables only. */
+  readonly showBusyOverlay = input<boolean>(true);
   readonly phaseYear = input<number>(new Date().getFullYear());
   readonly isAdmin = input<boolean>(false);
 

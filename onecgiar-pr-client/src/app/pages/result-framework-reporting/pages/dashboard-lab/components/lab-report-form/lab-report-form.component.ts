@@ -240,6 +240,8 @@ export class LabReportFormComponent {
   readonly dirtyChange = output<boolean>();
   /** `Cancel` in the footer — the host decides what closing means (it owns the dirty guard). */
   readonly cancelled = output<void>();
+  /** Non-null while MQAP sync or create is in flight — the drawer paints the full-pane overlay. */
+  readonly loadingOverlayChange = output<string | null>();
 
   /** Two columns when the panel is wide enough; one when it is not. */
   readonly columns = input<1 | 2>(1);
@@ -492,7 +494,19 @@ export class LabReportFormComponent {
     effect(() => {
       if (this.showsInnovationLink()) this.qaInnovationsSE.load();
     });
+
+    effect(() => {
+      const message = this.loadingOverlayMessage();
+      this.loadingOverlayChange.emit(message);
+    });
   }
+
+  /** Message for the host overlay — null when idle. */
+  readonly loadingOverlayMessage = computed<string | null>(() => {
+    if (this.creatingResult()) return 'Creating result…';
+    if (this.validatingHandler()) return `Retrieving metadata from ${this.repositoryLabel()}…`;
+    return null;
+  });
 
   /** P2-3420 — answering "No" drops the selection so the payload cannot keep a stale link. */
   onInnovationLinkChange(value: boolean): void {

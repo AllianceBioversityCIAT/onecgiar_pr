@@ -352,6 +352,24 @@ describe('IndicatorDrawerComponent', () => {
       expect(tpl).not.toContain('inset-0 z-[5]');
       expect(tpl).toContain('max-w-[100vw]');
     });
+
+    it('report loading overlay is outside the scroll container so it stays visible while the form scrolls', () => {
+      const fs = require('fs');
+      const tpl = fs.readFileSync(require('path').join(__dirname, 'indicator-drawer.component.html'), 'utf8');
+      const overlayIdx = tpl.indexOf('data-testid="report-form-loading-overlay"');
+      const scrollIdx = tpl.indexOf('custom_scroll flex flex-1 flex-col overflow-y-auto');
+      expect(overlayIdx).toBeGreaterThan(-1);
+      expect(scrollIdx).toBeGreaterThan(overlayIdx);
+      expect(tpl).toContain('[class.overflow-hidden]="!!panelLoadingMessage()"');
+      expect(tpl).toContain('panelLoadingMessage()');
+    });
+
+    it('panelLoadingMessage covers existing-results fetch when the form is idle', async () => {
+      await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55', indicator_description: 'Test' });
+      component.reportLoadingMessage.set(null);
+      component.loadingExisting.set(true);
+      expect(component.panelLoadingMessage()).toBe('Loading reported results…');
+    });
   });
 });
 
@@ -626,6 +644,10 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     return fixture;
   }
 
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach(c => c.remove());
+  });
+
   const squash = (value: string | null | undefined) => (value ?? '').replace(/\s+/g, ' ').trim();
 
   /** Every data row as its cell strings, Code → Phase (the actions cell is the icon, not data). */
@@ -638,8 +660,11 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     fixture.nativeElement.querySelector('[data-testid="irr-strip"]');
 
   /** `includes`, not `===`: several buttons prefix their label with a material-icon ligature. */
-  const buttonWithText = (fixture: ComponentFixture<IndicatorDrawerComponent>, text: string): HTMLButtonElement =>
-    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(b => squash(b.textContent).includes(text))!;
+  const buttonWithText = (fixture: ComponentFixture<IndicatorDrawerComponent>, text: string): HTMLButtonElement => {
+    const local = (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(b => squash(b.textContent).includes(text));
+    if (local) return local;
+    return (Array.from(document.querySelectorAll('.cdk-overlay-container button')) as HTMLButtonElement[]).find(b => squash(b.textContent).includes(text))!;
+  };
 
   // ── IRR-R-2, IRR-AC-2 ─────────────────────────────────────────────────────
   it('renders every column of every row with its exact text (IRR-R-2, IRR-AC-2)', async () => {
@@ -803,7 +828,7 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     fixture.detectChanges();
 
     expect(router.navigate).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.querySelector('[role="menu"]')).not.toBeNull();
+    expect(document.querySelector('.cdk-overlay-container [role="menu"]')).not.toBeNull();
   });
 
   it('opens the same destination from the menu\'s "Open result"', async () => {
@@ -817,7 +842,7 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     fixture.detectChanges();
 
     expect(router.navigate).toHaveBeenCalledWith(['/result', 'result-detail', '9006', 'general-information'], { queryParams: { phase: 11 } });
-    expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('.cdk-overlay-container [role="menu"]')).toBeNull();
   });
 
   it('copies the ABSOLUTE url of that same destination and toasts on globalUserNotification (IRR-R-5, IRR-AC-4)', async () => {
@@ -835,6 +860,19 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     expect(copySpy.mock.calls[0][0]).toBe(`${window.location.origin}/result/result-detail/9006/general-information?phase=11`);
     expect(toastSpy).toHaveBeenCalledWith({ key: 'globalUserNotification', severity: 'success', summary: 'Result link copied' });
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('renders the menu in CDK overlay outside the table to prevent scroll container clipping', async () => {
+    const fixture = await mount();
+    const kebab: HTMLButtonElement = fixture.nativeElement.querySelector('button[aria-label="Open row actions"]');
+    kebab.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    const panel = document.querySelector('.pr-row-menu');
+    expect(panel).toBeTruthy();
+    expect(panel!.closest('td.irr-actions')).toBeNull();
+    expect(panel!.closest('.cdk-overlay-container')).toBeTruthy();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.pr-row-menu')).toBeNull();
   });
 
   it('opens a new tab instead of navigating on a ctrl/cmd-click (IRR-R-12)', async () => {
@@ -862,7 +900,7 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     fixture.componentInstance.onEscape();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('.cdk-overlay-container [role="menu"]')).toBeNull();
     expect(closed).not.toHaveBeenCalled();
   });
 
@@ -926,7 +964,10 @@ describe('IndicatorDrawerComponent — width floor, restore and card fallback (I
 
   const setViewport = (w: number) => Object.defineProperty(window, 'innerWidth', { configurable: true, value: w });
   const originalWidth = window.innerWidth;
-  afterEach(() => setViewport(originalWidth));
+  afterEach(() => {
+    setViewport(originalWidth);
+    document.querySelectorAll('.cdk-overlay-container').forEach(c => c.remove());
+  });
 
   /**
    * Mounts with the REAL template (the create form stubbed): the card-vs-table assertion is a
@@ -1103,7 +1144,7 @@ describe('IndicatorDrawerComponent — width floor, restore and card fallback (I
 
     kebabs[0].click();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('.irr-card .pr-row-menu[role="menu"]').length).toBe(1);
+    expect(document.querySelectorAll('.cdk-overlay-container .pr-row-menu[role="menu"]').length).toBe(1);
   });
 });
 

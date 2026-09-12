@@ -640,12 +640,25 @@ describe('LabReportFormComponent', () => {
       expect(template.indexOf('Repository link/handle')).toBeGreaterThan(-1);
     });
 
-    it('shows a section spinner overlay while creatingResult is true', () => {
-      const template = readFileSync(join(__dirname, 'lab-report-form.component.html'), 'utf8');
+    it('emits loadingOverlayChange for MQAP sync and create, and marks the form aria-busy', async () => {
+      await setup({ indicator: indicator({ result_type_id: 6, type_name: 'Number of knowledge products' }), tocNode: {} });
+      const messages: Array<string | null> = [];
+      component.loadingOverlayChange.subscribe(message => messages.push(message));
 
-      expect(template.indexOf('[attr.aria-busy]="creatingResult()"')).toBeGreaterThan(-1);
-      expect(template.indexOf('Creating result…')).toBeGreaterThan(-1);
-      expect(template.indexOf('pi pi-spin pi-spinner')).toBeGreaterThan(-1);
+      component.validatingHandler.set(true);
+      fixture.detectChanges();
+      expect(component.loadingOverlayMessage()).toContain('Retrieving metadata');
+      expect(messages.at(-1)).toContain('Retrieving metadata');
+
+      component.validatingHandler.set(false);
+      component.creatingResult.set(true);
+      fixture.detectChanges();
+      expect(component.loadingOverlayMessage()).toBe('Creating result…');
+      expect(messages.at(-1)).toBe('Creating result…');
+
+      const template = readFileSync(join(__dirname, 'lab-report-form.component.html'), 'utf8');
+      expect(template.indexOf('[attr.aria-busy]="creatingResult() || validatingHandler()"')).toBeGreaterThan(-1);
+      expect(template.indexOf('absolute inset-0 z-20')).toBe(-1);
     });
 
     it('updates handler and calls validateHandle when onCgspaceItemSelected is called', async () => {

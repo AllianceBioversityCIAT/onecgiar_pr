@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { Router } from '@angular/router';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
 import { resolveReportResultTypeId, resolveReportResultTypeName } from '../../../../shared/report-result/create-result-payload.util';
@@ -106,6 +107,7 @@ export function toReportedResultRow(dto: any, phases: any[]): ReportedResultRow 
   imports: [
     DecimalPipe,
     LabReportFormComponent,
+    OverlayModule,
     // @akili-spec changes/indicator-reported-results — the Reported results table (IRR-R-2)
     PrTableComponent,
     PrTableHeaderDirective,
@@ -118,6 +120,18 @@ export function toReportedResultRow(dto: any, phases: any[]): ReportedResultRow 
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class IndicatorDrawerComponent {
+  /** Full-pane loading copy from `lab-report-form` (MQAP sync or create). */
+  readonly reportLoadingMessage = signal<string | null>(null);
+
+  /** Single drawer overlay message — form work (MQAP / create) or existing-results fetch. */
+  readonly panelLoadingMessage = computed<string | null>(() => {
+    const formMessage = this.reportLoadingMessage();
+    if (formMessage) return formMessage;
+    if (!this.emerging() && this.loadingExisting()) {
+      return 'Loading reported results…';
+    }
+    return null;
+  });
   private readonly api = inject(ApiService);
   // @akili-spec changes/indicator-reported-results
   // IRR-DD-3 — the phase NAME is client-side data: the payload carries only `version_id`, and the
@@ -287,6 +301,10 @@ export class IndicatorDrawerComponent {
     this.formDirty.set(dirty);
   }
 
+  onReportLoadingMessage(message: string | null): void {
+    this.reportLoadingMessage.set(message);
+  }
+
   requestClose(): void {
     if (this.formDirty()) {
       this.confirmingExit.set('close');
@@ -427,6 +445,7 @@ export class IndicatorDrawerComponent {
   }
 
   close(): void {
+    this.reportLoadingMessage.set(null);
     this.closed.emit();
   }
 
@@ -569,6 +588,18 @@ export class IndicatorDrawerComponent {
   // ── Row menu (IRR-R-10) ───────────────────────────────────────────────────
   private readonly openMenuKey = signal<string | null>(null);
 
+  /**
+   * CDK Connected Overlay positions for the row menu: below the ⋯ button, right edges aligned;
+   * flips above when the trigger sits near the bottom of the viewport. The panel is an overlay
+   * rather than a child of the table actions cell because the table container has `overflow-x: auto`
+   * and the drawer body has `overflow-y: auto`, which clips any descendant absolutely positioned
+   * popup at the bottom boundary of the table row.
+   */
+  readonly rowMenuPositions: ConnectedPosition[] = [
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', overlayX: 'end', originY: 'top', overlayY: 'bottom', offsetY: -4 }
+  ];
+
   /** `id ?? code`: a contributor with no `result_code` would collide with every other one on code. */
   rowKey(row: ReportedResultRow): string {
     return String(row?.id ?? row?.code ?? '');
@@ -587,6 +618,15 @@ export class IndicatorDrawerComponent {
 
   closeRowMenu(): void {
     this.openMenuKey.set(null);
+  }
+
+  /**
+   * `(detach)` of the row's overlay. Row-scoped ON PURPOSE: opening a second row's menu while one is
+   * open detaches the first, and an unconditional `closeRowMenu()` there would clear the key that
+   * now belongs to the SECOND row — both menus end up closed and the click looks swallowed.
+   */
+  onRowMenuDetach(row: ReportedResultRow): void {
+    if (this.isMenuOpen(row)) this.closeRowMenu();
   }
 
   /** Outside click dismisses the menu (hard UI rule 4), same as the Reporting table's. */

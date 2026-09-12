@@ -1,0 +1,116 @@
+digraph CenterEmailCodeLoginArchitecture {
+  rankdir=TB;
+  newrank=true;
+  bgcolor="white";
+  fontname="Helvetica";
+  labelloc="t";
+  fontsize=18;
+  label="Center email-code login — logical flow (PRMS)\nOption D: PRMS-owned code, no Cognito — verified 2026-09-12";
+  nodesep=0.3;
+  ranksep=0.4;
+  size="19,40";
+  ratio=compress;
+
+  node [fontname="Helvetica" shape=box style="rounded,filled" fillcolor="#ffffff" color="#333333" fontsize=12];
+  edge [fontname="Courier" fontsize=11 color="#555555" penwidth=1.2];
+
+  /* ---------- PRMS client (Angular) — row 1 ---------- */
+  subgraph cluster_client {
+    label="PRMS client (Angular)";
+    style="filled,rounded";
+    fillcolor="#eef3fb";
+    color="#7a9cc6";
+    fontsize=13;
+
+    Login [label="LoginComponent\nSAML · Center · password"];
+    OtpPanel [label="CenterOtpPanelComponent\nemail → code · 30s resend"];
+    CognitoAuth [label="CognitoService.startOtp/verifyOtp\n+ AuthService" fontname="Courier"];
+
+    { rank=same; Login; OtpPanel; CognitoAuth; }
+    Login -> OtpPanel [label="1 click Center"];
+    OtpPanel -> CognitoAuth;
+  }
+
+  /* ---------- PRMS server (NestJS) — row 2 ---------- */
+  subgraph cluster_server {
+    label="PRMS server (NestJS)";
+    style="filled,rounded";
+    fillcolor="#e9f5ea";
+    color="#7ab894";
+    fontsize=13;
+
+    ConfigNode [label="GET /auth/login/otp/config" fontname="Courier"];
+    StartNode [label="POST /auth/login/otp/start\nOtpThrottlerGuard 5/15min →\nallow-list → inactive → decoy" style="rounded,filled" fillcolor="#fdf3d6" color="#c9a227"];
+    ChallengeSvc [label="OtpChallengeService.create\n→ buildOtpEmail →\nEmailNotificationManagementService" fontname="Courier"];
+    VerifyNode [label="POST /auth/login/otp/verify\nHMAC compare (const-time) →\nconsume → auto-provision" style="rounded,filled" fillcolor="#fdf3d6" color="#c9a227"];
+    OtpTable [label="otp_challenges (MySQL)\nnonce, email_hash, code_hmac,\nexpires_at, attempts, consumed_at" shape=cylinder style="filled" fillcolor="#ffffff" color="#7ab894"];
+
+    { rank=same; ConfigNode; StartNode; ChallengeSvc; }
+    { rank=same; VerifyNode; OtpTable; }
+
+    ChallengeSvc -> OtpTable [label="row" style=dashed color="#999999" arrowhead=none];
+    VerifyNode -> OtpTable [label="row by nonce" style=dashed color="#999999" arrowhead=none];
+  }
+
+  /* ---------- PRMS email pipeline — row 3 ---------- */
+  subgraph cluster_email {
+    label="PRMS email pipeline";
+    style="filled,rounded";
+    fillcolor="#fdeeee";
+    color="#c67a7a";
+    fontsize=13;
+
+    Queue [label="RabbitMQ queue (send)" fontname="Courier"];
+    Pipeline [label="notification-microservice →\nSMTP → mailbox\nPRMS Reporting Tool\n<PRMS-No-reply@cgiar.org>"];
+
+    { rank=same; Queue; Pipeline; }
+    Queue -> Pipeline;
+  }
+
+  /* ---------- Not involved for Center path (Option D) — row 4 ---------- */
+  subgraph cluster_not_involved {
+    label="Not involved for the Center path (Option D)";
+    style="filled,rounded,dashed";
+    fillcolor="#f2f2f2";
+    color="#999999";
+    fontsize=13;
+    fontcolor="#666666";
+
+    CognitoPool [label="Amazon Cognito\nuser pool" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+    AuthMs [label="AUTH microservice\n(SAML / password paths only)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+
+    { rank=same; AuthMs; CognitoPool; }
+    AuthMs -> CognitoPool [style=dashed color="#999999" arrowhead=none];
+  }
+
+  /* ---------- Numbered flow edges across rows (top-to-bottom) ---------- */
+  CognitoAuth -> ConfigNode [label="config" style=dotted color="#999999" fontsize=9 arrowhead=vee];
+  CognitoAuth -> StartNode [label="2 start" color="#1a1a1a" penwidth=1.6];
+  StartNode -> ChallengeSvc [color="#1a1a1a" penwidth=1.6 label="3 throttle/allow-list/decoy\n4 create challenge"];
+  ChallengeSvc -> Queue [label="5 email via queue" color="#1a1a1a" penwidth=1.6];
+  CognitoAuth -> VerifyNode [label="7 verify" color="#1a1a1a" penwidth=1.4 style=dashed];
+
+  /* SAML / password paths — solid edge to the greyed-out cluster (drawn without affecting rank order) */
+  Login -> AuthMs [label="SAML / password paths" color="#1a1a1a" penwidth=1.4 constraint=false];
+  Pipeline -> AuthMs [style=invis];
+
+  /* backward edges — drawn without affecting rank order */
+  Pipeline -> OtpPanel [label="6 user enters code" style=dashed color="#1a1a1a" penwidth=1.6 constraint=false];
+  VerifyNode -> OtpPanel [label="8 consume + provision\n9 PRMS session" style=dashed color="#1a1a1a" penwidth=1.6 constraint=false];
+
+  /* ---------- Key rules + Legend, below everything ---------- */
+  subgraph cluster_notes {
+    label="";
+    style=invis;
+    { rank=same; KeyRules; LegendNote; }
+
+    KeyRules [shape=note style="filled" fillcolor="#fbfbe0" color="#b8b85a" fontsize=11 fontname="Helvetica"
+      label="Key rules\lAllow-list: OTP_ALLOWED_EMAIL_DOMAINS (parameter)\lCode: 6-digit CSPRNG · 5 min validity · 3 attempts · single use\lStorage: HMAC-only (never plaintext code/email)\lInactive users: decoy session, indistinguishable from real\lLog hygiene: nothing logs code, email, or session\l"];
+
+    LegendNote [shape=note style="filled" fillcolor="#ffffff" color="#999999" fontsize=11 fontname="Helvetica"
+      label="Legend\lSolid = in use (Option D, PRMS-owned)\lDashed grey = not involved for Center path\l(Cognito + AUTH microservice; SAML/password only)\lNo Cognito tokens are issued for the Center path.\l"];
+  }
+
+  Pipeline -> KeyRules [style=invis];
+  CognitoPool -> LegendNote [style=invis];
+}

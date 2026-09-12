@@ -304,6 +304,42 @@ describe('HlmSidebarService', () => {
 
       expect(compactMql.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
     });
+
+    it('auto-collapses the desktop rail on first render when the compact breakpoint matches', () => {
+      const { matchMedia } = fakeMatchMediaByQuery(false, true);
+      Object.defineProperty(window, 'matchMedia', { value: matchMedia, configurable: true, writable: true });
+
+      const service = setup();
+      render();
+
+      expect(service.isCompact()).toBe(true);
+      expect(service.state()).toBe('collapsed');
+      expect(document.cookie).not.toContain('sidebar_state');
+    });
+
+    it('does not auto-collapse on compact viewports while in mobile mode', () => {
+      const { matchMedia } = fakeMatchMediaByQuery(true, true);
+      Object.defineProperty(window, 'matchMedia', { value: matchMedia, configurable: true, writable: true });
+
+      const service = setup();
+      render();
+
+      expect(service.isMobile()).toBe(true);
+      expect(service.isCompact()).toBe(true);
+      expect(service.state()).toBe('expanded');
+    });
+
+    it('auto-collapses when the viewport shrinks into the compact breakpoint', () => {
+      const { matchMedia, compactMql } = fakeMatchMediaByQuery(false, false);
+      Object.defineProperty(window, 'matchMedia', { value: matchMedia, configurable: true, writable: true });
+
+      const service = setup();
+      render();
+      expect(service.state()).toBe('expanded');
+
+      compactMql.handlers.forEach(h => h({ matches: true }));
+      expect(service.state()).toBe('collapsed');
+    });
   });
 
   describe('collapseForCompactEntry', () => {

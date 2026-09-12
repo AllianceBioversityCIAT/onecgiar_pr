@@ -22,6 +22,7 @@ import { ResultsToUpdateModalModule } from './components/results-to-update-modal
 import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { CustomSpinnerModule } from '../../../../../../shared/components/custom-spinner/custom-spinner.module';
+import { ResultsCenterReportingGuideComponent } from './components/results-center-reporting-guide/results-center-reporting-guide.component';
 
 @NgModule({
   declarations: [ResultsListComponent, ReportNewResultButtonComponent],
@@ -43,7 +44,8 @@ import { CustomSpinnerModule } from '../../../../../../shared/components/custom-
     CustomFieldsModule,
     ResultsListFilterPipeModule,
     PdfIconModule,
-    ResultsListFiltersComponent
+    ResultsListFiltersComponent,
+    ResultsCenterReportingGuideComponent
   ]
 })
 export class ResultsListModule {}

@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { HlmSidebarService } from '@spartan/sidebar';
 
 jest.mock('driver.js/dist/driver.css', () => ({}), { virtual: true });
 jest.mock('driver.js', () => ({ driver: jest.fn() }));
@@ -13,6 +15,7 @@ import {
   SpTourOptions,
   TutorialId
 } from './reporting-guide.service';
+import { PLATFORM_TOUR_STORAGE_KEYS } from './platform/platform-tour.types';
 
 const driverMock = driver as unknown as jest.Mock;
 
@@ -54,9 +57,15 @@ function ctx(partial: Partial<GuideContext> = {}): GuideContext {
 
 describe('ReportingGuideService', () => {
   let service: ReportingGuideService;
+  let sidebarMock: { state: ReturnType<typeof signal<string>>; isMobile: ReturnType<typeof signal<boolean>>; setOpen: jest.Mock };
 
   beforeEach(() => {
     instances = [];
+    sidebarMock = {
+      state: signal('expanded'),
+      isMobile: signal(false),
+      setOpen: jest.fn()
+    };
     driverMock.mockReset();
     driverMock.mockImplementation((config: any) => {
       let activeIndex = 0;
@@ -73,8 +82,11 @@ describe('ReportingGuideService', () => {
       return instance;
     });
 
-    TestBed.configureTestingModule({ providers: [ReportingGuideService] });
+    TestBed.configureTestingModule({
+      providers: [ReportingGuideService, { provide: HlmSidebarService, useValue: sidebarMock }]
+    });
     service = TestBed.inject(ReportingGuideService);
+    localStorage.clear();
   });
 
   it('exposes the four tutorials in the catalogue', () => {
@@ -837,6 +849,58 @@ describe('ReportingGuideService', () => {
       expect(service.catalogue).toHaveLength(4);
       expect(service.catalogue.map(t => t.id)).toEqual(['basics', 'planned', 'emerging', 'guided']);
       expect(service.catalogue.map(t => t.id)).not.toContain('sidebar-hint' as unknown as TutorialId);
+    });
+  });
+
+  describe('platform onboarding tours (POT)', () => {
+    describe('startSidebarTour', () => {
+      it('drives sidebar steps and expands a collapsed sidebar first', () => {
+        jest.useFakeTimers();
+        sidebarMock.state.set('collapsed');
+
+        service.startSidebarTour({ hasMyPrograms: true, hasOtherPrograms: false, hasCenters: false });
+
+        expect(sidebarMock.setOpen).toHaveBeenCalledWith(true);
+        expect(driverMock).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(150);
+
+        expect(driverMock).toHaveBeenCalledTimes(1);
+        expect(elementsOf(lastSteps())).toContain('[data-guide="platform-tour-sidebar-results-center"]');
+        expect(lastInstance().drive).toHaveBeenCalled();
+
+        lastInstance().config.onDestroyed();
+        expect(localStorage.getItem(PLATFORM_TOUR_STORAGE_KEYS.sidebar)).toBe('true');
+        expect(localStorage.getItem(PLATFORM_TOUR_STORAGE_KEYS['results-center'])).toBeNull();
+
+        jest.useRealTimers();
+      });
+    });
+
+    describe('startResultsCenterTour', () => {
+      it('omits update step when canUpdateResult is false', () => {
+        service.startResultsCenterTour({ canUpdateResult: false });
+        expect(elementsOf(lastSteps())).not.toContain('[data-guide="platform-tour-rc-update"]');
+
+        lastInstance().config.onDestroyed();
+        expect(localStorage.getItem(PLATFORM_TOUR_STORAGE_KEYS['results-center'])).toBe('true');
+        expect(localStorage.getItem(PLATFORM_TOUR_STORAGE_KEYS.sidebar)).toBeNull();
+      });
+    });
+
+    describe('startWhereToReportTour', () => {
+      it('includes picker step in pick-program mode', () => {
+        service.startWhereToReportTour({ mode: 'pick-program', showPicker: true, showEmerging: true });
+        expect(elementsOf(lastSteps())).toContain('[data-guide="platform-tour-wtr-picker"]');
+      });
+    });
+
+    describe('isPlatformTourCompleted', () => {
+      it('tracks each storage key independently', () => {
+        localStorage.setItem(PLATFORM_TOUR_STORAGE_KEYS.sidebar, 'true');
+        expect(service.isPlatformTourCompleted('sidebar')).toBe(true);
+        expect(service.isPlatformTourCompleted('results-center')).toBe(false);
+      });
     });
   });
 });

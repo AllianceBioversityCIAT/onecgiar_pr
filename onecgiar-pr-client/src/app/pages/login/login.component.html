@@ -21,6 +21,26 @@
           }
         </button>
 
+        @if (centerDomains().length) {
+          <!-- @akili-spec changes/cognito-email-otp-login — OTP-T-7 (OTP-R-1, OTP-R-14 choose), mockup/login-target.html screens 1–2 -->
+          <p class="login-description center-helper" data-test="otp-center-helper">{{ centerHelperText() }}</p>
+
+          @if (centerPanelOpen()) {
+            <app-center-otp-panel [domains]="centerDomains()" />
+            <button type="button" class="center-cancel-btn" data-test="otp-center-cancel" (click)="toggleCenterPanel()">Cancel</button>
+          } @else {
+            <button
+              type="button"
+              class="center-account-btn"
+              data-test="otp-center-button"
+              (click)="toggleCenterPanel()"
+              [disabled]="cognito.isLoadingAzureAd() || cognito.isLoadingCredentials()">
+              <ng-icon name="lucideBuilding2" size="16" />
+              Continue with your Center account
+            </button>
+          }
+        }
+
         <div class="divider">
           <span>or</span>
         </div>

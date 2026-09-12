@@ -16,6 +16,7 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enu
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
+import { SpTabEmptyStateComponent } from '../dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
@@ -101,6 +102,7 @@ const UNASSIGNED_CENTER_CODE = '__unassigned__';
   imports: [
     NgIcon,
     ReportingProgramBandComponent,
+    SpTabEmptyStateComponent,
     WhereToReportModalComponent,
     BilateralReviewTableComponent,
     ResultReviewDrawerComponent

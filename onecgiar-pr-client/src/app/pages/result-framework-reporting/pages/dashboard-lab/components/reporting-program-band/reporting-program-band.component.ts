@@ -26,6 +26,7 @@ import { normalizeBilateralReviewPhaseId } from '../../../bilateral-review/bilat
 // badge now follows the CURRENT reporting phase, not just the program code (judgment-day L-2).
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { ReportingQuickTypologyFiltersComponent } from '../reporting-quick-typology-filters/reporting-quick-typology-filters.component';
+import { ReportingVideoModalComponent } from '../reporting-video-modal/reporting-video-modal.component';
 export type { ResultTypeQuickChip } from '../reporting-quick-typology-filters/reporting-quick-typology.util';
 
 export interface BandFilterOption {
@@ -105,7 +106,7 @@ export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
 @Component({
   selector: 'app-reporting-program-band',
   standalone: true,
-  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, ReportingQuickTypologyFiltersComponent],
+  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, ReportingQuickTypologyFiltersComponent, ReportingVideoModalComponent],
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -318,6 +319,16 @@ export class ReportingProgramBandComponent {
         return this.router.navigate([targetPath], { queryParamsHandling: 'preserve' }).then(() => {});
       }
     });
+  }
+
+  readonly videoGuideOpen = signal(false);
+
+  openVideoGuide(): void {
+    this.videoGuideOpen.set(true);
+  }
+
+  closeVideoGuide(): void {
+    this.videoGuideOpen.set(false);
   }
 
   /**
@@ -681,6 +692,19 @@ export class ReportingProgramBandComponent {
   });
 
   readonly hasActiveFilters = computed(() => this.activeFilterCount() > 0 || !!this.search());
+
+  /** True when dismissible filter chips should render on their own toolbar row. */
+  readonly hasActiveFilterChips = computed(() => {
+    if (this.compactFilters()) {
+      return !!(this.activeCenterLabel() || this.activeByAowTypeLabel() || this.activeStatusChips().length);
+    }
+    return (
+      this.activeAowChips().length > 0 ||
+      this.activeTypeChips().length > 0 ||
+      this.activeTypologyChips().length > 0 ||
+      this.activeStatusChips().length > 0
+    );
+  });
 
   readonly activeCenterLabel = computed(() => {
     const val = this.centerValue();

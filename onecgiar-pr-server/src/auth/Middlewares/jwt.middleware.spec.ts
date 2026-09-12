@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtMiddleware } from './jwt.middleware';
+import { SearchThrottleMiddleware } from './search-throttle.middleware';
 import { JwtService } from '@nestjs/jwt';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus, RequestMethod } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { UserRepository } from '../modules/user/repositories/user.repository';
+import { AuthModule } from '../auth.module';
 
 describe('JwtMiddleware', () => {
   let middleware: JwtMiddleware;
@@ -360,6 +362,46 @@ describe('JwtMiddleware', () => {
           secret: 'test-secret',
         },
       );
+    });
+  });
+
+  describe('Route mounting (OTP-T-4)', () => {
+    // /auth/login/otp/config must be reachable without a token. AuthModule (mounted at
+    // path 'auth' by main.routes.ts) is the module that owns this route, and its own
+    // `configure()` is what decides which of its routes JwtMiddleware intercepts — so this
+    // asserts the actual mount configuration (a fake MiddlewareConsumer, not a mocked
+    // JwtMiddleware) rather than calling `middleware.use()` directly, which would prove
+    // the opposite (that the path IS intercepted). AppModule's own JwtMiddleware mount
+    // (`api/*path`, `v2/*path`, `clarisa/*path`, `toc/*path`, `type-one-report` —
+    // asserted in app.module.spec.ts) never lists an `auth/*` path either.
+    it('mounts JwtMiddleware only on the pusher-auth route, never on /auth/login/otp/config', () => {
+      const chain: {
+        apply: jest.Mock;
+        forRoutes: jest.Mock;
+      } = {} as any;
+      chain.apply = jest.fn().mockReturnValue(chain);
+      chain.forRoutes = jest.fn().mockReturnValue(chain);
+
+      new AuthModule().configure(chain as any);
+
+      expect(chain.apply).toHaveBeenNthCalledWith(1, JwtMiddleware);
+      expect(chain.forRoutes).toHaveBeenNthCalledWith(1, {
+        path: '/auth/signing/pusher/result/:resultId/:user',
+        method: RequestMethod.POST,
+      });
+      expect(chain.apply).toHaveBeenNthCalledWith(2, SearchThrottleMiddleware);
+      expect(chain.forRoutes).toHaveBeenNthCalledWith(2, {
+        path: '/auth/users/search',
+        method: RequestMethod.GET,
+      });
+
+      const mountedPaths = chain.forRoutes.mock.calls.map(
+        ([route]) => route.path,
+      );
+      expect(mountedPaths).not.toContain('/auth/login/otp/config');
+      expect(
+        mountedPaths.some((path: string) => path.includes('login/otp')),
+      ).toBe(false);
     });
   });
 });
