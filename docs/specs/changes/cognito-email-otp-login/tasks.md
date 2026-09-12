@@ -118,7 +118,7 @@
 - **Verification:** `npx jest … login.component.spec.ts` + `tsc` + lint: `[]` → no `otp-center-button`; `['icrisat.org','cifor-icraf.org']` → button + helper "ICRISAT · CIFOR-ICRAF"; clicking Center then External hides the panel; pre-existing login tests pass unmodified; snapshot of the CGIAR and external blocks equals the pre-change snapshot (capture before editing). **Input that fails it:** render the button unconditionally → `[]` case fails. **Disqualifier:** a "pre-change snapshot" taken after the edit.
 - **Definition of done:** spec green (existing cases untouched); `tsc` + lint clean.
 
-### `OTP-T-8` — Cypress CT: `/login` with the Center panel at 1536 / 840 / 375
+### [x] `OTP-T-8` — Cypress CT: `/login` with the Center panel at 1536 / 840 / 375
 
 - **Type:** `tests`
 - **Description:** New `login.component.cy.ts` mounting `LoginComponent` with stubbed `AuthService`/`ResultsApiService` (config → two domains; start → session; verify → `OTP_CODE_MISMATCH`), driving to the code step with an error; sweep 1536/840/375 with `assertEffectiveWidth`: `documentElement.scrollWidth <= clientWidth`, every control `getBoundingClientRect().height >= 24`, the `aria-live` region contains the error text, the code input has `inputmode="numeric"`.
