@@ -239,11 +239,12 @@
           @case ('no-centers') {
             <div class="flex flex-col items-start gap-[8px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[16px] py-[20px]">
               <p class="m-0 text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ copy.w3.noCentersBody }}</p>
-              <a
-                [href]="requestAccessHref()"
-                class="text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline">
+              <button
+                type="button"
+                (click)="onRequestAccess()"
+                class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
                 {{ copy.requestAccess }}
-              </a>
+              </button>
             </div>
           }
           @case ('error') {
@@ -381,9 +382,12 @@
 
         <div class="mt-[14px] flex flex-wrap items-center justify-between gap-[12px] border-t border-[var(--pr-border)] pt-[10px]">
           <p class="m-0 text-[12px] font-normal text-[var(--pr-text-muted)]">{{ copy.notSeeingCenter }}</p>
-          <a [href]="requestAccessHref()" class="text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline">
+          <button
+            type="button"
+            (click)="onRequestAccess()"
+            class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
             {{ copy.requestAccess }}
-          </a>
+          </button>
         </div>
       </section>
     </div>

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
+import { FooterService } from '../../../../../../shared/components/footer/footer.service';
 import {
   ReportingEntryHubComponent,
   HubAowRow,
@@ -188,14 +189,31 @@ describe('ReportingEntryHubComponent', () => {
     expect(component.isCenterExpanded(africaRice)).toBe(false);
   });
 
-  // (f) no-centers → empty state with mailto, lane present.
-  it('renders the no-centers empty state with a mailto Request access link', async () => {
+  // (f) no-centers → empty state with Request access button that opens Contact Us dialog.
+  it('renders the no-centers empty state with a Request access button', async () => {
     await setup({ w3State: { status: 'no-centers' }, myCentersCount: 0 });
+    const footerService = TestBed.inject(FooterService);
+    footerService.displayContactUs = false;
     expect(text()).toContain('W3 results are reported by CGIAR Centers. You are not assigned to a center yet.');
-    const link = fixture.debugElement.query(By.css('a[href^="mailto:"]'));
-    expect(link).toBeTruthy();
-    expect((link.nativeElement as HTMLAnchorElement).href).toContain('PRMSTechSupport@cgiar.org');
+    const button = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(el => (el.nativeElement as HTMLElement).textContent?.trim() === 'Request access');
+    expect(button).toBeTruthy();
+    button!.nativeElement.click();
+    expect(footerService.displayContactUs).toBe(true);
     expect(text()).toContain('W3 · Bilateral projects');
+  });
+
+  it('opens Contact Us dialog when clicking footer Request access button', async () => {
+    await setup();
+    const footerService = TestBed.inject(FooterService);
+    footerService.displayContactUs = false;
+    const button = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(el => (el.nativeElement as HTMLElement).textContent?.trim() === 'Request access');
+    expect(button).toBeTruthy();
+    button!.nativeElement.click();
+    expect(footerService.displayContactUs).toBe(true);
   });
 
   // (g) all centers matching=0 → "None of your centers…" + "0 of M" rows.

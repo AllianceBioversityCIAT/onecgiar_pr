@@ -2,6 +2,10 @@
 
 // app-pr-dialog wrapper: restore the flush layout the old p-dialog had
 // ([style]padding:0) for the Contact us modal.
+::ng-deep app-pr-dialog:has(.contact-us-dialog) .pr-dialog-mask {
+  z-index: 1200;
+}
+
 ::ng-deep app-pr-dialog .contact-us-dialog {
   position: relative;
 
