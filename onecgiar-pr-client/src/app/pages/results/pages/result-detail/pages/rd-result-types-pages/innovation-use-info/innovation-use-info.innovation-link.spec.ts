@@ -155,6 +155,45 @@ describe('InnovationUseInfoComponent — optional link to a QA’d Innovation De
       component.linkedInnovationId = null;
       expect(component.innovationUseInfoBody.linked_results).toEqual([]);
     });
+
+    /**
+     * Regression. `linked_result` is SHARED: `getLinkedResultsByOrigin`
+     * (`results-innovations-use.repository.ts:245-259`) hands this section every active row of the
+     * result, whoever wrote it — the P22 "Links to results" section and versioning included — and this
+     * single-select can only paint the first one. Writing `[value]` back therefore deleted the rest,
+     * because the save sends the array verbatim and `LinkedResultRepository.updateLink`
+     * (`linked-results.repository.ts:313-330`) de-activates every active row missing from it.
+     *
+     * The fixture is real, not invented: result 11164 (code 8696, 2026 phase, `has_innovation_link = 1`)
+     * holds exactly these three active links on the test DB, and prtest's
+     * `v2/api/innovation-use/get/result/11164` returns them as `["8738","8826","8877"]` — strings,
+     * which is also why the ids are quoted here. 28 active Innovation use results were carrying more
+     * than one active link when this was measured (11 Sep 2026).
+     */
+    describe('a result that stores MORE links than this select can show (result 11164)', () => {
+      const storedOnServer = () => ['8738', '8826', '8877'] as any;
+
+      it('paints only the first one — the other two are invisible on this screen', () => {
+        component.innovationUseInfoBody.linked_results = storedOnServer();
+        expect(component.linkedInnovationId).toBe(8738);
+      });
+
+      it('replaces ONLY the id on screen when the user picks another innovation', () => {
+        component.innovationUseInfoBody.linked_results = storedOnServer();
+
+        component.linkedInnovationId = 9053;
+
+        expect(component.innovationUseInfoBody.linked_results).toEqual([9053, 8826, 8877]);
+      });
+
+      it('keeps the invisible ones when the user clears the select', () => {
+        component.innovationUseInfoBody.linked_results = storedOnServer();
+
+        component.linkedInnovationId = null;
+
+        expect(component.innovationUseInfoBody.linked_results).toEqual([8826, 8877]);
+      });
+    });
   });
 
   describe('the options offered', () => {
@@ -235,6 +274,18 @@ describe('InnovationUseInfoComponent — optional link to a QA’d Innovation De
       expect(getCallsWhenPatched).toBe(1);
       expect(savedPayload().has_innovation_link).toBe(true);
       expect(savedPayload().linked_results).toEqual([7777]);
+    });
+
+    it('carries the links this select never showed into the payload (result 11164)', () => {
+      // Without them the save is a silent delete: the server de-activates every active row whose id
+      // is missing from `linked_results` (`linked-results.repository.ts:313-330`).
+      component.innovationUseInfoBody.has_innovation_link = true;
+      component.innovationUseInfoBody.linked_results = ['8738', '8826', '8877'] as any;
+
+      component.linkedInnovationId = 9053;
+      component.onSaveSection();
+
+      expect(savedPayload().linked_results).toEqual([9053, 8826, 8877]);
     });
 
     it('falls back to the held values when that 2025 re-read fails', () => {
