@@ -118,6 +118,8 @@ export function toReportedResultRow(dto: any, phases: any[]): ReportedResultRow 
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class IndicatorDrawerComponent {
+  /** Full-pane loading copy from `lab-report-form` (MQAP sync or create). */
+  readonly reportLoadingMessage = signal<string | null>(null);
   private readonly api = inject(ApiService);
   // @akili-spec changes/indicator-reported-results
   // IRR-DD-3 — the phase NAME is client-side data: the payload carries only `version_id`, and the
@@ -287,6 +289,10 @@ export class IndicatorDrawerComponent {
     this.formDirty.set(dirty);
   }
 
+  onReportLoadingMessage(message: string | null): void {
+    this.reportLoadingMessage.set(message);
+  }
+
   requestClose(): void {
     if (this.formDirty()) {
       this.confirmingExit.set('close');
@@ -427,6 +433,7 @@ export class IndicatorDrawerComponent {
   }
 
   close(): void {
+    this.reportLoadingMessage.set(null);
     this.closed.emit();
   }
 

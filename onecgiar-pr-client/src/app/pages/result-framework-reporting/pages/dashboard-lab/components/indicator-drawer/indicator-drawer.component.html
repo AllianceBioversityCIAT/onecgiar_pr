@@ -140,7 +140,17 @@
     <!-- Follow-up 2026-09-04 (quick/indicator-reported-results-followups): the Report case is a
          persistent wrapper, not a @switch case — "See them in detail" must not unmount the form
          the user is filling. The other two tabs are conditional as before. -->
-    <div class="flex flex-1 min-h-0 flex-col" [style.display]="tab() === 'report' ? null : 'none'" data-testid="irr-report-pane">
+    <div class="relative flex flex-1 min-h-full min-h-0 flex-col" [style.display]="tab() === 'report' ? null : 'none'" data-testid="irr-report-pane">
+        @if (reportLoadingMessage()) {
+          <div
+            class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2.5 bg-[color-mix(in_srgb,white_88%,transparent)] backdrop-blur-[1px]"
+            role="status"
+            aria-live="polite"
+            data-testid="report-form-loading-overlay">
+            <i class="pi pi-spin pi-spinner text-[1.75rem] text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+            <span class="max-w-[min(100%,320px)] px-4 text-center text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)]">{{ reportLoadingMessage() }}</span>
+          </div>
+        }
         <!-- What is already reported here, visible WHILE the form is being filled: recognising a
              duplicate after creating it is too late. Compact on purpose — the form is the job. -->
         @if (!emerging()) {
@@ -207,6 +217,7 @@
           [columns]="columns()"
           [canReport]="canReport()"
           (dirtyChange)="onDirtyChange($event)"
+          (loadingOverlayChange)="onReportLoadingMessage($event)"
           (cancelled)="requestClose()"
           (created)="close()" />
       </div>
