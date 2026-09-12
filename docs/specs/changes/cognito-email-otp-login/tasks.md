@@ -161,7 +161,7 @@
 - **Verification:** `npx jest` in the package: define state machine (first / correct / wrong ×2 / wrong ×3 / `userNotFound`), create (fresh code 6 digits, reuse on retry, masked destination, emit payload deep-equals the `auth`+`ConfigMessageDto` shape, no PII in logger calls, queue error → challenge + `email_failed`), verify (correct / wrong / missing answer); `tsc` clean; `sam validate` (or `aws cloudformation validate-template`). **Input that fails it:** create sends a new code on every retry → reuse test fails. **Disqualifiers:** the code, email or session appearing in any log assertion; a `Math.random` code.
 - **Definition of done:** tests green; template validates; README complete; committed on `dev-auth-otp`.
 
-### `OTP-T-12` — Microservice: switch `CognitoService` to `CUSTOM_AUTH` / `CUSTOM_CHALLENGE`
+### [x] `OTP-T-12` — Microservice: switch `CognitoService` to `CUSTOM_AUTH` / `CUSTOM_CHALLENGE`
 
 - **Type:** `microservice`
 - **Description:** `startEmailOtp`: `AuthFlow: CUSTOM_AUTH`, drop `PREFERRED_CHALLENGE` and the `SELECT_CHALLENGE` branch, expect `CUSTOM_CHALLENGE`. `verifyEmailOtp`: `ChallengeName: CUSTOM_CHALLENGE`, `ChallengeResponses.ANSWER`; a reply with `ChallengeName === CUSTOM_CHALLENGE` and no `AuthenticationResult` → `401 { code: CODE_MISMATCH, session: <rotated> }`; `NotAuthorizedException` "Incorrect username or password" → `ATTEMPTS_EXCEEDED`; "session … expired" → `CODE_EXPIRED`; other challenge → `CHALLENGE_NOT_SUPPORTED`. Routes, DTOs, filter, interceptor, README contract updated (error row gains `session` on mismatch). Existing tests adjusted only where the flow changed.
