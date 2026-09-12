@@ -910,4 +910,98 @@ describe('InnovationDevService', () => {
       ).not.toHaveBeenCalled();
     });
   });
+  /**
+   * Regression — a W3/bilateral investment amount the user never typed was being stored as a
+   * reported USD 0.00 (`Number(null) === 0`), so the innovation's estimates table read
+   * "$0.00" on reload for every line left blank. Zero has to remain writable on purpose.
+   */
+  describe('saveBillateralInvestment — blank amount vs. an explicit zero', () => {
+    const wireBilateralDependencies = () => {
+      const budgetRepo = {
+        findOne: jest.fn(),
+        create: jest.fn((row: any) => ({ ...row })),
+        save: jest.fn(async (row: any) => row),
+      };
+      const projectRepo = {
+        findOne: jest.fn(async ({ where }: any) => ({
+          id: 1000 + Number(where.project_id),
+        })),
+      };
+      Object.assign(service as any, {
+        _resultBilateralBudgetRepository: budgetRepo,
+        _resultByProjectRepository: projectRepo,
+      });
+      return { budgetRepo, projectRepo };
+    };
+
+    /** What actually reached the table for `project_id`, across the update and create paths. */
+    const savedAmountFor = (budgetRepo: any, projectId: number) => {
+      const call = (budgetRepo.save.mock.calls as any[][]).find(
+        ([row]) => Number(row.result_project_id) === 1000 + projectId,
+      );
+      return call?.[0]?.kind_cash;
+    };
+
+    it('stores a blank amount as NULL (not 0) on an existing budget row', async () => {
+      const { budgetRepo } = wireBilateralDependencies();
+      budgetRepo.findOne.mockResolvedValue({
+        non_pooled_projetct_budget_id: 55,
+        result_project_id: 1007,
+        kind_cash: null,
+      });
+
+      await service.saveBillateralInvestment(11030, 1, {
+        // Exactly what the estimates table echoes back for an untouched currency input.
+        bilateral_expected_investment: [
+          { project_id: 7, kind_cash: null, is_determined: null },
+        ],
+      } as any);
+
+      expect(savedAmountFor(budgetRepo, 7)).toBeNull();
+    });
+
+    it('stores a blank amount as NULL (not 0) when the budget row has to be created', async () => {
+      const { budgetRepo } = wireBilateralDependencies();
+      budgetRepo.findOne.mockResolvedValue(null);
+
+      await service.saveBillateralInvestment(11030, 1, {
+        bilateral_expected_investment: [
+          { project_id: 8, kind_cash: null, is_determined: null },
+        ],
+      } as any);
+
+      expect(savedAmountFor(budgetRepo, 8)).toBeNull();
+    });
+
+    it('still stores an explicit 0 the user typed, and a real amount, unchanged', async () => {
+      const { budgetRepo } = wireBilateralDependencies();
+      budgetRepo.findOne.mockResolvedValue(null);
+
+      await service.saveBillateralInvestment(11030, 1, {
+        bilateral_expected_investment: [
+          { project_id: 9, kind_cash: 0, is_determined: null },
+          // `decimal` columns come back from MySQL as strings; a reloaded 0 must survive too.
+          { project_id: 10, kind_cash: '0.00', is_determined: null },
+          { project_id: 11, kind_cash: '1500.00', is_determined: null },
+        ],
+      } as any);
+
+      expect(savedAmountFor(budgetRepo, 9)).toBe(0);
+      expect(savedAmountFor(budgetRepo, 10)).toBe(0);
+      expect(savedAmountFor(budgetRepo, 11)).toBe(1500);
+    });
+
+    it('keeps clearing the amount when "yet to be determined" is ticked', async () => {
+      const { budgetRepo } = wireBilateralDependencies();
+      budgetRepo.findOne.mockResolvedValue(null);
+
+      await service.saveBillateralInvestment(11030, 1, {
+        bilateral_expected_investment: [
+          { project_id: 12, kind_cash: 900, is_determined: true },
+        ],
+      } as any);
+
+      expect(savedAmountFor(budgetRepo, 12)).toBeNull();
+    });
+  });
 });
