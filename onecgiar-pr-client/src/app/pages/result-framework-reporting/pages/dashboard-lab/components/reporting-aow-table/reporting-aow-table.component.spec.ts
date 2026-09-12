@@ -2719,4 +2719,210 @@ describe('ReportingAowTableComponent', () => {
       expect(fnSpy).toHaveBeenCalledWith(r);
     });
   });
+
+  describe('keyboard navigation and accessibility', () => {
+    const group1 = group([
+      row({ indicator_id: 101, indicator_description: 'KPI 1' }),
+      row({ indicator_id: 102, indicator_description: 'KPI 2' })
+    ], { aow: { id: 1, code: 'AOW01', name: 'Market Intelligence', progress: 38 } });
+
+    const group2 = group([
+      row({ indicator_id: 201, indicator_description: 'KPI 3' })
+    ], { aow: { id: 2, code: 'AOW02', name: 'Accelerated Breeding', progress: 10 } });
+
+    it('sets inert attribute on collapsed AoW card and removes it when expanded', async () => {
+      await build([group1, group2]);
+
+      const inners = (fixture.nativeElement as HTMLElement).querySelectorAll('.pr-collapse--card > .pr-collapse-inner');
+      expect(inners.length).toBe(2);
+      expect(inners[0].hasAttribute('inert')).toBe(true);
+      expect(inners[1].hasAttribute('inert')).toBe(true);
+
+      // Open first AoW
+      component.toggle('aow::AOW01', false);
+      fixture.detectChanges();
+
+      expect(inners[0].hasAttribute('inert')).toBe(false);
+      expect(inners[1].hasAttribute('inert')).toBe(true);
+    });
+
+    it('sets inert attribute on collapsed HLO sub-group and removes it when expanded', async () => {
+      await build([group1]);
+      // Open AoW first so HLO is visible in DOM
+      component.toggle('aow::AOW01', false);
+      fixture.detectChanges();
+
+      const hloInners = (fixture.nativeElement as HTMLElement).querySelectorAll('.pr-collapse:not(.pr-collapse--card) > .pr-collapse-inner');
+      expect(hloInners.length).toBeGreaterThan(0);
+      // HLO is closed by default, so inert should be present
+      expect(hloInners[0].hasAttribute('inert')).toBe(true);
+
+      // Expand HLO
+      const hloGroup = component.hloGroupsOf(group1)[0];
+      component.toggle(hloGroup.key, false);
+      fixture.detectChanges();
+
+      expect(hloInners[0].hasAttribute('inert')).toBe(false);
+    });
+
+    it('navigates between AoW card headers with ArrowDown, ArrowUp, Home, and End', async () => {
+      await build([group1, group2]);
+
+      const headers = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button[data-aow-header]');
+      expect(headers.length).toBe(2);
+
+      const focusSpy0 = jest.spyOn(headers[0], 'focus');
+      const focusSpy1 = jest.spyOn(headers[1], 'focus');
+
+      // On first header, ArrowDown focuses second header
+      const arrowDownEv = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true });
+      jest.spyOn(arrowDownEv, 'preventDefault');
+      headers[0].dispatchEvent(arrowDownEv);
+      expect(arrowDownEv.preventDefault).toHaveBeenCalled();
+      expect(focusSpy1).toHaveBeenCalled();
+
+      // On second header, ArrowUp focuses first header
+      const arrowUpEv = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true });
+      jest.spyOn(arrowUpEv, 'preventDefault');
+      headers[1].dispatchEvent(arrowUpEv);
+      expect(arrowUpEv.preventDefault).toHaveBeenCalled();
+      expect(focusSpy0).toHaveBeenCalled();
+
+      // End key focuses last header
+      const endEv = new KeyboardEvent('keydown', { key: 'End', bubbles: true });
+      jest.spyOn(endEv, 'preventDefault');
+      headers[0].dispatchEvent(endEv);
+      expect(focusSpy1).toHaveBeenCalled();
+
+      // Home key focuses first header
+      const homeEv = new KeyboardEvent('keydown', { key: 'Home', bubbles: true });
+      jest.spyOn(homeEv, 'preventDefault');
+      headers[1].dispatchEvent(homeEv);
+      expect(focusSpy0).toHaveBeenCalled();
+    });
+
+    it('expands collapsed AoW card on ArrowRight and collapses on ArrowLeft', async () => {
+      await build([group1]);
+
+      const header = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[data-aow-header]')!;
+      expect(component.isOpen('aow::AOW01', false)).toBe(false);
+
+      // ArrowRight expands
+      const arrowRightEv = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true });
+      jest.spyOn(arrowRightEv, 'preventDefault');
+      header.dispatchEvent(arrowRightEv);
+      expect(arrowRightEv.preventDefault).toHaveBeenCalled();
+      expect(component.isOpen('aow::AOW01', false)).toBe(true);
+      fixture.detectChanges();
+
+      // ArrowLeft collapses
+      const arrowLeftEv = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true });
+      jest.spyOn(arrowLeftEv, 'preventDefault');
+      header.dispatchEvent(arrowLeftEv);
+      expect(arrowLeftEv.preventDefault).toHaveBeenCalled();
+      expect(component.isOpen('aow::AOW01', false)).toBe(false);
+    });
+
+    it('navigates HLO sub-group with ArrowRight and ArrowLeft', async () => {
+      await build([group1]);
+      // Open AoW so HLO is in DOM
+      component.toggle('aow::AOW01', false);
+      fixture.detectChanges();
+
+      const hloHeader = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[data-hlo-header]')!;
+      const hloGroup = component.hloGroupsOf(group1)[0];
+      expect(component.isOpen(hloGroup.key, false)).toBe(false);
+
+      // ArrowRight expands HLO
+      const arrowRightEv = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true });
+      hloHeader.dispatchEvent(arrowRightEv);
+      expect(component.isOpen(hloGroup.key, false)).toBe(true);
+      fixture.detectChanges();
+
+      // ArrowLeft collapses HLO
+      const arrowLeftEv = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true });
+      hloHeader.dispatchEvent(arrowLeftEv);
+      expect(component.isOpen(hloGroup.key, false)).toBe(false);
+    });
+
+    it('emits openRow on indicator row when Enter or Space is pressed', async () => {
+      await build([group1]);
+      openAow('AOW01');
+
+      const indicatorRow = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.pr-reporting-row')!;
+      expect(indicatorRow).toBeTruthy();
+
+      const emitSpy = jest.spyOn(component.openRow, 'emit');
+
+      const enterEv = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      jest.spyOn(enterEv, 'preventDefault');
+      indicatorRow.dispatchEvent(enterEv);
+      expect(enterEv.preventDefault).toHaveBeenCalled();
+      expect(emitSpy).toHaveBeenCalledWith(expect.objectContaining({ indicator_id: 101 }));
+
+      const spaceEv = new KeyboardEvent('keydown', { key: ' ', bubbles: true });
+      jest.spyOn(spaceEv, 'preventDefault');
+      indicatorRow.dispatchEvent(spaceEv);
+      expect(spaceEv.preventDefault).toHaveBeenCalled();
+      expect(emitSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('navigates between indicator rows with ArrowDown and ArrowUp', async () => {
+      await build([group1]);
+      openAow('AOW01');
+
+      const indicatorRows = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.pr-reporting-row');
+      expect(indicatorRows.length).toBe(2);
+
+      const focusSpy1 = jest.spyOn(indicatorRows[1], 'focus');
+      const focusSpy0 = jest.spyOn(indicatorRows[0], 'focus');
+
+      // ArrowDown on first row focuses second row
+      const arrowDownEv = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true });
+      jest.spyOn(arrowDownEv, 'preventDefault');
+      indicatorRows[0].dispatchEvent(arrowDownEv);
+      expect(arrowDownEv.preventDefault).toHaveBeenCalled();
+      expect(focusSpy1).toHaveBeenCalled();
+
+      // ArrowUp on second row focuses first row
+      const arrowUpEv = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true });
+      jest.spyOn(arrowUpEv, 'preventDefault');
+      indicatorRows[1].dispatchEvent(arrowUpEv);
+      expect(arrowUpEv.preventDefault).toHaveBeenCalled();
+      expect(focusSpy0).toHaveBeenCalled();
+    });
+
+    it('returns focus to HLO header on ArrowLeft or Escape from an indicator row', async () => {
+      await build([group1]);
+      openAow('AOW01');
+
+      const indicatorRow = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.pr-reporting-row')!;
+      const hloHeader = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('button[data-hlo-header]')!;
+      const hloFocusSpy = jest.spyOn(hloHeader, 'focus');
+
+      const escapeEv = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+      jest.spyOn(escapeEv, 'preventDefault');
+      indicatorRow.dispatchEvent(escapeEv);
+      expect(escapeEv.preventDefault).toHaveBeenCalled();
+      expect(hloFocusSpy).toHaveBeenCalled();
+    });
+
+    it('stops Enter and Space propagation on AoW header child buttons (copy, info)', async () => {
+      await build([group1]);
+
+      const header = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[data-aow-header]')!;
+      const copyBtn = header.querySelector<HTMLButtonElement>('button[aria-label="Copy Area of Work name"]')!;
+      const infoBtn = header.querySelector<HTMLButtonElement>('button[aria-label="About this group"]')!;
+
+      const copyEnterEv = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      const copyStopSpy = jest.spyOn(copyEnterEv, 'stopPropagation');
+      copyBtn.dispatchEvent(copyEnterEv);
+      expect(copyStopSpy).toHaveBeenCalled();
+
+      const infoSpaceEv = new KeyboardEvent('keydown', { key: ' ', bubbles: true });
+      const infoStopSpy = jest.spyOn(infoSpaceEv, 'stopPropagation');
+      infoBtn.dispatchEvent(infoSpaceEv);
+      expect(infoStopSpy).toHaveBeenCalled();
+    });
+  });
 });
