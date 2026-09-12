@@ -34,7 +34,7 @@ Two hardening items recorded in `docs/specs/changes/cognito-email-otp-login/desi
 Both fixes are merged, deployed to TEST and verified (2026-09-12). **No pre-PROD code blocker remains** — only the prerequisites above (PROD account/pool, client, broker credentials).
 
 
-> **Where is the PROD pool? (checked 2026-09-12)** Not in IBD-DEV: the account holds only the TEST pool (`us-east-1`) and a legacy 2-user `OST-TOC` in `eu-west-1` (client `TOC`, 2022). Ask DevOps for the account that owns the pool behind the PROD microservice's `COGNITO_CLIENT_ID` / `COGNITO_USER_POOL_URL`; the PROD stack must be deployed there.
+> **PROD pool identified (2026-09-12):** `us-east-1_obEHCpsMB`, hosted domain `osttoc`, app client `1gne0454…` (**already allows `CUSTOM_AUTH`** — probe answered "Custom auth lambda trigger is not configured for the user pool"). It is **not** in IBD-DEV (`ResourceNotFoundException`): DevOps must name the owning account and either grant a CLI profile with `cognito-idp`, `cloudformation`, `lambda`, `iam`, `logs`, `s3` permissions or run Steps 0–4 themselves in that account. The stack is deployed **in that account, us-east-1**.
 
 ## Step 0 — Before-export of the pool and the client
 
