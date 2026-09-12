@@ -423,3 +423,8 @@ Sources: `design.md` §2.1, §4.1, §5.1, §13; `requirements.md` `OTP-R-8`, `OT
 ### `OTP-T-9` — PRMS TEST deploy (2026-09-11 21:58)
 
 - User: "1. performance-refactor fetch 2. merge from performance-refactor to qa-development-2026 (align) 3. merge qa-development-2026 to performance-refactor". `origin/performance-refactor` `793c367b0` merged into `qa-development-2026` → `64f88b28a` (no conflicts; 16 incoming commits: workflows + other specs); pushed; `performance-refactor` fast-forwarded to `64f88b28a` (0/0 between them). Jenkins TEST deploy of PRMS server + client expected → then the UI HITL.
+
+### Rev 3.1 — `OTP-T-15` first-login auto-provisioning (2026-09-11 22:05)
+
+- User: "se supone que no debo crear el usuario … al hacer login por primera vez se le asigna el rol de guest automáticamente". Verified: the provider flow (`validateAuthCode`) calls `UserService.createOrUpdateUserFromAuthProvider` (guest role via `createGuestRoleForUser`); T-5's OTP path required an existing PRMS user (decoy at `start`, `not_authorized` at `verify`). Spec delta committed `62a9c30f4` (design §18.5, `OTP-R-5`/`OTP-R-3` modified, `OTP-R-36`, `OTP-AC-20/21`, task `OTP-T-15`). TEST DB check: no PRMS user for `<spike mailbox>` nor any `@icrisat.org`/`@cifor-icraf.org` user; allow-list `icrisat.org,cifor-icraf.org`.
+- `OTP-T-15` Implementer `opus`, effort `high` — started; then Reviewer, commit, push, merge to `performance-refactor` (TEST redeploy) before the UI HITL. Note for the HITL with the spike Gmail mailbox: `gmail.com` would have to be added to `OTP_ALLOWED_EMAIL_DOMAINS` on TEST temporarily (user decision).
