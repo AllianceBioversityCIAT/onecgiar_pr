@@ -393,7 +393,11 @@
           sortField="code"
           [sortOrder]="-1"
           [value]="filteredRows()"
-          [loading]="data.loading()">
+          [loading]="data.loading()"
+          [paginator]="filteredRows().length"
+          [rows]="10"
+          [first]="searchDraft() && 0"
+          [rowsPerPageOptions]="[10, 50, 100]">
           <!-- HEADER. The LAST cell is the sticky spacer that keeps the header aligned with the
                sticky actions cell. -->
           <ng-template prTableHeader>

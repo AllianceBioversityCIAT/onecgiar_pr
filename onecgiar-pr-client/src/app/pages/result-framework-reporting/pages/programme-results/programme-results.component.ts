@@ -670,6 +670,20 @@ function formatDate(value: string): string {
         padding: 0 8px;
         background: inherit;
       }
+
+      :host ::ng-deep .pgr-table .pr-paginator {
+        position: sticky;
+        left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--pr-surface-card);
+        border-top: 1px solid var(--pr-border-divider);
+        border-radius: 0 0 11px 11px;
+        box-sizing: border-box;
+      }
     `
   ]
 })

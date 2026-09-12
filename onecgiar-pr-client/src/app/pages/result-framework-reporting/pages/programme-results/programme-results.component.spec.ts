@@ -2066,4 +2066,12 @@ describe('ProgrammeResultsComponent', () => {
       expect(sortSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('pagination and table UX', () => {
+    it('configures table pagination with default 10 rows and page options', () => {
+      const tblInstance = table();
+      expect(tblInstance.paginator).toBe(true);
+      expect(tblInstance.rowsPerPageOptions).toEqual([10, 50, 100]);
+    });
+  });
 });
