@@ -232,6 +232,8 @@ None.
 - `SELECT_CHALLENGE` vs direct `EMAIL_OTP` response shape — pinned by the spike; the microservice handles both.
 - Offering the code path to existing external users (`OTP-R-30`).
 - Federation of the center tenants remains the strategic path (proposal Option C).
+- **(j) Pre-existing a11y gap on `/login`** (found by the `OTP-T-8` CT, 2026-09-11): the support link `<a class="global-link" href="mailto:PRMSTechSupport@cgiar.org">` renders 15 px tall at every viewport, below the 24 px target-size floor (WCAG 2.5.8). Outside this spec's surface (`OTP-AC-13` keeps the existing DOM/styling unchanged); fix in a separate hygiene change (`min-height: 24px` on `.global-link` in `login.component.scss`). The CT's ≥ 24 px gate is therefore scoped to the Center-path controls.
+- **(k) Sonar counts spec files as new code** in `one-cgiar-microservices` (no `sonar.test.inclusions`); duplication in test fixtures fails the gate — configure test exclusions or keep specs deduplicated (PR #39).
 
 ## 14. Size check (Step 2.4)
 Estimate: **9 tasks (+1 conditional) · ~1,250 LOC incl. tests · 1 review round per task** — consistent with Full depth (auth, two repos, cloud runbook). Raised from ~1,050 after judgment-day (JA-13): the §10 inventory (eight service cases, DTO through the pipe, decoy/HMAC helper, throttler subclass, three client specs, CT) did not fit the first figure. Docs that live in shared files (`docs/trd/trd.md`) are **pending default-branch writes**, not task deliverables. Tripwire for `/akili-execute`: > 12 tasks or > 1,500 LOC → stop and escalate.
