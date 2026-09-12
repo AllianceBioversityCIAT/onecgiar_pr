@@ -461,18 +461,27 @@ export class AuthService {
       };
     }
 
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-15, design.md §18.5,
+    // requirements.md §14 OTP-R-3 modified, OTP-R-36) — the lookup is no longer an
+    // existence gate, only an *inactive* gate: a center user does not need a PRMS
+    // record before the first login (the first successful verify creates it with
+    // the guest role, exactly as the CGIAR provider path does). So the filter drops
+    // `active: true` — an inactive row must be seen, not silently missed — and the
+    // relations are gone with it: nothing here consumes `obj_role_by_user` any more
+    // (the verify path now gets its user, with relations, from `UserService`).
     let existingUser: any;
     try {
-      existingUser = await this._userRepository.findOne({
-        where: { email, active: true },
-        relations: ['obj_role_by_user'],
-      });
+      existingUser = await this._userRepository.findOne({ where: { email } });
     } catch {
       logOtpEvent(this._logger, 'start', domain, 'internal_error', startedAt);
       return this.otpUpstreamUnavailableResponse();
     }
 
-    if (!existingUser) {
+    // A deactivated account must never reach Cognito (OTP-R-36): it keeps the
+    // decoy — byte-identical to a real start — so no email is ever sent for it.
+    // An email simply unknown to PRMS falls through to the microservice, where
+    // Cognito's `userNotFound` fake challenge keeps the reply neutral (OTP-R-3).
+    if (existingUser?.active === false) {
       logOtpEvent(this._logger, 'start', domain, 'denied_user', startedAt);
       return {
         response: {
@@ -572,18 +581,24 @@ export class AuthService {
     // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, lens-A advisory)
     // A findOne failure here is PRMS-side (DB/cache), not the microservice —
     // log `internal_error` so the runbook doesn't chase Cognito for it.
+    //
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-15, design.md §18.5) — as in
+    // `startOtp`, this is now an *inactive* gate, not an existence gate: no `active`
+    // filter (an inactive row must be seen) and no relations (the user handed to
+    // `createSuccessfulLoginResponse` comes from `UserService` below, with its
+    // `obj_role_by_user` already loaded). Its second job is telling `provisioned`
+    // from `ok` in the telemetry without a second query.
     let existingUser: any;
     try {
-      existingUser = await this._userRepository.findOne({
-        where: { email, active: true },
-        relations: ['obj_role_by_user'],
-      });
+      existingUser = await this._userRepository.findOne({ where: { email } });
     } catch {
       logOtpEvent(this._logger, 'verify', domain, 'internal_error', startedAt);
       return this.otpUpstreamUnavailableResponse();
     }
 
-    if (!existingUser) {
+    // OTP-R-36 / OTP-AC-21 — a deactivated account gets the same body an unknown
+    // session gets, and never reaches Cognito.
+    if (existingUser?.active === false) {
       logOtpEvent(this._logger, 'verify', domain, 'not_authorized', startedAt);
       return this.otpNotAuthorizedResponse();
     }
@@ -606,11 +621,50 @@ export class AuthService {
         return this.otpNotAuthorizedResponse();
       }
 
-      await this._userRepository.updateLastLoginUserByEmail(email);
-      logOtpEvent(this._logger, 'verify', domain, 'ok', startedAt);
+      // @akili-spec changes/cognito-email-otp-login (OTP-T-15, requirements.md §14
+      // OTP-R-5 modified, OTP-AC-20) — first login provisions the PRMS user exactly
+      // as `validateAuthCode` does: same `createOrUpdateUserFromAuthProvider` call
+      // (which assigns the guest role and returns the user with `obj_role_by_user`
+      // loaded), same `last_login` write, same `createSuccessfulLoginResponse`.
+      // The names come from the ID-token claims; the email never does — the request
+      // email is the one that was normalised, domain-checked and rate-limited.
+      const claims = this.decodeIdTokenClaims(msResult.tokens.idToken);
+      const user = await this._userService.createOrUpdateUserFromAuthProvider({
+        email,
+        given_name: claims.given_name,
+        family_name: claims.family_name,
+        name: claims.name,
+      });
 
-      return this.createSuccessfulLoginResponse(existingUser, msResult.tokens);
+      await this._userRepository.update(
+        { id: user.id, email: user.email },
+        { last_login: new Date() },
+      );
+
+      logOtpEvent(
+        this._logger,
+        'verify',
+        domain,
+        existingUser ? 'ok' : 'provisioned',
+        startedAt,
+      );
+
+      return this.createSuccessfulLoginResponse(user, msResult.tokens);
     } catch (error) {
+      // An account deactivated between the gate above and this call still answers
+      // neutrally — `createOrUpdateUserFromAuthProvider` rethrows the inactive case
+      // as a plain Error, which the generic mapper would otherwise turn into a 503.
+      if (String(error?.message ?? '').includes('User is inactive')) {
+        logOtpEvent(
+          this._logger,
+          'verify',
+          domain,
+          'not_authorized',
+          startedAt,
+        );
+        return this.otpNotAuthorizedResponse();
+      }
+
       const mapped = this.mapOtpVerifyError(error);
       logOtpEvent(this._logger, 'verify', domain, mapped.outcome, startedAt);
       return {
@@ -622,6 +676,22 @@ export class AuthService {
         message: mapped.message,
         status: mapped.status,
       };
+    }
+  }
+
+  /**
+   * @akili-spec changes/cognito-email-otp-login (OTP-T-15, design.md §18.5)
+   * Reads the ID token's claims **without verifying its signature** — the token
+   * came back from our own microservice call, so there is nothing to authenticate
+   * here (verifying it against Cognito is explicitly out of scope). Only the name
+   * claims are ever used; the payload is never logged (OTP-R-11).
+   */
+  private decodeIdTokenClaims(idToken: string): Record<string, any> {
+    try {
+      const claims = this._jwtService.decode(idToken);
+      return claims && typeof claims === 'object' ? claims : {};
+    } catch {
+      return {};
     }
   }
 
