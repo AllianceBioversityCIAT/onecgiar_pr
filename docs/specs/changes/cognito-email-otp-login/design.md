@@ -332,3 +332,7 @@ After D is live in TEST: detach `LambdaConfig` (from a fresh export, writable ke
 ### 19.4 What stays true
 
 Enumeration resistance (decoys for inactive; unknown users get a real row + email only if… — **note:** with D an unknown-in-PRMS email gets a real code email; that is desired (first-login provisioning) and is not an oracle because the response is identical for every allow-listed address). Log hygiene (`OTP-R-11`): the email is stored only as an HMAC, the code only as an HMAC.
+
+### 19.5 Future extraction to the AUTH microservice (decided 2026-09-12: later, not now)
+
+The Option D logic stays in PRMS for this release. When a second application (e.g. PRMS Planning) needs the Center login, extract the code lifecycle to the AUTH microservice (`login/otp/start|verify` returning a signed assertion; each app mints its own session) with a challenge store (DynamoDB/Redis — the microservice has no database and runs with several replicas, so "single use" and "3 attempts" need shared state). Cognito triggers cannot live in the microservice (Cognito invokes Lambdas of its own account/region only).
