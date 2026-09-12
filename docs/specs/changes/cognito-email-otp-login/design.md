@@ -246,3 +246,45 @@ See `requirements.md` `OTP-OQ-7` and `execution.md`: 8-digit code; ~3-min single
 
 ## 17. Judgment Day
 Round 1 (2026-09-11, two blind `opus` judges): 6 confirmed severe findings fixed in this rev 2, 6 warnings applied, 5 suggestions applied; scoped re-judgment waived under the standing pre-approved mandate. Ledger in `judgment.md`.
+
+## 18. Rev 3 — Pivot to Option B: code generated and emailed by PRMS via Cognito `CUSTOM_AUTH` (2026-09-11)
+
+**Decision (user, `OTP-OQ-8`):** the sign-in code must reach the user from a familiar sender and out of spam. Cognito's default sender (`no-reply@verificationemail.com`, 50 mails/day pool-wide) cannot do that, and the SES route (Option C) is pool-wide and blocked by SES sandbox + `cgiar.org` DNS. **Option B** keeps everything PRMS-side (T-4–T-8) and the microservice routes/contract, and replaces only *who generates and sends the code*: Cognito's `CUSTOM_AUTH` flow with three pool triggers that PRMS owns; the code email goes through PRMS's existing pipeline (RabbitMQ `send` → `notification-microservice` → SMTP as `PRMS-No-reply@cgiar.org`, name "PRMS Reporting Tool"). Supersedes §2.2/§4.2's `USER_AUTH`/`EMAIL_OTP` mechanics; `OTP-DD-1` (microservice boundary), `OTP-DD-3` (decoys), `OTP-DD-6` (throttling) stand.
+
+### 18.1 Flow
+
+| Step | Actor | Call / event |
+|---|---|---|
+| 1 | PRMS server (`startOtp`, unchanged) | allow-list + user lookup → decoy for unknown/inactive; else `POST <auth-ms>/auth/login/otp/start { username }` |
+| 2 | AUTH microservice | `InitiateAuth { AuthFlow: CUSTOM_AUTH, ClientId, AuthParameters: { USERNAME, SECRET_HASH } }` (no `PREFERRED_CHALLENGE`, no `SELECT_CHALLENGE` branch) |
+| 3 | Cognito → **DefineAuthChallenge** | first call: `challengeName = CUSTOM_CHALLENGE`, `issueTokens = false`; `userNotFound = true` → still issue a challenge (fake) so the response is indistinguishable |
+| 4 | Cognito → **CreateAuthChallenge** | if a previous session entry carries a code (`challengeMetadata = "CODE-<code>"`) reuse it (no new mail on retries); else generate a 6-digit code with `crypto.randomInt`, set `privateChallengeParameters.answer`, `publicChallengeParameters.destination = <masked email>`, and **emit the email** to the notification queue (`{ auth: { username: MS_NOTIFICATION_USER, password: MS_NOTIFICATION_PASSWORD }, data: ConfigMessageDto }`, `from: { email: EMAIL_SENDER, name: "PRMS Reporting Tool" }`, subject `Your PRMS Reporting Tool sign-in code`, handlebars HTML bundled in the package with the branding block of `user.service.ts:743-750` — logo, `PRMSTechSupport@cgiar.org`); `userNotFound` → no email, random destination mask |
+| 5 | microservice → PRMS | `201 { challengeName: "CUSTOM_CHALLENGE", session, codeDeliveryDestination }` — PRMS maps `challengeName` to its neutral copy exactly as today (the client never sees the name) |
+| 6 | PRMS server (`verifyOtp`, unchanged) → microservice | `RespondToAuthChallenge { ChallengeName: CUSTOM_CHALLENGE, Session, ChallengeResponses: { USERNAME, ANSWER: <code>, SECRET_HASH } }` |
+| 7 | Cognito → **VerifyAuthChallengeResponse** | `answerCorrect = timingSafeEqual(answer, privateChallengeParameters.answer)` |
+| 8 | Cognito → DefineAuthChallenge | `challengeResult = true` → `issueTokens = true`; false and `session.length < 3` → new `CUSTOM_CHALLENGE` (rotated `Session`, same code via metadata); false at 3 → `failAuthentication = true` (`NotAuthorizedException`) |
+| 9 | microservice → PRMS | tokens → `201 { tokens }` as today; **wrong code is not an exception in custom auth**: a reply with `ChallengeName = CUSTOM_CHALLENGE` and no `AuthenticationResult` → `401 { code: "CODE_MISMATCH", message, session: <rotated> }`; `NotAuthorizedException` "Incorrect username or password" after the 3rd miss → `ATTEMPTS_EXCEEDED`; "Invalid session … expired" → `CODE_EXPIRED`; `NEW_PASSWORD_REQUIRED`/other challenge → `CHALLENGE_NOT_SUPPORTED` |
+| 10 | PRMS server → client | `401 OTP_CODE_MISMATCH` **now carries the rotated `session`**; the client stores it before the retry (`OTP-T-13`). Decoy path unchanged. |
+
+Code lifetime = Cognito `AuthSessionValidity` of `general-client` (3 min today; **raise to 5 min** — client-level, isolated — so a slow inbox does not expire the code; record in the runbook). Attempts: 3 per session (Define), independent of PRMS's per-email guard.
+
+### 18.2 Where the pieces live
+
+| Piece | Location | Notes |
+|---|---|---|
+| Triggers package | `one-cgiar-microservices/cognito-triggers/` (new; Node 22, TypeScript, three `handler` exports, `amqplib` only runtime dep) | Not inside the Nest app (cold start, no HTTP surface). Unit-tested with Jest. `template.yaml` (AWS SAM) describes the three functions + env; deploy = HITL (`OTP-T-14`) |
+| Email transport | RabbitMQ `send` pattern of `notification-microservice` (same as `auth-microservice/notification.service.ts:34-40`) | Lambda outside any VPC; broker reachability verified in the first TEST deploy. Fallback recorded: HTTP `POST /send` on `dev-email-notifications-microservice` API Gateway with the `auth` header |
+| Pool wiring | `LambdaConfig.{DefineAuthChallenge, CreateAuthChallenge, VerifyAuthChallengeResponse}` + `lambda:InvokeFunction` permission for `cognito-idp.amazonaws.com` | **Pool-level** but inert for every client without `ALLOW_CUSTOM_AUTH` (today only `general-client` has it — verified 2026-09-11). Apply via console or `--cli-input-json` built from the before-export (§5.4 rule; never a bare `update-user-pool`) |
+| `EMAIL_OTP` factor (T-1) | pool `SignInPolicy.AllowedFirstAuthFactors` | **Roll back** to `[PASSWORD]` after B is live in TEST (runbook rollback); leaves the pool with fewer changes than today |
+| Microservice | `CognitoService.startEmailOtp/verifyEmailOtp` (`OTP-T-12`) | ~40 lines changed, routes/DTOs/filters/interceptor untouched |
+| PRMS | `mapOtpVerifyError` passes `session` through on mismatch; client updates `session` (`OTP-T-13`) | ~20 lines |
+
+### 18.3 Security notes
+
+- The code never leaves Cognito's private parameters except inside the email; `challengeMetadata` is not returned to clients. Logs in the triggers: `{ event, outcome, durationMs, hasSession }` only — never the code, the email or the session (`OTP-R-11`).
+- Enumeration: `userNotFound` still yields a challenge with a random masked destination; PRMS decoys remain the first line.
+- IAM: trigger role = CloudWatch Logs only; broker credentials from Lambda env (Secrets Manager optional follow-up).
+
+### 18.4 Rejected in this pivot
+
+Option C (pool sender → SES + `CustomMessage` Lambda): pool-wide sender change for 10 apps, SES sandbox/production request, `cgiar.org` DNS outside IBD-DEV. `CustomEmailSender` trigger: replaces sending for **all** clients — violates "do not move what works".

@@ -251,3 +251,40 @@ Resolved: `OQ-2` (microservice is ours); `OQ-4` deferred as `OTP-R-30`; `OQ-5` (
 | OTP-R-14 | UI states, responsive, a11y | AC-15 |
 | OTP-R-20/21/22/23 | Resend cooldown, masked destination, pending redirect, remembered email | AC-6, AC-8 |
 | OTP-R-30/31 | Externals on the code path, SES sender | — |
+
+## 13. Rev 1.2 delta — Option B (2026-09-11, resolves `OTP-OQ-8`)
+
+**MODIFIED**
+
+- `OTP-R-7` — stable codes unchanged; **on `CODE_MISMATCH` the microservice and PRMS MUST return the rotated Cognito `session`** so the user can retry without requesting a new code.
+- `OTP-R-4` — "a wrong code keeps the session" now means "the client MUST replace its session with the one returned on mismatch".
+- `OTP-R-13` — provisioning (`CONFIRMED`) stays mandatory: `CUSTOM_AUTH` also requires a confirmed user.
+
+**ADDED**
+
+### Requirement `OTP-R-32`: The code email comes from PRMS
+The sign-in code email SHALL be sent through PRMS's own notification pipeline from the configured PRMS sender (`EMAIL_SENDER`, today `PRMS-No-reply@cgiar.org`) with the display name "PRMS Reporting Tool", a subject that names the tool, and the PRMS branding block (logo, support address). It MUST NOT be sent by Cognito's default sender.
+
+#### Scenario: familiar sender
+- GIVEN an allow-listed, provisioned center user
+- WHEN they request a code
+- THEN one email arrives from "PRMS Reporting Tool <EMAIL_SENDER>" with the 6-digit code
+- AND no email is sent by `no-reply@verificationemail.com`
+- BUT retrying a wrong code MUST NOT send a second email for the same session.
+
+### Requirement `OTP-R-33`: Pool triggers are inert for sibling apps
+The three Cognito triggers SHALL only act on `CUSTOM_AUTH` flows. Sibling app clients without `ALLOW_CUSTOM_AUTH` MUST observe no behaviour change (verified by a sibling smoke in the runbook), and the `EMAIL_OTP` first-factor enabled by `OTP-T-1` SHALL be rolled back once Option B is live.
+
+### Requirement `OTP-R-34`: Code policy
+Codes SHALL be 6 numeric digits from a CSPRNG, one code per Cognito session, at most 3 verification attempts per session, valid for the client's `AuthSessionValidity` (5 min target). Verification MUST use a constant-time comparison. Triggers MUST NOT log the code, the email or the session.
+
+### Requirement `OTP-R-35`: Delivery failure is observable
+If the email cannot be queued, the trigger SHALL still return a challenge (no enumeration signal) and SHALL log `outcome: email_failed`; the support runbook lists it under "code not received".
+
+**Acceptance criteria**
+
+- `OTP-AC-17` — TEST HITL: code received from "PRMS Reporting Tool", not in spam for the spike mailbox (Gmail), within 60 s.
+- `OTP-AC-18` — wrong code twice then the right code → session with roles, one email only; three wrong codes → "Too many attempts — request a new code."
+- `OTP-AC-19` — sibling smoke (`PRMS-Reporting`/`MARLO` password login on TEST) unchanged before/after the trigger wiring.
+
+**Open questions:** `OTP-OQ-8` → **resolved (Option B)**. New `OTP-OQ-9`: broker (`MS_RMQ_HOST`) reachable from a non-VPC Lambda? (answered in `OTP-T-14`, fallback HTTP `POST /send`). `OTP-OQ-1` (PROD account) now also gates the PROD Lambdas.

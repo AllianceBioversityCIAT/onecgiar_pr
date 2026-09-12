@@ -9,7 +9,7 @@
 | Approval Mode | pre-approved (Phase 3 gate: `auto-approved (pre-approved mode)`). **Cognito changes, microservice deploys and PROD steps are HITL inside their tasks** |
 | Status | not-started |
 | Owner / driver | Juan Carlos Cadavid · AKILI Leader |
-| Budget (from `design.md` §14) | 10 tasks (`OTP-T-10` triggered) · ~1,250 LOC incl. tests · ≤ 1 Reviewer round per task; tripwire > 12 tasks or > 1,500 LOC → stop and escalate |
+| Budget (from `design.md` §14) | **14 tasks after the rev 3 pivot** (`OTP-T-10` triggered; `OTP-T-11..14` added for Option B) · ~1,800 LOC incl. tests · ≤ 1 Reviewer round per task; the > 12 tasks / > 1,500 LOC tripwire **fired and was resolved by the user's Option B decision (2026-09-11)** |
 | Repositories | PRMS (`onecgiar-pr-server`, `onecgiar-pr-client`, this checkout) · AUTH microservice (`/Users/jcadavid/Development/one-cgiar-microservices/auth-microservice`, branch `dev-auth`, TEST `authtest-ibd.prms.cgiar.org`) |
 
 ### Execution constraints (inherited — standing mandate 2026-09-02)
@@ -135,7 +135,7 @@
 - **Description:** Docs: `docs/trd/trd.md` auth/integrations rows (**recorded as pending, applied on the default branch — not a deliverable of this branch**), `onecgiar-pr-server/src/CLAUDE.md`/`AGENTS.md` auth line (new public routes under `/auth/*`, the parameter, the fact that `/auth/*` carries no JWT middleware), support runbook entry "code not received" (incl. the *PRMS user not in Cognito* case) in `runbook/cognito-email-otp.md`. **TEST HITL** (Orca browser at `prtest` or local against `authtest-ibd`): set `OTP_ALLOWED_EMAIL_DOMAINS` on TEST; with a real center-domain mailbox: choose → email → code received → wrong code copy → correct code → session with roles; foreign domain copy; unknown user neutral copy; expired code (wait past the pinned expiry); SAML and password logins re-tested; screenshots + `auth.otp.*` log lines (redacted) into `execution.md`. **PROD parity** (after `OTP-OQ-1`): repeat `design.md` §5.4 on the PROD pool with before/after diff; deploy microservice `main-auth` and PRMS; set the PROD parameter last; record `OTP-OQ-8` decision (SES yes/no) with the TEST delivery evidence.
 - **Implements:** `OTP-R-8` (PROD parity), `OTP-R-10` (live re-test), `OTP-R-12` (events observed), `OTP-AC-13`, `OTP-AC-16`; live confirmation of `OTP-AC-4/6/7/8`; the "no automated gate" row of `requirements.md` §9.
 - **Files (expected):** `runbook/cognito-email-otp.md`, `runbook/prod-before.json`, `runbook/prod-after.json`, `onecgiar-pr-server/src/CLAUDE.md`, `onecgiar-pr-server/AGENTS.md`, `execution.md`; `docs/trd/trd.md` (pending, default branch).
-- **Depends on:** `OTP-T-3` (deployed), `OTP-T-7`, `OTP-T-8`; PROD half on `OTP-OQ-1` · **Blocks:** —
+- **Depends on:** `OTP-T-3` (deployed), `OTP-T-7`, `OTP-T-8`, **`OTP-T-13`, `OTP-T-14` (rev 3)**; PROD half on `OTP-OQ-1` (now also the PROD Lambdas) · **Blocks:** —
 - **Estimate:** S · ~40 LOC docs + HITL
 - **Verification:** HITL checklist all ticked with evidence; PROD diff equals the TEST diff (same single field). **Input that fails it:** code never arrives in TEST → `PRODUCT_BUG` (delivery/quota), do not tick. **Disqualifier:** screenshots without the redacted `auth.otp.*` log lines; a PROD step without the before-export.
 - **Definition of done:** guides updated; TRD row pending; TEST evidence recorded; PROD parity done or explicitly parked with its blocker.
@@ -150,6 +150,46 @@
 - **Estimate:** S · ~60 LOC
 - **Verification:** `npm test -- cognito.service` — for a `PASSWORDLESS_DOMAINS` email: `AdminCreateUserCommand` input has **no** `TemporaryPassword`, `MessageAction: 'SUPPRESS'`, `email_verified: 'true'`, welcome email suppressed; for another domain: existing input byte-identical (existing tests unchanged). TEST proof: a user provisioned through the deployed `/auth/register` shows `UserStatus: CONFIRMED` in `admin-get-user` and `InitiateAuth` returns `EMAIL_OTP` directly. **Input that fails it:** drop the domain gate → the external-user regression test fails. **Disqualifier:** any password or temporary password logged.
 - **Definition of done:** tests green; documented; a freshly provisioned TEST center user shows `CONFIRMED` in the pool export.
+
+### `OTP-T-11` — Cognito triggers package (`cognito-triggers/`): Define / Create / Verify + SAM template (TDD)
+
+- **Type:** `microservice` (new package in `one-cgiar-microservices`, branch `dev-auth-otp`)
+- **Description:** New package `cognito-triggers/` (Node 22, TypeScript, Jest, `amqplib` as the only runtime dep): `define-auth-challenge.handler` (first call → `CUSTOM_CHALLENGE`; `challengeResult` true → tokens; 3 misses → `failAuthentication`; `userNotFound` → still a challenge), `create-auth-challenge.handler` (reuse the code from the last session entry's `challengeMetadata`, else `crypto.randomInt` 6 digits; `privateChallengeParameters.answer`; `publicChallengeParameters.destination` masked; emit the PRMS email via the notification queue with the `auth` envelope and `ConfigMessageDto`; `userNotFound` → no email; queue failure → `outcome: email_failed`, challenge still returned), `verify-auth-challenge.handler` (`timingSafeEqual`). Bundled handlebars template with the `user.service.ts:743-750` branding block. `template.yaml` (SAM) with the three functions, env (`MS_RMQ_HOST/USER/PASSWORD`, `MS_QUEUE_PATH`, `MS_NOTIFICATION_QUEUE`, `MS_NOTIFICATION_USER/PASSWORD`, `EMAIL_SENDER`, `APP_URL`), and `lambda:InvokeFunction` permissions for `cognito-idp.amazonaws.com`. README with the deploy + pool-wiring steps (console or `--cli-input-json`).
+- **Implements:** `OTP-R-32`, `OTP-R-33` (trigger side), `OTP-R-34`, `OTP-R-35`, `OTP-R-11`; `design.md` §18.1–18.3.
+- **Depends on:** — · **Blocks:** `OTP-T-14`
+- **Estimate:** M · ~350 LOC incl. tests
+- **Verification:** `npx jest` in the package: define state machine (first / correct / wrong ×2 / wrong ×3 / `userNotFound`), create (fresh code 6 digits, reuse on retry, masked destination, emit payload deep-equals the `auth`+`ConfigMessageDto` shape, no PII in logger calls, queue error → challenge + `email_failed`), verify (correct / wrong / missing answer); `tsc` clean; `sam validate` (or `aws cloudformation validate-template`). **Input that fails it:** create sends a new code on every retry → reuse test fails. **Disqualifiers:** the code, email or session appearing in any log assertion; a `Math.random` code.
+- **Definition of done:** tests green; template validates; README complete; committed on `dev-auth-otp`.
+
+### `OTP-T-12` — Microservice: switch `CognitoService` to `CUSTOM_AUTH` / `CUSTOM_CHALLENGE`
+
+- **Type:** `microservice`
+- **Description:** `startEmailOtp`: `AuthFlow: CUSTOM_AUTH`, drop `PREFERRED_CHALLENGE` and the `SELECT_CHALLENGE` branch, expect `CUSTOM_CHALLENGE`. `verifyEmailOtp`: `ChallengeName: CUSTOM_CHALLENGE`, `ChallengeResponses.ANSWER`; a reply with `ChallengeName === CUSTOM_CHALLENGE` and no `AuthenticationResult` → `401 { code: CODE_MISMATCH, session: <rotated> }`; `NotAuthorizedException` "Incorrect username or password" → `ATTEMPTS_EXCEEDED`; "session … expired" → `CODE_EXPIRED`; other challenge → `CHALLENGE_NOT_SUPPORTED`. Routes, DTOs, filter, interceptor, README contract updated (error row gains `session` on mismatch). Existing tests adjusted only where the flow changed.
+- **Implements:** `OTP-R-7` (modified), `OTP-R-4` (session rotation), `design.md` §18.1 steps 2, 6, 9.
+- **Depends on:** — (mocked Cognito) · **Blocks:** `OTP-T-13`, `OTP-T-14`
+- **Estimate:** S · ~120 LOC incl. tests
+- **Verification:** `npx jest cognito.service auth.otp-routes` + full suite green; request-level test asserts the mismatch body carries `code` **and** `session`; `tsc`; eslint. **Input that fails it:** treating the wrong-code reply as success → tokens test fails. **Disqualifier:** logging the rotated session.
+- **Definition of done:** suite green; README updated; committed on `dev-auth-otp`.
+
+### `OTP-T-13` — PRMS server + client: carry the rotated session on `OTP_CODE_MISMATCH`
+
+- **Type:** `server` + `client`
+- **Description:** `auth.service.ts` `mapOtpVerifyError`: when the microservice body has `code: CODE_MISMATCH` and a `session`, include `session` in the 401 payload (decoy path unchanged — decoys never rotate). Client `CognitoService.verifyOtp` passes `err.error.response.session` to the panel; `CenterOtpPanelComponent` replaces `session` before the retry. Specs for both.
+- **Implements:** `OTP-R-4`, `OTP-R-7` (modified), `OTP-AC-18` (client half).
+- **Depends on:** `OTP-T-12` contract · **Blocks:** `OTP-T-9`
+- **Estimate:** S · ~40 LOC
+- **Verification:** server `npx jest src/auth` (mismatch with session → payload carries it; decoy mismatch → no session key); client `npx jest src/app/pages/login src/app/shared/services/cognito.service.spec.ts` (session replaced on mismatch, kept when absent); `tsc`; lint. **Disqualifier:** a decoy 401 that leaks a `session` field.
+- **Definition of done:** specs green; committed.
+
+### `OTP-T-14` — TEST rollout of Option B (HITL): deploy triggers, wire the pool, smoke, roll back `EMAIL_OTP`
+
+- **Type:** `rollout` (HITL, IBD-DEV profile, user approves each cloud step)
+- **Description:** (1) `sam deploy` (or the README's CLI equivalent) of `cognito-triggers` to IBD-DEV us-east-1 with TEST env (queue + sender); (2) verify broker reachability with one invocation (`OTP-OQ-9`; fallback HTTP `POST /send`); (3) wire `LambdaConfig` on pool `us-east-1_o9y9Yq5pO` **via console or `--cli-input-json` from a fresh before-export** (never a bare `update-user-pool`), grant invoke permissions; (4) raise `general-client` `AuthSessionValidity` 3 → 5 min; (5) deploy `dev-auth-otp` (T-12) to `authtest-ibd`; (6) smoke with the spike mailbox: code from "PRMS Reporting Tool", inbox not spam, wrong ×2 + right → tokens, 3 wrong → `ATTEMPTS_EXCEEDED`; (7) sibling smoke (`OTP-AC-19`); (8) roll back the T-1 `EMAIL_OTP` factor per the runbook and re-run the sibling smoke; before/after exports in `runbook/`.
+- **Implements:** `OTP-R-32`, `OTP-R-33`, `OTP-AC-17`, `OTP-AC-18`, `OTP-AC-19`.
+- **Depends on:** `OTP-T-11`, `OTP-T-12` · **Blocks:** `OTP-T-9`
+- **Estimate:** S · HITL
+- **Verification:** exports diff shows only `LambdaConfig` (+ later only `AllowedFirstAuthFactors` back to `[PASSWORD]`); smoke evidence with redacted log lines in `execution.md`. **Input that fails it:** no email within 60 s → `PRODUCT_BUG`, do not tick. **Disqualifier:** a pool update without the before-export.
+- **Definition of done:** Option B live in TEST; `EMAIL_OTP` factor reverted; evidence recorded.
 
 ## 4. Dependency graph
 
