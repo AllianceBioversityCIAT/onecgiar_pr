@@ -4,88 +4,155 @@
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  styleClass="results-to-update-dialog">
-  <div class="modal_title">
-    Update result
-    <i class="material-icons-round modal_close_icon" (click)="this.api.dataControlSE.updateResultModal = false"> close </i>
-  </div>
-  <div class="modal_container">
-    <div class="description">
-      Here you have the ability to choose a result from a previous phase and replicate its metadata into the current phase. This allows you to
-      conveniently update and modify the information for the current phase.
+  styleClass="rtu-dialog">
+  <header class="rtu-header">
+    <div class="rtu-header__identity">
+      <span class="rtu-header__icon" aria-hidden="true">
+        <span class="material-icons-round">sync_alt</span>
+      </span>
+      <div class="rtu-header__text">
+        <h2 class="rtu-header__title">Update result</h2>
+        <p class="rtu-header__subtitle">Copy metadata from a previous phase into the current reporting phase</p>
+      </div>
+    </div>
+    <button
+      type="button"
+      class="rtu-header__close"
+      aria-label="Close modal"
+      (click)="closeModal()">
+      <span class="material-icons-round">close</span>
+    </button>
+  </header>
+
+  @let filteredResults = this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search;
+
+  <div class="rtu-body">
+    <p class="rtu-intro">
+      Choose a result from an earlier phase, then replicate its metadata into the current phase. You can review the
+      record first or jump straight to the update flow.
+    </p>
+
+    <div class="rtu-toolbar" role="search" aria-label="Filter results to update">
+      <label class="rtu-search">
+        <span class="sr-only">Search results</span>
+        <i class="pi pi-search rtu-search__icon" aria-hidden="true"></i>
+        <input
+          type="search"
+          class="rtu-search__input"
+          placeholder="Search by title, code, or submitter…"
+          [(ngModel)]="text_to_search"
+          autocomplete="off" />
+      </label>
+      @if (filteredResults?.length) {
+        <p class="rtu-showing">
+          Showing {{ filteredResults.length }} of {{ this.api.dataControlSE.resultsList?.length ?? 0 }} eligible results
+        </p>
+      }
     </div>
 
-    <app-pr-field-header label="Result"></app-pr-field-header>
+    <div class="rtu-table-wrap">
+      <app-pr-table
+        id="resultsToUpdateTable"
+        sortField="result_code"
+        [sortOrder]="-1"
+        [value]="filteredResults"
+        [paginator]="!!filteredResults?.length"
+        [rows]="10"
+        styleClass="rtu-pr-table"
+        selectionMode="single"
+        [rowsPerPageOptions]="[10, 50, 100]">
+        <ng-template prTableHeader>
+          <tr>
+            <th id="result_code" prSortableColumn="result_code" style="width: 96px">
+              <div class="rtu-th">
+                <pr-sort-icon field="result_code"></pr-sort-icon>
+                Code
+              </div>
+            </th>
+            @for (column of columnOrder; track column.attr) {
+              <th [id]="column.attr" [prSortableColumn]="column.attr" [style.width]="column.width">
+                <div class="rtu-th">
+                  <pr-sort-icon [field]="column.attr"></pr-sort-icon>
+                  {{ column.title }}
+                </div>
+              </th>
+            }
+            @if (!this.api.rolesSE.platformIsClosed) {
+              <th id="actions" class="rtu-th-action" style="width: 168px">Actions</th>
+            }
+          </tr>
+        </ng-template>
 
-    <div class="search_input">
-      <i class="material-icons-round">search</i>
-      <input type="text" placeholder="Find result..." [(ngModel)]="this.text_to_search" />
-    </div>
+        <ng-template prTableBody let-result>
+          <tr class="rtu-row">
+            <td>
+              <span class="rtu-code">{{ result?.result_code }}</span>
+            </td>
+            @for (column of columnOrder; track column.attr) {
+              <td [class]="'rtu-td rtu-td--' + column.attr">
+                @if (column.attr === 'title') {
+                  <div class="rtu-title-cell">
+                    @if (result.is_new && !result.legacy_id) {
+                      <span class="rtu-badge rtu-badge--new">New</span>
+                    }
+                    @if (result.legacy_id) {
+                      <span class="rtu-badge rtu-badge--legacy">Pre 2022</span>
+                    }
+                    <span class="rtu-title-cell__text" [attr.title]="result.title">{{ result.title }}</span>
+                  </div>
+                } @else if (column.attr === 'result_type') {
+                  <div class="rtu-type-cell">
+                    <span
+                      class="rtu-type-dot"
+                      [style.background]="'var(--pr-color-result-level-' + result?.result_level_id + ')'"
+                      aria-hidden="true"></span>
+                    <span class="rtu-plain">{{ result[column.attr] }}</span>
+                  </div>
+                } @else if (column.attr === 'created_date') {
+                  <span class="rtu-date">{{ result[column.attr] | date: 'yyyy-MM-dd' }}</span>
+                } @else if (column.attr === 'submitter') {
+                  <span class="rtu-mono">{{ result[column.attr] || '—' }}</span>
+                } @else {
+                  <span class="rtu-plain">{{ result[column.attr] || '—' }}</span>
+                }
+              </td>
+            }
+            @if (!this.api.rolesSE.platformIsClosed) {
+              <td>
+                <div class="rtu-actions">
+                  <a
+                    class="rtu-btn rtu-btn--outline"
+                    [href]="viewResultHref(result)"
+                    target="_blank"
+                    rel="noopener noreferrer">
+                    View
+                  </a>
+                  <button
+                    type="button"
+                    class="rtu-btn rtu-btn--primary"
+                    [disabled]="result.result_type_id === 3"
+                    [attr.title]="
+                      result.result_type_id === 3
+                        ? 'This functionality is not available for capacity change result types.'
+                        : 'Update this result for the current phase'
+                    "
+                    (click)="onPressAction(result)">
+                    Update
+                  </button>
+                </div>
+              </td>
+            }
+          </tr>
+        </ng-template>
 
-    <app-pr-table
-      id="resultListTable"
-      sortField="result_code"
-      [sortOrder]="-1"
-      [value]="this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search"
-      [paginator]="(this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search)?.length"
-      [rows]="10"
-      selectionMode="single"
-      [rowsPerPageOptions]="[10, 50, 100]">
-      <ng-template prTableHeader>
-        <tr>
-          <th id="result_code" prSortableColumn="result_code"><pr-sort-icon field="result_code"></pr-sort-icon>Result code</th>
-          <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
-            <pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}
-          </th>
-          <th *ngIf="!this.api.rolesSE.platformIsClosed" id="actions">Action</th>
-        </tr>
-      </ng-template>
-      <ng-template prTableBody let-result>
-        <tr>
-          <td>
-            {{ result?.result_code }}
-          </td>
-          <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}" style="max-width: 440px">
-            <ng-container>
-              <a class="{{ column.class }}">
-                <div
-                  class="point"
-                  [style.background]="'var(--pr-color-result-level-' + result?.result_level_id + ')'"
-                  *ngIf="column.attr === 'result_type'"></div>
-
-                <div class="new_tag" *ngIf="i == 0 && result.is_new && !result.legacy_id">New</div>
-                <div class="new_tag pre" *ngIf="i == 0 && result.legacy_id">Pre 2022</div>
-                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'yyyy-MM-dd') }}
-              </a>
-            </ng-container>
-          </td>
-          <td>
-            <div class="actions_buttons">
-              <a [href]="'/result/result-detail/' + result?.result_code + '?phase=' + result?.version_id" target="_blank" class="link_button view"
-                >View</a
-              >
-              <app-pr-button
-                text="Update"
-                [verticalMargin]="0"
-                (clickEvent)="onPressAction(result)"
-                [disabled]="result.result_type_id === 3"
-                [tooltipText]="result.result_type_id === 3 ? 'This functionality is not available for capacity change result types.' : null"></app-pr-button>
-            </div>
-          </td>
-        </tr>
-      </ng-template>
-
-      <ng-template prTableEmpty>
-        <tr style="height: 200px">
-          <td colspan="10" class="noDataText">There are no results for the selected filters.</td>
-        </tr>
-      </ng-template>
-    </app-pr-table>
-
-    <div class="total" *ngIf="(this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search)?.length">
-      Total: {{ (this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search)?.length }}/{{
-        this.api.dataControlSE.resultsList?.length
-      }}
+        <ng-template prTableEmpty>
+          <tr>
+            <td [attr.colspan]="columnOrder.length + 2" class="rtu-empty">
+              There are no results matching your search in earlier phases.
+            </td>
+          </tr>
+        </ng-template>
+      </app-pr-table>
     </div>
   </div>
 </app-pr-dialog>
