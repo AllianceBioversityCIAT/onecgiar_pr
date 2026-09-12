@@ -213,7 +213,7 @@
 - **Verification:** `npx jest --silent --reporters=summary --forceExit src/auth` (start: row created, email DTO deep-equals the expected shape with the code in HTML/text only, response identical in shape to the decoy; verify: mismatch → attempts+1 + rotated session (same nonce), 3 misses → attempts exceeded, expired, consumed → not authorized, match → consumed + provisioning + session with no Cognito tokens; decoy path unchanged; nothing logs the code/email); `npm run migration:check`; `tsc`; eslint. **Disqualifiers:** plaintext code or email stored; a session that reveals real vs decoy.
 - **Definition of done:** specs green; migration checked; committed.
 
-### `OTP-T-17` — PRMS server: skip Cognito registration for allow-listed domains
+### [x] `OTP-T-17` — PRMS server: skip Cognito registration for allow-listed domains
 
 - **Type:** `server` · **Estimate:** S · ~40 LOC
 - **Description:** in `UserService` registration (`registerInCognitoIfNeeded` and the temporary-password email), when the email domain is in `OTP_ALLOWED_EMAIL_DOMAINS` skip both; log outcome `otp_domain_skip_cognito`; tests. **Implements:** `OTP-AC-24`, `OTP-R-13` (modified). **Depends on:** — · **Blocks:** `OTP-T-18`.
