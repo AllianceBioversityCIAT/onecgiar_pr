@@ -37,6 +37,14 @@ import { GlobalParameterRepository } from '../../../api/global-parameter/reposit
 // resolve dependencies of the AuthService (... GlobalParameterCacheService at
 // index [5] is not available in the UserModule context)".
 import { GlobalParameterCacheModule } from '../../../shared/services/cache/global-parameter-cache.module';
+// @akili-spec changes/cognito-email-otp-login (OTP-T-16, design.md §19.1) —
+// AuthService (also provided by this module, see the composition-fix note above)
+// now depends on OtpChallengeService; without its own TypeOrmModule.forFeature
+// registration in THIS module's DI context, Nest cannot resolve the
+// `@InjectRepository(OtpChallenge)` token here (same failure mode the note above
+// describes for GlobalParameterCacheService).
+import { OtpChallenge } from '../../otp/otp-challenge.entity';
+import { OtpChallengeService } from '../../otp/otp-challenge.service';
 
 @Global()
 @Module({
@@ -52,11 +60,12 @@ import { GlobalParameterCacheModule } from '../../../shared/services/cache/globa
     ActiveDirectoryService,
     VersionRepository,
     GlobalParameterRepository,
+    OtpChallengeService,
   ],
   imports: [
     UserModule,
     RoleModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, OtpChallenge]),
     JwtModule,
     RoleByUserModule,
     AuthMicroserviceModule,

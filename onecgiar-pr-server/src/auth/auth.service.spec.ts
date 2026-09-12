@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHmac } from 'crypto';
+import { FindOperator } from 'typeorm';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './modules/user/user.service';
@@ -14,6 +15,12 @@ import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
 import { OtpStartDto } from './dto/otp-start.dto';
 import { OtpVerifyDto } from './dto/otp-verify.dto';
+// @akili-spec changes/cognito-email-otp-login (OTP-T-16) — PRMS now owns the code
+// lifecycle and sends the email itself; Cognito is off the Center path entirely.
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { OtpChallenge } from './otp/otp-challenge.entity';
+import { OtpChallengeService } from './otp/otp-challenge.service';
+import { EmailNotificationManagementService } from '../shared/microservices/email-notification-management/email-notification-management.service';
 
 jest.mock('pusher', () => {
   return jest.fn().mockImplementation(() => ({
@@ -28,6 +35,67 @@ describe('AuthService', () => {
   let handlersError: HandlersError;
   let authMicroservice: AuthMicroserviceService;
   let globalParameterCacheService: GlobalParameterCacheService;
+  let otpChallengeService: OtpChallengeService;
+  let emailNotification: EmailNotificationManagementService;
+
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-16) — an in-memory stand-in
+  // for the `otp_challenges` table. The REAL `OtpChallengeService` runs on top of
+  // it, so every HMAC, attempt count and consume in these tests is the production
+  // construction, not a canned mock answer.
+  let otpRows: any[];
+  const otpRepositoryMock = {
+    save: jest.fn(async (row: any) => {
+      otpRows.push({ id: otpRows.length + 1, created_at: new Date(), ...row });
+      return row;
+    }),
+    findOne: jest.fn(
+      async ({ where: { nonce } }: any) =>
+        otpRows.find((row) => row.nonce === nonce) ?? null,
+    ),
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-16, reviewer advisory) —
+    // both mocks implement the SAME conditional semantics the real `UPDATE …
+    // WHERE …` statements do: a `FindOperator` in the criteria (`LessThan`,
+    // `IsNull`) is a real WHERE clause, not decoration, so `affected` is 0 whenever
+    // the row no longer matches it by the time the "statement" runs — exactly what
+    // makes the two concurrency fixes below observable against this in-memory row
+    // store instead of a live MySQL connection.
+    increment: jest.fn(async (where: any, field: string, by: number) => {
+      const row = otpRows.find((candidate) => candidate.nonce === where.nonce);
+      if (!row) return { affected: 0 };
+      const ceiling = where.attempts;
+      if (
+        ceiling instanceof FindOperator &&
+        ceiling.type === 'lessThan' &&
+        !(row.attempts < ceiling.value)
+      ) {
+        return { affected: 0 };
+      }
+      row[field] += by;
+      return { affected: 1 };
+    }),
+    update: jest.fn(async (where: any, patch: any) => {
+      const row = otpRows.find((candidate) => candidate.nonce === where.nonce);
+      if (!row) return { affected: 0 };
+      const unconsumed = where.consumed_at;
+      if (
+        unconsumed instanceof FindOperator &&
+        unconsumed.type === 'isNull' &&
+        row.consumed_at != null
+      ) {
+        return { affected: 0 };
+      }
+      Object.assign(row, patch);
+      return { affected: 1 };
+    }),
+    delete: jest.fn(async () => ({ affected: 0 })),
+  };
+
+  /** The code as the user receives it: read back out of the email that was sent. */
+  const codeFromLastEmail = (): string => {
+    const calls = (emailNotification.sendEmail as jest.Mock).mock.calls;
+    const text = calls[calls.length - 1][0].emailBody.message.text as string;
+    return /\b(\d{6})\b/.exec(text)[1];
+  };
 
   const mockUser = {
     id: 1,
@@ -66,18 +134,12 @@ describe('AuthService', () => {
     active: false,
   };
 
-  // @akili-spec changes/cognito-email-otp-login (OTP-T-15) — an obviously fake,
-  // unsigned ID token: the signature is never verified (the tokens come from our
-  // own microservice call), only the base64url payload is decoded.
-  const buildFakeIdToken = (claims: Record<string, unknown>): string =>
-    `fake-header.${Buffer.from(JSON.stringify(claims)).toString(
-      'base64url',
-    )}.fake-signature`;
-
   const mockJwtToken = 'mock-jwt-token';
 
   beforeEach(async () => {
     process.env.JWT_SKEY = 'test-secret';
+    process.env.EMAIL_SENDER = 'PRMS-No-reply@cgiar.org';
+    otpRows = [];
     process.env.PUSHER_APP_ID = 'test-app-id';
     process.env.PUSHER_API_KEY = 'test-api-key';
     process.env.PUSHER_API_SECRET = 'test-api-secret';
@@ -149,10 +211,23 @@ describe('AuthService', () => {
             clearCacheByKey: jest.fn(),
           },
         },
+        OtpChallengeService,
+        {
+          provide: getRepositoryToken(OtpChallenge),
+          useValue: otpRepositoryMock,
+        },
+        {
+          provide: EmailNotificationManagementService,
+          useValue: { sendEmail: jest.fn() },
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    otpChallengeService = module.get<OtpChallengeService>(OtpChallengeService);
+    emailNotification = module.get<EmailNotificationManagementService>(
+      EmailNotificationManagementService,
+    );
     userService = module.get<UserService>(UserService);
     userRepository = module.get<UserRepository>(UserRepository);
     handlersError = module.get<HandlersError>(HandlersError);
@@ -647,7 +722,8 @@ describe('AuthService', () => {
         valid: false,
         code: 'OTP_DOMAIN_NOT_ALLOWED',
       });
-      expect(authMicroservice.startEmailOtp).not.toHaveBeenCalled();
+      expect(otpRepositoryMock.save).not.toHaveBeenCalled();
+      expect(emailNotification.sendEmail).not.toHaveBeenCalled();
       expect(userRepository.findOne).not.toHaveBeenCalled();
       expect(
         logSpy.mock.calls.some((call) =>
@@ -656,31 +732,23 @@ describe('AuthService', () => {
       ).toBe(true);
     });
 
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15, design.md §18.5,
-    // requirements.md §14 OTP-R-3 modified / OTP-R-5 modified) — REPLACES the T-5
-    // test "(b)(c) unknown user gets a decoy, no MS call". A center user no longer
-    // needs a PRMS record before the first login: an allow-listed, unknown-in-PRMS
-    // email now goes straight to the microservice and Cognito decides (its
-    // `userNotFound` fake challenge keeps the response neutral).
-    it('(b)(c)(T-15) an allow-listed email with no PRMS record reaches the microservice and logs outcome sent', async () => {
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-16, design.md §19.1) —
+    // REPLACES the T-15 test "…reaches the microservice". PRMS now creates the
+    // challenge row and sends the email itself; no Cognito call exists on this path.
+    it('(T-16) an allow-listed email with no PRMS record gets a challenge row, the code email, and outcome sent', async () => {
       jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-      jest
-        .spyOn(authMicroservice, 'startEmailOtp')
-        .mockResolvedValue({ session: 'cognito-real-session' } as any);
       const logSpy = jest.spyOn((service as any)._logger, 'log');
 
       const result = await service.startOtp({
         email: 'unknown@icrisat.org',
       } as OtpStartDto);
 
-      expect(authMicroservice.startEmailOtp).toHaveBeenCalledTimes(1);
-      expect(authMicroservice.startEmailOtp).toHaveBeenCalledWith(
-        'unknown@icrisat.org',
-      );
+      expect(otpRows).toHaveLength(1);
+      expect(emailNotification.sendEmail).toHaveBeenCalledTimes(1);
       expect(result.status).toBe(HttpStatus.OK);
       expect(result.response).toEqual({
         sent: true,
-        session: 'cognito-real-session',
+        session: expect.any(String),
         destination: 'u***@icrisat.org',
       });
       expect(result.message).toBe(
@@ -693,16 +761,104 @@ describe('AuthService', () => {
       ).toBe(true);
     });
 
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15, OTP-R-36, OTP-AC-21) —
-    // the decoy survives for `active = false`: a deactivated account must never
-    // reach Cognito, and its body must be indistinguishable from a real start.
-    it('(T-15/OTP-R-36) an inactive PRMS user gets the decoy at start, no MS call, and a body indistinguishable from a real one', async () => {
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-16, requirements.md §15
+    // OTP-R-32 modified) — the exact DTO handed to the PRMS mail pipeline.
+    it('(T-16/OTP-R-32) sends the branded PRMS email carrying the code in both bodies', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+
+      await service.startOtp({ email: 'A@Icrisat.ORG ' } as OtpStartDto);
+
+      const code = codeFromLastEmail();
+      expect(code).toMatch(/^\d{6}$/);
+      expect(emailNotification.sendEmail).toHaveBeenCalledWith({
+        from: {
+          email: 'PRMS-No-reply@cgiar.org',
+          name: 'PRMS Reporting Tool -',
+        },
+        emailBody: {
+          subject: 'Your PRMS Reporting Tool sign-in code',
+          to: ['a@icrisat.org'],
+          cc: [],
+          bcc: '',
+          message: {
+            text: expect.stringContaining(code),
+            socketFile: expect.stringContaining(code),
+          },
+        },
+      });
+      // The HTML body is the branded one, not the plain-text alternative.
+      const dto = (emailNotification.sendEmail as jest.Mock).mock.calls[0][0];
+      expect(dto.emailBody.message.socketFile).toContain(
+        'Email_PRMS_Header.png',
+      );
+      expect(dto.emailBody.message.socketFile).toContain(
+        'The code expires in 5 minutes and can only be used once.',
+      );
+    });
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-16, design.md §19.1) — the
+    // session handed back is the SAME signed encoder the decoy uses, carrying the
+    // challenge's own nonce and expiry: real and decoy sessions stay byte-shaped
+    // alike, and only the presence of a row for the nonce tells them apart.
+    it('(T-16) the real session is a verifiable decoy-encoded blob carrying the challenge nonce and expiry', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+
+      const result = await service.startOtp({
+        email: 'a@icrisat.org',
+      } as OtpStartDto);
+
+      const parsed = (service as any).verifyDecoySession(
+        result.response.session,
+        'a@icrisat.org',
+      );
+      expect(parsed.isDecoy).toBe(true);
+      expect(parsed.expired).toBe(false);
+      expect(parsed.nonce).toBe(otpRows[0].nonce);
+      expect(parsed.exp).toBe(otpRows[0].expires_at.getTime());
+      expect(result.response.session.length).toBeGreaterThanOrEqual(1400);
+      expect(result.response.session.length).toBeLessThanOrEqual(1700);
+    });
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-16, requirements.md §13
+    // OTP-R-35) — a mail pipeline that will not take the message must NOT leak that
+    // fact to the caller: neutral 200, outcome `email_failed` for the runbook.
+    it('(OTP-R-35) a failing email still answers the neutral 200 and logs outcome email_failed', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+      jest.spyOn(emailNotification, 'sendEmail').mockImplementation(() => {
+        throw new Error('broker down');
+      });
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+
+      const result = await service.startOtp({
+        email: 'a@icrisat.org',
+      } as OtpStartDto);
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect(result.response).toEqual({
+        sent: true,
+        session: expect.any(String),
+        destination: 'a***@icrisat.org',
+      });
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'email_failed'"),
+        ),
+      ).toBe(true);
+    });
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-16, OTP-R-36, OTP-AC-21) —
+    // the decoy survives for `active = false`: a deactivated account gets no row and
+    // no email, and its body must be indistinguishable from a real start.
+    it('(OTP-R-36) an inactive PRMS user gets the decoy at start — no row, no email — with a body indistinguishable from a real one', async () => {
       jest
         .spyOn(userRepository, 'findOne')
         .mockResolvedValueOnce(mockOtpUser as any);
-      jest
-        .spyOn(authMicroservice, 'startEmailOtp')
-        .mockResolvedValueOnce({ session: 'cognito-real-session' } as any);
 
       const realResult = await service.startOtp({
         email: 'a@icrisat.org',
@@ -717,11 +873,9 @@ describe('AuthService', () => {
         email: 'inactive@icrisat.org',
       } as OtpStartDto);
 
-      // Only the active user's start reached the microservice.
-      expect(authMicroservice.startEmailOtp).toHaveBeenCalledTimes(1);
-      expect(authMicroservice.startEmailOtp).toHaveBeenCalledWith(
-        'a@icrisat.org',
-      );
+      // Only the active user's start created a challenge and sent a code.
+      expect(otpRows).toHaveLength(1);
+      expect(emailNotification.sendEmail).toHaveBeenCalledTimes(1);
 
       expect(inactiveResult.status).toBe(realResult.status);
       expect(inactiveResult.status).toBe(HttpStatus.OK);
@@ -740,8 +894,20 @@ describe('AuthService', () => {
           inactiveResult.response.session,
           'inactive@icrisat.org',
         ),
-      ).toEqual({ isDecoy: true, expired: false, exp: expect.any(Number) });
-      expect(realResult.response.session).toBe('cognito-real-session');
+      ).toEqual({
+        isDecoy: true,
+        expired: false,
+        exp: expect.any(Number),
+        nonce: expect.any(String),
+      });
+      // Byte-shape parity with the real one: same layout, same jitter class.
+      expect(realResult.response.session).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(
+        Math.abs(
+          realResult.response.session.length -
+            inactiveResult.response.session.length,
+        ),
+      ).toBeLessThanOrEqual(300);
       expect(
         logSpy.mock.calls.some((call) =>
           String(call[0]).includes("outcome: 'denied_user'"),
@@ -886,7 +1052,12 @@ describe('AuthService', () => {
       samples.slice(0, 25).forEach((s) => {
         expect(
           (service as any).verifyDecoySession(s, 'sample@icrisat.org'),
-        ).toEqual({ isDecoy: true, expired: false, exp: expect.any(Number) });
+        ).toEqual({
+          isDecoy: true,
+          expired: false,
+          exp: expect.any(Number),
+          nonce: expect.any(String),
+        });
       });
     });
 
@@ -948,6 +1119,7 @@ describe('AuthService', () => {
         isDecoy: true,
         expired: false,
         exp,
+        nonce: original.slice(43, 65),
       });
 
       const rotated = (service as any).buildDecoySession(email, exp);
@@ -1035,6 +1207,15 @@ describe('AuthService', () => {
             provide: GlobalParameterCacheService,
             useValue: { getParam: jest.fn(), clearCacheByKey: jest.fn() },
           },
+          OtpChallengeService,
+          {
+            provide: getRepositoryToken(OtpChallenge),
+            useValue: otpRepositoryMock,
+          },
+          {
+            provide: EmailNotificationManagementService,
+            useValue: { sendEmail: jest.fn() },
+          },
         ],
       }).compile();
       const serviceWithoutSkey =
@@ -1050,7 +1231,12 @@ describe('AuthService', () => {
       expect(decoyA).not.toBe(decoyB);
       expect(
         (serviceWithoutSkey as any).verifyDecoySession(decoyA, 'a@icrisat.org'),
-      ).toEqual({ isDecoy: true, expired: false, exp: expect.any(Number) });
+      ).toEqual({
+        isDecoy: true,
+        expired: false,
+        exp: expect.any(Number),
+        nonce: expect.any(String),
+      });
 
       if (original === undefined) {
         delete process.env.JWT_SKEY;
@@ -1059,34 +1245,17 @@ describe('AuthService', () => {
       }
     });
 
-    it('(g) returns 503 OTP_UPSTREAM_UNAVAILABLE when the microservice call fails', async () => {
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'startEmailOtp').mockRejectedValue({
-        status: 502,
-        response: { code: 'UPSTREAM_ERROR' },
-      });
-
-      const result = await service.startOtp({
-        email: 'a@icrisat.org',
-      } as OtpStartDto);
-
-      expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
-      expect(result.response).toEqual({
-        valid: false,
-        code: 'OTP_UPSTREAM_UNAVAILABLE',
-      });
-    });
-
-    // (p) — a resolved (not rejected) MS reply missing `session` is also 503 upstream_error.
-    it('(p) returns 503 OTP_UPSTREAM_UNAVAILABLE when the microservice start reply has no session', async () => {
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-16) — REPLACES the T-5/T-15
+    // "(g)/(p) microservice call fails / reply has no session" pair: there is no
+    // microservice on this path any more. The remaining way `start` can fail is the
+    // challenge write, and it keeps the same neutral 503 the client already handles.
+    it('(g) returns 503 OTP_UPSTREAM_UNAVAILABLE and logs internal_error when the challenge cannot be stored', async () => {
       jest
         .spyOn(userRepository, 'findOne')
         .mockResolvedValue(mockOtpUser as any);
       jest
-        .spyOn(authMicroservice, 'startEmailOtp')
-        .mockResolvedValue({} as any);
+        .spyOn(otpChallengeService, 'create')
+        .mockRejectedValue(new Error('db down'));
       const logSpy = jest.spyOn((service as any)._logger, 'log');
 
       const result = await service.startOtp({
@@ -1098,9 +1267,10 @@ describe('AuthService', () => {
         valid: false,
         code: 'OTP_UPSTREAM_UNAVAILABLE',
       });
+      expect(emailNotification.sendEmail).not.toHaveBeenCalled();
       expect(
         logSpy.mock.calls.some((call) =>
-          String(call[0]).includes("outcome: 'upstream_error'"),
+          String(call[0]).includes("outcome: 'internal_error'"),
         ),
       ).toBe(true);
     });
@@ -1125,7 +1295,7 @@ describe('AuthService', () => {
           String(call[0]).includes("outcome: 'internal_error'"),
         ),
       ).toBe(true);
-      expect(authMicroservice.startEmailOtp).not.toHaveBeenCalled();
+      expect(otpRepositoryMock.save).not.toHaveBeenCalled();
     });
 
     it('logs internal_error (still 503 neutral) when findOne throws', async () => {
@@ -1145,98 +1315,81 @@ describe('AuthService', () => {
           String(call[0]).includes("outcome: 'internal_error'"),
         ),
       ).toBe(true);
-      expect(authMicroservice.startEmailOtp).not.toHaveBeenCalled();
+      expect(otpRepositoryMock.save).not.toHaveBeenCalled();
+      expect(emailNotification.sendEmail).not.toHaveBeenCalled();
     });
   });
 
-  describe('verifyOtp', () => {
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15) — UPDATED from T-5: the
-    // user handed to `createSuccessfulLoginResponse` is now the one returned by
-    // `UserService.createOrUpdateUserFromAuthProvider` (the provider flow's step),
-    // and `last_login` is written exactly as `validateAuthCode` writes it.
-    it('(e) verify success deep-equals createSuccessfulLoginResponse for the same tokens and the provisioned/updated user', async () => {
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-16, design.md §19.1,
+  // requirements.md §15 OTP-R-37/OTP-R-38) — REPLACES every `verifyOtp` describe
+  // that mocked `AuthMicroserviceService`. There is no Cognito call on this path
+  // any more: each test drives a REAL `start` (real challenge row, real HMACs,
+  // real session encoder) and reads the code back out of the email exactly as the
+  // user reads it, then verifies against that.
+  describe('verifyOtp (PRMS-owned challenge)', () => {
+    /** Runs a real `start` and returns what the user ends up holding. */
+    const startFor = async (
+      email: string,
+    ): Promise<{ session: string; code: string }> => {
+      const started = await service.startOtp({ email } as OtpStartDto);
+      return {
+        session: started.response.session as string,
+        code: codeFromLastEmail(),
+      };
+    };
+
+    beforeEach(() => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue('icrisat.org');
       jest
         .spyOn(userRepository, 'findOne')
         .mockResolvedValue(mockOtpUser as any);
       jest
-        .spyOn(authMicroservice, 'verifyEmailOtp')
-        .mockResolvedValue({ tokens: mockAuthResponse.tokens } as any);
-      jest
         .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
         .mockResolvedValue(mockOtpUser as any);
+    });
+
+    it('(OTP-R-38) the right code consumes the challenge, provisions through the provider path and returns a session with NO Cognito tokens', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
       const logSpy = jest.spyOn((service as any)._logger, 'log');
 
       const expected = (service as any).createSuccessfulLoginResponse(
         mockOtpUser,
-        mockAuthResponse.tokens,
+        null,
       );
 
       const result = await service.verifyOtp({
         email: 'A@ICRISAT.ORG',
-        code: '123456',
-        session: 'cognito-real-session',
+        code,
+        session,
       } as OtpVerifyDto);
 
       expect(result).toEqual(expected);
+      expect(result.response.valid).toBe(true);
+      expect(result.response.token).toBe(mockJwtToken);
+      // OTP-R-38 — no `auth_tokens` for a center session; nothing downstream reads it.
+      expect(result.response).not.toHaveProperty('auth_tokens');
+      // The challenge is spent.
+      expect(otpRows[0].consumed_at).toEqual(expect.any(Date));
+      // Provisioning runs with the request email only — no names exist on this path.
+      expect(
+        userService.createOrUpdateUserFromAuthProvider,
+      ).toHaveBeenCalledWith({ email: 'a@icrisat.org' });
       expect(userRepository.update).toHaveBeenCalledWith(
         { id: mockOtpUser.id, email: mockOtpUser.email },
         { last_login: expect.any(Date) },
       );
-      expect(userRepository.findOne).toHaveBeenCalledWith({
-        where: { email: 'a@icrisat.org' },
-      });
-      // An already-known active user is `ok`, never `provisioned`.
       expect(
         logSpy.mock.calls.some((call) =>
           String(call[0]).includes("outcome: 'ok'"),
         ),
       ).toBe(true);
-      expect(
-        logSpy.mock.calls.some((call) =>
-          String(call[0]).includes("outcome: 'provisioned'"),
-        ),
-      ).toBe(false);
     });
 
-    it('(e′) a fixture user without roles gets 403 needsRoles on the OTP path exactly as singIn', async () => {
-      const userWithoutRoles = { ...mockOtpUser, obj_role_by_user: [] };
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(userWithoutRoles as any);
-      jest
-        .spyOn(authMicroservice, 'verifyEmailOtp')
-        .mockResolvedValue({ tokens: mockAuthResponse.tokens } as any);
-      jest
-        .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
-        .mockResolvedValue(userWithoutRoles as any);
-
-      const result = await service.verifyOtp({
-        email: 'a@icrisat.org',
-        code: '123456',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      expect(result.status).toBe(HttpStatus.FORBIDDEN);
-      expect(result.response.needsRoles).toBe(true);
-    });
-
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15, design.md §18.5,
-    // requirements.md §14 OTP-R-5 modified, OTP-AC-20) — first login provisions the
-    // PRMS user from the ID-token claims, exactly as the CGIAR provider flow does.
-    it('(T-15/OTP-AC-20) a successful verify with no PRMS record provisions the user from the ID-token claims, logs provisioned, and returns the provider-flow login response', async () => {
+    it('(OTP-AC-20) an email with no PRMS record is provisioned on first success and logged as provisioned', async () => {
+      const { session, code } = await startFor('new@icrisat.org');
       jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-      const tokens = {
-        ...mockAuthResponse.tokens,
-        idToken: buildFakeIdToken({
-          email: 'new@icrisat.org',
-          given_name: 'Nia',
-          family_name: 'Nuevo',
-          name: 'Nia Nuevo',
-        }),
-      };
-      jest
-        .spyOn(authMicroservice, 'verifyEmailOtp')
-        .mockResolvedValue({ tokens } as any);
       const provisionedUser = {
         id: 99,
         email: 'new@icrisat.org',
@@ -1250,30 +1403,14 @@ describe('AuthService', () => {
         .mockResolvedValue(provisionedUser as any);
       const logSpy = jest.spyOn((service as any)._logger, 'log');
 
-      const expected = (service as any).createSuccessfulLoginResponse(
-        provisionedUser,
-        tokens,
-      );
-
       const result = await service.verifyOtp({
-        email: 'NEW@ICRISAT.ORG',
-        code: '123456',
-        session: 'cognito-real-session',
+        email: 'new@icrisat.org',
+        code,
+        session,
       } as OtpVerifyDto);
 
-      expect(
-        userService.createOrUpdateUserFromAuthProvider,
-      ).toHaveBeenCalledWith({
-        email: 'new@icrisat.org',
-        given_name: 'Nia',
-        family_name: 'Nuevo',
-        name: 'Nia Nuevo',
-      });
-      expect(result).toEqual(expected);
-      expect(result.response.valid).toBe(true);
-      expect(userRepository.update).toHaveBeenCalledWith(
-        { id: 99, email: 'new@icrisat.org' },
-        { last_login: expect.any(Date) },
+      expect(result).toEqual(
+        (service as any).createSuccessfulLoginResponse(provisionedUser, null),
       );
       expect(
         logSpy.mock.calls.some((call) =>
@@ -1282,130 +1419,48 @@ describe('AuthService', () => {
       ).toBe(true);
     });
 
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15) — the ID token is
-    // decoded, never verified, so its `email` claim is not authority: the request
-    // email (already normalised and rate-limited under) always wins.
-    it('(T-15) the request email wins over a differing ID-token email claim', async () => {
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockResolvedValue({
-        tokens: {
-          ...mockAuthResponse.tokens,
-          idToken: buildFakeIdToken({
-            email: 'attacker@evil.org',
-            given_name: 'Mal',
-          }),
-        },
-      } as any);
+    it('a user without roles gets 403 needsRoles on the OTP path exactly as singIn', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      const userWithoutRoles = { ...mockOtpUser, obj_role_by_user: [] };
       jest
         .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
-        .mockResolvedValue(mockOtpUser as any);
+        .mockResolvedValue(userWithoutRoles as any);
 
-      await service.verifyOtp({
-        email: 'Victim@ICRISAT.org',
-        code: '123456',
-        session: 'cognito-real-session',
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
       } as OtpVerifyDto);
 
-      expect(
-        userService.createOrUpdateUserFromAuthProvider,
-      ).toHaveBeenCalledWith({
-        email: 'victim@icrisat.org',
-        given_name: 'Mal',
-        family_name: undefined,
-        name: undefined,
-      });
+      expect(result.status).toBe(HttpStatus.FORBIDDEN);
+      expect(result.response.needsRoles).toBe(true);
     });
 
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15, OTP-R-36, OTP-AC-21)
-    it('(T-15/OTP-AC-21) an inactive PRMS user gets OTP_NOT_AUTHORIZED at verify without reaching the microservice, byte-identical to the unknown-user body', async () => {
-      // Reference body: unknown in PRMS, the microservice denies the code.
-      jest.spyOn(userRepository, 'findOne').mockResolvedValueOnce(null);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValueOnce({
-        status: 401,
-        response: { code: 'NOT_AUTHORIZED' },
-      });
-      const unknownResult = await service.verifyOtp({
-        email: 'ghost@icrisat.org',
-        code: '123456',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValueOnce(mockInactiveOtpUser as any);
-      const logSpy = jest.spyOn((service as any)._logger, 'log');
-
-      const inactiveResult = await service.verifyOtp({
-        email: 'inactive@icrisat.org',
-        code: '123456',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      expect(inactiveResult).toEqual(unknownResult);
-      expect(inactiveResult.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(inactiveResult.response.code).toBe('OTP_NOT_AUTHORIZED');
-      // Only the reference (unknown-user) call reached the microservice.
-      expect(authMicroservice.verifyEmailOtp).toHaveBeenCalledTimes(1);
-      expect(
-        userService.createOrUpdateUserFromAuthProvider,
-      ).not.toHaveBeenCalled();
-      expect(
-        logSpy.mock.calls.some((call) =>
-          String(call[0]).includes("outcome: 'not_authorized'"),
-        ),
-      ).toBe(true);
-    });
-
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15) — an account deactivated
-    // between the pre-check and the provisioning call still answers neutrally, never
-    // with the 503 the generic error mapper would produce for a bare Error.
-    it('(T-15) maps the "User is inactive" throw from createOrUpdateUserFromAuthProvider to OTP_NOT_AUTHORIZED', async () => {
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-      jest
-        .spyOn(authMicroservice, 'verifyEmailOtp')
-        .mockResolvedValue({ tokens: mockAuthResponse.tokens } as any);
-      jest
-        .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
-        .mockRejectedValue(
-          new Error(
-            'Failed to create or update user: User is inactive. Please contact support.',
-          ),
-        );
+    it('a wrong code counts an attempt and returns a rotated session carrying the SAME nonce and expiry', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      const nonce = otpRows[0].nonce;
       const logSpy = jest.spyOn((service as any)._logger, 'log');
 
       const result = await service.verifyOtp({
         email: 'a@icrisat.org',
-        code: '123456',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
-      expect(
-        logSpy.mock.calls.some((call) =>
-          String(call[0]).includes("outcome: 'not_authorized'"),
-        ),
-      ).toBe(true);
-    });
-
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework, review FAIL B-3,
-    // design.md §4.1/OTP-DD-3, judgment lens-B advisory (b)) — a verified decoy now
-    // answers exactly like a wrong code on a real session (OTP_CODE_MISMATCH), not
-    // OTP_NOT_AUTHORIZED, so an unknown account is indistinguishable step-for-step.
-    it('(e″/o) a verified (unexpired) decoy session on verify returns 401 OTP_CODE_MISMATCH without calling the microservice or the user lookup', async () => {
-      const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
-      const logSpy = jest.spyOn((service as any)._logger, 'log');
-
-      const result = await service.verifyOtp({
-        email: 'unknown@icrisat.org',
-        code: '123456',
-        session: decoy,
+        code: code === '000000' ? '111111' : '000000',
+        session,
       } as OtpVerifyDto);
 
       expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
       expect(result.response.code).toBe('OTP_CODE_MISMATCH');
-      expect(authMicroservice.verifyEmailOtp).not.toHaveBeenCalled();
-      expect(userRepository.findOne).not.toHaveBeenCalled();
+      expect(result.message).toBe('Code incorrect. Try again.');
+      expect(otpRows[0].attempts).toBe(1);
+      expect(otpRows[0].consumed_at).toBeNull();
+
+      const rotated = (service as any).verifyDecoySession(
+        result.response.session,
+        'a@icrisat.org',
+      );
+      expect(result.response.session).not.toBe(session);
+      expect(rotated.isDecoy).toBe(true);
+      expect(rotated.nonce).toBe(nonce);
+      expect(rotated.exp).toBe(otpRows[0].expires_at.getTime());
       expect(
         logSpy.mock.calls.some((call) =>
           String(call[0]).includes("outcome: 'mismatch'"),
@@ -1413,8 +1468,263 @@ describe('AuthService', () => {
       ).toBe(true);
     });
 
-    // (o) — an expired decoy (exp in the past) → 401 OTP_NOT_AUTHORIZED, no MS call.
-    it('(o) an expired decoy session on verify returns 401 OTP_NOT_AUTHORIZED without calling the microservice', async () => {
+    it('the rotated session still verifies the right code — two misses then the right code signs in', async () => {
+      const started = await startFor('a@icrisat.org');
+      const { code } = started;
+      let { session } = started;
+
+      for (let i = 0; i < 2; i++) {
+        const miss = await service.verifyOtp({
+          email: 'a@icrisat.org',
+          code: '000000' === code ? '111111' : '000000',
+          session,
+        } as OtpVerifyDto);
+        expect(miss.response.code).toBe('OTP_CODE_MISMATCH');
+        session = miss.response.session;
+      }
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(result.response.valid).toBe(true);
+      expect(otpRows[0].attempts).toBe(2);
+      expect(otpRows[0].consumed_at).toEqual(expect.any(Date));
+      // One code, one email — a retry never re-sends (OTP-R-32 scenario).
+      expect(emailNotification.sendEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('(OTP-AC-22) the third wrong code answers OTP_ATTEMPTS_EXCEEDED', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      const wrong = code === '000000' ? '111111' : '000000';
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+
+      const first = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: wrong,
+        session,
+      } as OtpVerifyDto);
+      const second = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: wrong,
+        session: first.response.session,
+      } as OtpVerifyDto);
+      const third = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: wrong,
+        session: second.response.session,
+      } as OtpVerifyDto);
+
+      expect(first.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(second.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(third.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(third.response.code).toBe('OTP_ATTEMPTS_EXCEEDED');
+      expect(third.message).toBe('Too many attempts — request a new code.');
+      expect(otpRows[0].attempts).toBe(3);
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'attempts_exceeded'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('an exhausted challenge keeps answering OTP_ATTEMPTS_EXCEEDED, even for the right code', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      otpRows[0].attempts = 3;
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(result.response.code).toBe('OTP_ATTEMPTS_EXCEEDED');
+      expect(otpRows[0].consumed_at).toBeNull();
+      expect(
+        userService.createOrUpdateUserFromAuthProvider,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('(OTP-T-16 review) a real challenge past its TTL answers OTP_NOT_AUTHORIZED — the envelope expiry check covers it, never reaching the row', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      const { session, code } = await startFor('a@icrisat.org');
+      jest.setSystemTime(new Date('2026-01-01T00:10:00.000Z')); // +10min > 5min TTL
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
+      expect(otpRepositoryMock.findOne).not.toHaveBeenCalled();
+      expect(otpRows[0].consumed_at).toBeNull();
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'not_authorized'"),
+        ),
+      ).toBe(true);
+
+      jest.useRealTimers();
+    });
+
+    it('(OTP-R-37 concurrency, reviewer RISK) two concurrent right-code verifies — only one mints a session, the other is not authorized', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+
+      const [first, second] = await Promise.all([
+        service.verifyOtp({
+          email: 'a@icrisat.org',
+          code,
+          session,
+        } as OtpVerifyDto),
+        service.verifyOtp({
+          email: 'a@icrisat.org',
+          code,
+          session,
+        } as OtpVerifyDto),
+      ]);
+
+      const outcomes = [first, second].map((r) => r.response.code ?? 'OK');
+      expect(outcomes.filter((c) => c === 'OK')).toHaveLength(1);
+      expect(outcomes.filter((c) => c === 'OTP_NOT_AUTHORIZED')).toHaveLength(
+        1,
+      );
+      expect(otpRows[0].consumed_at).toEqual(expect.any(Date));
+    });
+
+    it('(OTP-R-37 concurrency, reviewer RISK) two concurrent wrong codes with one miss left before the ceiling — both are exceeded, and attempts is capped at 3 instead of overshooting to 4', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      const wrong = code === '000000' ? '111111' : '000000';
+      otpRows[0].attempts = 2; // one miss left before OTP_CHALLENGE_MAX_ATTEMPTS
+
+      const [first, second] = await Promise.all([
+        service.verifyOtp({
+          email: 'a@icrisat.org',
+          code: wrong,
+          session,
+        } as OtpVerifyDto),
+        service.verifyOtp({
+          email: 'a@icrisat.org',
+          code: wrong,
+          session,
+        } as OtpVerifyDto),
+      ]);
+
+      expect(first.response.code).toBe('OTP_ATTEMPTS_EXCEEDED');
+      expect(second.response.code).toBe('OTP_ATTEMPTS_EXCEEDED');
+      // The conditional increment (`attempts < 3`) lets at most one of the two
+      // concurrent misses actually write — the un-guarded `increment(...)` this
+      // replaces would have let both through and left `attempts` at 4.
+      expect(otpRows[0].attempts).toBe(3);
+    });
+
+    it('(OTP-R-37) a code works exactly once — replaying it answers OTP_NOT_AUTHORIZED', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+
+      const first = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
+      } as OtpVerifyDto);
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+      const replay = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(first.response.valid).toBe(true);
+      expect(replay.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(replay.response).toEqual({
+        valid: false,
+        code: 'OTP_NOT_AUTHORIZED',
+      });
+      expect(replay.message).toBe('Code incorrect or expired.');
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'consumed'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('a decoy session (no challenge row) answers OTP_CODE_MISMATCH with a rotated decoy — same nonce, same exp', async () => {
+      const decoy = (service as any).buildDecoySession('inactive@icrisat.org');
+      const originalCheck = (service as any).verifyDecoySession(
+        decoy,
+        'inactive@icrisat.org',
+      );
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+
+      const result = await service.verifyOtp({
+        email: 'inactive@icrisat.org',
+        code: '123456',
+        session: decoy,
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(userRepository.findOne).not.toHaveBeenCalled();
+
+      const rotatedCheck = (service as any).verifyDecoySession(
+        result.response.session,
+        'inactive@icrisat.org',
+      );
+      expect(result.response.session).not.toBe(decoy);
+      expect(rotatedCheck.isDecoy).toBe(true);
+      expect(rotatedCheck.expired).toBe(false);
+      expect(rotatedCheck.exp).toBe(originalCheck.exp);
+      // @akili-spec changes/cognito-email-otp-login (OTP-T-16) — the nonce must be
+      // carried over here too. A real mismatch MUST rotate the same nonce (the row
+      // is keyed by it), so a decoy that rolled a fresh one would let an attacker
+      // compare chars 43..65 across two rotations and classify the address.
+      expect(rotatedCheck.nonce).toBe(originalCheck.nonce);
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'mismatch'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('a session PRMS never issued (fails the HMAC) answers OTP_NOT_AUTHORIZED and touches nothing', async () => {
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: '123456',
+        session: 'not-a-real-session-and-too-short-to-be-a-decoy',
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
+      expect(otpRepositoryMock.findOne).not.toHaveBeenCalled();
+      expect(userRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'not_authorized'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('a forged blob of the right length but a non-matching HMAC is not a session either', async () => {
+      const decoy = (service as any).buildDecoySession('a@icrisat.org');
+      const forged = (decoy[0] === 'A' ? 'B' : 'A') + decoy.slice(1);
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: '123456',
+        session: forged,
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
+      expect(otpRepositoryMock.findOne).not.toHaveBeenCalled();
+    });
+
+    it('(o) an expired session answers OTP_NOT_AUTHORIZED without a challenge lookup', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
       const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
       jest.setSystemTime(new Date('2026-01-01T00:10:00.000Z')); // +10min > 5min TTL
@@ -1428,8 +1738,7 @@ describe('AuthService', () => {
 
       expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
       expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
-      expect(authMicroservice.verifyEmailOtp).not.toHaveBeenCalled();
-      expect(userRepository.findOne).not.toHaveBeenCalled();
+      expect(otpRepositoryMock.findOne).not.toHaveBeenCalled();
       expect(
         logSpy.mock.calls.some((call) =>
           String(call[0]).includes("outcome: 'not_authorized'"),
@@ -1439,89 +1748,68 @@ describe('AuthService', () => {
       jest.useRealTimers();
     });
 
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15) — UPDATED from T-5: the
-    // fall-through now ends at the microservice (an unknown-in-PRMS email is no
-    // longer rejected locally), and a reply without tokens is OTP_NOT_AUTHORIZED.
-    it('a session too short to carry the decoy layout is treated as real and goes to the microservice (not a decoy)', async () => {
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-
-      const result = await service.verifyOtp({
-        email: 'unknown@icrisat.org',
-        code: '123456',
-        session: 'not-a-real-session-and-too-short-to-be-a-decoy',
-      } as OtpVerifyDto);
-
-      expect(authMicroservice.verifyEmailOtp).toHaveBeenCalledTimes(1);
-      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
-    });
-
-    // (o) — a forged blob of the right length (but wrong HMAC) is NOT a decoy —
-    // it goes to the microservice like any other (unrecognised) real session.
-    it('(o) a forged blob of the right length but a non-matching HMAC is treated as real and goes to the microservice', async () => {
-      const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
-      // Flip one byte of the hmac segment — same total length, fails the HMAC check.
-      const forged = (decoy[0] === 'A' ? 'B' : 'A') + decoy.slice(1);
+    // @akili-spec changes/cognito-email-otp-login (OTP-R-36, OTP-AC-21) — an account
+    // deactivated AFTER its code was issued must not sign in. The gate sits on the
+    // match branch, since an already-inactive account never gets a row at all.
+    it('(OTP-R-36) an account deactivated after the code was issued gets OTP_NOT_AUTHORIZED on the right code', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 401,
-        response: { code: 'NOT_AUTHORIZED' },
-      });
-
-      const result = await service.verifyOtp({
-        email: 'a@icrisat.org',
-        code: '123456',
-        session: forged,
-      } as OtpVerifyDto);
-
-      expect(authMicroservice.verifyEmailOtp).toHaveBeenCalledTimes(1);
-      expect(authMicroservice.verifyEmailOtp).toHaveBeenCalledWith(
-        'a@icrisat.org',
-        '123456',
-        forged,
-      );
-      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
-    });
-
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-15) — UPDATED from T-5: an
-    // unknown-in-PRMS email is decided by Cognito now, so it reaches the microservice;
-    // the 401 comes from the microservice's denial, not from a local existence gate.
-    it('an unknown user (no decoy session) reaches the microservice and returns its 401 OTP_NOT_AUTHORIZED', async () => {
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 401,
-        response: { code: 'NOT_AUTHORIZED' },
-      });
-
-      const result = await service.verifyOtp({
-        email: 'ghost@icrisat.org',
-        code: '123456',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      expect(authMicroservice.verifyEmailOtp).toHaveBeenCalledTimes(1);
-      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
-      expect(
-        userService.createOrUpdateUserFromAuthProvider,
-      ).not.toHaveBeenCalled();
-    });
-
-    // Lens-A advisory — a findOne failure on verify is PRMS-side (internal_error),
-    // still a neutral 503, never blamed on the microservice.
-    it('logs internal_error (still 503 neutral) when findOne throws on verify', async () => {
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockRejectedValueOnce(new Error('db down'));
+        .mockResolvedValue(mockInactiveOtpUser as any);
       const logSpy = jest.spyOn((service as any)._logger, 'log');
 
       const result = await service.verifyOtp({
         email: 'a@icrisat.org',
-        code: '123456',
-        session: 'cognito-real-session',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response).toEqual({
+        valid: false,
+        code: 'OTP_NOT_AUTHORIZED',
+      });
+      expect(
+        userService.createOrUpdateUserFromAuthProvider,
+      ).not.toHaveBeenCalled();
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'not_authorized'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('maps the "User is inactive" throw from createOrUpdateUserFromAuthProvider to OTP_NOT_AUTHORIZED', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      jest
+        .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
+        .mockRejectedValue(
+          new Error(
+            'Failed to create or update user: User is inactive. Please contact support.',
+          ),
+        );
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.response.code).toBe('OTP_NOT_AUTHORIZED');
+    });
+
+    it('logs internal_error (still 503 neutral) when the challenge lookup throws', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      jest
+        .spyOn(otpChallengeService, 'findActive')
+        .mockRejectedValue(new Error('db down'));
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
       } as OtpVerifyDto);
 
       expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
@@ -1531,54 +1819,40 @@ describe('AuthService', () => {
           String(call[0]).includes("outcome: 'internal_error'"),
         ),
       ).toBe(true);
-      expect(authMicroservice.verifyEmailOtp).not.toHaveBeenCalled();
     });
 
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0)) — CODE_MISMATCH
-    // is covered separately below ("verifyOtp — rotated session on OTP_CODE_MISMATCH")
-    // because it now requires a rotated `session` to reach 401 at all; a session-less
-    // CODE_MISMATCH maps to 503 OTP_UPSTREAM_UNAVAILABLE instead (contract violation),
-    // so it no longer belongs in this generic "carries no session" table.
-    it.each([
-      ['CODE_EXPIRED', 'OTP_CODE_EXPIRED'],
-      ['ATTEMPTS_EXCEEDED', 'OTP_ATTEMPTS_EXCEEDED'],
-      ['NOT_AUTHORIZED', 'OTP_NOT_AUTHORIZED'],
-      ['CHALLENGE_NOT_SUPPORTED', 'OTP_NOT_AUTHORIZED'],
-    ])(
-      '(f) maps microservice code %s to %s (401)',
-      async (msCode, expectedCode) => {
-        jest
-          .spyOn(userRepository, 'findOne')
-          .mockResolvedValue(mockOtpUser as any);
-        jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-          status: 401,
-          response: { code: msCode, message: 'stable copy' },
-        });
-
-        const result = await service.verifyOtp({
-          email: 'a@icrisat.org',
-          code: '000000',
-          session: 'cognito-real-session',
-        } as OtpVerifyDto);
-
-        expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-        expect(result.response.code).toBe(expectedCode);
-      },
-    );
-
-    it('(g) returns 503 OTP_UPSTREAM_UNAVAILABLE when the microservice is down', async () => {
+    it('logs internal_error (still 503 neutral) when the user lookup throws on verify', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
       jest
         .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 502,
-        response: { code: 'UPSTREAM_ERROR' },
-      });
+        .mockRejectedValue(new Error('db down'));
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
 
       const result = await service.verifyOtp({
         email: 'a@icrisat.org',
-        code: '000000',
-        session: 'cognito-real-session',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+      expect(result.response.code).toBe('OTP_UPSTREAM_UNAVAILABLE');
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'internal_error'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('answers the neutral 503 when provisioning fails for an unexpected reason', async () => {
+      const { session, code } = await startFor('a@icrisat.org');
+      jest
+        .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
+        .mockRejectedValue(new Error('boom'));
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
       } as OtpVerifyDto);
 
       expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
@@ -1586,153 +1860,31 @@ describe('AuthService', () => {
     });
   });
 
-  // @akili-spec changes/cognito-email-otp-login (OTP-T-13, design.md §18.1 steps 9-10,
-  // requirements.md §13 OTP-R-7/OTP-R-4 modified, OTP-AC-18) — the rotated Cognito `session`
-  // the microservice attaches to a CODE_MISMATCH reply must reach the 401 payload; the decoy
-  // path (which never calls the microservice) must never carry one.
-  describe('verifyOtp — rotated session on OTP_CODE_MISMATCH (OTP-T-13)', () => {
-    it('carries the rotated session when the microservice mismatch error has one', async () => {
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2, OTP-T-16) — the
+  // anti-oracle invariant survives the move off Cognito: a mismatch on a REAL
+  // challenge and a mismatch on a decoy must be indistinguishable byte-for-byte in
+  // shape (same keys, same copy, same status, same session-length class).
+  describe('verifyOtp — real vs decoy mismatch parity', () => {
+    it('both mismatch bodies carry identical key sets, copy and status', async () => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue('icrisat.org');
       jest
         .spyOn(userRepository, 'findOne')
         .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 401,
-        response: {
-          code: 'CODE_MISMATCH',
-          message: 'stable copy',
-          session: 'rotated-cognito-session',
-        },
-      });
 
-      const result = await service.verifyOtp({
+      const started = await service.startOtp({
         email: 'a@icrisat.org',
-        code: '000000',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(result.response.code).toBe('OTP_CODE_MISMATCH');
-      expect(result.response.session).toBe('rotated-cognito-session');
-    });
-
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0)) — every real
-    // CODE_MISMATCH reply rotates a `session` (design.md §18.1 step 9); one that
-    // doesn't is a microservice contract violation, not a legitimate user answer
-    // (and emitting a mismatch body without `session` would itself be a reverse
-    // existence oracle, since decoy mismatches always mint one — OTP-T-13 rework
-    // 2). Map it to the same upstream-unavailable response as a downed microservice.
-    it('treats a session-less CODE_MISMATCH from the microservice as OTP_UPSTREAM_UNAVAILABLE (contract violation, not a user path)', async () => {
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 401,
-        response: { code: 'CODE_MISMATCH', message: 'stable copy' },
-      });
-      const logSpy = jest.spyOn((service as any)._logger, 'log');
-
-      const result = await service.verifyOtp({
-        email: 'a@icrisat.org',
-        code: '000000',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
-      expect(result.response.code).toBe('OTP_UPSTREAM_UNAVAILABLE');
-      expect(result.response).not.toHaveProperty('session');
-      expect(
-        logSpy.mock.calls.some((call) =>
-          String(call[0]).includes("outcome: 'upstream_error'"),
-        ),
-      ).toBe(true);
-    });
-
-    it('treats an empty-string session on a CODE_MISMATCH reply the same way (not just a missing key)', async () => {
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 401,
-        response: {
-          code: 'CODE_MISMATCH',
-          message: 'stable copy',
-          session: '',
-        },
-      });
-
-      const result = await service.verifyOtp({
-        email: 'a@icrisat.org',
-        code: '000000',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
-      expect(result.response.code).toBe('OTP_UPSTREAM_UNAVAILABLE');
-      expect(result.response).not.toHaveProperty('session');
-    });
-
-    // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2, design.md §18.1
-    // row 10, requirements.md OTP-R-4, design.md OTP-DD-3 — corrected after the T-13
-    // Reviewer FAIL, 2026-09-11) — the presence/absence of `session` on a mismatch was
-    // itself a user-existence oracle: a real mismatch always carries one (microservice
-    // rotation), so a decoy mismatch WITHOUT one let one `start` + one wrong `verify`
-    // classify any address. A decoy mismatch now mints a fresh decoy session, carrying
-    // the SAME `exp` as the original (never extending the lifetime past the start-time
-    // window) and the same length-jitter class as any other decoy.
-    it('a decoy mismatch mints a fresh decoy session carrying the SAME exp as the original (never an oracle)', async () => {
-      const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
-      const originalCheck = (service as any).verifyDecoySession(
-        decoy,
-        'unknown@icrisat.org',
-      );
-      expect(originalCheck.isDecoy).toBe(true);
-
-      const result = await service.verifyOtp({
-        email: 'unknown@icrisat.org',
-        code: '123456',
-        session: decoy,
-      } as OtpVerifyDto);
-
-      expect(result.response.code).toBe('OTP_CODE_MISMATCH');
-      expect(result.response.session).toEqual(expect.any(String));
-      expect(result.response.session).not.toBe(decoy);
-      expect(result.response.session.length).toBeGreaterThanOrEqual(1400);
-      expect(result.response.session.length).toBeLessThanOrEqual(1700);
-
-      const rotatedCheck = (service as any).verifyDecoySession(
-        result.response.session,
-        'unknown@icrisat.org',
-      );
-      expect(rotatedCheck.isDecoy).toBe(true);
-      expect(rotatedCheck.expired).toBe(false);
-      expect(rotatedCheck.exp).toBe(originalCheck.exp);
-      expect(authMicroservice.verifyEmailOtp).not.toHaveBeenCalled();
-    });
-
-    // Reviewer remediation: byte-shape parity between the real and decoy mismatch
-    // bodies is the actual anti-oracle invariant — not merely "decoy has a session".
-    it('real mismatch and decoy mismatch bodies carry identical key sets and message (no existence oracle)', async () => {
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 401,
-        response: {
-          code: 'CODE_MISMATCH',
-          message: 'stable copy',
-          session: 'rotated-cognito-session',
-        },
-      });
-
+      } as OtpStartDto);
       const realResult = await service.verifyOtp({
         email: 'a@icrisat.org',
-        code: '000000',
-        session: 'cognito-real-session',
+        code: '000000' === codeFromLastEmail() ? '111111' : '000000',
+        session: started.response.session,
       } as OtpVerifyDto);
 
-      const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
+      const decoy = (service as any).buildDecoySession('inactive@icrisat.org');
       const decoyResult = await service.verifyOtp({
-        email: 'unknown@icrisat.org',
+        email: 'inactive@icrisat.org',
         code: '000000',
         session: decoy,
       } as OtpVerifyDto);
@@ -1744,49 +1896,68 @@ describe('AuthService', () => {
       );
       expect(realResult.message).toBe(decoyResult.message);
       expect(realResult.status).toBe(decoyResult.status);
-    });
-
-    it('never logs the rotated session', async () => {
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValue(mockOtpUser as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
-        status: 401,
-        response: {
-          code: 'CODE_MISMATCH',
-          message: 'stable copy',
-          session: 'rotated-cognito-session',
-        },
-      });
-      const logSpy = jest.spyOn((service as any)._logger, 'log');
-      const warnSpy = jest.spyOn((service as any)._logger, 'warn');
-      const errorSpy = jest.spyOn((service as any)._logger, 'error');
-
-      await service.verifyOtp({
-        email: 'a@icrisat.org',
-        code: '000000',
-        session: 'cognito-real-session',
-      } as OtpVerifyDto);
-
-      // Reviewer advisory 3 — must land before the loop below: without it the test
-      // would pass vacuously if verifyOtp stopped logging altogether (all three spies
-      // empty), proving nothing about the rotated session specifically.
-      expect(logSpy).toHaveBeenCalled();
-
-      const calls = [
-        ...logSpy.mock.calls,
-        ...warnSpy.mock.calls,
-        ...errorSpy.mock.calls,
-      ].flat();
-      calls.forEach((arg) => {
-        expect(String(arg)).not.toContain('rotated-cognito-session');
+      expect(realResult.response.session).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(decoyResult.response.session).toMatch(/^[A-Za-z0-9_-]+$/);
+      [realResult, decoyResult].forEach((r) => {
+        expect(r.response.session.length).toBeGreaterThanOrEqual(1400);
+        expect(r.response.session.length).toBeLessThanOrEqual(1700);
       });
     });
   });
 
-  // @akili-spec changes/cognito-email-otp-login (OTP-T-5, tasks.md verification (h), OTP-R-11, .cursorrules)
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-13/OTP-T-16) — `mapOtpVerifyError`
+  // is now only the catch-all for an unexpected throw inside `verifyOtp`; its
+  // code-specific branches are retained (and pinned here) because the copy they own
+  // is the copy the PRMS-owned branches above emit.
+  describe('mapOtpVerifyError', () => {
+    it.each([
+      ['CODE_EXPIRED', 'OTP_CODE_EXPIRED', 'expired', HttpStatus.UNAUTHORIZED],
+      [
+        'ATTEMPTS_EXCEEDED',
+        'OTP_ATTEMPTS_EXCEEDED',
+        'attempts_exceeded',
+        HttpStatus.UNAUTHORIZED,
+      ],
+      [
+        'NOT_AUTHORIZED',
+        'OTP_NOT_AUTHORIZED',
+        'not_authorized',
+        HttpStatus.UNAUTHORIZED,
+      ],
+      [
+        'CHALLENGE_NOT_SUPPORTED',
+        'OTP_NOT_AUTHORIZED',
+        'not_authorized',
+        HttpStatus.UNAUTHORIZED,
+      ],
+      [
+        'ANYTHING_ELSE',
+        'OTP_UPSTREAM_UNAVAILABLE',
+        'upstream_error',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      ],
+    ])('maps %s to %s', (msCode, expectedCode, outcome, status) => {
+      expect(
+        (service as any).mapOtpVerifyError({ response: { code: msCode } }),
+      ).toEqual(
+        expect.objectContaining({ code: expectedCode, outcome, status }),
+      );
+    });
+
+    it('maps a bare Error (no response code) to the neutral upstream-unavailable answer', () => {
+      expect((service as any).mapOtpVerifyError(new Error('boom'))).toEqual(
+        expect.objectContaining({
+          code: 'OTP_UPSTREAM_UNAVAILABLE',
+          outcome: 'upstream_error',
+          status: HttpStatus.SERVICE_UNAVAILABLE,
+        }),
+      );
+    });
+  });
+
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-5/OTP-T-16, OTP-R-11, .cursorrules)
   describe('start/verifyOtp — no secrets in logs', () => {
-    it('never logs the full email, code, session or tokens across start/verify', async () => {
+    it('never logs the full email, the code or a session across start/verify', async () => {
       const logSpy = jest.spyOn((service as any)._logger, 'log');
       const warnSpy = jest.spyOn((service as any)._logger, 'warn');
       const errorSpy = jest.spyOn((service as any)._logger, 'error');
@@ -1798,39 +1969,33 @@ describe('AuthService', () => {
         .spyOn(userRepository, 'findOne')
         .mockResolvedValue(mockOtpUser as any);
       jest
-        .spyOn(authMicroservice, 'startEmailOtp')
-        .mockResolvedValue({ session: 'cognito-real-session' } as any);
-      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockResolvedValue({
-        tokens: {
-          ...mockAuthResponse.tokens,
-          // @akili-spec changes/cognito-email-otp-login (OTP-T-15) — the decoded
-          // ID-token claims must never reach a log line either (OTP-R-11).
-          idToken: buildFakeIdToken({
-            email: 'a@icrisat.org',
-            given_name: 'Ada',
-            family_name: 'Icrisat',
-          }),
-        },
-      } as any);
-      jest
         .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
         .mockResolvedValue(mockOtpUser as any);
 
       const email = 'a@icrisat.org';
-      const code = '654321';
+      const started = await service.startOtp({ email } as OtpStartDto);
+      const session = started.response.session as string;
+      const code = codeFromLastEmail();
       const decoy = (service as any).buildDecoySession('unknown@icrisat.org');
 
-      await service.startOtp({ email } as OtpStartDto);
+      const missed = await service.verifyOtp({
+        email,
+        code: code === '000000' ? '111111' : '000000',
+        session,
+      } as OtpVerifyDto);
       await service.verifyOtp({
         email,
         code,
-        session: 'cognito-real-session',
+        session: missed.response.session,
       } as OtpVerifyDto);
       await service.verifyOtp({
         email: 'unknown@icrisat.org',
         code,
         session: decoy,
       } as OtpVerifyDto);
+
+      // Guards against a vacuous pass if the OTP path ever stopped logging at all.
+      expect(logSpy).toHaveBeenCalled();
 
       const calls = [
         ...logSpy.mock.calls,
@@ -1842,10 +2007,29 @@ describe('AuthService', () => {
         const text = String(arg);
         expect(text).not.toContain(email);
         expect(text).not.toContain(code);
-        expect(text).not.toContain('cognito-real-session');
+        expect(text).not.toContain(session);
         expect(text).not.toContain(decoy);
-        expect(text).not.toContain(mockAuthResponse.tokens.accessToken);
+        expect(text).not.toContain(otpRows[0].nonce);
+        expect(text).not.toContain(otpRows[0].code_hmac);
+        expect(text).not.toContain(otpRows[0].email_hash);
       });
+    });
+
+    it('never stores the plaintext email or code in the challenge row (OTP-R-11)', async () => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue('icrisat.org');
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+
+      await service.startOtp({ email: 'a@icrisat.org' } as OtpStartDto);
+      const code = codeFromLastEmail();
+
+      const stored = JSON.stringify(otpRows[0]);
+      expect(stored).not.toContain('a@icrisat.org');
+      expect(stored).not.toContain('icrisat.org');
+      expect(stored).not.toContain(code);
     });
   });
 });

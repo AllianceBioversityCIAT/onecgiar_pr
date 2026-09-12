@@ -28,6 +28,14 @@ import { SearchThrottleMiddleware } from './Middlewares/search-throttle.middlewa
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { GlobalParameterCacheModule } from '../shared/services/cache/global-parameter-cache.module';
 import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
+// @akili-spec changes/cognito-email-otp-login (OTP-T-16, design.md §19.1) —
+// AuthService now depends on OtpChallengeService (challenge lifecycle) and
+// EmailNotificationManagementService (the code email); both must resolve inside
+// AuthModule's own DI context, exactly like the GlobalParameterCacheModule fix
+// above (OTP-T-4) — AuthModule instantiates AuthService directly.
+import { OtpChallenge } from './otp/otp-challenge.entity';
+import { OtpChallengeService } from './otp/otp-challenge.service';
+import { EmailNotificationManagementModule } from '../shared/microservices/email-notification-management/email-notification-management.module';
 
 @Module({
   controllers: [AuthController],
@@ -39,13 +47,14 @@ import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
       secret: env.JWT_SKEY,
       signOptions: { expiresIn: env.JWT_EXPIRES },
     }),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, OtpChallenge]),
     RoleByUserModule,
     RoleLevelsModule,
     RestrictionsByRoleModule,
     RestrictionsModule,
     AuthMicroserviceModule,
     GlobalParameterCacheModule,
+    EmailNotificationManagementModule,
   ],
   providers: [
     AuthService,
@@ -59,6 +68,7 @@ import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
     HandlersError,
     UserRepository,
     OtpThrottlerGuard,
+    OtpChallengeService,
   ],
   exports: [
     BcryptPasswordEncoder,

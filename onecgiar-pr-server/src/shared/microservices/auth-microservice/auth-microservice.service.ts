@@ -300,6 +300,11 @@ export class AuthMicroserviceService {
    * @param email Normalised PRMS email — used as Cognito `username`.
    * @description POST {MS_AUTH_URL}/auth/login/otp/start (OTP-T-5, design.md §4.2, §5.1).
    * Never logs the email (OTP-R-11, .cursorrules).
+   * @deprecated Unused since `design.md` §19 (Option D, OTP-T-16): PRMS now
+   * generates, emails and verifies the code itself — `AuthService.startOtp` no
+   * longer calls the microservice at all. Kept only as a client for the
+   * microservice's own (still-live) routes; `PASSWORDLESS_DOMAINS` and the
+   * Cognito triggers are left in place but unused by PRMS.
    */
   async startEmailOtp(email: string): Promise<{
     challengeName?: string;
@@ -345,6 +350,10 @@ export class AuthMicroserviceService {
    * @param session The session returned by `startEmailOtp` (real or decoy).
    * @description POST {MS_AUTH_URL}/auth/login/otp/verify (OTP-T-5, design.md §4.2, §5.1).
    * Never logs the code, session or email (OTP-R-11, .cursorrules).
+   * @deprecated Unused since `design.md` §19 (Option D, OTP-T-16): PRMS now
+   * generates, emails and verifies the code itself — `AuthService.verifyOtp` no
+   * longer calls the microservice at all. Kept only as a client for the
+   * microservice's own (still-live) routes.
    */
   async verifyEmailOtp(
     email: string,
