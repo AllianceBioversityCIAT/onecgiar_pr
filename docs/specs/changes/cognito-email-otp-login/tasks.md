@@ -218,7 +218,7 @@
 - **Type:** `server` · **Estimate:** S · ~40 LOC
 - **Description:** in `UserService` registration (`registerInCognitoIfNeeded` and the temporary-password email), when the email domain is in `OTP_ALLOWED_EMAIL_DOMAINS` skip both; log outcome `otp_domain_skip_cognito`; tests. **Implements:** `OTP-AC-24`, `OTP-R-13` (modified). **Depends on:** — · **Blocks:** `OTP-T-18`.
 
-### `OTP-T-18` — TEST switch + Cognito cleanup (HITL) + docs rev
+### [x] `OTP-T-18` — TEST switch + Cognito cleanup (HITL) + docs rev
 
 - **Type:** `rollout` + `docs` · **Estimate:** S · HITL
 - **Description:** deploy PRMS to TEST (`performance-refactor`), HITL `OTP-AC-22` with the spike mailbox, then restore the TEST pool (`LambdaConfig {}`, `AuthSessionValidity 3`) from fresh exports, delete stack `prms-cognito-otp-triggers-test`, verify `OTP-AC-23`; close PR #43 as not needed (or keep for the log redaction only — user decision); update `docs/auth/center-email-code-login/*` (README, runbook → "PROD = deploy PRMS + set the parameter", DevOps doc → triggers not in use, adoption guide → other apps would call PRMS-style logic or the microservice variant), regenerate diagrams. **Implements:** `OTP-AC-23`, `OTP-R-8`. **Depends on:** `OTP-T-16`, `OTP-T-17`.
