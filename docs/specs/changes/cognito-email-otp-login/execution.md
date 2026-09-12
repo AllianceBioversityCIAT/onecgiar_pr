@@ -266,3 +266,19 @@
 ### `OTP-T-3` — deploy half (2026-09-11, HITL)
 
 - User instruction: push and open the PR; merging into `dev-auth` deploys TEST automatically. Pushed `dev-auth-otp` (`f8ba4b6`, `265da21`, `da2b570`; 0 behind `origin/dev-auth`) and opened **PR A** `one-cgiar-microservices#38` (`dev-auth-otp` → `dev-auth`) with deploy note `PASSWORDLESS_DOMAINS=cifor-icraf.org,icrisat.org`. Merge = user action. After deploy: smoke `POST /auth/login/otp/start` shape on `authtest-ibd.prms.cgiar.org` (no session printed) and the `OTP-T-10` live proof.
+
+### `OTP-T-8` — Cypress CT: `/login` with the Center panel at 1536 / 840 / 375
+
+| Field | Value |
+|---|---|
+| Status | `[~]` — attempt 1: CT authored; run 9 passing / 3 failing on a **real defect** in the T-6 panel; fix + rerun in progress |
+| Date | 2026-09-11 |
+| Implementer | `akili-implementer` (`sonnet`), effort `medium`, skills `angular-developer`, `tdd` |
+| Requirements covered | `OTP-R-14` (responsive + a11y), `OTP-AC-15` |
+
+**Attempt 1**
+
+- File: `onecgiar-pr-client/src/app/pages/login/login.component.cy.ts` (new, ~120 LOC). Real `CognitoService` + `CenterOtpPanelComponent`; stubs: `GET_otpConfig` → `{ response: { domains } }` (`login.component.ts:86`), `POST_otpStart` → `{ response: { session, destination } }` (`cognito.service.ts:startOtp` reads `destination`, not `codeDeliveryDestination` — brief corrected by the Implementer), `POST_otpVerify` → `throwError({ error: { response: { code: 'OTP_CODE_MISMATCH' }, message }, status: 401 })` (`mapOtpErrorKey`); `ApiService`/`RolesService`/`Router`/`ActivatedRoute` stubbed only to cut `HttpClient` DI chains (same technique as `bilateral-review.cy.ts`).
+- Run (`CT_DEV_SERVER_PORT=8091 … --spec src/app/pages/login/login.component.cy.ts`, twice, identical): **Tests 12 · Passing 9 · Failing 3**. Passing at every viewport: no horizontal overflow, `aria-live` contains "Code incorrect. Try again.", `otp-code` has `inputmode="numeric"` + `autocomplete="one-time-code"`. Measured `clientWidth` 1536 / 840 / 375 (0 px drift). Failing at every viewport: `"otp-back" height(16.5) >= 24: expected 16.5 to be at least 24`.
+- **Defect (product, caught by the gate):** the panel's "Use a different email" `<button data-test="otp-back">` (`inline-flex … text-[11px] … p-0`) renders 16.5 px tall — below the ≥ 24 px control floor (`OTP-AC-15`, `design.md` §6.3). Neither disqualifier applies (no `nowrap`/fixed-width overflow; `clientWidth` exact). Root cause in `center-otp-panel.component.html` (T-6 deliverable, this spec's own file → in scope). **Leader decision:** fix it inside `OTP-T-8` (`min-h-[24px]` + `items-center` on the back link, px only), re-run the panel Jest suite and the CT; the Reviewer audits both the CT and the one-line panel fix.
+- 2026-09-11 19:18 (America/Bogota): user merged PR A `one-cgiar-microservices#38` → `dev-auth` `65758f4`; GitHub run "Trigger Jenkins Job AUTH Microservice" completed (success). Leader's own push/merge attempts were blocked by the permission classifier — the merge was a user action. SonarCloud Quality Gate on the PR: **failed on 5.9 % new-code duplication** (all in `cognito.service.spec.ts` 105 lines / `auth.service.spec.ts` 28 lines; production files 0) — test-only dedupe in progress as a follow-up commit.
