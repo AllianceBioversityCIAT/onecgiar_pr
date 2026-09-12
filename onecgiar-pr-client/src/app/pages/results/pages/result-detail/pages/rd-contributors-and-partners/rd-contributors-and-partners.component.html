@@ -522,7 +522,7 @@
     (selectOptionEvent)="this.rdPartnersSE.onLeadByPartnerChange($event)"
     [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
   </app-pr-yes-or-not>
-  <app-alert-status *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner" [description]="getMessageLeadPartner()"></app-alert-status>
+  <app-alert-status *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner" [description]="getMessageLeadPartner()" [collapsible]="false"></app-alert-status>
   <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner">
     <app-pr-select
       data-testid="cp-field-institutions~lead"
@@ -692,10 +692,10 @@
             <div class="selected_container custom_scroll" *ngIf="this.rdPartnersSE.partnersBody.linked_results?.length">
               <app-pr-field-header description="Results selected ({{ this.rdPartnersSE.partnersBody.linked_results.length }})"> </app-pr-field-header>
 
-              <div class="chips_container">
-                <div class="pr_chip_selected" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results; trackBy: trackByLinkedId">
-                  <div class="name" [innerHtml]="formatResultLabel(getResultById(id))"></div>
-                  <i class="material-icons-round" style="cursor: pointer; color: #f44336;" (click)="toggleResultSelection(id)">remove_circle</i>
+              <div class="chips_container" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="pr_chip_selected" style="display: flex; justify-content: space-between; align-items: center; width: 100%;" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results; trackBy: trackByLinkedId">
+                  <div class="name" style="flex: 1;" [innerHtml]="formatResultLabel(getResultById(id))"></div>
+                  <i class="material-icons-round" style="cursor: pointer; color: #f44336; margin-left: 10px;" (click)="toggleResultSelection(id)">remove_circle</i>
                 </div>
               </div>
             </div>

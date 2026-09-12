@@ -50,6 +50,13 @@ export class ShellTopbarComponent {
   private readonly searchTrigger = viewChild<ElementRef<HTMLButtonElement>>('searchTrigger');
 
   inLocal = (environment as any)?.inLocal;
+  /**
+   * Hides the "Report a bug / adjustment" entry point in production: a report
+   * filed from there lands straight in the team's Jira board and counts against
+   * the SLA. Test environments keep it. Same flag `onlyTest` navigation entries
+   * use, injected per environment by the pipeline.
+   */
+  readonly isProduction = environment.production;
   userMenuOpen = signal(false);
   reportFeedbackOpen = signal(false);
 
