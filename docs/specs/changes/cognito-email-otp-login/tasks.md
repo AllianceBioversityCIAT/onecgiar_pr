@@ -202,7 +202,7 @@
 - **Verification:** `npx jest --silent --reporters=summary --forceExit src/auth`: unknown-in-PRMS start → microservice called, `sent`; inactive start → decoy, no microservice call, body deep-equals the T-5 decoy body; verify with tokens + no PRMS user → `createOrUpdateUserFromAuthProvider` called with the decoded claims, `provisioned`, response = `createSuccessfulLoginResponse` result; inactive verify → `OTP_NOT_AUTHORIZED` with the same body as unknown; existing-user verify unchanged. `tsc`; eslint. **Disqualifier:** verifying the ID token signature against Cognito (out of scope) or trusting claims other than email/names.
 - **Definition of done:** specs green; runbook updated; committed; redeployed to TEST (merge to `performance-refactor`) for the `OTP-T-9` HITL.
 
-### `OTP-T-16` — PRMS server: PRMS-owned code (challenge table, email, verify) — rev 4
+### [x] `OTP-T-16` — PRMS server: PRMS-owned code (challenge table, email, verify) — rev 4
 
 - **Type:** `server`
 - **Description:** migration `otp_challenges`; `OtpChallengeService` (create/find/attempt/consume, HMAC of code and email with `JWT_SKEY`-derived keys, purge); `startOtp` sends the code through `EmailNotificationManagementService.sendEmail` with the ported T-11 template (code-bundled, branding block of `user.service.ts:743-750`), session = `buildDecoySession(email, exp, nonce)`; `verifyOtp` per `design.md` §19.1; `createSuccessfulLoginResponse(user, null)`; microservice OTP client calls removed from the path (methods kept, marked unused). Contracts unchanged.
