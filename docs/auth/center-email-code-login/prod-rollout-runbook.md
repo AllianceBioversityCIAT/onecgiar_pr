@@ -33,6 +33,9 @@ Two hardening items recorded in `docs/specs/changes/cognito-email-otp-login/desi
 
 Both fixes are merged, deployed to TEST and verified (2026-09-12). **No pre-PROD code blocker remains** — only the prerequisites above (PROD account/pool, client, broker credentials).
 
+
+> **Where is the PROD pool? (checked 2026-09-12)** Not in IBD-DEV: the account holds only the TEST pool (`us-east-1`) and a legacy 2-user `OST-TOC` in `eu-west-1` (client `TOC`, 2022). Ask DevOps for the account that owns the pool behind the PROD microservice's `COGNITO_CLIENT_ID` / `COGNITO_USER_POOL_URL`; the PROD stack must be deployed there.
+
 ## Step 0 — Before-export of the pool and the client
 
 Capture the rollback source **first**. Redact and keep it with the spec.
