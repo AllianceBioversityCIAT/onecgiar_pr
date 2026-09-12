@@ -577,7 +577,7 @@ export class AuthService {
   private async sendOtpCodeEmail(email: string, code: string): Promise<void> {
     const { subject, html, text } = buildOtpEmail({ code });
 
-    await this._emailNotificationManagementService.sendEmail({
+    this._emailNotificationManagementService.sendEmail({
       from: {
         email: process.env.EMAIL_SENDER,
         name: OTP_EMAIL_SENDER_NAME,
@@ -681,57 +681,12 @@ export class AuthService {
     // (`OTP-T-16` review — readability).
 
     if (!this._otpChallengeService.matchesCode(challenge, code)) {
-      // Captured BEFORE `registerAttempt` runs: an `increment(...)` UPDATE never
-      // mutates the entity `findActive` returned, but a repository that DOES hand
-      // back a live reference (a real TypeORM identity-map hit, or the in-memory
-      // fixture these specs run against) would otherwise let this method observe
-      // its own increment a line below.
-      const attemptsBeforeThisTry = challenge.attempts;
-
-      // OTP-R-37 concurrency (reviewer advisory): the increment is a conditional
-      // atomic UPDATE (`attempts < OTP_CHALLENGE_MAX_ATTEMPTS`), so the row's
-      // `attempts` can never be pushed past the ceiling no matter how many wrong
-      // codes for this nonce land at once — only as many of them as there is room
-      // for ever get to increment it.
-      let affected: number;
-      try {
-        affected = await this._otpChallengeService.registerAttempt(decoy.nonce);
-      } catch {
-        logOtpEvent(
-          this._logger,
-          'verify',
-          domain,
-          'internal_error',
-          startedAt,
-        );
-        return this.otpUpstreamUnavailableResponse();
-      }
-
-      // OTP-AC-18 / OTP-AC-22 — "three wrong codes → Too many attempts": the third
-      // miss is the one that says so, not a fourth submission that learns it.
-      // Checked two ways so neither a sequential nor a concurrent wrong code can
-      // slip past: `affected === 0` is this call losing the atomic increment
-      // outright (the ceiling was already reached by another one before it ran);
-      // `attemptsBeforeThisTry + 1 >= MAX` is this call being the one that just
-      // reached it, decided from the read this method already holds rather than a
-      // second query.
-      if (
-        affected === 0 ||
-        attemptsBeforeThisTry + 1 >= OTP_CHALLENGE_MAX_ATTEMPTS
-      ) {
-        logOtpEvent(
-          this._logger,
-          'verify',
-          domain,
-          'attempts_exceeded',
-          startedAt,
-        );
-        return this.otpAttemptsExceededResponse();
-      }
-
-      logOtpEvent(this._logger, 'verify', domain, 'mismatch', startedAt);
-      return this.otpMismatchResponse(
-        this.buildDecoySession(email, decoy.exp, decoy.nonce),
+      return this.handleOtpCodeMismatch(
+        challenge,
+        decoy,
+        email,
+        domain,
+        startedAt,
       );
     }
 
@@ -821,6 +776,70 @@ export class AuthService {
         status: mapped.status,
       };
     }
+  }
+
+  /**
+   * @akili-spec changes/cognito-email-otp-login (Sonar S3776 cleanup — extracted
+   * unmodified from `verifyOtp` to bring its cognitive complexity under the
+   * threshold; behaviour, comments and log outcomes are unchanged).
+   *
+   * Handles a wrong-code submission against an active challenge: records the
+   * attempt, decides between "attempts exceeded" and a rotated "mismatch"
+   * response, and returns the neutral envelope for whichever outcome applies.
+   */
+  private async handleOtpCodeMismatch(
+    challenge: any,
+    decoy: any,
+    email: string,
+    domain: string,
+    startedAt: number,
+  ): Promise<returnFormatService> {
+    // Captured BEFORE `registerAttempt` runs: an `increment(...)` UPDATE never
+    // mutates the entity `findActive` returned, but a repository that DOES hand
+    // back a live reference (a real TypeORM identity-map hit, or the in-memory
+    // fixture these specs run against) would otherwise let this method observe
+    // its own increment a line below.
+    const attemptsBeforeThisTry = challenge.attempts;
+
+    // OTP-R-37 concurrency (reviewer advisory): the increment is a conditional
+    // atomic UPDATE (`attempts < OTP_CHALLENGE_MAX_ATTEMPTS`), so the row's
+    // `attempts` can never be pushed past the ceiling no matter how many wrong
+    // codes for this nonce land at once — only as many of them as there is room
+    // for ever get to increment it.
+    let affected: number;
+    try {
+      affected = await this._otpChallengeService.registerAttempt(decoy.nonce);
+    } catch {
+      logOtpEvent(this._logger, 'verify', domain, 'internal_error', startedAt);
+      return this.otpUpstreamUnavailableResponse();
+    }
+
+    // OTP-AC-18 / OTP-AC-22 — "three wrong codes → Too many attempts": the third
+    // miss is the one that says so, not a fourth submission that learns it.
+    // Checked two ways so neither a sequential nor a concurrent wrong code can
+    // slip past: `affected === 0` is this call losing the atomic increment
+    // outright (the ceiling was already reached by another one before it ran);
+    // `attemptsBeforeThisTry + 1 >= MAX` is this call being the one that just
+    // reached it, decided from the read this method already holds rather than a
+    // second query.
+    if (
+      affected === 0 ||
+      attemptsBeforeThisTry + 1 >= OTP_CHALLENGE_MAX_ATTEMPTS
+    ) {
+      logOtpEvent(
+        this._logger,
+        'verify',
+        domain,
+        'attempts_exceeded',
+        startedAt,
+      );
+      return this.otpAttemptsExceededResponse();
+    }
+
+    logOtpEvent(this._logger, 'verify', domain, 'mismatch', startedAt);
+    return this.otpMismatchResponse(
+      this.buildDecoySession(email, decoy.exp, decoy.nonce),
+    );
   }
 
   private otpNotAuthorizedResponse(): returnFormatService {

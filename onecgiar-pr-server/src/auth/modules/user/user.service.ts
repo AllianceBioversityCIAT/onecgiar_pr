@@ -118,28 +118,10 @@ export class UserService {
             await this.handleCgiarUser(createUserDto);
         }
       } else {
-        await this.handleNonCgiarUser(createUserDto);
-
-        // @akili-spec changes/cognito-email-otp-login (OTP-T-17, design.md
-        // §19.2, requirements.md OTP-AC-24) — a center user whose email
-        // domain is allow-listed for the PRMS-handled OTP sign-in must not
-        // be registered in Cognito nor receive the temporary-password /
-        // welcome email; the PRMS user + roles are still created below.
-        const domain = createUserDto.email?.split('@').pop()?.toLowerCase();
-        const otpAllowedDomains = await this.getOtpAllowedDomainsSafe();
-
-        if (domain && otpAllowedDomains.includes(domain)) {
-          this._logger.log('otp_domain_skip_cognito');
-          shouldSendConfirmationEmail = false;
-        } else {
-          const cognitoSendsEmail = await this.registerInCognitoIfNeeded(
-            createUserDto,
-            options?.skipAllEmails,
-          );
-          if (!options?.skipAllEmails && cognitoSendsEmail === false) {
-            shouldSendConfirmationEmail = false;
-          }
-        }
+        shouldSendConfirmationEmail = await this.registerExternalUser(
+          createUserDto,
+          options,
+        );
       }
 
       const savedUser = await this.saveUserToDB(createUserDto, token);
@@ -151,6 +133,50 @@ export class UserService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * @akili-spec changes/cognito-email-otp-login (Sonar S3776 cleanup — extracted
+   * unmodified from `createFull` to bring its cognitive complexity under the
+   * threshold; behaviour, comments and outcomes are unchanged).
+   *
+   * Handles registration for a non-CGIAR ("external") user: PRMS-side
+   * validation, then the OTP-domain-skip vs. Cognito-registration decision
+   * that determines whether the confirmation/welcome email should be sent.
+   * @param createUserDto User information
+   * @param options.skipAllEmails When true, no confirmation/welcome/validation emails are sent
+   * @returns Whether the caller should send the account confirmation email
+   */
+  private async registerExternalUser(
+    createUserDto: CreateUserDto,
+    options?: { skipAllEmails?: boolean },
+  ): Promise<boolean> {
+    let shouldSendConfirmationEmail = !options?.skipAllEmails;
+
+    await this.handleNonCgiarUser(createUserDto);
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-17, design.md
+    // §19.2, requirements.md OTP-AC-24) — a center user whose email
+    // domain is allow-listed for the PRMS-handled OTP sign-in must not
+    // be registered in Cognito nor receive the temporary-password /
+    // welcome email; the PRMS user + roles are still created by the caller.
+    const domain = createUserDto.email?.split('@').pop()?.toLowerCase();
+    const otpAllowedDomains = await this.getOtpAllowedDomainsSafe();
+
+    if (domain && otpAllowedDomains.includes(domain)) {
+      this._logger.log('otp_domain_skip_cognito');
+      shouldSendConfirmationEmail = false;
+    } else {
+      const cognitoSendsEmail = await this.registerInCognitoIfNeeded(
+        createUserDto,
+        options?.skipAllEmails,
+      );
+      if (!options?.skipAllEmails && cognitoSendsEmail === false) {
+        shouldSendConfirmationEmail = false;
+      }
+    }
+
+    return shouldSendConfirmationEmail;
   }
 
   /**

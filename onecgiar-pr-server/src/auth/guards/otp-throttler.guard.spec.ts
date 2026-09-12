@@ -180,25 +180,35 @@ describe('OtpThrottlerGuard', () => {
           .expect(HttpStatus.CREATED);
       }
 
-      await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .post('/probe/otp/start')
         .send({ email: 'another@icrisat.org' })
         .expect(HttpStatus.CREATED);
+
+      // Explicit assertion (not just "did not throw"): the different email's
+      // request reaches the route handler cleanly — no rate-limit envelope.
+      expect(res.body).toEqual({ ok: true });
     });
 
     it('verify allows 10 per window (a stricter start limit does not leak onto verify)', async () => {
       const email = 'verify-email@icrisat.org';
       for (let i = 0; i < 10; i++) {
-        await request(app.getHttpServer())
+        const res = await request(app.getHttpServer())
           .post('/probe/otp/verify')
           .send({ email })
           .expect(HttpStatus.CREATED);
+        expect(res.body).toEqual({ ok: true });
       }
 
-      await request(app.getHttpServer())
+      const blocked = await request(app.getHttpServer())
         .post('/probe/otp/verify')
         .send({ email })
         .expect(HttpStatus.TOO_MANY_REQUESTS);
+
+      expect(blocked.body.response).toMatchObject({
+        valid: false,
+        code: 'OTP_RATE_LIMITED',
+      });
     });
 
     // FAIL A-2 — outcome=rate_limited must actually be emitted, exactly once.
@@ -293,10 +303,13 @@ describe('OtpThrottlerGuard', () => {
     // ordinary, undecorated route sitting in the same app.
     it('11 rapid calls to the undecorated control route all pass (default 100/60s only — OTP limits leak nowhere)', async () => {
       for (let i = 0; i < 11; i++) {
-        await request(app.getHttpServer())
+        const res = await request(app.getHttpServer())
           .post('/probe/otp/control')
           .send({})
           .expect(HttpStatus.CREATED);
+        // Explicit per-call assertion — proves each of the 11 calls actually
+        // reached the handler (not just that none of them threw).
+        expect(res.body).toEqual({ ok: true });
       }
     });
   });
