@@ -191,7 +191,7 @@
 - **Verification:** exports diff shows only `LambdaConfig` (+ later only `AllowedFirstAuthFactors` back to `[PASSWORD]`); smoke evidence with redacted log lines in `execution.md`. **Input that fails it:** no email within 60 s → `PRODUCT_BUG`, do not tick. **Disqualifier:** a pool update without the before-export.
 - **Definition of done:** Option B live in TEST; `EMAIL_OTP` factor reverted; evidence recorded.
 
-### `OTP-T-15` — PRMS server: first-login auto-provisioning on the OTP path (rev 3.1)
+### [x] `OTP-T-15` — PRMS server: first-login auto-provisioning on the OTP path (rev 3.1)
 
 - **Type:** `server`
 - **Description:** `startOtp`: drop the "no PRMS user → decoy" branch; keep the decoy for `active = false`; unknown-in-PRMS emails go to the microservice. `verifyOtp`: after `msResult.tokens`, decode the ID token claims (no signature check needed — the microservice call is ours) and call `UserService.createOrUpdateUserFromAuthProvider({ email, given_name, family_name, name })`; inactive → `OTP_NOT_AUTHORIZED`; then `createSuccessfulLoginResponse(user, tokens)` exactly as `validateAuthCode` does (same `last_login` update and relation handling). Outcomes: `start` `sent` for unknown-in-PRMS, `denied_user` only for inactive; `verify` `provisioned` on creation. Runbook row 2 + `OTP-R-*` references updated.
