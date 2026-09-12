@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { createHmac } from 'crypto';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './modules/user/user.service';
@@ -845,6 +846,168 @@ describe('AuthService', () => {
       );
       expect(parsed.isDecoy).toBe(true);
       expect(parsed.exp).toBe(exp);
+    });
+
+    // @akili-spec changes/cognito-email-otp-login (design.md §13 item (l), runbook
+    // "Known pre-PROD fixes" #1) — the residual statistic the Reviewer found after
+    // the keyed mask landed: a canonical base64url encoder emits zero for the bits
+    // that fall off the end of a segment whose byte length is not a multiple of 3.
+    // hmac (32 B → 43 chars) leaves 2 unused bits, nonce (16 B → 22 chars) leaves 4,
+    // exp (8 B → 11 chars) leaves 2 — so offsets 42/64/75 were confined to 16/4/16
+    // alphabet values in EVERY decoy, a 3-offset charset test that a uniformly
+    // random real session passes with p ≈ 1/256. Filling the unused bits with
+    // randomness removes the classifier at zero cost: Node's decoder drops them,
+    // so the authenticated bytes are untouched.
+    const BASE64URL_ALPHABET =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+    it('(§13 (l)) the trailing char of the hmac/nonce/exp segments is uniform over the base64url alphabet, not the 16/4/16-value subset canonical encoding leaves — 200 samples', () => {
+      const samples: string[] = Array.from({ length: 200 }, () =>
+        (service as any).buildDecoySession('sample@icrisat.org'),
+      );
+      const distinctAt = (i: number) => new Set(samples.map((s) => s[i])).size;
+
+      // hmac tail, nonce tail, exp tail. 200 samples over a uniform 64-char
+      // alphabet yield ~61 distinct values; 48 is a wide safety margin, while the
+      // pre-fix values (16 / 4 / 16) are far below it.
+      expect(distinctAt(42)).toBeGreaterThanOrEqual(48);
+      expect(distinctAt(64)).toBeGreaterThanOrEqual(48);
+      expect(distinctAt(75)).toBeGreaterThanOrEqual(48);
+
+      // The Reviewer's claim stated exactly: canonical encoding forces those
+      // alphabet indices to ≡ 0 (mod 4) / (mod 16) / (mod 4) in every decoy.
+      const idx = (c: string) => BASE64URL_ALPHABET.indexOf(c);
+      expect(samples.some((s) => idx(s[42]) % 4 !== 0)).toBe(true);
+      expect(samples.some((s) => idx(s[64]) % 16 !== 0)).toBe(true);
+      expect(samples.some((s) => idx(s[75]) % 4 !== 0)).toBe(true);
+
+      // …and the randomised bits stay decoder-invisible: every sample still
+      // verifies as an unexpired decoy for its email.
+      samples.slice(0, 25).forEach((s) => {
+        expect(
+          (service as any).verifyDecoySession(s, 'sample@icrisat.org'),
+        ).toEqual({ isDecoy: true, expired: false, exp: expect.any(Number) });
+      });
+    });
+
+    it('(§13 (l)) randomised trailing bits do not weaken the decoy: meaningful-bit tampering at any segment offset still fails the HMAC', () => {
+      const email = 'sample@icrisat.org';
+      const decoy = (service as any).buildDecoySession(email);
+      const swap = (s: string, i: number, newIdx: number) =>
+        s.slice(0, i) + BASE64URL_ALPHABET[newIdx] + s.slice(i + 1);
+      const idx = (s: string, i: number) => BASE64URL_ALPHABET.indexOf(s[i]);
+
+      // Shifting an alphabet index by 4 changes a bit that IS part of the
+      // authenticated bytes at every one of these offsets.
+      [0, 21, 42, 43, 64, 65, 75].forEach((i) => {
+        const tampered = swap(decoy, i, (idx(decoy, i) + 4) % 64);
+        expect(
+          (service as any).verifyDecoySession(tampered, email).isDecoy,
+        ).toBe(false);
+      });
+
+      // The nonce and exp tails are authenticated even in their unused bits: the
+      // HMAC is taken over the segments exactly as emitted, so re-rolling only
+      // the low bits there still fails the check.
+      [
+        [64, 15],
+        [75, 3],
+      ].forEach(([i, mask]) => {
+        const reRolled = swap(
+          decoy,
+          i,
+          (idx(decoy, i) & ~mask) | ((idx(decoy, i) + 1) & mask),
+        );
+        expect(
+          (service as any).verifyDecoySession(reRolled, email).isDecoy,
+        ).toBe(false);
+      });
+
+      // Only the hmac segment's own 2 unused bits are outside the authenticated
+      // bytes — verify compares the DECODED 32-byte digest, which the decoder
+      // yields identically whatever those bits hold. Re-rolling them is therefore
+      // a semantic no-op, and forges nothing: it takes a valid decoy as input and
+      // produces another encoding of the same digest.
+      const reRolledHmacTail = swap(
+        decoy,
+        42,
+        (idx(decoy, 42) & ~3) | ((idx(decoy, 42) + 1) & 3),
+      );
+      expect(reRolledHmacTail).not.toBe(decoy);
+      expect(
+        (service as any).verifyDecoySession(reRolledHmacTail, email),
+      ).toEqual((service as any).verifyDecoySession(decoy, email));
+    });
+
+    it('(§13 (l)) exp still round-trips, expires, and survives rotation verbatim with randomised trailing bits', () => {
+      const email = 'sample@icrisat.org';
+      const exp = Date.now() + 4 * 60 * 1000;
+
+      const original = (service as any).buildDecoySession(email, exp);
+      expect((service as any).verifyDecoySession(original, email)).toEqual({
+        isDecoy: true,
+        expired: false,
+        exp,
+      });
+
+      const rotated = (service as any).buildDecoySession(email, exp);
+      expect(rotated).not.toBe(original);
+      expect((service as any).verifyDecoySession(rotated, email).exp).toBe(exp);
+
+      const stale = (service as any).buildDecoySession(email, Date.now() - 1);
+      const staleCheck = (service as any).verifyDecoySession(stale, email);
+      expect(staleCheck.isDecoy).toBe(true);
+      expect(staleCheck.expired).toBe(true);
+    });
+
+    // @akili-spec changes/cognito-email-otp-login (design.md §13 item (l)) — the
+    // second half of the residual: `computeOtpExpMask` and `computeOtpDecoyHmac`
+    // both key off `_otpDecoyKey` with no domain-separation tag, so "no input of
+    // one can ever be an input of the other" rested on the `|` separator never
+    // appearing in a base64url nonce — an argument about the encoding, not about
+    // the construction. A distinct tag prefix per derivation makes it structural.
+    it('(§13 (l)) the exp-mask and decoy-auth HMACs are domain-separated under the shared _otpDecoyKey', () => {
+      const key = Buffer.from('test-secret'); // process.env.JWT_SKEY, set in beforeEach
+      const email = 'sample@icrisat.org';
+      const decoy = (service as any).buildDecoySession(email);
+      const nonce = decoy.slice(43, 65);
+      const expStr = decoy.slice(65, 76);
+
+      const mask: Buffer = (service as any).computeOtpExpMask(nonce);
+      expect(
+        mask.equals(
+          createHmac('sha256', key)
+            .update(`otp-decoy-mask\0${nonce}`)
+            .digest()
+            .subarray(0, 8),
+        ),
+      ).toBe(true);
+      // …and NOT the untagged derivation the Reviewer flagged.
+      expect(
+        mask.equals(
+          createHmac('sha256', key).update(nonce).digest().subarray(0, 8),
+        ),
+      ).toBe(false);
+
+      const authDigest: Buffer = (service as any).computeOtpDecoyHmac(
+        email,
+        nonce,
+        expStr,
+      );
+      expect(
+        authDigest.equals(
+          createHmac('sha256', key)
+            .update(`otp-decoy-auth\0${email}|${nonce}|${expStr}`)
+            .digest(),
+        ),
+      ).toBe(true);
+      expect(
+        authDigest.equals(
+          createHmac('sha256', key)
+            .update(`${email}|${nonce}|${expStr}`)
+            .digest(),
+        ),
+      ).toBe(false);
     });
 
     it('(o) two decoys for the same email differ even with JWT_SKEY unset (per-process random fallback key)', async () => {

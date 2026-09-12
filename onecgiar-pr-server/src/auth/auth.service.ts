@@ -68,6 +68,23 @@ const OTP_ATTEMPTS_EXCEEDED_MESSAGE = 'Too many attempts — request a new code.
 // real timestamp range is; unmasking only happens in `verifyDecoySession`, after
 // the HMAC has already confirmed the segment is a genuine decoy (never inside
 // `parseDecoySession`, which only validates shape).
+//
+// @akili-spec changes/cognito-email-otp-login (design.md §13 item (l), runbook
+// "Known pre-PROD fixes" #1) — masking removed the *value* signal but left a
+// *shape* signal: a canonical base64url encoder zeroes the bits that fall off the
+// end of a segment whose byte length is not a multiple of 3 (hmac 32 B → 2 unused
+// bits, nonce 16 B → 4, exp 8 B → 2), so the chars at offsets 42/64/75 were
+// confined to 16/4/16 alphabet values in every decoy — a 3-offset charset test a
+// uniformly random real session passes with p ≈ 1/256. `encodeOtpSegment` now
+// fills those unused bits with `randomInt`; Node's decoder drops them, so the
+// authenticated bytes and the HMAC-over-the-exact-emitted-strings contract are
+// untouched. The two derivations keyed by `_otpDecoyKey` also carry distinct
+// domain-separation tags (below), so "no input of one is ever an input of the
+// other" is structural rather than a property of the `|` separator.
+const OTP_DECOY_AUTH_TAG = 'otp-decoy-auth\0';
+const OTP_DECOY_MASK_TAG = 'otp-decoy-mask\0';
+const OTP_BASE64URL_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const OTP_DECOY_HMAC_LEN = 43; // base64url(HMAC-SHA256), no padding
 const OTP_DECOY_NONCE_LEN = 22; // base64url(16 random bytes), no padding
 const OTP_DECOY_EXP_LEN = 11; // base64url(8-byte big-endian epoch ms), no padding
@@ -792,34 +809,67 @@ export class AuthService {
   }
 
   /**
-   * HMAC-SHA256 over `email|nonce|expEncoded`, base64url, keyed with the
+   * base64url-encodes a segment and fills the bits the encoder would otherwise
+   * zero — the `6 - (8 * len) % 6` trailing bits of the last character when the
+   * byte length is not a multiple of 3 (design.md §13 item (l)). Node's decoder
+   * ignores those bits, so `Buffer.from(encodeOtpSegment(b), 'base64url')`
+   * returns `b` verbatim: the authenticated bytes are unchanged and only the
+   * *shape* signal disappears (the trailing char becomes uniform over all 64
+   * alphabet values instead of the 16/4-value subset canonical encoding leaves).
+   */
+  private encodeOtpSegment(bytes: Buffer): string {
+    const encoded = bytes.toString('base64url');
+    const remainder = bytes.length % 3;
+    if (remainder === 0) {
+      return encoded;
+    }
+
+    // 1 leftover byte → 2 chars, 4 unused bits; 2 leftover bytes → 3 chars, 2.
+    const unusedBits = remainder === 1 ? 4 : 2;
+    const unusedMask = (1 << unusedBits) - 1;
+    const lastIndex = OTP_BASE64URL_ALPHABET.indexOf(
+      encoded[encoded.length - 1],
+    );
+    const randomised = (lastIndex & ~unusedMask) | randomInt(0, unusedMask + 1);
+
+    return encoded.slice(0, -1) + OTP_BASE64URL_ALPHABET[randomised];
+  }
+
+  /**
+   * The raw 32-byte HMAC-SHA256 over `email|nonce|expEncoded`, keyed with the
    * per-process `_otpDecoyKey` (OTP-T-5 rework, review FAIL B-3 — never
-   * `env.JWT_SKEY ?? ''`). `expEncoded` MUST be passed as the same 11-char
-   * base64url-encoded string on both build and verify (OTP-T-14 step (0)) — the
-   * HMAC is computed over the exact bytes of the layout.
+   * `env.JWT_SKEY ?? ''`) and prefixed with `OTP_DECOY_AUTH_TAG` so this
+   * derivation can never share an input with `computeOtpExpMask` under the same
+   * key (design.md §13 item (l)). `expEncoded` MUST be passed as the same 11-char
+   * emitted string on both build and verify (OTP-T-14 step (0)) — the HMAC is
+   * computed over the exact bytes on the wire, trailing random bits included.
+   * Returns the digest, not its base64url form: the emitted hmac segment carries
+   * randomised trailing bits a recompute cannot reproduce, so verification
+   * compares decoded bytes (see `verifyDecoySession`).
    */
   private computeOtpDecoyHmac(
     email: string,
     nonce: string,
     expEncoded: string,
-  ): string {
+  ): Buffer {
     return createHmac('sha256', this._otpDecoyKey)
-      .update(`${email}|${nonce}|${expEncoded}`)
-      .digest('base64url');
+      .update(`${OTP_DECOY_AUTH_TAG}${email}|${nonce}|${expEncoded}`)
+      .digest();
   }
 
   /**
    * An 8-byte XOR keystream derived from the decoy's own `nonce` via HMAC-SHA256
    * under the per-process `_otpDecoyKey` (OTP-T-14 step (0), Reviewer FAIL —
-   * "re-encoded, not removed"). Masking the epoch-ms bytes with this keystream
-   * before base64url-encoding them removes the near-constant leading bytes every
-   * real epoch-ms timestamp has today, so the encoded segment carries no
-   * decoy-vs-real signal on its own — only a full HMAC match (which already
-   * consumes this same nonce) can recover it.
+   * "re-encoded, not removed"), domain-separated from the decoy-auth HMAC by
+   * `OTP_DECOY_MASK_TAG` (design.md §13 item (l)). Masking the epoch-ms bytes
+   * with this keystream before base64url-encoding them removes the near-constant
+   * leading bytes every real epoch-ms timestamp has today, so the encoded segment
+   * carries no decoy-vs-real signal on its own — only a full HMAC match (which
+   * already consumes this same nonce) can recover it.
    */
   private computeOtpExpMask(nonce: string): Buffer {
     return createHmac('sha256', this._otpDecoyKey)
-      .update(nonce)
+      .update(`${OTP_DECOY_MASK_TAG}${nonce}`)
       .digest()
       .subarray(0, 8);
   }
@@ -840,7 +890,7 @@ export class AuthService {
     for (let i = 0; i < 8; i++) {
       buf[i] ^= mask[i];
     }
-    return buf.toString('base64url');
+    return this.encodeOtpSegment(buf);
   }
 
   /**
@@ -891,7 +941,11 @@ export class AuthService {
    * prefix means the string's mere shape is never an existence oracle — only a
    * failed/successful HMAC recompute on verify tells decoy from real, and the
    * `exp` segment itself carries no signal either (masked per `encodeOtpExp`,
-   * OTP-T-14 step (0)).
+   * OTP-T-14 step (0)). Every fixed segment is emitted through
+   * `encodeOtpSegment`, which randomises the trailing bits base64url leaves
+   * unused, so the trailing char of each segment is uniform over the alphabet
+   * rather than the 16/4/16-value subset that made a 3-offset charset test a
+   * p ≈ 1/256 decoy-vs-real classifier (design.md §13 item (l)).
    *
    * @param exp Optional epoch-ms expiry to carry over verbatim (OTP-T-13 rework 2,
    * design.md §18.1 row 10). Used when *rotating* an existing decoy on mismatch —
@@ -900,12 +954,16 @@ export class AuthService {
    * original `start`-time decoy.
    */
   private buildDecoySession(email: string, exp?: number): string {
-    const nonce = randomBytes(16).toString('base64url'); // 22 chars
+    const nonce = this.encodeOtpSegment(randomBytes(16)); // 22 chars
     const expStr = this.encodeOtpExp(
       exp ?? Date.now() + OTP_DECOY_TTL_MS,
       nonce,
     ); // 11 chars, masked
-    const hmac = this.computeOtpDecoyHmac(email, nonce, expStr); // 43 chars
+    // The HMAC covers the nonce and exp segments exactly as emitted (trailing
+    // random bits included), so verify recomputes over the bytes on the wire.
+    const hmac = this.encodeOtpSegment(
+      this.computeOtpDecoyHmac(email, nonce, expStr),
+    ); // 43 chars
 
     const totalLen = randomInt(
       OTP_DECOY_MIN_TOTAL_LEN,
@@ -968,13 +1026,16 @@ export class AuthService {
       return { isDecoy: false, expired: false };
     }
 
-    const expected = this.computeOtpDecoyHmac(
+    // Compare the DECODED 32 bytes, not the 43-char strings: the emitted hmac
+    // segment's trailing bits are random (design.md §13 item (l)) and a recompute
+    // cannot reproduce them — the decoder drops them, so the authenticated digest
+    // is what gets compared, still in constant time.
+    const expectedBuffer = this.computeOtpDecoyHmac(
       email,
       parsed.nonce,
       parsed.expStr,
     );
-    const providedBuffer = Buffer.from(parsed.hmac);
-    const expectedBuffer = Buffer.from(expected);
+    const providedBuffer = Buffer.from(parsed.hmac, 'base64url');
     const isDecoy =
       providedBuffer.length === expectedBuffer.length &&
       timingSafeEqual(providedBuffer, expectedBuffer);
