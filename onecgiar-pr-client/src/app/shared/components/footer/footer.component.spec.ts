@@ -67,13 +67,13 @@ describe('FooterComponent', () => {
     expect(fixture.nativeElement.querySelector('.footer-blocker')).toBeNull();
   });
 
-  // FOVL-AC-3: listed non-detail path (Results list) must still mount the footer.
-  it('should render footer on results-list URL (FOVL-AC-3)', () => {
+  // RCS-T-4 / FOVL-AC-3: Results Center uses the viewport shell — footer must not mount there.
+  it('should not render footer on results-list URL (RCS-T-4)', () => {
     component.router = { url: '/result/results-outlet/results-list' } as Router;
     const result = component.showIfRouteIsInList();
-    expect(result).toBe(true);
+    expect(result).toBe(false);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.footer')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.footer')).toBeNull();
   });
 
   // FOVL-R-3: a remaining floating route must still set isFloating.

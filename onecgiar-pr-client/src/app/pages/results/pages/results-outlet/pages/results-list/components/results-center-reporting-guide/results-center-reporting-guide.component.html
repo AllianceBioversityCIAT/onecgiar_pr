@@ -1,0 +1,164 @@
+@if (visible()) {
+  <app-pr-dialog
+    [visible]="visible()"
+    [modal]="true"
+    [closeOnEscape]="true"
+    [showHeader]="false"
+    [dismissableMask]="true"
+    [styleClass]="dialogStyleClass()"
+    (onHide)="closeModal()">
+    <div class="flex items-center justify-between border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[24px] py-[16px]">
+      <div class="flex items-center gap-[10px]">
+        <span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+          <span class="material-icons-round text-[20px]">explore</span>
+        </span>
+        <div>
+          <h2 class="m-0 text-[16px] font-bold text-[var(--pr-text-heading)]">{{ copy.title }}</h2>
+          <p class="m-0 mt-[1px] text-[12px] text-[var(--pr-text-muted)]">{{ copy.subtitle }}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        (click)="closeModal()"
+        aria-label="Close modal"
+        class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] transition-colors">
+        <i class="material-icons-round text-[20px]">close</i>
+      </button>
+    </div>
+
+    @if (guideService.modalMode() === 'pick-program' && !showHub()) {
+      <section class="rc-guide-picker" aria-labelledby="rc-guide-picker-title">
+        <div class="rc-guide-picker__intro">
+          <h3 id="rc-guide-picker-title" class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">
+            {{ platformCopy.pickerTitle }}
+          </h3>
+          <p class="mt-[4px] mb-0 text-[12.5px] text-[var(--pr-text-muted)]">{{ platformCopy.pickerSubtitle }}</p>
+        </div>
+
+        @if (guideService.catalogLoading()) {
+          <p class="rc-guide-picker__loading text-[13px] text-[var(--pr-text-secondary)]">{{ platformCopy.pickerLoading }}</p>
+        } @else {
+          <div
+            class="rc-guide-picker__list custom_scroll"
+            role="radiogroup"
+            [attr.aria-label]="platformCopy.pickerTitle">
+            @for (choice of guideService.spChoices(); track choice.code) {
+              <label
+                class="rc-guide-picker__item"
+                [class.rc-guide-picker__item--selected]="pickerSelection() === choice.code">
+                <input
+                  type="radio"
+                  name="rc-sp-choice"
+                  class="rc-guide-picker__radio"
+                  [value]="choice.code"
+                  [checked]="pickerSelection() === choice.code"
+                  (change)="pickerSelection.set(choice.code)" />
+                <span class="rc-guide-picker__label">
+                  <span class="rc-guide-picker__code">{{ choice.code }}</span>
+                  <span class="rc-guide-picker__name">{{ choice.name }}</span>
+                </span>
+              </label>
+            }
+          </div>
+
+          <div class="rc-guide-picker__footer">
+            <span class="rc-guide-picker__count">
+              {{ platformCopy.pickerCount(guideService.spChoices().length) }}
+            </span>
+            <button
+              type="button"
+              class="rc-guide-picker__continue"
+              [disabled]="!pickerSelection()"
+              (click)="onPickerContinue()">
+              {{ platformCopy.pickerContinue }}
+            </button>
+          </div>
+        }
+      </section>
+    } @else {
+      <div class="rc-guide-body custom_scroll">
+      @if (guideService.modalMode() === 'guide-only') {
+        <div class="grid grid-cols-2 gap-[16px] max-[1279px]:grid-cols-1">
+          <section
+            aria-labelledby="rc-guide-w12"
+            class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-color-primary-300)]">
+            <h3 id="rc-guide-w12" class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">{{ platformCopy.w12NoSpTitle }}</h3>
+            <p class="mt-[8px] text-[13px] text-[var(--pr-text-secondary)]">{{ platformCopy.w12NoSpBody }}</p>
+            <a
+              [routerLink]="platformCopy.w12NoSpHref"
+              class="mt-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline"
+              (click)="closeModal()">
+              {{ platformCopy.w12NoSpLink }}
+            </a>
+
+            <div
+              class="mt-[16px] flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-purple-200/80 bg-gradient-to-r from-purple-50/70 to-indigo-50/50 p-[12px]"
+              aria-labelledby="rc-guide-emerging-title">
+              <div class="flex min-w-0 items-center gap-[10px]">
+                <span class="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] bg-purple-100 text-purple-700">
+                  <ng-icon name="lucideZap" class="text-[16px]" />
+                </span>
+                <div class="min-w-0">
+                  <span id="rc-guide-emerging-title" class="block text-[13px] font-bold text-[var(--pr-text-heading)]">
+                    {{ platformCopy.emergingTitle }}
+                  </span>
+                  <span class="block text-[12px] text-[var(--pr-text-muted)]">
+                    {{ platformCopy.emergingSubtitle(activeYear()) }}
+                  </span>
+                </div>
+              </div>
+              <strong class="text-[12px] font-semibold text-[var(--pr-text-muted)]">{{ platformCopy.emergingAction }}</strong>
+            </div>
+            <p class="mt-[8px] text-[12px] text-[var(--pr-text-muted)]">{{ platformCopy.emergingDisabledHint }}</p>
+          </section>
+
+          <section
+            aria-labelledby="rc-guide-w3"
+            class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-status-approved-fg)]">
+            <h3 id="rc-guide-w3" class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">{{ copy.w3.laneTitle }}</h3>
+            @if (guideService.hasCenterAccess()) {
+              <p class="mt-[8px] text-[13px] text-[var(--pr-text-secondary)]">{{ platformCopy.w3CenterOnlyBody(centerCount()) }}</p>
+              <a
+                [routerLink]="platformCopy.w12NoSpHref"
+                class="mt-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline"
+                (click)="closeModal()">
+                {{ platformCopy.w3CenterOnlyLink }}
+              </a>
+            } @else {
+              <div class="mt-[8px] flex flex-col items-start gap-[8px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[16px] py-[20px]">
+                <p class="m-0 text-[13px] text-[var(--pr-text-secondary)]">{{ copy.w3.noCentersBody }}</p>
+                <button
+                  type="button"
+                  (click)="onRequestAccess()"
+                  class="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline">
+                  {{ copy.requestAccess }}
+                </button>
+              </div>
+            }
+          </section>
+        </div>
+      } @else if (showHub()) {
+        <app-reporting-entry-hub
+          id="rc-reporting-entry-hub"
+          [isModal]="true"
+          [programCode]="programCode()"
+          [phaseLabel]="phaseLabel()"
+          [isActivePhase]="isActivePhase()"
+          [activeYear]="activeYear()"
+          [aowRows]="internalAowRows()"
+          [w1w2Loading]="internalW1W2Loading()"
+          [programLevelRows]="internalProgramLevelRows()"
+          [canReportW1W2]="canReportW1W2()"
+          [w3State]="internalW3State()"
+          [reportedResultsByProjectId]="internalReportedResultsByProjectId()"
+          [myCentersCount]="myCentersCount()"
+          [canReportEmerging]="canReportEmerging()"
+          (reportEmerging)="onReportEmerging()"
+          (reportAow)="onReportAow($event)"
+          (reportProgramLevel)="onReportProgramLevel($event)"
+          (retryW3)="retryW3()" />
+      }
+      </div>
+    }
+  </app-pr-dialog>
+}

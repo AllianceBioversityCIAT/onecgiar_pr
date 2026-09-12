@@ -1073,6 +1073,47 @@ describe('ResultsListComponent', () => {
     });
   });
 
+  describe('Where to report guide', () => {
+    it('should expose a hero CTA and open the reporting guide', () => {
+      fixture.detectChanges();
+      const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+      const cta = buttons.find(btn => btn.textContent?.includes('Where to report'));
+      expect(cta).toBeTruthy();
+
+      expect(component.reportingGuideOpen()).toBe(false);
+      component.openReportingGuide(new MouseEvent('click'));
+      expect(component.reportingGuideOpen()).toBe(true);
+    });
+  });
+
+  describe('Results Center info popover', () => {
+    it('should toggle the info popover and close it via closeInfo()', () => {
+      expect(component.infoOpen()).toBe(false);
+
+      component.toggleInfo(new MouseEvent('click'));
+      expect(component.infoOpen()).toBe(true);
+
+      component.closeInfo();
+      expect(component.infoOpen()).toBe(false);
+    });
+
+    it('should close the info popover on document click', () => {
+      component.toggleInfo(new MouseEvent('click'));
+      expect(component.infoOpen()).toBe(true);
+
+      component.onDocumentClick();
+      expect(component.infoOpen()).toBe(false);
+    });
+
+    it('should close the info popover when opening the columns panel', () => {
+      component.toggleInfo(new MouseEvent('click'));
+      component.toggleColumnsPanel(new MouseEvent('click'));
+
+      expect(component.infoOpen()).toBe(false);
+      expect(component.columnsOpen()).toBe(true);
+    });
+  });
+
   describe('ActivatedRoute query parameters handling', () => {
     it('should apply query parameters to resultsListFilterSE on init', () => {
       component.activatedRoute = {
