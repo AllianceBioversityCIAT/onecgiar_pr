@@ -1,18 +1,20 @@
 export interface ResultTypeQuickChip {
   id: string;
   label: string;
+  /** Abbreviated label for compact laptop toolbars (≤1366px). */
+  shortLabel: string;
   matchKey: string;
   count?: number;
   active: boolean;
 }
 
 export const QUICK_TYPOLOGIES = [
-  { id: 'all', label: 'All', matchKey: 'all' },
-  { id: 'kp', label: 'Knowledge Product', matchKey: 'Knowledge product' },
-  { id: 'id', label: 'Innovation Development', matchKey: 'Innovation development' },
-  { id: 'pc', label: 'Policy Change', matchKey: 'Policy change' },
-  { id: 'iu', label: 'Innovation Use', matchKey: 'Innovation use' },
-  { id: 'cs', label: 'Capacity Sharing', matchKey: 'Capacity sharing for development' }
+  { id: 'all', label: 'All', shortLabel: 'All', matchKey: 'all' },
+  { id: 'kp', label: 'Knowledge Product', shortLabel: 'KP', matchKey: 'Knowledge product' },
+  { id: 'id', label: 'Innovation Development', shortLabel: 'ID', matchKey: 'Innovation development' },
+  { id: 'pc', label: 'Policy Change', shortLabel: 'PC', matchKey: 'Policy change' },
+  { id: 'iu', label: 'Innovation Use', shortLabel: 'IU', matchKey: 'Innovation use' },
+  { id: 'cs', label: 'Capacity Sharing', shortLabel: 'CS', matchKey: 'Capacity sharing for development' }
 ] as const;
 
 export function buildQuickTypologyChips(
@@ -38,6 +40,7 @@ export function buildQuickTypologyChips(
     return {
       id: item.id,
       label: item.label,
+      shortLabel: item.shortLabel,
       matchKey: item.matchKey,
       count,
       active

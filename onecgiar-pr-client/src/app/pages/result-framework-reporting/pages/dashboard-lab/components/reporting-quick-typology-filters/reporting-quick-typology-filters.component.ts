@@ -15,12 +15,15 @@ import { buildQuickTypologyChips, ResultTypeQuickChip } from './reporting-quick-
         <button
           type="button"
           (click)="onChipClick(chip)"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-all cursor-pointer"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-all cursor-pointer max-[1366px]:px-2"
           [class]="chip.active
             ? 'border-[var(--pr-color-primary-400)] bg-[var(--pr-color-primary-400)] font-semibold text-white shadow-xs'
             : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] font-medium text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)]'"
-          [attr.aria-pressed]="chip.active">
-          <span>{{ chip.label }}</span>
+          [attr.aria-pressed]="chip.active"
+          [attr.aria-label]="chip.label"
+          [title]="chip.label">
+          <span class="max-[1366px]:hidden">{{ chip.label }}</span>
+          <span class="hidden max-[1366px]:inline">{{ chip.shortLabel }}</span>
           @if (chip.count !== undefined && chip.count !== null) {
             <span
               class="rounded-full px-1.5 py-0.2 text-[10.5px] tabular-nums"

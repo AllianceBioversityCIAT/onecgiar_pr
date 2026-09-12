@@ -899,23 +899,18 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
-  // ── MRF-T-2 · band controls (Only pending + Sort) ─────────────────────────
-  describe('band controls (Only pending + Sort)', () => {
+  // ── MRF-T-2 · band controls (Only pending) ────────────────────────────────
+  describe('band controls (Only pending)', () => {
     const onlyPendingBtn = () =>
-      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
-        b => b.textContent?.trim() === 'Only pending'
-      ) as HTMLButtonElement;
-    const sortTab = (label: string) =>
-      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[aria-label="Sort"] button')).find(
-        b => b.textContent?.trim() === label
+      (fixture.nativeElement as HTMLElement).querySelector(
+        'button[role="switch"][aria-label="Only pending"]'
       ) as HTMLButtonElement;
 
-    it('renders Only pending unchecked and Catalogue selected by default', async () => {
+    it('renders Only pending unchecked by default', async () => {
       await build({ showToolbar: true, activeTab: 'reporting' });
 
       expect(onlyPendingBtn().getAttribute('aria-checked')).toBe('false');
-      expect(sortTab('Catalogue').getAttribute('aria-selected')).toBe('true');
-      expect(sortTab('Remaining work').getAttribute('aria-selected')).toBe('false');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Sort"]')).toBeNull();
     });
 
     it('emits onlyPendingChange with the flipped value on click', async () => {
@@ -934,36 +929,16 @@ describe('ReportingProgramBandComponent', () => {
       expect(onlyPendingBtn().getAttribute('aria-checked')).toBe('true');
     });
 
-    it('emits burndownSortChange with the clicked segment', async () => {
-      await build({ showToolbar: true, activeTab: 'reporting' });
-      const emitted: string[] = [];
-      component.burndownSortChange.subscribe(v => emitted.push(v));
-
-      sortTab('Remaining work').click();
-
-      expect(emitted).toEqual(['remaining']);
-    });
-
-    it('marks Remaining work selected when burndownSort is remaining', async () => {
-      await build({ showToolbar: true, activeTab: 'reporting', burndownSort: 'remaining' });
-
-      expect(sortTab('Remaining work').getAttribute('aria-selected')).toBe('true');
-      expect(sortTab('Catalogue').getAttribute('aria-selected')).toBe('false');
-    });
-
     it('stays visible in By-AOW mode (compactFilters), unlike Type/Category/Status', async () => {
       await build({ showToolbar: true, activeTab: 'reporting', compactFilters: true });
 
       expect(onlyPendingBtn()).toBeTruthy();
-      expect(sortTab('Catalogue')).toBeTruthy();
-      expect(sortTab('Remaining work')).toBeTruthy();
     });
 
     it('is absent on Overview, where there is no toolbar at all', async () => {
       await build({ showToolbar: false });
 
-      expect(onlyPendingBtn()).toBeUndefined();
-      expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Sort"]')).toBeNull();
+      expect(onlyPendingBtn()).toBeNull();
     });
   });
 
@@ -1505,6 +1480,31 @@ describe('ReportingProgramBandComponent', () => {
       const statusSpy = jest.spyOn(component.statusChange, 'emit');
       component.removeStatusChip('achieved');
       expect(statusSpy).toHaveBeenCalledWith(['not-started']);
+    });
+  });
+
+  // ── Reporting Video Guide Modal ──────────────────────────────────────────────
+  describe('reporting video guide modal', () => {
+    it('renders the Video Guide button in reporting-view-controls and opens modal on click', async () => {
+      await build({ showToolbar: true });
+
+      const videoGuideBtn = root().querySelector('[data-testid="reporting-video-guide-btn"]') as HTMLButtonElement;
+      expect(videoGuideBtn).toBeTruthy();
+      expect(videoGuideBtn.textContent).toContain('Video Guide');
+      expect(component.videoGuideOpen()).toBe(false);
+      expect(root().querySelector('app-reporting-video-modal')).toBeFalsy();
+
+      videoGuideBtn.click();
+      fixture.detectChanges();
+
+      expect(component.videoGuideOpen()).toBe(true);
+      expect(root().querySelector('app-reporting-video-modal')).toBeTruthy();
+
+      component.closeVideoGuide();
+      fixture.detectChanges();
+
+      expect(component.videoGuideOpen()).toBe(false);
+      expect(root().querySelector('app-reporting-video-modal')).toBeFalsy();
     });
   });
 });
