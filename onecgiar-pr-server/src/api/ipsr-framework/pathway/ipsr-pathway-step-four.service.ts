@@ -133,7 +133,16 @@ export class IpsrPathwayStepFourService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      this._handlersError.returnErrorRes({ error, debug: true });
+      /*
+       * The `return` is the fix: without it this catch swallowed the failure, `saveMain` resolved to
+       * `undefined`, and `ResponseInterceptor` (shared/Interceptors/Return-data.interceptor.ts:30)
+       * defaults a missing status to 200 — so a step 4 save that failed (result not found, no active
+       * IPSR phase, a DB error while syncing the scaling-study URLs or updating the package) reached
+       * the user as HTTP 200 with the green toast and nothing saved. Returning the error object is
+       * what every sibling save in this service already does (`saveMaterials`, `saveBilaterals`,
+       * `savePartnerInvestment`, …) and it lets the real status reach the client.
+       */
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -145,20 +154,28 @@ export class IpsrPathwayStepFourService {
     const id = +resultId;
     try {
       const allEvidence = await this._evidenceRepository.getMaterials(id);
-      const ipsrMaterials = saveStepFourDto.ipsr_materials;
+      /*
+       * Reference material rows: blank rows are IGNORED, never a reason to discard the batch.
+       *
+       * What was breaking (measured on prtest, innovation package 9167, step 4): typing one link,
+       * pressing "Add another link to reference material" and leaving the second row blank made the
+       * whole save a no-op. A guard that used to sit here (`ipsrMaterials.find((m) => !m.link)`)
+       * returned NOT_ACCEPTABLE before a single evidence was written, and `saveMain` never looked at
+       * that status — it still answered HTTP 200, so the user got the green toast and, on reload, NO
+       * rows at all: the link that was typed had never been persisted. With a single filled row and
+       * no blank one it persisted fine, which pins the cause on the blank row alone.
+       *
+       * An empty row is UI noise, not data. It is dropped here, and the rows carrying a link are
+       * saved. A payload where every row is blank collapses to an empty list, i.e. the same as the
+       * front sending no rows at all: the stored materials are deactivated (`deactivateAll` below).
+       */
+      const ipsrMaterials = (saveStepFourDto.ipsr_materials ?? []).filter(
+        (m) => m?.link?.trim(),
+      );
 
       if (ipsrMaterials.length === 0) {
         const deactivated = await this.deactivateAll(allEvidence, user);
         return { saveMaterial: deactivated };
-      }
-
-      const invalid = ipsrMaterials.find((m) => !m.link);
-      if (invalid) {
-        return {
-          response: { valid: false },
-          message: 'Please provide a link',
-          status: HttpStatus.NOT_ACCEPTABLE,
-        };
       }
 
       const existingLinks = allEvidence.map((e) => e.link);

@@ -48,6 +48,7 @@ describe('IpsrPathwayStepFourService', () => {
     update: jest.fn(),
     save: jest.fn(),
     create: jest.fn(),
+    getMaterials: jest.fn(),
   });
 
   beforeEach(async () => {
@@ -262,6 +263,135 @@ describe('IpsrPathwayStepFourService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('reference materials: a blank row must not discard the filled ones', () => {
+    const resultId = 9167;
+    const user = { id: 575 } as any;
+    const filledLink = 'https://cgspace.cgiar.org/handle/10568/141592';
+
+    const mockOf = (token: any) => moduleRef.get(token) as any;
+
+    it('should save the typed link even when an empty "Add another link" row travels with it', async () => {
+      const evidences = mockOf(EvidencesRepository);
+      evidences.getMaterials.mockResolvedValue([]);
+      evidences.save.mockImplementation(async (e: any) => e);
+
+      const saved = await service.saveMaterials(resultId, user, {
+        ipsr_materials: [{ link: filledLink }, { link: '' }],
+      } as any);
+
+      // Before the fix this returned { status: 406 } and saved nothing, while saveMain still
+      // answered HTTP 200 - so the link the user typed was gone after a reload.
+      expect(saved.status).toBeUndefined();
+      expect(evidences.save).toHaveBeenCalledTimes(1);
+      expect(evidences.save).toHaveBeenCalledWith(
+        expect.objectContaining({ link: filledLink, result_id: resultId }),
+      );
+    });
+
+    it('should ignore a whitespace-only row exactly like an empty one', async () => {
+      const evidences = mockOf(EvidencesRepository);
+      evidences.getMaterials.mockResolvedValue([]);
+      evidences.save.mockImplementation(async (e: any) => e);
+
+      await service.saveMaterials(resultId, user, {
+        ipsr_materials: [{ link: filledLink }, { link: '   ' }],
+      } as any);
+
+      expect(evidences.save).toHaveBeenCalledTimes(1);
+      expect(evidences.save).toHaveBeenCalledWith(
+        expect.objectContaining({ link: filledLink }),
+      );
+    });
+
+    it('should persist the link end to end through saveMain with a blank row in the payload', async () => {
+      const evidences = mockOf(EvidencesRepository);
+      evidences.getMaterials.mockResolvedValue([]);
+      evidences.save.mockImplementation(async (e: any) => e);
+      mockOf(ResultRepository).findOne.mockResolvedValue({ id: resultId });
+      mockOf(VersioningService).$_findActivePhase.mockResolvedValue({ id: 2 });
+      mockOf(getRepositoryToken(ResultScalingStudyUrl)).find.mockResolvedValue(
+        [],
+      );
+      mockOf(getRepositoryToken(ResultScalingStudyUrl)).update.mockResolvedValue(
+        {},
+      );
+      mockOf(ResultInnovationPackageRepository).update.mockResolvedValue({});
+
+      const saved = (await service.saveMain(resultId, user, {
+        ipsr_materials: [{ link: filledLink }, { link: '' }],
+        scaling_studies_urls: [],
+        has_scaling_studies: false,
+      } as any)) as any;
+
+      expect(saved.status).toBe(HttpStatus.OK);
+      expect(evidences.save).toHaveBeenCalledWith(
+        expect.objectContaining({ link: filledLink }),
+      );
+    });
+
+    it('should deactivate the stored materials when every incoming row is blank', async () => {
+      const evidences = mockOf(EvidencesRepository);
+      const stored = { link: filledLink, is_active: 1 };
+      evidences.getMaterials.mockResolvedValue([stored]);
+      evidences.save.mockImplementation(async (e: any) => e);
+
+      await service.saveMaterials(resultId, user, {
+        ipsr_materials: [{ link: '' }],
+      } as any);
+
+      expect(evidences.save).toHaveBeenCalledWith(
+        expect.objectContaining({ link: filledLink, is_active: 0 }),
+      );
+    });
+  });
+
+  describe('saveMain must not report a failed save as a success', () => {
+    const resultId = 9167;
+    const user = { id: 575 } as any;
+
+    const mockOf = (token: any) => moduleRef.get(token) as any;
+
+    it('should return the error status when the result does not exist', async () => {
+      mockOf(ResultRepository).findOne.mockResolvedValue(null);
+
+      const saved = (await service.saveMain(resultId, user, {
+        ipsr_materials: [],
+        scaling_studies_urls: [],
+      } as any)) as any;
+
+      // Before the fix the catch swallowed the error, saveMain resolved to undefined and
+      // ResponseInterceptor defaulted the missing status to HTTP 200 (green toast, nothing saved).
+      expect(saved).toBeDefined();
+      expect(saved.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(saved.message).toBe('The result was not found');
+    });
+
+    it('should return the error status when a write fails mid-save', async () => {
+      mockOf(ResultRepository).findOne.mockResolvedValue({ id: resultId });
+      mockOf(VersioningService).$_findActivePhase.mockResolvedValue({ id: 2 });
+      mockOf(EvidencesRepository).getMaterials.mockResolvedValue([]);
+      mockOf(getRepositoryToken(ResultScalingStudyUrl)).find.mockResolvedValue(
+        [],
+      );
+      mockOf(getRepositoryToken(ResultScalingStudyUrl)).update.mockResolvedValue(
+        {},
+      );
+      mockOf(ResultInnovationPackageRepository).update.mockRejectedValue(
+        new Error('ER_LOCK_WAIT_TIMEOUT'),
+      );
+
+      const saved = (await service.saveMain(resultId, user, {
+        ipsr_materials: [],
+        scaling_studies_urls: [],
+        has_scaling_studies: false,
+      } as any)) as any;
+
+      expect(saved).toBeDefined();
+      expect(saved.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(saved.message).toBe('ER_LOCK_WAIT_TIMEOUT');
     });
   });
 
