@@ -138,23 +138,30 @@
     </app-pr-multi-select>
   }
 
-  <div class="medal_selector selected_container">
-    <div class="centers chips_container">
-      <div
-        class="center pr_chip_selected"
-        [prTooltip]="this.disabledText"
-        [prTooltipDisabled]="!center.from_cgspace"
-        *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
-        <div class="name" [innerHtml]="isCP2026() ? center?.acronym || center?.name : center?.name"></div>
-        <i
-          *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
-          class="material-icons-round"
-          (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
-          >cancel</i
-        >
+  <!-- bugfix: these chips render `contributing_center` — the SAME array bound to dropdown 1 above. Gated to the
+       exact cases where a control for that array is actually painted (legacy flat, unmapped-2026 flat, or the
+       2026-split dropdown 1 when the ToC brings reference centers), so a mid-session ToC change that flips
+       `hasReferenceCenters()` to false (dropdown 1 replaced by the "No CGIAR Centers..." note) can never leave
+       these chips orphaned with no visible owning field (see result 9139). -->
+  @if (!isCP2026() || this.rdPartnersSE.partnersBody.result_toc_result.planned_result === false || hasReferenceCenters()) {
+    <div class="medal_selector selected_container">
+      <div class="centers chips_container">
+        <div
+          class="center pr_chip_selected"
+          [prTooltip]="this.disabledText"
+          [prTooltipDisabled]="!center.from_cgspace"
+          *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+          <div class="name" [innerHtml]="isCP2026() ? center?.acronym || center?.name : center?.name"></div>
+          <i
+            *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+            class="material-icons-round"
+            (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
+            >cancel</i
+          >
+        </div>
       </div>
     </div>
-  </div>
+  }
 
   <!-- P2-2998 (2026): the "Other(s)" dropdown appears AFTER the selected-centers chips (chips stay pinned under dropdown 1).
        AC4: it auto-activates when the ToC returned no reference centers, even without the user picking "Other".
@@ -415,14 +422,19 @@
       }
     }
 
-    <div class="medal_selector selected_container">
-      <div class="centers chips_container">
-        <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
-          <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
-          <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
+    <!-- bugfix: same rationale as the Centers chips above — only show while dropdown 1 (bound to the same
+         `scienceSelected` array) is actually painted, i.e. the ToC brought reference Science Programs, so a
+         mid-session ToC change that empties `hasReferenceScience()` can't leave these chips orphaned. -->
+    @if (hasReferenceScience() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
+      <div class="medal_selector selected_container">
+        <div class="centers chips_container">
+          <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
+            <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+            <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
+          </div>
         </div>
       </div>
-    </div>
+    }
 
     <!-- P2-2929 (aligned with Centers AC4, per Santi 2026-07-03): the "Other(s)" dropdown appears when the user picks
          "Other" OR auto-activates when the ToC returned no Science Programs (empty state). -->
@@ -510,7 +522,7 @@
     (selectOptionEvent)="this.rdPartnersSE.onLeadByPartnerChange($event)"
     [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
   </app-pr-yes-or-not>
-  <app-alert-status *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner" [description]="getMessageLeadPartner()"></app-alert-status>
+  <app-alert-status *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner" [description]="getMessageLeadPartner()" [collapsible]="false"></app-alert-status>
   <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner">
     <app-pr-select
       data-testid="cp-field-institutions~lead"
@@ -680,10 +692,10 @@
             <div class="selected_container custom_scroll" *ngIf="this.rdPartnersSE.partnersBody.linked_results?.length">
               <app-pr-field-header description="Results selected ({{ this.rdPartnersSE.partnersBody.linked_results.length }})"> </app-pr-field-header>
 
-              <div class="chips_container">
-                <div class="pr_chip_selected" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results; trackBy: trackByLinkedId">
-                  <div class="name" [innerHtml]="formatResultLabel(getResultById(id))"></div>
-                  <i class="material-icons-round" style="cursor: pointer; color: #f44336;" (click)="toggleResultSelection(id)">remove_circle</i>
+              <div class="chips_container" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="pr_chip_selected" style="display: flex; justify-content: space-between; align-items: center; width: 100%;" *ngFor="let id of this.rdPartnersSE.partnersBody.linked_results; trackBy: trackByLinkedId">
+                  <div class="name" style="flex: 1;" [innerHtml]="formatResultLabel(getResultById(id))"></div>
+                  <i class="material-icons-round" style="cursor: pointer; color: #f44336; margin-left: 10px;" (click)="toggleResultSelection(id)">remove_circle</i>
                 </div>
               </div>
             </div>

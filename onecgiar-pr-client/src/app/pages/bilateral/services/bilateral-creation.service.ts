@@ -4,7 +4,7 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
-import { BilateralProject } from './bilateral-creation.interfaces';
+import { BilateralProject, ScienceProgramMapping } from './bilateral-creation.interfaces';
 import { User } from '../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 
 const LS_PROJECT_KEY = 'bp_project';
@@ -92,7 +92,15 @@ export class BilateralCreationService {
     this.isLoadingProjects.set(true);
     this.bilateralApi.GET_bilateralProjects(centerId).subscribe({
       next: ({ response }) => {
-        this.projects.set(response.projects);
+        const projects = response?.projects ?? [];
+        this.projects.set(projects);
+        // Detail responses omit project mappings. Once the centre catalogue arrives,
+        // enrich the existing lead project so Section 0 can offer its allocated programs.
+        const selected = this.selectedProject();
+        const catalogueProject = selected
+          ? projects.find((project: BilateralProject) => Number(project.id) === Number(selected.id))
+          : null;
+        if (catalogueProject) this.selectedProject.set(catalogueProject);
         this.isLoadingProjects.set(false);
       },
       error: () => this.isLoadingProjects.set(false)
@@ -337,6 +345,22 @@ export class BilateralCreationService {
       { id: newLeadId, shortName: project.shortName, fullName: project.fullName },
       ...list.filter(p => !isDropped(Number(p.id)))
     ]);
+  }
+
+  /** Applies a server-confirmed Section 0 assignment before detail state rehydrates. */
+  applyPrimaryAssignment(project: BilateralProject, primary: ScienceProgramMapping): void {
+    this.setLeadProject(project);
+    this.resultInitiativeId.set(Number(primary.programId));
+    this.selectedPrimarySp.set({
+      programId: Number(primary.programId),
+      programCode: primary.programCode,
+      allocation: primary.allocation ?? '',
+      name: primary.spName,
+      shortName: primary.spShortName,
+    });
+    this.selectedSecondarySps.update((programs) =>
+      programs.filter((program) => Number(program.programId) !== Number(primary.programId)),
+    );
   }
 
   /**

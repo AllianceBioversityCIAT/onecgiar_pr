@@ -8,7 +8,7 @@
   } @else {
     <div class="bps-dropdown-anchor">
       <div class="bps-field" (click)="toggleDropdown()" tabindex="0" role="combobox">
-        <span class="bps-field-text" [class.bps-placeholder]="!creationService.selectedProject()">
+        <span class="bps-field-text" [class.bps-placeholder]="!displayProject()">
           {{ selectedLabel }}
         </span>
         <i class="material-icons-round bps-chevron" [class.bps-chevron--open]="showDropdown()">expand_more</i>
@@ -34,7 +34,7 @@
           @for (project of filteredProjects(); track project.id) {
             <div
               class="bps-option"
-              [class.bps-option--selected]="creationService.selectedProject()?.id === project.id"
+              [class.bps-option--selected]="displayProject()?.id === project.id"
               (click)="selectProject(project)"
             >
               <span class="bps-option-code">{{ project.shortName }}</span>
@@ -52,7 +52,7 @@
 
   @if (isInline()) {
     <!-- Section 0 already renders Project Summary / Project Description / Lead Center below. -->
-  } @else if (creationService.selectedProject(); as project) {
+  } @else if (displayProject(); as project) {
     <div class="bps-project-info">
       <div class="bps-info-section">
         <h4 class="bps-info-label">Project Summary</h4>

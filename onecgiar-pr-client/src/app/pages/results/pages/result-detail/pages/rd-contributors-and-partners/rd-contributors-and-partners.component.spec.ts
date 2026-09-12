@@ -1043,7 +1043,7 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
     expect(svc.scienceSelected.map((sp: any) => sp.id)).toEqual([1, 7]);
   });
 
-  it('keeps Other sentinel, manual and persisted items while pruning stale preloaded SP', () => {
+  it('migrates persisted stale SP to Other(s), prunes stale preloaded SP, and keeps the Other sentinel', () => {
     svc.tocReferenceSynergyInitiativeIds.set([1]);
     flush();
     // persisted (no `new`) + Other sentinel appear alongside the preloaded SP01
@@ -1052,10 +1052,11 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
     svc.tocReferenceSynergyInitiativeIds.set([7]);
     flush();
     const ids = svc.scienceSelected.map((sp: any) => sp.id);
-    expect(ids).not.toContain(1); // stale preloaded pruned
-    expect(ids).toContain(99); // persisted survives
+    expect(ids).not.toContain(1); // stale preloaded (`new`) pruned entirely
+    expect(ids).not.toContain(99); // stale persisted MOVED out, not left behind (bugfix: was orphaned before)
     expect(ids).toContain(component.OTHER_SP_CODE); // sentinel survives
     expect(ids).toContain(7); // new node preselected
+    expect(svc.otherScienceSelected.map((sp: any) => sp.id)).toContain(99); // migrated here instead
   });
 
   it('cold-load guard (P2-3115): hydrated section without in-session ToC touch never prefills', () => {

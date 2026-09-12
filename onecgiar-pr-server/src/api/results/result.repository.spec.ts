@@ -174,6 +174,29 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
+  // P2-3653. The centre list offered "Update result" on a Knowledge Product and left the
+  // confirmation modal's Science Program blank, because the row carried neither the result type
+  // ID (only its display name) nor the result's primary Science Program. The client rule is
+  // shared with the Results Center list, which compares type IDs, so the ID is what has to
+  // travel. Same correlated-subquery reasoning as project_name above: a result has several
+  // `results_by_inititiative` rows and a JOIN would multiply the dashboard row.
+  it('returns the result type id and the primary Science Program for the bilateral centre dashboard, without multiplying rows', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.result_type_id');
+    expect(sql).toContain('SELECT ci.official_code');
+    expect(sql).toContain('rbi.initiative_role_id = 1');
+    expect(sql).toContain(') AS submitter');
+    expect(sql).not.toContain('LEFT JOIN results_by_inititiative');
+    // Neither addition binds a parameter. `?` inside a SQL comment counts for mysql2 too — that
+    // is what produced a QueryFailedError on `getIndicatorContributionSummaryByProgram`.
+    expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
   // (initiative_role_id=1) results in the requested version, with the meter's status/type
   // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/

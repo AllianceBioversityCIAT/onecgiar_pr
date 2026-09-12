@@ -217,6 +217,27 @@ describe('ComplementaryInnovationComponent', () => {
     });
   });
 
+  /**
+   * P2-3674 — the combination QA reported: a NON-admin on sub-step 2.1 (`isStepTwoTwo` is false,
+   * set by this component's own `ngOnInit`). Before the fix neither forward branch matched, so the
+   * save succeeded and the wizard stayed put. Sub-step 2.2 is admin-only, so the destination is
+   * step 3 — the same one `StepN2Component.routerStep()` returns for this user.
+   */
+  it('navigates a non-admin from sub-step 2.1 to step 3, instead of staying put', () => {
+    component.api.rolesSE.isAdmin = false;
+    component.api.isStepTwoTwo = false;
+    const routerSpy = jest.spyOn(component.router, 'navigate');
+    component.api.rolesSE.readOnly = true;
+    component.ipsrDataControlSE.resultInnovationCode = '123';
+    component.ipsrDataControlSE.resultInnovationPhase = 'phase';
+
+    component.onSavePreviousNext('next');
+
+    expect(routerSpy).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-3'], {
+      queryParams: { phase: 'phase' }
+    });
+  });
+
   it('should navigate to step 1 when description is "previous" and user is in read-only mode', () => {
     const description = 'previous';
     const routerSpy = jest.spyOn(component.router, 'navigate');

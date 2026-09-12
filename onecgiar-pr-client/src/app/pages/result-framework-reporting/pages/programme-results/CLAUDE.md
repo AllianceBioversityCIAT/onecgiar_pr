@@ -1,6 +1,6 @@
 # programme-results
 
-**Verified:** 2026-09-05 · branch qa-development-2026 · fe1d7402e (spec `changes/my-work-board`, MWB-T-13 — Category / Funding source / Center became MULTI-select on the shared `ProgrammeResultsFilterService`: `selectedCategories/Origins/Centers: string[]`, one chip per value, `parseListParam`/`joinListParam` for the comma-separated params, and the brand checkbox accent widened from `.pgr-filter--section` to `.pgr-filter`); prior: 1c438f120 (adds the viewport-lock layout contract below — unconditional host class, `#workArea` scroller, band `frameLocked`/`scrollHost`; fixes the stale `canReport` value; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: 6a9a45b5e (spec `changes/results-aow-column-filter`, RAC-T-1..T-5 — Area of Work column, live Section filter, `results-scope` join; prior: 2026-08-28 · branch performance-refactor · 11ba9ab1c, P2-3312)
+**Verified:** 2026-09-11 · branch performance-refactor · row menu moved to a CDK Connected Overlay (it was clipped by the table's `overflow-x: auto` wrapper and showed only its first item); prior: 2026-09-05 · branch qa-development-2026 · fe1d7402e (spec `changes/my-work-board`, MWB-T-13 — Category / Funding source / Center became MULTI-select on the shared `ProgrammeResultsFilterService`: `selectedCategories/Origins/Centers: string[]`, one chip per value, `parseListParam`/`joinListParam` for the comma-separated params, and the brand checkbox accent widened from `.pgr-filter--section` to `.pgr-filter`); prior: 1c438f120 (adds the viewport-lock layout contract below — unconditional host class, `#workArea` scroller, band `frameLocked`/`scrollHost`; fixes the stale `canReport` value; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: 6a9a45b5e (spec `changes/results-aow-column-filter`, RAC-T-1..T-5 — Area of Work column, live Section filter, `results-scope` join; prior: 2026-08-28 · branch performance-refactor · 11ba9ab1c, P2-3312)
 
 **What this owns:** the **Results** tab of the programme shell (`entity-details/:entityId/results`) — one flat, searchable table of every result that programme reported, plus its filter row, clickable status counters, Columns picker and CSV export.
 
@@ -122,10 +122,21 @@
   | Row menu → *View indicator* | no payload carries `toc_result_id` / indicator id, so there is nothing to open | P2-3395 |
   | Row checkbox (`select` column) | `PrTableComponent.selectionMode` only toggles a class, and the design has no select-all and no bulk-action bar | P2-3397 |
   | Indicator line under the result title | no results payload carries a ToC indicator; filling it with the result level would be fabricated data | P2-3399 (other half — the AoW half is now the column below) |
-- ⚠️ **Row-menu labels carry `whitespace-nowrap`; the popup is `w-[248px]`, not 200px** — at 200px `View indicator` wrapped. Measure before adding a longer label.
-- ⚠️ **The open row's actions cell needs `pgr-actions--open` (`z-index: 10`).** Every `td.pgr-actions`
-  is sticky at `z-index: 3`, so DOM order wins and the rows BELOW painted their opaque background over
-  an open menu. The popup's own `z-30` cannot fix it — elevate the CELL, never the popup.
+- 🛑 **The row menu is a CDK Connected Overlay, never a child of the actions cell.** `.pr-table-wrap.pgr-table`
+  is `overflow-x: auto` (the horizontal scroll the grid's `minWidth()` needs) and an overflow container
+  clips its descendants in **both** axes — the absolutely positioned panel was cut at the table's
+  bottom edge and only `Open result` showed. `cdkConnectedOverlay` renders it in `.cdk-overlay-container`
+  on `<body>`, outside the clip, with `rowMenuPositions` flipping it above the trigger near the
+  viewport bottom. Same pattern as `dashboard-lab/components/reporting-aow-table`. Two consequences:
+  its skin is the **global** `.pr-row-menu` / `.pr-row-menu_item` (`src/styles/row-menu.scss`) because
+  overlay panels leave every component's `ViewEncapsulation` — a `:host ::ng-deep` rule will NOT reach
+  it; and specs must read it through `document`, not the fixture (`.pr-row-menu [role="menuitem"]`,
+  plus an `afterEach` that drops `.cdk-overlay-container`). This replaced the old `pgr-actions--open`
+  (`z-index: 10`) hack, which only ever fought the sibling sticky cells and never the clip.
+- ⚠️ **`(detach)` must be row-scoped (`onRowMenuDetach(row)`), not a bare `closeRowMenu()`.** Opening a
+  second row's menu detaches the first, and an unconditional close there clears the key that already
+  belongs to the SECOND row — both end up closed.
+- ⚠️ **Row-menu labels carry `whitespace-nowrap`; the panel is 268px** (`.pr-row-menu`) — at 200px `View indicator` wrapped. Measure before adding a longer label.
 - **`Copy link` copies the ABSOLUTE url of `resultRoute(row)`** (`resultLink()` / `copyLink()`, `:812-828`)
   — same destination as `Open result`, built through `router.createUrlTree` + `serializeUrl`, not
   string concat like `pdfHref` (the review branch has query params to encode). 🛑 Its toast key must

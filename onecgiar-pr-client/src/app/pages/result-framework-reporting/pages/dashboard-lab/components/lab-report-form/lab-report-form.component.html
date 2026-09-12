@@ -322,7 +322,7 @@
 }
   </section>
 
-  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+  @if (!isEmerging() && (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler)) {
     <!-- ==================== CARD 2: TARGET CONTRIBUTION ==================== -->
     <section
       data-testid="card-target-contribution"
@@ -383,16 +383,19 @@
         }
       </div>
     </section>
+  }
 
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
     <!-- ==================== CARD 3: COLLABORATION & ATTRIBUTION ==================== -->
     <section
       data-testid="card-collaboration"
       class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-4.5">
       <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
         <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">groups</span>
-        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">3. Collaboration & Attribution</h4>
+        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">{{ isEmerging() ? '2' : '3' }}. Collaboration & Attribution</h4>
       </div>
 
+      @if (!isEmerging()) {
       <div
         data-testid="toc-attribution-note"
         class="flex gap-2.5 rounded-lg border border-[var(--pr-color-primary-100,#e9e0ff)] bg-[color-mix(in_srgb,var(--pr-color-primary-50,#f5f3ff)_55%,white)] px-3.5 py-3">
@@ -441,6 +444,7 @@
           }
         </div>
       </div>
+      }
 
       <!-- Contributing CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
            every option matches every value and each click deselects index 0 instead of adding. -->

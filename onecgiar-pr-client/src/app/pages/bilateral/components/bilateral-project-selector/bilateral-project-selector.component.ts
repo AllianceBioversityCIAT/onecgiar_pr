@@ -22,7 +22,13 @@ export class BilateralProjectSelectorComponent {
    * Science Program choice. `wizard` (the default) is the create flow, unchanged.
    */
   variant = input<'wizard' | 'inline'>('wizard');
+  /** Section 0 stages a project until its primary program has also been selected. */
+  deferCommit = input<boolean>(false);
+  previewProject = input<BilateralProject | null>(null);
   readonly isInline = computed(() => this.variant() === 'inline');
+  readonly displayProject = computed(
+    () => this.previewProject() ?? this.creationService.selectedProject(),
+  );
 
   projectSelected = output<BilateralProject>();
   showDropdown = signal(false);
@@ -65,9 +71,9 @@ export class BilateralProjectSelectorComponent {
   }
 
   selectProject(project: BilateralProject): void {
-    if (this.isInline()) {
+    if (this.isInline() && !this.deferCommit()) {
       this.creationService.setLeadProject(project);
-    } else {
+    } else if (!this.isInline()) {
       this.creationService.selectProject(project);
     }
     this.showDropdown.set(false);
@@ -75,7 +81,7 @@ export class BilateralProjectSelectorComponent {
   }
 
   get selectedLabel(): string {
-    const p = this.creationService.selectedProject();
+    const p = this.displayProject();
     return p ? `${p.shortName} — ${p.fullName}` : 'Select a project';
   }
 

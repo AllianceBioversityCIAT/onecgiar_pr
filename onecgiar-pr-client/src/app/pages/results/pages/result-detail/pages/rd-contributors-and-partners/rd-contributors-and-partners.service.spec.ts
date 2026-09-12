@@ -573,9 +573,15 @@ describe('RdContributorsAndPartnersService', () => {
     });
 
     describe('CP2026 + ToC-mapped — target is otherCentersSelected + sentinel (LC-AC-9)', () => {
+      // LC-DD-6 (bugfix): these scenarios model a genuine ToC/Other(s) split — the ToC DID bring a real
+      // reference center (`TOC1`, institutionId 1 below) — so `hasNoTocReferenceCenters()` must read false
+      // here, or `onLeadCenterSelected` falls into the (correct, for a DIFFERENT case) no-sentinel branch.
+      const setToCBroughtReferenceCenters = () => service.tocReferenceCenterInstitutionIds.set([1]);
+
       it('LC-TEST-12: ToC brought a real reference center already in contributing_center; picking a Lead Center NOT among them adds it to otherCentersSelected and the sentinel to contributing_center', () => {
         setMapped2026();
-        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }] as any;
+        setToCBroughtReferenceCenters();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center', institutionId: 1 }] as any;
         service.otherCentersSelected = [];
 
         service.onLeadCenterSelected('C1');
@@ -587,7 +593,8 @@ describe('RdContributorsAndPartnersService', () => {
 
       it('LC-TEST-13: the sentinel was already present (user had manually checked "Other(s)") — auto-add does not claim ownership of it', () => {
         setMapped2026();
-        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }, (service as any).buildOtherCentersSentinel()] as any;
+        setToCBroughtReferenceCenters();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center', institutionId: 1 }, (service as any).buildOtherCentersSentinel()] as any;
         service.otherCentersSelected = [{ code: 'MANUAL1', name: 'Manual center' }] as any;
 
         service.onLeadCenterSelected('C1');
@@ -599,7 +606,8 @@ describe('RdContributorsAndPartnersService', () => {
 
       it('LC-TEST-14: swap removes ONLY the auto-added entry — real ToC-derived centers untouched; the auto-added sentinel is removed and re-added around the swap', () => {
         setMapped2026();
-        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }] as any;
+        setToCBroughtReferenceCenters();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center', institutionId: 1 }] as any;
         service.otherCentersSelected = [];
         service.onLeadCenterSelected('C1');
         expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['TOC1', service.OTHER_CENTERS_CODE]);
@@ -613,7 +621,8 @@ describe('RdContributorsAndPartnersService', () => {
 
       it('LC-TEST-14b: when the auto-added entry is the only otherCentersSelected item and its sentinel was auto-added, clearing the Lead Center removes both the entry and the sentinel', () => {
         setMapped2026();
-        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }] as any;
+        setToCBroughtReferenceCenters();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center', institutionId: 1 }] as any;
         service.otherCentersSelected = [];
         service.onLeadCenterSelected('C1');
 
@@ -626,7 +635,8 @@ describe('RdContributorsAndPartnersService', () => {
 
       it('LC-TEST-14c: when the sentinel was checked manually (not auto-added), removing the auto-added entry leaves the sentinel in place', () => {
         setMapped2026();
-        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }, (service as any).buildOtherCentersSentinel()] as any;
+        setToCBroughtReferenceCenters();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center', institutionId: 1 }, (service as any).buildOtherCentersSentinel()] as any;
         service.otherCentersSelected = [];
         service.onLeadCenterSelected('C1'); // sentinel already present → _autoAddedSentinel stays false
         expect(service.otherCentersSelected.map((c: any) => c.code)).toEqual(['C1']);
@@ -635,6 +645,37 @@ describe('RdContributorsAndPartnersService', () => {
 
         expect(service.otherCentersSelected).toEqual([]);
         expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['TOC1', service.OTHER_CENTERS_CODE]);
+      });
+    });
+
+    // LC-DD-6 (bugfix, 2026-09-11, result 9139): a MAPPED 2026 result whose ToC brought NO reference
+    // centers (`tocReferenceCenterInstitutionIds` empty) is neither the flat/unmapped case nor the genuine
+    // ToC/Other(s) split — dropdown 1 and the sentinel are never painted (`hasReferenceCenters()` false), so
+    // the pick must land directly in `otherCentersSelected` with NO sentinel added to `contributing_center`.
+    describe('CP2026 + mapped, but ToC brought NO reference centers — target is otherCentersSelected, no sentinel (LC-DD-6)', () => {
+      it('adds the picked Lead Center directly to otherCentersSelected, without touching contributing_center or adding the sentinel', () => {
+        setMapped2026(); // tocReferenceCenterInstitutionIds left at its default empty signal
+        service.partnersBody.contributing_center = [];
+        service.otherCentersSelected = [];
+
+        service.onLeadCenterSelected('C1');
+
+        expect(service.otherCentersSelected.map((c: any) => c.code)).toEqual(['C1']);
+        expect(service.partnersBody.contributing_center).toEqual([]);
+        expect(service.autoAddedLeadCenterCode).toBe('C1');
+      });
+
+      it('swapping to a different Lead Center replaces the auto-added entry, still with no sentinel', () => {
+        setMapped2026();
+        service.partnersBody.contributing_center = [];
+        service.otherCentersSelected = [];
+        service.onLeadCenterSelected('C1');
+
+        service.onLeadCenterSelected('C2');
+
+        expect(service.otherCentersSelected.map((c: any) => c.code)).toEqual(['C2']);
+        expect(service.partnersBody.contributing_center).toEqual([]);
+        expect(service.autoAddedLeadCenterCode).toBe('C2');
       });
     });
   });

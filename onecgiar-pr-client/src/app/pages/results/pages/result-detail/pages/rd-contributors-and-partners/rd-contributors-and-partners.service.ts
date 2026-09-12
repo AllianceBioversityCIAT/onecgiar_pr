@@ -672,6 +672,18 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     return !this.fieldsManagerSE.isContributorsPartners2026() || this.partnersBody.result_toc_result?.planned_result === false;
   }
 
+  // LC-DD-6 (bugfix, 2026-09-11): a MAPPED 2026 result whose ToC brought NO reference centers is a third
+  // shape — `isUnmappedOrFlat()` is false (it IS mapped), but the template never paints dropdown 1 or the
+  // sentinel chip either (`hasReferenceCenters()` false ⇒ the note branch, `component.html:99-123`); the
+  // ONLY visible centers control is the second dropdown, carrying the plain "Contributing CGIAR Centers"
+  // label and bound to `otherCentersSelected` (`component.html:172-183`). Before this fix, `onLeadCenterSelected`
+  // still added the "Other(s)" sentinel to `contributing_center` in this case — invisible while
+  // `hasReferenceCenters()` stayed false, but a real, misleading "Other(s)" chip the instant it later became
+  // true (or simply confusing state to persist). This flags exactly that shape.
+  private hasNoTocReferenceCenters(): boolean {
+    return this.tocReferenceCenterInstitutionIds().length === 0;
+  }
+
   // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog, resolves LC-GAP-1, supersedes LC-DD-4): a Lead
   // Center chosen while it is not already a Contributing Center never persists — `onSaveSection` only
   // stamps `is_leading_result` on entries already inside `contributing_center` / `otherCentersSelected`.
@@ -680,10 +692,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   //   2. Otherwise, remove the previously auto-added entry (if any is still present) from wherever it
   //      lives — `contributing_center` or `otherCentersSelected` — and, if that removal empties
   //      `otherCentersSelected` and the "Other(s)" sentinel was itself auto-added, strip the sentinel too.
-  //   3. Auto-add the new `code` (LC-R-15): straight into `contributing_center` when the flat/unmapped UI
-  //      is active, otherwise into `otherCentersSelected` (+ the "Other(s)" sentinel, if not already
-  //      present, tracked via `_autoAddedSentinel` so a later removal only strips a sentinel THIS
-  //      mechanism added, never one the user checked manually).
+  //   3. Auto-add the new `code` (LC-R-15 / LC-DD-6): straight into `contributing_center` when the
+  //      flat/unmapped UI is active; straight into `otherCentersSelected` with NO sentinel when the result
+  //      is mapped but the ToC brought no reference centers (LC-DD-6 — there is no dropdown 1 to reveal);
+  //      otherwise (genuine ToC/Other(s) split, real ToC centers exist) into `otherCentersSelected` + the
+  //      "Other(s)" sentinel, if not already present, tracked via `_autoAddedSentinel` so a later removal
+  //      only strips a sentinel THIS mechanism added, never one the user checked manually.
   onLeadCenterSelected(code: string | null): void {
     const union = this.getContributingCentersUnion();
 
@@ -712,6 +726,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       if (center) {
         if (this.isUnmappedOrFlat()) {
           this.partnersBody.contributing_center = [...(this.partnersBody.contributing_center || []), { ...center }] as any[];
+        } else if (this.hasNoTocReferenceCenters()) {
+          // LC-DD-6: no dropdown 1 / sentinel is ever painted here — land the pick directly where the
+          // ONLY visible control actually reads from, instead of adding an invisible-yet-misleading sentinel.
+          this.otherCentersSelected = [...(this.otherCentersSelected || []), { ...center }];
         } else {
           this.otherCentersSelected = [...(this.otherCentersSelected || []), { ...center }];
           const hasSentinel = (this.partnersBody.contributing_center || []).some((c: any) => c?.code === this.OTHER_CENTERS_CODE);

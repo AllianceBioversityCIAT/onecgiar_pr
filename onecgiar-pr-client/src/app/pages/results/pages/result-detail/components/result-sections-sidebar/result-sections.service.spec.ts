@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { ResultSectionsService, SECTIONS_INCOMPLETE_TOOLTIP } from './result-sections.service';
+import { ResultSectionsService, SECTIONS_INCOMPLETE_TOOLTIP, UNSUBMIT_CLARIFICATION_TOOLTIP } from './result-sections.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
@@ -369,6 +369,24 @@ describe('ResultSectionsService', () => {
 
       expect(service.unsubmitDisabled).toBe(false);
       expect(service.showInQaNotice).toBe(false);
+    });
+
+    it('shows the clarification tooltip on an enabled Unsubmit button', () => {
+      dataControl.currentResult.status_id = 3;
+      build();
+
+      expect(service.unsubmitDisabled).toBe(false);
+      expect(service.unsubmitTooltip).toBe(UNSUBMIT_CLARIFICATION_TOOLTIP);
+    });
+
+    it('hides the clarification tooltip while Unsubmit is locked by QA', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.currentResult.inQA = true;
+      api.globalVariablesSE.get.in_qa = true;
+      build();
+
+      expect(service.unsubmitDisabled).toBe(true);
+      expect(service.unsubmitTooltip).toBe('');
     });
 
     it('explains that a quality assessed result (status 2) cannot be un-submitted', () => {

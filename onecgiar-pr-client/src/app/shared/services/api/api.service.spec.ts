@@ -843,6 +843,31 @@ describe('ApiService', () => {
       expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(true);
     });
 
+    // P2-3653. Knowledge Products are excluded from the carry-forward; the server refuses them, so
+    // offering the action walks the user into a dead end after the confirmation modal. AC3 of
+    // P2-3229 says an ineligible result is not DISPLAYED, which is why this returns false rather
+    // than leaving the action visible and disabled.
+    it('refuses a Knowledge Product, even for the lead centre on an approved past-phase result', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ result_type_id: 6 }), currentPhase)).toBe(false);
+    });
+
+    it('refuses a Knowledge Product for an admin too', () => {
+      rolesServiceSpy.isAdmin = true;
+      rolesServiceSpy.getMyCenters = jest.fn(() => []);
+      expect(service.canUpdateBilateral(approvedBilateral({ result_type_id: 6 }), currentPhase)).toBe(false);
+    });
+
+    // The Bilateral centre list sends `result_type_id` as a string in some payload shapes, and a
+    // strict `=== 6` would let a Knowledge Product through from exactly the list this bug was
+    // reported on. Every other result type must still pass.
+    it('refuses a Knowledge Product whose type id arrives as a string', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ result_type_id: '6' }), currentPhase)).toBe(false);
+    });
+
+    it.each([1, 2, 5, 7, 8])('allows result type %s', typeId => {
+      expect(service.canUpdateBilateral(approvedBilateral({ result_type_id: typeId }), currentPhase)).toBe(true);
+    });
+
     // The list reports `lead_center` as the CLARISA ACRONYM. Comparing it against `center_id`,
     // which is the code, matches nothing — the action would never appear and nothing would say why.
     it('matches on the centre acronym, not on the centre code', () => {

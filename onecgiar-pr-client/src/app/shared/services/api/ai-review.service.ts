@@ -15,6 +15,7 @@ import {
 import { ApiService } from './api.service';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { Router } from '@angular/router';
+import { CurrentResultService } from '../current-result.service';
 export interface DacScores {
   field_name: string;
   tag_id: string | number;
@@ -52,6 +53,7 @@ export class AiReviewService {
   api = inject(ApiService);
   saveButtonSE = inject(SaveButtonService);
   router = inject(Router);
+  currentResultSE = inject(CurrentResultService);
 
   // Signal para notificar cuando se guarda en general-information
   generalInformationSaved = signal<number>(0);
@@ -393,6 +395,10 @@ export class AiReviewService {
     if (currentUrl.includes('general-information') || currentUrl.includes('innovation-dev-info')) {
       this.generalInformationSaved.update(val => val + 1);
     }
+    // Unconditional per `design.md` §6.2 / `SUB-DD-1`: reload the shared result state on every
+    // AI Review save path, regardless of route or field name, so any consumer of
+    // `CurrentResultService` (e.g. the submission modal's title) reflects the latest server data.
+    this.currentResultSE.GET_resultById();
   }
 
   // Save DAC score

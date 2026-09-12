@@ -17,6 +17,9 @@ export type RdSection = PrRoute & { validation?: number };
 /** Tooltip shown on the disabled Submit / AI review buttons. Same copy the old panel-menu used. */
 export const SECTIONS_INCOMPLETE_TOOLTIP = 'This button will become available once all sections are completed.';
 
+/** Clarification for why a user can un-submit before the QA process starts. */
+export const UNSUBMIT_CLARIFICATION_TOOLTIP = 'Use this only if you need to make corrections before QA begins.';
+
 /** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
 const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
   1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
@@ -263,6 +266,10 @@ export class ResultSectionsService {
   /** Only the "sections still missing" case gets a tooltip — the QA lock has its own notice below. */
   get incompleteTooltip(): string {
     return this.dataControlSE.currentResult?.status_id == 1 && !this.greenChecksSE.submit ? SECTIONS_INCOMPLETE_TOOLTIP : '';
+  }
+
+  get unsubmitTooltip(): string {
+    return this.unsubmitDisabled ? '' : UNSUBMIT_CLARIFICATION_TOOLTIP;
   }
 
   /** Quality Assessed results cannot be un-submitted. */
