@@ -45,14 +45,34 @@ const OTP_ATTEMPTS_EXCEEDED_MESSAGE = 'Too many attempts — request a new code.
 // design.md §4.1 Response row + judgment lens-B advisory (a)) — the decoy is
 // prefix-free (no more `otp:`, which was itself an existence oracle: its mere
 // presence told an attacker "unknown user" without even checking the HMAC).
-// Fixed layout: hmac(43) ‖ nonce(22) ‖ exp(13 digits) ‖ filler, base64url charset
-// only, total length jittered uniformly in [1400, 1700] (a real Cognito session
-// measured 1,543 chars on the 2026-09-11 spike).
+// Fixed layout: hmac(43) ‖ nonce(22) ‖ exp(11 base64url chars) ‖ filler, base64url
+// charset only, total length jittered uniformly in [1400, 1700] (a real Cognito
+// session measured 1,543 chars on the 2026-09-11 spike).
+//
+// @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0), design.md §13
+// item (a)) — `exp` used to be 13 zero-padded ASCII decimal digits at this fixed
+// offset: a deterministic decoy-vs-real classifier from a single `start` response
+// (no real Cognito session has 13 consecutive digits there). It is now the
+// fixed-width base64url encoding of the epoch-ms value as an 8-byte big-endian
+// integer, XOR-masked with an HMAC-derived keystream before encoding
+// (`computeOtpExpMask`) — 11 base64url characters, no padding.
+//
+// @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0), Reviewer FAIL —
+// "re-encoded, not removed") — encoding the raw epoch-ms integer was not enough:
+// every epoch-ms value until ~2039 starts with 3 zero bytes and near-constant high
+// bits (~6 leading constant base64url chars today, shrinking over the ~13-year
+// window as the low bits roll), so the *unmasked* segment was still a decoder for
+// "does this decode near now ± 5 min?" — a decoy classifier, just laundered through
+// base64url. XORing the 8 bytes with an HMAC(key, nonce)-derived keystream before
+// encoding makes the segment's bytes uniformly random regardless of how narrow the
+// real timestamp range is; unmasking only happens in `verifyDecoySession`, after
+// the HMAC has already confirmed the segment is a genuine decoy (never inside
+// `parseDecoySession`, which only validates shape).
 const OTP_DECOY_HMAC_LEN = 43; // base64url(HMAC-SHA256), no padding
 const OTP_DECOY_NONCE_LEN = 22; // base64url(16 random bytes), no padding
-const OTP_DECOY_EXP_LEN = 13; // epoch ms, zero-padded — good until year 2286
+const OTP_DECOY_EXP_LEN = 11; // base64url(8-byte big-endian epoch ms), no padding
 const OTP_DECOY_FIXED_LEN =
-  OTP_DECOY_HMAC_LEN + OTP_DECOY_NONCE_LEN + OTP_DECOY_EXP_LEN; // 78
+  OTP_DECOY_HMAC_LEN + OTP_DECOY_NONCE_LEN + OTP_DECOY_EXP_LEN; // 76
 const OTP_DECOY_MIN_TOTAL_LEN = 1400;
 const OTP_DECOY_MAX_TOTAL_LEN = 1700;
 const OTP_DECOY_TTL_MS = 5 * 60 * 1000;
@@ -632,14 +652,30 @@ export class AuthService {
         // its own fresh decoy session inline instead (OTP-T-13 rework 2), so
         // both paths always answer OTP_CODE_MISMATCH with a `session`.
         const rotatedSession = error?.response?.session;
+
+        // @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0), design.md
+        // §13 item (a)) — a CODE_MISMATCH reply with no session is a contract
+        // violation, not a user path: every real mismatch rotates one (step 9
+        // above), so its absence means the microservice itself is misbehaving.
+        // Emitting a mismatch body without `session` here would also be a reverse
+        // existence oracle (a decoy mismatch always mints one — OTP-T-13 rework 2),
+        // so this maps to the same neutral upstream-unavailable response as a
+        // downed microservice, never to a session-less mismatch.
+        if (typeof rotatedSession !== 'string' || rotatedSession.length === 0) {
+          return {
+            code: 'OTP_UPSTREAM_UNAVAILABLE',
+            message: OTP_UPSTREAM_UNAVAILABLE_MESSAGE,
+            status: HttpStatus.SERVICE_UNAVAILABLE,
+            outcome: 'upstream_error',
+          };
+        }
+
         return {
           code: 'OTP_CODE_MISMATCH',
           message: OTP_CODE_MISMATCH_MESSAGE,
           status: HttpStatus.UNAUTHORIZED,
           outcome: 'mismatch',
-          ...(typeof rotatedSession === 'string' && rotatedSession
-            ? { session: rotatedSession }
-            : {}),
+          session: rotatedSession,
         };
       }
       case 'CODE_EXPIRED':
@@ -686,28 +722,106 @@ export class AuthService {
   }
 
   /**
-   * HMAC-SHA256 over `email|nonce|exp`, base64url, keyed with the per-process
-   * `_otpDecoyKey` (OTP-T-5 rework, review FAIL B-3 — never `env.JWT_SKEY ?? ''`).
-   * `exp` MUST be passed as the same zero-padded 13-digit string on both build
-   * and verify — the HMAC is computed over the exact bytes of the layout.
+   * HMAC-SHA256 over `email|nonce|expEncoded`, base64url, keyed with the
+   * per-process `_otpDecoyKey` (OTP-T-5 rework, review FAIL B-3 — never
+   * `env.JWT_SKEY ?? ''`). `expEncoded` MUST be passed as the same 11-char
+   * base64url-encoded string on both build and verify (OTP-T-14 step (0)) — the
+   * HMAC is computed over the exact bytes of the layout.
    */
   private computeOtpDecoyHmac(
     email: string,
     nonce: string,
-    expStr: string,
+    expEncoded: string,
   ): string {
     return createHmac('sha256', this._otpDecoyKey)
-      .update(`${email}|${nonce}|${expStr}`)
+      .update(`${email}|${nonce}|${expEncoded}`)
       .digest('base64url');
   }
 
   /**
-   * Prefix-free decoy session: `hmac(43) ‖ nonce(22) ‖ exp(13 digits) ‖ filler`,
-   * base64url charset only, total length jittered uniformly in [1400, 1700]
-   * (OTP-T-5 rework, review FAIL B-3, design.md §4.1 — a real Cognito session
-   * measured 1,543 chars on the 2026-09-11 spike). No prefix means the string's
-   * mere shape is never an existence oracle — only a failed/successful HMAC
-   * recompute on verify tells decoy from real.
+   * An 8-byte XOR keystream derived from the decoy's own `nonce` via HMAC-SHA256
+   * under the per-process `_otpDecoyKey` (OTP-T-14 step (0), Reviewer FAIL —
+   * "re-encoded, not removed"). Masking the epoch-ms bytes with this keystream
+   * before base64url-encoding them removes the near-constant leading bytes every
+   * real epoch-ms timestamp has today, so the encoded segment carries no
+   * decoy-vs-real signal on its own — only a full HMAC match (which already
+   * consumes this same nonce) can recover it.
+   */
+  private computeOtpExpMask(nonce: string): Buffer {
+    return createHmac('sha256', this._otpDecoyKey)
+      .update(nonce)
+      .digest()
+      .subarray(0, 8);
+  }
+
+  /**
+   * Encodes an epoch-ms timestamp as a fixed-width, 11-char base64url string —
+   * an 8-byte big-endian unsigned integer, XOR-masked with `computeOtpExpMask`,
+   * with no padding (OTP-T-14 step (0), design.md §13 item (a)). Replaces the
+   * old 13-digit zero-padded decimal `exp`, which was a fixed-offset fingerprint
+   * distinguishing every decoy from a real Cognito session — and the masking
+   * step exists because the unmasked 8-byte integer alone was *also* such a
+   * fingerprint (near-constant leading bytes for any real-world epoch-ms value).
+   */
+  private encodeOtpExp(exp: number, nonce: string): string {
+    const buf = Buffer.alloc(8);
+    buf.writeBigUInt64BE(BigInt(Math.max(0, Math.trunc(exp))));
+    const mask = this.computeOtpExpMask(nonce);
+    for (let i = 0; i < 8; i++) {
+      buf[i] ^= mask[i];
+    }
+    return buf.toString('base64url');
+  }
+
+  /**
+   * Validates that a candidate `exp` segment is a well-formed base64url
+   * encoding of exactly 8 bytes and returns those bytes **still masked** — or
+   * `null` when the shape is wrong (wrong length, a character outside the
+   * base64url alphabet, or a decode that doesn't yield 8 bytes), exactly like
+   * the old regex guard's `null`. Deliberately does NOT unmask: unmasking
+   * requires the same key/nonce input as the HMAC check, so doing it here
+   * (before `verifyDecoySession` has confirmed the HMAC) would let a forged
+   * segment's decode be computed before authenticity is established.
+   */
+  private decodeOtpExpSegment(expEncoded: string): Buffer | null {
+    if (
+      typeof expEncoded !== 'string' ||
+      expEncoded.length !== OTP_DECOY_EXP_LEN ||
+      !/^[A-Za-z0-9_-]+$/.test(expEncoded)
+    ) {
+      return null;
+    }
+
+    const buf = Buffer.from(expEncoded, 'base64url');
+    return buf.length === 8 ? buf : null;
+  }
+
+  /**
+   * Unmasks a validated, still-masked 8-byte `exp` segment into its epoch-ms
+   * value using the same nonce-derived keystream `encodeOtpExp` applied, or
+   * `null` when the result is not a finite, non-negative number. Called only
+   * from `verifyDecoySession`, after the HMAC has already confirmed the
+   * segment belongs to a genuine decoy (OTP-T-14 step (0)).
+   */
+  private unmaskOtpExp(maskedBuf: Buffer, nonce: string): number | null {
+    const mask = this.computeOtpExpMask(nonce);
+    const buf = Buffer.alloc(8);
+    for (let i = 0; i < 8; i++) {
+      buf[i] = maskedBuf[i] ^ mask[i];
+    }
+    const exp = Number(buf.readBigUInt64BE());
+    return Number.isFinite(exp) && exp >= 0 ? exp : null;
+  }
+
+  /**
+   * Prefix-free decoy session: `hmac(43) ‖ nonce(22) ‖ exp(11 base64url chars,
+   * mask-encoded) ‖ filler`, base64url charset only, total length jittered
+   * uniformly in [1400, 1700] (OTP-T-5 rework, review FAIL B-3, design.md §4.1 —
+   * a real Cognito session measured 1,543 chars on the 2026-09-11 spike). No
+   * prefix means the string's mere shape is never an existence oracle — only a
+   * failed/successful HMAC recompute on verify tells decoy from real, and the
+   * `exp` segment itself carries no signal either (masked per `encodeOtpExp`,
+   * OTP-T-14 step (0)).
    *
    * @param exp Optional epoch-ms expiry to carry over verbatim (OTP-T-13 rework 2,
    * design.md §18.1 row 10). Used when *rotating* an existing decoy on mismatch —
@@ -717,10 +831,10 @@ export class AuthService {
    */
   private buildDecoySession(email: string, exp?: number): string {
     const nonce = randomBytes(16).toString('base64url'); // 22 chars
-    const expStr = String(exp ?? Date.now() + OTP_DECOY_TTL_MS).padStart(
-      OTP_DECOY_EXP_LEN,
-      '0',
-    );
+    const expStr = this.encodeOtpExp(
+      exp ?? Date.now() + OTP_DECOY_TTL_MS,
+      nonce,
+    ); // 11 chars, masked
     const hmac = this.computeOtpDecoyHmac(email, nonce, expStr); // 43 chars
 
     const totalLen = randomInt(
@@ -735,10 +849,15 @@ export class AuthService {
     return `${hmac}${nonce}${expStr}${filler}`;
   }
 
-  /** Splits a candidate session into its fixed-layout segments, or `null` if too short. */
+  /**
+   * Splits a candidate session into its fixed-layout segments, or `null` if
+   * too short or the `exp` segment isn't shaped like a valid encoding. Returns
+   * the `exp` segment's bytes **still masked** (OTP-T-14 step (0)) — unmasking
+   * happens only in `verifyDecoySession`, after the HMAC confirms authenticity.
+   */
   private parseDecoySession(
     session: string,
-  ): { hmac: string; nonce: string; expStr: string; exp: number } | null {
+  ): { hmac: string; nonce: string; expStr: string; expBuf: Buffer } | null {
     if (typeof session !== 'string' || session.length < OTP_DECOY_FIXED_LEN) {
       return null;
     }
@@ -753,11 +872,12 @@ export class AuthService {
       OTP_DECOY_FIXED_LEN,
     );
 
-    if (!/^\d{13}$/.test(expStr)) {
+    const expBuf = this.decodeOtpExpSegment(expStr);
+    if (!expBuf) {
       return null;
     }
 
-    return { hmac, nonce, expStr, exp: Number(expStr) };
+    return { hmac, nonce, expStr, expBuf };
   }
 
   /**
@@ -765,7 +885,9 @@ export class AuthService {
    * HMAC over `email|nonce|exp` from the fixed layout (OTP-T-5 rework, review
    * FAIL B-3). A real Cognito session simply fails this check (wrong length
    * segments, or a mismatching HMAC) and is treated as real — it proceeds to
-   * the microservice exactly as before.
+   * the microservice exactly as before. The `exp` segment is only unmasked
+   * (via `unmaskOtpExp`) once the HMAC has confirmed the session is a genuine
+   * decoy (OTP-T-14 step (0)) — never before.
    */
   private verifyDecoySession(
     session: string,
@@ -787,13 +909,24 @@ export class AuthService {
       providedBuffer.length === expectedBuffer.length &&
       timingSafeEqual(providedBuffer, expectedBuffer);
 
+    if (!isDecoy) {
+      return { isDecoy: false, expired: false };
+    }
+
+    const exp = this.unmaskOtpExp(parsed.expBuf, parsed.nonce);
+    if (exp === null) {
+      // Would require an HMAC collision alongside a bad unmask — effectively
+      // unreachable — but fail safe rather than trust an unusable `exp`.
+      return { isDecoy: false, expired: false };
+    }
+
     return {
-      isDecoy,
-      expired: isDecoy && Date.now() > parsed.exp,
+      isDecoy: true,
+      expired: Date.now() > exp,
       // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2) — surfaced so
       // the unexpired-mismatch branch can rotate a fresh decoy carrying the SAME `exp`
       // (never extending the decoy's lifetime past the original start-time window).
-      ...(isDecoy ? { exp: parsed.exp } : {}),
+      exp,
     };
   }
 

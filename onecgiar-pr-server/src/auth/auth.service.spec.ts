@@ -694,6 +694,82 @@ describe('AuthService', () => {
       });
     });
 
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0), design.md §13
+    // item (a), Reviewer FAIL — "re-encoded, not removed") — the old layout carried
+    // `exp` as 13 zero-padded ASCII digits at a fixed offset. Encoding the raw
+    // epoch-ms integer as 8 bytes was NOT enough to remove that fingerprint: every
+    // epoch-ms value until ~2039 has 3 leading zero bytes plus near-constant high
+    // bits, so `slice(65, 76)` still decoded to "a value near now ± 5 min" for
+    // every decoy and to a ~uniform 64-bit value for a real Cognito session — a
+    // classifier from one `start` response, just laundered through base64url. The
+    // segment is now XOR-masked with an HMAC(key, nonce)-derived keystream before
+    // encoding, so it carries no signal until the HMAC itself is verified.
+    it('(exp encoding) the exp segment is 11 base64url chars with no 13-digit fixed-offset fingerprint, and is NOT a decodable near-now classifier', () => {
+      const exp = Date.now() + 5 * 60 * 1000;
+      const decoyA = (service as any).buildDecoySession(
+        'sample@icrisat.org',
+        exp,
+      );
+      const decoyB = (service as any).buildDecoySession(
+        'sample@icrisat.org',
+        exp,
+      );
+
+      // No run of >= 13 decimal digits anywhere in the decoy (was guaranteed at a
+      // fixed offset by the old 13-digit decimal `exp`).
+      expect(decoyA).not.toMatch(/\d{13}/);
+      expect(decoyB).not.toMatch(/\d{13}/);
+
+      // exp segment sits right after hmac(43) + nonce(22): exactly 11 base64url chars.
+      const expSegA = decoyA.slice(65, 76);
+      const expSegB = decoyB.slice(65, 76);
+      expect(expSegA).toHaveLength(11);
+      expect(expSegA).toMatch(/^[A-Za-z0-9_-]{11}$/);
+
+      // Two decoys minted for the SAME exp (rotation, T-13) must NOT share the
+      // encoded segment — each decoy has its own random nonce, and the nonce keys
+      // the mask, so the same timestamp produces unrelated-looking ciphertext.
+      // (Before masking, this was `expSegA === expSegB` — exactly the fingerprint
+      // the Reviewer flagged: the encoded value alone told you the timestamp.)
+      expect(expSegA).not.toBe(expSegB);
+      expect(decoyA).not.toBe(decoyB);
+
+      // Two decoys 1 ms apart (still both "near now") must also look unrelated —
+      // proves the masking isn't merely per-call jitter that happens to differ for
+      // equal inputs; nearby real timestamps don't produce recognizably-related
+      // segments either.
+      const decoyC = (service as any).buildDecoySession(
+        'sample@icrisat.org',
+        exp + 1,
+      );
+      const expSegC = decoyC.slice(65, 76);
+      expect(expSegC).not.toBe(expSegA);
+
+      // No constant run >= 3 chars at any fixed offset within the exp segment
+      // across many samples — the tell the Reviewer identified (`AAAB` for ~199
+      // days, 6 constant chars today) must be gone once every segment is masked.
+      const samples = Array.from({ length: 50 }, () =>
+        (service as any)
+          .buildDecoySession('sample@icrisat.org', exp)
+          .slice(65, 76),
+      );
+      for (let offset = 0; offset <= 11 - 3; offset++) {
+        const runs = new Set(
+          samples.map((s: string) => s.slice(offset, offset + 3)),
+        );
+        expect(runs.size).toBeGreaterThan(1);
+      }
+
+      // Round-trips back to the same millisecond value on verify (only after the
+      // HMAC has confirmed the decoy — `verifyDecoySession` unmasks internally).
+      const parsed = (service as any).verifyDecoySession(
+        decoyA,
+        'sample@icrisat.org',
+      );
+      expect(parsed.isDecoy).toBe(true);
+      expect(parsed.exp).toBe(exp);
+    });
+
     it('(o) two decoys for the same email differ even with JWT_SKEY unset (per-process random fallback key)', async () => {
       const original = process.env.JWT_SKEY;
       delete process.env.JWT_SKEY;
@@ -1019,8 +1095,12 @@ describe('AuthService', () => {
       expect(authMicroservice.verifyEmailOtp).not.toHaveBeenCalled();
     });
 
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0)) — CODE_MISMATCH
+    // is covered separately below ("verifyOtp — rotated session on OTP_CODE_MISMATCH")
+    // because it now requires a rotated `session` to reach 401 at all; a session-less
+    // CODE_MISMATCH maps to 503 OTP_UPSTREAM_UNAVAILABLE instead (contract violation),
+    // so it no longer belongs in this generic "carries no session" table.
     it.each([
-      ['CODE_MISMATCH', 'OTP_CODE_MISMATCH'],
       ['CODE_EXPIRED', 'OTP_CODE_EXPIRED'],
       ['ATTEMPTS_EXCEEDED', 'OTP_ATTEMPTS_EXCEEDED'],
       ['NOT_AUTHORIZED', 'OTP_NOT_AUTHORIZED'],
@@ -1096,13 +1176,49 @@ describe('AuthService', () => {
       expect(result.response.session).toBe('rotated-cognito-session');
     });
 
-    it('omits the session key when the microservice mismatch error carries none', async () => {
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-14 step (0)) — every real
+    // CODE_MISMATCH reply rotates a `session` (design.md §18.1 step 9); one that
+    // doesn't is a microservice contract violation, not a legitimate user answer
+    // (and emitting a mismatch body without `session` would itself be a reverse
+    // existence oracle, since decoy mismatches always mint one — OTP-T-13 rework
+    // 2). Map it to the same upstream-unavailable response as a downed microservice.
+    it('treats a session-less CODE_MISMATCH from the microservice as OTP_UPSTREAM_UNAVAILABLE (contract violation, not a user path)', async () => {
       jest
         .spyOn(userRepository, 'findOne')
         .mockResolvedValue(mockOtpUser as any);
       jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
         status: 401,
         response: { code: 'CODE_MISMATCH', message: 'stable copy' },
+      });
+      const logSpy = jest.spyOn((service as any)._logger, 'log');
+
+      const result = await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code: '000000',
+        session: 'cognito-real-session',
+      } as OtpVerifyDto);
+
+      expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+      expect(result.response.code).toBe('OTP_UPSTREAM_UNAVAILABLE');
+      expect(result.response).not.toHaveProperty('session');
+      expect(
+        logSpy.mock.calls.some((call) =>
+          String(call[0]).includes("outcome: 'upstream_error'"),
+        ),
+      ).toBe(true);
+    });
+
+    it('treats an empty-string session on a CODE_MISMATCH reply the same way (not just a missing key)', async () => {
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+      jest.spyOn(authMicroservice, 'verifyEmailOtp').mockRejectedValue({
+        status: 401,
+        response: {
+          code: 'CODE_MISMATCH',
+          message: 'stable copy',
+          session: '',
+        },
       });
 
       const result = await service.verifyOtp({
@@ -1111,8 +1227,8 @@ describe('AuthService', () => {
         session: 'cognito-real-session',
       } as OtpVerifyDto);
 
-      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(result.response.code).toBe('OTP_CODE_MISMATCH');
+      expect(result.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+      expect(result.response.code).toBe('OTP_UPSTREAM_UNAVAILABLE');
       expect(result.response).not.toHaveProperty('session');
     });
 
