@@ -580,18 +580,23 @@
             </button>
           </div>
         } @else if (showWholeEmpty()) {
-          <p class="py-[24px] text-[13px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-empty">{{ copy.states.empty }}</p>
+          <app-sp-tab-empty-state
+            testId="bilateral-review-empty"
+            icon="handshake"
+            [title]="copy.states.emptyTitle"
+            [description]="copy.states.emptyDescription"
+            [primaryLabel]="canReportEmerging() ? copy.states.emptyPrimary : null"
+            [secondaryLabel]="copy.states.emptySecondary"
+            (primaryAction)="openEmergingReport()"
+            (secondaryAction)="openWhereToReport()" />
         } @else if (showFilteredEmpty()) {
-          <div class="flex flex-col items-start gap-[10px] py-[24px]" data-testid="bilateral-review-filtered-empty">
-            <p class="text-[13px] text-[var(--pr-text-secondary)]">{{ copy.states.filteredEmpty }}</p>
-            <button
-              type="button"
-              (click)="clearAllFilters()"
-              class="inline-flex h-[32px] cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)]">
-              <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
-              {{ copy.toolbar.clearFilters }}
-            </button>
-          </div>
+          <app-sp-tab-empty-state
+            testId="bilateral-review-filtered-empty"
+            variant="filtered"
+            [title]="copy.states.filteredEmptyTitle"
+            [description]="copy.states.filteredEmptyDescription"
+            [secondaryLabel]="copy.toolbar.clearFilters"
+            (secondaryAction)="clearAllFilters()" />
         } @else {
           <app-bilateral-review-table
             [groups]="groups()"

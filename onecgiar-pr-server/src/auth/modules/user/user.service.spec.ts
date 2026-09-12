@@ -20,6 +20,7 @@ import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
 import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
+import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
 
 describe('UserService', () => {
   let service: UserService;
@@ -31,6 +32,7 @@ describe('UserService', () => {
   let awsCognitoService: AuthMicroserviceService;
   let clarisaInitiativesRepository: ClarisaInitiativesRepository;
   let roleRepository: RoleRepository;
+  let globalParameterCacheService: GlobalParameterCacheService;
   let versionRepository: VersionRepository;
 
   const mockUser: User = {
@@ -225,6 +227,14 @@ describe('UserService', () => {
             findOne: jest.fn(),
           },
         },
+        {
+          provide: GlobalParameterCacheService,
+          useValue: {
+            // Default: no allow-list configured — matches unchanged behaviour
+            // for every domain unless a test overrides this.
+            getParam: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -243,6 +253,9 @@ describe('UserService', () => {
     );
     roleRepository = module.get<RoleRepository>(RoleRepository);
     versionRepository = module.get<VersionRepository>(VersionRepository);
+    globalParameterCacheService = module.get<GlobalParameterCacheService>(
+      GlobalParameterCacheService,
+    );
   });
 
   it('should be defined', () => {
@@ -574,6 +587,89 @@ describe('UserService', () => {
 
       expect(handlersError.returnErrorRes).toHaveBeenCalled();
       expect(result.message).toBe('Handled error');
+    });
+
+    // @akili-spec changes/cognito-email-otp-login (OTP-T-17, design.md §19.2,
+    // requirements.md OTP-AC-24) — admin-created users whose email domain is
+    // in `OTP_ALLOWED_EMAIL_DOMAINS` sign in with the PRMS-handled OTP code
+    // and must not be registered in Cognito nor receive a temporary-password
+    // email; every other domain is unchanged.
+    describe('OTP-T-17: skip Cognito registration for allow-listed domains', () => {
+      const buildDto = () => ({
+        email: 'user@icrisat.org',
+        is_cgiar: false,
+        first_name: 'Jane',
+        last_name: 'Doe',
+        role_assignments: [],
+      });
+
+      beforeEach(() => {
+        jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
+          response: null,
+          message: null,
+          status: HttpStatus.OK,
+        });
+        jest.spyOn(service as any, 'saveUserToDB').mockResolvedValue({
+          response: { id: 20, first_name: 'Jane', last_name: 'Doe' },
+          message: 'The user has been successfully created',
+          status: 201,
+        });
+      });
+
+      it('skips Cognito registration and the confirmation email for an allow-listed domain', async () => {
+        (globalParameterCacheService.getParam as jest.Mock).mockResolvedValue(
+          'icrisat.org,ilri.org',
+        );
+        const emailService = (service as any)
+          ._emailNotificationManagementService as EmailNotificationManagementService;
+        const sendEmailSpy = jest.spyOn(emailService, 'sendEmail');
+
+        const result = await service.createFull(
+          buildDto() as any,
+          mockTokenDto.id,
+        );
+
+        expect(awsCognitoService.createUser).not.toHaveBeenCalled();
+        expect(sendEmailSpy).not.toHaveBeenCalled();
+        expect(result.status).toBe(201);
+        expect((result.response as User).id).toBe(20);
+      });
+
+      it('still registers in Cognito for a domain that is not in the allow-list', async () => {
+        (globalParameterCacheService.getParam as jest.Mock).mockResolvedValue(
+          'ilri.org',
+        );
+        mockTemplateRepository.findOne.mockResolvedValue({
+          name: 'email_template_new_external_user',
+          template: '<p>Welcome</p>',
+        });
+        jest
+          .spyOn(Handlebars, 'compile')
+          .mockReturnValue(() => '<p>template</p>');
+        (awsCognitoService.createUser as jest.Mock).mockResolvedValue({});
+
+        await service.createFull(buildDto() as any, mockTokenDto.id);
+
+        expect(awsCognitoService.createUser).toHaveBeenCalled();
+      });
+
+      it('treats an empty/unreadable allow-list parameter as no allow-list (unchanged behaviour)', async () => {
+        (globalParameterCacheService.getParam as jest.Mock).mockRejectedValue(
+          new Error('cache unavailable'),
+        );
+        mockTemplateRepository.findOne.mockResolvedValue({
+          name: 'email_template_new_external_user',
+          template: '<p>Welcome</p>',
+        });
+        jest
+          .spyOn(Handlebars, 'compile')
+          .mockReturnValue(() => '<p>template</p>');
+        (awsCognitoService.createUser as jest.Mock).mockResolvedValue({});
+
+        await service.createFull(buildDto() as any, mockTokenDto.id);
+
+        expect(awsCognitoService.createUser).toHaveBeenCalled();
+      });
     });
   });
 

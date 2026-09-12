@@ -1,7 +1,8 @@
-// @akili-spec changes/my-work-board (MWB-T-4, MWB-T-10, MWB-T-11, MWB-T-7, MWB-R-2, R-11)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { MyWorkColumnComponent } from './my-work-column.component';
+import { MyWorkCardComponent } from '../my-work-card/my-work-card.component';
 import { MyWorkColumn } from '../../my-work.view-model';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 
@@ -156,8 +157,26 @@ describe('MyWorkColumnComponent', () => {
           })
         });
 
-        expect(root().querySelector('button[aria-expanded]')).toBeNull();
+        expect(root().querySelector('.border-b button[aria-expanded]')).toBeNull();
         expect(root().querySelectorAll('button[aria-label^="Collapse"]').length).toBe(0);
+      });
+
+      it('forwards deleted output when a child card emits deleted', async () => {
+        const testRow = row();
+        await build({
+          column: column({
+            key: 'editing',
+            label: 'Needs my action',
+            rows: [testRow]
+          })
+        });
+        const deletedSpy = jest.fn();
+        component.deleted.subscribe(deletedSpy);
+
+        const card = fixture.debugElement.query(By.directive(MyWorkCardComponent)).componentInstance as MyWorkCardComponent;
+        card.deleted.emit(testRow);
+
+        expect(deletedSpy).toHaveBeenCalledWith(testRow);
       });
     });
   });

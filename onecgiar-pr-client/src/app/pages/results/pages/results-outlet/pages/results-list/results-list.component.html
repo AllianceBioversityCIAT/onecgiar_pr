@@ -15,23 +15,112 @@
 @let cols = visibleColumns();
 
 <div class="rc-page">
-  <!-- CURRENT chrome: title + Columns + Export CSV (PRMS-Shell.dc.html :408–421) -->
-  <header class="rc-page-header">
+  <header class="rc-page-header rc-hero flex-none" data-guide="platform-tour-rc-hero">
     <div class="rc-page-header__text">
-      <h1 class="rc-page-title">Results Center</h1>
+      <p class="rc-hero-eyebrow">PLATFORM · RESULTS CENTER</p>
+      <div class="rc-title-row">
+        <h1 class="rc-page-title">Results Center</h1>
+        <button
+          type="button"
+          class="rc-info-btn"
+          aria-label="About Results Center"
+          [attr.aria-expanded]="infoOpen()"
+          aria-controls="rc-info-popover"
+          (click)="toggleInfo($event)">
+          <span class="material-icons-round" aria-hidden="true">info</span>
+        </button>
+
+        @if (infoOpen()) {
+          <div
+            id="rc-info-popover"
+            class="rc-info-popover"
+            role="dialog"
+            aria-label="About Results Center"
+            (click)="$event.stopPropagation()"
+            (keydown.escape)="closeInfo()">
+            <div class="rc-info-popover__header">
+              <div class="rc-info-popover__heading">
+                <span class="rc-info-popover__icon-wrap" aria-hidden="true">
+                  <span class="material-icons-round">info</span>
+                </span>
+                <span class="rc-info-popover__title">{{ rcInfoActiveView.title }}</span>
+              </div>
+              <button type="button" class="rc-info-popover__close" aria-label="Close" (click)="closeInfo()">
+                <span class="material-icons-round" aria-hidden="true">close</span>
+              </button>
+            </div>
+
+            <div class="rc-info-popover__active">
+              <div class="rc-info-popover__active-labels">
+                <span class="rc-info-popover__badge">{{ rcInfoActiveView.title }}</span>
+                <span class="rc-info-popover__active-hint">Active view</span>
+              </div>
+              <p class="rc-info-popover__active-text">{{ rcInfoActiveView.description }}</p>
+            </div>
+
+            <div class="rc-info-popover__overview">
+              <span class="rc-info-popover__overview-label">Overview</span>
+              <p class="rc-info-popover__overview-text">{{ rcInfoOverview }}</p>
+            </div>
+
+            <div class="rc-info-popover__footer">
+              <span>Platform · Results Center</span>
+            </div>
+          </div>
+        }
+      </div>
       <p class="rc-page-sub">Search and export results across all Science Programs.</p>
     </div>
     <div class="rc-page-header__actions">
+      <button
+        type="button"
+        class="rc-btn rc-btn--soft rc-btn--toolbar rc-btn--outline"
+        data-guide="platform-tour-rc-trigger"
+        aria-label="Start Results Center tour"
+        (click)="startResultsCenterTour($event)">
+        <span class="material-icons-round rc-btn__icon" aria-hidden="true">explore</span>
+        Tour
+      </button>
+      <button
+        type="button"
+        class="rc-btn rc-btn--soft rc-btn--toolbar"
+        data-guide="platform-tour-rc-where-to-report"
+        (click)="openReportingGuide($event)">
+        <span class="material-icons-round rc-btn__icon" aria-hidden="true">explore</span>
+        Where to report
+      </button>
+      <button
+        type="button"
+        class="rc-btn rc-btn--soft rc-btn--toolbar"
+        data-guide="platform-tour-rc-update"
+        [class.rc-btn--disabled]="!activeButtons"
+        [disabled]="!activeButtons"
+        [attr.title]="!activeButtons ? 'To update a result, assign a role in the active portfolio.' : null"
+        (click)="activeButtons ? (api.dataControlSE.updateResultModal = true) : null">
+        <i class="pi pi-arrow-up-right" aria-hidden="true"></i>
+        Update result
+      </button>
+    </div>
+  </header>
+
+  <div class="rc-toolbar-row flex-none" data-guide="platform-tour-rc-filters">
+    <app-results-list-filters
+      #filters
+      class="rc-toolbar-row__filters"
+      [isAdmin]="this.api.rolesSE.isAdmin"
+      [hasFilteredResults]="shown > 0"></app-results-list-filters>
+
+    <div class="rc-toolbar-row__actions">
       <div class="rc-cols-wrap">
         <button
           type="button"
-          class="rc-btn rc-btn--soft"
+          class="rc-btn rc-btn--toolbar rc-btn--outline"
           [class.rc-btn--active]="columnsOpen()"
           [attr.aria-expanded]="columnsOpen()"
           aria-haspopup="dialog"
           (click)="toggleColumnsPanel($event)">
           Columns
-          <i class="pi pi-sliders-h" aria-hidden="true"></i>
+          <i class="pi pi-cog" aria-hidden="true"></i>
         </button>
         @if (columnsOpen()) {
           <div
@@ -63,7 +152,8 @@
       </div>
       <button
         type="button"
-        class="rc-btn rc-btn--primary"
+        class="rc-btn rc-btn--toolbar rc-btn--primary"
+        data-guide="platform-tour-rc-export"
         [disabled]="exportDisabled(shown)"
         [attr.title]="exportTitle()"
         (click)="onExportCsv()">
@@ -75,29 +165,25 @@
         Export CSV
       </button>
     </div>
-  </header>
+  </div>
 
-  <app-results-list-filters
-    #filters
-    [isAdmin]="this.api.rolesSE.isAdmin"
-    [hasFilteredResults]="shown > 0"></app-results-list-filters>
-
-  @if (this.api.dataControlSE.resultsListNoDataMessage(); as noResultsMsg) {
-    <app-alert-status
-      status="warning"
-      [description]="noResultsMsg"
-      inlineStyles="margin: 0 0 16px 0 !important;"></app-alert-status>
-  }
-
-  <p class="rc-showing">
-    @if (shown > 0) {
-      Showing {{ shown }} of {{ totalLoaded }} results.
-    } @else {
-      No results to show.
+  <div #workArea class="rc-work-area custom_scroll">
+    @if (this.api.dataControlSE.resultsListNoDataMessage(); as noResultsMsg) {
+      <app-alert-status
+        status="warning"
+        [description]="noResultsMsg"
+        inlineStyles="margin: 0 0 16px 0 !important;"></app-alert-status>
     }
-  </p>
 
-  <div class="table rc-table">
+    <p class="rc-showing">
+      @if (shown > 0) {
+        Showing {{ shown }} of {{ totalLoaded }} results.
+      } @else {
+        No results to show.
+      }
+    </p>
+
+    <div class="table rc-table" data-guide="platform-tour-rc-table">
     <app-pr-table
       id="resultListTable"
       #table
@@ -303,6 +389,7 @@
         </tr>
       </ng-template>
     </app-pr-table>
+    </div>
   </div>
 </div>
 
@@ -342,3 +429,4 @@
 @if (this.api.dataControlSE.chagePhaseModal) {
   <app-change-phase-modal></app-change-phase-modal>
 }
+<app-results-center-reporting-guide [(visible)]="reportingGuideOpen" />

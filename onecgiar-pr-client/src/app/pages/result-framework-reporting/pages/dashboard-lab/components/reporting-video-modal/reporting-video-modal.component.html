@@ -1,0 +1,413 @@
+<!-- Reporting Video Guide & Tutorial Modal -->
+<div
+  class="fixed inset-0 z-[1100] flex items-center justify-center bg-[rgba(15,23,42,0.65)] backdrop-blur-xs p-3 sm:p-6"
+  role="presentation"
+  data-testid="reporting-video-modal"
+  (click)="close()"
+  (keydown.escape)="close()">
+  <div
+    class="relative flex flex-col w-full max-w-[960px] max-h-[90vh] bg-white rounded-[20px] border border-slate-200/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Science Programs Reporting Video Guide"
+    (click)="$event.stopPropagation()"
+    (keydown.escape)="close()">
+    
+    <!-- ═══ HEADER ═══ -->
+    <header class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 sm:px-6 py-4">
+      <div class="flex items-center gap-3.5 min-w-0">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100 shadow-2xs">
+          <span class="material-icons-round text-[22px]">smart_display</span>
+        </span>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h2 class="m-0 text-[16px] sm:text-[18px] font-bold text-slate-900 leading-tight truncate">
+              Reporting Process & Walkthrough
+            </h2>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-rose-100/80 text-rose-700 border border-rose-200">
+              Video & Guide
+            </span>
+          </div>
+          <p class="m-0 mt-0.5 text-[12px] sm:text-[12.5px] text-slate-500 truncate">
+            {{ programName() }}@if (cycleYear()) { ({{ cycleYear() }}) } · How to navigate, select indicators, and report across dynamic result types.
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="close()"
+        aria-label="Close guide"
+        data-testid="video-modal-close-btn"
+        class="flex h-8 w-8 shrink-0 cursor-pointer appearance-none items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition-colors">
+        <span class="material-icons-round text-[20px]">close</span>
+      </button>
+    </header>
+
+    <!-- ═══ NAVIGATION TABS ═══ -->
+    <nav class="flex shrink-0 items-center border-b border-slate-200 bg-white px-5 sm:px-6 gap-1 overflow-x-auto custom_scroll">
+      <button
+        type="button"
+        (click)="setTab('video')"
+        class="flex items-center gap-2 py-3 px-3 text-[13px] font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap"
+        [class.border-rose-600]="activeTab() === 'video'"
+        [class.text-rose-600]="activeTab() === 'video'"
+        [class.border-transparent]="activeTab() !== 'video'"
+        [class.text-slate-600]="activeTab() !== 'video'"
+        [class.hover:text-slate-900]="activeTab() !== 'video'">
+        <span class="material-icons-round text-[17px]">play_circle</span>
+        <span>Video Walkthrough</span>
+      </button>
+
+      <button
+        type="button"
+        (click)="setTab('result-types')"
+        class="flex items-center gap-2 py-3 px-3 text-[13px] font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap"
+        [class.border-rose-600]="activeTab() === 'result-types'"
+        [class.text-rose-600]="activeTab() === 'result-types'"
+        [class.border-transparent]="activeTab() !== 'result-types'"
+        [class.text-slate-600]="activeTab() !== 'result-types'"
+        [class.hover:text-slate-900]="activeTab() !== 'result-types'">
+        <span class="material-icons-round text-[17px]">dynamic_form</span>
+        <span>Result Types & Dynamic Forms</span>
+      </button>
+
+      <button
+        type="button"
+        (click)="setTab('features')"
+        class="flex items-center gap-2 py-3 px-3 text-[13px] font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap"
+        [class.border-rose-600]="activeTab() === 'features'"
+        [class.text-rose-600]="activeTab() === 'features'"
+        [class.border-transparent]="activeTab() !== 'features'"
+        [class.text-slate-600]="activeTab() !== 'features'"
+        [class.hover:text-slate-900]="activeTab() !== 'features'">
+        <span class="material-icons-round text-[17px]">filter_alt</span>
+        <span>Search & Section Filters</span>
+      </button>
+
+      <button
+        type="button"
+        (click)="setTab('steps')"
+        class="flex items-center gap-2 py-3 px-3 text-[13px] font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap"
+        [class.border-rose-600]="activeTab() === 'steps'"
+        [class.text-rose-600]="activeTab() === 'steps'"
+        [class.border-transparent]="activeTab() !== 'steps'"
+        [class.text-slate-600]="activeTab() !== 'steps'"
+        [class.hover:text-slate-900]="activeTab() !== 'steps'">
+        <span class="material-icons-round text-[17px]">checklist</span>
+        <span>Step-by-Step Flow</span>
+      </button>
+    </nav>
+
+    <!-- ═══ MODAL BODY ═══ -->
+    <div class="flex-1 overflow-y-auto custom_scroll p-5 sm:p-6 bg-slate-50/50">
+
+      <!-- ── TAB 1: VIDEO WALKTHROUGH ── -->
+      @if (activeTab() === 'video') {
+        <div class="flex flex-col gap-5">
+          <!-- 16:9 Video Canvas / Player -->
+          <div class="relative w-full aspect-video rounded-xl bg-slate-950 overflow-hidden shadow-md border border-slate-800 flex items-center justify-center group">
+            <video
+              #videoPlayer
+              class="w-full h-full object-contain"
+              controls
+              playsinline
+              preload="metadata"
+              (play)="onVideoPlay()"
+              (pause)="onVideoPause()">
+              <source src="assets/videos/reporting-guide.mp4" type="video/mp4" />
+              <source src="assets/videos/reporting-guide.webm" type="video/webm" />
+              Your browser does not support HTML5 video playback.
+            </video>
+
+            <!-- Video Player Overlay Simulation (when no video is playing) -->
+            @if (!isPlaying()) {
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-900/20 flex flex-col justify-between p-6 cursor-pointer z-10"
+                role="button"
+                tabindex="0"
+                (click)="playVideo()"
+                (keydown.enter)="playVideo()"
+                (keydown.space)="playVideo(); $event.preventDefault()">
+                <div class="flex items-center justify-between">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-600 text-white font-mono text-[11px] font-bold tracking-wide uppercase shadow-sm">
+                    <span class="h-2 w-2 rounded-full bg-white animate-pulse"></span>
+                    Tutorial Video
+                  </span>
+                  <span class="text-xs font-medium text-slate-300">Click to Play</span>
+                </div>
+
+                <div class="self-center flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    class="flex h-16 w-16 items-center justify-center rounded-full bg-rose-600/90 text-white shadow-xl transition-transform hover:scale-110 hover:bg-rose-500 cursor-pointer border-0"
+                    aria-label="Play video"
+                    (click)="playVideo(); $event.stopPropagation()">
+                    <span class="material-icons-round text-[38px] ml-1">play_arrow</span>
+                  </button>
+                  <span class="text-xs font-semibold text-white/90 drop-shadow-sm">Click to Play Walkthrough</span>
+                </div>
+
+                <div class="flex flex-col gap-1 max-w-xl">
+                  <span class="text-xs uppercase tracking-wider font-bold text-rose-400">Science Program Result Reporting</span>
+                  <h3 class="text-base sm:text-lg font-bold text-white leading-snug m-0">
+                    Step-by-step from Theory of Change indicators to verified result submission.
+                  </h3>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Video Chapters -->
+          <div class="flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-bold uppercase tracking-wider text-slate-500">Video Chapters & Jump Points</span>
+              <span class="text-[11.5px] text-slate-400">Click any chapter to seek</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              @for (chapter of chapters; track chapter.id) {
+                <button
+                  type="button"
+                  (click)="seekToChapter(chapter)"
+                  data-testid="video-chapter-btn"
+                  class="flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer"
+                  [class.border-rose-300]="currentChapterId() === chapter.id"
+                  [class.bg-rose-50/50]="currentChapterId() === chapter.id"
+                  [class.border-slate-200]="currentChapterId() !== chapter.id"
+                  [class.bg-white]="currentChapterId() !== chapter.id"
+                  [class.hover:border-slate-300]="currentChapterId() !== chapter.id">
+                  <span
+                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-600"
+                    [class.bg-rose-100]="currentChapterId() === chapter.id"
+                    [class.text-rose-700]="currentChapterId() === chapter.id"
+                    [class.bg-slate-100]="currentChapterId() !== chapter.id">
+                    <span class="material-icons-round text-[16px]">{{ chapter.icon }}</span>
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-[12.5px] font-bold text-slate-900 truncate">{{ chapter.title }}</span>
+                      <span class="text-[11px] font-mono font-medium text-slate-500 shrink-0">{{ chapter.timeLabel }}</span>
+                    </div>
+                    <p class="m-0 mt-0.5 text-[11.5px] text-slate-500 line-clamp-2 leading-relaxed">
+                      {{ chapter.description }}
+                    </p>
+                  </div>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Key Takeaway Banner -->
+          <div class="flex items-start gap-3 p-4 rounded-xl border border-indigo-100 bg-indigo-50/60">
+            <span class="material-icons-round text-indigo-600 text-[20px] shrink-0 mt-0.5">info</span>
+            <div class="text-[12.5px] text-slate-700 leading-relaxed">
+              <strong class="font-semibold text-indigo-900">Important dynamic form notice:</strong>
+              Indicators in the Theory of Change are tied to specific <strong>Result Types</strong> (e.g. Knowledge Products, Innovation Development, Policy Changes, Capacity Sharing). When you click <em>Report</em>, the form dynamically changes its inputs and verification fields to match that specific result type.
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB 2: RESULT TYPES & DYNAMIC FORMS ── -->
+      @if (activeTab() === 'result-types') {
+        <div class="flex flex-col gap-4">
+          <div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 flex items-start gap-3">
+            <span class="material-icons-round text-amber-600 text-[20px] shrink-0 mt-0.5">tips_and_updates</span>
+            <div class="text-[12.5px] text-amber-900 leading-relaxed">
+              <strong>Why does the report form change?</strong> In OneCGIAR, different research results require different evidence and reporting standards. When you report an indicator, the drawer identifies the indicator's <em>Result Type</em> and renders the corresponding specialized form.
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            @for (rt of resultTypes; track rt.typeId) {
+              <div class="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-2xs hover:shadow-xs transition-shadow">
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+                      <span class="material-icons-round text-[16px]">{{ rt.icon }}</span>
+                    </span>
+                    <span class="text-[14px] font-bold text-slate-900">{{ rt.name }}</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-tight border uppercase" [class]="rt.badgeClass">
+                    {{ rt.code }}
+                  </span>
+                </div>
+
+                <p class="m-0 text-[12px] font-medium text-slate-600 mb-2">
+                  {{ rt.headline }}
+                </p>
+
+                <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-[11.5px] text-slate-700 leading-relaxed mb-3">
+                  <span class="font-semibold text-slate-900 block mb-1">Form Behavior:</span>
+                  {{ rt.formDynamics }}
+                </div>
+
+                <div class="mt-auto pt-2 border-t border-slate-100">
+                  <span class="text-[10.5px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Required Fields:</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (field of rt.keyFields; track field) {
+                      <span class="inline-flex items-center text-[11px] font-medium text-slate-600 bg-slate-100/80 px-2 py-0.5 rounded">
+                        • {{ field }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB 3: SEARCH & SECTION FILTERS ── -->
+      @if (activeTab() === 'features') {
+        <div class="flex flex-col gap-4">
+          <!-- Search Bar Feature -->
+          <div class="rounded-xl border border-slate-200 bg-white p-4.5 flex flex-col sm:flex-row items-start gap-4">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+              <span class="material-icons-round text-[22px]">search</span>
+            </span>
+            <div class="min-w-0 flex-1">
+              <h3 class="m-0 text-[14.5px] font-bold text-slate-900">Instant Keyword Search Bar</h3>
+              <p class="m-0 mt-1 text-[12px] text-slate-600 leading-relaxed">
+                Located in the sticky reporting toolbar. Type any keyword (e.g. <code>breeding</code>, <code>market</code>, <code>HLO4</code>, or indicator code). Matching cards and titles are dynamically highlighted with a yellow background, and an indicator match counter displays the exact number of matching KPIs.
+              </p>
+            </div>
+          </div>
+
+          <!-- Quick Typology Chips -->
+          <div class="rounded-xl border border-slate-200 bg-white p-4.5 flex flex-col sm:flex-row items-start gap-4">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+              <span class="material-icons-round text-[22px]">filter_alt</span>
+            </span>
+            <div class="min-w-0 flex-1">
+              <h3 class="m-0 text-[14.5px] font-bold text-slate-900">Quick Typology Chips</h3>
+              <p class="m-0 mt-1 text-[12px] text-slate-600 leading-relaxed">
+                Filter your view with one click by result typology: <strong>Knowledge Products</strong>, <strong>Innovation Development</strong>, <strong>Policy Changes</strong>, or <strong>Outcomes</strong>. Each chip indicates how many planned indicators belong to that typology.
+              </p>
+            </div>
+          </div>
+
+          <!-- Status Filters -->
+          <div class="rounded-xl border border-slate-200 bg-white p-4.5 flex flex-col sm:flex-row items-start gap-4">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+              <span class="material-icons-round text-[22px]">pie_chart</span>
+            </span>
+            <div class="min-w-0 flex-1">
+              <h3 class="m-0 text-[14.5px] font-bold text-slate-900">Workflow & Status Filtering</h3>
+              <p class="m-0 mt-1 text-[12px] text-slate-600 leading-relaxed">
+                Easily filter rows according to their workflow progress status:
+              </p>
+              <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold">• Not started (0% reported)</span>
+                <span class="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">• In progress (partially achieved)</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">• Achieved (100% target met)</span>
+                <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">• Overachieved (>100%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keyboard Navigation Shortcuts -->
+          <div class="rounded-xl border border-slate-200 bg-white p-4.5 flex flex-col sm:flex-row items-start gap-4">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 border border-slate-200">
+              <span class="material-icons-round text-[22px]">keyboard</span>
+            </span>
+            <div class="min-w-0 flex-1">
+              <h3 class="m-0 text-[14.5px] font-bold text-slate-900">Full Keyboard Navigation</h3>
+              <p class="m-0 mt-1 text-[12px] text-slate-600 leading-relaxed">
+                Report without leaving the keyboard:
+              </p>
+              <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11.5px] text-slate-700">
+                <div><kbd class="px-1.5 py-0.5 rounded bg-slate-100 border text-slate-800 font-mono">↓ / ↑</kbd> Move between AoW cards or indicator rows</div>
+                <div><kbd class="px-1.5 py-0.5 rounded bg-slate-100 border text-slate-800 font-mono">→ / ←</kbd> Expand / collapse card or sub-group</div>
+                <div><kbd class="px-1.5 py-0.5 rounded bg-slate-100 border text-slate-800 font-mono">Enter / Space</kbd> Open Report Drawer directly on row</div>
+                <div><kbd class="px-1.5 py-0.5 rounded bg-slate-100 border text-slate-800 font-mono">Esc</kbd> Return focus to parent HLO header</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB 4: STEP-BY-STEP FLOW ── -->
+      @if (activeTab() === 'steps') {
+        <div class="flex flex-col gap-3.5">
+          <div class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-4">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold text-sm">
+              1
+            </span>
+            <div class="flex-1 min-w-0">
+              <h4 class="m-0 text-sm font-bold text-slate-900">Locate your Area of Work (AoW)</h4>
+              <p class="m-0 mt-1 text-xs text-slate-600 leading-relaxed">
+                Browse through the 5–8 Areas of Work configured for your Science Program. Click the header or press <kbd class="px-1 rounded bg-slate-100 border">Space</kbd> to expand the card.
+              </p>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-4">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold text-sm">
+              2
+            </span>
+            <div class="flex-1 min-w-0">
+              <h4 class="m-0 text-sm font-bold text-slate-900">Expand the High-Level Output (HLO)</h4>
+              <p class="m-0 mt-1 text-xs text-slate-600 leading-relaxed">
+                Inside the AoW, indicators are grouped by HLO or Outcome milestones. Click the HLO group to reveal its planned indicators and targets.
+              </p>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-4">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold text-sm">
+              3
+            </span>
+            <div class="flex-1 min-w-0">
+              <h4 class="m-0 text-sm font-bold text-slate-900">Click "Report" to open the Indicator Drawer</h4>
+              <p class="m-0 mt-1 text-xs text-slate-600 leading-relaxed">
+                On the indicator row, click the <strong class="text-rose-600">Report</strong> (or <strong class="text-indigo-600">Continue</strong>) button. A sliding aside drawer opens on the right side of the screen without losing your place in the list.
+              </p>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-4">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold text-sm">
+              4
+            </span>
+            <div class="flex-1 min-w-0">
+              <h4 class="m-0 text-sm font-bold text-slate-900">Complete the Dynamic Result Form</h4>
+              <p class="m-0 mt-1 text-xs text-slate-600 leading-relaxed">
+                Fill out the form fields tailored to the indicator's Result Type. For Knowledge Products, search and link the CGSpace handle; for Innovation Development, input the readiness level; for Policy Changes, declare the policy stage.
+              </p>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-4">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold text-sm">
+              5
+            </span>
+            <div class="flex-1 min-w-0">
+              <h4 class="m-0 text-sm font-bold text-slate-900">Save and Track Real-Time Progress</h4>
+              <p class="m-0 mt-1 text-xs text-slate-600 leading-relaxed">
+                Save your progress. The target ratio, progress percentages, and status badge (Not Started → In Progress → Achieved) update immediately across the entire Science Program dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ═══ MODAL FOOTER ═══ -->
+    <footer class="flex items-center justify-between border-t border-slate-100 bg-white px-5 sm:px-6 py-3.5">
+      <div class="flex items-center gap-2 text-xs text-slate-500">
+        <span class="material-icons-round text-[16px] text-slate-400">help_outline</span>
+        <span class="hidden sm:inline">Need more guidance? You can also run the interactive walkthrough from the <strong>Tour</strong> button.</span>
+      </div>
+
+      <button
+        type="button"
+        (click)="close()"
+        class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 transition-colors cursor-pointer">
+        Got it, close guide
+      </button>
+    </footer>
+
+  </div>
+</div>

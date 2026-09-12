@@ -106,6 +106,22 @@ export class AuthService {
     return this.http.post<any>(`${this.apiBaseUrl}complete-password-challenge`, body);
   }
 
+  // @akili-spec changes/cognito-email-otp-login — OTP-T-6, design.md §4.1
+  /** Center path allow-list — empty `domains` keeps the third path hidden on the client. */
+  GET_otpConfig() {
+    return this.http.get<any>(`${this.apiBaseUrl}login/otp/config`);
+  }
+
+  /** `design.md` §4.1 — byte-identical `200` shape for known and unknown emails. */
+  POST_otpStart(body: { email: string }) {
+    return this.http.post<any>(`${this.apiBaseUrl}login/otp/start`, body);
+  }
+
+  /** `design.md` §4.1 — success shape matches `/login/custom` (`POST_cognitoAuth`). */
+  POST_otpVerify(body: { email: string; code: string; session: string }) {
+    return this.http.post<any>(`${this.apiBaseUrl}login/otp/verify`, body);
+  }
+
   GET_allRolesByUser() {
     return this.http.get<any>(`${this.apiBaseUrl}role-by-user/get/user/${this.localStorageUser?.id}`);
   }

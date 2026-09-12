@@ -1,16 +1,7 @@
 <!-- Layout follows the PRMS Form UX Pattern (RFUX-R-2, RFUX-AC-2): 3 distinct semantic cards
      (Result Identity, Target Contribution, Collaboration & Attribution) with 4/8px spacing rhythm,
      WCAG AA contrast, and sticky footer with readiness indicator. -->
-<form class="relative flex flex-col gap-4 flex-1 min-h-0" (ngSubmit)="onFormSubmit($event)" [attr.aria-busy]="creatingResult()">
-  @if (creatingResult()) {
-    <div
-      class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-[color-mix(in_srgb,white_80%,transparent)]"
-      role="status"
-      aria-live="polite">
-      <i class="pi pi-spin pi-spinner text-[1.75rem] text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
-      <span class="text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)]">Creating result…</span>
-    </div>
-  }
+<form class="relative flex flex-col gap-4 flex-1 min-h-0" (ngSubmit)="onFormSubmit($event)" [attr.aria-busy]="creatingResult() || validatingHandler()">
 
   <!-- ==================== CARD 1: RESULT IDENTITY ==================== -->
   <section
@@ -135,21 +126,9 @@
             </div>
 
             <div>
-              @if (validatingHandler()) {
-                <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
-                  <i class="pi pi-spin pi-spinner text-emerald-600"></i>
-                  <span>Retrieving metadata from {{ repositoryLabel() }}…</span>
-                </div>
-              } @else if (creatingResult()) {
-                <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
-                  <i class="pi pi-spin pi-spinner text-emerald-600"></i>
-                  <span>Creating result…</span>
-                </div>
-              } @else {
-                <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">
-                  {{ createResultBody().result_name }}
-                </h4>
-              }
+              <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">
+                {{ createResultBody().result_name }}
+              </h4>
               <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
                 <span class="font-mono text-xs text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-2xs">
                   {{ createResultBody().handler }}
@@ -164,6 +143,7 @@
         } @else {
           <app-kp-cgspace-browse
             [busy]="validatingHandler() || creatingResult()"
+            [showBusyOverlay]="false"
             [phaseYear]="phaseYear()"
             [isAdmin]="isAdmin()"
             (itemSelected)="onCgspaceItemSelected($event)"
@@ -199,7 +179,7 @@
             [disabled]="validatingHandler() || creatingResult()"
             class="inline-flex h-[40px] shrink-0 appearance-none items-center justify-center gap-1.5 rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-4 text-sm font-semibold text-white transition-all disabled:opacity-50 cursor-pointer focus:outline-none">
             {{ validatingHandler() ? 'Syncing…' : 'Sync' }}
-            <span class="material-icons-round text-[16px]" [class.animate-spin]="validatingHandler()">sync</span>
+            <span class="material-icons-round text-[16px]" aria-hidden="true">sync</span>
           </button>
         </div>
         @if (mqapUrlError().status) {
@@ -322,7 +302,7 @@
 }
   </section>
 
-  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+  @if (!isEmerging() && (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler)) {
     <!-- ==================== CARD 2: TARGET CONTRIBUTION ==================== -->
     <section
       data-testid="card-target-contribution"
@@ -383,16 +363,19 @@
         }
       </div>
     </section>
+  }
 
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
     <!-- ==================== CARD 3: COLLABORATION & ATTRIBUTION ==================== -->
     <section
       data-testid="card-collaboration"
       class="rounded-xl border border-[var(--pr-border)] bg-white p-4 shadow-2xs flex flex-col gap-4 min-[640px]:p-4.5">
       <div class="flex items-center gap-2 border-b border-[var(--pr-border)] pb-3">
         <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">groups</span>
-        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">3. Collaboration & Attribution</h4>
+        <h4 class="m-0 text-[13.5px] font-bold text-[var(--pr-color-secondary-400)]">{{ isEmerging() ? '2' : '3' }}. Collaboration & Attribution</h4>
       </div>
 
+      @if (!isEmerging()) {
       <div
         data-testid="toc-attribution-note"
         class="flex gap-2.5 rounded-lg border border-[var(--pr-color-primary-100,#e9e0ff)] bg-[color-mix(in_srgb,var(--pr-color-primary-50,#f5f3ff)_55%,white)] px-3.5 py-3">
@@ -441,6 +424,7 @@
           }
         </div>
       </div>
+      }
 
       <!-- Contributing CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
            every option matches every value and each click deselects index 0 instead of adding. -->
@@ -716,9 +700,6 @@
           class="inline-flex flex-1 appearance-none items-center justify-center gap-2 rounded-[10px] border-0 bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] px-5 py-2.5 text-[13.5px] font-semibold text-white shadow-xs hover:opacity-95 disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] disabled:shadow-none cursor-pointer transition-all min-[640px]:flex-none"
           [class.opacity-60]="!canSave() && !creatingResult()">
           {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
-          @if (creatingResult()) {
-            <i class="pi pi-spin pi-spinner text-[16px]" aria-hidden="true"></i>
-          }
         </button>
       }
     </div>

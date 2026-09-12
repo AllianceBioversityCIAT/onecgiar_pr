@@ -14,6 +14,8 @@ import { FontScaleService } from '../../services/font-scale.service';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { environment } from '../../../../environments/environment';
+import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
+import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 const PLANNED = '/result-framework-reporting/planned-toc';
 
@@ -30,6 +32,7 @@ describe('ReportingNavSidebarComponent', () => {
   let fontScaleMock: any;
   let notificationsMock: any;
   let sidebarMock: any;
+  let reportingGuideMock: { startSidebarTour: jest.Mock };
 
   /** Emit a NavigationEnd for `url` after pointing the router at it. */
   const navigateTo = (url: string) => {
@@ -49,7 +52,8 @@ describe('ReportingNavSidebarComponent', () => {
         { provide: ApiService, useValue: apiMock },
         { provide: FontScaleService, useValue: fontScaleMock },
         { provide: ResultsNotificationsService, useValue: notificationsMock },
-        { provide: HlmSidebarService, useValue: sidebarMock }
+        { provide: HlmSidebarService, useValue: sidebarMock },
+        { provide: ReportingGuideService, useValue: reportingGuideMock }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     })
@@ -94,7 +98,8 @@ describe('ReportingNavSidebarComponent', () => {
 
     fontScaleMock = { set: jest.fn(), scale: signal('default') };
     notificationsMock = { updatesPopUpData: [] as any[] };
-    sidebarMock = { state: signal('expanded'), isMobile: signal(false) };
+    sidebarMock = { state: signal('expanded'), isMobile: signal(false), setOpen: jest.fn() };
+    reportingGuideMock = { startSidebarTour: jest.fn() };
 
     // Pinned programmes persist in localStorage, so one test's pins would otherwise seed the next.
     localStorage.clear();
@@ -768,6 +773,62 @@ describe('ReportingNavSidebarComponent', () => {
       component.onEscape();
       expect(component.fontMenuOpen()).toBe(false);
       expect(component.iconFlyout()).toBeNull();
+    });
+  });
+
+  // ------------------------------------------------------- SGL-T-2 / SGL-R-1..R-2
+  // Parsed-template checks — same rationale as SBAR-T-3 below: the real template trips BrnTooltip
+  // under Jest, so markup authorship is asserted from the `.html` file on disk.
+  describe('platform sidebar tour (POT-T-3)', () => {
+    it('startPlatformSidebarTour forwards program and center context to ReportingGuideService', async () => {
+      homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01' }]);
+      homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP02' }]);
+      await build();
+
+      component.startPlatformSidebarTour();
+
+      expect(reportingGuideMock.startSidebarTour).toHaveBeenCalledWith({
+        hasMyPrograms: true,
+        hasOtherPrograms: true,
+        hasCenters: true
+      });
+    });
+
+    it('authors a Tour control in EXTRAS with platform anchors', () => {
+      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+      expect(html).toContain('data-guide="platform-tour-sidebar-trigger"');
+      expect(html).toContain('startPlatformSidebarTour()');
+      expect(html).toContain("'platform-tour-sidebar-results-center'");
+      expect(html).toContain('data-guide="platform-tour-sidebar-platform"');
+    });
+  });
+
+  describe('EXTRAS glossary link (SGL-T-2)', () => {
+    const readExtrasMarkup = (): string => {
+      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+      const start = html.indexOf('pr-nav-extras');
+      const end = html.indexOf('<!-- No footer');
+      return html.slice(start, end);
+    };
+
+    it('exposes clarisaGlossaryUrl from the shared CLARISA constant', async () => {
+      await build();
+      expect(component.clarisaGlossaryUrl).toBe(CLARISA_GLOSSARY_URL);
+    });
+
+    it('authors Glossary before Release notes with external link contract', () => {
+      const extras = readExtrasMarkup();
+      const glossaryIdx = extras.indexOf('tooltip="Glossary"');
+      const releaseIdx = extras.indexOf('routerLink="/whats-new"');
+
+      expect(glossaryIdx).toBeGreaterThan(-1);
+      expect(releaseIdx).toBeGreaterThan(glossaryIdx);
+      expect(extras).toContain('[href]="clarisaGlossaryUrl"');
+      expect(extras).toContain('target="_blank"');
+      expect(extras).toContain('rel="noopener noreferrer"');
+      expect(extras).toContain('name="lucideBookOpen"');
+      expect(extras).toContain('<span>Glossary</span>');
+      expect(extras.slice(glossaryIdx, releaseIdx)).not.toContain('routerLink');
     });
   });
 

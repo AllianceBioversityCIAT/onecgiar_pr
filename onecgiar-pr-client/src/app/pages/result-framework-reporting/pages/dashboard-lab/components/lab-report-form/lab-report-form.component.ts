@@ -240,6 +240,8 @@ export class LabReportFormComponent {
   readonly dirtyChange = output<boolean>();
   /** `Cancel` in the footer — the host decides what closing means (it owns the dirty guard). */
   readonly cancelled = output<void>();
+  /** Non-null while MQAP sync or create is in flight — the drawer paints the full-pane overlay. */
+  readonly loadingOverlayChange = output<string | null>();
 
   /** Two columns when the panel is wide enough; one when it is not. */
   readonly columns = input<1 | 2>(1);
@@ -492,7 +494,19 @@ export class LabReportFormComponent {
     effect(() => {
       if (this.showsInnovationLink()) this.qaInnovationsSE.load();
     });
+
+    effect(() => {
+      const message = this.loadingOverlayMessage();
+      this.loadingOverlayChange.emit(message);
+    });
   }
+
+  /** Message for the host overlay — null when idle. */
+  readonly loadingOverlayMessage = computed<string | null>(() => {
+    if (this.creatingResult()) return 'Creating result…';
+    if (this.validatingHandler()) return `Retrieving metadata from ${this.repositoryLabel()}…`;
+    return null;
+  });
 
   /** P2-3420 — answering "No" drops the selection so the payload cannot keep a stale link. */
   onInnovationLinkChange(value: boolean): void {
@@ -771,7 +785,7 @@ export class LabReportFormComponent {
     if (!body.result_name?.trim()) missing.push('Result title');
     else if (this.titleWordCount() > 30) missing.push('Result title exceeds 30 words');
     if (this.currentResultIsKnowledgeProduct() && !this.mqapJson()) missing.push('Repository link/handle');
-    if (body.contribution_to_indicator_target == null || `${body.contribution_to_indicator_target}`.trim() === '')
+    if (!this.isEmerging() && (body.contribution_to_indicator_target == null || `${body.contribution_to_indicator_target}`.trim() === ''))
       missing.push('Contribution to indicator target');
     // P2-3420: "Yes" is only a complete answer once an innovation has been picked. "No" (the
     // default) always is, which is what makes the field mandatory yet never blocking on its own.

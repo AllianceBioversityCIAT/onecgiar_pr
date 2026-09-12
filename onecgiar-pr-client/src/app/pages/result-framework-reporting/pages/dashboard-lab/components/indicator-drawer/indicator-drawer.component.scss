@@ -173,84 +173,16 @@
   line-height: 1.35;
 }
 
-// The actions cell is the menu's positioning context.
+// The actions cell alignment.
 :host ::ng-deep .irr-table .pr-table tbody td.irr-actions {
-  position: relative;
-  justify-content: center;
-  padding: 0 2px;
-  overflow: visible;
-}
-
-// Every actions cell shares one stacking context, so among equals DOM order decides and the rows
-// BELOW paint their own background over an open menu. Elevate the CELL — the popup's own z-index
-// only ranks inside it (Results-tab gotcha, `programme-results/CLAUDE.md`).
-:host ::ng-deep .irr-table .pr-table tbody td.irr-actions.irr-actions--open {
-  z-index: 10;
-}
-
-// ── Row menu ────────────────────────────────────────────────────────────────
-// COPIED from `reporting-aow-table.component.scss:204-260` — those rules are component-scoped, not
-// global, so a reference is not enough. Promote to `shared/` when a third copy appears.
-:host ::ng-deep .pr-row-menu {
-  position: absolute;
-  top: 30px;
-  right: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  width: 200px;
-  padding: 6px;
-  cursor: default;
-  background: var(--pr-surface-card);
-  border: 1px solid var(--pr-border);
-  border-radius: 12px;
-  box-shadow: var(--pr-shadow-2);
-  animation: prPop 120ms ease-out;
-}
-
-:host ::ng-deep .pr-row-menu_item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 34px;
-  padding: 0 10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--pr-text);
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-
-  &:hover:not(:disabled) {
-    background: var(--pr-color-primary-50);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--pr-color-primary-300);
-    outline-offset: -2px;
-  }
+  justify-content: center;
+  padding: 0 2px;
 }
 
-@keyframes prPop {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :host ::ng-deep .pr-row-menu {
-    animation: none;
-  }
-}
+/* Row overflow menu styles moved to src/styles/row-menu.scss so CDK Connected Overlay panels
+   (attached to document.body outside this component host) receive styling cleanly. */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // @akili-spec changes/indicator-reported-results — narrow fallback (IRR-R-8.1, IRR-T-4)

@@ -1,6 +1,13 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-11 · branch qa-development-2026-ss · bugfix/lead-center-no-toc-refs (LC-DD-6,
+**Verified:** 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
+(removed P2-3235's `tocAlignmentReadOnly()` ToC-alignment lock on the Level/HLO/Outcome/Output
+selects — explicit PO override (santiago.sanchez@cgiar.org, `proposal.md` §11), not a defect fix;
+these selects are now gated only by `editable` + the role read-only handling already inside
+`app-pr-select`. Accepted risk (`design.md` §5, not mitigated): Section 2 and the Results
+Framework/AOW module can again independently set the same result's ToC alignment, with no
+reconciliation or disagreement detection.); prior: 2026-09-11 · branch qa-development-2026-ss ·
+bugfix/lead-center-no-toc-refs (LC-DD-6,
 result 9139 follow-up: `onLeadCenterSelected` (`service.ts`) treated ANY mapped-2026 result as the
 genuine ToC/Other(s) split — adding the "Other(s)" sentinel to `contributing_center` — even when the ToC
 brought NO reference centers at all (`tocReferenceCenterInstitutionIds()` empty). In that shape dropdown 1

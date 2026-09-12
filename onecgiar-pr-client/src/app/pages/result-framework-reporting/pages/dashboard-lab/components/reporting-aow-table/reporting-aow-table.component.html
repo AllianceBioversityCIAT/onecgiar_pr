@@ -316,12 +316,14 @@
         <!-- Top-level header: 52px compact, balanced 3-zone layout. Same chrome for AoW and for Intermediate / 2030 buckets. -->
         <button
           type="button"
-          class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] bg-[var(--pr-surface-card)] px-[12px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px]"
+          class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] bg-[var(--pr-surface-card)] px-[12px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-400)] focus-visible:ring-inset"
           [class.rounded-b-[12px]]="!aowOpen"
           [class.border-b]="aowOpen"
           [class.border-[var(--pr-border-divider)]]="aowOpen"
           [attr.aria-expanded]="aowOpen"
-          (click)="toggle(aowKey, isDefaultOpenAow(group.aow.code), $event)">
+          [attr.data-aow-header]="group.aow.code"
+          (click)="toggle(aowKey, isDefaultOpenAow(group.aow.code), $event)"
+          (keydown)="onAowHeaderKeydown($event, aowKey, group.aow.code, aowOpen)">
           <ng-icon
             name="lucideChevronDown"
             class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
@@ -348,7 +350,9 @@
               aria-label="Copy Area of Work name"
               [prTooltip]="isJustCopied(aowKey) ? 'Copied!' : 'Copy name'"
               prTooltipPosition="top"
-              (click)="copyAow(group, $event)">
+              (click)="copyAow(group, $event)"
+              (keydown.enter)="$event.stopPropagation()"
+              (keydown.space)="$event.stopPropagation()">
               <span class="material-icons-round text-[14px]" [class.text-emerald-600]="isJustCopied(aowKey)">
                 {{ isJustCopied(aowKey) ? 'check' : 'content_copy' }}
               </span>
@@ -361,7 +365,9 @@
                 class="flex h-[20px] w-[20px] shrink-0 appearance-none items-center justify-center border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:text-[var(--pr-color-primary-300)]"
                 aria-label="About this group"
                 [attr.aria-expanded]="isInfoOpen(group)"
-                (click)="toggleInfo(group, $event)">
+                (click)="toggleInfo(group, $event)"
+                (keydown.enter)="$event.stopPropagation()"
+                (keydown.space)="$event.stopPropagation()">
                 <ng-icon name="lucideInfo" class="text-[14px]" />
               </button>
               @if (isInfoOpen(group)) {
@@ -482,7 +488,8 @@
               aria-label="Open this Area of Work in the By-AOW view"
               title="By AOW"
               (click)="emitAndStop(openAow, group.aow.code, $event)"
-              (keydown.enter)="emitAndStop(openAow, group.aow.code, $event)">
+              (keydown.enter)="emitAndStop(openAow, group.aow.code, $event)"
+              (keydown.space)="emitAndStop(openAow, group.aow.code, $event)">
               <span class="material-icons-round text-[16px]" aria-hidden="true">folder_open</span>
               <span class="max-[900px]:hidden">By AOW</span>
             </span>
@@ -493,7 +500,7 @@
 
         <!-- Always in DOM so height can animate (no @if pop). -->
         <div class="pr-collapse pr-collapse--card" [class.is-open]="aowOpen" [attr.aria-hidden]="!aowOpen">
-          <div class="pr-collapse-inner">
+          <div class="pr-collapse-inner" [attr.inert]="aowOpen ? null : ''">
             @if (group.loading) {
               <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
             } @else {
@@ -736,7 +743,9 @@
                         [class.border-slate-200/80]="isOpen(hlo.key, defaultOpen)"
                         [class.border-b-0]="!isOpen(hlo.key, defaultOpen)"
                         [attr.aria-expanded]="isOpen(hlo.key, defaultOpen)"
-                        (click)="toggle(hlo.key, defaultOpen, $event)">
+                        [attr.data-hlo-header]="hlo.key"
+                        (click)="toggle(hlo.key, defaultOpen, $event)"
+                        (keydown)="onHloHeaderKeydown($event, hlo.key, defaultOpen)">
                         <!-- Left identity zone -->
                         <div class="flex items-center gap-3 min-w-0 flex-1">
                           <!-- Rotating chevron in white button box -->
@@ -816,7 +825,7 @@
                         class="pr-collapse"
                         [class.is-open]="isOpen(hlo.key, defaultOpen)"
                         [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
-                        <div class="pr-collapse-inner overflow-x-auto custom_scroll">
+                        <div class="pr-collapse-inner overflow-x-auto custom_scroll" [attr.inert]="isOpen(hlo.key, defaultOpen) ? null : ''">
                           <div class="pl-4 sm:pl-6 border-l-4 border-indigo-500/40 bg-indigo-50/10">
                             @if (hlo.rows.length) {
                               <div class="pr-hlo-head h-7 h-[28px] text-[10px] text-slate-400 font-bold uppercase tracking-wider" aria-hidden="true">
@@ -873,7 +882,7 @@
 <!-- Shared indicator row. Status mark = the concentric bullseye (18px violet target). -->
 <ng-template #indicatorRow let-row let-showAow="showAow" let-bucketKind="bucketKind" let-activeCenter="activeCenter">
   <div
-    class="pr-reporting-row group border-l-[3px] bg-white hover:bg-slate-50/80 transition-colors"
+    class="pr-reporting-row group border-l-[3px] bg-white hover:bg-slate-50/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-400)] focus-visible:ring-inset"
     [class.border-l-[var(--pr-color-green-500)]]="statusOf(row) === 'achieved'"
     [class.border-l-purple-500]="statusOf(row) === 'overachieved'"
     [class.border-l-[var(--pr-color-primary-500)]]="statusOf(row) === 'in-progress'"
@@ -882,14 +891,14 @@
     tabindex="0"
     [id]="'indicator-row-' + row.indicator_id"
     [attr.data-row-key]="rowKey(row)"
+    data-indicator-row
     [class.ring-2]="highlightedRowKey() === rowKey(row)"
     [class.ring-inset]="highlightedRowKey() === rowKey(row)"
     [class.ring-[var(--pr-color-primary-300)]]="highlightedRowKey() === rowKey(row)"
     [class.bg-[var(--pr-color-primary-50)]]="highlightedRowKey() === rowKey(row)"
     [attr.aria-label]="row.indicator_description"
     (click)="onRowClick(row, $event)"
-    (keydown.enter)="openRow.emit(row)"
-    (keydown.space)="openRow.emit(row)">
+    (keydown)="onIndicatorRowKeydown($event, row)">
     <!-- 1 — concentric bullseye -->
     <span
       class="pr-status-mark"

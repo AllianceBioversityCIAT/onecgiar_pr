@@ -1,6 +1,7 @@
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-10, MWB-T-11, MWB-T-12, MWB-R-1, R-2, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-9, MWB-DD-11)
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   ElementRef,
@@ -29,6 +30,7 @@ import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { SpTabEmptyStateComponent } from '../dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
 import {
@@ -261,6 +263,7 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
     // Results tab mounts for Areas of Work, not a second implementation of one.
     PrFilterMultiselectModule,
     MyWorkColumnComponent,
+    SpTabEmptyStateComponent,
     WhereToReportModalComponent
   ],
   // `MWB-T-9`: `ProgrammeResultsFilterService` is page-scoped exactly like on the Results tab —
@@ -275,6 +278,7 @@ export class MyWorkBoardComponent {
   private readonly dataControlSE = inject(DataControlService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   /** Page-scoped board data (`MWB-T-3`) — providing it HERE, not root, drops the rows on leaving
    *  the tab instead of leaking one programme into the next (same reasoning as `ProgrammeResultsService`). */
@@ -299,8 +303,14 @@ export class MyWorkBoardComponent {
 
   readonly programmeName = computed(() => this.programme()?.initiativeShortName || this.programme()?.initiativeName || '');
 
-  readonly cycleYear = computed(() => this.dataControlSE.reportingCurrentPhase?.phaseYear ?? null);
-  readonly cyclePhase = computed(() => this.dataControlSE.reportingCurrentPhase?.portfolioAcronym ?? '');
+  readonly cycleYear = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return this.dataControlSE.reportingCurrentPhase?.phaseYear ?? null;
+  });
+  readonly cyclePhase = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return this.dataControlSE.reportingCurrentPhase?.portfolioAcronym ?? '';
+  });
 
   /** `Go to Reporting` target (`MWB-R-7`), `entity-details/:code` preserving `phase`. */
   readonly reportingPath = computed(() => `/result-framework-reporting/entity-details/${this.programmeCode()}`);
@@ -1066,4 +1076,14 @@ export class MyWorkBoardComponent {
     const phase = this.data.effectivePhase();
     if (this.filter.selectedPhase() !== phase) this.filter.selectedPhase.set(phase);
   }
+
+  // ── Deletion reload (DEL-T-3, DEL-R-4, DEL-AC-7, Defect gate D5) ──────────────────────────
+  onResultDeleted(): void {
+    const code = this.programmeCode();
+    if (code) {
+      this.data.load(code);
+      this.cdr.markForCheck();
+    }
+  }
 }
+

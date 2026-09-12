@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   HostListener,
@@ -31,6 +32,8 @@ import {
 } from '../../../../shared/components/pr-table';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import { ResultDeletionService, DeleteEligibility } from '../../services/result-deletion.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ChangePhaseModalModule } from '../../../../shared/components/change-phase-modal/change-phase-modal.module';
@@ -38,6 +41,7 @@ import {
   BandFilterGroup,
   ReportingProgramBandComponent
 } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
+import { SpTabEmptyStateComponent } from '../dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import {
@@ -113,12 +117,12 @@ export const PGR_COLUMNS: readonly PgrColumnDef[] = [
   // precomputed rank string (`sectionSort`), never the raw key, so `INTERMEDIATE` /
   // `EOI_2030` / `UNTAGGED` land after the alphabetically-sorted AoW codes (RAC-R-2.2).
   { key: 'aow', label: 'Area of Work', sortField: 'sectionSort', track: '132px', minPx: 132, optional: false },
-  { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
+  { key: 'status', label: 'Status', sortField: 'statusName', track: '150px', minPx: 150, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
   { key: 'origin', label: 'Funding source', sortField: 'origin', track: '140px', minPx: 140, optional: true },
   { key: 'center', label: 'Center', sortField: 'center', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
-  { key: 'updated', label: 'Updated', sortField: 'updated', track: '100px', minPx: 100, optional: false }
+  { key: 'updated', label: 'Updated', sortField: 'updated', track: '110px', minPx: 110, optional: false }
 ];
 
 /** Sticky-right actions column — always last, never optional, never sortable. */
@@ -274,6 +278,8 @@ function formatDate(value: string): string {
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
     ChangePhaseModalModule,
+    PrTooltipDirectiveModule,
+    SpTabEmptyStateComponent,
     WhereToReportModalComponent
   ],
   providers: [
@@ -664,6 +670,20 @@ function formatDate(value: string): string {
         padding: 0 8px;
         background: inherit;
       }
+
+      :host ::ng-deep .pgr-table .pr-paginator {
+        position: sticky;
+        left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--pr-surface-card);
+        border-top: 1px solid var(--pr-border-divider);
+        border-radius: 0 0 11px 11px;
+        box-sizing: border-box;
+      }
     `
   ]
 })
@@ -677,8 +697,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
   private readonly clipboard = inject(Clipboard);
   private readonly toastSE = inject(PrToastService);
   private readonly smartNav = inject(SmartNavigationService);
+  private readonly cdr = inject(ChangeDetectorRef);
   /** @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1) — the My work tab's badge. */
   private readonly myWorkCountSE = inject(MyWorkCountService);
+  /** @akili-spec changes/delete-result-action (DEL-T-2, DEL-R-1, DEL-R-4) */
+  readonly deletionSE = inject(ResultDeletionService);
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
@@ -1415,6 +1438,29 @@ export class ProgrammeResultsComponent implements OnDestroy {
     this.dataControlSE.currentResult = result;
     this.changePhaseModalMounted.set(true);
     this.dataControlSE.chagePhaseModal = true;
+  }
+
+  // ── Delete result (DEL-T-2, DEL-R-1, DEL-R-4) ──────────────────────────────────────────
+  deleteEligibility(row: ProgrammeResultRow): DeleteEligibility {
+    return this.deletionSE.getDeleteEligibility(row);
+  }
+
+  deleteResult(row: ProgrammeResultRow): void {
+    this.closeRowMenu();
+    this.deletionSE.deleteWithConfirmation(row, {
+      onStart: () => {
+        this.data.loading.set(true);
+        this.cdr.markForCheck();
+      },
+      onSuccess: () => {
+        this.data.load(this.programmeCode());
+        this.cdr.markForCheck();
+      },
+      onError: () => {
+        this.data.loading.set(false);
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   // ── Row activation ──────────────────────────────────────────────────────────────────────

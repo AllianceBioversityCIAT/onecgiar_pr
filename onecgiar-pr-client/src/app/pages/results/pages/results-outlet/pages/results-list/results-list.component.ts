@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked, signal, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked, signal, HostListener, viewChild, ElementRef } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -16,6 +16,7 @@ import {
   REVIEW_RESULT_QUERY_PARAM
 } from '../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
+import { ReportingGuideService } from '../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 interface ResultRoute {
   commands: unknown[];
@@ -45,6 +46,18 @@ export interface RcColumnDef {
 }
 
 const RC_COLUMN_STORAGE_KEY = 'pr.resultsCenter.visibleColumns';
+
+/** Copy for the hero ⓘ popover — mirrors SP band `activeTabInfo` + overview pattern. */
+export const RC_INFO_ACTIVE_VIEW = {
+  title: 'Results Center',
+  description:
+    'Search, filter, and export results reported across all Science Programs in the active portfolio. Filters apply to the table below; export includes the rows and columns currently shown.'
+} as const;
+
+export const RC_INFO_OVERVIEW =
+  'The Results Center is the platform-wide catalog of reported outputs and outcomes in PRMS. ' +
+  'Unlike a single Science Program Results tab, this view spans every program so you can find results by code, title, phase, indicator category, or status, open any row for full detail, or download the filtered list as CSV. ' +
+  'Use Update result when you need to migrate a legacy record you are permitted to edit.';
 
 /** Full CURRENT column set (order = picker + table order). */
 export const RC_COLUMNS: readonly RcColumnDef[] = [
@@ -82,12 +95,19 @@ function defaultColumnVisibility(): Record<string, boolean> {
   selector: 'app-results-list',
   templateUrl: './results-list.component.html',
   styleUrls: ['./results-list.component.scss', './results-list.responsive.scss'],
+  host: { class: 'pr-viewport-page' },
   standalone: false
 })
 export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   router = inject(Router);
   activatedRoute = inject(ActivatedRoute, { optional: true });
   bilateralResultsService = inject(BilateralResultsService);
+  private readonly reportingGuideSE = inject(ReportingGuideService);
+
+  /** `#workArea` — sole scroller ≥900px (`changes/results-center-sp-layout`, RCS-T-1). */
+  readonly workArea = viewChild<ElementRef<HTMLElement>>('workArea');
+  readonly workAreaEl = computed(() => this.workArea()?.nativeElement ?? null);
+  private workAreaScrollCleanup?: () => void;
 
   private readonly resultRouteCache = new Map<string, ResultRoute>();
 
@@ -125,6 +145,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   columnsOpen = signal(false);
+  infoOpen = signal(false);
+  reportingGuideOpen = signal(false);
+  readonly rcInfoActiveView = RC_INFO_ACTIVE_VIEW;
+  readonly rcInfoOverview = RC_INFO_OVERVIEW;
 
   /** Table columns currently visible (CURRENT order, filtered). */
   readonly visibleColumns = computed(() => {
@@ -294,11 +318,24 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   onDocumentClick() {
     if (this.menuOpen()) this.menuOpen.set(false);
     if (this.columnsOpen()) this.columnsOpen.set(false);
+    if (this.infoOpen()) this.infoOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    if (this.infoOpen()) this.infoOpen.set(false);
   }
 
   @HostListener('window:scroll')
   onWindowScroll() {
+    // Below `md` the viewport mixin is inert — document scroll still closes the row menu.
     if (this.menuOpen()) this.menuOpen.set(false);
+  }
+
+  get activeButtons(): boolean {
+    return (
+      (this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length ?? 0) > 0 || this.api.rolesSE?.isAdmin
+    );
   }
 
   validateOrder(columnAttr) {
@@ -364,6 +401,15 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
       this.resetTable();
       this.applyDefaultSort();
     }, 500);
+
+    const el = this.workAreaEl();
+    if (el) {
+      const onScroll = () => {
+        if (this.menuOpen()) this.menuOpen.set(false);
+      };
+      el.addEventListener('scroll', onScroll, { passive: true });
+      this.workAreaScrollCleanup = () => el.removeEventListener('scroll', onScroll);
+    }
   }
 
   private resetTable(): void {
@@ -482,8 +528,36 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  openReportingGuide(event: Event): void {
+    event.stopPropagation();
+    this.infoOpen.set(false);
+    this.columnsOpen.set(false);
+    this.reportingGuideOpen.set(true);
+  }
+
+  /** @akili-spec changes/platform-onboarding-tour (POT-T-4) */
+  startResultsCenterTour(event: Event): void {
+    event.stopPropagation();
+    this.infoOpen.set(false);
+    this.columnsOpen.set(false);
+    const activeButtons =
+      this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+    this.reportingGuideSE.startResultsCenterTour({ canUpdateResult: !!activeButtons });
+  }
+
+  toggleInfo(event: Event): void {
+    event.stopPropagation();
+    this.columnsOpen.set(false);
+    this.infoOpen.update(open => !open);
+  }
+
+  closeInfo(): void {
+    this.infoOpen.set(false);
+  }
+
   toggleColumnsPanel(event?: Event): void {
     event?.stopPropagation();
+    this.infoOpen.set(false);
     this.columnsOpen.update(v => !v);
   }
 
@@ -731,6 +805,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.workAreaScrollCleanup?.();
     this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
   }
 }

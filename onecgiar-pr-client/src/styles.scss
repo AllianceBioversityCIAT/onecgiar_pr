@@ -683,7 +683,7 @@ background-attachment: fixed;
 .driver-popover.pr-guide {
   position: fixed !important;
   z-index: 1000000000 !important;
-  max-width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
   padding: 20px 20px 16px;
   border-radius: 18px;
   background: #ffffff;

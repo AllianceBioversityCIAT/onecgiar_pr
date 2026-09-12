@@ -1,12 +1,9 @@
 <!--
-  Results Center toolbar — CURRENT PRMS-Shell.dc.html :405–580
-  Primary: Search · Program · Phase · Category · Status · More filters
-  Secondary (popover): Portfolio · Center · Submitter · Funding · My activity
-  All filter capabilities from the previous Table Filters drawer are preserved.
+  Results Center toolbar — SP Results tab parity (`changes/results-center-sp-layout`).
+  Single row: search · filter · chips (left cluster); Columns/Export live in the parent.
 -->
 
 <div class="rc-toolbar">
-  <!-- Primary filter row -->
   <div class="rc-filter-bar" role="search" aria-label="Results filters">
     <div class="rc-search">
       <i class="pi pi-search rc-search__icon" aria-hidden="true"></i>
@@ -19,69 +16,84 @@
         (ngModelChange)="resultsListFilterSE.text_to_search.set($event)" />
     </div>
 
-    <!-- Program = submitter initiatives (official codes) — live applied -->
-    <div class="rc-select-wrap">
-      <app-pr-filter-multiselect
-        [filter]="resultsListFilterSE.submittersOptionsAdmin().length > 0"
-        [options]="resultsListFilterSE.submittersOptionsAdmin()"
-        [ngModel]="resultsListFilterSE.selectedSubmittersAdmin()"
-        (ngModelChange)="resultsListFilterSE.selectedSubmittersAdmin.set($event)"
-        placeholder="Program"
-        optionLabel="displayName"></app-pr-filter-multiselect>
-    </div>
-
-    <div class="rc-select-wrap">
-      <app-pr-filter-multiselect
-        [options]="resultsListFilterSE.phasesOptionsOld()"
-        [ngModel]="resultsListFilterSE.selectedPhases()"
-        (ngModelChange)="resultsListFilterSE.selectedPhases.set($event)"
-        optionLabel="name"
-        placeholder="Phase"></app-pr-filter-multiselect>
-    </div>
-
-    <div class="rc-select-wrap rc-select-wrap--wide">
-      <app-pr-filter-multiselect
-        [options]="resultsListFilterSE.filters.resultLevel | reverse"
-        [ngModel]="resultsListFilterSE.selectedIndicatorCategories()"
-        (ngModelChange)="resultsListFilterSE.selectedIndicatorCategories.set($event)"
-        optionLabel="name"
-        placeholder="Indicator category"
-        [group]="true"
-        optionGroupChildren="options"
-        optionGroupLabel="name"></app-pr-filter-multiselect>
-    </div>
-
-    <div class="rc-select-wrap">
-      <app-pr-filter-multiselect
-        [options]="resultsListFilterSE.statusOptions()"
-        [ngModel]="resultsListFilterSE.selectedStatus()"
-        (ngModelChange)="resultsListFilterSE.selectedStatus.set($event)"
-        optionLabel="name"
-        placeholder="Status"></app-pr-filter-multiselect>
-    </div>
+    <div class="rc-filter-divider" aria-hidden="true"></div>
 
     <div class="rc-more-wrap">
       <button
         type="button"
-        class="rc-btn rc-btn--soft"
-        [class.rc-btn--active]="moreFiltersOpen() || moreFiltersCount() > 0"
+        class="rc-filter-btn"
+        [class.rc-filter-btn--active]="moreFiltersOpen() || moreFiltersCount() > 0"
         [attr.aria-expanded]="moreFiltersOpen()"
         aria-haspopup="dialog"
+        aria-label="Filter results"
         (click)="toggleMoreFilters($event)">
-        <i class="pi pi-sliders-h" aria-hidden="true"></i>
+        <span class="material-icons-round rc-filter-btn__icon" aria-hidden="true">filter_list</span>
+        <span>Filter</span>
         @if (moreFiltersCount() > 0) {
-          More filters ({{ moreFiltersCount() }})
-        } @else {
-          More filters
+          <span class="rc-filter-badge">{{ moreFiltersCount() }}</span>
         }
       </button>
 
       @if (moreFiltersOpen()) {
         <div
-          class="rc-more-panel"
+          class="rc-more-panel rc-filter-panel"
           role="dialog"
-          aria-label="More filters"
+          aria-label="Filters"
           (click)="$event.stopPropagation()">
+          <div class="rc-filter-panel__header">
+            <span class="rc-filter-panel__title">Filters</span>
+            @if (moreFiltersCount() > 0) {
+              <button type="button" class="rc-filter-panel__clear" (click)="clearAllNewFilters(); cancelFilters()">
+                <span class="material-icons-round" aria-hidden="true">filter_alt_off</span>
+                Clear all
+              </button>
+            }
+            <button type="button" class="rc-filter-panel__close" aria-label="Close filters" (click)="cancelFilters()">
+              <span class="material-icons-round" aria-hidden="true">close</span>
+            </button>
+          </div>
+
+          <div class="rc-more-field">
+            <label class="rc-more-label">Program</label>
+            <app-pr-filter-multiselect
+              [filter]="resultsListFilterSE.submittersOptionsAdmin().length > 0"
+              [options]="resultsListFilterSE.submittersOptionsAdmin()"
+              [(ngModel)]="tempSelectedSubmittersAdmin"
+              placeholder="All programs"
+              optionLabel="displayName"></app-pr-filter-multiselect>
+          </div>
+
+          <div class="rc-more-field">
+            <label class="rc-more-label">Phase</label>
+            <app-pr-filter-multiselect
+              [options]="filteredPhasesOptions()"
+              [(ngModel)]="tempSelectedPhases"
+              (changed)="onSelectPhases()"
+              optionLabel="name"
+              placeholder="All phases"></app-pr-filter-multiselect>
+          </div>
+
+          <div class="rc-more-field">
+            <label class="rc-more-label">Indicator category</label>
+            <app-pr-filter-multiselect
+              [options]="resultsListFilterSE.filters.resultLevel | reverse"
+              [(ngModel)]="tempSelectedIndicatorCategories"
+              optionLabel="name"
+              placeholder="All categories"
+              [group]="true"
+              optionGroupChildren="options"
+              optionGroupLabel="name"></app-pr-filter-multiselect>
+          </div>
+
+          <div class="rc-more-field">
+            <label class="rc-more-label">Status</label>
+            <app-pr-filter-multiselect
+              [options]="resultsListFilterSE.statusOptions()"
+              [(ngModel)]="tempSelectedStatus"
+              optionLabel="name"
+              placeholder="All statuses"></app-pr-filter-multiselect>
+          </div>
+
           <div class="rc-more-field">
             <label class="rc-more-label">Portfolio</label>
             <app-pr-filter-multiselect
@@ -100,16 +112,6 @@
               [(ngModel)]="tempSelectedLeadCenters"
               optionLabel="acronym"
               placeholder="All centers"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Submitter</label>
-            <app-pr-filter-multiselect
-              [filter]="resultsListFilterSE.submittersOptionsAdmin().length > 0"
-              [options]="resultsListFilterSE.submittersOptionsAdmin()"
-              [(ngModel)]="tempSelectedSubmittersAdmin"
-              placeholder="Anyone"
-              optionLabel="displayName"></app-pr-filter-multiselect>
           </div>
 
           <div class="rc-more-field">
@@ -150,44 +152,29 @@
         </div>
       }
     </div>
-  </div>
 
-  <!-- Chips + actions -->
-  <div class="rc-meta-row">
-    <div class="rc-chips">
-      @if (filterChipGroups().length > 0) {
-        @for (group of filterChipGroups(); track group.category) {
-          @for (chip of group.chips; track chip.label + chip.filterType) {
-            <span class="rc-chip">
-              <span class="rc-chip__text">{{ group.category }}: {{ chip.label }}</span>
-              @if (!(chip.filterType === 'phase' && group.chips.length === 1)) {
-                <button
-                  type="button"
-                  class="rc-chip__x"
-                  [attr.aria-label]="'Remove ' + chip.label"
-                  (click)="removeFilter(chip)">
-                  <i class="pi pi-times" aria-hidden="true"></i>
-                </button>
-              }
-            </span>
-          }
+    @if (filterChipGroups().length > 0) {
+      @for (group of filterChipGroups(); track group.category) {
+        @for (chip of group.chips; track chip.label + chip.filterType) {
+          <span class="rc-chip">
+            <span class="rc-chip__text">{{ group.category }}: {{ chip.label }}</span>
+            @if (!(chip.filterType === 'phase' && group.chips.length === 1)) {
+              <button
+                type="button"
+                class="rc-chip__x"
+                [attr.aria-label]="'Remove ' + chip.label"
+                (click)="removeFilter(chip)">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            }
+          </span>
         }
-        <button type="button" class="rc-clear-all" (click)="clearAllNewFilters()">Clear all</button>
       }
-    </div>
-
-    <div class="rc-actions">
-      <button
-        type="button"
-        class="rc-btn rc-btn--soft"
-        [class.rc-btn--disabled]="!activeButtons"
-        [disabled]="!activeButtons"
-        [attr.title]="!activeButtons ? 'To update a result, assign a role in the active portfolio.' : null"
-        (click)="activeButtons ? (api.dataControlSE.updateResultModal = true) : null">
-        <i class="pi pi-arrow-up-right" aria-hidden="true"></i>
-        Update result
+      <button type="button" class="rc-clear-all" (click)="clearAllNewFilters()">
+        <span class="material-icons-round rc-clear-all__icon" aria-hidden="true">filter_alt_off</span>
+        Clear filters
       </button>
-    </div>
+    }
   </div>
 </div>
 
@@ -285,4 +272,3 @@
     </div>
   </div>
 }
-

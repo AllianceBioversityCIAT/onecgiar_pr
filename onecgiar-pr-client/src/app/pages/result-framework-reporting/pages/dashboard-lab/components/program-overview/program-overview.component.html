@@ -1132,96 +1132,176 @@
     @if (!isFiltered() && scopeBreakdown().rows.length) {
       <div class="mt-[20px] border-t border-[var(--pr-border)] pt-[16px]">
         <div class="mb-[10px] flex flex-wrap items-center justify-between gap-[8px]">
-          <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">By scope</span>
+          <div class="flex items-center gap-[8px]">
+            <button
+              type="button"
+              (click)="toggleScopeTable()"
+              [attr.aria-expanded]="scopeTableExpanded()"
+              aria-controls="scope-breakdown-table"
+              class="group inline-flex cursor-pointer items-center gap-[8px] border-0 bg-transparent p-0 text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] rounded-[4px]">
+              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)] group-hover:text-[var(--pr-text-heading)] transition-colors">By scope</span>
+              <span
+                class="flex h-[22px] w-[22px] items-center justify-center rounded-[4px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] text-[var(--pr-text-secondary)] transition-all group-hover:border-[var(--pr-color-primary-300)] group-hover:text-[var(--pr-text-heading)]">
+                <span class="material-icons-round text-[16px] transition-transform duration-200" [class.rotate-180]="!scopeTableExpanded()" aria-hidden="true">expand_less</span>
+              </span>
+              <span class="sr-only">{{ scopeTableExpanded() ? 'Collapse' : 'Expand' }} scope table</span>
+            </button>
+          </div>
           <span class="text-[11.5px] text-[var(--pr-text-muted)]">Pick a scope above to focus the page on it</span>
         </div>
 
-        @for (group of breakdownGroups(); track group.kind) {
-          <div class="flex items-center gap-[8px] px-[4px] pb-[5px] pt-[12px]">
-            <span class="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">{{ group.label }}</span>
-            <span class="h-px flex-1 bg-[var(--pr-border-divider)]"></span>
+        <!-- Collapsible table body: only the table and caption collapse -->
+        <div id="scope-breakdown-table" class="pr-collapse" [class.is-open]="scopeTableExpanded()">
+          <div class="pr-collapse-inner">
+            <div [attr.inert]="scopeTableExpanded() ? null : ''">
+              <!-- Table Column Headers (desktop / tablet) -->
+              <div class="hidden md:flex w-full items-center gap-[4px] px-[4px] py-[8px] border-b border-[var(--pr-border-strong)] text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-muted)] bg-[var(--pr-surface-ground)]/40 rounded-t-[6px] sm:pr-[36px]">
+                <div class="grid flex-1 grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[14px]">
+                  <span class="pl-[2px]">Code</span>
+                  <div class="flex min-w-0 items-center justify-between gap-[16px] pr-[12px]">
+                    <span>Scope</span>
+                    <div class="flex items-center gap-[14px] shrink-0">
+                      <span class="w-[72px] text-right inline-flex items-center justify-end gap-[5px] text-[var(--pr-status-in-progress-fg)]">
+                        <span class="h-[6px] w-[6px] rounded-full bg-[var(--pr-status-in-progress-fg)]"></span>
+                        Editing
+                      </span>
+                      <span class="w-[78px] text-right inline-flex items-center justify-end gap-[5px] text-[var(--pr-status-submitted-fg)]">
+                        <span class="h-[6px] w-[6px] rounded-full bg-[var(--pr-status-submitted-fg)]"></span>
+                        Submitted
+                      </span>
+                      <span class="w-[68px] text-right inline-flex items-center justify-end gap-[5px] text-[var(--pr-status-in-qa-fg)]">
+                        <span class="h-[6px] w-[6px] rounded-full bg-[var(--pr-status-in-qa-fg)]"></span>
+                        In QA
+                      </span>
+                    </div>
+                  </div>
+                  <span class="text-left">Status mix</span>
+                  <span class="text-right pr-[2px]">Total</span>
+                </div>
+              </div>
+
+              @for (group of breakdownGroups(); track group.kind) {
+                <div class="flex items-center gap-[8px] px-[4px] pb-[5px] pt-[12px]">
+                  <span class="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">{{ group.label }}</span>
+                  <span class="h-px flex-1 bg-[var(--pr-border-divider)]"></span>
+                </div>
+
+                @for (row of group.options; track row.key) {
+                  <!--
+                    @akili-spec changes/results-aow-column-filter (`RAC-R-4`): the row is now a non-interactive
+                    wrapper holding TWO sibling buttons — the pre-existing select button (unchanged click,
+                    unchanged content) plus a new "View results" icon button. Never nested: a `<button>`
+                    cannot legally contain interactive content, so the new action sits beside it instead of
+                    inside it.
+                  -->
+                  <div class="flex w-full items-stretch gap-[4px] border-0 border-b border-[var(--pr-border-divider)]">
+                    <button
+                      type="button"
+                      (click)="selectScope(row.key)"
+                      class="grid flex-1 cursor-pointer grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-0 bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                      <!--
+                        `OSF-T-14`: every row now renders a short, user-facing code — `overviewScopeDisplayCode`
+                        (single-homed, also used by `scopeTriggerCode()`) maps the non-AoW internal enum keys
+                        (`INTERMEDIATE`/`EOI_2030`/`UNTAGGED`) to the mockup's own short codes (`INT`/`2030`/`—`);
+                        AoW keys (`AOW01`...) pass through unchanged. `aria-hidden`: the row's name span (below,
+                        NOT hidden) already carries the full accessible meaning, so the untagged bucket's bare
+                        `—` glyph is never announced on its own.
+                      -->
+                      <span
+                        class="pr-code text-[11px] font-bold"
+                        aria-hidden="true"
+                        [class]="row.kind === 'aow' ? 'text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-text-muted)]'">{{ overviewScopeDisplayCode(row) }}</span>
+                      <div class="flex min-w-0 items-center justify-between gap-[16px] pr-[12px]">
+                        <span class="min-w-0 truncate text-[13px] text-[var(--pr-text)] font-medium" [title]="row.name">{{ row.name }}</span>
+                        <div class="hidden md:flex items-center gap-[14px] shrink-0 text-[12px]">
+                          <span
+                            class="w-[72px] text-right tabular-nums"
+                            [class]="breakdownEditingCount(row) > 0 ? 'font-semibold text-[var(--pr-status-in-progress-fg)]' : 'text-[var(--pr-text-muted)] opacity-35 font-normal'">
+                            {{ breakdownEditingCount(row) }}
+                          </span>
+                          <span
+                            class="w-[78px] text-right tabular-nums"
+                            [class]="breakdownSubmittedCount(row) > 0 ? 'font-semibold text-[var(--pr-status-submitted-fg)]' : 'text-[var(--pr-text-muted)] opacity-35 font-normal'">
+                            {{ breakdownSubmittedCount(row) }}
+                          </span>
+                          <span
+                            class="w-[68px] text-right tabular-nums"
+                            [class]="breakdownQaCount(row) > 0 ? 'font-semibold text-[var(--pr-status-in-qa-fg)]' : 'text-[var(--pr-text-muted)] opacity-35 font-normal'">
+                            {{ breakdownQaCount(row) }}
+                          </span>
+                        </div>
+                      </div>
+                      <!--
+                        `OSF-T-13`: the mockup's segmented status bar (editing/submitted/QA), restored — `OSF-T-7`
+                        shipped a 3-track row and dropped this 150px column entirely. Widths COMPUTED IN TS from
+                        the bucket's own `byStatus` (never template arithmetic — `OAH-R-3`, same discipline as the
+                        AoW row bar above). `role="img"` + `aria-label` (`OAH-N-1` precedent): a roleless `<span>`
+                        is not exposed as a text-alternative-bearing element.
+                      -->
+                      <span
+                        role="img"
+                        class="hidden sm:flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
+                        [attr.title]="breakdownBarTitle(row)"
+                        [attr.aria-label]="breakdownBarTitle(row)">
+                        <span class="block h-full bg-[var(--pr-status-in-progress-fg)]" [style.width.%]="breakdownEditingWidth(row)"></span>
+                        <span class="block h-full bg-[var(--pr-status-submitted-fg)]" [style.width.%]="breakdownSubmittedWidth(row)"></span>
+                        <span class="block h-full bg-[var(--pr-status-in-qa-fg)]" [style.width.%]="breakdownQaWidth(row)"></span>
+                      </span>
+                      <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ row.count }}</span>
+                    </button>
+                    <!-- @akili-spec changes/results-aow-column-filter (`RAC-R-4`) -->
+                    <button
+                      type="button"
+                      (click)="viewBreakdownResults(row, $event)"
+                      [attr.aria-label]="'View results for ' + row.name"
+                      title="View results"
+                      class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer items-center justify-center self-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                      <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
+                    </button>
+                  </div>
+                }
+
+                @if (group.kind === 'aow') {
+                  <div class="grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] px-[4px] py-[7px] sm:pr-[36px]">
+                    <span></span>
+                    <div class="flex min-w-0 items-center justify-between gap-[16px] pr-[12px]">
+                      <span class="text-[11.5px] italic text-[var(--pr-text-muted)]">Areas of work subtotal</span>
+                      <div class="hidden md:flex items-center gap-[14px] shrink-0 text-[12px]">
+                        <span class="w-[72px] text-right font-bold tabular-nums text-[var(--pr-status-in-progress-fg)]">{{ aowEditingSubtotal() }}</span>
+                        <span class="w-[78px] text-right font-bold tabular-nums text-[var(--pr-status-submitted-fg)]">{{ aowSubmittedSubtotal() }}</span>
+                        <span class="w-[68px] text-right font-bold tabular-nums text-[var(--pr-status-in-qa-fg)]">{{ aowQaSubtotal() }}</span>
+                      </div>
+                    </div>
+                    <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
+                    <span class="hidden sm:block"></span>
+                    <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-muted)]">{{ scopeBreakdown().aowSubtotal }}</span>
+                  </div>
+                }
+              }
+
+              <div class="mt-[6px] grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-t-2 border-[var(--pr-border-strong)] px-[4px] pb-[2px] pt-[10px] sm:pr-[36px]">
+                <span></span>
+                <div class="flex min-w-0 items-center justify-between gap-[16px] pr-[12px]">
+                  <span class="text-[13px] font-bold text-[var(--pr-text-heading)]">All scopes</span>
+                  <div class="hidden md:flex items-center gap-[14px] shrink-0 text-[13px]">
+                    <span class="w-[72px] text-right font-bold tabular-nums text-[var(--pr-status-in-progress-fg)]">{{ allEditingTotal() }}</span>
+                    <span class="w-[78px] text-right font-bold tabular-nums text-[var(--pr-status-submitted-fg)]">{{ allSubmittedTotal() }}</span>
+                    <span class="w-[68px] text-right font-bold tabular-nums text-[var(--pr-status-in-qa-fg)]">{{ allQaTotal() }}</span>
+                  </div>
+                </div>
+                <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
+                <span class="hidden sm:block"></span>
+                <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ scopeBreakdown().total }}</span>
+              </div>
+
+              <p class="m-0 mt-[8px] text-[11.5px] leading-[1.5] text-[var(--pr-text-muted)]">
+                Areas of work alone come to <b class="text-[var(--pr-text)]">{{ scopeBreakdown().aowSubtotal }}</b> of
+                <b class="text-[var(--pr-text)]">{{ scopeBreakdown().total }}</b>. The rest sit on strategic outcomes or on
+                no ToC area at all &mdash; which is why the axis is <i>scope</i>, not <i>area of work</i>.
+              </p>
+            </div>
           </div>
-
-          @for (row of group.options; track row.key) {
-            <!--
-              @akili-spec changes/results-aow-column-filter (`RAC-R-4`): the row is now a non-interactive
-              wrapper holding TWO sibling buttons — the pre-existing select button (unchanged click,
-              unchanged content) plus a new "View results" icon button. Never nested: a `<button>`
-              cannot legally contain interactive content, so the new action sits beside it instead of
-              inside it.
-            -->
-            <div class="flex w-full items-stretch gap-[4px] border-0 border-b border-[var(--pr-border-divider)]">
-              <button
-                type="button"
-                (click)="selectScope(row.key)"
-                class="grid flex-1 cursor-pointer grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-0 bg-transparent px-[4px] py-[9px] text-left transition-colors duration-150 hover:bg-[var(--pr-surface-ground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                <!--
-                  `OSF-T-14`: every row now renders a short, user-facing code — `overviewScopeDisplayCode`
-                  (single-homed, also used by `scopeTriggerCode()`) maps the non-AoW internal enum keys
-                  (`INTERMEDIATE`/`EOI_2030`/`UNTAGGED`) to the mockup's own short codes (`INT`/`2030`/`—`);
-                  AoW keys (`AOW01`...) pass through unchanged. `aria-hidden`: the row's name span (below,
-                  NOT hidden) already carries the full accessible meaning, so the untagged bucket's bare
-                  `—` glyph is never announced on its own.
-                -->
-                <span
-                  class="pr-code text-[11px] font-bold"
-                  aria-hidden="true"
-                  [class]="row.kind === 'aow' ? 'text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-text-muted)]'">{{ overviewScopeDisplayCode(row) }}</span>
-                <span class="min-w-0 truncate text-[13px] text-[var(--pr-text)]" [title]="row.name">{{ row.name }}</span>
-                <!--
-                  `OSF-T-13`: the mockup's segmented status bar (editing/submitted/QA), restored — `OSF-T-7`
-                  shipped a 3-track row and dropped this 150px column entirely. Widths COMPUTED IN TS from
-                  the bucket's own `byStatus` (never template arithmetic — `OAH-R-3`, same discipline as the
-                  AoW row bar above). `role="img"` + `aria-label` (`OAH-N-1` precedent): a roleless `<span>`
-                  is not exposed as a text-alternative-bearing element.
-                -->
-                <span
-                  role="img"
-                  class="hidden sm:flex h-[8px] overflow-hidden rounded-[999px] bg-[var(--pr-border-divider)]"
-                  [attr.title]="breakdownBarTitle(row)"
-                  [attr.aria-label]="breakdownBarTitle(row)">
-                  <span class="block h-full bg-[var(--pr-status-in-progress-fg)]" [style.width.%]="breakdownEditingWidth(row)"></span>
-                  <span class="block h-full bg-[var(--pr-status-submitted-fg)]" [style.width.%]="breakdownSubmittedWidth(row)"></span>
-                  <span class="block h-full bg-[var(--pr-status-in-qa-fg)]" [style.width.%]="breakdownQaWidth(row)"></span>
-                </span>
-                <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ row.count }}</span>
-              </button>
-              <!-- @akili-spec changes/results-aow-column-filter (`RAC-R-4`) -->
-              <button
-                type="button"
-                (click)="viewBreakdownResults(row, $event)"
-                [attr.aria-label]="'View results for ' + row.name"
-                title="View results"
-                class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer items-center justify-center self-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
-              </button>
-            </div>
-          }
-
-          @if (group.kind === 'aow') {
-            <div class="grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] px-[4px] py-[7px]">
-              <span></span>
-              <span class="text-[11.5px] italic text-[var(--pr-text-muted)]">Areas of work subtotal</span>
-              <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
-              <span class="hidden sm:block"></span>
-              <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-muted)]">{{ scopeBreakdown().aowSubtotal }}</span>
-            </div>
-          }
-        }
-
-        <div class="mt-[6px] grid grid-cols-[54px_minmax(0,1fr)_40px] sm:grid-cols-[62px_minmax(0,1fr)_150px_46px] items-center gap-[8px] sm:gap-[14px] border-t-2 border-[var(--pr-border-strong)] px-[4px] pb-[2px] pt-[10px]">
-          <span></span>
-          <span class="text-[13px] font-bold text-[var(--pr-text-heading)]">All scopes</span>
-          <!-- Bar cell empty but present, exactly as the mockup does, so the grid stays aligned (`OSF-T-13`). -->
-          <span class="hidden sm:block"></span>
-          <span class="pr-figure-sm text-right font-bold text-[var(--pr-text-heading)]">{{ scopeBreakdown().total }}</span>
         </div>
-
-        <p class="m-0 mt-[8px] text-[11.5px] leading-[1.5] text-[var(--pr-text-muted)]">
-          Areas of work alone come to <b class="text-[var(--pr-text)]">{{ scopeBreakdown().aowSubtotal }}</b> of
-          <b class="text-[var(--pr-text)]">{{ scopeBreakdown().total }}</b>. The rest sit on strategic outcomes or on
-          no ToC area at all &mdash; which is why the axis is <i>scope</i>, not <i>area of work</i>.
-        </p>
       </div>
     }
   </section>
@@ -1528,22 +1608,65 @@
        card, moved WITH "Progress by area of work" into the hero at card 2 — see
        `@akili-spec changes/overview-aow-progress-hero` there. -->
   <section class="col-span-12 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <h2 class="m-0 mb-[16px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-      Theory of Change map
-    </h2>
+    <div class="mb-[16px] flex flex-wrap items-center justify-between gap-[12px]">
+      <div>
+        <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+          Theory of Change map
+        </h2>
+        <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+          Alignment and indicator achievement across Areas of Work and Theory of Change tiers
+        </p>
+      </div>
+
+      <!-- View Mode Toggle: Network Graph (primary) · Heatmap Matrix · Pathway Tree -->
+      <div class="flex shrink-0 items-center gap-0.5 rounded-[8px] border border-[var(--pr-border)] p-[2px]">
+        <button
+          type="button"
+          (click)="setTocMapViewMode('network')"
+          [attr.aria-pressed]="tocMapViewMode() === 'network'"
+          [class]="
+            tocMapViewMode() === 'network'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Network Graph
+        </button>
+        <button
+          type="button"
+          (click)="setTocMapViewMode('heatmap')"
+          [attr.aria-pressed]="tocMapViewMode() === 'heatmap'"
+          [class]="
+            tocMapViewMode() === 'heatmap'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Heatmap Matrix
+        </button>
+        <button
+          type="button"
+          (click)="setTocMapViewMode('tree')"
+          [attr.aria-pressed]="tocMapViewMode() === 'tree'"
+          [class]="
+            tocMapViewMode() === 'tree'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Pathway Tree
+        </button>
+      </div>
+    </div>
 
     @if (tocMap() || tocMapLoading()) {
-      <!-- OSF-DD-11 step 1: 460px is a floor, not a hard cap — the chart renders no <canvas> today,
-           so a fixed height reserved 460px for nothing. `min-h-[460px]` + `flex-1` (height:100%)
-           keeps a resolved, non-zero height for ECharts' init (the reversion trap) while letting
-           the chart grow past 460px instead of being clipped to it. -->
-      <div class="flex flex-col min-h-[460px]">
+      <div class="flex flex-col" [style.minHeight]="tocMapContainerHeight()">
         <app-pr-viz-chart
           class="flex-1"
           [options]="tocMapOption()"
           [tableModel]="tocMapTable()"
           [chartTitle]="'Theory of Change map'"
-          height="100%"
+          [height]="tocMapContainerHeight()"
           [loading]="tocMapLoading()"
           (chartClick)="onTocMapClick($event)" />
       </div>

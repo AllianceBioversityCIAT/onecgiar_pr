@@ -379,20 +379,24 @@
 @if (showToolbar()) {
   <!-- 1. Top Controls Bar — consistent with Overview top bar -->
   <!--
-    Responsive: ONE flat `flex-wrap` row. The old markup nested two groups (filters | view controls)
-    under `justify-between`; flex can only wrap at group boundaries, so below ~1250px CSS the whole
-    right group dropped to its own right-aligned row and left a hole under the filters (3 rows at
-    744px CSS, 4 at 480px). With every control a direct flex item, wrapping happens per control and
-    the view-controls block (`ml-auto`) hugs the right end of whatever row it lands on — the sort
-    tablist and the grouping tablist share the second row instead of stacking. design.md §9.
+    Responsive: explicit rows — (1) search + filter toggles | view controls, (2) active chips when
+    present, (3) quick typology below. Nesting view controls beside a wrapping filter cluster made
+    Only pending / Favorites drop to a stray second line; chips now live on their own row. design.md §9.
   -->
   <div
-    class="flex flex-wrap items-center gap-[10px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+    class="flex flex-col gap-[8px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
     role="search"
     aria-label="Reporting controls"
     data-guide="sp-actions-toolbar">
+    <!-- Row 1 — primary controls: filters left, view/sort right -->
+    <div
+      class="flex items-center gap-[10px] max-sm:flex-col max-sm:items-stretch max-sm:gap-[8px]"
+      data-testid="reporting-toolbar-primary">
+      <div
+        class="flex min-w-0 flex-1 items-center gap-[10px] max-sm:w-full max-sm:flex-wrap"
+        data-testid="reporting-filter-group">
     <!-- Search Input -->
-    <div class="relative h-[34px] w-[220px] max-sm:w-full">
+    <div class="relative h-[34px] w-[220px] min-w-[140px] shrink max-[1366px]:w-[min(100%,200px)] max-sm:w-full max-sm:min-w-0 max-sm:shrink-0">
       <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
         <ng-icon name="lucideSearch" class="text-[15px]" />
       </span>
@@ -446,14 +450,15 @@
       <button
         type="button"
         (click)="toggleFilterPopover($event)"
-        class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+        class="inline-flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs max-[1366px]:px-[8px]"
         [class]="hasActiveFilters()
           ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
           : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
         aria-label="Filter indicators"
+        title="Filter"
         [attr.aria-expanded]="filterPopoverOpen()">
         <span class="material-icons-round text-[18px]" [class.text-[var(--pr-color-primary-600)]]="hasActiveFilters()" [class.text-slate-500]="!hasActiveFilters()">filter_list</span>
-        <span>Filter</span>
+        <span class="max-[1366px]:hidden">Filter</span>
         @if (activeFilterCount() > 0) {
           <span class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
             {{ activeFilterCount() }}
@@ -602,105 +607,22 @@
       </div>
     </div>
 
-    <!-- Active Filter Chips -->
-    @if (compactFilters()) {
-      @if (activeCenterLabel(); as centerLbl) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Center:</span>
-          <span class="font-semibold max-w-[140px] truncate" [title]="centerLbl">{{ centerLbl }}</span>
-          <button
-            type="button"
-            (click)="removeCenterChip()"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove center filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
-      }
-      @if (activeByAowTypeLabel(); as aowTypeLbl) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Type:</span>
-          <span class="font-semibold max-w-[140px] truncate" [title]="aowTypeLbl">{{ aowTypeLbl }}</span>
-          <button
-            type="button"
-            (click)="removeByAowTypeChip()"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove type filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
-      }
-    } @else {
-      @for (chip of activeAowChips(); track chip.value) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Section:</span>
-          <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
-          <button
-            type="button"
-            (click)="removeAowChip(chip.value)"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove section filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
-      }
-
-      @for (chip of activeTypeChips(); track chip.value) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Type:</span>
-          <span class="font-semibold max-w-[120px] truncate" [title]="chip.label">{{ chip.label }}</span>
-          <button
-            type="button"
-            (click)="removeTypeChip(chip.value)"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove type filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
-      }
-
-      @for (chip of activeTypologyChips(); track chip.value) {
-        <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-          <span class="text-slate-500 font-normal">Category:</span>
-          <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
-          <button
-            type="button"
-            (click)="removeTypologyChip(chip.value)"
-            class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Remove category filter">
-            <span class="material-icons-round text-[13px]">close</span>
-          </button>
-        </span>
-      }
-    }
-
-    @for (chip of activeStatusChips(); track chip.value) {
-      <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
-        <span class="text-slate-500 font-normal">Status:</span>
-        <span class="font-semibold" [title]="chip.label">{{ chip.label }}</span>
-        <button
-          type="button"
-          (click)="removeStatusChip(chip.value)"
-          class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-          aria-label="Remove status filter">
-          <span class="material-icons-round text-[13px]">close</span>
-        </button>
-      </span>
-    }
-
     <!-- Only pending button switch directly in top bar -->
     <button
       type="button"
       role="switch"
       [attr.aria-checked]="onlyPending()"
-      class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors"
+      aria-label="Only pending"
+      title="Only pending"
+      class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors max-[1366px]:px-[8px]"
       [class]="
         onlyPending()
           ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
           : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
       "
       (click)="onlyPendingChange.emit(!onlyPending())">
-      Only pending
+      <span class="material-icons-round text-[18px]" aria-hidden="true">pending_actions</span>
+      <span class="max-[1366px]:hidden">Only pending</span>
     </button>
 
     <!-- Favorites-only switch, hidden in the By-AOW compact view (no stars rendered there). @akili-spec changes/reporting-favorite-indicators -->
@@ -710,7 +632,9 @@
         role="switch"
         [attr.aria-checked]="favoritesOnly()"
         data-testid="favorites-switch"
-        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors"
+        aria-label="Favorites"
+        title="Favorites"
+        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium transition-colors max-[1366px]:px-[8px]"
         [class]="
           favoritesOnly()
             ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
@@ -718,8 +642,13 @@
         "
         (click)="favoritesOnlyChange.emit(!favoritesOnly())">
         <span class="material-icons-round text-[16px]" aria-hidden="true">{{ favoritesOnly() ? 'star' : 'star_outline' }}</span>
-        Favorites
-        <span class="tabular-nums text-[12px] text-[var(--pr-text-subtle)]">({{ favoritesCount() }})</span>
+        <span class="max-[1366px]:hidden">Favorites</span>
+        <span class="tabular-nums text-[12px] text-[var(--pr-text-subtle)] max-[1366px]:hidden">({{ favoritesCount() }})</span>
+        <span
+          class="hidden max-[1366px]:inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-slate-100 px-[5px] text-[10.5px] font-bold tabular-nums text-slate-600"
+          aria-hidden="true">
+          {{ favoritesCount() }}
+        </span>
       </button>
     }
 
@@ -728,51 +657,31 @@
       <button
         type="button"
         (click)="clearAllFilters.emit()"
-        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+        aria-label="Clear filters"
+        title="Clear filters"
+        class="flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] max-[1366px]:px-[6px]">
         <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
-        Clear filters
+        <span class="max-[1366px]:hidden">Clear filters</span>
       </button>
     }
 
-    <!-- View controls: sort tablist + (All AoW | Expand all | Grouping). `grow` with an auto basis
-         means the block is never squeezed into a line it does not fit on, and it fills whatever line
-         it lands on — so when it wraps, the row reads `[Catalogue|Remaining] … [Expand][Grouped|All]`
-         instead of leaving a hole under the filters. Below `sm` the inner group may wrap once more. -->
-    <div class="flex grow items-center gap-[8px] sm:gap-[10px] max-sm:flex-wrap" data-testid="reporting-view-controls">
-      <!-- Sort tablist directly in top bar -->
-      <div
-        role="tablist"
-        aria-label="Sort"
-        class="flex h-[34px] shrink-0 items-center gap-[2px] rounded-[8px] bg-slate-100 p-[2px] border border-slate-200">
-        <button
-          type="button"
-          role="tab"
-          class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors cursor-pointer"
-          [class]="
-            burndownSort() === 'catalogue'
-              ? 'bg-white font-semibold text-[var(--pr-color-primary-600)] shadow-xs'
-              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-          "
-          [attr.aria-selected]="burndownSort() === 'catalogue'"
-          (click)="burndownSortChange.emit('catalogue')">
-          Catalogue
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors cursor-pointer"
-          [class]="
-            burndownSort() === 'remaining'
-              ? 'bg-white font-semibold text-[var(--pr-color-primary-600)] shadow-xs'
-              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-          "
-          [attr.aria-selected]="burndownSort() === 'remaining'"
-          (click)="burndownSortChange.emit('remaining')">
-          Remaining work
-        </button>
       </div>
 
-      <div class="ml-auto flex items-center gap-[8px] sm:gap-[10px]">
+      <!-- View controls: All AoW | Expand all | Grouping (Catalogue/Remaining sort hidden for now) -->
+      <div
+        class="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-[8px] sm:gap-[10px] max-sm:ml-0 max-sm:w-full max-sm:justify-between"
+        data-testid="reporting-view-controls">
+        <button
+          type="button"
+          class="flex h-[32px] sm:h-[34px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-rose-200 bg-rose-50/60 px-[10px] sm:px-[12px] text-[12.5px] font-semibold text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 shadow-2xs"
+          (click)="openVideoGuide()"
+          data-testid="reporting-video-guide-btn"
+          aria-label="Reporting Video Guide"
+          title="Watch reporting video tutorial">
+          <span class="material-icons-round text-[16px] text-rose-500">smart_display</span>
+          <span class="hidden min-[1367px]:inline">Video Guide</span>
+        </button>
+
         @if (showInsightsToggle()) {
           <button
             type="button"
@@ -795,9 +704,12 @@
           <button
             type="button"
             (click)="allAowsClick.emit()"
-            class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs transition-colors">
+            class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs transition-colors max-[1366px]:px-[8px]"
+            aria-label="All Areas of Work"
+            title="All Areas of Work">
             <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
-            All Areas of Work
+            <span class="max-[1366px]:hidden">All Areas of Work</span>
+            <span class="hidden max-[1366px]:inline">All AoW</span>
           </button>
         }
 
@@ -808,7 +720,7 @@
             [attr.aria-label]="allExpanded() ? 'Collapse all' : 'Expand all'"
             (click)="toggleExpandAll.emit()">
             <ng-icon [name]="allExpanded() ? 'lucideChevronsDownUp' : 'lucideChevronsUpDown'" class="text-[15px]" />
-            <span class="hidden sm:inline">{{ allExpanded() ? 'Collapse all' : 'Expand all' }}</span>
+            <span class="hidden min-[1367px]:inline">{{ allExpanded() ? 'Collapse all' : 'Expand all' }}</span>
           </button>
         }
 
@@ -820,29 +732,127 @@
             <button
               type="button"
               role="tab"
-              class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+              class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors max-[1366px]:px-[6px]"
               [class]="viewMode() === 'grouped'
                 ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
                 : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'"
               [attr.aria-selected]="viewMode() === 'grouped'"
+              aria-label="Grouped view"
+              title="Grouped"
               (click)="viewModeChange.emit('grouped')">
-              Grouped
+              <span class="material-icons-round hidden text-[16px] max-[1366px]:inline" aria-hidden="true">view_module</span>
+              <span class="max-[1366px]:hidden">Grouped</span>
             </button>
             <button
               type="button"
               role="tab"
-              class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors"
+              class="h-[28px] rounded-[6px] border-0 px-[10px] text-[12.5px] font-medium transition-colors max-[1366px]:px-[6px]"
               [class]="viewMode() === 'flat'
                 ? 'bg-white font-semibold text-[var(--pr-color-primary-700)] shadow-xs'
                 : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'"
               [attr.aria-selected]="viewMode() === 'flat'"
+              aria-label="All indicators"
+              title="All indicators"
               (click)="viewModeChange.emit('flat')">
-              All indicators
+              <span class="material-icons-round hidden text-[16px] max-[1366px]:inline" aria-hidden="true">table_rows</span>
+              <span class="max-[1366px]:hidden">All indicators</span>
             </button>
           </div>
         }
       </div>
     </div>
+
+    <!-- Row 2 — active filter chips (only when filters are applied) -->
+    @if (hasActiveFilterChips()) {
+      <div
+        class="flex flex-wrap items-center gap-[6px] border-t border-[var(--pr-border-divider)] pt-[8px]"
+        data-testid="reporting-active-chips-row">
+        @if (compactFilters()) {
+          @if (activeCenterLabel(); as centerLbl) {
+            <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+              <span class="text-slate-500 font-normal">Center:</span>
+              <span class="font-semibold max-w-[140px] truncate" [title]="centerLbl">{{ centerLbl }}</span>
+              <button
+                type="button"
+                (click)="removeCenterChip()"
+                class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Remove center filter">
+                <span class="material-icons-round text-[13px]">close</span>
+              </button>
+            </span>
+          }
+          @if (activeByAowTypeLabel(); as aowTypeLbl) {
+            <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+              <span class="text-slate-500 font-normal">Type:</span>
+              <span class="font-semibold max-w-[140px] truncate" [title]="aowTypeLbl">{{ aowTypeLbl }}</span>
+              <button
+                type="button"
+                (click)="removeByAowTypeChip()"
+                class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Remove type filter">
+                <span class="material-icons-round text-[13px]">close</span>
+              </button>
+            </span>
+          }
+        } @else {
+          @for (chip of activeAowChips(); track chip.value) {
+            <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+              <span class="text-slate-500 font-normal">Section:</span>
+              <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
+              <button
+                type="button"
+                (click)="removeAowChip(chip.value)"
+                class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Remove section filter">
+                <span class="material-icons-round text-[13px]">close</span>
+              </button>
+            </span>
+          }
+
+          @for (chip of activeTypeChips(); track chip.value) {
+            <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+              <span class="text-slate-500 font-normal">Type:</span>
+              <span class="font-semibold max-w-[120px] truncate" [title]="chip.label">{{ chip.label }}</span>
+              <button
+                type="button"
+                (click)="removeTypeChip(chip.value)"
+                class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Remove type filter">
+                <span class="material-icons-round text-[13px]">close</span>
+              </button>
+            </span>
+          }
+
+          @for (chip of activeTypologyChips(); track chip.value) {
+            <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+              <span class="text-slate-500 font-normal">Category:</span>
+              <span class="font-semibold max-w-[140px] truncate" [title]="chip.label">{{ chip.label }}</span>
+              <button
+                type="button"
+                (click)="removeTypologyChip(chip.value)"
+                class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Remove category filter">
+                <span class="material-icons-round text-[13px]">close</span>
+              </button>
+            </span>
+          }
+        }
+
+        @for (chip of activeStatusChips(); track chip.value) {
+          <span class="inline-flex h-[28px] items-center gap-[5px] rounded-[6px] border border-slate-200 bg-slate-100 pl-[8px] pr-[4px] text-[12px] font-medium text-slate-700">
+            <span class="text-slate-500 font-normal">Status:</span>
+            <span class="font-semibold" [title]="chip.label">{{ chip.label }}</span>
+            <button
+              type="button"
+              (click)="removeStatusChip(chip.value)"
+              class="flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Remove status filter">
+              <span class="material-icons-round text-[13px]">close</span>
+            </button>
+          </span>
+        }
+      </div>
+    }
   </div>
 
   @if (showQuickTypologyInBand()) {
@@ -855,5 +865,13 @@
         (typologyChange)="typologyChange.emit($event)" />
     </div>
   }
+}
+
+@if (videoGuideOpen()) {
+  <app-reporting-video-modal
+    [programName]="programName()"
+    [programCode]="programCode()"
+    [cycleYear]="cycleYear()"
+    (closed)="closeVideoGuide()" />
 }
 

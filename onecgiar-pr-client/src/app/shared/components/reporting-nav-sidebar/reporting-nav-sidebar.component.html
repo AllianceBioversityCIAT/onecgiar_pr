@@ -3,6 +3,7 @@
   <div hlmSidebarHeader class="gap-0 px-[16px] py-0">
     <div
       class="flex h-[64px] items-center gap-[10px]"
+      data-guide="platform-tour-sidebar-header"
       [class.justify-between]="!isCollapsed()"
       [class.justify-center]="isCollapsed()">
       <div class="flex min-w-0 items-center gap-[10px]" [class.justify-center]="isCollapsed()">
@@ -133,7 +134,7 @@
               @if (group.key === 'mine') {
                 <!-- MY SCIENCE PROGRAMS — 44px cards, gap 6px, per the design -->
                 <div class="pr-nav-section-label">{{ group.label }}</div>
-                <div class="flex flex-col gap-[6px]">
+                <div class="flex flex-col gap-[6px]" data-guide="platform-tour-sidebar-programs">
                   @for (sp of group.items; track sp.initiativeId) {
                     <a
                       class="pr-nav-program-card"
@@ -152,6 +153,7 @@
                 </div>
               } @else {
                 <!-- OTHER SCIENCE PROGRAMS / OTHER PROJECTS — toggle + mono count -->
+                <div [attr.data-guide]="group.key === 'other' ? 'platform-tour-sidebar-other-programs' : null">
                 <button type="button" class="pr-nav-others-toggle" (click)="toggleGroup(group.key)" [attr.aria-expanded]="isGroupOpen(group.key)">
                   <span class="pr-nav-section-label pr-nav-section-label--inline">{{ group.label }}</span>
                   <span class="pr-nav-others-count">{{ group.items.length }}</span>
@@ -233,6 +235,7 @@
                     <div class="pr-nav-others-fade" aria-hidden="true"></div>
                   </div>
                 }
+                </div>
               }
             }
           }
@@ -243,7 +246,7 @@
     <!-- MY CGIAR CENTERS — own labelled block, diamond marker (reference lines 131-144).
          Only rendered when the user actually has centres. -->
     @if (!isCollapsed() && getMyCenters().length > 0) {
-      <div hlmSidebarGroup class="pr-nav-programs">
+      <div hlmSidebarGroup class="pr-nav-programs" data-guide="platform-tour-sidebar-centers">
         <div class="pr-nav-section-label pr-nav-section-label--spaced">My CGIAR centers</div>
         <div class="flex flex-col gap-[6px]">
           @for (center of getMyCenters(); track center.center_id) {
@@ -270,7 +273,7 @@
       <div class="pr-nav-divider"></div>
     }
 
-    <div hlmSidebarGroup class="pr-nav-platform">
+    <div hlmSidebarGroup class="pr-nav-platform" data-guide="platform-tour-sidebar-platform">
       @if (!isCollapsed()) {
         <div class="pr-nav-section-label pr-nav-section-label--platform">Platform</div>
       }
@@ -360,6 +363,7 @@
                   routerLinkActive
                   #rla="routerLinkActive"
                   [isActive]="rla.isActive"
+                  [attr.data-guide]="section.path === 'result' ? 'platform-tour-sidebar-results-center' : null"
                   [tooltip]="section.prName ?? ''">
                   <ng-icon [name]="iconFor(section)" />
                   <span>{{ section.prName }}</span>
@@ -383,6 +387,17 @@
           <li hlmSidebarMenuItem>
             <a
               hlmSidebarMenuButton
+              [href]="clarisaGlossaryUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              tooltip="Glossary">
+              <ng-icon name="lucideBookOpen" />
+              <span>Glossary</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
               routerLink="/whats-new"
               routerLinkActive
               #rlaWhatsNew="routerLinkActive"
@@ -391,6 +406,18 @@
               <ng-icon name="lucideRocket" />
               <span>Release notes</span>
             </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <button
+              hlmSidebarMenuButton
+              type="button"
+              tooltip="Take a tour of the sidebar"
+              data-guide="platform-tour-sidebar-trigger"
+              aria-label="Start sidebar tour"
+              (click)="startPlatformSidebarTour()">
+              <ng-icon name="lucideSparkles" />
+              <span>Tour</span>
+            </button>
           </li>
           <li hlmSidebarMenuItem>
             <button hlmSidebarMenuButton type="button" tooltip="Notifications" (click)="goToNotifications()">

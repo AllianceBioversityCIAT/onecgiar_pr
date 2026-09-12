@@ -136,17 +136,30 @@
   }
 
   <!-- ---------- panel ---------- -->
-  <div class="custom_scroll flex flex-1 flex-col overflow-y-auto px-4 pb-0 pt-4 min-[640px]:px-6 min-[640px]:pt-5">
+  <!-- Loading overlay is a sibling of the scroller (not inside it) so it stays viewport-fixed while
+       the long report form scrolls underneath during MQAP sync / create. -->
+  <div class="relative flex flex-1 min-h-0 flex-col overflow-hidden">
+    @if (panelLoadingMessage()) {
+      <div
+        class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2.5 bg-[color-mix(in_srgb,white_88%,transparent)] backdrop-blur-[1px]"
+        role="status"
+        aria-live="polite"
+        data-testid="report-form-loading-overlay">
+        <i class="pi pi-spin pi-spinner text-[1.75rem] text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+        <span class="max-w-[min(100%,320px)] px-4 text-center text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)]">{{ panelLoadingMessage() }}</span>
+      </div>
+    }
+    <div
+      class="custom_scroll flex flex-1 flex-col overflow-y-auto px-4 pb-0 pt-4 min-[640px]:px-6 min-[640px]:pt-5"
+      [class.overflow-hidden]="!!panelLoadingMessage()">
     <!-- Follow-up 2026-09-04 (quick/indicator-reported-results-followups): the Report case is a
          persistent wrapper, not a @switch case — "See them in detail" must not unmount the form
          the user is filling. The other two tabs are conditional as before. -->
-    <div class="flex flex-1 min-h-0 flex-col" [style.display]="tab() === 'report' ? null : 'none'" data-testid="irr-report-pane">
+    <div class="flex flex-1 min-h-full min-h-0 flex-col" [style.display]="tab() === 'report' ? null : 'none'" data-testid="irr-report-pane">
         <!-- What is already reported here, visible WHILE the form is being filled: recognising a
              duplicate after creating it is too late. Compact on purpose — the form is the job. -->
-        @if (!emerging()) {
-        @if (loadingExisting()) {
-          <div class="mb-4 h-[38px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
-        } @else if (existing()?.length) {
+        @if (!emerging() && !loadingExisting()) {
+        @if (existing()?.length) {
           <div class="mb-4 rounded-xl border border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] p-3">
             <p class="m-0 flex items-center gap-1.5 text-[12px] font-semibold text-[var(--pr-color-secondary-400)]">
               <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-5)]">fact_check</span>
@@ -207,6 +220,7 @@
           [columns]="columns()"
           [canReport]="canReport()"
           (dirtyChange)="onDirtyChange($event)"
+          (loadingOverlayChange)="onReportLoadingMessage($event)"
           (cancelled)="requestClose()"
           (created)="close()" />
       </div>
@@ -230,11 +244,7 @@
           </button>
         }
         @if (loadingExisting()) {
-          <div class="flex flex-col gap-2" aria-hidden="true">
-            @for (s of [1, 2, 3]; track s) {
-              <div class="h-[44px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
-            }
-          </div>
+          <!-- Existing-results fetch uses the drawer-level overlay (panelLoadingMessage). -->
         } @else if (loadError()) {
           <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center" role="alert">
             <span class="material-icons-round text-[24px] text-[var(--pr-color-red-300)]">error_outline</span>
@@ -375,10 +385,14 @@
                     {{ row.contribution ?? '\u2014' }}
                   </td>
                   <td class="irr-td truncate text-[12px] text-[var(--pr-color-accents-5)]" [attr.title]="row.phaseName">{{ row.phaseName }}</td>
-                  <!-- The open row's CELL is elevated, not the popup: every actions cell shares a
-                       stacking context, so the rows below would paint over an open menu. -->
-                  <td class="irr-td irr-actions" [class.irr-actions--open]="isMenuOpen(row)">
+                  <!-- The panel is a CDK Connected Overlay, NOT a child of this cell. The table wrap
+                       is `overflow-x: auto` and clips its descendants in both axes — an absolutely positioned
+                       menu was cut off at the table's bottom edge. The overlay renders in
+                       `.cdk-overlay-container` on `<body>`, outside that clip. -->
+                  <td class="irr-td irr-actions">
                     <button
+                      #rowMenuTrigger="cdkOverlayOrigin"
+                      cdkOverlayOrigin
                       type="button"
                       class="flex size-[26px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
                       aria-label="Open row actions"
@@ -388,12 +402,20 @@
                       <span class="material-icons-round text-[18px]">more_horiz</span>
                     </button>
 
-                    @if (isMenuOpen(row)) {
+                    <ng-template
+                      cdkConnectedOverlay
+                      [cdkConnectedOverlayOrigin]="rowMenuTrigger"
+                      [cdkConnectedOverlayOpen]="isMenuOpen(row)"
+                      [cdkConnectedOverlayPositions]="rowMenuPositions"
+                      [cdkConnectedOverlayHasBackdrop]="true"
+                      cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                      (backdropClick)="closeRowMenu()"
+                      (detach)="onRowMenuDetach(row)">
                       <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
                         <button type="button" role="menuitem" class="pr-row-menu_item" (click)="openResult(row)">Open result</button>
                         <button type="button" role="menuitem" class="pr-row-menu_item" (click)="copyLink(row)">Copy link</button>
                       </div>
-                    }
+                    </ng-template>
                   </td>
                 </tr>
               </ng-template>
@@ -425,10 +447,10 @@
                     <p class="m-0 flex-1 text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]" [attr.title]="row.title">
                       {{ row.title }}
                     </p>
-                    <!-- The menu is `position: absolute`, so it needs its OWN positioning context
-                         here — anchored to the card it would drift to the card's top-right. -->
                     <span class="relative shrink-0">
                       <button
+                        #cardMenuTrigger="cdkOverlayOrigin"
+                        cdkOverlayOrigin
                         type="button"
                         class="flex size-[26px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
                         aria-label="Open row actions"
@@ -437,12 +459,20 @@
                         (click)="toggleRowMenu(row, $event)">
                         <span class="material-icons-round text-[18px]">more_horiz</span>
                       </button>
-                      @if (isMenuOpen(row)) {
+                      <ng-template
+                        cdkConnectedOverlay
+                        [cdkConnectedOverlayOrigin]="cardMenuTrigger"
+                        [cdkConnectedOverlayOpen]="isMenuOpen(row)"
+                        [cdkConnectedOverlayPositions]="rowMenuPositions"
+                        [cdkConnectedOverlayHasBackdrop]="true"
+                        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                        (backdropClick)="closeRowMenu()"
+                        (detach)="onRowMenuDetach(row)">
                         <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
                           <button type="button" role="menuitem" class="pr-row-menu_item" (click)="openResult(row)">Open result</button>
                           <button type="button" role="menuitem" class="pr-row-menu_item" (click)="copyLink(row)">Copy link</button>
                         </div>
-                      }
+                      </ng-template>
                     </span>
                   </div>
                   <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-color-accents-5)]">
@@ -522,6 +552,7 @@
         }
       }
 
+    </div>
   </div>
 
   @if (confirmingExit()) {

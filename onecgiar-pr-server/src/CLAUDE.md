@@ -234,6 +234,7 @@ auth/
 - **Header:** custom `auth: <JWT>` (NOT `Authorization: Bearer`).
 - **`Basic` auth is rejected** — 401 with `shouldRedirectToLogin: true`.
 - **Public routes** (allowlist — keep tiny): `/login/provider`, `/login/custom`, `/validate/code`, `/api/bilateral`. New feature paths SHOULD use `exclude(...)` in `app.module.ts` instead.
+- **The whole `/auth/*` mount carries no `JwtMiddleware` at all** — `main.routes.ts` binds the middleware only to `/api/(.*)`, `/v2/(.*)`, `/clarisa/(.*)`, `/toc/(.*)`, `/type-one-report`, so every route under `/auth/*` (including the Center email-OTP routes `GET auth/login/otp/config`, `POST auth/login/otp/start`, `POST auth/login/otp/verify`) is public by construction and MUST gate itself. The OTP routes gate via the `OTP_ALLOWED_EMAIL_DOMAINS` global parameter (`global_parameters`, category `platform_global_variables`; comma-separated domains, no `@`; empty value = the path stays hidden) and a per-normalised-email `OtpThrottlerGuard` (`start` 5 / `verify` 10 per 15 min, neutral `429 OTP_RATE_LIMITED`), never by a token.
 - **Token verify** via `JwtService.verifyAsync(token, { secret: env.JWT_SKEY })`. `TokenExpiredError` → 401 with `shouldRefreshToken: true`. Other errors → 401 with `shouldRedirectToLogin: true`.
 - **Payload contract:** MUST contain `id` and `email`. Exposed as `req.user` and `res.locals.jwtPayload`.
 - **Session rolling:** the middleware re-signs and **returns a fresh `auth` header on the response**. The Angular interceptor picks that up.
