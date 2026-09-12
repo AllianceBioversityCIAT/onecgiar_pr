@@ -315,9 +315,9 @@ describe('IpsrPathwayStepFourService', () => {
       mockOf(getRepositoryToken(ResultScalingStudyUrl)).find.mockResolvedValue(
         [],
       );
-      mockOf(getRepositoryToken(ResultScalingStudyUrl)).update.mockResolvedValue(
-        {},
-      );
+      mockOf(
+        getRepositoryToken(ResultScalingStudyUrl),
+      ).update.mockResolvedValue({});
       mockOf(ResultInnovationPackageRepository).update.mockResolvedValue({});
 
       const saved = (await service.saveMain(resultId, user, {
@@ -376,9 +376,9 @@ describe('IpsrPathwayStepFourService', () => {
       mockOf(getRepositoryToken(ResultScalingStudyUrl)).find.mockResolvedValue(
         [],
       );
-      mockOf(getRepositoryToken(ResultScalingStudyUrl)).update.mockResolvedValue(
-        {},
-      );
+      mockOf(
+        getRepositoryToken(ResultScalingStudyUrl),
+      ).update.mockResolvedValue({});
       mockOf(ResultInnovationPackageRepository).update.mockRejectedValue(
         new Error('ER_LOCK_WAIT_TIMEOUT'),
       );

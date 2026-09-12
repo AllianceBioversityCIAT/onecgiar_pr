@@ -169,8 +169,8 @@ export class IpsrPathwayStepFourService {
        * saved. A payload where every row is blank collapses to an empty list, i.e. the same as the
        * front sending no rows at all: the stored materials are deactivated (`deactivateAll` below).
        */
-      const ipsrMaterials = (saveStepFourDto.ipsr_materials ?? []).filter(
-        (m) => m?.link?.trim(),
+      const ipsrMaterials = (saveStepFourDto.ipsr_materials ?? []).filter((m) =>
+        m?.link?.trim(),
       );
 
       if (ipsrMaterials.length === 0) {
