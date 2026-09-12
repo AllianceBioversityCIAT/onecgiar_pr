@@ -1,6 +1,6 @@
 # Adopting the email-code login in another CGIAR app
 
-Guidance for a second application on the **same Cognito pool** (PRMS Planning is the motivating case). The honest summary: the *transport* is reusable almost as-is; the *product rules* around it are PRMS's and are not yet extracted.
+Guidance for a second application (PRMS Planning is the motivating case). Since Option D moved the whole lifecycle into PRMS's own server, there is no longer a shared microservice endpoint another app can simply call — the options below are about **how much of PRMS's approach to extract or copy**, not about reusing a running Cognito trigger.
 
 ---
 
@@ -8,73 +8,56 @@ Guidance for a second application on the **same Cognito pool** (PRMS Planning is
 
 | Question | Answer |
 |---|---|
-| Can another app reuse this? | **Yes** — call the AUTH microservice's two OTP routes. They are generic |
-| Does it need its own Lambdas? | **No.** The triggers are pool-level and already deployed |
-| Will it get PRMS-branded e-mail? | **Yes, today.** The subject, logo, copy and footer link are hard-wired in `CreateAuthChallenge`. Changing that is a small, well-scoped follow-up (§4) |
-| Does it get PRMS's allow-list, decoys, throttling and first-login rule? | **No.** Those live in PRMS's own `auth.service.ts` and must be re-implemented (or extracted to a shared package later) |
-| Recommended path | **Option A** — through the AUTH microservice. See §4 |
+| Can another app call PRMS's implementation directly? | **No.** The code lifecycle (`OtpChallengeService`, the decoy encoder, the allow-list) lives inside the PRMS server process and its own database |
+| Is there a shared, reusable endpoint today? | **No** — that is exactly the gap Option A below closes |
+| What is reusable **as a pattern**? | The lifecycle itself: a challenge table, `crypto.randomInt`, HMAC-only storage, decoys for inactive/unknown accounts, PRMS's own e-mail pipeline. None of it is Cognito-specific |
+| Recommended path today | **Option B** — copy the server-side pattern into the new app. Revisit **Option A** once a second app actually needs it |
 
 ---
 
-## 1. What is already shared
+## Option A (recommended once a second app arrives) — extract to the AUTH microservice
 
-| Piece | Sharing property |
-|---|---|
-| **Pool triggers** (Define / Create / Verify) | Pool-level, but they fire **only** for app clients whose `ExplicitAuthFlows` include `ALLOW_CUSTOM_AUTH`. On the TEST pool that is only `general-client`; the other 9 clients are unaffected |
-| **AUTH microservice OTP routes** | Generic by contract: `POST /auth/login/otp/start { username }` and `POST /auth/login/otp/verify { username, code, session }`, MIS-authenticated with the caller's own CLARISA `auth` header — nothing in them is PRMS-specific |
-| **E-mail transport** | RabbitMQ `send` → `notification-microservice` → SMTP, the same pipeline the other microservices already use |
-| **Security primitives in the flow** | `crypto.randomInt` 6-digit code, one e-mail per Cognito session, `timingSafeEqual` verification, 3 attempts per session, `AuthSessionValidity` as the code lifetime, unknown users neutralised by a fake challenge |
+Move the Option D lifecycle out of PRMS and into the shared AUTH microservice, behind two generic routes:
 
-## 2. What is PRMS-specific today
+```
+POST login/otp/start  { username }        → 200 { sent, session }
+POST login/otp/verify { username, code, session } → a signed assertion each app turns into its own session
+```
 
-| Piece | Where it lives | Why it does not transfer |
+- **Challenge store:** the microservice has no database today and runs with several replicas, so "single use" and "3 attempts" need **shared** state — DynamoDB or Redis, not an in-process map (PRMS's own `otp_challenges` table works only because PRMS itself is the single owner of that state).
+- **Each app mints its own session** from the microservice's signed assertion — the microservice does not hand out PRMS JWTs or anyone else's session format.
+- **Branding becomes per-caller:** subject, sender name and footer link move from PRMS's hard-coded template into a small `caller → { subject, senderName, appUrl, supportEmail }` map, keyed by the caller's MIS identity.
+- **Allow-list and throttling stay per-app** — a shared "which domains may use this" list does not make sense across apps with different rosters; each caller keeps its own gate and calls `start`/`verify` only for domains it has already allowed.
+
+This is **not built** — it is the recommended target the moment a second app needs the Center path, not a currently-running service.
+
+## Option B (today) — copy PRMS's server pattern
+
+Copy the shape, not the code verbatim (PRMS's version is wired into PRMS's user/role model):
+
+| Piece | What to copy | What stays PRMS-specific |
 |---|---|---|
-| E-mail branding | `cognito-triggers/src/lib/email-template.ts` | Subject *"Your PRMS Reporting Tool sign-in code"*, PRMS header logo, `PRMSTechSupport@cgiar.org`, and `APP_URL` as the footer link are **hard-wired**, with `EMAIL_SENDER` / `APP_URL` set per **stack**, not per client |
-| Domain allow-list | PRMS `global_parameters.OTP_ALLOWED_EMAIL_DOMAINS` + `getOtpAllowedDomains()` | A PRMS DB row and a PRMS cache service |
-| Decoy sessions | `onecgiar-pr-server/src/auth/auth.service.ts` | HMAC-signed neutral sessions for inactive users, keyed with PRMS's `JWT_SKEY` |
-| Throttling | `onecgiar-pr-server/src/auth/guards/otp-throttler.guard.ts` | 5 start / 10 verify per 15 min per e-mail, in-memory per PRMS instance |
-| Error copy & mapping | `mapOtpVerifyError` + the client's `OTP_ERROR_COPY` | PRMS-authored strings |
-| First-login rule | `createOrUpdateUserFromAuthProvider` → guest role | PRMS's own user model and role model |
-| UI | `pages/login/components/center-otp-panel/` | Angular, PRMS design tokens |
+| Challenge table | `otp_challenges` shape: `nonce` (unique), `email_hash`, `code_hmac`, `expires_at`, `attempts`, `consumed_at` — never the plaintext address or code | The exact HMAC-key derivation should use the new app's own signing secret, not PRMS's `JWT_SKEY` |
+| Code generation | `crypto.randomInt` 6-digit, one row per challenge, 5-minute TTL, 3-attempt cap, single use | — |
+| E-mail delivery | Whatever notification pipeline the new app already has (RabbitMQ → notification-microservice → SMTP is a CGIAR-wide pattern, not PRMS-only) | Subject, branding and sender name — PRMS's copy says "PRMS Reporting Tool" throughout |
+| Decoy sessions | Same signed-encoder trick: a real and a decoy session must be byte-indistinguishable, told apart only by whether a challenge row exists | The throttler is a route-scoped guard keyed on normalised e-mail (`OtpThrottlerGuard`'s 5/10-per-15-min shape is a reasonable default, not a requirement) |
+| First-login rule | PRMS auto-provisions a guest-role user on first successful verify | The role assigned and the provisioning call are specific to PRMS's `UserService` |
 
-## 3. The two options
+### Checklist for a Option-B implementation
 
-| | **Option A — call the AUTH microservice** ✅ recommended | **Option B — enable `ALLOW_CUSTOM_AUTH` and call Cognito directly** ❌ |
-|---|---|---|
-| Secrets | The app holds only its **MIS credentials**. The Cognito client secret stays in the microservice | The app must hold the Cognito **client id + secret** and compute `SECRET_HASH` itself — a new secret surface per app |
-| Error handling | Inherits the stable code set (`CODE_MISMATCH` + rotated session, `CODE_EXPIRED`, `ATTEMPTS_EXCEEDED`, `NOT_AUTHORIZED`, `CHALLENGE_NOT_SUPPORTED`, `UPSTREAM_ERROR`) and the user-safe copy | Must re-derive that mapping — notably that **a wrong code is not an exception** in `CUSTOM_AUTH`: it comes back as a `CUSTOM_CHALLENGE` reply with no `AuthenticationResult` and a **rotated session** |
-| Log hygiene | Inherits `redactSensitive()` in the `LoggingInterceptor` and the `{ outcome }`-only telemetry | Must re-implement, and is the most common place a session or token leaks into logs |
-| Identity boundary | One boundary, already the PRMS pattern (`OTP-DD-2`) | A second app talking to Cognito directly |
-| Verdict | Fewer moving parts, no new secrets, consistent behaviour across apps | Not recommended |
+- [ ] Challenge table stores only HMACs — never the plaintext e-mail or code.
+- [ ] Two domain-separated HMAC keys (email, code) derived from the app's own secret — never share one key across both purposes.
+- [ ] Decoys for inactive/unknown accounts, minted by the **same** encoder real sessions use.
+- [ ] `timingSafeEqual` for every code and session comparison.
+- [ ] A route-scoped throttle keyed on the normalised e-mail, counted before the user lookup — so a rate-limited response looks identical for known and unknown addresses.
+- [ ] `email_failed` and `internal_error` outcomes both keep the HTTP response neutral (`200`/`503` as appropriate) — a failed send must never leak through the response shape.
+- [ ] The rotated `session` on a wrong-code response is stored by the client before retrying — the single most common integration bug in this pattern.
+- [ ] Opportunistic (or scheduled) purge of expired rows — no PII accumulates in the table either way.
 
-## 4. Option A — step by step
-
-1. **Get MIS credentials** for the app from the AUTH microservice owners (the same CLARISA application credentials pattern the other consumers use).
-2. **Decide the client story.**
-   - *Reuse `general-client`* — nothing to configure on the pool, and the e-mail is PRMS-branded. Acceptable for a sibling PRMS product; wrong for an unrelated app.
-   - *Own app client* — create one with `ALLOW_CUSTOM_AUTH` in `ExplicitAuthFlows` and `AuthSessionValidity: 5`, and have the microservice select its id/secret per caller.
-3. **If you took an own client, add branding per client** — the small follow-up in `cognito-triggers`: a `clientId → { subject, logo, supportEmail, appUrl }` map consulted by `CreateAuthChallenge` (the `clientId` is available on the trigger event), defaulting to the current PRMS block. Redeploy the stack; **no pool change**.
-4. **Implement your own allow-list.** Decide which e-mail domains may use the path, and keep it in step with the microservice's `PASSWORDLESS_DOMAINS` (see the checklist).
-5. **Implement your own rate limiting** on `start` / `verify`. Cognito's 3-attempts-per-session and the 5-minute session are a backstop, not a rate limit.
-6. **Implement neutral responses.** Either copy PRMS's decoy approach or make sure your own `start` cannot distinguish a known from an unknown account (same status, same body shape, same timing class as far as practical).
-7. **Build the two-step UI** (e-mail → code) and store the **rotated `session`** returned with `CODE_MISMATCH` before the retry. This is the single most common integration bug.
-8. **Decide the first-login rule** — auto-provision with a default role (PRMS creates a guest user from the ID-token claims) or require a pre-existing record.
-9. **Smoke it** exactly as the PROD runbook's step 7: unknown user → simulated challenge and no e-mail; real user → e-mail → wrong code (rotated session, no second e-mail) → right code → tokens.
-
-> If more than one app ends up needing steps 4–8, extract PRMS's server-side logic (allow-list, decoys, throttler, error mapping) into a shared package rather than copying it. That extraction has not been done.
-
-## 5. Pool-level prerequisites checklist
-
-- [ ] The three triggers are wired on the pool's `LambdaConfig` (once per pool, not per app).
-- [ ] Your app client lists `ALLOW_CUSTOM_AUTH` — **and no client that should not use this flow does.** Wiring is pool-level; `ALLOW_CUSTOM_AUTH` is the only gate.
-- [ ] Your app client's `AuthSessionValidity` is **5** minutes (it *is* the code's lifetime; the e-mail says "expires in 5 minutes").
-- [ ] The trigger stack's `UserPoolId` parameter matches the pool, so the scoped `lambda:InvokeFunction` permission covers it.
-- [ ] Center users are provisioned `CONFIRMED`, not `FORCE_CHANGE_PASSWORD` — a user holding a temporary password can never complete the code flow.
-- [ ] **Dual allow-list:** the app's domain list and the microservice's `PASSWORDLESS_DOMAINS` env are changed **together**. A domain in only the app's list produces users provisioned with a temporary password, who then fail forever.
-- [ ] Notify the pool owner before any `LambdaConfig` or client change; every pool write goes through a before/after export diff and a named approver, never a bare `update-user-pool`.
+> **The dual allow-list rule from the Cognito-trigger era no longer applies.** That rule existed because two independent systems (PRMS's global parameter and the microservice's `PASSWORDLESS_DOMAINS` env) had to agree on the same domain list. Option D has exactly one allow-list, read by the one system that enforces it — there is nothing to keep in sync.
 
 ---
 
-**Sources:** `docs/specs/changes/cognito-email-otp-login/design.md` §18.1, §18.2, §18.3, §13 (dual allow-list), `OTP-DD-2` · `execution.md` (`OTP-T-14` steps 3–8, sibling verification 21:42) · `one-cgiar-microservices/cognito-triggers/README.md` (*Wire the pool*, environment, e-mail template) + `template.yaml` · `one-cgiar-microservices/auth-microservice/README.md` (OTP routes, `PASSWORDLESS_DOMAINS`, telemetry/redaction) · `onecgiar-pr-server/src/auth/{auth.service.ts,guards/otp-throttler.guard.ts}` · `runbook/cognito-email-otp.md` (sibling-client exposure)
+**Sources:** `docs/specs/changes/cognito-email-otp-login/design.md` §19.1, §19.5 · `requirements.md` §15 (`OTP-R-37`, `OTP-R-38`) · `execution.md` (rev 4 pivot — user decision "keep D in PRMS now; extraction recorded for later") · `onecgiar-pr-server/src/auth/otp/{otp-challenge.entity.ts,otp-challenge.service.ts}` · `onecgiar-pr-server/src/auth/guards/otp-throttler.guard.ts` · `onecgiar-pr-server/src/auth/auth.service.ts` (decoy encoder, first-login provisioning) · this module's [`README.md`](./README.md)
 
 **Last verified:** 2026-09-12

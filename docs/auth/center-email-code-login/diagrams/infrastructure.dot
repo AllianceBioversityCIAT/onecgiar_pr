@@ -1,174 +1,144 @@
 digraph CenterEmailCodeLoginInfrastructure {
   rankdir=TB;
+  newrank=true;
   bgcolor="white";
   fontname="Helvetica";
   labelloc="t";
-  fontsize=20;
-  label="Center email-code login — deployment view\nverified 2026-09-11/12";
-  nodesep=0.5;
-  ranksep=0.7;
-  compound=true;
+  fontsize=18;
+  label="Center email-code login — deployment view\nOption D: PRMS-owned code, no Cognito — verified 2026-09-12";
+  nodesep=0.3;
+  ranksep=0.4;
+  size="19,40";
+  ratio=compress;
 
-  node [fontname="Helvetica" shape=box style="rounded,filled" fillcolor="#ffffff" color="#333333" fontsize=11];
-  edge [fontname="Courier" fontsize=9 color="#555555" penwidth=1.2];
+  node [fontname="Helvetica" shape=box style="rounded,filled" fillcolor="#ffffff" color="#333333" fontsize=12];
+  edge [fontname="Courier" fontsize=11 color="#555555" penwidth=1.2];
 
-  /* ---------- AWS account IBD-DEV (TEST, deployed) ---------- */
-  subgraph cluster_aws_dev {
-    label="AWS account IBD-DEV (569113802249)\nregion us-east-1 — TEST (deployed 2026-09-11)";
-    style="filled,rounded";
-    fillcolor="#eef3fb";
-    color="#4c6fa5";
-    fontsize=12;
-
-    subgraph cluster_sam_stack {
-      label="CloudFormation stack\nprms-cognito-otp-triggers-test (SAM)";
-      style="filled,rounded";
-      fillcolor="#dfe9f7";
-      color="#5a7fb0";
-      fontsize=11;
-
-      DefineFn [label="…-define-auth-challenge\nNode 22, Timeout 5s\nIAM role: logs-only" fontname="Courier"];
-      CreateFn [label="…-create-auth-challenge\nNode 22, Timeout 5s\nIAM role: logs-only" fontname="Courier"];
-      VerifyFn [label="…-verify-auth-challenge\nNode 22, Timeout 5s\nIAM role: logs-only" fontname="Courier"];
-      InvokePerm [label="lambda:InvokeFunction permission\nprincipal: cognito-idp.amazonaws.com\nscoped to pool ARN" shape=note style="filled" fillcolor="#fdf3d6" color="#c9a227" fontsize=9];
-      LogGroups [label="CloudWatch log groups\n(one per function)" shape=cylinder style="filled" fillcolor="#ffffff" color="#5a7fb0"];
-
-      DefineFn -> LogGroups [style=dotted arrowhead=none color="#999999"];
-      CreateFn -> LogGroups [style=dotted arrowhead=none color="#999999"];
-      VerifyFn -> LogGroups [style=dotted arrowhead=none color="#999999"];
-    }
-
-    CognitoPool [label="Cognito user pool\nus-east-1_o9y9Yq5pO\n(OST-TOC, domain: ost-toc)" fontname="Courier" style="rounded,filled" fillcolor="#e7eef9" color="#5a7fb0"];
-
-    CognitoPool -> DefineFn [label="LambdaConfig"];
-    CognitoPool -> CreateFn [style=invis];
-    CognitoPool -> VerifyFn [style=invis];
-    InvokePerm -> CognitoPool [style=dashed arrowhead=none color="#999999"];
-
-    NotifLambda [label="email-notifications-microservice-dev-main\n(Lambda)\nAPI Gateway: dev-email-notifications-microservice\nconsumes RabbitMQ" fontname="Courier"];
-    PrstagingLambda [label="prstaging-dev-main\n(Lambda)\nenv source of trigger parameters" fontname="Courier"];
-
-    PrstagingLambda -> DefineFn [label="env params" style=dashed color="#777777"];
-    PrstagingLambda -> CreateFn [style=invis];
-    PrstagingLambda -> VerifyFn [style=invis];
-  }
-
-  /* ---------- Outside / managed ---------- */
-  subgraph cluster_managed {
-    label="Outside / managed";
-    style="filled,rounded";
-    fillcolor="#f2f2f2";
-    color="#888888";
-    fontsize=12;
-
-    RabbitBroker [label="RabbitMQ broker\nAMQPS\nMS_NOTIFICATION_HOST" fontname="Courier"];
-    SmtpRelay [label="CGIAR SMTP relay" fontname="Courier"];
-  }
-
-  /* ---------- PRMS TEST ---------- */
+  /* ---------- PRMS TEST — row 1 ---------- */
   subgraph cluster_prms_test {
     label="PRMS TEST";
     style="filled,rounded";
     fillcolor="#e9f5ea";
     color="#7ab894";
-    fontsize=12;
+    fontsize=13;
 
     PrmsClientTest [label="prtest.ciat.cgiar.org\n(nginx)" fontname="Courier"];
     PrmsServerTest [label="prtest-back.ciat.cgiar.org\n(container, Jenkins)" fontname="Courier"];
-    PrmsDbTest [label="prdb (MySQL)\nglobal_parameters.\nOTP_ALLOWED_EMAIL_DOMAINS" fontname="Courier" shape=cylinder style="filled" fillcolor="#ffffff" color="#7ab894"];
+    PrmsDbTest [label="prdb (MySQL)\nglobal_parameters.\nOTP_ALLOWED_EMAIL_DOMAINS\notp_challenges" fontname="Courier" shape=cylinder style="filled" fillcolor="#ffffff" color="#7ab894"];
 
+    { rank=same; PrmsClientTest; PrmsServerTest; PrmsDbTest; }
     PrmsClientTest -> PrmsServerTest;
     PrmsServerTest -> PrmsDbTest;
   }
 
-  /* ---------- AUTH microservice TEST ---------- */
-  subgraph cluster_authms_test {
-    label="AUTH microservice TEST";
-    style="filled,rounded";
-    fillcolor="#f3e9f7";
-    color="#a67ac0";
-    fontsize=12;
-
-    AuthMsTest [label="authtest-ibd.prms.cgiar.org\n(container, Jenkins job\nauth-microservice-dev-auth)\nenv: PASSWORDLESS_DOMAINS,\nCOGNITO_CLIENT_ID/SECRET,\nMS_NOTIFICATION_*" fontname="Courier"];
-  }
-
-  /* ---------- PROD (planned, mirror of TEST) ---------- */
-  subgraph cluster_aws_prod {
-    label="AWS account (TBD — OTP-OQ-1)\nregion us-east-1 — PROD (planned — mirror of TEST)";
-    style="filled,rounded,dashed";
-    fillcolor="#f7f2f2";
-    color="#a55a5a";
-    fontsize=12;
-
-    subgraph cluster_sam_stack_prod {
-      label="CloudFormation stack\nprms-cognito-otp-triggers-prod (planned)";
-      style="filled,rounded,dashed";
-      fillcolor="#f5e8e8";
-      color="#a55a5a";
-      fontsize=11;
-      DefineFnProd [label="…-define-auth-challenge\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
-      CreateFnProd [label="…-create-auth-challenge\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
-      VerifyFnProd [label="…-verify-auth-challenge\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
-    }
-
-    CognitoPoolProd [label="Cognito user pool\n(PROD, account TBD)\nOTP-OQ-1" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a5a"];
-    CognitoPoolProd -> DefineFnProd [style=dashed color="#a55a5a" label="LambdaConfig"];
-    CognitoPoolProd -> CreateFnProd [style=invis];
-    CognitoPoolProd -> VerifyFnProd [style=invis];
-  }
-
-  subgraph cluster_authms_prod {
-    label="AUTH microservice PROD (planned)";
-    style="filled,rounded,dashed";
-    fillcolor="#f5e8f0";
-    color="#a55a8f";
-    fontsize=12;
-    AuthMsProd [label="auth-ibd.prms.cgiar.org\nmain-auth\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#a55a8f"];
-  }
-
+  /* ---------- PRMS PROD (planned) — row 2 ---------- */
   subgraph cluster_prms_prod {
-    label="PRMS PROD (planned)";
+    label="PRMS PROD (planned — same shape)";
     style="filled,rounded,dashed";
     fillcolor="#eaf5ea";
     color="#5a9f6e";
-    fontsize=12;
-    PrmsProd [label="PRMS PROD\n(planned)" fontname="Courier" style="rounded,dashed" fillcolor="#ffffff" color="#5a9f6e"];
+    fontsize=13;
+
+    PrmsClientProd [label="reporting.cgiar.org\n(planned)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#5a9f6e"];
+    PrmsServerProd [label="PROD server\n(planned)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#5a9f6e"];
+    PrmsDbProd [label="PROD MySQL\n(planned)" fontname="Courier" shape=cylinder style="rounded,dashed,filled" fillcolor="#ffffff" color="#5a9f6e"];
+
+    { rank=same; PrmsClientProd; PrmsServerProd; PrmsDbProd; }
+    PrmsClientProd -> PrmsServerProd [style=dashed color="#5a9f6e"];
+    PrmsServerProd -> PrmsDbProd [style=dashed color="#5a9f6e"];
   }
 
-  /* ---------- Cross-cluster runtime relationships (TEST, solid = deployed) ---------- */
-  PrmsServerTest -> AuthMsTest [label="auth header\n(MIS creds)" color="#1a1a1a" penwidth=1.4];
-  AuthMsTest -> CognitoPool [label="InitiateAuth /\nRespondToAuthChallenge" color="#1a1a1a" penwidth=1.4];
-  CreateFn -> RabbitBroker [label="publish\n(auth envelope)" color="#1a1a1a" penwidth=1.4];
-  RabbitBroker -> NotifLambda [color="#1a1a1a" penwidth=1.4];
-  NotifLambda -> SmtpRelay [color="#1a1a1a" penwidth=1.4];
+  /* ---------- Shared / managed — row 3 ---------- */
+  subgraph cluster_managed {
+    label="Shared / managed";
+    style="filled,rounded";
+    fillcolor="#f2f2f2";
+    color="#888888";
+    fontsize=13;
 
-  /* ---------- Cross-cluster runtime relationships (PROD, dashed = planned) ---------- */
-  PrmsProd -> AuthMsProd [style=dashed color="#a55a5a"];
-  AuthMsProd -> CognitoPoolProd [style=dashed color="#a55a5a"];
-  CreateFnProd -> RabbitBroker [style=dashed color="#a55a5a" label="planned"];
+    RabbitBroker [label="RabbitMQ broker (AMQPS)" fontname="Courier"];
+    NotifLambda [label="email-notifications-microservice\n(Lambda, IBD-DEV us-east-1)" fontname="Courier"];
+    SmtpRelay [label="CGIAR SMTP relay" fontname="Courier"];
+    Mailbox [label="user mailbox" fontname="Courier"];
 
-  /* ---------- Deploy path ---------- */
+    { rank=same; RabbitBroker; NotifLambda; SmtpRelay; Mailbox; }
+    RabbitBroker -> NotifLambda -> SmtpRelay -> Mailbox;
+  }
+
+  /* ---------- AUTH microservice + Cognito (greyed, not involved) — row 4 ---------- */
+  subgraph cluster_authms {
+    label="AUTH microservice + Cognito pools\nused by SAML/password paths only; no OTP change";
+    style="filled,rounded,dashed";
+    fillcolor="#f2f2f2";
+    color="#999999";
+    fontsize=13;
+    fontcolor="#666666";
+
+    AuthMsTest [label="authtest-ibd" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+    AuthMsProd [label="auth-ibd" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+    CognitoTest [label="Cognito TEST\nOST-TOC us-east-1\n(IBD-DEV)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+    CognitoProd [label="Cognito PROD\n(another AWS account)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+
+    { rank=same; AuthMsTest; AuthMsProd; CognitoTest; CognitoProd; }
+    AuthMsTest -> CognitoTest [style=dashed color="#999999" arrowhead=none];
+    AuthMsProd -> CognitoProd [style=dashed color="#999999" arrowhead=none];
+  }
+
+  /* ---------- Retired — row 5 ---------- */
+  subgraph cluster_retired {
+    label="Retired 2026-09-12 — remove in TEST";
+    style="filled,rounded,dotted";
+    fillcolor="#f7f2f2";
+    color="#a55a5a";
+    fontsize=13;
+    fontcolor="#a55a5a";
+
+    SamStack [label="SAM stack\nprms-cognito-otp-triggers-test\n(3 Lambdas)" fontname="Courier" shape=box style="rounded,dotted,filled" fillcolor="#ffffff" color="#a55a5a" fontcolor="#a55a5a"];
+    LambdaConfig [label="pool LambdaConfig" fontname="Courier" style="rounded,dotted,filled" fillcolor="#ffffff" color="#a55a5a" fontcolor="#a55a5a"];
+
+    { rank=same; SamStack; LambdaConfig; }
+    SamStack -> LambdaConfig [style=dotted color="#a55a5a" arrowhead=none];
+  }
+
+  /* ---------- Cross-cluster runtime relationships ---------- */
+  PrmsServerTest -> RabbitBroker [label="publish (send)" color="#1a1a1a" penwidth=1.6];
+  Mailbox -> PrmsServerTest [style=invis];
+
+  /* AUTH/Cognito used by SAML/password only — drawn without affecting rank order */
+  PrmsServerTest -> AuthMsTest [label="SAML / password paths" style=dashed color="#999999" constraint=false];
+  PrmsServerProd -> AuthMsProd [style=dashed color="#999999" constraint=false];
+
+  /* PROD mirrors TEST shape (planned) */
+  PrmsServerProd -> RabbitBroker [style=dashed color="#5a9f6e" label="planned"];
+
+  /* Retired stack — dotted, no live traffic; ordering only, no visible cross edge */
+  RabbitBroker -> SamStack [style=invis];
+
+  /* ---------- Deploy path note — row 6 ---------- */
   subgraph cluster_deploy {
-    label="Deploy path (SAM stacks)";
+    label="Deploy path";
     style="filled,rounded";
     fillcolor="#fbfbe0";
     color="#b8b85a";
     fontsize=11;
-    DeployBuild [label="npm run build" fontname="Courier" shape=box style="rounded,filled" fillcolor="#ffffff"];
-    DeploySamBuild [label="sam build" fontname="Courier" shape=box style="rounded,filled" fillcolor="#ffffff"];
-    DeploySamDeploy [label="sam deploy\n(Docker required\nby SAM CLI)" fontname="Courier" shape=box style="rounded,filled" fillcolor="#ffffff"];
-    DeployBuild -> DeploySamBuild -> DeploySamDeploy;
+    DeployNote [shape=note style="filled" fillcolor="#ffffff" color="#b8b85a" fontsize=11 fontname="Helvetica"
+      label="PRMS release pipeline (Jenkins) — migration\n1788740000000-OTP-challenges applied on deploy;\nno Cognito/Lambda/SES steps."];
   }
-  DeploySamDeploy -> DefineFn [style=dotted color="#999999" constraint=false];
-  DeploySamDeploy -> DefineFnProd [style=dotted color="#999999" constraint=false];
 
-  /* ---------- Legend ---------- */
-  subgraph cluster_legend {
-    label="Legend";
-    style="filled,rounded";
-    fillcolor="#f7f7f7";
-    color="#999999";
-    fontsize=11;
-    LegendNote [shape=note style="filled" fillcolor="#ffffff" color="#999999" fontsize=9 label="Solid = deployed 2026-09-11 (TEST).\nDashed = planned (PROD, account TBD).\nDeploy path: npm run build → sam build →\nsam deploy (Docker required by SAM CLI)."];
+  /* ---------- Key rules + Legend, below everything ---------- */
+  subgraph cluster_notes {
+    label="";
+    style=invis;
+    { rank=same; KeyRules; LegendNote; }
+
+    KeyRules [shape=note style="filled" fillcolor="#fbfbe0" color="#b8b85a" fontsize=11 fontname="Helvetica"
+      label="Key rules\lAllow-list: global_parameters.OTP_ALLOWED_EMAIL_DOMAINS\lOtp state: otp_challenges (MySQL, PRMS-owned)\lNo Cognito/Lambda/SES steps in the deploy path\l"];
+
+    LegendNote [shape=note style="filled" fillcolor="#ffffff" color="#999999" fontsize=11 fontname="Helvetica"
+      label="Legend\lSolid = in use\lDashed green = planned PROD\lDashed grey = not involved (SAML/password only, no OTP change)\lDotted grey = retired (remove in TEST)\l"];
   }
+
+  SamStack -> DeployNote [style=invis];
+  DeployNote -> KeyRules [style=invis];
+  LambdaConfig -> LegendNote [style=invis];
 }
