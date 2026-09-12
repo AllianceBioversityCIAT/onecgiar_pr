@@ -149,7 +149,7 @@
   cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
   (backdropClick)="closeMenu()"
   (detach)="closeMenu()">
-  <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()">
+  <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()" (keydown.escape)="closeMenu()">
     <!-- 1 · Download PDF -->
     <a
       role="menuitem"

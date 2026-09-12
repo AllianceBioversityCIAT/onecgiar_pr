@@ -36,7 +36,8 @@
             class="rc-info-popover"
             role="dialog"
             aria-label="About Results Center"
-            (click)="$event.stopPropagation()">
+            (click)="$event.stopPropagation()"
+            (keydown.escape)="closeInfo()">
             <div class="rc-info-popover__header">
               <div class="rc-info-popover__heading">
                 <span class="rc-info-popover__icon-wrap" aria-hidden="true">
