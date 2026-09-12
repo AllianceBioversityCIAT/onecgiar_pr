@@ -155,10 +155,33 @@ export class PolicyChangeInfoComponent implements OnInit, CanComponentDeactivate
         this.loadedInnovationUseInfoBodyBaseline = JSON.parse(JSON.stringify(response));
         this.snapshotWhenBothLoaded();
       },
-      // No baseline recorded on a failed GET: `hasUnsavedChanges()` stays `false` (no snapshot
-      // taken yet) rather than throwing or reporting a false dirty state — same documented
-      // fail-open gap as the sibling `rd-*` sections (`UCA-T-6`/`UCA-T-8`/`UCA-T-9`/`UCA-T-10`).
-      error: () => this.sectionLoading.set(false)
+      /**
+       * ⚠️ A FAILED GET IS THE NORMAL FIRST VISIT HERE, not an exception. A Policy change with no
+       * `results_policy_changes` row yet answers this endpoint with **404** — the server throws
+       * `NOT_FOUND` when `ResultsPolicyChangesExists()` finds nothing
+       * (`summary.service.ts` `getPolicyChanges()`), which is every result whose section has never
+       * been saved.
+       *
+       * The previous handler only released the skeleton and recorded NO baseline, so
+       * `snapshotWhenBothLoaded()` never fired and `SectionDirtyTrackerService.isDirty()` returned
+       * `false` by construction ("no snapshot taken yet",
+       * `section-dirty-tracker.service.ts:35`). The unsaved-changes guard was therefore DEAD on
+       * exactly the visit where the whole form is filled for the first time: measured on prtest
+       * result 8501 (`result_id` 11039, this GET → 404) — picking a Policy type and clicking
+       * "Evidence" in the section rail navigated with no dialog and lost the answer, while the
+       * control result 9084 (`result_id` 11552, row exists → 200) warned and blocked correctly.
+       *
+       * The baseline is the body AS IT STANDS when the GET fails — the pristine class instance for
+       * a virgin section — so the section starts clean and only a real user edit turns it dirty.
+       * Deep-cloned for the same reason as the success path above. Deliberately NOT restricted to
+       * 404: on any other failure the form is on screen and empty too, and warning about the edits
+       * made on it is the safe direction to fail towards.
+       */
+      error: () => {
+        this.loadedInnovationUseInfoBodyBaseline = JSON.parse(JSON.stringify(this.innovationUseInfoBody));
+        this.snapshotWhenBothLoaded();
+        this.sectionLoading.set(false);
+      }
     });
   }
 

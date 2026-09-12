@@ -493,6 +493,41 @@ describe('PolicyChangeInfoComponent', () => {
       expect(component.hasUnsavedChanges()).toBe(true);
     }));
 
+    /**
+     * The VIRGIN-SECTION regression. `GET_policyChanges` answers **404** for a Policy change that
+     * has no `results_policy_changes` row yet (`summary.service.ts` `getPolicyChanges()` throws
+     * `NOT_FOUND`) — i.e. on every first visit, which is precisely when the user is filling the
+     * whole section for the first time. With no baseline recorded on that error,
+     * `SectionDirtyTrackerService.isDirty()` returns `false` by construction and the guard never
+     * fires: measured on prtest result 8501 (`result_id` 11039), where picking a Policy type and
+     * clicking "Evidence" in the rail navigated away with no warning and lost the answer.
+     *
+     * Falsifying input: with the pre-fix `error: () => this.sectionLoading.set(false)` the final
+     * expectation reads `false` (verified by restoring that handler and re-running). The clean
+     * assertion above it is what keeps the dirty one from passing vacuously.
+     */
+    it('arms the guard on a VIRGIN section, where the section GET answers 404', () => {
+      const virginQuestions = {
+        ...loadedQuestions,
+        optionsWithAnswers: [
+          { result_question_id: '50', answer_boolean: null },
+          { result_question_id: '51', answer_boolean: null }
+        ]
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(throwError(() => ({ status: 404 })));
+      jest.spyOn(mockApiService.resultsSE, 'GET_policyChangesQuestions').mockReturnValue(of({ response: virginQuestions }));
+
+      component.getSectionInformation();
+      component.getPolicyChangesQuestions();
+
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      // The exact gesture measured on 8501: pick a Policy type on a section that has no row yet.
+      component.innovationUseInfoBody.policy_type_id = 2;
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
     it('reports dirty after editing a bound field post-load', fakeAsync(() => {
       jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(of({ response: loadedBody }).pipe(delay(0)));
       jest.spyOn(mockApiService.resultsSE, 'GET_policyChangesQuestions').mockReturnValue(of({ response: loadedQuestions }).pipe(delay(0)));

@@ -1,6 +1,6 @@
 # policy-change-info
 
-**Verified:** 2026-09-10 · branch qa-development-2026-ss · `docs/specs/changes/unsaved-changes-alert/` `UCA-T-11`; prior: 2026-09-02 · branch performance-refactor · d659a442c
+**Verified:** 2026-09-11 · branch performance-refactor · virgin-section guard fix (404 baseline) + `result_related_engagement` measured against prtest; prior: 2026-09-10 · qa-development-2026-ss · `UCA-T-11`
 
 > Rewritten in English on 2026-09-01 (repo rule: every `CLAUDE.md` under `onecgiar_pr/` is English).
 
@@ -87,6 +87,15 @@ Implements `docs/specs/changes/unsaved-changes-alert/`'s unsaved-changes-warning
   `isPhaseYearAtLeast()` pair; reference shape is `FieldsManagerService.isPhaseYearAtLeast`
   (`8afb574f3`). ⚠️ `rd-annual-updating.component.ts` still keeps its fallback on purpose
   (different source, unmeasured) — it is **not** the shape to copy.
+- ⚠️ **A 404 from `GET_policyChanges()` is the NORMAL first visit, not an exception.** The server
+  throws `NOT_FOUND` when the `results_policy_changes` row does not exist yet (`summary.service.ts`
+  `getPolicyChanges()`), so every never-saved section loads through the `error` handler. Until
+  2026-09-11 that handler recorded no baseline, `snapshotWhenBothLoaded()` never fired and
+  `SectionDirtyTrackerService.isDirty()` returned `false` by construction: **the unsaved-changes
+  guard was dead on exactly the visit where the form is filled for the first time**. Measured on
+  prtest 8501 (`result_id` 11039, 404) — pick a Policy type, click "Evidence" in the rail, no
+  dialog, answer lost; control 9084 (`result_id` 11552, 200) warned correctly. The handler now
+  clones the pristine body as the baseline. Any new load path must record a baseline too.
 - ⚠️ `getSectionInformation()` does `this.innovationUseInfoBody = response` — it replaces the class
   instance with the raw backend object. Properties the backend omits end up `undefined`, not with
   the class default.
@@ -104,7 +113,14 @@ Implements `docs/specs/changes/unsaved-changes-alert/`'s unsaved-changes-warning
 
 ## Pending / Coming soon
 - The commented `result_related_engagement` block in the HTML ("Don't delete this code") is still
-  waiting on a business decision; the field exists in the model and in the DB.
+  waiting on a business decision; the field exists in the model and in the DB. 🛑 **It is NOT where
+  the "Is this result related to" dropdown is stored** — that answer lives in `result_answers` via
+  `optionsWithAnswers` (verified 2026-09-11 on prtest 11552: option 51 `answer_boolean: true` right
+  after a Save draft). `result_related_engagement` is a separate Yes/No question added by
+  `5ba38f986` (LFUB-1192), exported as its own column `s7_pc_result_related_engagement` ("related
+  result engagement") next to `s7_pc_result_related` ("related result (questions)"). The PATCH
+  therefore sends it as `null` on purpose; writing the dropdown's id into it would fabricate data in
+  an exported field. Only 11 rows platform-wide still carry a value, from that 2023 window.
 - The **bilateral** copy of this guidance (`section-type-specific/type-policy-change`) has no gate
   either. Left alone on purpose: bilateral is a 2026-only module, and that folder is owned by
   another workstream.
