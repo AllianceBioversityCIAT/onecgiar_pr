@@ -71,6 +71,7 @@
 @import '@angular/cdk/overlay-prebuilt.css';
 @import './app/shared/directives/chrome-fold.scss';
 @import './styles/field-flash.scss';
+@import './styles/tooltip-pin-hint.scss';
 
 // Neutralize the native OS button chrome. Tailwind's full preflight is disabled above
 // (it would reset PrimeNG), so raw <button>s render with the grey system look + native
