@@ -434,6 +434,13 @@
     border-top: 1px dashed var(--pr-border);
     border-radius: 0;
     background: transparent;
+
+    // Sin nada elegido, la línea punteada se queda sola bajo el desplegable y parece un campo
+    // partido. `:empty` no basta: el contenedor trae sus divs de estructura aunque el `*ngFor`
+    // no pinte un solo chip, así que la condición es "no hay chips", no "no hay nodos".
+    &:not(:has(.pr_chip_selected)) {
+      display: none;
+    }
   }
 }
 

@@ -80,6 +80,16 @@
       </div>
     </div>
   </div>
+  <!-- Lo elegido ENTRA en la caja (Yeck, 14-sep-2026). Varios consumidores pintan sus propios chips
+       —con medallas de lead, tooltips de CGSpace o borrados a medida— y hasta ahora los declaraban
+       como HERMANOS del `app-pr-multi-select`, o sea FUERA del marco `fc-boxed`: el contenedor
+       agrupaba titulo + descripcion + desplegable y dejaba la seleccion huerfana debajo.
+       Este hueco los mete dentro sin obligar a nadie a reescribir su markup.
+       🛑 Es solo para los chips. El marcador `appFeedbackValidation` de la seccion sigue siendo
+       HERMANO del dropdown: anidarlo aqui haria que `mandatoryFieldLabel` reportara la etiqueta
+       del desplegable en vez de la suya. -->
+  <ng-content select="[selectedItems]"></ng-content>
+
   <app-alert-status
     *ngIf="showPartnerAlert()"
     description="If you don't find the partner you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
