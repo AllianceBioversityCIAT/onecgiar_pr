@@ -160,13 +160,15 @@ describe('FieldCardComponent', () => {
   });
 
   describe('required marker', () => {
-    // The redesign replaced the Mandatory/Optional pill with a single red asterisk: a field says
-    // what it is and whether it is required, and nothing about completion.
-    it('marks a required field with an asterisk', () => {
-      expect(q('.fch_required').nativeElement.textContent.trim()).toBe('*');
+    // Proposal 18 (14-Sep-2026): the marker is a solid `REQUIRED` tag and NOTHING else. The
+    // asterisk was dropped because it sat next to the tag saying the same thing twice, and the
+    // optional field deliberately carries no counterpart — the absence of the tag is the marker.
+    it('marks a required field with a REQUIRED tag, not an asterisk', () => {
+      expect(q('.fch_required').nativeElement.textContent.trim()).toBe('Required');
+      expect(fixture.nativeElement.textContent).not.toContain('*');
     });
 
-    it('announces requiredness to screen readers, not just with the glyph', () => {
+    it('announces requiredness to screen readers, not just with the tag', () => {
       expect(q('.sr-only').nativeElement.textContent.trim()).toBe('(required)');
     });
 

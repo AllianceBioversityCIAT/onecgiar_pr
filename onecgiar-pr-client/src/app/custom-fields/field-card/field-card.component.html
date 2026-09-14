@@ -1,15 +1,27 @@
-<!-- Field block. Redesigned to match the approved mockup ("PRMS Reporting.dc.html" §pg-general):
-     a plain label with a red asterisk when required, an optional info button, and the control
-     underneath keeping its own neutral border. No status-coloured card, no Mandatory/Optional
-     pill, no colour legend — the state a user needs is now told once per section by the bottom
-     bar, not repeated on every field.
-     `.field_card` is kept as the root class name: `[appSectionSkeleton]` targets it. -->
-<div [class.field_card]="!isBare" [class.fc-row]="!isBare && layout === 'row'" [class.fc-error]="!isBare && hasError">
+<!-- Field block. Card chrome with a state-tinted header (proposal 18, approved 14-Sep-2026):
+     the header says WHAT the field is and whether it is required, the tint says HOW it stands
+     (green filled-required · blue filled-optional · amber required-and-empty · red over the limit),
+     and the right-hand pill says the one thing nothing else tells you — whether the work is saved.
+
+     🛑 No asterisk: requiredness is the `REQUIRED` tag and nothing else. An asterisk next to a tag
+     that already says "REQUIRED" is the same claim twice, and the optional field needs no marker at
+     all — the absence of the tag IS the marker.
+     🛑 The right side never repeats "Complete / Required": the tint already carries that verdict.
+
+     `.field_card` and `.fch_title` are load-bearing class names: `[appSectionSkeleton]` masks by the
+     first and `mandatoryFieldLabel` reads the label out of the second. -->
+<div
+  [class.field_card]="!isBare"
+  [class.fc-row]="!isBare && layout === 'row'"
+  [class.fc-error]="!isBare && hasError"
+  [attr.data-state]="isBare ? null : state"
+  (input)="markEdited()"
+  (change)="markEdited()">
   @if (showHeaderRow) {
-    <div class="field_card_header">
-      <span class="fch_title" [innerHTML]="label"></span>
+    <div class="field_card_header" [style]="labelDescInlineStyles">
+      <span class="fch_title" [innerHTML]="label + (useColon ? ':' : '')"></span>
       @if (required) {
-        <span class="fch_required" aria-hidden="true">*</span>
+        <span class="fch_required">Required</span>
         <span class="sr-only">(required)</span>
       }
       @if (tooltip) {
@@ -26,6 +38,28 @@
                literal text and overflow this 18px button onto the label. -->
           <app-pr-info-icon />
         </button>
+      }
+      @if (saveState !== 'none') {
+        <span class="fch_save" [attr.data-save]="saveState" [attr.aria-live]="saveState === 'saved' ? 'polite' : null">
+          @switch (saveState) {
+            @case ('saved') {
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3.2 8.4l3 3 6.6-6.8" />
+              </svg>
+              <span>Saved</span>
+            }
+            @case ('unsaved') {
+              <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="currentColor" /></svg>
+              <span>Unsaved changes</span>
+            }
+            @case ('saving') {
+              <svg class="fch_spin" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="8" cy="8" r="5.4" stroke-dasharray="24" stroke-dashoffset="8" />
+              </svg>
+              <span>Saving…</span>
+            }
+          }
+        </span>
       }
     </div>
   }

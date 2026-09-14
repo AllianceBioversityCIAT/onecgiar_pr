@@ -861,8 +861,9 @@ describe('LeadContactPersonFieldComponent', () => {
       component.body = { lead_contact_person: null, lead_contact_person_data: null };
       fixture.detectChanges();
 
-      // The Mandatory/Optional pill was replaced by a red asterisk next to the label.
-      expect(fixture.nativeElement.querySelector('.fch_required')?.textContent).toContain('*');
+      // Proposal 18: the marker is the solid REQUIRED tag — the asterisk it replaced was the same
+      // claim twice next to a tag that already said it.
+      expect(fixture.nativeElement.querySelector('.fch_required')?.textContent).toContain('Required');
       expect(fixture.nativeElement.querySelector('.fch_title')?.textContent).toContain('Lead contact person');
     });
 
