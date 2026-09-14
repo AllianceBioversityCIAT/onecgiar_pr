@@ -21,6 +21,8 @@ import { ResultSectionsService } from '../result-sections-sidebar/result-section
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
+import { ScrollChromeService } from '../../../../../../shared/services/scroll-chrome.service';
+import { ChromeFoldDirective } from '../../../../../../shared/directives/chrome-fold.directive';
 
 /**
  * Bottom bar of a result-detail section: section-to-section navigation, the position in the
@@ -44,9 +46,9 @@ import { UnsavedNavigationIntentService } from '../../../../../../shared/service
   // bottom-0` here used to be the only way to keep it on screen while the whole document
   // scrolled, and it came at the cost of the bar inheriting its ancestor's 885px width.
   // `z-[6]` stays: the floating "Links to results" helpers still overlap this strip.
-  host: { class: 'z-[6] block w-full flex-none' },
+  host: { class: 'relative z-[6] block w-full flex-none' },
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ChromeFoldDirective],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
@@ -58,6 +60,8 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   @Output() clickSave = new EventEmitter();
 
   readonly saveButtonSE = inject(SaveButtonService);
+  /** Folds the strip away while the user reads downwards; `Save draft` stays put. */
+  readonly scrollChromeSE = inject(ScrollChromeService);
   readonly dataControlSE = inject(DataControlService);
   readonly rolesSE = inject(RolesService);
   readonly sectionsSE = inject(ResultSectionsService);
@@ -182,6 +186,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
    * the two never stack during the route transition.
    */
   ngOnDestroy(): void {
+    if (this.pendingCloseTimer) clearTimeout(this.pendingCloseTimer);
     this.slotSE.syncSlot.set(null);
     this.hostRef.nativeElement.remove();
   }
@@ -228,6 +233,66 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
     } finally {
       this.savingBeforeNext.set(false);
     }
+  }
+
+  /**
+   * Hovering the "N fields missing" chip opens the list; the click stays for touch and keyboard.
+   * Leaving is delayed so the pointer can travel from the chip into the list without it closing
+   * underneath — the gap between the two is 10px of nothing.
+   */
+  private pendingCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  openPending(): void {
+    if (this.pendingCloseTimer) {
+      clearTimeout(this.pendingCloseTimer);
+      this.pendingCloseTimer = null;
+    }
+    this.pendingOpen.set(true);
+  }
+
+  schedulePendingClose(): void {
+    if (this.pendingCloseTimer) clearTimeout(this.pendingCloseTimer);
+    this.pendingCloseTimer = setTimeout(() => {
+      this.pendingCloseTimer = null;
+      this.pendingOpen.set(false);
+    }, 220);
+  }
+
+  /**
+   * Whether this entry can be jumped to. The DOM scan tags every missing field it found with
+   * `data-pr-feedback`; a field on a ToC tab that is not the active one, or a requirement no
+   * rendered field carries, is named in the list but has nothing on screen to go to — so the
+   * button appears per entry, not for the whole list.
+   */
+  canGoToField(label: string): boolean {
+    return Boolean(this.fieldElement(label));
+  }
+
+  /**
+   * Scrolls the field into view and flashes its background, so the eye finds it without reading
+   * the form. The class is removed on the way out: re-adding it is what lets the same field
+   * flash again when the user comes back to it a second time.
+   */
+  goToField(label: string): void {
+    const el = this.fieldElement(label);
+    if (!el) return;
+
+    this.closePending();
+    // The topbar and this very bar must stay exactly where they are while we travel.
+    this.scrollChromeSE.beginProgrammaticScroll();
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    el.classList.remove('pr-field-flash');
+    // Reading `offsetWidth` forces the style flush that makes the re-added class restart the
+    // animation; without it the browser coalesces remove+add into no change at all.
+    void el.offsetWidth;
+    el.classList.add('pr-field-flash');
+    setTimeout(() => el.classList.remove('pr-field-flash'), 2000);
+  }
+
+  private fieldElement(label: string): HTMLElement | null {
+    const key = DataControlService.feedbackKey(label);
+    return document.querySelector<HTMLElement>(`.section_container [data-pr-feedback="${key}"]`);
   }
 
   togglePending(): void {

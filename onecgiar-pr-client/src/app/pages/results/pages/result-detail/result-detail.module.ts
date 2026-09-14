@@ -21,6 +21,7 @@ import { ResultMetadataListComponent } from '../../../../shared/components/resul
 import { ResultMetadataWindowComponent } from '../../../../shared/components/result-metadata/result-metadata-window.component';
 import { ResultSectionsSidebarComponent } from './components/result-sections-sidebar/result-sections-sidebar.component';
 import { ResultHeaderComponent } from './components/result-header/result-header.component';
+import { HideChromeOnScrollDirective } from '../../../../shared/directives/hide-chrome-on-scroll.directive';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
@@ -41,7 +42,8 @@ import { ResultHeaderComponent } from './components/result-header/result-header.
     ResultMetadataListComponent,
     ResultMetadataWindowComponent,
     ResultSectionsSidebarComponent,
-    ResultHeaderComponent
+    ResultHeaderComponent,
+    HideChromeOnScrollDirective
   ]
 })
 export class ResultDetailModule {}

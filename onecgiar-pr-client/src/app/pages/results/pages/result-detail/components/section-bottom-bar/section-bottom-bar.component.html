@@ -4,8 +4,14 @@
      The INNER one carries the controls at the column's own 40px padding, the same one
      `.rd_scroll` uses, so Back and Save line up with the card's left and right edges.
      No margin-top: the bar is no longer the last thing inside the form, it is the column's floor. -->
-<div class="w-full border-t border-[var(--pr-border)] bg-white" data-testid="section-bottom-bar">
-  <div class="flex flex-wrap items-center justify-between gap-[16px] px-[40px] py-[14px]">
+<!-- The strip FOLDS while the user reads downwards (ScrollChromeService); `Save draft` does not.
+     `grid-template-rows: 1fr → 0fr` collapses the strip to nothing without anyone measuring it.
+     Save lives OUTSIDE that grid, absolutely positioned at the same 40px/14px inset the strip's
+     own padding gives it — so it holds EXACTLY its position whether the strip is there or not,
+     because the floor it is measured from is the content column's, which never moves. -->
+<div data-testid="section-bottom-bar">
+  <div appChromeFold="down" class="w-full border-t border-[var(--pr-border)] bg-white">
+    <div class="flex flex-wrap items-center justify-between gap-[16px] px-[40px] py-[14px]">
     <div class="flex items-center gap-[12px]">
       <!-- Secondary button, straight off the mockup: 1px #e3e3e8 rule, white fill, #2b2838 ink,
            weight 500, and a NEUTRAL hover (#f7f7f9 / #d5d5dc) — not the violet tint this used to
@@ -39,7 +45,7 @@
       }
     </div>
 
-    <div class="flex items-center gap-[12px]">
+    <div class="flex items-center gap-[12px]" [ngClass]="canSave ? 'pr-[124px]' : ''">
       @if (isComplete()) {
         <span
           class="inline-flex items-center gap-[6px] text-[14px] font-medium text-[var(--pr-status-approved-fg)]"
@@ -50,10 +56,10 @@
       } @else {
         <!-- Clickable counterpart of "Section complete": it names what is missing instead of only
            saying that something is. Same list the floating "N alerts" chip used to show. -->
-        <div class="relative">
+        <div class="relative" (mouseenter)="openPending()" (mouseleave)="schedulePendingClose()">
           <button
             type="button"
-            class="inline-flex items-center gap-[6px] text-[14px] font-medium text-[var(--pr-color-orange-700)] hover:underline"
+            class="-mx-[10px] -my-[5px] inline-flex items-center gap-[6px] rounded-[8px] border border-transparent px-[10px] py-[5px] text-[14px] font-medium text-[var(--pr-color-orange-700)] transition-colors hover:border-[var(--pr-color-orange-200)] hover:bg-[var(--pr-color-orange-50)]"
             [attr.aria-expanded]="pendingOpen()"
             aria-controls="sbb-pending-list"
             (click)="togglePending()"
@@ -76,9 +82,21 @@
                 </button>
               </div>
               @if (missingFields().length) {
-                <ul class="m-0 flex list-disc flex-col gap-[6px] pl-[18px]">
-                  <li class="text-[13px] leading-[1.45] text-[var(--pr-text)]" *ngFor="let field of missingFields(); trackBy: trackByField">
-                    {{ field }}
+                <ul class="m-0 flex list-none flex-col gap-[2px] p-0">
+                  <li
+                    class="flex items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[4px] text-[13px] leading-[1.45] text-[var(--pr-text)] hover:bg-[var(--pr-surface-app)]"
+                    *ngFor="let field of missingFields(); trackBy: trackByField">
+                    <span class="min-w-0">{{ field }}</span>
+                    <!-- Only for entries the scan could actually pin to an element on screen. -->
+                    @if (canGoToField(field)) {
+                      <button
+                        type="button"
+                        class="shrink-0 rounded-[6px] border border-[var(--pr-border)] bg-white px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:border-[var(--pr-color-primary-200)] hover:bg-[var(--pr-color-primary-25)]"
+                        (click)="goToField(field)"
+                        [attr.aria-label]="'Go to ' + field">
+                        Go
+                      </button>
+                    }
                   </li>
                 </ul>
               } @else {
@@ -97,16 +115,20 @@
       <!-- Slot for Knowledge Product Sync button -->
       <div class="sbb-sync-slot inline-flex items-center empty:hidden" #syncSlot></div>
 
-      @if (canSave) {
-        <button
-          type="button"
-          class="h-[38px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
-          [disabled]="saveButtonSE.isSaving() || disabled"
-          (click)="onClickSave()"
-          data-testid="section-bottom-bar-save">
-          {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
-        </button>
-      }
+    </div>
     </div>
   </div>
+
+  <!-- Anchored, never folded. `min-w` is what keeps the reserved gap above honest when the label
+       swaps to "Saving…". -->
+  @if (canSave) {
+    <button
+      type="button"
+      class="sbb-save absolute bottom-[14px] right-[40px] h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] shadow-[var(--pr-shadow-1)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+      [disabled]="saveButtonSE.isSaving() || disabled"
+      (click)="onClickSave()"
+      data-testid="section-bottom-bar-save">
+      {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
+    </button>
+  }
 </div>

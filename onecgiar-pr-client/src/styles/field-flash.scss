@@ -1,0 +1,44 @@
+/* The field a user jumped to from the bottom bar's "fields missing" list.
+   Global, not component-scoped: the list lives in the bottom bar and the field can be in any of
+   the eleven result-detail sections.
+
+   Painted by an OVERLAY, not on the host itself. The tagged element is `app-field-card`, whose
+   own card paints an opaque white box over the full host — measured, a `background-color` and an
+   `inset` ring on the host both ended up completely covered, and an OUTER ring was clipped by the
+   section's overflow to a sliver at the left edge. A positioned `::after` sits above the card's
+   own painting and cannot be cropped by an ancestor, so it always shows. */
+@keyframes pr-field-flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  25%,
+  60% {
+    opacity: 1;
+  }
+}
+
+.pr-field-flash {
+  position: relative;
+  z-index: 2;
+}
+
+.pr-field-flash::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: 5;
+  border: 3px solid var(--pr-color-primary-300);
+  border-radius: 10px;
+  background: rgba(107, 70, 229, 0.12);
+  pointer-events: none;
+  opacity: 0;
+  animation: pr-field-flash 800ms ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-field-flash::after {
+    animation: none;
+    opacity: 1;
+  }
+}
