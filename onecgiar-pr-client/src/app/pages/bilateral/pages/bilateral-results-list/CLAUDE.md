@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-11 · branch JuanGuzman-io/p2-3653-kp-exclusion-ui · 689240e7a
+**Verified:** 2026-09-14 · branch qa-development-2026 · spec `bilateral/center-overview-tab` (`COV-T-2`)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -17,7 +17,10 @@ result the centre participates in for the selected reporting phase, as lead or a
   `result.repository.getResultsByBilateralCenter`.
 - Rejection history: `GET_bilateralReviewHistory(resultId)` (P2-3157 AC4 dialog).
 - Delete: `ResultsApiService.PATCH_DeleteResult(id)`.
-- Exported for reuse/tests: `BilateralCenterResult`, `BilateralColumnDef`, `BILATERAL_COLUMNS`.
+- Exported for reuse/tests: `BilateralCenterResult` (`COV-DD-11` — the interface itself now lives
+  in `../../services/bilateral-center-result.interface.ts`, with a `project_id?: number | null`
+  field added for `COV-R-16`; this file only re-exports the type so existing imports compile),
+  `BilateralColumnDef`, `BILATERAL_COLUMNS`.
 
 ## Where it is used
 - `src/app/pages/bilateral/bilateral-routing.module.ts` — the centre's default landing page.

@@ -50,7 +50,7 @@
   - [x] No change to `/api/bilateral/*` (nothing to log in `bilateral-result-summaries.en.md`).
   - [x] Commit scoped to these two files: `🔧 fix(results) [<ticket>]: expose lead project_id on bilateral-center-results`.
 
-### `COV-T-2` — Shared contracts: query params, result filter, row interface, shared phase
+### `COV-T-2` — Shared contracts: query params, result filter, row interface, shared phase `[x]`
 
 - **Type:** `client`
 - **Description:** Create the pure contract modules and the shared state hook every later task imports: `bilateral-query-params.ts` (constants, `parseBilateralQueryParams`, `serializeBilateralQueryParams`, per-key validators, "stripped keys" report), `bilateral-result-filter.ts` (`filterCenterResults(rows, params)` covering status/project/program/type/role/source/method/search with `Number()` normalization), `bilateral-center-result.interface.ts` (moved `BilateralCenterResult` +`project_id`, re-exported from the Results component), and `selectedVersionId` on `BilateralContextService` (reset on center change).
@@ -65,9 +65,9 @@
 - **Input that would make the check fail:** a filter that compares `status_id === 5` (string ids pass through untouched → the string-id fixture fails); a serializer emitting `status=` for the default; a Results import path broken by the interface move (`tsc`).
 - **What this cannot prove / disqualifier:** the filter's equivalence with today's Results chips is asserted against a fixture, not against the live table — `COV-T-7` re-runs the Results spec unchanged to prove behavior preservation. Tests MUST call the exported functions (`KZ-GEO-1`), never a local copy of the predicate.
 - **Definition of done:**
-  - [ ] `tsc`, Jest, lint green; Results spec still green untouched (proves the re-export).
-  - [ ] No component, template or style change in this task.
-  - [ ] Commit: `✨ feat(bilateral) [<ticket>]: shared query-param contract, result filter and shell phase signal`.
+  - [x] `tsc`, Jest, lint green; Results spec still green untouched (proves the re-export).
+  - [x] No component, template or style change in this task.
+  - [x] Commit: `✨ feat(bilateral) [<ticket>]: shared query-param contract, result filter and shell phase signal`.
 
 ### `COV-T-3` — Overview data service and aggregation module
 
