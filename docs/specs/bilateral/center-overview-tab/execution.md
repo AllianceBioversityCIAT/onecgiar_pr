@@ -12,8 +12,8 @@
 | **Approval Mode** | `pre-approved` for routine PASS gates (project feedback: pragmatic execution; the spec's `gated` label is not high-risk — additive SQL field, new client page, no migration/auth). HALT, Pivot, budget tripwire and `FATAL_FAIL` still stop for the user |
 | **Runtime rules** | ≤ 1 Reviewer round per task (second FAIL escalates) · targeted `npx jest <path>` only · `tsc --noEmit` + `npx ng lint --quiet` per client task · module CT once per template task · plain-language progress line per task boundary |
 | **Budget (design §14)** | 8 tasks · ~1,700 LOC · ≤ 8 review rounds |
-| **Actuals to date** | 4 tasks · ~3,835 LOC (T-1 45 · T-2 1,290 · T-3 1,640 · T-7 860; ≈ 60 % tests) · 7 review rounds — **budget tripwire tripped (1,700 budget, 2,550 = +50 % line); execution paused for the user before `COV-T-4`** |
-| **Active rework loop** | none — paused at the budget tripwire before `COV-T-4` |
+| **Actuals to date** | 5 tasks · ~4,775 LOC (T-1 45 · T-2 1,290 · T-3 1,640 · T-7 860 · T-4 940) · 8 review rounds — re-based budget ~5,500 (user, at the tripwire) |
+| **Active rework loop** | `COV-T-5` attempt 1 (budget re-based by the user at the tripwire, 2026-09-14 ~18:00 Bogotá: 8 tasks · ~5,500 LOC · ≤ 1 FAIL round per task) |
 | **Pre-flight (2026-09-14)** | `requirements.md` already `approved` · `design.md` approved · OQ-2/OQ-3 resolved in design §13 · OQ-1 (Jira id) open — commits use `[SPEC:bilateral/center-overview-tab]` · no CLARISA/migration dependency · **Concurrent work still uncommitted in this checkout:** `bilateral/ai-drafts-redesign` (execution `complete`, edits to header/panel/drafts/creator not committed) and `bilateral/manual-create-drawer` (new drawer components, server bilateral DTO/service). Rule applied: `COV-T-6`/`COV-T-7` wait until those land; T-1…T-5 touch disjoint files. `git log --since=7.days -- pages/bilateral`: `a1e2651b1` (projects-panel restyle), `78c3e5e89` (lead project reassignment), `2744820db` (P2-3653 result_type_id/submitter on center list — already reflected in the design) |
 | **Kaizen digest** | `docs/specs/kaizen-log.md` does not exist in this checkout; lessons are cited inline in `tasks.md` (`KZ-W12-1`, `KZ-GEO-1`, `KZ-BOR-1/2`, `KZ-EVM-1`) and carried into each brief |
 
@@ -114,4 +114,22 @@
 **Decisions.** One FAIL round consumed — the per-task ceiling; a second FAIL would have escalated. Rotation: Implementer sonnet → opus, Reviewer session model (author ≠ auditor kept). Gate auto-approved (pre-approved mode).
 
 **Archive-time items added.** (1) `bilateral-projects-panel.component.html` legacy `pi pi-*` icons (9) → PrimeIcons migration is a separate cleanup, not this spec; (2) `bilateral-results-list/CLAUDE.md` stamp already reads this spec / 2026-09-14 — no re-stamp needed.
+
+### `COV-T-4` — Chart option and a11y table builders
+
+| Field | Value |
+|---|---|
+| **Final status** | PASS (attempt 1 of ≤ 2) |
+| **Date** | 2026-09-14 |
+| **Implementer attempts** | 1 (opus — sonnet quota still exhausted; effort medium; skills `angular-developer`, `tdd`, `dataviz`) |
+| **Reviewer verdict** | `STATUS: PASS` (session model, checklist mode) |
+| **Requirements covered** | `COV-R-7` BUT (ramp not status tokens), `COV-R-9` A / `COV-R-10` / `COV-R-11` / `COV-R-12` click → params, `COV-R-18` table part, `COV-AC-10` (meter colors), `COV-AC-15` (table keeps zero types), `COV-AC-16`/`17` (markArea/markLine presence) |
+| **Files (new)** | `pages/bilateral-overview/bilateral-overview.charts.ts` (548) · `.spec.ts` (392, 29 tests) |
+| **Final verification** | `npx tsc --noEmit -p tsconfig.app.json` → exit 0 · `npx jest …bilateral-overview.charts.spec.ts --silent` → 1 suite, **29/29** (with the aggregate spec: 2 suites, 64/64) · `npx ng lint --quiet` → All files pass linting · `! grep -nE "#[0-9a-fA-F]{3,8}\b" …charts.ts` → exit 0 (zero hex) |
+
+**Attempt 1 — Implementer.** Exports `statusMeterOption/Table`, `byProjectOption/Table(model, tokens, options?)`, `bySpOption/Table`, `byTypeOption/Table`, `paceOption/Table`, `resolveChartClick(event, model, options?) → Partial<BilateralQueryParams> | null`, helpers `visibleProjectBars`, `visibleTypeRows`, consts `OVERVIEW_PROJECT_BAR_LIMIT = 7`, `STATUS_TILE_LABELS`, `STATUS_KEY_LABELS`, `NO_PROJECT_CATEGORY_LABEL`, type `OverviewChartOptions` (limit, projectLabels, programLabels, today). Judgment calls: click resolution dispatches on namespaced series `id` + `dataIndex` and needs the same `OverviewChartOptions` as the option builder (documented in JSDoc); "No bilateral project" click → `{ project: [], source: 'w1w2' }` when all rows are W1/W2 else `{ project: [] }`; label-less zero-count types render `"<Group> type <id>"`, never "null". `Not Done / Assumptions`: shape tests only — visual correctness stays `COV-T-8` HITL (the task's own disqualifier).
+
+**Attempt 1 — Reviewer (PASS).** Colors proven to come only from the passed token object (sentinel tokens + `resolveChartTokens` mock assertion); zero rows kept in status/type tables; `markArea` iff `hasWindow`, `markLine` iff today ∈ window (all three combinations tested); click map complete incl. pace/unknown/out-of-range → `null`; abbreviations imported from the portfolio module; tests build models via `buildOverviewModel` + fixtures (`KZ-GEO-1`); every plotted number also in its table. All five judgment calls within the spec text (`{ project: [] }` serializes to "no project param" per `COV-R-9` C). **ADVISORY (recorded):** (1) charts spec never feeds an unknown `result_type_id` — the "Other" group is exercised only by the aggregate spec; (2) `STATUS_KEY_LABELS` duplicates the private map in `bilateral-results-list.component.ts` — hoist into `bilateral-query-params.ts` when that file is next touched; (3) **forward pointer to `COV-T-5`: derive one `chartOptions` computed and pass the same reference to `byProjectOption` and `resolveChartClick`; add a component test clicking the trailing category with `limit` active**; (4) `dataIndex === 0` guard on the status namespace would make intent explicit.
+
+**Decisions.** Gate auto-approved (pre-approved mode). Rotation unchanged (opus Implementer / session-model Reviewer).
 

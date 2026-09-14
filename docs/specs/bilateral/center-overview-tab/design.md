@@ -319,7 +319,7 @@ None. Drafts count already updates through `BilateralAiService`'s existing polli
 | Signal | Estimate |
 |---|---|
 | **Tasks** | 8 (1 server, 1 shared contracts, 1 service+aggregate, 1 charts, 1 page component, 1 header/route/other tabs, 1 CT + HITL, 1 docs/close-out) |
-| **LOC** | ~1,700 total — server ~40 · client production ~950 (page + controls ~450, pure modules ~300, edits to 5 existing files ~200) · client tests ~650 · CT ~60 |
+| **LOC** | **Re-based at execute (2026-09-14, user decision at the tripwire after 4 tasks / ~3,835 LOC): ~5,500 total.** Original estimate: ~1,700 total — server ~40 · client production ~950 (page + controls ~450, pure modules ~300, edits to 5 existing files ~200) · client tests ~650 · CT ~60 |
 | **Review rounds** | ≤ 1 Reviewer round per task (8 max); a second FAIL on any task escalates to the user instead of looping |
 | **Depth check** | Standard holds: multi-file client feature with a cross-tab contract and one additive server field; not Full (no migration, no new API, no auth change), clearly not Lite. |
 

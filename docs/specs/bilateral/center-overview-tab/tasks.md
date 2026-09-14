@@ -87,7 +87,7 @@
   - [x] All specs green; aggregate module ~100 % line coverage; no `inject()`/HTTP in the aggregate module.
   - [x] Commit: `✨ feat(bilateral-overview) [<ticket>]: overview data service and card aggregation`.
 
-### `COV-T-4` — Chart option and a11y table builders
+### `COV-T-4` — Chart option and a11y table builders `[x]`
 
 - **Type:** `client`
 - **Description:** `bilateral-overview.charts.ts`: pure builders `statusMeterOption/Table`, `byProjectOption/Table`, `bySpOption/Table`, `byTypeOption/Table`, `paceOption/Table`, and `resolveChartClick(event, model) → Partial<BilateralQueryParams>`; all colors from a passed `ResolvedChartTokens`; label abbreviations reuse the SP `AXIS_LABEL_ABBREVIATIONS` vocabulary where a label matches.
@@ -102,8 +102,8 @@
 - **Input that would make the check fail:** a builder coloring "Approved" with `--pr-status-approved-fg`; a table omitting zero-count statuses; a `'#6b46e5'` literal.
 - **What this cannot prove / disqualifier:** option-shape tests prove structure, **not the rendered picture** (D6 accepted blind spot) — the visual check is `COV-T-8`'s HITL; a green here is never cited as "charts look right".
 - **Definition of done:**
-  - [ ] Spec green; grep gate 0 hex; lint clean.
-  - [ ] Commit: `✨ feat(bilateral-overview) [<ticket>]: ECharts builders and a11y tables for the six cards`.
+  - [x] Spec green; grep gate 0 hex; lint clean.
+  - [x] Commit: `✨ feat(bilateral-overview) [<ticket>]: ECharts builders and a11y tables for the six cards`.
 
 ### `COV-T-5` — Overview page and controls components
 
