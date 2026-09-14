@@ -303,12 +303,15 @@
                     {{ subResult.result_type || '—' }}
                   </a>
                 } @else if (column.attr === 'source_name') {
+                  <!-- A chip, not plain text: funding is the column a reader scans for a PATTERN
+                       ("how much of this list is bilateral?"), and a colour answers that from the
+                       far side of the table while the word still says exactly which one. -->
                   <a
                     class="rc-cell-link rc-funding"
                     [routerLink]="getResultLink(subResult)"
                     [queryParams]="getResultQueryParams(subResult)"
                     (click)="onResultLinkClick($event, subResult)">
-                    {{ fundingLabel(subResult) }}
+                    <span [class]="fundingChipClass(subResult)">{{ fundingLabel(subResult) }}</span>
                   </a>
                 } @else if (column.attr === 'full_status_name_html') {
                   <a

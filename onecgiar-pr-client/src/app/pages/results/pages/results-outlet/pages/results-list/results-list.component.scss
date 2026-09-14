@@ -698,11 +698,10 @@
   white-space: nowrap;
 }
 
+// The cell is now a chip (see the template). Mono and the fixed ink belonged to the plain-text
+// version and would fight the chip's own type and colour.
 .rc-funding {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 12px;
-  font-weight: 500;
-  color: #2b2838;
+  display: inline-flex;
   white-space: nowrap;
 }
 
