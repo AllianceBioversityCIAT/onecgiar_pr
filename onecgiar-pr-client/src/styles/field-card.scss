@@ -402,6 +402,37 @@
   font-style: italic;
 }
 
+// ── layout="boxed": el grupo entero dentro de un marco ────────────────────
+// Un multi-select no termina en su control: sigue con la lista de lo elegido. Sin marco eso son
+// tres bloques sueltos —cabecera, desplegable y chips— que la vista no ata entre sí, y con varios
+// campos así seguidos nadie sabe qué pertenece a qué. El marco lo dice sin escribir una palabra.
+.field_card.fc-boxed {
+  border: 1px solid var(--pr-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--pr-surface-card);
+
+  .field_card_header {
+    border-radius: 0;
+    border-bottom: 1px solid var(--fc-edge);
+  }
+
+  > :not(.field_card_header):not(.field_card_desc) {
+    padding: 10px 12px 12px;
+  }
+
+  // Dentro del marco, lo elegido NO lleva su propia caja: una caja dentro de otra caja es ruido.
+  // Basta una línea que lo separe del control.
+  .selected_container {
+    margin-top: 10px;
+    padding: 10px 0 0;
+    border: 0;
+    border-top: 1px dashed var(--pr-border);
+    border-radius: 0;
+    background: transparent;
+  }
+}
+
 @keyframes fc-spin {
   to {
     transform: rotate(360deg);

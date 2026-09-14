@@ -14,6 +14,7 @@
   [class.field_card]="!isBare"
   [class.fc-row]="!isBare && layout === 'row'"
   [class.fc-inline]="!isBare && layout === 'inline'"
+  [class.fc-boxed]="!isBare && layout === 'boxed'"
   [class.fc-error]="!isBare && hasError"
   [class.fc-pinned]="pinned() && canPin"
   [attr.data-state]="isBare ? null : state"

@@ -10,7 +10,8 @@
   [hasValue]="hasSelection"
   [labelDescInlineStyles]="labelDescInlineStyles()"
   [showDescription]="showDescriptionLabel()"
-  [tooltip]="tooltip()">
+  [tooltip]="tooltip()"
+  layout="boxed">
 <div class="custom_select">
   <a class="field" tabindex="0" [id]="optionValue()" *ngIf="(!hideSelect() && !(readOnly() || this.rolesSE.readOnly)) || isStatic()">
     <div class="text select_placeholder">{{ placeholder() }}</div>

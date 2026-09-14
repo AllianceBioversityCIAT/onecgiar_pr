@@ -45,7 +45,15 @@
       }
     </div>
 
-    <div class="flex items-center gap-[12px]" [ngClass]="canSave ? 'pr-[124px]' : ''">
+    <div class="flex items-center gap-[12px]"></div>
+  </div>
+
+  <!-- Anclado, nunca plegado. Aquí viven las DOS cosas que el usuario necesita mientras escribe:
+       cuánto le falta y cómo guardar. El indicador estaba dentro de la franja que se pliega al leer
+       hacia abajo, así que desaparecía justo cuando el reportero está llenando campos — que es
+       cuando el contador importa (Yeck, 14-sep-2026). `min-w` mantiene honesto el hueco reservado
+       arriba cuando la etiqueta pasa a "Saving…". -->
+  <div class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]">
       @if (isComplete()) {
         <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
              "2 of 7 required" y "5 fields missing" — diciendo lo mismo con dos formas distintas. -->
@@ -156,19 +164,15 @@
       <div class="sbb-sync-slot inline-flex items-center empty:hidden" #syncSlot></div>
 
     </div>
-    </div>
+    @if (canSave) {
+      <button
+        type="button"
+        class="sbb-save h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] shadow-[var(--pr-shadow-1)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+        [disabled]="saveButtonSE.isSaving() || disabled"
+        (click)="onClickSave()"
+        data-testid="section-bottom-bar-save">
+        {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
+      </button>
+    }
   </div>
-
-  <!-- Anchored, never folded. `min-w` is what keeps the reserved gap above honest when the label
-       swaps to "Saving…". -->
-  @if (canSave) {
-    <button
-      type="button"
-      class="sbb-save absolute bottom-[14px] right-[40px] h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] shadow-[var(--pr-shadow-1)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
-      [disabled]="saveButtonSE.isSaving() || disabled"
-      (click)="onClickSave()"
-      data-testid="section-bottom-bar-save">
-      {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
-    </button>
-  }
 </div>

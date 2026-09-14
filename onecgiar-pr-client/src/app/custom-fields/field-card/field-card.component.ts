@@ -90,7 +90,14 @@ export class FieldCardComponent implements OnInit, OnChanges {
    * Se diferencia de `row` en que CONSERVA el color de estado: `row` es para listas de campos
    * homogéneos, donde cinco bandas seguidas serían un muro; `inline` es para un campo suelto.
    */
-  @Input() layout: 'stack' | 'row' | 'inline' = 'stack';
+  /**
+   * `boxed` (14-sep-2026): un marco alrededor de TODO el campo — cabecera, guía, control y lo que
+   * el control deja debajo. Para los campos que no terminan en su control: un multi-select es
+   * título + desplegable + la lista de lo elegido, tres bloques que sin marco se leen como tres
+   * cosas distintas de la página. El resto de campos siguen sin marco, que es lo que los hace
+   * ligeros.
+   */
+  @Input() layout: 'stack' | 'row' | 'inline' | 'boxed' = 'stack';
 
   readonly saveSE = inject(SaveButtonService);
   private readonly flightSE = inject(FieldCompletionFlightService);
