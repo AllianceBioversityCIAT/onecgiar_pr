@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, OnDestroy, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HlmButton } from '@spartan/button';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
@@ -13,6 +13,9 @@ import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BILATERAL_STATUS } from '../../services/bilateral-creation.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
+// @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15) — reads the shared query-param
+// contract's `project` key; this tab only READS it, it never writes back to the URL.
+import { parseBilateralQueryParams } from '../../bilateral-query-params';
 import { DraftResultCardComponent } from '../bilateral-ai-draft-detail/components/draft-result-card/draft-result-card.component';
 import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/components/draft-evidence-list/draft-evidence-list.component';
 import {
@@ -117,6 +120,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);
   readonly ctx = inject(BilateralContextService);
   readonly filter = inject(MyDraftResultsFilterService);
+  private readonly activatedRoute = inject(ActivatedRoute);
 
   /**
    * P2-3316: plain-language notes for the three card actions. End users could not tell
@@ -148,6 +152,13 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.bilateralAiService.loadAllDrafts();
+
+    // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15) — `?project=` (first value)
+    // pre-selects this tab's existing project filter. Read-only: never written back to the URL.
+    const { params } = parseBilateralQueryParams(this.activatedRoute.snapshot.queryParamMap);
+    if (params.project.length) {
+      this.filter.selectProject(String(params.project[0]));
+    }
   }
 
   // ── P2-3319 · Filter by project ───────────────────────────────────────

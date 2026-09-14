@@ -1,8 +1,8 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { RouterModule } from '@angular/router';
-import { of } from 'rxjs';
+import { ActivatedRoute, convertToParamMap, Params, Router, RouterModule } from '@angular/router';
+import { BehaviorSubject, map, of } from 'rxjs';
 import { signal } from '@angular/core';
 import {
   BilateralResultsListComponent,
@@ -21,6 +21,46 @@ describe('BilateralResultsListComponent', () => {
   let bilateralApiService: any;
   let phasesService: any;
   let rolesService: any;
+  let router: Router;
+  let navigateSpy: jest.SpyInstance;
+
+  /**
+   * `COV-T-7` / `COV-R-14` — the Results tab now READS and WRITES the shared query-param contract,
+   * so the spec drives it through a real URL round-trip instead of a one-way spy: the route's
+   * `queryParamMap` (and its `snapshot`, which `?result=` reads) is backed by a subject, and
+   * `Router.navigate` applies the same `merge` semantics the real router applies (a `null` value
+   * deletes the key) before feeding the result back into that subject.
+   *
+   * The feedback leg is the point. Without it a spec can assert what the component wrote but never
+   * what the re-hydration then does to it — which is how the multi-word search regression (every
+   * keystroke round-tripping through a `search` value the parser trims) stayed invisible behind a
+   * green suite.
+   */
+  let queryParams$: BehaviorSubject<Params>;
+
+  /** Re-creates the component on a given URL — the only way to exercise `ngOnInit`'s snapshot read
+   *  (`?result=`) and the init-time hydration. Destroys the previous fixture first so its still-live
+   *  `queryParamMap` subscription cannot answer the new params too. */
+  const recreateOn = (params: Params = {}) => {
+    fixture.destroy();
+    navigateSpy.mockClear();
+    queryParams$.next({ ...params });
+    fixture = TestBed.createComponent(BilateralResultsListComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    // Second pass: the rows arrive from the (synchronous) API mock during the first flush.
+    fixture.detectChanges();
+  };
+
+  const chipTexts = (): string[] =>
+    Array.from(fixture.nativeElement.querySelectorAll('button.brl_chip') as NodeListOf<HTMLElement>).map(
+      chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+
+  const chipButton = (label: string): HTMLButtonElement | undefined =>
+    Array.from(fixture.nativeElement.querySelectorAll('button.brl_chip') as NodeListOf<HTMLButtonElement>).find(chip =>
+      (chip.textContent ?? '').includes(label),
+    );
 
   const result = (overrides: Partial<BilateralCenterResult> = {}): BilateralCenterResult => ({
     id: 1,
@@ -40,6 +80,7 @@ describe('BilateralResultsListComponent', () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    queryParams$ = new BehaviorSubject<Params>({});
 
     bilateralApiService = {
       GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: [result()] })),
@@ -64,6 +105,48 @@ describe('BilateralResultsListComponent', () => {
         ResultsApiService,
       ],
     }).compileComponents();
+
+    // The real `ActivatedRoute` is kept (RouterLink in the page header resolves through it) — only
+    // the query-param plumbing is swapped for the subject, on the instance and on its snapshot.
+    const activatedRoute = TestBed.inject(ActivatedRoute);
+    Object.defineProperty(activatedRoute, 'queryParams', {
+      configurable: true,
+      value: queryParams$.asObservable(),
+    });
+    Object.defineProperty(activatedRoute, 'queryParamMap', {
+      configurable: true,
+      value: queryParams$.pipe(map(params => convertToParamMap(params))),
+    });
+    Object.defineProperty(activatedRoute.snapshot, 'queryParams', {
+      configurable: true,
+      get: () => queryParams$.value,
+    });
+    Object.defineProperty(activatedRoute.snapshot, 'queryParamMap', {
+      configurable: true,
+      get: () => convertToParamMap(queryParams$.value),
+    });
+
+    router = TestBed.inject(Router);
+    navigateSpy = jest.spyOn(router, 'navigate').mockImplementation((commands: any[], extras?: any) => {
+      // Only the component's own `navigate([], { queryParams, … })` writes are replayed into the
+      // URL; `openResult` navigates to a path and is merely recorded, as before.
+      if (commands.length === 0 && extras?.queryParams) {
+        const next: Params = extras.queryParamsHandling === 'merge' ? { ...queryParams$.value } : {};
+        for (const [key, value] of Object.entries(extras.queryParams as Params)) {
+          if (value === null || value === undefined) delete next[key];
+          else next[key] = String(value);
+        }
+        // The real router settles a navigation asynchronously: the `queryParamMap` emission lands
+        // AFTER the change-detection pass that already pushed the typed value into the input. The
+        // microtask preserves that ordering, and that ordering is what makes a hydration that
+        // clobbers the field observable in the DOM instead of only in the signal.
+        return Promise.resolve().then(() => {
+          queryParams$.next(next);
+          return true;
+        });
+      }
+      return Promise.resolve(true);
+    });
 
     fixture = TestBed.createComponent(BilateralResultsListComponent);
     component = fixture.componentInstance;
@@ -206,6 +289,213 @@ describe('BilateralResultsListComponent', () => {
       component.toggleW1W2();
       expect(component.filteredResults().map(r => r.id).sort()).toEqual([1, 2]);
     });
+  });
+
+  /**
+   * `COV-R-14`/`COV-DD-3` (amendment) — the URL write path. Two things have to hold at once:
+   * an explicit "both/both" selection must survive a reload (so it is written as the additive
+   * `all` token, not omitted — an omitted role/source re-triggers `applyResultsTabDefaults` and
+   * silently snaps the user back to W3 + Lead), and a plain `/results` load must write nothing
+   * at all (hydration is not a user change).
+   */
+  describe('COV-DD-3 amendment — URL round-trip of an explicit "both" scope', () => {
+    it('writes source=all&role=all once all four chips are on', () => {
+      component.toggleW1W2();
+      component.toggleContributing();
+
+      expect(component.showW3()).toBe(true);
+      expect(component.showW1W2()).toBe(true);
+      expect(component.showLead()).toBe(true);
+      expect(component.showContributing()).toBe(true);
+
+      expect(navigateSpy).toHaveBeenLastCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: expect.objectContaining({ source: 'all', role: 'all' }),
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        }),
+      );
+    });
+
+    it('writes nothing to the URL on a plain /results load with no params', () => {
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * `COV-R-14` / `COV-AC-18` — the read side of the contract. Every case here drives the component
+   * through the route subject (see the harness above), so what is asserted is what a real deep link,
+   * a back/forward step or the component's own write-back actually produces.
+   */
+  describe('COV-R-14 — hydrating the Results tab from the URL', () => {
+    it('shows only matching rows and one removable chip per param for ?status=pending&project=118 (COV-AC-18)', fakeAsync(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(
+        of({
+          response: [
+            result({ id: 1, result_code: '1', status_id: 5, status_name: 'Pending review', project_id: 118, project_name: 'Rice for Africa' }),
+            result({ id: 2, result_code: '2', status_id: 1, status_name: 'Editing', project_id: 118, project_name: 'Rice for Africa' }),
+            result({ id: 3, result_code: '3', status_id: 5, status_name: 'Pending review', project_id: 204 }),
+            result({ id: 4, result_code: '4', status_id: 5, status_name: 'Pending review', project_id: null }),
+          ],
+        }),
+      );
+
+      recreateOn({ status: 'pending', project: '118' });
+
+      expect(component.statusFilter()).toEqual(['pending']);
+      expect(component.projectFilter()).toEqual([118]);
+      expect(component.filteredResults().map(r => r.id)).toEqual([1]);
+
+      // Both chips are rendered, with the project's real name rather than its id.
+      expect(chipTexts().some(text => text.startsWith('Pending review'))).toBe(true);
+      expect(chipTexts().some(text => text.startsWith('Rice for Africa'))).toBe(true);
+
+      // …and both are removable: clicking one drops its param from the URL and its chip from the strip.
+      chipButton('Rice for Africa')!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.projectFilter()).toEqual([]);
+      expect('project' in queryParams$.value).toBe(false);
+      expect(chipTexts().some(text => text.startsWith('Rice for Africa'))).toBe(false);
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 3, 4]);
+
+      chipButton('Pending review')!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.statusFilter()).toEqual([]);
+      expect('status' in queryParams$.value).toBe(false);
+      expect(chipTexts().some(text => text.startsWith('Pending review'))).toBe(false);
+    }));
+
+    it('strips an invalid status token from the URL exactly once, keeping the valid ones', fakeAsync(() => {
+      recreateOn({ status: 'bogus,pending' });
+      tick();
+
+      expect(component.statusFilter()).toEqual(['pending']);
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { status: 'pending' },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        }),
+      );
+      // The rewritten URL re-enters `applyUrlParams`; it must settle there, not rewrite itself again.
+      expect(queryParams$.value).toEqual({ status: 'pending' });
+    }));
+
+    it('takes the phase from the shared signal instead of the Open phase', () => {
+      phasesService.phases.reporting = [
+        { id: 35, phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
+        { id: 36, phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
+      ];
+      TestBed.inject(BilateralContextService).selectedVersionId.set(35);
+
+      recreateOn();
+
+      expect(component.selectedPhase()?.id).toBe(35);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 35);
+    });
+
+    it('still focuses the row deep-linked by ?result=, and leaves that param alone', () => {
+      recreateOn({ result: '8706' });
+
+      expect(component.focusedResultCode()).toBe('8706');
+      expect(fixture.nativeElement.querySelector('tr.rc-row--focused')).toBeTruthy();
+      // `?result=` is neither a contract key nor a managed one: it is not stripped, and its presence
+      // must not suppress the no-param W3 + Lead default.
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(component.showW3()).toBe(true);
+      expect(component.showW1W2()).toBe(false);
+      expect(component.showLead()).toBe(true);
+      expect(component.showContributing()).toBe(false);
+    });
+
+    it('hydrates the search box from a deep link', () => {
+      recreateOn({ search: 'kenya' });
+
+      expect(component.searchQuery()).toBe('kenya');
+      expect((fixture.nativeElement.querySelector('input.brl_search_input') as HTMLInputElement).value).toBe('kenya');
+    });
+  });
+
+  /**
+   * `COV-R-13` BUT — the regression this file could not see before: `onSearch` writes every keystroke
+   * to the URL and the same component re-hydrates from it, while `parseBilateralQueryParams` trims
+   * `search`. Hydrating unconditionally ate the space of a two-word query (`foo ` → `foo` → next key
+   * `foob`), putting token search out of reach. These cases type through the real input and let the
+   * (simulated) navigation complete before asserting.
+   */
+  describe('COV-R-13 — the search box stays usable while it drives the URL', () => {
+    const searchInput = (): HTMLInputElement =>
+      fixture.nativeElement.querySelector('input.brl_search_input') as HTMLInputElement;
+
+    /**
+     * Types one character at a time onto the value the component owns. `[value]="searchQuery()"`
+     * makes the signal authoritative for the field, so the character a user types next lands on
+     * whatever the last hydration left there — and that is precisely the coupling under test.
+     * Assigning the whole query on every event would paper the defect over: a hydration that eats a
+     * character mid-word is invisible when the next "keystroke" restores the full string by itself.
+     */
+    const typeInto = (text: string) => {
+      const input = searchInput();
+      for (const char of text) {
+        input.value = component.searchQuery() + char;
+        input.dispatchEvent(new Event('input'));
+        fixture.detectChanges(); // the typed value reaches the `[value]` binding
+        tick(); // the navigation settles and `queryParamMap` re-emits
+        fixture.detectChanges(); // whatever the hydration decided is now in the DOM
+      }
+    };
+
+    it('keeps the trailing space of a half-typed two-word query through the URL round-trip', fakeAsync(() => {
+      typeInto('kenya');
+      expect(component.searchQuery()).toBe('kenya');
+      expect(queryParams$.value['search']).toBe('kenya');
+
+      typeInto(' ');
+      expect(component.searchQuery()).toBe('kenya ');
+      expect(searchInput().value).toBe('kenya ');
+
+      typeInto('risk');
+      expect(component.searchQuery()).toBe('kenya risk');
+      expect(searchInput().value).toBe('kenya risk');
+      expect(queryParams$.value['search']).toBe('kenya risk');
+    }));
+
+    it('still matches a row on both tokens of a two-word query', fakeAsync(() => {
+      typeInto('kenya risk');
+
+      // "Kenya County Climate Risk Profiles" — reachable only if the space survived every keystroke.
+      expect(component.filteredResults().map(r => r.result_code)).toEqual(['8706']);
+    }));
+
+    it('clears the box and the param when the clear button is used', fakeAsync(() => {
+      typeInto('kenya risk');
+      (fixture.nativeElement.querySelector('button.brl_search_clear') as HTMLButtonElement).click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.searchQuery()).toBe('');
+      expect(searchInput().value).toBe('');
+      expect('search' in queryParams$.value).toBe(false);
+    }));
+
+    it('lets an external URL change (back/forward) overwrite what was typed', fakeAsync(() => {
+      typeInto('kenya risk');
+
+      queryParams$.next({});
+      fixture.detectChanges();
+      expect(component.searchQuery()).toBe('');
+
+      queryParams$.next({ search: 'profiles' });
+      fixture.detectChanges();
+      expect(component.searchQuery()).toBe('profiles');
+    }));
   });
 
   // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: "Update result" existed only in the Results Center

@@ -13,7 +13,7 @@ export function filterCenterResults(
   rows: readonly BilateralCenterResult[],
   params: BilateralQueryParams,
 ): BilateralCenterResult[] {
-  const statusIds = params.status.length ? new Set(params.status.map(key => STATUS_KEY_TO_ID[key])) : null;
+  const statusIds = params.status.length ? new Set<number>(params.status.map(key => STATUS_KEY_TO_ID[key])) : null;
   const projectIds = params.project.length ? new Set(params.project) : null;
   const programCodes = params.program.length ? new Set(params.program) : null;
   const typeIds = params.type.length ? new Set(params.type) : null;

@@ -289,24 +289,35 @@ export function serializeBilateralQueryParams(
 }
 
 /**
- * `true` iff `parsed.present` contains a valid contract key OTHER than `phase`. `phase` is
- * excluded deliberately (`COV-DD-2`/`COV-DD-3` amendment): it is shell context, not a filter, so a
- * header tab click carrying only `?phase=` must still resolve to "no contract key" for
- * `applyResultsTabDefaults`'s purposes.
+ * `true` iff `parsed.present` contains a valid contract key OTHER than the ones in `ignoreKeys`
+ * (default `['phase']`). `phase` is excluded by default (`COV-DD-2`/`COV-DD-3` amendment): it is
+ * shell context, not a filter, so a header tab click carrying only `?phase=` must still resolve to
+ * "no contract key" for `applyResultsTabDefaults`'s purposes.
+ *
+ * `COV-T-7`: the Results tab passes `['phase', 'multi']` — `multi` is Reporting-only (it toggles
+ * that tab's Multi-Program quick filter) and must not, by itself, suppress the Results tab's own
+ * W3 + Lead default (e.g. a stray `?multi=1` left over from a Reporting deep link).
  */
-export function hasAnyContractParam(parsed: { present: readonly ContractKey[] }): boolean {
-  return parsed.present.some(key => key !== 'phase');
+export function hasAnyContractParam(
+  parsed: { present: readonly ContractKey[] },
+  ignoreKeys: readonly ContractKey[] = ['phase'],
+): boolean {
+  return parsed.present.some(key => !ignoreKeys.includes(key));
 }
 
 /**
  * `COV-DD-3` amendment: merges `RESULTS_TAB_DEFAULT_PARAMS` into `parsed` ONLY when
- * `hasAnyContractParam(parsed)` is `false` — i.e. `present` is empty or contains only `phase` —
- * otherwise returns `parsed` unchanged. A plain `?phase=36` tab-link click still gets the W3/Lead
- * default; `?phase=36&role=all&source=all` (the Overview's explicit-scope deep link) does not. The
- * Results tab (`COV-T-7`) filters through this; the Overview never does.
+ * `hasAnyContractParam(parsed, ignoreKeys)` is `false` — i.e. `present` is empty or contains only
+ * keys in `ignoreKeys` (default `['phase']`) — otherwise returns `parsed` unchanged. A plain
+ * `?phase=36` tab-link click still gets the W3/Lead default; `?phase=36&role=all&source=all` (the
+ * Overview's explicit-scope deep link) does not. The Results tab (`COV-T-7`) filters through this
+ * (passing `ignoreKeys: ['phase', 'multi']`); the Overview never does.
  */
-export function applyResultsTabDefaults(parsed: ParsedBilateralQueryParams): ParsedBilateralQueryParams {
-  if (hasAnyContractParam(parsed)) return parsed;
+export function applyResultsTabDefaults(
+  parsed: ParsedBilateralQueryParams,
+  ignoreKeys: readonly ContractKey[] = ['phase'],
+): ParsedBilateralQueryParams {
+  if (hasAnyContractParam(parsed, ignoreKeys)) return parsed;
   return {
     params: { ...parsed.params, ...RESULTS_TAB_DEFAULT_PARAMS },
     stripped: parsed.stripped,

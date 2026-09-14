@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
+import { convertToParamMap, RouterModule } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { PrTooltipDirective } from '../../../../shared/directives/pr-tooltip.directive';
@@ -660,6 +660,45 @@ describe('MyDraftResultsComponent', () => {
 
       const sessionCards = fixture.debugElement.queryAll(By.css('.mdr-session-card'));
       expect(sessionCards.length).toBe(2);
+    });
+  });
+
+  // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15) — asserts the rendered chip and
+  // count, not `filter.selectedProjectId()` directly (this folder's own convention: rendered
+  // output over internal field, so the assertion also proves the template branch exists).
+  describe('COV-T-7: reads `project` from the shared query-param contract on init (COV-R-15)', () => {
+    const draftOtherProject = {
+      ...draftStub,
+      id: 2,
+      job: { ...draftStub.job, project_id: 55 },
+    } as unknown as BilateralAiDraft;
+
+    it('pre-selects the project filter from `?project=`, reflected in the rendered chip and the "Showing N of M" count', () => {
+      bilateralAiService.draftList.set([draftStub, draftOtherProject]);
+      bilateralAiService.isDraftListLoaded.set(true);
+
+      // `ngOnInit` already ran once in the outer `beforeEach` against the default (query-param-less)
+      // `ActivatedRoute` from `RouterModule.forRoot([])`; re-point it at a `?project=` URL and
+      // re-run init, the same way the rest of this file re-applies state after the initial render.
+      (component as any).activatedRoute = { snapshot: { queryParamMap: convertToParamMap({ project: '7' }) } };
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      const chip = fixture.nativeElement.querySelector('.mdr-filter-chip');
+      expect(chip?.textContent).toContain('Project:');
+
+      const count = fixture.nativeElement.querySelector('[data-testid="mdr-filter-count"]');
+      expect(count?.textContent.trim()).toBe('Showing 1 of 2 drafts');
+    });
+
+    it('does not filter when `project` is absent from the URL', () => {
+      bilateralAiService.draftList.set([draftStub, draftOtherProject]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.mdr-filter-chip')).toBeNull();
+      const count = fixture.nativeElement.querySelector('[data-testid="mdr-filter-count"]');
+      expect(count).toBeNull();
     });
   });
 });

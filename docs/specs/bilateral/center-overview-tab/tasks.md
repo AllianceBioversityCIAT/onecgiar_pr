@@ -144,7 +144,7 @@
   - [ ] Sidebar and Home center-card links **not** modified (OQ-1).
   - [ ] Commit: `✨ feat(bilateral-page-header) [<ticket>]: Overview as first center tab; tab links carry the shared phase`.
 
-### `COV-T-7` — Results, Reporting and Draft Results tabs read (and Results writes) the contract
+### `COV-T-7` — Results, Reporting and Draft Results tabs read (and Results writes) the contract `[x]`
 
 - **Type:** `client`
 - **Description:** Results tab: derive `selectedPhase` from `ctx.selectedVersionId ?? Open`, parse all contract keys on init and on `queryParamMap` changes, re-express chip logic + search through `filterCenterResults`, write params on chip/phase/search change (`replaceUrl`, merge), render a **Status** chip group and a **Project** chip only when those params are present, keep `?result=` focus. Reporting tab: after projects load, apply `program` (first value → SP quick filter), `multi=1`, `project` (scroll + 2 s highlight ring, `motion-reduce` static, catalog **not** filtered). Draft Results: `project` → `filter.selectProject`. **Pre-step:** re-read `bilateral-projects-panel.*` and `my-draft-results.*` at HEAD (concurrent edits).
@@ -159,9 +159,9 @@
 - **Input that would make the check fail:** rewriting Results' default so W1/W2 rows show without params (existing spec fails); filtering the Reporting catalog to the `project` card (catalog-count assertion fails); reading `project` before projects load (highlight never applied → assertion fails).
 - **What this cannot prove / disqualifier:** URL writes are asserted through a Router spy — the real address bar, and the highlight's scroll position, are checked live in `COV-T-8`. If the concurrent spec's uncommitted edits are still present in these files, **stop and report** rather than merging by hand (shared-worktree rule).
 - **Definition of done:**
-  - [ ] Existing Results / panel / drafts specs green **untouched** + new cases green; `tsc`; lint.
-  - [ ] Column-picker preference still `localStorage`-only.
-  - [ ] Commit: `♻️ refactor(bilateral) [<ticket>]: center tabs read the shared query-param contract; Results tab URL-driven`.
+  - [x] Existing Results / panel / drafts specs green **untouched** + new cases green; `tsc`; lint.
+  - [x] Column-picker preference still `localStorage`-only.
+  - [x] Commit: `♻️ refactor(bilateral) [<ticket>]: center tabs read the shared query-param contract; Results tab URL-driven`.
 
 ### `COV-T-8` — CT layout gate, build, live reconciliation (HITL) and guide docs
 

@@ -215,7 +215,10 @@
         @if (viewMode() === 'grid') {
           <div class="bpp_grid">
             @for (project of filteredProjects(); track project.id) {
-              <article class="bpp_card">
+              <article
+                class="bpp_card"
+                [class.bpp_card--highlight]="highlightedProjectId() === project.id"
+                [attr.data-project-id]="project.id">
                 <div class="bpp_card_content">
                   <!-- Card Header -->
                   <div class="bpp_card_head">
@@ -288,7 +291,10 @@
               </thead>
               <tbody>
                 @for (project of filteredProjects(); track project.id) {
-                  <tr class="bpp_table_row">
+                  <tr
+                    class="bpp_table_row"
+                    [class.bpp_card--highlight]="highlightedProjectId() === project.id"
+                    [attr.data-project-id]="project.id">
                     <td class="bpp_td_code">
                       <span class="bpp_code_pill">{{ project.shortName }}</span>
                     </td>

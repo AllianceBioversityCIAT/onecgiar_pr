@@ -500,4 +500,18 @@ describe('applyResultsTabDefaults / hasAnyContractParam', () => {
     expect(hasAnyContractParam(parseBilateralQueryParams(convertToParamMap({ multi: '1' })))).toBe(true);
     expect(hasAnyContractParam(parseBilateralQueryParams(convertToParamMap({ role: 'all' })))).toBe(true);
   });
+
+  // COV-T-7: the Results tab passes `['phase', 'multi']` so a stray `?multi=1` left over from a
+  // Reporting deep link does not, by itself, suppress the Results tab's own W3 + Lead default.
+  it('an optional `ignoreKeys` list lets a caller exclude additional keys (e.g. "multi") from both functions', () => {
+    const parsed = parseBilateralQueryParams(convertToParamMap({ phase: '36', multi: '1' }));
+    expect(hasAnyContractParam(parsed)).toBe(true); // default ignoreKeys = ['phase'] only
+    expect(hasAnyContractParam(parsed, ['phase', 'multi'])).toBe(false);
+
+    const { params } = applyResultsTabDefaults(parsed, ['phase', 'multi']);
+    expect(params.role).toBe(RESULTS_TAB_DEFAULT_PARAMS.role);
+    expect(params.source).toBe(RESULTS_TAB_DEFAULT_PARAMS.source);
+    expect(params.phase).toBe(36);
+    expect(params.multi).toBe(true);
+  });
 });

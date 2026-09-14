@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { BilateralProjectsPanelComponent } from './bilateral-projects-panel.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
@@ -14,6 +15,7 @@ describe('BilateralProjectsPanelComponent', () => {
   let bilateralApiService: jest.Mocked<BilateralApiService>;
   let ctx: BilateralContextService;
   let manualCreateFlow: BilateralManualCreateFlowService;
+  let activatedRouteStub: { snapshot: { queryParamMap: ParamMap } };
 
   const mockProjects: BilateralProject[] = [
     {
@@ -57,12 +59,15 @@ describe('BilateralProjectsPanelComponent', () => {
       GET_bilateralProjects: jest.fn().mockReturnValue(of({ response: mockProjects }))
     };
 
+    activatedRouteStub = { snapshot: { queryParamMap: convertToParamMap({}) } };
+
     await TestBed.configureTestingModule({
       imports: [BilateralProjectsPanelComponent],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: BilateralApiService, useValue: mockApiService }
+        { provide: BilateralApiService, useValue: mockApiService },
+        { provide: ActivatedRoute, useValue: activatedRouteStub }
       ]
     }).compileComponents();
 
@@ -294,6 +299,103 @@ describe('BilateralProjectsPanelComponent', () => {
       const skeletons = fixture.nativeElement.querySelectorAll('.pr-skeleton');
       expect(skeletons.length).toBe(9); // 5 KPI skeleton cards + 4 catalog grid cards
       expect(fixture.nativeElement.querySelector('.pi-spinner')).toBeNull();
+    });
+  });
+
+  // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15, COV-AC-13, COV-DD-9)
+  describe('COV-T-7: reads program / multi / project from the shared query-param contract', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('pre-selects the SP quick filter from `?program=` (matched by programCode), catalog count unchanged', () => {
+      activatedRouteStub.snapshot.queryParamMap = convertToParamMap({ program: 'SP04' });
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      expect(component.selectedProgramFilter()).toBe('SP04');
+      expect(component.filteredProjects().length).toBe(1);
+      expect(component.filteredProjects()[0].shortName).toBe('B-A1532');
+      // The catalog itself is not narrowed to one card by the deep link mechanism — the SP filter
+      // is the SAME quick filter a manual click would apply, so the full catalog is still there,
+      // just filtered by that one dimension (unlike `project`, which never filters at all).
+      expect(component.projects().length).toBe(3);
+    });
+
+    it('turns on the Multi-Program quick filter from `?multi=1`', () => {
+      activatedRouteStub.snapshot.queryParamMap = convertToParamMap({ multi: '1' });
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      expect(component.selectedMultiProgramOnly()).toBe(true);
+      expect(component.filteredProjects().length).toBe(1);
+      expect(component.filteredProjects()[0].shortName).toBe('B-A1368');
+    });
+
+    it('highlights and scrolls to exactly one card from `?project=`, without filtering the catalog', () => {
+      activatedRouteStub.snapshot.queryParamMap = convertToParamMap({ project: '102' });
+      const scrollIntoView = jest.fn();
+      Element.prototype.scrollIntoView = scrollIntoView;
+
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+      jest.advanceTimersByTime(0);
+      fixture.detectChanges();
+
+      // catalog count unchanged — highlight, not filter
+      expect(component.filteredProjects().length).toBe(3);
+      expect(component.highlightedProjectId()).toBe(102);
+
+      const highlighted = fixture.nativeElement.querySelectorAll('.bpp_card--highlight');
+      expect(highlighted.length).toBe(1);
+      expect(highlighted[0].getAttribute('data-project-id')).toBe('102');
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
+    });
+
+    it('clears the highlight after the transient window elapses', () => {
+      activatedRouteStub.snapshot.queryParamMap = convertToParamMap({ project: '102' });
+      Element.prototype.scrollIntoView = jest.fn();
+
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+      jest.advanceTimersByTime(0);
+
+      expect(component.highlightedProjectId()).toBe(102);
+
+      jest.advanceTimersByTime(2000);
+      expect(component.highlightedProjectId()).toBeNull();
+    });
+
+    it('does nothing when `?project=` does not match a loaded project', () => {
+      activatedRouteStub.snapshot.queryParamMap = convertToParamMap({ project: '999' });
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      expect(component.highlightedProjectId()).toBeNull();
+    });
+
+    /**
+     * `COV-R-15`/hard rule 6 — the highlight is applied as one state class (`.bpp_card--highlight`)
+     * regardless of `prefers-reduced-motion`; the component SCSS's own
+     * `@media (prefers-reduced-motion: reduce) { transition: none }` rule (not evaluated by jsdom)
+     * is what removes the animated fade, so the reduced-motion path renders the SAME static ring —
+     * this asserts the component applies that one class consistently, which is what the CSS rule
+     * depends on.
+     */
+    it('applies the highlight as a state class independent of `prefers-reduced-motion` (static ring path)', () => {
+      activatedRouteStub.snapshot.queryParamMap = convertToParamMap({ project: '101' });
+      Element.prototype.scrollIntoView = jest.fn();
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+      jest.advanceTimersByTime(0);
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('[data-project-id="101"]');
+      expect(card.classList.contains('bpp_card--highlight')).toBe(true);
     });
   });
 });
