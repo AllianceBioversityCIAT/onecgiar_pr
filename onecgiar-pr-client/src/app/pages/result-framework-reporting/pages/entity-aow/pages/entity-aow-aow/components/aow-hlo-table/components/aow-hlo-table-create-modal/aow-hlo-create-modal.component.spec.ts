@@ -842,7 +842,7 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
 
       const centersEl = fixture.debugElement.query(By.css('[data-testid="toc-other-centers"]'));
       expect(centersEl).toBeTruthy();
-      const centersLabelEl = centersEl.query(By.css('.pr_label'));
+      const centersLabelEl = centersEl.query(By.css('.fch_title, .pr_label'));
       const centersLabelText = centersLabelEl.nativeElement.textContent.trim();
       expect(centersLabelText).toContain('Contributing CGIAR Centers');
       expect(centersLabelText).not.toContain('Other(s)');
@@ -850,7 +850,7 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       // No sibling header outside the testid'd element duplicates that same label text
       // (app-pr-multi-select always nests its own internal app-pr-field-header — RB-S1/§10 —
       // so the correct check is "no OTHER .pr_label with this text", not "no app-pr-field-header at all").
-      const allLabelEls: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.pr_label'));
+      const allLabelEls: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.fch_title, .pr_label'));
       const duplicateOutsideTestid = allLabelEls.filter(
         el => el.textContent?.trim().startsWith('Contributing CGIAR Centers') && !centersEl.nativeElement.contains(el)
       );
@@ -888,12 +888,12 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
 
       const centersEl = fixture.debugElement.query(By.css('[data-testid="toc-other-centers"]'));
       expect(centersEl).toBeTruthy();
-      const centersLabelEl = centersEl.query(By.css('.pr_label'));
+      const centersLabelEl = centersEl.query(By.css('.fch_title, .pr_label'));
       expect(centersLabelEl.nativeElement.textContent.trim()).toContain('Other(s) Contributing CGIAR Centers');
 
       const scienceHeaderEl = fixture.debugElement.query(By.css('[data-testid="toc-other-science-header"]'));
       expect(scienceHeaderEl).toBeTruthy();
-      const scienceLabelEl = scienceHeaderEl.query(By.css('.pr_label'));
+      const scienceLabelEl = scienceHeaderEl.query(By.css('.fch_title, .pr_label'));
       expect(scienceLabelEl.nativeElement.textContent.trim()).toContain('Other(s) Science Program(s)/Accelerator(s)');
     });
   });

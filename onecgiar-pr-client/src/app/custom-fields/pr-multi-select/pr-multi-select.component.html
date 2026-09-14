@@ -1,11 +1,16 @@
-<app-pr-field-header
+<!-- Migrado a `app-field-card` (14-sep-2026). `hasValue` = hay al menos una opción elegida, que es
+     lo que este control considera "lleno"; no hay clase `complete` propia que copiar porque el
+     multi-select no emite `.pr-field` (por eso los consumidores que deben contar para el bottom bar
+     usan `appFeedbackValidation` — `src/CLAUDE.md` §21.5). -->
+<app-field-card
   [label]="label()"
   [description]="description()"
   [required]="required()"
+  [useColon]="true"
+  [hasValue]="hasSelection"
   [labelDescInlineStyles]="labelDescInlineStyles()"
-  [showDescriptionLabel]="showDescriptionLabel()"
+  [showDescription]="showDescriptionLabel()"
   [tooltip]="tooltip()">
-</app-pr-field-header>
 <div class="custom_select">
   <a class="field" tabindex="0" [id]="optionValue()" *ngIf="(!hideSelect() && !(readOnly() || this.rolesSE.readOnly)) || isStatic()">
     <div class="text select_placeholder">{{ placeholder() }}</div>
@@ -79,3 +84,4 @@
     description="If you don't find the partner you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
   </app-alert-status>
 </div>
+</app-field-card>

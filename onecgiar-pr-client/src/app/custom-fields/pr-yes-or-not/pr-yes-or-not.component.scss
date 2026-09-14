@@ -1,16 +1,12 @@
 .field_container {
   gap: 10px;
 
-  .title {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
+  // `.title` desapareció al migrar a `app-field-card`: era el contenedor que ponía el label del
+  // header viejo a la izquierda y los botones Yes/No a la derecha. Ahora el label lo pinta la
+  // cabecera de la tarjeta y aquí solo quedan los botones.
   .choices {
     display: flex;
     align-items: center;
-    margin-top: 20px;
     gap: 10px;
 
     .yes {

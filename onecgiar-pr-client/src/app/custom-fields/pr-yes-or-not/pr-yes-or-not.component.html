@@ -1,8 +1,22 @@
+<!-- Migrado de `app-pr-field-header` a `app-field-card` (14-sep-2026), como el resto de los campos
+     reutilizables: cabecera tintada por estado + tag REQUIRED, y la guía dentro de la tarjeta.
+     Antes este componente pintaba DOS headers — uno para el label (arriba, junto a los botones) y
+     otro solo para la descripción (abajo) —, que es como `app-pr-field-header` obligaba a separar
+     un label de su propia explicación. La tarjeta ya coloca las dos cosas, así que el segundo
+     header desaparece sin que se pierda ningún texto.
+     🛑 `hasValue` es `value != null` a propósito: este control es un booleano y `false` es una
+     RESPUESTA ("No"), no un vacío. Con `!!value` un "No" respondido se pintaría como pendiente. -->
 @if (this.dynamicData()) {
-  <div class="field_container">
-    <div class="title">
-      <app-pr-field-header [label]="this.label" [tooltip]="this.tooltip" [required]="this.required" [useColon]="false" [labelDescInlineStyles]="this.labelDescInlineStyles">
-      </app-pr-field-header>
+  <app-field-card
+    [label]="this.label"
+    [description]="this.description"
+    [tooltip]="this.tooltip"
+    [required]="this.required"
+    [hasValue]="this.value !== null && this.value !== undefined"
+    [showDescription]="!hideDescription"
+    [descInlineStyles]="descInlineStyles"
+    [labelDescInlineStyles]="this.labelDescInlineStyles">
+    <div class="field_container">
       <div class="choices" *ngIf="!hideOptions">
         <div
           class="choice"
@@ -20,9 +34,5 @@
         </div>
       </div>
     </div>
-    <div class="description" *ngIf="!hideDescription">
-      <app-pr-field-header [description]="this.description" [showDescriptionLabel]="showDescriptionLabel" [descInlineStyles]="descInlineStyles">
-      </app-pr-field-header>
-    </div>
-  </div>
+  </app-field-card>
 }
