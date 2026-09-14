@@ -850,7 +850,12 @@ WHERE
         paginatedClause = ` LIMIT ${limit}${offsetClause}`;
       }
 
-      const queryData = `${baseQuery} ${where.join(' ')}${paginatedClause};`;
+      // Deterministic ordering so a LIMIT smaller than the all-phase historical row
+      // count can never silently drop open-phase rows (v.status is a boolean column —
+      // true/1 = open, false/0 = closed — see version.entity.ts / $_closeAllPhases).
+      // r.id DESC is a stable tiebreaker only, not a functional requirement.
+      const orderByClause = ' ORDER BY v.status DESC, r.id DESC';
+      const queryData = `${baseQuery} ${where.join(' ')}${orderByClause}${paginatedClause};`;
       const results = await this.query(queryData, params);
 
       if (limit !== undefined) {
