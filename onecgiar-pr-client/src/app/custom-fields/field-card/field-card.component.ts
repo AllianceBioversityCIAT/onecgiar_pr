@@ -148,7 +148,11 @@ export class FieldCardComponent implements OnInit, OnChanges {
     const wasComplete = change.previousValue === true;
     const isComplete = change.currentValue === true;
     if (!wasComplete && isComplete && this.edited() && !this.hasError) {
-      this.flightSE.flyFrom(this.hostRef.nativeElement?.querySelector?.('.field_card_header'));
+      // Sale del NOMBRE del campo, no de la cabecera entera: la cabecera es una franja de ancho
+      // completo y su centro cae en medio de la nada, lejos del texto que el usuario acaba de
+      // resolver. El punto tiene que salir de donde está mirando.
+      const host = this.hostRef.nativeElement;
+      this.flightSE.flyFrom(host?.querySelector?.('.fch_title') ?? host?.querySelector?.('.field_card_header'));
     }
   }
 

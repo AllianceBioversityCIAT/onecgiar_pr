@@ -23,8 +23,10 @@ export class FieldCompletionFlightService {
 
   private target: HTMLElement | null = null;
 
-  private static readonly DURATION_MS = 620;
-  private static readonly SIZE_PX = 12;
+  // Grande y sin prisa (Yeck, 14-sep-2026): el recorrido puede ser de media pantalla, y a 12 px en
+  // 620 ms el ojo lo perdía — que es lo mismo que no animar nada.
+  private static readonly DURATION_MS = 1100;
+  private static readonly SIZE_PX = 18;
 
   registerTarget(el: HTMLElement): void {
     this.target = el;
@@ -74,7 +76,7 @@ export class FieldCompletionFlightService {
     const dy = endY - startY;
     // El punto medio se levanta: una recta entre dos puntos lejanos se lee como un parpadeo, y el
     // arco es lo que deja ver el recorrido.
-    const lift = Math.min(120, Math.abs(dx) * 0.25 + 40);
+    const lift = Math.min(170, Math.abs(dx) * 0.3 + 70);
 
     const animation = dot.animate(
       [

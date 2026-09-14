@@ -53,24 +53,29 @@
              referencia y no es un simple contador. -->
         <span
           #progressTarget
-          class="inline-flex items-center gap-[7px] text-[13px] font-semibold text-[var(--pr-text-secondary)] transition-transform duration-200"
-          [class.scale-125]="ringPulsing()"
+          class="inline-flex items-center gap-[8px] rounded-full px-[10px] py-[4px] text-[13px] font-semibold transition-transform duration-200"
+          [ngClass]="
+            isComplete()
+              ? 'bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]'
+              : 'bg-[var(--pr-color-orange-50)] text-[var(--pr-color-orange-700)]'
+          "
+          [class.scale-110]="ringPulsing()"
           data-testid="section-bottom-bar-ring">
-          <svg viewBox="0 0 20 20" width="20" height="20" class="block -rotate-90" aria-hidden="true">
-            <circle cx="10" cy="10" r="8" fill="none" stroke="var(--pr-border-divider)" stroke-width="3" />
+          <svg viewBox="0 0 22 22" width="22" height="22" class="block -rotate-90" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="3.5" />
             <circle
-              cx="10"
-              cy="10"
+              cx="11"
+              cy="11"
               r="8"
               fill="none"
-              stroke-width="3"
+              stroke="currentColor"
+              stroke-width="3.5"
               stroke-linecap="round"
               class="transition-[stroke-dashoffset] duration-500"
-              [attr.stroke]="isComplete() ? 'var(--pr-status-approved-fg)' : 'var(--pr-color-orange-500)'"
               [attr.stroke-dasharray]="ringCircumference"
               [attr.stroke-dashoffset]="ringOffset()" />
           </svg>
-          <span class="font-mono tabular-nums">{{ mandatoryDone() }}/{{ mandatoryTotal() }}</span>
+          <span><span class="font-mono tabular-nums">{{ mandatoryDone() }}</span> of <span class="font-mono tabular-nums">{{ mandatoryTotal() }}</span> required</span>
         </span>
       }
       @if (isComplete()) {
