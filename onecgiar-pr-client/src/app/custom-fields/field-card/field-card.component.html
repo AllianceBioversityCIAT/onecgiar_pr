@@ -77,10 +77,13 @@
   @if (showGuidanceBlock) {
     <div class="field_card_desc" [style]="descInlineStyles">
       <div class="desc_text" [innerHTML]="description || tooltip"></div>
-      @if (pinned() && canPin) {
+      @if (pinned() && canPin && !description) {
         <!-- Soltar desde la propia guía: una vez anclada, volver a abrir la burbuja solo para
              quitarla es un rodeo. El de la burbuja sigue existiendo — este es el atajo del que ya
-             la tiene delante. -->
+             la tiene delante.
+             🛑 Solo cuando el bloque está ahí POR EL PIN. Con una `description` inline (las fases
+             anteriores a 2026) el texto se muestra siempre, y una × prometería quitar algo que va a
+             seguir ahí. -->
         <button type="button" class="fcd_unpin" (click)="togglePin()" aria-label="Unpin the guidance for this field" title="Unpin">
           <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
             <path d="M4 4l8 8M12 4l-8 8" />

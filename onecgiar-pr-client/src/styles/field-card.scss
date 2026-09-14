@@ -168,22 +168,26 @@
     }
   }
 
-  // ── Guidance: folded until the field is hovered or focused ───────────────
-  // It is still in the DOM (screen readers and Ctrl+F reach it); only its box collapses.
+  // ── Guidance ─────────────────────────────────────────────────────────────
+  // 🛑 SIEMPRE VISIBLE. Estuvo plegada (se abría al pasar el ratón) durante unas horas del
+  // 14-sep-2026 y fue un error con víctimas concretas: la guía de un campo llega por DOS caminos
+  // distintos —`tooltip` desde la fase 2026, y `description` inline en las fases anteriores— y
+  // plegarla dejó las fases viejas sin nada en pantalla: sin ⓘ (que solo se pinta cuando hay
+  // tooltip) y con el texto colapsado a cero. Un reportero de 2025 abría el formulario y la guía
+  // simplemente no existía. Verificado en el resultado 8553 / fase 34.
+  //
+  // El plegado se queda solo para lo que sí tiene su propio disparador: la guía del TOOLTIP, que
+  // el usuario ancla con el pin (`.fc-pinned`).
   .field_card_desc {
     position: relative;
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
     margin: 0;
-    padding: 0 12px;
+    padding: 10px 12px;
     border-radius: 0 0 8px 8px;
     background: var(--pr-surface-raised-soft);
-    border-bottom: 1px solid transparent;
+    border-bottom: 1px solid var(--pr-border-divider);
     font-size: 12.5px;
     line-height: 1.5;
     color: var(--pr-text-secondary);
-    transition: max-height 220ms ease, opacity 180ms ease, padding 220ms ease;
 
     .desc_text {
       :is(p, ul, ol) {
@@ -194,15 +198,6 @@
   }
 
   // Fijada: el bloque queda abierto pase lo que pase con el puntero.
-  &.fc-pinned .field_card_desc,
-  &:hover .field_card_desc,
-  &:focus-within .field_card_desc {
-    max-height: 320px;
-    opacity: 1;
-    padding: 10px 12px;
-    border-bottom-color: var(--pr-border-divider);
-  }
-
   // Botón de soltar, en la esquina del bloque fijado. Discreto: es una salida, no una acción del
   // formulario. Sube de contraste al acercarse y es alcanzable por teclado (no se oculta con
   // `display`, solo baja de color).
