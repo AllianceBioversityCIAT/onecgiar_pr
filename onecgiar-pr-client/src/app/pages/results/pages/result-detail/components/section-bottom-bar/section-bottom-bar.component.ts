@@ -11,7 +11,8 @@ import {
   computed,
   effect,
   inject,
-  signal
+  signal,
+  untracked
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -130,11 +131,33 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   readonly mandatoryTotal = computed(() => this.dataControlSE.mandatoryFieldsTotal());
   readonly mandatoryDone = computed(() => Math.max(0, this.mandatoryTotal() - this.missingFields().length));
   readonly showRing = computed(() => this.mandatoryTotal() > 0);
+
+  /**
+   * Lo que el aro MUESTRA, que no siempre es lo que el escaneo ya sabe.
+   *
+   * El número real sube en cuanto el campo queda completo — antes de que la bolita salga siquiera.
+   * Visto en pantalla, eso rompe la promesa de la animación: el contador ya había subido y la
+   * bolita llegaba a celebrar algo que el usuario leyó hace medio segundo. Aquí el número ESPERA a
+   * que la bolita aterrice.
+   *
+   * 🛑 Solo espera hacia arriba y solo si hay algo en el aire. Si el número BAJA (un campo que se
+   * vació) se aplica al instante — retrasar una mala noticia es mentir —, y si no salió ninguna
+   * bolita (reduced-motion, carga inicial, sin destino en pantalla) tampoco hay nada que esperar.
+   */
+  readonly displayedDone = signal(0);
+
+  private readonly syncDisplayed = effect(() => {
+    const real = this.mandatoryDone();
+    const flying = this.flightSE.inFlight();
+    untracked(() => {
+      if (real <= this.displayedDone() || flying === 0) this.displayedDone.set(real);
+    });
+  });
   /** Circunferencia del aro (r = 8). El arco se dibuja quitando longitud al trazo. */
   readonly ringCircumference = 2 * Math.PI * 8;
   readonly ringOffset = computed(() => {
     const total = this.mandatoryTotal();
-    const ratio = total ? Math.min(1, Math.max(0, this.mandatoryDone() / total)) : 0;
+    const ratio = total ? Math.min(1, Math.max(0, this.displayedDone() / total)) : 0;
     return this.ringCircumference * (1 - ratio);
   });
 
@@ -144,9 +167,13 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   private readonly landingPulse = effect(() => {
     // Leer `landed()` es lo que suscribe; el primer disparo (0) también entra y apaga el pulso solo.
     this.flightSE.landed();
-    if (this.pulseTimer) clearTimeout(this.pulseTimer);
-    this.ringPulsing.set(true);
-    this.pulseTimer = setTimeout(() => this.ringPulsing.set(false), 520);
+    untracked(() => {
+      // El número sube AQUÍ, con el golpe — no cuando el campo se completó.
+      this.displayedDone.set(this.mandatoryDone());
+      if (this.pulseTimer) clearTimeout(this.pulseTimer);
+      this.ringPulsing.set(true);
+      this.pulseTimer = setTimeout(() => this.ringPulsing.set(false), 520);
+    });
   });
 
   /**

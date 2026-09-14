@@ -75,7 +75,7 @@
               [attr.stroke-dasharray]="ringCircumference"
               [attr.stroke-dashoffset]="ringOffset()" />
           </svg>
-          <span><span class="font-mono tabular-nums">{{ mandatoryDone() }}</span> of <span class="font-mono tabular-nums">{{ mandatoryTotal() }}</span> required</span>
+          <span><span class="font-mono tabular-nums">{{ displayedDone() }}</span> of <span class="font-mono tabular-nums">{{ mandatoryTotal() }}</span> required</span>
         </span>
       }
       @if (isComplete()) {

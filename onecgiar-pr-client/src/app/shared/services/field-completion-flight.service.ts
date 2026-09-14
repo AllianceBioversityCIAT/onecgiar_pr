@@ -18,8 +18,10 @@ import { Injectable, signal } from '@angular/core';
  */
 @Injectable({ providedIn: 'root' })
 export class FieldCompletionFlightService {
-  /** Sube cada vez que una bolita ATERRIZA. El indicador lo lee para dar su pulso. */
+  /** Sube cada vez que una bolita ATERRIZA. El indicador lo lee para dar su pulso y para contar. */
   readonly landed = signal(0);
+  /** Cuántas bolitas hay en el aire. El contador lo mira para saber si debe esperar a una. */
+  readonly inFlight = signal(0);
 
   private target: HTMLElement | null = null;
 
@@ -54,6 +56,8 @@ export class FieldCompletionFlightService {
     // 🛑 `prefers-reduced-motion` no es un detalle de estilo: para parte de los usuarios una
     // partícula cruzando la pantalla es una molestia física. Sin movimiento, el contador sube igual.
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+      // Sin vuelo, el aterrizaje es inmediato: el contador no puede quedarse esperando a algo que
+      // nunca va a salir.
       this.landed.update(n => n + 1);
       return;
     }
@@ -107,11 +111,23 @@ export class FieldCompletionFlightService {
       { duration: FieldCompletionFlightService.DURATION_MS, fill: 'forwards' }
     );
 
-    const cleanup = () => dot.remove();
+    this.inFlight.update(n => n + 1);
+
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      dot.remove();
+      this.inFlight.update(n => Math.max(0, n - 1));
+    };
+
     animation.addEventListener('finish', () => {
-      cleanup();
+      settle();
       this.landed.update(n => n + 1);
     });
-    animation.addEventListener('cancel', cleanup);
+    // 🛑 `cancel` también libera el contador: una animación interrumpida (navegar, cerrar la
+    // sección) dejaría `inFlight` en 1 para siempre, y con él el número congelado esperando una
+    // bolita que ya no existe.
+    animation.addEventListener('cancel', settle);
   }
 }
