@@ -276,7 +276,11 @@ describe('GlobalSearchPaletteComponent', () => {
     it('offers All programs plus every programme in the scope select', () => {
       const options: HTMLOptionElement[] = Array.from(fixture.nativeElement.querySelectorAll('#pr-palette-scope option'));
       expect(options[0].textContent?.trim()).toBe('All programs');
-      expect(options.map((o) => o.textContent?.trim())).toEqual(['All programs', 'SP01', 'SP02']);
+      expect(options.map((o) => o.textContent?.trim())).toEqual([
+        'All programs',
+        'SP01 - Sustainable Farming',
+        'SP02 - Nutritious Diets'
+      ]);
     });
 
     it('marks the Esc hint decorative — the dialog already handles the key', () => {
