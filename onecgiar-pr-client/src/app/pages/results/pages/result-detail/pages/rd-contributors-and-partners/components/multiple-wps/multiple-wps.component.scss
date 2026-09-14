@@ -1,12 +1,15 @@
 .local_container {
-  margin-top: 30px;
-  margin-bottom: 30px;
+  // 14-sep-2026: eran 30px de margen y 50px de padding por lado, más 120px de margen inferior —
+  // el contenido del tab arrancaba a media pantalla del tab que lo abre y desperdiciaba un tercio
+  // del ancho útil. El bloque respira igual con la mitad.
+  margin-top: 18px;
+  margin-bottom: 18px;
   border-radius: 5px;
   width: 100%;
 
   .section_container {
-    padding: 50px 50px 50px 50px;
-    margin-bottom: 120px;
+    padding: 20px 24px 24px;
+    margin-bottom: 40px;
   }
 
   /*
@@ -21,6 +24,31 @@
    * Ahora: pastillas sobre el fondo de la página, el activo en blanco con borde y una barra violeta
    * debajo. El color se reserva para el estado (verde = completo) y para la barra del activo.
    */
+  // El panel del tab activo: fondo propio y borde que continúa la pastilla del tab. Da el contexto
+  // que Yeck pedía — que se vea que lo de dentro pertenece al tab y no a la sección entera.
+  // El panel del tab activo: fondo propio y borde que continúa la pastilla del tab. Es el contexto
+  // que faltaba — que se vea que lo de dentro pertenece a ESTE tab y no a la sección entera.
+  .multiple-wps-container {
+    padding: 18px;
+    border: 1px solid var(--pr-border);
+    border-top: 0;
+    border-radius: 0 0 10px 10px;
+    // Papel cuadriculado sobre un panel LIGERAMENTE HUNDIDO. Dos ajustes tras verlo (Yeck,
+    // 14-sep-2026): la retícula de 24px quedaba nerviosa —parecía un patrón de carga— y el fondo
+    // casi blanco no despegaba los campos, que también son blancos. Ahora la trama es de 44px y el
+    // panel lleva una tinta oscura translúcida: no es un color nuevo, es sombra, así que el color
+    // sigue reservado para el estado de los campos.
+    // En violeta de marca a baja opacidad, no en gris neutro: el gris leía a "deshabilitado" y el
+    // violeta es lo que ya identifica a la plataforma. Sigue siendo tinta, no un color de estado.
+    background-color: rgba(var(--pr-color-primary-rgb), 0.04);
+    background-image:
+      linear-gradient(to right, rgba(var(--pr-color-primary-rgb), 0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(var(--pr-color-primary-rgb), 0.07) 1px, transparent 1px);
+    background-size: 44px 44px;
+    // Hundido por dentro: es lo que hace que las tarjetas blancas floten por encima.
+    box-shadow: inset 0 1px 4px rgba(var(--pr-color-primary-rgb), 0.08);
+  }
+
   .tabs-container {
     display: flex;
     align-items: center;

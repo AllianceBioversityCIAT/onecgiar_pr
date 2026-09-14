@@ -18,6 +18,11 @@
 // tarjetas seguidas con la misma pregunta pesan más que las cinco respuestas que el usuario compara.
 .field_card {
   margin: 16px 0; // vertical separation from siblings
+  // Contenedor de consulta: la cabecera decide qué cabe mirando SU ancho, no el de la ventana.
+  // Un campo a media columna y otro a ancho completo comparten componente y viewport, así que sin
+  // esto la píldora de guardado se comía el título del estrecho — pasó en "Level:", que quedó en
+  // una "L" (Yeck, 14-sep-2026).
+  container-type: inline-size;
   // SIN marco gris (variante "sin tarjeta" de la propuesta 18, 14-sep-2026): la cabecera tintada
   // ya delimita el campo por sí sola, y el rectángulo gris alrededor sumaba una segunda caja
   // dentro de la caja blanca de la sección — dos bordes para separar una cosa de la nada.
@@ -78,6 +83,9 @@
 
     .fch_title {
       min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     // 🛑 The ONLY requiredness marker. The optional field deliberately carries NO counterpart:
@@ -345,6 +353,36 @@
     justify-self: start;
     padding: 0;
     background: transparent;
+  }
+}
+
+// ── Cabecera estrecha: la píldora de guardado se queda en el icono ─────────
+// Se mide el CAMPO, no la pantalla. Primero cae la palabra (el icono ya dice el estado y el
+// `title` lo deja disponible al pasar el ratón); si aún no cabe, cae también el tag REQUIRED,
+// que el asterisco del `sr-only` sigue anunciando a los lectores de pantalla.
+@container (max-width: 380px) {
+  .field_card .field_card_header .fch_save {
+    padding: 3px 5px;
+    gap: 0;
+
+    span:last-child {
+      display: none;
+    }
+  }
+}
+
+// 🛑 240px, no 330: con el umbral alto el tag se colapsaba en campos donde SOBRABA sitio — un
+// "Level:" de 325px de ancho tiene espacio de sobra para el título, el tag y el icono (≈170px en
+// total) y aun así perdía la palabra. El colapso es el último recurso, no la primera respuesta.
+@container (max-width: 240px) {
+  .field_card .field_card_header .fch_required {
+    padding: 3px 5px;
+    font-size: 0;
+    gap: 0;
+
+    &::before {
+      margin: 0;
+    }
   }
 }
 
