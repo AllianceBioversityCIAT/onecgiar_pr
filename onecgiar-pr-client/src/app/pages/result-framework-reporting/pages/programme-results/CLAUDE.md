@@ -1,6 +1,6 @@
 # programme-results
 
-**Verified:** 2026-09-11 · branch performance-refactor · row menu moved to a CDK Connected Overlay (it was clipped by the table's `overflow-x: auto` wrapper and showed only its first item); prior: 2026-09-05 · branch qa-development-2026 · fe1d7402e (spec `changes/my-work-board`, MWB-T-13 — Category / Funding source / Center became MULTI-select on the shared `ProgrammeResultsFilterService`: `selectedCategories/Origins/Centers: string[]`, one chip per value, `parseListParam`/`joinListParam` for the comma-separated params, and the brand checkbox accent widened from `.pgr-filter--section` to `.pgr-filter`); prior: 1c438f120 (adds the viewport-lock layout contract below — unconditional host class, `#workArea` scroller, band `frameLocked`/`scrollHost`; fixes the stale `canReport` value; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: 6a9a45b5e (spec `changes/results-aow-column-filter`, RAC-T-1..T-5 — Area of Work column, live Section filter, `results-scope` join; prior: 2026-08-28 · branch performance-refactor · 11ba9ab1c, P2-3312)
+**Verified:** 2026-09-14 · branch qa-development-2026-ss · spec `bugfix/phase-filter-missing-phases-prod` — the URL → filters effect now defers the auto-derived default-phase commit while `data.loading()` is `true`; explicit `?phase=` is unaffected; prior: 2026-09-11 · branch performance-refactor · row menu moved to a CDK Connected Overlay (it was clipped by the table's `overflow-x: auto` wrapper and showed only its first item); prior: 2026-09-05 · branch qa-development-2026 · fe1d7402e (spec `changes/my-work-board`, MWB-T-13 — Category / Funding source / Center became MULTI-select on the shared `ProgrammeResultsFilterService`: `selectedCategories/Origins/Centers: string[]`, one chip per value, `parseListParam`/`joinListParam` for the comma-separated params, and the brand checkbox accent widened from `.pgr-filter--section` to `.pgr-filter`); prior: 1c438f120 (adds the viewport-lock layout contract below — unconditional host class, `#workArea` scroller, band `frameLocked`/`scrollHost`; fixes the stale `canReport` value; spec `changes/sp-shell-app-viewport` SAV-T-6); prior: 6a9a45b5e (spec `changes/results-aow-column-filter`, RAC-T-1..T-5 — Area of Work column, live Section filter, `results-scope` join; prior: 2026-08-28 · branch performance-refactor · 11ba9ab1c, P2-3312)
 
 **What this owns:** the **Results** tab of the programme shell (`entity-details/:entityId/results`) — one flat, searchable table of every result that programme reported, plus its filter row, clickable status counters, Columns picker and CSV export.
 
@@ -113,6 +113,10 @@
 
 ## Gotchas
 
+- ⚠️ **The URL → filters effect defers the auto-derived default phase while `data.loading()` is
+  `true`** (spec `bugfix/phase-filter-missing-phases-prod`, D-1): `loading()` is read in the effect's
+  TRACKED scope, so the commit still fires on the true→false transition even if `defaultPhase()`
+  recomputes to the same string; the explicit `?phase=` branch stays unguarded and immediate.
 - ⚠️ **Three controls (down from four) still ship visible-but-disabled with a `Coming soon` tag** —
   real design controls with no honest data behind them. One `#comingSoon` template (`...component.html:10`);
   do not "finish" one without its ticket. The *Section* filter row that used to be in this table is

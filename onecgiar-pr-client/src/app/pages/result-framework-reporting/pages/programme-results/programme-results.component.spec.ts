@@ -271,11 +271,16 @@ describe('ProgrammeResultsComponent', () => {
     // `GET_ClarisaGlobalUnits` answers with, and an escape hatch to force it to fail (the
     // request is fail-soft — a failure must never touch the table or the scope join).
     units: Array<{ code: string; name: string }> = [],
-    unitsOverride?: jest.Mock
+    unitsOverride?: jest.Mock,
+    // @akili-spec bugfix/phase-filter-missing-phases-prod (REQ-1/REQ-2) — escape hatch to make
+    // the row-load response resolve on a LATER tick (a `Subject`) instead of synchronously via
+    // `of(...)`, so a test can reproduce the real async-load race and assert the state BEFORE
+    // and AFTER the response settles.
+    resultsOverride?: jest.Mock
   ): void {
     localStorage.clear();
 
-    getAllResults = jest.fn(() => of({ response: { items, meta: { total: String(items.length) } } }));
+    getAllResults = resultsOverride ?? jest.fn(() => of({ response: { items, meta: { total: String(items.length) } } }));
     getResultsScope = scopeOverride ?? jest.fn(() => of({ response: { programId: 'SP01', versionId: 11, buckets: scopeBuckets } }));
     getClarisaGlobalUnits = unitsOverride ?? jest.fn(() => of({ response: { units } }));
 
@@ -1091,6 +1096,93 @@ describe('ProgrammeResultsComponent', () => {
     });
     expect(extras.replaceUrl).toBe(true);
     expect(extras.queryParamsHandling).toBe('merge');
+  });
+
+  // @akili-spec bugfix/phase-filter-missing-phases-prod (TASK-1) — the auto-derived default phase
+  // must not lock onto a data-free phase while the row load is still in flight (REQ-1, REQ-2).
+  // Unlike every test above, these use a deferred `Subject` for `GET_AllResultsWithUseRole` so the
+  // response resolves AFTER the first `fixture.detectChanges()` — the exact async-race timing from
+  // `proposal.md` that a synchronous `of(...)` mock can never exercise.
+  describe('Deferred default phase (bugfix/phase-filter-missing-phases-prod)', () => {
+    /** Real data lives ONLY in "Reporting 2025 - P25"; the global active phase is "Reporting 2026" (set in `setup()`'s `DataControlService` mock) — mirrors SP08. */
+    const DEFERRED_REAL_PHASE_ITEMS: Record<string, unknown>[] = [
+      {
+        id: 21,
+        result_code: '9001',
+        title: 'Bean trial completed',
+        result_type: 'Innovation development',
+        status_id: '1',
+        status_name: 'Editing',
+        create_first_name: 'Rosa',
+        create_last_name: 'Parks',
+        created_date: '2025-05-01T00:00:00.000Z',
+        source_name: 'W1/W2',
+        lead_center: 'CIAT',
+        version_id: '9',
+        phase_name: 'Reporting 2025 - P25',
+        phase_year: 2025,
+        submitter: 'SP01'
+      }
+    ];
+
+    function setupDeferred(
+      initialQueryParams: Record<string, string> = {},
+      items: Record<string, unknown>[] = DEFERRED_REAL_PHASE_ITEMS
+    ): { resolve: () => void } {
+      const resultsSubject = new Subject<{ response: { items: Record<string, unknown>[]; meta: { total: string } } }>();
+      const resultsOverride = jest.fn(() => resultsSubject);
+      setup(items, initialQueryParams, [], undefined, [], undefined, resultsOverride);
+      return {
+        resolve: () => {
+          resultsSubject.next({ response: { items, meta: { total: String(items.length) } } });
+          resultsSubject.complete();
+        }
+      };
+    }
+
+    it('does not lock the phantom global-fallback phase in while the load is pending, and settles on the real defaultPhase once it resolves (REQ-1-S1, REQ-2-S1)', () => {
+      const { resolve } = setupDeferred();
+
+      // Load is still in flight: the auto-derived default must NOT have been committed as the
+      // phantom global-fallback value ("Reporting 2026") — either it never navigated with it, or
+      // selectedPhase() is still at its untouched initial value (null).
+      expect(component.data.loading()).toBe(true);
+      expect(filterService().selectedPhase()).not.toBe('Reporting 2026');
+      expect(filterService().selectedPhase()).toBeNull();
+      expect(router.navigate).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ queryParams: expect.objectContaining({ phase: 'Reporting 2026' }) }));
+
+      // Flush the deferred response on a LATER tick (never synchronously with detectChanges()).
+      resolve();
+      fixture.detectChanges();
+
+      expect(component.data.loading()).toBe(false);
+      expect(component.defaultPhase()).toBe('Reporting 2025 - P25');
+      expect(filterService().selectedPhase()).toBe(component.defaultPhase());
+      expect(filterService().selectedPhase()).toBe('Reporting 2025 - P25');
+    });
+
+    it('applies an explicit ?phase= param immediately, before the deferred load ever resolves (REQ-1-S2)', () => {
+      setupDeferred({ phase: 'Reporting 2025 - P25' });
+
+      expect(component.data.loading()).toBe(true);
+      expect(filterService().selectedPhase()).toBe('Reporting 2025 - P25');
+    });
+
+    it('leaves isNothingYet true and unchanged for a genuinely-empty programme, distinct from the filtered-empty case (REQ-1-S3)', () => {
+      const { resolve } = setupDeferred({}, []);
+
+      // While pending, isNothingYet must be false (loading() gates it) — not yet the resting state.
+      expect(component.data.loading()).toBe(true);
+      expect(component.isNothingYet()).toBe(false);
+
+      resolve();
+      fixture.detectChanges();
+
+      expect(component.data.loading()).toBe(false);
+      expect(component.data.rows().length).toBe(0);
+      expect(component.isNothingYet()).toBe(true);
+      expect(component.isFilteredEmpty()).toBe(false);
+    });
   });
 
   it('Filter popover row 3 names Created by and is keyboard-labelled', () => {
