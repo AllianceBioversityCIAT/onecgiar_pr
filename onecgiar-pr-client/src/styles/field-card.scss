@@ -127,47 +127,6 @@
       flex-shrink: 0;
     }
 
-    // ── Fijar la guía. Discreto por defecto (es una acción de lectura, no del formulario) y
-    // teñido con el estado cuando está activo, para que se vea que el bloque de abajo está ahí
-    // porque alguien lo dejó ahí.
-    .fch_pin {
-      flex: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 7px 2px 5px;
-      border: 1px solid transparent;
-      border-radius: 999px;
-      background: transparent;
-      color: var(--pr-text-muted);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      line-height: 1.4;
-      cursor: pointer;
-      // Aparece al acercarse al campo, no antes: es una acción de lectura y repetirla visible en
-      // cada fila de una lista de cinco pesa más que el botón que ofrece. Sigue alcanzable por
-      // teclado — el `:focus-within` de la tarjeta lo revela — y se queda visible si está fijado.
-      opacity: 0;
-      transition: opacity 140ms ease;
-
-      &:hover {
-        background: rgb(255 255 255 / 0.7);
-        color: var(--fc-ink);
-      }
-
-      &--on {
-        background: var(--pr-color-white);
-        border-color: var(--fc-edge);
-        color: var(--fc-ink);
-      }
-
-      svg {
-        display: block;
-      }
-    }
-
     // ── The save pill. Fed by SaveButtonService.savedTick — a save that FAILED never clears the
     // "unsaved" mark, which is the whole reason this is not wired to `isSaving`.
     .fch_save {
@@ -212,6 +171,7 @@
   // ── Guidance: folded until the field is hovered or focused ───────────────
   // It is still in the DOM (screen readers and Ctrl+F reach it); only its box collapses.
   .field_card_desc {
+    position: relative;
     max-height: 0;
     opacity: 0;
     overflow: hidden;
@@ -233,12 +193,6 @@
     }
   }
 
-  &:hover .fch_pin,
-  &:focus-within .fch_pin,
-  &.fc-pinned .fch_pin {
-    opacity: 1;
-  }
-
   // Fijada: el bloque queda abierto pase lo que pase con el puntero.
   &.fc-pinned .field_card_desc,
   &:hover .field_card_desc,
@@ -247,6 +201,41 @@
     opacity: 1;
     padding: 10px 12px;
     border-bottom-color: var(--pr-border-divider);
+  }
+
+  // Botón de soltar, en la esquina del bloque fijado. Discreto: es una salida, no una acción del
+  // formulario. Sube de contraste al acercarse y es alcanzable por teclado (no se oculta con
+  // `display`, solo baja de color).
+  &.fc-pinned .field_card_desc {
+    padding-right: 34px;
+  }
+
+  .fcd_unpin {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--pr-text-subtle);
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--pr-color-white);
+      color: var(--fc-ink);
+    }
+
+    svg {
+      display: block;
+    }
   }
 
   // El control cuelga de la banda, alineado con el borde de la sección (no con el de una tarjeta).
@@ -294,10 +283,6 @@
     font-size: 13px;
     font-weight: 500;
     color: var(--pr-text);
-  }
-
-  .field_card_header .fch_pin span {
-    display: none;
   }
 
   .field_card_desc {

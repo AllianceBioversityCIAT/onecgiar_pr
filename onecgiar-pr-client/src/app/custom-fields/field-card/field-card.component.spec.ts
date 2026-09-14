@@ -229,18 +229,31 @@ describe('FieldCardComponent', () => {
     beforeEach(() => localStorage.removeItem(PIN_KEY));
     afterEach(() => localStorage.removeItem(PIN_KEY));
 
-    const pinBtn = () => q('.fch_pin')?.nativeElement as HTMLButtonElement | undefined;
     const guidance = () => q('.field_card_desc');
+    /**
+     * El botón vive DENTRO de la burbuja del tooltip, que monta la directiva en `document.body`.
+     * Lo que le corresponde a ESTE componente es el cableado: que ofrezca la acción cuando hay guía
+     * que fijar, y que responda al evento. Lo que pinta la burbuja se prueba en la directiva.
+     */
+    const tooltipDir = () => {
+      const el = fixture.debugElement.query(By.directive(PrTooltipDirective));
+      return el ? (el.injector.get(PrTooltipDirective) as PrTooltipDirective) : null;
+    };
+    const pinAction = () => tooltipDir()?.prTooltipAction ?? null;
+    const clickPin = () => {
+      tooltipDir()!.prTooltipActionClick.emit();
+      fixture.detectChanges();
+    };
 
     it('offers the pin only when the field actually has guidance to pin', () => {
       host.description.set('');
       host.tooltip.set('');
       fixture.detectChanges();
-      expect(pinBtn()).toBeUndefined();
+      expect(tooltipDir()).toBeNull();
 
       host.tooltip.set('Write a short, self-explanatory name.');
       fixture.detectChanges();
-      expect(pinBtn()).toBeTruthy();
+      expect(pinAction()).toEqual({ label: 'Pin guidance', pressed: false, closeAfterClick: true });
     });
 
     it('pins the tooltip text into the card, and remembers it in localStorage', () => {
@@ -249,21 +262,19 @@ describe('FieldCardComponent', () => {
       fixture.detectChanges();
       expect(guidance()).toBeNull();
 
-      pinBtn()!.click();
-      fixture.detectChanges();
+      clickPin();
 
       expect(guidance().nativeElement.textContent).toContain('Write a short, self-explanatory name.');
       expect(localStorage.getItem(PIN_KEY)).toBe('1');
-      expect(pinBtn()!.textContent.trim()).toBe('Pinned');
+      // La etiqueta que recibe la burbuja cambia con el estado, para que el botón diga cómo soltarla.
+      expect(pinAction()).toEqual({ label: 'Unpin guidance', pressed: true, closeAfterClick: true });
     });
 
     it('unpins back, and the stored value says so — not just the absence of a key', () => {
       host.tooltip.set('Guidance');
       fixture.detectChanges();
-      pinBtn()!.click();
-      fixture.detectChanges();
-      pinBtn()!.click();
-      fixture.detectChanges();
+      clickPin();
+      clickPin();
 
       expect(localStorage.getItem(PIN_KEY)).toBe('0');
       expect(q('.fc-pinned')).toBeNull();

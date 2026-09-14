@@ -28,33 +28,26 @@
       @if (tooltip) {
         <!-- P2-3201: pinnable. Field guidance moved out of the inline grey box carries links and
              several paragraphs, so it must survive the pointer leaving; Escape / outside click closes it. -->
+        <!-- Fijar/soltar la guía vive DENTRO de la burbuja (Yeck, 14-sep-2026): el pin es una acción
+             sobre lo que se está leyendo, y en la cabecera se leía como un tercer marcador del campo
+             compitiendo con REQUIRED y con el estado de guardado. El botón lo pinta la directiva a
+             partir de `prTooltipAction` (`shared/directives/pr-tooltip.directive.ts`), y al pulsarlo
+             cierra la burbuja: el texto acaba de quedar anclado abajo y dejar las dos cosas abiertas
+             duplicaría la guía en pantalla. -->
         <button
           type="button"
           class="sgi-dac-info"
           [prTooltip]="tooltip"
           prTooltipPosition="right"
           prTooltipStyleClass="sgi-dac-tooltip"
+          [prTooltipAction]="
+            canPin ? { label: pinned() ? 'Unpin guidance' : 'Pin guidance', pressed: pinned(), closeAfterClick: true } : null
+          "
+          (prTooltipActionClick)="togglePin()"
           aria-label="More information">
           <!-- P2-3339: inline SVG, not an icon-font ligature. The ligature name used to paint as
                literal text and overflow this 18px button onto the label. -->
           <app-pr-info-icon />
-        </button>
-      }
-      @if (canPin) {
-        <!-- Fijar la guía: la ancla dentro de la tarjeta en vez de dejarla en un tooltip que se va
-             justo cuando el reportero empieza a escribir. La preferencia se recuerda por campo. -->
-        <button
-          type="button"
-          class="fch_pin"
-          [class.fch_pin--on]="pinned()"
-          [attr.aria-pressed]="pinned()"
-          [attr.aria-label]="pinned() ? 'Unpin the guidance for this field' : 'Pin the guidance for this field'"
-          (click)="togglePin()">
-          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M6.2 2h3.6l-.5 3.3 2.2 2.1H4.5l2.2-2.1z" />
-            <path d="M8 7.4V14" />
-          </svg>
-          <span>{{ pinned() ? 'Pinned' : 'Pin' }}</span>
         </button>
       }
       @if (saveState !== 'none') {
@@ -84,6 +77,16 @@
   @if (showGuidanceBlock) {
     <div class="field_card_desc" [style]="descInlineStyles">
       <div class="desc_text" [innerHTML]="description || tooltip"></div>
+      @if (pinned() && canPin) {
+        <!-- Soltar desde la propia guía: una vez anclada, volver a abrir la burbuja solo para
+             quitarla es un rodeo. El de la burbuja sigue existiendo — este es el atajo del que ya
+             la tiene delante. -->
+        <button type="button" class="fcd_unpin" (click)="togglePin()" aria-label="Unpin the guidance for this field" title="Unpin">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </button>
+      }
     </div>
   }
   <ng-content></ng-content>
