@@ -1,6 +1,6 @@
 # Adopting the Center email-code login in the Planning tool — brief for the Codeobia team
 
-**Last verified:** 2026-09-14 · **Source of truth:** PRMS spec `docs/specs/changes/cognito-email-otp-login` (rev 4, Option D), PRMS code in `onecgiar-pr-server` / `onecgiar-pr-client` (`master`), Planning code at `onecgiar-planning-module` branch `production-v2` (`9261968`).
+**Last verified:** 2026-09-14 · **Source of truth:** PRMS spec `docs/specs/archive/2026-09-14-changes--cognito-email-otp-login` (rev 4, Option D), PRMS code in `onecgiar-pr-server` / `onecgiar-pr-client` (`master`), Planning code at `onecgiar-planning-module` branch `production-v2` (`9261968`).
 
 ## 1. What PRMS shipped (live in PROD since 2026-09-12)
 

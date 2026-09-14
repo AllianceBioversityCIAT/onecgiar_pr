@@ -84,10 +84,10 @@ CGIAR SAML and external password logins are untouched by this rollout — smoke 
 
 ## Superseded
 
-An earlier revision of this runbook (Option B) walked through wiring three Cognito Lambda triggers onto the PROD pool. That design was abandoned because the PROD pool's AWS account grants Cognito **console access only** — no Lambda, CloudFormation or IAM — so the triggers could never be deployed there. See `docs/specs/changes/cognito-email-otp-login/design.md` §19 and this module's [`README.md`](./README.md) §8 for the full option history and why Option D replaced it. `PR #43` (microservice `dev-auth` → `main-auth`, the Option B promotion) is **not required** for Option D and was left open, unmerged, without consequence.
+An earlier revision of this runbook (Option B) walked through wiring three Cognito Lambda triggers onto the PROD pool. That design was abandoned because the PROD pool's AWS account grants Cognito **console access only** — no Lambda, CloudFormation or IAM — so the triggers could never be deployed there. See `docs/specs/archive/2026-09-14-changes--cognito-email-otp-login/design.md` §19 and this module's [`README.md`](./README.md) §8 for the full option history and why Option D replaced it. `PR #43` (microservice `dev-auth` → `main-auth`, the Option B promotion) is **not required** for Option D and was left open, unmerged, without consequence.
 
 ---
 
-**Sources:** `docs/specs/changes/cognito-email-otp-login/design.md` §19.1, §19.3 · `requirements.md` §15 (`OTP-AC-22`) · `execution.md` (rev 4 pivot entry, `OTP-T-16`/`OTP-T-17`) · `onecgiar-pr-server/src/migrations/{1788730000000-OTP-allowed-email-domains.ts,1788740000000-OTP-challenges.ts}` · `onecgiar-pr-server/src/auth/auth.service.ts` (`startOtp`, `verifyOtp`) · `onecgiar-pr-server/CLAUDE.md` §5, §10 (migration ownership, deploy) · this module's [`README.md`](./README.md)
+**Sources:** `docs/specs/archive/2026-09-14-changes--cognito-email-otp-login/design.md` §19.1, §19.3 · `requirements.md` §15 (`OTP-AC-22`) · `execution.md` (rev 4 pivot entry, `OTP-T-16`/`OTP-T-17`) · `onecgiar-pr-server/src/migrations/{1788730000000-OTP-allowed-email-domains.ts,1788740000000-OTP-challenges.ts}` · `onecgiar-pr-server/src/auth/auth.service.ts` (`startOtp`, `verifyOtp`) · `onecgiar-pr-server/CLAUDE.md` §5, §10 (migration ownership, deploy) · this module's [`README.md`](./README.md)
 
 **Last verified:** 2026-09-12
