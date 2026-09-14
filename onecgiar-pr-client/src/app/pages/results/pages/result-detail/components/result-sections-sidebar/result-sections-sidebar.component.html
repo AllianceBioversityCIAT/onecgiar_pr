@@ -77,17 +77,21 @@
           @if (section.underConstruction === true) {
             <img class="h-[14px] w-[14px] shrink-0" src="assets/work-in-progress.png" alt="Under construction" />
           } @else if (section.validation) {
-            <!-- Done: check on a green pill (mockup #d1fae5 / #047857 = the approved status pair). -->
+            <!-- Done: a SOLID green disc with a white check, haloed by the pale approved tint.
+                 The previous pale-pill-on-pale-tick read as barely-there at 14px — the one row
+                 state a reporter looks for on this rail should be the loudest thing on it. -->
             <span
-              class="flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full bg-[var(--pr-status-approved-bg)]"
+              class="rs-done flex size-[20px] shrink-0 items-center justify-center rounded-full bg-[var(--pr-color-green-500)] shadow-[0_0_0_3px_var(--pr-status-approved-bg)]"
               role="img"
               aria-label="Section complete">
-              <i class="material-icons-round text-[10px] leading-none text-[var(--pr-status-approved-fg)]" aria-hidden="true">check</i>
+              <i class="material-icons-round text-[13px] font-bold leading-none text-white" aria-hidden="true">check</i>
             </span>
           } @else {
-            <!-- Pending: empty ring, no icon. -->
+            <!-- Pending: a dashed ring. Dashed, not solid, so "not yet" reads as a state of its
+                 own rather than as a check that failed to render. Violet on the open section,
+                 tying the row the reporter is standing on to its own marker. -->
             <span
-              class="h-[14px] w-[14px] shrink-0 rounded-full border-[1.5px] border-[var(--pr-border-strong)]"
+              [class]="rla.isActive ? pendingActiveClass : pendingClass"
               role="img"
               aria-label="Section incomplete"></span>
           }
