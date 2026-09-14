@@ -303,7 +303,7 @@ export class BilateralReviewComponent {
 
   // ── Toolbar / filter state (design.md §6.2) ────────────────────────────────────────────────
   readonly search = signal('');
-  readonly status = signal<BilateralReviewStatusFilter>('all');
+  readonly status = signal<BilateralReviewStatusFilter>('pending');
   /** CLARISA center CODES (csv on the URL, BRT-R-16). */
   readonly centers = signal<string[]>([]);
   readonly projects = signal<string[]>([]);
@@ -699,7 +699,7 @@ export class BilateralReviewComponent {
   readonly activeFilterCount = computed(() => {
     let count = 0;
     if (this.search().trim()) count++;
-    if (this.status() !== 'all') count++;
+    if (this.status() === 'approved' || this.status() === 'rejected') count++;
     if (this.centers().length) count++;
     if (this.projects().length) count++;
     if (this.categories().length) count++;
@@ -754,15 +754,10 @@ export class BilateralReviewComponent {
       });
     }
 
-    // Status chip (when not 'all')
+    // Status chip (when approved or rejected)
     const statusVal = this.status();
-    if (statusVal !== 'all') {
-      const statusLabel =
-        statusVal === 'pending'
-          ? this.copy.chips.pending
-          : statusVal === 'approved'
-            ? this.copy.chips.approved
-            : this.copy.chips.rejected;
+    if (statusVal === 'approved' || statusVal === 'rejected') {
+      const statusLabel = statusVal === 'approved' ? this.copy.chips.approved : this.copy.chips.rejected;
       chips.push({
         id: 'status',
         dimension: 'status',
@@ -787,8 +782,8 @@ export class BilateralReviewComponent {
         this.search.set('');
         break;
       case 'status':
-        nextStatus = 'all';
-        this.status.set('all');
+        nextStatus = 'pending';
+        this.status.set('pending');
         break;
       case 'center':
         nextCenters = nextCenters.filter(c => c !== chip.value);
@@ -808,7 +803,7 @@ export class BilateralReviewComponent {
       relativeTo: this.route,
       queryParams: {
         [BILATERAL_REVIEW_QUERY_PARAM_MAP.search]: nextSearch.trim() || null,
-        [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: nextStatus === 'all' ? null : nextStatus,
+        [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: nextStatus === 'pending' ? null : nextStatus,
         [BILATERAL_REVIEW_QUERY_PARAM_MAP.center]: joinBilateralReviewListParam(nextCenters),
         [BILATERAL_REVIEW_QUERY_PARAM_MAP.project]: joinBilateralReviewListParam(nextProjects),
         [BILATERAL_REVIEW_QUERY_PARAM_MAP.category]: joinBilateralReviewListParam(nextCategories)
@@ -947,7 +942,7 @@ export class BilateralReviewComponent {
         const current = this.route.snapshot.queryParamMap;
         const next: Record<string, string | null> = {
           [BILATERAL_REVIEW_QUERY_PARAM_MAP.search]: search || null,
-          [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: status === 'all' ? null : status,
+          [BILATERAL_REVIEW_QUERY_PARAM_MAP.status]: status === 'pending' ? null : status,
           [BILATERAL_REVIEW_QUERY_PARAM_MAP.view]: view === 'grouped' ? null : view,
           [BILATERAL_REVIEW_QUERY_PARAM_MAP.center]: center,
           [BILATERAL_REVIEW_QUERY_PARAM_MAP.project]: project,
@@ -1275,7 +1270,7 @@ export class BilateralReviewComponent {
    *  status and popover filters emptied the list, this restores it in one click. */
   clearAllFilters(): void {
     this.search.set('');
-    this.status.set('all');
+    this.status.set('pending');
     this.clearFilters();
   }
 
