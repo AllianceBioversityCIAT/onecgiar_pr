@@ -297,4 +297,39 @@ describe('FieldCardComponent', () => {
       expect(fresh.debugElement.query(By.css('.fc-pinned'))).toBeTruthy();
     });
   });
+
+  describe('edition marked by pointer (14-sep-2026)', () => {
+    const card = () => q('.field_card').nativeElement as HTMLElement;
+    const cmp = () =>
+      fixture.debugElement.query(By.directive(FieldCardComponent)).componentInstance as FieldCardComponent;
+
+    /**
+     * 🛑 El caso que lo motivó: el sí/no y el segmentado de puntuación NO son controles nativos, no
+     * emiten `input` ni `change`, y sin esto quedaban fuera de todo lo que depende de "el usuario
+     * tocó este campo" — la píldora de sin guardar y la bolita de completado.
+     */
+    it('counts a click on the projected control as an edit', () => {
+      expect(cmp().edited()).toBe(false);
+      (q('.projected-control').nativeElement as HTMLElement).click();
+      fixture.detectChanges();
+      expect(cmp().edited()).toBe(true);
+    });
+
+    it('does NOT count a click on the header or the guidance — reading is not editing', () => {
+      host.tooltip.set('Guidance');
+      host.description.set('Some guidance');
+      fixture.detectChanges();
+
+      (q('.field_card_header').nativeElement as HTMLElement).click();
+      (q('.field_card_desc').nativeElement as HTMLElement).click();
+      fixture.detectChanges();
+
+      expect(cmp().edited()).toBe(false);
+      // Control positivo desde el MISMO montaje: sin esto, un `edited` que nunca se pone a true
+      // también pasaría este test.
+      (q('.projected-control').nativeElement as HTMLElement).click();
+      fixture.detectChanges();
+      expect(cmp().edited()).toBe(true);
+    });
+  });
 });

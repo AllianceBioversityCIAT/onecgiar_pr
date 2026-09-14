@@ -9,70 +9,139 @@
     margin-bottom: 120px;
   }
 
+  /*
+   * Tabs, rediseñados el 14-sep-2026 (solo presentación; el comportamiento no se toca).
+   *
+   * Antes: una franja gris a todo lo ancho, con el tab activo pintado de VIOLETA SÓLIDO. Dos cosas
+   * fallaban ahí — el violeta es el color de las acciones de la plataforma (el botón primario), así
+   * que un tab seleccionado gritaba más que el botón de guardar; y la franja gris seguía ocupando
+   * todo el ancho aunque hubiera un solo tab, dejando un rectángulo vacío que parecía un error de
+   * carga.
+   *
+   * Ahora: pastillas sobre el fondo de la página, el activo en blanco con borde y una barra violeta
+   * debajo. El color se reserva para el estado (verde = completo) y para la barra del activo.
+   */
   .tabs-container {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+    gap: 6px;
     width: 100%;
-    background-color: var(--pr-color-accents-2);
-
-    .active {
-      background-color: var(--pr-color-primary-300) !important;
-      color: var(--pr-color-white) !important;
-      font-weight: 600;
-    }
+    padding: 0 0 2px;
+    background-color: transparent;
+    border-bottom: 1px solid var(--pr-border);
 
     .tabs {
       display: grid;
       overflow-x: auto;
+      gap: 6px;
+      // La barra inferior del activo se dibuja pegada a la línea del contenedor.
+      padding-bottom: 0;
+      scrollbar-width: thin;
     }
 
     .tab {
-      background-color: var(--pr-color-accents-2);
-      color: var(--pr-color-accents-4);
+      position: relative;
+      background-color: transparent;
+      color: var(--pr-text-secondary);
       text-decoration: none;
-      padding: 10px 8px;
+      padding: 7px 10px;
       display: grid;
-      grid-template-columns: 6fr 1fr;
+      grid-template-columns: 1fr auto;
       align-items: center;
-      gap: 0.5rem;
+      gap: 6px;
+      border: 1px solid transparent;
+      border-radius: 8px 8px 0 0;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background-color 150ms ease, color 150ms ease;
+
+      &:hover {
+        background-color: var(--pr-surface-sunken);
+        color: var(--pr-text-heading);
+      }
 
       .tab-content {
         display: flex;
         align-items: center;
         overflow: hidden;
-        gap: 0.5rem;
+        gap: 6px;
         cursor: pointer;
       }
 
       .tab-title {
-        text-align: center;
+        text-align: left;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         margin: 0;
       }
+
+      // El icono de estado, más discreto: es una señal, no el protagonista del tab.
+      .material-icons-round {
+        font-size: 16px !important;
+      }
+    }
+
+    // El activo: blanco, borde neutro y una barra violeta abajo — la marca señala sin invadir.
+    .active {
+      background-color: var(--pr-surface-card) !important;
+      color: var(--pr-text-heading) !important;
+      font-weight: 700;
+      border-color: var(--pr-border);
+      border-bottom-color: transparent;
+
+      &::after {
+        content: '';
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: -2px;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--pr-color-primary-300);
+      }
     }
 
     .tab-add-button {
       display: flex;
-      justify-content: flex-start;
+      justify-content: center;
       align-items: center;
       cursor: pointer;
-      padding: 0.5rem;
-      width: 40px;
+      padding: 0;
+      width: auto;
+      margin-bottom: 2px;
 
       .tab-add-button-item {
-        padding: 0.5rem;
-        background-color: var(--pr-color-white);
-        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        font-size: 18px;
+        color: var(--pr-color-primary-300);
+        background-color: transparent;
+        border: 1px dashed var(--pr-border-strong);
+        border-radius: 8px;
+        transition: background-color 150ms ease, border-color 150ms ease;
+
+        &:hover {
+          background-color: var(--pr-color-primary-50);
+          border-color: var(--pr-color-primary-200);
+          border-style: solid;
+        }
       }
     }
 
     .tab-delete-button-item {
       cursor: pointer;
-      font-size: 16px;
+      font-size: 15px;
       text-align: end;
+      color: var(--pr-text-subtle);
+
+      &:hover {
+        color: var(--pr-danger);
+      }
     }
   }
 }

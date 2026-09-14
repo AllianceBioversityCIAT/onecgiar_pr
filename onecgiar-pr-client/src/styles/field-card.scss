@@ -301,6 +301,53 @@
   }
 }
 
+// ── layout="inline": la pregunta y su respuesta en la MISMA banda ──────────
+// El título ocupa la izquierda y el control se va a la derecha, los dos dentro del tinte de
+// estado. Nace del sí/no: apilado, la pregunta y los dos botones ocupaban dos alturas y quedaban
+// separados por el borde de la banda, como si no fueran lo mismo.
+.field_card.fc-inline {
+  display: grid;
+  // El título ocupa SU ancho y el control arranca justo después. Con `1fr auto` el control se iba
+  // al extremo derecho de la banda y quedaba a media pantalla de la pregunta: dos elementos en la
+  // misma línea pero sin relación visible.
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  // 🛑 El color NO envuelve las dos columnas: la banda termina donde termina el texto y el control
+  // queda fuera, sobre el fondo de la página. Envolviéndolo todo, el tinte se comía el control —
+  // un sí/no sobre verde se lee como parte del cartel, no como algo que se puede pulsar.
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+
+  .field_card_header {
+    grid-column: 1;
+    padding: 8px 12px;
+    min-height: 36px;
+    background: var(--fc-tint);
+    border: 1px solid var(--fc-edge);
+    border-radius: 8px;
+  }
+
+  // La guía cae debajo, a todo el ancho, y solo cuando toca mostrarla.
+  .field_card_desc {
+    grid-column: 1 / -1;
+    margin-top: 2px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+  }
+
+  // El control proyectado: segunda columna, pegado al título, no al borde.
+  > :not(.field_card_header):not(.field_card_desc) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    padding: 0;
+    background: transparent;
+  }
+}
+
 @keyframes fc-spin {
   to {
     transform: rotate(360deg);

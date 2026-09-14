@@ -200,10 +200,34 @@ input::placeholder,
     }
   }
 
+  /*
+   * Lo elegido, dentro de una caja que lo ata a SU campo (Yeck, 14-sep-2026).
+   *
+   * Antes los chips colgaban sueltos debajo del control, sin fondo ni borde: en una pantalla con
+   * varios multi-selects seguidos no había forma de saber a qué campo pertenecía cada grupo —
+   * parecían una lista más de la página. La caja no añade información nueva; dice de quién es lo
+   * que hay dentro.
+   */
   .selected_container {
-    margin-top: 10px;
+    margin-top: 8px;
+    padding: 8px 10px 10px;
+    border: 1px solid var(--pr-border);
+    border-radius: 8px;
+    background: var(--pr-surface-raised-soft);
     overflow-y: auto;
     max-height: 300px;
+
+    // El contador ("Partners (3)") hace de encabezado de la caja.
+    app-pr-field-header .pr_description {
+      margin: 0 0 7px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--pr-border-divider);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--pr-text-muted);
+    }
 
     .chips_container {
       display: flex;

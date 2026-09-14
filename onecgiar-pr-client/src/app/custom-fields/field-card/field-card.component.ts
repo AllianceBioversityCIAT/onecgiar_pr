@@ -82,7 +82,15 @@ export class FieldCardComponent implements OnInit, OnChanges {
    *
    * `stack` (por defecto) es el resto de los formularios y no cambia.
    */
-  @Input() layout: 'stack' | 'row' = 'stack';
+  /**
+   * `inline` (14-sep-2026): título a la izquierda y control a la DERECHA, los dos dentro de la
+   * misma banda tintada. Para respuestas cortas —un sí/no, una escala— donde apilar el control
+   * bajo el título gasta el doble de alto y separa la pregunta de su respuesta.
+   *
+   * Se diferencia de `row` en que CONSERVA el color de estado: `row` es para listas de campos
+   * homogéneos, donde cinco bandas seguidas serían un muro; `inline` es para un campo suelto.
+   */
+  @Input() layout: 'stack' | 'row' | 'inline' = 'stack';
 
   readonly saveSE = inject(SaveButtonService);
   private readonly flightSE = inject(FieldCompletionFlightService);
@@ -130,6 +138,26 @@ export class FieldCardComponent implements OnInit, OnChanges {
   /** `input`/`change` bubble out of the projected control, so one listener on the card is enough. */
   markEdited(): void {
     if (!this.edited()) this.edited.set(true);
+  }
+
+  /**
+   * El click también cuenta como edición — y hacía falta.
+   *
+   * 🛑 `input`/`change` solo los emiten los controles NATIVOS. La mitad de los campos de esta
+   * plataforma no lo son: el sí/no son dos `<div>` con `(click)`, el segmentado de puntuación son
+   * `<button>`, el desplegable propio es un `<a>` con divs. En todos ellos `edited` se quedaba en
+   * falso para siempre, y con él se quedaban fuera las dos cosas que dependen de esa marca: la
+   * píldora de "sin guardar" y la bolita que vuela al completar el campo. Reportado por Yeck el
+   * 14-sep-2026 sobre "Did the Program invest financial resources…".
+   *
+   * 🛑 Ignora la CABECERA y la GUÍA: pulsar el ⓘ o fijar la ayuda es leer, no editar, y marcaría
+   * el campo como "sin guardar" sin que el usuario haya cambiado nada.
+   */
+  markEditedFromPointer(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest) return;
+    if (target.closest('.field_card_header') || target.closest('.field_card_desc')) return;
+    this.markEdited();
   }
 
   readonly pinned = signal(false);

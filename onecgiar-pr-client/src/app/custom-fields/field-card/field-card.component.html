@@ -13,11 +13,13 @@
 <div
   [class.field_card]="!isBare"
   [class.fc-row]="!isBare && layout === 'row'"
+  [class.fc-inline]="!isBare && layout === 'inline'"
   [class.fc-error]="!isBare && hasError"
   [class.fc-pinned]="pinned() && canPin"
   [attr.data-state]="isBare ? null : state"
   (input)="markEdited()"
-  (change)="markEdited()">
+  (change)="markEdited()"
+  (click)="markEditedFromPointer($event)">
   @if (showHeaderRow) {
     <div class="field_card_header" [style]="labelDescInlineStyles">
       <span class="fch_title" [innerHTML]="label + (useColon ? ':' : '')"></span>
