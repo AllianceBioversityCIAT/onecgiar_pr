@@ -20,20 +20,34 @@
         </div>
       }
 
-      @if (!flow.canShowCreateForm()) {
-        <div #spSection class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-sp-gate">
-          <p class="m-0 mb-3 text-[14px] text-[var(--pr-text-subtle)]">
-            {{ copy.spGate.hint }}
-          </p>
-          <app-bilateral-sp-selector (primarySelected)="scrollToSpSection()" />
-        </div>
-      } @else if (!flow.selectedReportingWay()) {
-        <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-reporting-way">
-          <app-bilateral-reporting-way-selector
-            [isLoading]="flow.isCreating()"
-            [canUseAi]="flow.canUseAi()"
-            [selectedWay]="flow.selectedReportingWay()"
-            (waySelected)="flow.selectReportingWay($event)" />
+      @if (!flow.selectedReportingWay()) {
+        <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-setup">
+          @if (flow.showSpSelectionInDrawer()) {
+            <section class="bmcdh-setup-sp" data-testid="manual-drawer-sp-gate">
+              <p class="m-0 mb-3 text-[14px] text-[var(--pr-text-subtle)]">
+                {{ copy.spGate.hint }}
+              </p>
+              <app-bilateral-sp-selector primaryLayout="list" (primarySelected)="scrollToReportingWay()" />
+            </section>
+          }
+
+          <section
+            #reportingWaySection
+            class="bmcdh-setup-way"
+            [class.bmcdh-setup-way--locked]="!flow.canShowCreateForm()"
+            data-testid="manual-drawer-reporting-way">
+            @if (flow.showSpSelectionInDrawer() && !flow.canShowCreateForm()) {
+              <p class="bmcdh-setup-way-hint m-0 mb-3 text-[13px] text-[var(--pr-text-subtle)]">
+                {{ copy.spGate.reportingLockedHint }}
+              </p>
+            }
+            <app-bilateral-reporting-way-selector
+              [isLoading]="flow.isCreating()"
+              [canUseAi]="flow.canUseAi()"
+              [primaryReady]="flow.canShowCreateForm()"
+              [selectedWay]="flow.selectedReportingWay()"
+              (waySelected)="flow.selectReportingWay($event)" />
+          </section>
         </div>
       } @else if (flow.selectedReportingWay() === 'ai') {
         <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-ai-upload">

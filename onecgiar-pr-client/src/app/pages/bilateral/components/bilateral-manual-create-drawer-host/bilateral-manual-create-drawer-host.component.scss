@@ -1,3 +1,14 @@
+.bmcdh-setup-sp {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(30, 32, 47, 0.08);
+}
+
+.bmcdh-setup-way--locked {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .bmcdh-back-btn {
   appearance: none;
   border: 0;

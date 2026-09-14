@@ -82,7 +82,7 @@ describe('BilateralManualCreateFlowService', () => {
     expect(service.selectedReportingWay()).toBeNull();
   });
 
-  it('goes back from reporting way to SP selection when multiple programs exist', () => {
+  it('keeps the selected SP when going back from a reporting way to the combined setup page', () => {
     service.beginFromProject({
       ...singleSpProject,
       sciencePrograms: [
@@ -91,11 +91,14 @@ describe('BilateralManualCreateFlowService', () => {
       ]
     });
     creationService.selectPrimarySp({ programId: 1, programCode: 'SP01', allocation: '80' });
+    service.selectReportingWay('manual');
     service.goBack();
-    expect(creationService.selectedPrimarySp()).toBeNull();
+    expect(service.selectedReportingWay()).toBeNull();
+    expect(creationService.selectedPrimarySp()?.programCode).toBe('SP01');
+    expect(service.canGoBack()).toBe(false);
   });
 
-  it('shows SP gate inside drawer for multi-program projects', () => {
+  it('shows combined setup for multi-program projects until SP and way are chosen', () => {
     service.beginFromProject({
       ...singleSpProject,
       sciencePrograms: [
@@ -105,6 +108,8 @@ describe('BilateralManualCreateFlowService', () => {
     });
     expect(service.drawerOpen()).toBe(true);
     expect(service.canShowCreateForm()).toBe(false);
+    expect(service.showSpSelectionInDrawer()).toBe(true);
+    expect(service.selectedReportingWay()).toBeNull();
   });
 
   it('submits create with title and navigates to the editor', () => {

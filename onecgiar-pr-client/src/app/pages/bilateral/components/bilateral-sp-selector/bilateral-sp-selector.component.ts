@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, output, effect } from '@angular/core';
+import { Component, inject, computed, signal, output, effect, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 
@@ -10,6 +10,9 @@ import { BilateralCreationService } from '../../services/bilateral-creation.serv
 })
 export class BilateralSpSelectorComponent {
   readonly creationService = inject(BilateralCreationService);
+
+  /** `dropdown` on the wizard page; `list` shows all primary SP options inline (drawer). */
+  readonly primaryLayout = input<'dropdown' | 'list'>('dropdown');
 
   showPrimaryDropdown = signal(false);
   showSecondaryDropdown = signal(false);

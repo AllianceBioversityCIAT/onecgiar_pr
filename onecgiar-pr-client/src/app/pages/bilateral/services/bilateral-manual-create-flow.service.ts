@@ -26,16 +26,11 @@ export class BilateralManualCreateFlowService {
     () => (this.creationService.selectedProject()?.sciencePrograms?.length ?? 0) > 1
   );
 
-  readonly canGoBack = computed(() => {
-    if (this.selectedReportingWay()) return true;
-    return this.canShowCreateForm() && this.hasMultipleSpOptions();
-  });
+  readonly canGoBack = computed(() => !!this.selectedReportingWay());
 
-  readonly backLabel = computed(() =>
-    this.selectedReportingWay()
-      ? BILATERAL_MANUAL_CREATE_COPY.navigation.backToCreateOptions
-      : BILATERAL_MANUAL_CREATE_COPY.navigation.backToScienceProgram
-  );
+  readonly backLabel = computed(() => BILATERAL_MANUAL_CREATE_COPY.navigation.backToCreateOptions);
+
+  readonly showSpSelectionInDrawer = computed(() => this.hasMultipleSpOptions());
 
   readonly canUseAi = computed(
     () => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp()
@@ -80,10 +75,6 @@ export class BilateralManualCreateFlowService {
   goBack(): void {
     if (this.selectedReportingWay()) {
       this.selectedReportingWay.set(null);
-      return;
-    }
-    if (this.hasMultipleSpOptions()) {
-      this.creationService.selectedPrimarySp.set(null);
     }
   }
 

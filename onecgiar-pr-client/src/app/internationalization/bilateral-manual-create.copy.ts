@@ -18,7 +18,8 @@ export const BILATERAL_MANUAL_CREATE_COPY = {
     backToScienceProgram: 'Back to Science Program'
   },
   spGate: {
-    hint: 'Select the primary Science Program for this bilateral result before continuing.'
+    hint: 'Select the primary Science Program for this bilateral result before continuing.',
+    reportingLockedHint: 'Select a primary Science Program above to unlock these options.'
   },
   form: {
     resultTypeLabel: 'Result Type',

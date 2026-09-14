@@ -28,15 +28,15 @@ export class BilateralManualCreateDrawerHostComponent {
   /** Element that receives focus when the drawer closes. */
   readonly restoreFocusTarget = input<ElementRef<HTMLElement> | null>(null);
 
-  private readonly spSectionRef = viewChild<ElementRef<HTMLElement>>('spSection');
+  private readonly reportingWaySectionRef = viewChild<ElementRef<HTMLElement>>('reportingWaySection');
 
   onDrawerClosed(): void {
     this.flow.closeDrawer();
   }
 
-  scrollToSpSection(): void {
+  scrollToReportingWay(): void {
     setTimeout(() => {
-      this.spSectionRef()?.nativeElement?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      this.reportingWaySectionRef()?.nativeElement?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
     }, 50);
   }
 }

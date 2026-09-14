@@ -50,6 +50,23 @@ describe('BilateralSpSelectorComponent', () => {
     expect(component.availableSps().length).toBe(2);
   });
 
+  it('renders primary SP options inline when primaryLayout is list', () => {
+    creationService.selectedProject.set({
+      sciencePrograms: [
+        { programId: 100, programCode: 'SP06', allocation: '45.00', spName: 'Climate Action', spShortName: 'CA' },
+        { programId: 200, programCode: 'SP12', allocation: '25.00', spName: 'Breeding', spShortName: 'BfT' }
+      ]
+    } as any);
+    fixture.componentRef.setInput('primaryLayout', 'list');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.sps-field')).toBeNull();
+    expect(el.querySelectorAll('.sps-option--list').length).toBe(2);
+    expect(el.textContent).toContain('Climate Action');
+    expect(el.textContent).toContain('Breeding');
+  });
+
   it('should call selectPrimarySp on primary selection', () => {
     const emitSpy = jest.spyOn(component.primarySelected, 'emit');
     const sps = [
