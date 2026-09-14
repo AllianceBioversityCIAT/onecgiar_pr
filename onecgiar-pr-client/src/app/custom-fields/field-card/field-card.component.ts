@@ -54,6 +54,13 @@ export class FieldCardComponent implements OnInit, OnChanges {
    * persona en su navegador, no un dato del resultado — no viaja en ningún payload ni se comparte
    * con quien abra el mismo resultado después.
    */
+  /**
+   * El campo no se puede editar (lo trae el repositorio, lo calcula el sistema, o el rol es de solo
+   * lectura). Entonces NO lleva color de estado: el verde felicita por algo que el usuario no hizo
+   * y el naranja le reclama algo que no puede hacer. Queda en chrome neutro — que es lo que pidió
+   * Yeck el 14-sep-2026 al ver una pantalla con seis bandas verdes de campos intocables.
+   */
+  @Input() readOnly = false;
   @Input() pinGuidanceByDefault = false;
   /** Clave de persistencia. Por defecto se deriva del label, que es lo que identifica al campo. */
   @Input() pinKey = '';
@@ -106,6 +113,7 @@ export class FieldCardComponent implements OnInit, OnChanges {
 
   get state(): FieldCardState {
     if (this.hasError) return 'error';
+    if (this.readOnly) return 'plain';
     if (this.hasValue === null || this.hasValue === undefined) return 'plain';
     if (this.hasValue) return this.required ? 'ok' : 'opt';
     return this.required ? 'todo' : 'idle';

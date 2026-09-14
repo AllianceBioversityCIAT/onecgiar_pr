@@ -212,20 +212,26 @@ input::placeholder,
     }
   }
 
+  // 14-sep-2026: era un bloque VIOLETA de 43px a altura completa pegado al borde derecho. En un
+  // formulario donde el violeta es la marca —el botón principal, los enlaces— ese rectángulo
+  // pesaba como una acción primaria en cada desplegable de la pantalla, y en una fila con dos
+  // selects seguidos la vista iba a los dos botones antes que a los valores.
+  // Ahora no hay caja: solo la flecha, dentro del campo, como en cualquier control estándar.
   .icon_container {
     position: absolute;
     right: 0;
-    background-color: var(--pr-color-primary-300);
-    width: 43px;
+    width: 36px;
     height: 100%;
     z-index: 1;
     pointer-events: none;
-    border-radius: 3px;
+    background-color: transparent;
+    border-radius: 0 6px 6px 0;
   }
 
   .pr-select-clear {
     position: absolute;
-    right: 52px;
+    // Pegada a la flecha, que ahora ocupa 36px y no 43.
+    right: 40px;
     z-index: 2;
     cursor: pointer;
     font-size: 18px;
@@ -259,15 +265,19 @@ input::placeholder,
   position: relative;
 }
 
+// Deshabilitado: el campo entero ya se apaga; teñir solo la esquina lo hacía parecer un botón roto.
 .icon_container_active {
-  background-color: var(--pr-color-accents-5) !important;
+  background-color: transparent !important;
 }
 
 .icon_dropdown {
   position: relative;
   z-index: 2;
   pointer-events: none;
-  color: var(--pr-color-white) !important;
+  // Gris de texto secundario, no blanco sobre violeta: la flecha es una pista de que se despliega,
+  // no una llamada a la acción.
+  color: var(--pr-text-secondary) !important;
+  font-size: 13px;
 }
 
 .select_item_description {
