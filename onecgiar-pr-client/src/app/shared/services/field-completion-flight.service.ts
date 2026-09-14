@@ -26,7 +26,9 @@ export class FieldCompletionFlightService {
   // Grande y sin prisa (Yeck, 14-sep-2026): el recorrido puede ser de media pantalla, y a 12 px en
   // 620 ms el ojo lo perdía — que es lo mismo que no animar nada.
   private static readonly DURATION_MS = 1100;
-  private static readonly SIZE_PX = 18;
+  private static readonly SIZE_PX = 14;
+  /** Altura del brinco inicial, antes de que empiece el viaje. */
+  private static readonly JUMP_PX = 52;
 
   registerTarget(el: HTMLElement): void {
     this.target = el;
@@ -74,17 +76,35 @@ export class FieldCompletionFlightService {
 
     const dx = endX - startX;
     const dy = endY - startY;
-    // El punto medio se levanta: una recta entre dos puntos lejanos se lee como un parpadeo, y el
-    // arco es lo que deja ver el recorrido.
+    // Media de trayecto: el arco impide que un salto largo se lea como un parpadeo en línea recta.
     const lift = Math.min(170, Math.abs(dx) * 0.3 + 70);
+
+    /*
+     * Dos tiempos, no uno (Yeck, 14-sep-2026): BRINCA y después VIAJA.
+     *
+     * Con un solo tramo la bolita salía ya en diagonal y el ojo no llegaba a ver de dónde venía. El
+     * salto vertical la despega del campo —que es lo que ata el punto a ESE campo— y solo entonces
+     * arranca el viaje.
+     *
+     * Cada keyframe lleva su propia curva, que es lo que da las dos sensaciones con una sola
+     * animación: el salto sale disparado y frena arriba (`.2,.8,.3,1`), se sostiene un instante, y
+     * la caída acelera hacia el destino (`.45,0,.75,1`). Un `easing` global no puede hacer las dos.
+     */
+    const jump = FieldCompletionFlightService.JUMP_PX;
 
     const animation = dot.animate(
       [
-        { transform: 'translate(0px, 0px) scale(0.4)', opacity: 0.2, offset: 0 },
-        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - lift}px) scale(1)`, opacity: 1, offset: 0.45 },
-        { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0.9, offset: 1 }
+        // Sin rebote de tamaño: el punto no CRECE al salir (se leía como un globo hinchándose),
+        // solo aparece y se mueve. Lo único que escala es la despedida, para que el aterrizaje
+        // no termine en un corte seco.
+        { transform: 'translate(0px, 0px) scale(0.7)', opacity: 0, offset: 0, easing: 'cubic-bezier(.2,.8,.3,1)' },
+        { transform: `translate(0px, ${-jump * 0.45}px) scale(1)`, opacity: 1, offset: 0.14, easing: 'cubic-bezier(.2,.8,.3,1)' },
+        { transform: `translate(0px, ${-jump}px) scale(1)`, opacity: 1, offset: 0.32, easing: 'cubic-bezier(.4,0,.6,1)' },
+        { transform: `translate(0px, ${-jump}px) scale(1)`, opacity: 1, offset: 0.4, easing: 'cubic-bezier(.45,0,.75,1)' },
+        { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - lift * 0.55}px) scale(1)`, opacity: 1, offset: 0.7 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.55)`, opacity: 0.85, offset: 1 }
       ],
-      { duration: FieldCompletionFlightService.DURATION_MS, easing: 'cubic-bezier(.34,.15,.3,1)', fill: 'forwards' }
+      { duration: FieldCompletionFlightService.DURATION_MS, fill: 'forwards' }
     );
 
     const cleanup = () => dot.remove();

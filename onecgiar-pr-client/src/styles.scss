@@ -1074,6 +1074,8 @@ body.sidebar-width-resizing {
    cualquier `overflow: hidden` del formulario — así que su estilo tiene que ser global. */
 .pr-completion-dot {
   display: block;
-  background: radial-gradient(circle at 35% 30%, #6ee7a8, var(--pr-color-green-500, #19ae58) 70%);
-  box-shadow: 0 0 0 5px rgb(25 174 88 / 0.16), 0 4px 16px rgb(25 174 88 / 0.5);
+  // Plano y a secas (Yeck, 14-sep-2026): el degradado radial y el glow le daban volumen de
+  // canica 3D, que choca con una interfaz que es toda superficie plana. Un punto sólido del
+  // verde de la marca dice lo mismo sin pretender ser un objeto.
+  background: var(--pr-color-green-500, #19ae58);
 }
