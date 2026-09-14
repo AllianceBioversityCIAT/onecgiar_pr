@@ -97,7 +97,13 @@ describe('ResultHeaderComponent', () => {
 
       expect(title.textContent.trim()).toContain('Genetic basis of yield');
       expect(title.className).toContain('text-[20px]');
-      expect(title.nextElementSibling?.getAttribute('data-testid')).toBe('result-header-meta-wrap');
+      // The row is title → copy → ⓘ. Asserting on `nextElementSibling` pinned the ⓘ to being the
+      // title's immediate neighbour, which broke the moment anything else joined the row; what
+      // actually matters is that both still sit in it, in that order.
+      const row = title.parentElement as HTMLElement;
+      const order = Array.from(row.children).map(child => child.tagName.toLowerCase());
+      expect(order.indexOf('app-copy-button')).toBeGreaterThan(order.indexOf('h1'));
+      expect(row.querySelector('[data-testid="result-header-meta-wrap"]')).not.toBeNull();
     });
 
     it('does not render the back link (relocated to result-sections-sidebar)', async () => {

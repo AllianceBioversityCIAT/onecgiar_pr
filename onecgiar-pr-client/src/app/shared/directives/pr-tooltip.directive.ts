@@ -295,7 +295,6 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
     this.renderer.setProperty(body, 'innerHTML', this.text);
     this.renderer.appendChild(el, body);
     this.tooltipBodyEl = body;
-    this.renderer.appendChild(el, this.buildPinHint());
     // Toggletip id (TIP-DD-2) — set here so it exists before pin() wires aria-controls/describedby.
     this.renderer.setAttribute(el, 'id', this.tooltipId);
     // Unpinned tooltips are `pointer-events: none` in CSS so they never block the cursor; this
@@ -308,6 +307,7 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
     });
     this.renderer.appendChild(document.body, el);
     this.tooltipEl = el;
+    this.renderPinHint();
 
     this.position(el);
   }
@@ -361,33 +361,38 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
    * that contain links: without pinning, the pointer has to leave the trigger to reach them and
    * the tooltip vanishes on the way.
    */
-  private buildPinHint(): HTMLElement {
+  private ensurePinHint(): HTMLElement {
+    if (this.pinHintEl) return this.pinHintEl;
     const hint = this.renderer.createElement('div') as HTMLElement;
     this.renderer.addClass(hint, 'pr-tooltip__pin-hint');
-    // Decorative for assistive tech: the pinned state is already carried by `aria-expanded` on
-    // the host, so announcing this line too would say the same thing twice.
-    this.renderer.setAttribute(hint, 'aria-hidden', 'true');
     this.pinHintEl = hint;
-    this.renderPinHint();
     return hint;
   }
 
   private renderPinHint(): void {
-    if (!this.pinHintEl) return;
+    if (!this.tooltipEl) return;
 
     const action = this.prTooltipAction;
-    // Nothing at all while the bubble is merely hovered and the host offers no action. On hover
-    // the old line only said what the tooltip was about to do anyway, on a surface the pointer
-    // was still travelling towards.
+    // Nothing at all while the bubble is merely hovered and the host offers no action — and
+    // nothing in the DOM either. An always-emitted empty footer left a spare `<div>` inside every
+    // tooltip in the app and broke callers that read the bubble's own markup.
     if (!action && !this.pinned) {
-      this.renderer.setProperty(this.pinHintEl, 'innerHTML', '');
-      this.renderer.removeClass(this.pinHintEl, 'pr-tooltip__pin-hint--on');
+      if (this.pinHintEl?.parentNode) this.renderer.removeChild(this.tooltipEl, this.pinHintEl);
+      this.pinHintEl = null;
       this.actionButtonEl = null;
       return;
     }
 
-    this.renderer.setProperty(this.pinHintEl, 'innerHTML', '');
+    const hint = this.ensurePinHint();
+    if (!hint.parentNode) this.renderer.appendChild(this.tooltipEl, hint);
+    this.renderer.setProperty(hint, 'innerHTML', '');
     this.actionButtonEl = null;
+
+    // Decorative ONLY while it is just the pinned note: that state is already carried by
+    // `aria-expanded` on the host. With a button inside, `aria-hidden` would hide a real control
+    // from assistive tech AND from the focus trap that puts the keyboard right there.
+    if (action) this.renderer.removeAttribute(hint, 'aria-hidden');
+    else this.renderer.setAttribute(hint, 'aria-hidden', 'true');
 
     if (action) {
       const btn = this.renderer.createElement('button') as HTMLButtonElement;
@@ -408,7 +413,7 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
         this.prTooltipActionClick.emit();
         if (this.prTooltipAction?.closeAfterClick) this.hide();
       });
-      this.renderer.appendChild(this.pinHintEl, btn);
+      this.renderer.appendChild(hint, btn);
       this.actionButtonEl = btn;
     }
 
@@ -416,10 +421,10 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
       const note = this.renderer.createElement('span') as HTMLElement;
       this.renderer.addClass(note, 'pr-tooltip__pin-note');
       this.renderer.setProperty(note, 'textContent', 'Pinned — click the icon again to close');
-      this.renderer.appendChild(this.pinHintEl, note);
-      this.renderer.addClass(this.pinHintEl, 'pr-tooltip__pin-hint--on');
+      this.renderer.appendChild(hint, note);
+      this.renderer.addClass(hint, 'pr-tooltip__pin-hint--on');
     } else {
-      this.renderer.removeClass(this.pinHintEl, 'pr-tooltip__pin-hint--on');
+      this.renderer.removeClass(hint, 'pr-tooltip__pin-hint--on');
     }
   }
 
