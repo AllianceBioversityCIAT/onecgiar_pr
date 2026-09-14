@@ -13,19 +13,29 @@
 
     <!-- Right cluster: report bug + notifications + user (phase deferred) -->
     <div class="pr-topbar-right">
-      <!-- Test environments only: in production the in-app bug report would feed
-           straight into the team's SLA. Same `onlyTest` criterion the navigation
-           uses for test-only entries. -->
-      @if (!isProduction) {
-        <button
-          type="button"
-          class="pr-topbar-icon-btn"
-          aria-label="Report a bug or adjustment"
-          title="Report a bug or adjustment"
-          (click)="openReportFeedback()">
-          <ng-icon name="lucideBug" class="text-[20px]" />
-        </button>
-      }
+      <!-- Support (P2-3683): one entry point for getting help. It replaced the standalone bug
+           button, and Tawk's floating bubble in the bottom-right corner is gone with it. -->
+      <button
+        type="button"
+        class="inline-flex h-8 flex-none cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--pr-border,#e3e3e8)] bg-transparent px-2.5 text-[13px] font-semibold leading-none transition-colors"
+        cdkOverlayOrigin
+        #supportTrigger="cdkOverlayOrigin"
+        aria-label="Support"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="supportMenuOpen()"
+        [ngClass]="
+          supportMenuOpen()
+            ? 'bg-[#f5f3ff] text-[var(--pr-color-primary-400,#5733c4)]'
+            : 'text-[var(--pr-text-secondary,#5d5872)] hover:bg-[#f3f2f7] hover:text-[var(--pr-text-heading,#191524)]'
+        "
+        (click)="supportMenuOpen.set(!supportMenuOpen())">
+        <ng-icon name="lucideLifeBuoy" class="text-[17px]" />
+        <span>Support</span>
+        <ng-icon
+          name="lucideChevronDown"
+          class="text-[15px] transition-transform"
+          [class.rotate-180]="supportMenuOpen()" />
+      </button>
 
       <button
         type="button"
@@ -67,6 +77,33 @@
       </button>
     </div>
   </header>
+
+  <!-- Support menu (P2-3683) -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="supportTrigger"
+    [cdkConnectedOverlayOpen]="supportMenuOpen()"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    [cdkConnectedOverlayPositions]="supportMenuPositions"
+    (backdropClick)="supportMenuOpen.set(false)">
+    <div class="pr-topbar-panel w-[248px] py-1.5" role="menu" aria-label="Support">
+      <button type="button" role="menuitem" class="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3.5 py-2.5 text-left text-[13px] font-medium text-[var(--pr-text-heading,#191524)] transition-colors hover:bg-[#f3f2f7]" (click)="openSupportChat()">
+        <ng-icon name="lucideMessageCircle" class="text-[17px]" />
+        <span>Start a support chat</span>
+      </button>
+
+      <!-- Test environments only: a report filed from production lands straight in the team's Jira
+           board and counts against the SLA. Same `onlyTest` criterion the navigation uses. In
+           production the menu keeps the chat entry, which is the supported route there. -->
+      @if (!isProduction) {
+        <button type="button" role="menuitem" class="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3.5 py-2.5 text-left text-[13px] font-medium text-[var(--pr-text-heading,#191524)] transition-colors hover:bg-[#f3f2f7]" (click)="openFeedbackFromSupport()">
+          <ng-icon name="lucideMegaphone" class="text-[17px]" />
+          <span>Give feedback</span>
+        </button>
+      }
+    </div>
+  </ng-template>
 
   <!-- Notifications popover -->
   <ng-template
