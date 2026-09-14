@@ -284,24 +284,31 @@ export class IpsrContributorsComponent implements OnInit {
     });
   }
 
+  /**
+   * Wires the "request partners" alerts once they exist in the DOM.
+   *
+   * 🛑 `findClassTenSeconds` RESOLVES WITH `false` when the element never shows up — it gives up
+   * after ten one-second polls and does not reject (`data-control.service.ts:180-195`). The previous
+   * body ignored what it resolved with and ran its own `document.querySelector(...).addEventListener`,
+   * so on every section where these alerts are simply not rendered `querySelector` returned `null`
+   * and threw `Cannot read properties of null (reading 'addEventListener')`. The `try/catch` swallowed
+   * it into a `console.error`, which is the error QA pasted into P2-3673 as evidence.
+   *
+   * Using the resolved element removes both the throw and the second lookup — the first search
+   * already found it, and re-querying could legitimately answer something else after ten seconds of
+   * rendering.
+   */
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
-    this.api.dataControlSE.findClassTenSeconds('alert-event-2').then(resp => {
-      try {
-        document.querySelector('.alert-event-2').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
+    const openPartnersRequest = () => (this.api.dataControlSE.showPartnersRequest = true);
+
+    ['alert-event', 'alert-event-2'].forEach(className => {
+      this.api.dataControlSE.findClassTenSeconds(className).then(element => {
+        // `false` is the give-up value, so an optional chain is not enough — it is not nullish.
+        const target = element as HTMLElement | false;
+        if (target && typeof target.addEventListener === 'function') {
+          target.addEventListener('click', openPartnersRequest);
+        }
+      });
     });
   }
 
