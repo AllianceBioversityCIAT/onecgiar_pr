@@ -386,6 +386,22 @@
   }
 }
 
+// ── El valor de un campo de SOLO LECTURA ──────────────────────────────────
+// Misma caja que un control editable, en gris y sin borde de foco: se lee como un dato, no como
+// algo que se pueda escribir. Sin esto el texto colgaba desnudo bajo la cabecera y, sobre el panel
+// del tab, no se sabía dónde acababa un campo y empezaba el siguiente.
+.field_card .fc-readonly-value {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--pr-border-divider);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pr-text-secondary);
+  font-style: italic;
+}
+
 @keyframes fc-spin {
   to {
     transform: rotate(360deg);

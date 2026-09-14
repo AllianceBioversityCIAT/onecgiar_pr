@@ -1,6 +1,6 @@
 <div class="container" *ngIf="activeTab">
   <div class="flex flex-nowrap w-full gap-[20px] [&>*]:flex-1 [&>*]:max-w-none" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
-    <div style="max-width: 250px" *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && (isCP2026() ? !isUnplanned : true)">
+    <div style="max-width: 420px" *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && (isCP2026() ? !isUnplanned : true)">
       <app-pr-select
         data-testid="cp-toc-level-select"
         [options]="this.tocResultListFiltered()"
@@ -73,15 +73,13 @@
   <!-- P2-3063 (L3): read-only HLO/Intermediate Outcome/2030 Outcome Statement of the selected node (from TOC `outcome_statement`).
        2026 only (isCP2026), Yes scenario, once a node is selected. Label is dynamic per level. -->
   @if (isCP2026() && !isUnplanned && activeTab?.toc_result_id && hloStatementValue()) {
-    <!-- Solo lectura: viaja por `app-field-card` como todo lo demás, y con `readOnly` para que la
-         cabecera se quede neutra — no hay nada que completar aquí. -->
-    <app-field-card
-      [label]="hloStatementLabel()"
-      [description]="hloStatementValue()"
-      [tooltip]="hloStatementTooltip()"
-      [useColon]="true"
-      [readOnly]="true"
-      [required]="false"></app-field-card>
+    <!-- Solo lectura. El valor va como CONTENIDO de la tarjeta, no como `description`: la
+         descripción es el bloque de guía —fondo de ayuda, sin caja— y el valor se quedaba flotando
+         sin separación bajo la cabecera. Como contenido recibe la misma caja que cualquier otro
+         campo, y `readOnly` deja la cabecera neutra: aquí no hay nada que completar. -->
+    <app-field-card [label]="hloStatementLabel()" [tooltip]="hloStatementTooltip()" [useColon]="true" [readOnly]="true" [required]="false">
+      <p class="fc-readonly-value">{{ hloStatementValue() }}</p>
+    </app-field-card>
   }
 
   @if (this.secondFieldLabel() && !isUnplanned) {
@@ -106,11 +104,12 @@
         @if (isCP2026()) {
           <app-field-card
             label="Indicator Typology"
-            [description]="indicatorTypologyDisplay()"
             [tooltip]="indicatorTypologyTooltip()"
             [useColon]="true"
             [readOnly]="true"
-            [required]="false"></app-field-card>
+            [required]="false">
+            <p class="fc-readonly-value">{{ indicatorTypologyDisplay() }}</p>
+          </app-field-card>
         }
 
         <!-- P2-3036 (AC7): in 2026 group the read-only TOC "Unit of measurement" + "Target" directly below "Indicator Tipology". In 2025 they stay in their original position inside the contribution block below. -->
