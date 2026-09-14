@@ -98,12 +98,13 @@
           </div>
         }
       } @else {
-        <!-- Eyebrow: dot + CGIAR CENTER -->
+        <!-- Eyebrow: dot + CGIAR Center · REPORTING CYCLE 2026 · P25 -->
         <div class="flex items-center gap-[7px]">
           <span class="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
           <span
-            class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
-            CGIAR Center
+            class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
+            data-testid="bilateral-eyebrow">
+            {{ eyebrow() }}
           </span>
         </div>
 
@@ -202,7 +203,7 @@
             aria-hidden="true">
             fact_check
           </span>
-          <span>Draft Results</span>
+          <span>AI Draft Results</span>
           @if (bilateralAiService.draftCountDisplay(); as count) {
             <span
               class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"

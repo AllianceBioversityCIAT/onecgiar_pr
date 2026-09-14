@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HlmButton } from '@spartan/button';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
@@ -16,6 +17,7 @@ import { DraftResultCardComponent } from '../bilateral-ai-draft-detail/component
 import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/components/draft-evidence-list/draft-evidence-list.component';
 import {
   DraftProjectFilterOption,
+  formatDraftProjectOption,
   MyDraftResultsFilterService,
   normalizeProjectId,
 } from './services/my-draft-results-filter.service';
@@ -74,12 +76,25 @@ const DRAFT_STATUS_MODIFIERS: Record<number, string> = {
   [BILATERAL_STATUS.Rejected]: 'mdr-status--rejected',
 };
 
+export interface DraftSessionGroup {
+  sessionId: string;
+  sessionShortHash: string;
+  sessionTooltip: string;
+  createdDate: string;
+  formattedDate: string;
+  projectDisplay: { code: string; title: string; full: string };
+  programCode: string;
+  programTooltip: string;
+  drafts: BilateralAiDraft[];
+}
+
 @Component({
   selector: 'app-my-draft-results',
   imports: [
     CommonModule,
     FormsModule,
     RouterModule,
+    OverlayModule,
     HlmButton,
     PrDialogComponent,
     PrFilterSelectComponent,
@@ -152,6 +167,71 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly isFilteredEmpty = computed<boolean>(() => this.hasAnyDrafts() && !this.hasDrafts());
 
   /**
+   * Drafts grouped by AI Assistant session (job_id).
+   * Concentrates shared metadata (project, program, date, session hash) into one session header,
+   * avoiding repetitive rows and optimizing screen space.
+   */
+  readonly sessionGroups = computed<DraftSessionGroup[]>(() => {
+    const list = this.drafts();
+    if (!list.length) return [];
+
+    const groupMap = new Map<string, DraftSessionGroup>();
+
+    for (const draft of list) {
+      const sessionId = draft.job_id ?? draft.job?.job_id ?? `draft-${draft.id}`;
+      let group = groupMap.get(sessionId);
+
+      if (!group) {
+        const jobId = draft.job_id ?? draft.job?.job_id ?? '';
+        const short = jobId ? `#${jobId.split('-')[0]}` : `#${draft.id}`;
+        const createdDate = draft.job?.created_date ?? draft.created_date ?? '';
+        const formattedDate = createdDate ? this.formatDate(createdDate) : '';
+        const sessionTooltip = this.getSessionTooltip(draft);
+        const projectDisplay = this.getProjectDisplay(draft);
+        const programCode = draft.job?.program_code ?? '';
+        const programTooltip = this.getProgramTooltip(draft);
+
+        group = {
+          sessionId,
+          sessionShortHash: short,
+          sessionTooltip,
+          createdDate,
+          formattedDate,
+          projectDisplay,
+          programCode,
+          programTooltip,
+          drafts: [],
+        };
+        groupMap.set(sessionId, group);
+      }
+
+      group.drafts.push(draft);
+    }
+
+    return Array.from(groupMap.values());
+  });
+
+  readonly isProjectDropdownOpen = signal<boolean>(false);
+  readonly projectSearchQuery = signal<string>('');
+
+  readonly projectDropdownPositions: ConnectedPosition[] = [
+    {
+      originX: 'start',
+      originY: 'bottom',
+      overlayX: 'start',
+      overlayY: 'top',
+      offsetY: 4,
+    },
+    {
+      originX: 'start',
+      originY: 'top',
+      overlayX: 'start',
+      overlayY: 'bottom',
+      offsetY: -4,
+    },
+  ];
+
+  /**
    * One option per project that actually appears in this centre's drafts — building it from the
    * loaded list rather than from the full CLARISA catalogue means the dropdown can never offer a
    * project that would empty the page. Labelled through `projectNameMap()` (the same lookup the
@@ -165,11 +245,40 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     for (const draft of this.allDrafts()) {
       const value = normalizeProjectId(draft?.job?.project_id);
       if (!value || byId.has(value)) continue;
-      byId.set(value, { value, label: nameMap[Number(value)] ?? value });
+      byId.set(value, formatDraftProjectOption(value, nameMap));
     }
 
     return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
   });
+
+  readonly filteredProjectOptions = computed<DraftProjectFilterOption[]>(() => {
+    const query = this.projectSearchQuery().trim().toLowerCase();
+    const options = this.projectFilterOptions();
+    if (!query) return options;
+    return options.filter(
+      option =>
+        option.label.toLowerCase().includes(query) ||
+        (option.code && option.code.toLowerCase().includes(query)) ||
+        (option.title && option.title.toLowerCase().includes(query))
+    );
+  });
+
+  toggleProjectDropdown(): void {
+    this.isProjectDropdownOpen.update(open => !open);
+    if (!this.isProjectDropdownOpen()) {
+      this.projectSearchQuery.set('');
+    }
+  }
+
+  closeProjectDropdown(): void {
+    this.isProjectDropdownOpen.set(false);
+    this.projectSearchQuery.set('');
+  }
+
+  selectProjectAndClose(projectId: string | null): void {
+    this.filter.selectProject(projectId);
+    this.closeProjectDropdown();
+  }
 
   /** Label of the active project, for the chip. `''` when no project is selected. */
   readonly selectedProjectLabel = computed<string>(() => {
@@ -267,13 +376,44 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     return this.bilateralAiService.initiativeNameMap()[code] ?? code;
   }
 
+  getProjectDisplay(draft: BilateralAiDraft): { code: string; title: string; full: string } {
+    const rawId = draft?.job?.project_id;
+    if (rawId == null) return { code: '', title: '', full: '' };
+    const mapped =
+      this.bilateralAiService.projectNameMap()[Number(rawId)] ??
+      this.bilateralAiService.projectNameMap()[String(rawId) as any];
+
+    if (!mapped) {
+      const code = String(rawId);
+      return { code, title: '', full: code };
+    }
+
+    if (mapped.includes(' — ')) {
+      const parts = mapped.split(' — ');
+      const code = parts[0].trim();
+      const title = parts.slice(1).join(' — ').trim();
+      return { code, title, full: mapped };
+    }
+
+    return { code: mapped, title: '', full: mapped };
+  }
+
+  getProgramTooltip(draft: BilateralAiDraft): string {
+    const label = this.getProgramLabel(draft);
+    const code = draft?.job?.program_code ?? '';
+    if (label && label !== code) {
+      return `${code} — ${label}`;
+    }
+    return label || code;
+  }
+
   formatDate(dateStr: string): string {
     const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days === 0) return 'Today';
+    if (diff <= 0 || days <= 0) return 'Today';
     if (days === 1) return 'Yesterday';
     if (days < 7) return `${days} days ago`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

@@ -81,7 +81,7 @@ describe('BilateralPageHeaderComponent', () => {
     expect(links.map(l => l.nativeElement.textContent.trim().split('\n')[0].trim())).toEqual([
       'track_changes\n          Reporting',
       'table_chart\n          Results',
-      'fact_check\n          Draft Results',
+      'fact_check\n          AI Draft Results',
     ].map(s => s.replace(/\s+/g, ' ')));
 
     // Verify icons on all three tabs
@@ -360,7 +360,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.detectChanges();
 
     const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
-      l.nativeElement.textContent.includes('Draft Results'),
+      l.nativeElement.textContent.includes('AI Draft Results'),
     );
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
   });
@@ -438,6 +438,49 @@ describe('BilateralPageHeaderComponent', () => {
       fixture.detectChanges();
       expect(q('[data-testid="bilateral-detail-header"]')).toBeNull();
       expect(q('nav[aria-label="Breadcrumb"]')).not.toBeNull();
+    });
+  });
+
+  describe('Reporting Cycle Eyebrow', () => {
+    it('defaults to "CGIAR Center" when reporting current phase has no year or acronym', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      const eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl).toBeTruthy();
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center');
+    });
+
+    it('renders "CGIAR Center · Reporting cycle 2026 · P25" when reportingCurrentPhase is populated', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+
+      component.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+      component.dataControlSE.reportingCurrentPhase.portfolioAcronym = 'P25';
+      component.dataControlSE.reportingPhaseVersion.update(v => v + 1);
+      fixture.detectChanges();
+
+      const eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl).toBeTruthy();
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center · Reporting cycle 2026 · P25');
+    });
+
+    it('reactively updates eyebrow on phase load', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'drafts');
+      fixture.detectChanges();
+
+      let eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center');
+
+      component.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      component.dataControlSE.reportingCurrentPhase.portfolioAcronym = 'P26';
+      component.dataControlSE.reportingPhaseVersion.update(v => v + 1);
+      fixture.detectChanges();
+
+      eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center · Reporting cycle 2027 · P26');
     });
   });
 });

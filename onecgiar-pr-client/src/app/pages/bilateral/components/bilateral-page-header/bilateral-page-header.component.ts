@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
+import { DataControlService } from '../../../../shared/services/data-control.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { environment } from '../../../../../environments/environment';
@@ -18,6 +19,31 @@ export class BilateralPageHeaderComponent {
   readonly ctx = inject(BilateralContextService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly navSE = inject(SmartNavigationService);
+  readonly dataControlSE = inject(DataControlService);
+
+  readonly cycleYear = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return this.dataControlSE.reportingCurrentPhase?.phaseYear ?? null;
+  });
+
+  readonly cyclePhase = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return this.dataControlSE.reportingCurrentPhase?.portfolioAcronym ?? '';
+  });
+
+  readonly reportingCycleLabel = computed(() => {
+    const parts: string[] = [];
+    const year = this.cycleYear();
+    const phase = this.cyclePhase();
+    if (year) parts.push(`Reporting cycle ${year}`);
+    if (phase) parts.push(phase);
+    return parts.join(' · ');
+  });
+
+  readonly eyebrow = computed(() => {
+    const cycle = this.reportingCycleLabel();
+    return cycle ? `CGIAR Center · ${cycle}` : 'CGIAR Center';
+  });
 
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'reporting' | 'results' | 'drafts' | null>(null);
