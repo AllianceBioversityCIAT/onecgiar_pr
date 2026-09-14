@@ -127,6 +127,47 @@
       flex-shrink: 0;
     }
 
+    // ── Fijar la guía. Discreto por defecto (es una acción de lectura, no del formulario) y
+    // teñido con el estado cuando está activo, para que se vea que el bloque de abajo está ahí
+    // porque alguien lo dejó ahí.
+    .fch_pin {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px 2px 5px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--pr-text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1.4;
+      cursor: pointer;
+      // Aparece al acercarse al campo, no antes: es una acción de lectura y repetirla visible en
+      // cada fila de una lista de cinco pesa más que el botón que ofrece. Sigue alcanzable por
+      // teclado — el `:focus-within` de la tarjeta lo revela — y se queda visible si está fijado.
+      opacity: 0;
+      transition: opacity 140ms ease;
+
+      &:hover {
+        background: rgb(255 255 255 / 0.7);
+        color: var(--fc-ink);
+      }
+
+      &--on {
+        background: var(--pr-color-white);
+        border-color: var(--fc-edge);
+        color: var(--fc-ink);
+      }
+
+      svg {
+        display: block;
+      }
+    }
+
     // ── The save pill. Fed by SaveButtonService.savedTick — a save that FAILED never clears the
     // "unsaved" mark, which is the whole reason this is not wired to `isSaving`.
     .fch_save {
@@ -192,6 +233,14 @@
     }
   }
 
+  &:hover .fch_pin,
+  &:focus-within .fch_pin,
+  &.fc-pinned .fch_pin {
+    opacity: 1;
+  }
+
+  // Fijada: el bloque queda abierto pase lo que pase con el puntero.
+  &.fc-pinned .field_card_desc,
   &:hover .field_card_desc,
   &:focus-within .field_card_desc {
     max-height: 320px;
@@ -245,6 +294,10 @@
     font-size: 13px;
     font-weight: 500;
     color: var(--pr-text);
+  }
+
+  .field_card_header .fch_pin span {
+    display: none;
   }
 
   .field_card_desc {

@@ -1,4 +1,4 @@
-import { Component, Input, effect, inject, signal, untracked } from '@angular/core';
+import { Component, Input, OnInit, effect, inject, signal, untracked } from '@angular/core';
 import { SaveButtonService } from '../save-button/save-button.service';
 
 /**
@@ -23,7 +23,7 @@ export type FieldCardState = 'plain' | 'idle' | 'todo' | 'ok' | 'opt' | 'error';
   templateUrl: './field-card.component.html',
   standalone: false
 })
-export class FieldCardComponent {
+export class FieldCardComponent implements OnInit {
   @Input() label: string;
   @Input() description: string;
   @Input() tooltip = '';
@@ -39,6 +39,23 @@ export class FieldCardComponent {
    */
   @Input() labelDescInlineStyles = '';
   @Input() useColon = false;
+
+  /**
+   * ── Guía fijable ────────────────────────────────────────────────────────
+   * La guía de un campo vive en un tooltip: se lee una vez y desaparece, justo cuando el reportero
+   * empieza a escribir y es cuando la necesita delante. Con el pin queda anclada DENTRO de la
+   * tarjeta, debajo del título y encima del control, hasta que él la quite.
+   *
+   * `pinGuidanceByDefault` resuelve el dilema de qué mostrar de entrada: un campo que nadie sabe
+   * llenar puede nacer con la guía abierta, sin obligar a los demás a cerrarla.
+   *
+   * La elección persiste en **localStorage**, no en la base: es una preferencia de lectura de una
+   * persona en su navegador, no un dato del resultado — no viaja en ningún payload ni se comparte
+   * con quien abra el mismo resultado después.
+   */
+  @Input() pinGuidanceByDefault = false;
+  /** Clave de persistencia. Por defecto se deriva del label, que es lo que identifica al campo. */
+  @Input() pinKey = '';
 
   /**
    * Whether the field currently holds a value. Read again by the redesign to tint the header.
@@ -102,6 +119,53 @@ export class FieldCardComponent {
   /** `input`/`change` bubble out of the projected control, so one listener on the card is enough. */
   markEdited(): void {
     if (!this.edited()) this.edited.set(true);
+  }
+
+  readonly pinned = signal(false);
+  private static readonly PIN_PREFIX = 'pr-field-guidance-pin:';
+
+  ngOnInit(): void {
+    this.pinned.set(this.readPin());
+  }
+
+  /** El texto que se puede fijar: la descripción inline si la hay, y si no, la del tooltip. */
+  get guidanceText(): string {
+    return (this.description || this.tooltip || '').trim();
+  }
+
+  get canPin(): boolean {
+    return this.showHeaderRow && !!this.guidanceText;
+  }
+
+  /** El bloque de guía se pinta si el campo ya lo traía, o si el usuario lo fijó. */
+  get showGuidanceBlock(): boolean {
+    return this.showDescriptionBlock || (this.pinned() && this.canPin);
+  }
+
+  togglePin(): void {
+    const next = !this.pinned();
+    this.pinned.set(next);
+    // 🛑 Envuelto: en una ventana privada o con el almacenamiento bloqueado, `setItem` LANZA.
+    // Perder la preferencia es aceptable; romper el formulario por guardarla, no.
+    try {
+      localStorage.setItem(this.pinStorageKey, next ? '1' : '0');
+    } catch {
+      /* sin persistencia, el pin dura lo que la pantalla */
+    }
+  }
+
+  private get pinStorageKey(): string {
+    const id = this.pinKey || (this.label || '').replace(/<[^>]*>/g, '').trim().toLowerCase().replace(/\s+/g, '-');
+    return FieldCardComponent.PIN_PREFIX + id;
+  }
+
+  private readPin(): boolean {
+    try {
+      const raw = localStorage.getItem(this.pinStorageKey);
+      return raw === null ? this.pinGuidanceByDefault : raw === '1';
+    } catch {
+      return this.pinGuidanceByDefault;
+    }
   }
 
   /** A label is what makes a field addressable — blank/whitespace does not count as one. */

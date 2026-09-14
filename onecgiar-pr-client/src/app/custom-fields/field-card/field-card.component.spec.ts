@@ -16,7 +16,9 @@ import { PrInfoIconComponent } from '../pr-info-icon/pr-info-icon.component';
     [hasError]="hasError()"
     [tooltip]="tooltip()"
     [showHeader]="showHeader()"
-    [showDescription]="showDescription()">
+    [showDescription]="showDescription()"
+    [pinGuidanceByDefault]="pinByDefault()"
+    pinKey="my-field">
     <input class="projected-control" />
   </app-field-card>`,
   standalone: false
@@ -32,6 +34,7 @@ class HostComponent {
   readonly showHeader = signal(true);
   readonly showDescription = signal(true);
   readonly tooltip = signal('');
+  readonly pinByDefault = signal(false);
 }
 
 describe('FieldCardComponent', () => {
@@ -217,6 +220,70 @@ describe('FieldCardComponent', () => {
       fixture.detectChanges();
 
       expect(q('.field_card')).toBeNull();
+    });
+  });
+
+  describe('pinned guidance (14-sep-2026)', () => {
+    const PIN_KEY = 'pr-field-guidance-pin:my-field';
+
+    beforeEach(() => localStorage.removeItem(PIN_KEY));
+    afterEach(() => localStorage.removeItem(PIN_KEY));
+
+    const pinBtn = () => q('.fch_pin')?.nativeElement as HTMLButtonElement | undefined;
+    const guidance = () => q('.field_card_desc');
+
+    it('offers the pin only when the field actually has guidance to pin', () => {
+      host.description.set('');
+      host.tooltip.set('');
+      fixture.detectChanges();
+      expect(pinBtn()).toBeUndefined();
+
+      host.tooltip.set('Write a short, self-explanatory name.');
+      fixture.detectChanges();
+      expect(pinBtn()).toBeTruthy();
+    });
+
+    it('pins the tooltip text into the card, and remembers it in localStorage', () => {
+      host.description.set('');
+      host.tooltip.set('Write a short, self-explanatory name.');
+      fixture.detectChanges();
+      expect(guidance()).toBeNull();
+
+      pinBtn()!.click();
+      fixture.detectChanges();
+
+      expect(guidance().nativeElement.textContent).toContain('Write a short, self-explanatory name.');
+      expect(localStorage.getItem(PIN_KEY)).toBe('1');
+      expect(pinBtn()!.textContent.trim()).toBe('Pinned');
+    });
+
+    it('unpins back, and the stored value says so — not just the absence of a key', () => {
+      host.tooltip.set('Guidance');
+      fixture.detectChanges();
+      pinBtn()!.click();
+      fixture.detectChanges();
+      pinBtn()!.click();
+      fixture.detectChanges();
+
+      expect(localStorage.getItem(PIN_KEY)).toBe('0');
+      expect(q('.fc-pinned')).toBeNull();
+    });
+
+    /** 🛑 El default solo manda cuando el usuario NO ha elegido: una preferencia guardada gana. */
+    it('starts pinned when the field asks for it, and a stored choice still wins', () => {
+      localStorage.setItem(PIN_KEY, '0');
+      const other = TestBed.createComponent(HostComponent);
+      other.componentInstance.tooltip.set('Guidance');
+      other.componentInstance.pinByDefault.set(true);
+      other.detectChanges();
+      expect(other.debugElement.query(By.css('.fc-pinned'))).toBeNull();
+
+      localStorage.removeItem(PIN_KEY);
+      const fresh = TestBed.createComponent(HostComponent);
+      fresh.componentInstance.tooltip.set('Guidance');
+      fresh.componentInstance.pinByDefault.set(true);
+      fresh.detectChanges();
+      expect(fresh.debugElement.query(By.css('.fc-pinned'))).toBeTruthy();
     });
   });
 });

@@ -14,6 +14,7 @@
   [class.field_card]="!isBare"
   [class.fc-row]="!isBare && layout === 'row'"
   [class.fc-error]="!isBare && hasError"
+  [class.fc-pinned]="pinned() && canPin"
   [attr.data-state]="isBare ? null : state"
   (input)="markEdited()"
   (change)="markEdited()">
@@ -37,6 +38,23 @@
           <!-- P2-3339: inline SVG, not an icon-font ligature. The ligature name used to paint as
                literal text and overflow this 18px button onto the label. -->
           <app-pr-info-icon />
+        </button>
+      }
+      @if (canPin) {
+        <!-- Fijar la guía: la ancla dentro de la tarjeta en vez de dejarla en un tooltip que se va
+             justo cuando el reportero empieza a escribir. La preferencia se recuerda por campo. -->
+        <button
+          type="button"
+          class="fch_pin"
+          [class.fch_pin--on]="pinned()"
+          [attr.aria-pressed]="pinned()"
+          [attr.aria-label]="pinned() ? 'Unpin the guidance for this field' : 'Pin the guidance for this field'"
+          (click)="togglePin()">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6.2 2h3.6l-.5 3.3 2.2 2.1H4.5l2.2-2.1z" />
+            <path d="M8 7.4V14" />
+          </svg>
+          <span>{{ pinned() ? 'Pinned' : 'Pin' }}</span>
         </button>
       }
       @if (saveState !== 'none') {
@@ -63,9 +81,9 @@
       }
     </div>
   }
-  @if (showDescriptionBlock) {
+  @if (showGuidanceBlock) {
     <div class="field_card_desc" [style]="descInlineStyles">
-      <div class="desc_text" [innerHTML]="description"></div>
+      <div class="desc_text" [innerHTML]="description || tooltip"></div>
     </div>
   }
   <ng-content></ng-content>
