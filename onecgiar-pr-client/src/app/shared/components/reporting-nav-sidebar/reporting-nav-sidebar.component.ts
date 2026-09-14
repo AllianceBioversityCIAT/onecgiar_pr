@@ -51,6 +51,7 @@ import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
 import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
+import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
 import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
@@ -82,7 +83,7 @@ interface IconFlyout {
 @Component({
   selector: 'app-reporting-nav-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgIcon, OverlayModule, A11yModule, ...HlmSidebarImports],
+  imports: [CommonModule, RouterModule, NgIcon, OverlayModule, A11yModule, SpMarkerComponent, ...HlmSidebarImports],
   templateUrl: './reporting-nav-sidebar.component.html',
   styleUrls: ['./reporting-nav-sidebar.component.scss'],
   providers: [
@@ -590,6 +591,7 @@ export class ReportingNavSidebarComponent {
   iconSrc(sp: SPProgress): string {
     return `/assets/result-framework-reporting/SPs-Icons/${sp.initiativeCode}.png`;
   }
+
 
   // Mirrors NavigationBarComponent so admin-only entries stay gated in the sidebar too.
   validateAdminModuleAndRole(option: PrRoute): boolean {

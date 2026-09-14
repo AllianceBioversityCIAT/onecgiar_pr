@@ -37,7 +37,7 @@
     [attr.inert]="bandCollapsed() ? '' : null">
     <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
     <div class="flex items-center gap-[7px]">
-      <span class="h-[7px] w-[7px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
+      <app-sp-marker [code]="programCode()" [size]="15" [dotSize]="7" [fallbackColor]="programDotColor()" />
       @if (programCode()) {
         <!-- `font-mono` (not the global `.pr-code`): that class is UNLAYERED SCSS, so its 12px/500
              beat the layered Tailwind utilities next to it and the code rendered a notch bigger and

@@ -103,7 +103,7 @@
             [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
             [attr.aria-label]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)"
             [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
-            <span class="pr-nav-program-dot" [style.background]="programDotColor(sp.initiativeCode)"></span>
+            <app-sp-marker [code]="sp.initiativeCode" [size]="22" [dotSize]="8" [fallbackColor]="programDotColor(sp.initiativeCode)" />
           </a>
         }
         @if (getMyCenters().length > 0) {
@@ -142,7 +142,7 @@
                       [routerLink]="programLink(sp)"
                       [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
                       [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
-                      <span class="pr-nav-program-dot" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                      <app-sp-marker [code]="sp.initiativeCode" [size]="18" [dotSize]="8" [fallbackColor]="programDotColor(sp.initiativeCode)" />
                       <span class="pr-nav-program-code">{{ sp.initiativeCode }}</span>
                       <span class="pr-nav-program-name">{{ sp.initiativeShortName || sp.initiativeName }}</span>
                       @if (sp.initiativeCode === activeSpCode()) {
@@ -180,7 +180,7 @@
                               [routerLink]="programLink(sp)"
                               [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
                               [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
-                              <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                              <app-sp-marker [code]="sp.initiativeCode" [size]="18" [dotSize]="6" [fallbackColor]="programDotColor(sp.initiativeCode)" />
                               <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
                               <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
                             </a>
@@ -208,7 +208,7 @@
                             [routerLink]="programLink(sp)"
                             [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
                             [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
-                            <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                            <app-sp-marker [code]="sp.initiativeCode" [size]="18" [dotSize]="6" [fallbackColor]="programDotColor(sp.initiativeCode)" />
                             <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
                             <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
                           </a>

@@ -27,6 +27,7 @@ import { normalizeBilateralReviewPhaseId } from '../../../bilateral-review/bilat
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { ReportingQuickTypologyFiltersComponent } from '../reporting-quick-typology-filters/reporting-quick-typology-filters.component';
 import { ReportingVideoModalComponent } from '../reporting-video-modal/reporting-video-modal.component';
+import { SpMarkerComponent } from '../../../../../../shared/components/sp-marker/sp-marker.component';
 export type { ResultTypeQuickChip } from '../reporting-quick-typology-filters/reporting-quick-typology.util';
 
 export interface BandFilterOption {
@@ -106,7 +107,7 @@ export const SCIENCE_PROGRAM_DESCRIPTIONS: Record<string, string> = {
 @Component({
   selector: 'app-reporting-program-band',
   standalone: true,
-  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, ReportingQuickTypologyFiltersComponent, ReportingVideoModalComponent],
+  imports: [RouterLink, NgIcon, FormsModule, SpMarkerComponent, PrFilterMultiselectModule, PrFilterSelectComponent, ReportingQuickTypologyFiltersComponent, ReportingVideoModalComponent],
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
