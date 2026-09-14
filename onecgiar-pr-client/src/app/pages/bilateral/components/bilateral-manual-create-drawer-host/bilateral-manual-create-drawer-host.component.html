@@ -1,0 +1,50 @@
+@if (flow.drawerOpen()) {
+  <app-bilateral-create-drawer
+    [projectCode]="flow.drawerProjectCode()"
+    [projectTitle]="flow.drawerProjectTitle()"
+    [programCode]="flow.drawerProgramCode()"
+    [programName]="flow.drawerProgramName()"
+    [restoreFocusTarget]="restoreFocusTarget()"
+    (closed)="onDrawerClosed()">
+    <div class="bmcdh flex h-full min-h-0 flex-col">
+      @if (flow.canGoBack()) {
+        <div class="bmcdh-back shrink-0 border-b border-[rgba(30,32,47,0.08)] bg-white px-4 py-2.5 min-[640px]:px-6">
+          <button
+            type="button"
+            (click)="flow.goBack()"
+            data-testid="bilateral-create-drawer-back"
+            class="bmcdh-back-btn inline-flex items-center gap-1.5">
+            <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]" aria-hidden="true">arrow_back</span>
+            {{ flow.backLabel() }}
+          </button>
+        </div>
+      }
+
+      @if (!flow.canShowCreateForm()) {
+        <div #spSection class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-sp-gate">
+          <p class="m-0 mb-3 text-[14px] text-[var(--pr-text-subtle)]">
+            {{ copy.spGate.hint }}
+          </p>
+          <app-bilateral-sp-selector (primarySelected)="scrollToSpSection()" />
+        </div>
+      } @else if (!flow.selectedReportingWay()) {
+        <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-reporting-way">
+          <app-bilateral-reporting-way-selector
+            [isLoading]="flow.isCreating()"
+            [canUseAi]="flow.canUseAi()"
+            [selectedWay]="flow.selectedReportingWay()"
+            (waySelected)="flow.selectReportingWay($event)" />
+        </div>
+      } @else if (flow.selectedReportingWay() === 'ai') {
+        <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-ai-upload">
+          <app-bilateral-ai-upload />
+        </div>
+      } @else {
+        <app-bilateral-manual-create-form
+          class="block h-full min-h-0 flex-1"
+          [creating]="flow.isCreating()"
+          (create)="flow.submitCreate($event)" />
+      }
+    </div>
+  </app-bilateral-create-drawer>
+}

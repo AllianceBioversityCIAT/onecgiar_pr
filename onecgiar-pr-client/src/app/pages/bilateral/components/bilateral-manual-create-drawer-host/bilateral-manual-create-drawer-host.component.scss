@@ -1,0 +1,15 @@
+.bmcdh-back-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}

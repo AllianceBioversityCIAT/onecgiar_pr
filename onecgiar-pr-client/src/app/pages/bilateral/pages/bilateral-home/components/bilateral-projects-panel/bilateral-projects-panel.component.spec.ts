@@ -1,12 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { RouterModule } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { BilateralProjectsPanelComponent } from './bilateral-projects-panel.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
-import { BilateralCreationService } from '../../../../services/bilateral-creation.service';
+import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
 
 describe('BilateralProjectsPanelComponent', () => {
@@ -14,7 +13,7 @@ describe('BilateralProjectsPanelComponent', () => {
   let fixture: ComponentFixture<BilateralProjectsPanelComponent>;
   let bilateralApiService: jest.Mocked<BilateralApiService>;
   let ctx: BilateralContextService;
-  let creationService: BilateralCreationService;
+  let manualCreateFlow: BilateralManualCreateFlowService;
 
   const mockProjects: BilateralProject[] = [
     {
@@ -59,7 +58,7 @@ describe('BilateralProjectsPanelComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [BilateralProjectsPanelComponent, RouterModule.forRoot([])],
+      imports: [BilateralProjectsPanelComponent],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -71,7 +70,7 @@ describe('BilateralProjectsPanelComponent', () => {
     component = fixture.componentInstance;
     bilateralApiService = TestBed.inject(BilateralApiService) as jest.Mocked<BilateralApiService>;
     ctx = TestBed.inject(BilateralContextService);
-    creationService = TestBed.inject(BilateralCreationService);
+    manualCreateFlow = TestBed.inject(BilateralManualCreateFlowService);
   });
 
   afterEach(() => {
@@ -178,10 +177,11 @@ describe('BilateralProjectsPanelComponent', () => {
     expect(sessionStorage.getItem('pr.bilateral.viewMode')).toBe('grid');
   });
 
-  it('should call creationService.selectProject on selectAndCreate()', () => {
-    const spy = jest.spyOn(creationService, 'selectProject');
-    component.selectAndCreate(mockProjects[0]);
-    expect(spy).toHaveBeenCalledWith(mockProjects[0]);
+  it('opens the manual create drawer from Create result without leaving the catalog', () => {
+    const event = { preventDefault: jest.fn() } as unknown as Event;
+    component.openManualCreate(mockProjects[0], event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(manualCreateFlow.drawerOpen()).toBe(true);
   });
 
   it('should set error state if API fails', () => {
@@ -270,18 +270,16 @@ describe('BilateralProjectsPanelComponent', () => {
       expect(toolbar.nextElementSibling).toBe(workArea);
     });
 
-    it('should enclose header, KPI cards, and catalog inside #workArea scroller (BSA-DD-4, BSA-DD-5)', () => {
+    it('should enclose KPI cards and catalog inside #workArea scroller (BSA-DD-4, BSA-DD-5)', () => {
       ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
       fixture.detectChanges();
 
       const workArea = fixture.nativeElement.querySelector('#workArea') as HTMLElement;
       expect(workArea).toBeTruthy();
 
-      const header = workArea.querySelector('.bpp_header');
       const kpiSection = workArea.querySelector('.bpp_kpi_section');
       const catalogHeader = workArea.querySelector('.bpp_catalog_header');
 
-      expect(header).toBeTruthy();
       expect(kpiSection).toBeTruthy();
       expect(catalogHeader).toBeTruthy();
     });

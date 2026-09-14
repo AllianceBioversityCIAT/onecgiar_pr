@@ -11,8 +11,9 @@ import { BilateralAiUploadComponent } from '../../components/bilateral-ai-upload
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
 import { BilateralSpSelectorComponent } from '../../components/bilateral-sp-selector/bilateral-sp-selector.component';
-import { BilateralResultLevelSelectorComponent } from '../../components/bilateral-result-level-selector/bilateral-result-level-selector.component';
 import { BilateralReportingWaySelectorComponent } from '../../components/bilateral-reporting-way-selector/bilateral-reporting-way-selector.component';
+import { BilateralManualCreateDrawerHostComponent } from '../../components/bilateral-manual-create-drawer-host/bilateral-manual-create-drawer-host.component';
+import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { SectionGeneralInfoComponent } from '../../components/section-general-info/section-general-info.component';
 import { SectionContributorsComponent } from '../../components/section-contributors/section-contributors.component';
 import { SectionGeographyComponent } from '../../components/section-geography/section-geography.component';
@@ -23,20 +24,6 @@ import { FormSkeletonComponent } from '../../components/form-skeleton/form-skele
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 
-const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
-  3: [
-    { id: 1, label: 'Policy Change' },
-    { id: 2, label: 'Innovation Use' },
-    { id: 4, label: 'Other Outcome' }
-  ],
-  4: [
-    { id: 5, label: 'Capacity Sharing for Development' },
-    { id: 6, label: 'Knowledge Product' },
-    { id: 7, label: 'Innovation Development' },
-    { id: 8, label: 'Other Output' }
-  ]
-};
-
 @Component({
   selector: 'app-bilateral-result-creator',
   imports: [
@@ -44,8 +31,8 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionZeroDashboardComponent,
     BilateralProjectSelectorComponent,
     BilateralSpSelectorComponent,
-    BilateralResultLevelSelectorComponent,
     BilateralReportingWaySelectorComponent,
+    BilateralManualCreateDrawerHostComponent,
     BilateralAiUploadComponent,
     SectionGeneralInfoComponent,
     SectionContributorsComponent,
@@ -71,27 +58,17 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
   readonly bilateralAiService = inject(BilateralAiService);
+  readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
   private readonly ctx = inject(BilateralContextService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
-  resultLevelId = signal<number | null>(null);
-  resultTypeId = signal<number | null>(null);
-  isCreatingResult = signal(false);
   openSectionName = signal<BilateralEditorSection>('general-info');
   isSubmitting = signal(false);
   isManualSaving = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
-  showTypeDropdown = signal(false);
-  kpHandle = signal('');
-  validatingKpHandle = signal(false);
-  kpSyncedTitle = signal<string | null>(null);
-  kpHandleError = signal<string | null>(null);
   private isPageUnloading = false;
-
-  /** Knowledge Product (result_type_id 6) is created purely from a repository handle (CGSpace, MELSpace, or WorldFish DSpace). */
-  readonly isKnowledgeProductType = computed(() => this.resultTypeId() === 6);
 
   /**
    * P2-3387: Other Output (8) and Other Outcome (4) have no type-specific fields, and the story is
@@ -203,26 +180,11 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.pendingOpen.set(false);
   }
 
-  // Mirrors report-result-form.component.ts's GET_mqapValidation() regex — keep both in sync.
-  private readonly KP_HANDLE_REGEX =
-    /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
-
   canUseAi = computed(() => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp());
 
   isAiProcessing = computed(() => {
     const status = this.bilateralAiService.uploadState().status;
     return status === 'uploading' || status === 'pending' || status === 'processing';
-  });
-
-  availableResultTypes = computed(() => {
-    const level = this.resultLevelId();
-    return level ? (RESULT_TYPES_BY_LEVEL[level] ?? []) : [];
-  });
-
-  selectedTypeLabel = computed(() => {
-    const typeId = this.resultTypeId();
-    if (!typeId) return 'Select result type';
-    return this.availableResultTypes().find(t => t.id === typeId)?.label ?? 'Select result type';
   });
 
   overallPct = this.mdsTracker.overallPercentage;
@@ -332,11 +294,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.isCreating.set(true);
         this.resultId.set(null);
         this.selectedReportingWay.set(null);
-        this.resultLevelId.set(null);
-        this.resultTypeId.set(null);
-        this.showTypeDropdown.set(false);
-        this.kpHandle.set('');
-        this.resetKpSync();
+        this.manualCreateFlow.closeDrawer();
         this.autoSaveService.reset();
         this.mdsTracker.reset();
         this.creationService.resetWizard();
@@ -351,10 +309,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.autoSaveService.reset();
     this.mdsTracker.reset();
     this.selectedReportingWay.set(null);
-    this.resultLevelId.set(null);
-    this.resultTypeId.set(null);
-    this.kpHandle.set('');
-    this.resetKpSync();
+    this.manualCreateFlow.closeDrawer();
     this.scrollToSection('bcr-sp-section');
   }
 
@@ -363,147 +318,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   onReportingWaySelected(way: 'manual' | 'ai' | 'bulk'): void {
+    this.manualCreateFlow.closeDrawer();
     this.selectedReportingWay.set(way);
-    if (way === 'manual') {
-      this.scrollToSection('bcr-level-section');
-    } else if (way === 'ai') {
+    if (way === 'ai') {
       this.bilateralAiService.clearUploadState();
       this.scrollToSection('bcr-ai-upload');
+    } else if (way === 'manual') {
+      this.manualCreateFlow.openDrawerForManual();
     }
-  }
-
-  onLevelSelected(levelId: number): void {
-    this.resultLevelId.set(levelId);
-    this.creationService.resultLevelId.set(levelId);
-    this.resultTypeId.set(null);
-    this.creationService.resultTypeId.set(null);
-    this.showTypeDropdown.set(false);
-    this.kpHandle.set('');
-    this.resetKpSync();
-    this.scrollToSection('bcr-type-section');
-  }
-
-  toggleTypeDropdown(): void {
-    this.showTypeDropdown.update(v => !v);
-  }
-
-  closeTypeDropdown(): void {
-    this.showTypeDropdown.set(false);
-  }
-
-  onTypeSelected(typeId: number): void {
-    this.resultTypeId.set(typeId);
-    this.creationService.resultTypeId.set(typeId);
-    this.showTypeDropdown.set(false);
-    this.scrollToSection('bcr-actions');
-  }
-
-  onNext(): void {
-    this.createResult();
-  }
-
-  onKpHandleInput(value: string): void {
-    this.kpHandle.set(value);
-    this.resetKpSync();
-  }
-
-  /** Validates the handle format, then previews the title via the same mqap endpoint P25's creation flows use. */
-  syncKpHandle(): void {
-    const handle = this.kpHandle().trim();
-    this.kpSyncedTitle.set(null);
-
-    if (!handle) {
-      this.kpHandleError.set('Please enter a valid handle.');
-      return;
-    }
-    if (!this.KP_HANDLE_REGEX.test(handle)) {
-      this.kpHandleError.set(
-        'Please ensure that the handle is from the CGSpace, MELSpace or WorldFish repository and not other CGIAR repositories.'
-      );
-      return;
-    }
-
-    this.kpHandleError.set(null);
-    this.validatingKpHandle.set(true);
-    this.api.resultsSE.GET_mqapValidation(handle).subscribe({
-      next: (resp: any) => {
-        this.validatingKpHandle.set(false);
-        this.kpSyncedTitle.set(resp?.response?.title ?? null);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.validatingKpHandle.set(false);
-        this.kpHandleError.set(err.error?.message || 'Unable to retrieve metadata for this handle.');
-      }
-    });
-  }
-
-  private resetKpSync(): void {
-    this.validatingKpHandle.set(false);
-    this.kpSyncedTitle.set(null);
-    this.kpHandleError.set(null);
-  }
-
-  createResult(): void {
-    const level = this.resultLevelId();
-    const type = this.resultTypeId();
-    if (!level || !type) return;
-    const handle = this.isKnowledgeProductType() ? this.kpHandle().trim() : undefined;
-    if (this.isKnowledgeProductType() && !handle) return;
-    this.isCreatingResult.set(true);
-    this.creationService.createResult(level, type, handle).subscribe({
-      next: ({ response }) => {
-        this.isCreatingResult.set(false);
-        if (!response?.id) {
-          this.api.alertsFe.show({ id: 'bilateralCreateNoId', title: 'Error', description: 'Result created but no ID returned', status: 'error' });
-          return;
-        }
-        this.creationService.clearEditorState();
-        this.autoSaveService.reset();
-        this.mdsTracker.reset();
-
-        // The detail endpoint resolves by `result_code` when a phase is present, and by `id` when it
-        // is not. `result_code ?? id` used to let a 0 through — 0 is not nullish — and a 0 code is
-        // shared by every bilateral row, so `/result/0?phase=X` resolves to whichever draft the
-        // server finds first. Route by id (and drop the phase) rather than risk opening someone
-        // else's result, and say so instead of failing quietly.
-        const resultCode = Number(response.result_code);
-        const hasResultCode = Number.isFinite(resultCode) && resultCode > 0;
-        if (!hasResultCode) {
-          this.api.alertsFe.show({
-            id: 'bilateralCreateNoResultCode',
-            title: 'Result created without a result code',
-            description: 'Opening it by internal id. Please report this — the result code sequence may not be configured.',
-            status: 'warning',
-            closeIn: 8000
-          });
-        }
-
-        // The server resolves the lead centre from the selected project, falling back to
-        // `source_center_acronym` when CLARISA left `organization_code` null. When even that
-        // fails the result is still created — blocking creation would be worse — but it must
-        // not fail quietly: with no lead centre the Contributors & Partners green check can
-        // never turn green, and the person would have no way to find out why.
-        if (response.lead_center_resolved === false) {
-          this.api.alertsFe.show({
-            id: 'bilateralCreateNoLeadCenter',
-            title: 'Result created without a lead center',
-            description:
-              'The selected project has no center on record, so section 3 cannot be completed yet. Please report it so the project can be corrected.',
-            status: 'warning',
-            closeIn: 8000
-          });
-        }
-
-        this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', hasResultCode ? resultCode : response.id], {
-          queryParams: hasResultCode && response.version_id ? { phase: response.version_id } : {}
-        });
-      },
-      error: (err: HttpErrorResponse) => {
-        this.isCreatingResult.set(false);
-        const detail = err.error?.message || err.statusText || 'Unknown error';
-        this.api.alertsFe.show({ id: 'bilateralCreateError', title: 'Failed to create result', description: detail, status: 'error', closeIn: 5000 });
-      }
-    });
   }
 
   getSectionMdsStatus(sectionName: string): MdsStatus {
@@ -561,12 +383,6 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       if (!el) return;
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 50);
-  }
-
-  get canCreate(): boolean {
-    const baseReady = !!this.creationService.selectedPrimarySp() && !!this.resultLevelId() && !!this.resultTypeId();
-    if (!baseReady) return false;
-    return this.isKnowledgeProductType() ? !!this.kpSyncedTitle()?.trim() : true;
   }
 
   /**

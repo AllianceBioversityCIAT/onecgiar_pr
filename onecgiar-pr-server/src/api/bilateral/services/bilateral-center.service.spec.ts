@@ -394,6 +394,56 @@ describe('BilateralCenterService', () => {
       );
     });
 
+    // @akili-spec bilateral/manual-create-drawer (BIL-MCD-T-1)
+    it('persists a client-supplied title and skips the draft rename', async () => {
+      await service.createResultHeader(user, {
+        result_level_id: 4,
+        result_type_id: 8,
+        title: 'My Result',
+      });
+
+      expect(resultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'My Result' }),
+      );
+      expect(resultRepository.update).not.toHaveBeenCalledWith(99, {
+        title: 'Bilateral Draft #99',
+      });
+    });
+
+    it('assigns a bilateral draft title when title is omitted', async () => {
+      await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+      });
+
+      const saved = (resultRepository.save as jest.Mock).mock.calls.at(-1)[0];
+      expect(saved.title).toMatch(/^Bilateral Draft \d+$/);
+      expect(resultRepository.update).toHaveBeenCalledWith(99, {
+        title: 'Bilateral Draft #99',
+      });
+    });
+
+    it('still populates KP from CGSpace when a client title is provided', async () => {
+      const resultsKnowledgeProductsService =
+        module.get<ResultsKnowledgeProductsService>(
+          ResultsKnowledgeProductsService,
+        );
+
+      await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 6,
+        handle: '10568/175322',
+        title: 'Repository title preview',
+      });
+
+      expect(resultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Repository title preview' }),
+      );
+      expect(
+        resultsKnowledgeProductsService.populateKPFromCGSpace,
+      ).toHaveBeenCalledWith(99, '10568/175322', user);
+    });
+
     // A 0 result_code means the `result_auto_code` trigger is missing from the environment. Every
     // bilateral row then shares code 0, and the detail endpoint resolves by result_code whenever a
     // phase is supplied — so the user would silently open somebody else's draft. Logged rather than

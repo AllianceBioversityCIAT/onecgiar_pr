@@ -79,5 +79,18 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
 - ⚠️ Ese `effect` **no** puede vivir dentro de `submitResult()`: un resultado que ya llega fuera de
   `Editing` al cargar la página tiene que quedar bloqueado sin que nadie pulse Submit.
 
+## Wizard — drawer de creación manual (2026-09-14, BIL-MCD-T-6)
+- El bloque inline `#bcr-level-section` **ya no existe**. Nivel/tipo/título viven en
+  `app-bilateral-manual-create-form` dentro de `app-bilateral-manual-create-drawer-host`.
+- **Orquestación:** `BilateralManualCreateFlowService` (root singleton) — `drawerOpen`,
+  `selectedReportingWay`, `beginFromProject()` (catálogo home), `openDrawerForManual()` (wizard),
+  `submitCreate()` → `BilateralCreationService.createResult(..., title)`.
+- **Flujo wizard:** proyecto → SP → tarjetas AI/Manual → al elegir Manual el drawer abre al
+  instante (`openDrawerForManual()`). AI sigue inline en `#bcr-ai-upload`.
+- **Flujo home:** `+ Create result` en `bilateral-projects-panel` llama `beginFromProject()` —
+  drawer in-place, catálogo visible detrás del scrim; paso reporting-way dentro del drawer.
+- **Back:** barra superior del body del drawer (host), no header ni footer del form.
+- **Copy:** `src/app/internationalization/bilateral-manual-create.copy.ts`.
+
 ## Pendiente / Coming soon
-- Nada abierto en esta carpeta.
+- HITL responsive/axe del drawer — ver `execution.md` del spec `manual-create-drawer`.

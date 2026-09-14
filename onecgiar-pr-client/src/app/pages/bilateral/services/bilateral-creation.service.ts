@@ -409,7 +409,7 @@ export class BilateralCreationService {
     }
   }
 
-  createResult(resultLevelId: number, resultTypeId: number, handle?: string): Observable<any> {
+  createResult(resultLevelId: number, resultTypeId: number, handle?: string, title?: string): Observable<any> {
     const body: Record<string, unknown> = {
       result_level_id: resultLevelId,
       result_type_id: resultTypeId,
@@ -432,6 +432,9 @@ export class BilateralCreationService {
     }
     if (handle?.trim()) {
       body['handle'] = handle.trim();
+    }
+    if (title?.trim()) {
+      body['title'] = title.trim();
     }
     return this.bilateralApi.POST_createBilateralHeader(body);
   }

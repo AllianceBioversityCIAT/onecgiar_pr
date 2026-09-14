@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterModule } from '@angular/router';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
-import { BilateralCreationService } from '../../../../services/bilateral-creation.service';
+import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
+import { BilateralManualCreateDrawerHostComponent } from '../../../../components/bilateral-manual-create-drawer-host/bilateral-manual-create-drawer-host.component';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
 
 export interface KpiProgramStat {
@@ -35,7 +35,7 @@ function getInitialViewMode(): 'grid' | 'list' {
 @Component({
   selector: 'app-bilateral-projects-panel',
   standalone: true,
-  imports: [RouterModule, DecimalPipe],
+  imports: [DecimalPipe, BilateralManualCreateDrawerHostComponent],
   templateUrl: './bilateral-projects-panel.component.html',
   styleUrl: './bilateral-projects-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -43,7 +43,7 @@ function getInitialViewMode(): 'grid' | 'list' {
 export class BilateralProjectsPanelComponent {
   private readonly bilateralApiService = inject(BilateralApiService);
   readonly ctx = inject(BilateralContextService);
-  readonly creationService = inject(BilateralCreationService);
+  readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
 
   readonly projects = signal<BilateralProject[]>([]);
   readonly loading = signal(false);
@@ -186,8 +186,8 @@ export class BilateralProjectsPanelComponent {
     this.selectedMultiProgramOnly.set(false);
   }
 
-  selectAndCreate(project: BilateralProject): void {
-    this.creationService.selectProject(project);
+  openManualCreate(project: BilateralProject, event: Event): void {
+    this.manualCreateFlow.beginFromProject(project, event);
   }
 
   onSearch(event: Event): void {

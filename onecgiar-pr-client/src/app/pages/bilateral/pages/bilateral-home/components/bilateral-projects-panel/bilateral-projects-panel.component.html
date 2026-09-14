@@ -73,15 +73,6 @@
   class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
   <section class="bpp">
 
-    <!-- Header -->
-    <div class="bpp_header">
-      <div class="bpp_header_top">
-        <div>
-          <h2 class="bpp_title">Bilateral projects</h2>
-          <p class="bpp_subtitle">Projects available for reporting under this center</p>
-        </div>
-      </div>
-    </div>
 
     @if (loading()) {
       <!-- Modern Skeleton Loading State (KZ-BOR-1 compliant, no pi-spinner) -->
@@ -269,12 +260,14 @@
 
                 <!-- Card Footer Action -->
                 <div class="bpp_card_footer">
-                  <a class="bpp_cta_btn"
-                     [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
-                     (click)="selectAndCreate(project)">
+                  <button
+                    type="button"
+                    class="bpp_cta_btn"
+                    data-testid="bilateral-project-create-result"
+                    (click)="openManualCreate(project, $event)">
                     <i class="pi pi-plus"></i>
                     Create result
-                  </a>
+                  </button>
                 </div>
               </article>
             }
@@ -322,12 +315,14 @@
                       </div>
                     </td>
                     <td class="bpp_td_action">
-                      <a class="bpp_cta_btn bpp_cta_btn--table"
-                         [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
-                         (click)="selectAndCreate(project)">
+                      <button
+                        type="button"
+                        class="bpp_cta_btn bpp_cta_btn--table"
+                        data-testid="bilateral-project-create-result"
+                        (click)="openManualCreate(project, $event)">
                         <i class="pi pi-plus"></i>
                         <span>Create result</span>
-                      </a>
+                      </button>
                     </td>
                   </tr>
                 }
@@ -342,3 +337,5 @@
 
   </section>
 </div>
+
+<app-bilateral-manual-create-drawer-host />
