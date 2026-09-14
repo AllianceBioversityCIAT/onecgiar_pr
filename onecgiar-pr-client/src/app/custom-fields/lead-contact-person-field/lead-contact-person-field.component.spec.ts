@@ -327,7 +327,11 @@ describe('LeadContactPersonFieldComponent', () => {
 
         const loadingElement = fixture.debugElement.nativeElement.querySelector('.search-loading');
         expect(loadingElement).toBeTruthy();
-        expect(loadingElement.textContent.trim()).toBe('Searching...');
+        expect(loadingElement.textContent.trim()).toBe('Searching the CGIAR directory…');
+        // 🛑 El aro que gira es la mitad del indicador: un texto quieto se lee igual estando colgado
+        // que trabajando. Sin esta línea, quitar el spinner dejaría el test en verde.
+        expect(loadingElement.querySelector('.search-loading__spinner')).toBeTruthy();
+        expect(loadingElement.getAttribute('role')).toBe('status');
       });
     });
   });
