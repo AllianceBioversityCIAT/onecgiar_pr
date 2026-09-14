@@ -79,22 +79,19 @@
   }
 
   <!-- P2-3201: from 2026 the 0/1/2 scoring guidance moves into an ⓘ tooltip on the heading so the
-       section does not become note-heavy once the AI note is added. Earlier phases keep the box. -->
-  @if (guidanceAsTooltip()) {
-    <h1 class="pr_label impact_scores_heading">
-      Impact Area scores:
-      <button
-        type="button"
-        class="sgi-dac-info"
-        [prTooltip]="impactAreaScoresInfo()"
-        prTooltipPosition="bottom"
-        prTooltipStyleClass="sgi-dac-tooltip"
-        aria-label="Impact Area scoring guidance">
-        <app-pr-info-icon />
-      </button>
-    </h1>
-  } @else {
-    <h1 class="pr_label">Impact Area scores:</h1>
+       section does not become note-heavy once the AI note is added. Earlier phases keep the box.
+       14-sep-2026: el `<h1 class="pr_label">` suelto pasó a `app-field-group-header`. Era el único
+       elemento de la sección que quedaba fuera del lenguaje de los campos —texto plano encima de
+       una lista de cabeceras tintadas— y encima no podía decir lo único que un grupo necesita
+       decir: cuántos de sus campos faltan. Ahora lo dice, con el anillo, en el propio encabezado. -->
+  <app-field-group-header
+    data-testid="impact-areas-scored"
+    label="Impact Area scores"
+    [tooltip]="guidanceAsTooltip() ? impactAreaScoresInfo() : ''"
+    [completed]="impactAreasScored"
+    [total]="IMPACT_AREAS_TOTAL"
+    unit="scored"></app-field-group-header>
+  @if (!guidanceAsTooltip()) {
     <app-alert-status [collapsible]="false" [description]="impactAreaScoresInfo()"> </app-alert-status>
   }
 
@@ -376,11 +373,9 @@
     }
   </div>
 
-  <!-- Cierre de la lista de scores (mockup: número en JetBrains Mono 500 + texto 12px/400). Da el
-       progreso de la escala en un solo sitio, en vez de repetir un marcador por fila. -->
-  <span class="impact_scores_status" data-testid="impact-areas-scored">
-    <span class="font-mono font-medium">{{ impactAreasScored }}</span> of {{ IMPACT_AREAS_TOTAL }} impact areas scored
-  </span>
+  <!-- El contador que cerraba la lista subió a `app-field-group-header` (14-sep-2026): decir el
+       progreso ARRIBA es lo que permite leerlo sin haber recorrido las cinco filas antes. El
+       `data-testid` viajó con él, así que el contrato de pruebas sigue apuntando al mismo dato. -->
 
   <app-pr-yes-or-not
     data-testid="gi-field-is_krs"

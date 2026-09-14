@@ -31,6 +31,7 @@ import { InstitutionsService } from './../../../../../../shared/services/global/
 import { PusherService } from './../../../../../../shared/services/pusher.service';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { FieldGroupHeaderComponent } from 'src/app/custom-fields/field-group-header/field-group-header.component';
 import { FieldCardComponent } from './../../../../../../custom-fields/field-card/field-card.component';
 import { SectionSkeletonDirective } from './../../../../../../custom-fields/section-skeleton/section-skeleton.directive';
 import { GetImpactAreasScoresService } from './../../../../../../shared/services/global/get-impact-areas-scores.service';
@@ -229,6 +230,7 @@ describe('RdGeneralInformationComponent', () => {
         YesOrNotByBooleanPipe,
         ChangeResultTypeModalComponent,
         FieldCardComponent,
+        FieldGroupHeaderComponent,
         SectionSkeletonDirective
       ],
       providers: [
@@ -321,9 +323,9 @@ describe('RdGeneralInformationComponent', () => {
       const card = impactAreaCard();
       expect(card).toBeTruthy();
       expect(card.querySelector('.fch_title').textContent).toContain('Which component of the Impact Area?');
-      // Requiredness reads as the red asterisk next to the label — the Mandatory/Optional pill
-      // was dropped when the field card lost its status chrome.
-      expect(card.querySelector('.fch_required').textContent.trim()).toBe('*');
+      // Requiredness reads as the solid REQUIRED tag next to the label (proposal 18); the asterisk
+      // it replaced said the same thing a second time.
+      expect(card.querySelector('.fch_required').textContent.trim()).toBe('Required');
     });
 
     /**
@@ -534,10 +536,15 @@ describe('RdGeneralInformationComponent', () => {
       it('places it above the section heading', () => {
         renderForPhase(2026);
         const host = fixture.nativeElement as HTMLElement;
-        const nodes = Array.from(host.querySelectorAll('app-alert-status, h1.pr_label'));
+        // 14-sep-2026: el encabezado del grupo dejó de ser un `<h1 class="pr_label">` y pasó a
+        // `app-field-group-header` (cabecera tintada + contador con anillo). El test sigue
+        // midiendo lo mismo — que la nota va ARRIBA del encabezado — por el elemento que hoy ES
+        // el encabezado.
+        const nodes = Array.from(host.querySelectorAll('app-alert-status, app-field-group-header'));
         const noteIndex = nodes.findIndex(n => (n.textContent ?? '').includes('AI-assisted Notification'));
-        const headingIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'h1');
+        const headingIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'app-field-group-header');
         expect(noteIndex).toBeGreaterThan(-1);
+        expect(headingIndex).toBeGreaterThan(-1);
         expect(noteIndex).toBeLessThan(headingIndex);
       });
 
@@ -563,7 +570,7 @@ describe('RdGeneralInformationComponent', () => {
 
       it('moves the 0/1/2 scoring guidance into a pinnable tooltip on the heading', () => {
         renderForPhase(2026);
-        const trigger = fixture.nativeElement.querySelector('h1.impact_scores_heading .sgi-dac-info');
+        const trigger = fixture.nativeElement.querySelector('app-field-group-header .sgi-dac-info');
         expect(trigger).toBeTruthy();
         expect(fixture.nativeElement.textContent).not.toContain('0 = Not targeted');
       });
