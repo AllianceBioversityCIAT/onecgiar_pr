@@ -69,7 +69,7 @@
   - [x] No component, template or style change in this task.
   - [x] Commit: `✨ feat(bilateral) [<ticket>]: shared query-param contract, result filter and shell phase signal`.
 
-### `COV-T-3` — Overview data service and aggregation module
+### `COV-T-3` — Overview data service and aggregation module `[x]`
 
 - **Type:** `client`
 - **Description:** `BilateralOverviewService` (root; `Map<'center::version', {results, projects}>`, per-key `loading`/`error`, `load`, `invalidate`; projects cached per center; late responses stored under their own key) and `bilateral-overview.aggregate.ts` (`buildOverviewModel(rows, projects, drafts, phase, today)` producing KPI, status, attention, byProject, bySp, byType, pace models; `PENDING_AGE_DAYS = 14`; `RESULT_TYPE_GROUPS`).
@@ -84,8 +84,8 @@
 - **Input that would make the check fail:** counting a `project_id: null` W1/W2 row toward "Projects covered"; a project mapped to the same SP twice counting 2; a `created_date` after `end_date` silently dropped from the pace total.
 - **What this cannot prove / disqualifier:** the performance number is **not evidence** if the three runs vary by more than 50 % of the median (CI noise) — report the spread and mark inconclusive instead of committing a pass; a single run is never accepted.
 - **Definition of done:**
-  - [ ] All specs green; aggregate module ~100 % line coverage; no `inject()`/HTTP in the aggregate module.
-  - [ ] Commit: `✨ feat(bilateral-overview) [<ticket>]: overview data service and card aggregation`.
+  - [x] All specs green; aggregate module ~100 % line coverage; no `inject()`/HTTP in the aggregate module.
+  - [x] Commit: `✨ feat(bilateral-overview) [<ticket>]: overview data service and card aggregation`.
 
 ### `COV-T-4` — Chart option and a11y table builders
 
