@@ -4,6 +4,8 @@ import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr
 import { isMyResultsTab, isProgrammeResultsTab, SmartNavigationService, splitNavUrl } from '../../../../../../shared/services/smart-navigation.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ResultSectionsService } from './result-sections.service';
+import { CopyButtonComponent } from '../../../../../../shared/components/copy-button/copy-button.component';
+import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 
 /** Shared geometry of a section row — only the colours differ between active and idle. */
 // `shrink-0` reproduce el `flex:none` del mockup: el riel ahora tiene altura fija, así que sin
@@ -22,7 +24,7 @@ const ROW_BASE = 'flex h-[44px] shrink-0 items-center gap-[10px] rounded-[8px] p
   selector: 'app-result-sections-sidebar',
   templateUrl: './result-sections-sidebar.component.html',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, PrTooltipDirectiveModule],
+  imports: [RouterLink, RouterLinkActive, PrTooltipDirectiveModule, CopyButtonComponent],
   styles: `
     /* A section turning green is the one moment of progress on this screen; it earns a beat.
        The element is created by the template's @if, so this runs exactly when a section becomes
@@ -46,8 +48,21 @@ const ROW_BASE = 'flex h-[44px] shrink-0 items-center gap-[10px] rounded-[8px] p
       animation: rs-done-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
+    /* A recheck is in flight — the dashed ring becomes the spinner it already resembles. */
+    @keyframes rs-checking-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .rs-checking {
+      animation: rs-checking-spin 900ms linear infinite;
+      border-color: var(--pr-color-primary-300);
+    }
+
     @media (prefers-reduced-motion: reduce) {
-      .rs-done {
+      .rs-done,
+      .rs-checking {
         animation: none;
       }
     }
@@ -60,6 +75,8 @@ export class ResultSectionsSidebarComponent {
   private readonly smartNav = inject(SmartNavigationService);
 
   readonly activeRowClass = `${ROW_BASE} bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]`;
+  readonly greenChecksSE = inject(GreenChecksService);
+
   readonly idleRowClass = `${ROW_BASE} font-medium text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle-hover)]`;
 
   /** Pending marker. Held here, not in the template: an arbitrary-value class cannot go inside

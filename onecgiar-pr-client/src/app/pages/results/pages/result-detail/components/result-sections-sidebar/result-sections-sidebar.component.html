@@ -28,9 +28,14 @@
   @if (sectionsSE.resultCode() || sectionsSE.resultTypeName() || sectionsSE.statusLabel()) {
     <div class="mb-[16px] flex shrink-0 flex-col gap-[6px] border-b border-[var(--pr-border)] px-[10px] pb-[16px]" data-testid="result-sections-identity">
       @if (sectionsSE.resultCode()) {
-        <span class="text-[12px] font-normal text-[var(--pr-text-muted)]" data-testid="result-sections-code"
-          >Result code #{{ sectionsSE.resultCode() }}</span
-        >
+        <!-- The code is what a reporter retypes into Jira, a mail or a spreadsheet all day.
+             `group/copy` is what reveals the button on hover of the line, not of the button. -->
+        <span class="group/copy flex items-center gap-[4px]">
+          <span class="text-[12px] font-normal text-[var(--pr-text-muted)]" data-testid="result-sections-code"
+            >Result code #{{ sectionsSE.resultCode() }}</span
+          >
+          <app-copy-button [value]="sectionsSE.resultCode()" what="result code" />
+        </span>
       }
       @if (sectionsSE.resultTypeName()) {
         <span
@@ -90,10 +95,13 @@
             <!-- Pending: a dashed ring. Dashed, not solid, so "not yet" reads as a state of its
                  own rather than as a check that failed to render. Violet on the open section,
                  tying the row the reporter is standing on to its own marker. -->
+            <!-- While the platform is rechecking, the dashed ring simply spins: it already LOOKS
+                 like a spinner, so the same mark says "not yet" at rest and "working" in motion,
+                 and the check that replaces it lands as the end of one gesture. -->
             <span
-              [class]="rla.isActive ? pendingActiveClass : pendingClass"
-              role="img"
-              aria-label="Section incomplete"></span>
+              [class]="(rla.isActive ? pendingActiveClass : pendingClass) + (greenChecksSE.refreshing() ? ' rs-checking' : '')"
+              [attr.role]="greenChecksSE.refreshing() ? 'status' : 'img'"
+              [attr.aria-label]="greenChecksSE.refreshing() ? 'Checking section' : 'Section incomplete'"></span>
           }
         </a>
       }
