@@ -409,11 +409,15 @@
 .field_card.fc-boxed {
   border: 1px solid var(--pr-border);
   border-radius: 10px;
-  overflow: hidden;
   background: var(--pr-surface-card);
+  // 🛑 NADA de `overflow: hidden` aquí. El panel de opciones del multi-select es un absolute que
+  // vive dentro de esta caja: con overflow oculto, abrir el desplegable mostraba una lista cortada
+  // a la altura del marco. Lo que el recorte iba a resolver —que la cabecera no se salga por las
+  // esquinas— se resuelve redondeando la cabecera, que es lo único pegado al borde.
+  overflow: visible;
 
   .field_card_header {
-    border-radius: 0;
+    border-radius: 9px 9px 0 0;
     border-bottom: 1px solid var(--fc-edge);
   }
 
