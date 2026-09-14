@@ -591,23 +591,33 @@ describe('RdGeneralInformationComponent', () => {
         expect(countAlertsContaining('Example topics')).toBe(0);
       });
 
-      it('keeps the five guidance boxes inline on a 2025 result', () => {
+      /**
+       * 14-sep-2026: invertido a propósito. Antes este test fijaba lo contrario — cero tooltips y
+       * cinco cajas inline en 2025 — porque esa era la regla del ticket de 2026. Lo que destapó el
+       * uso real es que esas cinco cajas, desde que `app-alert-status` colapsa por defecto
+       * (`85b2d357f`), no pintan más que un ⓘ suelto flotando encima de cada fila, sin etiqueta y
+       * sin decir a qué campo pertenecen. La guía ahora cuelga del ⓘ del propio campo en TODAS las
+       * fases: mismo texto, en el sitio donde se busca.
+       */
+      it('hangs each Impact Area guidance off its own field, in 2025 too', () => {
         renderForPhase(2025);
         const tooltips = fixture.debugElement
           .queryAll(By.css('app-pr-radio-button'))
           .map(de => de.componentInstance.tooltip)
           .filter((tooltip: string) => !!tooltip);
-        expect(tooltips).toHaveLength(0);
-        // Portfolio is still P25 here, so the guidance is the P25 wording ("Example topics"),
-        // one inline box per Impact Area — exactly what the 2026 gate must not disturb.
-        expect(countAlertsContaining('Example topics')).toBe(5);
+        expect(tooltips).toHaveLength(5);
+        expect(tooltips.every((t: string) => t.includes('Example topics'))).toBe(true);
+        // 🛑 Y ya no queda ninguna caja suelta: era el icono huérfano que el reportero veía.
+        expect(countAlertsContaining('Example topics')).toBe(0);
       });
 
-      it('returns the guidance verbatim through sectionGuidanceTooltip', () => {
+      it('returns the guidance verbatim through sectionGuidanceTooltip, in every phase', () => {
         mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
         expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe(component.genderInformation());
+        // El año ya no decide si hay guía, solo dónde vivía antes. Devolver '' en 2025 era lo que
+        // dejaba el campo sin ⓘ y mandaba el texto a la caja suelta.
         mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
-        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe('');
+        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe(component.genderInformation());
       });
 
       /** The ticket freezes score-2 behaviour: this is presentation only. */

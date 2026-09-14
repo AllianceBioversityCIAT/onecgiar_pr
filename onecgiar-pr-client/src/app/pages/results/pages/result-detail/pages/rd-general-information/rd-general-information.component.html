@@ -131,10 +131,11 @@
 
   <!------- [1] ------->
   <div class="block_container">
-    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
-    @if (!guidanceAsTooltip()) {
-      <app-alert-status [description]="genderInformation()"> </app-alert-status>
-    }
+    <!-- La guía de este Impact Area vive en el ⓘ de su propia fila, en TODAS las fases.
+         14-sep-2026: antes, fuera de 2026, se pintaba aquí como `app-alert-status` colapsada — que
+         desde `85b2d357f` dibuja SOLO el icono. Resultado: cinco ⓘ huérfanos flotando encima de las
+         filas, sin etiqueta y sin decir a qué campo pertenecían. La guía es la misma; lo que cambia
+         es que ahora cuelga del campo que explica. -->
     <div class="radio_grid">
       <app-pr-radio-button
         data-testid="gi-field-gender_tag_id"
@@ -179,10 +180,11 @@
 
   <!------- [2] ------->
   <div class="block_container">
-    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
-    @if (!guidanceAsTooltip()) {
-      <app-alert-status [description]="climateInformation()"> </app-alert-status>
-    }
+    <!-- La guía de este Impact Area vive en el ⓘ de su propia fila, en TODAS las fases.
+         14-sep-2026: antes, fuera de 2026, se pintaba aquí como `app-alert-status` colapsada — que
+         desde `85b2d357f` dibuja SOLO el icono. Resultado: cinco ⓘ huérfanos flotando encima de las
+         filas, sin etiqueta y sin decir a qué campo pertenecían. La guía es la misma; lo que cambia
+         es que ahora cuelga del campo que explica. -->
     <div class="radio_grid" id="climate_change_tag">
       <app-pr-radio-button
         data-testid="gi-field-climate_change_tag_id"
@@ -227,10 +229,11 @@
 
   <!------- [3] ------->
   <div class="block_container">
-    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
-    @if (!guidanceAsTooltip()) {
-      <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
-    }
+    <!-- La guía de este Impact Area vive en el ⓘ de su propia fila, en TODAS las fases.
+         14-sep-2026: antes, fuera de 2026, se pintaba aquí como `app-alert-status` colapsada — que
+         desde `85b2d357f` dibuja SOLO el icono. Resultado: cinco ⓘ huérfanos flotando encima de las
+         filas, sin etiqueta y sin decir a qué campo pertenecían. La guía es la misma; lo que cambia
+         es que ahora cuelga del campo que explica. -->
     <div class="radio_grid">
       <app-pr-radio-button
         data-testid="gi-field-nutrition_tag_level_id"
@@ -275,10 +278,11 @@
 
   <!------- [4] ------->
   <div class="block_container">
-    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
-    @if (!guidanceAsTooltip()) {
-      <app-alert-status [description]="environmentInformation()"> </app-alert-status>
-    }
+    <!-- La guía de este Impact Area vive en el ⓘ de su propia fila, en TODAS las fases.
+         14-sep-2026: antes, fuera de 2026, se pintaba aquí como `app-alert-status` colapsada — que
+         desde `85b2d357f` dibuja SOLO el icono. Resultado: cinco ⓘ huérfanos flotando encima de las
+         filas, sin etiqueta y sin decir a qué campo pertenecían. La guía es la misma; lo que cambia
+         es que ahora cuelga del campo que explica. -->
     <div class="radio_grid">
       <app-pr-radio-button
         data-testid="gi-field-environmental_biodiversity_tag_level_id"
@@ -327,10 +331,11 @@
 
   <!------- [5] ------->
   <div class="block_container">
-    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
-    @if (!guidanceAsTooltip()) {
-      <app-alert-status [description]="povertyInformation()"> </app-alert-status>
-    }
+    <!-- La guía de este Impact Area vive en el ⓘ de su propia fila, en TODAS las fases.
+         14-sep-2026: antes, fuera de 2026, se pintaba aquí como `app-alert-status` colapsada — que
+         desde `85b2d357f` dibuja SOLO el icono. Resultado: cinco ⓘ huérfanos flotando encima de las
+         filas, sin etiqueta y sin decir a qué campo pertenecían. La guía es la misma; lo que cambia
+         es que ahora cuelga del campo que explica. -->
     <div class="radio_grid">
       <app-pr-radio-button
         data-testid="gi-field-poverty_tag_level_id"
