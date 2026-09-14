@@ -1,5 +1,6 @@
-import { Component, Input, OnInit, effect, inject, signal, untracked } from '@angular/core';
+import { Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, effect, inject, signal, untracked } from '@angular/core';
 import { SaveButtonService } from '../save-button/save-button.service';
+import { FieldCompletionFlightService } from '../../shared/services/field-completion-flight.service';
 
 /**
  * Visual state of a field, in the order it is resolved:
@@ -23,7 +24,7 @@ export type FieldCardState = 'plain' | 'idle' | 'todo' | 'ok' | 'opt' | 'error';
   templateUrl: './field-card.component.html',
   standalone: false
 })
-export class FieldCardComponent implements OnInit {
+export class FieldCardComponent implements OnInit, OnChanges {
   @Input() label: string;
   @Input() description: string;
   @Input() tooltip = '';
@@ -77,6 +78,8 @@ export class FieldCardComponent implements OnInit {
   @Input() layout: 'stack' | 'row' = 'stack';
 
   readonly saveSE = inject(SaveButtonService);
+  private readonly flightSE = inject(FieldCompletionFlightService);
+  private readonly hostRef = inject(ElementRef<HTMLElement>);
 
   /** The user typed/picked something in this field since the last successful save. */
   readonly edited = signal(false);
@@ -126,6 +129,27 @@ export class FieldCardComponent implements OnInit {
 
   ngOnInit(): void {
     this.pinned.set(this.readPin());
+  }
+
+  /**
+   * Lanza la bolita al indicador de la sección cuando el campo ACABA de quedar completo.
+   *
+   * 🛑 Dos guardas, y las dos hacen falta:
+   * - `edited()` — que el usuario haya tocado ESTE campo. Sin esto, abrir un resultado ya lleno
+   *   dispararía una bolita por campo a la vez: una ráfaga que no celebra nada porque el usuario
+   *   no hizo nada.
+   * - la TRANSICIÓN, no el estado. `hasValue` se re-evalúa en cada ciclo de detección; premiar el
+   *   estado "completo" lanzaría una bolita por cada tecla pulsada después de la primera.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['hasValue'];
+    if (!change || change.firstChange) return;
+
+    const wasComplete = change.previousValue === true;
+    const isComplete = change.currentValue === true;
+    if (!wasComplete && isComplete && this.edited() && !this.hasError) {
+      this.flightSE.flyFrom(this.hostRef.nativeElement?.querySelector?.('.field_card_header'));
+    }
   }
 
   /** El texto que se puede fijar: la descripción inline si la hay, y si no, la del tooltip. */

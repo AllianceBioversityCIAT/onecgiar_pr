@@ -101,7 +101,13 @@ describe('SectionBottomBarComponent', () => {
         return saveOutcome;
       })
     };
-    dataControlMock = { fieldFeedbackList: signal<string[]>([]), currentResultSignal: signal({ phase_year: phaseYear }) };
+    dataControlMock = {
+      fieldFeedbackList: signal<string[]>([]),
+      // El denominador del aro de progreso. Va en el mock porque el componente lo lee al construirse:
+      // sin él, CUALQUIER test de esta suite muere con "mandatoryFieldsTotal is not a function".
+      mandatoryFieldsTotal: signal<number>(0),
+      currentResultSignal: signal({ phase_year: phaseYear })
+    };
     rolesMock = { readOnly: false };
     sectionIsDone = true;
     phaseYear = null;

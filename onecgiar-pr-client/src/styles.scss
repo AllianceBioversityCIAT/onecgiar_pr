@@ -1068,3 +1068,12 @@ body.sidebar-width-resizing {
     transition: none !important;
   }
 }
+
+/* La bolita que vuela de un campo completado al indicador de la sección
+   (`shared/services/field-completion-flight.service.ts`). Vive en `document.body` — fuera de
+   cualquier `overflow: hidden` del formulario — así que su estilo tiene que ser global. */
+.pr-completion-dot {
+  display: block;
+  background: radial-gradient(circle at 35% 30%, #6ee7a8, var(--pr-color-green-500, #19ae58) 70%);
+  box-shadow: 0 0 0 3px rgb(25 174 88 / 0.18), 0 2px 10px rgb(25 174 88 / 0.45);
+}

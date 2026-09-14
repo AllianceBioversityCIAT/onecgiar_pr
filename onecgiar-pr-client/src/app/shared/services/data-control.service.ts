@@ -32,6 +32,8 @@ export class DataControlService {
    * instead of being recomputed on every change-detection cycle. (P2-2967/P2-2969)
    */
   readonly fieldFeedbackList = signal<string[]>([]);
+  /** Cuántos campos obligatorios tiene la sección abierta — el denominador de su progreso. */
+  readonly mandatoryFieldsTotal = signal<number>(0);
   showShareRequest = false;
   chagePhaseModal = false;
   updateResultModal = false;
@@ -260,7 +262,12 @@ export class DataControlService {
     const feedback: string[] = [];
     let incompleteInputs = 0;
     let incompleteSelects = 0;
+    let mandatoryTotal = 0;
     try {
+      const mandatoryInputs = this.mandatoryFieldsIn(container, '.pr-input.mandatory .input-validation');
+      const mandatorySelects = this.mandatoryFieldsIn(container, '.pr-field.mandatory');
+      mandatoryTotal = mandatoryInputs.length + mandatorySelects.length;
+
       incompleteInputs = this.mandatoryFieldsIn(container, '.pr-input.mandatory .input-validation')
         .filter((field: HTMLElement) => {
           const isEmpty = !field?.innerText;
@@ -293,6 +300,12 @@ export class DataControlService {
     // notifications/renders and lets callers compare by reference to know if it changed.
     if (!this.sameFeedback(this.fieldFeedbackList(), feedback)) {
       this.fieldFeedbackList.set(feedback);
+    }
+    // El TOTAL de obligatorios de la sección, no solo los que faltan. `fieldFeedbackList` responde
+    // "¿qué falta?" y con eso solo se puede escribir "6 fields missing" — un número sin escala, que
+    // no dice si son 6 de 7 o 6 de 30. El progreso de la sección necesita el denominador.
+    if (this.mandatoryFieldsTotal() !== mandatoryTotal) {
+      this.mandatoryFieldsTotal.set(mandatoryTotal);
     }
     // Counts, not the arrays: `Boolean([])` is `true`, so the previous version answered
     // "something is incomplete" on every call, even with every field filled in.

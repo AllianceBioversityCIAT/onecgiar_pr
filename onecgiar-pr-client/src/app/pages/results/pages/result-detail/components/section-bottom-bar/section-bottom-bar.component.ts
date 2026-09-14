@@ -7,6 +7,7 @@ import {
   Input,
   OnDestroy,
   Output,
+  ViewChild,
   computed,
   effect,
   inject,
@@ -20,6 +21,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { ResultSectionsService } from '../result-sections-sidebar/result-sections.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { FieldCompletionFlightService } from '../../../../../../shared/services/field-completion-flight.service';
 import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 import { ScrollChromeService } from '../../../../../../shared/services/scroll-chrome.service';
 import { ChromeFoldDirective } from '../../../../../../shared/directives/chrome-fold.directive';
@@ -66,6 +68,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   readonly rolesSE = inject(RolesService);
   readonly sectionsSE = inject(ResultSectionsService);
   readonly fieldsManagerSE = inject(FieldsManagerService);
+  private readonly flightSE = inject(FieldCompletionFlightService);
   private readonly router = inject(Router);
   private readonly slotSE = inject(SectionBottomBarSlotService);
   private readonly intentSE = inject(UnsavedNavigationIntentService);
@@ -118,6 +121,46 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   }
 
   readonly missingFields = computed(() => this.dataControlSE.fieldFeedbackList());
+
+  /**
+   * ── Progreso de la sección ──────────────────────────────────────────────
+   * "6 fields missing" es un número sin escala: no dice si son 6 de 7 o 6 de 30. El anillo pone el
+   * denominador que el escaneo ya conocía y nadie mostraba.
+   */
+  readonly mandatoryTotal = computed(() => this.dataControlSE.mandatoryFieldsTotal());
+  readonly mandatoryDone = computed(() => Math.max(0, this.mandatoryTotal() - this.missingFields().length));
+  readonly showRing = computed(() => this.mandatoryTotal() > 0);
+  /** Circunferencia del aro (r = 8). El arco se dibuja quitando longitud al trazo. */
+  readonly ringCircumference = 2 * Math.PI * 8;
+  readonly ringOffset = computed(() => {
+    const total = this.mandatoryTotal();
+    const ratio = total ? Math.min(1, Math.max(0, this.mandatoryDone() / total)) : 0;
+    return this.ringCircumference * (1 - ratio);
+  });
+
+  /** Pulso al aterrizar una bolita: el aro acusa el golpe, que es lo que cierra la animación. */
+  readonly ringPulsing = signal(false);
+  private pulseTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly landingPulse = effect(() => {
+    // Leer `landed()` es lo que suscribe; el primer disparo (0) también entra y apaga el pulso solo.
+    this.flightSE.landed();
+    if (this.pulseTimer) clearTimeout(this.pulseTimer);
+    this.ringPulsing.set(true);
+    this.pulseTimer = setTimeout(() => this.ringPulsing.set(false), 520);
+  });
+
+  /**
+   * El indicador se ANUNCIA como destino cuando entra en el DOM y se borra cuando sale: el servicio
+   * no debe guardar un elemento de una sección que ya no está en pantalla.
+   */
+  @ViewChild('progressTarget')
+  set progressTarget(ref: ElementRef<HTMLElement> | undefined) {
+    const el = ref?.nativeElement;
+    if (el) this.flightSE.registerTarget(el);
+    else if (this.lastTarget) this.flightSE.clearTarget(this.lastTarget);
+    this.lastTarget = el ?? null;
+  }
+  private lastTarget: HTMLElement | null = null;
 
   /**
    * Whether the open section is complete.
