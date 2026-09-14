@@ -471,6 +471,48 @@ describe('PortfolioOverviewComponent', () => {
     expect(fixture.debugElement.nativeElement.textContent).toContain('the server holds more');
   });
 
+  describe('Partial-results banner states real fetched counts (REQ-3-S1)', () => {
+    it('binds the banner to the fetched-row count, not the open-phase-filtered count', () => {
+      // Fetched page mixes OPEN_PHASE (5 rows) and CLOSED_PHASE (2 rows) — fetchedCount is 7,
+      // but data.total() (open-phase-filtered, what the old buggy binding used) is only 5. The
+      // mock deliberately makes the two numbers differ: if they were equal this test would not
+      // distinguish the fix from the bug it replaces.
+      build([...OPEN_PHASE, ...CLOSED_PHASE], { total: 20 });
+
+      expect(component.data.fetchedCount()).toBe(7);
+      expect(component.data.total()).toBe(5);
+      expect(component.data.isPartial()).toBe(true);
+
+      fixture.detectChanges();
+      const bannerText = fixture.debugElement.nativeElement.textContent as string;
+      expect(bannerText).toContain('Showing the first 7 results');
+      expect(bannerText).not.toContain('Showing the first 5 results');
+    });
+  });
+
+  describe('Open-cycle detection follows the fetched page (REQ-2-S1)', () => {
+    it('shows the open cycle and does not fall back to closedPhase() when the fetched page includes open-phase rows', () => {
+      // Simulates TASK-1's server fix: the fetched page contains at least one open-phase
+      // (phase_status = 1) row alongside closed-phase rows.
+      build([...OPEN_PHASE, ...CLOSED_PHASE]);
+
+      expect(component.data.closedPhase()).toBe(false);
+      expect(component.eyebrow()).toBe('PORTFOLIO · REPORTING CYCLE 2026 · P25');
+      fixture.detectChanges();
+      expect(fixture.debugElement.nativeElement.textContent).not.toContain('Viewing a closed phase');
+    });
+
+    it('still falls back to closedPhase() when the fetched page genuinely has no open-phase rows', () => {
+      // No open-phase row anywhere in the fetched page — the legitimate closed-phase fallback
+      // must still fire; the fix must not remove it.
+      build(CLOSED_PHASE);
+
+      expect(component.data.closedPhase()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.debugElement.nativeElement.textContent).toContain('Viewing a closed phase. Figures are final.');
+    });
+  });
+
   it('keeps the four view states mutually exclusive', () => {
     build([]);
     expect([component.isLoading(), component.hasError(), component.isEmpty(), component.hasFigures()]).toEqual([false, false, true, false]);
