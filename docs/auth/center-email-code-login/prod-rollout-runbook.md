@@ -18,6 +18,9 @@ No PROD Cognito pool access, no broker credentials beyond what PRMS's notificati
 
 ---
 
+
+> **Lesson from the 2026-09-12 PROD rollout:** the PROD pipeline does **not** run TypeORM migrations. After deploying the server, run `npm run migration:run` in the PROD server container (or apply the DDL and register the rows in `migrations`) **before** setting the parameter; verify with `SELECT name FROM migrations ORDER BY id DESC LIMIT 3` and `SHOW TABLES LIKE 'otp_challenges'`. Symptom when skipped: the Center button appears (if the parameter row was created by hand) and `start` answers `503 OTP_UPSTREAM_UNAVAILABLE`. If the parameter row was inserted manually before the migration ran, delete the duplicate empty row the migration adds. **Live in PROD since 2026-09-12.**
+
 ## Step 0 — Confirm the parameter row and that it is empty
 
 Migration `1788730000000-OTP-allowed-email-domains` inserts `OTP_ALLOWED_EMAIL_DOMAINS` with an **empty** value. Confirm the row exists and is still empty before deploying the rest of the feature — an empty value is what keeps the Center button hidden through steps 1–2.
