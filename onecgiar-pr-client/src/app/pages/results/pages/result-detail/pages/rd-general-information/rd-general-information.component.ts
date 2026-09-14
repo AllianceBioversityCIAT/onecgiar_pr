@@ -434,7 +434,7 @@ export class RdGeneralInformationComponent implements OnInit, CanComponentDeacti
 
     return this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, isP25).pipe(
       tap(() => {
-        this.currentResultSE.GET_resultById();
+        this.currentResultSE.GET_resultById(true);
         // `UCA-T-6` (rework) — snapshot HERE, synchronously, the instant the PATCH resolves. The
         // local `generalInfoBody` at this exact instant is precisely what the server just
         // persisted, so this is correct even before the reload below completes. This closes a
