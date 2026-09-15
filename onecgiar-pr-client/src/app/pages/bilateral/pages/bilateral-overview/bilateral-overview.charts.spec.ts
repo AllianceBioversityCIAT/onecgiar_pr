@@ -37,7 +37,7 @@ import {
 
 /**
  * Sentinel token values — deliberately NOT colors. Any literal a builder hardcodes (a status hex,
- * `'#ffffff'`, `'transparent'`) is therefore impossible to confuse with a token, and the
+ * `a white hex`, `'transparent'`) is therefore impossible to confuse with a token, and the
  * "every color ∈ the token object" assertions below catch it by construction (`COV-DD-5`).
  */
 const TOKENS: ResolvedChartTokens = {

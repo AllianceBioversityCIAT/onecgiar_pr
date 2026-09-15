@@ -1,0 +1,17 @@
+// @akili-spec bilateral/center-overview-tab (COV-T-5, COV-DD-7)
+//
+// `:host` box setup ONLY (client `CLAUDE.md` §5 rule 19) — every layout, colour and typography
+// decision on this page is a Tailwind utility in the template. The page locks itself to the
+// viewport like the Results tab so the band, the tab strip and the controls row stay put while
+// `#workArea` is the page's single vertical scroller (`COV-R-4`, `COV-DD-7`).
+@use '../../../../../styles/viewport-page' as vp;
+
+:host {
+  display: block;
+
+  @media (min-width: 900px) {
+    display: flex;
+    flex-direction: column;
+    @include vp.pr-viewport-page;
+  }
+}
