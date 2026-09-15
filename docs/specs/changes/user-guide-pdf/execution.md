@@ -39,6 +39,48 @@
 
 ---
 
+### `UG-T-2` — Verify environment and seed data
+
+- **Status:** PASS (Leader pre-flight verification, 2026-09-15 — environment task with no code deliverable; verified inline per `.agents/leader.md` Delegation Thresholds "puntual verification")
+- **Date:** 2026-09-15
+- **Skills assigned:** none
+- **Effort:** low
+
+**Verification**
+
+- `TEST_TOKEN` supplied by the user (2026-09-15) for `https://reporting.cgiar.org`; written to `tooling/.env` (confirmed gitignored via `git check-ignore`; never echoed, never committed). `CLIENT_BASE_URL=https://reporting.cgiar.org`.
+- `tooling/node_modules` re-installed in this worktree (`npm ci`, 24 packages, Playwright 1.63.0).
+- **Environment blocker found:** Playwright 1.63 requires bundled Chromium build 1243; `npx playwright install chromium` fails (CDN `cdn.playwright.dev` → 307 → download timeout, 3 attempts, incl. `PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT=300000`). Cached builds go up to 1234 only. **Workaround adopted:** launch the system Google Chrome via `chromium.launch({ channel: 'chrome' })` — forwarded to `UG-T-7` as an optional `PLAYWRIGHT_CHANNEL` env var (default: bundled Chromium).
+- Leader probe (scratchpad script, `channel: 'chrome'`, headless, 1440×900) reusing `tooling/src/auth.ts#injectAuth` against production:
+  - `injectAuth` → `RolesService` populated `localStorage.roles` with keys `user_id, application, initiative, action_area, center` → the token is a real, backend-accepted session. Post-reload landing URL `/result-framework-reporting/entity-details/SP01`.
+  - All 6 routes rendered inside the authenticated shell (`app-reporting-nav-sidebar` present, no `/login` redirect):
+
+| Route | Heading seen | Evidence of real data |
+|---|---|---|
+| `/result-framework-reporting/home` | "Welcome!" | 2,992 chars body text |
+| `/result-framework-reporting/entity-details/SP01/overview` | "Breeding for Tomorrow" | 71 table rows |
+| `/result-framework-reporting/entity-details/SP01?tocView=aows` | "Breeding for Tomorrow" | 413k chars body text (ToC tree) |
+| `/result/results-outlet/results-list` | "Results Center" | 10 table rows (paginated) |
+| `/result/results-outlet/results-notifications/requests/received` | "Notifications" | Pending requests visible (screenshot inspected by Leader) |
+| `/ipsr/list/innovation-list` | (no h1–h3) | 10 table rows |
+
+- `SP01` exists in production as "Breeding for Tomorrow" with the active `Reporting 2026 - (Open)` phase; ≥1 received notification and ≥1 innovation package confirmed.
+- **Observation for `UG-OQ-1`/`UG-T-16`:** the supplied session is an **admin** user — the sidebar shows `Quality Assurance`, `My Admin`, `Admin module`, which a plain P/A end user does not see. Screenshots will include those menu items unless a non-admin token is supplied or the sections are cropped/annotated around them. Flagged to the user; not blocking capture.
+- **Requirements covered:** `UG-R-2` (precondition), resolves `UG-OQ-2` in practice.
+- **Decisions made:** system-Chrome channel workaround (above). Pre-flight checklist boxes for requirements/design approval ticked per the user's approved-as-written confirmation already recorded in Document Control.
+- **Issues encountered:** Chromium CDN download failure (see above). CLARISA glossary URL 404 still open for `UG-T-10`.
+- **Final verification result:** PASS — both DoD items satisfied (6 routes render representative content; valid `TEST_TOKEN` available locally, never committed).
+
+---
+
+## 3a. Reconciliation note — unrecorded work landed in commit `b885c5f18` (2026-09-15)
+
+`git log` shows commit `b885c5f18` ("add auth and annotation utilities for Playwright testing") landed `tooling/src/auth.ts` (`UG-T-4`), `tooling/src/tokens.ts` (`UG-T-5`) and `tooling/src/annotate.ts` (`UG-T-6`) **without** an execution entry, without a Reviewer verdict, without the `[SPEC:changes/user-guide-pdf]` commit tag, and with two stray inclusions: `tooling/src/_scratch-verify.ts` (self-described throwaway) and 26 `"dev": true` normalisation lines in `onecgiar-pr-client/package-lock.json` (which the `UG-T-1` entry had explicitly excluded).
+
+**Leader action:** (1) a Reviewer is spawned over the committed diff of the three utilities (diff saved to the session scratchpad, 574 lines) so `author ≠ auditor` is restored before those tasks can be marked `[x]`; (2) the scratch file is deleted and the client lockfile restored to its pre-commit content in a housekeeping commit; (3) live DoD items for `UG-T-5`/`UG-T-6` that need a running capture are carried into `UG-T-7`'s run.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -59,10 +101,10 @@ Before starting `UG-T-2`, pre-flight environment verification found:
 
 ## 4. Pending inputs
 
-- **`TEST_TOKEN`** for `https://reporting.cgiar.org` — requested from the user (2026-09-15), not yet received. Blocks `UG-T-2` (env/seed-data verification) and `UG-T-4` (`auth.ts`) from starting.
+- **`TEST_TOKEN`** — received from the user 2026-09-15 and stored in gitignored `tooling/.env`. Resolved.
 
 ---
 
 ## 5. Summary (updated as tasks complete)
 
-1 of 16 tasks complete (`UG-T-1`). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+2 of 16 tasks complete (`UG-T-1`, `UG-T-2`); `UG-T-4`/`UG-T-5`/`UG-T-6` code landed unreviewed in `b885c5f18` — Reviewer pending (see §3a). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.

@@ -16,14 +16,14 @@
 
 Block execution until every box is ticked.
 
-- [ ] `requirements.md` is approved.
-- [ ] `design.md` is approved.
+- [x] `requirements.md` is approved (approved-as-written per user confirmation 2026-09-15, see `execution.md` Document Control).
+- [x] `design.md` is approved (same basis).
 - [ ] `UG-OQ-1` (P/A persona wording) and `UG-OQ-2` (credentials/seed-data ownership) working assumptions in `requirements.md` §11 are accepted, or overridden by the user.
-- [ ] `UG-OQ-4` (real deployed origin to reference in guide copy) is answered before `UG-T-9` (content authoring) closes — see `UG-T-8`.
+- [x] `UG-OQ-4` (real deployed origin to reference in guide copy) is answered before `UG-T-9` (content authoring) closes — see `UG-T-8`.
 - [x] Capture target confirmed reachable: local dev DB is unreachable (`ETIMEDOUT`), so per `design.md` `UG-DD-6` this run targets production `https://reporting.cgiar.org` instead (user-confirmed 2026-09-15, changes already shipped there, authenticated Chrome session available).
 - [ ] Network reachability to `https://clarisa.cgiar.org/landing-page/glossary` confirmed.
-- [ ] No conflicting in-flight spec touching the same entities (`docs/specs/` search — none found at spec time).
-- [ ] Migration check: **N/A**, no migration in this spec.
+- [x] No conflicting in-flight spec touching the same entities (`docs/specs/` search — none found at spec time).
+- [x] Migration check: **N/A**, no migration in this spec.
 
 ---
 
@@ -43,7 +43,7 @@ Block execution until every box is ticked.
   - [x] `.env` is confirmed gitignored; `.env.example` contains no real values.
   - [x] No secret or token committed (`.cursorrules`).
 
-### `UG-T-2` — Verify environment and seed data
+### `UG-T-2` — Verify environment and seed data — **[x] COMPLETE** (PASS, Leader pre-flight, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Per `design.md` `UG-DD-6`, this run targets production (`https://reporting.cgiar.org`) instead of the local stack (local dev DB is unreachable). Confirm SP01 (or the real equivalent visible there) exists in the active phase with at least one IPSR package and one received notification, and obtain a valid `TEST_TOKEN` from the user's own already-authenticated Chrome session (localStorage `token` key) for a representative end-user role. This resolves `UG-OQ-2`'s working assumption in practice rather than leaving it theoretical.
@@ -53,8 +53,8 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-3`
 - **Estimate:** S
 - **Definition of done:**
-  - [ ] All 6 target routes render non-empty, representative content when visited manually while logged in.
-  - [ ] A valid `TEST_TOKEN` is available locally (never committed).
+  - [x] All 6 target routes render non-empty, representative content when visited manually while logged in.
+  - [x] A valid `TEST_TOKEN` is available locally (never committed).
 
 ### `UG-T-3` — Define `routes.config.json`
 
