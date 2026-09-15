@@ -192,11 +192,11 @@ Passed: queue guard inert and tested; every flip conditional with notify gated o
 
 **Forward pointers applied:** (1) `isAiProcessing` includes `still_running`; (2) 404/410 gone job → idle form with explanation; (3) expectations failure → fallback copy (attempt 2); (4) retry errors through `errorCopy`; T-5's combined reading/transcribing label kept. **Requirements covered:** `APF-R-6` A–D (render), `APF-R-7` render, `APF-R-8` A/C, `APF-R-9`; `APF-AC-8/9/10/12/14/15`. CT → `APF-T-9`. **Gate:** auto-approved (pre-approved mode).
 
-### `APF-T-8` — Provenance notice on five surfaces, completion dialog line — **IN PROGRESS** (attempt 1 FAIL → attempt 2 running)
+### `APF-T-8` — Provenance notice on five surfaces, completion dialog line — **PASS** (attempt 2)
 
 | Field | Value |
 |---|---|
-| **Date** | 2026-09-15 (11:47 → …, America/Bogota; first worker killed by the quota at 11:53 after creating the component and the draft-card mount; resumed by `impl-apf-t8b` at 16:11) |
+| **Date** | 2026-09-15 (11:47 → 16:34, America/Bogota; first worker killed by the quota at 11:53 after creating the component and the draft-card mount; resumed by `impl-apf-t8b` at 16:11) |
 | **Implementer** | `akili-implementer` (sonnet) · skills `angular-developer`, `tailwind-design-system` · effort medium → high on attempt 2 |
 | **Reviewer** | `akili-reviewer` (opus) · lens checklist mode |
 
@@ -224,4 +224,12 @@ Passed (verified at source): single copy constant, no "AI Suggested" string surv
 **ADVISORY (recorded):** *Reliability* — `getExpectations` loads every `COMPLETED` row in the window and computes percentiles in JS (design §5 describes an ordered-subquery aggregate); fine at current volume, move to SQL before the table grows. *Resilience* — `keyExists` treats only 404/NotFound as missing; S3 answers `HEAD` on an absent key with **403** when the caller lacks `s3:ListBucket`, which would surface as 500 instead of 410 → **confirm against the real bucket policy in T-10**. *Reliability* — cached expectations object returned by reference (a mutating caller poisons the cache). (Report truncated after this point; remainder not retrieved.)
 
 **Requirements covered:** `APF-R-5` (all clauses; live 410 → T-10), `APF-R-6` D (API side), `APF-R-21`; `APF-AC-7`, `APF-AC-20`. **Gate:** auto-approved (pre-approved mode). **Server half (T-1…T-4) complete.**
+
+**Attempt 1 — Reviewer ADVISORY tail (received):** `badgeLabel` is a `computed()` with no reactive dependency (a plain readonly string says the same); the `sessionStorage` restore effect and `dismissAiProvenanceBanner()` duplicate the key construction and try/catch policy (one private helper); process note — the shipped sentence must sit in the HITL table for `APF-OQ-2` sign-off (it does: recorded above and carried to T-10).
+
+**Attempt 2 — files (fresh worker `impl-apf-t8c`, sonnet, effort high):** `services/bilateral-creation.service.spec.ts` (+28): `banner-gating invariant: clearEditorState() followed by a reload carrying creation_method "AI" restores isAiGenerated() to true (edit-path regression for APF-R-12 AND)` — against the real service (the component spec's mock stubs `loadResult`/`clearEditorState` as no-ops, so the sequence is unreachable there). No production code changed. Verification: tsc clean · creator spec 53/53 · creation-service spec 57/57 (+1) · lint clean.
+
+**Attempt 2 — Reviewer `STATUS: PASS`:** "The new case … closes issue 1 under the fallback clause I wrote. It drives the real `BilateralCreationService` through the exact sequence that threatens the `AND` clause of the requirement, and the test name states the invariant it protects." Verified: `loadResult` clears at `bilateral-creation.service.ts:153` before the GET (production path); the reload asserts through the normalized predicate (a truthiness regression could not pass); the intermediate `false` pins the risky state. Declared Not Done accepted (service level is the right home).
+
+**Requirements covered:** `APF-R-12` (five surfaces, absent on manual, persists after edits), `APF-R-8` B; `APF-AC-18`, `APF-AC-13` (dialog regression). Copy for `APF-OQ-2` sign-off → T-10 HITL table. **Gate:** auto-approved (pre-approved mode).
 

@@ -13,6 +13,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { computed, signal, Injectable } from '@angular/core';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 
 @Injectable()
 class MockBilateralAiService {
@@ -94,6 +95,7 @@ describe('BilateralResultCreatorComponent', () => {
       isEditableByCenterUser: signal(true) as any,
       resultTitle: signal('') as any,
       isLoadingResult: signal(false) as any,
+      loadFailed: signal(false) as any,
       // Signals the editor sections read once they mount.
       resultDescription: signal('') as any,
       resultLeadContact: signal('') as any,
@@ -659,7 +661,13 @@ describe('BilateralResultCreatorComponent', () => {
       fixture.detectChanges();
     }
 
-    beforeEach(() => sessionStorage.clear());
+    beforeEach(() => {
+      sessionStorage.clear();
+      // The badge is rendered by the real `bilateral-page-header`, whose entire template is
+      // gated on `ctx.centerAcronym()` — unset in the base fixture, since most tests in this
+      // file never render the header's identity strip.
+      TestBed.inject(BilateralContextService).setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+    });
     afterEach(() => sessionStorage.clear());
 
     it('shows the dismissible banner, and no badge, for an AI-generated result while editable', () => {

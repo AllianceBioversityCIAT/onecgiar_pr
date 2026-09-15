@@ -45,6 +45,9 @@
               {{ badge.label }}
             </span>
           }
+          @if (showAiProvenanceBadge()) {
+            <app-ai-provenance-notice variant="badge" />
+          }
         </div>
       }
     </header>

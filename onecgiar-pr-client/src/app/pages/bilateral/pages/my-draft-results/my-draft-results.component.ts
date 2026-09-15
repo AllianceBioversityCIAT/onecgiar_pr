@@ -18,6 +18,7 @@ import { BilateralPageHeaderComponent } from '../../components/bilateral-page-he
 import { parseBilateralQueryParams } from '../../bilateral-query-params';
 import { DraftResultCardComponent } from '../bilateral-ai-draft-detail/components/draft-result-card/draft-result-card.component';
 import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/components/draft-evidence-list/draft-evidence-list.component';
+import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
 import {
   DraftProjectFilterOption,
   formatDraftProjectOption,
@@ -111,6 +112,7 @@ export interface DraftSessionGroup {
     DraftResultCardComponent,
     DraftEvidenceListComponent,
     PrTooltipDirectiveModule,
+    AiProvenanceNoticeComponent,
   ],
   // P2-3319 — the filter is per-visit: provided here so it resets on leaving the tab or switching
   // centre, never in root (project ids are meaningless across centres).

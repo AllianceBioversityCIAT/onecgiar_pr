@@ -119,7 +119,26 @@
           [resultCode]="creationService.resultCode()"
           [resultTypeName]="creationService.resultTypeName()"
           [isW3Bilateral]="creationService.isW3Bilateral()"
-          [statusId]="creationService.resultStatusId()" />
+          [statusId]="creationService.resultStatusId()"
+          [showAiProvenanceBadge]="showAiProvenanceBadge()" />
+
+        @if (showAiProvenanceBanner()) {
+          <!-- `APF-R-12`: dismissible-per-session banner for an AI-originated result while it is
+               still editable (the read-only state shows the badge above instead, never both). -->
+          <div class="mb-[16px] flex items-start gap-[8px]" data-testid="bilateral-editor-ai-provenance-banner">
+            <div class="min-w-0 flex-1">
+              <app-ai-provenance-notice variant="banner" />
+            </div>
+            <button
+              type="button"
+              class="mt-[10px] inline-flex h-[20px] w-[20px] flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-status-submitted-fg)] hover:bg-black/5"
+              aria-label="Dismiss AI provenance notice"
+              data-testid="bilateral-editor-ai-provenance-dismiss"
+              (click)="dismissAiProvenanceBanner()">
+              <i class="material-icons-round text-[16px]" aria-hidden="true">close</i>
+            </button>
+          </div>
+        }
 
         @if (resultId()) {
           <!-- P2-3229 AC5. The phases this result exists in, so a versioned result can be navigated

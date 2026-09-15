@@ -5,11 +5,12 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { environment } from '../../../../../environments/environment';
+import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, AiProvenanceNoticeComponent],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -171,6 +172,14 @@ export class BilateralPageHeaderComponent {
   /** `result.status_id`. Only the four the story lists render a badge; anything else is ignored. */
   readonly statusId = input<number | null>(null);
 
+  /**
+   * `APF-R-12` — the "Result detail (read-only)" provenance surface: a static badge next to the
+   * status pill. The caller decides WHEN (draft-ness / `creation_method === 'AI'`, and only once the
+   * result is read-only — the editable editor shows the dismissible banner instead, see
+   * `bilateral-result-creator.component.ts`); this header only renders it.
+   */
+  readonly showAiProvenanceBadge = input(false);
+
   private static readonly STATUS_BADGES: Record<number, { label: string; classes: string }> = {
     1: { label: 'Editing', classes: 'bg-[#F3F4F6] text-[#6B7280]' },
     5: { label: 'Pending review', classes: 'bg-[#FEF3C7] text-[#B45309]' },
@@ -184,7 +193,12 @@ export class BilateralPageHeaderComponent {
   });
 
   readonly hasIdentityStrip = computed(
-    () => this.resultCode() != null || !!this.resultTypeName() || this.isW3Bilateral() || !!this.statusBadge(),
+    () =>
+      this.resultCode() != null ||
+      !!this.resultTypeName() ||
+      this.isW3Bilateral() ||
+      !!this.statusBadge() ||
+      this.showAiProvenanceBadge(),
   );
 
   /** `[Full Center Name] (INITIALS)`, the trailing breadcrumb segment required by AC1. */

@@ -507,6 +507,36 @@ describe('BilateralPageHeaderComponent', () => {
       expect(q('[data-testid="bilateral-detail-header"]')).toBeNull();
       expect(q('nav[aria-label="Breadcrumb"]')).not.toBeNull();
     });
+
+    // `APF-R-12` / `APF-DD-10` — the "Result detail (read-only)" provenance surface: a static
+    // badge next to the status pill, off by default so the existing "one pill" assertion above
+    // never breaks by accident.
+    describe('AI provenance badge (APF-R-12)', () => {
+      it('is absent by default', () => {
+        expect(q('[data-testid="ai-provenance-badge"]')).toBeNull();
+      });
+
+      it('renders next to the status pill when the caller asks for it', () => {
+        fixture.componentRef.setInput('showAiProvenanceBadge', true);
+        fixture.detectChanges();
+        const badge = q('[data-testid="ai-provenance-badge"]');
+        expect(badge).not.toBeNull();
+        expect(badge.getAttribute('aria-label')).toBe(
+          'Generated with AI assistance from your sources. Review and edit before submitting.',
+        );
+        const pills = fixture.nativeElement.querySelectorAll('.rounded-full');
+        expect(pills.length).toBe(2);
+      });
+
+      it('shows the identity strip for the badge alone, even with no status/code/type known', () => {
+        fixture.componentRef.setInput('statusId', null);
+        fixture.componentRef.setInput('resultCode', null);
+        fixture.componentRef.setInput('showAiProvenanceBadge', true);
+        fixture.detectChanges();
+        expect(component.hasIdentityStrip()).toBe(true);
+        expect(q('[data-testid="ai-provenance-badge"]')).not.toBeNull();
+      });
+    });
   });
 
   describe('Reporting Cycle Eyebrow', () => {

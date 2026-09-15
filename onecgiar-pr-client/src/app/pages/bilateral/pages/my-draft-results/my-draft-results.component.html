@@ -1,5 +1,12 @@
 <app-bilateral-page-header activeTab="drafts" />
 
+@if (hasAnyDrafts()) {
+  <!-- `APF-R-12`: one line under the tab title while the center has at least one AI draft. -->
+  <div class="px-[16px] pt-[10px] sm:px-[32px]" data-testid="mdr-ai-provenance-line">
+    <app-ai-provenance-notice variant="line" />
+  </div>
+}
+
 <!-- Docked bar: Project filter dropdown and active filter chips directly below tabs band -->
 @if (bilateralAiService.isDraftListLoaded() && hasAnyDrafts()) {
   <div

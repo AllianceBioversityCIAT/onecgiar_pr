@@ -55,6 +55,38 @@ describe('MyDraftResultsComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('AI provenance notice line (APF-R-12, APF-T-8)', () => {
+    const line = () => fixture.debugElement.query(By.css('[data-testid="mdr-ai-provenance-line"]'));
+
+    it('is absent while the centre has no drafts', () => {
+      bilateralAiService.draftList.set([]);
+      fixture.detectChanges();
+      expect(component.hasAnyDrafts()).toBe(false);
+      expect(line()).toBeNull();
+    });
+
+    it('renders under the tab title once the centre has at least one AI draft', () => {
+      bilateralAiService.draftList.set([draftStub]);
+      fixture.detectChanges();
+      expect(component.hasAnyDrafts()).toBe(true);
+      expect(line()).not.toBeNull();
+      expect(line().nativeElement.textContent).toContain(
+        'Generated with AI assistance from your sources. Review and edit before submitting.',
+      );
+    });
+
+    it('stays present even when a project filter hides every draft on screen', () => {
+      // `hasAnyDrafts()` reads the unfiltered list — the notice is about the centre's drafts, not
+      // about what a filter currently shows.
+      bilateralAiService.draftList.set([draftStub]);
+      fixture.detectChanges();
+      component.filter.selectProject('does-not-exist');
+      fixture.detectChanges();
+      expect(component.isFilteredEmpty()).toBe(true);
+      expect(line()).not.toBeNull();
+    });
+  });
+
   describe('relative date calculation (BADR-R-11, BADR-AC-8, Defect Gate D3)', () => {
     it('should format today correctly', () => {
       expect(component.formatDate(new Date().toISOString())).toBe('Today');

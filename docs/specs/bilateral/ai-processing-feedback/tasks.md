@@ -181,9 +181,10 @@
 - **Verification:** `cd onecgiar-pr-client && npx tsc --noEmit -p tsconfig.app.json && npx jest src/app/pages/bilateral/components/ai-provenance-notice src/app/pages/bilateral/pages/my-draft-results src/app/pages/bilateral/components/bilateral-ai-completion-dialog <editor and detail spec paths> --silent && npx ng lint --quiet && <token-existence gate over the touched templates>`
 - **Input that would make the check fail:** presence keyed on `is_ai_generated` truthiness of the string `"0"` (the manual fixture shows the notice); a status colour on the badge.
 - **What this cannot prove / disqualifier:** copy acceptance is product's (`APF-OQ-2`) — a green test with the default sentence is not sign-off; record the sentence in the HITL table for the user to approve.
+- **Status:** `[x]` PASS — 2026-09-15, attempt 2 (attempt 1 FAIL: no test for "persists after edits" — see `execution.md`)
 - **Definition of done:**
-  - [ ] Specs green (drafts/creator/dialog existing cases untouched); `tsc`; lint; token gate.
-  - [ ] Commit: `✨ feat(bilateral) [<ticket>]: AI provenance notice on drafts, editor, detail and completion dialog`.
+  - [x] Specs green (drafts/creator/dialog existing cases untouched); `tsc`; lint; token gate.
+  - [x] Commit: `✨ feat(bilateral) [<ticket>]: AI provenance notice on drafts, editor, detail and completion dialog`.
 
 ### `APF-T-9` — Cypress CT layout gate (panel + header chip), reduced motion, build
 

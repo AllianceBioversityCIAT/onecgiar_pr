@@ -1,0 +1,29 @@
+@switch (variant()) {
+  @case ('banner') {
+    <div
+      class="flex items-center gap-[10px] rounded-[6px] border-l-4 border-[var(--pr-status-submitted-fg)] bg-[var(--pr-status-submitted-bg)] px-[14px] py-[10px] text-[13px] text-[var(--pr-status-submitted-fg)]"
+      role="note"
+      data-testid="ai-provenance-banner">
+      <i class="material-icons-round shrink-0 text-[18px]" aria-hidden="true">auto_awesome</i>
+      <span>{{ noticeText }}</span>
+    </div>
+  }
+  @case ('line') {
+    <p
+      class="m-0 flex items-center gap-[6px] text-[12.5px] text-[var(--pr-text-secondary)]"
+      data-testid="ai-provenance-line">
+      <i class="material-icons-round shrink-0 text-[14px]" aria-hidden="true">auto_awesome</i>
+      <span>{{ noticeText }}</span>
+    </p>
+  }
+  @default {
+    <span
+      class="inline-flex items-center gap-[4px] rounded-full bg-[var(--pr-status-submitted-bg)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-status-submitted-fg)]"
+      [attr.aria-label]="noticeText"
+      [title]="noticeText"
+      data-testid="ai-provenance-badge">
+      <i class="material-icons-round text-[13px]" aria-hidden="true">auto_awesome</i>
+      {{ badgeLabel() }}
+    </span>
+  }
+}
