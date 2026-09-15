@@ -58,6 +58,6 @@ Copy the shape, not the code verbatim (PRMS's version is wired into PRMS's user/
 
 ---
 
-**Sources:** `docs/specs/changes/cognito-email-otp-login/design.md` §19.1, §19.5 · `requirements.md` §15 (`OTP-R-37`, `OTP-R-38`) · `execution.md` (rev 4 pivot — user decision "keep D in PRMS now; extraction recorded for later") · `onecgiar-pr-server/src/auth/otp/{otp-challenge.entity.ts,otp-challenge.service.ts}` · `onecgiar-pr-server/src/auth/guards/otp-throttler.guard.ts` · `onecgiar-pr-server/src/auth/auth.service.ts` (decoy encoder, first-login provisioning) · this module's [`README.md`](./README.md)
+**Sources:** `docs/specs/archive/2026-09-14-changes--cognito-email-otp-login/design.md` §19.1, §19.5 · `requirements.md` §15 (`OTP-R-37`, `OTP-R-38`) · `execution.md` (rev 4 pivot — user decision "keep D in PRMS now; extraction recorded for later") · `onecgiar-pr-server/src/auth/otp/{otp-challenge.entity.ts,otp-challenge.service.ts}` · `onecgiar-pr-server/src/auth/guards/otp-throttler.guard.ts` · `onecgiar-pr-server/src/auth/auth.service.ts` (decoy encoder, first-login provisioning) · this module's [`README.md`](./README.md)
 
 **Last verified:** 2026-09-12

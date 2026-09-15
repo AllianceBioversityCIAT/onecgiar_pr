@@ -157,11 +157,11 @@ Kept in their repos as reference — **not called by this path any more.**
 
 ## 12. Links
 
-- Spec folder: `docs/specs/changes/cognito-email-otp-login/` (`requirements.md`, `design.md` §19, `execution.md`)
+- Spec folder: `docs/specs/archive/2026-09-14-changes--cognito-email-otp-login/` (`requirements.md`, `design.md` §19, `execution.md`)
 - Sibling documents here: [`prod-rollout-runbook.md`](./prod-rollout-runbook.md) · [`devops-lambdas.md`](./devops-lambdas.md) · [`adopting-in-other-apps.md`](./adopting-in-other-apps.md)
 
 ---
 
-**Sources:** `docs/specs/changes/cognito-email-otp-login/design.md` §19 (19.1–19.5) · `requirements.md` §15 (`OTP-R-37`, `OTP-R-38`, `OTP-AC-22..24`) · `execution.md` (`OTP-T-16`, `OTP-T-17` entries) · `onecgiar-pr-server/src/auth/auth.service.ts` (`startOtp`, `verifyOtp`, decoy helpers, `createSuccessfulLoginResponse`) · `onecgiar-pr-server/src/auth/otp/{otp-challenge.entity.ts,otp-challenge.service.ts,otp-email.template.ts}` · `onecgiar-pr-server/src/auth/utils/otp-shared.util.ts` · `onecgiar-pr-server/src/auth/modules/user/user.service.ts` (T-17 guard) · `onecgiar-pr-server/src/auth/guards/otp-throttler.guard.ts` · `onecgiar-pr-server/src/auth/dto/otp-{start,verify}.dto.ts` · `onecgiar-pr-server/src/migrations/{1788730000000-OTP-allowed-email-domains.ts,1788740000000-OTP-challenges.ts}` · `onecgiar-pr-server/src/shared/microservices/email-notification-management/`
+**Sources:** `docs/specs/archive/2026-09-14-changes--cognito-email-otp-login/design.md` §19 (19.1–19.5) · `requirements.md` §15 (`OTP-R-37`, `OTP-R-38`, `OTP-AC-22..24`) · `execution.md` (`OTP-T-16`, `OTP-T-17` entries) · `onecgiar-pr-server/src/auth/auth.service.ts` (`startOtp`, `verifyOtp`, decoy helpers, `createSuccessfulLoginResponse`) · `onecgiar-pr-server/src/auth/otp/{otp-challenge.entity.ts,otp-challenge.service.ts,otp-email.template.ts}` · `onecgiar-pr-server/src/auth/utils/otp-shared.util.ts` · `onecgiar-pr-server/src/auth/modules/user/user.service.ts` (T-17 guard) · `onecgiar-pr-server/src/auth/guards/otp-throttler.guard.ts` · `onecgiar-pr-server/src/auth/dto/otp-{start,verify}.dto.ts` · `onecgiar-pr-server/src/migrations/{1788730000000-OTP-allowed-email-domains.ts,1788740000000-OTP-challenges.ts}` · `onecgiar-pr-server/src/shared/microservices/email-notification-management/`
 
 **Last verified:** 2026-09-12

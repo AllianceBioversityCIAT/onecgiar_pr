@@ -341,12 +341,15 @@ export class BilateralCenterService {
       throw new BadRequestException('No active year found.');
     }
 
-    const draftTitle = `Bilateral Draft ${Date.now()}`;
+    // @akili-spec bilateral/manual-create-drawer (BIL-MCD-T-1)
+    const clientTitle = dto.title?.trim();
+    const initialTitle =
+      clientTitle || `Bilateral Draft ${Date.now()}`;
 
     const result = await this.resultRepository.save({
       created_by: user.id,
       version_id: version.id,
-      title: draftTitle,
+      title: initialTitle,
       description: '',
       reported_year_id: year.year,
       result_code: 0,
@@ -357,9 +360,11 @@ export class BilateralCenterService {
       creation_method: ResultCreationMethod.MANUAL,
     } as Result);
 
-    await this.resultRepository.update(result.id, {
-      title: `Bilateral Draft #${result.id}`,
-    });
+    if (!clientTitle) {
+      await this.resultRepository.update(result.id, {
+        title: `Bilateral Draft #${result.id}`,
+      });
+    }
 
     const savedResult = await this.resultRepository.findOne({
       where: { id: result.id },

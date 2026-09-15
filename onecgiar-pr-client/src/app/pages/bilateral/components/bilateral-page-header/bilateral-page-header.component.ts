@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Params, Router, RouterLink } from '@angular/router';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
+import { DataControlService } from '../../../../shared/services/data-control.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { environment } from '../../../../../environments/environment';
@@ -18,12 +19,54 @@ export class BilateralPageHeaderComponent {
   readonly ctx = inject(BilateralContextService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly navSE = inject(SmartNavigationService);
+  readonly dataControlSE = inject(DataControlService);
+
+  readonly cycleYear = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return this.dataControlSE.reportingCurrentPhase?.phaseYear ?? null;
+  });
+
+  readonly cyclePhase = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    return this.dataControlSE.reportingCurrentPhase?.portfolioAcronym ?? '';
+  });
+
+  readonly reportingCycleLabel = computed(() => {
+    const parts: string[] = [];
+    const year = this.cycleYear();
+    const phase = this.cyclePhase();
+    if (year) parts.push(`Reporting cycle ${year}`);
+    if (phase) parts.push(phase);
+    return parts.join(' · ');
+  });
+
+  readonly eyebrow = computed(() => {
+    const cycle = this.reportingCycleLabel();
+    return cycle ? `CGIAR Center · ${cycle}` : 'CGIAR Center';
+  });
 
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'reporting' | 'results' | 'drafts' | null>(null);
 
-  /** Whether the Reporting (primary) tab is active — accepts both 'reporting' and legacy 'overview'. */
-  readonly isReportingActive = computed(() => this.activeTab() === 'reporting' || this.activeTab() === 'overview');
+  /**
+   * Whether the Reporting tab is active. `'overview'` used to be a legacy alias of Reporting
+   * (pre-`shell-sp-alignment` naming); the alias is retired now that Overview is its own tab
+   * (`COV-DD-4`) — `'overview'` activates Overview only.
+   */
+  readonly isReportingActive = computed(() => this.activeTab() === 'reporting');
+
+  /** Whether the Overview (first) tab is active. */
+  readonly isOverviewActive = computed(() => this.activeTab() === 'overview');
+
+  /**
+   * Query params carried by every tab link so the phase picked anywhere in the center shell
+   * survives a tab switch (`COV-R-5` A, `COV-DD-2`). `null` when no phase is selected — the
+   * tab links stay bare and each tab falls back to the Open phase.
+   */
+  readonly tabQueryParams = computed<Params | null>(() => {
+    const phase = this.ctx.selectedVersionId();
+    return phase == null ? null : { phase };
+  });
 
   /**
    * Page title for the single-page variant of this header (P2-3100 AC1). When set, the

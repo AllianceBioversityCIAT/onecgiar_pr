@@ -66,4 +66,13 @@ describe('BilateralReportingWaySelectorComponent', () => {
     const aiOption = component.options.find(o => o.id === 'ai')!;
     expect(component.isOptionDisabled(aiOption)).toBe(false);
   });
+
+  it('should disable every card when primaryReady is false', () => {
+    fixture.componentRef.setInput('primaryReady', false);
+    fixture.componentRef.setInput('canUseAi', true);
+    fixture.detectChanges();
+    for (const option of component.options) {
+      expect(component.isOptionDisabled(option)).toBe(true);
+    }
+  });
 });

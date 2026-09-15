@@ -100,6 +100,48 @@
         </div>
       </div>
 
+      <!-- Status chip group — COV-R-14: only when `?status=` carries at least one valid value -->
+      @if (statusChips().length) {
+        <div class="brl_filter_divider"></div>
+        <div class="brl_filter_group">
+          <span class="brl_filter_group_label">Status</span>
+          <div class="brl_chips">
+            @for (chip of statusChips(); track chip.key) {
+              <button
+                type="button"
+                class="brl_chip brl_chip--active"
+                (click)="removeStatusFilter(chip.key)"
+                [title]="'Remove ' + chip.label + ' filter'"
+                [attr.aria-label]="'Remove ' + chip.label + ' filter'">
+                {{ chip.label }}
+                <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Project chip — COV-R-14: only when `?project=` carries at least one valid value -->
+      @if (projectChips().length) {
+        <div class="brl_filter_divider"></div>
+        <div class="brl_filter_group">
+          <span class="brl_filter_group_label">Project</span>
+          <div class="brl_chips">
+            @for (chip of projectChips(); track chip.id) {
+              <button
+                type="button"
+                class="brl_chip brl_chip--active"
+                (click)="removeProjectFilter(chip.id)"
+                [title]="'Remove ' + chip.label + ' filter'"
+                [attr.aria-label]="'Remove ' + chip.label + ' filter'">
+                {{ chip.label }}
+                <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
     </div>
 
     <!-- Columns picker + Export CSV — same pattern as the Results Center list -->
@@ -168,7 +210,7 @@
           [value]="searchQuery()"
           (input)="onSearch($event)" />
         @if (searchQuery()) {
-          <button class="brl_search_clear" (click)="searchQuery.set('')" aria-label="Clear search">
+          <button class="brl_search_clear" (click)="clearSearch()" aria-label="Clear search">
             <span class="material-icons-round text-[16px]">close</span>
           </button>
         }

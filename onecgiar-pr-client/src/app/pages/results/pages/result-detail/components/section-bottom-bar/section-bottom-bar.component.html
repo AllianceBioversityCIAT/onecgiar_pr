@@ -4,13 +4,20 @@
      The INNER one carries the controls at the column's own 40px padding, the same one
      `.rd_scroll` uses, so Back and Save line up with the card's left and right edges.
      No margin-top: the bar is no longer the last thing inside the form, it is the column's floor. -->
-<!-- The strip FOLDS while the user reads downwards (ScrollChromeService); `Save draft` does not.
-     `grid-template-rows: 1fr → 0fr` collapses the strip to nothing without anyone measuring it.
-     Save lives OUTSIDE that grid, absolutely positioned at the same 40px/14px inset the strip's
-     own padding gives it — so it holds EXACTLY its position whether the strip is there or not,
-     because the floor it is measured from is the content column's, which never moves. -->
-<div data-testid="section-bottom-bar">
-  <div appChromeFold="down" class="w-full border-t border-[var(--pr-border)] bg-white">
+<!-- The strip FOLDS while the user reads downwards (ScrollChromeService); the progress indicator
+     and `Save draft` do NOT — they are the two things the reporter needs WHILE filling the form.
+     🛑 Por eso viven FUERA del elemento que lleva `appChromeFold`, como hermanos suyos, y no
+     dentro. La directiva no encoge la franja: la DESLIZA con `transform` y recupera el hueco con
+     un margen negativo (el porqué está en `chrome-fold.directive.ts`). Y un `transform` convierte
+     a su elemento en el bloque contenedor de TODO `position: absolute` que tenga dentro — así que
+     la fila anclada, mientras estuvo dentro, viajaba con la franja y se iba de la pantalla con
+     ella. Medido el 14-sep-2026 con el viewport en 820px: al plegar pasaba de `top: 768` a
+     `top: 835`, es decir, por debajo del borde inferior.
+     La superficie —blanco y regla superior— es del contenedor EXTERIOR, que es quien tiene que
+     seguir pintando el piso cuando la franja ya no está; su `min-h` reserva justo el alto de la
+     fila anclada más su respiro. -->
+<div data-testid="section-bottom-bar" class="relative min-h-[66px] w-full border-t border-[var(--pr-border)] bg-white">
+  <div appChromeFold="down" class="w-full">
     <div class="flex flex-wrap items-center justify-between gap-[16px] px-[40px] py-[14px]">
     <div class="flex items-center gap-[12px]">
       <!-- Secondary button, straight off the mockup: 1px #e3e3e8 rule, white fill, #2b2838 ink,
@@ -46,6 +53,8 @@
     </div>
 
     <div class="flex items-center gap-[12px]"></div>
+  </div>
+
   </div>
 
   <!-- Anclado, nunca plegado. Aquí viven las DOS cosas que el usuario necesita mientras escribe:
@@ -181,5 +190,4 @@
         </button>
       }
     </div>
-  </div>
 </div>

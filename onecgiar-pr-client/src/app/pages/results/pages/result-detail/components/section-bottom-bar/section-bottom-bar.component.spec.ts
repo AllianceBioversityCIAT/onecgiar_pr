@@ -562,5 +562,25 @@ describe('SectionBottomBarComponent', () => {
       // Hijo directo de la franja = el bug: sin posicionamiento propio, se va al flujo.
       if (strip) expect(save.parentElement).not.toBe(strip);
     });
+
+    /*
+     * El segundo fallo de la misma barra, el mismo día. `appChromeFold` NO encoge la franja: la
+     * desliza con `transform` y recupera el hueco con un margen negativo. Un `transform` convierte
+     * a su elemento en el bloque contenedor de todo `position: absolute` de dentro — así que la
+     * fila anclada, mientras vivió dentro, se iba de la pantalla con la franja justo cuando el
+     * reportero baja a leer, que es cuando el contador y el guardado hacen falta.
+     * Medido con el viewport en 820px: `Save draft` pasaba de `top: 768` a `top: 835`.
+     */
+    it('keeps the anchored row OUTSIDE the folding strip, so it survives the fold', async () => {
+      await build();
+
+      const anchored = fixture.nativeElement.querySelector('.absolute.bottom-\\[14px\\].right-\\[40px\\]');
+      const folding = fixture.nativeElement.querySelector('[appChromeFold], [ng-reflect-app-chrome-fold], .chrome-fold');
+
+      expect(anchored).toBeTruthy();
+      expect(folding).toBeTruthy();
+      // Dentro del host que se transforma = el bug.
+      expect(folding.contains(anchored)).toBe(false);
+    });
   });
 });

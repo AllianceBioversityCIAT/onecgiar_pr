@@ -9,7 +9,7 @@
 | **Design Reference** | [`docs/specs/bilateral/shell-sp-alignment/design.md`](./design.md) |
 | **Module / Sub-feature** | `bilateral` / `shell-sp-alignment` |
 | **Prefix** | `BSA` (Bilateral Shell Alignment) |
-| **Status** | in-progress |
+| **Status** | complete |
 | **Budget** | 4 tasks · ~240 LOC production / ~280 LOC test · ≤ 1 review round per task |
 | **Date** | 2026-09-07 |
 
@@ -60,13 +60,13 @@ This task list delivers the frontend implementation for aligning the CGIAR Cente
 - **Estimate:** S (≤ 0.5d)
 - **Skills:** `angular-developer`, `tailwind-design-system`
 - **Definition of Done:**
-  - [ ] `bilateral-header-back-btn` is NOT rendered when `variant !== 'detail'`.
-  - [ ] `bilateral-header-back-btn` IS rendered when `variant === 'detail'`.
-  - [ ] Title element has classes `text-[18px]` and `font-bold`.
-  - [ ] Tab 1 text is "Reporting" and links to `/home`.
-  - [ ] All 3 tabs render their respective icons.
-  - [ ] Unit tests pass: `npx jest src/app/pages/bilateral/components/bilateral-page-header/bilateral-page-header.component.spec.ts --silent`
-  - [ ] Disqualifier / Falsifier: Deleting the tab icon markup causes test assertion to fail.
+  - [x] `bilateral-header-back-btn` is NOT rendered when `variant !== 'detail'`.
+  - [x] `bilateral-header-back-btn` IS rendered when `variant === 'detail'`.
+  - [x] Title element has classes `text-[18px]` and `font-bold`.
+  - [x] Tab 1 text is "Reporting" and links to `/home`.
+  - [x] All 3 tabs render their respective icons.
+  - [x] Unit tests pass: `npx jest src/app/pages/bilateral/components/bilateral-page-header/bilateral-page-header.component.spec.ts --silent`
+  - [x] Disqualifier / Falsifier: Deleting the tab icon markup causes test assertion to fail.
 
 ---
 

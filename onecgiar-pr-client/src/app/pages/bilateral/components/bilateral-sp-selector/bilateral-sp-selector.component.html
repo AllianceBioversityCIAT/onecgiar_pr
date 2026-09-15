@@ -4,36 +4,56 @@
   } @else {
     <div class="sps-section">
       <label class="sps-label">Primary Contributing Science Program <span class="sps-required">*</span></label>
-      <div class="sps-field" (click)="togglePrimary()" tabindex="0" role="combobox">
-        @if (selectedPrimaryIcon(); as icon) {
-          <img class="sps-field-icon" [src]="icon" width="24" height="24" alt="" />
-        }
-        <span class="sps-field-text" [class.sps-placeholder]="!creationService.selectedPrimarySp()">
-          {{ selectedPrimaryLabel() }}
-        </span>
-        <i class="material-icons-round sps-chevron" [class.sps-chevron--open]="showPrimaryDropdown()">expand_more</i>
-      </div>
 
-      @if (showPrimaryDropdown()) {
-        <div class="sps-dropdown-overlay" (click)="closeDropdowns()"></div>
-        <div class="sps-dropdown">
+      @if (primaryLayout() === 'list') {
+        <div class="sps-option-list" role="radiogroup" aria-label="Primary Contributing Science Program">
           @for (sp of availableSps(); track sp.programId) {
-            <div
-              class="sps-option"
+            <button
+              type="button"
+              class="sps-option sps-option--list"
+              role="radio"
               [class.sps-option--selected]="creationService.selectedPrimarySp()?.programId === sp.programId"
-              (click)="selectPrimary(sp.programId, sp.programCode, sp.allocation ?? '')"
-            >
+              [attr.aria-checked]="creationService.selectedPrimarySp()?.programId === sp.programId"
+              (click)="selectPrimary(sp.programId, sp.programCode, sp.allocation ?? '')">
               <img class="sps-option-icon" [src]="spIconSrc(sp.programCode)" width="24" height="24" alt="" />
               <span class="sps-option-code">{{ sp.programCode }}</span>
               <span class="sps-option-name">{{ sp.spName }}</span>
               @if (sp.allocation) {
                 <span class="sps-option-pct">{{ formatAllocation(sp.allocation) }}%</span>
               }
-            </div>
+            </button>
           }
         </div>
-      }
+      } @else {
+        <div class="sps-field" (click)="togglePrimary()" tabindex="0" role="combobox">
+          @if (selectedPrimaryIcon(); as icon) {
+            <img class="sps-field-icon" [src]="icon" width="24" height="24" alt="" />
+          }
+          <span class="sps-field-text" [class.sps-placeholder]="!creationService.selectedPrimarySp()">
+            {{ selectedPrimaryLabel() }}
+          </span>
+          <i class="material-icons-round sps-chevron" [class.sps-chevron--open]="showPrimaryDropdown()">expand_more</i>
+        </div>
 
+        @if (showPrimaryDropdown()) {
+          <div class="sps-dropdown-overlay" (click)="closeDropdowns()"></div>
+          <div class="sps-dropdown">
+            @for (sp of availableSps(); track sp.programId) {
+              <div
+                class="sps-option"
+                [class.sps-option--selected]="creationService.selectedPrimarySp()?.programId === sp.programId"
+                (click)="selectPrimary(sp.programId, sp.programCode, sp.allocation ?? '')">
+                <img class="sps-option-icon" [src]="spIconSrc(sp.programCode)" width="24" height="24" alt="" />
+                <span class="sps-option-code">{{ sp.programCode }}</span>
+                <span class="sps-option-name">{{ sp.spName }}</span>
+                @if (sp.allocation) {
+                  <span class="sps-option-pct">{{ formatAllocation(sp.allocation) }}%</span>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
     </div>
 
     @if (availableSecondarySps().length > 0 && creationService.selectedPrimarySp()) {

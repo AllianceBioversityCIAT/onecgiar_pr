@@ -280,7 +280,11 @@ export class BilateralAiService implements OnDestroy {
         const map: Record<number, string> = {};
         for (const p of projects) {
           if (p.id != null) {
-            map[p.id] = p.shortName ?? p.fullName ?? String(p.id);
+            if (p.shortName && p.fullName) {
+              map[p.id] = `${p.shortName} — ${p.fullName}`;
+            } else {
+              map[p.id] = p.shortName ?? p.fullName ?? String(p.id);
+            }
           }
         }
         this.projectNameMap.set(map);

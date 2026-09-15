@@ -1,0 +1,26 @@
+.bmcdh-setup-sp {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(30, 32, 47, 0.08);
+}
+
+.bmcdh-setup-way--locked {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.bmcdh-back-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}

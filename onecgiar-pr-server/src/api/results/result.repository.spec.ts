@@ -289,6 +289,36 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
+  // COV-R-16 (bilateral/center-overview-tab): the Overview's "Projects covered" card needs the
+  // lead project's CLARISA id, not just its display name, so it can dedupe/group by project.
+  // project_id is a second correlated subquery on results_by_projects, deliberately duplicating
+  // the project_name shape so both fields always describe the same lead-project row.
+  it('returns project_id from the same lead-project subquery shape as project_name, without changing any existing column, param, or ordering', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain(') AS project_id');
+    // Every previously selected alias/column must still be present, untouched.
+    expect(sql).toContain('project_name');
+    expect(sql).toContain('r.result_type_id');
+    expect(sql).toContain(') AS submitter');
+    expect(sql).toContain('r.creation_method');
+    expect(sql).toContain('is_ai_generated');
+    expect(sql).toContain('rc.is_leading_result');
+    expect(sql).toContain('rs.status_name');
+    expect(sql).toContain('r.version_id');
+    expect(sql).toContain('r.source');
+    // Neither subquery binds a parameter — placeholder count must still match params.
+    expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+    // Both project_name and project_id resolve the lead project the same way.
+    expect(
+      (sql.match(/ORDER BY rbp\.is_lead DESC, rbp\.id DESC/g) ?? []).length,
+    ).toBe(2);
+  });
+
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
   // (initiative_role_id=1) results in the requested version, with the meter's status/type
   // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/

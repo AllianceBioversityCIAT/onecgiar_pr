@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { BilateralAiDraft } from '../../../services/bilateral-ai.interfaces';
 import {
   MyDraftResultsFilterService,
+  formatDraftProjectOption,
   matchesDraftProject,
   normalizeProjectId,
 } from './my-draft-results-filter.service';
@@ -102,6 +103,41 @@ describe('MyDraftResultsFilterService (P2-3319)', () => {
       expect(service.filterDrafts(null as unknown as BilateralAiDraft[])).toEqual([]);
       service.selectProject('7');
       expect(service.filterDrafts(null as unknown as BilateralAiDraft[])).toEqual([]);
+    });
+  });
+
+  describe('formatDraftProjectOption (BADR-R-1, BADR-AC-1, BADR-AC-2, Defect Gate D1)', () => {
+    it('formats label as "<shortName> — <fullName>" and extracts code and title when mapped', () => {
+      const nameMap = {
+        10156: 'A-AG10156 — Climate Rice Advisory',
+      };
+      const opt = formatDraftProjectOption('10156', nameMap);
+      expect(opt).toEqual({
+        value: '10156',
+        label: 'A-AG10156 — Climate Rice Advisory',
+        code: 'A-AG10156',
+        title: 'Climate Rice Advisory',
+      });
+    });
+
+    it('falls back to raw project ID when unmapped in nameMap (BADR-AC-2)', () => {
+      const opt = formatDraftProjectOption('A-AG99999', {});
+      expect(opt).toEqual({
+        value: 'A-AG99999',
+        label: 'A-AG99999',
+      });
+      expect(opt.label).toBe('A-AG99999');
+    });
+
+    it('handles shortName without fullName cleanly', () => {
+      const nameMap = {
+        7: 'PRJ-Seven',
+      };
+      const opt = formatDraftProjectOption(7, nameMap);
+      expect(opt).toEqual({
+        value: '7',
+        label: 'PRJ-Seven',
+      });
     });
   });
 });

@@ -119,13 +119,19 @@
   overflow-y: auto;
 }
 
+.sps-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .sps-option {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
   cursor: pointer;
-  transition: background 100ms ease;
+  transition: background 100ms ease, border-color 100ms ease;
 
   &:hover {
     background: #F3F4F6;
@@ -133,6 +139,34 @@
 
   &--selected {
     background: var(--pr-color-primary-50);
+  }
+
+  &--list {
+    width: 100%;
+    margin: 0;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    background: #FFFFFF;
+    font-family: inherit;
+    font-size: inherit;
+    text-align: left;
+    appearance: none;
+
+    &:hover {
+      border-color: #D1D5DB;
+      background: #F9FAFB;
+    }
+
+    &.sps-option--selected {
+      border-color: var(--pr-color-primary-300);
+      background: var(--pr-color-primary-50);
+    }
+
+    &:focus-visible {
+      outline: none;
+      border-color: var(--pr-color-primary-300);
+      box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.12);
+    }
   }
 }
 

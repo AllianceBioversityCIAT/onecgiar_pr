@@ -1,0 +1,77 @@
+<div
+  class="bcd-scrim fixed inset-0 z-[140] bg-[rgba(15,23,42,0.35)] backdrop-blur-[1px]"
+  (click)="requestClose()"
+  aria-hidden="true"
+  data-testid="bilateral-create-drawer-scrim"></div>
+
+<aside
+  class="bcd-panel fixed inset-y-0 right-0 z-[141] flex max-w-[100vw] flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
+  [class.bcd-panel--mobile]="isMobile()"
+  [style.width.px]="width()"
+  role="complementary"
+  [attr.aria-label]="copy.drawer.ariaLabel"
+  (keydown.escape)="onEscape()"
+  tabindex="-1"
+  data-testid="bilateral-create-drawer">
+  @if (!isMobile()) {
+    <div
+      class="absolute inset-y-0 -left-1 z-[2] w-2 cursor-col-resize"
+      (mousedown)="startResize($event)"
+      role="separator"
+      aria-orientation="vertical"
+      [attr.aria-label]="copy.drawer.resizeAriaLabel"></div>
+  }
+
+  <div class="flex shrink-0 items-center justify-between border-b border-[rgba(30,32,47,0.08)] bg-white px-4 py-3 min-[640px]:px-6">
+    <div class="flex min-w-0 items-center gap-2">
+      <span class="material-icons-round shrink-0 text-[18px] text-[var(--pr-color-primary-300)]">edit_note</span>
+      <h3 class="m-0 truncate text-[15px] font-bold text-gray-900">{{ copy.drawer.title }}</h3>
+    </div>
+    <button
+      type="button"
+      (click)="requestClose()"
+      [attr.aria-label]="copy.drawer.closeAriaLabel"
+      data-testid="bilateral-create-drawer-close"
+      class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer">
+      <span class="material-icons-round text-[20px]">close</span>
+    </button>
+  </div>
+
+  <header class="bcd-context shrink-0 border-b border-[rgba(30,32,47,0.08)] bg-[var(--pr-surface-subtle)] px-4 py-3 min-[640px]:px-6" data-testid="bilateral-create-drawer-context">
+    @if (projectCode() || projectTitle()) {
+      <div class="bcd-context__project">
+        <span class="material-icons-round bcd-context__project-icon" aria-hidden="true">folder</span>
+        <div class="bcd-context__project-copy min-w-0">
+          @if (projectCode()) {
+            <p class="bcd-context__code">{{ projectCode() }}</p>
+          }
+          @if (projectTitle()) {
+            <p class="bcd-context__title" [attr.title]="projectTitle()">{{ projectTitle() }}</p>
+          }
+        </div>
+      </div>
+    }
+    @if (programCode() || programName()) {
+      <div class="bcd-context__sp" data-testid="bilateral-create-drawer-sp">
+        @if (programCode()) {
+          <img
+            class="bcd-context__sp-icon"
+            [src]="'assets/result-framework-reporting/SPs-Icons/' + programCode() + '.png'"
+            [alt]="copy.drawer.programIconAlt(programCode())"
+            width="20"
+            height="20" />
+        }
+        <div class="bcd-context__sp-copy min-w-0">
+          <p class="bcd-context__sp-label">{{ copy.drawer.primaryScienceProgramLabel }}</p>
+          <p class="bcd-context__sp-value" [attr.title]="programName() || programCode()">
+            {{ programCode() }}@if (programName()) { · {{ programName() }} }
+          </p>
+        </div>
+      </div>
+    }
+  </header>
+
+  <div class="bcd-body flex min-h-0 flex-1 flex-col overflow-hidden">
+    <ng-content />
+  </div>
+</aside>

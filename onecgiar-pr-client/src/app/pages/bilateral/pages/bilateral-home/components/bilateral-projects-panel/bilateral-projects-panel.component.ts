@@ -1,10 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
-import { BilateralCreationService } from '../../../../services/bilateral-creation.service';
+import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
+import { BilateralManualCreateDrawerHostComponent } from '../../../../components/bilateral-manual-create-drawer-host/bilateral-manual-create-drawer-host.component';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
+// @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15, COV-DD-9) — reads the shared
+// query-param contract; this tab only READS (`program`, `project`, `multi`), it never writes back.
+import { parseBilateralQueryParams } from '../../../../bilateral-query-params';
+
+/** `COV-R-15`/`COV-DD-9` — how long the `?project=` highlight ring stays on the card. */
+const PROJECT_HIGHLIGHT_DURATION_MS = 2000;
 
 export interface KpiProgramStat {
   programId: number;
@@ -35,15 +42,17 @@ function getInitialViewMode(): 'grid' | 'list' {
 @Component({
   selector: 'app-bilateral-projects-panel',
   standalone: true,
-  imports: [RouterModule, DecimalPipe],
+  imports: [DecimalPipe, BilateralManualCreateDrawerHostComponent],
   templateUrl: './bilateral-projects-panel.component.html',
   styleUrl: './bilateral-projects-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BilateralProjectsPanelComponent {
   private readonly bilateralApiService = inject(BilateralApiService);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
   readonly ctx = inject(BilateralContextService);
-  readonly creationService = inject(BilateralCreationService);
+  readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
 
   readonly projects = signal<BilateralProject[]>([]);
   readonly loading = signal(false);
@@ -52,6 +61,12 @@ export class BilateralProjectsPanelComponent {
   readonly selectedProgramFilter = signal<string>('ALL');
   readonly selectedMultiProgramOnly = signal<boolean>(false);
   readonly viewMode = signal<'grid' | 'list'>(getInitialViewMode());
+
+  /** `COV-R-15`/`COV-DD-9` — the project id `?project=` highlights (scroll + transient ring), for
+   *  up to `PROJECT_HIGHLIGHT_DURATION_MS`. The catalog is never filtered by it — highlight, not
+   *  filter. */
+  readonly highlightedProjectId = signal<number | null>(null);
+  private highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly kpiSummary = computed<KpiSummary>(() => {
     const list = this.projects();
@@ -149,6 +164,9 @@ export class BilateralProjectsPanelComponent {
           next: ({ response }) => {
             this.projects.set(response?.projects ?? response ?? []);
             this.loading.set(false);
+            // `COV-R-15` — read the deep-link params only after the catalog it targets exists,
+            // and only once per load (not on every subsequent projects signal write).
+            this.applyDeepLinkParams();
           },
           error: () => {
             this.error.set(true);
@@ -186,12 +204,57 @@ export class BilateralProjectsPanelComponent {
     this.selectedMultiProgramOnly.set(false);
   }
 
-  selectAndCreate(project: BilateralProject): void {
-    this.creationService.selectProject(project);
+  openManualCreate(project: BilateralProject, event: Event): void {
+    this.manualCreateFlow.beginFromProject(project, event);
   }
 
   onSearch(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  /**
+   * `COV-R-15`/`COV-DD-9` — `program` (first value) pre-selects the SP quick filter (matched by
+   * `programCode`, same case-insensitive comparison `setProgramFilter` already drives), `multi=1`
+   * turns on the Multi-Program quick filter, and `project` (first value) highlights + scrolls to
+   * the matching card. Read-only: this tab never writes any of these back to the URL.
+   */
+  private applyDeepLinkParams(): void {
+    const { params } = parseBilateralQueryParams(this.activatedRoute.snapshot.queryParamMap);
+
+    if (params.program.length) {
+      this.setProgramFilter(params.program[0]);
+    }
+    if (params.multi) {
+      this.selectedMultiProgramOnly.set(true);
+    }
+    if (params.project.length) {
+      this.highlightProject(params.project[0]);
+    }
+  }
+
+  /** `COV-R-15`/`COV-DD-9` — whether `project` is the one `?project=` highlighted. The live API
+   *  returns `id` as a string (e.g. `"1368"`) even though `BilateralProject.id` is typed `number`,
+   *  so this always normalizes both sides through `Number()` rather than relying on `===` against
+   *  `highlightedProjectId()` directly (which is a number and would never match a string id). */
+  isHighlighted(project: BilateralProject): boolean {
+    const highlighted = this.highlightedProjectId();
+    return highlighted !== null && Number(project.id) === highlighted;
+  }
+
+  /** `COV-R-15` — scroll + transient ring for the card matching `projectId`; the catalog itself is
+   *  never filtered. No-op when the id does not match a loaded project. */
+  private highlightProject(projectId: number): void {
+    if (!this.projects().some(p => Number(p.id) === projectId)) return;
+
+    this.highlightedProjectId.set(projectId);
+    if (this.highlightTimer) clearTimeout(this.highlightTimer);
+    this.highlightTimer = setTimeout(() => this.highlightedProjectId.set(null), PROJECT_HIGHLIGHT_DURATION_MS);
+
+    // Deferred a tick so the `@for` has rendered the card for the just-set `projects` list.
+    setTimeout(() => {
+      const card = this.elementRef.nativeElement.querySelector(`[data-project-id="${projectId}"]`);
+      card?.scrollIntoView({ block: 'center' });
+    });
   }
 }
 

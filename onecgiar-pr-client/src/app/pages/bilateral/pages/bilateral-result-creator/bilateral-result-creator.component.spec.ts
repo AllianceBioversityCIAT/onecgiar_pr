@@ -10,8 +10,9 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { signal, Injectable } from '@angular/core';
+import { computed, signal, Injectable } from '@angular/core';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
+import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 
 @Injectable()
 class MockBilateralAiService {
@@ -22,6 +23,7 @@ class MockBilateralAiService {
   canUseAi = signal(true);
   startUpload = jest.fn();
   resetUpload = jest.fn();
+  clearUploadState = jest.fn();
   loadAllDrafts = jest.fn();
   getDraft = jest.fn();
   promoteDraft = jest.fn();
@@ -33,9 +35,37 @@ class MockBilateralAiService {
   isDraftListLoaded = signal(false);
 }
 
+function makeManualCreateFlowMock() {
+  const drawerOpen = signal(false);
+  const isCreating = signal(false);
+  return {
+    drawerOpen,
+    isCreating,
+    canShowCreateForm: computed(() => true),
+    drawerProjectCode: computed(() => ''),
+    drawerProjectTitle: computed(() => ''),
+    selectedReportingWay: signal<'manual' | 'ai' | null>(null),
+    canUseAi: computed(() => true),
+    drawerProgramCode: computed(() => ''),
+    drawerProgramName: computed(() => ''),
+    openDrawerForManual: jest.fn(() => {
+      drawerOpen.set(true);
+    }),
+    closeDrawer: jest.fn(() => drawerOpen.set(false)),
+    selectReportingWay: jest.fn(),
+    goBack: jest.fn(),
+    canGoBack: computed(() => false),
+    backLabel: computed(() => 'Back'),
+    beginFromProject: jest.fn(),
+    submitCreate: jest.fn()
+  };
+}
+
 describe('BilateralResultCreatorComponent', () => {
   let component: BilateralResultCreatorComponent;
   let fixture: any;
+  let mockAiService: MockBilateralAiService;
+  let manualCreateFlow: ReturnType<typeof makeManualCreateFlowMock>;
   let creationService: any;
   let mdsTracker: any;
   let autoSaveService: any;
@@ -141,6 +171,9 @@ describe('BilateralResultCreatorComponent', () => {
       url: '/bilateral/test',
     };
 
+    mockAiService = new MockBilateralAiService();
+    manualCreateFlow = makeManualCreateFlowMock();
+
     await TestBed.configureTestingModule({
       imports: [BilateralResultCreatorComponent, HttpClientTestingModule],
       providers: [
@@ -148,6 +181,8 @@ describe('BilateralResultCreatorComponent', () => {
         { provide: Router, useValue: mockRouter },
         { provide: RolesService, useValue: rolesService },
         { provide: CentersService, useValue: centersService },
+        { provide: BilateralAiService, useValue: mockAiService },
+        { provide: BilateralManualCreateFlowService, useValue: manualCreateFlow },
       ],
     })
       .overrideComponent(BilateralResultCreatorComponent, {
@@ -157,7 +192,6 @@ describe('BilateralResultCreatorComponent', () => {
             { provide: BilateralCreationService, useValue: creationService },
             { provide: BilateralMdsTrackerService, useValue: mdsTracker },
             { provide: BilateralAutoSaveService, useValue: autoSaveService },
-            { provide: BilateralAiService, useClass: MockBilateralAiService },
           ],
         },
       })
@@ -213,29 +247,6 @@ describe('BilateralResultCreatorComponent', () => {
     expect(creationService.resetWizard).toHaveBeenCalled();
   });
 
-  it('should handle result level selection', () => {
-    component.onLevelSelected(3);
-    expect(component.resultLevelId()).toBe(3);
-    expect(component.resultTypeId()).toBeNull();
-  });
-
-  it('should filter result types by selected level', () => {
-    component.resultLevelId.set(3);
-    expect(component.availableResultTypes().length).toBe(3);
-    expect(component.availableResultTypes()[0].label).toBe('Policy Change');
-  });
-
-  it('should return empty array for unsupported level', () => {
-    component.resultLevelId.set(1);
-    expect(component.availableResultTypes().length).toBe(0);
-  });
-
-  it('should show output types for level 4', () => {
-    component.resultLevelId.set(4);
-    expect(component.availableResultTypes().length).toBe(4);
-    expect(component.availableResultTypes().find(t => t.id === 6)!.label).toBe('Knowledge Product');
-  });
-
   it('should emit submit action', () => {
     component.resultId.set(42);
     component.submitResult();
@@ -283,14 +294,6 @@ describe('BilateralResultCreatorComponent', () => {
     );
   });
 
-  it('should create result and navigate to editor', () => {
-    component.resultLevelId.set(3);
-    component.resultTypeId.set(2);
-    creationService.selectedPrimarySp.set({ programId: 100 });
-    component.createResult();
-    expect(creationService.createResult).toHaveBeenCalledWith(3, 2, undefined);
-  });
-
   it('should have null reporting way by default', () => {
     expect(component.selectedReportingWay()).toBeNull();
   });
@@ -305,30 +308,16 @@ describe('BilateralResultCreatorComponent', () => {
     expect(creationService.createResult).not.toHaveBeenCalled();
   });
 
-  it('should set type without creating on type selection', () => {
-    component.selectedReportingWay.set('manual');
-    component.resultLevelId.set(3);
-    creationService.selectedPrimarySp.set({ programId: 100 });
-    component.onTypeSelected(2);
-    expect(component.resultTypeId()).toBe(2);
-    expect(creationService.createResult).not.toHaveBeenCalled();
+  it('should open the manual drawer immediately when manual way is selected', () => {
+    component.onReportingWaySelected('manual');
+    expect(manualCreateFlow.openDrawerForManual).toHaveBeenCalled();
+    expect(manualCreateFlow.drawerOpen()).toBe(true);
   });
 
-  it('should close type dropdown when a type is selected', () => {
-    component.showTypeDropdown.set(true);
-    component.resultLevelId.set(3);
-    creationService.selectedPrimarySp.set({ programId: 100 });
-    component.onTypeSelected(1);
-    expect(component.showTypeDropdown()).toBe(false);
-  });
-
-  it('should create result on next click', () => {
-    component.selectedReportingWay.set('manual');
-    component.resultLevelId.set(3);
-    component.resultTypeId.set(2);
-    creationService.selectedPrimarySp.set({ programId: 100 });
-    component.onNext();
-    expect(creationService.createResult).toHaveBeenCalledWith(3, 2, undefined);
+  it('should close the manual drawer when switching reporting ways', () => {
+    manualCreateFlow.drawerOpen.set(true);
+    component.onReportingWaySelected('ai');
+    expect(manualCreateFlow.closeDrawer).toHaveBeenCalled();
   });
 
   describe('header title (P2-3352)', () => {
@@ -385,112 +374,6 @@ describe('BilateralResultCreatorComponent', () => {
       expect(component.hasTypeSpecificSection()).toBe(true);
     });
 
-    // Regression guard for the actual defect: this is what a green suite looked like while the
-    // feature did nothing on the editor path.
-    it('ignores the local resultTypeId signal — the editor never sets it', () => {
-      creationService.resultTypeId.set(8);
-      component.resultTypeId.set(1);
-      expect(component.hasTypeSpecificSection()).toBe(false);
-
-      creationService.resultTypeId.set(1);
-      component.resultTypeId.set(8);
-      expect(component.hasTypeSpecificSection()).toBe(true);
-    });
-  });
-
-  describe('Knowledge Product via CGSpace handle', () => {
-    beforeEach(() => {
-      component.resultLevelId.set(4);
-      component.resultTypeId.set(6);
-      creationService.selectedPrimarySp.set({ programId: 100 });
-    });
-
-    it('should identify Knowledge Product as the selected type', () => {
-      expect(component.isKnowledgeProductType()).toBe(true);
-    });
-
-    it('should not allow creation until the handle has been synced', () => {
-      component.kpHandle.set('');
-      expect(component.canCreate).toBe(false);
-
-      component.kpHandle.set('https://cgspace.cgiar.org/handle/10568/175322');
-      expect(component.canCreate).toBe(false);
-
-      component.kpSyncedTitle.set('Some retrieved title');
-      expect(component.canCreate).toBe(true);
-    });
-
-    it('should invalidate a previous sync when the handle is edited', () => {
-      component.kpSyncedTitle.set('Some retrieved title');
-      component.onKpHandleInput('https://cgspace.cgiar.org/handle/10568/999999');
-      expect(component.kpSyncedTitle()).toBeNull();
-      expect(component.canCreate).toBe(false);
-    });
-
-    describe('syncKpHandle', () => {
-      it('should error when the handle is blank', () => {
-        component.kpHandle.set('   ');
-        component.syncKpHandle();
-        expect(component.kpHandleError()).toBe('Please enter a valid handle.');
-        expect(component.kpSyncedTitle()).toBeNull();
-      });
-
-      it('should error when the handle format is not from an accepted repository', () => {
-        component.kpHandle.set('10568/175322');
-        component.syncKpHandle();
-        expect(component.kpHandleError()).toContain('CGSpace, MELSpace or WorldFish');
-        expect(component.kpSyncedTitle()).toBeNull();
-      });
-
-      it('should preview the title on a successful sync', () => {
-        const apiService = TestBed.inject(ApiService);
-        jest.spyOn(apiService.resultsSE, 'GET_mqapValidation').mockReturnValue(of({ response: { title: 'A retrieved title' } }) as any);
-
-        component.kpHandle.set('https://cgspace.cgiar.org/handle/10568/175322');
-        component.syncKpHandle();
-
-        expect(apiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith('https://cgspace.cgiar.org/handle/10568/175322');
-        expect(component.kpSyncedTitle()).toBe('A retrieved title');
-        expect(component.kpHandleError()).toBeNull();
-        expect(component.validatingKpHandle()).toBe(false);
-      });
-
-      it('should surface the server error message when the sync fails', () => {
-        const apiService = TestBed.inject(ApiService);
-        jest
-          .spyOn(apiService.resultsSE, 'GET_mqapValidation')
-          .mockReturnValue(throwError(() => ({ error: { message: 'Handle already reported.' } })) as any);
-
-        component.kpHandle.set('https://cgspace.cgiar.org/handle/10568/175322');
-        component.syncKpHandle();
-
-        expect(component.kpHandleError()).toBe('Handle already reported.');
-        expect(component.kpSyncedTitle()).toBeNull();
-        expect(component.validatingKpHandle()).toBe(false);
-      });
-    });
-
-    it('should pass the trimmed handle through to createResult', () => {
-      component.kpHandle.set('  10568/175322  ');
-      component.createResult();
-      expect(creationService.createResult).toHaveBeenCalledWith(4, 6, '10568/175322');
-    });
-
-    it('should not create when the handle is blank', () => {
-      component.kpHandle.set('   ');
-      component.createResult();
-      expect(creationService.createResult).not.toHaveBeenCalled();
-    });
-
-    it('should reset the handle and its synced state when the level changes', () => {
-      component.kpHandle.set('10568/175322');
-      component.kpSyncedTitle.set('Some retrieved title');
-      component.kpHandleError.set('some error');
-      component.onLevelSelected(3);
-      expect(component.kpHandle()).toBe('');
-      expect(component.kpSyncedTitle()).toBeNull();
-      expect(component.kpHandleError()).toBeNull();
-    });
   });
 
   it('should reset reporting way on project change', () => {

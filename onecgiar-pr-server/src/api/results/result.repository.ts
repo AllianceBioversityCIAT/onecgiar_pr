@@ -4079,6 +4079,20 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           ORDER BY rbp.is_lead DESC, rbp.id DESC
           LIMIT 1
         ) AS project_name,
+        -- @akili-spec bilateral/center-overview-tab COV-R-16: the Overview's "Projects covered"
+        -- card needs the lead project's CLARISA id to dedupe/group by project, not just its
+        -- display name. Deliberately duplicated correlated subquery (not a shared CTE/join) so
+        -- project_id and project_name are guaranteed to describe the same lead-project row.
+        (
+          SELECT cp.id
+          FROM results_by_projects rbp
+          INNER JOIN clarisa_projects cp
+                  ON cp.id = rbp.project_id
+          WHERE rbp.result_id = r.id
+            AND rbp.is_active = 1
+          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          LIMIT 1
+        ) AS project_id,
         rt.name  AS result_type,
         -- P2-3653. The type NAME alone cannot gate the "Update result" action: the client rule is
         -- shared with the Results Center list, which compares the type ID (Knowledge Products are
