@@ -1,20 +1,41 @@
 // Estado vacío compartido por 25 pantallas ("No evidence added", "No links added", …).
 //
-// 15-sep-2026 — era un degradado gris→blanco a todo el ancho con el texto en MORADO. El morado es
-// el color de lo que se puede pulsar, así que un texto que solo informa lo llevaba puesto y competía
-// con el botón que sí hay que pulsar, justo debajo. Y el degradado no aparece en ningún otro sitio
-// de la plataforma. Ahora es lo que es: una nota tranquila, en texto secundario, sobre un marco
-// punteado que dice "aquí va a haber algo" sin gritarlo.
+// 15-sep-2026, segunda pasada. El original era un degradado gris→blanco con el texto en MORADO —el
+// color de lo que se pulsa— compitiendo con el botón que sí hay que pulsar, justo debajo. La
+// primera corrección lo dejó correcto pero soso: una caja punteada con una frase dentro.
+//
+// Un vacío bien resuelto dice tres cosas a la vez: que no hay nada, que eso es NORMAL, y dónde
+// empieza lo que sí habrá. De ahí el icono —un marco punteado sin contenido, el mismo idioma que
+// la caja— sobre un disco tenue, y el texto debajo en tinta secundaria. El punteado del borde se
+// afina a `--pr-border`: marca el sitio sin dibujar una segunda caja tan fuerte como las de verdad.
 .no_data_text {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 84px;
-  padding: 20px 24px;
+  gap: 10px;
+  min-height: 118px;
+  padding: 24px;
   text-align: center;
   color: var(--pr-text-muted);
   font-size: 13px;
+  line-height: 1.5;
   background: var(--pr-surface-subtle);
-  border: 1px dashed var(--pr-border-strong);
-  border-radius: 10px;
+  border: 1px dashed var(--pr-border);
+  border-radius: 12px;
+
+  // Icono decorativo: va en CSS y no en el HTML a propósito — el componente recibe un único
+  // `title` y lo pintan 25 pantallas; añadirle marcado obligaría a tocarlas todas.
+  &::before {
+    content: '';
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border-radius: 50%;
+    background-color: var(--pr-surface-ground);
+    // Caja vacía, trazo de 1.6 en `--pr-text-subtle` (#9691a8), centrada a 20px.
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239691a8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8.5 12 4l9 4.5-9 4.5z'/%3E%3Cpath d='M3 8.5v7L12 20l9-4.5v-7'/%3E%3Cpath d='M12 13v7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+  }
 }

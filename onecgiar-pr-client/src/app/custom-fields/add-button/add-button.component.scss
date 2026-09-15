@@ -3,11 +3,19 @@
 // Botón de "añadir uno más" de toda la plataforma: evidencias, enlaces, expertos, proyectos no
 // agrupados, los pasos de IPSR… 15 pantallas comparten este archivo.
 //
-// 15-sep-2026 — era una píldora morada con las esquinas alternadas (`20px 5px 20px 5px`), una
-// sombra negra difusa y un círculo blanco con el `+` pegado a un lado, que al pasar el ratón
-// EMPUJABA el texto. Nada de eso existe en el resto de la interfaz, así que el botón se leía como
-// de otra aplicación. Ahora usa el par primario del mockup tal cual — el mismo que `Next` y
-// `Submit result` — y el icono va DENTRO, a la izquierda del texto, donde no mueve nada al pasar.
+// 15-sep-2026, segunda pasada. La primera lo dejó PLANO —un rectángulo morado y ya— y Yeck tenía
+// razón: perdió lo único bueno que tenía el original, que era tener carácter. Lo que sobraba del
+// viejo eran las esquinas alternadas (`20px 5px 20px 5px`), la sombra NEGRA y el círculo blanco
+// que empujaba el texto al pasar el ratón. Lo que valía la pena era el gesto del `+` en su propia
+// superficie. Eso vuelve, pero por dentro: un disco translúcido sobre el propio morado, que no
+// abre un agujero blanco en el botón ni mueve nada.
+//
+// Las tres decisiones que lo separan de un rectángulo de color:
+//  · degradado corto (300→400 de la rampa) en vez de un plano — le da volumen sin parecer un botón
+//    de otra década;
+//  · sombra DEL COLOR del botón, no negra. Una sombra negra sobre morado ensucia; una morada eleva;
+//  · el hover levanta 1px y ensancha la sombra, el active la devuelve a cero. El botón responde al
+//    dedo, que es lo que lo hace sentirse vivo.
 .add_button_container {
   display: flex;
   justify-content: center;
@@ -17,29 +25,42 @@
   .add_button_content {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    height: 38px;
-    padding: 0 18px;
-    border-radius: 8px;
-    background: var(--pr-color-primary-300);
+    gap: 10px;
+    height: 40px;
+    padding: 0 20px 0 14px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--pr-color-primary-300) 0%, var(--pr-color-primary-400) 100%);
+    box-shadow: 0 1px 2px rgba(var(--pr-color-primary-rgb), 0.24), 0 4px 12px rgba(var(--pr-color-primary-rgb), 0.26);
     color: var(--pr-color-white);
     cursor: pointer;
     user-select: none;
-    transition: background 150ms ease;
+    transition: box-shadow 180ms ease, transform 180ms ease, background 180ms ease;
 
     &:hover {
-      background: var(--pr-color-primary-400);
+      background: linear-gradient(180deg, var(--pr-color-primary-400) 0%, var(--pr-color-primary-500) 100%);
+      box-shadow: 0 2px 4px rgba(var(--pr-color-primary-rgb), 0.26), 0 8px 20px rgba(var(--pr-color-primary-rgb), 0.32);
+      transform: translateY(-1px);
+
+      .icon_container {
+        background: rgba(255, 255, 255, 0.28);
+      }
     }
 
-    // El mismo trato que el mockup da a su "Submit result" bloqueado.
+    // Pulsado: vuelve al ras. Sin esto el botón se queda flotando y el clic no se siente.
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(var(--pr-color-primary-rgb), 0.3);
+    }
+
     &.disabled {
       opacity: 0.35;
       cursor: not-allowed;
       pointer-events: none;
+      box-shadow: none;
     }
 
     &:focus-visible {
-      outline: 2px solid var(--pr-color-primary-300);
+      outline: 2px solid var(--pr-color-primary-200);
       outline-offset: 2px;
     }
 
@@ -47,22 +68,45 @@
       @include fonts.pr-typography('body-2');
       font-size: 14px;
       font-weight: 600;
+      letter-spacing: 0.01em;
       color: var(--pr-color-white);
       line-height: 1;
     }
 
-    // El círculo blanco desapareció: el icono es parte del botón, no una segunda superficie.
+    // El disco del `+`: la idea del original, resuelta por dentro. Va PRIMERO (`order: -1`) porque
+    // el icono anuncia la acción y el texto la nombra; al revés se lee como una etiqueta con un
+    // adorno detrás.
     .icon_container {
+      order: -1;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      order: -1;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.18);
+      transition: background 180ms ease;
 
-      .icon i {
-        display: block;
-        font-size: 19px;
-        color: var(--pr-color-white);
+      .icon {
+        display: flex;
+
+        i {
+          display: block;
+          font-size: 18px;
+          line-height: 1;
+          color: var(--pr-color-white);
+        }
       }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .add_button_container .add_button_content {
+    transition-duration: 1ms;
+
+    &:hover {
+      transform: none;
     }
   }
 }
