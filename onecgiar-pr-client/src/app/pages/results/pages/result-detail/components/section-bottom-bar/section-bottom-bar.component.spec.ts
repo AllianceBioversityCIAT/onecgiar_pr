@@ -8,6 +8,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
+import { ScrollChromeService } from '../../../../../../shared/services/scroll-chrome.service';
 
 describe('SectionBottomBarComponent', () => {
   let fixture: ComponentFixture<SectionBottomBarComponent>;
@@ -553,34 +554,86 @@ describe('SectionBottomBarComponent', () => {
       expect(anchored.contains(save)).toBe(true);
     });
 
-    it('never lets Save draft be a bare child of the strip', async () => {
+    /*
+     * 15-sep-2026. Ángel reportó que «no se ven los botones de next y back… si muevo el scroll
+     * hacia abajo desaparece», y su vídeo (jam.dev/c/b908dd61) muestra a un reportero subiendo el
+     * scroll para poder volver a la sección anterior. Respuesta de Yeck: que NADA de esta barra se
+     * oculte, y que no haya superficie blanca. jsdom no pinta, así que lo que se vigila es lo que
+     * decide el pintado: las clases del contenedor, que no quede ni rastro del plegado, y que los
+     * controles sigan montados cuando el servicio dice que el chrome está oculto.
+     */
+    it('paints no strip of its own — no white, no rule, no reserved height', async () => {
+      await build();
+
+      const cls = q('[data-testid="section-bottom-bar"]').className;
+      expect(cls).toContain('bg-transparent');
+      expect(cls).toContain('min-h-0');
+      expect(cls).not.toContain('bg-white');
+      expect(cls).not.toContain('border-t');
+      expect(cls).not.toContain('min-h-[66px]');
+    });
+
+    it('anchors BOTH groups, so neither rides the scrolling form', async () => {
+      await build();
+
+      const toolbar = q('[data-testid="section-bottom-bar-toolbar"]');
+      const anchored = q('[data-testid="section-bottom-bar-anchored"]');
+
+      expect(toolbar.className).toContain('absolute');
+      expect(toolbar.className).toContain('bottom-[14px]');
+      expect(anchored.className).toContain('absolute');
+      expect(anchored.className).toContain('bottom-[14px]');
+      // Hermanos, no anidados: el de la izquierda no puede arrastrar al de la derecha.
+      expect(toolbar.contains(anchored)).toBe(false);
+    });
+
+    it('keeps Save draft inside its anchored row, never a bare child of the bar', async () => {
       await build();
 
       const save = q('[data-testid="section-bottom-bar-save"]');
-      const strip = fixture.nativeElement.querySelector('[appChromeFold], [ng-reflect-app-chrome-fold]');
+      const anchored = q('[data-testid="section-bottom-bar-anchored"]');
+      const bar = q('[data-testid="section-bottom-bar"]');
 
-      // Hijo directo de la franja = el bug: sin posicionamiento propio, se va al flujo.
-      if (strip) expect(save.parentElement).not.toBe(strip);
+      expect(anchored.contains(save)).toBe(true);
+      // Hijo directo de la barra = sin posicionamiento propio, se iría al flujo.
+      expect(save.parentElement).not.toBe(bar);
     });
 
-    /*
-     * El segundo fallo de la misma barra, el mismo día. `appChromeFold` NO encoge la franja: la
-     * desliza con `transform` y recupera el hueco con un margen negativo. Un `transform` convierte
-     * a su elemento en el bloque contenedor de todo `position: absolute` de dentro — así que la
-     * fila anclada, mientras vivió dentro, se iba de la pantalla con la franja justo cuando el
-     * reportero baja a leer, que es cuando el contador y el guardado hacen falta.
-     * Medido con el viewport en 820px: `Save draft` pasaba de `top: 768` a `top: 835`.
-     */
-    it('keeps the anchored row OUTSIDE the folding strip, so it survives the fold', async () => {
+    /* El plegado se fue del template: ni la directiva ni sus clases pueden quedar sueltas. */
+    it('carries no trace of the fold', async () => {
       await build();
 
-      const anchored = fixture.nativeElement.querySelector('.absolute.bottom-\\[14px\\].right-\\[40px\\]');
-      const folding = fixture.nativeElement.querySelector('[appChromeFold], [ng-reflect-app-chrome-fold], .chrome-fold');
+      const folding = fixture.nativeElement.querySelector(
+        '[appChromeFold], [ng-reflect-app-chrome-fold], .chrome-fold, .chrome-fold--folded, .chrome-fold--down'
+      );
+      expect(folding).toBeNull();
+    });
 
-      expect(anchored).toBeTruthy();
-      expect(folding).toBeTruthy();
-      // Dentro del host que se transforma = el bug.
-      expect(folding.contains(anchored)).toBe(false);
+    /* La prueba de fondo: el servicio que antes la plegaba ya no la toca. */
+    it('shows Back, Next, the indicator and Save even while the chrome reports itself hidden', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal(['Result title', 'Description']);
+      await build();
+      const chromeSE = TestBed.inject(ScrollChromeService);
+
+      chromeSE.hidden.set(true);
+      fixture.detectChanges();
+
+      const back = q('[data-testid="section-bottom-bar-back"]');
+      const next = q('[data-testid="section-bottom-bar-next"]');
+      const save = q('[data-testid="section-bottom-bar-save"]');
+      const pending = q('[data-testid="section-bottom-bar-pending"]');
+
+      expect(back).toBeTruthy();
+      expect(next).toBeTruthy();
+      expect(save).toBeTruthy();
+      expect(pending).toBeTruthy();
+      for (const el of [back, next, save, pending]) {
+        expect(el.className).not.toContain('opacity-0');
+        expect(el.className).not.toContain('pointer-events-none');
+        expect(el.getAttribute('aria-hidden')).toBeNull();
+      }
+      expect(q('[data-testid="section-bottom-bar"]').className).toContain('bg-transparent');
     });
   });
 });
