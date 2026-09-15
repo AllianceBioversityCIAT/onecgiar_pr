@@ -642,5 +642,47 @@ describe('BilateralPageHeaderComponent', () => {
 
       expect(chip().nativeElement.textContent).toContain('01:30');
     });
+
+    describe('tick gating (rework addendum, Reviewer-advisory)', () => {
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it('does not schedule the 1 s tick while there is no alive job for this center', () => {
+        jest.useFakeTimers();
+        const setIntervalSpy = jest.spyOn(globalThis, 'setInterval');
+
+        ctx.setCenter('AfricaRice', 'Africa Rice Center');
+        fixture.componentRef.setInput('activeTab', 'reporting');
+        fixture.detectChanges();
+
+        setIntervalSpy.mockClear();
+        jest.advanceTimersByTime(5000);
+
+        expect(setIntervalSpy).not.toHaveBeenCalled();
+        expect(chip()).toBeNull();
+      });
+
+      it('advances the chip elapsed label once a second while the job stays alive for this center', () => {
+        jest.useFakeTimers();
+
+        ctx.setCenter('AfricaRice', 'Africa Rice Center');
+        fixture.componentRef.setInput('activeTab', 'reporting');
+        aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
+        (aiService as unknown as { activeJob: unknown }).activeJob = {
+          jobId: 'job-1',
+          centerAcronym: 'AfricaRice',
+          startedAt: Date.now(),
+        };
+        fixture.detectChanges();
+
+        expect(chip().nativeElement.textContent).toContain('00:00');
+
+        jest.advanceTimersByTime(1000);
+        fixture.detectChanges();
+
+        expect(chip().nativeElement.textContent).toContain('00:01');
+      });
+    });
   });
 });

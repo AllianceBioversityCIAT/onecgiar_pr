@@ -159,9 +159,10 @@
 - **Verification:** `cd onecgiar-pr-client && npx tsc --noEmit -p tsconfig.app.json && npx jest src/app/pages/bilateral/components/bilateral-page-header <set-up spec path> --silent && npx ng lint --quiet && <token-existence gate over the two templates as in APF-T-6>`
 - **Input that would make the check fail:** chip rendered from `uploadState` alone without the center match (the CIMMYT case fails); a `<div (click)>` chip.
 - **What this cannot prove / disqualifier:** overflow of the tab strip with the chip at 375 px is layout → `APF-T-9` CT.
+- **Status:** `[x]` PASS — 2026-09-15, attempt 2 (attempt 1 FAIL: accordion DI crash in the manual-create drawer, middot, elapsed token — see `execution.md`)
 - **Definition of done:**
-  - [ ] Specs green (header spec's existing cases untouched); `tsc`; lint; token gate.
-  - [ ] Commit: `✨ feat(bilateral-page-header) [<ticket>]: AI job running chip; set-up coming-soon block collapsed`.
+  - [x] Specs green (header spec's existing cases untouched); `tsc`; lint; token gate.
+  - [x] Commit: `✨ feat(bilateral-page-header) [<ticket>]: AI job running chip; set-up coming-soon block collapsed`.
 
 ### `APF-T-8` — Provenance notice component on five surfaces, completion dialog line
 

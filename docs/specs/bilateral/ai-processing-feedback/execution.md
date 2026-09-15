@@ -105,3 +105,40 @@ grep -rn "Processing timed out" src/app/pages/bilateral/    → 0 matches
 
 **Requirements covered:** `APF-R-1` A/B, `APF-R-3`, `APF-R-2` A AND-IT-MUST (reuse); `APF-AC-1`, `APF-AC-2`, `APF-AC-5`. **Gate:** auto-approved (pre-approved mode).
 
+### `APF-T-7` — Header "AI job running" chip and set-up "coming soon" disclosure — **PASS** (attempt 2)
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-09-15 (11:07 → 11:46, America/Bogota) |
+| **Attempts** | 2 |
+| **Implementer** | `akili-implementer` (sonnet) · skills `angular-developer`, `tailwind-design-system` · effort medium → high on attempt 2 |
+| **Reviewer** | `akili-reviewer` (opus) · lens checklist mode |
+
+**Attempt 1 — files:** `services/bilateral-ai.service.ts` (+`getActiveJobSnapshot()`), `components/bilateral-page-header/*.{ts,html,spec.ts}`, `components/bilateral-sp-selector/*.{ts,html,spec.ts}` (+268/−39). Verification: tsc clean · jest header + sp-selector `Tests: 76 passed` · lint clean on own files · grep + token gates clean. Implementer assumptions: (1) `getActiveJobSnapshot` accessor added outside the file list; (2) `bilateral-accordion` always renders completion chrome ("0/0 fields", meter) with no input to suppress it; (3) reduced motion / 375-px overflow → T-9.
+
+**Attempt 1 — Reviewer `STATUS: FAIL` (verbatim issues):**
+1. Wrapping the contributing-SP block in `app-bilateral-accordion` introduces a runtime `NullInjectorError` in the second host of `BilateralSpSelectorComponent` — the accordion `inject`s `BilateralAutoSaveService` (not `providedIn: 'root'`, provided only on `bilateral-result-creator`), and the selector is also mounted from `bilateral-manual-create-drawer-host` → `bilateral-projects-panel` outside that scope; picking a primary SP in the manual-create drawer throws. The TestBed supplied the service and hid it. Violated: `APF-R-11` BUT clause; TRD §4. Remediation: optional injection / provider / root.
+2. Chip renders label and elapsed with no middot separator. Violated: `APF-R-10`, design §6.2 (`"AI job running · mm:ss"`).
+3. Elapsed painted `--pr-text-secondary`; design §6.3 assigns `--pr-text-heading` to elapsed.
+Rulings: `getActiveJobSnapshot` in scope (`APF-DD-8`); accordion chrome conforms to `APF-DD-11` — the accordion cannot express a chrome-less disclosure without editing it (report truncated here; tail requested).
+
+**Leader decision for attempt 2:** optional injection in the accordion (`inject(BilateralAutoSaveService, { optional: true })`, null-safe `toggle()`) — backward-compatible, no DI scoping change; no `providedIn: 'root'`, no provider on the drawer host. Extend the run to the drawer-host and projects-panel specs plus a no-provider selector case. Attempt History passed: the TestBed provider that hid the crash must not be repeated.
+
+> **Runtime note (2026-09-15 11:29):** another session's commit sweep on the shared worktree landed `f21191e2b` "✨ feat(bilateral-ai) [APF]: client processing panel, upload recovery, and SP selector polish" — the in-flight, **not yet reviewed** working-tree state of `APF-T-6` (panel, upload) and `APF-T-7` attempt 1 (header chip, SP selector, `getActiveJobSnapshot`). The commit is outside this Leader's control (shared branch, not reverted). Consequence: the Reviewer gate still decides `[x]` for both tasks; their diffs are taken as `git diff 7eb8a8e84 -- <task paths>` (committed + working tree) and any rework lands as a follow-up commit under the AKILI standard. The T-7 attempt-1 FAIL findings above therefore describe code that is already on the branch until the attempt-2 commit lands.
+
+**Attempt 2 — files (on top of attempt 1):** `components/bilateral-accordion/bilateral-accordion.component.ts` (optional injection + null-safe `toggle()` — outside the declared file list, prescribed by the Reviewer as the minimal remediation), `bilateral-page-header.component.{ts,html,spec.ts}` (middot, token, effect-gated 1-s tick + 2 fake-timer cases), `bilateral-sp-selector.component.spec.ts` (+ provider-less DI regression block), new `bilateral-manual-create-drawer-host.component.spec.ts`, `bilateral-home/components/bilateral-projects-panel.component.spec.ts` (+1 case). Total task diff vs `7eb8a8e84`: 9 files, +517/−41 (plus the 10-line `getActiveJobSnapshot()` accessor in the service, swept into `f21191e2b`).
+
+**Attempt 2 — runtime note:** the attempt-2 worker went idle twice without applying the Leader-adopted addendum (tick gated on an alive job) — replaced per the poke-once rule by a fresh worker (`impl-apf-t7b`, sonnet), which found the effect gate half-applied with a stray `state.jobId` reference and completed it.
+
+**Attempt 2 — Implementer verification:** `npx tsc --noEmit -p tsconfig.app.json` → clean · `npx jest` header + sp-selector + drawer-host + projects-panel + accordion → `Test Suites: 5 passed, Tests: 106 passed` (before the tick fix); header after the tick fix → `52/52` · `npx ng lint --quiet` → All files pass · grep gate: only the pre-existing `#EDE9FE`/`#5733C4` on the untouched W3 badge · token loop: all resolve. Falsification: the Implementer reverted the optional injection locally and saw exactly the 3 new DI tests fail with `NullInjectorError`.
+
+**Attempt 2 — Reviewer `STATUS: PASS`:** "All three FAIL issues are resolved, and the fix for the blocking one is backed by behavioral proof rather than a presence assertion … Three regression tests mount the production DI shape with no provider at all, at each level of the chain … Issue 2: the chip now renders the label, an `aria-hidden="true"` middot, then the elapsed value … Issue 3: the elapsed span is `font-mono tabular-nums` with no colour override, inheriting the anchor's `--pr-text-heading`." Tick gating confirmed (effect on `aliveJobForThisCenter`, idempotent start/stop, destroy backstop, behavioural fake-timer cases). Existing header/sp-selector/projects-panel cases untouched. Scope note: the accordion edit is the prescribed minimal remediation, behaviour-preserving for every host.
+
+**ADVISORY (attempt 1 + 2, recorded):**
+- *Accordion chrome* — the reused `bilateral-accordion` always renders its completion tracker ("0/0 fields", dot, meter) on the coming-soon disclosure; conforms to `APF-DD-11` (reuse, no new component) and `APF-R-11` (one line). Hiding it needs an input on the shared component → **user decision / follow-up quick**, surfaced at the T-10 HITL.
+- *Readability* — the sp-selector spec's shared-provider comment still claims the accordion injects the service unconditionally; reword in a follow-up.
+- *Readability* — header spec writes the service's private `activeJob` through a double cast in five places.
+- *Reliability* (resolved in attempt 2) — unconditional 1-s interval → now effect-gated.
+
+**Requirements covered:** `APF-R-10` (all clauses except the 375-px layout → T-9), `APF-R-11`; `APF-AC-16`, `APF-AC-17`. **Gate:** auto-approved (pre-approved mode).
+

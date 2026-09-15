@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { Params, Router, RouterLink } from '@angular/router';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -31,29 +31,62 @@ export class BilateralPageHeaderComponent {
    * second poll (`design.md` §8).
    */
   private readonly nowMs = signal(Date.now());
-
-  constructor() {
-    const tickTimer = setInterval(() => this.nowMs.set(Date.now()), 1000);
-    this.destroyRef.onDestroy(() => clearInterval(tickTimer));
-  }
+  private tickTimer: ReturnType<typeof setInterval> | null = null;
 
   /**
-   * `APF-R-10`/`APF-DD-8`: the persistent "AI job running" chip. `null` (hidden) unless
-   * `BilateralAiService` reports a job alive (`pending`/`processing`/`still_running`) AND the
-   * record's center matches this header's center — a job started for another center must render
-   * nothing. Elapsed time comes from the normalized job's queue-entry clock once a poll has
-   * landed, else the resume record's `startedAt`.
+   * `APF-R-10`: the alive-and-matching-center job, computed once and shared by the tick gate
+   * (below) and `aiJobChip`. `null` unless `BilateralAiService` reports a job alive
+   * (`pending`/`processing`/`still_running`) AND the record's center matches this header's center
+   * — a job started for another center is not "here".
    */
-  readonly aiJobChip = computed(() => {
-    this.nowMs();
+  private readonly aliveJobForThisCenter = computed(() => {
     const state = this.bilateralAiService.uploadState();
     if (!state.jobId || !BilateralPageHeaderComponent.AI_JOB_ALIVE_STATUSES.has(state.status)) return null;
 
     const snapshot = this.bilateralAiService.getActiveJobSnapshot();
     if (!snapshot || snapshot.centerAcronym !== this.ctx.centerAcronym()) return null;
 
+    return { jobId: state.jobId, snapshot };
+  });
+
+  constructor() {
+    // Gate the 1 s tick on an alive job for this center — an unconditional interval schedules
+    // app-wide change detection every second on every bilateral page even with no job to show,
+    // which `APF-R-10` never asks for (rework addendum, Reviewer-advisory).
+    effect(() => {
+      if (this.aliveJobForThisCenter()) {
+        this.startTick();
+      } else {
+        this.stopTick();
+      }
+    });
+    this.destroyRef.onDestroy(() => this.stopTick());
+  }
+
+  private startTick(): void {
+    if (this.tickTimer) return;
+    this.tickTimer = setInterval(() => this.nowMs.set(Date.now()), 1000);
+  }
+
+  private stopTick(): void {
+    if (this.tickTimer) {
+      clearInterval(this.tickTimer);
+      this.tickTimer = null;
+    }
+  }
+
+  /**
+   * `APF-R-10`/`APF-DD-8`: the persistent "AI job running" chip. `null` (hidden) unless
+   * `aliveJobForThisCenter` is set. Elapsed time comes from the normalized job's queue-entry
+   * clock once a poll has landed, else the resume record's `startedAt`.
+   */
+  readonly aiJobChip = computed(() => {
+    this.nowMs();
+    const active = this.aliveJobForThisCenter();
+    if (!active) return null;
+
     const job = this.bilateralAiService.currentJob();
-    const startMs = job && job.jobId === state.jobId ? job.queueEntryDate.getTime() : snapshot.startedAt;
+    const startMs = job && job.jobId === active.jobId ? job.queueEntryDate.getTime() : active.snapshot.startedAt;
     const elapsed = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
@@ -62,7 +95,7 @@ export class BilateralPageHeaderComponent {
     const secondWord = seconds === 1 ? 'second' : 'seconds';
 
     return {
-      jobId: state.jobId,
+      jobId: active.jobId,
       elapsedLabel,
       ariaLabel: `AI job running, ${minutes} ${minuteWord} ${seconds} ${secondWord} — open the processing panel`,
     };
