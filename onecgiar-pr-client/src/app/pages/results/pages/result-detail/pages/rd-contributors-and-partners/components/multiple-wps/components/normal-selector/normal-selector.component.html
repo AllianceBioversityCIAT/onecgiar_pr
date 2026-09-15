@@ -10,12 +10,14 @@
     !!this.institutionsNoSentinel.length ||
     !!this.rdPartnersSE.otherPartnersSelected?.length
   "
-  description="Select this option if the partner section is not applicable"
+  tooltip="Select this option if the partner section is not applicable"
   layout="inline">
   <!-- El control va AL FRENTE de la banda (`layout="inline"`), como el Yes/No — y con su mismo
        idioma: control segmentado sobre blanco, gris oscuro al elegirlo. Marcar "no aplica" no es
        un acierto ni un fallo, así que no lleva ni verde ni rojo.
-       La frase larga se queda como guía del campo: el botón dice la acción, la guía dice cuándo. -->
+       La frase larga va de `tooltip`, no de `description`: así se pliega detrás del ⓘ de la
+       cabecera como en todos los demás campos, en vez de quedarse abierta en un bloque gris
+       a todo el ancho — que era la forma de las fases anteriores (Yeck, 15-sep-2026). -->
   <div>
     @if (this.rolesSE.readOnly) {
       <span class="fc-switch-readonly">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '—' }}</span>
