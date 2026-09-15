@@ -8,6 +8,7 @@
     "build:dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
     "test": "jest --no-coverage",
+    "test:local": "node scripts/run-jest-local.js",
     "test:watch": "jest --watch --no-coverage",
     "test:coverage": "jest --coverage",
     "test:coverage:html": "jest --coverage --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcov",

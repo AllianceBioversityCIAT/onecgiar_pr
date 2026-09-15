@@ -114,7 +114,8 @@ npm run watch       # ng build --watch --configuration development
 ### Tests
 
 ```bash
-npm run test                # Jest unit tests
+npm run test                # Jest unit tests (what CI runs — do not add local-only flags here)
+npm run test:local          # same suite, workers sized to free memory (see below)
 npm run test:watch          # Jest watch mode
 npm run test:coverage       # Jest with coverage
 npm run test:coverage:html  # Coverage with text-summary, cobertura, lcov reporters
@@ -159,6 +160,20 @@ RAM_GUARD=off npm run test:ct       # run anyway on a red machine (it will hurt)
 lists them, plus any headless browser a crashed Playwright/Cypress run left behind (with the `kill`
 command ready to paste). It **never lists a real browser window** — only headless ones, and it
 never kills anything on its own.
+
+**Unit tests too — but through `test:local`, never `test`.** Each Jest worker is a full Node
+process with the Angular compiler loaded (~400-600 MB). The configured `"maxWorkers": "50%"` is 5
+of them on a 10-core Mac. `npm run test:local` (`scripts/run-jest-local.js`) runs the same suite
+with the worker count sized to *free memory* instead of core count — 1 when red, 2 when amber,
+2-6 when green — and `JEST_WORKERS=n` forces it.
+
+> 🛑 **`maxWorkers` must never be pinned in `package.json`**: that file travels to the build agent,
+> where more workers is exactly what you want. The limit belongs to the local invocation. This is
+> also why `npm test` is left untouched — it is the command CI runs.
+
+🛑 **The guard is a silent no-op off a local macOS session** (`process.platform !== 'darwin'` or
+`CI` set) and fails open if the measurement itself throws. A guard that can turn a build agent red
+is worse than the freeze it prevents — see the root guide's rule on never breaking the pipeline.
 
 ### Coverage thresholds (enforced in `package.json`)
 

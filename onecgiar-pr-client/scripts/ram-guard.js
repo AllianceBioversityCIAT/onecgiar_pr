@@ -13,6 +13,13 @@
 const { execSync } = require('node:child_process');
 
 const GB = 1073741824;
+
+/**
+ * The guard exists to protect one developer laptop, and it reads `vm_stat` / `sysctl` to do it.
+ * On a build agent neither the problem nor those commands exist, so it must be a silent no-op
+ * there — a guard that can fail a pipeline is worse than the freeze it prevents.
+ */
+const INACTIVE = process.platform !== 'darwin' || Boolean(process.env.CI);
 const RED = '\x1b[31m';
 const AMBER = '\x1b[33m';
 const GREEN = '\x1b[32m';
@@ -48,13 +55,16 @@ function read() {
  * Traffic light. Thresholds match the house rule: under 15% available, or swap past 80%, the
  * machine is already hurting and nothing heavy should be started on top of it.
  */
-function level(state = read()) {
+function level(state = INACTIVE ? null : read()) {
+  // No measurement (build agent, or a reading that threw) means no reason to hold anything back.
+  if (!state) return 'green';
   if (state.availableRatio < 0.1 || state.swapRatio > 0.85) return 'red';
   if (state.availableRatio < 0.2 || state.swapRatio > 0.6) return 'amber';
   return 'green';
 }
 
-function format(state = read()) {
+function format(state = INACTIVE ? null : read()) {
+  if (!state) return 'memory not measured on this platform';
   return (
     `RAM available ${state.availableGB.toFixed(1)}/${state.totalGB.toFixed(0)} GB ` +
     `(${(state.availableRatio * 100).toFixed(0)}%) - swap ${state.swapUsedGB.toFixed(1)}/` +
@@ -78,6 +88,7 @@ const KINDS = [
 ];
 
 function offenders() {
+  if (INACTIVE) return [];
   const lines = execSync('ps -axo rss=,command=', { encoding: 'utf8' }).split('\n');
   const processes = lines
     .map(line => {
@@ -102,7 +113,16 @@ function offenders() {
  * shrink their workload on amber instead of bailing out.
  */
 function gate({ what = 'this run', allowAmber = true } = {}) {
-  const state = read();
+  if (INACTIVE) return null;
+
+  // Fail open: if the measurement itself breaks, that is no reason to block a developer's run.
+  let state;
+  try {
+    state = read();
+  } catch {
+    return null;
+  }
+
   const light = level(state);
   if (light === 'green') return state;
 
@@ -132,6 +152,7 @@ function gate({ what = 'this run', allowAmber = true } = {}) {
  * to close is the operator's call, and a real browser window is off-limits.
  */
 function strayBrowsers(minMinutes = 20) {
+  if (INACTIVE) return [];
   const raw = execSync('ps -axo pid=,etime=,command=', { encoding: 'utf8' });
   return raw
     .split('\n')
@@ -155,6 +176,10 @@ function etimeToMinutes(etime) {
 module.exports = { read, level, format, offenders, strayBrowsers, gate };
 
 if (require.main === module) {
+  if (INACTIVE) {
+    console.log('ram-guard: not a local macOS session, nothing to measure.');
+    process.exit(0);
+  }
   const state = read();
   const light = level(state);
   const colour = { green: GREEN, amber: AMBER, red: RED }[light];
