@@ -155,29 +155,71 @@
     }
 
     .ev_title_link {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
+      display: inline flow-root;
+      max-width: 100%;
       text-decoration: none;
+      // Un enlace largo parte por donde quepa en vez de estirar la tarjeta.
+      overflow-wrap: anywhere;
 
-      // El icono de "abre fuera" solo aparece al pasar por encima: en reposo, seis tarjetas con
-      // seis flechitas eran seis cosas que mirar antes de leer los seis nombres.
-      .ev_ext {
-        font-size: 15px;
-        opacity: 0;
-        transform: translateX(-2px);
-        transition: opacity 0.15s ease, transform 0.15s ease;
+      // El dominio manda: es lo que dice DE DÓNDE sale la evidencia.
+      .ev_host {
+        color: var(--pr-text-heading);
+      }
+
+      // La ruta acompaña: mismo tamaño, peso normal y tinta suave. Sin esto el enlace entero iba
+      // a un solo peso y no se distinguía el sitio del fichero dentro del sitio.
+      .ev_path {
+        font-weight: 400;
+        color: var(--pr-text-subtle);
       }
 
       &:hover {
-        color: var(--pr-color-primary-300);
         text-decoration: underline;
         text-underline-offset: 3px;
 
-        .ev_ext {
-          opacity: 1;
-          transform: translateX(0);
+        .ev_host {
+          color: var(--pr-color-primary-300);
         }
+
+        .ev_path {
+          color: var(--pr-color-primary-300);
+          opacity: 0.75;
+        }
+      }
+    }
+
+    // La acción principal de la tarjeta, dicha con todas las letras. Discreta en reposo —es una de
+    // seis— y se tiñe de primario al alcanzarla; el título sigue siendo clicable para quien ya lo
+    // sabe, pero esto es lo que lo anuncia.
+    .ev_open {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 30px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--pr-border);
+      background: var(--pr-surface-card);
+      color: var(--pr-text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+      i {
+        font-size: 15px;
+      }
+
+      &:hover {
+        background: var(--pr-color-primary-50);
+        border-color: var(--pr-color-primary-200);
+        color: var(--pr-color-primary-400);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--pr-color-primary-300);
+        outline-offset: 2px;
       }
     }
 
@@ -364,7 +406,7 @@
   .evidences .evidence_card,
   .evidences .evidence_card::before,
   .evidences .evidence_card .ev_actions,
-  .evidences .evidence_card .ev_title_link .ev_ext {
+  .evidences .evidence_card .ev_open {
     transition-duration: 1ms;
   }
 }

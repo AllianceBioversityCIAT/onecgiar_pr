@@ -1312,4 +1312,44 @@ describe('RdEvidencesComponent', () => {
       });
     });
   });
+
+  /*
+   * El enlace se pinta en dos piezas —dominio fuerte, ruta suave— y el campo lo escribe el
+   * reportero A MANO: llega sin protocolo, con espacios, o directamente sin ser una URL. `new URL`
+   * lanza con cualquiera de esos, así que lo que se vigila aquí es que la tarjeta NUNCA se quede
+   * sin título por un enlace mal escrito.
+   */
+  describe('el enlace, partido para pintarlo', () => {
+    const ev = (link: string, sp_file_name?: string) => ({ link, sp_file_name } as any);
+
+    it('splits a normal link into domain and the rest', () => {
+      expect(component.evidenceHost(ev('https://cgspace.cgiar.org/handle/10568/1234'))).toBe('cgspace.cgiar.org');
+      expect(component.evidenceRest(ev('https://cgspace.cgiar.org/handle/10568/1234'))).toBe('/handle/10568/1234');
+    });
+
+    it('accepts a link typed without a protocol — the commonest case in this field', () => {
+      expect(component.evidenceHost(ev('test.com'))).toBe('test.com');
+      expect(component.evidenceRest(ev('test.com'))).toBe('');
+    });
+
+    it('drops www and keeps query and fragment, which locate the evidence inside the page', () => {
+      expect(component.evidenceHost(ev('https://www.example.org/a/b?page=7#fig2'))).toBe('example.org');
+      expect(component.evidenceRest(ev('https://www.example.org/a/b?page=7#fig2'))).toBe('/a/b?page=7#fig2');
+    });
+
+    it('leaves no trailing slash behind for a link to the root', () => {
+      expect(component.evidenceRest(ev('https://example.org/'))).toBe('');
+    });
+
+    it('never blanks the card on text that is not a URL at all', () => {
+      expect(component.evidenceHost(ev('not a url at all'))).toBe('not a url at all');
+      expect(component.evidenceRest(ev('not a url at all'))).toBe('');
+      expect(component.evidenceHost(ev(''))).toBe('');
+    });
+
+    it('shows a file by its name, with nothing trailing it', () => {
+      expect(component.evidenceHost(ev('', 'annual-report-2026.pdf'))).toBe('annual-report-2026.pdf');
+      expect(component.evidenceRest(ev('', 'annual-report-2026.pdf'))).toBe('');
+    });
+  });
 });

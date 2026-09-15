@@ -498,6 +498,39 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
     return evidence?.sp_file_name || evidence?.link || '';
   }
 
+  /**
+   * El enlace partido en dos para poder pintarlo con jerarquía: el DOMINIO manda (es lo que dice
+   * de dónde sale la evidencia — una revista, un repositorio, un Drive) y el resto de la ruta va
+   * detrás en tinta suave. Un enlace entero a un mismo peso es una cadena que nadie lee.
+   *
+   * 🛑 Tolera basura: el campo lo escribe el reportero a mano y llega de todo — sin protocolo
+   * ("test.com"), con espacios, o directamente no siendo una URL. `URL` lanza con cualquiera de
+   * esos, así que el fallo devuelve el texto tal cual y nunca rompe la tarjeta.
+   */
+  private parsedLink(evidence: EvidencesCreateInterface): { host: string; rest: string } | null {
+    const raw = (evidence?.link ?? '').trim();
+    if (!raw) return null;
+    try {
+      const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`);
+      const rest = `${url.pathname === '/' ? '' : url.pathname}${url.search}${url.hash}`;
+      return { host: url.host.replace(/^www\./i, ''), rest };
+    } catch {
+      return { host: raw, rest: '' };
+    }
+  }
+
+  /** Dominio del enlace, o el nombre del archivo cuando la evidencia es un fichero. */
+  evidenceHost(evidence: EvidencesCreateInterface): string {
+    if (evidence?.sp_file_name) return evidence.sp_file_name;
+    return this.parsedLink(evidence)?.host ?? '';
+  }
+
+  /** Lo que sigue al dominio. Vacío para un fichero y para un enlace a la raíz. */
+  evidenceRest(evidence: EvidencesCreateInterface): string {
+    if (evidence?.sp_file_name) return '';
+    return this.parsedLink(evidence)?.rest ?? '';
+  }
+
   getSelectedImpactTags(evidence: EvidencesCreateInterface): string[] {
     if (!evidence) return [];
     return this.tagFields.filter(({ field }) => evidence[field]).map(({ label }) => label);

@@ -44,14 +44,20 @@
             <div class="pr-skeleton ev_skeleton" style="width: 160px; height: 9px; border-radius: 6px"></div>
           </ng-container>
           <ng-template #evidenceReady>
+            <!-- El enlace, con jerarquía: el DOMINIO manda —dice de dónde sale la evidencia: una
+                 revista, un repositorio, un Drive— y la ruta va detrás en tinta suave. Un enlace
+                 entero al mismo peso es una cadena que nadie lee. -->
             <a
               *ngIf="evidence.link; else roPlainName"
               [href]="evidence.link"
               target="_blank"
               rel="noopener noreferrer"
               class="ev_title ev_title_link"
-              >{{ evidenceDisplayName(evidence) }}<i class="material-icons-round ev_ext" aria-hidden="true">open_in_new</i></a
-            >
+              [prTooltip]="evidence.link"
+              prTooltipPosition="top">
+              <span class="ev_host">{{ evidenceHost(evidence) }}</span
+              ><span class="ev_path" *ngIf="evidenceRest(evidence)">{{ evidenceRest(evidence) }}</span>
+            </a>
             <ng-template #roPlainName>
               <span class="ev_title ev_title_plain">{{ evidenceDisplayName(evidence) || '—' }}</span>
             </ng-template>
@@ -81,6 +87,21 @@
       </div>
 
       <div class="ev_aside">
+        <!-- Abrir, dicho con todas las letras. El título es clicable, pero un enlace de texto no
+             anuncia que se abre en otra pestaña hasta que lo pulsas; el botón sí, y de paso da a
+             la tarjeta la acción principal que le faltaba. -->
+        <a
+          class="ev_open"
+          *ngIf="evidence.link && !isEvidenceUploading(evidence)"
+          [href]="evidence.link"
+          target="_blank"
+          rel="noopener noreferrer"
+          prTooltip="Open in a new tab"
+          prTooltipPosition="top">
+          <span>Open</span>
+          <i class="material-icons-round" aria-hidden="true">open_in_new</i>
+        </a>
+
         <!-- Las fechas suben a la esquina, con su propia forma: no son un chip (un chip clasifica)
              ni una línea de metadatos bajo el título, que era donde le robaban el sitio a la
              descripción. Aquí ocupan un hueco que estaba vacío y liberan una línea del cuerpo. -->
