@@ -27,7 +27,8 @@
   @if (userSearchService.showContactError) {
     <div class="contact-error-message">
       <i class="warning-icon">⚠️</i>
-      The contact person entered was not found in the directory. Please select from the search results or leave empty.
+      The contact person entered was not found in the directory. Please select from the search results, leave empty, or
+      <button type="button" class="use-anyway-btn" (click)="acceptTypedNameAnyway()">use this name anyway</button>.
     </div>
   }
 
