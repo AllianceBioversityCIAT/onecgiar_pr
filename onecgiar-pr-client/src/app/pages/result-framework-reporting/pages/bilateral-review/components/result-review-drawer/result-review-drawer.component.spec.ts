@@ -660,6 +660,60 @@ describe('ResultReviewDrawerComponent', () => {
 
   // ------------------------------------------------------------ save dialogs
 
+  /**
+   * P2-3620 AC1 — "Given a bilateral result in edit mode, When the researcher tries to save
+   * Geographic Location without selecting a scope, Then the system prevents saving."
+   *
+   * QA reproduced the opposite on prtest v49 (draft 9100): the justification modal opened, the save
+   * persisted, and a reload showed the scope still blank while "# of people trained", touched in
+   * the same save, kept its new value. The scope was silently written as null.
+   */
+  describe('required geographic scope gates the save (P2-3620)', () => {
+    const asAdminWithScope = (geographicScope: any) => {
+      apiMock.rolesSE.isAdmin = true;
+      component.resultToReview.set({ id: '1', status_id: 5 } as any);
+      component.resultDetail.set(buildDetail({ geographicScope }));
+    };
+
+    it('AC1 — the save is refused while the scope is unanswered', () => {
+      asAdminWithScope({ geo_scope_id: null });
+      component.onSaveDataStandardChanges();
+      expect(component.saveChangesType).toBeNull();
+      expect(component.showConfirmSaveChangesDialog()).toBe(false);
+    });
+
+    it('AC1 — it is refused just the same when the section never loaded a scope at all', () => {
+      asAdminWithScope(null);
+      component.onSaveDataStandardChanges();
+      expect(component.showConfirmSaveChangesDialog()).toBe(false);
+    });
+
+    it('AC1 — and the save goes through once a scope is selected', () => {
+      asAdminWithScope({ geo_scope_id: 3 });
+      component.onSaveDataStandardChanges();
+      expect(component.saveChangesType).toBe('dataStandard');
+      expect(component.showConfirmSaveChangesDialog()).toBe(true);
+    });
+
+    it('tells the reporter WHY the button is disabled', () => {
+      asAdminWithScope({ geo_scope_id: null });
+      expect(component.getSaveDataStandardsTooltip()).toBe('Please select the geographic focus of the result before saving');
+    });
+
+    it('stops blaming the scope once it is answered', () => {
+      asAdminWithScope({ geo_scope_id: 1 });
+      expect(component.getSaveDataStandardsTooltip()).not.toContain('geographic focus');
+    });
+
+    it('isGeoScopeCompleted tracks the selection', () => {
+      asAdminWithScope({ geo_scope_id: null });
+      expect(component.isGeoScopeCompleted()).toBe(false);
+
+      component.resultDetail.set(buildDetail({ geographicScope: { geo_scope_id: 50 } }));
+      expect(component.isGeoScopeCompleted()).toBe(true);
+    });
+  });
+
   describe('save-changes dialogs', () => {
     it('onSaveTocChanges bails when planned_result is undefined', () => {
       component.tocInitiative = { planned_result: undefined };
@@ -683,6 +737,8 @@ describe('ResultReviewDrawerComponent', () => {
     it('onSaveDataStandardChanges opens the dialog', () => {
       // P2-3154: Data Standards are only saveable by a platform administrator.
       apiMock.rolesSE.isAdmin = true;
+      // P2-3620: ...and only once the required geographic scope is answered.
+      component.resultDetail.set(buildDetail({ geographicScope: { geo_scope_id: 1 } }));
       component.onSaveDataStandardChanges();
       expect(component.saveChangesType).toBe('dataStandard');
       expect(component.showConfirmSaveChangesDialog()).toBe(true);
