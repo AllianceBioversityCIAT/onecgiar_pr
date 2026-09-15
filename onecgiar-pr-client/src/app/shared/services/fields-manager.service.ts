@@ -235,7 +235,8 @@ export class FieldsManagerService {
         label: 'Lead contact person',
         placeholder: 'Search for a person (min 4 characters)',
         description: `For more precise results, we recommend searching by email or username.
-    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`,
+    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith
+    <br><br>If the person isn't found in the directory, click "use this name anyway" on the error message to save the name as entered — this doesn't link an email or role since that data only exists for directory records.`,
         required: this.isLeadContactPersonMandatory2026()
       },
       '[general-info]-is_krs': {
