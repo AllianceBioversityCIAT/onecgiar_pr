@@ -24,219 +24,348 @@
     border-top: 5px solid rgba(var(--pr-color-secondary-rgb), 0.443);
   }
 
-  // P2-2935 — flat evidence card (non-collapsible: all info is visible at once)
+  // Tarjeta de evidencia — rediseño del 15-sep-2026.
   //
-  // 15-sep-2026. La tarjeta tenía TRES cosas moradas —el número, el enlace y cada etiqueta— más una
-  // papelera roja permanente. El morado es el color de lo que se pulsa y el rojo el de lo que va
-  // mal, así que entre los cuatro no quedaba nada que destacara: la evidencia se leía como una
-  // alarma con un número al lado. Ahora manda una sola: el ENLACE, que es lo único de la tarjeta
-  // que el usuario abre. Todo lo demás baja a tinta neutra.
-  // 🛑 Tokens: `--pr-color-accents-2/-5` y `--pr-color-secondary-400` son de la paleta anterior al
-  // revamp; aquí se usan los del sistema (`--pr-border`, `--pr-text-*`).
+  // El problema no era el color, era el ORDEN. El titular de la tarjeta era el TIPO ("Link
+  // Evidence") y el dato que el reportero busca al recorrer la lista —qué evidencia es— vivía
+  // abajo, en 12px, detrás de un icono gris. El tipo cabe en un icono; el nombre no cabe en
+  // ningún sitio salvo el titular.
+  //
+  // Tres columnas: sello · contenido · acciones.
   .evidence_card {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 14px;
+    padding: 16px 16px 16px 18px;
     border: 1px solid var(--pr-border);
-    border-radius: 12px;
-    overflow: hidden;
+    border-radius: 14px;
     background: var(--pr-surface-card);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+
+    // Filo de color a la izquierda: aparece al pasar por encima y dice cuál de las seis tarjetas
+    // tienes debajo del puntero sin mover ni un píxel del contenido.
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--pr-color-primary-300);
+      // Presente siempre, discreto; al pasar el puntero se afirma. Invisible en reposo, la lista
+      // perdía la única marca de color que la ataba al resto de la plataforma.
+      opacity: 0.28;
+      transition: opacity 0.18s ease;
+    }
 
     &:hover {
       border-color: var(--pr-border-strong);
-      box-shadow: var(--pr-shadow-1);
+      box-shadow: var(--pr-shadow-2);
+
+      &::before {
+        opacity: 1;
+      }
+
+      .ev_actions {
+        opacity: 1;
+      }
     }
 
-    // Franja superior: índice · tipo · candado · fecha · acciones
-    .ev_card_top {
+    // Sello: la clase de evidencia en un cuadro tintado, con su número como chapa. Morado para el
+    // enlace, ámbar para el archivo — dos clases que se distinguen de lejos y sin leer.
+    .ev_seal {
+      position: relative;
+      flex: none;
+      width: 40px;
+      height: 40px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px 16px 8px;
+      justify-content: center;
+      border-radius: 12px;
+      // Sólido, no tintado: el sello es lo primero que se ve de la tarjeta y en pastel no sostenía
+      // la mirada — la tarjeta entera se leía gris (Yeck, 15-sep-2026: "le falta más color
+      // primario"). Con sombra del propio color, que es la que lo levanta del papel.
+      background: linear-gradient(180deg, var(--pr-color-primary-300) 0%, var(--pr-color-primary-400) 100%);
+      color: var(--pr-color-white);
+      border: 0;
+      box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.28);
 
-      // Cuadrado, no círculo, y en gris: es una POSICIÓN en una lista de seis, no una acción.
-      // En morado y redondo se leía como un botón que no se puede pulsar.
-      .ev_index {
-        flex: 0 0 auto;
-        width: 24px;
-        height: 24px;
-        border-radius: 7px;
+      &.is_file {
+        background: linear-gradient(180deg, var(--pr-color-orange-400) 0%, var(--pr-color-orange-500) 100%);
+        color: var(--pr-color-white);
+        box-shadow: 0 2px 6px rgba(249, 115, 22, 0.28);
+      }
+
+      > i {
+        font-size: 20px;
+      }
+
+      // La chapa del número. Va encima del sello y no en su propia columna: sigue sirviendo para
+      // decir "la evidencia 2" y ya no gasta 26px de ancho en decirlo.
+      // Abajo a la derecha del sello, no arriba a la izquierda: ahí chocaba con la esquina de la
+      // tarjeta y se leía como si se saliera de ella.
+      .ev_num {
+        position: absolute;
+        bottom: -5px;
+        right: -5px;
+        border: 2px solid var(--pr-surface-card);
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--pr-text-muted);
-        background: var(--pr-surface-ground);
-      }
-
-      .ev_type_row {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        align-items: baseline;
-        gap: 10px;
-        flex-wrap: wrap;
-
-        .ev_type {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--pr-text-heading);
-        }
-
-        .ev_lock {
-          font-size: 17px;
-          align-self: center;
-
-          &.public {
-            color: var(--pr-color-green-600);
-          }
-          &.private {
-            color: var(--pr-text-subtle);
-          }
-        }
-
-        // La fecha es contexto, no dato: 11px en la tinta más suave que hay, y las dos separadas
-        // por un punto medio. El "|" de antes pesaba más que las propias fechas.
-        .ev_date {
-          font-size: 11px;
-          color: var(--pr-text-subtle);
-
-          .ev_dot {
-            margin: 0 6px;
-          }
-        }
-      }
-
-      // Las dos acciones salen NEUTRAS. Borrar se pone rojo solo cuando el puntero está encima:
-      // teñirla siempre convierte cada evidencia guardada en un aviso permanente.
-      .ev_actions {
-        flex: 0 0 auto;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-
-        .ev_edit,
-        .ev_delete {
-          border: none;
-          background: transparent;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 30px;
-          height: 30px;
-          border-radius: 8px;
-          color: var(--pr-text-subtle);
-          transition: background 0.15s ease, color 0.15s ease;
-
-          i {
-            font-size: 18px;
-          }
-
-          &:focus-visible {
-            outline: 2px solid var(--pr-color-primary-300);
-            outline-offset: 1px;
-          }
-        }
-
-        .ev_edit:hover {
-          background: var(--pr-surface-app);
-          color: var(--pr-color-primary-300);
-        }
-
-        .ev_delete:hover {
-          background: var(--pr-color-red-50);
-          color: var(--pr-color-red-300);
-        }
+        border-radius: 999px;
+        background: var(--pr-text);
+        color: var(--pr-color-white);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
       }
     }
 
-    // Cuerpo: una sola superficie blanca. El sangrado de 52px alinea con el texto de la cabecera,
-    // no con el borde: las tres filas cuelgan del tipo de evidencia, que es su título.
-    .ev_card_body {
+    .ev_main {
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      gap: 4px;
+      padding-top: 1px;
+    }
+
+    .ev_headline {
+      display: flex;
+      align-items: center;
       gap: 8px;
-      padding: 2px 16px 14px 52px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
 
-      .ev_ro_item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        min-width: 0;
-        font-size: 13px;
-        color: var(--pr-text-secondary);
-        word-break: break-word;
+    // El titular. 15px/600 en tinta principal: es un nombre, no una acción, así que no nace morado
+    // — se tiñe cuando el puntero lo alcanza, que es cuando se comporta como enlace.
+    .ev_title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--pr-text-heading);
+      word-break: break-word;
+      min-width: 0;
+    }
 
-        > i {
-          flex: 0 0 auto;
-          font-size: 17px;
-          color: var(--pr-text-subtle);
-        }
+    .ev_title_link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+
+      // El icono de "abre fuera" solo aparece al pasar por encima: en reposo, seis tarjetas con
+      // seis flechitas eran seis cosas que mirar antes de leer los seis nombres.
+      .ev_ext {
+        font-size: 15px;
+        opacity: 0;
+        transform: translateX(-2px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
       }
 
-      // Lo único morado de la tarjeta, porque es lo único que se abre.
-      .ev_ro_main {
-        > i {
-          color: var(--pr-text-muted);
-        }
+      &:hover {
+        color: var(--pr-color-primary-300);
+        text-decoration: underline;
+        text-underline-offset: 3px;
 
-        .ev_ro_link,
-        .ev_ro_name {
-          font-weight: 500;
-          word-break: break-word;
-        }
-
-        .ev_ro_link {
-          color: var(--pr-color-primary-300);
-          text-decoration: none;
-          border-bottom: 1px solid rgba(var(--pr-color-primary-rgb), 0.35);
-
-          &:hover {
-            color: var(--pr-color-primary-400);
-            border-bottom-color: var(--pr-color-primary-400);
-          }
-        }
-
-        // Subiendo el archivo: nombre arriba, barra animada debajo
-        .ev_ro_uploading {
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-          min-width: 0;
-
-          .ev_ro_name {
-            color: var(--pr-text-muted);
-          }
-        }
-      }
-
-      // La descripción es el campo prioritario: toda la anchura de la tarjeta y su propia línea.
-      .ev_ro_details {
-        align-self: stretch;
-        align-items: flex-start;
-        color: var(--pr-text);
-        line-height: 1.5;
-      }
-
-      .ev_ro_tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-
-        // Neutras. En morado competían con el enlace y hacían que un dato de clasificación
-        // pareciera pulsable.
-        .ev_tag {
-          font-size: 11px;
-          font-weight: 500;
-          padding: 2px 9px;
-          border-radius: 999px;
-          color: var(--pr-text-secondary);
-          background: var(--pr-surface-subtle);
-          border: 1px solid var(--pr-border);
+        .ev_ext {
+          opacity: 1;
+          transform: translateX(0);
         }
       }
     }
+
+    .ev_lock {
+      font-size: 16px;
+
+      &.public {
+        color: var(--pr-color-green-600);
+      }
+      &.private {
+        color: var(--pr-text-subtle);
+      }
+    }
+
+    .ev_skeleton {
+      margin-top: 2px;
+    }
+
+    // La clase de evidencia, ahora un chip junto al nombre. Lleva el color de su sello, así que
+    // enlace y archivo se distinguen dos veces sin repetir una palabra.
+    .ev_kind {
+      flex: none;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--pr-color-primary-500);
+      background: var(--pr-color-primary-50);
+      border: 1px solid var(--pr-color-primary-200);
+
+      &.is_file {
+        color: var(--pr-color-orange-700);
+        background: var(--pr-color-orange-50);
+        border-color: var(--pr-color-orange-200);
+      }
+    }
+
+    // Columna derecha: cuándo, y qué se puede hacer.
+    // En fila, no en columna: apiladas, las acciones caían al fondo de la tarjeta y entre ellas y
+    // las fechas quedaba un hueco del alto del cuerpo. En fila comparten la línea del titular y la
+    // tarjeta pierde ese aire muerto (Yeck, 15-sep-2026: "y ahorra espacio").
+    .ev_aside {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: none;
+    }
+
+    // Las fechas, en la esquina. Ni chip ni línea de metadatos: una ficha de dos filas con la
+    // etiqueta en versalitas y el dato alineado a la derecha. Ocupa un hueco que estaba vacío y
+    // devuelve una línea entera al cuerpo de la tarjeta.
+    .ev_when {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
+      padding: 5px 10px;
+      border-radius: 9px;
+      background: var(--pr-surface-subtle);
+      border: 1px solid var(--pr-border-divider);
+      font-size: 11px;
+      color: var(--pr-text-muted);
+      white-space: nowrap;
+      line-height: 1.45;
+
+      .ev_when_row {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+
+      .ev_when_label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--pr-text-subtle);
+      }
+    }
+
+    // La descripción es texto DEL REPORTERO, no un campo del sistema: se presenta como cita, con
+    // su regla a la izquierda. Antes compartía forma con el enlace y las etiquetas y las tres
+    // filas se leían como una lista de propiedades.
+    .ev_desc {
+      margin: 6px 0 0;
+      padding-left: 10px;
+      border-left: 2px solid var(--pr-border);
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--pr-text);
+      word-break: break-word;
+    }
+
+    .ev_tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+
+      // 15-sep-2026: dejaron de ser grises planas. Llevan el primario en su tinta oscura sobre el
+      // tinte más claro de la rampa, un degradado corto para que no sean un rectángulo de color, y
+      // un punto delante que las ata al sello. Siguen sin poder confundirse con un botón: el
+      // relleno es claro y el texto no está subrayado.
+      .ev_tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 11px 3px 9px;
+        border-radius: 999px;
+        color: var(--pr-color-primary-500);
+        background: linear-gradient(180deg, var(--pr-color-primary-25) 0%, var(--pr-color-primary-50) 100%);
+        border: 1px solid var(--pr-color-primary-200);
+
+        &::before {
+          content: '';
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: var(--pr-color-primary-300);
+          flex: none;
+        }
+      }
+    }
+
+    // Las acciones se atenúan en reposo y se encienden con la tarjeta. Seis tarjetas con doce
+    // botones a plena tinta convierten la lista en una barra de herramientas; atenuadas siguen
+    // estando ahí —y siguen siendo alcanzables con teclado, por eso `:focus-within`—, pero dejan
+    // que se lea primero el contenido.
+    .ev_actions {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      opacity: 0.45;
+      transition: opacity 0.18s ease;
+
+      .ev_edit,
+      .ev_delete {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        color: var(--pr-text-muted);
+        transition: background 0.15s ease, color 0.15s ease;
+
+        i {
+          font-size: 18px;
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--pr-color-primary-300);
+          outline-offset: 1px;
+        }
+      }
+
+      .ev_edit:hover {
+        background: var(--pr-surface-app);
+        color: var(--pr-color-primary-300);
+      }
+
+      // Rojo solo al alcanzarlo: teñido siempre, cada evidencia guardada parece un aviso.
+      .ev_delete:hover {
+        background: var(--pr-color-red-50);
+        color: var(--pr-color-red-300);
+      }
+    }
+
+    &:focus-within .ev_actions {
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evidences .evidence_card,
+  .evidences .evidence_card::before,
+  .evidences .evidence_card .ev_actions,
+  .evidences .evidence_card .ev_title_link .ev_ext {
+    transition-duration: 1ms;
   }
 }
 
