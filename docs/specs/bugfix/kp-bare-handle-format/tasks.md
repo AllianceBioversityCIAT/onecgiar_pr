@@ -38,7 +38,7 @@
   - [ ] Lint clean (`npx ng lint --quiet`); no coverage regression on this file.
   - [ ] Code merged via `<emoji> <type>(<scope>) [ticket]: <description>` (e.g. `🔧 fix(kp-handle.validator): accept bare CGSpace/MELSpace/WorldFish handle format`).
 
-### [ ] `KPH-T-2` — Route `report-result-form.component.ts`'s Sync through the shared validator
+### [x] `KPH-T-2` — Route `report-result-form.component.ts`'s Sync through the shared validator
 
 - **Type:** `client`
 - **Description:** In `report-result-form.component.ts`'s `GET_mqapValidation()` (~lines 502-533), remove the inline duplicated `regex`/message block and replace it with a call to `validateKpHandle(this.resultLevelSE.resultBody.handler)` (already imported at line 20). On success, call `normalizeKpHandle(...)`, assign the normalized value back to `resultLevelSE.resultBody.handler`, then proceed to `api.resultsSE.GET_mqapValidation(normalized)` as today.
