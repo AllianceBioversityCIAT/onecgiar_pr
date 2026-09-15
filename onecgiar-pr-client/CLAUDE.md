@@ -618,6 +618,7 @@ npm run test:ct            # runs all src/**/*.cy.ts headless — expect "All sp
 | **Coverage** | Client thresholds: 50/60/60/60. Don't lower them. |
 | **Browser verification** | Inject `token` **and** `user` in localStorage, and confirm the served bundle is not stale — see §9 "Verifying in a REAL browser". Both traps look like broken features. |
 | **Commit** | `<emoji> <type>(<scope>) [ticket]: <description>`. |
+| **Asunto del commit: sin apostrofes ni `$` ni comillas** | 🛑 El job de Jenkins lee `git log -1 --pretty=format:%H %an %ad %s` y **interpola el asunto en un `sh` sin entrecomillar**. Un apostrofo deja una comilla sin cerrar y el build muere con `Syntax error: Unterminated quoted string` → `Error retrieving commit information` → **FAILURE**, con los tests en verde. Medido el 15-sep-2026: build **#2286**, HEAD `00c5fcff3` (*the client s enum does not*); los tres anteriores, sin apostrofo, SUCCESS. Escribe *the client enum* o *the enum of the client*. ⚠️ La causa de fondo es del Jenkinsfile (falta entrecomillar esa variable) y es infra: no se toca sin Yeck. |
 
 ### Commit examples
 
