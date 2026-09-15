@@ -12,7 +12,7 @@ import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-trac
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
-import { InnovationUseResultsService } from '../../../../../shared/services/global/innovation-use-results.service';
+import { QaInnovationDevelopmentResultsService } from '../../../../../shared/services/global/qa-innovation-development-results.service';
 
 describe('TypeInnovationUseComponent', () => {
   let fixture: ComponentFixture<TypeInnovationUseComponent>;
@@ -23,7 +23,7 @@ describe('TypeInnovationUseComponent', () => {
   let autoSave: any;
   let expandableState: any;
   let innovationControlListSE: any;
-  let innovationUseResultsSE: any;
+  let qaInnovationsSE: any;
 
   /**
    * P2-3556 — `build()` now RUNS the first change detection, so `ngOnInit` fires and the default
@@ -63,7 +63,7 @@ describe('TypeInnovationUseComponent', () => {
         { id: '7', level: 6, name: 'Level 6' },
       ],
     };
-    innovationUseResultsSE = { resultsList: [] };
+    qaInnovationsSE = { options: signal([]), load: jest.fn() };
     bilateralApi = {
       GET_actorsTypes: jest.fn().mockReturnValue(of({ response: [{ actor_type_id: 1, name: 'Farmer' }] })),
       GET_institutionsTypeTree: jest.fn().mockReturnValue(
@@ -87,7 +87,7 @@ describe('TypeInnovationUseComponent', () => {
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralExpandableStateService, useValue: expandableState },
         { provide: InnovationControlListService, useValue: innovationControlListSE },
-        { provide: InnovationUseResultsService, useValue: innovationUseResultsSE },
+        { provide: QaInnovationDevelopmentResultsService, useValue: qaInnovationsSE },
       ],
     })
       .overrideTemplate(TypeInnovationUseComponent, '<div></div>')
@@ -964,36 +964,57 @@ describe('TypeInnovationUseComponent', () => {
   });
 
   describe('link to a QA-ed Innovation Development result — P2-3424', () => {
-    const rows = [
-      { id: '1', name: 'Innovation development', title: 'QA-ed innovation', status_id: 2 },
-      { id: '2', name: 'Innovation development', title: 'Still editing', status_id: 1 },
-      { id: '3', name: 'Innovation development', title: 'Submitted, not QA-ed', status_id: 3 },
-      { id: '4', name: 'Innovation use', title: 'Wrong result type', status_id: 2 },
-      { id: '5', name: 'Knowledge product', title: 'Wrong result type too', status_id: 2 },
+    /**
+     * AC4 — the dropdown must offer the QA'd Innovation Development results of the previous phase,
+     * across every portfolio. That catalogue is owned by `QaInnovationDevelopmentResultsService`
+     * (P2-3422) and is exactly what W1/W2 already reads, which is why the filtering below is the
+     * SERVICE's job and not this component's.
+     *
+     * 🛑 The previous implementation read the wide Contributors & Partners list and narrowed it here
+     * with `status_id === 2`. That comment claimed the endpoint carried no status; it does —
+     * `getResultsForInnovUse` (result.repository.ts:3079) selects `r.status_id` and filters
+     * `IN (2, 6)` — so the client filter silently dropped every Approved (6) result. A bilateral
+     * Innovation Development is Approved, so the dropdown was missing precisely what AC4 asks for.
+     */
+    const options = [
+      { id: 1, result_code: 1001, title: 'QA-ed innovation', status_id: 2, phase_year: 2025, acronym: 'SP01', display: '1001 - QA-ed innovation' },
+      { id: 2, result_code: 1002, title: 'Approved bilateral innovation', status_id: 6, phase_year: 2025, acronym: null, display: '1002 - Approved bilateral innovation' }
     ];
 
-    it('keeps only Innovation Development results whose status is Quality Assessed (status_id = 2)', () => {
-      innovationUseResultsSE.resultsList = rows;
+    it('offers the shared QA catalogue verbatim, Approved results included', () => {
+      // The Approved (6) row is the regression guard: the old client filter threw it away.
+      qaInnovationsSE.options.set(options);
       build();
-      expect(component.qaInnovationDevelopmentResults.map((r: any) => r.id)).toEqual(['1']);
+      expect(component.qaInnovationDevelopmentResults.map((r: any) => r.id)).toEqual([1, 2]);
     });
 
-    it('drops every non Innovation Development result type', () => {
-      innovationUseResultsSE.resultsList = rows;
+    it('asks the shared catalogue to load, so bilateral and W1/W2 can never diverge', () => {
       build();
-      expect(component.qaInnovationDevelopmentResults.some((r: any) => r.name !== 'Innovation development')).toBe(false);
+      expect(qaInnovationsSE.load).toHaveBeenCalled();
     });
 
-    it('lets an option through when the catalog carries no status_id at all (current endpoint payload)', () => {
-      // The live catalog (`getResultsForInnovUse`) selects no status column, so the QA gate cannot bite yet.
-      // Filtering these out would render a permanently empty dropdown; see the component comment.
-      innovationUseResultsSE.resultsList = [{ id: '9', name: 'Innovation development', title: 'No status in payload' }];
+    it('keeps a previously linked result that is no longer in the catalogue', () => {
+      // Otherwise the select paints empty and the next save wipes a link the user never touched.
+      qaInnovationsSE.options.set(options);
       build();
-      expect(component.qaInnovationDevelopmentResults.map((r: any) => r.id)).toEqual(['9']);
+      component.body = { has_innovation_link: true, linked_result_id: 777 };
+
+      const shown = component.qaInnovationDevelopmentResults;
+
+      expect(shown.map((r: any) => r.id)).toEqual([777, 1, 2]);
+      expect(shown[0].display).toContain('777');
+    });
+
+    it('does not duplicate the linked result when it IS in the catalogue', () => {
+      qaInnovationsSE.options.set(options);
+      build();
+      component.body = { has_innovation_link: true, linked_result_id: 1 };
+
+      expect(component.qaInnovationDevelopmentResults.map((r: any) => r.id)).toEqual([1, 2]);
     });
 
     it('tolerates an empty catalog', () => {
-      innovationUseResultsSE.resultsList = null;
+      qaInnovationsSE.options.set([]);
       build();
       expect(component.qaInnovationDevelopmentResults).toEqual([]);
     });
