@@ -19,12 +19,48 @@
   <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning"> </app-alert-status>
 
   <div class="evidences">
-    <!-- P2-2935: flat (non-collapsible) evidence card — all info fits, no accordion -->
+    <!-- Tarjeta de evidencia, rediseñada el 15-sep-2026.
+         Antes era una franja de cabecera con el TIPO por título ("Link Evidence") y el dato real
+         —el enlace— relegado a una línea de cuerpo con un icono gris delante. Estaba al revés: el
+         tipo lo dice el icono en dos píxeles, y lo que el reportero busca al recorrer la lista es
+         QUÉ evidencia es, no de qué clase.
+         Tres columnas: el sello (tipo + posición), el contenido, y las acciones. El titular es el
+         enlace; debajo, una sola línea de metadatos; la descripción va como cita, con su regla a la
+         izquierda, porque es texto del usuario y no un campo del sistema. -->
     <div class="evidence_card" *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
-      <div class="ev_card_top">
-        <div class="ev_index">{{ i + 1 }}</div>
-        <div class="ev_type_row">
-          <span class="ev_type">{{ evidenceTypeLabel(evidence) }}</span>
+      <!-- Sello: dice de un vistazo si es enlace o archivo, y lleva su número encima como una
+           chapa. El número seguía siendo útil (la gente dice "la evidencia 2"), pero ocupaba una
+           columna entera para tres píxeles de información. -->
+      <div class="ev_seal" [class.is_file]="isFileEvidence(evidence)">
+        <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
+        <span class="ev_num">{{ i + 1 }}</span>
+      </div>
+
+      <div class="ev_main">
+        <div class="ev_headline">
+          <!-- Mientras el archivo sube: nombre + barra, y todavía no hay enlace que abrir. -->
+          <ng-container *ngIf="isEvidenceUploading(evidence); else evidenceReady">
+            <span class="ev_title ev_title_plain">{{ evidenceUploadingName(evidence) }}</span>
+            <div class="pr-skeleton ev_skeleton" style="width: 160px; height: 9px; border-radius: 6px"></div>
+          </ng-container>
+          <ng-template #evidenceReady>
+            <a
+              *ngIf="evidence.link; else roPlainName"
+              [href]="evidence.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ev_title ev_title_link"
+              >{{ evidenceDisplayName(evidence) }}<i class="material-icons-round ev_ext" aria-hidden="true">open_in_new</i></a
+            >
+            <ng-template #roPlainName>
+              <span class="ev_title ev_title_plain">{{ evidenceDisplayName(evidence) || '—' }}</span>
+            </ng-template>
+          </ng-template>
+
+          <!-- La clase de evidencia, junto al nombre: es lo que antes ocupaba el titular entero.
+               De chip ocupa lo que vale. -->
+          <span class="ev_kind" [class.is_file]="isFileEvidence(evidence)">{{ evidenceTypeLabel(evidence) }}</span>
+
           <i
             *ngIf="isFileEvidence(evidence)"
             class="material-icons-round ev_lock"
@@ -34,71 +70,49 @@
             prTooltipPosition="top">
             {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
           </i>
-          <span class="ev_date" *ngIf="evidence.creation_date || evidence.last_updated_date">
-            <ng-container *ngIf="evidence.creation_date">Added {{ evidence.creation_date | date: 'MMM d, y' }}</ng-container>
-            <ng-container *ngIf="evidence.last_updated_date">
-              <span class="ev_dot" aria-hidden="true">·</span>Updated {{ evidence.last_updated_date | date: 'MMM d, y' }}</ng-container
-            >
-          </span>
         </div>
-        <div class="ev_actions">
-          <button
-            type="button"
-            class="ev_edit"
-            *ngIf="!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
-            prTooltip="Edit evidence"
-            prTooltipPosition="top"
-            (click)="editEvidence(i)">
-            <i class="material-icons-round">edit</i>
-          </button>
-          <button
-            type="button"
-            class="ev_delete"
-            *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
-            prTooltip="Delete evidence"
-            prTooltipPosition="top"
-            (click)="deleteEvidenceWithConfirm(i)">
-            <i class="material-icons-round">delete</i>
-          </button>
+
+        <!-- Texto escrito por el reportero: se presenta como cita, no como un campo más. -->
+        <p class="ev_desc" *ngIf="evidence.description">{{ evidence.description }}</p>
+
+        <div class="ev_tags" *ngIf="getSelectedImpactTags(evidence).length">
+          <span class="ev_tag" *ngFor="let tag of getSelectedImpactTags(evidence)">{{ tag }}</span>
         </div>
       </div>
 
-      <div class="ev_card_body">
-        <span class="ev_ro_item ev_ro_main">
-          <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
-          <!-- While the file is being uploaded: show its name + a skeleton, then switch to the link -->
-          <span class="ev_ro_uploading" *ngIf="isEvidenceUploading(evidence); else evidenceReady">
-            <span class="ev_ro_name">{{ evidenceUploadingName(evidence) }}</span>
-            <div class="pr-skeleton ev_ro_skeleton" style="width:160px;height:9px;border-radius:6px"></div>
+      <div class="ev_aside">
+        <!-- Las fechas suben a la esquina, con su propia forma: no son un chip (un chip clasifica)
+             ni una línea de metadatos bajo el título, que era donde le robaban el sitio a la
+             descripción. Aquí ocupan un hueco que estaba vacío y liberan una línea del cuerpo. -->
+        <div class="ev_when" *ngIf="evidence.creation_date || evidence.last_updated_date">
+          <span class="ev_when_row" *ngIf="evidence.creation_date">
+            <span class="ev_when_label">Added</span>{{ evidence.creation_date | date: 'MMM d, y' }}
           </span>
-          <ng-template #evidenceReady>
-            <a
-              *ngIf="evidence.link; else roPlainName"
-              [href]="evidence.link"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="ev_ro_link"
-              >{{ evidenceDisplayName(evidence) }}</a
-            >
-            <ng-template #roPlainName>
-              <span class="ev_ro_name">{{ evidenceDisplayName(evidence) || '—' }}</span>
-            </ng-template>
-          </ng-template>
-        </span>
-
-        <!-- Sin icono delante: un chip ya se lee como chip, y la columna de iconos grises de la
-             izquierda era la que hacía que las tres filas del cuerpo se vieran como una lista de
-             sistema en vez de como el contenido de la evidencia. El icono se queda SOLO en el
-             enlace, donde sí informa — dice si es un enlace o un archivo. -->
-        <span class="ev_ro_item ev_ro_tagrow" *ngIf="getSelectedImpactTags(evidence).length">
-          <span class="ev_ro_tags">
-            <span class="ev_tag" *ngFor="let tag of getSelectedImpactTags(evidence)">{{ tag }}</span>
+          <span class="ev_when_row" *ngIf="evidence.last_updated_date">
+            <span class="ev_when_label">Updated</span>{{ evidence.last_updated_date | date: 'MMM d, y' }}
           </span>
-        </span>
+        </div>
 
-        <span class="ev_ro_item ev_ro_details" *ngIf="evidence.description">
-          <span>{{ evidence.description }}</span>
-        </span>
+        <div class="ev_actions">
+        <button
+          type="button"
+          class="ev_edit"
+          *ngIf="!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+          prTooltip="Edit evidence"
+          prTooltipPosition="top"
+          (click)="editEvidence(i)">
+          <i class="material-icons-round">edit</i>
+        </button>
+        <button
+          type="button"
+          class="ev_delete"
+          *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+          prTooltip="Delete evidence"
+          prTooltipPosition="top"
+          (click)="deleteEvidenceWithConfirm(i)">
+          <i class="material-icons-round">delete</i>
+        </button>
+        </div>
       </div>
     </div>
   </div>
