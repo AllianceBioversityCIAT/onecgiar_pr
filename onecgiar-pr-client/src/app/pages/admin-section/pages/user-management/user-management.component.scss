@@ -689,6 +689,15 @@
       font-weight: 500;
     }
   }
+
+  // The counter floats over the paginator strip that sits under the table. `app-pr-table`
+  // only renders that strip when the rows overflow one page, so a search that returns a
+  // single user leaves nothing underneath and the absolute counter lands on the last row.
+  // Without the strip it goes back into the flow, right below the table.
+  &:not(:has(.pr-paginator)) .counter {
+    position: static;
+    margin-top: 12px;
+  }
 }
 .export-button {
   margin-bottom: 20px;
