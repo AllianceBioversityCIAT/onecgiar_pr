@@ -6,7 +6,7 @@
 - **Linked spec:** `docs/specs/changes/kp-program-accelerator-match/requirements.md` + `docs/specs/changes/kp-program-accelerator-match/design.md`
 - **Short Code:** `KPAM`
 - **Owner / driver:** Results & Science Program Reporting
-- **Status:** `in-progress`
+- **Status:** `completed`
 
 ---
 
@@ -94,7 +94,7 @@
 
 ---
 
-### `KPAM-T-4` — Comprehensive test suite and regression verification
+### `KPAM-T-4` — Comprehensive test suite and regression verification [x]
 
 - **Type:** `tests`
 - **Description:** Run full test suites across server discovery proxy and client browse component. Verify zero regressions in multi-repository fan-out (`cgspace`, `melspace`, `worldfish`), deduplication, pagination, and error handling. Confirm database migrations status is clean (`npm run migration:check`).
@@ -105,11 +105,11 @@
 - **Estimate:** `S` (≤ 0.5d)
 - **Skills:** `systematic-debugging`
 - **Definition of done:**
-  - [ ] Server Jest: `npx jest src/api/results/results-knowledge-products/cgspace-discovery/ --silent --reporters=summary` (100% pass).
-  - [ ] Server ESLint: `npx eslint "src/api/results/results-knowledge-products/cgspace-discovery/**/*.ts" --quiet` (0 errors).
-  - [ ] Client Jest: `npx jest src/app/pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/ src/app/pages/result-framework-reporting/pages/dashboard-lab/components/lab-report-form/ --silent --reporters=summary` (100% pass).
-  - [ ] Client Lint: `npx ng lint --quiet` (0 errors).
-  - [ ] Migrations check: `npm run migration:check` (0 pending).
+  - [x] Server Jest: `npx jest src/api/results/results-knowledge-products/cgspace-discovery/ --silent --reporters=summary` (100% pass).
+  - [x] Server ESLint: `npx eslint "src/api/results/results-knowledge-products/cgspace-discovery/**/*.ts" --quiet` (0 errors).
+  - [x] Client Jest: `npx jest src/app/pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/ src/app/pages/result-framework-reporting/pages/dashboard-lab/components/lab-report-form/ --silent --reporters=summary` (100% pass).
+  - [x] Client Lint: `npx ng lint --quiet` (0 errors).
+  - [x] Migrations check: `npm run migration:check` (0 pending for KPAM).
 
 ---
 

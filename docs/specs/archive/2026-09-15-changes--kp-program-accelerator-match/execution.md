@@ -8,9 +8,9 @@
 | Execution Log Path | `docs/specs/changes/kp-program-accelerator-match/execution.md` |
 | Approval Mode | `gated` |
 | Started | 2026-09-15 |
-| Status | in-progress |
+| Status | completed |
 | Total Tasks | 4 |
-| Tasks Completed | 3 |
+| Tasks Completed | 4 |
 
 ---
 
@@ -82,3 +82,24 @@
   - Confirmed binding in `aow-hlo-create-modal.component.html` using typed `officialCode` and `shortName`.
   - Confirmed Defect Gate D6 unit tests verifying both input propagation and template presence.
 
+---
+
+### `KPAM-T-4` — Comprehensive test suite and regression verification
+
+- **Status:** `PASS`
+- **Attempt:** 2 (Attempt 1 caught dropped tags in dedup merge; Attempt 2 fixed and verified)
+- **Implementer:** Antigravity
+- **Reviewer Model:** `pro` (subagent `416f1b1e-5e5b-4496-bb62-5e82ef864610`)
+- **Files Modified:**
+  - `onecgiar-pr-server/src/api/results/results-knowledge-products/cgspace-discovery/merge.ts`
+  - `onecgiar-pr-server/src/api/results/results-knowledge-products/cgspace-discovery/merge.spec.ts`
+- **Verification Evidence:**
+  - `npx jest src/api/results/results-knowledge-products/cgspace-discovery/ --silent --reporters=summary` (88/88 tests pass across 5 suites).
+  - `npx eslint "src/api/results/results-knowledge-products/cgspace-discovery/**/*.ts" --quiet` (0 errors).
+  - `npx jest src/app/pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/ src/app/pages/result-framework-reporting/pages/dashboard-lab/components/lab-report-form/ --silent --reporters=summary` (165/165 tests pass across 2 suites).
+  - `npx ng lint --lint-file-patterns="src/app/pages/result-framework-reporting/pages/entity-aow/**/*.ts" --lint-file-patterns="src/app/pages/result-framework-reporting/pages/dashboard-lab/components/lab-report-form/**/*.ts"` (All files pass linting, 0 errors).
+  - `npx ng build --configuration=development --no-progress` (Angular template type checking 100% clean, exit code 0).
+- **Reviewer Verdict:** `STATUS: PASS`
+  - Validated multi-source deduplication in `merge.ts` unions and deduplicates `programAccelerators` across duplicate group items.
+  - Confirmed unit tests in `merge.spec.ts` asserting exact union behavior.
+  - Full validation of Defect Gates `D1` through `D6` and acceptance criteria `KPAM-AC-1` through `KPAM-AC-7`.
