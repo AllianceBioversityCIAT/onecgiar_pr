@@ -200,32 +200,27 @@ input::placeholder,
     }
   }
 
-  .selected_container {
-    margin-top: 10px;
-    overflow-y: auto;
-    max-height: 300px;
 
-    .chips_container {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-  }
-
+  // 14-sep-2026: era un bloque VIOLETA de 43px a altura completa pegado al borde derecho. En un
+  // formulario donde el violeta es la marca —el botón principal, los enlaces— ese rectángulo
+  // pesaba como una acción primaria en cada desplegable de la pantalla, y en una fila con dos
+  // selects seguidos la vista iba a los dos botones antes que a los valores.
+  // Ahora no hay caja: solo la flecha, dentro del campo, como en cualquier control estándar.
   .icon_container {
     position: absolute;
     right: 0;
-    background-color: var(--pr-color-primary-300);
-    width: 43px;
+    width: 36px;
     height: 100%;
     z-index: 1;
     pointer-events: none;
-    border-radius: 3px;
+    background-color: transparent;
+    border-radius: 0 6px 6px 0;
   }
 
   .pr-select-clear {
     position: absolute;
-    right: 52px;
+    // Pegada a la flecha, que ahora ocupa 36px y no 43.
+    right: 40px;
     z-index: 2;
     cursor: pointer;
     font-size: 18px;
@@ -259,15 +254,19 @@ input::placeholder,
   position: relative;
 }
 
+// Deshabilitado: el campo entero ya se apaga; teñir solo la esquina lo hacía parecer un botón roto.
 .icon_container_active {
-  background-color: var(--pr-color-accents-5) !important;
+  background-color: transparent !important;
 }
 
 .icon_dropdown {
   position: relative;
   z-index: 2;
   pointer-events: none;
-  color: var(--pr-color-white) !important;
+  // Gris de texto secundario, no blanco sobre violeta: la flecha es una pista de que se despliega,
+  // no una llamada a la acción.
+  color: var(--pr-text-secondary) !important;
+  font-size: 13px;
 }
 
 .select_item_description {
@@ -504,5 +503,56 @@ input::placeholder,
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/*
+ * Lo elegido por un multi-select, SIEMPRE dentro de una caja con borde.
+ *
+ * Regla propia y no anidada en `.custom_select` a propósito: la mitad de estas listas las pinta la
+ * plantilla que consume el componente (centros contribuyentes, Science Programs), no el
+ * multi-select, y anidada solo alcanzaba a la mitad. El resultado era el que Yeck describió el
+ * 14-sep-2026: una lista encajada y, dos campos más abajo, los chips sueltos por la página sin
+ * nada que dijera de qué campo eran.
+ */
+.selected_container {
+  margin-top: 8px;
+  padding: 8px 10px 10px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  overflow-y: auto;
+  max-height: 320px;
+
+  // El contador ("Projects selected (3)") hace de encabezado de la caja.
+  app-pr-field-header .pr_description {
+    margin: 0 0 7px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--pr-border-divider);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--pr-text-muted);
+  }
+
+  .chips_container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  // Los que van en fila (acrónimos cortos: SP01, centros) se reparten en varias líneas dentro de
+  // la MISMA caja, en vez de desbordarse por la página.
+  .centers.chips_container,
+  &.medal_selector .chips_container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  // Vacía no se pinta: una caja con borde y nada dentro parece un campo roto.
+  &:empty {
+    display: none;
   }
 }

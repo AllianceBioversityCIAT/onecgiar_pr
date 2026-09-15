@@ -126,6 +126,14 @@ export class VersioningController {
     return this.versioningService.annualReplicationProcessInnovationDev(user);
   }
 
+  @Patch('execute/annual/replicate/innovation-use')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({ summary: 'Replicate annual innovation use results' })
+  updateAnnuallyInnovationUse(@UserToken() user: TokenDto) {
+    return this.versioningService.annualReplicationProcessInnovationUse(user);
+  }
+
   @Patch('execute/annual/replicate/innovation-package')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)

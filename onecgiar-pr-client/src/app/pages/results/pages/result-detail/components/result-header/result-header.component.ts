@@ -7,6 +7,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { PdfExportService } from '../../../../../../shared/services/pdf-export.service';
 import { ResultMetadataPanelService } from '../../../../../../shared/components/result-metadata/result-metadata-panel.service';
+import { CopyButtonComponent } from '../../../../../../shared/components/copy-button/copy-button.component';
 
 interface MetaRow {
   label: string;
@@ -149,7 +150,7 @@ function mapAowFromCatalog(lookup: AowCatalogLookup, catalogResp: any): AowMappi
   selector: 'app-result-header',
   templateUrl: './result-header.component.html',
   standalone: true,
-  imports: [RouterLink],
+  imports: [CopyButtonComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.Default
 })
 export class ResultHeaderComponent implements DoCheck {

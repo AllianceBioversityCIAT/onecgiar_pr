@@ -1,6 +1,6 @@
 # portfolio-overview
 
-**Verified:** 2026-08-24 · branch performance-refactor · b3181e828
+**Verified:** 2026-09-14 · branch qa-development-2026-ss · spec bugfix/portfolio-overview-partial-counts
 
 **What this owns:** the **admin-only** `/portfolio-overview` screen — reporting figures for the WHOLE
 portfolio in the open phase: a status strip, results by indicator category, a bilateral summary, and
@@ -58,6 +58,15 @@ a science-program × category matrix. Ticket **P2-3304**; design block `showPort
   text: see `docs/DESIGN-DEVIATIONS.md` §1 vs §8, the same hex answering two different questions.
 - **`isPartial()` is the honesty guard**: if `meta.total` exceeds what we asked for, the screen says
   the figures are partial rather than passing a truncated portfolio off as the whole thing.
+- 🛑 **Two different counts answer two different questions — don't conflate them.** `total()`
+  (`services/portfolio-overview.service.ts:195`) is `rows().length`, i.e. the **open-phase-filtered**
+  count; it correctly feeds the "Total Portfolio Results" KPI tile. `fetchedCount()` (`:182`) is the
+  **raw row count actually returned by the server in this page**, captured in `load()` before
+  `apply()`'s phase filter runs. The partial-results banner ("Showing the first N results") MUST bind
+  to `fetchedCount()`, never `total()` — binding it to the post-filter number was the bug fixed by
+  spec `bugfix/portfolio-overview-partial-counts` (2026-09-14): with historical volume exceeding the
+  page `LIMIT`, `total()` could read far lower than what was actually fetched, understating the
+  banner's own "first N" claim.
 
 ## Pending
 

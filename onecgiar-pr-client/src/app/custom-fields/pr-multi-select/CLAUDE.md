@@ -1,6 +1,6 @@
 # pr-multi-select
 
-**Verified:** 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
+**Verified:** 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
 
 ## Qué es
 
@@ -18,6 +18,19 @@ El dropdown multi-selección de toda la app: buscador, `select all` opcional, mo
   `app-pr-field-header` interno: cuando no está vacío, pinta el ⓘ inline junto al label
   (`PrTooltipDirective`, click/`Enter`/`Space` para fijar, mismo patrón que `pr-select` y
   `pr-yes-or-not`). Ninguna de las ~80 instancias existentes lo usa hoy — es aditivo.
+- `selectedItems` — **hueco de proyección** para los chips que pinta el propio consumidor
+  (medallas de lead, tooltips de CGSpace, borrados a medida). Antes se declaraban como
+  HERMANOS del `app-pr-multi-select`, o sea fuera del marco `fc-boxed`, y la selección
+  quedaba huérfana bajo la tarjeta. `rd-contributors-and-partners` usa las dos formas:
+  hijo directo con el atributo, y `<ng-container ngProjectAs="[selectedItems]"
+  *ngTemplateOutlet>` cuando dos ramas de `@if` comparten la misma tira de chips.
+  🛑 `ngProjectAs` no es opcional ahí: el `select` del `ng-content` mira el nodo declarado
+  en el sitio de uso (el `ng-container`), no lo que el `ng-template` pinta dentro — sin él
+  los chips desaparecen sin un solo error. Candado:
+  `pr-multi-select.selected-items-slot.spec.ts`.
+  🛑 El hueco es SOLO para chips. El marcador `appFeedbackValidation` de la sección sigue
+  siendo hermano del dropdown: anidarlo haría que `mandatoryFieldLabel` reportara la
+  etiqueta del desplegable en vez de la suya.
 - Gates de render: `readOnly` · `RolesService.readOnly` (global, **default TRUE**) ·
   `isStatic` (fuerza el control aunque sea read-only) · `hideSelect`.
 - `required` — **default `true`**. Ver la trampa ⚠️ #1: hoy es casi inerte.

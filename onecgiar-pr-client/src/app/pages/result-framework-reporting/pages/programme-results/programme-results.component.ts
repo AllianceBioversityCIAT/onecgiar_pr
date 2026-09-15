@@ -1095,10 +1095,20 @@ export class ProgrammeResultsComponent implements OnDestroy {
     effect(() => {
       const params = this.queryParams();
       const defPhase = this.defaultPhase();
+      // @akili-spec bugfix/phase-filter-missing-phases-prod (D-1) — read `loading()` in the
+      // TRACKED scope (not only inside `untracked` below) so this effect is guaranteed to
+      // re-fire on the `true -> false` load transition even if `defaultPhase()`'s recomputed
+      // string happens to equal its pre-load guess (no dependency-value change to key off of).
+      const isLoading = this.data.loading();
 
       untracked(() => {
         const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
-        const phase = urlPhase !== null ? this.toFilterValue(urlPhase) : defPhase;
+        // REQ-1-S1/REQ-2: on the auto-derived path (no explicit `?phase=` param), do not commit
+        // `defPhase` while the initial row load is still in flight — it was computed against an
+        // empty `phaseOptions()` and would lock a data-free phase into `selectedPhase`/the URL.
+        // Leave `selectedPhase()` at its current value until `loading()` settles. The
+        // explicit-URL-param path (REQ-1-S2) stays completely unguarded.
+        const phase = urlPhase !== null ? this.toFilterValue(urlPhase) : isLoading ? this.filter.selectedPhase() : defPhase;
         const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
         // @akili-spec changes/my-work-board (MWB-T-13) — the three multi dimensions travel as
         // comma-separated lists. Splitting on `,` is the whole decode (the router has already

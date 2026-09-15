@@ -1,27 +1,128 @@
-<div class="filters">
-    <div *ngFor="let filter of this.ipsrListFilterSE.filters.general" class="filter {{filter.attr}}">
-        <div class="filter_title">{{filter.filter_title}}</div>
-        <div class="chips">
-            <div class="chip"
-                [ngClass]="{'chip_selected': option.selected,'disabled':option.name=='2023' || option.name=='2024'}"
-                (click)="this.ipsrListFilterSE.onSelectChip(option); this.ipsrListFilterSE.cleanAllFilters(option)"
-                *ngFor="let option of filter?.options">
-                {{option.name}}
-            </div>
-        </div>
+<!--
+  Primary filter row rebuilt to match Results Center's `results-list-filters.component.html`
+  shape (search, Program, Phase, Status — applied live, no Apply step). `IPSR-R-1`/`IPSR-R-2`/
+  `IPSR-R-3`/`IPSR-R-5`. "More filters" (Portfolio-only, `IPSR-DD-3` revised 2026-09-14 — Center
+  descoped, IPSR list rows carry no center field) popover + the removable chip row below, both
+  `IPSR-T-5` — mirrors RC's `.rc-more-panel` / `.rc-meta-row` almost verbatim, re-pointed at
+  `IpsrListFilterService`'s signals (`IPSR-R-4`/`IPSR-R-10`/`IPSR-DD-3`).
+-->
+<div class="flex flex-col gap-3 mt-[24px]">
+  <div class="flex flex-wrap items-center gap-2" role="search" aria-label="Innovation Packages filters">
+    <div class="relative flex items-center gap-2 h-[40px] min-w-[140px] max-w-[220px] flex-1 sm:flex-none px-3 border border-[var(--pr-border)] rounded-lg bg-white">
+      <i class="material-icons-round text-[16px] text-[var(--pr-text-subtle)]" aria-hidden="true">search</i>
+      <input
+        type="text"
+        class="flex-1 min-w-0 border-none outline-none bg-transparent text-[14px] text-[var(--pr-text-heading)] placeholder:text-[var(--pr-text-subtle)]"
+        placeholder="Find result..."
+        aria-label="Find result by title or code"
+        [(ngModel)]="this.ipsrListService.text_to_search" />
     </div>
-</div>
 
-<div class="search">
-    <div class="search_input ipsr_searhc_input">
-        <i class="material-icons-round">search</i>
-        <input type="text" placeholder="Find result..." [(ngModel)]="this.ipsrListService.text_to_search">
+    <div class="min-w-[140px] max-w-[220px] flex-1 sm:flex-none">
+      <app-pr-filter-multiselect
+        aria-label="Filter by submitter"
+        [options]="ipsrListFilterSE.programOptions()"
+        [ngModel]="ipsrListFilterSE.selectedPrograms()"
+        (ngModelChange)="ipsrListFilterSE.selectedPrograms.set($event)"
+        optionLabel="displayName"
+        placeholder="Submitter"></app-pr-filter-multiselect>
     </div>
-    
-    <div class="download_button_container">
-        <app-pr-button 
-        *ngIf="(this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : this.ipsrListService.text_to_search).length > 0"
-        tooltipText="Download excel report"
-        text="Download" (click)="onDownLoadTableAsExcel(onFilterSelectedInits(), onFilterSelectedPhases(), this.ipsrListService.text_to_search)" [icon]="isLoadingReport ? 'loop' : 'file_download'" [rotating]="this.isLoadingReport" ></app-pr-button>
+
+    <div class="min-w-[140px] max-w-[220px] flex-1 sm:flex-none">
+      <app-pr-filter-multiselect
+        aria-label="Filter by phase"
+        [options]="ipsrListFilterSE.phaseOptions()"
+        [ngModel]="ipsrListFilterSE.selectedPhases()"
+        (ngModelChange)="ipsrListFilterSE.selectedPhases.set($event)"
+        optionLabel="name"
+        placeholder="Phase"></app-pr-filter-multiselect>
     </div>
+
+    <div class="min-w-[140px] max-w-[220px] flex-1 sm:flex-none">
+      <app-pr-filter-multiselect
+        aria-label="Filter by package status"
+        [options]="ipsrListFilterSE.statusOptions()"
+        [ngModel]="ipsrListFilterSE.selectedStatus()"
+        (ngModelChange)="ipsrListFilterSE.selectedStatus.set($event)"
+        placeholder="Package status"></app-pr-filter-multiselect>
+    </div>
+
+    <div class="relative">
+      <button
+        type="button"
+        class="flex items-center gap-1 h-[40px] px-3 rounded-lg border border-[var(--pr-color-primary-300)] bg-white text-[14px] font-medium text-[var(--pr-color-primary-300)]"
+        [attr.aria-expanded]="moreFiltersOpen()"
+        aria-haspopup="dialog"
+        data-testid="ip-more-filters-trigger"
+        (click)="toggleMoreFilters($event)">
+        <i class="material-icons-round text-[16px]" aria-hidden="true">tune</i>
+        More filters
+      </button>
+
+      @if (moreFiltersOpen()) {
+        <div
+          class="absolute right-0 z-10 mt-1 w-[260px] flex flex-col gap-3 p-4 bg-white border border-[var(--pr-border)] rounded-lg shadow-lg"
+          role="dialog"
+          aria-label="More filters"
+          (click)="$event.stopPropagation()">
+          <div class="flex flex-col gap-1">
+            <label class="text-[12px] text-[var(--pr-text-subtle)]">Portfolio</label>
+            <app-pr-filter-multiselect
+              aria-label="Filter by portfolio"
+              [options]="ipsrListFilterSE.portfolioOptions()"
+              [ngModel]="ipsrListFilterSE.tempSelectedPortfolios()"
+              (ngModelChange)="ipsrListFilterSE.tempSelectedPortfolios.set($event)"
+              optionLabel="name"
+              placeholder="All portfolios"></app-pr-filter-multiselect>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-1">
+            <app-pr-button text="Cancel" [showBackground]="false" (clickEvent)="cancelFilters()"></app-pr-button>
+            <app-pr-button text="Apply" (clickEvent)="applyFilters()"></app-pr-button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (filterChipGroups().length > 0) {
+    <div class="flex flex-wrap items-center gap-2">
+      @for (group of filterChipGroups(); track group.category) {
+        @for (chip of group.chips; track chip.item ?? $index) {
+          <span
+            class="flex items-center gap-1 h-7 pl-2 pr-1 rounded-full border border-[var(--pr-border)] bg-white text-[12px] text-[var(--pr-text-heading)]">
+            {{ group.category }}: {{ chip.label }}
+            <button
+              type="button"
+              class="flex items-center justify-center"
+              [attr.aria-label]="'Remove ' + group.category + ' ' + chip.label"
+              (click)="removeFilter(chip)">
+              <i class="material-icons-round text-[14px]" aria-hidden="true">close</i>
+            </button>
+          </span>
+        }
+      }
+      <button
+        type="button"
+        class="text-[12px] text-[var(--pr-color-primary-300)]"
+        (click)="clearAllNewFilters()">
+        Clear all
+      </button>
+    </div>
+  }
+
+  <div class="flex justify-end">
+    <!-- Gates on the FILTERED/searched result count (`IPSR-R-6`, `IPSR-AC-8`), not the raw unfiltered
+         list — a search/filter combination that matches nothing hides Download rather than offering an
+         empty-workbook export. Applies the same `innovationPackageListFilter` pipe the table itself uses
+         (`innovation-package-list.component.html`), so both surfaces agree on what "no results" means.
+         Re-pointed here from the IPSR-T-4 TEMPORARY unfiltered-count gate — this is now permanent. -->
+    <app-pr-button
+      *ngIf="((this.ipsrDataControlSE.ipsrResultList ?? []) | innovationPackageListFilter: this.ipsrListService.text_to_search)?.length > 0"
+      tooltipText="Download excel report"
+      text="Download"
+      (click)="onDownLoadTableAsExcel(onFilterSelectedInits(), onFilterSelectedPhases(), this.ipsrListService.text_to_search)"
+      [icon]="isLoadingReport ? 'loop' : 'file_download'"
+      [rotating]="this.isLoadingReport"></app-pr-button>
+  </div>
 </div>

@@ -101,7 +101,13 @@ describe('SectionBottomBarComponent', () => {
         return saveOutcome;
       })
     };
-    dataControlMock = { fieldFeedbackList: signal<string[]>([]), currentResultSignal: signal({ phase_year: phaseYear }) };
+    dataControlMock = {
+      fieldFeedbackList: signal<string[]>([]),
+      // El denominador del aro de progreso. Va en el mock porque el componente lo lee al construirse:
+      // sin él, CUALQUIER test de esta suite muere con "mandatoryFieldsTotal is not a function".
+      mandatoryFieldsTotal: signal<number>(0),
+      currentResultSignal: signal({ phase_year: phaseYear })
+    };
     rolesMock = { readOnly: false };
     sectionIsDone = true;
     phaseYear = null;
@@ -521,6 +527,60 @@ describe('SectionBottomBarComponent', () => {
 
       expect(saveMock.saveAndSettle).not.toHaveBeenCalled();
       expect(router.navigate).toHaveBeenCalledWith(['/result/result-detail/1234/general-information'], { queryParams: { phase: 7 } });
+    });
+  });
+
+  /*
+   * Candado de posición (14-sep-2026). `Save draft` no tiene NI UNA regla de estilo propia: este
+   * componente no lleva `.scss` y `.sbb-save` no aparece en ninguna hoja global. Todo su
+   * posicionamiento lo da el contenedor anclado, así que el botón se pinta bien solo mientras sea
+   * su descendiente.
+   *
+   * Ya falló una vez: el botón llevaba `absolute bottom-[14px] right-[40px]` en su propia clase, y
+   * al mover el indicador a un contenedor nuevo esas utilidades se quedaron con el contenedor. El
+   * botón cayó al flujo normal —segunda línea, pegado a la izquierda— y al estirar el alto del
+   * bloque se llevó al indicador fuera de la franja. jsdom no tiene layout, así que esto no se
+   * puede medir en píxeles aquí: lo que se vigila es la RELACIÓN de la que depende el layout.
+   */
+  describe('anclaje de la barra', () => {
+    it('keeps Save draft inside the anchored row, next to the progress indicator', async () => {
+      await build();
+
+      const save = q('[data-testid="section-bottom-bar-save"]');
+      const anchored = fixture.nativeElement.querySelector('.absolute.bottom-\\[14px\\].right-\\[40px\\]');
+
+      expect(anchored).toBeTruthy();
+      expect(anchored.contains(save)).toBe(true);
+    });
+
+    it('never lets Save draft be a bare child of the strip', async () => {
+      await build();
+
+      const save = q('[data-testid="section-bottom-bar-save"]');
+      const strip = fixture.nativeElement.querySelector('[appChromeFold], [ng-reflect-app-chrome-fold]');
+
+      // Hijo directo de la franja = el bug: sin posicionamiento propio, se va al flujo.
+      if (strip) expect(save.parentElement).not.toBe(strip);
+    });
+
+    /*
+     * El segundo fallo de la misma barra, el mismo día. `appChromeFold` NO encoge la franja: la
+     * desliza con `transform` y recupera el hueco con un margen negativo. Un `transform` convierte
+     * a su elemento en el bloque contenedor de todo `position: absolute` de dentro — así que la
+     * fila anclada, mientras vivió dentro, se iba de la pantalla con la franja justo cuando el
+     * reportero baja a leer, que es cuando el contador y el guardado hacen falta.
+     * Medido con el viewport en 820px: `Save draft` pasaba de `top: 768` a `top: 835`.
+     */
+    it('keeps the anchored row OUTSIDE the folding strip, so it survives the fold', async () => {
+      await build();
+
+      const anchored = fixture.nativeElement.querySelector('.absolute.bottom-\\[14px\\].right-\\[40px\\]');
+      const folding = fixture.nativeElement.querySelector('[appChromeFold], [ng-reflect-app-chrome-fold], .chrome-fold');
+
+      expect(anchored).toBeTruthy();
+      expect(folding).toBeTruthy();
+      // Dentro del host que se transforma = el bug.
+      expect(folding.contains(anchored)).toBe(false);
     });
   });
 });

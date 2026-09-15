@@ -12,7 +12,7 @@
 }
 
 // P2-3655 — requiredness marker for an unanswered mandatory ladder.
-// Reuses the platform's ONLY required marker: the `*` in `--pr-field-required-fg` (#b42318) that
+// Reuses the platform's ONLY required marker: the `*` in `--pr-field-required-fg` (#dc2626) that
 // `pr-field-header.component.scss:1-7` (`.required::after`) and `styles/field-card.scss:66-76`
 // (`.fch_required`) already paint on every other required field. Nothing new is invented, and the
 // block is only in the DOM when the caller opted in with `[required]` and the value is still null.
@@ -25,9 +25,13 @@
   color: var(--pr-field-required-fg);
 }
 
-.prl-required-asterisk {
-  font-weight: 700;
-  line-height: 1;
+// El punto del marcador, idéntico al de `.fch_required` en styles/field-card.scss.
+.prl-required-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .prl-track {

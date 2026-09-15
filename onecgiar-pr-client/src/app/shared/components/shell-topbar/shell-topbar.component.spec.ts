@@ -10,6 +10,7 @@ import { DataControlService } from '../../services/data-control.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { environment } from '../../../../environments/environment';
+import { SupportChatService } from '../../services/support-chat.service';
 
 /**
  * The topbar owns the ONLY user/account menu in the shell (PROGRAM-SHELL-SPEC.md §2). The
@@ -348,14 +349,75 @@ describe('ShellTopbarComponent', () => {
       expect(guarded.length).toBe(2);
       const insideGuards = guarded.join('\n');
 
-      expect(insideGuards).toContain('aria-label="Report a bug or adjustment"');
-      expect(insideGuards).toContain('openReportFeedback()');
+      // Since P2-3683 the entry point is the "Give feedback" item of the Support menu, not a
+      // standalone bug button — the guard has to sit on THAT, or production gets it back.
+      expect(insideGuards).toContain('Give feedback');
+      expect(insideGuards).toContain('openFeedbackFromSupport()');
       expect(insideGuards).toContain('<app-report-feedback-dialog');
 
       // Control: the brace walk must NOT swallow the whole template. If it did, the three
       // assertions above would pass no matter where the button actually sits.
       expect(insideGuards).not.toContain('aria-label="Notifications"');
       expect(insideGuards).not.toContain('<app-global-search-palette');
+
+      // The chat is NOT gated — it is the supported route in production.
+      expect(insideGuards).not.toContain('openSupportChat()');
+    });
+  });
+
+  // ------------------------------------------------------------------ support menu (P2-3683)
+  describe('Support menu', () => {
+    it('openSupportChat closes the menu when the chat actually opened', async () => {
+      await build();
+      const chat = TestBed.inject(SupportChatService);
+      const open = jest.spyOn(chat, 'open').mockReturnValue(true);
+
+      component.supportMenuOpen.set(true);
+      component.openSupportChat();
+
+      expect(open).toHaveBeenCalled();
+      expect(component.supportMenuOpen()).toBe(false);
+    });
+
+    it('KEEPS the menu open when the widget is not on the page', async () => {
+      await build();
+      const chat = TestBed.inject(SupportChatService);
+      jest.spyOn(chat, 'open').mockReturnValue(false);
+
+      component.supportMenuOpen.set(true);
+      component.openSupportChat();
+
+      // Closing on a click that opened nothing reads as "it broke silently".
+      expect(component.supportMenuOpen()).toBe(true);
+    });
+
+    it('openFeedbackFromSupport closes the menu and opens the report dialog', async () => {
+      await build();
+      component.supportMenuOpen.set(true);
+
+      component.openFeedbackFromSupport();
+
+      expect(component.supportMenuOpen()).toBe(false);
+      expect(component.reportFeedbackOpen()).toBe(true);
+    });
+
+    it('escape closes the support menu too', async () => {
+      await build();
+      component.supportMenuOpen.set(true);
+
+      component.onEscape();
+
+      expect(component.supportMenuOpen()).toBe(false);
+    });
+
+    it('the standalone bug button is gone — Support is the only way in', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+
+      expect(html).not.toContain('aria-label="Report a bug or adjustment"');
+      expect(html).not.toContain('lucideBug');
+      // Control for the two assertions above: the entry point still exists, just moved.
+      expect(html).toContain('openFeedbackFromSupport()');
+      expect(html).toContain('aria-label="Support"');
     });
   });
 });

@@ -490,6 +490,34 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     return raw;
   }
 
+  /**
+   * Chip styling per funding source.
+   *
+   * There are exactly TWO sources, and no catalogue endpoint to read them from: the server
+   * derives the value from one binary column — `IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals')`
+   * (`result.repository.ts:750`). A third case exists in one report query, an empty string when a
+   * result carries no source at all, which is what `unknown` covers here.
+   *
+   * Held as whole class strings because an arbitrary-value utility cannot live inside a
+   * `[class.…]` binding — the brackets break Angular's template parser.
+   */
+  private static readonly FUNDING_CHIP_BASE =
+    'inline-flex items-center rounded-full border px-[9px] py-[2px] text-[11px] font-semibold leading-[1.45] tracking-[0.01em]';
+
+  readonly fundingChipW1W2 =
+    `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]`;
+  readonly fundingChipBilateral =
+    `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-color-orange-200)] bg-[var(--pr-color-orange-50)] text-[var(--pr-color-orange-700)]`;
+  readonly fundingChipUnknown =
+    `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-border)] bg-[var(--pr-surface-app)] text-[var(--pr-text-muted)]`;
+
+  fundingChipClass(result: CurrentResult): string {
+    const label = this.fundingLabel(result);
+    if (label === 'Bilateral') return this.fundingChipBilateral;
+    if (label === '—') return this.fundingChipUnknown;
+    return this.fundingChipW1W2;
+  }
+
   /** Recent = last 7 days (CURRENT purple code dot). */
   isRecentResult(result: CurrentResult): boolean {
     if (!result?.created_date) return false;

@@ -143,8 +143,15 @@ describe('ResultDetailComponent', () => {
     mockSidebarService = {
       isCompact: signal(false),
       state: signal<'expanded' | 'collapsed'>('expanded'),
-      collapseForCompactEntry: jest.fn()
+      collapseForCompactEntry: jest.fn(),
+      // Restoring on the way out is a real write (it persists the user's preference), unlike the
+      // transient collapse — so the two are separate spies on purpose.
+      setOpen: jest.fn()
     };
+    // The real service flips `state` when it collapses. Without mirroring that here, every entry
+    // still reads "expanded" and the guard that makes this happen ONCE per result is untestable.
+    mockSidebarService.collapseForCompactEntry.mockImplementation(() => mockSidebarService.state.set('collapsed'));
+    mockSidebarService.setOpen.mockImplementation((open: boolean) => mockSidebarService.state.set(open ? 'expanded' : 'collapsed'));
 
     // SBAR-T-5: the discoverability hint trigger, wired off the same id-change stream as
     // SBAR-T-2's auto-collapse.
@@ -507,7 +514,14 @@ describe('ResultDetailComponent', () => {
   // The subscription is created in the constructor (see `watchCompactEntry()`), so `component` is
   // already wired the moment `TestBed.createComponent` runs in the outer `beforeEach` — no
   // `fixture.detectChanges()` / `ngOnInit()` is required to exercise it.
-  describe('compact-viewport auto-collapse on result entry (SBAR-R-1..R-4)', () => {
+  /**
+   * ⚠️ WIDENED 14-Sep-2026: entering a result now collapses the app rail on EVERY viewport, not
+   * only the compact one SBAR-R-1..R-4 described. The form is the whole job on this screen and
+   * the rail is 260px of it. The half of those rules that still holds — collapse once per
+   * distinct result, never on a resize, never again after a manual re-expand — is unchanged and
+   * still asserted below; the "desktop is unaffected" half is deliberately gone.
+   */
+  describe('auto-collapse of the app rail on result entry (SBAR-R-1..R-4, widened)', () => {
     it('Scenario: Compact laptop entering a result — auto-collapse (collapses exactly once)', () => {
       mockSidebarService.isCompact.set(true);
       mockSidebarService.state.set('expanded');
@@ -517,15 +531,34 @@ describe('ResultDetailComponent', () => {
       expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
     });
 
-    it('Scenario: Desktop viewport unaffected — never collapses, even across multiple distinct entries', () => {
+    it('Scenario: Desktop viewport collapses too — once per distinct result', () => {
       mockSidebarService.isCompact.set(false);
       mockSidebarService.state.set('expanded');
 
       paramsSubject.next({ id: '9043' });
-      paramsSubject.next({ id: '5001' });
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
 
-      // Asserted after the full lifecycle above, not just "not yet called".
-      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
+      // A second, different result: the rail is already collapsed, so nothing to do again.
+      paramsSubject.next({ id: '5001' });
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+    });
+
+    it('Scenario: leaving the result puts the rail back, and only if it was open on the way in', () => {
+      mockSidebarService.isCompact.set(false);
+      mockSidebarService.state.set('expanded');
+      paramsSubject.next({ id: '9043' });
+
+      component.ngOnDestroy();
+      expect(mockSidebarService.setOpen).toHaveBeenCalledWith(true);
+    });
+
+    it('Scenario: a rail the user had already collapsed is left collapsed on the way out', () => {
+      mockSidebarService.isCompact.set(false);
+      mockSidebarService.state.set('collapsed');
+      paramsSubject.next({ id: '9043' });
+
+      component.ngOnDestroy();
+      expect(mockSidebarService.setOpen).not.toHaveBeenCalled();
     });
 
     it('Scenario: Manual re-expand is respected — re-emitting the same id (section switch) does not re-collapse', () => {
@@ -547,16 +580,16 @@ describe('ResultDetailComponent', () => {
       mockSidebarService.state.set('expanded');
 
       paramsSubject.next({ id: '9043' });
-      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
-
-      // Simulates a live resize to a compact width with no navigation — no new params emission.
-      mockSidebarService.isCompact.set(true);
-
-      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
-
-      // A subsequent fresh entry to a DIFFERENT result at that same narrow width still applies.
-      paramsSubject.next({ id: '5001' });
       expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+
+      // Simulates a live resize with no navigation — no new params emission, so nothing happens.
+      mockSidebarService.isCompact.set(true);
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(1);
+
+      // A fresh entry to a DIFFERENT result, with the rail re-opened in between, applies again.
+      mockSidebarService.state.set('expanded');
+      paramsSubject.next({ id: '5001' });
+      expect(mockSidebarService.collapseForCompactEntry).toHaveBeenCalledTimes(2);
     });
 
     it('Disqualifying input: the id-param stream emitting 9043 twice in a row is filtered by distinctUntilChanged', () => {
@@ -631,7 +664,8 @@ describe('ResultDetailComponent', () => {
       paramsSubject.next({ id: '9043' });
       jest.advanceTimersByTime(0);
 
-      expect(mockSidebarService.collapseForCompactEntry).not.toHaveBeenCalled();
+      // The rail now collapses on every viewport (see the widened block above); what this test
+      // owns is that the HINT is not gated on the viewport either.
       expect(mockReportingGuideService.startResultSidebarHint).toHaveBeenCalledTimes(1);
     });
 

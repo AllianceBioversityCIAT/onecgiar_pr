@@ -1,6 +1,6 @@
 # innovation-use-info
 
-**Verified:** 2026-09-10 · branch performance-refactor · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
+**Verified:** 2026-09-11 · branch performance-refactor · the innovation-link picker no longer wipes the links it cannot show (`linked_result` is a shared table — see the trap below); prior: 2026-09-10 · P2-3424 moves the "link to a QA'd Innovation Development result" question INTO this section, optional (PO decision, Ángel Jarrín, 10 Sep 2026).
 
 ## What it is
 The "Innovation Use" section of the result detail (`result_type_id` 2, `prHide: 2`). It is a **host**:
@@ -57,6 +57,19 @@ assessed?"* and its single searchable picker are asked HERE, and they are **opti
   saving the section would then wipe it without the user touching anything. The stored id is kept as
   an option; its title is unknown here (this section loads no wider catalogue), and the label says so
   rather than inventing one.
+- ⚠️ **`linked_results` is NOT this question's private storage — the table is shared.**
+  `getLinkedResultsByOrigin` (`results-innovations-use.repository.ts:245-259`) returns EVERY active
+  `linked_result` row of the result, whoever wrote it: the P22 "Links to results" section and
+  versioning replication included. The picker can only paint ONE of them, so writing `[value]` back
+  deleted the rest — the payload carries the array verbatim and
+  `LinkedResultRepository.updateLink` (`linked-results.repository.ts:313-330`) de-activates every
+  active row missing from it. Measured 11 Sep 2026 on the test DB: **28 active Innovation use results
+  carry more than one active link**; result 11164 (code 8696, 2026 phase) carries three — 8738,
+  8826, 8877, all three *Policy change* results, and prtest returns all three. The setter now replaces
+  only the id the getter displays and carries the rest through untouched.
+  🛑 Still open and NOT fixable from the client: answering **"No"** makes the server call
+  `createForInnovationUse(id, [], user)` (`innovation-use.service.ts:359-372`), which de-activates
+  **every** active link of the result, the ones this surface never showed included.
 - ⚠️ **Not an MDS is a CLIENT statement.** `validation_innovation_use_P25` still returns FALSE when
   `results_innovations_use.has_innovation_link IS NULL`, so the section's green check keeps expecting
   an answer. Changing that is a migration + the green check — Juan David's, not this ticket's.

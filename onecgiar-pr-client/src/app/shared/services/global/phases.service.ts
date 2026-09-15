@@ -4,7 +4,6 @@ import { ResultsApiService } from '../api/results-api.service';
 import { Subject } from 'rxjs';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
-import { IpsrListFilterService } from '../../../pages/ipsr/pages/innovation-package-list-content/pages/innovation-package-list/services/ipsr-list-filter.service';
 
 @Injectable({
   providedIn: 'root'
@@ -19,8 +18,7 @@ export class PhasesService {
 
   constructor(
     private readonly api: ResultsApiService,
-    private filterService: ResultsListFilterService,
-    private ipsrFilterService: IpsrListFilterService
+    private filterService: ResultsListFilterService
   ) {
     this.getNewPhases();
   }
@@ -40,16 +38,11 @@ export class PhasesService {
           };
         });
 
-        this.ipsrFilterService.filters.general[1].options = this.phases.ipsr.map(item => {
-          const label = `${item.phase_name}${item?.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : ''}`;
-
-          return {
-            attr: label,
-            selected: item.status,
-            name: label + (item.status ? ' (Open)' : ' (Closed)'),
-            id: item.id
-          };
-        });
+        // Note: PhasesService no longer writes into IpsrListFilterService directly (IPSR-T-1).
+        // IpsrListFilterService now derives its own `phaseOptions` from `phases.ipsr` (via
+        // `buildIpsrPhaseOptions()`), subscribing to `getPhasesObservable()` below to stay in
+        // sync — PhasesService stays a pure data source, matching its role for every other
+        // consumer.
         this.phasesSubject.next(this.phases.reporting);
       }
     });

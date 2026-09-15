@@ -10,6 +10,7 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { ResultsNotificationsService } from './pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { SmartNavigationService } from './shared/services/smart-navigation.service';
+import { ScrollChromeService } from './shared/services/scroll-chrome.service';
 // import { WebsocketService } from './sockets/websocket.service';
 
 @Component({
@@ -29,6 +30,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly inLocal = (environment as { inLocal?: boolean }).inLocal;
 
   readonly layoutSE = inject(LayoutService);
+  /** Folds the topbar away while a page reports downward scrolling. */
+  readonly scrollChromeSE = inject(ScrollChromeService);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly resultsNotificationsSE = inject(ResultsNotificationsService);

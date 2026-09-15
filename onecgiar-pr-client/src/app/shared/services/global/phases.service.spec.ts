@@ -4,7 +4,6 @@ import { PhasesService } from './phases.service';
 describe('PhasesService', () => {
   let mockApi: any;
   let mockResultsFilterService: any;
-  let mockIpsrFilterService: any;
   let service: PhasesService;
 
   const versioningResponse = [
@@ -45,16 +44,7 @@ describe('PhasesService', () => {
       }
     };
 
-    mockIpsrFilterService = {
-      filters: {
-        general: [
-          {},
-          { options: [] }
-        ]
-      }
-    };
-
-    service = new PhasesService(mockApi as any, mockResultsFilterService as any, mockIpsrFilterService as any);
+    service = new PhasesService(mockApi as any, mockResultsFilterService as any);
   });
 
   it('should load phases and map reporting and ipsr correctly', () => {
@@ -87,16 +77,6 @@ describe('PhasesService', () => {
     expect(options[1].attr).toBe('2024 Reporting - PORT');
     expect(options[1].name).toBe('2024 Reporting - PORT (Closed)');
     expect(options[1].selected).toBe(false);
-  });
-
-  it('should populate IPSR filters options with label, name and id', () => {
-    const options = mockIpsrFilterService.filters.general[1].options;
-    expect(options.length).toBe(1);
-    const opt = options[0];
-    expect(opt.attr).toBe('2025 IPSR - IPSR');
-    expect(opt.name).toBe('2025 IPSR - IPSR (Open)');
-    expect(opt.selected).toBe(true);
-    expect(opt.id).toBe(201);
   });
 
   it('should emit reporting phases via getPhasesObservable', done => {
@@ -153,10 +133,10 @@ describe('PhasesService', () => {
     expect(reportingOptions[0].attr).toBe('2026 Reporting');
     expect(reportingOptions[0].name).toBe('2026 Reporting (Open)');
 
-    // IPSR filter options should NOT have acronym suffix
-    const ipsrOptions = mockIpsrFilterService.filters.general[1].options;
-    expect(ipsrOptions[0].attr).toBe('2026 IPSR');
-    expect(ipsrOptions[0].name).toBe('2026 IPSR (Closed)');
+    // IPSR phases are still mapped onto service.phases.ipsr (no acronym suffix) even though
+    // PhasesService no longer writes them into a filter service directly.
+    expect(service.phases.ipsr[0].phase_name).toBe('2026 IPSR');
+    expect(service.phases.ipsr[0].selected).toBe(false);
   });
 
   it('should handle phases with obj_portfolio but empty acronym', () => {
@@ -185,9 +165,8 @@ describe('PhasesService', () => {
     expect(reportingOptions[0].attr).toBe('2027 Reporting');
     expect(reportingOptions[0].name).toBe('2027 Reporting (Open)');
 
-    const ipsrOptions = mockIpsrFilterService.filters.general[1].options;
-    expect(ipsrOptions[0].attr).toBe('2027 IPSR');
-    expect(ipsrOptions[0].name).toBe('2027 IPSR (Open)');
+    expect(service.phases.ipsr[0].phase_name).toBe('2027 IPSR');
+    expect(service.phases.ipsr[0].selected).toBe(true);
   });
 
   it('should handle phases with obj_portfolio but undefined acronym', () => {

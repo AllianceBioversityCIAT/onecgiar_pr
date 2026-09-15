@@ -1,4 +1,14 @@
-import { Component, Input } from '@angular/core';
+import { Component, ElementRef, Input, OnChanges, OnInit, SimpleChanges, effect, inject, signal, untracked } from '@angular/core';
+import { SaveButtonService } from '../save-button/save-button.service';
+import { FieldCompletionFlightService } from '../../shared/services/field-completion-flight.service';
+
+/**
+ * Visual state of a field, in the order it is resolved:
+ * `error` over the word limit · `ok` required and filled · `opt` optional and filled ·
+ * `todo` required and empty · `idle` optional and empty · `plain` the wrapper did not report
+ * whether the field holds a value, so nothing is claimed about it.
+ */
+export type FieldCardState = 'plain' | 'idle' | 'todo' | 'ok' | 'opt' | 'error';
 
 /**
  * Reusable field wrapper: a label (with a red asterisk when required), an optional info button,
@@ -14,7 +24,7 @@ import { Component, Input } from '@angular/core';
   templateUrl: './field-card.component.html',
   standalone: false
 })
-export class FieldCardComponent {
+export class FieldCardComponent implements OnInit, OnChanges {
   @Input() label: string;
   @Input() description: string;
   @Input() tooltip = '';
@@ -23,15 +33,47 @@ export class FieldCardComponent {
   @Input() showHeader = true;
   @Input() showDescription = true;
   @Input() descInlineStyles = '';
+  /**
+   * Paridad con `app-pr-field-header`, que es de donde vienen los campos migrados: 23 plantillas
+   * pasan `labelDescInlineStyles` y 38 pasan `useColon`. Sin estos dos inputs, migrar un wrapper
+   * perdería silenciosamente el estilo del label y los dos puntos del título en esos sitios.
+   */
+  @Input() labelDescInlineStyles = '';
+  @Input() useColon = false;
 
   /**
-   * @deprecated No longer read. The card used to derive a four-colour status from it
-   * (`optional` / `pending` / `done` / `error`) and paint the border and header tint with it;
-   * the redesign dropped that verdict from the field. Kept as an accepted input so the four
-   * wrappers that still bind it (`pr-input`, `pr-textarea`, `pr-radio-button`,
-   * `lead-contact-person-field`) do not need touching for a purely visual change.
+   * ── Guía fijable ────────────────────────────────────────────────────────
+   * La guía de un campo vive en un tooltip: se lee una vez y desaparece, justo cuando el reportero
+   * empieza a escribir y es cuando la necesita delante. Con el pin queda anclada DENTRO de la
+   * tarjeta, debajo del título y encima del control, hasta que él la quite.
+   *
+   * `pinGuidanceByDefault` resuelve el dilema de qué mostrar de entrada: un campo que nadie sabe
+   * llenar puede nacer con la guía abierta, sin obligar a los demás a cerrarla.
+   *
+   * La elección persiste en **localStorage**, no en la base: es una preferencia de lectura de una
+   * persona en su navegador, no un dato del resultado — no viaja en ningún payload ni se comparte
+   * con quien abra el mismo resultado después.
    */
-  @Input() hasValue = false;
+  /**
+   * El campo no se puede editar (lo trae el repositorio, lo calcula el sistema, o el rol es de solo
+   * lectura). Entonces NO lleva color de estado: el verde felicita por algo que el usuario no hizo
+   * y el naranja le reclama algo que no puede hacer. Queda en chrome neutro — que es lo que pidió
+   * Yeck el 14-sep-2026 al ver una pantalla con seis bandas verdes de campos intocables.
+   */
+  @Input() readOnly = false;
+  @Input() pinGuidanceByDefault = false;
+  /** Clave de persistencia. Por defecto se deriva del label, que es lo que identifica al campo. */
+  @Input() pinKey = '';
+
+  /**
+   * Whether the field currently holds a value. Read again by the redesign to tint the header.
+   *
+   * 🛑 `null` is NOT the same as `false`: it means the wrapper never reported one. Roughly half the
+   * call sites do not bind this input, and defaulting them to `false` would paint every one of them
+   * amber — "required and empty" — on a form the user may have filled long ago. Unreported stays
+   * `plain`: neutral chrome, no verdict.
+   */
+  @Input() hasValue: boolean | null = null;
   /**
    * `row` pone el label a la IZQUIERDA y el control a la DERECHA en una sola línea, con una regla
    * de 1px arriba — la forma en que el mockup presenta una lista de campos homogéneos y cortos
@@ -40,7 +82,162 @@ export class FieldCardComponent {
    *
    * `stack` (por defecto) es el resto de los formularios y no cambia.
    */
-  @Input() layout: 'stack' | 'row' = 'stack';
+  /**
+   * `inline` (14-sep-2026): título a la izquierda y control a la DERECHA, los dos dentro de la
+   * misma banda tintada. Para respuestas cortas —un sí/no, una escala— donde apilar el control
+   * bajo el título gasta el doble de alto y separa la pregunta de su respuesta.
+   *
+   * Se diferencia de `row` en que CONSERVA el color de estado: `row` es para listas de campos
+   * homogéneos, donde cinco bandas seguidas serían un muro; `inline` es para un campo suelto.
+   */
+  /**
+   * `boxed` (14-sep-2026): un marco alrededor de TODO el campo — cabecera, guía, control y lo que
+   * el control deja debajo. Para los campos que no terminan en su control: un multi-select es
+   * título + desplegable + la lista de lo elegido, tres bloques que sin marco se leen como tres
+   * cosas distintas de la página. El resto de campos siguen sin marco, que es lo que los hace
+   * ligeros.
+   */
+  @Input() layout: 'stack' | 'row' | 'inline' | 'boxed' = 'stack';
+
+  readonly saveSE = inject(SaveButtonService);
+  private readonly flightSE = inject(FieldCompletionFlightService);
+  private readonly hostRef = inject(ElementRef<HTMLElement>);
+
+  /** The user typed/picked something in this field since the last successful save. */
+  readonly edited = signal(false);
+  /** Momentary confirmation right after a save that actually reached the server. */
+  readonly justSaved = signal(false);
+  private justSavedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    // Only a SUCCESSFUL save clears the mark (see SaveButtonService.savedTick): watching
+    // `isSaving` instead would tell the user their work is safe when the request failed.
+    effect(() => {
+      this.saveSE.savedTick();
+      untracked(() => {
+        if (!this.edited()) return;
+        this.edited.set(false);
+        this.justSaved.set(true);
+        if (this.justSavedTimer) clearTimeout(this.justSavedTimer);
+        this.justSavedTimer = setTimeout(() => this.justSaved.set(false), FieldCardComponent.JUST_SAVED_MS);
+      });
+    });
+  }
+
+  private static readonly JUST_SAVED_MS = 4000;
+
+  get state(): FieldCardState {
+    if (this.hasError) return 'error';
+    if (this.readOnly) return 'plain';
+    if (this.hasValue === null || this.hasValue === undefined) return 'plain';
+    if (this.hasValue) return this.required ? 'ok' : 'opt';
+    return this.required ? 'todo' : 'idle';
+  }
+
+  /** What the right-hand pill says — the one thing neither the tint nor the tag tells you. */
+  get saveState(): 'saving' | 'unsaved' | 'saved' | 'none' {
+    if (this.edited() && this.saveSE.isSaving()) return 'saving';
+    if (this.edited()) return 'unsaved';
+    if (this.justSaved()) return 'saved';
+    return 'none';
+  }
+
+  /** `input`/`change` bubble out of the projected control, so one listener on the card is enough. */
+  markEdited(): void {
+    if (!this.edited()) this.edited.set(true);
+  }
+
+  /**
+   * El click también cuenta como edición — y hacía falta.
+   *
+   * 🛑 `input`/`change` solo los emiten los controles NATIVOS. La mitad de los campos de esta
+   * plataforma no lo son: el sí/no son dos `<div>` con `(click)`, el segmentado de puntuación son
+   * `<button>`, el desplegable propio es un `<a>` con divs. En todos ellos `edited` se quedaba en
+   * falso para siempre, y con él se quedaban fuera las dos cosas que dependen de esa marca: la
+   * píldora de "sin guardar" y la bolita que vuela al completar el campo. Reportado por Yeck el
+   * 14-sep-2026 sobre "Did the Program invest financial resources…".
+   *
+   * 🛑 Ignora la CABECERA y la GUÍA: pulsar el ⓘ o fijar la ayuda es leer, no editar, y marcaría
+   * el campo como "sin guardar" sin que el usuario haya cambiado nada.
+   */
+  markEditedFromPointer(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest) return;
+    if (target.closest('.field_card_header') || target.closest('.field_card_desc')) return;
+    this.markEdited();
+  }
+
+  readonly pinned = signal(false);
+  private static readonly PIN_PREFIX = 'pr-field-guidance-pin:';
+
+  ngOnInit(): void {
+    this.pinned.set(this.readPin());
+  }
+
+  /**
+   * Lanza la bolita al indicador de la sección cuando el campo ACABA de quedar completo.
+   *
+   * 🛑 Dos guardas, y las dos hacen falta:
+   * - `edited()` — que el usuario haya tocado ESTE campo. Sin esto, abrir un resultado ya lleno
+   *   dispararía una bolita por campo a la vez: una ráfaga que no celebra nada porque el usuario
+   *   no hizo nada.
+   * - la TRANSICIÓN, no el estado. `hasValue` se re-evalúa en cada ciclo de detección; premiar el
+   *   estado "completo" lanzaría una bolita por cada tecla pulsada después de la primera.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['hasValue'];
+    if (!change || change.firstChange) return;
+
+    const wasComplete = change.previousValue === true;
+    const isComplete = change.currentValue === true;
+    if (!wasComplete && isComplete && this.edited() && !this.hasError) {
+      // Sale del NOMBRE del campo, no de la cabecera entera: la cabecera es una franja de ancho
+      // completo y su centro cae en medio de la nada, lejos del texto que el usuario acaba de
+      // resolver. El punto tiene que salir de donde está mirando.
+      const host = this.hostRef.nativeElement;
+      this.flightSE.flyFrom(host?.querySelector?.('.fch_title') ?? host?.querySelector?.('.field_card_header'));
+    }
+  }
+
+  /** El texto que se puede fijar: la descripción inline si la hay, y si no, la del tooltip. */
+  get guidanceText(): string {
+    return (this.description || this.tooltip || '').trim();
+  }
+
+  get canPin(): boolean {
+    return this.showHeaderRow && !!this.guidanceText;
+  }
+
+  /** El bloque de guía se pinta si el campo ya lo traía, o si el usuario lo fijó. */
+  get showGuidanceBlock(): boolean {
+    return this.showDescriptionBlock || (this.pinned() && this.canPin);
+  }
+
+  togglePin(): void {
+    const next = !this.pinned();
+    this.pinned.set(next);
+    // 🛑 Envuelto: en una ventana privada o con el almacenamiento bloqueado, `setItem` LANZA.
+    // Perder la preferencia es aceptable; romper el formulario por guardarla, no.
+    try {
+      localStorage.setItem(this.pinStorageKey, next ? '1' : '0');
+    } catch {
+      /* sin persistencia, el pin dura lo que la pantalla */
+    }
+  }
+
+  private get pinStorageKey(): string {
+    const id = this.pinKey || (this.label || '').replace(/<[^>]*>/g, '').trim().toLowerCase().replace(/\s+/g, '-');
+    return FieldCardComponent.PIN_PREFIX + id;
+  }
+
+  private readPin(): boolean {
+    try {
+      const raw = localStorage.getItem(this.pinStorageKey);
+      return raw === null ? this.pinGuidanceByDefault : raw === '1';
+    } catch {
+      return this.pinGuidanceByDefault;
+    }
+  }
 
   /** A label is what makes a field addressable — blank/whitespace does not count as one. */
   get hasLabel(): boolean {

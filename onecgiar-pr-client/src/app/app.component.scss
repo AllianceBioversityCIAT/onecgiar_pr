@@ -42,6 +42,8 @@
   z-index: 30;
   flex: none;
   background: #ffffff;
+
+  // It folds away while the user reads downwards — see `appChromeFold` in the template.
 }
 
 // Test-environment banner. It intentionally stays in the main-column flow:

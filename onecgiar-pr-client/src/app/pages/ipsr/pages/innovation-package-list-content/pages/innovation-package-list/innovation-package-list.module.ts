@@ -22,6 +22,7 @@ import { ChangePhaseModalModule } from '../../../../../../shared/components/chan
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { FilterByTextModule } from '../../../../../../shared/pipes/filter-by-text.module';
 import { SectionHeaderModule } from '../../../../components/section-header/section-header.module';
+import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 
 @NgModule({
   declarations: [
@@ -46,7 +47,8 @@ import { SectionHeaderModule } from '../../../../components/section-header/secti
     PrTableBodyDirective,
     PrTableEmptyDirective,
     RouterModule,
-    ChangePhaseModalModule
+    ChangePhaseModalModule,
+    PrFilterMultiselectModule
   ]
 })
 export class InnovationPackageListModule {}

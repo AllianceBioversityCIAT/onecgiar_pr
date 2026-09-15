@@ -797,70 +797,67 @@ describe('IpsrContributorsComponent', () => {
   });
 
   describe('requestEvent', () => {
-    it('should show partners request on click of alert-event', async () => {
-      const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>
-        `,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+    /**
+     * P2-3673: `findClassTenSeconds` RESOLVES WITH `false` when the element never appears (it gives
+     * up after ten one-second polls, it does not reject). The old body ignored what it resolved with
+     * and re-queried the DOM itself, so on any section without these alerts it threw
+     * `Cannot read properties of null (reading 'addEventListener')` into a swallowed `console.error`
+     * — the very error QA pasted into the ticket.
+     */
+    const resolveWith = (byClass: Record<string, unknown>) =>
+      jest
+        .spyOn(mockApiService.dataControlSE, 'findClassTenSeconds')
+        .mockImplementation((className: string) => Promise.resolve(byClass[className] ?? false));
+
+    it('binds the click to the element it was handed, without querying the DOM again', async () => {
+      const alert = document.createElement('div');
+      const spy = resolveWith({ 'alert-event': alert });
+      const querySelector = jest.spyOn(document, 'querySelector');
 
       await component.requestEvent();
 
-      const alertDiv = dom.querySelector('.alert-event');
-
-      if (alertDiv) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
-      expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
+      alert.dispatchEvent(new MouseEvent('click'));
+      expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
+      expect(spy).toHaveBeenCalledTimes(2);
+      // The first search already found it; a second lookup could answer something else by now.
+      expect(querySelector).not.toHaveBeenCalledWith('.alert-event');
     });
 
-    it('should show partners request on click of alert-event and alert-event-2', async () => {
-      const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>
-        <div class="alert-event-2"></div>
-        `,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+    it('binds both alerts', async () => {
+      const alert = document.createElement('div');
+      const alert2 = document.createElement('div');
+      resolveWith({ 'alert-event': alert, 'alert-event-2': alert2 });
 
       await component.requestEvent();
 
-      const alertDiv = dom.querySelector('.alert-event');
-      const alertDiv2 = dom.querySelector('.alert-event-2');
-
-      if (alertDiv) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv.dispatchEvent(clickEvent);
+      for (const el of [alert, alert2]) {
+        component.api.dataControlSE.showPartnersRequest = false;
+        el.dispatchEvent(new MouseEvent('click'));
         expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
       }
-
-      if (alertDiv2) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv2.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
-
-      expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle error when querySelector fails', async () => {
-      jest.spyOn(document, 'querySelector').mockImplementation(() => {
-        throw new Error('Element not found');
-      });
+    it('stays silent when the alerts never render — the P2-3673 error', async () => {
+      resolveWith({}); // both give up, i.e. resolve `false`
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      expect(() => component.requestEvent()).not.toThrow();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(consoleSpy).not.toHaveBeenCalled();
+    });
+
+    it('survives a give-up on ONE of the two without losing the other', async () => {
+      const alert2 = document.createElement('div');
+      resolveWith({ 'alert-event-2': alert2 });
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       await component.requestEvent();
 
-      expect(consoleSpy).toHaveBeenCalled();
+      alert2.dispatchEvent(new MouseEvent('click'));
+      expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
+      expect(consoleSpy).not.toHaveBeenCalled();
     });
   });
 

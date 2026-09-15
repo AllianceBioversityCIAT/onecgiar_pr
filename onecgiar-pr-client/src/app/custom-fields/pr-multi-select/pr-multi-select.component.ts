@@ -198,6 +198,15 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     return !this.readOnly() && !this.rolesSE.readOnly && !this.isStatic();
   }
 
+  /**
+   * "Lleno" para la cabecera de `app-field-card`: al menos una opción elegida.
+   * Mismo `value?.length` que ya lee `selectedLabelDescription()` — una sola definición de lo que
+   * este control considera vacío, para que el contador y el color no puedan discrepar.
+   */
+  get hasSelection(): boolean {
+    return (this.value?.length ?? 0) > 0;
+  }
+
   selectedLabelDescription() {
     // P2-3523: `value` is undefined until the parent writes into it, and `undefined` used to reach
     // the interpolation verbatim — every Policy Change section opened showing "Organization (undefined)".

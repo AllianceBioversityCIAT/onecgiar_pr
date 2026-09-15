@@ -201,8 +201,16 @@ export class RdGeneralInformationComponent implements OnInit, CanComponentDeacti
   }
 
   /** P2-3201: same rule for guidance authored in this component instead of FieldsManager. */
+  /**
+   * La guía de un tag de Impact Area, para el ⓘ de su fila.
+   *
+   * Devolvía '' fuera de 2026 porque en esas fases la guía se pintaba aparte, como un
+   * `app-alert-status`. Ese bloque se retiró (14-sep-2026): colapsado no mostraba más que un icono
+   * suelto encima de la fila. Ahora la guía es la misma en todas las fases y cuelga del campo que
+   * explica, que es donde el reportero la busca.
+   */
   sectionGuidanceTooltip(guidance: string): string {
-    return this.guidanceAsTooltip() ? guidance : '';
+    return guidance;
   }
 
   getImpactAreaFieldRequired(fieldRef: string): boolean {
@@ -434,7 +442,7 @@ export class RdGeneralInformationComponent implements OnInit, CanComponentDeacti
 
     return this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, isP25).pipe(
       tap(() => {
-        this.currentResultSE.GET_resultById();
+        this.currentResultSE.GET_resultById(true);
         // `UCA-T-6` (rework) — snapshot HERE, synchronously, the instant the PATCH resolves. The
         // local `generalInfoBody` at this exact instant is precisely what the server just
         // persisted, so this is correct even before the reload below completes. This closes a

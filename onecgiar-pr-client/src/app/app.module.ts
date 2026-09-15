@@ -32,6 +32,7 @@ import { PrmsRouteReuseStrategy } from './shared/components/ai-assistant/prms-ro
 import { HlmSidebarImports } from '@spartan/sidebar';
 import { ReportingNavSidebarComponent } from './shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component';
 import { ShellTopbarComponent } from './shared/components/shell-topbar/shell-topbar.component';
+import { ChromeFoldDirective } from './shared/directives/chrome-fold.directive';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -41,6 +42,7 @@ function initializeClarityService(clarityService: ClarityService) {
   declarations: [AppComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, GoogleAnalyticsComponent],
   bootstrap: [AppComponent],
   imports: [
+    ChromeFoldDirective,
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,

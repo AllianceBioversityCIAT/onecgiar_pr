@@ -38,24 +38,10 @@
   }
 }
 
-/* P2-3201: ⓘ trigger for the Impact Area scoring guidance that used to render as an inline box.
-   `.sgi-dac-info` (custom-fields.scss, global) already styles the button itself. */
-.impact_scores_heading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+/* El encabezado del grupo (con su ⓘ y su contador) es ahora `app-field-group-header`
+   (custom-fields), que trae sus propios estilos. Las reglas que vivían aquí — `.impact_scores_heading`
+   y `.impact_scores_status` — se fueron con él. */
 
-// Contador que cierra la lista de Impact Area scores. `--pr-text-secondary` de forma constante:
-// el mockup liga el color a `pg.scoreStatusColor`, cuyo valor cae en la cola inalcanzable del
-// `.dc.html` — así que no se inventa un estado de color que no se puede verificar.
-.impact_scores_status {
-  display: block;
-  margin-top: 12px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--pr-text-secondary);
-}
 
 // `.field_card.fc-row` (styles/field-card.scss, global) draws a border-top on every Impact Area
 // score row, including the first one — that reads as a stray divider between the section title

@@ -5,7 +5,14 @@ import { Component, ElementRef, HostListener, inject, signal, viewChild } from '
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBell, lucideBug, lucideSearch } from '@ng-icons/lucide';
+import {
+  lucideBell,
+  lucideChevronDown,
+  lucideLifeBuoy,
+  lucideMegaphone,
+  lucideMessageCircle,
+  lucideSearch
+} from '@ng-icons/lucide';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { environment } from '../../../../environments/environment';
 import { ApiService } from '../../services/api/api.service';
@@ -14,6 +21,7 @@ import { PopUpNotificationItemComponent } from '../header-panel/components/pop-u
 import { GlobalSearchPaletteComponent } from '../global-search-palette/global-search-palette.component';
 import { ReportFeedbackDialogComponent } from '../report-feedback-dialog/report-feedback-dialog.component';
 import { ConsoleCaptureService } from '../../services/console-capture.service';
+import { SupportChatService } from '../../services/support-chat.service';
 
 /**
  * CURRENT shell topbar (PRMS-Shell.dc.html header):
@@ -36,7 +44,16 @@ import { ConsoleCaptureService } from '../../services/console-capture.service';
     GlobalSearchPaletteComponent,
     ReportFeedbackDialogComponent
   ],
-  providers: [provideIcons({ lucideSearch, lucideBell, lucideBug })],
+  providers: [
+    provideIcons({
+      lucideSearch,
+      lucideBell,
+      lucideLifeBuoy,
+      lucideMessageCircle,
+      lucideMegaphone,
+      lucideChevronDown
+    })
+  ],
   templateUrl: './shell-topbar.component.html',
   styleUrls: ['./shell-topbar.component.scss']
 })
@@ -59,6 +76,9 @@ export class ShellTopbarComponent {
   readonly isProduction = environment.production;
   userMenuOpen = signal(false);
   reportFeedbackOpen = signal(false);
+  supportMenuOpen = signal(false);
+
+  private readonly supportChatSE = inject(SupportChatService);
 
   // Injected here, not used directly: the topbar mounts with the app, and
   // instantiating the service is what installs the console hooks, so errors
@@ -90,6 +110,30 @@ export class ShellTopbarComponent {
   readonly notificationsPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
+  /** Support hangs from the LEFT edge of its trigger, per the reference (P2-3683). */
+  readonly supportMenuPositions: ConnectedPosition[] = [
+    { originX: 'start', overlayX: 'start', originY: 'bottom', overlayY: 'top', offsetY: 8 }
+  ];
+
+  /**
+   * "Start a support chat" (P2-3683). Tawk's floating bubble is hidden now, so this is the only
+   * way into the conversation.
+   *
+   * The widget is genuinely absent for anonymous users and in local (`app.component.html` skips
+   * `<app-tawk>` on `!inLocal`), and the third-party script can fail to load — so when it is not
+   * there the menu stays OPEN instead of closing on a click that did nothing. A menu that shuts
+   * with no chat on screen reads as "it broke silently"; leaving it open lets the user try again
+   * or pick the other entry.
+   */
+  openSupportChat(): void {
+    if (this.supportChatSE.open()) this.supportMenuOpen.set(false);
+  }
+
+  /** "Give feedback" (P2-3683) — same report dialog, now reached through the Support menu. */
+  openFeedbackFromSupport(): void {
+    this.supportMenuOpen.set(false);
+    this.openReportFeedback();
+  }
 
   get unreadNotifications() {
     return this.resultsNotificationsSE.updatesPopUpData ?? [];
@@ -210,5 +254,6 @@ export class ShellTopbarComponent {
   onEscape(): void {
     this.userMenuOpen.set(false);
     this.notificationsOpen.set(false);
+    this.supportMenuOpen.set(false);
   }
 }

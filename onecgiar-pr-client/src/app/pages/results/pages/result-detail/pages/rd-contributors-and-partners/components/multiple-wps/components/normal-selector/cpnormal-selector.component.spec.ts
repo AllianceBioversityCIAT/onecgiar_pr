@@ -324,7 +324,7 @@ describe('CPNormalSelectorComponent — "Other(s) External Partners" label (EPT-
   let rdPartnersMock: any;
 
   const otherPartnersSelectEl = () => fixture.nativeElement.querySelector('[data-testid="toc-other-partners"]');
-  const otherPartnersLabelText = () => otherPartnersSelectEl()?.querySelector('.pr_label')?.textContent?.trim();
+  const otherPartnersLabelText = () => otherPartnersSelectEl()?.querySelector('.fch_title, .pr_label')?.textContent?.trim();
 
   const partner = (id: number, name: string) => ({
     institutions_id: id,

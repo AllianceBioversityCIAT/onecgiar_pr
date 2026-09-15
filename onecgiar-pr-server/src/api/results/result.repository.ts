@@ -109,6 +109,18 @@ export class ResultRepository
    * copy stops reading as W3/bilateral in the reporting tool and in the `/list` sync, while
    * `external_reference` is the id the reporting platform correlates by.
    *
+   * `lead_contact_person_id` is part of the copy for the same reason, and it was missing until
+   * 2026-09-14. Only the free-text `lead_contact_person` travelled, so every rolled-over result
+   * landed in the new phase with the directory link dropped — the name on screen, the FK empty.
+   * From the 2026 phase that is fatal: the live `validation_general_information_P25` requires
+   * `IF(v.phase_year >= 2026, r.lead_contact_person_id IS NOT NULL, TRUE)`, so the copy can never
+   * turn General information green and Submit stays disabled, over a field the reporter sees
+   * filled in and has no reason to touch. Measured on prtest that day: of the rolled-over 2026
+   * results carrying a name, 5 of 5 without the id answered `general-information: false` and
+   * `submit: false` (P2-3663; result 8555 carried the id in its 2025 row, `11023`, and lost it in
+   * `11617`). The id only ever came back if someone re-picked the person from the directory,
+   * because that is the one path that writes it (`results.service.ts`, `lead_contact_person_data`).
+   *
    * `status_id` is deliberately NOT one of them: the copy always starts at 1 (Editing) and
    * any flow that needs another status sets it afterwards on the new row. This query is
    * shared with the W1/W2 phase change, so changing it here would move everyone.
@@ -147,6 +159,7 @@ export class ResultRepository
         r2.has_countries,
         r2.geographic_scope_id,
         r2.lead_contact_person,
+        r2.lead_contact_person_id,
         r2.result_code,
         r2.source,
         r2.creation_method,
@@ -183,6 +196,7 @@ export class ResultRepository
         ,has_countries
         ,geographic_scope_id
         ,lead_contact_person
+        ,lead_contact_person_id
         ,result_code,
         nutrition_tag_level_id,
         environmental_biodiversity_tag_level_id,
@@ -222,6 +236,7 @@ export class ResultRepository
         r2.has_countries,
         r2.geographic_scope_id,
         r2.lead_contact_person,
+        r2.lead_contact_person_id,
         r2.result_code,
         r2.nutrition_tag_level_id,
         r2.environmental_biodiversity_tag_level_id,
@@ -850,7 +865,12 @@ WHERE
         paginatedClause = ` LIMIT ${limit}${offsetClause}`;
       }
 
-      const queryData = `${baseQuery} ${where.join(' ')}${paginatedClause};`;
+      // Deterministic ordering so a LIMIT smaller than the all-phase historical row
+      // count can never silently drop open-phase rows (v.status is a boolean column —
+      // true/1 = open, false/0 = closed — see version.entity.ts / $_closeAllPhases).
+      // r.id DESC is a stable tiebreaker only, not a functional requirement.
+      const orderByClause = ' ORDER BY v.status DESC, r.id DESC';
+      const queryData = `${baseQuery} ${where.join(' ')}${orderByClause}${paginatedClause};`;
       const results = await this.query(queryData, params);
 
       if (limit !== undefined) {
