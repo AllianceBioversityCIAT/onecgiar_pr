@@ -61,6 +61,18 @@
 
 ---
 
-## 3. Summary (in progress)
+### TASK-2 — Manual verification: confirm the fix in prod on SP08
 
-TASK-1 (the entire code fix) is complete and PASSed review. TASK-2 (manual prod verification on SP08) is Pending — it depends on TASK-1 being **deployed**, which has not yet happened (no commit/deploy performed in this session per project convention — commits require explicit user go-ahead). Spec not yet fully complete.
+**Final status:** PASS
+**Date:** 2026-09-14
+
+- **Verification performed:** user confirmed manually in prod, no `?phase=` param, that the Results tab for SP08 settles on `Phase: Reporting 2025 - P25` showing the programme's real results (no "0 results" state, no manual filter clear required) — matching the disqualifier-free pass criterion in tasks.md.
+- **Finding recorded:** PASS, as required by TASK-2's Done criteria before archiving.
+
+**Requirements covered:** Manual defect class (requirements.md §8 — no automated check reaches real prod data).
+
+---
+
+## 3. Summary
+
+Both tasks are complete. TASK-1 (client fix + 3 regression tests, PASSed Reviewer on attempt 2 after a folder-doc remediation) and TASK-2 (manual prod re-verification on SP08) both PASS. Commit `0dccca5e0` on `qa-development-2026-ss` (pushed to `origin/qa-development-2026-ss`) carries the fix, tests, and the spec documents. Spec fully complete — no outstanding work.

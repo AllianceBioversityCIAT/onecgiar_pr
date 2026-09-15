@@ -60,7 +60,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Pending |
+| Status | Done |
 | Size | XS |
 | Dependencies | TASK-1 (deployed) |
 | Requirements | Manual defect class (requirements.md §8 — no automated check reaches real prod data) |
