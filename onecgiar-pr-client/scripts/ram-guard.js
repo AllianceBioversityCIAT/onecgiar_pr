@@ -25,50 +25,74 @@ const AMBER = '\x1b[33m';
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
 
-/** Current memory + swap state, in GB and ratios. */
+/**
+ * Current memory state.
+ *
+ * 🛑 The authority is the kernel's own pressure level, not a number derived from `vm_stat`, and
+ * not swap. Two readings that looked obvious are both wrong:
+ *
+ *   - **Swap used is cumulative.** `vm.swapusage` reports what has been paged out since boot; it
+ *     does not fall back when the pressure ends. Gating on it pins the guard at red forever after
+ *     one bad afternoon — measured 15-sep-2026: swap 95% while the kernel reported normal.
+ *   - **free + inactive + speculative understates badly**, because it ignores the compressor.
+ *     4.3 GB sat compressed in that same reading — memory that exists, just squeezed. That
+ *     formula said 23% available while macOS itself said 46%.
+ *
+ * `kern.memorystatus_vm_pressure_level` is the signal the OS acts on: 1 normal, 2 warning,
+ * 4 critical. Swap and the raw numbers are kept for the report, never for the verdict.
+ */
 function read() {
-  const vmStat = execSync('vm_stat', { encoding: 'utf8' });
-  const pageSize = Number(/page size of (\d+) bytes/.exec(vmStat)?.[1] || 4096);
-  const pages = name => Number(new RegExp(`${name}:\\s+(\\d+)`).exec(vmStat)?.[1] || 0);
+  const sysctl = key => execSync(`sysctl -n ${key}`, { encoding: 'utf8' }).trim();
 
-  // "Available" the way macOS itself counts it: free plus the pages it can reclaim on demand.
-  const availableBytes =
-    (pages('Pages free') + pages('Pages inactive') + pages('Pages speculative')) * pageSize;
-  const totalBytes = Number(execSync('sysctl -n hw.memsize', { encoding: 'utf8' }).trim());
+  const pressure = Number(sysctl('kern.memorystatus_vm_pressure_level')) || 1;
+  const totalBytes = Number(sysctl('hw.memsize'));
 
-  const swapLine = execSync('sysctl -n vm.swapusage', { encoding: 'utf8' });
+  // What macOS reports in Activity Monitor, and the closest thing to "room left".
+  let freePercent = null;
+  try {
+    const out = execSync('memory_pressure -Q', { encoding: 'utf8' });
+    freePercent = Number(/free percentage:\s*(\d+)/.exec(out)?.[1]);
+  } catch {
+    freePercent = null;
+  }
+
+  const swapLine = sysctl('vm.swapusage');
   const swapNum = label => Number(new RegExp(`${label} = ([\\d.]+)M`).exec(swapLine)?.[1] || 0) / 1024;
-  const swapTotal = swapNum('total');
-  const swapUsed = swapNum('used');
 
   return {
-    availableGB: availableBytes / GB,
+    pressure,
+    freePercent,
     totalGB: totalBytes / GB,
-    availableRatio: availableBytes / totalBytes,
-    swapUsedGB: swapUsed,
-    swapTotalGB: swapTotal,
-    swapRatio: swapTotal > 0 ? swapUsed / swapTotal : 0
+    freeGB: freePercent === null ? null : (totalBytes * freePercent) / 100 / GB,
+    swapUsedGB: swapNum('used'),
+    swapTotalGB: swapNum('total')
   };
 }
 
 /**
- * Traffic light. Thresholds match the house rule: under 15% available, or swap past 80%, the
- * machine is already hurting and nothing heavy should be started on top of it.
+ * Traffic light, driven by the kernel. `freePercent` only ever *adds* caution — it never turns a
+ * critical reading green.
  */
 function level(state = INACTIVE ? null : read()) {
   // No measurement (build agent, or a reading that threw) means no reason to hold anything back.
   if (!state) return 'green';
-  if (state.availableRatio < 0.1 || state.swapRatio > 0.85) return 'red';
-  if (state.availableRatio < 0.2 || state.swapRatio > 0.6) return 'amber';
+  if (state.pressure >= 4) return 'red';
+  if (state.pressure >= 2) return 'amber';
+  if (state.freePercent !== null && state.freePercent < 10) return 'red';
+  if (state.freePercent !== null && state.freePercent < 20) return 'amber';
   return 'green';
 }
 
+const PRESSURE_WORDS = { 1: 'normal', 2: 'warning', 4: 'critical' };
+
 function format(state = INACTIVE ? null : read()) {
   if (!state) return 'memory not measured on this platform';
+  const free =
+    state.freePercent === null ? 'free n/a' : `${state.freePercent}% free (~${state.freeGB.toFixed(1)} GB)`;
+  // Swap is shown because it explains a slow machine; it is never why the light is red.
   return (
-    `RAM available ${state.availableGB.toFixed(1)}/${state.totalGB.toFixed(0)} GB ` +
-    `(${(state.availableRatio * 100).toFixed(0)}%) - swap ${state.swapUsedGB.toFixed(1)}/` +
-    `${state.swapTotalGB.toFixed(1)} GB (${(state.swapRatio * 100).toFixed(0)}%)`
+    `kernel pressure: ${PRESSURE_WORDS[state.pressure] || state.pressure} - ${free} of ` +
+    `${state.totalGB.toFixed(0)} GB - swap ${state.swapUsedGB.toFixed(1)} GB paged since boot (cumulative)`
   );
 }
 
@@ -76,12 +100,12 @@ function format(state = INACTIVE ? null : read()) {
  * The processes most likely to be the reason, so the message is actionable and not just a number.
  *
  * Deliberately counted, not ranked by size: on a machine that is already swapping, RSS collapses
- * as the kernel pages those very processes out — four dev-servers holding 600 MB each report
+ * as the kernel pages those very processes out — a dev-server holding 600 MB while it compiles reports
  * 40 MB by the time the guard fires. Sorting by RSS would hide the offenders exactly when they
  * matter, so what is reported is how many of each kind are open.
  */
 const KINDS = [
-  { label: 'Angular dev-server ("ng serve")', pattern: /(^|\/|\s)ng serve\b/, note: '~600 MB each when warm' },
+  { label: 'Angular dev-server ("ng serve")', pattern: /(^|\/|\s)ng serve\b/, note: 'tens of MB asleep, ~600 MB while compiling' },
   { label: 'Cypress', pattern: /Cypress\.app|cypress\/resources|cypress run\b/ },
   { label: 'Playwright / headless Chromium', pattern: /ms-playwright|chrome-headless-shell|playwright.*chromium/i },
   { label: 'esbuild / webpack worker', pattern: /esbuild|webpack/i }
@@ -133,7 +157,7 @@ function gate({ what = 'this run', allowAmber = true } = {}) {
     console.error(
       `\n${RED}Refusing to start ${what} - the machine is already out of memory.${RESET}\n` +
         `${format(state)}${detail}\n\n` +
-        `Close what you are not using (an idle "ng serve" costs ~600 MB each) and try again.\n` +
+        `Close what you are not using, then try again - "npm run ram" lists it.\n` +
         `Override at your own risk: RAM_GUARD=off\n`
     );
     if (process.env.RAM_GUARD !== 'off') process.exit(1);
@@ -198,7 +222,7 @@ if (require.main === module) {
   if (light === 'red') {
     console.log(
       '\nToo little memory left to start anything heavy. Close what you are not using' +
-        '\n(an idle "ng serve" costs ~600 MB each), or override with RAM_GUARD=off.'
+        '\nor override with RAM_GUARD=off.'
     );
   }
   process.exit(light === 'red' && process.env.RAM_GUARD !== 'off' ? 1 : 0);

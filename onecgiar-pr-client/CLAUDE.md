@@ -175,6 +175,34 @@ with the worker count sized to *free memory* instead of core count — 1 when re
 `CI` set) and fails open if the measurement itself throws. A guard that can turn a build agent red
 is worse than the freeze it prevents — see the root guide's rule on never breaking the pipeline.
 
+> 🥇 **What the guard measures, and the two readings that look right and are wrong** (15-sep-2026).
+> The verdict comes from `kern.memorystatus_vm_pressure_level` — the signal macOS itself acts on
+> (1 normal / 2 warning / 4 critical). Swap and raw page counts are printed, never gated on:
+> - **Swap used is cumulative since boot** and does not fall when the pressure ends. Gating on it
+>   pins the guard at red forever after one bad afternoon. Measured that day: swap **95%** while
+>   the kernel reported **normal**.
+> - **`free + inactive + speculative` understates badly** because it ignores the compressor —
+>   4.3 GB sat compressed in the same reading. That formula said **23% available** where macOS
+>   said **46%**.
+>
+> A light that cannot turn green is not a measurement, it is a constant — and this one had already
+> made another session shut down a dev-server that was not in the way.
+
+### 🛑 "Cannot find module 'cypress-real-events/support'" — the suite dies before the first assert
+
+`cypress/support/component.ts` imports `cypress-real-events`, so if that package is missing from
+`node_modules` **every** component-test run fails with one synthetic failure per spec and zero
+tests executed — it looks like the specs are broken when nothing has run at all. It is declared in
+`package.json`; a checkout can simply be missing it:
+
+```bash
+npm install cypress-real-events@1.15.0 --no-save --no-package-lock   # restores it, touches nothing
+```
+
+🛑 **Never `npm ci` to fix this.** Other sessions' worktrees symlink this very `node_modules` to
+avoid duplicating 1.5 GB, so a reinstall here pulls the floor out from under several working trees
+at once — and from anyone mid-capture against a running `ng serve`.
+
 ### Coverage thresholds (enforced in `package.json`)
 
 - branches **50%**, functions **60%**, lines **60%**, statements **60%**.

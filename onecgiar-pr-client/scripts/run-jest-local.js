@@ -27,8 +27,9 @@ function workersFor() {
   if (!state) return null; // not measured (CI, or a reading that threw) — let Jest decide.
   if (light === 'red') return '1';
   if (light === 'amber') return '2';
-  // Even on a green machine, one worker per ~1.5 GB available beats one per core on 16 GB.
-  return String(Math.max(2, Math.min(6, Math.floor(state.availableGB / 1.5))));
+  // Even on a green machine, one worker per ~1.5 GB free beats one per core on 16 GB.
+  if (state.freeGB === null) return null;
+  return String(Math.max(2, Math.min(6, Math.floor(state.freeGB / 1.5))));
 }
 
 const workers = workersFor();
