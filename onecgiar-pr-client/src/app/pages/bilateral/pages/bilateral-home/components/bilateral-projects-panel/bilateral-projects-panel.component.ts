@@ -232,6 +232,15 @@ export class BilateralProjectsPanelComponent {
     }
   }
 
+  /** `COV-R-15`/`COV-DD-9` — whether `project` is the one `?project=` highlighted. The live API
+   *  returns `id` as a string (e.g. `"1368"`) even though `BilateralProject.id` is typed `number`,
+   *  so this always normalizes both sides through `Number()` rather than relying on `===` against
+   *  `highlightedProjectId()` directly (which is a number and would never match a string id). */
+  isHighlighted(project: BilateralProject): boolean {
+    const highlighted = this.highlightedProjectId();
+    return highlighted !== null && Number(project.id) === highlighted;
+  }
+
   /** `COV-R-15` — scroll + transient ring for the card matching `projectId`; the catalog itself is
    *  never filtered. No-op when the id does not match a loaded project. */
   private highlightProject(projectId: number): void {

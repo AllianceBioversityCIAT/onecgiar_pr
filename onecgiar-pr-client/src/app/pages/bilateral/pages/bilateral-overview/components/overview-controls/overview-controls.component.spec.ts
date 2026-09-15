@@ -11,8 +11,13 @@ import { OverviewControlsComponent } from './overview-controls.component';
 import { Phases } from '../../../../../../shared/interfaces/phasesList.interface';
 import { BilateralQueryParams } from '../../../../bilateral-query-params';
 
+/**
+ * `COV-R-2` C, HITL H-2 — `GET /api/versioning` delivers `Phases.id` as a **string** (`'34'`, `'36'`
+ * in the live AfricaRice payload) although `Phases` types it `number`, while `selectedPhaseId` is
+ * numeric. Every fixture below keeps the API's real shape so the component has to normalize.
+ */
 function phase(overrides: Partial<Phases>): Phases {
-  return {
+  const merged = {
     is_active: true,
     created_date: '2026-01-01',
     last_updated_date: '2026-01-01',
@@ -34,14 +39,17 @@ function phase(overrides: Partial<Phases>): Phases {
     obj_portfolio: { id: 1, acronym: 'P25' },
     ...overrides,
   };
+  return { ...merged, id: String(merged.id) as unknown as number };
 }
 
+const OPEN_PHASE_ID = 36;
+const CLOSED_PHASE_ID = 35;
 const OPEN_PHASE = phase({});
-const CLOSED_PHASE = phase({ id: 35, phase_name: 'Reporting 2025', phase_year: 2025, status: false });
+const CLOSED_PHASE = phase({ id: CLOSED_PHASE_ID, phase_name: 'Reporting 2025', phase_year: 2025, status: false });
 
 function params(overrides: Partial<BilateralQueryParams> = {}): BilateralQueryParams {
   return {
-    phase: OPEN_PHASE.id,
+    phase: OPEN_PHASE_ID,
     status: [],
     project: [],
     program: [],
@@ -96,7 +104,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
     fixture = TestBed.createComponent(OverviewControlsComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('phases', [OPEN_PHASE, CLOSED_PHASE]);
-    fixture.componentRef.setInput('selectedPhaseId', OPEN_PHASE.id);
+    fixture.componentRef.setInput('selectedPhaseId', OPEN_PHASE_ID);
     fixture.componentRef.setInput('params', params());
     fixture.componentRef.setInput('programOptions', [
       { value: 'SP01', label: 'Better Diets' },
@@ -123,7 +131,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
     it('renders the Open badge next to the trigger only while the selected phase is open', () => {
       expect(el('overview-phase-open-badge')).toBeTruthy();
 
-      fixture.componentRef.setInput('selectedPhaseId', CLOSED_PHASE.id);
+      fixture.componentRef.setInput('selectedPhaseId', CLOSED_PHASE_ID);
       fixture.detectChanges();
       expect(el('overview-phase-open-badge')).toBeFalsy();
     });
@@ -132,11 +140,33 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       const emitted: number[] = [];
       component.phaseChange.subscribe(value => emitted.push(value));
 
-      component.onPhasePicked(OPEN_PHASE.id);
-      component.onPhasePicked(CLOSED_PHASE.id);
+      component.onPhasePicked(OPEN_PHASE_ID);
+      component.onPhasePicked(CLOSED_PHASE_ID);
       component.onPhasePicked(null);
 
-      expect(emitted).toEqual([CLOSED_PHASE.id]);
+      expect(emitted).toEqual([CLOSED_PHASE_ID]);
+    });
+
+    /** HITL H-2 — the selection has to resolve against the string ids the API actually sends. */
+    it('resolves the selection from the API string ids and hands numeric option values to the select', async () => {
+      // `ngModel` writes the value into the select on a microtask, so the trigger's label is only
+      // rendered after the fixture settles.
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const trigger = (el('overview-phase-select').nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
+      expect(trigger).toContain('Reporting 2026');
+      expect(component.phaseSelectOptions().map(option => option.id)).toEqual([OPEN_PHASE_ID, CLOSED_PHASE_ID]);
+    });
+
+    it('emits a NUMBER even when the raw string id comes back from the select', () => {
+      const emitted: number[] = [];
+      component.phaseChange.subscribe(value => emitted.push(value));
+
+      component.onPhasePicked('35');
+
+      expect(emitted).toEqual([CLOSED_PHASE_ID]);
+      expect(typeof emitted[0]).toBe('number');
     });
   });
 
@@ -167,7 +197,7 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       const removeButtons = fixture.debugElement.queryAll(By.css('[data-testid="overview-filter-chips"] button'));
       (removeButtons[0].nativeElement as HTMLButtonElement).click();
 
-      expect(emitted!).toEqual(expect.objectContaining({ program: [], source: 'w3', phase: OPEN_PHASE.id }));
+      expect(emitted!).toEqual(expect.objectContaining({ program: [], source: 'w3', phase: OPEN_PHASE_ID }));
     });
 
     it('Clear emits clearFilters and closes the popover', () => {

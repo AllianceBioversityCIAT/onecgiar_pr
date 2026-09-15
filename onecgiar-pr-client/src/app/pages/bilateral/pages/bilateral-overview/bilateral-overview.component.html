@@ -25,7 +25,7 @@
     <!-- ═══ KPI deck (COV-R-6, COV-R-19) ══════════════════════════════════════════════════ -->
     <section
       aria-label="Key figures"
-      class="grid grid-cols-1 sm:grid-cols-2 min-[900px]:grid-cols-3 min-[1280px]:grid-cols-5 gap-[16px]">
+      class="grid grid-cols-1 min-[640px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1280px]:grid-cols-5 gap-[16px]">
       @if (resultsLoading()) {
         @for (slot of kpiSkeletonSlots; track slot) {
           <div
@@ -42,7 +42,7 @@
         <div
           role="alert"
           data-testid="kpi-error"
-          class="sm:col-span-2 min-[900px]:col-span-3 min-[1280px]:col-span-5 flex max-h-[160px] flex-wrap items-center gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[14px]">
+          class="min-[640px]:col-span-2 min-[900px]:col-span-3 min-[1280px]:col-span-5 flex max-h-[160px] flex-wrap items-center gap-[12px] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[14px]">
           <i class="material-icons-round text-[18px] text-[var(--pr-danger)]" aria-hidden="true">error_outline</i>
           <span class="text-[14px] text-[var(--pr-text-secondary)]">{{ resultsError() }}</span>
           <button

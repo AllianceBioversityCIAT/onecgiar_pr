@@ -108,6 +108,17 @@ function emptyParams(): BilateralQueryParams {
   };
 }
 
+/**
+ * `COV-R-2` C — `GET /api/versioning` delivers `Phases.id` as a **string** (`'34'`, `'36'`) even
+ * though `Phases` types it `number`, so a strict comparison against the numeric `?phase=` (or
+ * against `ctx.selectedVersionId`, which is numeric by contract) never matched: every real phase
+ * looked unknown, the deep link was stripped and the selector fell back to Open. Every id
+ * comparison and every id that leaves this page normalizes through here.
+ */
+function phaseVersionId(phase: Phases): number {
+  return Number(phase.id);
+}
+
 /** The four Needs-attention rows' copy, keyed by the model's row key (`COV-R-8`). */
 const ATTENTION_ROW_COPY: Record<OverviewAttentionRow['key'], { title: string; hint: string }> = {
   editing: { title: 'Results still in Editing', hint: 'Created but not submitted for review' },
@@ -211,13 +222,16 @@ export class BilateralOverviewComponent implements OnInit {
     if (!phases.length) return null;
     const versionId = this.ctx.selectedVersionId();
     if (versionId !== null) {
-      const match = phases.find(phase => phase.id === versionId);
+      const match = phases.find(phase => phaseVersionId(phase) === versionId);
       if (match) return match;
     }
     return phases.find(phase => phase.status) ?? phases[0] ?? null;
   });
 
-  readonly effectiveVersionId = computed<number | null>(() => this.selectedPhase()?.id ?? null);
+  readonly effectiveVersionId = computed<number | null>(() => {
+    const phase = this.selectedPhase();
+    return phase ? phaseVersionId(phase) : null;
+  });
 
   /**
    * `COV-DD-8` + the `COV-T-3` review note: `entry()` ALLOCATES a computed per call, so it is
@@ -459,7 +473,7 @@ export class BilateralOverviewComponent implements OnInit {
       const phases = this.phases();
       const versionId = this.ctx.selectedVersionId();
       if (!phases.length || versionId === null) return;
-      if (phases.some(phase => phase.id === versionId)) return;
+      if (phases.some(phase => phaseVersionId(phase) === versionId)) return;
       untracked(() => {
         this.ctx.selectedVersionId.set(null);
         this.params.update(params => ({ ...params, phase: null }));
@@ -566,8 +580,10 @@ export class BilateralOverviewComponent implements OnInit {
   // ── Controls handlers ────────────────────────────────────────────────────────────────────
 
   onPhaseChange(versionId: number): void {
-    this.ctx.selectedVersionId.set(versionId);
-    this.params.update(params => ({ ...params, phase: versionId }));
+    const id = Number(versionId);
+    if (!Number.isFinite(id)) return;
+    this.ctx.selectedVersionId.set(id);
+    this.params.update(params => ({ ...params, phase: id }));
     this.writeUrl();
   }
 

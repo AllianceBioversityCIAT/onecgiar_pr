@@ -140,6 +140,16 @@ function defaultColumnVisibility(): Record<string, boolean> {
   return map;
 }
 
+/**
+ * `COV-R-2` C / `COV-R-5` A — `GET /api/versioning` delivers `Phases.id` as a **string** (`'34'`)
+ * although `Phases` types it `number`. `ctx.selectedVersionId` is numeric by contract (it carries
+ * the parsed `?phase=`), so a strict `p.id === versionId` never matched a real phase and the shared
+ * phase silently degraded to Open. Normalize wherever a phase id is compared or handed on.
+ */
+function phaseVersionId(phase: Phases): number {
+  return Number(phase.id);
+}
+
 @Component({
   selector: 'app-bilateral-results-list',
   standalone: true,
@@ -206,7 +216,7 @@ export class BilateralResultsListComponent implements OnInit {
     if (!phases.length) return null;
     const versionId = this.ctx.selectedVersionId();
     if (versionId !== null) {
-      const match = phases.find(p => p.id === versionId);
+      const match = phases.find(p => phaseVersionId(p) === versionId);
       if (match) return match;
     }
     return phases.find(p => p.status) ?? phases[0] ?? null;
@@ -332,7 +342,7 @@ export class BilateralResultsListComponent implements OnInit {
       toObservable(this.selectedPhase).pipe(filter((p): p is Phases => !!p)),
     ])
       .pipe(takeUntilDestroyed())
-      .subscribe(([, phase]) => this.loadResults(phase.id));
+      .subscribe(([, phase]) => this.loadResults(phaseVersionId(phase)));
 
     // Reset the table to its default sort + page 0 whenever the filtered set changes
     // (filter chips, search, new data) — mirrors the Results Center pattern.
@@ -555,7 +565,7 @@ export class BilateralResultsListComponent implements OnInit {
 
   /** `COV-DD-2`/`COV-R-5` A — writes both the shared phase signal and `?phase=`. */
   selectPhase(phase: Phases): void {
-    this.ctx.selectedVersionId.set(phase.id);
+    this.ctx.selectedVersionId.set(phaseVersionId(phase));
     this.searchQuery.set('');
     this.syncUrlParams();
   }

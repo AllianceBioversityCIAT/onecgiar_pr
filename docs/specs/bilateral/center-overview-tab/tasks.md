@@ -8,7 +8,7 @@
 | **Linked spec** | `requirements.md` + `design.md` (same folder) · `proposal.md` · `mockup/center-overview-tab.html` |
 | **Depth** | Standard · **Budget (design §14):** 8 tasks · ~1,700 LOC · ≤1 Reviewer round per task (second FAIL escalates) |
 | **Approval Mode** | pre-approved (applied at execute start per project feedback; HALT/Pivot/tripwire still stop) |
-| **Status** | in-progress |
+| **Status** | executed (all 8 tasks `[x]`, 2026-09-15) — PRs pending |
 | **Owner / driver** | Juan Carlos Cadavid |
 | **Ticket** | `COV-OQ-1` — open the Jira id before the first commit; until then commits use `[SPEC:bilateral/center-overview-tab]` as the ticket slot |
 | **Execution runtime rules** (from project feedback, inherited by every Implementer/Tester brief) | targeted `npx jest <path> --silent` only, never the full client suite · `npx ng lint --quiet` (no flat ESLint config) · `npx tsc --noEmit -p tsconfig.app.json` on every client task · module CT once per task that touches templates · plain-language progress line at every task boundary · pointer briefs, not anthologies |
@@ -24,7 +24,7 @@
 - [x] CLARISA dependencies: none (no cache table or endpoint change).
 - [x] **Conflicting in-flight specs** — checked 2026-09-14: `bilateral/ai-drafts-redesign` is being executed in this checkout (uncommitted edits to `bilateral-page-header.component.{html,spec.ts}`, `bilateral-projects-panel.*`, `my-draft-results.component.html`, `bilateral-result-creator.*`). **Rule:** `COV-T-6` and `COV-T-7` start by re-reading those files at HEAD; if the other spec's edits are still uncommitted, the Leader pauses those two tasks until they land (or the user says which lands first). `bilateral/manual-create-drawer` touches only the wizard — no overlap. Also check `git log --since=7.days -- onecgiar-pr-client/src/app/pages/bilateral` for fixes landed outside AKILI (`KZ-IDEV-1`).
 - [x] Migrations: none. `npm run migration:check` green on the branch before `COV-T-1` commit.
-- [ ] Dev server for HITL: confirm `ng serve` age and DB reachability before `COV-T-8` evidence (memory: stale dev servers produced false HITL results).
+- [x] Dev server for HITL: confirm `ng serve` age and DB reachability before `COV-T-8` evidence (memory: stale dev servers produced false HITL results).
 
 ---
 
@@ -163,7 +163,7 @@
   - [x] Column-picker preference still `localStorage`-only.
   - [x] Commit: `♻️ refactor(bilateral) [<ticket>]: center tabs read the shared query-param contract; Results tab URL-driven`.
 
-### `COV-T-8` — CT layout gate, build, live reconciliation (HITL) and guide docs
+### `COV-T-8` — CT layout gate, build, live reconciliation (HITL) and guide docs `[x]`
 
 - **Type:** `tests` + `docs`
 - **Description:** Add `bilateral-overview.cy.ts` (CT) and run the module CT set; run `npm run build:dev`; perform the live HITL on AfricaRice in the Orca browser and record evidence; create the component guide; record archive-time items.
@@ -178,11 +178,11 @@
 - **Input that would make the check fail:** a KPI card with `min-w-[240px]` (column count at 900 drops); a controls row sticky to the wrong ancestor (top changes at 1000px height but not at 720); one destination count differing from the Overview figure by ±1 (e.g. Results' "Lead only" default not carried by the link).
 - **What this cannot prove / disqualifier:** the CT fixture proves layout, **not data**; the reconciliation table is the only proof of D2 and it is **inconclusive** if the dev server is stale or the DB unreachable (check before measuring, per project memory) or if any row is compared against a tab whose own chips were changed by hand. A mismatch is reported as a finding, never explained away; a screenshot without the counter visible does not count as evidence.
 - **Definition of done:**
-  - [ ] CT green at all four viewports; `build:dev` green.
-  - [ ] Reconciliation table complete with zero mismatches (or mismatches raised as findings before close-out).
-  - [ ] `bilateral-overview/CLAUDE.md` written (invariants: computes nothing itself; contract file is the single filter; cache key; alias retired) and linked from the bilateral parent guide index.
-  - [ ] Archive-time items recorded in `execution.md` (not applied on the spec branch): `docs/ux-ui/design.md` §4 screen inventory row; `docs/trd/trd.md` §6 note (Charts: ECharts via `pr-viz-chart` for new dashboards); `bilateral-results-list/CLAUDE.md` stale "default landing" line; `.agents/model-routing.md` T1 registry refresh.
-  - [ ] Commit: `✅ test(bilateral-overview) [<ticket>]: CT layout gate, component guide and HITL evidence`.
+  - [x] CT green at all four viewports; `build:dev` green.
+  - [x] Reconciliation table complete with zero mismatches (or mismatches raised as findings before close-out).
+  - [x] `bilateral-overview/CLAUDE.md` written (invariants: computes nothing itself; contract file is the single filter; cache key; alias retired) — parent guide index does not exist; link recorded as archive item 6.
+  - [x] Archive-time items recorded in `execution.md` (not applied on the spec branch): `docs/ux-ui/design.md` §4 screen inventory row; `docs/trd/trd.md` §6 note (Charts: ECharts via `pr-viz-chart` for new dashboards); `bilateral-results-list/CLAUDE.md` stale "default landing" line; `.agents/model-routing.md` T1 registry refresh.
+  - [x] Commit: `✅ test(bilateral-overview) [<ticket>]: CT layout gate, component guide and HITL evidence`.
 
 ---
 

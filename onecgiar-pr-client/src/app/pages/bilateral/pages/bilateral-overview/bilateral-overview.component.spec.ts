@@ -80,10 +80,27 @@ jest.mock('../../../../shared/utils/chart-tokens.util', () => ({
 }));
 
 const CENTER = 'AfricaRice';
-const OPEN_PHASE_ID = FIXTURE_PHASE.id;
+/**
+ * `COV-R-2` C, HITL H-2 — `GET /api/versioning` delivers `Phases.id` as a **string** (`'34'`,
+ * `'36'` in the live AfricaRice payload) although `Phases` types it `number`. Every phase fixture
+ * below therefore carries the shape the API really delivers: a component comparing `phase.id`
+ * strictly against the numeric `?phase=` fails these cases instead of passing against a fixture
+ * that never existed in production.
+ */
+const asApiPhase = (phase: Phases): Phases => ({ ...phase, id: String(phase.id) as unknown as number });
+
+const OPEN_PHASE: Phases = asApiPhase(FIXTURE_PHASE);
+const OPEN_PHASE_ID = Number(FIXTURE_PHASE.id);
 
 /** A second, CLOSED phase so "pick another phase" has somewhere to go. */
-const CLOSED_PHASE: Phases = { ...FIXTURE_PHASE, id: 35, phase_name: 'Reporting 2025', phase_year: 2025, status: false };
+const CLOSED_PHASE: Phases = asApiPhase({
+  ...FIXTURE_PHASE,
+  id: 35,
+  phase_name: 'Reporting 2025',
+  phase_year: 2025,
+  status: false,
+});
+const CLOSED_PHASE_ID = 35;
 
 describe('BilateralOverviewComponent (COV-T-5)', () => {
   let harness: RouterTestingHarness;
@@ -125,7 +142,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
     phasesLate = new Subject<Phases[]>();
     jest.spyOn(phasesService, 'getPhasesObservable').mockReturnValue(phasesLate.asObservable());
-    phasesService.phases.reporting = options.latePhases ? [] : [FIXTURE_PHASE, CLOSED_PHASE];
+    phasesService.phases.reporting = options.latePhases ? [] : [OPEN_PHASE, CLOSED_PHASE];
 
     aiService.draftList.set(FIXTURE_DRAFTS);
     // `unresolvedCenter` reproduces the real cold boot: the shell sets the acronym synchronously
@@ -275,8 +292,24 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       await setup();
       flushData();
 
+      expect(text('overview-phase-select')).toContain('Reporting 2026');
       expect(el('overview-phase-open-badge')).toBeTruthy();
       expect(router.url).not.toContain('phase=');
+    });
+
+    /**
+     * HITL H-2 — a deep link to a real, CLOSED phase. `flushData(CLOSED_PHASE_ID)` is the hard part:
+     * it fails unless the cards were actually fetched for phase 35, which is exactly what the
+     * string-vs-number id comparison broke (the page resolved back to Open and stripped the param).
+     */
+    it('honors a deep link to a KNOWN phase: selector, cards and URL all stay on it (COV-R-2 C)', async () => {
+      await setup(`/bilateral/${CENTER}/overview?phase=${CLOSED_PHASE_ID}`);
+      flushData(CLOSED_PHASE_ID);
+      await settle();
+
+      expect(text('overview-phase-select')).toContain('Reporting 2025');
+      expect(el('overview-phase-open-badge')).toBeFalsy();
+      expect(router.url).toContain(`phase=${CLOSED_PHASE_ID}`);
     });
 
     it('falls back to the Open phase and strips an unknown ?phase= (COV-AC-4)', async () => {
@@ -295,7 +328,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       expect(el('kpi-skeleton')).toBeTruthy();
       httpMock.expectNone(request => request.url.includes('bilateral-center-results'));
 
-      phasesLate.next([FIXTURE_PHASE, CLOSED_PHASE]);
+      phasesLate.next([OPEN_PHASE, CLOSED_PHASE]);
       harness.detectChanges();
       flushData();
 
@@ -306,13 +339,13 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       await setup();
       flushData();
 
-      harness.routeDebugElement!.query(By.css('app-overview-controls')).componentInstance.phaseChange.emit(CLOSED_PHASE.id);
+      harness.routeDebugElement!.query(By.css('app-overview-controls')).componentInstance.phaseChange.emit(CLOSED_PHASE_ID);
       await settle();
 
-      expect(router.url).toContain(`phase=${CLOSED_PHASE.id}`);
+      expect(router.url).toContain(`phase=${CLOSED_PHASE_ID}`);
       expect(el('kpi-skeleton')).toBeTruthy();
 
-      httpMock.expectOne(resultsUrl(CLOSED_PHASE.id)).flush({ response: [FIXTURE_D1_ROWS[0]] });
+      httpMock.expectOne(resultsUrl(CLOSED_PHASE_ID)).flush({ response: [FIXTURE_D1_ROWS[0]] });
       harness.detectChanges();
       expect(text('kpi-total')).toContain('1');
     });
@@ -333,10 +366,10 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         .match(request => request.url.includes('center/projects'))
         .forEach(request => request.flush({ response: { projects: FIXTURE_PROJECTS } }));
 
-      harness.routeDebugElement!.query(By.css('app-overview-controls')).componentInstance.phaseChange.emit(CLOSED_PHASE.id);
+      harness.routeDebugElement!.query(By.css('app-overview-controls')).componentInstance.phaseChange.emit(CLOSED_PHASE_ID);
       harness.detectChanges();
 
-      httpMock.expectOne(resultsUrl(CLOSED_PHASE.id)).flush({ response: [FIXTURE_D1_ROWS[0]] });
+      httpMock.expectOne(resultsUrl(CLOSED_PHASE_ID)).flush({ response: [FIXTURE_D1_ROWS[0]] });
       harness.detectChanges();
       expect(text('kpi-total')).toContain('1');
 
@@ -372,8 +405,8 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
     });
 
     it('Clear removes the chips and params but keeps the phase (COV-AC-6)', async () => {
-      await setup(`/bilateral/${CENTER}/overview?phase=${CLOSED_PHASE.id}`);
-      flushData(CLOSED_PHASE.id);
+      await setup(`/bilateral/${CENTER}/overview?phase=${CLOSED_PHASE_ID}`);
+      flushData(CLOSED_PHASE_ID);
       await applyProgramFilter();
       expect(router.url).toContain('program=SP02');
 
@@ -381,7 +414,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       await settle();
 
       expect(router.url).not.toContain('program=');
-      expect(router.url).toContain(`phase=${CLOSED_PHASE.id}`);
+      expect(router.url).toContain(`phase=${CLOSED_PHASE_ID}`);
       expect(el('overview-filter-badge')).toBeFalsy();
     });
 
@@ -687,6 +720,49 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
 
       chart.chartClick.emit({ seriesId: 'overview-by-sp:results', dataIndex: 0 } as never);
       expect(navigate.mock.calls[1][0]).toEqual(['/bilateral', CENTER, 'results']);
+    });
+  });
+
+  // ── COV-R-18 · reduced motion (carried over from the COV-T-5 review, closed in COV-T-8) ──
+
+  describe('scrollToAttention respects prefers-reduced-motion (COV-R-18)', () => {
+    // jsdom implements neither API by default (`HTMLElement.prototype.scrollIntoView` does not
+    // exist and `window.matchMedia` is absent) — `jest.spyOn` needs a pre-existing property to
+    // wrap, so both are assigned directly and restored by hand rather than via `jest.spyOn`.
+    const originalMatchMedia = window.matchMedia;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    });
+
+    it('scrolls with behavior "auto" when the user prefers reduced motion', async () => {
+      await setup();
+      flushData();
+
+      const scrollIntoViewSpy = jest.fn();
+      HTMLElement.prototype.scrollIntoView = scrollIntoViewSpy;
+      window.matchMedia = jest.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia;
+
+      (el('kpi-attention').nativeElement as HTMLButtonElement).click();
+      harness.detectChanges();
+
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+    });
+
+    it('scrolls with behavior "smooth" when the user does not prefer reduced motion', async () => {
+      await setup();
+      flushData();
+
+      const scrollIntoViewSpy = jest.fn();
+      HTMLElement.prototype.scrollIntoView = scrollIntoViewSpy;
+      window.matchMedia = jest.fn().mockReturnValue({ matches: false }) as unknown as typeof window.matchMedia;
+
+      (el('kpi-attention').nativeElement as HTMLButtonElement).click();
+      harness.detectChanges();
+
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
     });
   });
 });

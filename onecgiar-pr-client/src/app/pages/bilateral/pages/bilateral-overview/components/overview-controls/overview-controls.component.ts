@@ -41,6 +41,16 @@ interface PhaseSelectOption {
 }
 
 /**
+ * `COV-R-2` C — `GET /api/versioning` delivers `Phases.id` as a **string** (`'34'`) although the
+ * interface types it `number`. `selectedPhaseId` is numeric, so an un-normalized `phase.id ===`
+ * matched nothing: the option value handed to `app-pr-select` never equalled its `ngModel` and the
+ * selector stayed on whatever the page had resolved by fallback.
+ */
+function phaseVersionId(phase: Phases): number {
+  return Number(phase.id);
+}
+
+/**
  * The Overview's docked controls row (`COV-R-2`, `COV-R-3`, `COV-R-4`): a phase selector, a single
  * Filter button opening a six-dimension popover, one removable chip per active dimension and a
  * Clear action. Deliberately **presentational** — it owns no data, no URL and no service: every
@@ -106,7 +116,7 @@ export class OverviewControlsComponent {
 
   readonly phaseSelectOptions = computed<PhaseSelectOption[]>(() =>
     this.phases().map(phase => ({
-      id: phase.id,
+      id: phaseVersionId(phase),
       select_label: `${phase.phase_name} · ${phase.phase_year}`,
       select_badge: phase.status ? 'Open' : '',
       select_badge_tone: 'match',
@@ -114,7 +124,7 @@ export class OverviewControlsComponent {
   );
 
   readonly selectedPhase = computed<Phases | null>(
-    () => this.phases().find(phase => phase.id === this.selectedPhaseId()) ?? null,
+    () => this.phases().find(phase => phaseVersionId(phase) === this.selectedPhaseId()) ?? null,
   );
 
   /** `COV-R-3` A — one badge unit per ACTIVE dimension, not per selected value. */
@@ -209,10 +219,12 @@ export class OverviewControlsComponent {
     this.filterOrigin()?.elementRef.nativeElement.focus();
   }
 
-  onPhasePicked(phaseId: number | null | undefined): void {
-    if (phaseId === null || phaseId === undefined) return;
-    if (phaseId === this.selectedPhaseId()) return;
-    this.phaseChange.emit(Number(phaseId));
+  onPhasePicked(phaseId: number | string | null | undefined): void {
+    if (phaseId === null || phaseId === undefined || phaseId === '') return;
+    const id = Number(phaseId);
+    if (!Number.isFinite(id)) return;
+    if (id === this.selectedPhaseId()) return;
+    this.phaseChange.emit(id);
   }
 
   isProgramChecked(code: string): boolean {

@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-14 · branch qa-development-2026 · spec `bilateral/center-overview-tab` (`COV-T-2`)
+**Verified:** 2026-09-14 · branch qa-development-2026 · 576167f86 · spec `bilateral/center-overview-tab` (`COV-T-2`, `COV-T-8` H-2)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -56,6 +56,12 @@ a missing one renders blank here and populated from the Results Center, which is
 found.
 
 ## Traps (⚠️ = already broke something)
+- ⚠️ **The APIs deliver ids as STRINGS.** `GET /api/versioning` answers `{ id: '34', … }` and the
+  center projects payload does the same, although `Phases.id` is typed `number` (H-1/H-2 of the
+  `center-overview-tab` spec). `selectedPhase`, `selectPhase` and the `loadResults` subscription all
+  normalize through `phaseVersionId()`; a strict `p.id === ctx.selectedVersionId()` matched nothing,
+  so the shared phase degraded to Open and the fetch went out with a string `versionId`. Phase
+  fixtures MUST use string ids.
 - ⚠️ **Bump `BILATERAL_COLUMN_STORAGE_KEY` whenever a new column must be visible by default.**
   Visibility is persisted per browser in `localStorage`, and a stored map from an older version
   wins over `defaultOn`, so returning users would never see the new column. Currently `…v3`

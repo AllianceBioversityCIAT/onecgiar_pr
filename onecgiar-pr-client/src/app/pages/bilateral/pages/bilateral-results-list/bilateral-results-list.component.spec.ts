@@ -86,7 +86,10 @@ describe('BilateralResultsListComponent', () => {
       GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: [result()] })),
     };
     phasesService = {
-      phases: { reporting: [{ id: 36, phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } }] },
+      // `COV-R-2` C / HITL H-2 — `GET /api/versioning` delivers `id` as a STRING (`'36'`), although
+      // `Phases` types it `number`. The fixtures keep the API's real shape so the component has to
+      // normalize before comparing it with the numeric shared phase signal.
+      phases: { reporting: [{ id: '36', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } }] },
       getPhasesObservable: jest.fn().mockReturnValue(of([])),
     };
     rolesService = {
@@ -390,14 +393,30 @@ describe('BilateralResultsListComponent', () => {
 
     it('takes the phase from the shared signal instead of the Open phase', () => {
       phasesService.phases.reporting = [
-        { id: 35, phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
-        { id: 36, phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
+        { id: '35', phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
+        { id: '36', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
       ];
       TestBed.inject(BilateralContextService).selectedVersionId.set(35);
 
       recreateOn();
 
-      expect(component.selectedPhase()?.id).toBe(35);
+      expect(component.selectedPhase()?.phase_year).toBe(2025);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 35);
+    });
+
+    /** `COV-R-5` A — the shared signal the other tabs read must be a NUMBER, not the API's string. */
+    it('writes a numeric phase id to the shared signal when a phase tab is picked', () => {
+      phasesService.phases.reporting = [
+        { id: '35', phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
+        { id: '36', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
+      ];
+      recreateOn();
+
+      // `phases` keeps the service's order, so index 0 is the CLOSED 2025 phase.
+      component.selectPhase(component.phases()[0]);
+      fixture.detectChanges();
+
+      expect(TestBed.inject(BilateralContextService).selectedVersionId()).toBe(35);
       expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 35);
     });
 

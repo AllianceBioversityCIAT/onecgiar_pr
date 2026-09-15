@@ -304,8 +304,16 @@ describe('BilateralProjectsPanelComponent', () => {
 
   // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15, COV-AC-13, COV-DD-9)
   describe('COV-T-7: reads program / multi / project from the shared query-param contract', () => {
+    // COV-T-8 HITL finding (D2/D10, COV-AC-13/COV-R-15): the live
+    // `GET api/bilateral/center/projects` endpoint returns `id` as a STRING (e.g. `"1368"`), even
+    // though `BilateralProject.id` is typed `number`. The highlight comparison must therefore
+    // normalize both sides through `Number()` rather than relying on `===`. This fixture matches
+    // that real, string-id payload shape so the regression is caught by Jest, not only in prod.
+    const mockProjectsWithStringIds = mockProjects.map(p => ({ ...p, id: String(p.id) })) as unknown as BilateralProject[];
+
     beforeEach(() => {
       jest.useFakeTimers();
+      bilateralApiService.GET_bilateralProjects.mockReturnValue(of({ response: mockProjectsWithStringIds }));
     });
 
     afterEach(() => {
