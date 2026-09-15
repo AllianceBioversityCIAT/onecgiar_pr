@@ -458,3 +458,109 @@
     animation-duration: 1ms;
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Interruptor de una sola opción, para un campo cuyo "control" es un booleano
+// suelto ("Not applicable"). Vive aquí porque solo tiene sentido como contenido
+// de una tarjeta `fc-inline`: la banda dice de qué campo se habla y esto queda
+// a su lado, igual que el Yes/No (Yeck, 15-sep-2026: *"que quede en frente, así
+// como hicimos con el yes y no"*).
+//
+// Mismo idioma que `.choices` de `pr-yes-or-not`: control segmentado sobre
+// blanco, la opción elegida se rellena, la otra se queda en texto. 🛑 Sin rojo
+// y sin verde — marcar "no aplica" no es un acierto ni un fallo, es una
+// respuesta; el gris oscuro es el mismo que ese componente usa para su "No".
+.fc-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 4px 10px;
+  min-height: 34px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  background: var(--pr-color-white);
+  color: var(--pr-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    border-color: var(--pr-border-strong);
+    background: var(--pr-surface-app);
+    color: var(--pr-text-heading);
+  }
+
+  // Foco visible de verdad: es un control que se alcanza con teclado y su estado
+  // no se puede deducir de nada más en pantalla.
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+
+  // La casilla. Existe apagada —un marco vacío— para que se lea como algo
+  // pulsable antes de pulsarlo; encendida se rellena y saca el check.
+  .fcs_box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 17px;
+    height: 17px;
+    border: 1.5px solid var(--pr-border-strong);
+    border-radius: 5px;
+    background: var(--pr-color-white);
+    transition: background 150ms ease, border-color 150ms ease;
+
+    svg {
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+  }
+
+  &.on {
+    background: var(--pr-text);
+    border-color: var(--pr-text);
+    color: var(--pr-color-white);
+
+    &:hover {
+      background: var(--pr-text);
+      color: var(--pr-color-white);
+    }
+
+    .fcs_box {
+      background: var(--pr-color-white);
+      border-color: var(--pr-color-white);
+      color: var(--pr-text);
+
+      svg {
+        opacity: 1;
+      }
+    }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+}
+
+// Lo que ve quien solo puede mirar: el mismo dato, sin prometer un control que
+// no va a responder.
+.fc-switch-readonly {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  color: var(--pr-text-secondary);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-switch,
+  .fc-switch .fcs_box,
+  .fc-switch .fcs_box svg {
+    transition-duration: 1ms;
+  }
+}
