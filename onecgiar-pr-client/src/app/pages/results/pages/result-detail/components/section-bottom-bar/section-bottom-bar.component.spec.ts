@@ -637,28 +637,21 @@ describe('SectionBottomBarComponent', () => {
       expect(progress().getAttribute('aria-hidden')).toBeNull();
     });
 
-    /*
-     * Sin la franja blanca detrás, el indicador se apoya directamente sobre el texto del
-     * formulario. Con el toolbar puesto no necesita superficie propia — la franja ya es su fondo.
-     */
-    it('gives the two controls ONE surface, and only once they are floating', async () => {
+    /* Sin contenedor: al plegarse el toolbar los dos controles quedan flotando tal cual, cada uno
+     * con la superficie que ya trae. Nada de cápsula alrededor (Yeck, 15-sep-2026). */
+    it('adds no container of its own around the floating controls', async () => {
       await build();
       const chromeSE = TestBed.inject(ScrollChromeService);
       const anchored = () => q('[data-testid="section-bottom-bar-anchored"]');
-
-      expect(anchored().className).not.toContain('bg-white');
-      expect(anchored().className).not.toContain('rounded-full');
+      const before = anchored().className;
 
       chromeSE.hidden.set(true);
       fixture.detectChanges();
 
-      expect(anchored().className).toContain('bg-white');
-      expect(anchored().className).toContain('rounded-full');
-      expect(anchored().className).toContain('shadow-[var(--pr-shadow-2)]');
-      // Una sola cápsula: si cada control se trajera la suya, entre ambas se leería el formulario.
-      expect(anchored().contains(q('[data-testid="section-bottom-bar-save"]'))).toBe(true);
-      expect(anchored().contains(progress())).toBe(true);
-      expect(progress().className).not.toContain('bg-white');
+      expect(anchored().className).toBe(before);
+      expect(anchored().className).not.toContain('bg-white');
+      expect(anchored().className).not.toContain('rounded-full');
+      expect(anchored().className).not.toContain('shadow-');
     });
   });
 });

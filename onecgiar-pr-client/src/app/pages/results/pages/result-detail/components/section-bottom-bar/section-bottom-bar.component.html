@@ -67,15 +67,9 @@
   </div>
 
   <!-- Anclado, y lo que queda EN PANTALLA cuando el toolbar se va: cuánto falta y cómo guardar.
-       `min-w` mantiene honesto el hueco reservado arriba cuando la etiqueta pasa a "Saving…".
-       🛑 Flotando necesita superficie propia, y tiene que ser UNA para los dos controles, no una
-       por control: con una cápsula cada uno, por los 12px de separación se leía el formulario de
-       fondo y el conjunto quedaba sucio (medido en pantalla el 15-sep-2026, resultado 9139). Con
-       el toolbar puesto no lleva ninguna — la franja blanca ya es su fondo. -->
-  <div
-    class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]"
-    [ngClass]="scrollChromeSE.hidden() ? 'rounded-full border border-[var(--pr-border)] bg-white pl-[14px] pr-[6px] py-[6px] shadow-[var(--pr-shadow-2)]' : ''"
-    data-testid="section-bottom-bar-anchored">
+       Sin contenedor propio — flotan tal cual, cada uno con lo que ya trae (Yeck, 15-sep-2026).
+       `min-w` mantiene honesto el hueco reservado arriba cuando la etiqueta pasa a "Saving…". -->
+  <div class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]" data-testid="section-bottom-bar-anchored">
       <!-- El indicador se queda cuando el toolbar se va: saber cuánto falta es justo lo que hace
            falta MIENTRAS se llenan campos. -->
       <div class="flex items-center gap-[12px]" data-testid="section-bottom-bar-progress">
