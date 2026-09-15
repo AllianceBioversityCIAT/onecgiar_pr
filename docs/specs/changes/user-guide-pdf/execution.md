@@ -106,7 +106,9 @@ Before starting `UG-T-2`, pre-flight environment verification found:
 
 **Safety basis for targeting production:** `UG-DD-4`'s constraints (real login only, no bypass/fabricated JWT) and `design.md` §7's read-only guarantee (no create/submit/delete interaction) apply unchanged. `docs/infrastructure.md`'s "cloud is governed and never deployed by agents" rule is not implicated — nothing is deployed; the script performs a single-pass, 6-route read-only navigation, equivalent in kind to what it would have done against localhost.
 
-**Separately noted (not yet resolved, tracked for `UG-T-10`):** a direct fetch of `https://clarisa.cgiar.org/landing-page/glossary` (both `curl` and an isolated fetch tool) returned HTTP 404 during pre-flight. Flagged in `tasks.md`'s `UG-T-10` for the Implementer to re-investigate (likely a moved path or a client-rendered route requiring a real browser) before curating the glossary.
+**Resolved 2026-09-15 (Leader pre-flight):** `https://clarisa.cgiar.org/landing-page/glossary` is a client-rendered SPA route — the server answers HTTP 404 for the deep link, but a real browser renders the glossary (title "CLARISA", ~27k chars: "Glossary of terms and their definitions used across CLARISA and CGIAR reporting. Filter by portfolio or search any term"). `UG-T-10` must extract via headless browser, not `curl`. Original note kept below for history.
+
+**Separately noted (original, superseded):** a direct fetch of `https://clarisa.cgiar.org/landing-page/glossary` (both `curl` and an isolated fetch tool) returned HTTP 404 during pre-flight. Flagged in `tasks.md`'s `UG-T-10` for the Implementer to re-investigate (likely a moved path or a client-rendered route requiring a real browser) before curating the glossary.
 
 ---
 

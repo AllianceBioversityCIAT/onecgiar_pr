@@ -21,7 +21,7 @@ Block execution until every box is ticked.
 - [ ] `UG-OQ-1` (P/A persona wording) and `UG-OQ-2` (credentials/seed-data ownership) working assumptions in `requirements.md` §11 are accepted, or overridden by the user.
 - [x] `UG-OQ-4` (real deployed origin to reference in guide copy) is answered before `UG-T-9` (content authoring) closes — see `UG-T-8`.
 - [x] Capture target confirmed reachable: local dev DB is unreachable (`ETIMEDOUT`), so per `design.md` `UG-DD-6` this run targets production `https://reporting.cgiar.org` instead (user-confirmed 2026-09-15, changes already shipped there, authenticated Chrome session available).
-- [ ] Network reachability to `https://clarisa.cgiar.org/landing-page/glossary` confirmed.
+- [x] Network reachability to `https://clarisa.cgiar.org/landing-page/glossary` confirmed (2026-09-15: SPA route — HTTP 404 on the raw fetch, renders in a real browser; see `execution.md` §3).
 - [x] No conflicting in-flight spec touching the same entities (`docs/specs/` search — none found at spec time).
 - [x] Migration check: **N/A**, no migration in this spec.
 
