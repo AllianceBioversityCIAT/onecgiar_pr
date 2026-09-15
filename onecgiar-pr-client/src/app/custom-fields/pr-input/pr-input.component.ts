@@ -132,6 +132,40 @@ export class PrInputComponent implements ControlValueAccessor {
     this.currencyRaw = v === null || v === undefined || v === '' ? '' : String(v);
   }
 
+  /**
+   * While typing, drop what the field can never store and keep the bound model in sync — the same
+   * contract `type="number"` already had (`onNumberInput`), which this one was missing.
+   *
+   * 🛑 Two reports, one cause (Ángel, 15-sep-2026, `innovation-dev-info` → "Total USD Value"):
+   * the box took letters without complaining, and the value "se escribe y se borra". It did not
+   * disappear on its own — `onCurrencyBlur` stripped every non-digit, so anything that was not a
+   * number came back EMPTY the moment the caret left, with nothing on screen saying why.
+   * And because the model only moved on blur, whatever was typed lived in the view alone: a save,
+   * a section change or a re-render of the row reached the server without it.
+   *
+   * It never reformats mid-typing — that would move the caret and break entries like "10.".
+   */
+  onCurrencyInput() {
+    const cleaned = this.sanitizeCurrencyInput(this.currencyRaw);
+    // Only rewrite the box to DROP characters the amount can never hold (letters, a second dot,
+    // a minus sign) — never to reformat, so the caret stays put while typing.
+    if (cleaned !== this.currencyRaw) this.currencyRaw = cleaned;
+    const parsed = cleaned === '' ? null : Number(cleaned);
+    const next = parsed === null || isNaN(parsed) ? null : parsed < 0 ? 0 : parsed;
+    if (next !== this._value()) {
+      this._value.set(next);
+      this.onChange(next);
+    }
+  }
+
+  /** Digits and a single decimal point — what a USD amount can hold, and nothing else. */
+  private sanitizeCurrencyInput(raw: string): string {
+    let cleaned = (raw ?? '').replace(/[^0-9.]/g, '');
+    const firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
+    return cleaned;
+  }
+
   /** On blur, parse what was typed into a number and reformat for display. */
   onCurrencyBlur() {
     const cleaned = (this.currencyRaw ?? '').replace(/[^0-9.]/g, '');
