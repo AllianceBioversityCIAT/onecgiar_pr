@@ -104,6 +104,7 @@
         type="text"
         inputmode="decimal"
         [(ngModel)]="currencyRaw"
+        (ngModelChange)="onCurrencyInput()"
         (focus)="onCurrencyFocus()"
         (blur)="onCurrencyBlur()"
         [disabled]="disabled()"
@@ -112,7 +113,8 @@
         [style]="{ width: '100%' }" />
       <div class="hints_container">
         <div class="hint">{{ hint() }}</div>
-        <app-pr-word-counter *ngIf="maxWords()" [wordCount]="wordCount()" [maxWords]="maxWords()" [autogenerate]="autogenerate()"> </app-pr-word-counter>
+        <app-pr-word-counter *ngIf="maxWords()" [wordCount]="wordCount()" [maxWords]="maxWords()" [autogenerate]="autogenerate()">
+        </app-pr-word-counter>
       </div>
       <div class="custom_validation_tooltip_container" *ngIf="type() == 'link' && badLink && !readOnly() && !this.rolesSE.readOnly && value">
         <app-custom-validation-tooltip></app-custom-validation-tooltip>
