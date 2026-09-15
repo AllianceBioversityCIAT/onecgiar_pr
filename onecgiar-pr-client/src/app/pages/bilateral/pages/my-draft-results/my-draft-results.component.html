@@ -126,9 +126,35 @@
   class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
   <div class="mdr">
     @if (hasDrafts()) {
+      <!-- Action Guidance Banner -->
+      <div class="mdr-guidance-banner mb-[20px] rounded-[12px] border border-blue-200 bg-gradient-to-r from-blue-50/90 to-indigo-50/60 p-[16px] text-blue-950 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-200 shadow-xs">
+        <div class="flex items-start gap-[14px]">
+          <div class="flex h-[36px] w-[36px] flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
+            <i class="material-icons-round text-[20px]">auto_awesome</i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center justify-between gap-[8px]">
+              <h3 class="text-[14px] font-semibold text-blue-950 dark:text-blue-100 flex items-center gap-[6px]">
+                Candidate Results Ready for Review & Creation
+              </h3>
+              <span class="inline-flex items-center gap-[4px] text-[11px] font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/60 px-[8px] py-[2px] rounded-full">
+                <i class="material-icons-round text-[13px]">info</i>
+                Next Steps
+              </span>
+            </div>
+            <p class="mt-[4px] text-[12px] text-blue-900/80 dark:text-blue-200/80 leading-relaxed">
+              The AI Assistant analyzed your uploaded project documents and identified candidate results below.
+              Inspect each draft by clicking <strong class="font-semibold text-blue-950 dark:text-white">Review</strong>, then click <strong class="font-semibold text-emerald-800 dark:text-emerald-300">Create Result</strong> to validate and officially add it to your Center's reporting.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div class="mdr-session-list flex flex-col gap-[20px]">
         @for (group of sessionGroups(); track group.sessionId) {
-          <div class="mdr-session-card bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm">
+          <div
+            class="mdr-session-card bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm transition-all"
+            [class.mdr-session-card--me]="group.isCurrentUser">
             <!-- Session Header -->
             <div class="mdr-session-header flex flex-wrap items-center justify-between gap-[12px] px-[20px] py-[12px] bg-[var(--pr-surface-page)] border-b border-[var(--pr-border-divider)]">
               <div class="flex flex-wrap items-center gap-[10px] min-w-0">
@@ -139,6 +165,19 @@
                   </span>
                   <span class="mdr-date sr-only">{{ group.formattedDate }}</span>
                 </div>
+
+                <!-- Creator Badge -->
+                @if (group.creatorName) {
+                  <span
+                    class="mdr-creator-badge inline-flex items-center gap-[5px] px-[8px] py-[2px] text-[11px] font-medium rounded-full"
+                    [ngClass]="group.isCurrentUser ? 'mdr-creator-badge--me' : 'mdr-creator-badge--other'"
+                    [prTooltip]="group.creatorTooltip"
+                    prTooltipPosition="top">
+                    <i class="material-icons-round text-[14px]">{{ group.isCurrentUser ? 'person' : 'person_outline' }}</i>
+                    <span class="font-semibold">{{ group.creatorName }}</span>
+                  </span>
+                }
+
                 <span class="inline-flex items-center px-[8px] py-[1px] text-[11px] font-semibold rounded-full bg-[var(--pr-surface-hover)] text-[var(--pr-text-secondary)] border border-[var(--pr-border-divider)]">
                   {{ group.drafts.length }} {{ group.drafts.length === 1 ? 'draft' : 'drafts' }}
                 </span>

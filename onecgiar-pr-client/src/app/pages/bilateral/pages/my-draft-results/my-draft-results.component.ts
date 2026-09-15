@@ -24,6 +24,7 @@ import {
   MyDraftResultsFilterService,
   normalizeProjectId,
 } from './services/my-draft-results-filter.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
 
 /**
  * P2-3169 AC2 — the `result` relation the drafts endpoint returns next to every draft.
@@ -88,6 +89,10 @@ export interface DraftSessionGroup {
   projectDisplay: { code: string; title: string; full: string };
   programCode: string;
   programTooltip: string;
+  userId?: number | null;
+  isCurrentUser: boolean;
+  creatorName: string;
+  creatorTooltip: string;
   drafts: BilateralAiDraft[];
 }
 
@@ -117,6 +122,7 @@ export interface DraftSessionGroup {
   },
 })
 export class MyDraftResultsComponent implements OnInit, OnDestroy {
+  readonly api = inject(ApiService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly ctx = inject(BilateralContextService);
   readonly filter = inject(MyDraftResultsFilterService);
@@ -187,6 +193,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     if (!list.length) return [];
 
     const groupMap = new Map<string, DraftSessionGroup>();
+    const currentUserId = this.api.authSE?.localStorageUser?.id;
+    const currentUserName = this.api.authSE?.localStorageUser?.user_name;
 
     for (const draft of list) {
       const sessionId = draft.job_id ?? draft.job?.job_id ?? `draft-${draft.id}`;
@@ -202,6 +210,23 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
         const programCode = draft.job?.program_code ?? '';
         const programTooltip = this.getProgramTooltip(draft);
 
+        const jobUserId = draft.job?.user_id;
+        const isCurrentUser = Boolean(
+          currentUserId != null && jobUserId != null && Number(currentUserId) === Number(jobUserId)
+        );
+
+        let creatorName = '';
+        let creatorTooltip = '';
+        if (isCurrentUser) {
+          creatorName = 'Created by you';
+          creatorTooltip = currentUserName
+            ? `AI extraction session created by you (${currentUserName})`
+            : 'AI extraction session created by you';
+        } else if (jobUserId != null) {
+          creatorName = `User #${jobUserId}`;
+          creatorTooltip = `AI extraction session created by User #${jobUserId}`;
+        }
+
         group = {
           sessionId,
           sessionShortHash: short,
@@ -211,6 +236,10 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
           projectDisplay,
           programCode,
           programTooltip,
+          userId: jobUserId,
+          isCurrentUser,
+          creatorName,
+          creatorTooltip,
           drafts: [],
         };
         groupMap.set(sessionId, group);

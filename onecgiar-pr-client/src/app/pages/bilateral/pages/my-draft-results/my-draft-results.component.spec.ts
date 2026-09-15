@@ -701,4 +701,99 @@ describe('MyDraftResultsComponent', () => {
       expect(count).toBeNull();
     });
   });
+
+  describe('Creator identification and guidance UX (quick/draft-results-creator-ux)', () => {
+    afterEach(() => {
+      localStorage.removeItem('user');
+    });
+
+    it('renders guidance banner above session list explaining review & creation steps', () => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const banner = fixture.nativeElement.querySelector('.mdr-guidance-banner');
+      expect(banner).toBeTruthy();
+      expect(banner.textContent).toContain('Candidate Results Ready for Review & Creation');
+      expect(banner.textContent).toContain('Next Steps');
+      expect(banner.textContent).toContain('Review');
+      expect(banner.textContent).toContain('Create Result');
+    });
+
+    it('identifies sessions created by the current user with "Created by you" badge and .mdr-session-card--me accent styling', () => {
+      const myDraft = {
+        ...draftStub,
+        id: 101,
+        job_id: 'user-session-1111',
+        job: { ...draftStub.job, job_id: 'user-session-1111', user_id: 42 },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([myDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(true);
+      expect(group.creatorName).toBe('Created by you');
+      expect(group.creatorTooltip).toContain('Dr. Maria Santos');
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      expect(card.classes['mdr-session-card--me']).toBe(true);
+
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.classes['mdr-creator-badge--me']).toBe(true);
+      expect(badge.nativeElement.textContent).toContain('Created by you');
+    });
+
+    it('identifies sessions created by another user with "User #<id>" badge without .mdr-session-card--me', () => {
+      const colleagueDraft = {
+        ...draftStub,
+        id: 102,
+        job_id: 'colleague-session-2222',
+        job: { ...draftStub.job, job_id: 'colleague-session-2222', user_id: 99 },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([colleagueDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(false);
+      expect(group.creatorName).toBe('User #99');
+      expect(group.creatorTooltip).toBe('AI extraction session created by User #99');
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      expect(card.classes['mdr-session-card--me']).toBeFalsy();
+
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.classes['mdr-creator-badge--other']).toBe(true);
+      expect(badge.nativeElement.textContent).toContain('User #99');
+    });
+
+    it('handles missing user_id gracefully without creator badge', () => {
+      const legacyDraft = {
+        ...draftStub,
+        id: 103,
+        job_id: 'legacy-session-3333',
+        job: { ...draftStub.job, job_id: 'legacy-session-3333', user_id: null },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([legacyDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.creatorName).toBe('');
+      expect(group.isCurrentUser).toBe(false);
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeNull();
+    });
+  });
 });
