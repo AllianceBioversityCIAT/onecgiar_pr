@@ -120,9 +120,10 @@
 - **Verification:** `cd onecgiar-pr-client && npx tsc --noEmit -p tsconfig.app.json && npx jest src/app/pages/bilateral/bilateral-ai-job.model.spec.ts src/app/pages/bilateral/services/bilateral-ai.service.spec.ts src/app/shared/services/api/bilateral-api.service.spec.ts --silent && npx ng lint --quiet && ! grep -rn "Processing timed out" src/app/pages/bilateral/`
 - **Input that would make the check fail:** a fixture with numeric ids only (the normalization tests cannot go red — reject it); `status: 'failed'` set at the ceiling; a `catch` that swallows 404; `errorCopy` throwing on an unknown code.
 - **What this cannot prove / disqualifier:** fake timers prove the schedule, not the real interval under tab throttling; the live cadence is observed in `APF-T-10` (poll count over 2 minutes from the network log — not evidence if the tab was backgrounded).
+- **Status:** `[x]` PASS — 2026-09-15, attempt 1 (see `execution.md`; forward pointers to T-6 recorded there)
 - **Definition of done:**
-  - [ ] `tsc`, Jest, lint green; grep gate 0 for the removed copy; no template change in this task.
-  - [ ] Commit: `♻️ refactor(bilateral-ai) [<ticket>]: job model, adaptive polling, still-running ceiling, single-surface gate, retry and expectations`.
+  - [x] `tsc`, Jest, lint green; grep gate 0 for the removed copy; no template change in this task.
+  - [x] Commit: `♻️ refactor(bilateral-ai) [<ticket>]: job model, adaptive polling, still-running ceiling, single-surface gate, retry and expectations`.
 
 ### `APF-T-6` — Processing panel component and upload integration
 

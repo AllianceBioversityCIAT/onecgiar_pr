@@ -211,4 +211,25 @@ describe('BilateralApiService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(mockResponse);
   });
+
+  it('POST_bilateralAiJobRetry should POST to the retry endpoint for the given job id', done => {
+    service.POST_bilateralAiJobRetry('job-1').subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs/job-1/retry`);
+    expect(req.request.method).toBe('POST');
+    req.flush(mockResponse);
+  });
+
+  it('GET_bilateralAiJobExpectations should GET the expectations route under center/ai/, not center/ai/jobs/', done => {
+    service.GET_bilateralAiJobExpectations('documents').subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/ai/expectations?mix=documents`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.url).not.toContain('/ai/jobs/');
+    req.flush(mockResponse);
+  });
 });

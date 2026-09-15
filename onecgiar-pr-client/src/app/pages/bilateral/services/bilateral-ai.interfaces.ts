@@ -47,7 +47,18 @@ export interface BilateralAiDraft {
 
 export interface BilateralAiUploadState {
   jobId: string | null;
-  status: 'idle' | 'uploading' | 'pending' | 'processing' | 'completed' | 'completed_no_candidates' | 'failed' | 'discarded' | 'promoted';
+  status:
+    | 'idle'
+    | 'uploading'
+    | 'pending'
+    | 'processing'
+    /** Polling ceiling reached (30 min) while the server is still alive — never a client failure (`APF-R-7`). */
+    | 'still_running'
+    | 'completed'
+    | 'completed_no_candidates'
+    | 'failed'
+    | 'discarded'
+    | 'promoted';
   errorMessage?: string;
   uploadProgress: number;
 }
