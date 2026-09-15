@@ -65,7 +65,7 @@
 | `/ipsr/list/innovation-list` | (no h1–h3) | 10 table rows |
 
 - `SP01` exists in production as "Breeding for Tomorrow" with the active `Reporting 2026 - (Open)` phase; ≥1 received notification and ≥1 innovation package confirmed.
-- **Observation for `UG-OQ-1`/`UG-T-16`:** the supplied session is an **admin** user — the sidebar shows `Quality Assurance`, `My Admin`, `Admin module`, which a plain P/A end user does not see. Screenshots will include those menu items unless a non-admin token is supplied or the sections are cropped/annotated around them. Flagged to the user; not blocking capture.
+- **Observation for `UG-OQ-1`/`UG-T-16`:** the supplied session is an **admin** user — the sidebar shows `Quality Assurance`, `My Admin`, `Admin module`, which a plain P/A end user does not see. Screenshots will include those menu items unless a non-admin token is supplied or the sections are cropped/annotated around them. Flagged to the user; **user decision 2026-09-15: "sigue con este token, no importa que sea admin" — capture proceeds with the admin session; admin-only sidebar items may appear in screenshots and `UG-T-9` copy must not describe them as P/A features.** Closes the `UG-OQ-1` persona-wording assumption for this run.
 - **Requirements covered:** `UG-R-2` (precondition), resolves `UG-OQ-2` in practice.
 - **Decisions made:** system-Chrome channel workaround (above). Pre-flight checklist boxes for requirements/design approval ticked per the user's approved-as-written confirmation already recorded in Document Control.
 - **Issues encountered:** Chromium CDN download failure (see above). CLARISA glossary URL 404 still open for `UG-T-10`.
