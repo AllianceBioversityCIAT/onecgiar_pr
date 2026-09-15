@@ -177,6 +177,19 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   showConfirmSaveChangesDialog = signal<boolean>(false);
   isToCCompleted = signal<boolean>(false);
 
+  /**
+   * P2-3620 AC1 — "What is the geographic focus of the result?" is required, but the drawer used to
+   * save it empty without a word: the justification dialog opened, the save went through, and a
+   * reload showed the scope still blank while every other field touched in the same save kept its
+   * new value. This mirrors `isToCCompleted` so "Save data standards" can refuse for the same
+   * reason the Approve button already refuses an incomplete TOC.
+   *
+   * Truthiness (not `!= null`) on purpose: it is the same test the template already uses to decide
+   * whether to offer the extra-scope question (`fields.geographicScope.geo_scope_id && ...`), and
+   * no valid CLARISA scope id is 0.
+   */
+  isGeoScopeCompleted = computed<boolean>(() => !!this.resultDetail()?.geographicScope?.geo_scope_id);
+
   // @akili-spec changes/sp-bilateral-review-tab (BRT-T-2, BRT-R-14) — membership check moved to the
   // shared BilateralReviewAccessService so the row action label (bilateral-review page) and this
   // drawer read the same rule; the pending-status guard stays local to the drawer.
@@ -390,6 +403,16 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     return this.isToCCompleted() && !this.hasDataStandardUnsavedChanges() && !this.hasTocUnsavedChanges();
   }
 
+  /**
+   * P2-3620 AC1 — the reporter must be told WHY the save is refused. Same shape as
+   * `getApproveButtonTooltip()` so both buttons in the drawer explain themselves the same way.
+   */
+  getSaveDataStandardsTooltip(): string {
+    if (!this.isGeoScopeCompleted()) return 'Please select the geographic focus of the result before saving';
+    if (!this.hasDataStandardUnsavedChanges()) return '';
+    return 'Save the data standards changes';
+  }
+
   getApproveButtonTooltip(): string {
     if (!this.isToCCompleted()) return 'Please complete and save the TOC data before approving the result';
     if (this.hasTocUnsavedChanges()) return 'Please save the TOC changes before approving the result';
@@ -512,6 +535,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   onSaveDataStandardChanges(): void {
     // P2-3154 AC1/AC2: only the TOC alignment is saveable by the reviewing Science Program.
     if (!this.canEditDataStandards()) return;
+    // P2-3620 AC1: never open the justification dialog with the required geographic scope empty.
+    // The guard lives here and not only on the button because the "unsaved data standards changes"
+    // status chip in the footer is a second, independent trigger for this very method.
+    if (!this.isGeoScopeCompleted()) return;
     this.saveChangesType = 'dataStandard';
     this.saveChangesJustification = '';
     this.showConfirmSaveChangesDialog.set(true);
