@@ -102,4 +102,4 @@ feeds `buildOverviewModel` (`bilateral-overview.aggregate.ts:220`). Chart option
 - Whether the `sm:`/arbitrary-breakpoint cascade defect above also affects other pages using the
   same mixed-breakpoint pattern — not audited beyond this folder.
 
-**Verified:** 2026-09-14 · qa-development-2026 · 576167f86 (spec: `docs/specs/bilateral/center-overview-tab/`, `COV-T-8` H-1/H-2)
+**Verified:** 2026-09-14 · qa-development-2026 · 576167f86 (spec: `docs/specs/archive/2026-09-14-bilateral--center-overview-tab/`, `COV-T-8` H-1/H-2)
