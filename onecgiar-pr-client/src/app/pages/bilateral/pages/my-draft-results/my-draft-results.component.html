@@ -208,19 +208,19 @@
             <div class="mdr-table-container overflow-x-auto custom_scroll">
               <table class="mdr-session-table w-full text-left border-collapse text-[13px]">
                 <colgroup>
-                  <col class="w-auto" />
-                  <col style="width: 240px;" />
-                  <col style="width: 100px;" />
-                  <col style="width: 90px;" />
-                  <col style="width: 275px;" />
+                  <col class="mdr-col-title" />
+                  <col class="mdr-col-category" />
+                  <col class="mdr-col-level" />
+                  <col class="mdr-col-status" />
+                  <col class="mdr-col-actions" />
                 </colgroup>
                 <thead>
                   <tr class="border-b border-[var(--pr-border-divider)] text-[11px] font-semibold uppercase tracking-wider text-[var(--pr-text-secondary)] bg-[var(--pr-surface-card)]">
-                    <th scope="col" class="py-[10px] pl-[20px] pr-[16px]">Result Title</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap" style="width: 240px;">Category</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap" style="width: 100px;">Level</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap" style="width: 90px;">Status</th>
-                    <th scope="col" class="py-[10px] pl-[12px] pr-[20px] text-right whitespace-nowrap" style="width: 275px;">Actions</th>
+                    <th scope="col" class="mdr-col-title py-[10px] pl-[20px] pr-[16px]">Result Title</th>
+                    <th scope="col" class="mdr-col-category py-[10px] px-[12px] whitespace-nowrap">Category</th>
+                    <th scope="col" class="mdr-col-level py-[10px] px-[12px] whitespace-nowrap">Level</th>
+                    <th scope="col" class="mdr-col-status py-[10px] px-[12px] whitespace-nowrap">Status</th>
+                    <th scope="col" class="mdr-col-actions py-[10px] pl-[12px] pr-[20px] text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--pr-border-subtle)]">
@@ -244,34 +244,35 @@
                           </div>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap overflow-hidden" style="width: 240px;">
+                      <td class="mdr-col-category py-[12px] px-[12px] align-middle whitespace-nowrap overflow-hidden">
                         @if (getDraftIndicator(draft)) {
                           <span class="mdr-card-type">{{ getDraftIndicator(draft) }}</span>
                         } @else {
                           <span class="text-[var(--pr-text-muted)]">—</span>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap" style="width: 100px;">
+                      <td class="mdr-col-level py-[12px] px-[12px] align-middle whitespace-nowrap">
                         @if (getDraftLevel(draft); as level) {
                           <span class="mdr-card-level">{{ level }}</span>
                         } @else {
                           <span class="text-[var(--pr-text-muted)]">—</span>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap" style="width: 90px;">
+                      <td class="mdr-col-status py-[12px] px-[12px] align-middle">
                         <span [class]="getDraftStatusClass(draft)">{{ getDraftStatus(draft) }}</span>
                       </td>
-                      <td class="py-[12px] pl-[12px] pr-[20px] align-middle text-right whitespace-nowrap" style="width: 275px;">
+                      <td class="mdr-col-actions py-[12px] pl-[16px] pr-[20px] align-middle text-right whitespace-nowrap">
                         <div class="mdr-actions inline-flex items-center justify-end gap-[8px]">
                           <button
                             type="button"
                             class="mdr-btn mdr-btn--review"
+                            [attr.aria-label]="reviewTooltip"
                             [prTooltip]="reviewTooltip"
                             prTooltipPosition="top"
                             (click)="onReview(draft)"
                           >
-                            <i class="material-icons-round">visibility</i>
-                            Review
+                            <i class="material-icons-round" aria-hidden="true">visibility</i>
+                            <span class="mdr-btn-label">Review</span>
                           </button>
                           <button
                             type="button"
@@ -291,7 +292,7 @@
                             prTooltipPosition="top"
                             (click)="onDiscardClick(draft)"
                           >
-                            <i class="material-icons-round">delete_outline</i>
+                            <i class="material-icons-round" aria-hidden="true">delete</i>
                           </button>
                         </div>
                       </td>

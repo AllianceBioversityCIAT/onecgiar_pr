@@ -197,15 +197,26 @@ describe('MyDraftResultsComponent', () => {
       expect(textOf('.mdr-card-type')).toBe('Capacity Sharing');
     });
 
-    it('renders colgroup with fixed column widths to ensure columns align across sessions', () => {
+    it('renders colgroup with fixed column classes so Status and Actions stay separated', () => {
       const colgroup = fixture.debugElement.query(By.css('.mdr-session-table colgroup'));
       expect(colgroup).toBeTruthy();
       const cols = colgroup.queryAll(By.css('col'));
       expect(cols.length).toBe(5);
-      expect(cols[1].nativeElement.style.width).toBe('240px');
-      expect(cols[2].nativeElement.style.width).toBe('100px');
-      expect(cols[3].nativeElement.style.width).toBe('90px');
-      expect(cols[4].nativeElement.style.width).toBe('275px');
+      expect(cols[0].nativeElement.classList.contains('mdr-col-title')).toBe(true);
+      expect(cols[1].nativeElement.classList.contains('mdr-col-category')).toBe(true);
+      expect(cols[2].nativeElement.classList.contains('mdr-col-level')).toBe(true);
+      expect(cols[3].nativeElement.classList.contains('mdr-col-status')).toBe(true);
+      expect(cols[4].nativeElement.classList.contains('mdr-col-actions')).toBe(true);
+    });
+
+    it('keeps the status chip and Review control in separate table cells (responsive overlap fix)', () => {
+      const row = fixture.debugElement.query(By.css('.mdr-session-table tbody tr'));
+      const statusCell = row.query(By.css('.mdr-col-status'));
+      const actionsCell = row.query(By.css('.mdr-col-actions'));
+
+      expect(statusCell.query(By.css('.mdr-status'))).toBeTruthy();
+      expect(statusCell.query(By.css('.mdr-btn--review'))).toBeFalsy();
+      expect(actionsCell.query(By.css('.mdr-btn--review'))).toBeTruthy();
     });
 
     it('shows the suggested result type as Output or Outcome, from result.result_level_id', () => {
@@ -333,7 +344,7 @@ describe('MyDraftResultsComponent', () => {
       const discardBtn = actions.query(By.css('.mdr-btn--discard'));
       expect(discardBtn).toBeTruthy();
       expect(discardBtn.nativeElement.getAttribute('aria-label')).toBe('Delete draft');
-      expect(discardBtn.query(By.css('i'))?.nativeElement.textContent.trim()).toBe('delete_outline');
+      expect(discardBtn.query(By.css('i'))?.nativeElement.textContent.trim()).toBe('delete');
     });
   });
 
