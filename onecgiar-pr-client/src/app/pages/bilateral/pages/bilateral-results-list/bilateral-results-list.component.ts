@@ -14,7 +14,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, filter, take, map, distinctUntilChanged } from 'rxjs';
+import { combineLatest, filter, take, map, distinctUntilChanged, forkJoin, switchMap } from 'rxjs';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
@@ -150,6 +150,18 @@ function phaseVersionId(phase: Phases): number {
   return Number(phase.id);
 }
 
+function parsePhaseIdsFromUrl(raw: string | null): number[] {
+  if (!raw) return [];
+  const ids = raw
+    .split(',')
+    .map(token => {
+      const n = Number(token.trim());
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })
+    .filter((n): n is number => n !== null);
+  return [...new Set(ids)];
+}
+
 @Component({
   selector: 'app-bilateral-results-list',
   standalone: true,
@@ -185,6 +197,8 @@ export class BilateralResultsListComponent implements OnInit {
   readonly ctx = inject(BilateralContextService);
 
   readonly phases = signal<Phases[]>([]);
+  /** Reporting phases included in the current Results view — at least one must stay selected. */
+  readonly selectedPhaseIds = signal<number[]>([]);
   readonly results = signal<BilateralCenterResult[]>([]);
   readonly loading = signal(false);
   readonly initializing = signal(true);
@@ -206,20 +220,31 @@ export class BilateralResultsListComponent implements OnInit {
   readonly typeFilter = signal<number[]>([]);
   readonly methodFilter = signal<BilateralMethod | null>(null);
 
+  /** Default phase selection — the Open reporting phase, else the first loaded phase. */
+  readonly defaultPhaseIds = computed(() => {
+    const phases = this.phases();
+    if (!phases.length) return [];
+    const open = phases.find(p => p.status) ?? phases[0];
+    return open ? [phaseVersionId(open)] : [];
+  });
+
+  readonly selectedPhases = computed(() => {
+    const ids = new Set(this.selectedPhaseIds());
+    return this.phases().filter(phase => ids.has(phaseVersionId(phase)));
+  });
+
   /**
-   * `COV-DD-2`: the phase shared by all four center tabs lives on `BilateralContextService`
-   * (`null` = Open). `null` also means the URL carried no `?phase=` at all — a match is looked up
-   * by id, falling back to the Open phase (today's `status` flag) or the first phase loaded.
+   * `COV-DD-2`: the primary phase shared by the other center tabs lives on `BilateralContextService`
+   * (`null` = Open). On this tab it tracks the preferred id among `selectedPhaseIds` (Open when
+   * selected, otherwise the first selected id).
    */
   readonly selectedPhase = computed<Phases | null>(() => {
-    const phases = this.phases();
-    if (!phases.length) return null;
     const versionId = this.ctx.selectedVersionId();
     if (versionId !== null) {
-      const match = phases.find(p => phaseVersionId(p) === versionId);
+      const match = this.phases().find(p => phaseVersionId(p) === versionId);
       if (match) return match;
     }
-    return phases.find(p => p.status) ?? phases[0] ?? null;
+    return this.selectedPhases()[0] ?? null;
   });
 
   // Actions
@@ -326,9 +351,16 @@ export class BilateralResultsListComponent implements OnInit {
     });
   });
 
+  readonly hasNonDefaultPhaseFilter = computed(() => {
+    const selected = [...this.selectedPhaseIds()].sort((a, b) => a - b);
+    const defaults = [...this.defaultPhaseIds()].sort((a, b) => a - b);
+    return selected.join(',') !== defaults.join(',');
+  });
+
   /** True when the Filter button should use the active (primary-tinted) styling. */
   readonly filterButtonActive = computed(
     () =>
+      this.hasNonDefaultPhaseFilter() ||
       this.showW1W2() ||
       this.showContributing() ||
       this.statusFilter().length > 0 ||
@@ -339,9 +371,10 @@ export class BilateralResultsListComponent implements OnInit {
       this.searchQuery().trim().length > 0,
   );
 
-  /** Badge count on the Filter button — extras beyond the default W3 + Lead pair. */
+  /** Badge count on the Filter button — extras beyond the default W3 + Lead + Open phase. */
   readonly activeFilterBadgeCount = computed(() => {
     let count = 0;
+    if (this.hasNonDefaultPhaseFilter()) count += Math.max(0, this.selectedPhaseIds().length - this.defaultPhaseIds().length) || 1;
     if (this.showW1W2()) count++;
     if (this.showContributing()) count++;
     count += this.statusFilter().length;
@@ -367,10 +400,38 @@ export class BilateralResultsListComponent implements OnInit {
 
     combineLatest([
       centerIdentifier$,
-      toObservable(this.selectedPhase).pipe(filter((p): p is Phases => !!p)),
+      toObservable(this.selectedPhaseIds).pipe(
+        filter(ids => ids.length > 0),
+        distinctUntilChanged((a, b) => a.length === b.length && a.every((id, index) => id === b[index])),
+      ),
     ])
-      .pipe(takeUntilDestroyed())
-      .subscribe(([, phase]) => this.loadResults(phaseVersionId(phase)));
+      .pipe(
+        takeUntilDestroyed(),
+        switchMap(([centerId, phaseIds]) => {
+          this.loading.set(true);
+          this.error.set(false);
+
+          if (phaseIds.length === 1) {
+            return this.bilateralApiService.GET_bilateralCenterResults(centerId, phaseIds[0]).pipe(
+              map(({ response }) => response ?? []),
+            );
+          }
+
+          return forkJoin(
+            phaseIds.map(id => this.bilateralApiService.GET_bilateralCenterResults(centerId, id)),
+          ).pipe(map(responses => responses.flatMap(({ response }) => response ?? [])));
+        }),
+      )
+      .subscribe({
+        next: rows => {
+          this.results.set(rows);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
+      });
 
     // Reset the table to its default sort + page 0 whenever the filtered set changes
     // (filter chips, search, new data) — mirrors the Results Center pattern.
@@ -397,15 +458,60 @@ export class BilateralResultsListComponent implements OnInit {
 
     if (reportingPhases.length) {
       this.phases.set(reportingPhases);
+      this.ensureDefaultPhaseSelection();
       this.initializing.set(false);
     } else {
       this.phasesService.getPhasesObservable()
         .pipe(take(1), takeUntilDestroyed(this.destroyRef))
         .subscribe(loaded => {
           this.phases.set(p25Only(loaded));
+          this.ensureDefaultPhaseSelection();
           this.initializing.set(false);
         });
     }
+  }
+
+  phaseChipLabel(phase: Phases): string {
+    const year = phase.phase_year ?? phase.phase_name;
+    const portfolio = phase.obj_portfolio?.acronym;
+    const base = portfolio ? `${year} · ${portfolio}` : String(year ?? '');
+    return phase.status ? `${base} · Open` : base;
+  }
+
+  isPhaseSelected(phase: Phases): boolean {
+    return this.selectedPhaseIds().includes(phaseVersionId(phase));
+  }
+
+  private ensureDefaultPhaseSelection(): void {
+    if (this.selectedPhaseIds().length) return;
+
+    const phases = this.phases();
+    if (!phases.length) return;
+
+    const fromCtx = this.ctx.selectedVersionId();
+    if (fromCtx !== null && phases.some(phase => phaseVersionId(phase) === fromCtx)) {
+      this.selectedPhaseIds.set([fromCtx]);
+      return;
+    }
+
+    const defaults = this.defaultPhaseIds();
+    if (defaults.length) {
+      this.selectedPhaseIds.set(defaults);
+      this.syncPrimaryPhase();
+    }
+  }
+
+  private syncPrimaryPhase(): void {
+    const ids = this.selectedPhaseIds();
+    if (!ids.length) {
+      this.ctx.selectedVersionId.set(null);
+      return;
+    }
+
+    const open = this.phases().find(phase => phase.status);
+    const openId = open ? phaseVersionId(open) : null;
+    const primary = openId !== null && ids.includes(openId) ? openId : ids[0];
+    this.ctx.selectedVersionId.set(primary);
   }
 
   /**
@@ -452,8 +558,15 @@ export class BilateralResultsListComponent implements OnInit {
     this.typeFilter.set(params.type);
     this.methodFilter.set(params.method);
 
-    if (params.phase !== null && params.phase !== this.ctx.selectedVersionId()) {
+    const urlPhaseIds = parsePhaseIdsFromUrl(map.get(BILATERAL_PHASE_QUERY_PARAM));
+    if (urlPhaseIds.length) {
+      this.selectedPhaseIds.set(urlPhaseIds);
+      this.syncPrimaryPhase();
+    } else if (params.phase !== null) {
+      this.selectedPhaseIds.set([params.phase]);
       this.ctx.selectedVersionId.set(params.phase);
+    } else {
+      this.ensureDefaultPhaseSelection();
     }
 
     if (stripped.length) {
@@ -485,6 +598,10 @@ export class BilateralResultsListComponent implements OnInit {
    */
   private syncUrlParams(): void {
     const serialized = serializeBilateralQueryParams(this.currentContractParams(), { explicitDefaults: true });
+    const phaseIds = this.selectedPhaseIds();
+    if (phaseIds.length) serialized[BILATERAL_PHASE_QUERY_PARAM] = phaseIds.join(',');
+    else delete serialized[BILATERAL_PHASE_QUERY_PARAM];
+
     const current = this.activatedRoute.snapshot.queryParamMap;
     const next: Params = {};
     let changed = false;
@@ -540,6 +657,8 @@ export class BilateralResultsListComponent implements OnInit {
   }
 
   clearAllFilters(): void {
+    this.selectedPhaseIds.set(this.defaultPhaseIds());
+    this.syncPrimaryPhase();
     this.showW3.set(true);
     this.showW1W2.set(false);
     this.showLead.set(true);
@@ -625,10 +744,19 @@ export class BilateralResultsListComponent implements OnInit {
     }
   }
 
-  /** `COV-DD-2`/`COV-R-5` A — writes both the shared phase signal and `?phase=`. */
-  selectPhase(phase: Phases): void {
-    this.ctx.selectedVersionId.set(phaseVersionId(phase));
-    this.searchQuery.set('');
+  /** Toggles a reporting phase in the Results filter — at least one phase must remain selected. */
+  togglePhase(phase: Phases): void {
+    const id = phaseVersionId(phase);
+    const current = this.selectedPhaseIds();
+
+    if (current.includes(id)) {
+      if (current.length === 1) return;
+      this.selectedPhaseIds.set(current.filter(existing => existing !== id));
+    } else {
+      this.selectedPhaseIds.set([...current, id].sort((a, b) => a - b));
+    }
+
+    this.syncPrimaryPhase();
     this.syncUrlParams();
   }
 
@@ -744,25 +872,6 @@ export class BilateralResultsListComponent implements OnInit {
       },
       error: () => {
         this.deletingId.set(null);
-      },
-    });
-  }
-
-  loadResults(versionId: number): void {
-    const centerId = this.ctx.centerId() || this.ctx.centerAcronym() || '';
-    if (!centerId) return;
-
-    this.loading.set(true);
-    this.error.set(false);
-
-    this.bilateralApiService.GET_bilateralCenterResults(centerId, versionId).subscribe({
-      next: ({ response }) => {
-        this.results.set(response ?? []);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set(true);
-        this.loading.set(false);
       },
     });
   }

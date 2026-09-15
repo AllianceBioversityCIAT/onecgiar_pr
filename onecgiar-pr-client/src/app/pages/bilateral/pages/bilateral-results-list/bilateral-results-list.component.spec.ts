@@ -405,7 +405,7 @@ describe('BilateralResultsListComponent', () => {
     });
 
     /** `COV-R-5` A — the shared signal the other tabs read must be a NUMBER, not the API's string. */
-    it('writes a numeric phase id to the shared signal when a phase tab is picked', () => {
+    it('writes a numeric phase id to the shared signal when a phase filter chip is picked', () => {
       phasesService.phases.reporting = [
         { id: '35', phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
         { id: '36', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
@@ -413,11 +413,13 @@ describe('BilateralResultsListComponent', () => {
       recreateOn();
 
       // `phases` keeps the service's order, so index 0 is the CLOSED 2025 phase.
-      component.selectPhase(component.phases()[0]);
+      component.togglePhase(component.phases()[0]);
       fixture.detectChanges();
 
-      expect(TestBed.inject(BilateralContextService).selectedVersionId()).toBe(35);
-      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 35);
+      expect(component.selectedPhaseIds()).toEqual([35, 36]);
+      expect(TestBed.inject(BilateralContextService).selectedVersionId()).toBe(36);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledWith('CIAT-BIOVERSITY', 35);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledWith('CIAT-BIOVERSITY', 36);
     });
 
     it('still focuses the row deep-linked by ?result=, and leaves that param alone', () => {

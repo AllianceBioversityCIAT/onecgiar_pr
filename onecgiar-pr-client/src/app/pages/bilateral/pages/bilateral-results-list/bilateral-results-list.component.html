@@ -1,27 +1,8 @@
 <app-bilateral-page-header activeTab="results" />
 
-<!-- Docked Phase tabs & Filter bar -->
-<div class="brl_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] pt-[8px] pb-[10px]">
-  <!-- Phase tabs -->
-  @if (phases().length > 0) {
-    <div class="brl_phases_wrap">
-      <div class="brl_phases">
-        @for (phase of phases(); track phase.id) {
-          <button
-            class="brl_phase_tab"
-            [class.brl_phase_tab--active]="selectedPhase()?.id === phase.id"
-            (click)="selectPhase(phase)">
-            {{ phase.phase_year ?? phase.phase_name }}
-            @if (phase.status) {
-              <span class="brl_phase_open">Open</span>
-            }
-          </button>
-        }
-      </div>
-    </div>
-  }
-
-  <!-- Filter bar — JIRA-style Filter button + active chips (Reporting / Programme Results parity) -->
+<!-- Docked filter bar -->
+<div class="brl_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]">
+  <!-- Filter bar — Filter button + active chips (Reporting / Programme Results parity) -->
   <div class="brl_filter_bar">
     <div class="brl_filter_main">
       <div class="relative brl-filter-container">
@@ -80,6 +61,29 @@
           </div>
 
           <div class="flex flex-col gap-[14px]">
+            @if (phases().length > 0) {
+              <div class="brl_filter_group brl_filter_group--stacked">
+                <span class="brl_filter_group_label">Phase</span>
+                <div class="brl_chips">
+                  @for (phase of phases(); track phase.id) {
+                    <button
+                      type="button"
+                      class="brl_chip brl_chip--phase"
+                      [class.brl_chip--active]="isPhaseSelected(phase)"
+                      (click)="togglePhase(phase)"
+                      [title]="isPhaseSelected(phase) ? 'Hide ' + phaseChipLabel(phase) + ' results' : 'Add ' + phaseChipLabel(phase) + ' results'">
+                      {{ phaseChipLabel(phase) }}
+                      @if (isPhaseSelected(phase)) {
+                        <span class="material-icons-round brl_chip_icon">check</span>
+                      } @else {
+                        <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
             <div class="brl_filter_group brl_filter_group--stacked">
               <span class="brl_filter_group_label">Source</span>
               <div class="brl_chips">
@@ -152,6 +156,20 @@
           </div>
         </div>
       </div>
+
+      @for (phase of selectedPhases(); track phase.id) {
+        <button
+          type="button"
+          class="brl_chip brl_chip--phase brl_chip--active"
+          (click)="togglePhase(phase)"
+          [title]="selectedPhaseIds().length > 1 ? 'Remove ' + phaseChipLabel(phase) + ' filter' : phaseChipLabel(phase) + ' is the only phase filter active'"
+          [attr.aria-label]="'Remove ' + phaseChipLabel(phase) + ' filter'">
+          {{ phaseChipLabel(phase) }}
+          @if (selectedPhaseIds().length > 1) {
+            <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+          }
+        </button>
+      }
 
       @if (showW3()) {
         <button

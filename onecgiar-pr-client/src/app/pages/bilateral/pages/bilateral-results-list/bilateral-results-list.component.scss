@@ -26,61 +26,6 @@
   }
 }
 
-// ─── Phase tabs ───────────────────────────────────────────────────────────────
-
-.brl_phases_wrap {
-  overflow-x: auto;
-  overflow-y: hidden;
-  border-bottom: 1px solid var(--pr-color-accents-2);
-  margin-bottom: 16px;
-}
-
-.brl_phases {
-  display: flex;
-  gap: 4px;
-  padding: 12px 0 0;
-  white-space: nowrap;
-}
-
-.brl_phase_tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--pr-color-accents-5);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-  font-family: inherit;
-  margin-bottom: -1px;
-
-  &:hover {
-    color: var(--pr-color-secondary-400);
-  }
-
-  &--active {
-    color: var(--pr-color-primary-300);
-    border-bottom-color: var(--pr-color-primary-300);
-  }
-}
-
-.brl_phase_open {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: 20px;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--pr-color-primary-300);
-  letter-spacing: 0.3px;
-}
-
 // ─── Filter chips bar ─────────────────────────────────────────────────────────
 
 // Color tokens for the four chip types
@@ -99,6 +44,10 @@ $lead-color-border:  #a7f3d0;
 $contrib-color:      #0284c7;
 $contrib-color-light:#e0f2fe;
 $contrib-color-border:#bae6fd;
+
+$phase-color:         #475569;
+$phase-color-light:   #f8fafc;
+$phase-color-border:  #cbd5e1;
 
 .brl_filter_bar {
   display: flex;
@@ -212,6 +161,19 @@ $contrib-color-border:#bae6fd;
 
 // W3 Bilateral chip
 .brl_chip_dot--w3 { background: $w3-color; }
+
+.brl_chip--phase {
+  &:hover:not(.brl_chip--active) {
+    border-color: $phase-color-border;
+    background: $phase-color-light;
+    color: $phase-color;
+  }
+  &.brl_chip--active {
+    background: $phase-color-light;
+    border-color: $phase-color-border;
+    color: $phase-color;
+  }
+}
 
 .brl_chip--w3 {
   &:hover:not(.brl_chip--active) {
