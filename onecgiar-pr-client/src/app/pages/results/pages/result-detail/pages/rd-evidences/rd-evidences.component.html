@@ -31,10 +31,30 @@
       <!-- Sello: dice de un vistazo si es enlace o archivo, y lleva su número encima como una
            chapa. El número seguía siendo útil (la gente dice "la evidencia 2"), pero ocupaba una
            columna entera para tres píxeles de información. -->
-      <div class="ev_seal" [class.is_file]="isFileEvidence(evidence)">
-        <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
-        <span class="ev_num">{{ i + 1 }}</span>
-      </div>
+      <!-- El sello reconoce lo que tiene delante: una imagen se ve, un documento dice su formato, y
+           un enlace lleva su icono. Una miniatura que no carga —archivo privado, enlace caducado,
+           subida a medias— cae de vuelta al sello por `(error)`: lo único que una tarjeta no puede
+           mostrar es una imagen rota. -->
+      @if (showThumb(evidence)) {
+        <button
+          type="button"
+          class="ev_seal ev_seal_thumb"
+          (click)="openPreview(evidence)"
+          [attr.aria-label]="'Preview ' + evidenceDisplayName(evidence)">
+          <img [src]="evidence.link" [alt]="evidenceDisplayName(evidence)" (error)="onThumbError(evidence)" />
+          <span class="ev_zoom" aria-hidden="true"><i class="material-icons-round">zoom_in</i></span>
+          <span class="ev_num">{{ i + 1 }}</span>
+        </button>
+      } @else {
+        <div class="ev_seal" [class.is_file]="isFileEvidence(evidence)">
+          @if (isFileEvidence(evidence) && evidenceFormatLabel(evidence)) {
+            <span class="ev_format">{{ evidenceFormatLabel(evidence) }}</span>
+          } @else {
+            <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
+          }
+          <span class="ev_num">{{ i + 1 }}</span>
+        </div>
+      }
 
       <div class="ev_main">
         <div class="ev_headline">
@@ -102,8 +122,23 @@
           rel="noopener noreferrer"
           prTooltip="Open in a new tab"
           prTooltipPosition="top">
-          <span>Open</span>
-          <i class="material-icons-round" aria-hidden="true">open_in_new</i>
+          <span>{{ showThumb(evidence) ? 'View' : 'Open' }}</span>
+          <i class="material-icons-round" aria-hidden="true">{{ showThumb(evidence) ? 'visibility' : 'open_in_new' }}</i>
+        </a>
+
+        <!-- Descargar, solo para un archivo del repositorio: un enlace externo no es nuestro para
+             ofrecerlo como descarga, y abrirlo ya es lo que hace el botón de al lado. -->
+        <a
+          class="ev_open ev_download"
+          *ngIf="isFileEvidence(evidence) && evidence.link && !isEvidenceUploading(evidence)"
+          [href]="evidence.link"
+          [attr.download]="evidenceDisplayName(evidence)"
+          target="_blank"
+          rel="noopener noreferrer"
+          prTooltip="Download the file"
+          prTooltipPosition="top"
+          [attr.aria-label]="'Download ' + evidenceDisplayName(evidence)">
+          <i class="material-icons-round" aria-hidden="true">download</i>
         </a>
 
         <!-- Las fechas suben a la esquina, con su propia forma: no son un chip (un chip clasifica)
@@ -163,6 +198,28 @@
 </div>
 
 <app-section-bottom-bar [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()" />
+
+<!-- Visor de la imagen. Vive fuera de la lista y no dentro de cada tarjeta: una sola instancia
+     para las seis, y así ninguna arrastra un diálogo oculto. -->
+<app-pr-dialog
+  [visible]="!!previewEvidence"
+  (visibleChange)="!$event && closePreview()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  (onHide)="closePreview()"
+  styleClass="evidence-preview-dialog">
+  <div class="ev_preview" *ngIf="previewEvidence">
+    <div class="ev_preview_top">
+      <span class="ev_preview_name">{{ evidenceDisplayName(previewEvidence) }}</span>
+      <button type="button" class="modal_close" prTooltip="Close" (click)="closePreview()">
+        <i class="material-icons-round">close</i>
+      </button>
+    </div>
+    <img [src]="previewEvidence.link" [alt]="evidenceDisplayName(previewEvidence)" (error)="onThumbError(previewEvidence); closePreview()" />
+  </div>
+</app-pr-dialog>
 
 <!-- P2-2935: evidence creation modal -->
 <app-pr-dialog

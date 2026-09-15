@@ -1352,4 +1352,69 @@ describe('RdEvidencesComponent', () => {
       expect(component.evidenceRest(ev('', 'annual-report-2026.pdf'))).toBe('');
     });
   });
+
+  /*
+   * El sello reconoce lo que tiene delante: una imagen se ve, un documento dice su formato y un
+   * enlace lleva su icono. Lo que se vigila aquí es el caso que arruina una lista — que una
+   * miniatura se quede rota en pantalla — y el que engaña al ojo: la extensión en mayúsculas.
+   */
+  describe('qué enseña el sello de cada evidencia', () => {
+    const file = (name: string, link = 'https://repo.example/f') =>
+      ({ is_sharepoint: true, sp_file_name: name, link }) as any;
+
+    it('treats the browser-renderable formats as images', () => {
+      for (const ext of ['jpg', 'jpeg', 'png', 'gif', 'webp']) {
+        expect(component.isImageEvidence(file(`shot.${ext}`))).toBe(true);
+      }
+    });
+
+    it('does not care how the extension was typed', () => {
+      expect(component.isImageEvidence(file('FOTO.PNG'))).toBe(true);
+      expect(component.evidenceFormatLabel(file('report.PdF'))).toBe('PDF');
+    });
+
+    it('leaves a document as a format badge, never as a preview', () => {
+      expect(component.isImageEvidence(file('report.pdf'))).toBe(false);
+      expect(component.showThumb(file('report.pdf'))).toBe(false);
+      expect(component.evidenceFormatLabel(file('data.xlsx'))).toBe('XLSX');
+    });
+
+    it('never previews a link evidence, whatever its url looks like', () => {
+      const link = { is_sharepoint: false, link: 'https://example.org/photo.png' } as any;
+      expect(component.isImageEvidence(link)).toBe(false);
+      expect(component.showThumb(link)).toBe(false);
+      expect(component.evidenceFormatLabel(link)).toBe('');
+    });
+
+    /*
+     * Un archivo del repositorio puede ser privado o tener el enlace caducado. Sin esto la
+     * alternativa es el icono de imagen rota del navegador, que es la única cosa que una lista de
+     * evidencias no puede permitirse mostrar.
+     */
+    it('falls back to the seal once a thumbnail has failed to load', () => {
+      const img = file('shot.png');
+      expect(component.showThumb(img)).toBe(true);
+
+      component.onThumbError(img);
+
+      expect(component.thumbFailed(img)).toBe(true);
+      expect(component.showThumb(img)).toBe(false);
+    });
+
+    it('shows no thumbnail while the file has no link yet — it is still uploading', () => {
+      expect(component.showThumb(file('shot.png', ''))).toBe(false);
+    });
+
+    it('only opens the viewer for something it can actually show', () => {
+      component.openPreview(file('report.pdf'));
+      expect(component.previewEvidence).toBeNull();
+
+      const img = file('shot.png');
+      component.openPreview(img);
+      expect(component.previewEvidence).toBe(img);
+
+      component.closePreview();
+      expect(component.previewEvidence).toBeNull();
+    });
+  });
 });

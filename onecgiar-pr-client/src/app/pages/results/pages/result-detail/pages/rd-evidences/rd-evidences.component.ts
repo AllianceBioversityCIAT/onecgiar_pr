@@ -494,6 +494,68 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
     return this.isFileEvidence(evidence) ? 'File Evidence' : 'Link Evidence';
   }
 
+  /** Extensión del archivo subido, en minúsculas y sin punto. Vacío para una evidencia de enlace. */
+  private fileExtension(evidence: EvidencesCreateInterface): string {
+    const name = evidence?.sp_file_name ?? '';
+    if (!name.includes('.')) return '';
+    return (name.split('.').pop() ?? '').toLowerCase();
+  }
+
+  /** Las que un navegador pinta sin ayuda. Las demás se ofrecen para descargar, no para mirar. */
+  private static readonly PREVIEWABLE_IMAGES = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+  isImageEvidence(evidence: EvidencesCreateInterface): boolean {
+    return this.isFileEvidence(evidence) && RdEvidencesComponent.PREVIEWABLE_IMAGES.includes(this.fileExtension(evidence));
+  }
+
+  /**
+   * Miniaturas que YA fallaron al cargar. Un archivo del repositorio puede ser privado, haber
+   * caducado su enlace o no estar todavía subido; el `(error)` de la imagen apunta aquí y la
+   * tarjeta vuelve a su sello.
+   * 🛑 Sin esto la alternativa sería una imagen rota, que es la única cosa que una tarjeta no
+   * puede permitirse mostrar.
+   */
+  /**
+   * 🛑 Señal, y con un Set NUEVO en cada fallo, no un `Set` mutado: la app corre zoneless y
+   * `@if (showThumb(...))` solo se reevalúa si lo que lee ha cambiado de identidad. Mutando el Set
+   * en sitio, `onThumbError` se ejecutaba, el estado quedaba bien y la tarjeta seguía enseñando el
+   * icono de imagen rota del navegador — medido en pantalla el 15-sep-2026, con el test unitario en
+   * verde. El test veía el estado; la pantalla, el repintado.
+   */
+  private readonly _brokenThumbs = signal<ReadonlySet<string>>(new Set<string>());
+
+  thumbFailed(evidence: EvidencesCreateInterface): boolean {
+    return this._brokenThumbs().has(evidence?.link ?? '');
+  }
+
+  onThumbError(evidence: EvidencesCreateInterface): void {
+    if (!evidence?.link) return;
+    this._brokenThumbs.update(current => new Set(current).add(evidence.link));
+  }
+
+  /** Se muestra miniatura solo si es imagen, hay de dónde sacarla y no ha fallado ya. */
+  showThumb(evidence: EvidencesCreateInterface): boolean {
+    return this.isImageEvidence(evidence) && Boolean(evidence?.link) && !this.thumbFailed(evidence);
+  }
+
+  /** Etiqueta corta del formato, para el sello de un documento: PDF, DOCX, XLSX… */
+  evidenceFormatLabel(evidence: EvidencesCreateInterface): string {
+    return this.fileExtension(evidence).toUpperCase();
+  }
+
+  // ---- Vista previa a tamaño grande ----
+
+  /** La imagen abierta en el visor, o null. */
+  previewEvidence: EvidencesCreateInterface | null = null;
+
+  openPreview(evidence: EvidencesCreateInterface): void {
+    if (this.showThumb(evidence)) this.previewEvidence = evidence;
+  }
+
+  closePreview(): void {
+    this.previewEvidence = null;
+  }
+
   evidenceDisplayName(evidence: EvidencesCreateInterface): string {
     return evidence?.sp_file_name || evidence?.link || '';
   }

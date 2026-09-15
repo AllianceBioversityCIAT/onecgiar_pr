@@ -103,6 +103,16 @@
         font-size: 20px;
       }
 
+      // Documento: en vez de un icono genérico de hoja, el FORMATO. "PDF" o "XLSX" dice en tres
+      // letras lo que el icono no dice en veinte píxeles, y es lo que el usuario recuerda del
+      // archivo que subió.
+      .ev_format {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        line-height: 1;
+      }
+
       // La chapa del número. Va encima del sello y no en su propia columna: sigue sirviendo para
       // decir "la evidencia 2" y ya no gasta 26px de ancho en decirlo.
       // Abajo a la derecha del sello, no arriba a la izquierda: ahí chocaba con la esquina de la
@@ -125,6 +135,59 @@
         font-weight: 700;
         line-height: 1;
       }
+    }
+
+    // Miniatura: el sello deja de representar el archivo y pasa a MOSTRARLO. Mismo tamaño y misma
+    // esquina, así que la lista no se descuadra entre una imagen y un PDF.
+    .ev_seal_thumb {
+      padding: 0;
+      border: 1px solid var(--pr-border);
+      background: var(--pr-surface-ground);
+      overflow: hidden;
+      cursor: zoom-in;
+      box-shadow: none;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      // La lupa se enciende encima de la imagen al pasar por ella: en reposo taparía justo lo que
+      // la miniatura existe para enseñar.
+      .ev_zoom {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.45);
+        color: var(--pr-color-white);
+        opacity: 0;
+        transition: opacity 0.15s ease;
+
+        i {
+          font-size: 20px;
+        }
+      }
+
+      &:hover .ev_zoom,
+      &:focus-visible .ev_zoom {
+        opacity: 1;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--pr-color-primary-300);
+        outline-offset: 2px;
+      }
+    }
+
+    // Descargar es un acompañante de "Open", no su igual: mismo alto y misma forma, solo el icono.
+    .ev_download {
+      padding: 0;
+      width: 30px;
+      justify-content: center;
     }
 
     .ev_main {
@@ -522,5 +585,50 @@
       opacity: 0.35 !important;
       pointer-events: none;
     }
+  }
+}
+
+
+// Visor de imagen. El diálogo se ajusta a la imagen en vez de imponerle una caja: una captura
+// apaisada y un documento escaneado en vertical no caben en el mismo rectángulo.
+::ng-deep app-pr-dialog .evidence-preview-dialog {
+  &.pr-dialog {
+    width: auto;
+    max-width: 92vw;
+  }
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
+.ev_preview {
+  display: flex;
+  flex-direction: column;
+  max-width: 92vw;
+
+  .ev_preview_top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px 12px 18px;
+    border-bottom: 1px solid var(--pr-border-divider);
+  }
+
+  .ev_preview_name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pr-text-heading);
+    word-break: break-word;
+  }
+
+  img {
+    display: block;
+    max-width: 92vw;
+    // Descontando la barra del nombre: la imagen nunca obliga a hacer scroll dentro del diálogo.
+    max-height: calc(88vh - 52px);
+    object-fit: contain;
+    background: var(--pr-surface-ground);
   }
 }
