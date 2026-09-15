@@ -1,0 +1,36 @@
+<section
+  aria-labelledby="sp-reporting-access-title"
+  data-testid="sp-reporting-access-notice"
+  class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-color-primary-300)]">
+  <h3 id="sp-reporting-access-title" class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">
+    {{ copy.w12NoSpTitle }}
+  </h3>
+  <p class="mt-[8px] text-[13px] text-[var(--pr-text-secondary)]">{{ copy.w12NoSpBody }}</p>
+  <a
+    [routerLink]="copy.w12NoSpHref"
+    class="mt-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline">
+    {{ copy.w12NoSpLink }}
+  </a>
+
+  @if (showEmergingHint()) {
+    <div
+      class="mt-[16px] flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-purple-200/80 bg-gradient-to-r from-purple-50/70 to-indigo-50/50 p-[12px]"
+      aria-labelledby="sp-reporting-access-emerging-title">
+      <div class="flex min-w-0 items-center gap-[10px]">
+        <span class="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] bg-purple-100 text-purple-700">
+          <ng-icon name="lucideZap" class="text-[16px]" />
+        </span>
+        <div class="min-w-0">
+          <span id="sp-reporting-access-emerging-title" class="block text-[13px] font-bold text-[var(--pr-text-heading)]">
+            {{ copy.emergingTitle }}
+          </span>
+          <span class="block text-[12px] text-[var(--pr-text-muted)]">
+            {{ copy.emergingSubtitle(activeYear()) }}
+          </span>
+        </div>
+      </div>
+      <strong class="text-[12px] font-semibold text-[var(--pr-text-muted)]">{{ copy.emergingAction }}</strong>
+    </div>
+    <p class="mt-[8px] text-[12px] text-[var(--pr-text-muted)]">{{ copy.emergingDisabledHint }}</p>
+  }
+</section>

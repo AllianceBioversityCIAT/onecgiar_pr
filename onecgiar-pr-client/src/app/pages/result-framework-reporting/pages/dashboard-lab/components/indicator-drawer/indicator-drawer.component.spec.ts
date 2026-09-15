@@ -2,6 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
 import { DrawerTab, IndicatorDrawerComponent, initialDrawerWidth, toReportedResultRow } from './indicator-drawer.component';
@@ -415,6 +416,7 @@ describe('IndicatorDrawerComponent — Reported results tab DOM (IRR-R-1, IRR-R-
     const fixture = TestBed.createComponent(IndicatorDrawerComponent);
     fixture.componentRef.setInput('indicator', { toc_result_id: 'toc-1', related_node_id: 'IND-55', indicator_description: 'HL04', target_value_sum: 8 });
     fixture.componentRef.setInput('initialTab', initialTab);
+    fixture.componentRef.setInput('canReport', true);
     fixture.detectChanges();
     return fixture;
   }
@@ -640,6 +642,7 @@ describe('IndicatorDrawerComponent — Reported results table (IRR-T-3)', () => 
     const fixture = TestBed.createComponent(IndicatorDrawerComponent);
     fixture.componentRef.setInput('indicator', indicator);
     fixture.componentRef.setInput('initialTab', 'results');
+    fixture.componentRef.setInput('canReport', true);
     fixture.detectChanges();
     return fixture;
   }
@@ -995,6 +998,7 @@ describe('IndicatorDrawerComponent — width floor, restore and card fallback (I
     fixture.componentInstance.widthChange.subscribe(w => emitted.push(w));
     fixture.componentRef.setInput('indicator', indicator);
     fixture.componentRef.setInput('initialTab', initialTab);
+    fixture.componentRef.setInput('canReport', true);
     fixture.detectChanges();
     return { fixture, component: fixture.componentInstance, emitted };
   }
@@ -1158,10 +1162,13 @@ describe('IndicatorDrawerComponent — Verbatim Context Card & Empty State Micro
       providers: [
         {
           provide: ApiService,
-          useValue: { resultsSE: { GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors } })) } }
+          useValue: {
+            resultsSE: { GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors } })) },
+            dataControlSE: { reportingCurrentPhase: { phaseYear: 2026 } }
+          }
         },
         { provide: PhasesService, useValue: { phases: { reporting: [{ id: 11, phase_name: 'Reporting 2026' }] } } },
-        { provide: Router, useValue: { navigate: jest.fn(), createUrlTree: jest.fn(), serializeUrl: jest.fn(() => '') } }
+        provideRouter([])
       ]
     })
       .overrideComponent(IndicatorDrawerComponent, { remove: { imports: [LabReportFormComponent] }, add: { imports: [LabReportFormStub] } })
@@ -1170,6 +1177,7 @@ describe('IndicatorDrawerComponent — Verbatim Context Card & Empty State Micro
     const fixture = TestBed.createComponent(IndicatorDrawerComponent);
     fixture.componentRef.setInput('indicator', indicator);
     fixture.componentRef.setInput('initialTab', initialTab);
+    fixture.componentRef.setInput('canReport', true);
     fixture.detectChanges();
     return fixture;
   }
@@ -1216,6 +1224,26 @@ describe('IndicatorDrawerComponent — Verbatim Context Card & Empty State Micro
     expect(emptyCard?.textContent).toContain('flag');
     expect(fixture.nativeElement.textContent).not.toContain('Nothing has been reported against this indicator yet.');
   });
+
+  it('shows the pooled-funding access notice instead of the form when canReport is false', async () => {
+    const fixture = await mountDrawer(
+      {
+        toc_result_id: 'toc-1',
+        related_node_id: 'IND-55',
+        indicator_description: 'Test Indicator',
+        target_value_sum: 10
+      },
+      'report',
+      []
+    );
+    fixture.componentRef.setInput('canReport', false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="sp-reporting-access-notice"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('app-lab-report-form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="irr-micro-empty-card"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="sp-reporting-access-close"]')).toBeTruthy();
+  });
 });
 
 // @akili-spec changes/emerging-result-cta-placement (ERC-T-3)
@@ -1227,9 +1255,15 @@ describe('IndicatorDrawerComponent — emerging mode (ERC-T-3)', () => {
     await TestBed.configureTestingModule({
       imports: [IndicatorDrawerComponent],
       providers: [
-        { provide: ApiService, useValue: { resultsSE: { GET_ExistingResultsContributors: getExisting } } },
+        {
+          provide: ApiService,
+          useValue: {
+            resultsSE: { GET_ExistingResultsContributors: getExisting },
+            dataControlSE: { reportingCurrentPhase: { phaseYear: 2026 } }
+          }
+        },
         { provide: PhasesService, useValue: { phases: { reporting: [{ id: 11, phase_name: 'Reporting 2026' }] } } },
-        { provide: Router, useValue: { navigate: jest.fn(), createUrlTree: jest.fn(), serializeUrl: jest.fn(() => '') } }
+        provideRouter([])
       ]
     })
       .overrideComponent(IndicatorDrawerComponent, { remove: { imports: [LabReportFormComponent] }, add: { imports: [LabReportFormStub] } })
@@ -1239,6 +1273,7 @@ describe('IndicatorDrawerComponent — emerging mode (ERC-T-3)', () => {
     fixture.componentRef.setInput('emerging', true);
     fixture.componentRef.setInput('indicator', null);
     fixture.componentRef.setInput('initialTab', 'report');
+    fixture.componentRef.setInput('canReport', true);
     fixture.detectChanges();
     return fixture;
   }
@@ -1255,6 +1290,15 @@ describe('IndicatorDrawerComponent — emerging mode (ERC-T-3)', () => {
     expect(form).toBeTruthy();
     expect(form.componentInstance.emergingMode()).toBe(true);
     expect(form.componentInstance.emergingCategory()).toBeNull();
+  });
+
+  it('shows the access notice instead of the emerging form when canReport is false', async () => {
+    const fixture = await mountEmerging();
+    fixture.componentRef.setInput('canReport', false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="sp-reporting-access-notice"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('app-lab-report-form')).toBeNull();
   });
 
   it('keeps the report tab when info/results are requested in emerging mode', async () => {

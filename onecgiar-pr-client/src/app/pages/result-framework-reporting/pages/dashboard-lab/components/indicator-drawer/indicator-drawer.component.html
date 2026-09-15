@@ -199,7 +199,7 @@
               Retry
             </button>
           </p>
-        } @else {
+        } @else if (canReport()) {
           <div data-testid="irr-micro-empty-card" class="mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <span class="material-icons-round text-[20px] text-[var(--pr-color-primary-300)] shrink-0">flag</span>
             <p class="m-0 text-[12.5px] leading-snug font-medium text-slate-700">
@@ -209,20 +209,33 @@
         }
         }
 
-        <app-lab-report-form
-          class="flex flex-col flex-1 min-h-0"
-          [tocNode]="tocNode()"
-          [indicator]="indicator()"
-          [emergingMode]="emerging()"
-          [emergingCategory]="null"
-          [initiativeId]="initiativeId()"
-          [programCode]="programCode()"
-          [columns]="columns()"
-          [canReport]="canReport()"
-          (dirtyChange)="onDirtyChange($event)"
-          (loadingOverlayChange)="onReportLoadingMessage($event)"
-          (cancelled)="requestClose()"
-          (created)="close()" />
+        @if (canReport()) {
+          <app-lab-report-form
+            class="flex flex-col flex-1 min-h-0"
+            [tocNode]="tocNode()"
+            [indicator]="indicator()"
+            [emergingMode]="emerging()"
+            [emergingCategory]="null"
+            [initiativeId]="initiativeId()"
+            [programCode]="programCode()"
+            [columns]="columns()"
+            [canReport]="canReport()"
+            (dirtyChange)="onDirtyChange($event)"
+            (loadingOverlayChange)="onReportLoadingMessage($event)"
+            (cancelled)="requestClose()"
+            (created)="close()" />
+        } @else {
+          <app-sp-reporting-access-notice class="mb-4" [showEmergingHint]="emerging()" />
+          <div class="sticky bottom-0 -mx-4 mt-auto flex items-center justify-end border-t border-[rgba(30,32,47,0.08)] bg-white px-4 py-3.5 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] min-[640px]:-mx-6 min-[640px]:px-6">
+            <button
+              type="button"
+              (click)="requestClose()"
+              data-testid="sp-reporting-access-close"
+              class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer">
+              Close
+            </button>
+          </div>
+        }
       </div>
 
       <!-- @akili-spec changes/indicator-reported-results
