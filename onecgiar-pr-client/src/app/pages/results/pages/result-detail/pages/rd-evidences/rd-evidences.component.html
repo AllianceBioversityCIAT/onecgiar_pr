@@ -63,10 +63,6 @@
             </ng-template>
           </ng-template>
 
-          <!-- La clase de evidencia, junto al nombre: es lo que antes ocupaba el titular entero.
-               De chip ocupa lo que vale. -->
-          <span class="ev_kind" [class.is_file]="isFileEvidence(evidence)">{{ evidenceTypeLabel(evidence) }}</span>
-
           <i
             *ngIf="isFileEvidence(evidence)"
             class="material-icons-round ev_lock"
@@ -76,6 +72,14 @@
             prTooltipPosition="top">
             {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
           </i>
+        </div>
+
+        <!-- La clase de evidencia, DEBAJO del nombre (Yeck, 15-sep-2026). En la misma línea, el
+             chip quedaba a la distancia que dejara el nombre: con "images.png" caía a un sitio y
+             con un enlace largo a otro, así que dos tarjetas seguidas nunca lo tenían alineado.
+             Debajo arranca siempre en el mismo punto. -->
+        <div class="ev_kindrow">
+          <span class="ev_kind" [class.is_file]="isFileEvidence(evidence)">{{ evidenceTypeLabel(evidence) }}</span>
         </div>
 
         <!-- Texto escrito por el reportero: se presenta como cita, no como un campo más. -->
