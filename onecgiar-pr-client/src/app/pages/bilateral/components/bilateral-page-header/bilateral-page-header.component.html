@@ -209,6 +209,26 @@
           <span>Results</span>
         </a>
 
+        <!-- "AI job running" chip (`APF-R-10`, `APF-DD-8`): sits left of the AI Draft Results
+             badge, at the nav's end slot. `ml-auto` pushes it (and the tab after it) to the end
+             while Overview/Reporting/Results stay left-anchored, mirroring the mockup's spacer. -->
+        @if (aiJobChip(); as chip) {
+          <a
+            class="ml-auto flex h-[24px] shrink-0 items-center gap-[6px] self-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+            data-testid="bilateral-ai-job-chip"
+            [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
+            [queryParams]="{ job: chip.jobId }"
+            [attr.aria-label]="chip.ariaLabel">
+            <span
+              class="material-icons-round flex-none animate-pulse text-[14px] leading-none text-[var(--pr-color-primary-300)] motion-reduce:animate-none"
+              aria-hidden="true">
+              auto_awesome
+            </span>
+            <span>AI job running</span>
+            <span class="font-mono tabular-nums text-[var(--pr-text-secondary)]">{{ chip.elapsedLabel }}</span>
+          </a>
+        }
+
         <!-- Tab 4: Draft Results -->
         <a
           class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"

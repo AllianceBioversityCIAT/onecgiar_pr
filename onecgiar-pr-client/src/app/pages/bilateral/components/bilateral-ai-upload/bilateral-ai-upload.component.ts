@@ -1,11 +1,15 @@
-import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
+import { AiProcessingPanelComponent } from '../ai-processing-panel/ai-processing-panel.component';
+import { BilateralAiExpectations, BilateralAiMixClass, mixClass } from '../../bilateral-ai-job.model';
 
 interface UploadFileEntry {
   id: string;
@@ -34,15 +38,18 @@ const MAX_TEXT_LENGTH = 50_000;
 
 @Component({
   selector: 'app-bilateral-ai-upload',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AiProcessingPanelComponent],
   templateUrl: './bilateral-ai-upload.component.html',
   styleUrl: './bilateral-ai-upload.component.scss',
 })
-export class BilateralAiUploadComponent implements OnDestroy {
+export class BilateralAiUploadComponent implements OnInit, OnDestroy {
   private readonly creationService = inject(BilateralCreationService);
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly bilateralAiService = inject(BilateralAiService);
   private readonly messageService = inject(PrToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly ctx = inject(BilateralContextService);
 
   files = signal<UploadFileEntry[]>([]);
   contextText = signal('');
@@ -51,6 +58,16 @@ export class BilateralAiUploadComponent implements OnDestroy {
   isRecording = signal(false);
 
   uploadState = this.bilateralAiService.uploadState;
+
+  /** `APF-T-6`: fed straight into `<app-ai-processing-panel>`, never read/computed by this file. */
+  currentJob = this.bilateralAiService.currentJob;
+  /** 1 s tick for the panel's elapsed clock — runs only while a job is alive (`APF-R-6`). */
+  now = signal(Date.now());
+  /** `APF-R-6` D: served by the API, cached per mix by the service — never computed client-side. */
+  expectation = signal<BilateralAiExpectations | null>(null);
+
+  private tickTimer: ReturnType<typeof setInterval> | null = null;
+  private lastExpectationMix: BilateralAiMixClass | null = null;
 
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
@@ -94,10 +111,78 @@ export class BilateralAiUploadComponent implements OnDestroy {
       !this.isUploading(),
   );
 
+  constructor() {
+    // The panel owns no timer of its own (`APF-R-6` A AND-IT-MUST) — this host ticks it, and only
+    // while a job is actually alive, so nothing spins once the outcome is terminal.
+    effect(() => {
+      const status = this.uploadState().status;
+      const isLive = status === 'pending' || status === 'processing' || status === 'still_running';
+      if (isLive) {
+        this.startTick();
+      } else {
+        this.stopTick();
+      }
+    });
+
+    // `APF-R-6` D: the expected range is served by the API per mix class; re-subscribing on every
+    // poll would leak subscriptions on the `shareReplay(1)` cache, so this only calls out when the
+    // mix actually changes (a job's source mix never changes mid-flight, so in practice: once).
+    effect(() => {
+      const job = this.currentJob();
+      if (!job) return;
+      const mix = mixClass(job);
+      if (mix === this.lastExpectationMix) return;
+      this.lastExpectationMix = mix;
+      this.bilateralAiService.expectations(mix).subscribe(exp => this.expectation.set(exp));
+    });
+  }
+
+  ngOnInit(): void {
+    // `APF-DD-7`: registers this host as the live outcome surface so the app-wide completion
+    // dialog stays silent while the panel is mounted (`APF-R-8` A/B).
+    this.bilateralAiService.setPanelVisible(true);
+
+    // `design.md` §6.1 / §2.3: a notification or the header chip deep-links here with `?job=<id>`
+    // to open the panel for that specific job.
+    const jobId = this.route.snapshot.queryParams['job'];
+    if (jobId && this.bilateralAiService.currentJobId() !== jobId) {
+      this.bilateralAiService.startJob(jobId);
+    }
+  }
+
   ngOnDestroy(): void {
+    this.bilateralAiService.setPanelVisible(false);
+    this.stopTick();
     this.stopRecording();
     this.stopAudio();
     this.files().forEach(f => this.revokeUrl(f));
+  }
+
+  private startTick(): void {
+    if (this.tickTimer) return;
+    this.tickTimer = setInterval(() => this.now.set(Date.now()), 1000);
+  }
+
+  private stopTick(): void {
+    if (this.tickTimer) {
+      clearInterval(this.tickTimer);
+      this.tickTimer = null;
+    }
+  }
+
+  // ── Processing panel integration (APF-T-6) ─────────────────────────
+
+  onPanelRetry(): void {
+    const jobId = this.uploadState().jobId;
+    if (jobId) this.bilateralAiService.retryJob(jobId);
+  }
+
+  onPanelReset(): void {
+    this.onReset();
+  }
+
+  onPanelOpenDrafts(): void {
+    void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
   }
 
   // ── File Handling ───────────────────────────────────────────────────

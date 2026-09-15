@@ -1,5 +1,14 @@
 @if (uploadState().status === 'idle' || uploadState().status === 'uploading') {
   <div class="aiu-card">
+    @if (uploadState().errorMessage) {
+      <div
+        class="mb-[16px] flex items-center gap-[8px] rounded-[10px] border border-[var(--pr-danger-soft)] bg-[var(--pr-danger-bg)] px-[12px] py-[10px] text-[12.5px] text-[var(--pr-danger)]"
+        role="alert"
+        data-testid="aiu-gone-notice">
+        <i class="material-icons-round text-[16px]" aria-hidden="true">error_outline</i>
+        <span>{{ uploadState().errorMessage }}</span>
+      </div>
+    }
     @if (reportingCenterName()) {
       <div class="aiu-info-note" role="note">
         <i class="material-icons-round">info</i>
@@ -172,64 +181,21 @@
   </div>
 }
 
-@if (uploadState().status === 'pending' || uploadState().status === 'processing') {
-  <div class="aiu-processing">
-    <div class="aiu-processing-graphic">
-      <div class="aiu-pulse-ring"></div>
-      <div class="aiu-pulse-ring aiu-pulse-ring--2"></div>
-      <div class="aiu-pulse-ring aiu-pulse-ring--3"></div>
-      <i class="material-icons-round aiu-processing-icon">auto_awesome</i>
-    </div>
-
-    <h3 class="aiu-processing-title">
-      @if (uploadState().status === 'pending') {
-        Job Queued
-      } @else {
-        Analyzing Content
-      }
-    </h3>
-    <p class="aiu-processing-subtitle">
-      @if (uploadState().status === 'pending') {
-        Your documents are queued for AI processing. This may take a few minutes.
-      } @else {
-        Extracting result data from your sources...
-      }
-    </p>
-
-    <div class="aiu-processing-spinner"></div>
-
-    <p class="aiu-processing-hint">You can safely close this page and check your drafts later.</p>
-  </div>
-}
-
-@if (uploadState().status === 'failed') {
-  <div class="aiu-error">
-    <div class="aiu-error-icon">
-      <i class="material-icons-round">error_outline</i>
-    </div>
-    <h3 class="aiu-error-title">Processing Failed</h3>
-    <p class="aiu-error-message">{{ uploadState().errorMessage || 'An unexpected error occurred during AI processing.' }}</p>
-    <div class="aiu-error-actions">
-      <button type="button" class="aiu-submit-btn" (click)="onReset()">
-        <i class="material-icons-round">refresh</i>
-        Try Again
-      </button>
-    </div>
-  </div>
-}
-
-@if (uploadState().status === 'completed_no_candidates') {
-  <div class="aiu-error">
-    <div class="aiu-error-icon aiu-error-icon--warn">
-      <i class="material-icons-round">info</i>
-    </div>
-    <h3 class="aiu-error-title">No Candidates Found</h3>
-    <p class="aiu-error-message">AI could not extract enough information from the provided sources. Try adding more documents or context.</p>
-    <div class="aiu-error-actions">
-      <button type="button" class="aiu-submit-btn" (click)="onReset()">
-        <i class="material-icons-round">refresh</i>
-        Try Again
-      </button>
-    </div>
-  </div>
+@if (
+  uploadState().status === 'pending' ||
+  uploadState().status === 'processing' ||
+  uploadState().status === 'still_running' ||
+  uploadState().status === 'failed' ||
+  uploadState().status === 'completed' ||
+  uploadState().status === 'completed_no_candidates'
+) {
+  <app-ai-processing-panel
+    [job]="currentJob()"
+    [status]="uploadState().status"
+    [expectation]="expectation()"
+    [now]="now()"
+    (retry)="onPanelRetry()"
+    (reset)="onPanelReset()"
+    (openDrafts)="onPanelOpenDrafts()">
+  </app-ai-processing-panel>
 }

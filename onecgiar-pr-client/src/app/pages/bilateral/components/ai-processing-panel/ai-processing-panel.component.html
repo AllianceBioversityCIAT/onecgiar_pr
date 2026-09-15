@@ -1,0 +1,181 @@
+<!-- @akili-spec bilateral/ai-processing-feedback (APF-R-6, APF-R-7, APF-R-8, APF-R-9, APF-AC-8/9/10/12/14/15) -->
+<div
+  class="rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px_20px] min-[640px]:p-[20px_24px]"
+  aria-live="polite"
+  data-testid="ai-processing-panel">
+  @if (viewState() === 'preparing') {
+    <p class="m-0 text-[12.5px] text-[var(--pr-text-secondary)]" data-testid="ai-panel-preparing">Preparing your job…</p>
+  } @else if (isLive()) {
+    <div data-testid="ai-panel-live">
+      <div class="flex items-start justify-between gap-[12px]">
+        <div class="min-w-0">
+          <h3 class="m-0 text-[17px] font-bold text-[var(--pr-text-heading)]">
+            {{ isRetrying() ? 'Retrying' : activeStep()?.label }}
+            @if (showAttemptBadge()) {
+              <span
+                class="ml-[8px] inline-flex h-[22px] items-center rounded-full bg-[var(--pr-status-submitted-bg)] px-[9px] text-[11.5px] font-semibold text-[var(--pr-status-submitted-fg)]"
+                data-testid="ai-panel-attempt-badge">
+                {{ attemptBadgeLabel() }}
+              </span>
+            }
+          </h3>
+          <p class="m-0 mt-[4px] text-[12.5px] text-[var(--pr-text-secondary)]">
+            @if (isRetrying()) {
+              The AI service did not answer in time. Your job is queued again automatically — nothing to do.
+            } @else if (viewState() === 'queued') {
+              {{ queuePositionLine() }}
+            } @else {
+              {{ mixLine() || 'Processing your sources.' }}
+            }
+          </p>
+          @if (retryingErrorLine()) {
+            <p class="m-0 mt-[4px] text-[12px] text-[var(--pr-text-secondary)]" data-testid="ai-panel-last-error">
+              <em>{{ retryingErrorLine() }}</em>
+            </p>
+          }
+        </div>
+        <div class="flex-none text-right">
+          <div class="font-mono text-[22px] font-bold tabular-nums text-[var(--pr-text-heading)]" data-testid="ai-panel-elapsed">{{ elapsedLabel() }}</div>
+          <div class="text-[11px] font-medium text-[var(--pr-text-subtle)]">elapsed</div>
+        </div>
+      </div>
+
+      <ol class="mt-[16px] grid grid-cols-1 gap-[10px] min-[640px]:grid-cols-6 min-[640px]:gap-0" role="list" aria-label="Processing stages">
+        @for (step of stepper(); track step.id; let last = $last) {
+          <li class="relative pl-[30px] text-left min-[640px]:pl-0 min-[640px]:pt-[26px] min-[640px]:text-center">
+            @if (!last) {
+              <span
+                class="absolute left-[9px] top-[20px] hidden h-full w-[2px] min-[640px]:top-[9px] min-[640px]:left-1/2 min-[640px]:block min-[640px]:h-[2px] min-[640px]:w-full"
+                [class]="step.state === 'done' ? 'bg-[var(--pr-color-primary-300)]' : 'bg-[var(--pr-border)]'"
+                aria-hidden="true"></span>
+            }
+            <span
+              class="absolute left-0 top-0 flex h-[20px] w-[20px] flex-none items-center justify-center rounded-full border-2 min-[640px]:left-1/2 min-[640px]:-translate-x-1/2"
+              [class]="stepDotClass(step)"
+              aria-hidden="true">
+              @if (step.state === 'done') {
+                <i class="material-icons-round text-[12px] text-white">check</i>
+              } @else if (step.state === 'active') {
+                <span class="h-[8px] w-[8px] rounded-full bg-[var(--pr-color-primary-300)] motion-reduce:animate-none animate-pulse"></span>
+              }
+            </span>
+            <span class="block text-[11px] leading-[1.3]" [class]="stepLabelClass(step)">{{ step.label }}</span>
+          </li>
+        }
+      </ol>
+
+      <div class="mt-[14px] flex flex-wrap gap-[8px_16px] text-[12px] text-[var(--pr-text-secondary)]">
+        @if (mixLine()) {
+          <span data-testid="ai-panel-mix">{{ mixLine() }}</span>
+        }
+        <span data-testid="ai-panel-expected-range">{{ expectedRangeLine() }}</span>
+      </div>
+
+      <div class="mt-[14px] rounded-[10px] bg-[var(--pr-color-primary-50)] px-[12px] py-[10px] text-[12px] text-[var(--pr-text-secondary)]">
+        You can leave this page. We'll notify you here and by email.
+      </div>
+    </div>
+  } @else if (viewState() === 'still_running') {
+    <div class="flex items-start gap-[14px]" data-testid="ai-panel-still-running">
+      <div class="flex h-[40px] w-[40px] flex-none items-center justify-center rounded-full bg-[var(--pr-status-submitted-bg)] text-[var(--pr-status-submitted-fg)]">
+        <i class="material-icons-round text-[20px]" aria-hidden="true">schedule</i>
+      </div>
+      <div class="min-w-0">
+        <h3 class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">Still running</h3>
+        <p class="m-0 mt-[4px] text-[12.5px] text-[var(--pr-text-secondary)]">We'll notify you here and by email when it finishes.</p>
+        <div class="mt-[8px] flex flex-wrap items-center gap-[8px_16px] text-[12px] text-[var(--pr-text-secondary)]">
+          <span class="font-mono text-[15px] font-bold tabular-nums text-[var(--pr-text-heading)]" data-testid="ai-panel-elapsed">{{ elapsedLabel() }}</span>
+          <span>Checking every 30 seconds</span>
+        </div>
+        <div class="mt-[12px] flex gap-[8px]">
+          <button
+            type="button"
+            class="inline-flex h-[32px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] text-[12.5px] font-semibold text-[var(--pr-text-heading)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+            (click)="onOpenDrafts()">
+            Go to Draft Results
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else if (viewState() === 'failed') {
+    <div class="flex items-start gap-[14px]" data-testid="ai-panel-failed">
+      <div class="flex h-[40px] w-[40px] flex-none items-center justify-center rounded-full bg-[var(--pr-danger-soft)] text-[var(--pr-danger)]">
+        <i class="material-icons-round text-[20px]" aria-hidden="true">error_outline</i>
+      </div>
+      <div class="min-w-0">
+        <h3 class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">Processing did not finish</h3>
+        <p class="m-0 mt-[4px] text-[12.5px] text-[var(--pr-text-secondary)]" data-testid="ai-panel-failed-message">
+          {{ failureCopy().message }}
+          <span class="block text-[11.5px] text-[var(--pr-text-subtle)]">{{ failureCopy().actionLabel }}</span>
+        </p>
+        <div class="mt-[8px] flex flex-wrap gap-[8px_16px] text-[11.5px] text-[var(--pr-text-subtle)]">
+          <span>{{ attemptsSummary() }}</span>
+          <span>Job {{ shortJobId() }}</span>
+        </div>
+        <div class="mt-[12px] flex gap-[8px]">
+          <button
+            type="button"
+            class="inline-flex h-[32px] cursor-pointer items-center rounded-[8px] border border-transparent bg-[var(--pr-color-primary-300)] px-[14px] text-[12.5px] font-semibold text-white focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+            [disabled]="isJobAlive()"
+            (click)="onRetry()">
+            Try again
+          </button>
+          <button
+            type="button"
+            class="inline-flex h-[32px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] text-[12.5px] font-semibold text-[var(--pr-text-heading)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+            (click)="onReset()">
+            Upload different files
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else if (viewState() === 'completed') {
+    <div class="flex items-start gap-[14px]" data-testid="ai-panel-completed">
+      <div class="flex h-[40px] w-[40px] flex-none items-center justify-center rounded-full bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]">
+        <i class="material-icons-round text-[20px]" aria-hidden="true">check</i>
+      </div>
+      <div class="min-w-0">
+        <h3 class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]" data-testid="ai-panel-completed-title">{{ completedTitle() }}</h3>
+        <p class="m-0 mt-[4px] text-[12.5px] text-[var(--pr-text-secondary)]">Review them in AI Draft Results and promote the ones you want to report.</p>
+        <p class="m-0 mt-[8px] flex items-center gap-[6px] text-[12px] text-[var(--pr-status-submitted-fg)]" data-testid="ai-panel-provenance">
+          <i class="material-icons-round text-[14px]" aria-hidden="true">auto_awesome</i>
+          Generated with AI assistance from your sources. Review and edit before submitting.
+        </p>
+        <div class="mt-[12px] flex gap-[8px]">
+          <button
+            type="button"
+            class="inline-flex h-[32px] cursor-pointer items-center rounded-[8px] border border-transparent bg-[var(--pr-color-primary-300)] px-[14px] text-[12.5px] font-semibold text-white focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+            (click)="onOpenDrafts()">
+            Review drafts
+          </button>
+          <button
+            type="button"
+            class="inline-flex h-[32px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] text-[12.5px] font-semibold text-[var(--pr-text-heading)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+            (click)="onReset()">
+            Start another
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else if (viewState() === 'completed_no_candidates') {
+    <div class="flex items-start gap-[14px]" data-testid="ai-panel-no-candidates">
+      <div class="flex h-[40px] w-[40px] flex-none items-center justify-center rounded-full bg-[var(--pr-status-submitted-bg)] text-[var(--pr-status-submitted-fg)]">
+        <i class="material-icons-round text-[20px]" aria-hidden="true">info</i>
+      </div>
+      <div class="min-w-0">
+        <h3 class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">No result candidates found</h3>
+        <p class="m-0 mt-[4px] text-[12.5px] text-[var(--pr-text-secondary)]">
+          The AI service could not extract enough information from your sources. Try adding more documents or context.
+        </p>
+        <div class="mt-[12px] flex gap-[8px]">
+          <button
+            type="button"
+            class="inline-flex h-[32px] cursor-pointer items-center rounded-[8px] border border-transparent bg-[var(--pr-color-primary-300)] px-[14px] text-[12.5px] font-semibold text-white focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+            (click)="onReset()">
+            Upload different files
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

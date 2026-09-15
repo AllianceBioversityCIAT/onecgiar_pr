@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { Params, Router, RouterLink } from '@angular/router';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -16,10 +16,57 @@ import { environment } from '../../../../../environments/environment';
 })
 export class BilateralPageHeaderComponent {
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   readonly ctx = inject(BilateralContextService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly navSE = inject(SmartNavigationService);
   readonly dataControlSE = inject(DataControlService);
+
+  /** `APF-R-10`: statuses that make a tracked job "alive" for the header chip. */
+  private static readonly AI_JOB_ALIVE_STATUSES: ReadonlySet<string> = new Set(['pending', 'processing', 'still_running']);
+
+  /**
+   * 1 s tick driving the chip's elapsed clock. The chip reads `BilateralAiService` state only —
+   * this timer just forces `aiJobChip` to re-evaluate `Date.now()` each second; it starts no
+   * second poll (`design.md` §8).
+   */
+  private readonly nowMs = signal(Date.now());
+
+  constructor() {
+    const tickTimer = setInterval(() => this.nowMs.set(Date.now()), 1000);
+    this.destroyRef.onDestroy(() => clearInterval(tickTimer));
+  }
+
+  /**
+   * `APF-R-10`/`APF-DD-8`: the persistent "AI job running" chip. `null` (hidden) unless
+   * `BilateralAiService` reports a job alive (`pending`/`processing`/`still_running`) AND the
+   * record's center matches this header's center — a job started for another center must render
+   * nothing. Elapsed time comes from the normalized job's queue-entry clock once a poll has
+   * landed, else the resume record's `startedAt`.
+   */
+  readonly aiJobChip = computed(() => {
+    this.nowMs();
+    const state = this.bilateralAiService.uploadState();
+    if (!state.jobId || !BilateralPageHeaderComponent.AI_JOB_ALIVE_STATUSES.has(state.status)) return null;
+
+    const snapshot = this.bilateralAiService.getActiveJobSnapshot();
+    if (!snapshot || snapshot.centerAcronym !== this.ctx.centerAcronym()) return null;
+
+    const job = this.bilateralAiService.currentJob();
+    const startMs = job && job.jobId === state.jobId ? job.queueEntryDate.getTime() : snapshot.startedAt;
+    const elapsed = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const elapsedLabel = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    const minuteWord = minutes === 1 ? 'minute' : 'minutes';
+    const secondWord = seconds === 1 ? 'second' : 'seconds';
+
+    return {
+      jobId: state.jobId,
+      elapsedLabel,
+      ariaLabel: `AI job running, ${minutes} ${minuteWord} ${seconds} ${secondWord} — open the processing panel`,
+    };
+  });
 
   readonly cycleYear = computed(() => {
     this.dataControlSE.reportingPhaseVersion();

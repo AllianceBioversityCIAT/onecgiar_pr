@@ -3,6 +3,7 @@ import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BilateralSpSelectorComponent } from './bilateral-sp-selector.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
+import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { signal } from '@angular/core';
 
 describe('BilateralSpSelectorComponent', () => {
@@ -17,11 +18,19 @@ describe('BilateralSpSelectorComponent', () => {
       selectedSecondarySps: signal([]),
       selectPrimarySp: jest.fn(),
       toggleSecondarySp: jest.fn(),
+      // Read by the nested `app-bilateral-accordion` (the "coming soon" disclosure, `APF-R-11`)
+      // when it is opened — not otherwise exercised by this component.
+      isLoadingResult: jest.fn().mockReturnValue(false),
     };
 
     await TestBed.configureTestingModule({
       imports: [BilateralSpSelectorComponent],
-      providers: [{ provide: BilateralCreationService, useValue: creationService }],
+      providers: [
+        { provide: BilateralCreationService, useValue: creationService },
+        // `app-bilateral-accordion` injects this unconditionally on construction; it has no
+        // `providedIn: 'root'`, so it must be supplied here once the "coming soon" block renders.
+        { provide: BilateralAutoSaveService, useValue: { flush: jest.fn().mockResolvedValue(undefined) } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BilateralSpSelectorComponent);
@@ -254,6 +263,54 @@ describe('BilateralSpSelectorComponent', () => {
 
       expect(template).toContain('Coming soon');
       expect(template).not.toContain('add or change them later in the form');
+    });
+  });
+
+  describe('"Contributing Science Programs" disclosure (APF-R-11, APF-DD-11)', () => {
+    const withSecondarySps = () => {
+      creationService.selectedProject.set({
+        sciencePrograms: [
+          { programId: 1, programCode: 'SP01', spName: 'Climate Action', spShortName: 'CA', allocation: '60.00' },
+          { programId: 2, programCode: 'SP02', spName: 'Breeding for Tomorrow', spShortName: 'BfT', allocation: '40.00' },
+        ],
+      } as any);
+      creationService.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '60.00' });
+      fixture.detectChanges();
+    };
+
+    it('renders the block collapsed behind a one-line disclosure by default', () => {
+      withSecondarySps();
+
+      expect(fixture.nativeElement.querySelector('.bp-accordion-header')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.bp-accordion-body')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Coming soon');
+    });
+
+    it('expands on click to reveal the secondary chips', () => {
+      withSecondarySps();
+
+      const header = fixture.nativeElement.querySelector('.bp-accordion-header');
+      header.click();
+      fixture.detectChanges();
+
+      const body = fixture.nativeElement.querySelector('.bp-accordion-body');
+      expect(body).not.toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.sps-chip').length).toBe(1);
+      // The chip grid renders `spShortName`, not the full `spName` (see the component's own note).
+      expect(fixture.nativeElement.textContent).toContain('BfT');
+      expect(fixture.nativeElement.textContent).toContain('SP02');
+    });
+
+    it('leaves primary SP selection and the primary field untouched, collapsed or expanded', () => {
+      withSecondarySps();
+      expect(component.selectedPrimaryLabel()).toContain('SP01');
+      expect(fixture.nativeElement.querySelector('.sps-field')).not.toBeNull();
+
+      fixture.nativeElement.querySelector('.bp-accordion-header').click();
+      fixture.detectChanges();
+
+      expect(component.selectedPrimaryLabel()).toContain('SP01');
+      expect(fixture.nativeElement.querySelector('.sps-field')).not.toBeNull();
     });
   });
 });

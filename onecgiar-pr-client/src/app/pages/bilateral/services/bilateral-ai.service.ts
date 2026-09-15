@@ -133,6 +133,16 @@ export class BilateralAiService implements OnDestroy {
     this.panelVisible.set(visible);
   }
 
+  /**
+   * `APF-T-7`/`APF-R-10`: read-only snapshot of the in-memory active-job record, for the header
+   * chip's per-center gate and its elapsed-time fallback before the first poll response lands.
+   * `null` when this tab is not tracking a job. Kept separate from the private `activeJob` field
+   * so callers cannot mutate it.
+   */
+  getActiveJobSnapshot(): { centerAcronym: string; startedAt: number } | null {
+    return this.activeJob ? { centerAcronym: this.activeJob.centerAcronym, startedAt: this.activeJob.startedAt } : null;
+  }
+
   // ── Job lifecycle ───────────────────────────────────────────────────
 
   startJob(jobId: string): void {

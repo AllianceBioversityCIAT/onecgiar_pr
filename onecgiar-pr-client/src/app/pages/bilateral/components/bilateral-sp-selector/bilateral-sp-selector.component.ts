@@ -1,10 +1,11 @@
 import { Component, inject, computed, signal, output, effect, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
+import { BilateralAccordionComponent } from '../bilateral-accordion/bilateral-accordion.component';
 
 @Component({
   selector: 'app-bilateral-sp-selector',
-  imports: [CommonModule],
+  imports: [CommonModule, BilateralAccordionComponent],
   templateUrl: './bilateral-sp-selector.component.html',
   styleUrl: './bilateral-sp-selector.component.scss'
 })
