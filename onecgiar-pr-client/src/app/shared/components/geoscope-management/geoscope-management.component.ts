@@ -36,13 +36,40 @@ export class GeoscopeManagementComponent implements OnInit {
 
   get labelRadioButtons(): string {
     return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING
-      ? `What is the main geographic focus of the ${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}?`
+      ? `What is the main geographic focus of the ${this.resultLevelWord}?`
       : `Select country/ geoscope for which packaging and scaling readiness assessment will be conducted`;
+  }
+
+  /**
+   * The noun these labels talk about — "Output", "Outcome", … — or `Result` when the app never
+   * learned it.
+   *
+   * 🛑 P2-3622: the name is written in exactly ONE place, `current-result.service.ts` inside
+   * `GET_resultById()`, which only the result-detail tree calls. The bilateral review drawer
+   * (`result-framework-reporting/.../result-review-drawer`) renders this very component with
+   * `module="reporting"` on a route that never goes through it, so the name stayed null,
+   * `getLastWord()` returned an empty string, and QA read three broken sentences with a hole where
+   * the word belongs: "where the  has taken place", "specify for this ?" (result codes 9100 and
+   * 9097 on prtest, 8 Sep 2026).
+   *
+   * The fallback is `Result` because that is the word the ticket asks for, and because it is the
+   * honest generic: every screen reaching this code is editing a result. Callers that DO know the
+   * level are untouched — W1/W2 keeps saying "Output"/"Outcome" exactly as before, and IPSR passes
+   * `module="ipsr"`, which hides all four strings.
+   */
+  get resultLevelWord(): string {
+    // 🛑 The name is trimmed before it goes in, and the fallback also covers whatever comes back.
+    // `getLastWord()` (data-control.service.ts) THROWS on a whitespace-only string: `'   '.split(' ')`
+    // ends on an empty last word and `lastWord[0].toUpperCase()` reads `undefined`. Found by the
+    // third test below, on 14 Sep 2026. Left that function alone — this component is its only
+    // caller, so sanitising here fixes every path without moving anyone else.
+    const levelName = this.resultLevelSE.currentResultLevelName?.trim();
+    return (levelName && this.api.dataControlSE.getLastWord(levelName)) || 'Result';
   }
 
   get descriptionRadioButtons(): string {
     return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING
-      ? `This should reflect where the <strong>${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}</strong> has taken place/contributed to benefit.`
+      ? `This should reflect where the <strong>${this.resultLevelWord}</strong> has taken place/contributed to benefit.`
       : undefined;
   }
 
