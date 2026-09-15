@@ -87,13 +87,8 @@ describe('BilateralAiService (unit)', () => {
     const clarisaInstitutionsRepository = {
       findOne: jest.fn().mockResolvedValue({ id: 7, acronym: 'AfricaRice' }),
     };
-    const templateRepository = {
-      findOne: jest.fn().mockResolvedValue({
-        template: '<p>{{result_count}} — {{drafts_url}}</p>',
-      }),
-    };
-    const emailService = {
-      sendEmail: jest.fn(),
+    const notificationsService = {
+      notifyTerminal: jest.fn().mockResolvedValue(undefined),
     };
 
     const service = new BilateralAiService(
@@ -112,8 +107,7 @@ describe('BilateralAiService (unit)', () => {
       roleByUserRepository as any,
       clarisaCentersRepository as any,
       clarisaInstitutionsRepository as any,
-      templateRepository as any,
-      emailService as any,
+      notificationsService as any,
     );
 
     Object.assign(service, overrides);
@@ -136,8 +130,7 @@ describe('BilateralAiService (unit)', () => {
         roleByUserRepository,
         clarisaCentersRepository,
         clarisaInstitutionsRepository,
-        templateRepository,
-        emailService,
+        notificationsService,
       },
     };
   };
@@ -1199,8 +1192,17 @@ describe('BilateralAiService (unit)', () => {
           completed_date: expect.any(Date),
         },
       );
-      // Zero candidates → nothing to review → no mail.
-      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
+      // `APF-T-3`: the mail rule (2-minute gate, template selection) is
+      // `BilateralAiNotificationsService`'s concern (see its own spec) — this seam only proves
+      // `processJob` picked the zero-drafts outcome.
+      expect(stubs.notificationsService.notifyTerminal).toHaveBeenCalledTimes(
+        1,
+      );
+      const [notifiedJob, outcome, options] =
+        stubs.notificationsService.notifyTerminal.mock.calls[0];
+      expect(notifiedJob.job_id).toBe('j1');
+      expect(outcome).toBe('no_candidates');
+      expect(options).toMatchObject({ resultCount: 0, late: false });
     });
 
     // `APF-R-2` A "AND IT MUST accept a late mining response... idempotently": a re-run for the
@@ -1248,9 +1250,11 @@ describe('BilateralAiService (unit)', () => {
       );
     });
 
-    // 2026-09-04: the client no longer force-redirects on completion, so this mail is what brings
-    // the uploader back to the Drafts list.
-    it('mails the uploader a link to the drafts list when candidates were produced', async () => {
+    // `APF-T-3`: `processJob` now delegates the whole "tell the uploader" concern to
+    // `BilateralAiNotificationsService.notifyTerminal` (the mail rule, template selection and
+    // link-building are covered by that service's own spec) — this seam only proves the COMPLETED
+    // branch hands off the right outcome and count.
+    it('notifies "results_ready" with the result count when candidates were produced', async () => {
       const { service, stubs } = makeService();
       stubs.jobRepository.findOne.mockResolvedValue({
         job_id: 'j1',
@@ -1264,10 +1268,6 @@ describe('BilateralAiService (unit)', () => {
         center_id: 7,
         program_code: 'SP06',
       });
-      stubs.userRepository.findOne.mockResolvedValue({
-        email: 'uploader@cgiar.org',
-        first_name: 'Cristian',
-      });
       stubs.textMining.normalize.mockReturnValue({
         results: [
           { indicator: 'Number of innovations', title: 'A', description: 'd' },
@@ -1280,29 +1280,21 @@ describe('BilateralAiService (unit)', () => {
 
       await service.processJob('j1');
 
-      expect(stubs.templateRepository.findOne).toHaveBeenCalledWith({
-        where: { name: 'email_template_bilateral_ai_results_ready' },
-      });
-      expect(stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
-      const payload = stubs.emailService.sendEmail.mock.calls[0][0];
-      expect(payload.emailBody.to).toEqual(['uploader@cgiar.org']);
-      // The rendered body carries the count and the centre's drafts URL.
-      expect(payload.emailBody.message.socketFile).toContain('1');
-      expect(payload.emailBody.message.socketFile).toContain(
-        '/bilateral/AfricaRice/drafts',
+      expect(stubs.notificationsService.notifyTerminal).toHaveBeenCalledTimes(
+        1,
       );
+      const [notifiedJob, outcome, options] =
+        stubs.notificationsService.notifyTerminal.mock.calls[0];
+      expect(notifiedJob.job_id).toBe('j1');
+      expect(outcome).toBe('results_ready');
+      expect(options).toMatchObject({ resultCount: 1, late: false });
     });
 
-    // 2026-09-07: "Bioversity (Alliance)" pasted raw into the href was cut at the space by the
-    // mail client and landed on /bilateral/Bioversity%20/home. The segment is percent-encoded,
-    // parentheses included, so the link survives every client and the router decodes it back.
-    it('percent-encodes the centre acronym in the drafts link, parentheses included', async () => {
+    // `APF-R-2` A: a mining response landing after the sweeper already flipped the row to
+    // `FAILED`/`TIMED_OUT` still completes the job, but the notification must say so.
+    it('notifies with late=true when the row was FAILED/TIMED_OUT immediately before this write', async () => {
       const { service, stubs } = makeService();
-      stubs.clarisaInstitutionsRepository.findOne.mockResolvedValue({
-        id: 7,
-        acronym: 'Bioversity (Alliance)',
-      });
-      stubs.jobRepository.findOne.mockResolvedValue({
+      const jobFixture = {
         job_id: 'j1',
         status: BilateralAiJobStatus.PENDING,
         attempts: 0,
@@ -1312,17 +1304,19 @@ describe('BilateralAiService (unit)', () => {
         text_context: null,
         user_id: 42,
         center_id: 7,
-        program_code: 'SP06',
-      });
-      stubs.userRepository.findOne.mockResolvedValue({
-        email: 'uploader@cgiar.org',
-        first_name: 'Juan',
-      });
+      };
+      // `attemptStart`'s read sees PENDING (the case that got this attempt going); the
+      // pre-completion late-detection read is a SEPARATE `findOne` call and must see the row as
+      // it stands right before the COMPLETED write — simulated here as the sweeper's flip.
+      stubs.jobRepository.findOne
+        .mockResolvedValueOnce(jobFixture)
+        .mockResolvedValueOnce({
+          status: BilateralAiJobStatus.FAILED,
+          error_code: 'TIMED_OUT',
+        });
       stubs.textMining.normalize.mockReturnValue({
-        results: [
-          { indicator: 'Number of innovations', title: 'A', description: 'd' },
-        ],
-        interactionId: 'int-9',
+        results: [{ indicator: 'Number of innovations' }],
+        interactionId: null,
       });
       jest
         .spyOn(service as any, 'createDraftFromCandidate')
@@ -1330,16 +1324,17 @@ describe('BilateralAiService (unit)', () => {
 
       await service.processJob('j1');
 
-      const payload = stubs.emailService.sendEmail.mock.calls[0][0];
-      expect(payload.emailBody.message.socketFile).toContain(
-        '/bilateral/Bioversity%20%28Alliance%29/drafts',
-      );
-      expect(payload.emailBody.message.socketFile).not.toContain(
-        '/bilateral/Bioversity (Alliance)/drafts',
-      );
+      const [, outcome, options] =
+        stubs.notificationsService.notifyTerminal.mock.calls[0];
+      expect(outcome).toBe('results_ready');
+      expect(options).toMatchObject({ late: true });
     });
 
-    it('a mail failure never fails the job — COMPLETED already stands', async () => {
+    // `BilateralAiNotificationsService.notifyTerminal` is contractually never-throwing (its own
+    // spec proves it) — `processJob` relies on that rather than wrapping it a second time. What
+    // this seam owns is ordering: the COMPLETED write must already stand before the notification
+    // is attempted, so a slow or misbehaving notification can never undo it.
+    it('writes COMPLETED before calling notifyTerminal', async () => {
       const { service, stubs } = makeService();
       stubs.jobRepository.findOne.mockResolvedValue({
         job_id: 'j1',
@@ -1359,14 +1354,21 @@ describe('BilateralAiService (unit)', () => {
       jest
         .spyOn(service as any, 'createDraftFromCandidate')
         .mockResolvedValue({ id: 1 });
-      stubs.templateRepository.findOne.mockRejectedValue(new Error('db down'));
 
-      await expect(service.processJob('j1')).resolves.toBeUndefined();
+      const callOrder: string[] = [];
+      stubs.jobRepository.update.mockImplementation(async (_where, set) => {
+        if ((set as any)?.status === BilateralAiJobStatus.COMPLETED) {
+          callOrder.push('update-completed');
+        }
+        return { affected: 1 };
+      });
+      stubs.notificationsService.notifyTerminal.mockImplementation(async () => {
+        callOrder.push('notify');
+      });
 
-      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
-        { job_id: 'j1' },
-        expect.objectContaining({ status: BilateralAiJobStatus.COMPLETED }),
-      );
+      await service.processJob('j1');
+
+      expect(callOrder).toEqual(['update-completed', 'notify']);
     });
 
     it('should preserve the AI-detected lead center when creating a draft', async () => {
@@ -1441,6 +1443,9 @@ describe('BilateralAiService (unit)', () => {
         expect.anything(),
         expect.objectContaining({ status: BilateralAiJobStatus.FAILED }),
       );
+      // Not terminal yet — the retry keeps `PROCESSING`, so `APF-R-4`'s "exactly once per terminal
+      // state" must not fire here.
+      expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
     });
 
     // `APF-R-3` "AND IT MUST set FAILED with the last error_code after attempt max_attempts".
@@ -1473,6 +1478,13 @@ describe('BilateralAiService (unit)', () => {
           completed_date: expect.any(Date),
         },
       );
+      expect(stubs.notificationsService.notifyTerminal).toHaveBeenCalledTimes(
+        1,
+      );
+      const [notifiedJob, outcome] =
+        stubs.notificationsService.notifyTerminal.mock.calls[0];
+      expect(notifiedJob.error_code).toBe('HTTP_503');
+      expect(outcome).toBe('failed');
     });
 
     it('should mark job as FAILED without throwing on 4xx errors', async () => {

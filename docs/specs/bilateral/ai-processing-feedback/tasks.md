@@ -85,9 +85,10 @@
 - **Verification:** `cd onecgiar-pr-server && npx jest src/api/bilateral-ai src/api/notification --silent && npx eslint "src/api/bilateral-ai/**/*.ts" "src/api/notification/**/*.ts" --quiet`
 - **Input that would make the check fail:** stall check without the liveness condition (the "another job advanced" fixture flips); mail sent for a 90-second job; notification built through `emitResultNotification` (the emitter-equals-recipient drop makes the persisted-row assertion fail); read query still `innerJoin`ing `obj_result`.
 - **What this cannot prove / disqualifier:** cron scheduling itself and mail delivery are not unit-testable — `APF-T-10` observes one real sweep flip (forced by a dead consumer) and one real mail; if prtest has no mail transport the mail rows are recorded as not observed, never as passed.
+- **Status:** `[x]` PASS — 2026-09-15, attempt 2 (attempt 1 FAIL: sweeper windows untested with a frozen clock — see `execution.md`)
 - **Definition of done:**
-  - [ ] Specs green; lint clean; sweeper inert when the queue env is missing (test).
-  - [ ] Commit: `✨ feat(bilateral-ai) [<ticket>]: sweeper for timed-out and stalled jobs; one notification per terminal state; bell read path for job rows`.
+  - [x] Specs green; lint clean; sweeper inert when the queue env is missing (test).
+  - [x] Commit: `✨ feat(bilateral-ai) [<ticket>]: sweeper for timed-out and stalled jobs; one notification per terminal state; bell read path for job rows`.
 
 ### `APF-T-4` — Retry and expectations endpoints, contract doc change log
 

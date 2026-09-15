@@ -68,6 +68,8 @@ import { BilateralAiConsumer } from '../bilateral-ai/bilateral-ai.consumer';
 import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.service';
 import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
 import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
+import { BilateralAiNotificationsService } from '../bilateral-ai/services/bilateral-ai-notifications.service';
+import { BilateralAiSweeperCron } from '../bilateral-ai/bilateral-ai-sweeper.cron';
 import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
 import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
 import { AdUsersModule } from '../ad_users/ad_users.module';
@@ -173,6 +175,13 @@ import { InnovationUseMdsValidator } from './services/innovation-use-mds-validat
     BilateralAiService,
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
+    // `APF-T-3`: the terminal-notification writer (in-app row + mail) shared by `processJob`'s
+    // COMPLETED/FAILED branches and the sweeper below, and the sweeper cron itself. No dedicated
+    // `bilateral-ai.module.ts` exists — this module is where every other `bilateral-ai/*`
+    // provider is already registered, so these two follow the same wiring rather than starting a
+    // module split this task was not asked to do.
+    BilateralAiNotificationsService,
+    BilateralAiSweeperCron,
     BilateralWebhookService,
   ],
   // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the

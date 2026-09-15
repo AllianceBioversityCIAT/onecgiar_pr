@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,19 +33,15 @@ import {
 } from '../entities/draft-evidence.entity';
 import { CreateBilateralAiJobDto } from '../dto/create-bilateral-ai-job.dto';
 import { BilateralService } from '../../bilateral/bilateral.service';
-import * as handlebars from 'handlebars';
-import { env } from 'node:process';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
-import { TemplateRepository } from '../../platform-report/repositories/template.repository';
-import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
-import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { getBilateralAiMaxAttempts } from '../bilateral-ai.config';
+import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
 
 /**
  * The complete server `stage` vocabulary (`design.md` §3.1, `requirements.md` §2 Glossary).
  * Nothing else is ever written to `BilateralAiJob.stage`.
  */
-const BilateralAiJobStage = {
+export const BilateralAiJobStage = {
   QUEUED: 'queued',
   UPLOADING: 'uploading',
   READING: 'reading',
@@ -94,9 +89,7 @@ export class BilateralAiService {
     private readonly roleByUserRepository: RoleByUserRepository,
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
-    private readonly templateRepository: TemplateRepository,
-    @Optional()
-    private readonly emailService?: EmailNotificationManagementService,
+    private readonly notificationsService: BilateralAiNotificationsService,
   ) {}
 
   async createJob(
@@ -504,22 +497,10 @@ export class BilateralAiService {
       this.logger.debug(
         `Bilateral AI job ${jobId} stage update to "${stage}" affected 0 rows — status changed concurrently.`,
       );
+      return;
     }
-  }
-
-  /**
-   * Seam for `APF-T-3` (`design.md` §5 "Terminal notifications", §6.4). No-op today: that task
-   * replaces this body with `emitBilateralAiJobNotification` (in-app row) plus the mail dispatch
-   * for the `COMPLETED`-with-zero-drafts and `FAILED` cases. The existing results-ready mail
-   * (`sendResultsReadyEmail`, below) keeps firing unchanged until then.
-   */
-  private async notifyTerminal(
-    job: BilateralAiJob,
-    outcome: 'completed' | 'failed',
-  ): Promise<void> {
-    this.logger.debug(
-      `Bilateral AI job ${job.job_id} reached terminal state (${outcome}); notification not yet wired (APF-T-3).`,
-    );
+    // `design.md` §9 Observability: "info on stage transitions (jobId, stage)".
+    this.logger.log(`Bilateral AI job ${jobId} stage -> ${stage}.`);
   }
 
   async processJob(jobId: string): Promise<void> {
@@ -581,10 +562,23 @@ export class BilateralAiService {
         if (draft) resultCount += 1;
       }
 
+      // Late-completion detection, read BEFORE the write below (`design.md` §5 "Late
+      // completion", `APF-R-2` A): a mining response that lands after the sweeper already gave
+      // up on this job (`FAILED`/`TIMED_OUT`) still creates drafts and completes the job, but the
+      // notification says "arrived after all" instead of the on-time copy.
+      const priorState = await this.jobRepository.findOne({
+        where: { job_id: jobId },
+        select: { status: true, error_code: true },
+      });
+      const late =
+        priorState?.status === BilateralAiJobStatus.FAILED &&
+        priorState?.error_code === 'TIMED_OUT';
+
       // Unconditional on `job_id` alone (not scoped to `status = PROCESSING`): a late mining
       // response must still be able to flip a `FAILED`/`TIMED_OUT` row to `COMPLETED`
       // (`APF-R-2` A, `design.md` §5 "Late completion") — the draft-level idempotency lives in
       // `createDraftFromCandidate`, not in this write's WHERE clause.
+      const completedAt = new Date();
       await this.jobRepository.update(
         { job_id: jobId },
         {
@@ -592,17 +586,19 @@ export class BilateralAiService {
           result_count: resultCount,
           external_interaction_id: normalized.interactionId,
           response_snapshot: response,
-          completed_date: new Date(),
+          completed_date: completedAt,
         },
       );
 
       // Processing can take minutes and the uploader has usually moved on; the client no longer
-      // force-redirects on completion (2026-09-04), so the mail is what tells them the drafts are
-      // ready. After the status update and never blocking: a mail failure must not fail the job.
-      if (resultCount > 0) {
-        await this.sendResultsReadyEmail(job, user, resultCount);
-      }
-      await this.notifyTerminal(job, 'completed');
+      // force-redirects on completion (2026-09-04), so this is what tells them the outcome. After
+      // the status update and never blocking: a notification failure must not fail the job
+      // (`notifyTerminal` never throws — `APF-R-4`).
+      await this.notificationsService.notifyTerminal(
+        job,
+        resultCount > 0 ? 'results_ready' : 'no_candidates',
+        { resultCount, late, terminalDate: completedAt },
+      );
     } catch (error: any) {
       const status = error?.status;
       const retryable = !status || status >= 500;
@@ -625,108 +621,29 @@ export class BilateralAiService {
         throw error;
       }
 
+      const completedAt = new Date();
       const result = await this.jobRepository.update(
         { job_id: jobId, status: BilateralAiJobStatus.PROCESSING },
         {
           status: BilateralAiJobStatus.FAILED,
           error_code: errorCode,
           error_message: failure,
-          completed_date: new Date(),
+          completed_date: completedAt,
         },
       );
       if (result?.affected) {
-        await this.notifyTerminal(job, 'failed');
+        // `design.md` §9 Observability: "error on final FAILED" — jobId + error_code only, per
+        // AC-9 (no message text, which could echo back sensitive upstream detail).
+        this.logger.error(
+          `Bilateral AI job ${jobId} failed terminally (error_code=${errorCode}).`,
+        );
+        await this.notificationsService.notifyTerminal(
+          { ...job, error_code: errorCode },
+          'failed',
+          { terminalDate: completedAt },
+        );
       }
       if (retryable) throw error;
-    }
-  }
-
-  /**
-   * Mails the uploader that their AI job finished and where the drafts wait. Follows the
-   * established lookup-only email path (`WebhookAlertService`, `UserService`): body from the
-   * `template` table, rendered with handlebars, handed to `sendEmail` as `socketFile`.
-   *
-   * Never throws — the job is already COMPLETED and a notification failure must not undo that.
-   * A missing template or email service downgrades to a warn, same posture as the webhook alert.
-   */
-  private async sendResultsReadyEmail(
-    job: BilateralAiJob,
-    user: { email: string; first_name?: string },
-    resultCount: number,
-  ): Promise<void> {
-    try {
-      if (!this.emailService) {
-        this.logger.warn(
-          `Email service unavailable; AI results-ready mail skipped for job ${job.job_id}`,
-        );
-        return;
-      }
-
-      const templateRow = await this.templateRepository.findOne({
-        where: { name: EmailTemplate.BILATERAL_AI_RESULTS_READY },
-      });
-      if (!templateRow?.template) {
-        this.logger.warn(
-          `Email template ${EmailTemplate.BILATERAL_AI_RESULTS_READY} not found; AI results-ready mail skipped for job ${job.job_id}`,
-        );
-        return;
-      }
-
-      // The drafts route is /bilateral/:acronym/drafts; the acronym comes from the centre's
-      // CLARISA institution. Same frontend-base derivation `attachResultLinks` already uses.
-      //
-      // The acronym is a URL path segment and MUST be encoded: "Bioversity (Alliance)" pasted raw
-      // gave mail clients `.../bilateral/Bioversity (Alliance)/drafts`, which they cut at the
-      // space — the link landed on `/bilateral/Bioversity%20/home`, a centre that does not exist
-      // (reported 2026-09-07). `encodeURIComponent` leaves `(` `)` alone and some clients still
-      // stop at those, so they are encoded by hand; the Angular router decodes both fine.
-      const institution = await this.clarisaInstitutionsRepository.findOne({
-        where: { id: job.center_id },
-      });
-      const acronymSegment = institution?.acronym
-        ? encodeURIComponent(institution.acronym).replace(
-            /[()]/g,
-            (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
-          )
-        : null;
-      const pdfBase = (
-        env.FRONT_END_PDF_ENDPOINT ??
-        'https://reporting.cgiar.org/reports/result-details/'
-      ).replace(/\/+$/, '');
-      const frontendBase =
-        pdfBase.replace(/\/reports\/result-details$/, '') ||
-        'https://reporting.cgiar.org';
-      const draftsUrl = acronymSegment
-        ? `${frontendBase}/bilateral/${acronymSegment}/drafts`
-        : frontendBase;
-
-      const compiled = handlebars.compile(templateRow.template);
-      const body = compiled({
-        user_name: user.first_name || 'there',
-        result_count: resultCount,
-        result_plural: resultCount === 1 ? '' : 's',
-        center_acronym: institution?.acronym ?? 'your centre',
-        drafts_url: draftsUrl,
-      });
-
-      this.emailService.sendEmail({
-        from: { email: env.EMAIL_SENDER, name: 'PRMS Reporting Tool -' },
-        emailBody: {
-          subject: `[PRMS] Your AI-identified result${resultCount === 1 ? ' is' : 's are'} ready for review`,
-          to: [user.email],
-          cc: [],
-          bcc: '',
-          message: {
-            text: `The AI processing finished: ${resultCount} result draft${resultCount === 1 ? '' : 's'} ready for review.`,
-            socketFile: body,
-          },
-        },
-      });
-    } catch (error) {
-      this.logger.error(
-        `Failed to send the AI results-ready mail for job ${job.job_id}`,
-        error as Error,
-      );
     }
   }
 

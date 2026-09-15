@@ -142,3 +142,46 @@ Rulings: `getActiveJobSnapshot` in scope (`APF-DD-8`); accordion chrome conforms
 
 **Requirements covered:** `APF-R-10` (all clauses except the 375-px layout → T-9), `APF-R-11`; `APF-AC-16`, `APF-AC-17`. **Gate:** auto-approved (pre-approved mode).
 
+### `APF-T-6` — Processing panel component and upload integration — **IN PROGRESS** (attempt 1 FAIL → attempt 2 running)
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-09-15 (11:07 → …, America/Bogota) |
+| **Implementer** | `akili-implementer` (sonnet) · skills `angular-developer`, `ui-ux-pro-max`, `tailwind-design-system` · effort high → xhigh on attempt 2 |
+| **Reviewer** | `akili-reviewer` (opus) · four-lens sweep |
+
+**Attempt 1 — files:** new `components/ai-processing-panel/ai-processing-panel.component.{ts,html,spec.ts}`; `components/bilateral-ai-upload/*.{ts,html,scss,spec.ts}` (inline blocks replaced by the panel, `panelVisible` on init/destroy, `?job=` deep link, retry via service, dead SCSS removed, `errorMessage` notice on the idle form); `pages/bilateral-result-creator/bilateral-result-creator.component.{ts,spec.ts}` (`isAiProcessing` includes `still_running` — forward pointer 1); `services/bilateral-ai.service.{ts,spec.ts}` (404/410 gone-job reset — forward pointer 2). Diff vs `7eb8a8e84`: 11 files, +941/−207 (partly swept into `f21191e2b` by another session, see runtime note). Verification: tsc clean · jest panel + upload `Tests: 39 passed` · lint clean · grep gate 0 · token loop 0 misses · service + creator specs `92 passed`.
+
+**Attempt 1 — Reviewer `STATUS: FAIL` (verbatim issues):**
+1. The elapsed clock sits inside the `aria-live="polite"` region (panel root), so the timer is announced every second instead of stage changes. Violated: `requirements.md` §7 Accessibility, `design.md` §6.2, `APF-R-6` B AND-IT-MUST. Remediation: one stable inner live region for stage/outcome text only.
+2. Estimated steps lack the dotted connector and the "estimated" caption in `--pr-text-subtle`; `BilateralAiStepModel.estimated` never read. Violated: `design.md` §6.3 Stepper; mockup `.step.est::before` / `.est-cap`. Remediation: branch the connector on `step.estimated`, caption as its own span, short step labels, long copy in the `<h3>`.
+3. Source mix rendered twice in the processing state (sub-line + meta row). Violated: `design.md` §6.3 mockup state 2; `APF-R-6` B. Remediation: drop `mixLine()` from the sub-line.
+Rulings: fixed button labels, split still-running copy, attempts>1 badge — conform. Advisory: expectations subscription has no error arm / `takeUntilDestroyed` and never retries after a failure (Leader adopted into attempt 2 — forward pointer 3 had asked for `catchError`); retrying body copy drifts from the §6.3 literal (recorded).
+
+### `APF-T-3` — Sweeper cron, terminal notifications, notification read-path branch — **PASS** (attempt 2)
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-09-15 (11:25 → 16:18, America/Bogota; incl. the 11:53–16:11 quota pause) |
+| **Attempts** | 2 |
+| **Implementer** | `akili-implementer` (sonnet) · skills `nestjs-expert`, `tdd`, `error-handling-patterns` · effort high → xhigh on attempt 2 |
+| **Reviewer** | `akili-reviewer` (opus) · four-lens sweep |
+
+**Attempt 1 — files (9, +1583/−189):** new `bilateral-ai-sweeper.cron.ts` (+ spec), new `services/bilateral-ai-notifications.service.ts` (+ spec), `services/bilateral-ai.service.ts` (+ spec: `sendResultsReadyEmail`/stub seam removed, notifications service wired, late detection before the COMPLETED write, `BilateralAiJobStage` exported, `info`/`error` logs per design §9), `src/api/notification/notification.service.ts` (+ spec: `emitBilateralAiJobNotification`, read-path merge in `getAllNotifications` / `getPopUpNotifications` / `getRecentResultActivity`), `src/api/bilateral/bilateral.module.ts` (providers — no `bilateral-ai.module.ts` exists; the module already wires all `bilateral-ai/*`). Verification: `npx jest src/api/bilateral-ai src/api/notification --silent` → `Tests: 192 passed` · eslint clean · `tsc --noEmit` clean. Seam: `notifyTerminal(job, outcome: 'results_ready'|'no_candidates'|'failed', { resultCount?, late?, terminalDate? })`, never throws.
+
+**Implementer assumptions (all accepted by the Reviewer):** `notification_level = RESULT` (targeted row, not a broadcast); mail copy/subjects authored by the Implementer (design fixes variable names only — bindings match the T-1 templates exactly); change log untouched (T-4); the sweeper writes no `stage` (design §5 names only `status`/`error_code`/`completed_date`).
+
+**Attempt 1 — Reviewer `STATUS: FAIL` (verbatim issue):**
+1. The sweeper's two time windows are never exercised: `bilateral-ai-sweeper.cron.spec.ts` uses no fake timers and never asserts the `where` handed to `find`/`findOne`/`count`; the mock decides both boundary outcomes, so a cutoff computed from `created_date`, a swapped getter, or a liveness count ignoring `stage_updated_date` would all pass. Violated: `tasks.md` `APF-T-3` Tests ("frozen clock"), `APF-R-2` A BUT clause, design §5 (b). Remediation: freeze the clock and assert the query arguments (`started_date: LessThan(now − attemptTimeout)`, `queue_entry_date: LessThan(now − stall)` + `order ASC`, liveness `count` with the two `MoreThan` clauses).
+Passed: queue guard inert and tested; every flip conditional with notify gated on `affected`; persisted row asserted directly (`result_id: null`, `target_user`, mix + duration text); 90-s job → row, no mail; 6-min job → mail; `late` read before the COMPLETED write → "arrived after all". (Report tail requested; recorded when received.)
+
+**Attempt 1 — Reviewer tail (received):** read paths merge a `find()` with no `obj_result` condition scoped to `target_user` + read/after; `buildResultNotificationBaseQuery`'s `innerJoinAndSelect` untouched (result-type regression holds structurally); `BilateralAiJobStage` exported; providers registered in `bilateral.module.ts`. No further issues. **ADVISORY:** *Reliability* — one `try` wraps both sweeper branches (a failure in the timeout sweep skips the stall sweep for that tick) → **Leader adopted into attempt 2**; *Risk (AC-9)* — `notifyTerminal`'s catch interpolates `error.message` into the `warn` → **Leader adopted into attempt 2** (log `error.name`/code only); *Readability* — job rows appended unsorted to the bell lists (pre-existing queries carry no `order` either) → confirm ordering at T-10; *Testing* — the result-type regression case passes because the fixture carries the relation; the real guarantee is the untouched query builder.
+
+> **Runtime note (2026-09-15 11:53 → 16:11):** the sonnet session limit ("You've hit your session limit · resets 4:10pm (America/Bogota)") killed three Implementers mid-task: `impl-apf-t3` (attempt 2 — nothing applied yet: sweeper spec unchanged, single `try`, `error.message` still logged), `impl-apf-t6` (attempt 2 — markup partly rewritten: live region moved inward, `estimated` caption added; spec realignment unfinished), `impl-apf-t8` (attempt 1 — `ai-provenance-notice` component created and mounted on `draft-result-card`; other surfaces pending). No rework attempt consumed (runtime failure, not a work FAIL). Resumed at 16:11 after the reset with fresh `akili-implementer` workers on the default wrapper (sonnet), each briefed "the working tree wins — probe, then complete"; rotation to opus stays the fallback if the limit recurs.
+
+**Attempt 2 — files (on top of attempt 1; fresh worker `impl-apf-t3b`, sonnet, effort xhigh):** `bilateral-ai-sweeper.cron.spec.ts` (rewritten: frozen clock per describe, exact `where` assertions with `LessThan`/`MoreThan` cutoffs from the config getters, 14/16/31-min boundary proofs, getters-differ case), `bilateral-ai-sweeper.cron.ts` (independent try/catch per branch + 2 cases), `services/bilateral-ai-notifications.service.ts` (catch logs `error_name` + jobId/outcome/error_code, no `error.message`). Verification: `npx jest src/api/bilateral-ai src/api/notification --silent` → `Test Suites: 13 passed, Tests: 193 passed, 193 total` · eslint both globs → exit 0.
+
+**Attempt 2 — Reviewer `STATUS: PASS`:** "Issue 1 is resolved. The sweeper spec now freezes the clock per timed describe block and asserts the exact query arguments, so both windows are genuinely pinned … fails the moment the column becomes `created_date` or the getter is swapped … `count` must carry the two-clause OR array with `started_date` and `stage_updated_date` both `MoreThan(stallCutoff)` … Both adopted advisories are in and proven … Everything cleared in attempt 1 still holds." Remaining ADVISORY (recorded): bell ordering of job rows (no `order` on either query) → eyeball at T-10; the result-type regression case relies on an untouched query builder.
+
+**Requirements covered:** `APF-R-2` A/B/C, `APF-R-4` (all clauses; live mail/bell → T-10), `APF-R-22`; `APF-AC-3`, `APF-AC-4`, `APF-AC-6`. **Gate:** auto-approved (pre-approved mode).
+
