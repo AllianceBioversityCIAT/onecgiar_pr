@@ -6,7 +6,7 @@
 |---|---|
 | Spec Path | `changes/my-work-editing-reorder` |
 | Started | 2026-09-15 |
-| Status | in-progress |
+| Status | archived 2026-09-15 |
 
 ## 2. Task Execution History
 
@@ -113,4 +113,15 @@ Result: **2 suites PASS**
 | MWER-T-1 | PASS |
 | MWER-T-2 | PASS |
 | MWER-T-3 | PASS |
-| MWER-T-4 | pending |
+| MWER-T-4 | deferred (accepted follow-up) |
+
+---
+
+## 4. Post-ship fix — skeleton loop (2026-09-15)
+
+| Field | Value |
+|---|---|
+| Symptom | My work board stuck on skeleton after MWER wiring |
+| Cause | `loadForKey` / `save` rewrote `orderedCodes` even when unchanged → load + prune effects looped |
+| Fix | `sameCodeSequence` compare-before-write in `MyWorkEditingOrderService`; split load vs prune effects |
+| Verification | Scoped Jest 173 PASS; manual reload on `my-work?phase=36` |

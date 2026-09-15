@@ -8,7 +8,7 @@
 | Requirements | [`requirements.md`](./requirements.md) |
 | Design | [`design.md`](./design.md) |
 | Prefix | `MWER` |
-| Status | not-started |
+| Status | shipped (T-4 follow-up deferred) |
 | Budget | 4 tasks · ~280 LOC prod / ~350 LOC test |
 | Date | 2026-09-15 |
 
