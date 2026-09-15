@@ -102,8 +102,15 @@
       </ng-template>
     </ng-template>
 
-    <div class="checkboxes_container" *ngIf="!isSuppInfo">
-      <app-pr-field-header [label]="getEvidenceRelatedTitle()" [required]="false"></app-pr-field-header>
+    <!-- La pregunta de las casillas es un campo más, así que lleva la misma tarjeta que el resto
+         del formulario (propuesta 18) en vez del `app-pr-field-header` suelto, que era el patrón
+         anterior al rediseño: un título a pelo encima de una fila de casillas sueltas. -->
+    <app-field-card
+      class="checkboxes_container"
+      *ngIf="!isSuppInfo"
+      [label]="getEvidenceRelatedTitle()"
+      [required]="false"
+      [hasValue]="anyImpactAreaChecked()">
       <div class="checkboxes">
         <app-pr-checkbox label="Gender equality, youth and social inclusion" [(ngModel)]="this.evidence.gender_related"> </app-pr-checkbox>
         <app-pr-checkbox label="Climate adaptation and mitigation" [(ngModel)]="this.evidence.youth_related"> </app-pr-checkbox>
@@ -125,7 +132,7 @@
         <app-pr-checkbox label="Other Outcome" [(ngModel)]="this.evidence.other_outcome_related" *ngIf="this.resultTypeId === 4">
         </app-pr-checkbox>
       </div>
-    </div>
+    </app-field-card>
     <app-pr-textarea
       [label]="
         'Please provide details of where' +

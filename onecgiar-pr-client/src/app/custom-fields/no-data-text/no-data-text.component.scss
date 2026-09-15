@@ -1,6 +1,20 @@
+// Estado vacío compartido por 25 pantallas ("No evidence added", "No links added", …).
+//
+// 15-sep-2026 — era un degradado gris→blanco a todo el ancho con el texto en MORADO. El morado es
+// el color de lo que se puede pulsar, así que un texto que solo informa lo llevaba puesto y competía
+// con el botón que sí hay que pulsar, justo debajo. Y el degradado no aparece en ningún otro sitio
+// de la plataforma. Ahora es lo que es: una nota tranquila, en texto secundario, sobre un marco
+// punteado que dice "aquí va a haber algo" sin gritarlo.
 .no_data_text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84px;
+  padding: 20px 24px;
   text-align: center;
-  color: var(--pr-color-primary-300);
-  padding: 20px 100px;
-  background: linear-gradient(180deg, var(--pr-color-accents-2) 0%, var(--pr-color-white) 100%);
+  color: var(--pr-text-muted);
+  font-size: 13px;
+  background: var(--pr-surface-subtle);
+  border: 1px dashed var(--pr-border-strong);
+  border-radius: 10px;
 }

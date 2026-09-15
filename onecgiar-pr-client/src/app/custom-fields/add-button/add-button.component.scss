@@ -1,66 +1,67 @@
 @use '../../../styles/fonts.scss' as fonts;
 
+// Botón de "añadir uno más" de toda la plataforma: evidencias, enlaces, expertos, proyectos no
+// agrupados, los pasos de IPSR… 15 pantallas comparten este archivo.
+//
+// 15-sep-2026 — era una píldora morada con las esquinas alternadas (`20px 5px 20px 5px`), una
+// sombra negra difusa y un círculo blanco con el `+` pegado a un lado, que al pasar el ratón
+// EMPUJABA el texto. Nada de eso existe en el resto de la interfaz, así que el botón se leía como
+// de otra aplicación. Ahora usa el par primario del mockup tal cual — el mismo que `Next` y
+// `Submit result` — y el icono va DENTRO, a la izquierda del texto, donde no mueve nada al pasar.
 .add_button_container {
   display: flex;
   justify-content: center;
+  margin-top: 12px;
   padding-bottom: 10px;
-  margin-top: 10px;
 
   .add_button_content {
-    transition: all ease 0.3s;
-    background-color: rgba(var(--pr-color-primary-rgb), 0.925);
-    border-radius: 20px 5px 20px 5px;
-    display: flex;
-    justify-content: space-between;
-    overflow: hidden;
-    box-shadow: 0px 0px 5px rgba(var(--pr-color-black-rgb), 0.39);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 8px;
+    background: var(--pr-color-primary-300);
+    color: var(--pr-color-white);
     cursor: pointer;
+    user-select: none;
+    transition: background 150ms ease;
 
+    &:hover {
+      background: var(--pr-color-primary-400);
+    }
+
+    // El mismo trato que el mockup da a su "Submit result" bloqueado.
     &.disabled {
-      opacity: 0.5;
+      opacity: 0.35;
       cursor: not-allowed;
       pointer-events: none;
     }
 
-    &:hover {
-      background-color: var(--pr-color-primary-300);
-      transition: all ease 0.3s;
-
-      .name {
-        padding-right: 20px;
-        transition: all ease 0.3s;
-        color: var(--pr-color-white);
-      }
+    &:focus-visible {
+      outline: 2px solid var(--pr-color-primary-300);
+      outline-offset: 2px;
     }
 
     .name {
-      transition: all ease 0.3s;
-      margin-left: 10px;
-      display: flex;
-      align-items: center;
-      padding-right: 10px;
-      color: var(--pr-color-white);
-      padding-left: 10px;
       @include fonts.pr-typography('body-2');
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--pr-color-white);
+      line-height: 1;
     }
 
+    // El círculo blanco desapareció: el icono es parte del botón, no una segunda superficie.
     .icon_container {
-      background-color: var(--pr-color-white);
-      width: 35px;
-      height: 35px;
-      border-radius: 20px 5px 20px 5px;
-      display: flex;
-      justify-content: center;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
+      order: -1;
 
-      .icon {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-
-        i {
-          color: rgba(var(--pr-color-primary-rgb), 0.925);
-        }
+      .icon i {
+        display: block;
+        font-size: 19px;
+        color: var(--pr-color-white);
       }
     }
   }
