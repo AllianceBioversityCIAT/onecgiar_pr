@@ -1,16 +1,21 @@
-<div class="column_title">
-  {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'Partners' }}
-</div>
-<div [ngSwitch]="this.rolesSE.readOnly">
-  <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
-  <div *ngSwitchCase="false">
-    <app-pr-checkbox
-      label="This section is not applicable."
-      [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-      (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
-    </app-pr-checkbox>
+<!-- Misma tarjeta que su gemelo de `rd-contributors-and-partners` (propuesta 18). Aquí el título
+     NO llevaba `required`, así que la tarjeta tampoco: el campo es opcional y la ausencia del tag
+     ES el marcador. -->
+<app-field-card
+  [label]="dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'Partners'"
+  [required]="false"
+  [hasValue]="!!this.rdPartnersSE.partnersBody.no_applicable_partner || !!this.rdPartnersSE.partnersBody.institutions?.length">
+  <div [ngSwitch]="this.rolesSE.readOnly">
+    <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
+    <div *ngSwitchCase="false">
+      <app-pr-checkbox
+        label="This section is not applicable."
+        [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
+        (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
+      </app-pr-checkbox>
+    </div>
   </div>
-</div>
+</app-field-card>
 <app-alert-status
   *ngIf="dataControlSE.isKnowledgeProduct"
   description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
