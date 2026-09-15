@@ -163,16 +163,23 @@
       <!-- Slot for Knowledge Product Sync button -->
       <div class="sbb-sync-slot inline-flex items-center empty:hidden" #syncSlot></div>
 
+      <!-- 🛑 `Save draft` va DENTRO de esta fila anclada, no detrás de ella. Antes el botón llevaba
+           `absolute bottom-[14px] right-[40px]` en su propia clase; al sacar el indicador a este
+           contenedor se le quitó el posicionamiento y el botón cayó al flujo normal: se pintaba en
+           una segunda línea, pegado a la izquierda, y de paso estiraba el alto del bloque, con lo
+           que el indicador absoluto se iba con él fuera de la franja (14-sep-2026).
+           `.sbb-save` NO tiene estilos propios en ninguna hoja — el posicionamiento es solo este
+           contenedor, así que sacarlo de aquí vuelve a romperlo. -->
+      @if (canSave) {
+        <button
+          type="button"
+          class="sbb-save h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] shadow-[var(--pr-shadow-1)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+          [disabled]="saveButtonSE.isSaving() || disabled"
+          (click)="onClickSave()"
+          data-testid="section-bottom-bar-save">
+          {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
+        </button>
+      }
     </div>
-    @if (canSave) {
-      <button
-        type="button"
-        class="sbb-save h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] shadow-[var(--pr-shadow-1)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
-        [disabled]="saveButtonSE.isSaving() || disabled"
-        (click)="onClickSave()"
-        data-testid="section-bottom-bar-save">
-        {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
-      </button>
-    }
   </div>
 </div>
