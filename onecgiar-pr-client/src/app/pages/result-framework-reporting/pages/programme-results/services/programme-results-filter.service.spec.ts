@@ -31,7 +31,12 @@ function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
     indicator: '',
     section: '',
     versionId: '34',
+    phaseName: '',
+    phaseYear: null,
+    phaseAcronym: '',
+    phaseSort: '0000_',
     submitterCode: 'SP01',
+    raw: {},
     ...partial
   };
 }
@@ -47,12 +52,12 @@ describe('ProgrammeResultsFilterService', () => {
   it('starts with every dimension empty and no chips', () => {
     expect(service.searchText()).toBe('');
     expect(service.selectedSections()).toEqual([]);
-    expect(service.selectedPhase()).toBeNull();
-    expect(service.selectedStatus()).toBeNull();
+    expect(service.selectedPhases()).toEqual([]);
+    expect(service.selectedStatuses()).toEqual([]);
     expect(service.selectedCategories()).toEqual([]);
     expect(service.selectedOrigins()).toEqual([]);
     expect(service.selectedCenters()).toEqual([]);
-    expect(service.selectedCreatedBy()).toBeNull();
+    expect(service.selectedCreatedBy()).toEqual([]);
     expect(service.hasActiveFilters()).toBe(false);
     expect(service.activeChips()).toEqual([]);
   });
@@ -128,7 +133,7 @@ describe('ProgrammeResultsFilterService', () => {
     });
 
     it('filters by status, category and origin', () => {
-      service.selectedStatus.set('Submitted');
+      service.selectedStatuses.set(['Submitted']);
       expect(service.filterRows(rows).map(r => r.code)).toEqual(['2', '3']);
 
       service.selectedOrigins.set(['W1/W2']);
@@ -213,16 +218,16 @@ describe('ProgrammeResultsFilterService', () => {
         row({ code: '2', phaseName: 'Reporting 2024 - P24', phaseYear: 2024, versionId: '20' })
       ];
 
-      service.selectedPhase.set('Reporting 2026 - P26');
+      service.selectedPhases.set(['Reporting 2026 - P26']);
       expect(service.filterRows(phaseRows).map(r => r.code)).toEqual(['1']);
 
-      service.selectedPhase.set('2024');
+      service.selectedPhases.set(['2024']);
       expect(service.filterRows(phaseRows).map(r => r.code)).toEqual(['2']);
     });
 
     it('combines every dimension with AND', () => {
       service.searchText.set('a');
-      service.selectedStatus.set('Editing');
+      service.selectedStatuses.set(['Editing']);
       service.selectedCategories.set(['Innovation development']);
       service.selectedOrigins.set(['W1/W2']);
 
@@ -230,7 +235,7 @@ describe('ProgrammeResultsFilterService', () => {
     });
 
     it('ignores the status dimension when asked, so the counters can stay honest', () => {
-      service.selectedStatus.set('Editing');
+      service.selectedStatuses.set(['Editing']);
       service.selectedOrigins.set(['W1/W2']);
 
       expect(service.filterRows(rows).map(r => r.code)).toEqual(['1']);
@@ -249,7 +254,7 @@ describe('ProgrammeResultsFilterService', () => {
     });
 
     it('is driven by the same pure predicate the service uses', () => {
-      service.selectedStatus.set('Submitted');
+      service.selectedStatuses.set(['Submitted']);
       expect(matchesProgrammeResultFilters(rows[0], service.state())).toBe(false);
       expect(matchesProgrammeResultFilters(rows[1], service.state())).toBe(true);
     });
@@ -259,12 +264,12 @@ describe('ProgrammeResultsFilterService', () => {
     it('builds one chip per active value, in toolbar order', () => {
       service.searchText.set('maize');
       service.selectedSections.set(['AoW1', 'AoW2']);
-      service.selectedPhase.set('Phase 2026');
-      service.selectedStatus.set('Submitted');
+      service.selectedPhases.set(['Phase 2026']);
+      service.selectedStatuses.set(['Submitted']);
       service.selectedCategories.set(['Policy change']);
       service.selectedOrigins.set(['W1/W2']);
       service.selectedCenters.set(['IITA']);
-      service.selectedCreatedBy.set('Angel Jarrin');
+      service.selectedCreatedBy.set(['Angel Jarrin']);
 
       expect(service.activeChips()).toEqual([
         { label: 'Search: maize', dimension: 'search', value: 'maize' },
@@ -310,23 +315,23 @@ describe('ProgrammeResultsFilterService', () => {
     beforeEach(() => {
       service.searchText.set('maize');
       service.selectedSections.set(['AoW1', 'AoW2']);
-      service.selectedPhase.set('Phase 2026');
-      service.selectedStatus.set('Submitted');
+      service.selectedPhases.set(['Phase 2026']);
+      service.selectedStatuses.set(['Submitted']);
       service.selectedCategories.set(['Policy change']);
       service.selectedOrigins.set(['W1/W2']);
       service.selectedCenters.set(['IITA']);
-      service.selectedCreatedBy.set('Angel Jarrin');
+      service.selectedCreatedBy.set(['Angel Jarrin']);
     });
 
     it('clears one dimension at a time', () => {
       service.clearSearch();
       expect(service.searchText()).toBe('');
 
-      service.clearPhase();
-      expect(service.selectedPhase()).toBeNull();
+      service.clearPhases();
+      expect(service.selectedPhases()).toEqual([]);
 
-      service.clearStatus();
-      expect(service.selectedStatus()).toBeNull();
+      service.clearStatuses();
+      expect(service.selectedStatuses()).toEqual([]);
 
       service.clearCategory();
       expect(service.selectedCategories()).toEqual([]);
@@ -338,7 +343,7 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.selectedCenters()).toEqual([]);
 
       service.clearCreatedBy();
-      expect(service.selectedCreatedBy()).toBeNull();
+      expect(service.selectedCreatedBy()).toEqual([]);
 
       expect(service.selectedSections()).toEqual(['AoW1', 'AoW2']);
     });
@@ -386,7 +391,7 @@ describe('ProgrammeResultsFilterService', () => {
 
       // The other dimensions are untouched by either removal.
       expect(service.selectedOrigins()).toEqual(['W1/W2']);
-      expect(service.selectedStatus()).toBe('Submitted');
+      expect(service.selectedStatuses()).toEqual(['Submitted']);
     });
 
     it('clearChip() removes exactly the filter behind the chip', () => {
@@ -395,19 +400,19 @@ describe('ProgrammeResultsFilterService', () => {
 
       expect(service.selectedSections()).toEqual(['AoW1']);
       expect(service.searchText()).toBe('maize');
-      expect(service.selectedStatus()).toBe('Submitted');
+      expect(service.selectedStatuses()).toEqual(['Submitted']);
 
       service.clearChip(chips.find(chip => chip.dimension === 'status')!);
-      expect(service.selectedStatus()).toBeNull();
+      expect(service.selectedStatuses()).toEqual([]);
 
       service.clearChip(chips.find(chip => chip.dimension === 'phase')!);
-      expect(service.selectedPhase()).toBeNull();
+      expect(service.selectedPhases()).toEqual([]);
 
       service.clearChip(chips.find(chip => chip.dimension === 'center')!);
       expect(service.selectedCenters()).toEqual([]);
 
       service.clearChip(chips.find(chip => chip.dimension === 'createdBy')!);
-      expect(service.selectedCreatedBy()).toBeNull();
+      expect(service.selectedCreatedBy()).toEqual([]);
     });
 
     it('clearChip() is a no-op on an unknown dimension', () => {
@@ -422,12 +427,12 @@ describe('ProgrammeResultsFilterService', () => {
 
       expect(service.searchText()).toBe('');
       expect(service.selectedSections()).toEqual([]);
-      expect(service.selectedPhase()).toBeNull();
-      expect(service.selectedStatus()).toBeNull();
+      expect(service.selectedPhases()).toEqual([]);
+      expect(service.selectedStatuses()).toEqual([]);
       expect(service.selectedCategories()).toEqual([]);
       expect(service.selectedOrigins()).toEqual([]);
       expect(service.selectedCenters()).toEqual([]);
-      expect(service.selectedCreatedBy()).toBeNull();
+      expect(service.selectedCreatedBy()).toEqual([]);
       expect(service.hasActiveFilters()).toBe(false);
       expect(service.activeChips()).toEqual([]);
     });
@@ -461,15 +466,18 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.selectedSections()).toEqual(['AoW2']);
     });
 
-    it('toggleStatus() sets a status and clears it when the same pill is clicked again', () => {
+    it('toggleStatus() adds and removes statuses from the multi-select list', () => {
       service.toggleStatus('Submitted');
-      expect(service.selectedStatus()).toBe('Submitted');
+      expect(service.selectedStatuses()).toEqual(['Submitted']);
 
       service.toggleStatus('Editing');
-      expect(service.selectedStatus()).toBe('Editing');
+      expect(service.selectedStatuses()).toEqual(['Submitted', 'Editing']);
 
       service.toggleStatus('Editing');
-      expect(service.selectedStatus()).toBeNull();
+      expect(service.selectedStatuses()).toEqual(['Submitted']);
+
+      service.toggleStatus('Submitted');
+      expect(service.selectedStatuses()).toEqual([]);
     });
 
     // @akili-spec changes/my-work-board (MWB-T-13)
@@ -554,7 +562,7 @@ describe('ProgrammeResultsFilterService', () => {
         row({ code: '2', statusName: 'Submitted', origin: 'W1/W2' }),
         row({ code: '3', statusName: 'Submitted', origin: 'W3/Bilaterals' })
       ];
-      service.selectedStatus.set('Editing');
+      service.selectedStatuses.set(['Editing']);
       service.selectedOrigins.set(['W1/W2']);
 
       expect(buildStatusCounts(service.filterRows(rows, { ignoreStatus: true }))).toEqual([
@@ -669,7 +677,7 @@ describe('ProgrammeResultsFilterService', () => {
     ];
 
     it('selecting a person leaves only that person’s rows and hides the blank-name row (CBF-R-1, CBF-AC-1)', () => {
-      service.selectedCreatedBy.set('Angel Jarrin');
+      service.selectedCreatedBy.set(['Angel Jarrin']);
 
       expect(service.filterRows(authorRows).map(r => r.code)).toEqual(['1', '2']);
       expect(service.filterRows(authorRows).some(r => r.createdBy === 'Santiago Sanchez')).toBe(false);
@@ -677,14 +685,14 @@ describe('ProgrammeResultsFilterService', () => {
     });
 
     it('matches Created by case-insensitively (CBF-R-1)', () => {
-      service.selectedCreatedBy.set('angel jarrin');
+      service.selectedCreatedBy.set(['angel jarrin']);
 
       expect(service.filterRows(authorRows).map(r => r.code)).toEqual(['1', '2']);
     });
 
     it('AND-combines with Status and keeps both chips (CBF-R-1 combine)', () => {
-      service.selectedCreatedBy.set('Angel Jarrin');
-      service.selectedStatus.set('Submitted');
+      service.selectedCreatedBy.set(['Angel Jarrin']);
+      service.selectedStatuses.set(['Submitted']);
 
       expect(service.filterRows(authorRows).map(r => r.code)).toEqual(['2']);
       expect(service.activeChips()).toEqual([
@@ -694,27 +702,27 @@ describe('ProgrammeResultsFilterService', () => {
     });
 
     it('clearChip on Created by leaves Status set (CBF-R-2, CBF-AC-2)', () => {
-      service.selectedCreatedBy.set('Angel Jarrin');
-      service.selectedStatus.set('Submitted');
+      service.selectedCreatedBy.set(['Angel Jarrin']);
+      service.selectedStatuses.set(['Submitted']);
 
       const createdByChip = service.activeChips().find(chip => chip.dimension === 'createdBy')!;
       expect(createdByChip.label).toBe('Created by: Angel Jarrin');
 
       service.clearChip(createdByChip);
 
-      expect(service.selectedCreatedBy()).toBeNull();
-      expect(service.selectedStatus()).toBe('Submitted');
+      expect(service.selectedCreatedBy()).toEqual([]);
+      expect(service.selectedStatuses()).toEqual(['Submitted']);
       expect(service.activeChips()).toEqual([{ label: 'Status: Submitted', dimension: 'status', value: 'Submitted' }]);
     });
 
     it('clearAll nulls Created by and Status (CBF-R-2)', () => {
-      service.selectedCreatedBy.set('Angel Jarrin');
-      service.selectedStatus.set('Submitted');
+      service.selectedCreatedBy.set(['Angel Jarrin']);
+      service.selectedStatuses.set(['Submitted']);
 
       service.clearAll();
 
-      expect(service.selectedCreatedBy()).toBeNull();
-      expect(service.selectedStatus()).toBeNull();
+      expect(service.selectedCreatedBy()).toEqual([]);
+      expect(service.selectedStatuses()).toEqual([]);
       expect(service.activeChips()).toEqual([]);
     });
   });

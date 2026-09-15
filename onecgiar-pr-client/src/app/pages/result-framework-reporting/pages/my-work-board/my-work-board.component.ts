@@ -28,7 +28,6 @@ import { lucideSearch, lucideX } from '@ng-icons/lucide';
 
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
-import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
@@ -262,7 +261,6 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
     RouterLink,
     NgIcon,
     ReportingProgramBandComponent,
-    PrFilterSelectComponent,
     // `MWB-T-12`: Category / Funding source / Center are multi-select — the same control the
     // Results tab mounts for Areas of Work, not a second implementation of one.
     PrFilterMultiselectModule,
@@ -811,24 +809,33 @@ export class MyWorkBoardComponent {
     effect(() => {
       const params = this.queryParams();
       untracked(() => {
-        const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
-        if (urlPhase !== this.data.phase()) this.data.setPhase(urlPhase);
+        const urlPhaseRaw = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
+        if (urlPhaseRaw !== null) {
+          const parsedPhases = parseListParam(urlPhaseRaw);
+          if (parsedPhases.length <= 1) {
+            const single = parsedPhases[0] ?? null;
+            if (single !== this.data.phase()) this.data.setPhase(single);
+          } else {
+            if (parsedPhases[0] !== this.data.phase()) this.data.setPhase(parsedPhases[0]);
+            if (!sameList(parsedPhases, this.filter.selectedPhases())) this.filter.selectedPhases.set(parsedPhases);
+          }
+        }
         this.syncFilterPhase();
 
-        // `MWB-T-12`: the three multi dimensions travel as comma-separated lists, the same shape
-        // the Results tab's `?section=` uses. Splitting on `,` is the whole decode — the router
-        // has already percent-decoded each value.
+        // `MWB-T-12`: multi dimensions travel as comma-separated lists, the same shape the Results
+        // tab's `?section=` uses. Splitting on `,` is the whole decode — the router has already
+        // percent-decoded each value.
         const categories = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category));
         const origins = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin));
         const centers = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center));
-        const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
+        const createdBy = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy));
 
         // An unknown value is applied as-is: the predicates are pure and case-insensitive, so it
         // simply matches nothing and stays visible as a chip the user can remove (Results parity).
         if (!sameList(categories, this.selectedCategories())) this.selectedCategories.set(categories);
         if (!sameList(origins, this.selectedOrigins())) this.selectedOrigins.set(origins);
         if (!sameList(centers, this.selectedCenters())) this.selectedCenters.set(centers);
-        if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
+        if (!sameList(createdBy, this.filter.selectedCreatedBy())) this.filter.selectedCreatedBy.set(createdBy);
       });
     });
 
@@ -853,13 +860,15 @@ export class MyWorkBoardComponent {
       // URL's own label, which the hydrate has already written) republishes an identical value,
       // so nothing navigates until the resolution is real. After `clearAll()`/`onPhaseChange(null)`
       // both are `null` only while rows are absent; once they land the resolved default is written.
-      const phase = this.data.effectivePhase() ?? this.data.phase();
+      const selectedPhases = this.filter.selectedPhases();
+      const phase =
+        selectedPhases.length > 0 ? joinListParam(selectedPhases) : (this.data.effectivePhase() ?? this.data.phase());
       // `MWB-T-12`: `null` when nothing is selected — under `queryParamsHandling: 'merge'` that is
       // what REMOVES the key, so an emptied multi-select leaves no `?category=` behind.
       const category = joinListParam(this.selectedCategories());
       const origin = joinListParam(this.selectedOrigins());
       const center = joinListParam(this.selectedCenters());
-      const createdBy = this.filter.selectedCreatedBy();
+      const createdBy = joinListParam(this.filter.selectedCreatedBy());
 
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
@@ -1023,7 +1032,7 @@ export class MyWorkBoardComponent {
     // Removing the phase chip means "back to the default", not "no phase": a board with no phase
     // would show every reporting cycle at once (design.md §6.6).
     if (chip?.dimension === 'phase') {
-      this.onPhaseChange(null);
+      this.resetPhaseToDefault();
       return;
     }
     // `MWB-T-12`: a multi chip's × drops ONLY its own value — the other picks of the same
@@ -1070,7 +1079,7 @@ export class MyWorkBoardComponent {
     this.filter.clearAll();
     // `MWB-T-12`: the three board-local dimensions are not the shared service's to clear.
     this.data.clearMultiFilters();
-    this.onPhaseChange(null);
+    this.resetPhaseToDefault();
   }
 
   // @akili-spec changes/my-work-board (MWB-T-12)
@@ -1082,43 +1091,36 @@ export class MyWorkBoardComponent {
     return null;
   }
 
-  // ── Single-select filters ──────────────────────────────────────────────────────────────────
-  /** `app-pr-filter-select`'s empty sentinel is `'all'`; the filter service's is `null`. */
-  private toFilterValue(value: unknown): string | null {
-    return !value || value === 'all' ? null : String(value);
-  }
-
-  selectValue(value: string | null): string {
-    return value ?? 'all';
-  }
-
+  // @akili-spec result-framework-reporting/programme-results-multiselect-filters (PRM-T-3)
   /**
-   * Phase select change (`MWB-R-3` *Switch phase*): re-groups in memory, and the mirror effect
-   * writes the URL. `MyWorkBoardService.phase` is the ONLY writer of the phase — the filter
-   * service's `selectedPhase` is copied from the resolved `effectivePhase()` in the same
-   * synchronous turn (`MWB-T-9` FAIL input: two phase sources make badge and columns disagree).
+   * Phase multiselect change (`MWB-R-3` *Switch phase*): re-groups in memory, and the mirror effect
+   * writes the URL. `MyWorkBoardService.phase` remains the primary writer for badge/totals; the
+   * filter service's `selectedPhases` owns the chip row.
    */
-  onPhaseChange(value: unknown): void {
-    // `MWB-T-14`: same volatility rule as `setScope` — a phase switch re-groups the whole board.
+  onPhasesChange(values: string[]): void {
     this.chipsExpanded.set(false);
-    this.data.setPhase(this.toFilterValue(value));
+    const next = values?.length ? values : [];
+    if (!next.length) {
+      this.resetPhaseToDefault();
+      return;
+    }
+    this.filter.selectedPhases.set(next);
+    this.data.setPhase(next[0]);
+  }
+
+  /** Removing the phase chip or clearing all filters restores the resolved default phase. */
+  private resetPhaseToDefault(): void {
+    this.chipsExpanded.set(false);
+    this.data.setPhase(null);
     this.syncFilterPhase();
   }
 
-  // `MWB-T-12` removed `onCategoryChange` / `onOriginChange` / `onCenterChange`: those three
-  // dimensions are multi-select now and write their own signals straight from the template's
-  // `(changed)` output. `ProgrammeResultsFilterService.selectedCategory/Origin/Center` stay `null`
-  // on this page — one source of truth per dimension.
-
-  onCreatedByChange(value: unknown): void {
-    this.filter.selectedCreatedBy.set(this.toFilterValue(value));
-  }
-
-  /** Copies the RESOLVED phase into the filter service, which owns the chip and the select's
-   *  model. Called synchronously from every phase write so the two never drift apart. */
+  /** Copies the RESOLVED phase into the filter service when not in explicit multi-phase mode. */
   private syncFilterPhase(): void {
+    if (this.filter.selectedPhases().length > 1) return;
     const phase = this.data.effectivePhase();
-    if (this.filter.selectedPhase() !== phase) this.filter.selectedPhase.set(phase);
+    const next = phase ? [phase] : [];
+    if (!sameList(next, this.filter.selectedPhases())) this.filter.selectedPhases.set(next);
   }
 
   /** Clears manual Editing order for the current storage key (`MWER-R-5`). */

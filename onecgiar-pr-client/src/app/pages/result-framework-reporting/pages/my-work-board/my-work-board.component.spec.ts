@@ -436,7 +436,7 @@ describe('MyWorkBoardComponent', () => {
     // five-param mirror effect, so the navigate call now carries the whole param map. The
     // assertion's substance is unchanged: `phase` reaches the URL with `merge` + `replaceUrl`.
     it('re-groups (no request) and mirrors the URL with replaceUrl + merge on change', () => {
-      component.onPhaseChange('Reporting 2025');
+      component.onPhasesChange(['Reporting 2025']);
       expect(service.setPhase).toHaveBeenCalledWith('Reporting 2025');
 
       // The real service resolves the new label inside `setPhase()`; the fake needs it spelled out.
@@ -471,7 +471,7 @@ describe('MyWorkBoardComponent', () => {
       expect(filterRow.getAttribute('role')).toBe('search');
       expect(filterRow.getAttribute('aria-label')).toBe('My results filters');
       expect(filterRow.querySelector('[aria-label="My results board controls"] [role="tablist"]')).toBeTruthy();
-      expect(filterRow.querySelector('app-pr-filter-select')).toBeTruthy();
+      expect(filterRow.querySelector('[data-testid="my-work-filter-button"]')).toBeTruthy();
       expect(filterRow.textContent).toContain('Phase');
 
       expect(root().querySelector('app-pr-tab-intro')).toBeNull();
@@ -803,10 +803,8 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     expect(filterRow.querySelector('[aria-label="My results board controls"] [role="tablist"]')).toBeTruthy();
     expect(filterRow.querySelector('[data-testid="my-work-search"]')).toBeTruthy();
     expect(filterRow.querySelector('[data-testid="my-work-filter-button"]')).toBeTruthy();
-    // The `MWB-T-8` bare select is gone: the only `app-pr-filter-select`s left are inside the popover.
-    expect(filterRow.querySelectorAll('[data-testid="my-work-filter-popover"] app-pr-filter-select').length).toBe(
-      filterRow.querySelectorAll('app-pr-filter-select').length
-    );
+    // The `MWB-T-8` bare select is gone: filter controls live inside the popover as multiselects.
+    expect(filterRow.querySelectorAll('app-pr-filter-select').length).toBe(0);
     expect(chipLabels()).toEqual(['Phase: Reporting 2026']);
   });
 
@@ -905,7 +903,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     build();
     expect(board.badge()).toBe(5);
 
-    component.onPhaseChange('Reporting 2025');
+    component.onPhasesChange(['Reporting 2025']);
     fixture.detectChanges();
 
     httpMock.expectNone(req => req.url.includes('get/all/roles/filter'));
@@ -914,7 +912,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     // One phase source: the chip, the columns and the badge all read the same resolved label.
     expect(chipLabels()).toEqual(['Phase: Reporting 2025']);
     expect(board.badge()).toBe(1);
-    expect(filter.selectedPhase()).toBe('Reporting 2025');
+    expect(filter.selectedPhases()).toEqual(['Reporting 2025']);
   });
 
   it('mirrors a category choice to the URL with merge + replaceUrl', () => {
@@ -960,7 +958,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     expect(publishedPhases).not.toContain(null);
 
     expect(board.effectivePhase()).toBe('Reporting 2025');
-    expect(filter.selectedPhase()).toBe('Reporting 2025');
+    expect(filter.selectedPhases()).toEqual(['Reporting 2025']);
     expect(chipLabels()).toEqual(['Phase: Reporting 2025']);
     expect(cardTitles()).toEqual(['Legacy irrigation study']);
   });
@@ -986,7 +984,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
 
     expect(root().querySelector('[aria-label="Filter by created by"]')).toBeTruthy();
 
-    component.onCreatedByChange('Ana Ruiz');
+    component.filter.selectedCreatedBy.set(['Ana Ruiz']);
     fixture.detectChanges();
     expect(cardTitles().sort()).toEqual(['Seed multiplication guide', 'Seed systems brief', 'Water accounting tool']);
     expect(chipLabels()).toContain('Created by: Ana Ruiz');
@@ -998,7 +996,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     fixture.detectChanges();
 
     expect(root().querySelector('[aria-label="Filter by created by"]')).toBeNull();
-    expect(filter.selectedCreatedBy()).toBeNull();
+    expect(filter.selectedCreatedBy()).toEqual([]);
     expect(cardCount()).toBe(5);
   });
 
@@ -1063,7 +1061,8 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
       }
       // The `.mwb-filter` wrapper is what the T-8 `.custom_select` reshape hangs off — it must
       // survive the swap or the three controls fall back to the legacy 40px violet form shell.
-      expect(popover.querySelectorAll('.mwb-filter app-pr-filter-multiselect').length).toBe(3);
+      expect(popover.querySelectorAll('[data-dimension="phase"] app-pr-filter-multiselect').length).toBe(1);
+      expect(popover.querySelectorAll('[data-dimension="category"] app-pr-filter-multiselect, [data-dimension="origin"] app-pr-filter-multiselect, [data-dimension="center"] app-pr-filter-multiselect').length).toBe(3);
     });
 
     it('ORs the values inside Category and adds one chip per value', () => {
@@ -1530,7 +1529,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
         fixture.detectChanges();
         expect(component.chipsExpanded()).toBe(true);
 
-        component.onPhaseChange('Reporting 2025');
+        component.onPhasesChange(['Reporting 2025']);
         fixture.detectChanges();
 
         expect(component.chipsExpanded()).toBe(false);

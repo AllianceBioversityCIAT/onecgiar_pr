@@ -130,25 +130,27 @@
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Phase
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="phaseSelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Phase"
-                    [ngModel]="selectValue(filter.selectedPhase())"
-                    (changed)="onPhaseChange($event)"></app-pr-filter-select>
+                    countLabel="phases"
+                    [ngModel]="filter.selectedPhases()"
+                    (changed)="onPhasesChange($event)"></app-pr-filter-multiselect>
                 </div>
                 <div class="pgr-filter" aria-label="Filter by status">
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Status
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="statusSelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Status"
-                    [ngModel]="selectValue(filter.selectedStatus())"
-                    (changed)="onStatusChange($event)"></app-pr-filter-select>
+                    countLabel="statuses"
+                    [ngModel]="filter.selectedStatuses()"
+                    (changed)="filter.selectedStatuses.set($event)"></app-pr-filter-multiselect>
                 </div>
               </div>
 
@@ -203,15 +205,16 @@
                   <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                     Created by
                   </label>
-                  <app-pr-filter-select
+                  <app-pr-filter-multiselect
                     [options]="createdBySelectOptions()"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Created by"
+                    countLabel="creators"
                     [filter]="true"
                     filterPlaceholder="Search user..."
-                    [ngModel]="selectValue(filter.selectedCreatedBy())"
-                    (changed)="onCreatedByChange($event)"></app-pr-filter-select>
+                    [ngModel]="filter.selectedCreatedBy()"
+                    (changed)="filter.selectedCreatedBy.set($event)"></app-pr-filter-multiselect>
                 </div>
               </div>
 
@@ -516,8 +519,8 @@
                     </td>
                   }
                   @case ('phase') {
-                    <!-- PHASE (optional) — truncated + tooltip. -->
-                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="cellText(row, 'phase')">
+                    <!-- PHASE (optional) — compact `2026 · P25`, same as the Results Center list. -->
+                    <td class="pgr-td whitespace-nowrap text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.phaseName || cellText(row, 'phase')">
                       {{ cellText(row, 'phase') }}
                     </td>
                   }

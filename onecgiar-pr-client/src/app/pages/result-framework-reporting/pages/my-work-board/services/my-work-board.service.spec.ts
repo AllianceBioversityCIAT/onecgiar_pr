@@ -381,7 +381,7 @@ describe('MyWorkBoardService', () => {
     it('never applies a Status dimension — the columns already are the status (ignoreStatus)', () => {
       loadSixRows();
 
-      filter.selectedStatus.set('Submitted');
+      filter.selectedStatuses.set(['Submitted']);
 
       expect(service.visibleRows().length).toBe(6);
       expect(service.columns().find(column => column.key === 'submitted')?.rows.length).toBe(1);

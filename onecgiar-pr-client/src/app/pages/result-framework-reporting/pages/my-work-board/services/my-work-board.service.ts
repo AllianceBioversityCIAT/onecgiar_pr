@@ -7,6 +7,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ScienceProgramIdService } from '../../../services/science-program-id.service';
 import {
   matchesProgrammeResultCategory,
+  matchesProgrammeResultPhase,
   normalize,
   ProgrammeResultsFilterService
 } from '../../programme-results/services/programme-results-filter.service';
@@ -118,7 +119,14 @@ export class MyWorkBoardService {
    *  This is the PHASE-ONLY view: the tab badge (`MWB-R-1`) and the segment totals (`MWB-R-3`
    *  "its total count for the selected phase") are defined on it, so a toolbar filter never
    *  rewrites either of those two numbers. */
-  readonly phaseRows = computed<ProgrammeResultRow[]>(() => filterByPhase(this.rows(), this.effectivePhase()));
+  readonly phaseRows = computed<ProgrammeResultRow[]>(() => {
+    const selected = this.filter.selectedPhases();
+    if (selected.length > 1) {
+      return this.rows().filter(row => selected.some(phase => matchesProgrammeResultPhase(row, phase)));
+    }
+    if (selected.length === 1) return filterByPhase(this.rows(), selected[0]);
+    return filterByPhase(this.rows(), this.effectivePhase());
+  });
 
   // @akili-spec changes/my-work-board (MWB-T-9, MWB-DD-11)
   /**
@@ -127,7 +135,7 @@ export class MyWorkBoardService {
    * already are the status — offering a Status dimension would let the filter and the grouping
    * fight each other (`MWB-T-9` FAIL input).
    *
-   * The filter service's own `selectedPhase` is mirrored to `effectivePhase()` by the page, so its
+   * The filter service's own `selectedPhases` is mirrored to `effectivePhase()` by the page, so its
    * phase predicate re-asserts a narrowing `phaseRows()` has already applied — a deliberate no-op
    * that keeps ONE phase source (`MyWorkBoardService.phase` → `effectivePhase`) while still
    * producing the `Phase: …` chip from the same `activeChips()` the other dimensions use.
