@@ -1,16 +1,26 @@
-<div class="column_title required">
-  {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'External partners' }}
-</div>
-<div [ngSwitch]="this.rolesSE.readOnly" class="mt-8">
-  <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
-  <div *ngSwitchCase="false">
-    <app-pr-checkbox
-      label="Select this option if the partner section is not applicable"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-      (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
-    </app-pr-checkbox>
+<!-- El encabezado del bloque de socios es un CAMPO como los demás, así que lleva la tarjeta
+     (propuesta 18) y no un `.column_title.required` con asterisco: el tag REQUIRED lo dice, y el
+     asterisco al lado sería la misma afirmación dos veces. El estado de la banda se resuelve igual
+     que el check de la sección — hay socios elegidos, o está marcado "no aplica". -->
+<app-field-card
+  [label]="dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'External partners'"
+  [required]="true"
+  [hasValue]="
+    !!this.rdPartnersSE.partnersBody.no_applicable_partner ||
+    !!this.institutionsNoSentinel.length ||
+    !!this.rdPartnersSE.otherPartnersSelected?.length
+  ">
+  <div [ngSwitch]="this.rolesSE.readOnly">
+    <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
+    <div *ngSwitchCase="false">
+      <app-pr-checkbox
+        label="Select this option if the partner section is not applicable"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
+        (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
+      </app-pr-checkbox>
+    </div>
   </div>
-</div>
+</app-field-card>
 <app-alert-status
   *ngIf="dataControlSE.isKnowledgeProduct"
   [collapsible]="false"
