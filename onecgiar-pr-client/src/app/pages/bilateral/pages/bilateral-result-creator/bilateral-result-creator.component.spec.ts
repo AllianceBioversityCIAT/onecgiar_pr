@@ -17,7 +17,7 @@ import { BilateralManualCreateFlowService } from '../../services/bilateral-manua
 @Injectable()
 class MockBilateralAiService {
   draftCount = signal(0);
-  uploadState = signal('idle');
+  uploadState = signal<{ status: string }>({ status: 'idle' });
   isUploading = signal(false);
   errorMessage = signal<string | null>(null);
   canUseAi = signal(true);
@@ -318,6 +318,24 @@ describe('BilateralResultCreatorComponent', () => {
     manualCreateFlow.drawerOpen.set(true);
     component.onReportingWaySelected('ai');
     expect(manualCreateFlow.closeDrawer).toHaveBeenCalled();
+  });
+
+  describe('isAiProcessing (APF-T-6 forward pointer 1)', () => {
+    it.each(['uploading', 'pending', 'processing', 'still_running'])(
+      'locks the AI step while the job is alive (%s)',
+      status => {
+        mockAiService.uploadState.set({ status });
+        expect(component.isAiProcessing()).toBe(true);
+      },
+    );
+
+    it.each(['idle', 'completed', 'completed_no_candidates', 'failed'])(
+      'does not lock the AI step once the job is terminal or not started (%s)',
+      status => {
+        mockAiService.uploadState.set({ status });
+        expect(component.isAiProcessing()).toBe(false);
+      },
+    );
   });
 
   describe('header title (P2-3352)', () => {
@@ -622,6 +640,94 @@ describe('BilateralResultCreatorComponent', () => {
       enterEditor();
       expect(q('app-bilateral-page-header')).not.toBeNull();
       expect(q('app-bilateral-page-header').getAttribute('variant')).toBe('detail');
+    });
+  });
+
+  /**
+   * `APF-R-12` / `APF-DD-10` — two of the five provenance surfaces live on this page: the
+   * dismissible banner while the result is still editable, and the static badge (rendered by
+   * `bilateral-page-header`) once it is read-only. They never show together.
+   */
+  describe('AI provenance notice (APF-R-12, APF-T-8)', () => {
+    const q = (selector: string) => fixture.nativeElement.querySelector(selector);
+    const banner = () => q('[data-testid="bilateral-editor-ai-provenance-banner"]');
+    const badge = () => q('[data-testid="ai-provenance-badge"]');
+
+    function enterEditor(id = 42): void {
+      component.isCreating.set(false);
+      component.resultId.set(id);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => sessionStorage.clear());
+    afterEach(() => sessionStorage.clear());
+
+    it('shows the dismissible banner, and no badge, for an AI-generated result while editable', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+
+      expect(banner()).not.toBeNull();
+      expect(banner().textContent).toContain(
+        'Generated with AI assistance from your sources. Review and edit before submitting.',
+      );
+      expect(badge()).toBeNull();
+    });
+
+    it('shows the badge next to the status pill, and no banner, once the result is read-only', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(false);
+      enterEditor();
+
+      expect(badge()).not.toBeNull();
+      expect(banner()).toBeNull();
+    });
+
+    it('shows neither surface for a manually created result, editable or not', () => {
+      creationService.isAiGenerated.set(false);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+      expect(banner()).toBeNull();
+      expect(badge()).toBeNull();
+
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+      expect(badge()).toBeNull();
+    });
+
+    it('dismissing the banner hides it and persists the dismissal in sessionStorage, per result', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor(42);
+      expect(banner()).not.toBeNull();
+
+      q('[data-testid="bilateral-editor-ai-provenance-dismiss"]').click();
+      fixture.detectChanges();
+
+      expect(banner()).toBeNull();
+      expect(sessionStorage.getItem('prms.bilateral-ai.provenance-dismissed.42')).toBe('1');
+
+      // Simulate returning to the SAME result (e.g. a reload within the session): the dismissal
+      // must still hold.
+      component.resultId.set(null);
+      fixture.detectChanges();
+      component.resultId.set(42);
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+    });
+
+    it('does not carry a dismissal over to a different result', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor(42);
+      q('[data-testid="bilateral-editor-ai-provenance-dismiss"]').click();
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+
+      component.resultId.set(43);
+      fixture.detectChanges();
+      expect(banner()).not.toBeNull();
     });
   });
 });

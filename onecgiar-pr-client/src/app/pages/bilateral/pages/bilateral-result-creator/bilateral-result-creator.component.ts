@@ -23,6 +23,7 @@ import { BilateralPageHeaderComponent } from '../../components/bilateral-page-he
 import { FormSkeletonComponent } from '../../components/form-skeleton/form-skeleton.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
+import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -40,7 +41,8 @@ import { PhaseSwitcherModule } from '../../../../shared/components/phase-switche
     SectionEvidenceComponent,
     SectionTypeSpecificComponent,
     BilateralPageHeaderComponent,
-    FormSkeletonComponent
+    FormSkeletonComponent,
+    AiProvenanceNoticeComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -184,7 +186,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   isAiProcessing = computed(() => {
     const status = this.bilateralAiService.uploadState().status;
-    return status === 'uploading' || status === 'pending' || status === 'processing';
+    // `still_running` (`APF-R-7`) is still an alive job past the client's old polling ceiling —
+    // the host step must stay locked exactly as it does for `pending`/`processing`.
+    return status === 'uploading' || status === 'pending' || status === 'processing' || status === 'still_running';
   });
 
   overallPct = this.mdsTracker.overallPercentage;
@@ -224,10 +228,68 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     effect(() => {
       this.autoSaveService.setReadOnly(!this.creationService.isEditableByCenterUser());
     });
+
+    /**
+     * `APF-R-12` — reads this result's banner dismissal back from `sessionStorage` whenever the
+     * bound result changes (new visit, or navigating between results), so a session-scoped
+     * dismissal survives a reload of the SAME result but never leaks onto a different one.
+     */
+    effect(() => {
+      const rid = this.resultId();
+      if (rid == null) {
+        this.provenanceBannerDismissed.set(false);
+        return;
+      }
+      let dismissed = false;
+      try {
+        dismissed = sessionStorage.getItem(BilateralResultCreatorComponent.provenanceDismissKey(rid)) === '1';
+      } catch {
+        // sessionStorage unavailable — treat as not dismissed.
+      }
+      this.provenanceBannerDismissed.set(dismissed);
+    });
   }
 
   /** P2-3520 — single gate the sections and the Submit button read, so no template knows the status numbers. */
   readonly isFormReadOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+  /**
+   * `APF-R-12` / `APF-DD-10` — two of the five provenance surfaces live on this page, split by
+   * `isFormReadOnly()` so they never show together: the editable editor gets the dismissible
+   * banner, the read-only "result detail" state gets the static badge next to the status pill
+   * (`bilateral-page-header`'s `showAiProvenanceBadge`). Both gate on the same normalized
+   * presence rule the editor's `loadResult` already computes (`creationService.isAiGenerated`),
+   * never on `is_ai_generated` truthiness — see that signal's own comment.
+   */
+  readonly showAiProvenanceBadge = computed(() => this.isFormReadOnly() && this.creationService.isAiGenerated());
+
+  /** sessionStorage key the editor banner's per-result dismissal is stored under (Leader decision). */
+  private static provenanceDismissKey(resultId: number): string {
+    return `prms.bilateral-ai.provenance-dismissed.${resultId}`;
+  }
+
+  private readonly provenanceBannerDismissed = signal(false);
+
+  readonly showAiProvenanceBanner = computed(
+    () =>
+      this.resultId() != null &&
+      !this.isFormReadOnly() &&
+      this.creationService.isAiGenerated() &&
+      !this.provenanceBannerDismissed()
+  );
+
+  /** Dismisses the AI provenance banner for this result, for the rest of the browser session. */
+  dismissAiProvenanceBanner(): void {
+    const rid = this.resultId();
+    this.provenanceBannerDismissed.set(true);
+    if (rid == null) return;
+    try {
+      sessionStorage.setItem(BilateralResultCreatorComponent.provenanceDismissKey(rid), '1');
+    } catch {
+      // sessionStorage unavailable (private mode, disabled storage): the dismissal just won't
+      // persist across a reload — the banner is not shown again this instance regardless.
+    }
+  }
 
   /**
    * P2-3229 AC5. Feeds `app-phase-switcher` the phases this result exists in, so a result

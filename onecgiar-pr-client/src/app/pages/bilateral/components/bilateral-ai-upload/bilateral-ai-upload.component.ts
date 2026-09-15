@@ -1,4 +1,6 @@
-import { Component, inject, signal, computed, effect, OnDestroy, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, signal, computed, effect, OnDestroy, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -127,13 +129,28 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     // `APF-R-6` D: the expected range is served by the API per mix class; re-subscribing on every
     // poll would leak subscriptions on the `shareReplay(1)` cache, so this only calls out when the
     // mix actually changes (a job's source mix never changes mid-flight, so in practice: once).
+    // `takeUntilDestroyed` (captured here, in the constructor's own injection context — not
+    // inside the effect callback, which is not one) stops it with the component; `catchError`
+    // keeps a failed call from ever reaching the service's `completionNotice`/toast machinery —
+    // this is a soft "no range today" outcome, not a job failure — and resets `lastExpectationMix`
+    // so a later poll for the SAME mix retries instead of being permanently skipped.
+    const destroyRef = inject(DestroyRef);
     effect(() => {
       const job = this.currentJob();
       if (!job) return;
       const mix = mixClass(job);
       if (mix === this.lastExpectationMix) return;
       this.lastExpectationMix = mix;
-      this.bilateralAiService.expectations(mix).subscribe(exp => this.expectation.set(exp));
+      this.bilateralAiService
+        .expectations(mix)
+        .pipe(
+          catchError(() => {
+            if (this.lastExpectationMix === mix) this.lastExpectationMix = null;
+            return of(null);
+          }),
+          takeUntilDestroyed(destroyRef),
+        )
+        .subscribe(exp => this.expectation.set(exp));
     });
   }
 

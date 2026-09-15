@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { CommonModule } from '@angular/common';
 import {
   BilateralAiExpectations,
+  BilateralAiStepId,
   BilateralAiStepModel,
   NormalizedBilateralAiJob,
   buildStepperModel,
@@ -14,6 +15,21 @@ import { BilateralAiUploadState } from '../../services/bilateral-ai.interfaces';
 const FALLBACK_RANGE_COPY = 'This usually takes a few minutes; audio takes longer';
 
 type PanelView = 'preparing' | 'queued' | 'processing' | 'still_running' | 'failed' | 'completed' | 'completed_no_candidates';
+
+/**
+ * Short per-step grid labels — distinct from `BilateralAiStepModel.label`, the long sentence used
+ * for the active-step heading (e.g. "Extracting results (estimated)"). A six-column grid cell
+ * cannot carry that sentence (`design.md` §6.3 stepper geometry); the "estimated" qualifier moves
+ * to its own caption, rendered from `step.estimated` (reviewer-flagged: previously unread).
+ */
+const STEP_SHORT_LABELS: Record<BilateralAiStepId, string> = {
+  queued: 'Queued',
+  uploading: 'Uploading',
+  reading_transcribing: 'Reading / Transcribing',
+  extracting: 'Extracting',
+  validating: 'Validating',
+  creating_drafts: 'Creating drafts',
+};
 
 function formatElapsed(totalSeconds: number): string {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -56,8 +72,12 @@ export class AiProcessingPanelComponent {
 
   /** "Try again" on a FAILED job — the host calls `BilateralAiService.retryJob`. */
   readonly retry = output<void>();
-  /** "Upload different files" / "Start another" — the host resets the upload form. */
-  readonly reset = output<void>();
+  /**
+   * "Upload different files" / "Start another" — the host resets the upload form. Named
+   * `resetUpload`, not `reset`: `@angular-eslint/no-output-native` blocks an output named after a
+   * native DOM event (`reset`, the form-reset event).
+   */
+  readonly resetUpload = output<void>();
   /** "Review drafts" / "Go to Draft Results" — the host navigates to the Drafts tab. */
   readonly openDrafts = output<void>();
 
@@ -157,6 +177,11 @@ export class AiProcessingPanelComponent {
     return id.length > 8 ? `${id.slice(0, 8)}…` : id;
   });
 
+  /** The short grid caption — never the long sentence carried by `step.label` (reviewer issue 2). */
+  stepShortLabel(step: BilateralAiStepModel): string {
+    return STEP_SHORT_LABELS[step.id];
+  }
+
   stepDotClass(step: BilateralAiStepModel): string {
     if (step.state === 'done') return 'bg-[var(--pr-color-primary-300)] border-[var(--pr-color-primary-300)]';
     if (step.state === 'active') return 'border-[var(--pr-color-primary-300)] bg-[var(--pr-surface-card)] shadow-[var(--pr-focus-ring)]';
@@ -169,12 +194,28 @@ export class AiProcessingPanelComponent {
     return 'text-[var(--pr-text-subtle)]';
   }
 
+  /**
+   * Connector fill for the line leading INTO this step. Estimated steps (`step.estimated`, from
+   * the T-5 model, previously never read here) render a dotted/repeating fill instead of a solid
+   * one, per the mockup's `.step.est::before`; every literal below is a complete, static Tailwind
+   * class string so the build-time scanner can find it (a runtime-interpolated class name would
+   * never get a generated rule).
+   */
+  stepConnectorClass(step: BilateralAiStepModel): string {
+    if (step.estimated) {
+      return step.state === 'done'
+        ? 'bg-[image:repeating-linear-gradient(90deg,var(--pr-color-primary-300)_0_6px,transparent_6px_10px)]'
+        : 'bg-[image:repeating-linear-gradient(90deg,var(--pr-border)_0_6px,transparent_6px_10px)]';
+    }
+    return step.state === 'done' ? 'bg-[var(--pr-color-primary-300)]' : 'bg-[var(--pr-border)]';
+  }
+
   onRetry(): void {
     this.retry.emit();
   }
 
   onReset(): void {
-    this.reset.emit();
+    this.resetUpload.emit();
   }
 
   onOpenDrafts(): void {

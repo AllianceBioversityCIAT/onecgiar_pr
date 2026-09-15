@@ -142,11 +142,12 @@ Rulings: `getActiveJobSnapshot` in scope (`APF-DD-8`); accordion chrome conforms
 
 **Requirements covered:** `APF-R-10` (all clauses except the 375-px layout → T-9), `APF-R-11`; `APF-AC-16`, `APF-AC-17`. **Gate:** auto-approved (pre-approved mode).
 
-### `APF-T-6` — Processing panel component and upload integration — **IN PROGRESS** (attempt 1 FAIL → attempt 2 running)
+### `APF-T-6` — Processing panel component and upload integration — **PASS** (attempt 2)
 
 | Field | Value |
 |---|---|
-| **Date** | 2026-09-15 (11:07 → …, America/Bogota) |
+| **Date** | 2026-09-15 (11:07 → 16:21, America/Bogota; incl. the 11:53–16:11 quota pause) |
+| **Attempts** | 2 |
 | **Implementer** | `akili-implementer` (sonnet) · skills `angular-developer`, `ui-ux-pro-max`, `tailwind-design-system` · effort high → xhigh on attempt 2 |
 | **Reviewer** | `akili-reviewer` (opus) · four-lens sweep |
 
@@ -184,4 +185,10 @@ Passed: queue guard inert and tested; every flip conditional with notify gated o
 **Attempt 2 — Reviewer `STATUS: PASS`:** "Issue 1 is resolved. The sweeper spec now freezes the clock per timed describe block and asserts the exact query arguments, so both windows are genuinely pinned … fails the moment the column becomes `created_date` or the getter is swapped … `count` must carry the two-clause OR array with `started_date` and `stage_updated_date` both `MoreThan(stallCutoff)` … Both adopted advisories are in and proven … Everything cleared in attempt 1 still holds." Remaining ADVISORY (recorded): bell ordering of job rows (no `order` on either query) → eyeball at T-10; the result-type regression case relies on an untouched query builder.
 
 **Requirements covered:** `APF-R-2` A/B/C, `APF-R-4` (all clauses; live mail/bell → T-10), `APF-R-22`; `APF-AC-3`, `APF-AC-4`, `APF-AC-6`. **Gate:** auto-approved (pre-approved mode).
+
+**Attempt 2 — files (first worker killed by the quota after a partial rewrite; resumed by `impl-apf-t6b`, sonnet, xhigh):** `components/ai-processing-panel/ai-processing-panel.component.{html,ts,spec.ts}` (live region narrowed to stage heading/sub-line/last-error; `stepConnectorClass()` dashed repeating-gradient connector for `step.estimated` + 10-px `--pr-text-subtle` caption; `STEP_SHORT_LABELS` = the six §6.3 names, long copy in the `<h3>`; mix shown once), `components/bilateral-ai-upload/bilateral-ai-upload.component.{ts,spec.ts}` (expectations `catchError(() => of(null))` + `takeUntilDestroyed` + `lastExpectationMix` reset, +1 case), `components/bilateral-ai-upload/CLAUDE.md` (re-stamped). Total task diff vs `7eb8a8e84`: 8 panel/upload files +1006/−209 plus the creator/service hunks from attempt 1. Verification: tsc clean · `npx jest` panel + upload → `42/42` · lint clean · hex/icon/rgba gate 0 · token loop 0 missing.
+
+**Attempt 2 — Reviewer `STATUS: PASS`:** "All three FAIL issues are resolved at the source, not papered over, and the Leader's addendum is implemented correctly … the per-second tick no longer mutates a live region … `stepConnectorClass()` reads `step.estimated` … a separate 10 px `--pr-text-subtle` caption renders under the label … the mix appears once, in the meta row." Ruling on the flagged judgment call (one live region per branch, not one cross-state wrapper): **conformant** — stage changes happen inside the live branch where the region is stable; hoisting one wrapper over six outcome layouts is not asked by the spec. **ADVISORY (recorded):** *Reliability* — an outcome region inserted together with its text may be skipped by screen readers (stage-change path unaffected) → note for T-9/T-10; *Readability* — `stepConnectorClass` doc comment says "leading INTO this step" while the geometry draws the line out of it; reword in a follow-up.
+
+**Forward pointers applied:** (1) `isAiProcessing` includes `still_running`; (2) 404/410 gone job → idle form with explanation; (3) expectations failure → fallback copy (attempt 2); (4) retry errors through `errorCopy`; T-5's combined reading/transcribing label kept. **Requirements covered:** `APF-R-6` A–D (render), `APF-R-7` render, `APF-R-8` A/C, `APF-R-9`; `APF-AC-8/9/10/12/14/15`. CT → `APF-T-9`. **Gate:** auto-approved (pre-approved mode).
 

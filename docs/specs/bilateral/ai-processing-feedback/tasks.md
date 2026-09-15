@@ -141,10 +141,11 @@
 - **Verification:** `cd onecgiar-pr-client && npx tsc --noEmit -p tsconfig.app.json && npx jest src/app/pages/bilateral/components/ai-processing-panel src/app/pages/bilateral/components/bilateral-ai-upload --silent && npx ng lint --quiet && ! grep -rnE "#[0-9a-fA-F]{3,8}\b|pi pi-|rgba?\(" src/app/pages/bilateral/components/ai-processing-panel/*.html src/app/pages/bilateral/components/bilateral-ai-upload/*.html && for v in $(grep -rhoE "var\(--pr-[a-z0-9-]+\)" src/app/pages/bilateral/components/ai-processing-panel/*.html src/app/pages/bilateral/components/bilateral-ai-upload/*.html | sort -u | sed 's/var(\(.*\))/\1/'); do grep -q -- "$v:" src/styles/colors.scss || { echo "MISSING TOKEN $v"; exit 1; }; done` (CT for this component lands in `APF-T-9`; say so in the report)
 - **Input that would make the check fail:** `var(--pr-status-rejected-fg)` (token gate); a progress `<progress>` or `%` string; `sm:` beside `min-[640px]:` on one property; the dialog and the panel both rendering the outcome.
 - **What this cannot prove / disqualifier:** class presence for sticky/orientation/heights is not layout — `APF-T-9` measures; `aria-live` announcement is asserted as text mutation, not as screen-reader output (accepted, D10).
+- **Status:** `[x]` PASS — 2026-09-15, attempt 2 (attempt 1 FAIL: live region wrapped the ticking clock, estimated steps unmarked, mix duplicated — see `execution.md`)
 - **Definition of done:**
-  - [ ] `tsc`, Jest, lint, hex/rgba/PrimeIcons and **token-existence** gates green.
-  - [ ] Every number visible is in text; no SCSS beyond `:host`.
-  - [ ] Commit: `✨ feat(bilateral-ai) [<ticket>]: processing panel — stages, elapsed, expectation, queue position, single outcome surface`.
+  - [x] `tsc`, Jest, lint, hex/rgba/PrimeIcons and **token-existence** gates green.
+  - [x] Every number visible is in text; no SCSS beyond `:host`.
+  - [x] Commit: `✨ feat(bilateral-ai) [<ticket>]: processing panel — stages, elapsed, expectation, queue position, single outcome surface`.
 
 ### `APF-T-7` — Header "AI job running" chip and set-up "coming soon" disclosure
 

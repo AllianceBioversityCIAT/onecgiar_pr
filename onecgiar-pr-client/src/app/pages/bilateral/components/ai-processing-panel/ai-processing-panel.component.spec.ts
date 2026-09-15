@@ -63,6 +63,35 @@ describe('AiProcessingPanelComponent', () => {
     expect(fixture.nativeElement.querySelector('progress')).toBeNull();
   });
 
+  it('reviewer issue 3: the source mix is stated exactly once, not duplicated between the sub-line and the meta row', () => {
+    mount(FIXTURE_PROCESSING_EXTRACTING, 'processing');
+
+    const full = text();
+    const occurrences = (full.match(/1 audio file/g) ?? []).length;
+    expect(occurrences).toBe(1);
+    // The sub-line under the heading is stage prose, not the mix, for a non-retrying, non-queued job.
+    const subLine = fixture.nativeElement.querySelector('[data-testid="ai-panel-announce"] p').textContent as string;
+    expect(subLine).toContain('Processing your sources.');
+    expect(subLine).not.toContain('document');
+  });
+
+  it('reviewer issue 2: estimated steps carry a short grid label plus a separate "estimated" caption, observed steps carry neither', () => {
+    mount(FIXTURE_PROCESSING_EXTRACTING, 'processing');
+
+    const items = Array.from(fixture.nativeElement.querySelectorAll('li')) as HTMLElement[];
+    expect(items.length).toBe(6);
+    // The 6 grid cells never carry the long sentence-style label.
+    for (const item of items) {
+      expect(item.textContent).not.toContain('AI service');
+    }
+    // Exactly the 2 estimated steps (reading/transcribing, extracting) get the caption.
+    expect(fixture.nativeElement.querySelectorAll('[data-testid="ai-panel-step-estimated"]').length).toBe(2);
+    const extractingItem = items.find(i => i.textContent?.includes('Extracting')) as HTMLElement;
+    expect(extractingItem.querySelector('[data-testid="ai-panel-step-estimated"]')).toBeTruthy();
+    const validatingItem = items.find(i => i.textContent?.includes('Validating')) as HTMLElement;
+    expect(validatingItem.querySelector('[data-testid="ai-panel-step-estimated"]')).toBeNull();
+  });
+
   it('APF-AC-9: an observed (non-estimated) stage renders without the "estimated" caption', () => {
     mount(FIXTURE_PROCESSING_VALIDATING, 'processing');
 
@@ -189,7 +218,7 @@ describe('AiProcessingPanelComponent', () => {
     const retrySpy = jest.fn();
     const resetSpy = jest.fn();
     component.retry.subscribe(retrySpy);
-    component.reset.subscribe(resetSpy);
+    component.resetUpload.subscribe(resetSpy);
 
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
     buttons.find(b => b.textContent?.trim() === 'Try again')!.click();

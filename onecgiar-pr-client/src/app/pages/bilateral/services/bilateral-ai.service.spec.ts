@@ -573,6 +573,21 @@ describe('BilateralAiService', () => {
       expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
     });
 
+    it('404: resets to the upload form with an explanation — never a live-looking job with a dead timer', async () => {
+      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
+      service.startJob('job-1');
+      await flush();
+
+      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 404 })));
+      await advance(POLL_INTERVAL_INITIAL);
+
+      expect(service.uploadState().status).toBe('idle');
+      expect(service.uploadState().jobId).toBeNull();
+      expect(service.uploadState().errorMessage).toBeTruthy();
+      expect(service.currentJobId()).toBeNull();
+      expect(service.currentJob()).toBeNull();
+    });
+
     it('410: stops polling and drops the resume record — same as 404', async () => {
       bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PROCESSING', stage: 'extracting' }) }));
       service.startJob('job-1');
@@ -585,6 +600,19 @@ describe('BilateralAiService', () => {
       const calls = bilateralApi.GET_bilateralAiJob.mock.calls.length;
       await advance(POLL_INTERVAL_INITIAL * 5);
       expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledTimes(calls);
+    });
+
+    it('410: resets to the upload form with an explanation, same as the retry endpoint\'s own 410 branch', async () => {
+      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ status: 'PENDING', stage: 'queued' }) }));
+      service.startJob('job-1');
+      await flush();
+
+      bilateralApi.GET_bilateralAiJob.mockReturnValue(throwError(() => ({ status: 410 })));
+      await advance(POLL_INTERVAL_INITIAL);
+
+      expect(service.uploadState().status).toBe('idle');
+      expect(service.uploadState().errorMessage).toBeTruthy();
+      expect(service.currentJob()).toBeNull();
     });
 
     it('401: stops polling silently — the session is gone, a retry would only produce more 401s', async () => {

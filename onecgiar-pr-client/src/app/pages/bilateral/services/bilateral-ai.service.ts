@@ -370,9 +370,21 @@ export class BilateralAiService implements OnDestroy {
   private handlePollError(err: unknown): void {
     const status = (err as { status?: number } | null | undefined)?.status;
     if (status === 404 || status === 410) {
-      // The job row is gone server-side — nothing left to resume.
+      // The job row is gone server-side — nothing left to resume. `stopPolling` alone leaves
+      // `uploadState`/`currentJob` pointing at the last-known (now dead) job: the panel would keep
+      // rendering a live-looking stepper with a timer that ticks against a `queueEntryDate` no
+      // poll will ever refresh again. Reset to the upload form with an explanation, the same
+      // outcome `retryJob`'s own 410 branch produces (`APF-R-9` AND-IT-MUST).
       this.stopPolling();
       this.clearActiveJob();
+      this.currentJobId.set(null);
+      this.currentJob.set(null);
+      this.uploadState.set({
+        jobId: null,
+        status: 'idle',
+        uploadProgress: 0,
+        errorMessage: 'This job is no longer available. Please upload your sources again.',
+      });
     } else if (status === 401) {
       // The session is gone; retrying the request would only produce more 401s.
       this.stopPolling();
