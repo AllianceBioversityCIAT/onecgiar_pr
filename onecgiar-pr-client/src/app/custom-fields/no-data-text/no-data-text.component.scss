@@ -38,4 +38,12 @@
     background-repeat: no-repeat;
     background-position: center;
   }
+
+  // El texto es UN ítem del flex, pase lo que pase dentro. Sin esto, un `title` con marcado —el
+  // enlace "Go to step 2.1" que dos pantallas de IPSR interpolan— se despiezaba en un ítem por
+  // nodo y la frase se partía en tres renglones con el enlace suelto en medio.
+  .ndt_text {
+    display: block;
+    max-width: 52ch;
+  }
 }
