@@ -106,4 +106,25 @@ export class BilateralAiFileStorageService {
       Expires: expiresIn,
     });
   }
+
+  /**
+   * `HEAD`s a stored S3 key — the retry endpoint's per-key existence check before it reuses stored
+   * sources (`APF-R-5`, `design.md` §5 "Retry endpoint"). `true` when the object exists; `false`
+   * only on a genuine not-found, which the caller turns into `410 SOURCES_GONE`. Any other AWS
+   * error (permissions, network, throttling) is rethrown — treating an unrelated failure as
+   * "missing" would wrongly tell the user to re-upload.
+   */
+  async keyExists(key: string): Promise<boolean> {
+    if (!this.bucket)
+      throw new BadRequestException('Bilateral AI storage is not configured.');
+    try {
+      await this.s3.headObject({ Bucket: this.bucket, Key: key }).promise();
+      return true;
+    } catch (error: any) {
+      if (error?.statusCode === 404 || error?.code === 'NotFound') {
+        return false;
+      }
+      throw error;
+    }
+  }
 }

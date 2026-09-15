@@ -192,3 +192,36 @@ Passed: queue guard inert and tested; every flip conditional with notify gated o
 
 **Forward pointers applied:** (1) `isAiProcessing` includes `still_running`; (2) 404/410 gone job → idle form with explanation; (3) expectations failure → fallback copy (attempt 2); (4) retry errors through `errorCopy`; T-5's combined reading/transcribing label kept. **Requirements covered:** `APF-R-6` A–D (render), `APF-R-7` render, `APF-R-8` A/C, `APF-R-9`; `APF-AC-8/9/10/12/14/15`. CT → `APF-T-9`. **Gate:** auto-approved (pre-approved mode).
 
+### `APF-T-8` — Provenance notice on five surfaces, completion dialog line — **IN PROGRESS** (attempt 1 FAIL → attempt 2 running)
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-09-15 (11:47 → …, America/Bogota; first worker killed by the quota at 11:53 after creating the component and the draft-card mount; resumed by `impl-apf-t8b` at 16:11) |
+| **Implementer** | `akili-implementer` (sonnet) · skills `angular-developer`, `tailwind-design-system` · effort medium → high on attempt 2 |
+| **Reviewer** | `akili-reviewer` (opus) · lens checklist mode |
+
+**Attempt 1 — files (19, +542/−28 vs `a010141b3`):** new `components/ai-provenance-notice/*` (three variants, one constant `AI_PROVENANCE_NOTICE_TEXT`, full sentence in `aria-label`/`title`); `pages/bilateral-ai-draft-detail/components/draft-result-card/*` (badge replaces the ad-hoc `.drc-ai-badge` + its two hex literals); `components/bilateral-page-header/*` (`showAiProvenanceBadge` input → badge next to the status pill in the `detail` strip); `pages/bilateral-result-creator/*` (editor-route host **and** read-only detail view, split by `isFormReadOnly()`: dismissible banner via `sessionStorage` `prms.bilateral-ai.provenance-dismissed.<resultId>`, badge through the header when read-only — its `.ts` hunk was swept into the T-6 commit `267465b71` by the Leader's explicit-path commit; `.html`/`.spec.ts` still in the tree); `pages/my-draft-results/*` (line under the tab title when `hasAnyDrafts()`); `components/bilateral-ai-completion-dialog/*` (line on success only; `APF-AC-13` regression through the real service). Copy shipped: "Generated with AI assistance from your sources. Review and edit before submitting." (`APF-OQ-2` sign-off pending). Verification: tsc clean · jest 7 suites `211 passed` · lint clean · grep gate: only pre-existing hits on untouched lines · token gate: all resolve.
+
+**Attempt 1 — Reviewer `STATUS: FAIL` (verbatim issue):**
+1. The `AND` clause of `APF-R-12` — the notice "MUST persist after the user edits the result" — has no test on any surface; the five creator cases cover presence, absence, read-only swap and dismissal only. Risk is real: `BilateralCreationService.clearEditorState()` resets `isAiGenerated` to `false` and the type-conversion flow clears editor state before reloading. Violated: `APF-R-12` AND clause; `tasks.md` `APF-T-8` Tests. Remediation: one creator case that edits a field and runs a save cycle then re-asserts the banner, or the `clearEditorState()` + reload invariant with an explicit name.
+Passed (verified at source): single copy constant, no "AI Suggested" string survives; badge sentence in `aria-label` and `title`; info pair only (`--pr-status-submitted-bg/fg`, `--pr-text-secondary`), no status colour, no new hex; normalized presence rule (`Number(is_ai_generated) === 1 || creation_method === 'AI'`, `'0'`/`0`/`null` → false); drafts-list gate on `allDrafts()` equals "≥ 1 AI draft"; `APF-AC-13` regression behavioural (real service, `setPanelVisible`); dialog line success-only; header input in scope as the "badge next to the status pill" mount; existing cases untouched. ADVISORY: `badgeLabel` is a `computed()` with no reactive dependency (rest of the block requested).
+
+### `APF-T-4` — Retry and expectations endpoints, contract doc change log — **PASS** (attempt 1)
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-09-15 (16:19 → 16:33, America/Bogota) |
+| **Implementer** | `akili-implementer` (sonnet) · skills `nestjs-expert`, `api-design-principles` · effort high |
+| **Reviewer** | `akili-reviewer` (opus) · lens checklist with the risk lens on the payload contract |
+| **Attempts** | 1 |
+
+**Files changed (8, +703/−1):** `onecgiar-pr-server/src/api/bilateral-ai/bilateral-ai.controller.ts` (+ spec incl. an HTTP-level supertest route-order proof), `services/bilateral-ai.service.ts` (+ spec: `retryJob`, `getExpectations`), `services/bilateral-ai-file-storage.service.ts` (`keyExists` — S3 `HEAD`), new `dto/bilateral-ai-expectations.dto.ts`, `dto/bilateral-ai-job-response.dto.ts` (+ `queue_entry_date`), `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (change-log entry 2026-09-15: `stage, stage_updated_date, retrying, retried_date, queue_entry_date, queue_position, max_attempts` + `POST jobs/:jobId/retry`, `GET expectations`).
+
+**Implementer verification:** `npx jest src/api/bilateral-ai --silent --reporters=summary --forceExit` → `Test Suites: 9 passed, Tests: 175 passed, 175 total` · eslint clean · grep → all three route phrases present in the entry. Assumptions (all accepted by the Reviewer): 503 guard first (mirrors `createJob`); nearest-rank percentiles; `{ code, message }` bodies via `HttpException` (throttler-guard precedent); `HEAD` mocked (live → T-10); no migration needed.
+
+**Reviewer verdict — `STATUS: PASS`:** "The retry and expectations endpoints match `APF-R-5`, `APF-R-6` D, `APF-R-21` and design §4.1/§5 exactly — full error matrix, exact reset payload with `created_date` untouched, two mix classes, 90-day COMPLETED window, cache, nulls under 5 — and the change-log entry is present, dated and complete. The route-order test is a real HTTP-dispatch proof, not a delegation stub." Verified at source: matrix order 503 → 404 → 403 → 409 → 409 → 410 → conditional update (0 rows → 409) → publish with re-flip; `WHERE status = FAILED` cannot lock out a timed-out job (`FAILED` is the only terminal-failure status); `stage` from `BilateralAiJobStage.QUEUED`; `queue_entry_date` truly ships (STORED column, spread row); JWT exclusion list keeps `center/ai/*` behind the middleware; owner check `job.user_id === user.id`, no admin bypass; no secrets in logs.
+
+**ADVISORY (recorded):** *Reliability* — `getExpectations` loads every `COMPLETED` row in the window and computes percentiles in JS (design §5 describes an ordered-subquery aggregate); fine at current volume, move to SQL before the table grows. *Resilience* — `keyExists` treats only 404/NotFound as missing; S3 answers `HEAD` on an absent key with **403** when the caller lacks `s3:ListBucket`, which would surface as 500 instead of 410 → **confirm against the real bucket policy in T-10**. *Reliability* — cached expectations object returned by reference (a mutating caller poisons the cache). (Report truncated after this point; remainder not retrieved.)
+
+**Requirements covered:** `APF-R-5` (all clauses; live 410 → T-10), `APF-R-6` D (API side), `APF-R-21`; `APF-AC-7`, `APF-AC-20`. **Gate:** auto-approved (pre-approved mode). **Server half (T-1…T-4) complete.**
+

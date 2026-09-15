@@ -104,9 +104,10 @@
 - **Verification:** `cd onecgiar-pr-server && npx jest src/api/bilateral-ai --silent && npx eslint "src/api/bilateral-ai/**/*.ts" --quiet && grep -n "center/ai/jobs/:jobId\|center/ai/expectations\|jobs/:jobId/retry" docs/bilateral-result-summaries.en.md`
 - **Input that would make the check fail:** the expectations route declared after `jobs/:jobId` under the old path; retry allowed on `PROCESSING`; `created_date` reset on retry; three mix classes.
 - **What this cannot prove / disqualifier:** S3 `HEAD` is mocked — the 410 path is exercised live in `APF-T-10` by deleting a key; percentiles are only as good as prtest's history (fallback copy expected if < 5).
+- **Status:** `[x]` PASS — 2026-09-15, attempt 1 (see `execution.md`)
 - **Definition of done:**
-  - [ ] Specs green; lint clean; change-log entry present with date and field list.
-  - [ ] Commit: `✨ feat(bilateral-ai) [<ticket>]: retry endpoint reusing stored sources; expectations from job history; contract change log`.
+  - [x] Specs green; lint clean; change-log entry present with date and field list.
+  - [x] Commit: `✨ feat(bilateral-ai) [<ticket>]: retry endpoint reusing stored sources; expectations from job history; contract change log`.
 
 ### `APF-T-5` — Client job model and service: normalization, stepper model, adaptive polling, still-running, one surface, retry, expectations
 

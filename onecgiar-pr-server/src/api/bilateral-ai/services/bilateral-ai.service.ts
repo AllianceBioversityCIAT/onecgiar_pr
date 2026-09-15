@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { In, LessThan, Repository } from 'typeorm';
+import { In, LessThan, MoreThan, Repository } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -36,6 +38,10 @@ import { BilateralService } from '../../bilateral/bilateral.service';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { getBilateralAiMaxAttempts } from '../bilateral-ai.config';
 import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
+import {
+  BilateralAiExpectationsMix,
+  BilateralAiExpectationsResponseDto,
+} from '../dto/bilateral-ai-expectations.dto';
 
 /**
  * The complete server `stage` vocabulary (`design.md` §3.1, `requirements.md` §2 Glossary).
@@ -68,6 +74,16 @@ const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
 @Injectable()
 export class BilateralAiService {
   private readonly logger = new Logger(BilateralAiService.name);
+
+  /** `APF-R-21` SHOULD — 10-minute in-memory cache per mix class, keyed on the process's own
+   * singleton instance of this service (`getExpectations`). */
+  private readonly expectationsCache = new Map<
+    string,
+    { data: BilateralAiExpectationsResponseDto; expiresAt: number }
+  >();
+  private static readonly EXPECTATIONS_CACHE_MS = 10 * 60_000;
+  private static readonly EXPECTATIONS_SAMPLE_WINDOW_MS = 90 * 24 * 60 * 60_000;
+  private static readonly EXPECTATIONS_MIN_SAMPLE_SIZE = 5;
 
   constructor(
     @InjectRepository(BilateralAiJob)
@@ -189,6 +205,211 @@ export class BilateralAiService {
       message: 'AI job found',
       status: 200,
     };
+  }
+
+  /**
+   * `POST /api/bilateral/center/ai/jobs/:jobId/retry` — idempotent "Try again" (`APF-R-5`,
+   * `design.md` §5 "Retry endpoint"). Order: queue-configured guard (503, same as `createJob`) →
+   * owner check (403) → status check (409 `JOB_ALIVE` while PENDING/PROCESSING, 409
+   * `JOB_COMPLETED` when COMPLETED) → `HEAD` each stored S3 key, 410 `SOURCES_GONE` on the first
+   * miss (no re-upload — the same keys are reused) → conditional reset scoped to
+   * `status = FAILED` (0 rows means another actor moved the job between the read and this write —
+   * 409 `JOB_ALIVE`) → publish. `retried_date = now` moves `queue_entry_date` to the retry
+   * moment; `created_date` is left untouched for provenance.
+   */
+  async retryJob(jobId: string, user: TokenDto) {
+    if (!this.queue.isEnabled()) {
+      throw new ServiceUnavailableException(
+        'Bilateral AI processing queue is not configured.',
+      );
+    }
+    const job = await this.jobRepository.findOne({ where: { job_id: jobId } });
+    if (!job) throw new NotFoundException('AI job not found.');
+    if (job.user_id !== user.id) {
+      throw new ForbiddenException('You do not have access to this AI job.');
+    }
+    if (
+      job.status === BilateralAiJobStatus.PENDING ||
+      job.status === BilateralAiJobStatus.PROCESSING
+    ) {
+      throw new HttpException(
+        {
+          code: 'JOB_ALIVE',
+          message: 'This AI job is still running; wait for it to finish.',
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (job.status === BilateralAiJobStatus.COMPLETED) {
+      throw new HttpException(
+        { code: 'JOB_COMPLETED', message: 'This AI job already completed.' },
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    // `APF-R-5`: no re-upload — the stored S3 keys are reused, but a key can have expired or been
+    // removed since the job failed, in which case the user must upload again (410).
+    const storedKeys = [
+      ...(job.document_keys ?? []),
+      ...(job.audio_keys ?? []),
+    ];
+    for (const key of storedKeys) {
+      const exists = await this.storage.keyExists(key);
+      if (!exists) {
+        throw new HttpException(
+          {
+            code: 'SOURCES_GONE',
+            message:
+              'One or more of your uploaded files are no longer available. Please upload again.',
+          },
+          HttpStatus.GONE,
+        );
+      }
+    }
+
+    const now = new Date();
+    const reset = await this.jobRepository.update(
+      { job_id: jobId, status: BilateralAiJobStatus.FAILED },
+      {
+        status: BilateralAiJobStatus.PENDING,
+        stage: BilateralAiJobStage.QUEUED,
+        stage_updated_date: now,
+        attempts: 0,
+        retrying: false,
+        error_code: null,
+        error_message: null,
+        started_date: null,
+        completed_date: null,
+        retried_date: now,
+      },
+    );
+    if (!reset?.affected) {
+      // Another actor (the sweeper, or a second retry request) moved the job between the read
+      // above and this write (`design.md` §5 "Retry endpoint").
+      throw new HttpException(
+        {
+          code: 'JOB_ALIVE',
+          message: 'This AI job changed status; refresh and try again.',
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    try {
+      this.queue.publish({ jobId });
+    } catch (error) {
+      await this.jobRepository.update(jobId, {
+        status: BilateralAiJobStatus.FAILED,
+        error_code: 'QUEUE_NOT_AVAILABLE',
+        error_message: 'The AI processing queue could not accept the job.',
+        completed_date: new Date(),
+      });
+      throw error;
+    }
+
+    return {
+      response: { jobId, jobStatus: BilateralAiJobStatus.PENDING },
+      message: 'AI job re-queued for retry',
+      status: 202,
+    };
+  }
+
+  /**
+   * `GET /api/bilateral/center/ai/expectations?mix=documents|audio` (`APF-R-6` D, `APF-R-21`,
+   * `design.md` §5 "Expectations"). P25/P75 of `completed_date - started_date`, in whole minutes,
+   * over `COMPLETED` jobs of the same mix class in the last 90 days; `null` under 5 samples —
+   * never invented from a smaller sample. Two classes only, never computed client-side.
+   */
+  async getExpectations(mix: string) {
+    if (
+      mix !== BilateralAiExpectationsMix.DOCUMENTS &&
+      mix !== BilateralAiExpectationsMix.AUDIO
+    ) {
+      throw new BadRequestException('mix must be "documents" or "audio".');
+    }
+
+    const cached = this.expectationsCache.get(mix);
+    if (cached && cached.expiresAt > Date.now()) {
+      return {
+        response: cached.data,
+        message: 'AI job expectations found',
+        status: 200,
+      };
+    }
+
+    const since = new Date(
+      Date.now() - BilateralAiService.EXPECTATIONS_SAMPLE_WINDOW_MS,
+    );
+    const rows = await this.jobRepository.find({
+      where: {
+        status: BilateralAiJobStatus.COMPLETED,
+        completed_date: MoreThan(since),
+      },
+      select: { audio_keys: true, started_date: true, completed_date: true },
+    });
+
+    const durationsSeconds = rows
+      .filter((row) => this.mixClass(row) === mix)
+      .map((row) => this.durationSeconds(row))
+      .filter((seconds): seconds is number => seconds != null && seconds >= 0)
+      .sort((a, b) => a - b);
+
+    const sampleSize = durationsSeconds.length;
+    const data: BilateralAiExpectationsResponseDto =
+      sampleSize < BilateralAiService.EXPECTATIONS_MIN_SAMPLE_SIZE
+        ? {
+            mix: mix as BilateralAiExpectationsMix,
+            sampleSize,
+            p25Minutes: null,
+            p75Minutes: null,
+          }
+        : {
+            mix: mix as BilateralAiExpectationsMix,
+            sampleSize,
+            p25Minutes: this.percentileMinutes(durationsSeconds, 0.25),
+            p75Minutes: this.percentileMinutes(durationsSeconds, 0.75),
+          };
+
+    this.expectationsCache.set(mix, {
+      data,
+      expiresAt: Date.now() + BilateralAiService.EXPECTATIONS_CACHE_MS,
+    });
+
+    return {
+      response: data,
+      message: 'AI job expectations found',
+      status: 200,
+    };
+  }
+
+  /** `documents` when the job carries no audio source, `audio` when it carries any (`design.md`
+   * §5 "Expectations") — a document + audio job is `audio`, because audio is what makes it slow. */
+  private mixClass(
+    job: Pick<BilateralAiJob, 'audio_keys'>,
+  ): BilateralAiExpectationsMix {
+    return (job.audio_keys?.length ?? 0) > 0
+      ? BilateralAiExpectationsMix.AUDIO
+      : BilateralAiExpectationsMix.DOCUMENTS;
+  }
+
+  private durationSeconds(
+    job: Pick<BilateralAiJob, 'started_date' | 'completed_date'>,
+  ): number | null {
+    if (!job.started_date || !job.completed_date) return null;
+    return (
+      (new Date(job.completed_date).getTime() -
+        new Date(job.started_date).getTime()) /
+      1000
+    );
+  }
+
+  /** Nearest-rank percentile over an ascending-sorted seconds array, rounded to whole minutes. */
+  private percentileMinutes(sortedSeconds: number[], p: number): number {
+    const index = Math.min(
+      sortedSeconds.length - 1,
+      Math.max(0, Math.ceil(p * sortedSeconds.length) - 1),
+    );
+    return Math.round(sortedSeconds[index] / 60);
   }
 
   async getSignedUrl(key: string, user: TokenDto) {

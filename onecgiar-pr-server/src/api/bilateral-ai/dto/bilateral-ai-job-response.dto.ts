@@ -132,6 +132,13 @@ export class BilateralAiJobResponseDto {
   })
   retried_date: Date | null;
 
+  @ApiProperty({
+    description:
+      'COALESCE(retried_date, created_date) — the moment the job entered the queue in its ' +
+      'current life. Drives queue_position ordering and the sweeper stall check.',
+  })
+  queue_entry_date: Date;
+
   @ApiProperty()
   last_updated_date: Date;
 }

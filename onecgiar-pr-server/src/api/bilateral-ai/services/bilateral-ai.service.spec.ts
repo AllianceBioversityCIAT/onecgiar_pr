@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ describe('BilateralAiService (unit)', () => {
       create: jest.fn((x) => x),
       save: jest.fn(async (x) => ({ ...x, job_id: 'job-uuid-1' })),
       findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
       // Default: every conditional UPDATE "wins" (affected: 1). Tests exercising a lost race
       // (attempt-start, stage advancement, retry/final writes) override this per-call.
       update: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -57,6 +59,7 @@ describe('BilateralAiService (unit)', () => {
       uploadFiles: jest.fn().mockResolvedValue([]),
       getBucketName: jest.fn().mockReturnValue('test-bucket'),
       getSignedUrl: jest.fn().mockReturnValue('https://signed.url'),
+      keyExists: jest.fn().mockResolvedValue(true),
     };
     const textMining = {
       extract: jest.fn().mockResolvedValue({}),
@@ -359,6 +362,268 @@ describe('BilateralAiService (unit)', () => {
           delete process.env.BILATERAL_AI_MAX_ATTEMPTS;
         else process.env.BILATERAL_AI_MAX_ATTEMPTS = original;
       }
+    });
+  });
+
+  describe('retryJob', () => {
+    const failedJob = () => ({
+      job_id: 'job-1',
+      user_id: 42,
+      status: BilateralAiJobStatus.FAILED,
+      document_keys: ['doc-key-1'],
+      audio_keys: [],
+    });
+
+    it('should throw ServiceUnavailableException when the queue is not configured', async () => {
+      const { service, stubs } = makeService();
+      stubs.queue.isEnabled.mockReturnValue(false);
+
+      await expect(service.retryJob('job-1', user)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
+    });
+
+    it('should throw NotFoundException when the job does not exist', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.retryJob('missing', user)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw ForbiddenException when the requester is not the job owner', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        ...failedJob(),
+        user_id: 999,
+      });
+
+      await expect(service.retryJob('job-1', user)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it.each([BilateralAiJobStatus.PENDING, BilateralAiJobStatus.PROCESSING])(
+      'should throw 409 JOB_ALIVE when the job is %s',
+      async (status) => {
+        const { service, stubs } = makeService();
+        stubs.jobRepository.findOne.mockResolvedValue({
+          ...failedJob(),
+          status,
+        });
+
+        try {
+          await service.retryJob('job-1', user);
+          throw new Error('expected retryJob to throw');
+        } catch (error) {
+          expect(error).toBeInstanceOf(HttpException);
+          expect((error as HttpException).getStatus()).toBe(409);
+          expect((error as HttpException).getResponse()).toEqual(
+            expect.objectContaining({ code: 'JOB_ALIVE' }),
+          );
+        }
+      },
+    );
+
+    it('should throw 409 JOB_COMPLETED when the job already completed', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        ...failedJob(),
+        status: BilateralAiJobStatus.COMPLETED,
+      });
+
+      try {
+        await service.retryJob('job-1', user);
+        throw new Error('expected retryJob to throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect((error as HttpException).getStatus()).toBe(409);
+        expect((error as HttpException).getResponse()).toEqual(
+          expect.objectContaining({ code: 'JOB_COMPLETED' }),
+        );
+      }
+    });
+
+    it('should throw 410 SOURCES_GONE on the first missing S3 key, before writing anything', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(failedJob());
+      stubs.storage.keyExists.mockResolvedValue(false);
+
+      try {
+        await service.retryJob('job-1', user);
+        throw new Error('expected retryJob to throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect((error as HttpException).getStatus()).toBe(410);
+        expect((error as HttpException).getResponse()).toEqual(
+          expect.objectContaining({ code: 'SOURCES_GONE' }),
+        );
+      }
+      expect(stubs.jobRepository.update).not.toHaveBeenCalled();
+      expect(stubs.queue.publish).not.toHaveBeenCalled();
+    });
+
+    it('should reset the job and republish on success, returning 202 with the same jobId', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(failedJob());
+
+      const result = await service.retryJob('job-1', user);
+
+      expect(result).toEqual({
+        response: { jobId: 'job-1', jobStatus: BilateralAiJobStatus.PENDING },
+        message: 'AI job re-queued for retry',
+        status: 202,
+      });
+      expect(stubs.queue.publish).toHaveBeenCalledWith({ jobId: 'job-1' });
+    });
+
+    it('resets attempts/retrying/error_*/started_date/completed_date, sets retried_date, scopes the write to status = FAILED, and leaves created_date untouched', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(failedJob());
+
+      await service.retryJob('job-1', user);
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'job-1', status: BilateralAiJobStatus.FAILED },
+        expect.objectContaining({
+          status: BilateralAiJobStatus.PENDING,
+          stage: 'queued',
+          stage_updated_date: expect.any(Date),
+          attempts: 0,
+          retrying: false,
+          error_code: null,
+          error_message: null,
+          started_date: null,
+          completed_date: null,
+          retried_date: expect.any(Date),
+        }),
+      );
+      const [, setPayload] = stubs.jobRepository.update.mock.calls[0];
+      expect(setPayload).not.toHaveProperty('created_date');
+    });
+
+    it('should throw 409 JOB_ALIVE when the conditional reset affects 0 rows (lost the race)', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(failedJob());
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 0 });
+
+      try {
+        await service.retryJob('job-1', user);
+        throw new Error('expected retryJob to throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect((error as HttpException).getStatus()).toBe(409);
+        expect((error as HttpException).getResponse()).toEqual(
+          expect.objectContaining({ code: 'JOB_ALIVE' }),
+        );
+      }
+      expect(stubs.queue.publish).not.toHaveBeenCalled();
+    });
+
+    it('should mark the job FAILED again and rethrow when publish fails after the reset', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(failedJob());
+      const publishError = new Error('queue unavailable');
+      stubs.queue.publish.mockImplementation(() => {
+        throw publishError;
+      });
+
+      await expect(service.retryJob('job-1', user)).rejects.toThrow(
+        publishError,
+      );
+
+      expect(stubs.jobRepository.update).toHaveBeenLastCalledWith('job-1', {
+        status: BilateralAiJobStatus.FAILED,
+        error_code: 'QUEUE_NOT_AVAILABLE',
+        error_message: 'The AI processing queue could not accept the job.',
+        completed_date: expect.any(Date),
+      });
+    });
+  });
+
+  describe('getExpectations', () => {
+    const makeCompletedRow = (
+      durationSeconds: number,
+      mix: 'documents' | 'audio',
+    ) => {
+      const started = new Date('2026-01-01T00:00:00.000Z');
+      return {
+        audio_keys: mix === 'audio' ? ['audio-key-1'] : [],
+        started_date: started,
+        completed_date: new Date(started.getTime() + durationSeconds * 1000),
+      };
+    };
+
+    it('should throw BadRequestException for an invalid mix', async () => {
+      const { service } = makeService();
+
+      await expect(service.getExpectations('mixed')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('computes P25/P75 in whole minutes over 6 COMPLETED samples of the same mix class', async () => {
+      const { service, stubs } = makeService();
+      const durationsSeconds = [120, 240, 360, 480, 600, 720];
+      stubs.jobRepository.find.mockResolvedValue(
+        durationsSeconds.map((s) => makeCompletedRow(s, 'documents')),
+      );
+
+      const result = await service.getExpectations('documents');
+
+      expect(result).toEqual({
+        response: {
+          mix: 'documents',
+          sampleSize: 6,
+          p25Minutes: 4,
+          p75Minutes: 10,
+        },
+        message: 'AI job expectations found',
+        status: 200,
+      });
+    });
+
+    it('returns null percentiles when fewer than 5 samples exist', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.find.mockResolvedValue(
+        [60, 120, 180, 240].map((s) => makeCompletedRow(s, 'documents')),
+      );
+
+      const result = await service.getExpectations('documents');
+
+      expect(result.response).toEqual({
+        mix: 'documents',
+        sampleSize: 4,
+        p25Minutes: null,
+        p75Minutes: null,
+      });
+    });
+
+    it('classifies a job with any audio key as "audio", even alongside documents', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.find.mockResolvedValue([
+        makeCompletedRow(600, 'audio'),
+      ]);
+
+      const audioResult = await service.getExpectations('audio');
+      expect(audioResult.response.sampleSize).toBe(1);
+
+      const documentsResult = await service.getExpectations('documents');
+      expect(documentsResult.response.sampleSize).toBe(0);
+    });
+
+    it('caches the result per mix — a second call within the 10-minute window skips the query', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.find.mockResolvedValue(
+        [120, 240, 360, 480, 600].map((s) => makeCompletedRow(s, 'documents')),
+      );
+
+      const first = await service.getExpectations('documents');
+      const second = await service.getExpectations('documents');
+
+      expect(stubs.jobRepository.find).toHaveBeenCalledTimes(1);
+      expect(second).toEqual(first);
     });
   });
 
