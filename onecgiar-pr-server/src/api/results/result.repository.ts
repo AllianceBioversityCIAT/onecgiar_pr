@@ -799,6 +799,7 @@ WHERE
         AND rt.id not in (${excludeType.toString()})`;
 
     const params: (string | number)[] = [userid];
+    const orderParams: (string | number)[] = [];
     const where: string[] = [];
 
     const addInGeneric = (
@@ -813,6 +814,10 @@ WHERE
       params.push(...arr);
     };
 
+    // Set only when filters.title is present — reused by both the WHERE match and the relevance
+    // ORDER BY below, so an exact code / title-prefix hit outranks a mid-string LIKE hit.
+    let escapedTitle: string | undefined;
+
     try {
       addInGeneric('ci.official_code', filters?.initiativeCode);
       addInGeneric('r.version_id', filters?.versionId);
@@ -823,8 +828,14 @@ WHERE
       addInGeneric('r.source', filters?.fundingSource);
 
       if (filters?.title) {
-        where.push('AND LOWER(r.title) LIKE LOWER(?)');
-        params.push(`%${filters.title}%`);
+        where.push(
+          'AND (LOWER(r.title) LIKE LOWER(?) OR r.result_code LIKE ?)',
+        );
+        escapedTitle = filters.title
+          .replaceAll('%', String.raw`\%`)
+          .replaceAll('_', String.raw`\_`);
+        const term = `%${escapedTitle}%`;
+        params.push(term, term);
       }
 
       if (
@@ -869,9 +880,19 @@ WHERE
       // count can never silently drop open-phase rows (v.status is a boolean column —
       // true/1 = open, false/0 = closed — see version.entity.ts / $_closeAllPhases).
       // r.id DESC is a stable tiebreaker only, not a functional requirement.
-      const orderByClause = ' ORDER BY v.status DESC, r.id DESC';
+      //
+      // When a title/code search is active, relevance leads instead: an exact result_code hit,
+      // then a title that STARTS WITH the query, rank above a mid-string LIKE hit — this is what
+      // makes a numeric code search (the global search palette) behave like a search rather than
+      // an arbitrary-order filter. v.status/r.id remain the tiebreaker for everything else.
+      let orderByClause = ' ORDER BY v.status DESC, r.id DESC';
+      if (filters?.title && escapedTitle !== undefined) {
+        orderByClause =
+          ' ORDER BY (r.result_code = ?) DESC, (LOWER(r.title) LIKE LOWER(?)) DESC, v.status DESC, r.id DESC';
+        orderParams.push(filters.title, `${escapedTitle}%`);
+      }
       const queryData = `${baseQuery} ${where.join(' ')}${orderByClause}${paginatedClause};`;
-      const results = await this.query(queryData, params);
+      const results = await this.query(queryData, [...params, ...orderParams]);
 
       if (limit !== undefined) {
         const countQuery = `SELECT COUNT(1) as total FROM (${baseQuery} ${where.join(' ')}) as sub`;

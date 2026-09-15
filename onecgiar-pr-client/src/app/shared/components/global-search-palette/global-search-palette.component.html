@@ -82,9 +82,35 @@
         [attr.aria-busy]="search.resultsLoading() ? 'true' : null">
         <!-- ── RESULTS ────────────────────────────────────────────────────────────────────── -->
         @if (search.resultsIdle()) {
-          <p class="px-[10px] py-[12px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
-            Start typing to search results and programs.
-          </p>
+          @if (search.recentQueries().length > 0) {
+            <div brnCommandGroup>
+              <p
+                class="px-[10px] pb-[6px] pt-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                Recent searches
+              </p>
+              @for (term of search.recentQueries(); track term) {
+                <button
+                  brnCommandItem
+                  type="button"
+                  [value]="recentValue(term)"
+                  [attr.aria-label]="'Recent search: ' + term"
+                  class="flex w-full items-center gap-[10px] rounded-[6px] px-[10px] py-[7px] text-left outline-none data-[selected]:bg-[var(--pr-surface-band)] hover:bg-[var(--pr-surface-band)]"
+                  (selected)="openRecent(term)">
+                  <ng-icon
+                    name="lucideHistory"
+                    class="shrink-0 text-[14px] text-[var(--pr-text-subtle)]"
+                    aria-hidden="true" />
+                  <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text)]">{{
+                    term
+                  }}</span>
+                </button>
+              }
+            </div>
+          } @else {
+            <p class="px-[10px] py-[12px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+              Start typing to search results and programs.
+            </p>
+          }
         } @else {
           <div brnCommandGroup [attr.aria-labelledby]="resultsHeadingId">
             <p
@@ -129,9 +155,35 @@
                   aria-hidden="true"
                   >{{ row.submitterCode }}</span
                 >
-                <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text)]">{{
-                  row.title
-                }}</span>
+                <!--
+                  The result code is the field a numeric search (e.g. "20694") actually matches, but
+                  nothing in this row displayed it before — a code search returned a title-only row
+                  with no visible sign of what matched it. Muted mono, highlighted like the title.
+                -->
+                <span
+                  class="shrink-0 font-mono text-[12px] font-medium text-[var(--pr-text-subtle)]"
+                  aria-hidden="true"
+                  >@for (part of highlightParts('#' + row.code, search.query()); track $index) {
+                    @if (part.match) {
+                      <mark class="rounded-[2px] bg-[var(--pr-color-primary-100)] text-inherit">{{
+                        part.text
+                      }}</mark>
+                    } @else {
+                      {{ part.text }}
+                    }
+                  }</span
+                >
+                <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text)]"
+                  >@for (part of highlightParts(row.title, search.query()); track $index) {
+                    @if (part.match) {
+                      <mark class="rounded-[2px] bg-[var(--pr-color-primary-100)] text-inherit">{{
+                        part.text
+                      }}</mark>
+                    } @else {
+                      {{ part.text }}
+                    }
+                  }</span
+                >
                 <span
                   class="shrink-0 rounded-[999px] px-[8px] py-[2px] text-[11px] font-medium"
                   [style.color]="statusFg(row.statusId)"
