@@ -46,7 +46,7 @@ export class GeographicLocationService {
         // `findGeographicLocation` below answers `geo_scope_id: 0` for a result with no scope —
         // `let scope = 0` is this service's own "none" placeholder. Clients hand that number back
         // untouched on the next save, and 0 is the one value the column cannot take:
-        // `clarisa_geographic_scope` holds 1, 2, 3, 4, 5 and 50, so the write died on
+        // no valid scope id is 0 (`GeoScopeEnum`: 1, 2, 3, 5, 50), so the write died on
         // `FK_c02a8848d0317d55d1bd882833e` with a 500 the reporter never saw. Stored, "none" is
         // NULL — 2,223 rows in prdb are NULL and not one is 0 — so the placeholder is normalised
         // back to NULL here, the same guard `extra_geo_scope_id` has always had on the next line.
