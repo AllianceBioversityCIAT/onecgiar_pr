@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import {
+  BILATERAL_RESULT_ORIGIN_STORAGE_KEY,
   isBilateralReviewTab,
+  isKnownBilateralOrigin,
   isReportingTab,
   RESULT_DETAIL_ORIGIN_STORAGE_KEY,
   SmartNavigationService
@@ -21,6 +23,7 @@ describe('SmartNavigationService', () => {
 
   beforeEach(() => {
     sessionStorage.removeItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY);
+    sessionStorage.removeItem(BILATERAL_RESULT_ORIGIN_STORAGE_KEY);
     routerEvents$ = new Subject<unknown>();
     mockRouter = {
       url: '/result-framework-reporting/home',
@@ -407,6 +410,141 @@ describe('SmartNavigationService', () => {
       });
 
       expect(TestBed.inject(SmartNavigationService).getResultDetailBackTarget(detail).url).toBe(reportingOrigin);
+    });
+  });
+
+  describe('Bilateral Result Editor & Creator Back Navigation', () => {
+    const bilateralResults = '/bilateral/AfricaRice/results?phase=36';
+    const bilateralDrafts = '/bilateral/AfricaRice/drafts?phase=36';
+    const bilateralEditor = '/bilateral/AfricaRice/result/123';
+    const bilateralEditorSection = '/bilateral/AfricaRice/result/123/evidence';
+
+    describe('isKnownBilateralOrigin', () => {
+      it('identifies bilateral results, drafts, home, and overview as valid origins', () => {
+        expect(isKnownBilateralOrigin('/bilateral/AfricaRice/results?phase=36')).toBe(true);
+        expect(isKnownBilateralOrigin('/bilateral/AfricaRice/drafts?phase=36')).toBe(true);
+        expect(isKnownBilateralOrigin('/bilateral/AfricaRice/home')).toBe(true);
+        expect(isKnownBilateralOrigin('/bilateral/AfricaRice/overview')).toBe(true);
+        expect(isKnownBilateralOrigin('/bilateral')).toBe(true);
+      });
+
+      it('rejects editor and creation URLs as origins', () => {
+        expect(isKnownBilateralOrigin('/bilateral/AfricaRice/result/123')).toBe(false);
+        expect(isKnownBilateralOrigin('/bilateral/AfricaRice/create')).toBe(false);
+        expect(isKnownBilateralOrigin('/result/result-detail/123')).toBe(false);
+        expect(isKnownBilateralOrigin('')).toBe(false);
+      });
+    });
+
+    it('returns exact Results tab URL with phase and label "Back" when navigating from results to editor', () => {
+      service.recordUrl(bilateralResults);
+      service.recordUrl(bilateralEditor);
+      mockRouter.url = bilateralEditor;
+
+      const target = service.getBackTarget(bilateralEditor, 'AfricaRice');
+
+      expect(target.url).toBe(bilateralResults);
+      expect(target.label).toBe('Back');
+    });
+
+    it('skips intermediate editor section hops and returns to the Results tab', () => {
+      service.recordUrl(bilateralResults);
+      service.recordUrl(bilateralEditor);
+      service.recordUrl(bilateralEditorSection);
+      mockRouter.url = bilateralEditorSection;
+
+      const target = service.getBackTarget(bilateralEditorSection, 'AfricaRice');
+
+      expect(target.url).toBe(bilateralResults);
+      expect(target.label).toBe('Back');
+    });
+
+    it('returns exact Drafts tab URL when navigating from drafts to editor', () => {
+      service.recordUrl(bilateralDrafts);
+      service.recordUrl(bilateralEditor);
+      mockRouter.url = bilateralEditor;
+
+      const target = service.getBackTarget(bilateralEditor, 'AfricaRice');
+
+      expect(target.url).toBe(bilateralDrafts);
+      expect(target.label).toBe('Back');
+    });
+
+    it('returns exact Results Center URL when navigating from Results Center to bilateral editor', () => {
+      const resultsCenter = '/result/results-outlet/results-list';
+      service.recordUrl(resultsCenter);
+      service.recordUrl(bilateralEditor);
+      mockRouter.url = bilateralEditor;
+
+      const target = service.getBackTarget(bilateralEditor, 'AfricaRice');
+
+      expect(target.url).toBe(resultsCenter);
+      expect(target.label).toBe('Back');
+    });
+
+    it('restores Results Center origin from sessionStorage on page reload of a bilateral result', () => {
+      const resultsCenter = '/result/results-outlet/results-list';
+      sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, resultsCenter);
+      TestBed.resetTestingModule();
+      mockRouter.url = bilateralEditor;
+      mockRouter.getCurrentNavigation = jest.fn(() => null);
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      const reloadedService = TestBed.inject(SmartNavigationService);
+      const target = reloadedService.getBackTarget(bilateralEditor, 'AfricaRice');
+
+      expect(target.url).toBe(resultsCenter);
+      expect(target.label).toBe('Back');
+    });
+
+    it('persists bilateral origin in sessionStorage and restores it after page reload', () => {
+      sessionStorage.setItem(BILATERAL_RESULT_ORIGIN_STORAGE_KEY, bilateralResults);
+      TestBed.resetTestingModule();
+      mockRouter.url = bilateralEditor;
+      mockRouter.getCurrentNavigation = jest.fn(() => null);
+      TestBed.configureTestingModule({
+        providers: [SmartNavigationService, { provide: Router, useValue: mockRouter }]
+      });
+
+      const reloadedService = TestBed.inject(SmartNavigationService);
+      const target = reloadedService.getBackTarget(bilateralEditor, 'AfricaRice');
+
+      expect(target.url).toBe(bilateralResults);
+      expect(target.label).toBe('Back');
+    });
+
+    it('falls back to Center results with phase when history and storage are empty', () => {
+      const activeUrlWithPhase = '/bilateral/AfricaRice/result/123?phase=36';
+      mockRouter.url = activeUrlWithPhase;
+      (service as any).history = [activeUrlWithPhase];
+
+      const target = service.getBackTarget(activeUrlWithPhase, 'AfricaRice');
+
+      expect(target.url).toBe('/bilateral/AfricaRice/results?phase=36');
+      expect(target.label).toBe('Back');
+    });
+
+    it('falls back to bare Center results when history and storage are empty and no phase in URL', () => {
+      mockRouter.url = bilateralEditor;
+      (service as any).history = [bilateralEditor];
+
+      const target = service.getBackTarget(bilateralEditor, 'AfricaRice');
+
+      expect(target.url).toBe('/bilateral/AfricaRice/results');
+      expect(target.label).toBe('Back');
+    });
+
+    it('falls back to /bilateral when center is unknown and no history exists', () => {
+      const bareCreate = '/bilateral/create';
+      mockRouter.url = bareCreate;
+      (service as any).history = [bareCreate];
+
+      const target = service.getBackTarget(bareCreate);
+
+      expect(target.url).toBe('/bilateral');
+      expect(target.label).toBe('Back');
     });
   });
 });

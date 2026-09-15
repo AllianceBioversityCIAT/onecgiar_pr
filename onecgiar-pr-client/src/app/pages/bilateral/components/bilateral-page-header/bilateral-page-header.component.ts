@@ -192,6 +192,24 @@ export class BilateralPageHeaderComponent {
     return id == null ? null : (BilateralPageHeaderComponent.STATUS_BADGES[Number(id)] ?? null);
   });
 
+  /**
+   * BRRA-R-4: Secondary contextual metadata inputs for streamlined detail header.
+   */
+  readonly resultLevelName = input<string | null>(null);
+  readonly centerName = input<string | null>(null);
+  readonly areaOfWork = input<string | null>(null);
+
+  readonly resolvedCenterName = computed(() => this.centerName() || this.ctx.centerAcronym() || this.ctx.centerName() || null);
+
+  readonly hasDetailIdentityStrip = computed(
+    () =>
+      !!this.resultLevelName() ||
+      this.isW3Bilateral() ||
+      !!this.resolvedCenterName() ||
+      !!this.areaOfWork() ||
+      this.showAiProvenanceBadge(),
+  );
+
   readonly hasIdentityStrip = computed(
     () =>
       this.resultCode() != null ||

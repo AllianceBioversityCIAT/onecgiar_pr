@@ -1,5 +1,5 @@
 import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -7,6 +7,7 @@ import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-
 import { BilateralAutoSaveService, BilateralEditorSection } from '../../services/bilateral-auto-save.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { SmartNavigationService, splitNavUrl } from '../../../../shared/services/smart-navigation.service';
 import { BilateralAiUploadComponent } from '../../components/bilateral-ai-upload/bilateral-ai-upload.component';
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
@@ -24,10 +25,13 @@ import { FormSkeletonComponent } from '../../components/form-skeleton/form-skele
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
+import { CopyButtonComponent } from '../../../../shared/components/copy-button/copy-button.component';
 
 @Component({
   selector: 'app-bilateral-result-creator',
   imports: [
+    RouterLink,
+    CopyButtonComponent,
     PhaseSwitcherModule,
     SectionZeroDashboardComponent,
     BilateralProjectSelectorComponent,
@@ -62,6 +66,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);
   readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
   private readonly ctx = inject(BilateralContextService);
+  private readonly smartNav = inject(SmartNavigationService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
@@ -96,6 +101,95 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * load fails — falling back to "Report New Bilateral Result" told the user they were creating a
    * result when they were editing one. A neutral label is honest in both states.
    */
+  private static readonly STATUS_LABELS: Record<number, string> = {
+    1: 'Editing',
+    5: 'Pending review',
+    6: 'Approved',
+    7: 'Rejected',
+  };
+
+  readonly backTarget = computed(() => {
+    const activeUrl = this.router.url?.includes('/result/') || this.router.url?.includes('/create')
+      ? this.router.url
+      : (this.resultId() && !this.isCreating()
+        ? `/bilateral/${this.ctx.centerAcronym()}/result/${this.resultId()}`
+        : this.router.url);
+    const center = this.ctx.centerAcronym() ?? undefined;
+    return this.smartNav.getBackTarget(activeUrl, center);
+  });
+
+  readonly backLink = computed(() => splitNavUrl(this.backTarget().url).path);
+
+  readonly backQueryParams = computed<Record<string, string | number> | null>(() => {
+    const targetUrl = this.backTarget().url;
+    const params: Record<string, string | number> = { ...splitNavUrl(targetUrl).queryParams };
+    const phase = this.ctx.selectedVersionId();
+    if (targetUrl.includes('/bilateral') && !params['phase'] && phase != null) {
+      params['phase'] = phase;
+    }
+    return Object.keys(params).length > 0 ? params : null;
+  });
+
+  readonly backTitle = computed(() => 'Back');
+  readonly resultCode = computed(() => {
+    const code = this.creationService.resultCode();
+    return code != null && String(code).trim() !== '' ? String(code) : '';
+  });
+  readonly resultTypeName = computed(() => this.creationService.resultTypeName() ?? '');
+  readonly statusLabel = computed(() => {
+    const id = this.creationService.resultStatusId();
+    return id != null ? BilateralResultCreatorComponent.STATUS_LABELS[Number(id)] ?? '' : '';
+  });
+  readonly statusFg = computed(() => {
+    const id = this.creationService.resultStatusId();
+    switch (Number(id)) {
+      case 1:
+        return 'var(--pr-status-in-progress-fg)';
+      case 5:
+        return '#B45309';
+      case 6:
+        return 'var(--pr-status-approved-fg)';
+      case 7:
+        return 'var(--pr-status-rejected-fg)';
+      default:
+        return 'var(--pr-status-not-started-fg)';
+    }
+  });
+  readonly statusBg = computed(() => {
+    const id = this.creationService.resultStatusId();
+    switch (Number(id)) {
+      case 1:
+        return 'var(--pr-status-in-progress-bg)';
+      case 5:
+        return '#FEF3C7';
+      case 6:
+        return 'var(--pr-status-approved-bg)';
+      case 7:
+        return 'var(--pr-status-rejected-bg)';
+      default:
+        return 'var(--pr-status-not-started-bg)';
+    }
+  });
+  readonly isLoadingResult = computed(() => this.creationService.isLoadingResult());
+
+  readonly resultLevelName = computed(() => {
+    const levelId = this.creationService.resultLevelId();
+    switch (Number(levelId)) {
+      case 3:
+        return 'Output';
+      case 4:
+        return 'Outcome';
+      case 2:
+        return 'End of Initiative Outcome';
+      case 1:
+        return 'Initiative';
+      default:
+        return null;
+    }
+  });
+
+  readonly areaOfWork = computed(() => this.creationService.selectedProject()?.shortName || null);
+
   readonly headerTitle = computed(() => {
     if (this.isCreating()) return 'Report New Bilateral Result';
     return this.creationService.resultTitle() || 'Bilateral result';

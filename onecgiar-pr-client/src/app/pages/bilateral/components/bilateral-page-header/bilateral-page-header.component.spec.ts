@@ -251,29 +251,14 @@ describe('BilateralPageHeaderComponent', () => {
       expect(backBtn).toBeNull();
     });
 
-    it('renders back button in detail variant and handles goBack()', () => {
+    it('does NOT render back button in detail variant as navigation is anchored in rail (BRRA-R-3, Gate D4)', () => {
       ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
       fixture.componentRef.setInput('variant', 'detail');
       fixture.componentRef.setInput('pageTitle', 'A bilateral result');
       fixture.detectChanges();
 
       const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      expect(backBtn).not.toBeNull();
-
-      const spy = jest.spyOn(component, 'goBack');
-      backBtn.nativeElement.click();
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('respects backLabelOverride in detail variant', () => {
-      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
-      fixture.componentRef.setInput('variant', 'detail');
-      fixture.componentRef.setInput('pageTitle', 'A bilateral result');
-      fixture.componentRef.setInput('backLabelOverride', 'Back to Custom Destination');
-      fixture.detectChanges();
-
-      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      expect(backBtn.nativeElement.textContent).toContain('Back to Custom Destination');
+      expect(backBtn).toBeNull();
     });
   });
 
@@ -481,24 +466,34 @@ describe('BilateralPageHeaderComponent', () => {
       fixture.detectChanges();
     });
 
-    it('renders the title with the way back above it and no breadcrumb band', () => {
+    it('renders the title with no in-flow back button and no breadcrumb band (BRRA-R-3, Gate D4)', () => {
       expect(q('[data-testid="bilateral-detail-header"]')).not.toBeNull();
       expect(q('h1')?.textContent.trim()).toBe('Test JD');
       expect(q('nav[aria-label="Breadcrumb"]')).toBeNull();
       expect(q('.bg-\\[var\\(--pr-surface-band\\)\\]')).toBeNull();
-      const back = q('[data-testid="bilateral-header-back-btn"]');
-      expect(back).not.toBeNull();
-      expect(back.textContent).toContain(component.backLabel());
+      expect(q('[data-testid="bilateral-header-back-btn"]')).toBeNull();
     });
 
-    it('spends the one pill on the status and lists the funding tag as text', () => {
+    it('renders streamlined identity strip without duplicate code, type, or status (BRRA-R-4, Gate D4)', () => {
       const text = fixture.nativeElement.textContent;
-      expect(text).toContain('8976');
-      expect(text).toContain('Innovation use');
+      expect(text).not.toContain('8976');
+      expect(text).not.toContain('Innovation use');
+      expect(q('[data-testid="bilateral-status-badge"]')).toBeNull();
       expect(text).toContain('W3/Bilateral');
-      expect(q('[data-testid="bilateral-status-badge"]')?.textContent.trim()).toBe('Editing');
-      const pills = fixture.nativeElement.querySelectorAll('.rounded-full');
-      expect(pills.length).toBe(1);
+    });
+
+    it('renders secondary contextual metadata in detail identity strip (BRRA-R-4)', () => {
+      fixture.componentRef.setInput('resultLevelName', 'Output');
+      fixture.componentRef.setInput('centerName', 'AfricaRice');
+      fixture.componentRef.setInput('areaOfWork', 'Rice Breeding');
+      fixture.detectChanges();
+
+      const strip = q('[data-testid="bilateral-detail-identity-strip"]');
+      expect(strip).not.toBeNull();
+      expect(strip.textContent).toContain('Output');
+      expect(strip.textContent).toContain('W3/Bilateral');
+      expect(strip.textContent).toContain('AfricaRice');
+      expect(strip.textContent).toContain('Rice Breeding');
     });
 
     it('keeps the band for every other page', () => {
@@ -509,14 +504,13 @@ describe('BilateralPageHeaderComponent', () => {
     });
 
     // `APF-R-12` / `APF-DD-10` — the "Result detail (read-only)" provenance surface: a static
-    // badge next to the status pill, off by default so the existing "one pill" assertion above
-    // never breaks by accident.
+    // badge in the secondary metadata strip.
     describe('AI provenance badge (APF-R-12)', () => {
       it('is absent by default', () => {
         expect(q('[data-testid="ai-provenance-badge"]')).toBeNull();
       });
 
-      it('renders next to the status pill when the caller asks for it', () => {
+      it('renders in detail identity strip when the caller asks for it', () => {
         fixture.componentRef.setInput('showAiProvenanceBadge', true);
         fixture.detectChanges();
         const badge = q('[data-testid="ai-provenance-badge"]');
@@ -525,7 +519,7 @@ describe('BilateralPageHeaderComponent', () => {
           'Generated with AI assistance from your sources. Review and edit before submitting.',
         );
         const pills = fixture.nativeElement.querySelectorAll('.rounded-full');
-        expect(pills.length).toBe(2);
+        expect(pills.length).toBe(1);
       });
 
       it('shows the identity strip for the badge alone, even with no status/code/type known', () => {

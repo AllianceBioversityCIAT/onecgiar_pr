@@ -44,6 +44,57 @@
   <div class="bcr-layout" data-testid="bilateral-editor-layout">
     <!-- Sections rail: 240px, white, own scroll, right rule to the floor. -->
     <aside class="bcr-rail pr-light-scroll" data-testid="bilateral-sections-rail">
+      <!-- Way back anchor: persistent, zero-scroll return to origin -->
+      <div class="bcr-rail__back-container mb-[14px] flex shrink-0 items-center border-b border-[var(--pr-border)] pb-[12px]">
+        <a
+          [routerLink]="backLink()"
+          [queryParams]="backQueryParams()"
+          class="group inline-flex min-h-[32px] w-full items-center gap-[6px] rounded-[8px] px-[8px] py-[6px] -ml-[8px] text-[13px] font-medium text-[var(--pr-text-secondary)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-400)] focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] focus-visible:outline-none"
+          [title]="backTitle()"
+          data-testid="bilateral-rail-back-link">
+          <i class="material-icons-round text-[16px] leading-none text-[var(--pr-text-muted)] transition-colors group-hover:text-[var(--pr-color-primary-400)]" aria-hidden="true">chevron_left</i>
+          <span>Back</span>
+        </a>
+      </div>
+
+      <!-- Result identity card: pinned result code, type, and status badge (BRRA-R-2, BRRA-R-5) -->
+      @if (resultId()) {
+        <div class="bcr-rail__identity mb-[16px] flex shrink-0 flex-col gap-[6px] border-b border-[var(--pr-border)] px-[10px] pb-[16px]" data-testid="bilateral-rail-identity">
+          @if (resultCode()) {
+            <span class="group/copy flex items-center gap-[4px]">
+              <span class="result-sections-code text-[12px] font-normal text-[var(--pr-text-muted)]" data-testid="bilateral-rail-code">
+                Result code #{{ resultCode() }}
+              </span>
+              <app-copy-button [value]="resultCode()" what="result code" />
+            </span>
+          }
+          @if (resultTypeName()) {
+            <span
+              class="result-sections-type text-[12px] font-semibold uppercase leading-[1.35] tracking-[0.02em] text-[var(--pr-text)]"
+              [title]="resultTypeName()"
+              data-testid="bilateral-rail-type">
+              {{ resultTypeName() }}
+            </span>
+          }
+          @if (statusLabel()) {
+            <span
+              class="result-sections-status mt-[4px] w-fit rounded-full border px-[10px] py-[3px] text-[11px] font-semibold uppercase tracking-[0.06em]"
+              [style.color]="statusFg()"
+              [style.border-color]="statusFg()"
+              [style.background-color]="statusBg()"
+              data-testid="bilateral-rail-status">
+              {{ statusLabel() }}
+            </span>
+          }
+        </div>
+      } @else if (isLoadingResult()) {
+        <div class="bcr-rail__identity mb-[16px] flex shrink-0 flex-col gap-[8px] border-b border-[var(--pr-border)] px-[10px] pb-[16px]" aria-hidden="true" data-testid="bilateral-rail-identity-skeleton">
+          <div class="pr-skeleton" style="height: 12px; width: 110px"></div>
+          <div class="pr-skeleton" style="height: 14px; width: 160px"></div>
+          <div class="pr-skeleton" style="height: 20px; width: 70px; border-radius: 9999px"></div>
+        </div>
+      }
+
       <p class="bcr-rail__eyebrow">Sections</p>
 
       <nav class="bcr-rail__nav" aria-label="Result sections">
@@ -116,10 +167,9 @@
         <app-bilateral-page-header
           variant="detail"
           [pageTitle]="headerTitle()"
-          [resultCode]="creationService.resultCode()"
-          [resultTypeName]="creationService.resultTypeName()"
+          [resultLevelName]="resultLevelName()"
           [isW3Bilateral]="creationService.isW3Bilateral()"
-          [statusId]="creationService.resultStatusId()"
+          [areaOfWork]="areaOfWork()"
           [showAiProvenanceBadge]="showAiProvenanceBadge()" />
 
         @if (showAiProvenanceBanner()) {

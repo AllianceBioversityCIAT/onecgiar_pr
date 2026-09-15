@@ -14,6 +14,7 @@ import { computed, signal, Injectable } from '@angular/core';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 
 @Injectable()
 class MockBilateralAiService {
@@ -171,6 +172,8 @@ describe('BilateralResultCreatorComponent', () => {
     mockRouter = {
       navigate: jest.fn().mockResolvedValue(true),
       url: '/bilateral/test',
+      createUrlTree: jest.fn((commands, extras) => ({ commands, extras })),
+      serializeUrl: jest.fn(tree => (Array.isArray(tree?.commands) ? tree.commands.join('/') : tree?.commands || '/bilateral/test')),
     };
 
     mockAiService = new MockBilateralAiService();
@@ -736,6 +739,144 @@ describe('BilateralResultCreatorComponent', () => {
       component.resultId.set(43);
       fixture.detectChanges();
       expect(banner()).not.toBeNull();
+    });
+  });
+
+  describe('BRRA-T-1: Rail back link and identity card', () => {
+    const q = (selector: string) => fixture.nativeElement.querySelector(selector);
+    let ctxService: BilateralContextService;
+
+    function enterEditor(id = 42): void {
+      mockRouter.url = `/bilateral/ABC/result/${id}`;
+      component.isCreating.set(false);
+      component.resultId.set(id);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      ctxService = TestBed.inject(BilateralContextService);
+      ctxService.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      creationService.resultCode.set(null);
+      creationService.resultTypeName.set(null);
+      creationService.resultStatusId.set(null);
+      creationService.isLoadingResult.set(false);
+    });
+
+    it('renders the persistent back link with label "Back" returning to results or origin (BRRA-R-1, Gate D1)', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      (smartNav as any).history = ['/bilateral/ABC/result/42'];
+      enterEditor(42);
+      const backLink = q('[data-testid="bilateral-rail-back-link"]');
+      expect(backLink).not.toBeNull();
+      expect(backLink.getAttribute('title')).toBe('Back');
+      expect(backLink.textContent.trim()).toContain('Back');
+      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backQueryParams()).toBeNull();
+    });
+
+    it('returns to where the user came from (e.g. results?phase=36) with query params intact', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      smartNav.recordUrl('/bilateral/ABC/results?phase=36');
+      smartNav.recordUrl('/bilateral/ABC/result/42');
+      mockRouter.url = '/bilateral/ABC/result/42';
+      enterEditor(42);
+
+      const backLink = q('[data-testid="bilateral-rail-back-link"]');
+      expect(backLink).not.toBeNull();
+      expect(backLink.textContent.trim()).toBe('chevron_leftBack');
+      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backQueryParams()).toEqual({ phase: '36' });
+    });
+
+    it('returns to Results Center when navigating from Results Center to bilateral editor', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      smartNav.recordUrl('/result/results-outlet/results-list');
+      smartNav.recordUrl('/bilateral/ABC/result/42');
+      mockRouter.url = '/bilateral/ABC/result/42';
+      enterEditor(42);
+
+      const backLink = q('[data-testid="bilateral-rail-back-link"]');
+      expect(backLink).not.toBeNull();
+      expect(backLink.textContent.trim()).toBe('chevron_leftBack');
+      expect(component.backLink()).toBe('/result/results-outlet/results-list');
+      expect(component.backQueryParams()).toBeNull();
+    });
+
+    it('preserves phase query param in rail back link when selectedVersionId is set (BRRA-R-1, Gate D1)', () => {
+      ctxService.selectedVersionId.set(2025);
+      enterEditor(42);
+      expect(component.backQueryParams()).toEqual({ phase: 2025 });
+    });
+
+    it('renders result identity block with code and copy button (BRRA-R-2, BRRA-AC-1, Gate D2)', () => {
+      creationService.resultCode.set('9368');
+      enterEditor(42);
+
+      const identity = q('[data-testid="bilateral-rail-identity"]');
+      expect(identity).not.toBeNull();
+
+      const codeEl = q('[data-testid="bilateral-rail-code"]');
+      expect(codeEl).not.toBeNull();
+      expect(codeEl.textContent.trim()).toContain('Result code #9368');
+
+      const copyBtn = identity.querySelector('app-copy-button');
+      expect(copyBtn).not.toBeNull();
+    });
+
+    it('renders uppercase result type name in rail identity card (BRRA-R-2, BRRA-AC-2, Gate D2)', () => {
+      creationService.resultTypeName.set('Capacity sharing for development');
+      enterEditor(42);
+
+      const typeEl = q('[data-testid="bilateral-rail-type"]');
+      expect(typeEl).not.toBeNull();
+      expect(typeEl.textContent.trim()).toBe('Capacity sharing for development');
+      expect(typeEl.className).toContain('uppercase');
+    });
+
+    it('renders status pill badge with correct token styles for statuses (BRRA-R-5, Gate D3)', () => {
+      // Status 1: Editing
+      creationService.resultStatusId.set(1);
+      enterEditor(42);
+
+      let statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl).not.toBeNull();
+      expect(statusEl.textContent.trim()).toBe('Editing');
+      expect(component.statusFg()).toBe('var(--pr-status-in-progress-fg)');
+      expect(component.statusBg()).toBe('var(--pr-status-in-progress-bg)');
+
+      // Status 5: Pending review
+      creationService.resultStatusId.set(5);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Pending review');
+      expect(component.statusFg()).toBe('#B45309');
+      expect(component.statusBg()).toBe('#FEF3C7');
+
+      // Status 6: Approved
+      creationService.resultStatusId.set(6);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Approved');
+      expect(component.statusFg()).toBe('var(--pr-status-approved-fg)');
+      expect(component.statusBg()).toBe('var(--pr-status-approved-bg)');
+
+      // Status 7: Rejected
+      creationService.resultStatusId.set(7);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Rejected');
+      expect(component.statusFg()).toBe('var(--pr-status-rejected-fg)');
+      expect(component.statusBg()).toBe('var(--pr-status-rejected-bg)');
+    });
+
+    it('renders identity skeleton loader when isLoadingResult is true and resultId is null (BRRA-R-2)', () => {
+      component.isCreating.set(false);
+      component.resultId.set(null);
+      creationService.isLoadingResult.set(true);
+      fixture.detectChanges();
+
+      const skeleton = q('[data-testid="bilateral-rail-identity-skeleton"]');
+      expect(skeleton).not.toBeNull();
     });
   });
 });
