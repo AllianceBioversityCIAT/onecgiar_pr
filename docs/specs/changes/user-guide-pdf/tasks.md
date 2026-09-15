@@ -150,7 +150,7 @@ Block execution until every box is ticked.
   - [ ] All copy is U.S. English, plain-language (no internal jargon like `status_id` or entity codes without a plain explanation).
   - [ ] Results Center section contains an explicit "update current-year innovations" statement (`UG-AC-4`).
 
-### `UG-T-10` — Curate the glossary from the CLARISA glossary
+### `UG-T-10` — Curate the glossary from the CLARISA glossary — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** docs
 - **Description:** Fetch https://clarisa.cgiar.org/landing-page/glossary — **note:** a direct HTTP fetch of this exact URL returned 404 during `/akili-execute` pre-flight (2026-09-15); confirm the correct current path (it may be a client-rendered SPA route requiring a browser, or the path may have moved) before curating. Extract only the terms that actually appear in the 6 covered flows (e.g., AOW, HLO, Science Program, Initiative, ToC, IPSR-related terms), and write `content/glossary.json` as `[{ term, definition, sourceUrl, accessedOn }]`. Any in-flow term absent from the CLARISA glossary must be flagged (a `sourceUrl: null` / `note` field), never silently dropped.
@@ -160,9 +160,9 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-12`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] Every entry with a `sourceUrl` is a faithful match (or attributed paraphrase) of the live CLARISA definition, spot-checked by a second read against the source page.
-  - [ ] No term unrelated to the 6 flows is included.
-  - [ ] Any in-flow term not found on CLARISA is explicitly flagged, not omitted.
+  - [x] Every entry with a `sourceUrl` is a faithful match (or attributed paraphrase) of the live CLARISA definition, spot-checked by a second read against the source page.
+  - [x] No term unrelated to the 6 flows is included.
+  - [x] Any in-flow term not found on CLARISA is explicitly flagged, not omitted.
 
 ### `UG-T-11` — Build `template/guide.html` + `guide.css`
 

@@ -120,6 +120,31 @@
 
 ---
 
+### `UG-T-10` — Curate the glossary from the CLARISA glossary
+
+- **Status:** PASS (attempt 1)
+- **Date:** 2026-09-15
+- **Skills assigned:** none (content task). **Effort:** medium. Implementer `akili-implementer` (sonnet) · Reviewer `akili-reviewer` (opus).
+- **Files changed:** `tooling/content/glossary.json` (new, 20 entries: 16 sourced + 4 flagged).
+
+**Attempt 1**
+- **Implementer:** discovered the SPA is backed by the read-only JSON API `GET https://api.clarisa.cgiar.org/api/glossary` (70 terms) and fetched it from within the loaded page; curated to the flow vocabulary named in the brief + `tasks.md` examples; alphabetical; flagged entries carry `sourceUrl: null`, `definition: null`, `flag: "not found on CLARISA"`. Extraction script was throwaway (scratchpad). Verification: JSON parses to the `design.md` §2 shape.
+- **Implementer `Not Done / Assumptions` (verbatim substance):** (a) scope curated without `UG-T-9` section copy (does not exist yet); (b) "Science Program" mapped to CLARISA `Program`; (c) flagged entries have `definition: null`; (d) full IPSR/Scaling-Readiness taxonomy not expanded.
+- **Reviewer verdict: PASS.** Fidelity table against the Leader's API snapshot: all 16 sourced definitions **exact** (whitespace/`<br />` normalisation only, curly quotes preserved); all 4 flags **correct** after a synonym sweep. Judged (a)–(d) accepted — final flow-scope closure is `UG-AC-5`/`UG-T-16` by design.
+
+**Forward pointers (carried by the Leader into the named briefs):**
+- → `UG-T-9`: use the glossary's exact `term` strings as in-copy vocabulary ("Area of Work (AoW)", "High Level Output (HLO)", "Innovation Packages and Scaling Readiness (IPSR)", "Program"); if the copy uses the UI label "Science Program", add an alias entry to the glossary; any new flow term introduced by the copy must be added/flagged here before `UG-T-12`.
+- → `UG-T-12`: render `definition === null` / `sourceUrl === null` without emitting literal `null` or an empty "Source:" line; → `UG-T-13`: assert no empty glossary `<dd>`.
+
+**ADVISORY (4R, non-gating, recorded):** readability — flagged terms have no reader-facing definition (a short PRMS-authored definition with `source: "PRMS (not on CLARISA)"` would inform rather than only record a gap; decision deferred to `UG-T-9`/`UG-T-16`); readability — key name `flag` vs. the Description's `note` example, fix the shape comment in `design.md` §2 at archive; resilience — CLARISA `referenceDate` is null for every term, so keep the API snapshot (or per-definition hashes) under `tooling/content/` for future diffing (recorded, not adopted); risk (scope breadth) — candidate add-list once `UG-T-9` copy exists: `Package of deliverables (POD)`, `Deliverable`, `Innovation readiness`, `Innovation Bundle`, `Scaling Readiness`, `Scaling`, `Key result story` (CLARISA analogue of the flagged `OICR`), `Contributor`/`Partner`.
+
+- **Requirements covered:** `UG-R-5`, `UG-US-8`; `UG-AC-5` partially (final cross-check at `UG-T-16`).
+- **Decisions made:** DoD box "no term unrelated to the 6 flows" ticked provisionally on the Reviewer's evidence; `UG-T-16` re-checks the union with the final copy.
+- **Issues encountered:** none.
+- **Final verification result:** PASS.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -148,4 +173,4 @@ Before starting `UG-T-2`, pre-flight environment verification found:
 
 ## 5. Summary (updated as tasks complete)
 
-4 of 16 tasks complete (`UG-T-1`, `UG-T-2`, `UG-T-4`, `UG-T-8`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. In flight: `UG-T-3`+`UG-T-7` (one Implementer), `UG-T-10` (Implementer). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+5 of 16 tasks complete (`UG-T-1`, `UG-T-2`, `UG-T-4`, `UG-T-8`, `UG-T-10`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. In flight: `UG-T-3`+`UG-T-7` (one Implementer), `UG-T-11` (Implementer). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
