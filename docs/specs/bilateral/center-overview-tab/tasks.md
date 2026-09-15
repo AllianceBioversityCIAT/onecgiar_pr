@@ -105,7 +105,7 @@
   - [x] Spec green; grep gate 0 hex; lint clean.
   - [x] Commit: `✨ feat(bilateral-overview) [<ticket>]: ECharts builders and a11y tables for the six cards`.
 
-### `COV-T-5` — Overview page and controls components
+### `COV-T-5` — Overview page and controls components `[x]`
 
 - **Type:** `client`
 - **Description:** `BilateralOverviewComponent` (page; URL ↔ state sync; effective phase = URL ?? shared signal ?? Open; calls the service; `scopedRows` via `filterCenterResults`; card models via `aggregate`; options via `charts`; KPI deck + 6 cards; per-card skeleton / error+Retry / ≤160px empty; center-switch reset; deep-link `routerLink`s carrying serialized params) and `OverviewControlsComponent` (phase `app-pr-select` with Open badge; Filter button with count badge; popover with the six dimensions; chips; Clear; Escape/outside-click closes without applying; keyboard operable). Layout per `design.md` §6.3 and the mockup; controls row sticky inside `#workArea`.
@@ -120,12 +120,12 @@
 - **Input that would make the check fail:** a tile as `<div (click)>` (name assertion fails); a KPI rendered from a component-local count instead of the aggregate model (the "hero equals `model.kpis.total`" DOM assertion fails when the fixture is changed); a `#` hex or `pi pi-` in the template.
 - **What this cannot prove / disqualifier:** presence of `sticky top-0` classes proves nothing about behavior — the sticky proof is the CT measurement in `COV-T-8` at two heights (`KZ-EVM-1`); jsdom cannot measure layout or contrast (D4/D10) — those are `COV-T-8`. Any DOM assertion on a class name alone is recorded as presence-only in the spec's comments.
 - **Definition of done:**
-  - [ ] `tsc`, Jest, lint, grep gates green.
-  - [ ] Every number visible on screen is also in text (no chart-only figure).
-  - [ ] SCSS limited to `:host` box setup; all layout/color/typography as Tailwind utilities (rule 19).
-  - [ ] Commit: `✨ feat(bilateral-overview) [<ticket>]: Overview page — controls row, KPI deck and six cards`.
+  - [x] `tsc`, Jest, lint, grep gates green.
+  - [x] Every number visible on screen is also in text (no chart-only figure).
+  - [x] SCSS limited to `:host` box setup; all layout/color/typography as Tailwind utilities (rule 19).
+  - [x] Commit: `✨ feat(bilateral-overview) [<ticket>]: Overview page — controls row, KPI deck and six cards`.
 
-### `COV-T-6` — Route and header: Overview as first tab, alias retired, tab links carry the phase
+### `COV-T-6` — Route and header: Overview as first tab, alias retired, tab links carry the phase `[x]`
 
 - **Type:** `client`
 - **Description:** Add the `overview` route before `home` in `BilateralRouting` (`prHide: true`); add the Overview tab first in `bilateral-page-header` (`space_dashboard`, same classes as the other tabs); make `'overview'` activate only Overview (retire the Reporting alias); bind `queryParams` `{ phase }` on the four tab `routerLink`s when `ctx.selectedVersionId()` is set; rewrite the 4 alias spec cases and add the Overview-active case. **Pre-step:** re-read the header files at HEAD (concurrent `ai-drafts-redesign` edits — keep its "AI Draft Results" label).
@@ -140,9 +140,9 @@
 - **Input that would make the check fail:** leaving `|| activeTab() === 'overview'` in `isReportingActive` (the "Reporting not active" assertion fails); changing the wildcard to `overview`.
 - **What this cannot prove / disqualifier:** `routerLink` bindings are asserted as attributes — the real navigation (`/bilateral/AfricaRice` → Reporting; tab click keeps phase) is confirmed live in `COV-T-8`.
 - **Definition of done:**
-  - [ ] Specs green (including the other spec's label expectation, untouched); `tsc`; lint.
-  - [ ] Sidebar and Home center-card links **not** modified (OQ-1).
-  - [ ] Commit: `✨ feat(bilateral-page-header) [<ticket>]: Overview as first center tab; tab links carry the shared phase`.
+  - [x] Specs green (including the other spec's label expectation, untouched); `tsc`; lint.
+  - [x] Sidebar and Home center-card links **not** modified (OQ-1).
+  - [x] Commit: `✨ feat(bilateral-page-header) [<ticket>]: Overview as first center tab; tab links carry the shared phase`.
 
 ### `COV-T-7` — Results, Reporting and Draft Results tabs read (and Results writes) the contract `[x]`
 
