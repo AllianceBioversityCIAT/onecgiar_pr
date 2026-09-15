@@ -26,6 +26,35 @@ export interface MyDraftResultsFilterState {
 export interface DraftProjectFilterOption {
   value: string;
   label: string;
+  code?: string;
+  title?: string;
+}
+
+/**
+ * Formats a project option for the filter dropdown (BADR-R-1, BADR-AC-1, BADR-AC-2).
+ * If the mapped name contains ' — ', splits into code and title.
+ * If unmapped, falls back to the raw project ID.
+ */
+export function formatDraftProjectOption(
+  id: unknown,
+  nameMap: Record<number, string> = {}
+): DraftProjectFilterOption {
+  const value = normalizeProjectId(id);
+  const mapped = nameMap[Number(value)];
+  const label = mapped ?? value;
+  let code: string | undefined;
+  let title: string | undefined;
+
+  if (label.includes(' — ')) {
+    const [c, ...rest] = label.split(' — ');
+    code = c.trim();
+    title = rest.join(' — ').trim();
+  }
+
+  const option: DraftProjectFilterOption = { value, label };
+  if (code) option.code = code;
+  if (title) option.title = title;
+  return option;
 }
 
 /** `null`/`undefined`/`''` all mean "no project", and ids are compared as trimmed strings. */

@@ -27,7 +27,7 @@ export class UnsubmitModalComponent {
       next: resp => {
         this.api.alertsFe.show({ id: 'unsubmodal', title: `Success`, description: `The result has been unsubmitted.`, status: 'success' });
         this.unsubmitModalSE.showModal = false;
-        this.currentResultSE.GET_resultById();
+        this.currentResultSE.GET_resultById(true);
         this.requesting = false;
       },
       error: err => {

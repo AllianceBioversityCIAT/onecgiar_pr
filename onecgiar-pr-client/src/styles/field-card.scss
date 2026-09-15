@@ -1,90 +1,199 @@
-// Shared "field block" design — label + red asterisk + the control, nothing else.
+// Shared "field block" design — proposal 18, approved 14-Sep-2026.
 //
-// Replaces the status-coloured card (blue/orange/green/red border + tinted header + a
-// Mandatory/Optional pill + a colour legend). Per the approved mockup, a field says only what it
-// is and whether it is required; whether the SECTION is complete is answered once, by the bottom
-// bar. Painting every mandatory-but-empty field orange on load also read as an error state on a
-// form the user had not started yet.
+// A card with a state-tinted header. Three things say three DIFFERENT things, and none of them
+// repeats another:
+//   · the TAG on the left  → is this field required (absent tag = optional; there is no asterisk)
+//   · the TINT of the header → how the field stands (filled / empty / over the limit)
+//   · the PILL on the right → whether the work is saved, which nothing else on the page tells you
+// The guidance text is folded away until the pointer (or keyboard focus) is on the field, so a long
+// form reads as a list of questions instead of a wall of instructions.
 //
-// The class name `.field_card` is unchanged on purpose: `[appSectionSkeleton]` masks by it.
-// `.fc-error` is the one state that survives — an over-limit field must still be visible.
+// The class name `.field_card` is unchanged on purpose: `[appSectionSkeleton]` masks by it, and
+// `.fch_title` still holds the label (`mandatoryFieldLabel` reads it). `.fc-error` survives too.
+//
 // Variante de FILA (`layout="row"`): label a la izquierda, control a la derecha, separadas por
 // una regla de 1px — el patrón que el mockup usa para una lista de campos homogéneos
 // (`PRMS-Reporting.dc.html`, las cinco filas de Impact Area scores: `min-height:44px`, `gap:16px`,
-// nombre en 13px/500, y la pista de 372px pegada a la derecha).
-//
-// Grid, no flex: así una descripción —si el campo llega a tener— cae bajo el label en la MISMA
-// columna en vez de convertirse en un tercer item que empuja el control fuera de sitio.
-.field_card.fc-row {
-  margin: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 16px;
-  min-height: 44px;
-  padding: 4px 0;
-  border-top: 1px solid var(--pr-border);
-
-  .field_card_header {
-    margin-bottom: 0;
-    // 13px/500: en una lista de cinco filas el 14/600 del modo apilado compite con el título de
-    // la sección y hace que cada fila se lea como un encabezado propio.
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .field_card_desc {
-    grid-column: 1;
-    margin-top: 4px;
-  }
-
-  // El control proyectado toma la segunda columna y conserva su ancho propio.
-  > .pr-field {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
-  }
-}
-
+// nombre en 13px/500, y la pista de 372px pegada a la derecha). Esa variante NO lleva tarjeta: cinco
+// tarjetas seguidas con la misma pregunta pesan más que las cinco respuestas que el usuario compara.
 .field_card {
-  margin: 20px 0; // vertical separation from siblings
+  margin: 16px 0; // vertical separation from siblings
+  // Contenedor de consulta: la cabecera decide qué cabe mirando SU ancho, no el de la ventana.
+  // Un campo a media columna y otro a ancho completo comparten componente y viewport, así que sin
+  // esto la píldora de guardado se comía el título del estrecho — pasó en "Level:", que quedó en
+  // una "L" (Yeck, 14-sep-2026).
+  container-type: inline-size;
+  // SIN marco gris (variante "sin tarjeta" de la propuesta 18, 14-sep-2026): la cabecera tintada
+  // ya delimita el campo por sí sola, y el rectángulo gris alrededor sumaba una segunda caja
+  // dentro de la caja blanca de la sección — dos bordes para separar una cosa de la nada.
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+
+  // Per-state palette. Defaults are the neutral chrome used when the wrapper never reported
+  // whether the field holds a value (`data-state="plain"`) — half the call sites do not.
+  --fc-tint: var(--pr-surface-sunken);
+  --fc-edge: var(--pr-border);
+  --fc-ink: var(--pr-text);
+
+  // Lleno = VERDE, sea obligatorio u opcional (Yeck, 14-sep-2026). El opcional completo tenía su
+  // propio azul, y eso hacía que la cabecera respondiera a dos preguntas a la vez: "¿está lleno?"
+  // y "¿era obligatorio?". La segunda ya la contesta el badge REQUIRED, y mezclarlas obligaba al
+  // reportero a traducir un color para saber si le faltaba algo. Ahora el color dice UNA cosa:
+  // verde hecho · naranja falta · rojo mal · neutro opcional vacío.
+  &[data-state='ok'],
+  &[data-state='opt'] {
+    --fc-tint: #eafff0;
+    --fc-edge: #c9f2d8;
+    --fc-ink: #14562b;
+  }
+  // Pendiente. Era el par amber-100/200 (#fef3c7 sobre #fde68a) con tinta #92400e: un amarillo
+  // mostaza pastel que Yeck rechazó de plano el 14-sep-2026 — el amarillo es el hue que peor
+  // envejece en una superficie grande, y aquí la cabecera es una franja de ancho completo.
+  // El par naranja de la rampa del repo dice lo mismo ("esto falta") con un tono limpio, y no
+  // inventa hexes: `--pr-color-orange-50/-200/-700` ya existen en este archivo.
+  &[data-state='todo'] {
+    --fc-tint: var(--pr-color-orange-50);
+    --fc-edge: var(--pr-color-orange-200);
+    --fc-ink: var(--pr-color-orange-700);
+  }
+  &[data-state='error'] {
+    --fc-tint: var(--pr-danger-bg);
+    --fc-edge: var(--pr-danger-soft);
+    --fc-ink: var(--pr-danger);
+  }
 
   .field_card_header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-    font-size: 14px;
-    font-weight: 600;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 12px;
+    min-height: 36px;
+    // Redondeada por los cuatro lados: sin tarjeta debajo, una banda con esquinas rectas abajo
+    // se lee como el techo de una caja que no existe.
+    border-radius: 8px;
+    background: var(--fc-tint);
+    border: 1px solid var(--fc-edge);
+    font-size: 13px;
+    font-weight: 700;
     line-height: 1.35;
-    color: var(--pr-text);
+    color: var(--fc-ink);
 
     .fch_title {
       min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    // The asterisk is the ONLY required-marker now. Same convention `app-pr-field-header` has
-    // used all along (`.required::after { content: '*' }`), so the two label styles agree —
-    // including the colour: both are `--pr-field-required-fg` (#b42318, the mockup's value).
-    // It used to be `--pr-color-red-300`, which is the ERROR red: a field that is merely
-    // required rendered in the same colour as a field that is wrong.
+    // 🛑 The ONLY requiredness marker. The optional field deliberately carries NO counterpart:
+    // "unmarked" is the marker.
+    //
+    // 14-sep-2026 — NOT a filled pill. It was one for half a day and read as a price sticker
+    // ("como de ticket"): a solid block of colour is the loudest thing a chip can be, and this one
+    // repeats on every field of the form — five times in a row down the Impact Area list alone.
+    // A dot plus the word carries the same information at a fraction of the weight, and the red
+    // still reads instantly against the tinted headers because nothing else in the row is red.
     .fch_required {
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      // Badge de fondo BLANCO con borde rojo fino: tiene forma propia (que el texto suelto no
+      // tenía) sin ser un bloque de color (que era lo de la pastilla rellena). El blanco además
+      // se recorta igual de bien sobre las tres cabeceras tintadas — verde, ámbar y azul — y
+      // sobre el blanco de las filas `fc-row`, donde lo que lo sostiene es el borde.
+      padding: 4px 10px 4px 8px;
+      border: 1px solid #fecaca;
+      border-radius: 999px;
+      background: var(--pr-color-white);
       color: var(--pr-field-required-fg);
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      line-height: 1;
+      text-transform: uppercase;
+
+      // The dot does the work the pill's fill used to do: it puts a bit of solid colour in the
+      // row so the marker is found by scanning, not by reading.
+      &::before {
+        content: '';
+        flex: none;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+      }
     }
 
     // Info button sits right after the label, not pushed to the far edge: with no pill to clear
     // it belongs to the label, and a lone icon floating at the right of a wide row reads as
-    // unrelated. (Was `margin-left: auto`.)
+    // unrelated.
     .sgi-dac-info {
       flex-shrink: 0;
     }
+
+    // ── The save pill. Fed by SaveButtonService.savedTick — a save that FAILED never clears the
+    // "unsaved" mark, which is the whole reason this is not wired to `isSaving`.
+    .fch_save {
+      flex: none;
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px 3px 6px;
+      border-radius: 999px;
+      background: rgb(255 255 255 / 0.75);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--pr-text-muted);
+      white-space: nowrap;
+
+      &[data-save='saved'] {
+        color: #14562b;
+        background: rgb(255 255 255 / 0.9);
+      }
+      &[data-save='unsaved'] {
+        color: var(--pr-warning-strong);
+        background: var(--pr-color-white);
+        box-shadow: inset 0 0 0 1px #fde68a;
+      }
+      &[data-save='saving'] {
+        background: var(--pr-color-white);
+      }
+
+      svg {
+        display: block;
+      }
+
+      .fch_spin {
+        animation: fc-spin 900ms linear infinite;
+        transform-origin: 50% 50%;
+      }
+    }
   }
 
+  // ── Guidance ─────────────────────────────────────────────────────────────
+  // 🛑 SIEMPRE VISIBLE. Estuvo plegada (se abría al pasar el ratón) durante unas horas del
+  // 14-sep-2026 y fue un error con víctimas concretas: la guía de un campo llega por DOS caminos
+  // distintos —`tooltip` desde la fase 2026, y `description` inline en las fases anteriores— y
+  // plegarla dejó las fases viejas sin nada en pantalla: sin ⓘ (que solo se pinta cuando hay
+  // tooltip) y con el texto colapsado a cero. Un reportero de 2025 abría el formulario y la guía
+  // simplemente no existía. Verificado en el resultado 8553 / fase 34.
+  //
+  // El plegado se queda solo para lo que sí tiene su propio disparador: la guía del TOOLTIP, que
+  // el usuario ancla con el pin (`.fc-pinned`).
   .field_card_desc {
-    margin-bottom: 8px;
-    font-size: 13px;
+    position: relative;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 0 0 8px 8px;
+    background: var(--pr-surface-raised-soft);
+    border-bottom: 1px solid var(--pr-border-divider);
+    font-size: 12.5px;
     line-height: 1.5;
     color: var(--pr-text-secondary);
 
@@ -96,18 +205,256 @@
     }
   }
 
-  // No inner padding any more: the block has no card chrome to inset the control from.
-  .pr-input,
-  .pr-field {
-    padding: 0;
+  // Fijada: el bloque queda abierto pase lo que pase con el puntero.
+  // Botón de soltar, en la esquina del bloque fijado. Discreto: es una salida, no una acción del
+  // formulario. Sube de contraste al acercarse y es alcanzable por teclado (no se oculta con
+  // `display`, solo baja de color).
+  &.fc-pinned .field_card_desc {
+    padding-right: 34px;
   }
 
-  // ── Error is the only state painted on the field ─────────────────────────
-  // Over the word/character limit. Everything else (empty vs filled, required vs optional) is
-  // already carried by the asterisk and the section indicator, so it is not repeated here.
+  .fcd_unpin {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--pr-text-subtle);
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--pr-color-white);
+      color: var(--fc-ink);
+    }
+
+    svg {
+      display: block;
+    }
+  }
+
+  // El control cuelga de la banda, alineado con el borde de la sección (no con el de una tarjeta).
+  > :not(.field_card_header):not(.field_card_desc) {
+    display: block;
+    padding: 8px 2px 0;
+    background: transparent;
+  }
+
+  // ── Error is still painted on the control itself ─────────────────────────
+  // The header tint answers "is something wrong here?" from across the page; the red border
+  // answers "where exactly?" once the user is reading the field.
   &.fc-error {
     :is(input, textarea) {
       border-color: var(--pr-color-red-300) !important;
     }
+  }
+}
+
+.field_card.fc-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--pr-border);
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+
+  .field_card_header {
+    margin-bottom: 0;
+    padding: 0;
+    background: transparent;
+    // La fila no lleva banda: ni fondo, ni borde, ni esquinas. Su separador es la regla de 1px
+    // de arriba, y el marco que sí luce el modo apilado aquí encerraría cinco etiquetas seguidas.
+    border: 0;
+    border-radius: 0;
+    min-height: 0;
+    // 13px/500: en una lista de cinco filas el 14/600 del modo apilado compite con el título de
+    // la sección y hace que cada fila se lea como un encabezado propio.
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--pr-text);
+  }
+
+  .field_card_desc {
+    grid-column: 1;
+    margin-top: 4px;
+    // En fila no hay cabecera que revele la guía al pasar por encima, así que se muestra siempre.
+    max-height: none;
+    opacity: 1;
+    padding: 0;
+    background: transparent;
+    border-bottom: 0;
+  }
+
+  // El control proyectado toma la segunda columna y conserva su ancho propio.
+  > :not(.field_card_header):not(.field_card_desc) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+// ── layout="inline": la pregunta y su respuesta en la MISMA banda ──────────
+// El título ocupa la izquierda y el control se va a la derecha, los dos dentro del tinte de
+// estado. Nace del sí/no: apilado, la pregunta y los dos botones ocupaban dos alturas y quedaban
+// separados por el borde de la banda, como si no fueran lo mismo.
+.field_card.fc-inline {
+  display: grid;
+  // El título ocupa SU ancho y el control arranca justo después. Con `1fr auto` el control se iba
+  // al extremo derecho de la banda y quedaba a media pantalla de la pregunta: dos elementos en la
+  // misma línea pero sin relación visible.
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  // 🛑 El color NO envuelve las dos columnas: la banda termina donde termina el texto y el control
+  // queda fuera, sobre el fondo de la página. Envolviéndolo todo, el tinte se comía el control —
+  // un sí/no sobre verde se lee como parte del cartel, no como algo que se puede pulsar.
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+
+  .field_card_header {
+    grid-column: 1;
+    padding: 8px 12px;
+    min-height: 36px;
+    background: var(--fc-tint);
+    border: 1px solid var(--fc-edge);
+    border-radius: 8px;
+  }
+
+  // La guía cae debajo, a todo el ancho, y solo cuando toca mostrarla.
+  .field_card_desc {
+    grid-column: 1 / -1;
+    margin-top: 2px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+  }
+
+  // El control proyectado: segunda columna, pegado al título, no al borde.
+  > :not(.field_card_header):not(.field_card_desc) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+// ── Cabecera estrecha: la píldora de guardado se queda en el icono ─────────
+// Se mide el CAMPO, no la pantalla. Primero cae la palabra (el icono ya dice el estado y el
+// `title` lo deja disponible al pasar el ratón); si aún no cabe, cae también el tag REQUIRED,
+// que el asterisco del `sr-only` sigue anunciando a los lectores de pantalla.
+@container (max-width: 380px) {
+  .field_card .field_card_header .fch_save {
+    padding: 3px 5px;
+    gap: 0;
+
+    span:last-child {
+      display: none;
+    }
+  }
+}
+
+// 🛑 240px, no 330: con el umbral alto el tag se colapsaba en campos donde SOBRABA sitio — un
+// "Level:" de 325px de ancho tiene espacio de sobra para el título, el tag y el icono (≈170px en
+// total) y aun así perdía la palabra. El colapso es el último recurso, no la primera respuesta.
+@container (max-width: 240px) {
+  .field_card .field_card_header .fch_required {
+    padding: 3px 5px;
+    font-size: 0;
+    gap: 0;
+
+    &::before {
+      margin: 0;
+    }
+  }
+}
+
+// ── El valor de un campo de SOLO LECTURA ──────────────────────────────────
+// Misma caja que un control editable, en gris y sin borde de foco: se lee como un dato, no como
+// algo que se pueda escribir. Sin esto el texto colgaba desnudo bajo la cabecera y, sobre el panel
+// del tab, no se sabía dónde acababa un campo y empezaba el siguiente.
+.field_card .fc-readonly-value {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--pr-border-divider);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pr-text-secondary);
+  font-style: italic;
+}
+
+// ── layout="boxed": el grupo entero dentro de un marco ────────────────────
+// Un multi-select no termina en su control: sigue con la lista de lo elegido. Sin marco eso son
+// tres bloques sueltos —cabecera, desplegable y chips— que la vista no ata entre sí, y con varios
+// campos así seguidos nadie sabe qué pertenece a qué. El marco lo dice sin escribir una palabra.
+.field_card.fc-boxed {
+  border: 1px solid var(--pr-border);
+  border-radius: 10px;
+  background: var(--pr-surface-card);
+  // 🛑 NADA de `overflow: hidden` aquí. El panel de opciones del multi-select es un absolute que
+  // vive dentro de esta caja: con overflow oculto, abrir el desplegable mostraba una lista cortada
+  // a la altura del marco. Lo que el recorte iba a resolver —que la cabecera no se salga por las
+  // esquinas— se resuelve redondeando la cabecera, que es lo único pegado al borde.
+  overflow: visible;
+
+  .field_card_header {
+    border-radius: 9px 9px 0 0;
+    border-bottom: 1px solid var(--fc-edge);
+  }
+
+  > :not(.field_card_header):not(.field_card_desc) {
+    padding: 10px 12px 12px;
+  }
+
+  // Dentro del marco, lo elegido NO lleva su propia caja: una caja dentro de otra caja es ruido.
+  // Basta una línea que lo separe del control.
+  .selected_container {
+    margin-top: 10px;
+    padding: 10px 0 0;
+    border: 0;
+    border-top: 1px dashed var(--pr-border);
+    border-radius: 0;
+    background: transparent;
+
+    // Sin nada elegido, la línea punteada se queda sola bajo el desplegable y parece un campo
+    // partido. `:empty` no basta: el contenedor trae sus divs de estructura aunque el `*ngFor`
+    // no pinte un solo chip, así que la condición es "no hay chips", no "no hay nodos".
+    &:not(:has(.pr_chip_selected)) {
+      display: none;
+    }
+  }
+}
+
+@keyframes fc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field_card .field_card_desc {
+    transition-duration: 1ms;
+  }
+  .field_card .field_card_header .fch_save .fch_spin {
+    animation-duration: 1ms;
   }
 }

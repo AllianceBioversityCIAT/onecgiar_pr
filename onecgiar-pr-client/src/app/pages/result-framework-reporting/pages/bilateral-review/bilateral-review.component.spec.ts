@@ -365,23 +365,34 @@ describe('BilateralReviewComponent', () => {
 
   describe('Pending toggle (BRT-AC-5)', () => {
     it('toggles the Pending chip and card together, and back to All', () => {
+      // Starts at Pending by default
+      expect(byTestId('kpi-pending-toggle')?.getAttribute('aria-pressed')).toBe('true');
+      expect(byTestId('bilateral-review-chip-pending')?.getAttribute('aria-pressed')).toBe('true');
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
+
+      // First click toggles to All
+      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(byTestId('kpi-pending-toggle')?.getAttribute('aria-pressed')).toBe('false');
+      expect(byTestId('bilateral-review-chip-all')?.getAttribute('aria-pressed')).toBe('true');
+      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(7);
+
+      // Second click toggles back to Pending
       (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       expect(byTestId('kpi-pending-toggle')?.getAttribute('aria-pressed')).toBe('true');
       expect(byTestId('bilateral-review-chip-pending')?.getAttribute('aria-pressed')).toBe('true');
       expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(3);
-
-      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
-      fixture.detectChanges();
-
-      expect(byTestId('kpi-pending-toggle')?.getAttribute('aria-pressed')).toBe('false');
-      expect(root().querySelectorAll('[data-testid="bilateral-review-row-action"]').length).toBe(7);
     });
   });
 
   describe('Search (BRT-AC-6)', () => {
     it('keeps only DESIRA rows and sets the match count', () => {
+      component.status.set('all');
+      fixture.detectChanges();
+
       const input = byTestId('bilateral-review-search') as HTMLInputElement;
       input.value = 'desira';
       input.dispatchEvent(new Event('input'));
@@ -395,6 +406,7 @@ describe('BilateralReviewComponent', () => {
 
   describe('Center filter (BRT-AC-7)', () => {
     it('narrows to CIP-led rows, shows a badge of 1, and Clear filters restores the list', () => {
+      component.status.set('all');
       component.centers.set(['C1']);
       fixture.detectChanges();
 
@@ -411,6 +423,9 @@ describe('BilateralReviewComponent', () => {
 
   describe('Only pending toggle', () => {
     it('sets status to pending', () => {
+      component.status.set('all');
+      fixture.detectChanges();
+
       (byTestId('bilateral-review-only-pending') as HTMLButtonElement).click();
       fixture.detectChanges();
 
@@ -631,6 +646,8 @@ describe('BilateralReviewComponent', () => {
     // though each has its own toggle method and its own query-param key.
     it('toggling a PROJECT option through the rendered checkbox narrows the rows, flips aria-checked, and writes ?project=', () => {
       openPopover();
+      component.status.set('all');
+      fixture.detectChanges();
       router.navigate.mockClear();
       const betaOption = Array.from(root().querySelectorAll('[data-testid="bilateral-review-filter-option-project"]')).find(
         el => el.querySelector('[data-testid="bilateral-review-filter-option-label"]')?.textContent?.trim() === 'P2 - DESIRA Beta'
@@ -1268,6 +1285,8 @@ describe('BilateralReviewComponent', () => {
 
     describe('Selecting a center (BRC-AC-2, R-2, R-3)', () => {
       it('onCenterChipSelect sets centers() to [CIP code], creates active chip in Row 2, narrows rows to CIP, and reflects in the popover', () => {
+        component.status.set('all');
+        fixture.detectChanges();
         router.navigate.mockClear();
         component.onCenterChipSelect('C1');
         fixture.detectChanges();
@@ -1374,8 +1393,8 @@ describe('BilateralReviewComponent', () => {
       expect(component.activeFilterCount()).toBe(1);
     });
 
-    it('status ≠ all alone counts 1 (onlyPending IS the status dimension, not a second one)', () => {
-      component.setStatus('pending');
+    it('status (approved or rejected) alone counts 1', () => {
+      component.setStatus('approved');
       fixture.detectChanges();
       expect(component.activeFilterCount()).toBe(1);
     });
@@ -1427,7 +1446,7 @@ describe('BilateralReviewComponent', () => {
 
     it('reads "Clear filters · 3" with search + status + one center active, unaffected by phase', () => {
       component.search.set('maize');
-      component.setStatus('pending');
+      component.setStatus('approved');
       component.centers.set(['C1']);
       fixture.detectChanges();
 
@@ -1491,8 +1510,6 @@ describe('BilateralReviewComponent', () => {
     });
 
     it('clicking Pending Review in metric ribbon toggles pending filter via kpi-pending-toggle', () => {
-      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
-      fixture.detectChanges();
       expect(component.status()).toBe('pending');
       expect(byTestId('bilateral-review-chip-pending')?.getAttribute('aria-pressed')).toBe('true');
 
@@ -1500,11 +1517,16 @@ describe('BilateralReviewComponent', () => {
       fixture.detectChanges();
       expect(component.status()).toBe('all');
       expect(byTestId('bilateral-review-chip-all')?.getAttribute('aria-pressed')).toBe('true');
+
+      (byTestId('kpi-pending-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(component.status()).toBe('pending');
+      expect(byTestId('bilateral-review-chip-pending')?.getAttribute('aria-pressed')).toBe('true');
     });
 
     it('renders dismissible active filter chips for active filters', () => {
       component.search.set('beta');
-      component.status.set('pending');
+      component.status.set('approved');
       component.centers.set(['C1']);
       component.projects.set(['P1 - Alpha Project']);
       component.categories.set(['Policy']);
@@ -1513,7 +1535,7 @@ describe('BilateralReviewComponent', () => {
       const chips = component.activeFilterChips();
       expect(chips.length).toBe(5);
       expect(chips.some(c => c.label === 'Search: "beta"')).toBe(true);
-      expect(chips.some(c => c.label === 'Status: Pending review')).toBe(true);
+      expect(chips.some(c => c.label === 'Status: Approved')).toBe(true);
       expect(chips.some(c => c.label === 'Center: CIP')).toBe(true);
       expect(chips.some(c => c.label === 'Project: P1 - Alpha Project')).toBe(true);
       expect(chips.some(c => c.label === 'Category: Policy')).toBe(true);
@@ -1670,7 +1692,7 @@ describe('BilateralReviewComponent', () => {
 
       beforeEach(() => {
         fixture.destroy();
-        build({}, of(groupedResponse(GROUP_FIXTURE_ROWS)));
+        build({ status: 'all' }, of(groupedResponse(GROUP_FIXTURE_ROWS)));
         component.setGroup('center');
         fixture.detectChanges();
         fixture.detectChanges();

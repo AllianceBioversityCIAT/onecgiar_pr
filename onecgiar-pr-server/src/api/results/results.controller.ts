@@ -832,7 +832,7 @@ export class ResultsController {
   @ApiOperation({
     summary: 'Get bilateral results by center and phase',
     description:
-      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters.',
+      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters. Each row also includes `project_id` (the lead bilateral project CLARISA id, `null` when the result has no linked project) alongside `project_name`, both resolved from the same lead-project selection.',
   })
   @ApiQuery({
     name: 'centerId',

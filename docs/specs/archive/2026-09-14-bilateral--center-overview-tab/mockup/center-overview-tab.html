@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — Bilateral Center Overview tab (AfricaRice)</title>
+<!--
+  Self-contained mockup for docs/specs/bilateral/center-overview-tab (generated 2026-09-14, /akili-specify).
+  Purpose: agree the CARD SET, ORDER and CONTROLS PLACEMENT before Judgment Day. Numbers are illustrative.
+  Tokens mirror onecgiar-pr-client/src/styles/colors.scss (light values). Charts are static SVG stand-ins for
+  the ECharts widgets rendered by <app-pr-viz-chart> in the real implementation.
+  Not part of the build. Open directly in a browser (file://).
+-->
+<style>
+  :root{
+    --pr-color-primary-50:#f5f3ff; --pr-color-primary-300:#6b46e5; --pr-color-primary-400:#5733c4; --pr-color-primary-600:#3f2499;
+    --pr-surface-band:#f7f4fd; --pr-surface-card:#ffffff; --pr-surface-page:#fafafa;
+    --pr-border:#e3e3e8; --pr-border-divider:#eeeef1; --pr-border-band:#e4e0ef;
+    --pr-text-heading:#191524; --pr-text-secondary:#5d5872; --pr-text-muted:#6b6580; --pr-text-subtle:#9691a8;
+    --pr-chart-1:#4a2bb8; --pr-chart-2:#6b46e5; --pr-chart-3:#9270f0; --pr-chart-4:#c4a0f7; --pr-chart-2-muted:#8b7cc4;
+    --pr-status-not-started-fg:#4b5563; --pr-status-not-started-bg:#f3f4f6;
+    --pr-status-in-progress-fg:#b45309; --pr-status-in-progress-bg:#fef3c7;
+    --pr-status-submitted-fg:#1d4ed8; --pr-status-submitted-bg:#dbeafe;
+    --pr-status-in-qa-fg:#0e7490; --pr-status-in-qa-bg:#cffafe;
+    --pr-status-approved-fg:#047857; --pr-status-approved-bg:#d1fae5;
+    --pr-status-rejected-fg:#b91c1c; --pr-status-rejected-bg:#fee2e2;
+  }
+  *{box-sizing:border-box} html{font-size:12px}
+  body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--pr-surface-page);color:var(--pr-text-heading)}
+  .shell{max-width:1440px;margin:0 auto;border-left:1px solid var(--pr-border);border-right:1px solid var(--pr-border);background:var(--pr-surface-page);min-height:100vh}
+  /* ── Band (existing bilateral-page-header, band variant) ── */
+  .band{position:sticky;top:0;z-index:20;background:var(--pr-surface-band)}
+  .band-top{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+  .eyebrow{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pr-text-subtle)}
+  .eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--pr-color-primary-300)}
+  .title{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+  .title h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.015em}
+  .title p{margin:0;font-size:13px;color:var(--pr-text-secondary)}
+  .cta{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:8px;background:var(--pr-color-primary-300);color:#fff;font-weight:600;font-size:14px;text-decoration:none}
+  .tabs{display:flex;gap:24px;height:48px;padding:0 32px;border-bottom:1px solid var(--pr-border-band)}
+  .tab{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--pr-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;padding:0 4px}
+  .tab.active{color:var(--pr-text-heading);font-weight:600;border-color:var(--pr-color-primary-300)}
+  .tab .ic{width:18px;height:18px;border-radius:4px;background:var(--pr-text-subtle);opacity:.6}
+  .tab.active .ic{background:var(--pr-color-primary-400);opacity:1}
+  .badge{height:18px;min-width:18px;padding:0 5px;border-radius:9px;background:var(--pr-color-primary-600);color:#fff;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+  /* ── Controls row (sticky inside the work area) ── */
+  .controls{position:sticky;top:112px;z-index:15;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:10px 32px;background:var(--pr-surface-card);border-bottom:1px solid var(--pr-border-divider)}
+  .controls .left{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pr-text-subtle)}
+  .select{width:210px;height:34px;border:1px solid var(--pr-border);border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:13px}
+  .select .open{font-size:10px;font-weight:700;padding:1px 6px;border-radius:9px;background:var(--pr-status-approved-bg);color:var(--pr-status-approved-fg)}
+  .divider{width:1px;height:22px;background:var(--pr-border-divider)}
+  .btn{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:8px;border:1px solid var(--pr-border);background:#fff;font-size:13px;font-weight:500;color:var(--pr-text-heading)}
+  .btn.active{border-color:var(--pr-color-primary-300);background:var(--pr-color-primary-50);color:var(--pr-color-primary-600);font-weight:600}
+  .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--pr-border);background:#fff;font-size:12px;color:var(--pr-text-secondary)}
+  .chip b{color:var(--pr-text-heading);font-weight:600}
+  .ghost{font-size:12px;color:var(--pr-color-primary-300);font-weight:600;background:none;border:0}
+  /* ── Content ── */
+  .work{padding:20px 32px 40px;display:flex;flex-direction:column;gap:20px}
+  .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+  .kpi{border:1px solid var(--pr-border);border-radius:14px;background:var(--pr-surface-card);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+  .kpi .h{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--pr-text-subtle)}
+  .kpi .tag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:9px;background:var(--pr-color-primary-50);color:var(--pr-color-primary-600);text-transform:none;letter-spacing:0}
+  .kpi .v{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .kpi .v small{font-size:13px;font-weight:500;color:var(--pr-text-secondary);margin-left:6px}
+  .kpi .s{font-size:12px;color:var(--pr-text-secondary);display:flex;gap:10px;flex-wrap:wrap}
+  .kpi.hero{background:linear-gradient(135deg,var(--pr-color-primary-300),var(--pr-color-primary-400));color:#fff;border-color:transparent}
+  .kpi.hero .h,.kpi.hero .s,.kpi.hero .v small{color:rgba(255,255,255,.85)}
+  .kpi.hero .tag{background:rgba(255,255,255,.18);color:#fff}
+  .row{display:grid;gap:16px}
+  .row.a{grid-template-columns:3fr 2fr}.row.c{grid-template-columns:1fr 1fr}
+  .card{border:1px solid var(--pr-border);border-radius:14px;background:var(--pr-surface-card);padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+  .card h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .card .sub{margin:-6px 0 0;font-size:12px;color:var(--pr-text-secondary)}
+  .card .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .tile{border:1px solid var(--pr-border-divider);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;cursor:pointer}
+  .tile .n{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,monospace}
+  .tile .l{font-size:11.5px;color:var(--pr-text-secondary)}
+  .pill{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;font-size:11px;font-weight:600;width:max-content}
+  .p-edit{background:var(--pr-status-not-started-bg);color:var(--pr-status-not-started-fg)}
+  .p-pend{background:var(--pr-status-in-progress-bg);color:var(--pr-status-in-progress-fg)}
+  .p-appr{background:var(--pr-status-approved-bg);color:var(--pr-status-approved-fg)}
+  .p-rej{background:var(--pr-status-rejected-bg);color:var(--pr-status-rejected-fg)}
+  .p-sub{background:var(--pr-status-submitted-bg);color:var(--pr-status-submitted-fg)}
+  .meter{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--pr-border-divider)}
+  .meter span{display:block;height:100%}
+  .list{display:flex;flex-direction:column;border-top:1px solid var(--pr-border-divider)}
+  .li{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--pr-border-divider);font-size:13px}
+  .li .n{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:700;text-align:right;min-width:32px}
+  .li .go{font-size:12px;font-weight:600;color:var(--pr-color-primary-300)}
+  .li small{display:block;color:var(--pr-text-secondary);font-size:11.5px}
+  .bars{display:grid;grid-template-columns:minmax(160px,1.2fr) 3fr 56px;gap:10px;align-items:center;font-size:12.5px}
+  .bars .name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .bars .code{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--pr-text-subtle);margin-right:6px}
+  .bars .track{height:14px;border-radius:7px;background:var(--pr-border-divider);display:flex;overflow:hidden}
+  .bars .track span{height:100%}
+  .bars .val{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+  .legend{display:flex;gap:14px;font-size:11.5px;color:var(--pr-text-secondary);flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .notstarted{border-top:1px dashed var(--pr-border);padding-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--pr-text-secondary)}
+  .notstarted .chip{cursor:pointer}
+  .empty{height:56px;display:flex;align-items:center;gap:12px;font-size:14px;color:var(--pr-text-secondary)}
+  svg text{font-family:inherit}
+  .note{font-size:11px;color:var(--pr-text-subtle);border:1px dashed var(--pr-border);border-radius:8px;padding:8px 10px;background:#fff}
+  @media (max-width:1279px){.kpis{grid-template-columns:repeat(3,1fr)}.row.a,.row.c{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(3,1fr)}}
+  @media (max-width:899px){.kpis{grid-template-columns:repeat(2,1fr)}.band-top,.tabs,.controls,.work{padding-left:16px;padding-right:16px}}
+  @media (max-width:639px){.kpis{grid-template-columns:1fr}.bars{grid-template-columns:1fr 2fr 40px}.tiles{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Band + tabs: unchanged bilateral-page-header; the only change is the new first tab -->
+  <header class="band">
+    <div class="band-top">
+      <div>
+        <div class="eyebrow"><i></i> CGIAR Center</div>
+        <div class="title"><h1>AfricaRice</h1><p>Africa Rice Center</p></div>
+      </div>
+      <a class="cta" href="#">⬆ Bulk Results Uploader</a>
+    </div>
+    <nav class="tabs" aria-label="Center sections">
+      <a class="tab active" aria-current="page"><span class="ic"></span>Overview</a>
+      <a class="tab"><span class="ic"></span>Reporting</a>
+      <a class="tab"><span class="ic"></span>Results</a>
+      <a class="tab"><span class="ic"></span>Draft Results <span class="badge">9</span></a>
+    </nav>
+  </header>
+
+  <!-- Controls row: PHASE + Filter, docked under the tabs, sticky while cards scroll -->
+  <div class="controls" role="group" aria-label="Overview controls">
+    <div class="left">
+      <span class="label">Phase</span>
+      <div class="select"><span>Reporting 2026 · 2026</span><span class="open">Open</span></div>
+      <span class="divider"></span>
+      <button class="btn active">⚲ Filter <span class="badge">2</span></button>
+      <span class="chip">Program: <b>Climate Action</b> ✕</span>
+      <span class="chip">Source: <b>W3/Bilateral</b> ✕</span>
+      <button class="ghost">Clear</button>
+    </div>
+    <span class="note">Filters and phase are mirrored to the URL (?phase=&amp;program=&amp;source=…) — every figure below links to a tab with these same params.</span>
+  </div>
+
+  <main class="work">
+    <!-- KPI deck -->
+    <section class="kpis" aria-label="Key figures">
+      <a class="kpi hero" href="#results?phase=36">
+        <div class="h">Total results <span class="tag">Center</span></div>
+        <div class="v">47<small>results</small></div>
+        <div class="s"><span>38 W3/Bilateral · 9 W1/W2</span><span>41 lead · 6 contributing</span></div>
+      </a>
+      <a class="kpi" href="#results?status=pending">
+        <div class="h">Pending review <span class="tag">SP review</span></div>
+        <div class="v">9<small>results</small></div>
+        <div class="s"><span>oldest 21 days</span><span>· 3 &gt; 14 days</span></div>
+      </a>
+      <a class="kpi" href="#results?status=approved">
+        <div class="h">Approved <span class="tag">Quality</span></div>
+        <div class="v">17<small>results</small></div>
+        <div class="s"><span>85% approval rate</span><span>· 3 rejected</span></div>
+      </a>
+      <a class="kpi" href="#attention">
+        <div class="h">Needs attention <span class="tag">Action</span></div>
+        <div class="v">26<small>items</small></div>
+        <div class="s"><span>14 editing · 3 rejected</span><span>· 9 AI drafts</span></div>
+      </a>
+      <a class="kpi" href="#home">
+        <div class="h">Projects covered <span class="tag">Coverage</span></div>
+        <div class="v">13<small>of 21</small></div>
+        <div class="s"><span>8 projects with no result yet</span></div>
+      </a>
+    </section>
+
+    <!-- Row A: Reporting status + Needs attention -->
+    <section class="row a">
+      <article class="card">
+        <div class="head"><div><h2>Reporting status</h2><p class="sub">Where this phase's results are in the pipeline — click a segment or tile to open them in Results</p></div><button class="ghost">Data table</button></div>
+        <div class="meter" aria-label="Status proportion">
+          <span style="width:30%;background:var(--pr-chart-4)"></span>
+          <span style="width:19%;background:var(--pr-chart-3)"></span>
+          <span style="width:9%;background:var(--pr-chart-2-muted)"></span>
+          <span style="width:36%;background:var(--pr-chart-2)"></span>
+          <span style="width:6%;background:var(--pr-chart-1)"></span>
+        </div>
+        <div class="tiles">
+          <div class="tile"><span class="pill p-edit">Editing</span><span class="n">14</span><span class="l">not yet submitted</span></div>
+          <div class="tile"><span class="pill p-pend">Pending review</span><span class="n">9</span><span class="l">waiting on the SP</span></div>
+          <div class="tile"><span class="pill p-sub">Submitted / QA</span><span class="n">4</span><span class="l">W1/W2 workflow</span></div>
+          <div class="tile"><span class="pill p-appr">Approved</span><span class="n">17</span><span class="l">by the Science Program</span></div>
+          <div class="tile"><span class="pill p-rej">Rejected</span><span class="n">3</span><span class="l">rework required</span></div>
+        </div>
+        <div class="legend"><span><i style="background:var(--pr-chart-4)"></i>Editing</span><span><i style="background:var(--pr-chart-3)"></i>Pending review</span><span><i style="background:var(--pr-chart-2-muted)"></i>Submitted/QA</span><span><i style="background:var(--pr-chart-2)"></i>Approved</span><span><i style="background:var(--pr-chart-1)"></i>Rejected</span></div>
+      </article>
+
+      <article class="card" id="attention">
+        <div class="head"><div><h2>Needs attention</h2><p class="sub">What the center has to do next</p></div></div>
+        <div class="list">
+          <div class="li"><div>Results still in Editing<small>Created but not submitted for review</small></div><span class="n">14</span><a class="go" href="#results?status=editing">Open →</a></div>
+          <div class="li"><div>Rejected by the Science Program<small>Need rework and resubmission</small></div><span class="n">3</span><a class="go" href="#results?status=rejected">Open →</a></div>
+          <div class="li"><div>AI draft results awaiting review<small>Extracted candidates not yet promoted or discarded</small></div><span class="n">9</span><a class="go" href="#drafts">Open →</a></div>
+          <div class="li"><div>Pending review for more than 14 days<small>Waiting on the SP — consider following up</small></div><span class="n">3</span><a class="go" href="#results?status=pending">Open →</a></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Row B: Results by project -->
+    <section class="row">
+      <article class="card">
+        <div class="head"><div><h2>Results by project</h2><p class="sub">Results reported under each bilateral project this phase — lead vs contributing</p></div><div class="legend"><span><i style="background:var(--pr-chart-2)"></i>Lead</span><span><i style="background:var(--pr-chart-2-muted)"></i>Contributing</span></div></div>
+        <div class="bars">
+          <div class="name"><span class="code">A-AG10156</span>AICCRA Project</div><div class="track"><span style="width:88%;background:var(--pr-chart-2)"></span><span style="width:12%;background:var(--pr-chart-2-muted)"></span></div><div class="val">12</div>
+          <div class="name"><span class="code">A-AG10173</span>HealthyDiets4Africa</div><div class="track"><span style="width:60%;background:var(--pr-chart-2)"></span></div><div class="val">9</div>
+          <div class="name"><span class="code">A-AG10179</span>Technologies for African Agricultural Transformation II</div><div class="track"><span style="width:46%;background:var(--pr-chart-2)"></span><span style="width:8%;background:var(--pr-chart-2-muted)"></span></div><div class="val">8</div>
+          <div class="name"><span class="code">A-AG10171</span>ARISE PDRCC</div><div class="track"><span style="width:40%;background:var(--pr-chart-2)"></span></div><div class="val">6</div>
+          <div class="name"><span class="code">A-AG10185</span>Seeds4Liberia</div><div class="track"><span style="width:27%;background:var(--pr-chart-2)"></span></div><div class="val">4</div>
+          <div class="name"><span class="code">A-AG10181</span>BMGF MultiHarvestRice</div><div class="track"><span style="width:20%;background:var(--pr-chart-2)"></span></div><div class="val">3</div>
+          <div class="name"><span class="code">A-AG10190</span>MEADEN</div><div class="track"><span style="width:13%;background:var(--pr-chart-2)"></span></div><div class="val">2</div>
+        </div>
+        <button class="ghost" style="align-self:flex-start">Show 6 more projects with results</button>
+        <div class="notstarted">
+          <b style="color:var(--pr-text-heading)">Not started yet (8)</b>
+          <span class="chip">A-AG10189 Saskatchewan Collaboration →</span><span class="chip">A-AG10192 …</span><span class="chip">A-AG10201 …</span><span class="chip">+5 more</span>
+          <span style="margin-left:auto">Opens the project card on the Reporting tab</span>
+        </div>
+      </article>
+    </section>
+
+    <!-- Row C: SP contribution + Results by type -->
+    <section class="row c">
+      <article class="card">
+        <div class="head"><div><h2>Science Program contribution</h2><p class="sub">Projects mapped to each SP vs results reported with that SP as primary</p></div><div class="legend"><span><i style="background:var(--pr-chart-4)"></i>Projects mapped</span><span><i style="background:var(--pr-chart-2)"></i>Results reported</span></div></div>
+        <svg viewBox="0 0 520 190" width="100%" height="190" role="img" aria-label="Grouped bars per Science Program">
+          <g font-size="11" fill="#5d5872">
+            <text x="8" y="26">Scaling for Impact</text><rect x="150" y="14" width="90" height="7" rx="3" fill="#c4a0f7"/><rect x="150" y="23" width="180" height="7" rx="3" fill="#6b46e5"/><text x="338" y="30" font-family="monospace">9 · 18</text>
+            <text x="8" y="66">Climate Action</text><rect x="150" y="54" width="80" height="7" rx="3" fill="#c4a0f7"/><rect x="150" y="63" width="130" height="7" rx="3" fill="#6b46e5"/><text x="288" y="70" font-family="monospace">8 · 13</text>
+            <text x="8" y="106">Policy Innovations</text><rect x="150" y="94" width="60" height="7" rx="3" fill="#c4a0f7"/><rect x="150" y="103" width="90" height="7" rx="3" fill="#6b46e5"/><text x="248" y="110" font-family="monospace">6 · 9</text>
+            <text x="8" y="146">Breeding for Tomorrow</text><rect x="150" y="134" width="30" height="7" rx="3" fill="#c4a0f7"/><rect x="150" y="143" width="50" height="7" rx="3" fill="#6b46e5"/><text x="208" y="150" font-family="monospace">3 · 5</text>
+            <text x="8" y="182">Better Diets and Nutrition</text><rect x="150" y="170" width="20" height="7" rx="3" fill="#c4a0f7"/><rect x="150" y="179" width="0" height="7" rx="3" fill="#6b46e5"/><text x="178" y="186" font-family="monospace">2 · 0</text>
+          </g>
+        </svg>
+        <p class="sub">A program with projects but zero results (Better Diets) is the gap to act on — click the row to open those projects on the Reporting tab.</p>
+      </article>
+
+      <article class="card">
+        <div class="head"><div><h2>Results by result type</h2><p class="sub">Outputs and outcomes reported this phase, with status inside each type</p></div><button class="ghost">Data table</button></div>
+        <div class="bars">
+          <div class="name" style="grid-column:1/-1;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--pr-text-subtle)">Outputs</div>
+          <div class="name">Knowledge product</div><div class="track"><span style="width:38%;background:var(--pr-chart-2)"></span><span style="width:16%;background:var(--pr-chart-3)"></span><span style="width:22%;background:var(--pr-chart-4)"></span></div><div class="val">19</div>
+          <div class="name">Innovation development</div><div class="track"><span style="width:20%;background:var(--pr-chart-2)"></span><span style="width:10%;background:var(--pr-chart-3)"></span><span style="width:14%;background:var(--pr-chart-4)"></span></div><div class="val">11</div>
+          <div class="name">Capacity sharing for development</div><div class="track"><span style="width:12%;background:var(--pr-chart-2)"></span><span style="width:8%;background:var(--pr-chart-3)"></span><span style="width:12%;background:var(--pr-chart-4)"></span></div><div class="val">8</div>
+          <div class="name" style="grid-column:1/-1;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--pr-text-subtle);margin-top:6px">Outcomes</div>
+          <div class="name">Innovation use</div><div class="track"><span style="width:10%;background:var(--pr-chart-2)"></span><span style="width:6%;background:var(--pr-chart-3)"></span><span style="width:4%;background:var(--pr-chart-4)"></span></div><div class="val">5</div>
+          <div class="name">Policy change</div><div class="track"><span style="width:8%;background:var(--pr-chart-2)"></span><span style="width:4%;background:var(--pr-chart-4)"></span></div><div class="val">3</div>
+          <div class="name">Other outcome</div><div class="track"><span style="width:4%;background:var(--pr-chart-4)"></span></div><div class="val">1</div>
+        </div>
+        <div class="legend"><span><i style="background:var(--pr-chart-2)"></i>Approved</span><span><i style="background:var(--pr-chart-3)"></i>Pending review</span><span><i style="background:var(--pr-chart-4)"></i>Editing / other</span></div>
+      </article>
+    </section>
+
+    <!-- Row D: Reporting pace -->
+    <section class="row">
+      <article class="card">
+        <div class="head"><div><h2>Reporting pace</h2><p class="sub">Cumulative results created across the phase window (Reporting 2026 · 01 Feb → 30 Nov) · today marked</p></div><button class="ghost">Data table</button></div>
+        <svg viewBox="0 0 1000 180" width="100%" height="180" role="img" aria-label="Cumulative results created over the phase window">
+          <rect x="60" y="10" width="900" height="140" fill="#f7f4fd"/>
+          <line x1="60" y1="150" x2="960" y2="150" stroke="#e3e3e8"/>
+          <polyline fill="none" stroke="#6b46e5" stroke-width="2.5" points="60,150 150,146 240,138 330,120 420,104 510,90 600,72 690,58"/>
+          <polyline fill="none" stroke="#c4a0f7" stroke-width="2" stroke-dasharray="4 4" points="690,58 780,50 870,44 960,40"/>
+          <line x1="690" y1="10" x2="690" y2="150" stroke="#5733c4" stroke-dasharray="3 3"/>
+          <text x="696" y="22" font-size="11" fill="#5733c4">today · 47</text>
+          <g font-size="11" fill="#9691a8"><text x="60" y="170">Feb</text><text x="240" y="170">Apr</text><text x="420" y="170">Jun</text><text x="600" y="170">Aug</text><text x="780" y="170">Oct</text><text x="930" y="170">Nov</text></g>
+          <g font-size="11" fill="#9691a8" text-anchor="end"><text x="52" y="152">0</text><text x="52" y="82">25</text><text x="52" y="16">50</text></g>
+        </svg>
+        <p class="sub">Solid: results created (this phase, current filters). Dotted: same-period pace of the previous phase when available (MAY, v1 may omit).</p>
+      </article>
+    </section>
+
+    <!-- Empty state reference (hard rule 5: ≤160px) -->
+    <section class="row">
+      <article class="card" style="border-style:dashed">
+        <h2 style="font-size:14px;color:var(--pr-text-secondary)">Reference — empty state when the phase has no results</h2>
+        <div class="empty">No results reported by AfricaRice in Reporting 2025 yet. <button class="ghost">Open the Reporting tab</button></div>
+      </article>
+    </section>
+  </main>
+</div>
+</body>
+</html>

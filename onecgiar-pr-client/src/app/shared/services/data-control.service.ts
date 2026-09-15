@@ -32,6 +32,8 @@ export class DataControlService {
    * instead of being recomputed on every change-detection cycle. (P2-2967/P2-2969)
    */
   readonly fieldFeedbackList = signal<string[]>([]);
+  /** Cuántos campos obligatorios tiene la sección abierta — el denominador de su progreso. */
+  readonly mandatoryFieldsTotal = signal<number>(0);
   showShareRequest = false;
   chagePhaseModal = false;
   updateResultModal = false;
@@ -260,13 +262,21 @@ export class DataControlService {
     const feedback: string[] = [];
     let incompleteInputs = 0;
     let incompleteSelects = 0;
+    let mandatoryTotal = 0;
     try {
+      const mandatoryInputs = this.mandatoryFieldsIn(container, '.pr-input.mandatory .input-validation');
+      const mandatorySelects = this.mandatoryFieldsIn(container, '.pr-field.mandatory');
+      mandatoryTotal = mandatoryInputs.length + mandatorySelects.length;
+
       incompleteInputs = this.mandatoryFieldsIn(container, '.pr-input.mandatory .input-validation')
         .filter((field: HTMLElement) => {
           const isEmpty = !field?.innerText;
           const label = this.mandatoryFieldLabel(field);
 
-          if (label && isEmpty) feedback.push(label);
+          if (label && isEmpty) {
+            feedback.push(label);
+            this.tagFeedbackTarget(field, label);
+          }
 
           return isEmpty;
         }).length;
@@ -276,7 +286,10 @@ export class DataControlService {
           const isIncomplete = !field.classList.contains('complete');
           const label = this.mandatoryFieldLabel(field);
 
-          if (label && isIncomplete) feedback.push(label);
+          if (label && isIncomplete) {
+            feedback.push(label);
+            this.tagFeedbackTarget(field, label);
+          }
 
           return isIncomplete;
         }).length;
@@ -287,6 +300,12 @@ export class DataControlService {
     // notifications/renders and lets callers compare by reference to know if it changed.
     if (!this.sameFeedback(this.fieldFeedbackList(), feedback)) {
       this.fieldFeedbackList.set(feedback);
+    }
+    // El TOTAL de obligatorios de la sección, no solo los que faltan. `fieldFeedbackList` responde
+    // "¿qué falta?" y con eso solo se puede escribir "6 fields missing" — un número sin escala, que
+    // no dice si son 6 de 7 o 6 de 30. El progreso de la sección necesita el denominador.
+    if (this.mandatoryFieldsTotal() !== mandatoryTotal) {
+      this.mandatoryFieldsTotal.set(mandatoryTotal);
     }
     // Counts, not the arrays: `Boolean([])` is `true`, so the previous version answered
     // "something is incomplete" on every call, even with every field filled in.
@@ -318,6 +337,79 @@ export class DataControlService {
    * the list — the user saw "0 alerts" while a required field sat empty. Walk up through the
    * field hosts instead and accept either label element.
    */
+  /**
+   * Key a missing field by its own label, so "Go" in the bottom bar's list can find it again.
+   *
+   * Written on the WHOLE field (its labelled host when it has one), not on the inner validation
+   * node: scrolling to a bare `.input-validation` would land on a 1px helper with the label
+   * already off-screen above it.
+   */
+  static feedbackKey(label: string): string {
+    return label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  /** A target taller than this is a section, not a field — highlighting it says nothing. */
+  private static readonly MAX_TARGET_HEIGHT = 420;
+
+  /**
+   * Hosts to RING, which is a wider set than the hosts that carry a LABEL.
+   * `app-lead-contact-person-field` declares its requiredness through `appFeedbackValidation`, a
+   * hidden 0×0 div with no labelled host above it — so without naming it here the climb ran past
+   * every wrapper up to `.detail_container` and the field got no "Go" at all.
+   */
+  private static readonly HIGHLIGHT_HOSTS = `${DataControlService.LABELLED_FIELD_HOSTS},app-lead-contact-person-field`;
+
+  private tagFeedbackTarget(field: Element, label: string): void {
+    const host = field.closest(DataControlService.HIGHLIGHT_HOSTS) as HTMLElement | null;
+    const target = (host && this.highlightTarget(host)) ?? this.targetByLabelText(label);
+    if (target) target.dataset['prFeedback'] = DataControlService.feedbackKey(label);
+  }
+
+  /**
+   * Last resort: find the field through the LABEL the user can see.
+   *
+   * An `appFeedbackValidation` marker is a 0×0 div declared at the END of a section's template —
+   * measured, its parent chain goes straight to `.detail_container`, so it shares no ancestor
+   * with the control it speaks for and climbing can never reach it. The rendered label is the
+   * only link between the two, and it is the very string the list is already showing.
+   */
+  private targetByLabelText(label: string): HTMLElement | null {
+    const labels = document.querySelectorAll<HTMLElement>('.section_container .pr_label, .section_container .fch_title');
+    for (const node of Array.from(labels)) {
+      const text = (node.innerText ?? node.textContent ?? '').trim();
+      if (text !== label) continue;
+      const host = node.closest(DataControlService.HIGHLIGHT_HOSTS) as HTMLElement | null;
+      const target = host ? this.highlightTarget(host) : this.highlightTarget(node);
+      if (target) return target;
+    }
+    return null;
+  }
+
+  /**
+   * The element "Go" should scroll to and ring.
+   *
+   * `appFeedbackValidation` fields (Lead contact person among them) are declared as a HIDDEN 0×0
+   * div, so the field itself has nothing to highlight. Walking up to the first ancestor with a
+   * box overshot in the other direction — it landed on `.detail_container` and ringed the whole
+   * section. So: climb only until something is both VISIBLE and small enough to still read as
+   * one field, and give up rather than point at a section.
+   */
+  private highlightTarget(el: HTMLElement): HTMLElement | null {
+    let node: HTMLElement | null = el;
+    for (let hops = 0; node && hops < 5; hops++) {
+      const wide = node.offsetWidth > 0;
+      const tall = node.offsetHeight > 0;
+      if (wide && tall) {
+        return node.offsetHeight <= DataControlService.MAX_TARGET_HEIGHT ? node : null;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
   private mandatoryFieldLabel(field: Element): string {
     // 1. Nearest field component that carries a label, widening outwards. This is the precise
     //    path and it is what makes an `app-field-card` wrapper work.

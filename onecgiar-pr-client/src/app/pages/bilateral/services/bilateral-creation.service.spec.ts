@@ -653,6 +653,16 @@ describe('BilateralCreationService', () => {
         result_type_id: 6,
       });
     });
+
+    it('includes a trimmed title when provided', () => {
+      service.resetWizard();
+      service.createResult(4, 8, undefined, '  My bilateral title  ').subscribe();
+      expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({
+        result_level_id: 4,
+        result_type_id: 8,
+        title: 'My bilateral title',
+      });
+    });
   });
 
   describe('local storage persistence', () => {

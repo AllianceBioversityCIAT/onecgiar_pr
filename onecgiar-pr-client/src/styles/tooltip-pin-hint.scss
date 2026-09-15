@@ -1,0 +1,83 @@
+/* Foot of a `.pr-tooltip`, telling the reader it can be pinned.
+   Kept out of `custom-fields.scss` — where `.pr-tooltip` itself lives — only because another
+   session has that folder open; move it in when the tree is quiet. */
+.pr-tooltip__pin-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pr-border);
+  color: var(--pr-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+
+  i {
+    font-size: 13px;
+    line-height: 1;
+    transform: rotate(45deg);
+  }
+}
+
+/* Pinned: the same line becomes the way OUT, so it earns the brand colour. */
+.pr-tooltip__pin-hint--on {
+  color: var(--pr-color-primary-300);
+
+  i {
+    transform: none;
+  }
+}
+
+/* A button the HOST asked for (`prTooltipAction`) — e.g. field-card's "Pin guidance", whose
+   state lives with the card, not with this bubble. */
+.pr-tooltip__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--pr-border);
+  border-radius: 999px;
+  background: var(--pr-surface-card);
+  color: var(--pr-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+
+  i {
+    font-size: 13px;
+    line-height: 1;
+    transform: rotate(45deg);
+  }
+
+  &:hover {
+    border-color: var(--pr-color-primary-200);
+    background: var(--pr-color-primary-25);
+    color: var(--pr-color-primary-300);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+/* Pressed — the guidance is anchored in the card right now. */
+.pr-tooltip__action--on {
+  border-color: var(--pr-color-primary-200);
+  background: var(--pr-color-primary-50);
+  color: var(--pr-color-primary-400);
+
+  i {
+    transform: none;
+  }
+}
+
+.pr-tooltip__pin-note {
+  color: var(--pr-color-primary-300);
+}

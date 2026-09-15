@@ -19,31 +19,6 @@
   }
 }
 
-.bpp_header {
-  margin-bottom: 20px;
-}
-
-.bpp_header_top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.bpp_title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--pr-color-secondary-400);
-  margin: 0 0 4px;
-}
-
-.bpp_subtitle {
-  font-size: 12px;
-  color: var(--pr-color-accents-5);
-  margin: 0;
-}
-
 // ─── KPI Quick Filter Strip ───────────────────────────────────────────────────
 
 .bpp_kpi_section {
@@ -413,6 +388,18 @@
     border-color: var(--pr-color-primary-300);
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(107, 109, 196, 0.12);
+  }
+}
+
+// @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15, COV-DD-9) — transient ring for a
+// `?project=` deep link (scroll + highlight, never a catalog filter). Shared by the grid card
+// (`.bpp_card`) and the list row (`.bpp_table_row`).
+.bpp_card--highlight {
+  box-shadow: var(--pr-focus-ring);
+  transition: box-shadow 0.3s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 }
 

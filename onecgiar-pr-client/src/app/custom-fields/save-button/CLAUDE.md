@@ -1,6 +1,6 @@
 # save-button
 
-**Verified:** 2026-09-11 · branch performance-refactor · b0a177160
+**Verified:** 2026-09-14 · branch performance-refactor · 3cc49d069
 
 ## What it is
 The floating bar at the bottom of every result form: the Save button, its "N alerts" missing-fields
@@ -33,6 +33,12 @@ it navigates). It runs the handler and resolves `saved` / `failed` / `not-starte
   not hold the caller for the full 60 s save timeout.
 - One settle per pipe, first answer wins: the success toast is raised after the outcome is recorded
   and `show()` touches the DOM, so a throw there must not turn an accepted save into `failed`.
+
+## `savedTick` — who reads it and why it is not `isSaving`
+`readonly savedTick = signal(0)` counts **successful** settles only (raised inside `settleOnce`
+next to the private `settledSaves`). `app-field-card` watches it to clear its "Unsaved changes"
+pill. 🛑 Do not re-point that pill at `isSaving`: that flag goes down on failure too, so a save the
+server rejected would tell the user their work is safe.
 
 ## Traps (⚠️ = already broke something)
 - ⚠️ **`RolesService.readOnly` starts TRUE and is lowered only after an async role resolution.**

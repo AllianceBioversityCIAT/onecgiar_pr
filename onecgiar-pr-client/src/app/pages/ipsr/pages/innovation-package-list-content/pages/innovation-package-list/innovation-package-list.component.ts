@@ -81,12 +81,26 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`;
         inno.result_code = Number(inno.result_code);
       });
+
+      // `IpsrListFilterService.statusOptions` derives from the loaded list (`IPSR-DD-2`) but has no
+      // caller yet as of `IPSR-T-1` — wire it here, on every (re)load, per that task's forward pointer.
+      this.ipsrListFilterSE.refreshStatusOptions(this.ipsrDataControlSE.ipsrResultList);
     });
   }
 
+  /**
+   * Re-pointed at `IpsrListFilterService.phaseOptions()` (`IPSR-T-6`) — the new-signal-model
+   * equivalent of the removed `filters.general[1]?.options` (the Phase facet's full option catalog,
+   * not the selection). The JOIN shape is preserved (`myInitiativesListIPSRByPortfolio` concatenated
+   * with every currently-known Phase option) but NOT the `selected` semantics of that catalog:
+   * `filters.general[1].options[*].selected` used to reflect the user's chip selection, while
+   * `phaseOptions()` entries (built by `buildIpsrPhaseOptions()`) carry `selected` reflecting each
+   * phase's open/closed status instead. Callers reading `selected` off this joined text now see
+   * phase status, not user selection.
+   */
   get initsSelectedJoinText() {
     const myInitiativesList = this.api.dataControlSE?.myInitiativesListIPSRByPortfolio;
-    const options = this.ipsrListFilterSE.filters.general[1]?.options;
+    const options = this.ipsrListFilterSE.phaseOptions();
     return JSON.stringify([...myInitiativesList, ...options]);
   }
 

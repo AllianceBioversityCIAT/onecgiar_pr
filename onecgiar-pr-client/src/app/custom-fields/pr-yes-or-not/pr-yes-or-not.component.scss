@@ -1,34 +1,61 @@
 .field_container {
   gap: 10px;
 
-  .title {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
+  // `.title` desapareció al migrar a `app-field-card`: era el contenedor que ponía el label del
+  // header viejo a la izquierda y los botones Yes/No a la derecha. Ahora el label lo pinta la
+  // cabecera de la tarjeta y aquí solo quedan los botones.
+  // 14-sep-2026: eran dos pastillas de color sólido —verde y rojo— con el texto en blanco. Dos
+  // problemas: el ROJO decía "error" sobre una respuesta perfectamente válida ("No" no es un fallo),
+  // y el par de bloques de color competía con la cabecera del propio campo.
+  // Ahora es un control segmentado sobre blanco, el mismo idioma que los 0/1/2 de Impact Area: la
+  // opción elegida se rellena, la otra se queda en texto.
   .choices {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    margin-top: 20px;
-    gap: 10px;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--pr-border);
+    border-radius: 8px;
+    background: var(--pr-color-white);
 
+    .choice {
+      min-width: 58px;
+      padding: 5px 14px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--pr-text-secondary);
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      user-select: none;
+
+      &:hover {
+        background: var(--pr-surface-sunken);
+        color: var(--pr-text-heading);
+      }
+    }
+
+    // La elegida: verde para el sí, gris oscuro para el no. Sin rojo — una respuesta no es un error.
     .yes {
       background-color: var(--pr-color-green-500) !important;
+      color: var(--pr-color-white);
+
+      &:hover {
+        background-color: var(--pr-color-green-500) !important;
+        color: var(--pr-color-white);
+      }
     }
 
     .no {
-      background-color: var(--pr-color-red-300) !important;
-    }
-
-    .choice {
-      background-color: var(--pr-color-accents-4);
-      padding: 1px 10px;
-      border-radius: 5px;
+      background-color: var(--pr-text) !important;
       color: var(--pr-color-white);
-      cursor: pointer;
-      transition: all ease-in-out 0.3s;
-      font-weight: 500;
+
+      &:hover {
+        background-color: var(--pr-text) !important;
+        color: var(--pr-color-white);
+      }
     }
   }
 }

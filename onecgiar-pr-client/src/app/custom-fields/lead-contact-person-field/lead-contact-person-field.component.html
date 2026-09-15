@@ -27,7 +27,8 @@
   @if (userSearchService.showContactError) {
     <div class="contact-error-message">
       <i class="warning-icon">⚠️</i>
-      The contact person entered was not found in the directory. Please select from the search results or leave empty.
+      The contact person entered was not found in the directory. Please select from the search results, leave empty, or
+      <button type="button" class="use-anyway-btn" (click)="acceptTypedNameAnyway()">use this name anyway</button>.
     </div>
   }
 
@@ -56,7 +57,12 @@
     }
 
     @if (isSearching) {
-      <div class="search-loading">Searching...</div>
+      <div class="search-loading" role="status" aria-live="polite">
+        <svg class="search-loading__spinner" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="8" cy="8" r="5.5" stroke-dasharray="24" stroke-dashoffset="8" />
+        </svg>
+        <span>Searching the CGIAR directory…</span>
+      </div>
     }
 
     @if (searchResults.length === 0 && !isSearching && showResults) {

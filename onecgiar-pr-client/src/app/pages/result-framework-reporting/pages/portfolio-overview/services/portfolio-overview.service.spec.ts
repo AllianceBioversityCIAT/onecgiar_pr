@@ -349,6 +349,28 @@ describe('PortfolioOverviewService', () => {
     });
   });
 
+  describe('fetchedCount — rows actually fetched, before phase filtering (REQ-3-S1)', () => {
+    it('reports the raw fetched-item count, distinct from the open-phase-filtered total()', () => {
+      // 9 open-phase rows + 2 closed-phase rows fetched in the same page — fetchedCount must be 11
+      // (raw fetch size), while total() stays 9 (post-open-phase-filter). The two must differ, or
+      // the test cannot distinguish the fix from the bug it replaces.
+      setupService([...MOCK_RESULTS, ...CLOSED_PHASE_ITEMS]);
+      service.load();
+
+      expect(service.fetchedCount()).toBe(11);
+      expect(service.total()).toBe(9);
+      expect(service.fetchedCount()).not.toBe(service.total());
+    });
+
+    it('resets fetchedCount to 0 when the session cannot be read', () => {
+      setupService();
+      apiMock.authSE.localStorageUser = null;
+      service.load();
+
+      expect(service.fetchedCount()).toBe(0);
+    });
+  });
+
   describe('Performance (POV-NFR-1)', () => {
     it('aggregates a 20,000-item dataset without degrading super-linearly', () => {
       const largeItems: RawResult[] = [];

@@ -61,7 +61,11 @@ export class GlobalSearchPaletteService {
   ]);
 
   readonly scopeOptions = computed(() =>
-    this.programs().map((sp) => ({ id: sp.initiativeId, code: sp.initiativeCode, name: sp.initiativeName }))
+    this.programs().map((sp) => ({
+      id: sp.initiativeId,
+      code: sp.initiativeCode,
+      name: sp.initiativeShortName || sp.initiativeName
+    }))
   );
 
   /**

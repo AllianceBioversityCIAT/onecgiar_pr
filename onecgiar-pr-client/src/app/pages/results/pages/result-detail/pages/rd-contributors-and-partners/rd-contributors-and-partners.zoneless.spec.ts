@@ -292,7 +292,7 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
     const otherCentersEl = otherCentersSelectEl();
     expect(otherCentersEl).toBeTruthy();
     // `.pr_label` renders the label text with a trailing colon (`useColon`) appended by app-pr-field-header.
-    expect(otherCentersEl?.querySelector('.pr_label')?.textContent?.trim()).toBe('Other(s) Contributing CGIAR Centers:');
+    expect(otherCentersEl?.querySelector('.fch_title, .pr_label')?.textContent?.trim()).toBe('Other(s) Contributing CGIAR Centers:');
   });
 
   /** OTV-R-1 / OTV-AC-1: the actual bug being fixed — the empty-ToC Centers dropdown must resolve to the
@@ -300,7 +300,7 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
    *  the resolved `.pr_label` text (not just element presence) is what makes this catch a reverted/backwards
    *  `[label]` ternary — see `requirements.md` §7.1 row 1 and the RED evidence below. */
   it('resolves the empty-ToC Centers label to "Contributing CGIAR Centers", not "Other(s)…" (OTV-R-1, OTV-AC-1)', () => {
-    const labelText = otherCentersSelectEl()?.querySelector('.pr_label')?.textContent?.trim();
+    const labelText = otherCentersSelectEl()?.querySelector('.fch_title, .pr_label')?.textContent?.trim();
     expect(labelText).toBe('Contributing CGIAR Centers:');
     expect(labelText).not.toContain('Other(s)');
   });
@@ -308,7 +308,7 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
   /** OTV-R-2 / OTV-AC-2: Science half of the same defect — `data-testid="toc-other-science"` was previously
    *  asserted nowhere in this suite. */
   it('resolves the empty-ToC Science label to "Contributing Science Program/Accelerator", not "Other(s)…" (OTV-R-2, OTV-AC-2)', () => {
-    const labelText = otherScienceSelectEl()?.querySelector('.pr_label')?.textContent?.trim();
+    const labelText = otherScienceSelectEl()?.querySelector('.fch_title, .pr_label')?.textContent?.trim();
     expect(labelText).toBe('Contributing Science Program/Accelerator:');
     expect(labelText).not.toContain('Other(s)');
   });
@@ -353,7 +353,7 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
 
     const otherScienceEl = otherScienceSelectEl();
     expect(otherScienceEl).toBeTruthy();
-    expect(otherScienceEl?.querySelector('.pr_label')?.textContent?.trim()).toBe('Other(s) Science Program(s):');
+    expect(otherScienceEl?.querySelector('.fch_title, .pr_label')?.textContent?.trim()).toBe('Other(s) Science Program(s):');
   });
 
   /**
@@ -620,6 +620,11 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     const isRequired = (testid: string) => {
       const host = fixture.nativeElement.querySelector(`[data-testid="${testid}"]`);
       expect(host).toBeTruthy();
+      // Dos formas del MISMO marcador: `app-field-card` (los campos migrados el 14-sep-2026) lo
+      // pinta como el elemento `.fch_required`; `app-pr-field-header` lo pintaba como la clase
+      // `required` sobre el propio label. Se aceptan las dos para que el test mida "¿está marcado
+      // como obligatorio?" y no "¿qué componente lo pinta?".
+      if (host.querySelector('.fch_required')) return true;
       return host.querySelector('.pr_label')?.classList.contains('required') ?? false;
     };
 
@@ -666,8 +671,13 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     const flat = fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center~flat"]');
     expect(flat).toBeTruthy();
 
-    // 1 — the visible asterisk.
-    expect(flat.querySelector('.pr_label')?.classList.contains('required')).toBe(true);
+    // 1 — el marcador visible de obligatorio. Desde el 14-sep-2026 el dropdown lo pinta
+    // `app-field-card` como el elemento `.fch_required` (antes: la clase `required` sobre el
+    // label de `app-pr-field-header`). Se aceptan las dos formas — lo que se mide es que el campo
+    // ESTÉ marcado, no quién lo pinta.
+    const flatMarked =
+      !!flat.querySelector('.fch_required') || (flat.querySelector('.pr_label')?.classList.contains('required') ?? false);
+    expect(flatMarked).toBe(true);
     // 2 — the inline validation message, under the plain wording (nothing from the ToC can be demanded).
     expect(validationNoteText()).toBe('Please select at least one Contributing CGIAR Center.');
     // 3 — the bottom bar's "N fields missing" list, via the REAL scan over the REAL DOM.

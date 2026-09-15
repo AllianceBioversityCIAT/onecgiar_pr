@@ -41,9 +41,9 @@ export type BilateralReviewViewMode = 'grouped' | 'flat';
  *  center. Never a third value; unknown/missing parses to `'project'` (BRP-DD-4). */
 export type BilateralReviewGroupMode = 'project' | 'center';
 
-/** Unknown/missing → `'all'` (BRT-R-7's default), never a value the chips do not render. */
+/** Unknown/missing → `'pending'` (defaults to pending review), never a value the chips do not render. */
 export function parseBilateralReviewStatus(raw: string | null): BilateralReviewStatusFilter {
-  return raw === 'pending' || raw === 'approved' || raw === 'rejected' ? raw : 'all';
+  return raw === 'all' || raw === 'approved' || raw === 'rejected' ? raw : 'pending';
 }
 
 /** Unknown/missing → `'grouped'` (BRT-R-30's default). */

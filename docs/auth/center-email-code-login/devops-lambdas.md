@@ -57,6 +57,6 @@ Option D is PRMS-specific: it works because PRMS already has its own JWT session
 
 ---
 
-**Sources:** `docs/specs/changes/cognito-email-otp-login/design.md` §19.1, §19.3 · `execution.md` (`OTP-T-16`, rev 4 pivot, T-18 note) · `onecgiar-pr-server/src/auth/utils/otp-shared.util.ts` (`logOtpEvent`) · `onecgiar-pr-server/src/auth/otp/otp-challenge.service.ts` (purge, TTL, attempts) · `onecgiar-pr-server/src/migrations/{1788730000000-OTP-allowed-email-domains.ts,1788740000000-OTP-challenges.ts}` · `onecgiar-pr-server/CLAUDE.md` §5 (migration ownership) · `one-cgiar-microservices/cognito-triggers/README.md` (retired design, kept as reference)
+**Sources:** `docs/specs/archive/2026-09-14-changes--cognito-email-otp-login/design.md` §19.1, §19.3 · `execution.md` (`OTP-T-16`, rev 4 pivot, T-18 note) · `onecgiar-pr-server/src/auth/utils/otp-shared.util.ts` (`logOtpEvent`) · `onecgiar-pr-server/src/auth/otp/otp-challenge.service.ts` (purge, TTL, attempts) · `onecgiar-pr-server/src/migrations/{1788730000000-OTP-allowed-email-domains.ts,1788740000000-OTP-challenges.ts}` · `onecgiar-pr-server/CLAUDE.md` §5 (migration ownership) · `one-cgiar-microservices/cognito-triggers/README.md` (retired design, kept as reference)
 
 **Last verified:** 2026-09-12

@@ -9,15 +9,20 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 })
 export class OtherFunctionalitiesComponent {
   @Input() replicateIPSR: boolean = false;
+  @Input() replicateInnovationUse: boolean = false;
 
   constructor(public api: ApiService) {}
 
   replicateBannerText() {
+    if (this.replicateInnovationUse) {
+      return 'Replicate all Innovation Use results from previous phase to the current active phase';
+    }
+
     if (this.replicateIPSR) {
       return 'Replicate all Innovation Packages from previous phase to the current active phase';
     }
 
-    return 'Replicate all QAed result innovations from previous phase to the current active phase';
+    return 'Replicate all result innovations from previous phase to the current active phase (except Editing/Rejected)';
   }
 
   execute() {

@@ -11,7 +11,8 @@ import { mountCF } from '../../../../cypress/support/ct-utils';
  *
  * Those assertions are gone rather than adapted: there is nothing left to adapt them to, and
  * re-adding the pill would be rebuilding what the mockup deliberately dropped. What the card
- * still owns — and what is locked here — is the label, the required asterisk, the error state,
+ * still owns — and what is locked here — is the label, the REQUIRED tag (proposal 18 dropped the
+ * asterisk: the tag is the only marker, and an optional field carries none), the error state,
  * the row layout and content projection.
  */
 describe('FieldCardComponent (CT)', () => {
@@ -21,13 +22,14 @@ describe('FieldCardComponent (CT)', () => {
     cy.get('.body').should('contain.text', 'inner');
   });
 
-  it('marks a required field with an asterisk, and says so to a screen reader', () => {
+  it('marks a required field with a REQUIRED tag, and says so to a screen reader', () => {
     mountCF(`<app-field-card label="My field" [required]="true"></app-field-card>`);
-    cy.get('.fch_required').should('contain.text', '*');
+    cy.get('.fch_required').should('contain.text', 'Required');
+    cy.get('.field_card_header').should('not.contain.text', '*');
     cy.get('.sr-only').should('contain.text', '(required)');
   });
 
-  it('omits the asterisk when the field is optional', () => {
+  it('omits the tag when the field is optional', () => {
     mountCF(`<app-field-card label="My field" [required]="false"></app-field-card>`);
     // Anchored to a POSITIVE assertion first. A bare `.fch_required should not.exist` also passes
     // when nothing mounted at all, which makes it a test that cannot fail — verified by mutation.
@@ -48,7 +50,7 @@ describe('FieldCardComponent (CT)', () => {
   /**
    * ~60 call sites project a control with no label (currency cells, sub-inputs inside a radio
    * option, "Other" specifiers) and most of them leave `required` at its `true` default. Without
-   * this guard every one of them would grow an orphan asterisk over an empty title.
+   * this guard every one of them would grow an orphan REQUIRED tag over an empty title.
    */
   it('renders no chrome at all when there is neither label nor description', () => {
     mountCF(`<app-field-card><span class="body">bare</span></app-field-card>`);

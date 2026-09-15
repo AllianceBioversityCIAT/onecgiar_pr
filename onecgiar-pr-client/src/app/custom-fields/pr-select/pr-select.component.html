@@ -1,13 +1,20 @@
 <div [style]="inlineStylesContainer()">
-  <app-pr-field-header
+  <!-- Migrado de `app-pr-field-header` a `app-field-card` (14-sep-2026): el campo pasa a la
+       cabecera tintada por estado, igual que pr-input / pr-textarea / pr-radio-button.
+       🛑 `hasValue` usa la MISMA expresión que la clase `complete` de abajo. Si divergen, el color
+       de la cabecera y la lista de campos faltantes del bottom bar se contradicen en los bordes
+       ('' vs espacios) — está escrito en `src/CLAUDE.md` §21.5. -->
+  <app-field-card
     [label]="label()"
     [description]="description()"
     [tooltip]="tooltip()"
     [required]="required()"
-    [showDescriptionLabel]="showDescriptionLabel()"
+    [useColon]="true"
+    [hasValue]="!!(optionsIntance() | labelName: this.value : optionValue() : optionLabel())"
+    [showDescription]="showDescriptionLabel()"
     [descInlineStyles]="descInlineStyles()"
-    [labelDescInlineStyles]="labelDescInlineStyles()"></app-pr-field-header>
-  <input type="text" [hidden]="true" [(ngModel)]="this.value" />
+    [labelDescInlineStyles]="labelDescInlineStyles()">
+    <input type="text" [hidden]="true" [(ngModel)]="this.value" />
   <div
     [ngSwitch]="editable() ? false : (readOnly() || this.rolesSE.readOnly) && !isStatic()"
     class="pr-field"
@@ -99,6 +106,7 @@
     </app-alert-status>
   </div>
 
-  <!-- Expandable space when dropdown is open -->
-  <div *ngIf="expandSpaceOnOpen()" class="expandable-space" [ngClass]="{ expanded: isDropdownOpen() }"></div>
+    <!-- Expandable space when dropdown is open -->
+    <div *ngIf="expandSpaceOnOpen()" class="expandable-space" [ngClass]="{ expanded: isDropdownOpen() }"></div>
+  </app-field-card>
 </div>

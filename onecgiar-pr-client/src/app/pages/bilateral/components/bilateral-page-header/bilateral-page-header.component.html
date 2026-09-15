@@ -98,12 +98,13 @@
           </div>
         }
       } @else {
-        <!-- Eyebrow: dot + CGIAR CENTER -->
+        <!-- Eyebrow: dot + CGIAR Center · REPORTING CYCLE 2026 · P25 -->
         <div class="flex items-center gap-[7px]">
           <span class="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
           <span
-            class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
-            CGIAR Center
+            class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
+            data-testid="bilateral-eyebrow">
+            {{ eyebrow() }}
           </span>
         </div>
 
@@ -148,7 +149,27 @@
       <nav
         class="flex h-[48px] items-stretch gap-[16px] sm:gap-[24px] border-b border-[var(--pr-border-band)] px-[16px] sm:px-[32px] overflow-x-auto no-scrollbar"
         aria-label="Center sections">
-        <!-- Tab 1: Reporting -->
+        <!-- Tab 1: Overview -->
+        <a
+          class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
+          [class]="
+            isOverviewActive()
+              ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+              : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-current]="isOverviewActive() ? 'page' : null"
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'overview']"
+          [queryParams]="tabQueryParams()">
+          <span
+            class="material-icons-round text-[18px] transition-colors"
+            [class]="isOverviewActive() ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
+            aria-hidden="true">
+            space_dashboard
+          </span>
+          <span>Overview</span>
+        </a>
+
+        <!-- Tab 2: Reporting -->
         <a
           class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
           [class]="
@@ -157,7 +178,8 @@
               : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
           "
           [attr.aria-current]="isReportingActive() ? 'page' : null"
-          [routerLink]="['/bilateral', ctx.centerAcronym(), 'home']">
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'home']"
+          [queryParams]="tabQueryParams()">
           <span
             class="material-icons-round text-[18px] transition-colors"
             [class]="isReportingActive() ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
@@ -167,7 +189,7 @@
           <span>Reporting</span>
         </a>
 
-        <!-- Tab 2: Results -->
+        <!-- Tab 3: Results -->
         <a
           class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
           [class]="
@@ -176,7 +198,8 @@
               : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
           "
           [attr.aria-current]="activeTab() === 'results' ? 'page' : null"
-          [routerLink]="['/bilateral', ctx.centerAcronym(), 'results']">
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'results']"
+          [queryParams]="tabQueryParams()">
           <span
             class="material-icons-round text-[18px] transition-colors"
             [class]="activeTab() === 'results' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
@@ -186,7 +209,7 @@
           <span>Results</span>
         </a>
 
-        <!-- Tab 3: Draft Results -->
+        <!-- Tab 4: Draft Results -->
         <a
           class="mb-[-1px] flex shrink-0 items-center gap-[6px] border-b-2 px-[4px] text-[13.5px] sm:text-[14px] no-underline transition-colors group"
           [class]="
@@ -195,14 +218,15 @@
               : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
           "
           [attr.aria-current]="activeTab() === 'drafts' ? 'page' : null"
-          [routerLink]="['/bilateral', ctx.centerAcronym(), 'drafts']">
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'drafts']"
+          [queryParams]="tabQueryParams()">
           <span
             class="material-icons-round text-[18px] transition-colors"
             [class]="activeTab() === 'drafts' ? 'text-[var(--pr-color-primary-400)]' : 'text-[var(--pr-text-muted)] group-hover:text-[var(--pr-text-heading)]'"
             aria-hidden="true">
             fact_check
           </span>
-          <span>Draft Results</span>
+          <span>AI Draft Results</span>
           @if (bilateralAiService.draftCountDisplay(); as count) {
             <span
               class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums"

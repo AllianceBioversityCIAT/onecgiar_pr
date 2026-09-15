@@ -105,8 +105,12 @@ describe('PrRangeLevelComponent', () => {
 
       expect(component.isRequiredAndEmpty).toBe(true);
       expect(marker()).toBeTruthy();
-      expect(marker().textContent).toContain('*');
+      // 14-sep-2026: el asterisco se retiró de toda la plataforma; el marcador es ahora el punto
+      // rojo + el texto. Se ancla al punto Y al texto: sin el punto, un `toContain('required')`
+      // solo a secas seguiría pasando con el marcador entero borrado.
+      expect(marker().querySelector('.prl-required-dot')).toBeTruthy();
       expect(marker().textContent).toContain('required');
+      expect(marker().textContent).not.toContain('*');
       expect(track().getAttribute('aria-required')).toBe('true');
     });
 

@@ -1,15 +1,32 @@
 import {
   Directive,
   ElementRef,
+  EventEmitter,
   HostListener,
   Input,
   OnChanges,
   OnDestroy,
   OnInit,
+  Output,
   Renderer2,
   SimpleChanges,
   inject
 } from '@angular/core';
+
+/**
+ * An action the HOST wants offered inside the tooltip's own footer.
+ *
+ * It exists because two different "pins" meet on the same field and must not be confused:
+ * this directive's pin keeps the BUBBLE open and dies with it, while `field-card`'s pin anchors
+ * the guidance TEXT inside the card and persists per field. The second one needs a button, and
+ * the button belongs in the bubble — but the state stays with whoever owns it.
+ */
+export interface PrTooltipAction {
+  label: string;
+  pressed: boolean;
+  /** Close the bubble right after the click — for an action that puts the same text elsewhere. */
+  closeAfterClick?: boolean;
+}
 import { RouterLink } from '@angular/router';
 import { FocusTrap, FocusTrapFactory, LiveAnnouncer } from '@angular/cdk/a11y';
 
@@ -56,6 +73,9 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
   @Input() prTooltipDisabled: boolean = false;
   /** Delay in ms before the tooltip appears on hover (mirrors PrimeNG `showDelay`). */
   @Input() prTooltipShowDelay: number = 0;
+  /** Renders a button in the tooltip footer. `null` leaves the footer exactly as it was. */
+  @Input() prTooltipAction: PrTooltipAction | null = null;
+  @Output() prTooltipActionClick = new EventEmitter<void>();
 
   private readonly focusTrapFactory = inject(FocusTrapFactory);
   private readonly liveAnnouncer = inject(LiveAnnouncer);
@@ -75,6 +95,11 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
   private tooltipEl: HTMLElement | null = null;
   private showTimer: ReturnType<typeof setTimeout> | null = null;
   private pinned = false;
+  /** The guidance itself, separate from the pin hint appended after it. */
+  private tooltipBodyEl: HTMLElement | null = null;
+  private pinHintEl: HTMLElement | null = null;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private actionButtonEl: HTMLButtonElement | null = null;
   /** Teardown callbacks for the document/window listeners registered while pinned. */
   private pinnedListeners: (() => void)[] = [];
   private focusTrap: FocusTrap | null = null;
@@ -138,6 +163,8 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
     if (changes['text'] || changes['prTooltipDisabled']) {
       this.syncHostAffordance();
     }
+    // The host can flip `pressed` while the bubble is open — the label must follow.
+    if (changes['prTooltipAction'] && this.tooltipEl) this.renderPinHint();
   }
 
   /**
@@ -186,7 +213,27 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
   onLeave(): void {
     // A pinned tooltip survives the pointer leaving — that is the point of pinning.
     if (this.pinned) return;
-    this.hide();
+    this.scheduleHide();
+  }
+
+  /**
+   * Close after a beat instead of at once, so the pointer can cross the 8px gap between the
+   * trigger and the tooltip. Without it the guidance closed on the way to its own links, and a
+   * hover tooltip carrying links is unusable — which is what made pinning feel mandatory.
+   */
+  private scheduleHide(): void {
+    this.clearHideTimer();
+    this.hideTimer = setTimeout(() => {
+      this.hideTimer = null;
+      if (!this.pinned) this.hide();
+    }, 160);
+  }
+
+  private clearHideTimer(): void {
+    if (this.hideTimer) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
   }
 
   @HostListener('click')
@@ -239,11 +286,28 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
     if (this.prTooltipStyleClass) {
       this.prTooltipStyleClass.split(' ').forEach(cls => cls && this.renderer.addClass(el, cls));
     }
-    this.renderer.setProperty(el, 'innerHTML', this.text);
+    // The content lives in its own box so the pin hint below can be appended as a SIBLING —
+    // writing both through `innerHTML` would mean re-parsing the caller's markup, and reading the
+    // announcement back (further down) would read the hint out to a screen reader as if it were
+    // part of the guidance.
+    const body = this.renderer.createElement('div') as HTMLElement;
+    this.renderer.addClass(body, 'pr-tooltip__body');
+    this.renderer.setProperty(body, 'innerHTML', this.text);
+    this.renderer.appendChild(el, body);
+    this.tooltipBodyEl = body;
     // Toggletip id (TIP-DD-2) — set here so it exists before pin() wires aria-controls/describedby.
     this.renderer.setAttribute(el, 'id', this.tooltipId);
+    // Unpinned tooltips are `pointer-events: none` in CSS so they never block the cursor; this
+    // one has to accept the pointer to be readable, and `hide()` removes the node, so nothing is
+    // left behind to swallow clicks.
+    this.renderer.setStyle(el, 'pointer-events', 'auto');
+    el.addEventListener('mouseenter', () => this.clearHideTimer());
+    el.addEventListener('mouseleave', () => {
+      if (!this.pinned) this.scheduleHide();
+    });
     this.renderer.appendChild(document.body, el);
     this.tooltipEl = el;
+    this.renderPinHint();
 
     this.position(el);
   }
@@ -289,8 +353,84 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
    * Clicks landing inside the tooltip (its links) or back on the trigger are ignored — the
    * trigger's own `click` handler already toggles it.
    */
+  /**
+   * A line at the foot of the tooltip saying it can be pinned.
+   *
+   * Clicking already pins — it has since TIP-DD-1 — but nothing on screen said so, so the
+   * behaviour was only ever found by accident. It matters most on the long guidance tooltips
+   * that contain links: without pinning, the pointer has to leave the trigger to reach them and
+   * the tooltip vanishes on the way.
+   */
+  private ensurePinHint(): HTMLElement {
+    if (this.pinHintEl) return this.pinHintEl;
+    const hint = this.renderer.createElement('div') as HTMLElement;
+    this.renderer.addClass(hint, 'pr-tooltip__pin-hint');
+    this.pinHintEl = hint;
+    return hint;
+  }
+
+  private renderPinHint(): void {
+    if (!this.tooltipEl) return;
+
+    const action = this.prTooltipAction;
+    // Nothing at all while the bubble is merely hovered and the host offers no action — and
+    // nothing in the DOM either. An always-emitted empty footer left a spare `<div>` inside every
+    // tooltip in the app and broke callers that read the bubble's own markup.
+    if (!action && !this.pinned) {
+      if (this.pinHintEl?.parentNode) this.renderer.removeChild(this.tooltipEl, this.pinHintEl);
+      this.pinHintEl = null;
+      this.actionButtonEl = null;
+      return;
+    }
+
+    const hint = this.ensurePinHint();
+    if (!hint.parentNode) this.renderer.appendChild(this.tooltipEl, hint);
+    this.renderer.setProperty(hint, 'innerHTML', '');
+    this.actionButtonEl = null;
+
+    // Decorative ONLY while it is just the pinned note: that state is already carried by
+    // `aria-expanded` on the host. With a button inside, `aria-hidden` would hide a real control
+    // from assistive tech AND from the focus trap that puts the keyboard right there.
+    if (action) this.renderer.removeAttribute(hint, 'aria-hidden');
+    else this.renderer.setAttribute(hint, 'aria-hidden', 'true');
+
+    if (action) {
+      const btn = this.renderer.createElement('button') as HTMLButtonElement;
+      this.renderer.setAttribute(btn, 'type', 'button');
+      this.renderer.addClass(btn, 'pr-tooltip__action');
+      if (action.pressed) this.renderer.addClass(btn, 'pr-tooltip__action--on');
+      this.renderer.setAttribute(btn, 'aria-pressed', String(action.pressed));
+      this.renderer.setProperty(
+        btn,
+        'innerHTML',
+        `<i class="material-icons-round" aria-hidden="true">push_pin</i><span>${action.label}</span>`
+      );
+      btn.addEventListener('click', event => {
+        // The host's own click handler pins the bubble; this button means something else, and
+        // the document listener would read a click it did not recognise as "close".
+        event.preventDefault();
+        event.stopPropagation();
+        this.prTooltipActionClick.emit();
+        if (this.prTooltipAction?.closeAfterClick) this.hide();
+      });
+      this.renderer.appendChild(hint, btn);
+      this.actionButtonEl = btn;
+    }
+
+    if (this.pinned) {
+      const note = this.renderer.createElement('span') as HTMLElement;
+      this.renderer.addClass(note, 'pr-tooltip__pin-note');
+      this.renderer.setProperty(note, 'textContent', 'Pinned — click the icon again to close');
+      this.renderer.appendChild(hint, note);
+      this.renderer.addClass(hint, 'pr-tooltip__pin-hint--on');
+    } else {
+      this.renderer.removeClass(hint, 'pr-tooltip__pin-hint--on');
+    }
+  }
+
   private pin(): void {
     this.pinned = true;
+    this.renderPinHint();
     // `.pr-tooltip` sets `pointer-events: none` so a hover tooltip never blocks the cursor.
     // A pinned one must accept the pointer, otherwise its own links are unreachable — which
     // is the whole reason pinning exists.
@@ -321,7 +461,7 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
     // contains anchors, so announcing it verbatim reads literal markup to a screen reader). Not
     // gated further since a manual pass records any double-announcement conflict with focus-trap
     // timing per tasks.md TIP-T-1 item 8.
-    const announceText = this.tooltipEl?.textContent?.trim() ?? '';
+    const announceText = (this.tooltipBodyEl ?? this.tooltipEl)?.textContent?.trim() ?? '';
     if (announceText) this.liveAnnouncer.announce(announceText);
 
     const onDocumentClick = (event: Event): void => {
@@ -399,6 +539,10 @@ export class PrTooltipDirective implements OnInit, OnChanges, OnDestroy {
       // wiping innerHTML). `removeChild` on an orphan throws NotFoundError.
       if (this.tooltipEl.parentNode) this.renderer.removeChild(this.tooltipEl.parentNode, this.tooltipEl);
       this.tooltipEl = null;
+      this.tooltipBodyEl = null;
+      this.clearHideTimer();
+      this.pinHintEl = null;
+      this.actionButtonEl = null;
     }
   }
 

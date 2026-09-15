@@ -83,4 +83,16 @@ export class CreateCenterResultDto {
   @IsString()
   @IsNotEmpty()
   handle?: string;
+
+  // @akili-spec bilateral/manual-create-drawer (BIL-MCD-T-1)
+  @ApiPropertyOptional({
+    description:
+      'Result title supplied by the centre reporting tool at create time. ' +
+      'When omitted the server assigns a bilateral draft title.',
+    example: 'Kenya County Climate Risk Profiles',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  title?: string;
 }

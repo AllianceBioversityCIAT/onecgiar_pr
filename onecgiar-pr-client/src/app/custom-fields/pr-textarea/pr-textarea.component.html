@@ -5,6 +5,7 @@
     [tooltip]="tooltip()"
     [required]="effectiveRequired()"
     [hasValue]="hasValue"
+    [readOnly]="readOnly() || this.rolesSE.readOnly"
     [hasError]="!!maxWords() && wordCount() > maxWords() && !autogenerate()"
     [showDescription]="showDescriptionLabel()"
     [descInlineStyles]="labelDescInlineStyles()">

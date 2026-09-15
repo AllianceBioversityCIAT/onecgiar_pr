@@ -30,11 +30,22 @@ export class CurrentResultService {
     private readonly router: Router
   ) {}
 
-  GET_resultById() {
+  /**
+   * @param keepCurrent Refresh in place, leaving what is on screen alone until the new payload
+   *   lands. Use it for a RELOAD of the result already open (a save); leave it off when moving to
+   *   a different result, where the old data must not linger under the new one.
+   */
+  GET_resultById(keepCurrent = false) {
     this.api.fieldsManagerSE.inIpsr.set(false);
-    // Clear previous result data to avoid showing wrong portfolio menu during loading
-    this.resultLevelSE.currentResultTypeId = null;
-    this.dataControlSE.currentResultSignal.set({});
+    // Clearing here is what stops a stale portfolio menu from showing while another result loads.
+    // On a save it is the opposite of helpful: emptying `currentResultSignal` blanks every screen
+    // that reads it — the section skeletons come back over text the user is looking at and that
+    // was never in doubt, and the rail's sections briefly drop to zero. So a refresh in place
+    // keeps the data and lets the response replace it.
+    if (!keepCurrent) {
+      this.resultLevelSE.currentResultTypeId = null;
+      this.dataControlSE.currentResultSignal.set({});
+    }
 
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {

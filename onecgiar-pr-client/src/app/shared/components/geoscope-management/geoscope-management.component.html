@@ -20,7 +20,7 @@
     [label]="
       this.body.geo_scope_id != 2
         ? 'Are there any regions that you wish to specify for this ' +
-          this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName) +
+          this.resultLevelWord +
           '?'
         : 'Select regions'
     "
@@ -50,7 +50,7 @@
     [label]="
       this.body.geo_scope_id != 3
         ? 'Are there any countries that you wish to specify for this ' +
-          this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName) +
+          this.resultLevelWord +
           '?'
         : 'Select countries'
     "

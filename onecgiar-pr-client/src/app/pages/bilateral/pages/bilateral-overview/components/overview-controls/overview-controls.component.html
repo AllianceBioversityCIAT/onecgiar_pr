@@ -1,0 +1,343 @@
+<!-- @akili-spec bilateral/center-overview-tab (COV-T-5, COV-R-2, COV-R-3, COV-R-18) -->
+<div class="flex flex-wrap items-center gap-[10px] px-[16px] sm:px-[32px] py-[10px]">
+  <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Phase</span>
+
+  <!--
+    Phase selector (`COV-R-2`) — a token-styled `role="combobox"` trigger over a hand-rolled ARIA 1.2
+    listbox in the SAME `cdkConnectedOverlay` the Filter popover below uses, so both controls open,
+    dismiss (backdrop / `Escape`) and restore focus identically. Replaces the legacy `pr-select`
+    primitive, whose grey-input + solid-chevron look was rejected on the live page (`COV-T-8` H-3).
+  -->
+  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[210px] flex-none" data-testid="overview-phase-select">
+    <button
+      #phaseTrigger
+      type="button"
+      cdkOverlayOrigin
+      #phaseOrigin="cdkOverlayOrigin"
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-label="Phase"
+      data-testid="overview-phase-trigger"
+      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+      [attr.aria-expanded]="phaseOpen() ? 'true' : 'false'"
+      [attr.aria-controls]="phaseListboxId"
+      (click)="togglePhaseListbox()"
+      (keydown)="onPhaseTriggerKeydown($event)">
+      <span class="truncate" [title]="selectedPhaseLabel()">{{ selectedPhaseLabel() }}</span>
+      <i
+        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+        [class.rotate-180]="phaseOpen()"
+        aria-hidden="true"
+        >expand_more</i
+      >
+    </button>
+  </div>
+
+  @if (selectedPhase(); as phase) {
+    @if (phase.status) {
+      <span
+        class="flex-none inline-flex items-center h-[20px] px-[8px] rounded-[10px] text-[10px] font-bold bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]"
+        data-testid="overview-phase-open-badge">
+        Open
+      </span>
+    }
+  }
+
+  <span class="hidden min-[900px]:block w-[1px] h-[22px] bg-[var(--pr-border-divider)] flex-none"></span>
+
+  <!-- ── Filter button + popover (COV-R-3) ────────────────────────────────────────────────── -->
+  <button
+    type="button"
+    cdkOverlayOrigin
+    #filterOrigin="cdkOverlayOrigin"
+    data-testid="overview-filter-button"
+    class="flex-none inline-flex h-[34px] items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] font-medium cursor-pointer transition-colors focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+    [class]="filterButtonClass()"
+    [attr.aria-expanded]="popoverOpen()"
+    aria-haspopup="dialog"
+    [attr.aria-label]="'Filter, ' + activeFilterCount() + ' active'"
+    (click)="togglePopover()">
+    <i class="material-icons-round text-[16px]" aria-hidden="true">filter_alt</i>
+    Filter
+    @if (activeFilterCount() > 0) {
+      <span
+        class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-[var(--pr-color-primary-600)] px-[5px] text-[10px] font-bold text-white"
+        data-testid="overview-filter-badge">
+        {{ activeFilterCount() }}
+      </span>
+    }
+  </button>
+
+  <!-- ── Active chips (COV-R-3 A) ─────────────────────────────────────────────────────────── -->
+  @if (chips().length) {
+    <div
+      class="flex items-center gap-[8px] min-w-0 max-[899px]:overflow-x-auto max-[899px]:no-scrollbar max-[899px]:w-full"
+      data-testid="overview-filter-chips">
+      @for (chip of chips(); track chip.dimension) {
+        <span
+          class="inline-flex flex-none items-center gap-[6px] h-[26px] rounded-[13px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[10px] pr-[4px] text-[12px] text-[var(--pr-text-secondary)]">
+          {{ chip.label }}: <b class="font-semibold text-[var(--pr-text-heading)] max-w-[180px] truncate">{{ chip.value }}</b>
+          <button
+            type="button"
+            class="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-transparent text-[var(--pr-text-subtle)] hover:text-[var(--pr-text-heading)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+            [attr.aria-label]="'Remove filter ' + chip.label + ': ' + chip.value"
+            (click)="removeChip(chip.dimension)">
+            <i class="material-icons-round text-[13px]" aria-hidden="true">close</i>
+          </button>
+        </span>
+      }
+    </div>
+
+    <button
+      type="button"
+      data-testid="overview-clear-filters"
+      class="flex-none border border-transparent bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+      (click)="onClear()">
+      Clear
+    </button>
+  }
+</div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="filterOrigin"
+  [cdkConnectedOverlayOpen]="popoverOpen()"
+  [cdkConnectedOverlayPositions]="popoverPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closePopover()"
+  (overlayKeydown)="onOverlayKeydown($event)"
+  (detach)="closePopover()">
+  <div
+    role="dialog"
+    aria-label="Filter the Overview"
+    data-testid="overview-filter-popover"
+    cdkTrapFocus
+    cdkTrapFocusAutoCapture
+    class="w-[min(560px,calc(100vw-32px))] max-h-[min(70vh,520px)] overflow-y-auto custom_scroll rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] shadow-[var(--pr-shadow-2)]">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-[16px] p-[16px]">
+      <!-- Science Program (multi) -->
+      <div role="group" aria-label="Science Program" class="flex flex-col gap-[6px] min-w-0">
+        <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Science Program</span>
+        <div class="flex flex-col max-h-[160px] overflow-y-auto custom_scroll">
+          @for (option of programOptions(); track option.value) {
+            <button
+              type="button"
+              role="checkbox"
+              [attr.aria-checked]="isProgramChecked(option.value)"
+              class="flex h-[30px] items-center gap-[8px] rounded-[6px] border border-transparent px-[6px] text-left text-[12.5px] text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              (click)="toggleProgram(option.value)">
+              <span
+                class="inline-flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] border"
+                [class]="checkboxBoxClass(isProgramChecked(option.value))">
+                @if (isProgramChecked(option.value)) {
+                  <i class="material-icons-round text-[11px] text-white" aria-hidden="true">check</i>
+                }
+              </span>
+              <span class="truncate">{{ option.label }}</span>
+            </button>
+          } @empty {
+            <span class="px-[6px] py-[6px] text-[12px] text-[var(--pr-text-secondary)]">No Science Programs in this phase</span>
+          }
+        </div>
+      </div>
+
+      <!-- Project (multi) -->
+      <div role="group" aria-label="Project" class="flex flex-col gap-[6px] min-w-0">
+        <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Project</span>
+        <div class="flex flex-col max-h-[160px] overflow-y-auto custom_scroll">
+          @for (option of projectOptions(); track option.value) {
+            <button
+              type="button"
+              role="checkbox"
+              [attr.aria-checked]="isProjectChecked(option.value)"
+              class="flex h-[30px] items-center gap-[8px] rounded-[6px] border border-transparent px-[6px] text-left text-[12.5px] text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              (click)="toggleProject(option.value)">
+              <span
+                class="inline-flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] border"
+                [class]="checkboxBoxClass(isProjectChecked(option.value))">
+                @if (isProjectChecked(option.value)) {
+                  <i class="material-icons-round text-[11px] text-white" aria-hidden="true">check</i>
+                }
+              </span>
+              <span class="truncate">{{ option.label }}</span>
+            </button>
+          } @empty {
+            <span class="px-[6px] py-[6px] text-[12px] text-[var(--pr-text-secondary)]">No projects for this center</span>
+          }
+        </div>
+      </div>
+
+      <!-- Result type (multi) -->
+      <div role="group" aria-label="Result type" class="flex flex-col gap-[6px] min-w-0">
+        <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Result type</span>
+        <div class="flex flex-col max-h-[160px] overflow-y-auto custom_scroll">
+          @for (option of typeOptions(); track option.value) {
+            <button
+              type="button"
+              role="checkbox"
+              [attr.aria-checked]="isTypeChecked(option.value)"
+              class="flex h-[30px] items-center gap-[8px] rounded-[6px] border border-transparent px-[6px] text-left text-[12.5px] text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              (click)="toggleType(option.value)">
+              <span
+                class="inline-flex h-[15px] w-[15px] flex-none items-center justify-center rounded-[4px] border"
+                [class]="checkboxBoxClass(isTypeChecked(option.value))">
+                @if (isTypeChecked(option.value)) {
+                  <i class="material-icons-round text-[11px] text-white" aria-hidden="true">check</i>
+                }
+              </span>
+              <span class="truncate">{{ option.label }}</span>
+            </button>
+          } @empty {
+            <span class="px-[6px] py-[6px] text-[12px] text-[var(--pr-text-secondary)]">No result types in this phase</span>
+          }
+        </div>
+      </div>
+
+      <!-- Role · Source · Creation method (single, default both) -->
+      <div class="flex flex-col gap-[12px] min-w-0">
+        <div role="radiogroup" aria-label="Role" class="flex flex-col gap-[6px]">
+          <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Role</span>
+          <div class="flex flex-wrap gap-[6px]">
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="draftParams().role === null"
+              class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              [class]="choiceChipClass(draftParams().role === null)"
+              (click)="selectRole(null)">
+              Both
+            </button>
+            @for (choice of roleChoices; track choice.value) {
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="draftParams().role === choice.value"
+                class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+                [class]="choiceChipClass(draftParams().role === choice.value)"
+                (click)="selectRole(choice.value)">
+                {{ choice.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div role="radiogroup" aria-label="Source" class="flex flex-col gap-[6px]">
+          <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Source</span>
+          <div class="flex flex-wrap gap-[6px]">
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="draftParams().source === null"
+              class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              [class]="choiceChipClass(draftParams().source === null)"
+              (click)="selectSource(null)">
+              Both
+            </button>
+            @for (choice of sourceChoices; track choice.value) {
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="draftParams().source === choice.value"
+                class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+                [class]="choiceChipClass(draftParams().source === choice.value)"
+                (click)="selectSource(choice.value)">
+                {{ choice.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div role="radiogroup" aria-label="Creation method" class="flex flex-col gap-[6px]">
+          <span class="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--pr-text-subtle)]">Creation method</span>
+          <div class="flex flex-wrap gap-[6px]">
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="draftParams().method === null"
+              class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              [class]="choiceChipClass(draftParams().method === null)"
+              (click)="selectMethod(null)">
+              Both
+            </button>
+            @for (choice of methodChoices; track choice.value) {
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="draftParams().method === choice.value"
+                class="inline-flex h-[26px] items-center rounded-[13px] border px-[10px] text-[12px] font-medium cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+                [class]="choiceChipClass(draftParams().method === choice.value)"
+                (click)="selectMethod(choice.value)">
+                {{ choice.label }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-[8px] border-t border-[var(--pr-border-divider)] px-[16px] py-[10px]">
+      <button
+        type="button"
+        data-testid="overview-filter-cancel"
+        class="inline-flex h-[32px] items-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[13px] font-medium text-[var(--pr-text-secondary)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+        (click)="closePopover()">
+        Cancel
+      </button>
+      <button
+        type="button"
+        data-testid="overview-filter-apply"
+        class="inline-flex h-[32px] items-center rounded-[8px] border border-transparent bg-[var(--pr-color-primary-300)] px-[14px] text-[13px] font-semibold text-white hover:bg-[var(--pr-color-primary-400)] cursor-pointer focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-white"
+        (click)="applyDraft()">
+        Apply
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- Phase listbox (`COV-R-2` B/C) — transparent backdrop + positions mirror the Filter popover. -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="phaseOrigin"
+  [cdkConnectedOverlayOpen]="phaseOpen()"
+  [cdkConnectedOverlayPositions]="popoverPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closePhaseListbox()"
+  (overlayKeydown)="onPhaseOverlayKeydown($event)"
+  (detach)="closePhaseListbox()">
+  <div
+    #phaseList
+    [id]="phaseListboxId"
+    role="listbox"
+    tabindex="0"
+    aria-label="Phase"
+    data-testid="overview-phase-listbox"
+    [attr.aria-activedescendant]="activePhaseId() === null ? null : phaseOptionId(activePhaseId())"
+    (keydown)="onPhaseListKeydown($event)"
+    class="flex w-[240px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] overflow-y-auto custom_scroll rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)] outline-none">
+    @for (option of phaseOptions(); track option.id) {
+      <button
+        type="button"
+        role="option"
+        [id]="phaseOptionId(option.id)"
+        [attr.data-testid]="'overview-phase-option-' + option.id"
+        [attr.aria-selected]="selectedPhaseId() === option.id"
+        (click)="selectPhase(option.id)"
+        (mouseenter)="activePhaseId.set(option.id)"
+        class="flex w-full items-center justify-between gap-[8px] rounded-[6px] border-2 px-[10px] py-[7px] text-left text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none"
+        [class]="phaseOptionClass(option.id)">
+        <span class="truncate">{{ option.label }}</span>
+        @if (option.isOpen) {
+          <span
+            class="flex-none inline-flex items-center h-[20px] px-[8px] rounded-[10px] text-[10px] font-bold bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]"
+            data-testid="overview-phase-option-open-badge">
+            Open
+          </span>
+        }
+      </button>
+    } @empty {
+      <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No phases available</span>
+    }
+  </div>
+</ng-template>

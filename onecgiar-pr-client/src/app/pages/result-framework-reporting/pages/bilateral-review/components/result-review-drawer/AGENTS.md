@@ -183,6 +183,42 @@ stays editable. Admins are out of the story's scope, so they keep full editing.
 
 ---
 
+## 3c. A THIRD gate, and it is not about permission (P2-3620)
+
+`isGeoScopeCompleted()` (`:181`) answers a different question from the two above: **"is the data
+complete enough to be worth saving?"**, not "may this user save?". Don't fold it into either of
+them — a platform admin passes both permission gates and still must not save an empty required
+scope.
+
+| | `canEditDataStandards()` | `isGeoScopeCompleted()` |
+|---|---|---|
+| Question | may this user rewrite the Center's data? | is the required scope answered? |
+| Reads | roles + `status_id` | `resultDetail().geographicScope.geo_scope_id` |
+| When false | the section renders locked | the section stays editable, only the SAVE refuses |
+
+- **What it was fixing:** QA reproduced on prtest v49 (draft 9100) that "What is the geographic
+  focus of the result?" — a required field — saved empty **silently**. The justification modal
+  opened, the save went through, and a reload showed the scope still blank while
+  `# of people trained`, touched in the same save, kept its new value. `:723` writes
+  `geo_scope_id: geoScope.geo_scope_id || null`, so the null reached the server unchallenged.
+- **The guard lives in `onSaveDataStandardChanges()`, not only on the button**, for the same reason
+  §3b gives: the footer's "Unsaved data standards changes" chip is a **second, independent
+  trigger** for that method. Disabling one button would have left the other path open.
+- `getSaveDataStandardsTooltip()` mirrors `getApproveButtonTooltip()` so both buttons in the drawer
+  explain their own refusal the same way.
+- ⚠️ **Only the "prevents saving" half of AC1 is implemented.** The ticket also asks that the field
+  be **highlighted** as required. That is NOT a one-liner here:
+  `DataControlService.someMandatoryFieldIncompleteResultDetail()` paints nothing on its own — it
+  only writes `fieldFeedbackList` / `mandatoryFieldsTotal` and stamps `data-pr-feedback`. The
+  components that actually draw the alert and the red flash (`app-save-button`,
+  `app-section-bottom-bar`) are **not mounted anywhere in `result-framework-reporting/`**, and the
+  jump-to-field query is hardcoded to `.section_container`, a container this drawer does not have.
+  Calling the scanner from here would render nothing **and** would stomp signals shared with
+  result-detail / result-creator. The highlight needs its own UI in the drawer — treat it as
+  separate work, not a follow-up line.
+
+---
+
 ## 4. Read-only toggle mechanics (`RolesService.readOnly` global flip)
 
 > ⚠️ Read §3b first. This flip is still required — the TOC tree needs it — and it is safe alongside

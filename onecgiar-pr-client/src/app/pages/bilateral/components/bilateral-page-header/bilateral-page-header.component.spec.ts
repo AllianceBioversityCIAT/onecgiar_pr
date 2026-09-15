@@ -78,15 +78,17 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.detectChanges();
 
     const links = fixture.debugElement.queryAll(By.css('nav a'));
-    expect(links.map(l => l.nativeElement.textContent.trim().split('\n')[0].trim())).toEqual([
-      'track_changes\n          Reporting',
-      'table_chart\n          Results',
-      'fact_check\n          Draft Results',
-    ].map(s => s.replace(/\s+/g, ' ')));
+    expect(links.map(l => l.nativeElement.textContent.replace(/\s+/g, ' ').trim())).toEqual([
+      'space_dashboard Overview',
+      'track_changes Reporting',
+      'table_chart Results',
+      'fact_check AI Draft Results',
+    ]);
 
-    // Verify icons on all three tabs
+    // Verify icons on all four tabs
     const icons = fixture.debugElement.queryAll(By.css('nav a .material-icons-round'));
     expect(icons.map(i => i.nativeElement.textContent.trim())).toEqual([
+      'space_dashboard',
       'track_changes',
       'table_chart',
       'fact_check',
@@ -123,19 +125,83 @@ describe('BilateralPageHeaderComponent', () => {
     expect(heroDiv.classList.contains('border-b-band')).toBe(true);
   });
 
-  it('activates Reporting tab when activeTab is "reporting" or "overview"', () => {
+  it('activates the Reporting tab when activeTab is "reporting"', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
     fixture.componentRef.setInput('activeTab', 'reporting');
     fixture.detectChanges();
 
-    let active = fixture.debugElement.query(By.css('nav a[aria-current="page"]'));
-    expect(active?.nativeElement.textContent.trim()).toContain('Reporting');
+    const active = fixture.debugElement.queryAll(By.css('nav a[aria-current="page"]'));
+    expect(active.length).toBe(1);
+    expect(active[0].nativeElement.textContent.trim()).toContain('Reporting');
+    expect(component.isOverviewActive()).toBe(false);
+  });
 
+  /**
+   * `'overview'` used to be a legacy alias of Reporting. Now that Overview is its own tab the
+   * alias is retired (`COV-DD-4`): the literal activates Overview and nothing else.
+   */
+  it('activates only the Overview tab when activeTab is "overview"', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
     fixture.componentRef.setInput('activeTab', 'overview');
     fixture.detectChanges();
 
-    active = fixture.debugElement.query(By.css('nav a[aria-current="page"]'));
-    expect(active?.nativeElement.textContent.trim()).toContain('Reporting');
+    const active = fixture.debugElement.queryAll(By.css('nav a[aria-current="page"]'));
+    expect(active.length).toBe(1);
+    expect(active[0].nativeElement.textContent.trim()).toContain('Overview');
+    expect(active[0].nativeElement.getAttribute('href')).toBe('/bilateral/SMO/overview');
+    expect(component.isReportingActive()).toBe(false);
+  });
+
+  it('renders the four center tabs with Overview first', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.detectChanges();
+
+    const labels = fixture.debugElement
+      .queryAll(By.css('nav[aria-label="Center sections"] a'))
+      .map(a => a.nativeElement.textContent.replace(/\s+/g, ' ').trim());
+    expect(labels.length).toBe(4);
+    expect(labels[0]).toContain('Overview');
+    expect(labels[1]).toContain('Reporting');
+    expect(labels[2]).toContain('Results');
+    expect(labels[3]).toContain('AI Draft Results');
+  });
+
+  describe('shared phase on the tab links (COV-R-5 A)', () => {
+    const tabHrefs = () =>
+      fixture.debugElement
+        .queryAll(By.css('nav[aria-label="Center sections"] a'))
+        .map(a => a.nativeElement.getAttribute('href'));
+
+    it('leaves the tab links bare while no phase is selected', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      ctx.selectedVersionId.set(null);
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      expect(component.tabQueryParams()).toBeNull();
+      expect(tabHrefs()).toEqual([
+        '/bilateral/SMO/overview',
+        '/bilateral/SMO/home',
+        '/bilateral/SMO/results',
+        '/bilateral/SMO/drafts',
+      ]);
+    });
+
+    it('carries ?phase= on all four tab links once a phase is selected', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      ctx.selectedVersionId.set(35);
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      expect(component.tabQueryParams()).toEqual({ phase: 35 });
+      expect(tabHrefs()).toEqual([
+        '/bilateral/SMO/overview?phase=35',
+        '/bilateral/SMO/home?phase=35',
+        '/bilateral/SMO/results?phase=35',
+        '/bilateral/SMO/drafts?phase=35',
+      ]);
+    });
   });
 
   describe('draft count badge', () => {
@@ -330,7 +396,7 @@ describe('BilateralPageHeaderComponent', () => {
 
   it('leaves the tabbed pages on the stacked centre block when no page title is given', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
-    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.componentRef.setInput('activeTab', 'reporting');
     fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.css('nav[aria-label="Breadcrumb"]'))).toBeNull();
@@ -340,7 +406,7 @@ describe('BilateralPageHeaderComponent', () => {
 
   it('points the Bulk Results Uploader CTA at the external platform, in a new tab', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
-    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.componentRef.setInput('activeTab', 'reporting');
     fixture.detectChanges();
 
     const cta = fixture.debugElement.query(By.css('[data-testid="bilateral-bulk-uploader-cta"]'));
@@ -356,11 +422,11 @@ describe('BilateralPageHeaderComponent', () => {
 
   it('leaves the tabs pointing at the current center', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
-    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.componentRef.setInput('activeTab', 'reporting');
     fixture.detectChanges();
 
     const draftsTab = fixture.debugElement.queryAll(By.css('nav a')).find(l =>
-      l.nativeElement.textContent.includes('Draft Results'),
+      l.nativeElement.textContent.includes('AI Draft Results'),
     );
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
   });
@@ -438,6 +504,49 @@ describe('BilateralPageHeaderComponent', () => {
       fixture.detectChanges();
       expect(q('[data-testid="bilateral-detail-header"]')).toBeNull();
       expect(q('nav[aria-label="Breadcrumb"]')).not.toBeNull();
+    });
+  });
+
+  describe('Reporting Cycle Eyebrow', () => {
+    it('defaults to "CGIAR Center" when reporting current phase has no year or acronym', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      const eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl).toBeTruthy();
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center');
+    });
+
+    it('renders "CGIAR Center · Reporting cycle 2026 · P25" when reportingCurrentPhase is populated', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+
+      component.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+      component.dataControlSE.reportingCurrentPhase.portfolioAcronym = 'P25';
+      component.dataControlSE.reportingPhaseVersion.update(v => v + 1);
+      fixture.detectChanges();
+
+      const eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl).toBeTruthy();
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center · Reporting cycle 2026 · P25');
+    });
+
+    it('reactively updates eyebrow on phase load', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'drafts');
+      fixture.detectChanges();
+
+      let eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center');
+
+      component.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      component.dataControlSE.reportingCurrentPhase.portfolioAcronym = 'P26';
+      component.dataControlSE.reportingPhaseVersion.update(v => v + 1);
+      fixture.detectChanges();
+
+      eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
+      expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center · Reporting cycle 2027 · P26');
     });
   });
 });

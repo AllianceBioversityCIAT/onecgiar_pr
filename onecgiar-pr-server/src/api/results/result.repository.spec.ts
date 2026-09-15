@@ -72,6 +72,98 @@ describe('ResultRepository (unit)', () => {
     expect(countParams).toEqual(params);
   });
 
+  /**
+   * Bug: docs/specs/bugfix/portfolio-overview-partial-counts. In prod, historical row volume
+   * exceeded the page LIMIT and the query had no ORDER BY, so open-phase (v.status = 1) rows
+   * could be silently dropped from the page depending on MySQL's unordered LIMIT selection.
+   * REQ-1: `ORDER BY v.status DESC, r.id DESC` must be present, immediately before LIMIT/OFFSET,
+   * so open-phase rows always sort ahead and survive the page regardless of historical volume.
+   */
+  describe('AllResultsByRoleUserAndInitiativeFiltered — deterministic ordering (REQ-1)', () => {
+    /**
+     * A tiny in-memory stand-in for MySQL's row selection, driven by the actual generated SQL:
+     * - If the SQL carries the fix's ORDER BY, rows are sorted (open-phase first, r.id DESC
+     *   tiebreak) before LIMIT/OFFSET is applied.
+     * - If it does not (pre-fix), rows are returned in raw insertion order before LIMIT/OFFSET
+     *   is applied — the same "arbitrary page" symptom the proposal diagnosed in prod.
+     */
+    const makeOrderingAwareQueryMock = (seededRows: any[]) =>
+      jest.fn((sql: string) => {
+        if (sql.includes('SELECT COUNT(1) as total FROM (')) {
+          return Promise.resolve([{ total: seededRows.length }]);
+        }
+        let rows = [...seededRows];
+        if (/ORDER BY v\.status DESC, r\.id DESC/.test(sql)) {
+          rows.sort((a, b) => b.phase_status - a.phase_status || b.id - a.id);
+        }
+        const limitMatch = sql.match(/LIMIT (\d+)/);
+        const offsetMatch = sql.match(/OFFSET (\d+)/);
+        const offset = offsetMatch ? parseInt(offsetMatch[1], 10) : 0;
+        const limit = limitMatch ? parseInt(limitMatch[1], 10) : rows.length;
+        rows = rows.slice(offset, offset + limit);
+        return Promise.resolve(rows);
+      });
+
+    it('REQ-1-S1: keeps an open-phase row inside the page when historical volume exceeds the LIMIT, even though it is not naturally within an unordered LIMIT window', async () => {
+      const LIMIT = 20;
+      // 24 closed-phase rows (ids 2..25) inserted first, then ONE open-phase row (id=1 — the
+      // smallest, so r.id DESC alone would rank it LAST, not first) inserted LAST. An unordered
+      // LIMIT (raw insertion order, sliced to LIMIT) returns only the first 20 closed rows —
+      // the open row sits at array index 24 and is provably excluded without ordering.
+      const closedRows = Array.from({ length: 24 }, (_, i) => ({
+        id: i + 2,
+        phase_status: 0,
+      }));
+      const openRow = { id: 1, phase_status: 1 };
+      const seededRows = [...closedRows, openRow];
+      expect(seededRows.length).toBeGreaterThan(LIMIT);
+
+      queryMock = makeOrderingAwareQueryMock(seededRows);
+      (repo as any).query = queryMock;
+
+      const res = await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        {},
+        [10, 11],
+        { limit: LIMIT, offset: 0 },
+      );
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('ORDER BY v.status DESC, r.id DESC');
+      // The ORDER BY must sit between the WHERE clauses and LIMIT/OFFSET.
+      expect(sql.indexOf('ORDER BY')).toBeGreaterThan(sql.indexOf('WHERE'));
+      expect(sql.indexOf('ORDER BY')).toBeLessThan(sql.indexOf('LIMIT'));
+
+      expect(res.results).toHaveLength(LIMIT);
+      expect(res.results.some((r: any) => r.id === openRow.id)).toBe(true);
+    });
+
+    it('REQ-1-S2: when total rows are below the LIMIT, the same set of rows is returned unchanged (no regression for other callers)', async () => {
+      const seededRows = [
+        { id: 5, phase_status: 0 },
+        { id: 3, phase_status: 1 },
+        { id: 9, phase_status: 0 },
+        { id: 1, phase_status: 0 },
+        { id: 7, phase_status: 1 },
+      ];
+
+      queryMock = makeOrderingAwareQueryMock(seededRows);
+      (repo as any).query = queryMock;
+
+      const res = await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        {},
+        [10, 11],
+        { limit: 20, offset: 0 },
+      );
+
+      expect(res.results).toHaveLength(seededRows.length);
+      expect(new Set(res.results.map((r: any) => r.id))).toEqual(
+        new Set(seededRows.map((r) => r.id)),
+      );
+    });
+  });
+
   it('supports single filter values without pagination', async () => {
     const items = [{ id: 2 }];
     queryMock.mockResolvedValueOnce(items);
@@ -195,6 +287,36 @@ describe('ResultRepository (unit)', () => {
     // is what produced a QueryFailedError on `getIndicatorContributionSummaryByProgram`.
     expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
     expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
+  // COV-R-16 (bilateral/center-overview-tab): the Overview's "Projects covered" card needs the
+  // lead project's CLARISA id, not just its display name, so it can dedupe/group by project.
+  // project_id is a second correlated subquery on results_by_projects, deliberately duplicating
+  // the project_name shape so both fields always describe the same lead-project row.
+  it('returns project_id from the same lead-project subquery shape as project_name, without changing any existing column, param, or ordering', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain(') AS project_id');
+    // Every previously selected alias/column must still be present, untouched.
+    expect(sql).toContain('project_name');
+    expect(sql).toContain('r.result_type_id');
+    expect(sql).toContain(') AS submitter');
+    expect(sql).toContain('r.creation_method');
+    expect(sql).toContain('is_ai_generated');
+    expect(sql).toContain('rc.is_leading_result');
+    expect(sql).toContain('rs.status_name');
+    expect(sql).toContain('r.version_id');
+    expect(sql).toContain('r.source');
+    // Neither subquery binds a parameter — placeholder count must still match params.
+    expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+    // Both project_name and project_id resolve the lead project the same way.
+    expect(
+      (sql.match(/ORDER BY rbp\.is_lead DESC, rbp\.id DESC/g) ?? []).length,
+    ).toBe(2);
   });
 
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
@@ -690,5 +812,106 @@ describe('ResultRepository — AllResultsLegacyNewByTitle (P2-3527)', () => {
       'climate',
       'climate%',
     ]);
+  });
+});
+
+/**
+ * P2-3663 — a phase change must carry the lead contact person's DIRECTORY LINK, not just the typed
+ * name. Until 2026-09-14 the replication SQL copied `lead_contact_person` alone, so every
+ * rolled-over result landed in the new phase with `lead_contact_person_id` empty while the name
+ * still showed on screen. From the 2026 phase the live `validation_general_information_P25`
+ * requires that id, so the copy could never turn General information green and Submit stayed
+ * disabled with nothing for the reporter to act on (measured on prtest: 5 of 5 such results
+ * answered `general-information: false` and `submit: false`).
+ *
+ * 🛑 The position check is the point, not the `toContain`. An INSERT whose column list and SELECT
+ * drift apart still compiles and still runs — it just writes every value into the wrong column.
+ * Asserting only that the name appears somewhere would pass on exactly that bug.
+ */
+describe('ResultRepository — replication carries the contact directory link (P2-3663)', () => {
+  const repo = new ResultRepository(
+    {
+      createEntityManager: jest.fn(() => ({}) as any),
+    } as unknown as DataSource,
+    { returnErrorRepository: jest.fn() } as any,
+  );
+  const config = {
+    phase: 5,
+    user: { id: 77 } as any,
+    old_result_id: 1000,
+    new_result_id: 2000,
+  } as any;
+
+  /** Column list and SELECT list of the INSERT, each collapsed to one entry per written column. */
+  const insertLists = (insertQuery: string) => {
+    const match =
+      /insert into `result` \(\s*([\s\S]*?)\s*\) select\s*([\s\S]*?)\s*from `result` r2/.exec(
+        insertQuery,
+      );
+    if (!match)
+      throw new Error(
+        'replication INSERT no longer matches the expected shape',
+      );
+
+    const columns = match[1]
+      .split(/[\n,]/)
+      .map((entry) => entry.trim().replace(/^,/, '').trim())
+      .filter(Boolean);
+
+    // `${...}` expressions span several lines; join them until their delimiters balance out.
+    const values: string[] = [];
+    let buffer = '';
+    for (const line of match[2]
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)) {
+      buffer = buffer ? `${buffer} ${line}` : line;
+      const balanced =
+        (buffer.match(/\(/g) ?? []).length ===
+          (buffer.match(/\)/g) ?? []).length &&
+        (buffer.match(/\{/g) ?? []).length ===
+          (buffer.match(/\}/g) ?? []).length;
+      if (balanced) {
+        values.push(buffer.replace(/,$/, '').trim());
+        buffer = '';
+      }
+    }
+    if (buffer) values.push(buffer.trim());
+
+    return { columns, values };
+  };
+
+  it('copies lead_contact_person_id alongside the name in findQuery', () => {
+    const { findQuery } = repo.createQueries(config);
+
+    expect(findQuery).toContain('r2.lead_contact_person,');
+    expect(findQuery).toContain('r2.lead_contact_person_id,');
+  });
+
+  it('writes lead_contact_person_id into its own column in insertQuery', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+    );
+    const index = columns.indexOf('lead_contact_person_id');
+
+    expect(index).toBeGreaterThan(-1);
+    expect(values[index]).toBe('r2.lead_contact_person_id');
+  });
+
+  it('keeps every INSERT column aligned with the value written into it', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+    );
+
+    expect(values).toHaveLength(columns.length);
+    const misaligned = columns.filter((column, i) => {
+      const value = values[i] ?? '';
+      const alias = value.includes(' as ')
+        ? value.slice(value.lastIndexOf(' as ') + 4).trim()
+        : value.replace('r2.', '').trim();
+      return alias !== column;
+    });
+
+    expect(misaligned).toEqual([]);
   });
 });

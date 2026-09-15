@@ -113,6 +113,13 @@ describe('AiReviewService', () => {
       // `beforeEach`, before this block even runs. It has nothing to do with DAC scores; flush it
       // here too so it doesn't show up as an unmatched request in this describe's `httpMock.verify()`.
       httpMock.expectOne(req => req.url.includes('type-by-level/get/all')).flush({ response: [{ id: 3, result_type: [] }] });
+      // Same story one level further out: `AiReviewService` → `ApiService` → `IpsrListFilterService`,
+      // which (since `changes/innovation-packages-filters-parity`) resolves `PhasesService` a microtask
+      // after construction, and `PhasesService`'s constructor fires `GET /api/versioning` on the spot.
+      // In the app `PhasesService` is bootstrapped by other consumers anyway, so nothing here is about
+      // DAC scores — flush whatever landed so `httpMock.verify()` sees no open request. `match()` (not
+      // `expectOne`) because the microtask may or may not have run yet when this hook executes.
+      httpMock.match(req => req.url.includes('api/versioning')).forEach(req => req.flush({ response: [] }));
     });
 
     afterEach(() => {

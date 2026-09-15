@@ -22,6 +22,8 @@ interface ReportingWayOption {
 export class BilateralReportingWaySelectorComponent {
   isLoading = input(false);
   canUseAi = input(false);
+  /** When false, every card is disabled until prerequisites (e.g. primary SP) are met. */
+  primaryReady = input(true);
   selectedWay = input<ReportingWay | null>(null);
   waySelected = output<ReportingWay>();
 
@@ -46,6 +48,7 @@ export class BilateralReportingWaySelectorComponent {
 
   isOptionDisabled(option: ReportingWayOption): boolean {
     if (this.isLoading()) return true;
+    if (!this.primaryReady()) return true;
     if (option.id === 'ai' && !this.canUseAi()) return true;
     return !option.enabled;
   }

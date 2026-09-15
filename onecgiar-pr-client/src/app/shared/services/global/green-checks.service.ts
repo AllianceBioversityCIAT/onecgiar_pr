@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { ApiService } from '../api/api.service';
 import { ResultsApiService } from '../api/results-api.service';
 import { FieldsManagerService } from '../fields-manager.service';
@@ -18,6 +18,13 @@ export class GreenChecksService {
    * checks on B's rail, with nothing on screen to say so.
    */
   private pendingResultId: number | string | null = null;
+
+  /**
+   * A recalculation is in the air. The section rail turns its pending rings into spinners while
+   * this is true, so a save that changes nothing visible on the form still SAYS the platform is
+   * rechecking — the alternative is a rail that sits silent for a second and then blinks.
+   */
+  readonly refreshing = signal(false);
 
   constructor(
     private readonly api: ApiService,
@@ -52,6 +59,7 @@ export class GreenChecksService {
     }
 
     this.pendingResultId = resultId;
+    this.refreshing.set(true);
     const request$ = this.fieldsManagerSE.isP25()
       ? this.api.resultsSE.GET_p25GreenChecksByResultId()
       : this.api.resultsSE.GET_greenChecksByResultId();
@@ -59,6 +67,7 @@ export class GreenChecksService {
     request$.subscribe({
       next: ({ response }) => {
         if (this.pendingResultId !== resultId) return;
+        this.refreshing.set(false);
         this.api.dataControlSE.green_checks = response?.green_checks ?? null;
         this.submit = response?.submit ?? null;
       },
@@ -69,6 +78,7 @@ export class GreenChecksService {
        */
       error: err => {
         if (this.pendingResultId !== resultId) return;
+        this.refreshing.set(false);
         console.error('Green checks could not be loaded', err);
         this.reset();
       }
@@ -77,6 +87,7 @@ export class GreenChecksService {
 
   private reset() {
     this.pendingResultId = null;
+    this.refreshing.set(false);
     if (this.api.dataControlSE.green_checks !== null) this.api.dataControlSE.green_checks = null;
     this.submit = null;
   }

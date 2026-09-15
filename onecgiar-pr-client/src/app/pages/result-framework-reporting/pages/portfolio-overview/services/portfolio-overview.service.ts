@@ -172,6 +172,15 @@ export class PortfolioOverviewService {
   /** True when the server holds more rows than the single page we asked for. */
   readonly isPartial = signal<boolean>(false);
 
+  /**
+   * Rows actually fetched from the server in this page, BEFORE `apply()`'s open-phase filtering.
+   * This is what the partial-results banner must report ("Showing the first N results") — `total()`
+   * below is a DIFFERENT number (post-filter, open-phase-only) that legitimately feeds the "Total
+   * Portfolio Results" KPI tile. Conflating the two was the bug (see spec
+   * bugfix/portfolio-overview-partial-counts).
+   */
+  readonly fetchedCount = signal<number>(0);
+
   /** Results of the OPEN phase only (`phase_status === 1`). */
   private readonly rows = signal<RawResult[]>([]);
   /** Label of the phase these figures describe, e.g. `Reporting 2026 - P25`. */
@@ -469,6 +478,7 @@ export class PortfolioOverviewService {
       next: envelope => {
         if (token !== this.requestToken) return;
         const items = envelope?.response?.items ?? [];
+        this.fetchedCount.set(items.length);
         this.apply(items);
         const total = Number(envelope?.response?.meta?.total ?? items.length);
         this.isPartial.set(Number.isFinite(total) && total > items.length);
@@ -526,6 +536,7 @@ export class PortfolioOverviewService {
 
   private reset(): void {
     this.rows.set([]);
+    this.fetchedCount.set(0);
     this.phaseName.set('');
     this.portfolioAcronym.set('');
     this.closedPhase.set(false);

@@ -143,8 +143,30 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
     const id = Number((first as any)?.id ?? first);
     return Number.isFinite(id) ? id : null;
   }
+  /**
+   * 🛑 The array this single-select writes into is NOT this question's private storage.
+   * `linked_result` is a shared table and the read path gives this section EVERY active row of the
+   * result: `getLinkedResultsByOrigin` (`results-innovations-use.repository.ts:245-259`) selects
+   * `linked_results_id` for the origin with no filter on WHICH surface wrote it, so the P22 "Links to
+   * results" rows and the ones versioning replicated from the previous phase arrive here too, mixed
+   * with the answer to this question.
+   *
+   * Measured on the test DB and on prtest (11 Sep 2026): 28 active Innovation use results carry more
+   * than one active link, and result 11164 (code 8696, 2026 phase) carries three — 8738, 8826 and
+   * 8877, all three Policy change results. `v2/api/innovation-use/get/result/11164` returns the three
+   * of them, while this select can only ever paint ONE (the id the getter above returns).
+   *
+   * Overwriting the whole array with `[value]` therefore deleted the links this surface never showed:
+   * the payload carries the array verbatim (`currentInnovationLink()` below) and
+   * `LinkedResultsService.createForInnovationUse` → `LinkedResultRepository.updateLink`
+   * de-activates every active row whose id is missing from it
+   * (`linked-results.repository.ts:313-330`). So only the slot actually on screen is replaced; every
+   * other stored id rides through untouched.
+   */
   set linkedInnovationId(value: number | null) {
-    this.innovationUseInfoBody.linked_results = value == null ? [] : [value];
+    const displayed = this.linkedInnovationId;
+    const untouched = this.toLinkedResultIds(this.innovationUseInfoBody?.linked_results).filter(id => Number.isFinite(id) && id !== displayed);
+    this.innovationUseInfoBody.linked_results = value == null ? untouched : [value, ...untouched];
   }
 
   /**

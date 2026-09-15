@@ -398,7 +398,7 @@ export class AiReviewService {
     // Unconditional per `design.md` §6.2 / `SUB-DD-1`: reload the shared result state on every
     // AI Review save path, regardless of route or field name, so any consumer of
     // `CurrentResultService` (e.g. the submission modal's title) reflects the latest server data.
-    this.currentResultSE.GET_resultById();
+    this.currentResultSE.GET_resultById(true);
   }
 
   // Save DAC score

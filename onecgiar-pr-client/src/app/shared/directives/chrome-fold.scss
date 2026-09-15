@@ -1,0 +1,29 @@
+/* Shared by the topbar and any bottom bar that folds. Global (not component-scoped) because the
+   two hosts live in different components and must behave identically. */
+.chrome-fold {
+  transition:
+    transform 220ms ease,
+    margin 220ms ease,
+    opacity 160ms ease;
+}
+
+/* Leaves upwards by default (the topbar) and gives its space back from the bottom. */
+.chrome-fold--folded {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  margin-bottom: calc(-1 * var(--fold-h, 0px));
+}
+
+/* A bottom bar leaves downwards instead. */
+.chrome-fold--down.chrome-fold--folded {
+  transform: translateY(100%);
+  margin-bottom: 0;
+  margin-top: calc(-1 * var(--fold-h, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chrome-fold {
+    transition-duration: 1ms;
+  }
+}

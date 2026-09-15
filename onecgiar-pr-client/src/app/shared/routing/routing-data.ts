@@ -712,6 +712,15 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
 
 export const BilateralRouting: PrRoute[] = [
   {
+    prName: 'Bilateral Overview',
+    path: 'overview',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-overview/bilateral-overview.component').then(
+        m => m.BilateralOverviewComponent
+      )
+  },
+  {
     prName: 'Bilateral Home',
     path: 'home',
     prHide: true,

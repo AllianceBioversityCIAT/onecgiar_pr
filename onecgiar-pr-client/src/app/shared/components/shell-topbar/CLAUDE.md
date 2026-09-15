@@ -1,8 +1,8 @@
 # shell-topbar
 
-**Verified:** 2026-09-08 · branch qa-development-2026-ss · SPEC:changes/sidebar-toggle-consolidation (STC-T-2)
+**Verified:** 2026-09-13 · branch performance-refactor · P2-3683 (Support menu)
 
-The app shell header: centered Search · notifications popover · user menu. Rendered
+The app shell header: centered Search · **Support menu** · notifications popover · user menu. Rendered
 by `app.component.html:38`, and hidden entirely when `dataControlSE.show_qa_full_screen` or
 `focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
 `Cmd/Ctrl+K` listener**.
@@ -23,8 +23,12 @@ service any more.
 - `Cmd/Ctrl+K` is registered here (`onGlobalKeydown`, `document:keydown`) with `preventDefault()`,
   and is ignored when the event target is an `input`/`textarea`/`select`/contenteditable — except
   when the palette is already open, so the shortcut can still toggle it closed from its own input.
-- Notifications and the user menu are `cdkConnectedOverlay` popovers driven by two local signals,
-  both closed by the separate `document:keydown.escape` listener.
+- Notifications, the user menu and **Support** are `cdkConnectedOverlay` popovers driven by local
+  signals, all closed by the separate `document:keydown.escape` listener.
+- **Support is the single entry point for getting help** (P2-3683): `Start a support chat` and
+  `Give feedback`. It replaced the standalone bug button, and Tawk's floating bubble in the
+  bottom-right corner went with it — `TawkComponent` now hides the launcher on `onLoad`,
+  `onChatMinimized` and `onChatEnded`, and `SupportChatService.open()` is what brings the chat back.
 
 ## Traps (⚠️ = already caused a change)
 
@@ -41,6 +45,15 @@ service any more.
 - ⚠️ **`Cmd/Ctrl+B` is not ours** — it is Spartan's sidebar toggle, registered on `window` with its
   own `preventDefault` (`spartan/sidebar` → `hlm-sidebar.service.ts:47`). Do not bind it here, and do
   not bind `/` for search: PRMS users type slashes into result titles and ToC statements all day.
+- ⚠️ **`Give feedback` is gated on `environment.production`, the chat is NOT.** A report filed from
+  production lands straight in the team's Jira board and counts against the SLA (JC, 11-sep-2026),
+  so the feedback entry is test-only — same `onlyTest` criterion the navigation uses. In production
+  the menu keeps the chat, which is the supported route there. Do not "restore" the feedback item
+  for parity with the design: the design predates that call.
+- ⚠️ **`openSupportChat()` leaves the menu OPEN when the widget is absent.** `<app-tawk>` is skipped
+  for anonymous users and in local (`app.component.html`, `!inLocal`), and the third-party script
+  can fail — a menu that shuts with no chat on screen reads as "it broke silently". The service
+  returns a boolean for exactly this; don't close unconditionally.
 - **Two Esc listeners coexist.** The palette's Esc is CDK Dialog's; this component's
   `document:keydown.escape` only closes the two popovers. Both firing on one Esc press is harmless
   (the popovers are already closed), but do not "unify" them — they close different things.

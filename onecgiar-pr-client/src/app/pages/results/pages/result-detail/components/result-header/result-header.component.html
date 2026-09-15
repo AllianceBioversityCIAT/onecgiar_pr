@@ -3,13 +3,17 @@
     <!-- Clamped to two lines: result titles run long and a five-line heading pushes the form below
          the fold. The full text stays reachable in the Title field of General information.
          20px is the approved h1 token (`fonts.scss`); 26px was crowding the identity strip. -->
-    <div class="flex min-w-0 flex-1 items-start gap-[8px]">
+    <div class="group/copy flex min-w-0 flex-1 items-start gap-[8px]">
       <h1
         class="m-0 line-clamp-2 min-w-0 text-pretty text-[20px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
         [title]="title"
         data-testid="result-header-title">
         {{ title }}
       </h1>
+
+      <!-- The title is clamped to two lines, so copying it is the only way to get the whole
+           thing out of this screen without opening General information. -->
+      <app-copy-button class="mt-[2px]" [value]="title" what="result title" />
 
       <span class="relative mt-[3px] inline-flex shrink-0 items-center" data-testid="result-header-meta-wrap">
         <button
@@ -161,13 +165,16 @@
       @if (officialCode) {
         <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
         <span class="text-[var(--pr-text-secondary)]">Submitter</span>
-        <a
-          [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
-          class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
-          [attr.aria-label]="'Submitter: ' + submitterValue"
-          data-testid="result-header-submitter">
-          {{ submitterValue }}
-        </a>
+        <span class="group/copy inline-flex items-center gap-[2px]">
+          <a
+            [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
+            class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
+            [attr.aria-label]="'Submitter: ' + submitterValue"
+            data-testid="result-header-submitter">
+            {{ submitterValue }}
+          </a>
+          <app-copy-button [value]="submitterValue" what="submitter" />
+        </span>
       }
       @if (aowLoading()) {
         <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
@@ -178,14 +185,17 @@
       } @else if (aowValue) {
         <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
         <span class="text-[var(--pr-text-secondary)]">Area of Work</span>
-        <a
-          [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
-          [queryParams]="aowQueryParams"
-          class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
-          [attr.aria-label]="'Area of Work: ' + aowValue"
-          data-testid="result-header-aow">
-          {{ aowValue }}
-        </a>
+        <span class="group/copy inline-flex items-center gap-[2px]">
+          <a
+            [routerLink]="['/result-framework-reporting/entity-details', officialCode]"
+            [queryParams]="aowQueryParams"
+            class="cursor-pointer font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
+            [attr.aria-label]="'Area of Work: ' + aowValue"
+            data-testid="result-header-aow">
+            {{ aowValue }}
+          </a>
+          <app-copy-button [value]="aowValue" what="area of work" />
+        </span>
       }
     }
   </div>

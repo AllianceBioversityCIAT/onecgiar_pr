@@ -21,7 +21,7 @@
       }
       @if (data.isPartial()) {
         <p class="mt-[4px] text-[13px] font-medium text-[var(--pr-status-in-progress-fg)]">
-          Showing the first {{ data.total() }} results — the server holds more, so these figures are partial.
+          Showing the first {{ data.fetchedCount() }} results — the server holds more, so these figures are partial.
         </p>
       }
     </header>

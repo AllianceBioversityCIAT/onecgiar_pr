@@ -12,7 +12,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, filter, take, map, distinctUntilChanged } from 'rxjs';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -34,35 +34,66 @@ import {
   PrTableEmptyDirective,
   PrTableLoadingDirective,
 } from '../../../../shared/components/pr-table';
+// @akili-spec bilateral/center-overview-tab (COV-T-2, COV-DD-11) — `BilateralCenterResult` moved
+// to a shared interface file so both the Results tab and the Overview's pure modules can import
+// the row shape without page-to-page coupling; re-exported below for existing imports.
+import type { BilateralCenterResult } from '../../services/bilateral-center-result.interface';
+// @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-13, COV-R-14, COV-DD-3) — the shared
+// query-param contract and filter predicate. The Results tab is now a reader/writer of this
+// contract; `applyResultsTabDefaults` is what protects the byte-identical no-param default (W3 +
+// Lead) this list shipped before this spec.
+import {
+  applyResultsTabDefaults,
+  BilateralMethod,
+  BilateralQueryParams,
+  BilateralRole,
+  BilateralSource,
+  BILATERAL_METHOD_QUERY_PARAM,
+  BILATERAL_PHASE_QUERY_PARAM,
+  BILATERAL_PROGRAM_QUERY_PARAM,
+  BILATERAL_PROJECT_QUERY_PARAM,
+  BILATERAL_ROLE_QUERY_PARAM,
+  BILATERAL_SEARCH_QUERY_PARAM,
+  BILATERAL_SOURCE_QUERY_PARAM,
+  BILATERAL_STATUS_QUERY_PARAM,
+  BILATERAL_TYPE_QUERY_PARAM,
+  parseBilateralQueryParams,
+  serializeBilateralQueryParams,
+  StatusKey,
+} from '../../bilateral-query-params';
+import { filterCenterResults } from '../../bilateral-result-filter';
 
-export interface BilateralCenterResult {
-  id: number;
-  result_code: string;
-  title: string;
-  /** P2-3152 AC6 — result description, listed next to the title on the centre dashboard. */
-  description?: string | null;
-  /** P2-3152 AC6 — name of the W3/Bilateral project the result was reported under. */
-  project_name?: string | null;
-  result_type: string;
-  /**
-   * P2-3653 — `ResultTypeEnum` id. The display name above cannot gate "Update result": the rule
-   * is shared with the Results Center list, which compares ids.
-   */
-  result_type_id?: number;
-  /**
-   * P2-3653 — official code of the result's primary Science Program (role 1), under the key the
-   * change-phase modal reads (`scienceProgram` getter). Same name the Results Center list uses.
-   */
-  submitter?: string | null;
-  status_id: number;
-  status_name: string;
-  created_date: string;
-  version_id: number;
-  source: 'API' | 'Result';
-  creation_method?: string;
-  is_ai_generated?: boolean | number;
-  is_leading_result: 0 | 1;
-}
+export type { BilateralCenterResult };
+
+/** `COV-R-14` — the Results tab excludes `phase` (shell context) AND `multi` (Reporting-only) from
+ *  the "does the URL carry any contract param" test, so a plain `?phase=` tab-link click or a
+ *  stray `?multi=1` left over from a Reporting deep link still gets the W3 + Lead default. */
+const RESULTS_TAB_IGNORE_KEYS = ['phase', 'multi'] as const;
+
+/** `COV-R-14` — the nine contract keys the Results tab reads AND writes (everything except
+ *  `multi`, which is Reporting-only, and `?result=`, which is untouched notification focus). */
+const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
+  BILATERAL_PHASE_QUERY_PARAM,
+  BILATERAL_STATUS_QUERY_PARAM,
+  BILATERAL_PROJECT_QUERY_PARAM,
+  BILATERAL_PROGRAM_QUERY_PARAM,
+  BILATERAL_TYPE_QUERY_PARAM,
+  BILATERAL_ROLE_QUERY_PARAM,
+  BILATERAL_SOURCE_QUERY_PARAM,
+  BILATERAL_METHOD_QUERY_PARAM,
+  BILATERAL_SEARCH_QUERY_PARAM,
+] as const;
+
+/** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
+const STATUS_KEY_LABELS: Record<StatusKey, string> = {
+  editing: 'Editing',
+  qa: 'In QA',
+  submitted: 'Submitted',
+  discontinued: 'Discontinued',
+  pending: 'Pending review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
 
 /** Column catalog for the "Columns" picker — mirrors the Results Center pattern (RC_COLUMNS). */
 export interface BilateralColumnDef {
@@ -109,6 +140,16 @@ function defaultColumnVisibility(): Record<string, boolean> {
   return map;
 }
 
+/**
+ * `COV-R-2` C / `COV-R-5` A — `GET /api/versioning` delivers `Phases.id` as a **string** (`'34'`)
+ * although `Phases` types it `number`. `ctx.selectedVersionId` is numeric by contract (it carries
+ * the parsed `?phase=`), so a strict `p.id === versionId` never matched a real phase and the shared
+ * phase silently degraded to Open. Normalize wherever a phase id is compared or handed on.
+ */
+function phaseVersionId(phase: Phases): number {
+  return Number(phase.id);
+}
+
 @Component({
   selector: 'app-bilateral-results-list',
   standalone: true,
@@ -144,7 +185,6 @@ export class BilateralResultsListComponent implements OnInit {
   readonly ctx = inject(BilateralContextService);
 
   readonly phases = signal<Phases[]>([]);
-  readonly selectedPhase = signal<Phases | null>(null);
   readonly results = signal<BilateralCenterResult[]>([]);
   readonly loading = signal(false);
   readonly initializing = signal(true);
@@ -156,6 +196,31 @@ export class BilateralResultsListComponent implements OnInit {
   readonly showW1W2 = signal(false);
   readonly showLead = signal(true);
   readonly showContributing = signal(false);
+
+  // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-14) — additional contract-driven
+  // filters with no chip pair of their own; hydrated from the URL, filtered through the shared
+  // `filterCenterResults` predicate, and round-tripped back to the URL like every other chip.
+  readonly statusFilter = signal<StatusKey[]>([]);
+  readonly projectFilter = signal<number[]>([]);
+  readonly programFilter = signal<string[]>([]);
+  readonly typeFilter = signal<number[]>([]);
+  readonly methodFilter = signal<BilateralMethod | null>(null);
+
+  /**
+   * `COV-DD-2`: the phase shared by all four center tabs lives on `BilateralContextService`
+   * (`null` = Open). `null` also means the URL carried no `?phase=` at all — a match is looked up
+   * by id, falling back to the Open phase (today's `status` flag) or the first phase loaded.
+   */
+  readonly selectedPhase = computed<Phases | null>(() => {
+    const phases = this.phases();
+    if (!phases.length) return null;
+    const versionId = this.ctx.selectedVersionId();
+    if (versionId !== null) {
+      const match = phases.find(p => phaseVersionId(p) === versionId);
+      if (match) return match;
+    }
+    return phases.find(p => p.status) ?? phases[0] ?? null;
+  });
 
   // Actions
   readonly confirmingDeleteId = signal<number | null>(null);
@@ -205,34 +270,60 @@ export class BilateralResultsListComponent implements OnInit {
 
   @ViewChild('table') table?: PrTableComponent;
 
-  readonly filteredResults = computed(() => {
+  /**
+   * `COV-R-13`/`COV-DD-3` — the chip pair (`showW3`/`showW1W2`, `showLead`/`showContributing`)
+   * stays the immediate local state (behaviour-preserving), but is re-expressed as `role`/`source`
+   * so the actual filtering runs through the ONE predicate every center tab shares
+   * (`filterCenterResults`). Both chips on (or, for role, neither toggle applicable) → `null`
+   * ("both" — matches the contract's own null semantics); exactly one on → that literal value.
+   */
+  private readonly currentContractParams = computed<BilateralQueryParams>(() => {
     const showW3 = this.showW3();
     const showW1W2 = this.showW1W2();
     const showLead = this.showLead();
     const showContributing = this.showContributing();
-    const query = normalise(this.searchQuery());
-    const tokens = query ? query.split(/\s+/).filter(Boolean) : [];
 
-    return this.results().filter(r => {
-      const sourceOk =
-        (showW3 && r.source === 'API') ||
-        (showW1W2 && r.source === 'Result');
-      const roleOk =
-        (showLead && r.is_leading_result === 1) ||
-        (showContributing && r.is_leading_result === 0);
+    let source: BilateralSource | null = null;
+    if (showW3 && !showW1W2) source = 'w3';
+    else if (showW1W2 && !showW3) source = 'w1w2';
 
-      if (!sourceOk || !roleOk) return false;
-      if (!tokens.length) return true;
+    let role: BilateralRole | null = null;
+    if (showLead && !showContributing) role = 'lead';
+    else if (showContributing && !showLead) role = 'contributing';
 
-      const hay = normalise(
-        `${r.result_code} ${r.title} ${r.result_type} ${r.source === 'API' ? 'W3 bilateral' : 'W1 W2'}`
-      );
-      return tokens.every(t => hay.includes(t));
-    });
+    return {
+      phase: this.ctx.selectedVersionId(),
+      status: this.statusFilter(),
+      project: this.projectFilter(),
+      program: this.programFilter(),
+      type: this.typeFilter(),
+      role,
+      source,
+      method: this.methodFilter(),
+      search: this.searchQuery(),
+      multi: false,
+    };
   });
+
+  readonly filteredResults = computed(() => filterCenterResults(this.results(), this.currentContractParams()));
 
   readonly totalCount = computed(() => this.filteredResults().length);
   readonly totalLoaded = computed(() => this.results().length);
+
+  /** `COV-R-14` — one removable chip per active status key, only when `status` is present. */
+  readonly statusChips = computed(() =>
+    this.statusFilter().map(key => ({ key, label: STATUS_KEY_LABELS[key] ?? key })),
+  );
+
+  /** `COV-R-14` — a chip per active project id, label from a loaded row's `project_name`, else
+   *  `Project <id>`, only when `project` is present. */
+  readonly projectChips = computed(() => {
+    const rows = this.results();
+    return this.projectFilter().map(id => {
+      const match = rows.find(r => r.project_id != null && Number(r.project_id) === id);
+      return { id, label: match?.project_name || `Project ${id}` };
+    });
+  });
 
   constructor() {
     // Use centerId when resolved; fall back to centerAcronym so admin users browsing
@@ -251,7 +342,7 @@ export class BilateralResultsListComponent implements OnInit {
       toObservable(this.selectedPhase).pipe(filter((p): p is Phases => !!p)),
     ])
       .pipe(takeUntilDestroyed())
-      .subscribe(([, phase]) => this.loadResults(phase.id));
+      .subscribe(([, phase]) => this.loadResults(phaseVersionId(phase)));
 
     // Reset the table to its default sort + page 0 whenever the filtered set changes
     // (filter chips, search, new data) — mirrors the Results Center pattern.
@@ -266,26 +357,134 @@ export class BilateralResultsListComponent implements OnInit {
     const focused = this.activatedRoute.snapshot.queryParamMap.get('result');
     if (focused) this.focusedResultCode.set(focused);
 
+    // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-14) — parse the shared contract on
+    // init AND on every `queryParamMap` change (deep link, back/forward, header tab click). The
+    // Observable emits its current value immediately upon subscription, so one subscription covers
+    // both cases.
+    this.activatedRoute.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(map => this.applyUrlParams(map));
+
     const p25Only = (phases: Phases[]) => phases.filter(p => p.obj_portfolio?.acronym === 'P25');
 
     const reportingPhases = p25Only(this.phasesService.phases.reporting);
 
     if (reportingPhases.length) {
       this.phases.set(reportingPhases);
-      const active = reportingPhases.find(p => p.status) ?? reportingPhases[0] ?? null;
-      this.selectedPhase.set(active);
       this.initializing.set(false);
     } else {
       this.phasesService.getPhasesObservable()
         .pipe(take(1), takeUntilDestroyed(this.destroyRef))
         .subscribe(loaded => {
-          const p25 = p25Only(loaded);
-          this.phases.set(p25);
-          const active = p25.find((p: Phases) => p.status) ?? p25[0] ?? null;
-          this.selectedPhase.set(active);
+          this.phases.set(p25Only(loaded));
           this.initializing.set(false);
         });
     }
+  }
+
+  /**
+   * `COV-R-14`/`COV-DD-3` — hydrates the chips, search and the new status/project/program/type/
+   * method filters from the URL, applying the Results tab's own no-param default (W3 + Lead) via
+   * `applyResultsTabDefaults`. `phase` wins over the shared signal when present and differs
+   * (`COV-DD-2`'s "secondary flows": the signal is then updated to the URL value). Invalid tokens
+   * are rewritten out of the URL once, using only the still-valid values for the affected keys —
+   * never touching an unrelated key or injecting a default the user never asked for.
+   */
+  private applyUrlParams(map: ParamMap): void {
+    const parsedRaw = parseBilateralQueryParams(map);
+    const { params, stripped } = applyResultsTabDefaults(parsedRaw, RESULTS_TAB_IGNORE_KEYS);
+
+    if (params.source === null) {
+      this.showW3.set(true);
+      this.showW1W2.set(true);
+    } else {
+      this.showW3.set(params.source === 'w3');
+      this.showW1W2.set(params.source === 'w1w2');
+    }
+
+    if (params.role === null) {
+      this.showLead.set(true);
+      this.showContributing.set(true);
+    } else {
+      this.showLead.set(params.role === 'lead');
+      this.showContributing.set(params.role === 'contributing');
+    }
+
+    // `COV-R-13` BUT ("the destination's own chips and search remain usable"): the search box drives
+    // the URL AND is hydrated from it, so a naive `set` makes the field unusable for anything but a
+    // single word. `onSearch` writes every keystroke, the emission re-enters this method, and
+    // `parseBilateralQueryParams` TRIMS `search` — typing `foo ` would come back as `foo`, the
+    // `[value]="searchQuery()"` binding would reset the input, and the next key would yield `foob`,
+    // putting the token search (`tokens.every`) permanently out of reach for a two-word query.
+    // A URL value that differs from the typed one ONLY by trimming is this component's own echo and
+    // is ignored; any genuinely different value still wins — a deep link, a back/forward step, and
+    // the empty string left behind by `clearSearch` (`'' !== 'foo'`) all still hydrate normally.
+    if (params.search !== this.searchQuery().trim()) this.searchQuery.set(params.search);
+    this.statusFilter.set(params.status);
+    this.projectFilter.set(params.project);
+    this.programFilter.set(params.program);
+    this.typeFilter.set(params.type);
+    this.methodFilter.set(params.method);
+
+    if (params.phase !== null && params.phase !== this.ctx.selectedVersionId()) {
+      this.ctx.selectedVersionId.set(params.phase);
+    }
+
+    if (stripped.length) {
+      const validSerialized = serializeBilateralQueryParams(parsedRaw.params);
+      const affectedKeys = new Set(stripped.map(entry => entry.split('=')[0]));
+      const next: Params = {};
+      for (const key of affectedKeys) {
+        next[key] = key in validSerialized ? validSerialized[key] : null;
+      }
+      this.router.navigate([], {
+        relativeTo: this.activatedRoute,
+        queryParams: next,
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+  }
+
+  /**
+   * `COV-R-14`/`COV-DD-3` (amendment) — writes the chip/phase/search/status/project state back to
+   * the URL (`replaceUrl`, `merge`), called only from a user action (never during hydration, so a
+   * plain `/results` load writes nothing). Uses `explicitDefaults: true` so an explicit "both"
+   * selection (all four chips on) survives a reload as `role=all&source=all` instead of silently
+   * falling back to the W3 + Lead default on the next parse — `serializeBilateralQueryParams`
+   * otherwise omits a `null` role/source entirely, and an empty URL re-triggers
+   * `applyResultsTabDefaults`. Every managed key not present in the serialized params is explicitly
+   * nulled so `merge` clears it from an existing URL rather than leaving it stale; `?result=`
+   * (notification focus) is never in the managed set, so it is untouched.
+   */
+  private syncUrlParams(): void {
+    const serialized = serializeBilateralQueryParams(this.currentContractParams(), { explicitDefaults: true });
+    const current = this.activatedRoute.snapshot.queryParamMap;
+    const next: Params = {};
+    let changed = false;
+    for (const key of RESULTS_TAB_MANAGED_QUERY_PARAMS) {
+      const value = key in serialized ? serialized[key] : null;
+      next[key] = value;
+      if ((current.get(key) ?? null) !== (value ?? null)) changed = true;
+    }
+    if (!changed) return;
+
+    this.router.navigate([], {
+      relativeTo: this.activatedRoute,
+      queryParams: next,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  /** `COV-R-14` — removes one status from the Status chip group and writes the URL. */
+  removeStatusFilter(key: StatusKey): void {
+    this.statusFilter.update(keys => keys.filter(k => k !== key));
+    this.syncUrlParams();
+  }
+
+  /** `COV-R-14` — removes one project id from the Project chip and writes the URL. */
+  removeProjectFilter(id: number): void {
+    this.projectFilter.update(ids => ids.filter(existing => existing !== id));
+    this.syncUrlParams();
   }
 
   @HostListener('document:click')
@@ -364,29 +563,35 @@ export class BilateralResultsListComponent implements OnInit {
     }
   }
 
+  /** `COV-DD-2`/`COV-R-5` A — writes both the shared phase signal and `?phase=`. */
   selectPhase(phase: Phases): void {
-    this.selectedPhase.set(phase);
+    this.ctx.selectedVersionId.set(phaseVersionId(phase));
     this.searchQuery.set('');
+    this.syncUrlParams();
   }
 
   toggleW3(): void {
     if (this.showW3() && !this.showW1W2()) return;
     this.showW3.update(v => !v);
+    this.syncUrlParams();
   }
 
   toggleW1W2(): void {
     if (this.showW1W2() && !this.showW3()) return;
     this.showW1W2.update(v => !v);
+    this.syncUrlParams();
   }
 
   toggleLead(): void {
     if (this.showLead() && !this.showContributing()) return;
     this.showLead.update(v => !v);
+    this.syncUrlParams();
   }
 
   toggleContributing(): void {
     if (this.showContributing() && !this.showLead()) return;
     this.showContributing.update(v => !v);
+    this.syncUrlParams();
   }
 
   /** Any W3 result the current user can open and edit. */
@@ -515,6 +720,13 @@ export class BilateralResultsListComponent implements OnInit {
 
   onSearch(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
+    this.syncUrlParams();
+  }
+
+  /** `COV-R-14` — clears the search box and writes the URL (used by the search field's clear button). */
+  clearSearch(): void {
+    this.searchQuery.set('');
+    this.syncUrlParams();
   }
 
   statusClass(statusId: number): string {
@@ -584,12 +796,4 @@ export interface ReviewHistoryEntry {
   first_name?: string;
   last_name?: string;
   email?: string;
-}
-
-function normalise(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ');
 }
