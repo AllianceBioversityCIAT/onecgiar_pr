@@ -1,9 +1,91 @@
-.ipsr_searhc_input {
-  margin-top: 2rem;
-}
+:host {
+  display: block;
 
-.search {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  // `app-pr-filter-multiselect` ships no default styling for `.custom_select` / `.field` /
+  // `.icon_dropdown` / `.icon_container` of its own (its .scss only styles the option list), so
+  // every consumer must override it or it falls back to a global default with a purple chevron
+  // box. Ported from Results Center's CURRENT select (results-list-filters.component.scss
+  // `.rc-select-wrap` block): plain 40px white field + muted chevron — no purple bar chrome.
+  // One block covers every instance on this page (primary row's Submitter/Phase/Status AND the
+  // "More filters" popover's Portfolio control) since they're all the same shared component and
+  // this page has no per-instance wrapper class to scope against, unlike RC's `.rc-select-wrap` /
+  // `.rc-more-field`. MUST stay nested under `:host` — without it, `::ng-deep` compiles to a
+  // GLOBAL rule that leaks onto every `app-pr-select`/`app-pr-multi-select` instance app-wide
+  // (420+ usages across 85 templates), since they share the `.custom_select` root class.
+  ::ng-deep .custom_select,
+  ::ng-deep .pr-filter-ms {
+    width: 100%;
+
+    .field {
+      min-height: 40px;
+      height: 40px;
+      padding: 0 36px 0 12px;
+      border: 1px solid var(--pr-border, #e3e3e8);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: none;
+      gap: 8px;
+
+      &:hover {
+        border-color: #d5d5dc;
+      }
+
+      &:focus-within {
+        border-color: var(--pr-color-primary-200, #a78bfa);
+        box-shadow: 0 0 0 3px rgba(107, 70, 229, 0.12);
+      }
+
+      .text {
+        padding-right: 0;
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--pr-text-heading, #191524);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &.select_placeholder {
+          color: var(--pr-text-subtle, #9691a8);
+        }
+      }
+
+      .icon_container {
+        display: none !important;
+      }
+
+      .icon_dropdown {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        font-size: 12px;
+        color: var(--pr-text-secondary, #5d5872) !important;
+        pointer-events: none;
+      }
+
+      .options {
+        top: calc(100% + 4px);
+        bottom: auto;
+        left: 0;
+        min-width: 100%;
+        width: max-content;
+        // NOTE (Reviewer ADVISORY, non-blocking): RC's own "More filters" popover is 320px wide,
+        // so its 320px max-width never overhangs. This page's popover is 260px wide
+        // (`ipsr-list-filters.component.html`), so the Portfolio dropdown can overhang its right
+        // edge by up to 60px. Left at 320px (matching RC exactly) rather than narrowed, since a
+        // narrower max-width here would also shrink the primary row's Submitter/Phase/Status
+        // dropdowns (140-220px fields) and truncate their longer option labels. Verify visually
+        // at `IPSR-T-8`; if it's a real problem, scope a popover-specific override instead of a
+        // shared one.
+        max-width: 320px;
+        max-height: 320px;
+        border: 1px solid var(--pr-border, #e3e3e8);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+        overflow: hidden;
+        transform-origin: top center;
+      }
+    }
+  }
 }

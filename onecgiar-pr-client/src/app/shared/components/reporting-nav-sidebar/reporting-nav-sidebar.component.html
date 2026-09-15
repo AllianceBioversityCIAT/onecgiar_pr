@@ -6,7 +6,12 @@
       data-guide="platform-tour-sidebar-header"
       [class.justify-between]="!isCollapsed()"
       [class.justify-center]="isCollapsed()">
-      <div class="flex min-w-0 items-center gap-[10px]" [class.justify-center]="isCollapsed()">
+      <a
+        routerLink="/result-framework-reporting/home"
+        class="flex min-w-0 items-center gap-[10px] no-underline"
+        [class.justify-center]="isCollapsed()"
+        aria-label="Go to Home"
+        title="Home">
         <!-- Typographic 32×32 brand tile (reference). It replaces assets/brand/prms-logo.png: the PNG
              is a raster square that turned to mush at 32px on the rail, and the reference tints the
              tile differently per state — violet wash expanded, plain white wash on the rail — which a
@@ -17,14 +22,14 @@
           aria-hidden="true">
           PR
         </div>
-        <span class="sr-only">PRMS Reporting</span>
+        <span class="sr-only">PRMS Reporting — Home</span>
         @if (!isCollapsed()) {
           <div class="flex min-w-0 flex-col gap-px">
             <span class="text-[16px] font-semibold leading-none tracking-[-0.01em] text-white">PRMS</span>
             <span class="text-[11px] font-medium leading-none text-[var(--pr-sidebar-fg-muted)]">Reporting</span>
           </div>
         }
-      </div>
+      </a>
       <!-- SPEC:changes/sidebar-toggle-consolidation (STC-DD-1) — the sidebar now owns the
            collapse/expand control in BOTH states; the topbar's copy was removed. This is the
            expanded-state button (the collapsed-state one lives further down, unchanged). Both
@@ -283,6 +288,18 @@
           No Emerging (band CTA). No second Results Center from RFR. No nested RFR group.
         -->
         <ul hlmSidebarMenu class="pr-nav-platform-menu">
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
+              routerLink="/result-framework-reporting/home"
+              routerLinkActive
+              #rlaHome="routerLinkActive"
+              [isActive]="rlaHome.isActive"
+              tooltip="Home">
+              <ng-icon name="lucideHouse" />
+              <span>Home</span>
+            </a>
+          </li>
           @for (section of sections(); track section.path) {
             @if (section.path === 'init-admin-module') {
               <li hlmSidebarMenuItem>

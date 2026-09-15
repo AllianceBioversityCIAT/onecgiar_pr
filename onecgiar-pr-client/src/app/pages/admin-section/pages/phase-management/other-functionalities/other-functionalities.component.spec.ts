@@ -41,7 +41,13 @@ describe('OtherFunctionalitiesComponent', () => {
     it('should return the correct string when replicateIPSR is false', () => {
       component.replicateIPSR = false;
       const result = component.replicateBannerText();
-      expect(result).toBe('Replicate all QAed result innovations from previous phase to the current active phase');
+      expect(result).toBe('Replicate all result innovations from previous phase to the current active phase (except Editing/Rejected)');
+    });
+
+    it('should return the correct string when replicateInnovationUse is true', () => {
+      component.replicateInnovationUse = true;
+      const result = component.replicateBannerText();
+      expect(result).toBe('Replicate all Innovation Use results from previous phase to the current active phase');
     });
   });
 });

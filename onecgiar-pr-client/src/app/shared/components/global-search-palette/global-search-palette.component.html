@@ -56,12 +56,14 @@
           size="sm"
           class="shrink-0"
           selectId="pr-palette-scope"
-          selectClass="h-[28px] rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[8px] pr-[24px] text-[13px] font-medium text-[var(--pr-text)]"
+          selectClass="h-[28px] max-w-[140px] truncate rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[8px] pr-[24px] text-[13px] font-medium text-[var(--pr-text)] transition-colors hover:border-[var(--pr-border-strong)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none"
           [value]="scopeValue()"
           (valueChange)="onScopeChange($event ?? '')">
           <option hlmNativeSelectOption value="">All programs</option>
           @for (opt of search.scopeOptions(); track opt.id) {
-            <option hlmNativeSelectOption [value]="opt.id">{{ opt.code }}</option>
+            <option hlmNativeSelectOption [value]="opt.id" [title]="opt.code + ' · ' + opt.name"
+              >{{ opt.code }} - {{ opt.name }}</option
+            >
           }
         </hlm-native-select>
 

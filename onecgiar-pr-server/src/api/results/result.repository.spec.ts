@@ -72,6 +72,98 @@ describe('ResultRepository (unit)', () => {
     expect(countParams).toEqual(params);
   });
 
+  /**
+   * Bug: docs/specs/bugfix/portfolio-overview-partial-counts. In prod, historical row volume
+   * exceeded the page LIMIT and the query had no ORDER BY, so open-phase (v.status = 1) rows
+   * could be silently dropped from the page depending on MySQL's unordered LIMIT selection.
+   * REQ-1: `ORDER BY v.status DESC, r.id DESC` must be present, immediately before LIMIT/OFFSET,
+   * so open-phase rows always sort ahead and survive the page regardless of historical volume.
+   */
+  describe('AllResultsByRoleUserAndInitiativeFiltered — deterministic ordering (REQ-1)', () => {
+    /**
+     * A tiny in-memory stand-in for MySQL's row selection, driven by the actual generated SQL:
+     * - If the SQL carries the fix's ORDER BY, rows are sorted (open-phase first, r.id DESC
+     *   tiebreak) before LIMIT/OFFSET is applied.
+     * - If it does not (pre-fix), rows are returned in raw insertion order before LIMIT/OFFSET
+     *   is applied — the same "arbitrary page" symptom the proposal diagnosed in prod.
+     */
+    const makeOrderingAwareQueryMock = (seededRows: any[]) =>
+      jest.fn((sql: string) => {
+        if (sql.includes('SELECT COUNT(1) as total FROM (')) {
+          return Promise.resolve([{ total: seededRows.length }]);
+        }
+        let rows = [...seededRows];
+        if (/ORDER BY v\.status DESC, r\.id DESC/.test(sql)) {
+          rows.sort((a, b) => b.phase_status - a.phase_status || b.id - a.id);
+        }
+        const limitMatch = sql.match(/LIMIT (\d+)/);
+        const offsetMatch = sql.match(/OFFSET (\d+)/);
+        const offset = offsetMatch ? parseInt(offsetMatch[1], 10) : 0;
+        const limit = limitMatch ? parseInt(limitMatch[1], 10) : rows.length;
+        rows = rows.slice(offset, offset + limit);
+        return Promise.resolve(rows);
+      });
+
+    it('REQ-1-S1: keeps an open-phase row inside the page when historical volume exceeds the LIMIT, even though it is not naturally within an unordered LIMIT window', async () => {
+      const LIMIT = 20;
+      // 24 closed-phase rows (ids 2..25) inserted first, then ONE open-phase row (id=1 — the
+      // smallest, so r.id DESC alone would rank it LAST, not first) inserted LAST. An unordered
+      // LIMIT (raw insertion order, sliced to LIMIT) returns only the first 20 closed rows —
+      // the open row sits at array index 24 and is provably excluded without ordering.
+      const closedRows = Array.from({ length: 24 }, (_, i) => ({
+        id: i + 2,
+        phase_status: 0,
+      }));
+      const openRow = { id: 1, phase_status: 1 };
+      const seededRows = [...closedRows, openRow];
+      expect(seededRows.length).toBeGreaterThan(LIMIT);
+
+      queryMock = makeOrderingAwareQueryMock(seededRows);
+      (repo as any).query = queryMock;
+
+      const res = await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        {},
+        [10, 11],
+        { limit: LIMIT, offset: 0 },
+      );
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('ORDER BY v.status DESC, r.id DESC');
+      // The ORDER BY must sit between the WHERE clauses and LIMIT/OFFSET.
+      expect(sql.indexOf('ORDER BY')).toBeGreaterThan(sql.indexOf('WHERE'));
+      expect(sql.indexOf('ORDER BY')).toBeLessThan(sql.indexOf('LIMIT'));
+
+      expect(res.results).toHaveLength(LIMIT);
+      expect(res.results.some((r: any) => r.id === openRow.id)).toBe(true);
+    });
+
+    it('REQ-1-S2: when total rows are below the LIMIT, the same set of rows is returned unchanged (no regression for other callers)', async () => {
+      const seededRows = [
+        { id: 5, phase_status: 0 },
+        { id: 3, phase_status: 1 },
+        { id: 9, phase_status: 0 },
+        { id: 1, phase_status: 0 },
+        { id: 7, phase_status: 1 },
+      ];
+
+      queryMock = makeOrderingAwareQueryMock(seededRows);
+      (repo as any).query = queryMock;
+
+      const res = await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        {},
+        [10, 11],
+        { limit: 20, offset: 0 },
+      );
+
+      expect(res.results).toHaveLength(seededRows.length);
+      expect(new Set(res.results.map((r: any) => r.id))).toEqual(
+        new Set(seededRows.map((r) => r.id)),
+      );
+    });
+  });
+
   it('supports single filter values without pagination', async () => {
     const items = [{ id: 2 }];
     queryMock.mockResolvedValueOnce(items);

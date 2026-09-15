@@ -115,6 +115,8 @@ export class VersionRepository extends Repository<Version> {
     phase: Version,
     result_type = 7,
   ): Promise<Result[]> {
+    // status_id 1 = Editing, 7 = Rejected — excluded per business rule: all other
+    // statuses (QA'ed or not) carry over into the new phase.
     const queryData = `
     SELECT
         r.*
@@ -134,6 +136,7 @@ export class VersionRepository extends Repository<Version> {
         r.result_type_id = ${result_type}
         AND r.version_id = ?
         AND r.is_active > 0
+        AND r.status_id NOT IN (1, 7)
         AND rv.result_code IS NULL;
       `;
     return this.query(queryData, [phase.id, phase.obj_previous_phase.id])
@@ -149,6 +152,8 @@ export class VersionRepository extends Repository<Version> {
     phase: Version,
     result_type = 10,
   ): Promise<Result[]> {
+    // status_id 1 = Editing, 7 = Rejected — excluded per business rule: all other
+    // statuses (QA'ed or not) carry over into the new phase.
     const queryData = `
     select r.*
     from \`result\` r 
@@ -160,6 +165,7 @@ export class VersionRepository extends Repository<Version> {
     where r.result_type_id = ${result_type}
     and r.version_id = ?
     and r.is_active > 0
+    and r.status_id not in (1, 7)
     and rv.result_code is null;
       `;
     return this.query(queryData, [phase.id, phase.obj_previous_phase.id])

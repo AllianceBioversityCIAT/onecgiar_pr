@@ -5,10 +5,20 @@
       (PRMS-Reporting.dc.html:232, `onClick="{{ openPalette }}"`). It is deliberately no longer a
       text field: see `openSearchPalette()` for why.
     -->
-    <button #searchTrigger type="button" class="pr-topbar-search" aria-label="Search" (click)="openSearchPalette()">
+    <button
+      #searchTrigger
+      type="button"
+      class="pr-topbar-search group relative"
+      aria-label="Search"
+      (click)="openSearchPalette()">
       <ng-icon name="lucideSearch" class="pr-topbar-search__icon" />
       <span class="pr-topbar-search__placeholder">Search</span>
       <kbd class="pr-topbar-search__kbd" aria-hidden="true">{{ shortcutHint }}</kbd>
+      <span
+        role="tooltip"
+        class="pointer-events-none absolute left-1/2 top-full z-[30] mt-[8px] w-max max-w-[240px] -translate-x-1/2 rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
+        Search results and programs across PRMS
+      </span>
     </button>
 
     <!-- Right cluster: report bug + notifications + user (phase deferred) -->
