@@ -69,7 +69,7 @@ Block execution until every box is ticked.
   - [ ] Each `readySelector` is verified to be absent on the login page and present only after real data loads (manually confirmed once per route).
   - [ ] Each `clickTarget` resolves to exactly one element via `page.locator(...).count() === 1`.
 
-### `UG-T-4` — `auth.ts` (localStorage token+user injection)
+### `UG-T-4` — `auth.ts` (localStorage token+user injection) — **[x] COMPLETE** (PASS, retroactive Reviewer audit, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Implement the login-state injection described in `UG-DD-4`: after `page.goto(CLIENT_BASE_URL)`, use `page.evaluate()` to set both `localStorage['token']` and `localStorage['user']` (rebuilt from the JWT payload), then reload so `RolesService` picks up the session.
@@ -79,10 +79,10 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-7`
 - **Estimate:** S
 - **Definition of done:**
-  - [ ] After running `auth.ts` standalone against a manual test page load, `window.ng.getComponent(...)`-level inspection (or an equivalent role check) confirms `isAdmin`/`readOnly` reflect a real logged-in session, not the logged-out default.
-  - [ ] No token/credential value is logged to console.
+  - [x] After running `auth.ts` standalone against a manual test page load, `window.ng.getComponent(...)`-level inspection (or an equivalent role check) confirms `isAdmin`/`readOnly` reflect a real logged-in session, not the logged-out default.
+  - [x] No token/credential value is logged to console.
 
-### `UG-T-5` — `tokens.ts` (live design-token extraction)
+### `UG-T-5` — `tokens.ts` (live design-token extraction) — **[~] code PASS**, live DoD pending `UG-T-7` run (see `execution.md`)
 
 - **Type:** infra
 - **Description:** Implement `UG-DD-2`: read `getComputedStyle(document.documentElement)` on the authenticated, loaded app for `--pr-color-primary-300`, `--pr-color-primary-400`, `--pr-color-secondary-400`, `--pr-color-orange-500`, and the resolved `font-family` stacks (Manrope, JetBrains Mono), writing them to `tokens.json`. Fail loudly (throw) if any expected custom property is missing/empty rather than silently defaulting.
@@ -95,7 +95,7 @@ Block execution until every box is ticked.
   - [ ] Running against the live app produces a `tokens.json` whose values match what DevTools shows for the same custom properties (manual spot check).
   - [ ] Deliberately querying a non-existent custom property throws instead of returning an empty string silently.
 
-### `UG-T-6` — `annotate.ts` (DOM overlay click-target marker)
+### `UG-T-6` — `annotate.ts` (DOM overlay click-target marker) — **[~] code PASS**, visual DoD pending `UG-T-7` run (see `execution.md`)
 
 - **Type:** infra
 - **Description:** Implement `UG-DD-3`: given a `Locator`, compute its `boundingBox()`, inject a fixed, high-`z-index` `<div>` appended to `document.body` styled as a highlight ring/arrow using the orange token (`--pr-color-orange-500`) from `UG-T-5`'s output, positioned over (but not obscuring the label of) the target element; provide a companion function to remove the overlay after the screenshot.

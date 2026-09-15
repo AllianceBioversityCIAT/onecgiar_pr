@@ -92,6 +92,34 @@
 
 ---
 
+### `UG-T-4` — `auth.ts` · `UG-T-5` — `tokens.ts` · `UG-T-6` — `annotate.ts` (retroactive audit of commit `b885c5f18`)
+
+- **Status:** `UG-T-4` PASS · `UG-T-5` PASS (code) — live DoD carried to `UG-T-7` · `UG-T-6` PASS (code) — live DoD carried to `UG-T-7`
+- **Date:** 2026-09-15 (code landed earlier the same day in `b885c5f18` without an entry — see §3a)
+- **Implementer attempts:** 1 (author: prior session, unrecorded). **Reviewer rounds:** 1 (this session, `akili-reviewer`, `opus`; author ≠ auditor restored).
+- **Files:** `tooling/src/auth.ts` (223 lines), `tooling/src/tokens.ts` (181), `tooling/src/annotate.ts` (136), `tooling/package.json` (dotenv devDependency).
+
+**Reviewer verdict (summary):**
+- `UG-T-4`: writes `token` + `user` together then reloads (`UG-DD-4`, client `CLAUDE.md` §9); JWT validated before navigation; **secret-leak sweep clean** — every log line emits only booleans/derived flags. DoD 1 satisfied by the Leader's live role check (`localStorage.roles` populated by RolesService, §UG-T-2 entry); DoD 2 by code review. **STATUS: PASS**.
+- `UG-T-5`: live `getComputedStyle` read, no navigation/auth/side effects; `readRootCustomProperty` throws on empty value naming the property (fail-loud per `UG-DD-2`, no fallback anywhere); the four required `--pr-color-*` properties confirmed present in `colors.scss`; font stacks resolved via `body` + removed off-screen `.pr-code` probe because `fonts.scss` declares no `--font-*` property; `writeTokensJson` resolves to the gitignored `tooling/tokens.json`. **STATUS: PASS**. *Unverified, carried to `UG-T-7`:* tokens.json spot-check vs DevTools; the throw exercised live.
+- `UG-T-6`: overlay appended as a direct child of `document.body`, `position: fixed`, `z-index: 2147483647`; label legibility guaranteed by geometry (border painted outside the target box, transparent background); removal exhaustive via `data-ug-annotation`; `pointer-events: none` + `aria-hidden`; colour injected by parameter (no hardcoded marker colour); fails loudly on null `boundingBox()`. **STATUS: PASS**. *Unverified, carried to `UG-T-7`:* all four visual DoD items + proof that `capture.ts` passes `--pr-color-orange-500`.
+
+**ADVISORY (4R, non-gating, recorded verbatim in substance):**
+- RELIABILITY: `position: fixed` + `fullPage: true` is a fragile pairing (viewport-relative `boundingBox()`); `UG-T-7`'s visual check must include a below-the-fold target; fallback `absolute` + `window.scrollY`. → *Forwarded to the `UG-T-7` Implementer (examined by the Leader, in scope).*
+- RELIABILITY: `borderWidth ≤ padding` is documented but not enforced — a guard/clamp is cheap. *Recorded only.*
+- RELIABILITY: wrap annotate→screenshot in `try/finally removeAnnotation`. → *Forwarded to `UG-T-7`.*
+- RISK: none of the three files had been type-checked; `npx tsc --noEmit` before `UG-T-7`. → *Forwarded to `UG-T-7` (`typecheck` script is in its brief).*
+- RISK (minor): keep "no interpolated inputs in error messages" in `auth.ts` so `err.message` logging can never carry the token. *Recorded only.*
+- READABILITY: `try/catch` around `Buffer.from(..., 'base64')` is dead code (Node does not throw on malformed base64). *Recorded only.*
+- RISK (sub-threshold): halo `rgba(255,255,255,0.9)` / `borderRadius: 10px` literals are ungoverned by any spec clause; not a `UG-R-4` violation. *Recorded only.*
+
+- **Requirements covered:** `UG-R-2` (T-4), `UG-R-4` (T-5), `UG-R-3` (T-6).
+- **Decisions made:** `UG-T-5`/`UG-T-6` stay `[~]` until `UG-T-7`'s live run confirms their carried DoD items; `UG-T-4` moves to `[x]`.
+- **Issues encountered:** work landed unrecorded (see §3a); `_scratch-verify.ts` removed and client lockfile restored in `1373a0f5f`.
+- **Final verification result:** PASS ×3 on spec conformance.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -120,4 +148,4 @@ Before starting `UG-T-2`, pre-flight environment verification found:
 
 ## 5. Summary (updated as tasks complete)
 
-3 of 16 tasks complete (`UG-T-1`, `UG-T-2`, `UG-T-8`); `UG-T-4`/`UG-T-5`/`UG-T-6` code landed unreviewed in `b885c5f18` — Reviewer pending (see §3a). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+4 of 16 tasks complete (`UG-T-1`, `UG-T-2`, `UG-T-4`, `UG-T-8`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. In flight: `UG-T-3`+`UG-T-7` (one Implementer), `UG-T-10` (Implementer). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
