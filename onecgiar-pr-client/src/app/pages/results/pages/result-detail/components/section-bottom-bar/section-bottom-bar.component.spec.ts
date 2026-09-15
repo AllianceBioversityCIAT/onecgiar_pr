@@ -8,6 +8,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
+import { ScrollChromeService } from '../../../../../../shared/services/scroll-chrome.service';
 
 describe('SectionBottomBarComponent', () => {
   let fixture: ComponentFixture<SectionBottomBarComponent>;
@@ -581,6 +582,68 @@ describe('SectionBottomBarComponent', () => {
       expect(folding).toBeTruthy();
       // Dentro del host que se transforma = el bug.
       expect(folding.contains(anchored)).toBe(false);
+    });
+  });
+
+  /*
+   * 15-sep-2026. La vuelta de tuerca del caso de arriba: lo que sobrevive al pliegue es SOLO
+   * `Save draft`. El indicador de campos pendientes se va con la franja, porque al leer hacia
+   * abajo la barra entera tiene que desaparecer — Back, Next, la posición y el contador.
+   * Sigue anclado (no se desmonta) para que el hueco mantenga a `Save draft` en su sitio, así
+   * que lo que se vigila es que quede INVISIBLE y FUERA DE ALCANCE, no que deje de existir.
+   */
+  describe('qué sobrevive al pliegue', () => {
+    const progress = () => q('[data-testid="section-bottom-bar-progress"]');
+
+    it('fades the progress indicator out and takes it out of reach while folded', async () => {
+      await build();
+      const chromeSE = TestBed.inject(ScrollChromeService);
+
+      // Control positivo: desplegada, el indicador es visible y clicable.
+      expect(progress().className).toContain('opacity-100');
+      expect(progress().className).not.toContain('pointer-events-none');
+      expect(progress().getAttribute('aria-hidden')).toBeNull();
+
+      chromeSE.hidden.set(true);
+      fixture.detectChanges();
+
+      expect(progress().className).toContain('opacity-0');
+      expect(progress().className).toContain('pointer-events-none');
+      expect(progress().getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('keeps Save draft untouched through the fold', async () => {
+      await build();
+      const chromeSE = TestBed.inject(ScrollChromeService);
+
+      chromeSE.hidden.set(true);
+      fixture.detectChanges();
+
+      const save = q('[data-testid="section-bottom-bar-save"]');
+      expect(save).toBeTruthy();
+      // Ni desvanecido ni inalcanzable: el indicador se va, el guardado no.
+      expect(save.closest('[data-testid="section-bottom-bar-progress"]')).toBeNull();
+      expect(save.hasAttribute('aria-hidden')).toBe(false);
+    });
+
+    it('closes the "Still missing" list when the strip folds', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal(['Result title', 'Description']);
+      await build();
+      const chromeSE = TestBed.inject(ScrollChromeService);
+
+      // Control positivo: sin el chip pendiente no habría lista que cerrar y el caso pasaría solo.
+      expect(q('[data-testid="section-bottom-bar-pending"]')).toBeTruthy();
+
+      component.openPending();
+      fixture.detectChanges();
+      expect(component.pendingOpen()).toBe(true);
+
+      chromeSE.hidden.set(true);
+      fixture.detectChanges();
+
+      expect(component.pendingOpen()).toBe(false);
+      expect(q('#sbb-pending-list')).toBeNull();
     });
   });
 });

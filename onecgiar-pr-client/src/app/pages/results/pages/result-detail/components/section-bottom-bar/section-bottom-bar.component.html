@@ -57,12 +57,21 @@
 
   </div>
 
-  <!-- Anclado, nunca plegado. Aquí viven las DOS cosas que el usuario necesita mientras escribe:
-       cuánto le falta y cómo guardar. El indicador estaba dentro de la franja que se pliega al leer
-       hacia abajo, así que desaparecía justo cuando el reportero está llenando campos — que es
-       cuando el contador importa (Yeck, 14-sep-2026). `min-w` mantiene honesto el hueco reservado
-       arriba cuando la etiqueta pasa a "Saving…". -->
+  <!-- Anclado. De lo que vive aquí, lo único que NUNCA se pliega es `Save draft`: guardar tiene que
+       estar a un clic desde cualquier punto del formulario. `min-w` mantiene honesto el hueco
+       reservado arriba cuando la etiqueta pasa a "Saving…". -->
   <div class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]">
+      <!-- 🛑 El indicador SÍ se va con la franja (Yeck, 15-sep-2026): al leer hacia abajo se pliega
+           la barra ENTERA — Back, Next, la posición y también "N fields missing" — y solo queda
+           `Save draft`. Se desvanece en vez de desmontarse a propósito: el hueco que ocupa es lo que
+           mantiene a `Save draft` clavado en su sitio, así que quitarlo del flujo haría saltar el
+           botón a la derecha en cada pliegue. Con `pointer-events-none` tampoco queda un objetivo
+           invisible sobre la franja. -->
+      <div
+        class="flex items-center gap-[12px] transition-[opacity,transform] duration-200"
+        [ngClass]="scrollChromeSE.hidden() ? 'pointer-events-none translate-y-[6px] opacity-0' : 'translate-y-0 opacity-100'"
+        [attr.aria-hidden]="scrollChromeSE.hidden() ? 'true' : null"
+        data-testid="section-bottom-bar-progress">
       @if (isComplete()) {
         <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
              "2 of 7 required" y "5 fields missing" — diciendo lo mismo con dos formas distintas. -->
@@ -168,6 +177,8 @@
           }
         </div>
       }
+
+      </div>
 
       <!-- Slot for Knowledge Product Sync button -->
       <div class="sbb-sync-slot inline-flex items-center empty:hidden" #syncSlot></div>

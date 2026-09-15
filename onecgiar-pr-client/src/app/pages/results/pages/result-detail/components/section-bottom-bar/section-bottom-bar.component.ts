@@ -63,7 +63,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   @Output() clickSave = new EventEmitter();
 
   readonly saveButtonSE = inject(SaveButtonService);
-  /** Folds the strip away while the user reads downwards; `Save draft` stays put. */
+  /** Folds the strip away while the user reads downwards; only `Save draft` stays put. */
   readonly scrollChromeSE = inject(ScrollChromeService);
   readonly dataControlSE = inject(DataControlService);
   readonly rolesSE = inject(RolesService);
@@ -77,6 +77,16 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
 
   /** Open/closed state of the pending-fields popover. */
   readonly pendingOpen = signal(false);
+
+  /**
+   * Folding the strip also takes the progress indicator with it, so the list it opens cannot be
+   * left hanging over the form with nothing underneath it to point at (Yeck, 15-Sep-2026). The
+   * hover close is a 220ms timer; a fold that happens while the pointer sits on the chip would
+   * never fire it.
+   */
+  private readonly closePendingOnFold = effect(() => {
+    if (this.scrollChromeSE.hidden()) untracked(() => this.closePending());
+  });
 
   /**
    * True while `Next` is saving the open section before it navigates (P2-3659 / P2-3654). Keeps the
