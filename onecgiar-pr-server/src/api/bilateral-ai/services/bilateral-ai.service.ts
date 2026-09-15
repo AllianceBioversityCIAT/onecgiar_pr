@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -202,7 +202,7 @@ export class BilateralAiService {
 
   async listDrafts(userId: number, centerId: number) {
     await this.assertCenterEntitlement(userId, centerId);
-    return this.draftRepository.find({
+    const drafts = await this.draftRepository.find({
       where: {
         is_discarded: false,
         job: { center_id: centerId },
@@ -210,6 +210,29 @@ export class BilateralAiService {
       relations: { job: true, result: true },
       order: { created_date: 'DESC' },
     });
+
+    const userIds = [
+      ...new Set(
+        drafts
+          .map((d) => d.job?.user_id)
+          .filter((id): id is number => id != null),
+      ),
+    ];
+
+    if (userIds.length > 0) {
+      const users = await this.userRepository.find({
+        where: { id: In(userIds) },
+        select: { id: true, first_name: true, last_name: true, email: true },
+      });
+      const userMap = new Map(users.map((u) => [u.id, u]));
+      for (const draft of drafts) {
+        if (draft.job?.user_id && userMap.has(draft.job.user_id)) {
+          (draft.job as any).user = userMap.get(draft.job.user_id);
+        }
+      }
+    }
+
+    return drafts;
   }
 
   private async getDraftRaw(draftId: number, userId: number) {

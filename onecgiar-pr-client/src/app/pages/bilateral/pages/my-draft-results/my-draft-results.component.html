@@ -207,20 +207,30 @@
             <!-- Compact Results Table -->
             <div class="mdr-table-container overflow-x-auto custom_scroll">
               <table class="mdr-session-table w-full text-left border-collapse text-[13px]">
+                <colgroup>
+                  <col class="w-auto" />
+                  <col style="width: 240px;" />
+                  <col style="width: 100px;" />
+                  <col style="width: 90px;" />
+                  <col style="width: 275px;" />
+                </colgroup>
                 <thead>
                   <tr class="border-b border-[var(--pr-border-divider)] text-[11px] font-semibold uppercase tracking-wider text-[var(--pr-text-secondary)] bg-[var(--pr-surface-card)]">
                     <th scope="col" class="py-[10px] pl-[20px] pr-[16px]">Result Title</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap w-[200px]">Category</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap w-[100px]">Level</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap w-[90px]">Status</th>
-                    <th scope="col" class="py-[10px] pl-[12px] pr-[20px] text-right whitespace-nowrap w-[250px]">Actions</th>
+                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap" style="width: 240px;">Category</th>
+                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap" style="width: 100px;">Level</th>
+                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap" style="width: 90px;">Status</th>
+                    <th scope="col" class="py-[10px] pl-[12px] pr-[20px] text-right whitespace-nowrap" style="width: 275px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--pr-border-subtle)]">
                   @for (draft of group.drafts; track draft.id) {
                     <tr class="mdr-card-row hover:bg-[var(--pr-surface-hover)] transition-colors">
-                      <td class="py-[12px] pl-[20px] pr-[16px] align-middle">
-                        <div class="mdr-card-title font-semibold text-[14px] text-[var(--pr-text-heading)] leading-snug">
+                      <td class="py-[12px] pl-[20px] pr-[16px] align-middle overflow-hidden">
+                        <div
+                          class="mdr-card-title font-semibold text-[14px] text-[var(--pr-text-heading)] leading-snug truncate cursor-default"
+                          [prTooltip]="getDraftTitle(draft)"
+                          prTooltipPosition="top">
                           {{ getDraftTitle(draft) }}
                         </div>
                         @if (draft.mapping_warnings?.length) {
@@ -234,24 +244,24 @@
                           </div>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap">
+                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap overflow-hidden" style="width: 240px;">
                         @if (getDraftIndicator(draft)) {
                           <span class="mdr-card-type">{{ getDraftIndicator(draft) }}</span>
                         } @else {
                           <span class="text-[var(--pr-text-muted)]">—</span>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap">
+                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap" style="width: 100px;">
                         @if (getDraftLevel(draft); as level) {
                           <span class="mdr-card-level">{{ level }}</span>
                         } @else {
                           <span class="text-[var(--pr-text-muted)]">—</span>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap">
+                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap" style="width: 90px;">
                         <span [class]="getDraftStatusClass(draft)">{{ getDraftStatus(draft) }}</span>
                       </td>
-                      <td class="py-[12px] pl-[12px] pr-[20px] align-middle text-right whitespace-nowrap">
+                      <td class="py-[12px] pl-[12px] pr-[20px] align-middle text-right whitespace-nowrap" style="width: 275px;">
                         <div class="mdr-actions inline-flex items-center justify-end gap-[8px]">
                           <button
                             type="button"

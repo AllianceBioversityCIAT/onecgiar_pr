@@ -189,9 +189,23 @@ describe('MyDraftResultsComponent', () => {
     const textOf = (selector: string): string =>
       fixture.debugElement.query(By.css(selector))?.nativeElement.textContent.trim() ?? '';
 
-    it('shows the suggested title and the suggested indicator category', () => {
+    it('shows the suggested title with tooltip and the suggested indicator category', () => {
       expect(textOf('.mdr-card-title')).toBe('A draft title');
+      const titleEl = fixture.debugElement.query(By.css('.mdr-card-title'));
+      const tooltip = titleEl.injector.get(PrTooltipDirective);
+      expect(tooltip.text).toBe('A draft title');
       expect(textOf('.mdr-card-type')).toBe('Capacity Sharing');
+    });
+
+    it('renders colgroup with fixed column widths to ensure columns align across sessions', () => {
+      const colgroup = fixture.debugElement.query(By.css('.mdr-session-table colgroup'));
+      expect(colgroup).toBeTruthy();
+      const cols = colgroup.queryAll(By.css('col'));
+      expect(cols.length).toBe(5);
+      expect(cols[1].nativeElement.style.width).toBe('240px');
+      expect(cols[2].nativeElement.style.width).toBe('100px');
+      expect(cols[3].nativeElement.style.width).toBe('90px');
+      expect(cols[4].nativeElement.style.width).toBe('275px');
     });
 
     it('shows the suggested result type as Output or Outcome, from result.result_level_id', () => {
@@ -747,7 +761,40 @@ describe('MyDraftResultsComponent', () => {
       expect(badge.nativeElement.textContent).toContain('Created by you');
     });
 
-    it('identifies sessions created by another user with "User #<id>" badge without .mdr-session-card--me', () => {
+    it('identifies sessions created by another user with their full name badge when user object is available', () => {
+      const colleagueDraft = {
+        ...draftStub,
+        id: 102,
+        job_id: 'colleague-session-2222',
+        job: {
+          ...draftStub.job,
+          job_id: 'colleague-session-2222',
+          user_id: 99,
+          user: { id: 99, first_name: 'Carlos', last_name: 'Mendez', email: 'c.mendez@cgiar.org' },
+        },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([colleagueDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(false);
+      expect(group.creatorName).toBe('Carlos Mendez');
+      expect(group.creatorTooltip).toContain('Carlos Mendez');
+      expect(group.creatorTooltip).toContain('c.mendez@cgiar.org');
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      expect(card.classes['mdr-session-card--me']).toBeFalsy();
+
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.classes['mdr-creator-badge--other']).toBe(true);
+      expect(badge.nativeElement.textContent).toContain('Carlos Mendez');
+    });
+
+    it('displays "Center Colleague" instead of raw ID when colleague name is not yet available', () => {
       const colleagueDraft = {
         ...draftStub,
         id: 102,
@@ -762,16 +809,13 @@ describe('MyDraftResultsComponent', () => {
 
       const group = component.sessionGroups()[0];
       expect(group.isCurrentUser).toBe(false);
-      expect(group.creatorName).toBe('User #99');
-      expect(group.creatorTooltip).toBe('AI extraction session created by User #99');
+      expect(group.creatorName).toBe('Center Colleague');
+      expect(group.creatorTooltip).toBe('AI extraction session created by a Center team member');
 
-      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
-      expect(card.classes['mdr-session-card--me']).toBeFalsy();
-
-      const badge = card.query(By.css('.mdr-creator-badge'));
+      const badge = fixture.debugElement.query(By.css('.mdr-creator-badge'));
       expect(badge).toBeTruthy();
-      expect(badge.classes['mdr-creator-badge--other']).toBe(true);
-      expect(badge.nativeElement.textContent).toContain('User #99');
+      expect(badge.nativeElement.textContent).toContain('Center Colleague');
+      expect(badge.nativeElement.textContent).not.toContain('User #99');
     });
 
     it('handles missing user_id gracefully without creator badge', () => {

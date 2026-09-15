@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, effect, computed } from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -150,9 +150,43 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   discardTarget = signal<BilateralAiDraft | null>(null);
   selectedDraft = signal<BilateralAiDraft | null>(null);
 
+  readonly resolvedUserNames = signal<Record<number, string>>({});
+  private readonly userLookupRequested = new Set<number>();
+
   constructor() {
     effect(() => {
       document.body.style.overflow = this.selectedDraft() ? 'hidden' : '';
+    });
+
+    effect(() => {
+      const drafts = this.allDrafts();
+      const currentUserId = this.api.authSE?.localStorageUser?.id;
+      for (const draft of drafts) {
+        const uid = draft.job?.user_id;
+        const jobUser = draft.job?.user;
+        const hasDirectName = Boolean(jobUser?.first_name || jobUser?.last_name);
+        if (
+          uid != null &&
+          Number(uid) !== Number(currentUserId) &&
+          !hasDirectName &&
+          !this.resolvedUserNames()[uid] &&
+          !this.userLookupRequested.has(uid)
+        ) {
+          this.userLookupRequested.add(uid);
+          this.api.resultsSE.GET_userById(uid).subscribe({
+            next: (res: any) => {
+              const user = res?.response;
+              if (user) {
+                const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+                if (name) {
+                  this.resolvedUserNames.update(map => ({ ...map, [uid]: name }));
+                }
+              }
+            },
+            error: () => {},
+          });
+        }
+      }
     });
   }
 
@@ -215,16 +249,29 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
           currentUserId != null && jobUserId != null && Number(currentUserId) === Number(jobUserId)
         );
 
+        const jobUser = draft.job?.user;
+        const jobUserName =
+          [jobUser?.first_name, jobUser?.last_name].filter(Boolean).join(' ').trim() ||
+          (jobUserId != null ? this.resolvedUserNames()[jobUserId] : '');
+
         let creatorName = '';
         let creatorTooltip = '';
         if (isCurrentUser) {
           creatorName = 'Created by you';
           creatorTooltip = currentUserName
             ? `AI extraction session created by you (${currentUserName})`
-            : 'AI extraction session created by you';
+            : (jobUserName ? `AI extraction session created by you (${jobUserName})` : 'AI extraction session created by you');
+        } else if (jobUserName) {
+          creatorName = jobUserName;
+          creatorTooltip = jobUser?.email
+            ? `AI extraction session created by ${jobUserName} (${jobUser.email})`
+            : `AI extraction session created by ${jobUserName}`;
+        } else if (jobUser?.email) {
+          creatorName = jobUser.email;
+          creatorTooltip = `AI extraction session created by ${jobUser.email}`;
         } else if (jobUserId != null) {
-          creatorName = `User #${jobUserId}`;
-          creatorTooltip = `AI extraction session created by User #${jobUserId}`;
+          creatorName = 'Center Colleague';
+          creatorTooltip = 'AI extraction session created by a Center team member';
         }
 
         group = {

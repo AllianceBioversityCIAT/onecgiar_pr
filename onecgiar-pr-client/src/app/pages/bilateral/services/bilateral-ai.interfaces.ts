@@ -1,8 +1,16 @@
 export type BilateralAiJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
+export interface BilateralAiJobUser {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}
+
 export interface BilateralAiJob {
   job_id: string;
   user_id: number;
+  user?: BilateralAiJobUser;
   center_id: number | null;
   project_id: number;
   program_code: string;

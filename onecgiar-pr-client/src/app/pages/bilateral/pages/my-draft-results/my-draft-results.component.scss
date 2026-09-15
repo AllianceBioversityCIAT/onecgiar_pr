@@ -132,9 +132,11 @@
 
 .mdr-session-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
   font-size: 13px;
+  min-width: 960px;
 
   th {
     padding: 10px 16px;
@@ -163,6 +165,7 @@
 
     &:first-child {
       padding-left: 20px;
+      overflow: hidden;
     }
     &:last-child {
       padding-right: 20px;
@@ -185,6 +188,9 @@
   color: var(--pr-text-heading, #1A202C);
   margin: 0;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mdr-list {

@@ -73,6 +73,7 @@ describe('BilateralAiService (unit)', () => {
     };
     const userRepository = {
       findOne: jest.fn().mockResolvedValue({ email: 'user@cgiar.org' }),
+      find: jest.fn().mockResolvedValue([]),
     };
     const roleByUserRepository = {
       validationCenterPermissions: jest.fn().mockResolvedValue(1),
@@ -385,6 +386,35 @@ describe('BilateralAiService (unit)', () => {
         order: { created_date: 'DESC' },
       });
       expect(result).toEqual([{ id: 1 }]);
+    });
+
+    it('should enrich drafts with creator user info when user_id is present on the job', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.find.mockResolvedValue([
+        { id: 1, job: { job_id: 'j1', user_id: 612 } },
+      ]);
+      stubs.userRepository.find.mockResolvedValue([
+        {
+          id: 612,
+          first_name: 'Juan',
+          last_name: 'Cadavid',
+          email: 'j.cadavid@cgiar.org',
+        },
+      ]);
+
+      const result = await service.listDrafts(42, 7);
+
+      expect(stubs.userRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: { id: true, first_name: true, last_name: true, email: true },
+        }),
+      );
+      expect((result[0] as any).job.user).toEqual({
+        id: 612,
+        first_name: 'Juan',
+        last_name: 'Cadavid',
+        email: 'j.cadavid@cgiar.org',
+      });
     });
 
     it('should scope the query to a different center independently', async () => {
