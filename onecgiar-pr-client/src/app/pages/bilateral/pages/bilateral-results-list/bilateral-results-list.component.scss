@@ -106,36 +106,20 @@ $contrib-color-border:#bae6fd;
   justify-content: space-between;
   gap: 14px;
   padding: 10px 14px;
-  background: #fafbff;
-  border: 1px solid var(--pr-color-accents-2);
+  background: var(--pr-surface-card);
+  border: 1px solid var(--pr-border);
   border-radius: 10px;
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
-.brl_filter_label {
+.brl_filter_main {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--pr-color-accents-5);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
-
-  .pi {
-    font-size: 11px;
-  }
-}
-
-.brl_filter_groups {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   flex: 1;
+  min-width: 0;
 }
 
 .brl_filter_actions {
@@ -149,6 +133,12 @@ $contrib-color-border:#bae6fd;
   display: flex;
   align-items: center;
   gap: 6px;
+
+  &--stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
 
 .brl_filter_group_label {

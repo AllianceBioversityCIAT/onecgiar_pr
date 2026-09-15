@@ -21,127 +21,228 @@
     </div>
   }
 
-  <!-- Filter chips bar -->
+  <!-- Filter bar — JIRA-style Filter button + active chips (Reporting / Programme Results parity) -->
   <div class="brl_filter_bar">
-    <span class="brl_filter_label">
-      <span class="material-icons-round text-[16px]">filter_alt</span>
-      Filters
-    </span>
+    <div class="brl_filter_main">
+      <div class="relative brl-filter-container">
+        <button
+          type="button"
+          data-testid="bilateral-results-filter-button"
+          class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+          [class]="filterButtonActive()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
+          aria-label="Filter results"
+          [attr.aria-expanded]="filterPopoverOpen()"
+          (click)="toggleFilterPopover($event)">
+          <span
+            class="material-icons-round text-[18px]"
+            [class.text-[var(--pr-color-primary-600)]]="filterButtonActive()"
+            [class.text-slate-500]="!filterButtonActive()"
+            aria-hidden="true"
+            >filter_list</span
+          >
+          <span>Filter</span>
+          @if (activeFilterBadgeCount() > 0) {
+            <span
+              class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
+              {{ activeFilterBadgeCount() }}
+            </span>
+          }
+        </button>
 
-    <div class="brl_filter_groups">
+        <div
+          class="absolute left-0 top-[40px] z-30 w-[min(420px,calc(100vw-32px))] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+          [class.hidden]="!filterPopoverOpen()"
+          role="dialog"
+          aria-label="Result filters"
+          (click)="$event.stopPropagation()">
+          <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
+            <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+            <div class="flex items-center gap-[10px]">
+              @if (hasClearableFilters()) {
+                <button
+                  type="button"
+                  class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline"
+                  (click)="clearAllFilters()">
+                  <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
+                  Clear all
+                </button>
+              }
+              <button
+                type="button"
+                class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close filters"
+                (click)="closeFilterPopover()">
+                <span class="material-icons-round text-[16px]">close</span>
+              </button>
+            </div>
+          </div>
 
-      <!-- Source group -->
-      <div class="brl_filter_group">
-        <span class="brl_filter_group_label">Source</span>
-        <div class="brl_chips">
-          <button
-            class="brl_chip brl_chip--w3"
-            [class.brl_chip--active]="showW3()"
-            (click)="toggleW3()"
-            [title]="showW3() ? 'Hide W3 Bilateral results' : 'Show W3 Bilateral results'">
-            <span class="brl_chip_dot brl_chip_dot--w3"></span>
-            W3 Bilateral
-            @if (showW3()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
-            }
-          </button>
+          <div class="flex flex-col gap-[14px]">
+            <div class="brl_filter_group brl_filter_group--stacked">
+              <span class="brl_filter_group_label">Source</span>
+              <div class="brl_chips">
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--w3"
+                  [class.brl_chip--active]="showW3()"
+                  (click)="toggleW3()"
+                  [title]="showW3() ? 'Hide W3 Bilateral results' : 'Show W3 Bilateral results'">
+                  <span class="brl_chip_dot brl_chip_dot--w3"></span>
+                  W3 Bilateral
+                  @if (showW3()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
 
-          <button
-            class="brl_chip brl_chip--w1w2"
-            [class.brl_chip--active]="showW1W2()"
-            (click)="toggleW1W2()"
-            [title]="showW1W2() ? 'Hide W1/W2 results' : 'Add W1/W2 results'">
-            <span class="brl_chip_dot brl_chip_dot--w1w2"></span>
-            W1 / W2
-            @if (showW1W2()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
-            }
-          </button>
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--w1w2"
+                  [class.brl_chip--active]="showW1W2()"
+                  (click)="toggleW1W2()"
+                  [title]="showW1W2() ? 'Hide W1/W2 results' : 'Add W1/W2 results'">
+                  <span class="brl_chip_dot brl_chip_dot--w1w2"></span>
+                  W1 / W2
+                  @if (showW1W2()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
+              </div>
+            </div>
+
+            <div class="brl_filter_group brl_filter_group--stacked">
+              <span class="brl_filter_group_label">Center role</span>
+              <div class="brl_chips">
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--lead"
+                  [class.brl_chip--active]="showLead()"
+                  (click)="toggleLead()"
+                  [title]="showLead() ? 'Hide results where center is lead' : 'Show results where center is lead'">
+                  <span class="brl_chip_dot brl_chip_dot--lead"></span>
+                  Lead · {{ ctx.centerAcronym() }}
+                  @if (showLead()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
+
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--contributing"
+                  [class.brl_chip--active]="showContributing()"
+                  (click)="toggleContributing()"
+                  [title]="showContributing() ? 'Hide results where center is contributing' : 'Add results where center is contributing'">
+                  <span class="brl_chip_dot brl_chip_dot--contributing"></span>
+                  Contributing
+                  @if (showContributing()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="brl_filter_divider"></div>
-
-      <!-- Role group -->
-      <div class="brl_filter_group">
-        <span class="brl_filter_group_label">Center role</span>
-        <div class="brl_chips">
-          <button
-            class="brl_chip brl_chip--lead"
-            [class.brl_chip--active]="showLead()"
-            (click)="toggleLead()"
-            [title]="showLead() ? 'Hide results where center is lead' : 'Show results where center is lead'">
-            <span class="brl_chip_dot brl_chip_dot--lead"></span>
-            Lead · {{ ctx.centerAcronym() }}
-            @if (showLead()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
-            }
-          </button>
-
-          <button
-            class="brl_chip brl_chip--contributing"
-            [class.brl_chip--active]="showContributing()"
-            (click)="toggleContributing()"
-            [title]="showContributing() ? 'Hide results where center is contributing' : 'Add results where center is contributing'">
-            <span class="brl_chip_dot brl_chip_dot--contributing"></span>
-            Contributing
-            @if (showContributing()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
-            }
-          </button>
-        </div>
-      </div>
-
-      <!-- Status chip group — COV-R-14: only when `?status=` carries at least one valid value -->
-      @if (statusChips().length) {
-        <div class="brl_filter_divider"></div>
-        <div class="brl_filter_group">
-          <span class="brl_filter_group_label">Status</span>
-          <div class="brl_chips">
-            @for (chip of statusChips(); track chip.key) {
-              <button
-                type="button"
-                class="brl_chip brl_chip--active"
-                (click)="removeStatusFilter(chip.key)"
-                [title]="'Remove ' + chip.label + ' filter'"
-                [attr.aria-label]="'Remove ' + chip.label + ' filter'">
-                {{ chip.label }}
-                <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
-              </button>
-            }
-          </div>
-        </div>
+      @if (showW3()) {
+        <button
+          type="button"
+          class="brl_chip brl_chip--w3 brl_chip--active"
+          (click)="toggleW3()"
+          [title]="showW1W2() ? 'Remove W3 Bilateral filter' : 'W3 Bilateral is the only source filter active'"
+          [attr.aria-label]="'Remove W3 Bilateral filter'">
+          <span class="brl_chip_dot brl_chip_dot--w3"></span>
+          W3 Bilateral
+          @if (showW1W2()) {
+            <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+          }
+        </button>
       }
 
-      <!-- Project chip — COV-R-14: only when `?project=` carries at least one valid value -->
-      @if (projectChips().length) {
-        <div class="brl_filter_divider"></div>
-        <div class="brl_filter_group">
-          <span class="brl_filter_group_label">Project</span>
-          <div class="brl_chips">
-            @for (chip of projectChips(); track chip.id) {
-              <button
-                type="button"
-                class="brl_chip brl_chip--active"
-                (click)="removeProjectFilter(chip.id)"
-                [title]="'Remove ' + chip.label + ' filter'"
-                [attr.aria-label]="'Remove ' + chip.label + ' filter'">
-                {{ chip.label }}
-                <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
-              </button>
-            }
-          </div>
-        </div>
+      @if (showW1W2()) {
+        <button
+          type="button"
+          class="brl_chip brl_chip--w1w2 brl_chip--active"
+          (click)="toggleW1W2()"
+          title="Remove W1/W2 filter"
+          aria-label="Remove W1/W2 filter">
+          <span class="brl_chip_dot brl_chip_dot--w1w2"></span>
+          W1 / W2
+          <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+        </button>
       }
 
+      @if (showLead()) {
+        <button
+          type="button"
+          class="brl_chip brl_chip--lead brl_chip--active"
+          (click)="toggleLead()"
+          [title]="showContributing() ? 'Remove Lead filter' : 'Lead is the only center role filter active'"
+          [attr.aria-label]="'Remove Lead filter'">
+          <span class="brl_chip_dot brl_chip_dot--lead"></span>
+          Lead · {{ ctx.centerAcronym() }}
+          @if (showContributing()) {
+            <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+          }
+        </button>
+      }
+
+      @if (showContributing()) {
+        <button
+          type="button"
+          class="brl_chip brl_chip--contributing brl_chip--active"
+          (click)="toggleContributing()"
+          title="Remove Contributing filter"
+          aria-label="Remove Contributing filter">
+          <span class="brl_chip_dot brl_chip_dot--contributing"></span>
+          Contributing
+          <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+        </button>
+      }
+
+      @for (chip of statusChips(); track chip.key) {
+        <button
+          type="button"
+          class="brl_chip brl_chip--active"
+          (click)="removeStatusFilter(chip.key)"
+          [title]="'Remove ' + chip.label + ' filter'"
+          [attr.aria-label]="'Remove ' + chip.label + ' filter'">
+          {{ chip.label }}
+          <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+        </button>
+      }
+
+      @for (chip of projectChips(); track chip.id) {
+        <button
+          type="button"
+          class="brl_chip brl_chip--active"
+          (click)="removeProjectFilter(chip.id)"
+          [title]="'Remove ' + chip.label + ' filter'"
+          [attr.aria-label]="'Remove ' + chip.label + ' filter'">
+          {{ chip.label }}
+          <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
+        </button>
+      }
+
+      @if (hasClearableFilters()) {
+        <button
+          type="button"
+          data-testid="bilateral-results-clear-filters"
+          class="inline-flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          (click)="clearAllFilters()">
+          <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+          Clear filters
+        </button>
+      }
     </div>
 
     <!-- Columns picker + Export CSV — same pattern as the Results Center list -->

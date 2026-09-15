@@ -249,6 +249,7 @@ export class BilateralResultsListComponent implements OnInit {
   });
 
   readonly columnsOpen = signal(false);
+  readonly filterPopoverOpen = signal(false);
 
   /** Table columns currently visible (order preserved, filtered). */
   readonly visibleColumns = computed(() => {
@@ -324,6 +325,33 @@ export class BilateralResultsListComponent implements OnInit {
       return { id, label: match?.project_name || `Project ${id}` };
     });
   });
+
+  /** True when the Filter button should use the active (primary-tinted) styling. */
+  readonly filterButtonActive = computed(
+    () =>
+      this.showW1W2() ||
+      this.showContributing() ||
+      this.statusFilter().length > 0 ||
+      this.projectFilter().length > 0 ||
+      this.programFilter().length > 0 ||
+      this.typeFilter().length > 0 ||
+      this.methodFilter() !== null ||
+      this.searchQuery().trim().length > 0,
+  );
+
+  /** Badge count on the Filter button — extras beyond the default W3 + Lead pair. */
+  readonly activeFilterBadgeCount = computed(() => {
+    let count = 0;
+    if (this.showW1W2()) count++;
+    if (this.showContributing()) count++;
+    count += this.statusFilter().length;
+    count += this.projectFilter().length;
+    if (this.searchQuery().trim()) count++;
+    return count;
+  });
+
+  /** Clear filters is hidden on the default W3 + Lead view with no URL-driven chips. */
+  readonly hasClearableFilters = computed(() => this.filterButtonActive());
 
   constructor() {
     // Use centerId when resolved; fall back to centerAcronym so admin users browsing
@@ -487,9 +515,42 @@ export class BilateralResultsListComponent implements OnInit {
     this.syncUrlParams();
   }
 
-  @HostListener('document:click')
-  onDocumentClick(): void {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent): void {
     if (this.columnsOpen()) this.columnsOpen.set(false);
+
+    const target = event?.target as HTMLElement | null;
+    if (target?.closest?.('.brl-filter-container')) return;
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  }
+
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.columnsOpen.set(false);
+    this.filterPopoverOpen.update(open => !open);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  clearAllFilters(): void {
+    this.showW3.set(true);
+    this.showW1W2.set(false);
+    this.showLead.set(true);
+    this.showContributing.set(false);
+    this.statusFilter.set([]);
+    this.projectFilter.set([]);
+    this.programFilter.set([]);
+    this.typeFilter.set([]);
+    this.methodFilter.set(null);
+    this.searchQuery.set('');
+    this.syncUrlParams();
   }
 
   isColumnVisible(key: string): boolean {
@@ -516,6 +577,7 @@ export class BilateralResultsListComponent implements OnInit {
 
   toggleColumnsPanel(event?: Event): void {
     event?.stopPropagation();
+    this.filterPopoverOpen.set(false);
     this.columnsOpen.update(v => !v);
   }
 
