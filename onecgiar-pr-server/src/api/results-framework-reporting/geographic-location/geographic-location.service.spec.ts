@@ -16,7 +16,9 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
  * 🛑 `findGeographicLocation` answers `geo_scope_id: 0` for a result with no scope — this service's
  * own "none" placeholder (`let scope = 0`). Clients hand that number straight back on the next save,
  * and 0 is the one value `result.geographic_scope_id` cannot take: `clarisa_geographic_scope` holds
- * no valid scope id is 0 (`GeoScopeEnum`: 1, 2, 3, 5, 50), so the write died on
+ * the table holds 1, 2, 3, 4, 5 and 50 and no 0 — read off prdb (test) on 15-Sep-2026. 🛑 Not the
+ * client's `GeoScopeEnum` (1, 2, 3, 5, 50): the front folds the legacy 4 ("National") into COUNTRY,
+ * so it lists fewer ids than the column accepts. The write died on
  * `FK_c02a8848d0317d55d1bd882833e` with a 500 the
  * reporter never saw — Save draft simply appeared to do nothing.
  *
