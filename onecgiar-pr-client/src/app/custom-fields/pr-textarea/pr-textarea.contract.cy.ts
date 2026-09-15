@@ -177,7 +177,7 @@ describe('PrTextareaComponent — contract (CT)', () => {
 
     it('[contract] the counter renders the configured limit and tracks the current word count', () => {
       mountCF(TPL, { editable: true, componentProperties: props({ model: '', maxWords: 5 }) });
-      cy.get('app-pr-word-counter').should('contain.text', 'Max 5 words');
+      cy.get('app-pr-word-counter').should('contain.text', '/ 5');
       cy.get(TEXTAREA).type('one two three');
       cy.get('app-pr-word-counter .limitBreaker').should('have.text', '3');
     });

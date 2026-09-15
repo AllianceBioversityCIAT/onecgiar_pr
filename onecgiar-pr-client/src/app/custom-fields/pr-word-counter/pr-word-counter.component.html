@@ -1,4 +1,27 @@
-<div class="word_counter" [ngClass]="{'invalid' : wordCount > maxWords, 'warning' : (wordCount > maxWords) && autogenerate}">
-    Max {{maxWords}} words:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <div class="limitBreaker" [ngClass]="{'invalid': (wordCount > maxWords) && !autogenerate , 'warning' : (wordCount > maxWords) && autogenerate}">
-        {{wordCount}}</div> / {{maxWords}}
+<!-- Propuesta 04, aprobada por Yeck el 15-sep-2026: un aro diminuto que se llena, y la cifra.
+     El literal "Max N words:" se cae — la barra inclinada ya dice que hay un techo, y ese texto
+     gastaba media línea en repetirlo. Lo que el aro añade es lo que el texto NO daba: cuánto queda,
+     legible sin comparar dos números. El aro es el MISMO signo que la barra inferior usa para el
+     progreso de la sección, así que no enseña un símbolo nuevo, reutiliza uno ya aprendido.
+     🛑 `.limitBreaker` (solo la cifra) y las clases `invalid` / `warning` son CONTRATO: los leen
+     `pr-input`, `pr-textarea` y sus tests, y la misma comparación alimenta `[hasError]` de la
+     tarjeta de campo. La presentación cambió; el contrato no. -->
+<div
+  class="word_counter"
+  [ngClass]="{ 'invalid': isOverLimit && !autogenerate, 'warning': isOverLimit && autogenerate, 'near-limit': isNearLimit }"
+  role="img"
+  [attr.aria-label]="ariaLabel">
+  <!-- aria-hidden: la etiqueta del contenedor ya dice el estado completo; sin esto un lector de
+       pantalla leería el gráfico y luego los mismos números otra vez. -->
+  <svg class="wc_ring" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <circle class="wc_ring_track" cx="8" cy="8" r="6" />
+    <circle
+      class="wc_ring_value"
+      cx="8"
+      cy="8"
+      r="6"
+      [attr.stroke-dasharray]="ringCircumference"
+      [attr.stroke-dashoffset]="ringOffset" />
+  </svg>
+  <div class="limitBreaker" [ngClass]="{ 'invalid': isOverLimit && !autogenerate, 'warning': isOverLimit && autogenerate }">{{ wordCount || 0 }}</div> / {{ maxWords }}
 </div>
