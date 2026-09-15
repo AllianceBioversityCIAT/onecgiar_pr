@@ -85,6 +85,14 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'search';
+
+interface BilateralFilterChip {
+  dimension: BilateralFilterChipDimension;
+  value: string;
+  label: string;
+}
+
 const STATUS_KEY_LABELS: Record<StatusKey, string> = {
   editing: 'Editing',
   qa: 'In QA',
@@ -357,34 +365,66 @@ export class BilateralResultsListComponent implements OnInit {
     return selected.join(',') !== defaults.join(',');
   });
 
-  /** True when the Filter button should use the active (primary-tinted) styling. */
-  readonly filterButtonActive = computed(
-    () =>
-      this.hasNonDefaultPhaseFilter() ||
-      this.showW1W2() ||
-      this.showContributing() ||
-      this.statusFilter().length > 0 ||
-      this.projectFilter().length > 0 ||
-      this.programFilter().length > 0 ||
-      this.typeFilter().length > 0 ||
-      this.methodFilter() !== null ||
-      this.searchQuery().trim().length > 0,
-  );
+  /** One labelled chip per active filter value — Programme Results toolbar parity (`Phase: …`). */
+  readonly activeChips = computed<BilateralFilterChip[]>(() => {
+    const chips: BilateralFilterChip[] = [];
+    const showW3 = this.showW3();
+    const showW1W2 = this.showW1W2();
+    const showLead = this.showLead();
+    const showContributing = this.showContributing();
 
-  /** Badge count on the Filter button — extras beyond the default W3 + Lead + Open phase. */
-  readonly activeFilterBadgeCount = computed(() => {
-    let count = 0;
-    if (this.hasNonDefaultPhaseFilter()) count += Math.max(0, this.selectedPhaseIds().length - this.defaultPhaseIds().length) || 1;
-    if (this.showW1W2()) count++;
-    if (this.showContributing()) count++;
-    count += this.statusFilter().length;
-    count += this.projectFilter().length;
-    if (this.searchQuery().trim()) count++;
-    return count;
+    for (const phase of this.selectedPhases()) {
+      chips.push({
+        dimension: 'phase',
+        value: String(phaseVersionId(phase)),
+        label: `Phase: ${this.phaseFilterLabel(phase)}`,
+      });
+    }
+
+    if (showW3 && showW1W2) {
+      chips.push(
+        { dimension: 'source', value: 'w3', label: 'Source: W3 Bilateral' },
+        { dimension: 'source', value: 'w1w2', label: 'Source: W1/W2' },
+      );
+    } else if (showW1W2 && !showW3) {
+      chips.push({ dimension: 'source', value: 'w1w2', label: 'Source: W1/W2' });
+    }
+
+    if (showLead && showContributing) {
+      chips.push(
+        { dimension: 'role', value: 'lead', label: `Center role: Lead · ${this.ctx.centerAcronym()}` },
+        { dimension: 'role', value: 'contributing', label: 'Center role: Contributing' },
+      );
+    } else if (showContributing && !showLead) {
+      chips.push({ dimension: 'role', value: 'contributing', label: 'Center role: Contributing' });
+    }
+
+    for (const chip of this.statusChips()) {
+      chips.push({ dimension: 'status', value: chip.key, label: `Status: ${chip.label}` });
+    }
+
+    for (const chip of this.projectChips()) {
+      chips.push({ dimension: 'project', value: String(chip.id), label: `Project: ${chip.label}` });
+    }
+
+    const search = this.searchQuery().trim();
+    if (search) chips.push({ dimension: 'search', value: search, label: `Search: ${search}` });
+
+    return chips;
   });
 
-  /** Clear filters is hidden on the default W3 + Lead view with no URL-driven chips. */
-  readonly hasClearableFilters = computed(() => this.filterButtonActive());
+  readonly hasActiveFilters = computed(() => this.activeChips().length > 0);
+
+  /** True when the Filter button should use the active (primary-tinted) styling. */
+  readonly filterButtonActive = computed(() => this.hasActiveFilters());
+
+  /** Badge count on the Filter button — one per active chip. */
+  readonly activeFilterBadgeCount = computed(() => this.activeChips().length);
+
+  /** Clear filters is hidden while only the default phase chip(s) remain. */
+  readonly hasClearableFilters = computed(
+    () => this.activeChips().some(chip => chip.dimension !== 'phase') || this.hasNonDefaultPhaseFilter(),
+  );
 
   constructor() {
     // Use centerId when resolved; fall back to centerAcronym so admin users browsing
@@ -476,6 +516,13 @@ export class BilateralResultsListComponent implements OnInit {
     const portfolio = phase.obj_portfolio?.acronym;
     const base = portfolio ? `${year} · ${portfolio}` : String(year ?? '');
     return phase.status ? `${base} · Open` : base;
+  }
+
+  /** Toolbar chip label — matches Programme Results (`Reporting 2026 - P25`). */
+  phaseFilterLabel(phase: Phases): string {
+    const name = phase.phase_name ?? (phase.phase_year ? `Reporting ${phase.phase_year}` : 'Phase');
+    const acronym = phase.obj_portfolio?.acronym;
+    return acronym ? `${name} - ${acronym}` : name;
   }
 
   isPhaseSelected(phase: Phases): boolean {
@@ -669,6 +716,36 @@ export class BilateralResultsListComponent implements OnInit {
     this.typeFilter.set([]);
     this.methodFilter.set(null);
     this.searchQuery.set('');
+    this.syncUrlParams();
+  }
+
+  clearChip(chip: BilateralFilterChip): void {
+    switch (chip.dimension) {
+      case 'phase': {
+        const id = Number(chip.value);
+        const next = this.selectedPhaseIds().filter(existing => existing !== id);
+        this.selectedPhaseIds.set(next.length ? next : this.defaultPhaseIds());
+        this.syncPrimaryPhase();
+        break;
+      }
+      case 'source':
+        if (chip.value === 'w3') this.toggleW3();
+        else if (chip.value === 'w1w2') this.toggleW1W2();
+        return;
+      case 'role':
+        if (chip.value === 'lead') this.toggleLead();
+        else if (chip.value === 'contributing') this.toggleContributing();
+        return;
+      case 'status':
+        this.removeStatusFilter(chip.value as StatusKey);
+        return;
+      case 'project':
+        this.removeProjectFilter(Number(chip.value));
+        return;
+      case 'search':
+        this.clearSearch();
+        return;
+    }
     this.syncUrlParams();
   }
 

@@ -10,12 +10,6 @@
   }
 }
 
-.brl_docked {
-  .brl_filter_bar {
-    margin-bottom: 0;
-  }
-}
-
 .brl {
   width: 100%;
   box-sizing: border-box;
@@ -49,33 +43,35 @@ $phase-color:         #475569;
 $phase-color-light:   #f8fafc;
 $phase-color-border:  #cbd5e1;
 
-.brl_filter_bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px 14px;
-  background: var(--pr-surface-card);
-  border: 1px solid var(--pr-border);
-  border-radius: 10px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
+/* Programme Results toolbar chip parity */
+.pr-chip.brl-chip {
+  height: 26px;
+  gap: 6px;
+  padding: 0 6px 0 10px;
+  border-radius: 999px;
+  background: var(--pr-color-primary-100);
+  color: var(--pr-color-primary-400);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
 }
 
-.brl_filter_main {
+.pr-chip .brl-chip-remove {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex: 1;
-  min-width: 0;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+  padding: 0;
 }
 
-.brl_filter_actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+.pr-chip .brl-chip-remove:hover {
+  background: var(--pr-color-primary-200);
 }
 
 .brl_filter_group {
