@@ -353,7 +353,7 @@
             <span class="h-[14px] w-px bg-[var(--pr-border)] hidden sm:block" aria-hidden="true"></span>
             <button
               type="button"
-              class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+              class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
               [class]="
                 isStatusActive(count.statusName)
                   ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
@@ -393,7 +393,11 @@
           sortField="code"
           [sortOrder]="-1"
           [value]="filteredRows()"
-          [loading]="data.loading()">
+          [loading]="data.loading()"
+          [paginator]="filteredRows().length"
+          [rows]="10"
+          [first]="searchDraft() && 0"
+          [rowsPerPageOptions]="[10, 50, 100]">
           <!-- HEADER. The LAST cell is the sticky spacer that keeps the header aligned with the
                sticky actions cell. -->
           <ng-template prTableHeader>
@@ -504,7 +508,7 @@
                     <!-- 6 · STATUS — pill from the fixed --pr-status-* fg/bg PAIR (UI-RULES 9). -->
                     <td class="pgr-td">
                       <span
-                        class="inline-block whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium"
+                        class="inline-flex items-center whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium leading-[1.2]"
                         [style.color]="statusFg(row.statusId)"
                         [style.background]="statusBg(row.statusId)">
                         {{ row.statusName }}
@@ -640,6 +644,26 @@
                       (click)="copyLink(row)">
                       Copy link
                     </button>
+
+                    <!-- 5 · Delete result (DEL-R-1) -->
+                    @if (deleteEligibility(row).visible) {
+                      <div class="my-[4px] h-[1px] bg-[var(--pr-border)]"></div>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        [disabled]="deleteEligibility(row).disabled"
+                        [attr.aria-disabled]="deleteEligibility(row).disabled"
+                        [title]="deleteEligibility(row).tooltip"
+                        [prTooltip]="deleteEligibility(row).disabled ? deleteEligibility(row).tooltip : null"
+                        prTooltipPosition="bottom"
+                        class="flex h-[36px] w-full items-center gap-[8px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-color-red-600)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+                        [class.cursor-not-allowed]="deleteEligibility(row).disabled"
+                        [class.opacity-50]="deleteEligibility(row).disabled"
+                        (click)="deleteEligibility(row).disabled ? null : deleteResult(row)">
+                        <i class="pi pi-trash text-[13px]" aria-hidden="true"></i>
+                        Delete
+                      </button>
+                    }
                   </div>
                 </ng-template>
               </td>
@@ -661,29 +685,23 @@
            Mutually exclusive computeds, unlike the mockup's three independent blocks. The toolbar,
            the chips and the counts stay OUTSIDE them, so they remain visible in both. -->
       @if (isFilteredEmpty()) {
-        <div
-          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
-          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results match these filters.</p>
-          <button
-            type="button"
-            class="h-[32px] rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
-            (click)="clearAll()">
-            Clear all filters
-          </button>
-        </div>
+        <app-sp-tab-empty-state
+          testId="programme-results-filtered-empty"
+          variant="filtered"
+          title="No results match these filters"
+          description="Try removing a filter or widening your search to see more program results."
+          secondaryLabel="Clear all filters"
+          (secondaryAction)="clearAll()" />
       }
 
       @if (isNothingYet()) {
-        <div
-          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
-          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results reported in this program yet.</p>
-          <button
-            type="button"
-            class="flex h-[32px] items-center rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
-            (click)="goToReporting()">
-            Go to Reporting
-          </button>
-        </div>
+        <app-sp-tab-empty-state
+          testId="programme-results-empty"
+          icon="table_chart"
+          title="No results reported yet"
+          [description]="'Results reported in ' + (programmeName() || 'this program') + ' will show up here.'"
+          primaryLabel="Go to Reporting"
+          [primaryRouterLink]="reportingPath()" />
       }
     </div>
     </div>

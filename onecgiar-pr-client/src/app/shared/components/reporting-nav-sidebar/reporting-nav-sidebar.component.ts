@@ -46,11 +46,14 @@ import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { APP_VERSION } from '../../constants/app-version.constants';
+import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
 import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
+import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
+import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
 
@@ -81,7 +84,7 @@ interface IconFlyout {
 @Component({
   selector: 'app-reporting-nav-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgIcon, OverlayModule, A11yModule, ...HlmSidebarImports],
+  imports: [CommonModule, RouterModule, NgIcon, OverlayModule, A11yModule, SpMarkerComponent, ...HlmSidebarImports],
   templateUrl: './reporting-nav-sidebar.component.html',
   styleUrls: ['./reporting-nav-sidebar.component.scss'],
   providers: [
@@ -130,10 +133,13 @@ export class ReportingNavSidebarComponent {
   public readonly fontScaleSE = inject(FontScaleService);
   public readonly resultsNotificationsSE = inject(ResultsNotificationsService);
   public readonly sidebarSE = inject(HlmSidebarService);
+  private readonly reportingGuideSE = inject(ReportingGuideService);
 
   readonly isProduction = environment.production;
   readonly appVersion = APP_VERSION;
   readonly fontScaleOptions = FONT_SCALE_OPTIONS;
+  /** P2-3145 — CLARISA public glossary (sidebar EXTRAS + footer). */
+  readonly clarisaGlossaryUrl = CLARISA_GLOSSARY_URL;
 
   /** Icon-rail mode (Spartan `collapsible="icon"` + service state). */
   readonly isCollapsed = computed(() => this.sidebarSE.state() === 'collapsed' && !this.sidebarSE.isMobile());
@@ -588,6 +594,7 @@ export class ReportingNavSidebarComponent {
     return `/assets/result-framework-reporting/SPs-Icons/${sp.initiativeCode}.png`;
   }
 
+
   // Mirrors NavigationBarComponent so admin-only entries stay gated in the sidebar too.
   validateAdminModuleAndRole(option: PrRoute): boolean {
     if (option?.onlyTest && environment.production) return true;
@@ -670,5 +677,15 @@ export class ReportingNavSidebarComponent {
   onEscape(): void {
     this.fontMenuOpen.set(false);
     this.closeIconFlyout();
+  }
+
+  /** @akili-spec changes/platform-onboarding-tour (POT-T-3) */
+  startPlatformSidebarTour(): void {
+    const groups = this.programGroups();
+    this.reportingGuideSE.startSidebarTour({
+      hasMyPrograms: (groups.find(g => g.key === 'mine')?.items.length ?? 0) > 0,
+      hasOtherPrograms: (groups.find(g => g.key === 'other')?.items.length ?? 0) > 0,
+      hasCenters: this.getMyCenters().length > 0
+    });
   }
 }

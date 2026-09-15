@@ -59,6 +59,8 @@ export class LeadContactPersonFieldComponent implements OnChanges {
   searchResults: User[] = [];
   showResults: boolean = false;
   isSearching: boolean = false;
+  /** Mínimo de caracteres que dispara la búsqueda — el mismo que anuncia el placeholder del campo. */
+  private static readonly MIN_SEARCH_LENGTH = 4;
 
   private readonly searchSubject = new Subject<string>();
   private lastQueryWasValidEmail: boolean = false;
@@ -74,7 +76,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
         distinctUntilChanged(),
         switchMap((query: string) => {
           const trimmedQuery = query;
-          if (trimmedQuery.length >= 4) {
+          if (trimmedQuery.length >= LeadContactPersonFieldComponent.MIN_SEARCH_LENGTH) {
             this.isSearching = true;
             this.showResults = false;
             return this.resultsApiService.GET_adUsersSearch(trimmedQuery).pipe(catchError(() => of({ response: [] })));
@@ -183,6 +185,12 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     if (query) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = false;
+      // El indicador se enciende AQUÍ, al teclear, y no dentro del `switchMap`: entre la última
+      // tecla y la petición hay 500 ms de `debounceTime`, y encenderlo solo al salir la petición
+      // dejaba ese medio segundo sin ninguna señal — que es justo el silencio que el reportero lee
+      // como "no está pasando nada". Se apaga en los tres finales del pipe (next, error y la rama
+      // de query corta), así que no puede quedarse girando.
+      this.isSearching = query.length >= LeadContactPersonFieldComponent.MIN_SEARCH_LENGTH;
       this.searchSubject.next(query);
     } else {
       this.resetContactState();

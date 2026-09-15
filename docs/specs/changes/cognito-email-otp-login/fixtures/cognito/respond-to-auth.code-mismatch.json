@@ -1,0 +1,5 @@
+{
+  "__type": "CodeMismatchException",
+  "operation": "RespondToAuthChallenge",
+  "message": "Invalid code or auth state for the user."
+}

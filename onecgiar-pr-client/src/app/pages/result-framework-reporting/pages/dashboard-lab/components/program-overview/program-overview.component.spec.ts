@@ -828,6 +828,54 @@ describe('ProgramOverviewComponent', () => {
       // No further emissions past the one real AoW click.
       expect(emitted).toEqual(['AOW01']);
     });
+
+    it('defaults to network graph view mode and toggles to heatmap and tree view modes', () => {
+      fixture.componentRef.setInput('tocMap', tocModel);
+      fixture.detectChanges();
+
+      expect(component.tocMapViewMode()).toBe('network');
+      expect((component.tocMapOption() as any)?.series[0]?.type).toBe('graph');
+
+      component.setTocMapViewMode('heatmap');
+      fixture.detectChanges();
+
+      expect(component.tocMapViewMode()).toBe('heatmap');
+      expect((component.tocMapOption() as any)?.series[0]?.type).toBe('heatmap');
+
+      component.setTocMapViewMode('tree');
+      fixture.detectChanges();
+
+      expect(component.tocMapViewMode()).toBe('tree');
+      expect((component.tocMapOption() as any)?.series[0]?.type).toBe('tree');
+    });
+
+    it('resolves openAow click from heatmap cell payload', () => {
+      fixture.componentRef.setInput('tocMap', tocModel);
+      fixture.detectChanges();
+
+      const emitted: string[] = [];
+      component.openAow.subscribe(code => emitted.push(code));
+
+      component.onTocMapClick({
+        data: {
+          tocCellPayload: {
+            aowCode: 'AOW01',
+            branchKind: 'aow',
+            branchName: 'AOW01 · Area of Work 1',
+            colName: 'Outputs (HLO)',
+            done: 1,
+            total: 2,
+            target: 10,
+            achieved: 5,
+            pct: 50,
+            isApplicable: true,
+            leaves: []
+          }
+        }
+      } as unknown as ECElementEvent);
+
+      expect(emitted).toEqual(['AOW01']);
+    });
   });
 
   describe('KPI summary cards and section filtering', () => {

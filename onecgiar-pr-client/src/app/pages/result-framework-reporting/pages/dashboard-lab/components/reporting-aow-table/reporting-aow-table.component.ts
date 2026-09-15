@@ -1258,13 +1258,195 @@ export class ReportingAowTableComponent {
     return this.overrides().get(key) ?? defaultOpen;
   }
 
-  toggle(key: string, defaultOpen = false, event?: MouseEvent): void {
+  toggle(key: string, defaultOpen = false, event?: Event): void {
     const selection = window.getSelection()?.toString();
     if (selection && selection.trim().length > 0) {
       return;
     }
     const now = this.isOpen(key, defaultOpen);
     this.overrides.update(map => new Map(map).set(key, !now));
+  }
+
+  // ── Keyboard Accessibility (WAI-ARIA Accordion & Navigation) ───────────────
+  /**
+   * Accessible keyboard navigation across AoW card headers (WAI-ARIA Accordion Pattern).
+   * - ArrowDown / ArrowUp: navigate sequentially between AoW card headers.
+   * - Home / End: jump to first / last AoW card header.
+   * - ArrowRight: expand card if collapsed; if already open, move focus to first focusable child.
+   * - ArrowLeft: collapse card if expanded.
+   */
+  onAowHeaderKeydown(event: KeyboardEvent, aowKey: string, code: string, isOpen: boolean): void {
+    const target = event.currentTarget as HTMLElement;
+    const container = target.closest('.flex-col');
+    const allHeaders = Array.from(
+      container?.querySelectorAll<HTMLElement>('section > button[data-aow-header]') ?? []
+    );
+    const currentIndex = allHeaders.indexOf(target);
+
+    switch (event.key) {
+      case 'ArrowDown': {
+        event.preventDefault();
+        if (currentIndex >= 0 && currentIndex < allHeaders.length - 1) {
+          allHeaders[currentIndex + 1].focus();
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        event.preventDefault();
+        if (currentIndex > 0) {
+          allHeaders[currentIndex - 1].focus();
+        }
+        break;
+      }
+      case 'Home': {
+        event.preventDefault();
+        allHeaders[0]?.focus();
+        break;
+      }
+      case 'End': {
+        event.preventDefault();
+        allHeaders[allHeaders.length - 1]?.focus();
+        break;
+      }
+      case 'ArrowRight': {
+        event.preventDefault();
+        if (!isOpen) {
+          this.toggle(aowKey, this.isDefaultOpenAow(code));
+        } else {
+          const cardSection = target.closest('section');
+          const firstInnerFocusable = cardSection
+            ?.querySelector('.pr-collapse-inner')
+            ?.querySelector<HTMLElement>('button[id^="hlo-group-"], button:not([disabled]), [tabindex="0"]');
+          firstInnerFocusable?.focus();
+        }
+        break;
+      }
+      case 'ArrowLeft': {
+        if (isOpen) {
+          event.preventDefault();
+          this.toggle(aowKey, this.isDefaultOpenAow(code));
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * Keyboard navigation on HLO sub-group headers:
+   * - ArrowRight: expands HLO; if open, moves focus to first indicator row.
+   * - ArrowLeft: collapses HLO; if closed, returns focus to parent AoW header.
+   * - ArrowDown / ArrowUp: navigate between HLO headers in the same AoW card.
+   */
+  onHloHeaderKeydown(event: KeyboardEvent, hloKey: string, defaultOpen: boolean): void {
+    const target = event.currentTarget as HTMLElement;
+    const isOpen = this.isOpen(hloKey, defaultOpen);
+
+    switch (event.key) {
+      case 'ArrowRight': {
+        event.preventDefault();
+        if (!isOpen) {
+          this.toggle(hloKey, defaultOpen);
+        } else {
+          const firstRow = target.closest('.rounded-xl')?.querySelector<HTMLElement>('.pr-reporting-row[tabindex="0"]');
+          firstRow?.focus();
+        }
+        break;
+      }
+      case 'ArrowLeft': {
+        event.preventDefault();
+        if (isOpen) {
+          this.toggle(hloKey, defaultOpen);
+        } else {
+          const aowHeader = target.closest('section')?.querySelector<HTMLElement>('button[data-aow-header]');
+          aowHeader?.focus();
+        }
+        break;
+      }
+      case 'ArrowDown': {
+        const hloHeaders = Array.from(
+          target.closest('.pr-collapse-inner')?.querySelectorAll<HTMLElement>('button[id^="hlo-group-"]') ?? []
+        );
+        const idx = hloHeaders.indexOf(target);
+        if (idx >= 0 && idx < hloHeaders.length - 1) {
+          event.preventDefault();
+          hloHeaders[idx + 1].focus();
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        const hloHeaders = Array.from(
+          target.closest('.pr-collapse-inner')?.querySelectorAll<HTMLElement>('button[id^="hlo-group-"]') ?? []
+        );
+        const idx = hloHeaders.indexOf(target);
+        if (idx > 0) {
+          event.preventDefault();
+          hloHeaders[idx - 1].focus();
+        } else {
+          event.preventDefault();
+          const aowHeader = target.closest('section')?.querySelector<HTMLElement>('button[data-aow-header]');
+          aowHeader?.focus();
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * Keyboard navigation on indicator rows:
+   * - ArrowDown: moves focus to next indicator row.
+   * - ArrowUp: moves focus to previous indicator row (or HLO header if at top).
+   * - ArrowLeft / Escape: returns focus to the parent HLO header or AoW header.
+   * - Enter / Space: opens the Report Aside Drawer (`openRow.emit(row)`).
+   */
+  onIndicatorRowKeydown(event: KeyboardEvent, row: ReportingIndicator): void {
+    const target = event.currentTarget as HTMLElement;
+
+    switch (event.key) {
+      case 'Enter':
+      case ' ': {
+        event.preventDefault();
+        this.openRow.emit(row);
+        break;
+      }
+      case 'ArrowDown': {
+        const allRows = Array.from(
+          target.closest('.pr-collapse-inner')?.querySelectorAll<HTMLElement>('.pr-reporting-row[tabindex="0"]') ?? []
+        );
+        const idx = allRows.indexOf(target);
+        if (idx >= 0 && idx < allRows.length - 1) {
+          event.preventDefault();
+          allRows[idx + 1].focus();
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        const allRows = Array.from(
+          target.closest('.pr-collapse-inner')?.querySelectorAll<HTMLElement>('.pr-reporting-row[tabindex="0"]') ?? []
+        );
+        const idx = allRows.indexOf(target);
+        if (idx > 0) {
+          event.preventDefault();
+          allRows[idx - 1].focus();
+        } else {
+          event.preventDefault();
+          const hloHeader = target.closest('.rounded-xl')?.querySelector<HTMLElement>('button[id^="hlo-group-"]');
+          hloHeader?.focus();
+        }
+        break;
+      }
+      case 'ArrowLeft':
+      case 'Escape': {
+        event.preventDefault();
+        const hloHeader = target.closest('.rounded-xl')?.querySelector<HTMLElement>('button[id^="hlo-group-"]');
+        if (hloHeader) {
+          hloHeader.focus();
+        } else {
+          const aowHeader = target.closest('section')?.querySelector<HTMLElement>('button[data-aow-header]');
+          aowHeader?.focus();
+        }
+        break;
+      }
+    }
   }
 
   /** Check if all HLO sub-groups in a band are expanded. */

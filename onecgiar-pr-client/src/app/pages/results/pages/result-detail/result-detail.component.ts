@@ -87,7 +87,12 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
         takeUntilDestroyed()
       )
       .subscribe(() => {
-        if (this.sidebarSE.isCompact() && this.sidebarSE.state() === 'expanded') {
+        // Entering a result collapses the app rail on EVERY viewport, not only the compact one:
+        // the form is the whole job here and the rail is 260px of it. Remembered so leaving puts
+        // it back exactly as the user had it — `collapseForCompactEntry` deliberately does not
+        // touch the cookie, so their own preference is never silently rewritten.
+        if (this.sidebarSE.state() === 'expanded') {
+          this.sidebarWasExpanded = true;
           this.sidebarSE.collapseForCompactEntry();
         }
 
@@ -109,6 +114,9 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
       });
   }
 
+  /** Whether the app rail was open when this result was entered, to restore it on the way out. */
+  private sidebarWasExpanded = false;
+
   ngOnInit(): void {
     // Published here, NOT in ngAfterViewInit: Angular runs a child's `ngAfterViewInit` before its
     // parent's, so a section mounting in the same pass would look for the slot and find nothing.
@@ -118,6 +126,9 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // "Back to results", a browser back, a link out — all of them land here, so the rail comes
+    // back on its own without the button having to know about it.
+    if (this.sidebarWasExpanded) this.sidebarSE.setOpen(true);
     this.pdfSE.disable();
     // The slot dies with this view; leaving a detached node published would send the next
     // section's bar into a DOM fragment nobody renders.

@@ -31,6 +31,7 @@ import { InstitutionsService } from './../../../../../../shared/services/global/
 import { PusherService } from './../../../../../../shared/services/pusher.service';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { FieldGroupHeaderComponent } from 'src/app/custom-fields/field-group-header/field-group-header.component';
 import { FieldCardComponent } from './../../../../../../custom-fields/field-card/field-card.component';
 import { SectionSkeletonDirective } from './../../../../../../custom-fields/section-skeleton/section-skeleton.directive';
 import { GetImpactAreasScoresService } from './../../../../../../shared/services/global/get-impact-areas-scores.service';
@@ -229,6 +230,7 @@ describe('RdGeneralInformationComponent', () => {
         YesOrNotByBooleanPipe,
         ChangeResultTypeModalComponent,
         FieldCardComponent,
+        FieldGroupHeaderComponent,
         SectionSkeletonDirective
       ],
       providers: [
@@ -321,9 +323,9 @@ describe('RdGeneralInformationComponent', () => {
       const card = impactAreaCard();
       expect(card).toBeTruthy();
       expect(card.querySelector('.fch_title').textContent).toContain('Which component of the Impact Area?');
-      // Requiredness reads as the red asterisk next to the label — the Mandatory/Optional pill
-      // was dropped when the field card lost its status chrome.
-      expect(card.querySelector('.fch_required').textContent.trim()).toBe('*');
+      // Requiredness reads as the solid REQUIRED tag next to the label (proposal 18); the asterisk
+      // it replaced said the same thing a second time.
+      expect(card.querySelector('.fch_required').textContent.trim()).toBe('Required');
     });
 
     /**
@@ -534,10 +536,15 @@ describe('RdGeneralInformationComponent', () => {
       it('places it above the section heading', () => {
         renderForPhase(2026);
         const host = fixture.nativeElement as HTMLElement;
-        const nodes = Array.from(host.querySelectorAll('app-alert-status, h1.pr_label'));
+        // 14-sep-2026: el encabezado del grupo dejó de ser un `<h1 class="pr_label">` y pasó a
+        // `app-field-group-header` (cabecera tintada + contador con anillo). El test sigue
+        // midiendo lo mismo — que la nota va ARRIBA del encabezado — por el elemento que hoy ES
+        // el encabezado.
+        const nodes = Array.from(host.querySelectorAll('app-alert-status, app-field-group-header'));
         const noteIndex = nodes.findIndex(n => (n.textContent ?? '').includes('AI-assisted Notification'));
-        const headingIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'h1');
+        const headingIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'app-field-group-header');
         expect(noteIndex).toBeGreaterThan(-1);
+        expect(headingIndex).toBeGreaterThan(-1);
         expect(noteIndex).toBeLessThan(headingIndex);
       });
 
@@ -563,7 +570,7 @@ describe('RdGeneralInformationComponent', () => {
 
       it('moves the 0/1/2 scoring guidance into a pinnable tooltip on the heading', () => {
         renderForPhase(2026);
-        const trigger = fixture.nativeElement.querySelector('h1.impact_scores_heading .sgi-dac-info');
+        const trigger = fixture.nativeElement.querySelector('app-field-group-header .sgi-dac-info');
         expect(trigger).toBeTruthy();
         expect(fixture.nativeElement.textContent).not.toContain('0 = Not targeted');
       });
@@ -584,23 +591,33 @@ describe('RdGeneralInformationComponent', () => {
         expect(countAlertsContaining('Example topics')).toBe(0);
       });
 
-      it('keeps the five guidance boxes inline on a 2025 result', () => {
+      /**
+       * 14-sep-2026: invertido a propósito. Antes este test fijaba lo contrario — cero tooltips y
+       * cinco cajas inline en 2025 — porque esa era la regla del ticket de 2026. Lo que destapó el
+       * uso real es que esas cinco cajas, desde que `app-alert-status` colapsa por defecto
+       * (`85b2d357f`), no pintan más que un ⓘ suelto flotando encima de cada fila, sin etiqueta y
+       * sin decir a qué campo pertenecen. La guía ahora cuelga del ⓘ del propio campo en TODAS las
+       * fases: mismo texto, en el sitio donde se busca.
+       */
+      it('hangs each Impact Area guidance off its own field, in 2025 too', () => {
         renderForPhase(2025);
         const tooltips = fixture.debugElement
           .queryAll(By.css('app-pr-radio-button'))
           .map(de => de.componentInstance.tooltip)
           .filter((tooltip: string) => !!tooltip);
-        expect(tooltips).toHaveLength(0);
-        // Portfolio is still P25 here, so the guidance is the P25 wording ("Example topics"),
-        // one inline box per Impact Area — exactly what the 2026 gate must not disturb.
-        expect(countAlertsContaining('Example topics')).toBe(5);
+        expect(tooltips).toHaveLength(5);
+        expect(tooltips.every((t: string) => t.includes('Example topics'))).toBe(true);
+        // 🛑 Y ya no queda ninguna caja suelta: era el icono huérfano que el reportero veía.
+        expect(countAlertsContaining('Example topics')).toBe(0);
       });
 
-      it('returns the guidance verbatim through sectionGuidanceTooltip', () => {
+      it('returns the guidance verbatim through sectionGuidanceTooltip, in every phase', () => {
         mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
         expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe(component.genderInformation());
+        // El año ya no decide si hay guía, solo dónde vivía antes. Devolver '' en 2025 era lo que
+        // dejaba el campo sin ⓘ y mandaba el texto a la caja suelta.
         mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
-        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe('');
+        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe(component.genderInformation());
       });
 
       /** The ticket freezes score-2 behaviour: this is presentation only. */

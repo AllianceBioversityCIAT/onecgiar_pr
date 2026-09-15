@@ -4,10 +4,13 @@ import {
   Body,
   Param,
   HttpCode,
+  UseGuards,
   UseInterceptors,
+  ValidationPipe,
   Get,
   Query,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
@@ -16,6 +19,9 @@ import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
 import { ActiveDirectoryService } from './services/active-directory.service';
+import { OtpStartDto } from './dto/otp-start.dto';
+import { OtpVerifyDto } from './dto/otp-verify.dto';
+import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
 
 @Controller()
 @ApiTags('Authentication')
@@ -44,6 +50,69 @@ export class AuthController {
     @Query('redirectUri') redirectUri?: string,
   ) {
     return this.authService.getAuthURL(provider, redirectUri);
+  }
+
+  @Get('/login/otp/config')
+  @ApiOperation({
+    summary: 'Get the Center-path (email one-time-code) allowed domains',
+    description:
+      'Public, read-only config for the Center login path. Empty domains list keeps the path hidden on the client.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Allowed domains retrieved successfully',
+  })
+  getOtpConfig() {
+    return this.authService.getOtpConfig();
+  }
+
+  @Post('/login/otp/start')
+  @UseGuards(OtpThrottlerGuard)
+  // @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework round 2, Leader
+  // correction) — plain @SkipThrottle() skips the app-global default throttler
+  // (the only one `ThrottlerModule.forRoot` declares — no named `otp` entry,
+  // see app.module.ts) so ThrottlerExcludeBilateralGuard contributes nothing
+  // here. OtpThrottlerGuard enforces its OWN limit (5/900s) via its own
+  // storage key/namespace — not `@Throttle` — so it can never leak onto any
+  // other route in the app.
+  @SkipThrottle()
+  @ApiOperation({
+    summary: 'Start the Center (email OTP) sign-in challenge',
+    description:
+      'Byte-identical neutral 200 for known and unknown users (OTP-R-3). 400 only for a domain outside the allow-list.',
+  })
+  @ApiResponse({ status: 200, description: 'Neutral response, code sent' })
+  @ApiResponse({ status: 400, description: 'Domain not allowed' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  @ApiResponse({ status: 503, description: 'Sign-in service unavailable' })
+  startOtp(
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    dto: OtpStartDto,
+  ) {
+    return this.authService.startOtp(dto);
+  }
+
+  @Post('/login/otp/verify')
+  @UseGuards(OtpThrottlerGuard)
+  @SkipThrottle()
+  @ApiOperation({
+    summary: 'Verify the Center (email OTP) sign-in challenge',
+    description:
+      'Same success shape as /login/custom on success (OTP-R-5, OTP-DD-4).',
+  })
+  @ApiResponse({ status: 200, description: 'Successful login' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized (neutral or code error)',
+  })
+  @ApiResponse({ status: 403, description: 'User has no roles assigned' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  @ApiResponse({ status: 503, description: 'Sign-in service unavailable' })
+  verifyOtp(
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    dto: OtpVerifyDto,
+  ) {
+    return this.authService.verifyOtp(dto);
   }
 
   @Post('/login/custom')

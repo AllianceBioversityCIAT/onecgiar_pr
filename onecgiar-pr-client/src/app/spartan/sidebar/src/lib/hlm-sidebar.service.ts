@@ -62,8 +62,11 @@ export class HlmSidebarService {
       // Add compact-breakpoint media query listener
       const compactMediaQueryHandler = (e: MediaQueryListEvent) => {
         this._isCompact.set(e.matches);
+        if (e.matches) this.applyCompactViewportDefault();
       };
       this._compactMediaQuery.addEventListener('change', compactMediaQueryHandler);
+
+      this.applyCompactViewportDefault();
 
       // Add keyboard shortcut listener
       const keydownHandler = (event: KeyboardEvent) => {
@@ -113,6 +116,12 @@ export class HlmSidebarService {
    */
   public collapseForCompactEntry(): void {
     this._open.set(false);
+  }
+
+  /** Collapse the desktop rail on compact laptops (≤ compactBreakpoint) without touching the cookie. */
+  private applyCompactViewportDefault(): void {
+    if (this._isMobile() || !this._isCompact()) return;
+    if (this._open()) this.collapseForCompactEntry();
   }
 
   public setOpenMobile(open: boolean): void {

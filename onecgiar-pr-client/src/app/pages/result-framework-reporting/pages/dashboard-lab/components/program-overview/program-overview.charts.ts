@@ -885,7 +885,11 @@ function tocMapBranchNode(branch: TocBranch, tokens: ResolvedChartTokens): TocMa
  * (brand primary fill — it carries no indicators, so it is never quartile-colored); branch/leaf
  * fill by `done/total` quartile; root+branch labels on, leaf labels off (`TCM-DD-6`).
  */
-export function tocMapOption(model: TocMapModel, tokens: ResolvedChartTokens): EChartsOption {
+export function tocMapOption(
+  model: TocMapModel,
+  tokens: ResolvedChartTokens,
+  layout: 'radial' | 'orthogonal' = 'radial'
+): EChartsOption {
   const rootPayload: TocMapNodePayload = {
     kind: 'root',
     aowCode: null,
@@ -921,9 +925,9 @@ export function tocMapOption(model: TocMapModel, tokens: ResolvedChartTokens): E
     series: [
       {
         type: 'tree',
-        layout: 'radial',
+        layout,
         initialTreeDepth: -1,
-        roam: false,
+        roam: layout === 'orthogonal',
         // HITL fix (TCM-T-4, SP02 live render): ECharts tree series defaults to `symbol:
         // 'emptyCircle'` — an unfilled ring whose OWN border, not `itemStyle.color`, is the only
         // visible stroke. Every node rendered hollow regardless of quartile/muted/primary fill.
@@ -932,8 +936,487 @@ export function tocMapOption(model: TocMapModel, tokens: ResolvedChartTokens): E
         // Series-level fallback symbolSize/label — every node below sets its OWN (root/branch/
         // leaf), this default only ever matters if ECharts falls back before data is set.
         symbolSize: TOC_MAP_LEAF_SYMBOL_SIZE,
-        label: { show: false },
+        label: { show: layout === 'orthogonal', position: 'right' },
+        ...(layout === 'orthogonal'
+          ? {
+              orient: 'LR',
+              leaves: {
+                label: { show: true, position: 'right', fontSize: 11 }
+              }
+            }
+          : {}),
         data: [rootNode]
+      }
+    ]
+  } as EChartsOption;
+}
+
+/**
+ * Builds the `app-pr-viz-chart` `options` for a Force-Directed Research Network Graph view.
+ * Uses `type: 'graph'`, `layout: 'force'`, `labelLayout: { hideOverlap: true }`,
+ * and `emphasis: { focus: 'adjacency' }` to provide a collision-free, interactive research network map.
+ */
+export function tocMapNetworkOption(model: TocMapModel, tokens: ResolvedChartTokens): EChartsOption {
+  const rootPayload: TocMapNodePayload = {
+    kind: 'root',
+    aowCode: null,
+    code: null,
+    title: model.spName,
+    level: '',
+    indicators: 0,
+    target: 0,
+    achieved: 0,
+    done: 0,
+    total: 0
+  };
+
+  const categories = [
+    { name: 'Science Program' },
+    { name: 'Area of Work' },
+    { name: 'Outcome' },
+    { name: 'Output (HLO)' },
+    { name: 'Strategic Outcome' }
+  ];
+
+  const nodes: Array<{
+    id: string;
+    name: string;
+    value: number;
+    symbolSize: number;
+    category: number;
+    itemStyle?: { color?: string; borderColor?: string; borderWidth?: number };
+    label?: { show: boolean; fontWeight?: string | number; fontSize?: number };
+    draggable: boolean;
+    tocMapPayload: TocMapNodePayload;
+  }> = [];
+
+  const links: Array<{
+    source: string;
+    target: string;
+    lineStyle?: { width?: number; opacity?: number; curveness?: number };
+  }> = [];
+
+  // 1. Root node
+  const rootId = `root-${model.spCode}`;
+  nodes.push({
+    id: rootId,
+    name: model.spCode,
+    value: model.branches.length,
+    symbolSize: TOC_MAP_ROOT_SYMBOL_SIZE,
+    category: 0,
+    itemStyle: {
+      color: tokens.primaryStrong,
+      borderColor: tokens.border,
+      borderWidth: 2
+    },
+    label: { show: true, fontWeight: 700, fontSize: 13 },
+    draggable: true,
+    tocMapPayload: rootPayload
+  });
+
+  // 2. Branch and leaf nodes
+  model.branches.forEach((branch, bIdx) => {
+    const branchId = `branch-${branch.code || bIdx}`;
+    const branchPayload: TocMapNodePayload = {
+      kind: branch.kind,
+      aowCode: branch.kind === 'aow' ? branch.code : null,
+      code: branch.code,
+      title: branch.name,
+      level: '',
+      indicators: tocMapSumIndicators(branch.leaves),
+      target: branch.target,
+      achieved: branch.achieved,
+      done: branch.done,
+      total: branch.total
+    };
+
+    const branchCategory = branch.kind === 'aow' ? 1 : 4;
+    const branchColor = branch.kind === 'aow' ? tocMapNodeColor(branch.done, branch.total, tokens) : tokens.primary;
+
+    nodes.push({
+      id: branchId,
+      name: branch.kind === 'aow' ? `${branch.code} · ${truncateTocMapTitle(branch.name)}` : branch.name,
+      value: branch.total,
+      symbolSize: TOC_MAP_BRANCH_SYMBOL_SIZE,
+      category: branchCategory,
+      itemStyle: {
+        color: branchColor,
+        borderColor: tokens.border,
+        borderWidth: 1.5
+      },
+      label: { show: true, fontWeight: 600, fontSize: 11 },
+      draggable: true,
+      tocMapPayload: branchPayload
+    });
+
+    // Link root -> branch
+    links.push({
+      source: rootId,
+      target: branchId,
+      lineStyle: {
+        width: 2.2,
+        opacity: 0.6,
+        curveness: 0.04
+      }
+    });
+
+    // Leaves
+    branch.leaves.forEach((leaf, lIdx) => {
+      const leafId = `leaf-${branch.code || bIdx}-${lIdx}`;
+      const leafPayload: TocMapNodePayload = {
+        kind: 'leaf',
+        aowCode: null,
+        code: leaf.code,
+        title: leaf.title,
+        level: leaf.level,
+        indicators: leaf.indicators,
+        target: leaf.target,
+        achieved: leaf.achieved,
+        done: leaf.done,
+        total: leaf.total
+      };
+
+      const leafCategory = leaf.level === 'OUTCOME' ? 2 : 3;
+      const leafSize = leaf.level === 'OUTCOME' ? 18 : TOC_MAP_LEAF_SYMBOL_SIZE;
+
+      nodes.push({
+        id: leafId,
+        name: leaf.code ? `${leaf.code}: ${truncateTocMapTitle(leaf.title)}` : truncateTocMapTitle(leaf.title),
+        value: leaf.total,
+        symbolSize: leafSize,
+        category: leafCategory,
+        itemStyle: {
+          color: tocMapNodeColor(leaf.done, leaf.total, tokens)
+        },
+        label: { show: true, fontSize: 10 },
+        draggable: true,
+        tocMapPayload: leafPayload
+      });
+
+      // Link branch -> leaf
+      links.push({
+        source: branchId,
+        target: leafId,
+        lineStyle: {
+          width: 1.2,
+          opacity: 0.45,
+          curveness: 0.06
+        }
+      });
+    });
+  });
+
+  return {
+    tooltip: {
+      formatter: (params: unknown) => {
+        const payload = params as { data?: { tocMapPayload?: TocMapNodePayload } };
+        const node = payload?.data?.tocMapPayload;
+        return node ? tocMapTooltip(node) : '';
+      }
+    },
+    legend: {
+      show: true,
+      bottom: 8,
+      right: 16,
+      data: categories.map(c => c.name),
+      textStyle: { color: tokens.textSecondary, fontSize: 11 }
+    },
+    series: [
+      {
+        type: 'graph',
+        layout: 'force',
+        data: nodes,
+        links,
+        categories,
+        roam: true,
+        draggable: true,
+        scaleLimit: { min: 0.35, max: 3.5 },
+        label: {
+          show: true,
+          position: 'right',
+          color: tokens.textSecondary,
+          fontSize: 11
+        },
+        labelLayout: {
+          hideOverlap: true
+        },
+        emphasis: {
+          focus: 'adjacency',
+          lineStyle: { width: 3.5, opacity: 0.95 }
+        },
+        lineStyle: {
+          color: 'source',
+          curveness: 0.06,
+          opacity: 0.5
+        },
+        force: {
+          repulsion: 180,
+          gravity: 0.1,
+          edgeLength: [50, 120],
+          friction: 0.6
+        }
+      }
+    ]
+  } as EChartsOption;
+}
+
+export interface TocHeatmapCellPayload {
+  aowCode: string | null;
+  branchKind: TocBranchKind;
+  branchName: string;
+  colName: string;
+  done: number;
+  total: number;
+  target: number;
+  achieved: number;
+  pct: number | null;
+  isApplicable: boolean;
+  leaves: TocLeaf[];
+}
+
+/**
+ * Builds the `app-pr-viz-chart` `options` for a Theory-of-Change Heatmap Matrix view.
+ * Rows = Areas of Work & Program-level branches.
+ * Cols = Theory of Change tiers (Outputs, Outcomes, Intermediate, 2030) + Total Progress.
+ * Cells = Progress ratio (done/total) and percentage with violet ramp heatmap intensity.
+ */
+export function tocMapHeatmapOption(model: TocMapModel, tokens: ResolvedChartTokens): EChartsOption {
+  const hasIntermediate = model.branches.some(b => b.kind === 'intermediate');
+  const has2030 = model.branches.some(b => b.kind === '2030');
+  const hasProgram = model.branches.some(b => b.kind === 'program');
+
+  const cols: string[] = ['Outputs (HLO)', 'Outcomes'];
+  if (hasIntermediate) cols.push('Intermediate Outcomes');
+  if (has2030) cols.push('2030 Outcomes');
+  if (hasProgram) cols.push('Program-level');
+  cols.push('Total Progress');
+
+  const rows = model.branches.map(b => (b.kind === 'aow' ? `${b.code} · ${b.name}` : b.name));
+
+  const data: Array<{
+    value: [number, number, number];
+    tocCellPayload: TocHeatmapCellPayload;
+    itemStyle?: { borderColor?: string; borderWidth?: number; borderRadius?: number; color?: string };
+    label?: {
+      show: boolean;
+      formatter: () => string;
+      color?: string;
+      fontWeight?: string | number;
+      fontSize?: number;
+      textBorderColor?: string;
+      textBorderWidth?: number;
+    };
+  }> = [];
+
+  const heatmapRamp = [...tokens.ramp].reverse();
+
+  model.branches.forEach((branch, r) => {
+    cols.forEach((col, c) => {
+      let leaves: TocLeaf[] = [];
+      let isApplicable = false;
+
+      if (col === 'Outputs (HLO)') {
+        if (branch.kind === 'aow') {
+          leaves = branch.leaves.filter(l => l.level === 'OUTPUT' || !l.level);
+          isApplicable = leaves.length > 0;
+        }
+      } else if (col === 'Outcomes') {
+        if (branch.kind === 'aow') {
+          leaves = branch.leaves.filter(l => l.level === 'OUTCOME');
+          isApplicable = leaves.length > 0;
+        }
+      } else if (col === 'Intermediate Outcomes') {
+        if (branch.kind === 'intermediate') {
+          leaves = branch.leaves;
+          isApplicable = true;
+        }
+      } else if (col === '2030 Outcomes') {
+        if (branch.kind === '2030') {
+          leaves = branch.leaves;
+          isApplicable = true;
+        }
+      } else if (col === 'Program-level') {
+        if (branch.kind === 'program') {
+          leaves = branch.leaves;
+          isApplicable = true;
+        }
+      } else if (col === 'Total Progress') {
+        leaves = branch.leaves;
+        isApplicable = true;
+      }
+
+      const done = leaves.reduce((sum, l) => sum + l.done, 0);
+      const total = leaves.reduce((sum, l) => sum + l.total, 0);
+      const target = leaves.reduce((sum, l) => sum + l.target, 0);
+      const achieved = leaves.reduce((sum, l) => sum + l.achieved, 0);
+      const pct = total > 0 ? Math.round((done / total) * 100) : (isApplicable ? 0 : null);
+      const cellValue = isApplicable ? (pct ?? 0) : -1;
+
+      const payload: TocHeatmapCellPayload = {
+        aowCode: branch.kind === 'aow' ? branch.code : null,
+        branchKind: branch.kind,
+        branchName: branch.kind === 'aow' ? `${branch.code} · ${branch.name}` : branch.name,
+        colName: col,
+        done,
+        total,
+        target,
+        achieved,
+        pct,
+        isApplicable,
+        leaves
+      };
+
+      const cellItem: (typeof data)[number] = {
+        value: [c, r, cellValue],
+        tocCellPayload: payload,
+        itemStyle: {
+          borderColor: tokens.border,
+          borderWidth: 1.5,
+          borderRadius: 4
+        }
+      };
+
+      if (!isApplicable) {
+        cellItem.itemStyle = {
+          ...cellItem.itemStyle,
+          color: 'transparent'
+        };
+        cellItem.label = {
+          show: true,
+          formatter: () => '—',
+          color: tokens.textSecondary,
+          fontSize: 13
+        };
+      } else if (total === 0) {
+        cellItem.itemStyle = {
+          ...cellItem.itemStyle,
+          color: 'transparent'
+        };
+        cellItem.label = {
+          show: true,
+          formatter: () => '0 KPIs',
+          color: tokens.textSecondary,
+          fontSize: 11
+        };
+      } else {
+        cellItem.label = {
+          show: true,
+          formatter: () => `${done}/${total} (${pct}%)`,
+          color: '#ffffff',
+          textBorderColor: 'rgba(25, 21, 36, 0.3)',
+          textBorderWidth: 1,
+          fontWeight: 700,
+          fontSize: 12
+        };
+      }
+
+      data.push(cellItem);
+    });
+  });
+
+  return {
+    tooltip: {
+      formatter: (params: unknown) => {
+        const payload = (params as { data?: { tocCellPayload?: TocHeatmapCellPayload } })?.data?.tocCellPayload;
+        if (!payload) return '';
+        if (!payload.isApplicable) {
+          return `<div style="padding:2px"><strong>${payload.branchName}</strong><br/><span style="color:${tokens.textSecondary}">No deliverables in this tier</span></div>`;
+        }
+        const lines: string[] = [
+          `<div style="font-weight:700;font-size:13px;margin-bottom:3px">${payload.branchName}</div>`,
+          `<div style="color:${tokens.textSecondary};font-size:11.5px;margin-bottom:6px">${payload.colName}</div>`,
+          `<div><b>Progress:</b> ${payload.done}/${payload.total} KPIs (${payload.pct}%)</div>`,
+          `<div><b>Target Σ:</b> ${payload.target} · <b>Achieved Σ:</b> ${payload.achieved}</div>`
+        ];
+        if (payload.leaves?.length) {
+          lines.push(
+            `<div style="margin-top:8px;padding-top:4px;border-top:1px solid rgba(150,150,150,0.2);font-size:11px"><b>Deliverables (${payload.leaves.length}):</b></div>`
+          );
+          payload.leaves.slice(0, 5).forEach(leaf => {
+            const codePrefix = leaf.code ? `<b>${leaf.code}</b>: ` : '';
+            const status = leaf.total > 0 ? `(${leaf.done}/${leaf.total})` : '(0 KPIs)';
+            const titleShort = leaf.title.length > 36 ? `${leaf.title.slice(0, 35)}…` : leaf.title;
+            lines.push(
+              `<div style="font-size:11px;margin-top:2px">• ${codePrefix}${titleShort} <span style="color:${tokens.textSecondary}">${status}</span></div>`
+            );
+          });
+          if (payload.leaves.length > 5) {
+            lines.push(
+              `<div style="font-size:10.5px;color:${tokens.textSecondary};margin-top:2px;font-style:italic">+${payload.leaves.length - 5} more</div>`
+            );
+          }
+        }
+        if (payload.aowCode) {
+          lines.push(
+            `<div style="margin-top:8px;font-size:11px;font-style:italic;color:${tokens.primaryStrong}">Click to open this Area of Work</div>`
+          );
+        }
+        return lines.join('');
+      }
+    },
+    grid: {
+      left: 180,
+      right: 24,
+      top: 32,
+      bottom: 48,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: cols,
+      position: 'top',
+      splitArea: { show: true },
+      axisTick: { show: false },
+      axisLine: { show: false },
+      axisLabel: {
+        interval: 0,
+        fontWeight: 600,
+        fontSize: 12,
+        color: tokens.textSecondary
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: rows,
+      inverse: true,
+      splitArea: { show: true },
+      axisTick: { show: false },
+      axisLine: { show: false },
+      axisLabel: {
+        interval: 0,
+        fontWeight: 500,
+        fontSize: 12,
+        color: tokens.textSecondary,
+        formatter: (val: string) => (val.length > 30 ? `${val.slice(0, 29)}…` : val)
+      }
+    },
+    visualMap: {
+      type: 'continuous',
+      min: 0,
+      max: 100,
+      calculable: false,
+      orient: 'horizontal',
+      right: 24,
+      bottom: 0,
+      formatter: '{value}%',
+      text: ['100%', '0%'],
+      textStyle: {
+        color: tokens.textSecondary,
+        fontSize: 11
+      },
+      inRange: {
+        color: heatmapRamp
+      },
+      outOfRange: {
+        color: 'transparent'
+      }
+    },
+    series: [
+      {
+        type: 'heatmap',
+        id: 'toc-heatmap-matrix',
+        data,
+        label: { show: true }
       }
     ]
   } as EChartsOption;
@@ -988,10 +1471,16 @@ export function tocMapTable(model: TocMapModel): VizChartTableModel {
  * with the other resolvers in this file).
  */
 export function tocMapAowFromClick(event: { data?: unknown }, model: TocMapModel): string | null {
-  const data = event?.data as { tocMapPayload?: TocMapNodePayload } | undefined;
-  const payload = data?.tocMapPayload;
-  if (!payload || payload.kind !== 'aow' || !payload.aowCode) return null;
-  return model.branches.some(branch => branch.kind === 'aow' && branch.code === payload.aowCode) ? payload.aowCode : null;
+  const data = event?.data as { tocMapPayload?: TocMapNodePayload; tocCellPayload?: TocHeatmapCellPayload } | undefined;
+  const treePayload = data?.tocMapPayload;
+  if (treePayload && treePayload.kind === 'aow' && treePayload.aowCode) {
+    return model.branches.some(branch => branch.kind === 'aow' && branch.code === treePayload.aowCode) ? treePayload.aowCode : null;
+  }
+  const cellPayload = data?.tocCellPayload;
+  if (cellPayload && cellPayload.branchKind === 'aow' && cellPayload.aowCode) {
+    return model.branches.some(branch => branch.kind === 'aow' && branch.code === cellPayload.aowCode) ? cellPayload.aowCode : null;
+  }
+  return null;
 }
 
 export interface TrendPoint {

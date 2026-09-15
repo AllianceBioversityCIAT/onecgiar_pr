@@ -294,4 +294,115 @@ export class AuthMicroserviceService {
       );
     }
   }
+
+  /**
+   * Start the Center (email OTP) sign-in challenge.
+   * @param email Normalised PRMS email — used as Cognito `username`.
+   * @description POST {MS_AUTH_URL}/auth/login/otp/start (OTP-T-5, design.md §4.2, §5.1).
+   * Never logs the email (OTP-R-11, .cursorrules).
+   * @deprecated Unused since `design.md` §19 (Option D, OTP-T-16): PRMS now
+   * generates, emails and verifies the code itself — `AuthService.startOtp` no
+   * longer calls the microservice at all. Kept only as a client for the
+   * microservice's own (still-live) routes; `PASSWORDLESS_DOMAINS` and the
+   * Cognito triggers are left in place but unused by PRMS.
+   */
+  async startEmailOtp(email: string): Promise<{
+    challengeName?: string;
+    session: string;
+    codeDeliveryDestination?: string;
+  }> {
+    try {
+      this.logger.log('Starting email OTP challenge');
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.authMicroserviceUrl}/auth/login/otp/start`,
+          { username: email },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              auth: JSON.stringify({
+                username: this.misId,
+                password: this.misSecret,
+              }),
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Error starting email OTP challenge');
+      throw new HttpException(
+        {
+          code: error.response?.data?.code ?? 'UPSTREAM_ERROR',
+          message: error.response?.data?.message ?? 'Failed to start email OTP',
+        },
+        error.response?.status ?? 502,
+      );
+    }
+  }
+
+  /**
+   * Verify the Center (email OTP) sign-in challenge.
+   * @param email Normalised PRMS email — used as Cognito `username`.
+   * @param code The one-time code the user submitted.
+   * @param session The session returned by `startEmailOtp` (real or decoy).
+   * @description POST {MS_AUTH_URL}/auth/login/otp/verify (OTP-T-5, design.md §4.2, §5.1).
+   * Never logs the code, session or email (OTP-R-11, .cursorrules).
+   * @deprecated Unused since `design.md` §19 (Option D, OTP-T-16): PRMS now
+   * generates, emails and verifies the code itself — `AuthService.verifyOtp` no
+   * longer calls the microservice at all. Kept only as a client for the
+   * microservice's own (still-live) routes.
+   */
+  async verifyEmailOtp(
+    email: string,
+    code: string,
+    session: string,
+  ): Promise<{ tokens: any }> {
+    try {
+      this.logger.log('Verifying email OTP challenge');
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.authMicroserviceUrl}/auth/login/otp/verify`,
+          { username: email, code, session },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              auth: JSON.stringify({
+                username: this.misId,
+                password: this.misSecret,
+              }),
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Error verifying email OTP challenge');
+      // @akili-spec changes/cognito-email-otp-login (OTP-T-13 rework 2, design.md §18.1
+      // steps 9-10, OTP-R-7 modified, Reviewer advisory 1) — on CODE_MISMATCH the
+      // microservice rotates the Cognito `session` so the client can retry without a
+      // new code. Gate strictly on `code === 'CODE_MISMATCH'` (not merely "a session
+      // string is present") — any other microservice error code carrying a stray
+      // `session` field must never surface it. Never logged (OTP-R-11 / .cursorrules).
+      const responseCode = error.response?.data?.code ?? 'UPSTREAM_ERROR';
+      const rotatedSession = error.response?.data?.session;
+      throw new HttpException(
+        {
+          code: responseCode,
+          message:
+            error.response?.data?.message ?? 'Failed to verify email OTP',
+          ...(responseCode === 'CODE_MISMATCH' &&
+          typeof rotatedSession === 'string' &&
+          rotatedSession
+            ? { session: rotatedSession }
+            : {}),
+        },
+        error.response?.status ?? 502,
+      );
+    }
+  }
 }

@@ -734,6 +734,60 @@ describe('ProgramOverviewComponent — overview states (OSF-T-7)', () => {
         const bar = optionRow.querySelector('[role="img"]') as HTMLElement;
         expect(bar.getAttribute('aria-label')).toBe('5 Editing, 2 Submitted, 1 In QA');
       });
+
+      it('renders structured table column headers (Code, Scope, Editing, Submitted, In QA, Status mix, Total) for tablet/desktop view', () => {
+        fixture.componentRef.setInput('scopeBreakdown', breakdown);
+        fixture.componentRef.setInput('selectedScope', null);
+        detect();
+
+        const headers = fixture.nativeElement.querySelector('.hidden.md\\:flex.w-full.items-center') as HTMLElement;
+        expect(headers).toBeTruthy();
+        expect(headers.textContent).toContain('Code');
+        expect(headers.textContent).toContain('Scope');
+        expect(headers.textContent).toContain('Editing');
+        expect(headers.textContent).toContain('Submitted');
+        expect(headers.textContent).toContain('In QA');
+        expect(headers.textContent).toContain('Status mix');
+        expect(headers.textContent).toContain('Total');
+      });
+
+      it('supports collapsing and expanding the By Scope table with inert toggling', () => {
+        fixture.componentRef.setInput('scopeBreakdown', breakdown);
+        fixture.componentRef.setInput('selectedScope', null);
+        detect();
+
+        expect(component.scopeTableExpanded()).toBe(true);
+
+        const toggleBtn = fixture.nativeElement.querySelector(
+          'button[aria-controls="scope-breakdown-table"]'
+        ) as HTMLButtonElement;
+        expect(toggleBtn).toBeTruthy();
+        expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
+
+        const collapsePanel = fixture.nativeElement.querySelector('#scope-breakdown-table') as HTMLElement;
+        expect(collapsePanel.className).toContain('is-open');
+
+        const innerInertDiv = collapsePanel.querySelector('.pr-collapse-inner > div') as HTMLElement;
+        expect(innerInertDiv.hasAttribute('inert')).toBe(false);
+
+        // Click to collapse
+        toggleBtn.click();
+        detect();
+
+        expect(component.scopeTableExpanded()).toBe(false);
+        expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
+        expect(collapsePanel.className).not.toContain('is-open');
+        expect(innerInertDiv.hasAttribute('inert')).toBe(true);
+
+        // Toggle back open
+        component.toggleScopeTable();
+        detect();
+
+        expect(component.scopeTableExpanded()).toBe(true);
+        expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
+        expect(collapsePanel.className).toContain('is-open');
+        expect(innerInertDiv.hasAttribute('inert')).toBe(false);
+      });
     });
   });
 });

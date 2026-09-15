@@ -148,7 +148,7 @@
 
   <!-- Content area for various states -->
   <div class="relative mt-2 min-h-[160px]" [attr.aria-busy]="busy()">
-    @if (busy()) {
+    @if (busy() && showBusyOverlay()) {
       <div
         class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-[color-mix(in_srgb,white_82%,transparent)]"
         role="status"

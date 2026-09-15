@@ -16,7 +16,9 @@ import { PrInfoIconComponent } from '../pr-info-icon/pr-info-icon.component';
     [hasError]="hasError()"
     [tooltip]="tooltip()"
     [showHeader]="showHeader()"
-    [showDescription]="showDescription()">
+    [showDescription]="showDescription()"
+    [pinGuidanceByDefault]="pinByDefault()"
+    pinKey="my-field">
     <input class="projected-control" />
   </app-field-card>`,
   standalone: false
@@ -32,6 +34,7 @@ class HostComponent {
   readonly showHeader = signal(true);
   readonly showDescription = signal(true);
   readonly tooltip = signal('');
+  readonly pinByDefault = signal(false);
 }
 
 describe('FieldCardComponent', () => {
@@ -160,13 +163,15 @@ describe('FieldCardComponent', () => {
   });
 
   describe('required marker', () => {
-    // The redesign replaced the Mandatory/Optional pill with a single red asterisk: a field says
-    // what it is and whether it is required, and nothing about completion.
-    it('marks a required field with an asterisk', () => {
-      expect(q('.fch_required').nativeElement.textContent.trim()).toBe('*');
+    // Proposal 18 (14-Sep-2026): the marker is a solid `REQUIRED` tag and NOTHING else. The
+    // asterisk was dropped because it sat next to the tag saying the same thing twice, and the
+    // optional field deliberately carries no counterpart — the absence of the tag is the marker.
+    it('marks a required field with a REQUIRED tag, not an asterisk', () => {
+      expect(q('.fch_required').nativeElement.textContent.trim()).toBe('Required');
+      expect(fixture.nativeElement.textContent).not.toContain('*');
     });
 
-    it('announces requiredness to screen readers, not just with the glyph', () => {
+    it('announces requiredness to screen readers, not just with the tag', () => {
       expect(q('.sr-only').nativeElement.textContent.trim()).toBe('(required)');
     });
 
@@ -215,6 +220,116 @@ describe('FieldCardComponent', () => {
       fixture.detectChanges();
 
       expect(q('.field_card')).toBeNull();
+    });
+  });
+
+  describe('pinned guidance (14-sep-2026)', () => {
+    const PIN_KEY = 'pr-field-guidance-pin:my-field';
+
+    beforeEach(() => localStorage.removeItem(PIN_KEY));
+    afterEach(() => localStorage.removeItem(PIN_KEY));
+
+    const guidance = () => q('.field_card_desc');
+    /**
+     * El botón vive DENTRO de la burbuja del tooltip, que monta la directiva en `document.body`.
+     * Lo que le corresponde a ESTE componente es el cableado: que ofrezca la acción cuando hay guía
+     * que fijar, y que responda al evento. Lo que pinta la burbuja se prueba en la directiva.
+     */
+    const tooltipDir = () => {
+      const el = fixture.debugElement.query(By.directive(PrTooltipDirective));
+      return el ? (el.injector.get(PrTooltipDirective) as PrTooltipDirective) : null;
+    };
+    const pinAction = () => tooltipDir()?.prTooltipAction ?? null;
+    const clickPin = () => {
+      tooltipDir()!.prTooltipActionClick.emit();
+      fixture.detectChanges();
+    };
+
+    it('offers the pin only when the field actually has guidance to pin', () => {
+      host.description.set('');
+      host.tooltip.set('');
+      fixture.detectChanges();
+      expect(tooltipDir()).toBeNull();
+
+      host.tooltip.set('Write a short, self-explanatory name.');
+      fixture.detectChanges();
+      expect(pinAction()).toEqual({ label: 'Pin guidance', pressed: false, closeAfterClick: true });
+    });
+
+    it('pins the tooltip text into the card, and remembers it in localStorage', () => {
+      host.description.set('');
+      host.tooltip.set('Write a short, self-explanatory name.');
+      fixture.detectChanges();
+      expect(guidance()).toBeNull();
+
+      clickPin();
+
+      expect(guidance().nativeElement.textContent).toContain('Write a short, self-explanatory name.');
+      expect(localStorage.getItem(PIN_KEY)).toBe('1');
+      // La etiqueta que recibe la burbuja cambia con el estado, para que el botón diga cómo soltarla.
+      expect(pinAction()).toEqual({ label: 'Unpin guidance', pressed: true, closeAfterClick: true });
+    });
+
+    it('unpins back, and the stored value says so — not just the absence of a key', () => {
+      host.tooltip.set('Guidance');
+      fixture.detectChanges();
+      clickPin();
+      clickPin();
+
+      expect(localStorage.getItem(PIN_KEY)).toBe('0');
+      expect(q('.fc-pinned')).toBeNull();
+    });
+
+    /** 🛑 El default solo manda cuando el usuario NO ha elegido: una preferencia guardada gana. */
+    it('starts pinned when the field asks for it, and a stored choice still wins', () => {
+      localStorage.setItem(PIN_KEY, '0');
+      const other = TestBed.createComponent(HostComponent);
+      other.componentInstance.tooltip.set('Guidance');
+      other.componentInstance.pinByDefault.set(true);
+      other.detectChanges();
+      expect(other.debugElement.query(By.css('.fc-pinned'))).toBeNull();
+
+      localStorage.removeItem(PIN_KEY);
+      const fresh = TestBed.createComponent(HostComponent);
+      fresh.componentInstance.tooltip.set('Guidance');
+      fresh.componentInstance.pinByDefault.set(true);
+      fresh.detectChanges();
+      expect(fresh.debugElement.query(By.css('.fc-pinned'))).toBeTruthy();
+    });
+  });
+
+  describe('edition marked by pointer (14-sep-2026)', () => {
+    const card = () => q('.field_card').nativeElement as HTMLElement;
+    const cmp = () =>
+      fixture.debugElement.query(By.directive(FieldCardComponent)).componentInstance as FieldCardComponent;
+
+    /**
+     * 🛑 El caso que lo motivó: el sí/no y el segmentado de puntuación NO son controles nativos, no
+     * emiten `input` ni `change`, y sin esto quedaban fuera de todo lo que depende de "el usuario
+     * tocó este campo" — la píldora de sin guardar y la bolita de completado.
+     */
+    it('counts a click on the projected control as an edit', () => {
+      expect(cmp().edited()).toBe(false);
+      (q('.projected-control').nativeElement as HTMLElement).click();
+      fixture.detectChanges();
+      expect(cmp().edited()).toBe(true);
+    });
+
+    it('does NOT count a click on the header or the guidance — reading is not editing', () => {
+      host.tooltip.set('Guidance');
+      host.description.set('Some guidance');
+      fixture.detectChanges();
+
+      (q('.field_card_header').nativeElement as HTMLElement).click();
+      (q('.field_card_desc').nativeElement as HTMLElement).click();
+      fixture.detectChanges();
+
+      expect(cmp().edited()).toBe(false);
+      // Control positivo desde el MISMO montaje: sin esto, un `edited` que nunca se pone a true
+      // también pasaría este test.
+      (q('.projected-control').nativeElement as HTMLElement).click();
+      fixture.detectChanges();
+      expect(cmp().edited()).toBe(true);
     });
   });
 });

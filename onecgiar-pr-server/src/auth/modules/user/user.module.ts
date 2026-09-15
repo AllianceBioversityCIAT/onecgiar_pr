@@ -30,6 +30,21 @@ import { ClarisaInitiativesModule } from '../../../clarisa/clarisa-initiatives/c
 import { ClarisaCentersModule } from '../../../clarisa/clarisa-centers/clarisa-centers.module';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
 import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
+// @akili-spec changes/cognito-email-otp-login (OTP-T-5 rework — composition fix)
+// UserModule also provides AuthService (line below); AuthService now depends on
+// GlobalParameterCacheService (OTP-T-4, OTP-R-9). Without this import, Nest's
+// UserModule-context injector cannot resolve it — boot fails with "Nest can't
+// resolve dependencies of the AuthService (... GlobalParameterCacheService at
+// index [5] is not available in the UserModule context)".
+import { GlobalParameterCacheModule } from '../../../shared/services/cache/global-parameter-cache.module';
+// @akili-spec changes/cognito-email-otp-login (OTP-T-16, design.md §19.1) —
+// AuthService (also provided by this module, see the composition-fix note above)
+// now depends on OtpChallengeService; without its own TypeOrmModule.forFeature
+// registration in THIS module's DI context, Nest cannot resolve the
+// `@InjectRepository(OtpChallenge)` token here (same failure mode the note above
+// describes for GlobalParameterCacheService).
+import { OtpChallenge } from '../../otp/otp-challenge.entity';
+import { OtpChallengeService } from '../../otp/otp-challenge.service';
 
 @Global()
 @Module({
@@ -45,11 +60,12 @@ import { GlobalParameterRepository } from '../../../api/global-parameter/reposit
     ActiveDirectoryService,
     VersionRepository,
     GlobalParameterRepository,
+    OtpChallengeService,
   ],
   imports: [
     UserModule,
     RoleModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, OtpChallenge]),
     JwtModule,
     RoleByUserModule,
     AuthMicroserviceModule,
@@ -58,6 +74,7 @@ import { GlobalParameterRepository } from '../../../api/global-parameter/reposit
     ClarisaPortfoliosModule,
     ClarisaInitiativesModule,
     ClarisaCentersModule,
+    GlobalParameterCacheModule,
   ],
   exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })

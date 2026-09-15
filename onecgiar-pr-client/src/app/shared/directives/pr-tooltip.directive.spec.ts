@@ -27,6 +27,17 @@ function tooltipEl(): HTMLElement | null {
   return document.body.querySelector('.pr-tooltip');
 }
 
+/**
+ * The guidance markup, without the bubble's own chrome.
+ *
+ * The content lives in `.pr-tooltip__body` so the footer (the host's optional action button, and
+ * the pinned note) can be a sibling. Asserting on the bubble's whole `innerHTML` would tie every
+ * one of these tests to that chrome and break them again the next time the footer changes.
+ */
+function tooltipBodyHtml(): string | null {
+  return document.body.querySelector('.pr-tooltip .pr-tooltip__body')?.innerHTML ?? null;
+}
+
 function getEl(fx: ComponentFixture<unknown>, id: string): HTMLElement {
   return fx.debugElement.query(By.css('#' + id)).nativeElement;
 }
@@ -159,7 +170,7 @@ describe('PrTooltipDirective', () => {
     it('shows immediately when there is no delay', () => {
       hoverIn(getEl(fixture, 'divTrigger'));
       expect(tooltipEl()).not.toBeNull();
-      expect(tooltipEl()!.innerHTML).toBe('Hello');
+      expect(tooltipBodyHtml()).toBe('Hello');
     });
 
     it('does nothing when disabled', () => {
@@ -187,10 +198,17 @@ describe('PrTooltipDirective', () => {
       jest.useRealTimers();
     });
 
-    it('removes the tooltip on mouse leave (not yet pinned)', () => {
+    // A real timer, not `fakeAsync`: the directive registers its grace period from a DOM listener
+    // bound when the fixture was created, so the callback does not land on the fake clock this
+    // test would install and `tick()` never fires it.
+    it('removes the tooltip on mouse leave (not yet pinned), after the grace period', async () => {
       const div = getEl(fixture, 'divTrigger');
       hoverIn(div);
       hoverOut(div);
+      // Leaving the trigger does NOT close it at once: the pointer is given time to cross the gap
+      // and land on the bubble, which is what makes a bubble carrying links usable at all.
+      expect(tooltipEl()).not.toBeNull();
+      await new Promise(resolve => setTimeout(resolve, 260));
       expect(tooltipEl()).toBeNull();
     });
 
@@ -216,7 +234,7 @@ describe('PrTooltipDirective', () => {
       host.divText.set('<b>bold</b>');
       fixture.detectChanges();
       hoverIn(getEl(fixture, 'divTrigger'));
-      expect(tooltipEl()!.innerHTML).toBe('<b>bold</b>');
+      expect(tooltipBodyHtml()).toBe('<b>bold</b>');
     });
   });
 

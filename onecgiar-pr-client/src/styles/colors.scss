@@ -212,12 +212,19 @@
   // low contrast: it is a state, not content, so it is never used for text the user must read.
   --pr-text-disabled: #cfc9de;
 
-  // Marcador de campo OBLIGATORIO (el asterisco), tomado del mockup. Es semántico a propósito y
-  // NO un paso de la escala `red-*`: #b42318 no está en esa rampa, y meterlo ahí ya salió mal una
-  // vez —se declaró un segundo `--pr-color-red-500` sobre el que ya existía (#9d061d), que
-  // consumen el hover de "Log out" y los errores del panel de IA—. Distinto del rojo de error
-  // (`--pr-color-red-300`) a propósito: un campo que falta no es un campo equivocado.
-  --pr-field-required-fg: #b42318;
+  // Marcador de campo OBLIGATORIO. Es semántico a propósito y NO un paso de la escala `red-*`:
+  // este hex no está en esa rampa, y meterlo ahí ya salió mal una vez —se declaró un segundo
+  // `--pr-color-red-500` sobre el que ya existía (#9d061d), que consumen el hover de "Log out" y
+  // los errores del panel de IA—. Sigue siendo distinto del rojo de error (`--pr-color-red-300`):
+  // un campo que falta no es un campo equivocado.
+  //
+  // 14-sep-2026: era #b42318, un granate que Yeck leyó como "vino tinto" en cuanto el marcador
+  // pasó de asterisco fino a TAG SÓLIDO — un hex oscuro que apenas se nota como color en 14px de
+  // texto domina cuando se convierte en una pastilla llena. #dc2626 es el mismo rojo, vivo: 4.83:1
+  // con el texto blanco encima (AA para el tag, que es 9.5px en 800) y 4.83:1 como color de texto
+  // sobre blanco, que es como lo sigue usando el asterisco de `pr-field-header` en los campos no
+  // migrados. 🛑 No subir a #ef4444: mide 3.76:1 y deja el tag por debajo de AA.
+  --pr-field-required-fg: #dc2626;
 
   // ── Sidebar (on-dark). Foregrounds verified against --pr-sidebar-bg:
   // #e9e4fa 12.1601:1 · #c4b5fd 8.6:1 · #a79bd4 6.2:1 — all clear AA.
@@ -253,7 +260,8 @@
   --pr-danger: #b91c1c; // mockup --danger
   --pr-danger-bg: #fef2f2; // mockup --danger-bg
   --pr-danger-soft: #fee2e2; // mockup --danger-soft
-  // --pr-field-required-fg (#b42318) is already the mockup's --danger-strong. Not duplicated.
+  // --pr-field-required-fg was the mockup's --danger-strong (#b42318); it is now #dc2626 (see
+  // above), so --pr-danger below stays the darker strong red on its own.
   --pr-warning-strong: #92400e; // mockup --warning-strong, darker than --pr-status-in-progress-fg
 
   // ── Two surface steps the mockup uses and this file lacked. Both sit between --pr-surface-card

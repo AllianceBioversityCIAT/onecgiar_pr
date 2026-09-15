@@ -207,12 +207,16 @@ describe('GeoscopeManagementComponent', () => {
   describe('labelRadioButtons', () => {
     it('should return the correct label when the module is REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.REPORTING);
+      // P2-3622: the level has to be set for the real level to win over the `Result` fallback —
+      // these two cases describe a route that KNOWS its level, and the fallback exists for the one
+      // that does not (covered in its own describe below).
+      component.resultLevelSE.currentResultLevelName = 'Some someWord';
       jest.spyOn(component.api.dataControlSE, 'getLastWord').mockReturnValue('someWord');
 
       const label = component.labelRadioButtons;
 
       expect(label).toBe(`What is the main geographic focus of the someWord?`);
-      expect(component.api.dataControlSE.getLastWord).toHaveBeenCalledWith(component.resultLevelSE.currentResultLevelName);
+      expect(component.api.dataControlSE.getLastWord).toHaveBeenCalledWith('Some someWord');
     });
     it('should return the correct label when the module is not REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.ALL);
@@ -226,12 +230,14 @@ describe('GeoscopeManagementComponent', () => {
   describe('descriptionRadioButtons', () => {
     it('should return the correct description when the module is REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.REPORTING);
+      // P2-3622: see the note above — a known level must still be the one that renders.
+      component.resultLevelSE.currentResultLevelName = 'Some someWord';
       jest.spyOn(component.api.dataControlSE, 'getLastWord').mockReturnValue('someWord');
 
       const description = component.descriptionRadioButtons;
 
       expect(description).toBe(`This should reflect where the <strong>someWord</strong> has taken place/contributed to benefit.`);
-      expect(component.api.dataControlSE.getLastWord).toHaveBeenCalledWith(component.resultLevelSE.currentResultLevelName);
+      expect(component.api.dataControlSE.getLastWord).toHaveBeenCalledWith('Some someWord');
     });
     it('should return undefined when the module is not REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.ALL);
@@ -240,5 +246,56 @@ describe('GeoscopeManagementComponent', () => {
 
       expect(description).toBeUndefined();
     });
+  });
+});
+
+/**
+ * P2-3622 — the helper texts name the kind of result they talk about, and that name is written in
+ * one place only (`current-result.service.ts`, inside `GET_resultById()`), reachable solely from
+ * the result-detail tree. The bilateral review drawer renders this component with
+ * `module="reporting"` on a route that never calls it, so the name was null and the sentences
+ * rendered with a hole: "where the  has taken place", "specify for this ?".
+ *
+ * 🛑 The second test is the one that matters for regressions: W1/W2 DOES know the level and must
+ * keep saying it. A fallback that overwrote a known level would fix the drawer by breaking the
+ * form that works.
+ */
+describe('GeoscopeManagementComponent — the helper texts always name something (P2-3622)', () => {
+  let component: GeoscopeManagementComponent;
+  let fixture: ComponentFixture<GeoscopeManagementComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [GeoscopeManagementComponent, PrRadioButtonComponent, PrFieldHeaderComponent],
+      imports: [HttpClientTestingModule, FormsModule]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(GeoscopeManagementComponent);
+    component = fixture.componentInstance;
+    component.internalModule = { name: ModuleTypeEnum.REPORTING, value: 1 };
+  });
+
+  it('falls back to "Result" when the route never set the result level', () => {
+    component.resultLevelSE.currentResultLevelName = null;
+
+    expect(component.resultLevelWord).toBe('Result');
+    expect(component.descriptionRadioButtons).toContain('where the <strong>Result</strong> has taken place');
+    expect(component.descriptionRadioButtons).not.toContain('<strong></strong>');
+  });
+
+  it('keeps using the real level when the route did set it', () => {
+    component.resultLevelSE.currentResultLevelName = 'Output';
+
+    expect(component.resultLevelWord).toBe('Output');
+    expect(component.descriptionRadioButtons).toContain('where the <strong>Output</strong> has taken place');
+  });
+
+  it('never leaves the sentence with an empty slot, whatever the level is', () => {
+    for (const level of [null, undefined, '', '   ', 'Outcome', 'Impact Area']) {
+      component.resultLevelSE.currentResultLevelName = level as any;
+
+      expect(component.resultLevelWord.trim()).not.toBe('');
+      expect(component.descriptionRadioButtons).not.toContain('<strong></strong>');
+    }
   });
 });

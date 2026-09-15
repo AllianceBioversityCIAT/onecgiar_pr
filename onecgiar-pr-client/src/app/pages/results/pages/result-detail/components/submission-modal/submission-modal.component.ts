@@ -26,7 +26,7 @@ export class SubmissionModalComponent {
       next: resp => {
         this.api.alertsFe.show({ id: 'submodal', title: `Success`, description: `The result has been submitted.`, status: 'success' });
         this.submissionModalSE.showModal = false;
-        this.currentResultSE.GET_resultById();
+        this.currentResultSE.GET_resultById(true);
         this.requesting = false;
       },
       error: err => {

@@ -18,6 +18,8 @@ import {
   radarTable,
   radarLinkFromClick,
   tocMapOption,
+  tocMapNetworkOption,
+  tocMapHeatmapOption,
   tocMapTable,
   tocMapAowFromClick,
   computeReportingTrendModel,
@@ -1025,6 +1027,161 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
 
       const branchRow = table.rows.find(row => row[0] === 'Area of Work 1' && row[1] === 'AOW01')!;
       expect(branchRow).toEqual(['Area of Work 1', 'AOW01', 'Area of Work 1', 'AoW', 2, 15, 4, '1/2']);
+    });
+  });
+
+  describe('tocMapHeatmapOption', () => {
+    const model = makeModel([
+      makeBranch({
+        kind: 'aow',
+        code: 'AOW01',
+        name: 'Area of Work 1',
+        done: 2,
+        total: 3,
+        target: 20,
+        achieved: 15,
+        leaves: [
+          makeLeaf({ code: 'HLO1', title: 'Output 1', level: 'OUTPUT', indicators: 1, target: 10, achieved: 10, done: 1, total: 1 }),
+          makeLeaf({ code: 'IO1', title: 'Outcome 1', level: 'OUTCOME', indicators: 2, target: 10, achieved: 5, done: 1, total: 2 })
+        ]
+      }),
+      makeBranch({
+        kind: 'intermediate',
+        code: 'intermediate-outcomes',
+        name: 'Intermediate outcomes',
+        done: 1,
+        total: 1,
+        target: 5,
+        achieved: 5,
+        leaves: [makeLeaf({ code: 'IO-PROG', title: 'Prog outcome', indicators: 1, target: 5, achieved: 5, done: 1, total: 1 })]
+      })
+    ]);
+
+    it('builds a heatmap option with correct tiers as columns and AoWs as rows', () => {
+      const option = tocMapHeatmapOption(model, tokens) as any;
+      expect(option.series[0].type).toBe('heatmap');
+      expect(option.xAxis.data).toContain('Outputs (HLO)');
+      expect(option.xAxis.data).toContain('Outcomes');
+      expect(option.xAxis.data).toContain('Intermediate Outcomes');
+      expect(option.xAxis.data).toContain('Total Progress');
+
+      expect(option.yAxis.data).toEqual(['AOW01 · Area of Work 1', 'Intermediate outcomes']);
+    });
+
+    it('computes correct cell values, labels, and percentage for each tier', () => {
+      const option = tocMapHeatmapOption(model, tokens) as any;
+      const data = option.series[0].data;
+
+      // Cell 0,0: AOW01 Outputs -> 1/1 = 100%
+      const aowOutputs = data.find((d: any) => d.value[0] === 0 && d.value[1] === 0);
+      expect(aowOutputs.value[2]).toBe(100);
+      expect(aowOutputs.label.formatter()).toBe('1/1 (100%)');
+      expect(aowOutputs.tocCellPayload.aowCode).toBe('AOW01');
+
+      // Cell 1,0: AOW01 Outcomes -> 1/2 = 50%
+      const aowOutcomes = data.find((d: any) => d.value[0] === 1 && d.value[1] === 0);
+      expect(aowOutcomes.value[2]).toBe(50);
+      expect(aowOutcomes.label.formatter()).toBe('1/2 (50%)');
+
+      // Cell 2,0: AOW01 Intermediate -> not applicable (—)
+      const aowIntermediate = data.find((d: any) => d.value[0] === 2 && d.value[1] === 0);
+      expect(aowIntermediate.value[2]).toBe(-1);
+      expect(aowIntermediate.label.formatter()).toBe('—');
+    });
+
+    it('resolves click on an AoW cell back to its AoW code', () => {
+      const option = tocMapHeatmapOption(model, tokens) as any;
+      const aowCell = option.series[0].data[0];
+      expect(tocMapAowFromClick({ data: aowCell }, model)).toBe('AOW01');
+    });
+
+    it('sets reversed ramp for visualMap and white label styling', () => {
+      const option = tocMapHeatmapOption(model, tokens) as any;
+      expect(option.visualMap.inRange.color).toEqual([...tokens.ramp].reverse());
+
+      const data = option.series[0].data;
+      const cell100 = data.find((d: any) => d.value[2] === 100);
+      expect(cell100.label.color).toBe('#ffffff');
+      expect(cell100.label.fontWeight).toBe(700);
+
+      const cell50 = data.find((d: any) => d.value[2] === 50);
+      expect(cell50.label.color).toBe('#ffffff');
+      expect(cell50.label.fontWeight).toBe(700);
+    });
+
+    it('generates rich tooltip text with deliverables', () => {
+      const option = tocMapHeatmapOption(model, tokens) as any;
+      const aowOutputs = option.series[0].data.find((d: any) => d.value[0] === 0 && d.value[1] === 0);
+      const tooltip = option.tooltip.formatter({ data: aowOutputs });
+      expect(tooltip).toContain('AOW01 · Area of Work 1');
+      expect(tooltip).toContain('Outputs (HLO)');
+      expect(tooltip).toContain('Progress:');
+      expect(tooltip).toContain('Deliverables');
+      expect(tooltip).toContain('HLO1');
+    });
+  });
+
+  describe('tocMapNetworkOption — Force-Directed Research Network Graph view', () => {
+    const model = makeModel([
+      makeBranch({
+        kind: 'aow',
+        code: 'AOW01',
+        name: 'Area of Work 1',
+        leaves: [makeLeaf({ code: 'HLO1', level: 'OUTPUT', done: 1, total: 2 })]
+      }),
+      makeBranch({
+        kind: 'program',
+        code: 'SHARED',
+        name: 'Program Level',
+        leaves: [makeLeaf({ code: 'SHARED1', level: 'OUTCOME', done: 3, total: 3 })]
+      })
+    ]);
+
+    it('builds a graph series with force layout, label collision avoidance, and adjacency emphasis', () => {
+      const option = tocMapNetworkOption(model, tokens) as any;
+      const series = option.series[0];
+
+      expect(series.type).toBe('graph');
+      expect(series.layout).toBe('force');
+      expect(series.labelLayout).toEqual({ hideOverlap: true });
+      expect(series.emphasis.focus).toBe('adjacency');
+      expect(series.roam).toBe(true);
+      expect(series.draggable).toBe(true);
+    });
+
+    it('includes root node, branch nodes, and leaf nodes with appropriate links', () => {
+      const option = tocMapNetworkOption(model, tokens) as any;
+      const series = option.series[0];
+
+      // Root node + 2 branch nodes + 2 leaf nodes = 5 nodes
+      expect(series.data.length).toBe(5);
+
+      const rootNode = series.data.find((n: any) => n.id === `root-${model.spCode}`);
+      expect(rootNode).toBeDefined();
+      expect(rootNode.category).toBe(0);
+
+      const aowNode = series.data.find((n: any) => n.id === 'branch-AOW01');
+      expect(aowNode).toBeDefined();
+      expect(aowNode.category).toBe(1);
+
+      // Links: root -> 2 branches, 2 branches -> 2 leaves = 4 links
+      expect(series.links.length).toBe(4);
+    });
+
+    it('resolves click on an AoW graph node to its AoW code', () => {
+      const option = tocMapNetworkOption(model, tokens) as any;
+      const aowNode = option.series[0].data.find((n: any) => n.id === 'branch-AOW01');
+
+      expect(tocMapAowFromClick({ data: aowNode }, model)).toBe('AOW01');
+    });
+
+    it('formats rich tooltip for graph nodes', () => {
+      const option = tocMapNetworkOption(model, tokens) as any;
+      const aowNode = option.series[0].data.find((n: any) => n.id === 'branch-AOW01');
+      const tooltip = option.tooltip.formatter({ data: aowNode });
+
+      expect(tooltip).toContain('AOW01');
+      expect(tooltip).toContain('Click to open this Area of Work');
     });
   });
 });

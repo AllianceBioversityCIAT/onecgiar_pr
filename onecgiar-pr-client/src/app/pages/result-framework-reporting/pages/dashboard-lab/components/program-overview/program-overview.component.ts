@@ -22,6 +22,8 @@ import {
   donutOption,
   donutTable,
   sectorLinkFromClick,
+  tocMapNetworkOption,
+  tocMapHeatmapOption,
   tocMapOption,
   tocMapTable,
   tocMapAowFromClick,
@@ -42,6 +44,9 @@ import { SCIENCE_PROGRAM_DESCRIPTIONS } from '../reporting-program-band/reportin
 
 /** A matrix card's view mode: default 'vertical-bar', then 'horizontal-bar', then 'heatmap'. */
 export type ChartViewMode = 'vertical-bar' | 'horizontal-bar' | 'heatmap';
+
+/** Theory of Change card's view mode: default 'network', then 'heatmap', then 'tree'. */
+export type TocMapViewMode = 'network' | 'heatmap' | 'tree';
 
 /**
  * Typed navigation intent for the Results tab (`OVW-R-5` emission contract). Only the defined
@@ -831,14 +836,33 @@ export class ProgramOverviewComponent {
    * builders. `resolveChartTokens()` is called here (the component), never from the pure
    * `program-overview.charts.ts` file — same fence every other card in this component follows.
    */
+  readonly tocMapViewMode = signal<TocMapViewMode>('network');
+
+  setTocMapViewMode(mode: TocMapViewMode): void {
+    this.tocMapViewMode.set(mode);
+  }
+
   readonly tocMapOption = computed<EChartsOption | null>(() => {
     const model = this.tocMap();
-    return model ? tocMapOption(model, resolveChartTokens()) : null;
+    if (!model) return null;
+    const tokens = resolveChartTokens();
+    const mode = this.tocMapViewMode();
+    if (mode === 'network') return tocMapNetworkOption(model, tokens);
+    if (mode === 'heatmap') return tocMapHeatmapOption(model, tokens);
+    return tocMapOption(model, tokens, 'orthogonal');
   });
 
   readonly tocMapTable = computed<VizChartTableModel | null>(() => {
     const model = this.tocMap();
     return model ? tocMapTable(model) : null;
+  });
+
+  readonly tocMapContainerHeight = computed<string>(() => {
+    const mode = this.tocMapViewMode();
+    if (mode === 'network') return '560px';
+    if (mode === 'tree') return '480px';
+    const branchCount = this.tocMap()?.branches?.length ?? 5;
+    return `${Math.max(380, branchCount * 48 + 110)}px`;
   });
 
   /** Resolves the click to an AoW code and emits `openAow` ONLY on a non-null result (`TCM-R-5`). */
@@ -912,6 +936,16 @@ export class ProgramOverviewComponent {
    */
   toggleAowSection(): void {
     this.aowSectionExpanded.update(expanded => !expanded);
+  }
+
+  /**
+   * Whether the By Scope breakdown table is expanded.
+   * Defaults to true so users see the table, but can collapse it to save space.
+   */
+  readonly scopeTableExpanded = signal(true);
+
+  toggleScopeTable(): void {
+    this.scopeTableExpanded.update(expanded => !expanded);
   }
 
   private static readonly SCOPE_GROUP_LABEL: Record<OverviewScopeOption['kind'], string> = {
@@ -1173,6 +1207,42 @@ export class ProgramOverviewComponent {
   breakdownQaWidth(row: OverviewScopeOption): number {
     return this.breakdownSegmentWidth(row, 2);
   }
+
+  breakdownEditingCount(row: OverviewScopeOption): number {
+    return row.byStatus?.[1] ?? 0;
+  }
+
+  breakdownSubmittedCount(row: OverviewScopeOption): number {
+    return row.byStatus?.[3] ?? 0;
+  }
+
+  breakdownQaCount(row: OverviewScopeOption): number {
+    return row.byStatus?.[2] ?? 0;
+  }
+
+  readonly aowEditingSubtotal = computed(() =>
+    this.scopeBreakdown().rows.filter(r => r.kind === 'aow').reduce((sum, r) => sum + (r.byStatus?.[1] ?? 0), 0)
+  );
+
+  readonly aowSubmittedSubtotal = computed(() =>
+    this.scopeBreakdown().rows.filter(r => r.kind === 'aow').reduce((sum, r) => sum + (r.byStatus?.[3] ?? 0), 0)
+  );
+
+  readonly aowQaSubtotal = computed(() =>
+    this.scopeBreakdown().rows.filter(r => r.kind === 'aow').reduce((sum, r) => sum + (r.byStatus?.[2] ?? 0), 0)
+  );
+
+  readonly allEditingTotal = computed(() =>
+    this.scopeBreakdown().rows.reduce((sum, r) => sum + (r.byStatus?.[1] ?? 0), 0)
+  );
+
+  readonly allSubmittedTotal = computed(() =>
+    this.scopeBreakdown().rows.reduce((sum, r) => sum + (r.byStatus?.[3] ?? 0), 0)
+  );
+
+  readonly allQaTotal = computed(() =>
+    this.scopeBreakdown().rows.reduce((sum, r) => sum + (r.byStatus?.[2] ?? 0), 0)
+  );
 
   /** Text alternative for the bar (`OAH-N-1` precedent, `:665`) — a roleless `<span>` is not exposed
    *  as a text-alternative-bearing element, so `role="img"` + this label is what AT actually reads. */

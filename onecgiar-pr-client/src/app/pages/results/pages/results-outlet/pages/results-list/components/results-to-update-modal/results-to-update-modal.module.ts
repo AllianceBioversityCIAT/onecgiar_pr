@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ResultsToUpdateModalComponent } from './results-to-update-modal.component';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
-import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import {
   PrTableComponent,
   PrSortIconComponent,
@@ -19,8 +19,8 @@ import { ResultsToUpdateFilterPipe } from './results-to-update-filter.pipe';
   exports: [ResultsToUpdateModalComponent],
   imports: [
     CommonModule,
+    FormsModule,
     PrDialogComponent,
-    CustomFieldsModule,
     PrTableComponent,
     PrSortIconComponent,
     PrSortableColumnDirective,

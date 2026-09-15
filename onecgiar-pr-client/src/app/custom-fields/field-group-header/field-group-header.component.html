@@ -1,0 +1,34 @@
+<!-- Mismo lenguaje que la cabecera de `app-field-card`: banda tintada por estado, título a la
+     izquierda, ⓘ pegado al título, y el estado del grupo a la derecha. -->
+<div class="fgh" [attr.data-state]="state">
+  <span class="fgh_title" [innerHTML]="label + (useColon ? ':' : '')"></span>
+
+  @if (tooltip) {
+    <button
+      type="button"
+      class="sgi-dac-info"
+      [prTooltip]="tooltip"
+      prTooltipPosition="right"
+      prTooltipStyleClass="sgi-dac-tooltip"
+      aria-label="More information">
+      <app-pr-info-icon />
+    </button>
+  }
+
+  @if (showProgress) {
+    <!-- El contador ES el texto accesible; el anillo lo repite en forma y se oculta a lectores. -->
+    <span class="fgh_progress">
+      <svg class="fgh_ring" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true">
+        <circle class="fgh_ring_track" cx="9" cy="9" r="7" />
+        <circle
+          class="fgh_ring_fill"
+          cx="9"
+          cy="9"
+          r="7"
+          [attr.stroke-dasharray]="circumference"
+          [attr.stroke-dashoffset]="dashOffset" />
+      </svg>
+      <span class="fgh_count"><b>{{ completed }}</b> of {{ total }} {{ unit }}</span>
+    </span>
+  }
+</div>

@@ -1,5 +1,18 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { driver, DriveStep, Driver } from 'driver.js';
+import { HlmSidebarService } from '@spartan/sidebar';
+import {
+  buildResultsCenterTourSteps,
+  buildSidebarTourSteps,
+  buildWhereToReportTourSteps
+} from './platform/platform-tour.steps';
+import {
+  PLATFORM_TOUR_STORAGE_KEYS,
+  PlatformTourId,
+  ResultsCenterTourContext,
+  SidebarTourContext,
+  WtrTourContext
+} from './platform/platform-tour.types';
 
 export const SP_TOUR_STORAGE_KEY = 'pr.tour.sp.completed';
 
@@ -77,6 +90,8 @@ type Waiting = 'program' | 'aow' | null;
  */
 @Injectable({ providedIn: 'root' })
 export class ReportingGuideService {
+  private readonly sidebarSE = inject(HlmSidebarService);
+
   private instance: Driver | null = null;
   private waitingFor: Waiting = null;
   private current: TutorialId = 'basics';
@@ -390,6 +405,101 @@ export class ReportingGuideService {
     });
 
     this.instance.drive();
+  }
+
+  // ---- Platform onboarding tours (POT) ------------------------------------
+
+  isPlatformTourCompleted(id: PlatformTourId): boolean {
+    try {
+      return localStorage.getItem(PLATFORM_TOUR_STORAGE_KEYS[id]) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  resetPlatformTourState(id: PlatformTourId): void {
+    try {
+      localStorage.removeItem(PLATFORM_TOUR_STORAGE_KEYS[id]);
+    } catch {
+      // ignore storage access errors
+    }
+  }
+
+  startSidebarTour(ctx: SidebarTourContext): void {
+    this.instance?.destroy();
+
+    const steps = buildSidebarTourSteps(ctx);
+    if (!steps.length) return;
+
+    const run = () => {
+      this.instance = this.createPlatformDriver(steps, PLATFORM_TOUR_STORAGE_KEYS.sidebar);
+      this.instance.drive();
+    };
+
+    const collapsed = this.sidebarSE.state() === 'collapsed' && !this.sidebarSE.isMobile();
+    if (collapsed) {
+      this.sidebarSE.setOpen(true);
+      setTimeout(run, 150);
+    } else {
+      run();
+    }
+  }
+
+  startResultsCenterTour(ctx: ResultsCenterTourContext): void {
+    this.instance?.destroy();
+    const steps = buildResultsCenterTourSteps(ctx);
+    if (!steps.length) return;
+    this.instance = this.createPlatformDriver(steps, PLATFORM_TOUR_STORAGE_KEYS['results-center']);
+    this.instance.drive();
+  }
+
+  startWhereToReportTour(ctx: WtrTourContext): void {
+    this.instance?.destroy();
+    const steps = buildWhereToReportTourSteps(ctx);
+    if (!steps.length) return;
+    this.instance = this.createPlatformDriver(steps, PLATFORM_TOUR_STORAGE_KEYS['where-to-report']);
+    this.instance.drive();
+  }
+
+  private createPlatformDriver(steps: DriveStep[], storageKey: string): Driver {
+    const animate = !this.prefersReducedMotion();
+
+    return driver({
+      showProgress: true,
+      progressText: 'Step {{current}} of {{total}}',
+      nextBtnText: 'Next',
+      prevBtnText: 'Back',
+      doneBtnText: 'Got it',
+      overlayColor: '#1e202f',
+      overlayOpacity: 0.72,
+      stagePadding: 10,
+      stageRadius: 10,
+      popoverClass: 'pr-guide',
+      allowClose: true,
+      animate,
+      disableActiveInteraction: false,
+      onDestroyed: () => {
+        try {
+          localStorage.setItem(storageKey, 'true');
+        } catch {
+          // ignore storage errors
+        }
+        this.instance = null;
+      },
+      onDoneClick: (_element, _step, opts) => {
+        const d = opts?.driver ?? this.instance;
+        d?.destroy();
+      },
+      steps
+    });
+  }
+
+  private prefersReducedMotion(): boolean {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
   }
 
   start(id: TutorialId, ctx: GuideContext): void {

@@ -341,17 +341,15 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     return `Apply filters (${this.filtersCount()})`;
   });
 
-  /**
-   * Badge for the More filters button — only secondary filters (CURRENT More filters count).
-   * Primary bar: search / program / phase / category / status are not counted here.
-   */
+  /** Badge for the Filter button — applied dimensions except live search (RCS-T-3). */
   moreFiltersCount = computed(() => {
     let n = 0;
+    if (this.resultsListFilterSE.selectedPhases().length > 0) n++;
+    if (this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) n++;
+    if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) n++;
+    if (this.resultsListFilterSE.selectedStatus().length > 0) n++;
     if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) n++;
     if (this.resultsListFilterSE.selectedLeadCenters().length > 0) n++;
-    // Submitter lives both in primary Program and More filters — count once when set.
-    // Primary already shows Program; count only if we want dual signal. Still count for badge
-    // when portfolio/center/funding/my-activity apply. Submitter is primary Program → skip here.
     if (this.resultsListFilterSE.selectedFundingSource().length > 0) n++;
     if (this.resultsListFilterSE.filterCreatedByMe()) n++;
     if (this.resultsListFilterSE.filterSubmittedByMe()) n++;
@@ -760,12 +758,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempFilterSubmittedByMe.set(this.resultsListFilterSE.filterSubmittedByMe());
   }
 
-  // Apply secondary filters from the More filters popover
+  // Apply all popover filters (search stays live on the toolbar).
   applyFilters() {
+    this.resultsListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
+    this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
+    this.resultsListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
     this.resultsListFilterSE.selectedClarisaPortfolios.set([...this.tempSelectedClarisaPortfolios()]);
     this.resultsListFilterSE.selectedFundingSource.set([...this.tempSelectedFundingSource()]);
-    // Submitter from More filters merges with primary Program (same signal)
-    this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
     this.resultsListFilterSE.selectedLeadCenters.set([...this.tempSelectedLeadCenters()]);
     this.resultsListFilterSE.filterCreatedByMe.set(this.tempFilterCreatedByMe());
     this.resultsListFilterSE.filterSubmittedByMe.set(this.tempFilterSubmittedByMe());

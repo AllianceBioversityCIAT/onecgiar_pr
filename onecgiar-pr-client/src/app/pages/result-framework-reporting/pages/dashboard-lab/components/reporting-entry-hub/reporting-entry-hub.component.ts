@@ -1,6 +1,7 @@
 // @akili-spec changes/reporting-entry-hub
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
+import { FooterService } from '../../../../../../shared/components/footer/footer.service';
 import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -120,6 +121,7 @@ const COLLAPSE_STORAGE_KEY = 'pr.hub.collapsed';
   ]
 })
 export class ReportingEntryHubComponent {
+  private readonly footerSE = inject(FooterService);
   readonly copy = HUB_COPY;
 
   readonly programCode = input<string>('');
@@ -283,6 +285,10 @@ export class ReportingEntryHubComponent {
 
   onRetry(): void {
     this.retryW3.emit();
+  }
+
+  onRequestAccess(): void {
+    this.footerSE.displayContactUs = true;
   }
 
   requestAccessHref(): string {

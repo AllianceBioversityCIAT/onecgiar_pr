@@ -66,6 +66,16 @@ export class SaveButtonService {
   private readonly settledSaves = signal(0);
   private lastSaveSucceeded = true;
 
+  /**
+   * Monotonic counter of SUCCESSFUL settles, public on purpose.
+   *
+   * `settledSaves` above counts every settle (success or failure) and is private because it only
+   * exists to give {@link saveAndSettle} a baseline. A field that shows "unsaved changes" needs the
+   * opposite question answered — "did anything actually reach the server?" — and must NOT clear its
+   * mark when the save failed, which is exactly what watching `isSaving` would do.
+   */
+  readonly savedTick = signal(0);
+
   private creatingNavSub: Subscription | null = null;
   private creatingHoldId: any = null;
 
@@ -249,6 +259,7 @@ export class SaveButtonService {
       settled = true;
       this.lastSaveSucceeded = ok;
       this.settledSaves.update(count => count + 1);
+      if (ok) this.savedTick.update(count => count + 1);
     };
   }
 

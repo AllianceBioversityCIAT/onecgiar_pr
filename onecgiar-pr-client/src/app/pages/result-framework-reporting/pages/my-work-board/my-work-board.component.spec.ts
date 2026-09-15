@@ -9,6 +9,7 @@ import { BehaviorSubject, of } from 'rxjs';
 import { MyWorkBoardComponent } from './my-work-board.component';
 import { MyWorkBoardService } from './services/my-work-board.service';
 import { MyWorkCountService } from './services/my-work-count.service';
+import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
 import { MyWorkColumn, MyWorkTotals } from './my-work.view-model';
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
 import { PROGRAMME_RESULTS_OTHER_CATEGORY, ProgrammeResultsFilterService } from '../programme-results/services/programme-results-filter.service';
@@ -304,7 +305,7 @@ describe('MyWorkBoardComponent', () => {
       fixture.detectChanges();
 
       expect(root().querySelector('section[aria-labelledby="my-work-column-inQa"]')).toBeTruthy();
-      expect(root().querySelectorAll('app-my-work-column button[aria-expanded="false"]').length).toBe(2);
+      expect(root().querySelectorAll('app-my-work-column > button[aria-expanded="false"]').length).toBe(2);
     });
 
     it('renders the Other rail only when it has rows', () => {
@@ -340,7 +341,7 @@ describe('MyWorkBoardComponent', () => {
       service.columns.set(sevenColumns);
       fixture.detectChanges();
 
-      const rail = () => root().querySelector('app-my-work-column button[aria-expanded="false"]') as HTMLButtonElement | null;
+      const rail = () => root().querySelector('app-my-work-column > button[aria-expanded="false"]') as HTMLButtonElement | null;
       const collapse = () => root().querySelector('button[aria-label="Collapse Discontinued"]') as HTMLButtonElement | null;
 
       rail()!.click();
@@ -366,7 +367,7 @@ describe('MyWorkBoardComponent', () => {
       const expandedBefore = nonEditing().filter(item => !closedKeys.has(item.dataset['columnKey'] ?? ''));
       expect(expandedBefore.length).toBe(4);
 
-      (root().querySelector('app-my-work-column button[aria-expanded="false"]') as HTMLButtonElement).click();
+      (root().querySelector('app-my-work-column > button[aria-expanded="false"]') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       const expandedAfter = nonEditing();
@@ -1651,7 +1652,7 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
 
     // Seven expanded regions (vs five + two rails on the locked board) and no expand/collapse chrome.
     expect(root().querySelectorAll('section[role="region"]').length).toBe(7);
-    expect(root().querySelectorAll('app-my-work-column button[aria-expanded]').length).toBe(0);
+    expect(root().querySelectorAll('app-my-work-column > button[aria-expanded]').length).toBe(0);
     expect(root().querySelector('button[aria-label="Collapse Discontinued"]')).toBeNull();
     // The desktop state is untouched — only its RENDERING is suppressed here.
     expect(component.closedCollapsed()).toBe(true);
@@ -1663,7 +1664,7 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
 
     expect(root().querySelector('[data-testid="my-work-jumper"]')).toBeNull();
     expect(component.closedIsRail()).toBe(true);
-    expect(root().querySelectorAll('app-my-work-column button[aria-expanded="false"]').length).toBe(2);
+    expect(root().querySelectorAll('app-my-work-column > button[aria-expanded="false"]').length).toBe(2);
   });
 
   it('sizes every strip column to min(85vw, 360px) below 900px and to the two-step floors above it', () => {
@@ -1683,4 +1684,32 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
     expect(component.expandedColumnItemClass).toContain('min-[900px]:min-w-[240px]');
     expect(component.expandedColumnItemClass).toContain('min-[1440px]:min-w-[260px]');
   });
+
+  // ── Deletion reload (DEL-T-3, DEL-R-4, DEL-AC-7, D5) ────────────────────────────
+  describe('deletion reload (DEL-T-3, DEL-R-4, DEL-AC-7)', () => {
+    it('reloads board data when onResultDeleted is called', () => {
+      build(false);
+      const loadSpy = jest.spyOn(service, 'load');
+
+      component.onResultDeleted();
+
+      expect(loadSpy).toHaveBeenCalledWith('SP01');
+    });
+
+    it('reloads board data when a child column emits deleted', () => {
+      build(false);
+      service.columns.set([{ key: 'editing', label: 'Needs my action', group: 'editing', rows: [row()] }]);
+      service.visibleRows.set([row()]);
+      fixture.detectChanges();
+
+      const loadSpy = jest.spyOn(service, 'load');
+      const columnComp = fixture.debugElement.query(By.directive(MyWorkColumnComponent))?.componentInstance as MyWorkColumnComponent;
+      expect(columnComp).toBeTruthy();
+
+      columnComp.deleted.emit(row());
+
+      expect(loadSpy).toHaveBeenCalledWith('SP01');
+    });
+  });
 });
+

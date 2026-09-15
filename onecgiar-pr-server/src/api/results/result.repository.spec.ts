@@ -784,3 +784,104 @@ describe('ResultRepository — AllResultsLegacyNewByTitle (P2-3527)', () => {
     ]);
   });
 });
+
+/**
+ * P2-3663 — a phase change must carry the lead contact person's DIRECTORY LINK, not just the typed
+ * name. Until 2026-09-14 the replication SQL copied `lead_contact_person` alone, so every
+ * rolled-over result landed in the new phase with `lead_contact_person_id` empty while the name
+ * still showed on screen. From the 2026 phase the live `validation_general_information_P25`
+ * requires that id, so the copy could never turn General information green and Submit stayed
+ * disabled with nothing for the reporter to act on (measured on prtest: 5 of 5 such results
+ * answered `general-information: false` and `submit: false`).
+ *
+ * 🛑 The position check is the point, not the `toContain`. An INSERT whose column list and SELECT
+ * drift apart still compiles and still runs — it just writes every value into the wrong column.
+ * Asserting only that the name appears somewhere would pass on exactly that bug.
+ */
+describe('ResultRepository — replication carries the contact directory link (P2-3663)', () => {
+  const repo = new ResultRepository(
+    {
+      createEntityManager: jest.fn(() => ({}) as any),
+    } as unknown as DataSource,
+    { returnErrorRepository: jest.fn() } as any,
+  );
+  const config = {
+    phase: 5,
+    user: { id: 77 } as any,
+    old_result_id: 1000,
+    new_result_id: 2000,
+  } as any;
+
+  /** Column list and SELECT list of the INSERT, each collapsed to one entry per written column. */
+  const insertLists = (insertQuery: string) => {
+    const match =
+      /insert into `result` \(\s*([\s\S]*?)\s*\) select\s*([\s\S]*?)\s*from `result` r2/.exec(
+        insertQuery,
+      );
+    if (!match)
+      throw new Error(
+        'replication INSERT no longer matches the expected shape',
+      );
+
+    const columns = match[1]
+      .split(/[\n,]/)
+      .map((entry) => entry.trim().replace(/^,/, '').trim())
+      .filter(Boolean);
+
+    // `${...}` expressions span several lines; join them until their delimiters balance out.
+    const values: string[] = [];
+    let buffer = '';
+    for (const line of match[2]
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)) {
+      buffer = buffer ? `${buffer} ${line}` : line;
+      const balanced =
+        (buffer.match(/\(/g) ?? []).length ===
+          (buffer.match(/\)/g) ?? []).length &&
+        (buffer.match(/\{/g) ?? []).length ===
+          (buffer.match(/\}/g) ?? []).length;
+      if (balanced) {
+        values.push(buffer.replace(/,$/, '').trim());
+        buffer = '';
+      }
+    }
+    if (buffer) values.push(buffer.trim());
+
+    return { columns, values };
+  };
+
+  it('copies lead_contact_person_id alongside the name in findQuery', () => {
+    const { findQuery } = repo.createQueries(config);
+
+    expect(findQuery).toContain('r2.lead_contact_person,');
+    expect(findQuery).toContain('r2.lead_contact_person_id,');
+  });
+
+  it('writes lead_contact_person_id into its own column in insertQuery', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+    );
+    const index = columns.indexOf('lead_contact_person_id');
+
+    expect(index).toBeGreaterThan(-1);
+    expect(values[index]).toBe('r2.lead_contact_person_id');
+  });
+
+  it('keeps every INSERT column aligned with the value written into it', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+    );
+
+    expect(values).toHaveLength(columns.length);
+    const misaligned = columns.filter((column, i) => {
+      const value = values[i] ?? '';
+      const alias = value.includes(' as ')
+        ? value.slice(value.lastIndexOf(' as ') + 4).trim()
+        : value.replace('r2.', '').trim();
+      return alias !== column;
+    });
+
+    expect(misaligned).toEqual([]);
+  });
+});

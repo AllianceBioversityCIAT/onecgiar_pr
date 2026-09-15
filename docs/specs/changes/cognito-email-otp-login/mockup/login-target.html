@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PRMS login — Center account (target mockup)</title>
+<style>
+  :root { --primary: #5b6cf0; --primary-700: #3f4fc7; --ink: #1f2340; --muted: #5f6478; --border: #d9dce6; --bg: #f3f2ef; --card: #ffffff; --amber-bg: #fff7e6; --amber-bd: #f4c26b; --amber-ink: #6b4a00; }
+  body { margin: 0; background: var(--bg); font-family: Poppins, "Segoe UI", system-ui, sans-serif; color: var(--ink); }
+  .wrap { display: flex; gap: 32px; padding: 32px; flex-wrap: wrap; justify-content: center; }
+  .card { background: var(--card); border-radius: 16px; width: 660px; max-width: 100%; padding: 40px 40px 28px; box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+  .card.narrow { width: 375px; padding: 28px 20px; }
+  .logo { text-align: center; font-weight: 700; letter-spacing: .06em; margin-bottom: 24px; }
+  .logo .pr { display: inline-block; width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: #fff; line-height: 44px; margin-left: 12px; font-size: 18px; }
+  h2 { text-align: center; font-size: 22px; margin: 8px 0 20px; }
+  p.desc { color: var(--muted); font-size: 15px; margin: 18px 0 8px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 48px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .btn.secondary { background: #fff; color: var(--primary-700); border: 1.5px solid var(--primary); }
+  .divider { display: flex; align-items: center; gap: 12px; color: var(--muted); margin: 18px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 2px; background: var(--border); }
+  .panel { border: 1.5px solid var(--primary); border-radius: 12px; padding: 16px; margin-top: 10px; }
+  .panel label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .panel input { width: 100%; box-sizing: border-box; height: 44px; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; font-size: 15px; }
+  .panel input.code { letter-spacing: .35em; font-family: "JetBrains Mono", monospace; font-size: 20px; text-align: center; }
+  .row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .row .btn { flex: 1 1 160px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .status { margin-top: 10px; font-size: 13.5px; border-radius: 8px; padding: 8px 10px; }
+  .status.ok { background: #eef6ee; color: #1f5e2b; border: 1px solid #bfe0c4; }
+  .status.err { background: var(--amber-bg); color: var(--amber-ink); border: 1px solid var(--amber-bd); }
+  .link { color: var(--primary-700); font-size: 13.5px; text-decoration: underline; background: none; border: 0; cursor: pointer; padding: 0; }
+  .help { text-align: center; color: var(--muted); font-size: 14px; margin-top: 26px; }
+  .help a { color: var(--primary-700); }
+  .caption { width: 100%; text-align: center; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Screen 1: choose (desktop) -->
+  <div class="card" aria-label="Screen 1 — choose path">
+    <div class="logo">CGIAR <span class="pr">PR</span></div>
+    <h2>Log in to your PRMS Reporting Tool</h2>
+
+    <p class="desc">Use your organization email to easily connect</p>
+    <button class="btn">Continue with your CGIAR account</button>
+
+    <p class="desc">For CGIAR centers outside the CGIAR directory · ICRISAT · CIFOR-ICRAF</p>
+    <button class="btn secondary" data-test="otp-center-button">🏢 Continue with your Center account</button>
+
+    <div class="divider">or</div>
+
+    <p class="desc">Log in using your personalized email and password</p>
+    <button class="btn">Continue as an external user</button>
+
+    <p class="help">Need help? Contact PRMS technical support at<br /><a href="#">PRMSTechSupport@cgiar.org</a></p>
+  </div>
+
+  <!-- Screen 2: email step (desktop) -->
+  <div class="card" aria-label="Screen 2 — email step">
+    <div class="logo">CGIAR <span class="pr">PR</span></div>
+    <h2>Log in to your PRMS Reporting Tool</h2>
+    <p class="desc">Use your organization email to easily connect</p>
+    <button class="btn">Continue with your CGIAR account</button>
+
+    <p class="desc">For CGIAR centers outside the CGIAR directory · ICRISAT · CIFOR-ICRAF</p>
+    <div class="panel" role="group" aria-label="Center account sign-in">
+      <label for="e1">Work email</label>
+      <input id="e1" type="email" placeholder="name@icrisat.org" value="a.person@icrisat.org" data-test="otp-email" />
+      <div class="row">
+        <button class="btn" data-test="otp-send">Send code</button>
+        <button class="btn secondary" data-test="otp-back">Cancel</button>
+      </div>
+      <p class="hint">We will email you a one-time code. No password needed.</p>
+    </div>
+
+    <div class="divider">or</div>
+    <p class="desc">Log in using your personalized email and password</p>
+    <button class="btn">Continue as an external user</button>
+  </div>
+
+  <!-- Screen 3: code step with error (375 px) -->
+  <div class="card narrow" aria-label="Screen 3 — code step at 375 px">
+    <div class="logo">CGIAR <span class="pr">PR</span></div>
+    <h2 style="font-size:19px">Log in to your PRMS Reporting Tool</h2>
+    <p class="desc">For CGIAR centers outside the CGIAR directory</p>
+    <div class="panel" role="group" aria-label="Center account sign-in">
+      <div class="status ok" role="status" data-test="otp-status">If this account exists, we sent a code to a***@icrisat.org</div>
+      <label for="c1" style="margin-top:12px">One-time code</label>
+      <input id="c1" class="code" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••" value="482913" data-test="otp-code" />
+      <div class="status err" role="alert">Code incorrect. Try again.</div>
+      <div class="row">
+        <button class="btn" data-test="otp-verify">Verify</button>
+        <button class="btn secondary" data-test="otp-resend" disabled>Resend in 24 s</button>
+      </div>
+      <p class="hint"><button class="link" data-test="otp-back">← Use a different email</button></p>
+    </div>
+    <p class="help">Need help? <a href="#">PRMSTechSupport@cgiar.org</a></p>
+  </div>
+
+  <p class="caption">Target mockup for <code>docs/specs/changes/cognito-email-otp-login</code> — three states: choose · email · code (375 px, wrong-code error, resend cooldown). Colours approximate the existing login tokens; implementation uses the project SCSS/Tailwind tokens (design.md §6.3).</p>
+</div>
+</body>
+</html>

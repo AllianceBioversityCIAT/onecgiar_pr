@@ -246,6 +246,59 @@ describe('AuthService', () => {
     });
   });
 
+  // @akili-spec changes/cognito-email-otp-login — OTP-T-6
+  describe('GET_otpConfig', () => {
+    it('should call GET_otpConfig and return the allowed domains', done => {
+      const mockResponse = { response: { domains: ['icrisat.org', 'cifor-icraf.org'] } };
+
+      service.GET_otpConfig().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}login/otp/config`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_otpStart', () => {
+    it('should POST the normalised email and return the neutral sent shape', done => {
+      const mockBody = { email: 'a.person@icrisat.org' };
+      const mockResponse = { response: { sent: true, session: 'sess-123', destination: 'a***@icrisat.org' }, message: 'If this account exists, a code has been sent.', status: 200 };
+
+      service.POST_otpStart(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}login/otp/start`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(mockBody);
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_otpVerify', () => {
+    it('should POST the code and session and return the login-success shape', done => {
+      const mockBody = { email: 'a.person@icrisat.org', code: '48291345', session: 'sess-123' };
+      const mockResponse = { response: { valid: true, token: 'jwt-token', user: { id: 1 }, auth_tokens: {} }, message: 'Successful login', status: 200 };
+
+      service.POST_otpVerify(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}login/otp/verify`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(mockBody);
+
+      req.flush(mockResponse);
+    });
+  });
+
   describe('GET_allRolesByUser', () => {
     it('should get roles by user', done => {
       const mockUser = { id: 123, name: 'Test User' };

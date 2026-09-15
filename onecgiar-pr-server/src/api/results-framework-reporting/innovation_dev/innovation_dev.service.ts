@@ -742,8 +742,35 @@ export class InnovationDevService {
     });
   }
 
+  /**
+   * The amount a W3/bilateral row must be STORED with.
+   *
+   * An amount nobody typed has to stay "not reported" (`NULL`), never become a reported USD 0.00.
+   * The previous expression was `Number(i.kind_cash)`, and `Number(null)` — which is what a blank
+   * currency input sends back, since `pr-input`'s `onCurrencyBlur()` parses an empty field to
+   * `null` — is `0`. So merely opening an Innovation Development section and saving it stamped
+   * "0.00" on every W3/bilateral line the user had left empty, while the pooled-programme and
+   * partner tables of the SAME save (handled by `InnoDevService`, which assigns `kind_cash` raw)
+   * correctly kept their `NULL`s.
+   *
+   * ZERO IS A LEGITIMATE ANSWER — a project that genuinely invested nothing this period — so an
+   * explicit `0` (or the `'0'`/`'0.00'` string the `decimal` column reads back as) must still be
+   * stored as `0`. Only `null`, `undefined` and `''` mean "not reported".
+   *
+   * Same rule, and same reason, as `ResultInvestmentService.amountToSave`
+   * (`api/results/result_budget/result-investment.service.ts`): ticking "This is yet to be
+   * determined" and an amount are mutually exclusive, so the checkbox clears the amount.
+   */
+  private bilateralAmountToSave(i: any): number | null {
+    if (i?.is_determined === true) return null;
+    const raw = i?.kind_cash;
+    if (raw === null || raw === undefined || raw === '') return null;
+    const amount = Number(raw);
+    return Number.isFinite(amount) ? amount : null;
+  }
+
   private async updateBilateralBudget(rbb: any, i: any, user: number) {
-    rbb.kind_cash = i.is_determined === true ? null : Number(i.kind_cash);
+    rbb.kind_cash = this.bilateralAmountToSave(i);
     rbb.is_determined = i.is_determined;
     rbb.last_updated_by = user;
     rbb.non_pooled_projetct_id = null;
@@ -759,7 +786,7 @@ export class InnovationDevService {
     const newRbb = this._resultBilateralBudgetRepository.create({
       result_project_id: resultProjectId,
       non_pooled_projetct_id: null,
-      kind_cash: i.is_determined === true ? null : Number(i.kind_cash),
+      kind_cash: this.bilateralAmountToSave(i),
       is_determined: i.is_determined,
       created_by: user,
       last_updated_by: user,

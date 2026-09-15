@@ -7,10 +7,12 @@ import {
   Input,
   OnDestroy,
   Output,
+  ViewChild,
   computed,
   effect,
   inject,
-  signal
+  signal,
+  untracked
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -20,7 +22,10 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { ResultSectionsService } from '../result-sections-sidebar/result-sections.service';
 import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { FieldCompletionFlightService } from '../../../../../../shared/services/field-completion-flight.service';
 import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
+import { ScrollChromeService } from '../../../../../../shared/services/scroll-chrome.service';
+import { ChromeFoldDirective } from '../../../../../../shared/directives/chrome-fold.directive';
 
 /**
  * Bottom bar of a result-detail section: section-to-section navigation, the position in the
@@ -44,9 +49,9 @@ import { UnsavedNavigationIntentService } from '../../../../../../shared/service
   // bottom-0` here used to be the only way to keep it on screen while the whole document
   // scrolled, and it came at the cost of the bar inheriting its ancestor's 885px width.
   // `z-[6]` stays: the floating "Links to results" helpers still overlap this strip.
-  host: { class: 'z-[6] block w-full flex-none' },
+  host: { class: 'relative z-[6] block w-full flex-none' },
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ChromeFoldDirective],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
@@ -58,10 +63,13 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   @Output() clickSave = new EventEmitter();
 
   readonly saveButtonSE = inject(SaveButtonService);
+  /** Folds the strip away while the user reads downwards; `Save draft` stays put. */
+  readonly scrollChromeSE = inject(ScrollChromeService);
   readonly dataControlSE = inject(DataControlService);
   readonly rolesSE = inject(RolesService);
   readonly sectionsSE = inject(ResultSectionsService);
   readonly fieldsManagerSE = inject(FieldsManagerService);
+  private readonly flightSE = inject(FieldCompletionFlightService);
   private readonly router = inject(Router);
   private readonly slotSE = inject(SectionBottomBarSlotService);
   private readonly intentSE = inject(UnsavedNavigationIntentService);
@@ -114,6 +122,72 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   }
 
   readonly missingFields = computed(() => this.dataControlSE.fieldFeedbackList());
+
+  /**
+   * ── Progreso de la sección ──────────────────────────────────────────────
+   * "6 fields missing" es un número sin escala: no dice si son 6 de 7 o 6 de 30. El anillo pone el
+   * denominador que el escaneo ya conocía y nadie mostraba.
+   */
+  readonly mandatoryTotal = computed(() => this.dataControlSE.mandatoryFieldsTotal());
+  readonly mandatoryDone = computed(() => Math.max(0, this.mandatoryTotal() - this.missingFields().length));
+  readonly showRing = computed(() => this.mandatoryTotal() > 0);
+
+  /**
+   * Lo que el aro MUESTRA, que no siempre es lo que el escaneo ya sabe.
+   *
+   * El número real sube en cuanto el campo queda completo — antes de que la bolita salga siquiera.
+   * Visto en pantalla, eso rompe la promesa de la animación: el contador ya había subido y la
+   * bolita llegaba a celebrar algo que el usuario leyó hace medio segundo. Aquí el número ESPERA a
+   * que la bolita aterrice.
+   *
+   * 🛑 Solo espera hacia arriba y solo si hay algo en el aire. Si el número BAJA (un campo que se
+   * vació) se aplica al instante — retrasar una mala noticia es mentir —, y si no salió ninguna
+   * bolita (reduced-motion, carga inicial, sin destino en pantalla) tampoco hay nada que esperar.
+   */
+  readonly displayedDone = signal(0);
+
+  private readonly syncDisplayed = effect(() => {
+    const real = this.mandatoryDone();
+    const flying = this.flightSE.inFlight();
+    untracked(() => {
+      if (real <= this.displayedDone() || flying === 0) this.displayedDone.set(real);
+    });
+  });
+  /** Circunferencia del aro (r = 8). El arco se dibuja quitando longitud al trazo. */
+  readonly ringCircumference = 2 * Math.PI * 8;
+  readonly ringOffset = computed(() => {
+    const total = this.mandatoryTotal();
+    const ratio = total ? Math.min(1, Math.max(0, this.displayedDone() / total)) : 0;
+    return this.ringCircumference * (1 - ratio);
+  });
+
+  /** Pulso al aterrizar una bolita: el aro acusa el golpe, que es lo que cierra la animación. */
+  readonly ringPulsing = signal(false);
+  private pulseTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly landingPulse = effect(() => {
+    // Leer `landed()` es lo que suscribe; el primer disparo (0) también entra y apaga el pulso solo.
+    this.flightSE.landed();
+    untracked(() => {
+      // El número sube AQUÍ, con el golpe — no cuando el campo se completó.
+      this.displayedDone.set(this.mandatoryDone());
+      if (this.pulseTimer) clearTimeout(this.pulseTimer);
+      this.ringPulsing.set(true);
+      this.pulseTimer = setTimeout(() => this.ringPulsing.set(false), 520);
+    });
+  });
+
+  /**
+   * El indicador se ANUNCIA como destino cuando entra en el DOM y se borra cuando sale: el servicio
+   * no debe guardar un elemento de una sección que ya no está en pantalla.
+   */
+  @ViewChild('progressTarget')
+  set progressTarget(ref: ElementRef<HTMLElement> | undefined) {
+    const el = ref?.nativeElement;
+    if (el) this.flightSE.registerTarget(el);
+    else if (this.lastTarget) this.flightSE.clearTarget(this.lastTarget);
+    this.lastTarget = el ?? null;
+  }
+  private lastTarget: HTMLElement | null = null;
 
   /**
    * Whether the open section is complete.
@@ -182,6 +256,7 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
    * the two never stack during the route transition.
    */
   ngOnDestroy(): void {
+    if (this.pendingCloseTimer) clearTimeout(this.pendingCloseTimer);
     this.slotSE.syncSlot.set(null);
     this.hostRef.nativeElement.remove();
   }
@@ -228,6 +303,66 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
     } finally {
       this.savingBeforeNext.set(false);
     }
+  }
+
+  /**
+   * Hovering the "N fields missing" chip opens the list; the click stays for touch and keyboard.
+   * Leaving is delayed so the pointer can travel from the chip into the list without it closing
+   * underneath — the gap between the two is 10px of nothing.
+   */
+  private pendingCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  openPending(): void {
+    if (this.pendingCloseTimer) {
+      clearTimeout(this.pendingCloseTimer);
+      this.pendingCloseTimer = null;
+    }
+    this.pendingOpen.set(true);
+  }
+
+  schedulePendingClose(): void {
+    if (this.pendingCloseTimer) clearTimeout(this.pendingCloseTimer);
+    this.pendingCloseTimer = setTimeout(() => {
+      this.pendingCloseTimer = null;
+      this.pendingOpen.set(false);
+    }, 220);
+  }
+
+  /**
+   * Whether this entry can be jumped to. The DOM scan tags every missing field it found with
+   * `data-pr-feedback`; a field on a ToC tab that is not the active one, or a requirement no
+   * rendered field carries, is named in the list but has nothing on screen to go to — so the
+   * button appears per entry, not for the whole list.
+   */
+  canGoToField(label: string): boolean {
+    return Boolean(this.fieldElement(label));
+  }
+
+  /**
+   * Scrolls the field into view and flashes its background, so the eye finds it without reading
+   * the form. The class is removed on the way out: re-adding it is what lets the same field
+   * flash again when the user comes back to it a second time.
+   */
+  goToField(label: string): void {
+    const el = this.fieldElement(label);
+    if (!el) return;
+
+    this.closePending();
+    // The topbar and this very bar must stay exactly where they are while we travel.
+    this.scrollChromeSE.beginProgrammaticScroll();
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    el.classList.remove('pr-field-flash');
+    // Reading `offsetWidth` forces the style flush that makes the re-added class restart the
+    // animation; without it the browser coalesces remove+add into no change at all.
+    void el.offsetWidth;
+    el.classList.add('pr-field-flash');
+    setTimeout(() => el.classList.remove('pr-field-flash'), 2000);
+  }
+
+  private fieldElement(label: string): HTMLElement | null {
+    const key = DataControlService.feedbackKey(label);
+    return document.querySelector<HTMLElement>(`.section_container [data-pr-feedback="${key}"]`);
   }
 
   togglePending(): void {

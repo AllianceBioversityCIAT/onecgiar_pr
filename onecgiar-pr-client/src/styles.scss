@@ -69,6 +69,9 @@
 // CDK Overlay positioning styles — required for cdkConnectedOverlay panels
 // (header-panel user menu + notifications) to float anchored to their trigger.
 @import '@angular/cdk/overlay-prebuilt.css';
+@import './app/shared/directives/chrome-fold.scss';
+@import './styles/field-flash.scss';
+@import './styles/tooltip-pin-hint.scss';
 
 // Neutralize the native OS button chrome. Tailwind's full preflight is disabled above
 // (it would reset PrimeNG), so raw <button>s render with the grey system look + native
@@ -683,7 +686,7 @@ background-attachment: fixed;
 .driver-popover.pr-guide {
   position: fixed !important;
   z-index: 1000000000 !important;
-  max-width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
   padding: 20px 20px 16px;
   border-radius: 18px;
   background: #ffffff;
@@ -1064,4 +1067,15 @@ body.sidebar-width-resizing {
   [data-slot='sidebar-container'] {
     transition: none !important;
   }
+}
+
+/* La bolita que vuela de un campo completado al indicador de la sección
+   (`shared/services/field-completion-flight.service.ts`). Vive en `document.body` — fuera de
+   cualquier `overflow: hidden` del formulario — así que su estilo tiene que ser global. */
+.pr-completion-dot {
+  display: block;
+  // Plano y a secas (Yeck, 14-sep-2026): el degradado radial y el glow le daban volumen de
+  // canica 3D, que choca con una interfaz que es toda superficie plana. Un punto sólido del
+  // verde de la marca dice lo mismo sin pretender ser un objeto.
+  background: var(--pr-color-green-500, #19ae58);
 }

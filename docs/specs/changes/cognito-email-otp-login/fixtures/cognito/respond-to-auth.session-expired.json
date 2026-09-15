@@ -1,0 +1,5 @@
+{
+  "__type": "NotAuthorizedException",
+  "operation": "RespondToAuthChallenge",
+  "message": "Invalid session for the user, session is expired."
+}

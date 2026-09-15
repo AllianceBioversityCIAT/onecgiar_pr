@@ -38,6 +38,13 @@ export class TawkComponent implements OnInit {
           mobile: { position: 'br', xOffset: 24, yOffset: 130 }
         }
       };
+      // P2-3683: no floating bubble in the corner any more — the only way into the chat is the
+      // topbar's Support menu (SupportChatService.open()). The bubble is hidden as soon as the
+      // embed loads, and again whenever the user minimises the conversation, because Tawk brings
+      // its launcher back on minimise and it would reappear in the corner.
+      Tawk_API.onLoad = function () { if (Tawk_API.hideWidget) Tawk_API.hideWidget(); };
+      Tawk_API.onChatMinimized = function () { if (Tawk_API.hideWidget) Tawk_API.hideWidget(); };
+      Tawk_API.onChatEnded = function () { if (Tawk_API.hideWidget) Tawk_API.hideWidget(); };
       (function(){
       var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
       s1.async=true;

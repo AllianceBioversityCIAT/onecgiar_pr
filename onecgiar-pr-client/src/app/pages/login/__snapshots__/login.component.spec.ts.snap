@@ -1,0 +1,68 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the CGIAR block (title, description, button, divider) identical: cgiar-button 1`] = `
+[
+  "<button class="corp-id-btn"><img src="../../../assets/cgiar-logo.png" alt="CGIAR" class="cgiar-icon"> Continue with your CGIAR account <!--container--></button>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the CGIAR block (title, description, button, divider) identical: cgiar-description 1`] = `"<p class="login-description">Use your organization email to easily connect</p>"`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the CGIAR block (title, description, button, divider) identical: cgiar-title 1`] = `
+[
+  "<h2 class="login-title">Log in to your PRMS Reporting Tool</h2>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the CGIAR block (title, description, button, divider) identical: divider 1`] = `
+[
+  "<div class="divider"><span>or</span></div>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the closed external-user block (description + button) identical: external-button 1`] = `
+[
+  "<button class="show-login-form-btn"><i class="pi pi-users" style="font-size: 16px;"></i> Continue as an external user </button>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the closed external-user block (description + button) identical: external-description 1`] = `"<p class="login-description">Log in using your personalized email and password</p>"`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the open external-user form identical: external-form-groups 1`] = `
+[
+  "<div class="form-group"><label for="email">Email:</label><input data-slot="input" hlminput="" type="email" id="email" placeholder="name@host.com" class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-[40px] rounded-[8px] border bg-white px-[12px] py-[8px] text-[14px] font-normal leading-[1.5] transition-[color,box-shadow] file:h-7 file:text-[13px] file:font-medium focus-visible:ring-3 file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 ng-untouched ng-pristine ng-valid"></div>",
+  "<div class="form-group" style="margin-bottom: 15px;"><label for="password"> Password: </label><div class="password-field"><input data-slot="input" hlminput="" id="password" class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-[40px] rounded-[8px] border bg-white px-[12px] py-[8px] text-[14px] font-normal leading-[1.5] transition-[color,box-shadow] file:h-7 file:text-[13px] file:font-medium focus-visible:ring-3 file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 ng-untouched ng-pristine ng-valid" type="password" placeholder="Password"><button type="button" tabindex="-1" class="password-toggle-btn" aria-label="Show password"><span class="material-icons-round">visibility</span></button></div><!--container--></div>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the open external-user form identical: external-form-heading 1`] = `
+[
+  "<p class="external-users-text">For non-CGIAR accounts</p>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the open external-user form identical: external-form-submit 1`] = `
+[
+  "<button class="signin-btn" disabled=""><span><!--container--><!--container--> Log in <!--container--><!--container--></span><!--container--></button>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the password-change form identical: change-password-form-groups 1`] = `
+[
+  "<div class="form-group"><label for="email">Email:</label><input data-slot="input" hlminput="" type="email" id="email" placeholder="name@host.com" class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-[40px] rounded-[8px] border bg-white px-[12px] py-[8px] text-[14px] font-normal leading-[1.5] transition-[color,box-shadow] file:h-7 file:text-[13px] file:font-medium focus-visible:ring-3 file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 ng-untouched ng-pristine" disabled=""></div>",
+  "<div class="form-group" style="margin-bottom: 6px;"><label for="password"> New Password: </label><div class="password-field"><input data-slot="input" hlminput="" id="password" class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-[40px] rounded-[8px] border bg-white px-[12px] py-[8px] text-[14px] font-normal leading-[1.5] transition-[color,box-shadow] file:h-7 file:text-[13px] file:font-medium focus-visible:ring-3 file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 ng-untouched ng-pristine ng-valid" type="password" placeholder="New Password"><button type="button" tabindex="-1" class="password-toggle-btn" aria-label="Show password"><span class="material-icons-round">visibility</span></button></div><ul class="requirements-list"><li class="invalid"><i class="pi pi-times"></i> Password must contain a lower case letter </li><li class="invalid"><i class="pi pi-times"></i> Password must contain an upper case letter </li><li class="invalid"><i class="pi pi-times"></i> Password must contain at least 8 characters </li><li class="invalid"><i class="pi pi-times"></i> Password must contain a special character or a space </li><li class="valid"><i class="pi pi-check"></i> Password must not contain a leading or trailing space </li></ul><!--container--></div>",
+  "<div class="form-group" style="margin-bottom: 15px;"><label for="confirmPassword">Confirm Password</label><div class="password-field"><input data-slot="input" hlminput="" id="confirmPassword" placeholder="Confirm Password" class="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-[40px] rounded-[8px] border bg-white px-[12px] py-[8px] text-[14px] font-normal leading-[1.5] transition-[color,box-shadow] file:h-7 file:text-[13px] file:font-medium focus-visible:ring-3 file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 ng-untouched ng-pristine ng-valid" type="password"><button type="button" tabindex="-1" class="password-toggle-btn" aria-label="Show password"><span class="material-icons-round">visibility</span></button></div><!--container--><!--container--></div>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the password-change form identical: change-password-submit 1`] = `
+[
+  "<button class="signin-btn" disabled=""><span> Change Password <!--container--><!--container--></span><!--container--></button>",
+]
+`;
+
+exports[`LoginComponent pre-change DOM snapshot (OTP-AC-13) keeps the password-change form identical: change-password-title 1`] = `
+[
+  "<h2 class="login-title">Please change your password</h2>",
+]
+`;

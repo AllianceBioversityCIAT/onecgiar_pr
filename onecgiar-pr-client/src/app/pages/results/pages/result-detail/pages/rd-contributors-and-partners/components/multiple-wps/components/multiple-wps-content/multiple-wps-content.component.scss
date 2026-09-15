@@ -1,5 +1,9 @@
 .container {
   scroll-behavior: smooth;
-  padding: 1rem 2rem 3rem 2rem;
+  padding: 1rem 1.5rem 2rem;
   z-index: 1000;
+  // 🛑 Heredaba el `max-width: 768px` de la clase genérica `.container`. En una pantalla ancha eso
+  // dejaba el formulario en una columna estrecha con un tercio de la sección vacío a los lados —
+  // el espacio desaprovechado que Yeck señaló el 14-sep-2026. El ancho lo manda el panel del tab.
+  max-width: none;
 }

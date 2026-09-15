@@ -110,8 +110,12 @@ export const BILATERAL_REVIEW_COPY = {
   },
   /** Loading / empty / filtered-empty / error states (BRT-R-31). */
   states: {
-    empty: 'No bilateral results reported to this program yet.',
-    filteredEmpty: 'No results match your filters.',
+    emptyTitle: 'No bilateral results yet',
+    emptyDescription: 'When Centers report W3/Bilateral results to this program, they will appear here for review.',
+    emptyPrimary: 'Report emerging result',
+    emptySecondary: 'Where to report',
+    filteredEmptyTitle: 'No results match these filters',
+    filteredEmptyDescription: 'Try removing a filter or widening your search to see more bilateral results.',
     error: 'We could not load the bilateral review list.',
     retry: 'Retry'
   },

@@ -1,0 +1,91 @@
+// Los tokens de estado son los MISMOS que los de `styles/field-card.scss`. Se redeclaran aquí en
+// vez de importarse porque ese archivo es global y este componente tiene encapsulación propia;
+// si un día cambian, cambian en los dos sitios — están anotados en ambos.
+.fgh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--fgh-edge);
+  background: var(--fgh-tint);
+  color: var(--fgh-ink);
+
+  --fgh-tint: var(--pr-surface-sunken);
+  --fgh-edge: var(--pr-border);
+  --fgh-ink: var(--pr-text-heading);
+
+  &[data-state='ok'] {
+    --fgh-tint: #eafff0;
+    --fgh-edge: #c9f2d8;
+    --fgh-ink: #14562b;
+  }
+
+  &[data-state='todo'] {
+    --fgh-tint: var(--pr-color-orange-50);
+    --fgh-edge: var(--pr-color-orange-200);
+    --fgh-ink: var(--pr-color-orange-700);
+  }
+}
+
+.fgh_title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.sgi-dac-info {
+  flex-shrink: 0;
+}
+
+.fgh_progress {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.fgh_count {
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  b {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.fgh_ring {
+  display: block;
+  // Arranca a las 12 en punto; sin esto el arco empieza a las 3 y el grupo a medias se lee torcido.
+  transform: rotate(-90deg);
+}
+
+.fgh_ring_track {
+  fill: none;
+  // El propio color del estado a baja opacidad, no blanco: sobre la banda tintada un track blanco
+  // se confunde con el fondo y el anillo vacío (0 %) desaparece — que es justo el momento en el
+  // que hace falta ver que hay algo por llenar.
+  stroke: currentColor;
+  opacity: 0.22;
+  stroke-width: 3;
+}
+
+.fgh_ring_fill {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 260ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fgh_ring_fill {
+    transition-duration: 1ms;
+  }
+}

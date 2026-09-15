@@ -1,0 +1,43 @@
+{
+  "UserPoolId": "us-east-1_o9y9Yq5pO",
+  "ClientName": "general-client",
+  "ClientId": "6ph57qfck44f8d4jgf47if0s11",
+  "ClientSecret": "<redacted>",
+  "LastModifiedDate": "2026-09-11T21:31:36.032000-05:00",
+  "CreationDate": "2025-05-08T15:37:24.593000-05:00",
+  "RefreshTokenValidity": 5,
+  "AccessTokenValidity": 60,
+  "IdTokenValidity": 60,
+  "TokenValidityUnits": {
+    "AccessToken": "minutes",
+    "IdToken": "minutes",
+    "RefreshToken": "days"
+  },
+  "ExplicitAuthFlows": [
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH",
+    "ALLOW_CUSTOM_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_AUTH",
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_USER_SRP_AUTH"
+  ],
+  "SupportedIdentityProviders": [
+    "COGNITO"
+  ],
+  "CallbackURLs": [
+    "https://localhost:4200/auth"
+  ],
+  "AllowedOAuthFlows": [
+    "code"
+  ],
+  "AllowedOAuthScopes": [
+    "email",
+    "openid",
+    "phone"
+  ],
+  "AllowedOAuthFlowsUserPoolClient": true,
+  "PreventUserExistenceErrors": "ENABLED",
+  "EnableTokenRevocation": true,
+  "EnablePropagateAdditionalUserContextData": false,
+  "AuthSessionValidity": 5
+}

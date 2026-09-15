@@ -1,0 +1,144 @@
+digraph CenterEmailCodeLoginInfrastructure {
+  rankdir=TB;
+  newrank=true;
+  bgcolor="white";
+  fontname="Helvetica";
+  labelloc="t";
+  fontsize=18;
+  label="Center email-code login — deployment view\nOption D: PRMS-owned code, no Cognito — verified 2026-09-12";
+  nodesep=0.3;
+  ranksep=0.4;
+  size="19,40";
+  ratio=compress;
+
+  node [fontname="Helvetica" shape=box style="rounded,filled" fillcolor="#ffffff" color="#333333" fontsize=12];
+  edge [fontname="Courier" fontsize=11 color="#555555" penwidth=1.2];
+
+  /* ---------- PRMS TEST — row 1 ---------- */
+  subgraph cluster_prms_test {
+    label="PRMS TEST";
+    style="filled,rounded";
+    fillcolor="#e9f5ea";
+    color="#7ab894";
+    fontsize=13;
+
+    PrmsClientTest [label="prtest.ciat.cgiar.org\n(nginx)" fontname="Courier"];
+    PrmsServerTest [label="prtest-back.ciat.cgiar.org\n(container, Jenkins)" fontname="Courier"];
+    PrmsDbTest [label="prdb (MySQL)\nglobal_parameters.\nOTP_ALLOWED_EMAIL_DOMAINS\notp_challenges" fontname="Courier" shape=cylinder style="filled" fillcolor="#ffffff" color="#7ab894"];
+
+    { rank=same; PrmsClientTest; PrmsServerTest; PrmsDbTest; }
+    PrmsClientTest -> PrmsServerTest;
+    PrmsServerTest -> PrmsDbTest;
+  }
+
+  /* ---------- PRMS PROD (planned) — row 2 ---------- */
+  subgraph cluster_prms_prod {
+    label="PRMS PROD (planned — same shape)";
+    style="filled,rounded,dashed";
+    fillcolor="#eaf5ea";
+    color="#5a9f6e";
+    fontsize=13;
+
+    PrmsClientProd [label="reporting.cgiar.org\n(planned)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#5a9f6e"];
+    PrmsServerProd [label="PROD server\n(planned)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#5a9f6e"];
+    PrmsDbProd [label="PROD MySQL\n(planned)" fontname="Courier" shape=cylinder style="rounded,dashed,filled" fillcolor="#ffffff" color="#5a9f6e"];
+
+    { rank=same; PrmsClientProd; PrmsServerProd; PrmsDbProd; }
+    PrmsClientProd -> PrmsServerProd [style=dashed color="#5a9f6e"];
+    PrmsServerProd -> PrmsDbProd [style=dashed color="#5a9f6e"];
+  }
+
+  /* ---------- Shared / managed — row 3 ---------- */
+  subgraph cluster_managed {
+    label="Shared / managed";
+    style="filled,rounded";
+    fillcolor="#f2f2f2";
+    color="#888888";
+    fontsize=13;
+
+    RabbitBroker [label="RabbitMQ broker (AMQPS)" fontname="Courier"];
+    NotifLambda [label="email-notifications-microservice\n(Lambda, IBD-DEV us-east-1)" fontname="Courier"];
+    SmtpRelay [label="CGIAR SMTP relay" fontname="Courier"];
+    Mailbox [label="user mailbox" fontname="Courier"];
+
+    { rank=same; RabbitBroker; NotifLambda; SmtpRelay; Mailbox; }
+    RabbitBroker -> NotifLambda -> SmtpRelay -> Mailbox;
+  }
+
+  /* ---------- AUTH microservice + Cognito (greyed, not involved) — row 4 ---------- */
+  subgraph cluster_authms {
+    label="AUTH microservice + Cognito pools\nused by SAML/password paths only; no OTP change";
+    style="filled,rounded,dashed";
+    fillcolor="#f2f2f2";
+    color="#999999";
+    fontsize=13;
+    fontcolor="#666666";
+
+    AuthMsTest [label="authtest-ibd" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+    AuthMsProd [label="auth-ibd" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+    CognitoTest [label="Cognito TEST\nOST-TOC us-east-1\n(IBD-DEV)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+    CognitoProd [label="Cognito PROD\n(another AWS account)" fontname="Courier" style="rounded,dashed,filled" fillcolor="#ffffff" color="#999999" fontcolor="#666666"];
+
+    { rank=same; AuthMsTest; AuthMsProd; CognitoTest; CognitoProd; }
+    AuthMsTest -> CognitoTest [style=dashed color="#999999" arrowhead=none];
+    AuthMsProd -> CognitoProd [style=dashed color="#999999" arrowhead=none];
+  }
+
+  /* ---------- Retired — row 5 ---------- */
+  subgraph cluster_retired {
+    label="Retired 2026-09-12 — remove in TEST";
+    style="filled,rounded,dotted";
+    fillcolor="#f7f2f2";
+    color="#a55a5a";
+    fontsize=13;
+    fontcolor="#a55a5a";
+
+    SamStack [label="SAM stack\nprms-cognito-otp-triggers-test\n(3 Lambdas)" fontname="Courier" shape=box style="rounded,dotted,filled" fillcolor="#ffffff" color="#a55a5a" fontcolor="#a55a5a"];
+    LambdaConfig [label="pool LambdaConfig" fontname="Courier" style="rounded,dotted,filled" fillcolor="#ffffff" color="#a55a5a" fontcolor="#a55a5a"];
+
+    { rank=same; SamStack; LambdaConfig; }
+    SamStack -> LambdaConfig [style=dotted color="#a55a5a" arrowhead=none];
+  }
+
+  /* ---------- Cross-cluster runtime relationships ---------- */
+  PrmsServerTest -> RabbitBroker [label="publish (send)" color="#1a1a1a" penwidth=1.6];
+  Mailbox -> PrmsServerTest [style=invis];
+
+  /* AUTH/Cognito used by SAML/password only — drawn without affecting rank order */
+  PrmsServerTest -> AuthMsTest [label="SAML / password paths" style=dashed color="#999999" constraint=false];
+  PrmsServerProd -> AuthMsProd [style=dashed color="#999999" constraint=false];
+
+  /* PROD mirrors TEST shape (planned) */
+  PrmsServerProd -> RabbitBroker [style=dashed color="#5a9f6e" label="planned"];
+
+  /* Retired stack — dotted, no live traffic; ordering only, no visible cross edge */
+  RabbitBroker -> SamStack [style=invis];
+
+  /* ---------- Deploy path note — row 6 ---------- */
+  subgraph cluster_deploy {
+    label="Deploy path";
+    style="filled,rounded";
+    fillcolor="#fbfbe0";
+    color="#b8b85a";
+    fontsize=11;
+    DeployNote [shape=note style="filled" fillcolor="#ffffff" color="#b8b85a" fontsize=11 fontname="Helvetica"
+      label="PRMS release pipeline (Jenkins) — migration\n1788740000000-OTP-challenges applied on deploy;\nno Cognito/Lambda/SES steps."];
+  }
+
+  /* ---------- Key rules + Legend, below everything ---------- */
+  subgraph cluster_notes {
+    label="";
+    style=invis;
+    { rank=same; KeyRules; LegendNote; }
+
+    KeyRules [shape=note style="filled" fillcolor="#fbfbe0" color="#b8b85a" fontsize=11 fontname="Helvetica"
+      label="Key rules\lAllow-list: global_parameters.OTP_ALLOWED_EMAIL_DOMAINS\lOtp state: otp_challenges (MySQL, PRMS-owned)\lNo Cognito/Lambda/SES steps in the deploy path\l"];
+
+    LegendNote [shape=note style="filled" fillcolor="#ffffff" color="#999999" fontsize=11 fontname="Helvetica"
+      label="Legend\lSolid = in use\lDashed green = planned PROD\lDashed grey = not involved (SAML/password only, no OTP change)\lDotted grey = retired (remove in TEST)\l"];
+  }
+
+  SamStack -> DeployNote [style=invis];
+  DeployNote -> KeyRules [style=invis];
+  LambdaConfig -> LegendNote [style=invis];
+}

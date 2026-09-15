@@ -1,0 +1,11 @@
+{
+  "ChallengeName": "EMAIL_OTP",
+  "Session": "<redacted>",
+  "ChallengeParameters": {
+    "CODE_DELIVERY_DELIVERY_MEDIUM": "EMAIL",
+    "CODE_DELIVERY_DESTINATION": "j***@g***"
+  },
+  "AvailableChallenges": [
+    "EMAIL_OTP"
+  ]
+}

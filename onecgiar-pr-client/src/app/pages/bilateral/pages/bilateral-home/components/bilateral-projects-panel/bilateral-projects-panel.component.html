@@ -283,37 +283,37 @@
 
         <!-- 2. LIST VIEW (Dense Table) -->
         @if (viewMode() === 'list') {
-          <div class="bpp_table_wrapper">
+          <div class="bpp_table_wrapper" tabindex="0" role="region" aria-label="Projects catalog table">
             <table class="bpp_table">
               <thead>
                 <tr>
-                  <th style="width: 130px;">Code</th>
-                  <th>Project Title</th>
-                  <th style="width: 320px;">Science Programs & Allocations</th>
-                  <th style="width: 150px; text-align: right;">Action</th>
+                  <th scope="col" class="bpp_col_code">Code</th>
+                  <th scope="col" class="bpp_col_title">Project Title</th>
+                  <th scope="col" class="bpp_col_sp">Science Programs & Allocations</th>
+                  <th scope="col" class="bpp_col_action">Action</th>
                 </tr>
               </thead>
               <tbody>
                 @for (project of filteredProjects(); track project.id) {
                   <tr class="bpp_table_row">
-                    <td>
+                    <td class="bpp_td_code">
                       <span class="bpp_code_pill">{{ project.shortName }}</span>
                     </td>
-                    <td>
+                    <td class="bpp_td_title">
                       <div class="bpp_table_title" [title]="project.fullName || project.shortName">
                         {{ project.fullName || project.shortName }}
                       </div>
                       @if (project.summary || project.description) {
-                        <div class="bpp_table_summary">
+                        <div class="bpp_table_summary" [title]="project.summary || project.description">
                           {{ project.summary || project.description }}
                         </div>
                       }
                     </td>
-                    <td>
+                    <td class="bpp_td_sp">
                       <div class="bpp_sp_chips">
                         @for (sp of project.sciencePrograms; track sp.programId) {
                           <span class="bpp_sp_chip">
-                            {{ sp.spShortName || sp.spName }}
+                            <span>{{ sp.spShortName || sp.spName }}</span>
                             @if (sp.allocation) {
                               <span class="bpp_sp_chip_alloc">{{ sp.allocation | number:'1.0-0' }}%</span>
                             }
@@ -321,12 +321,12 @@
                         }
                       </div>
                     </td>
-                    <td style="text-align: right;">
+                    <td class="bpp_td_action">
                       <a class="bpp_cta_btn bpp_cta_btn--table"
                          [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
                          (click)="selectAndCreate(project)">
                         <i class="pi pi-plus"></i>
-                        Create result
+                        <span>Create result</span>
                       </a>
                     </td>
                   </tr>

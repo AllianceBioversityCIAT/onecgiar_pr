@@ -513,40 +513,26 @@
             </button>
           </div>
         } @else if (showWholeBoardEmpty()) {
-          <div
-            class="mx-[16px] my-[14px] flex flex-1 flex-col items-center justify-center gap-[12px] rounded-[12px] border border-dashed border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] p-[24px] text-center sm:mx-[32px]">
-            <div class="flex h-[44px] w-[44px] items-center justify-center rounded-[12px] bg-[var(--pr-color-primary-50)]">
-              <span class="material-icons-round text-[22px] text-[var(--pr-color-primary-300)]" aria-hidden="true">view_kanban</span>
-            </div>
-            <p class="m-0 text-[14px] font-semibold text-[var(--pr-text-heading)]">Nothing on your board yet</p>
-            <p class="m-0 max-w-[360px] text-[12px] leading-[1.5] text-[var(--pr-text-muted)]">
-              Results you create in {{ programmeName() || 'this program' }} will show up here, grouped by status.
-            </p>
-            <div class="mt-[4px] flex items-center gap-[10px]">
-              <a
-                class="inline-flex h-[30px] items-center rounded-[8px] bg-gradient-to-r from-[#6b6dc4] to-[#6461bc] px-[14px] text-[12px] font-semibold text-white no-underline"
-                [routerLink]="reportingPath()"
-                queryParamsHandling="preserve">
-                Go to Reporting
-              </a>
-              <button type="button" class="text-[12px] font-semibold text-[var(--pr-color-primary-400)]" (click)="seeAllResults()">
-                See all program results
-              </button>
-            </div>
-          </div>
+          <app-sp-tab-empty-state
+            testId="my-work-empty"
+            icon="view_kanban"
+            title="Nothing on your board yet"
+            [description]="'Results you create in ' + (programmeName() || 'this program') + ' will show up here, grouped by status.'"
+            primaryLabel="Go to Reporting"
+            [primaryRouterLink]="reportingPath()"
+            secondaryLabel="See all program results"
+            (secondaryAction)="seeAllResults()" />
         } @else if (showFilteredEmpty()) {
           <!-- `MWB-T-9`: the board emptied by the toolbar, not by the absence of results. Distinct
                copy and a single Clear-filters action — the "Nothing on your board yet" panel above
                would tell the user to go report results they demonstrably already have. -->
-          <div
-            class="mx-[16px] my-[14px] flex flex-1 flex-col items-center justify-center gap-[10px] rounded-[12px] border border-dashed border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[24px] text-center sm:mx-[32px]"
-            data-testid="my-work-filtered-empty">
-            <p class="m-0 text-[14px] font-semibold text-[var(--pr-text-heading)]">No results match these filters</p>
-            <p class="m-0 max-w-[360px] text-[12px] leading-[1.5] text-[var(--pr-text-muted)]">
-              Try removing a filter or widening your search to see more of your board.
-            </p>
-            <button type="button" class="text-[12px] font-semibold text-[var(--pr-color-primary-400)]" (click)="clearAll()">Clear filters</button>
-          </div>
+          <app-sp-tab-empty-state
+            testId="my-work-filtered-empty"
+            variant="filtered"
+            title="No results match these filters"
+            description="Try removing a filter or widening your search to see more of your board."
+            secondaryLabel="Clear filters"
+            (secondaryAction)="clearAll()" />
         } @else if (showBoard()) {
           <!-- `MWB-T-7` (4): keyed on `boardRegroupKey()` (scope/phase) so a scope or phase switch
                remounts this container and replays its entrance fade once; per-row/card updates
@@ -576,7 +562,7 @@
                   <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-color-primary-400)]"
                     >Needs my action</span
                   >
-                  <app-my-work-column [column]="editing" />
+                  <app-my-work-column [column]="editing" (deleted)="onResultDeleted()" />
                 </div>
               }
 
@@ -586,7 +572,7 @@
                   <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]">{{
                     first ? 'Waiting on others' : ''
                   }}</span>
-                  <app-my-work-column [column]="col" />
+                  <app-my-work-column [column]="col" (deleted)="onResultDeleted()" />
                 </div>
               }
 
@@ -597,7 +583,7 @@
                     class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-text-subtle)]"
                     >{{ first ? 'Done' : '' }}</span
                   >
-                  <app-my-work-column [column]="col" />
+                  <app-my-work-column [column]="col" (deleted)="onResultDeleted()" />
                 </div>
               }
 
@@ -621,7 +607,8 @@
                     [rail]="closedIsRail()"
                     [collapsed]="closedIsRail()"
                     [collapsible]="!closedCollapsed() && !isNarrow()"
-                    (expandToggle)="toggleClosed()" />
+                    (expandToggle)="toggleClosed()"
+                    (deleted)="onResultDeleted()" />
                 </div>
               }
             </div>
