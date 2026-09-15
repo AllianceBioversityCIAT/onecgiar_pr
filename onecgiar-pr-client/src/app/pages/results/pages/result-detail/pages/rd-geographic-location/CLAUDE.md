@@ -1,6 +1,6 @@
 # rd-geographic-location
 
-**Verified:** 2026-09-10 · branch qa-development-2026-ss · UCA-T-7 rework attempt 2 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-09-10 attempt 1 (FAILed) · 2026-08-26 · branch performance-refactor · 75d56f2cd
+**Verified:** 2026-09-15 · branch yzuniga/qa-bugs-2026-09 · el `0` de "sin ámbito" viaja como NULL (barrido 15-sep); prior: 2026-09-10 · branch qa-development-2026-ss · UCA-T-7 rework attempt 2 (`docs/specs/changes/unsaved-changes-alert/`); prior: 2026-09-10 attempt 1 (FAILed) · 2026-08-26 · branch performance-refactor · 75d56f2cd
 
 ## Qué es
 Sección "Geographic location" del detalle de un resultado: alcance geográfico (global / regional /
@@ -92,6 +92,18 @@ el flujo "unsaved changes" de `docs/specs/changes/unsaved-changes-alert/`:
   resultado 5453 fase 30). Ahora la pregunta y su entrada comparten el mismo `@if
   (showExtraGeoScopeQuestion())` y el rótulo sale de FieldsManager. **Regla: no registres una
   entrada de completitud para un control que FieldsManager puede ocultar.**
+- ⚠️ 🔴 **El `0` de "sin ámbito" NO se puede reenviar: rompe la FK con un 500 mudo.** El servidor
+  emite `geo_scope_id: 0` como su propio marcador de "ninguno" (`geographic-location.service.ts`:
+  `let scope = 0`), pero `clarisa_geographic_scope` sólo tiene 1, 2, 3, 5 y 50 — **no existe el 0**.
+  Devolverlo tal cual mataba el PATCH con
+  `Cannot add or update a child row: a foreign key constraint fails (… FK_c02a8848d0317d55d1bd882833e …)`,
+  y **el reportero no veía nada**: ni toast, ni mensaje; Save draft parecía no hacer nada. Medido el
+  15-sep-2026: **40 de 60** resultados de fase 2026 muestreados tienen `geo_scope_id = 0`, y el 500
+  se reprodujo en 5 de 7 tipos en fase 2025. Guardado es NULL, así que NULL es lo que va en el
+  payload (`performSave()`), igual que ya hacía `extra_geo_scope_id` con su `?? null`. Control
+  positivo: con ámbito elegido el mismo guardado seguía y sigue dando `PATCH 200` con el país intacto.
+  🛑 **La raíz está en el back y sigue viva**: `geographic-location.service.ts:46` escribe
+  `geographic_scope_id: createResultGeo.geo_scope_id` sin la guarda que la línea 47 sí tiene.
 - ⚠️ `fillExtraGeographicLocationBody()` hace `Boolean(response.has_extra_geo_scope)`, así que un
   `null` del servidor ("sin responder") se vuelve indistinguible de un "No" real: la pregunta sale
   precontestada y nunca cuenta como faltante. Sólo la llama la rama P25.
