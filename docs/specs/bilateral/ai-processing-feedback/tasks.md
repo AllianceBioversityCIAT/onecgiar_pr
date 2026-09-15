@@ -109,7 +109,7 @@
 
 - **Type:** `client`
 - **Description:** `bilateral-ai-job.model.ts` (pure): `normalizeJob` (ids/dates/booleans from captured payloads), `buildStepperModel` (6 UI steps from status/stage/mix incl. `estimated` flags), `elapsedSeconds(job, now)` from `queue_entry_date`, `mixClass` (two classes), `errorCopy(code)` with a default arm. `BilateralAiService`: normalize on each poll; intervals 5 s → 15 s (after 2 min) → 30 s (still-running); ceiling → `status: 'still_running'` (record kept); `pollJob` branches on HTTP status (404/410 → drop record + stop; 401 → stop; others → keep polling); `panelVisible` signal gating `announce()`; resume record `{ jobId, startedAt, centerAcronym }` kept until terminal/404; `retryJob(jobId)` → endpoint then restart polling on the same id; `expectations(mix)` cached per session; remove the "Processing timed out" copy. `BilateralApiService` +2 calls.
-- **Implements:** `APF-R-7` (scenario, BUT no client failure, AND resume regardless of age, AND stop on 404/410); `APF-R-8` A/B (service side of the single surface); `APF-R-9` (service side: same id, disabled while alive); `APF-R-20`; `APF-R-6` C/D model parts; `APF-AC-11`, `APF-AC-14` (copy table); JD: JA-10, JA-12 (model is input-driven), JA-13
+- **Implements:** `APF-R-7` (scenario, BUT no client failure, AND resume regardless of age, AND stop on 404/410); `APF-R-8` A/B (service side of the single surface); `APF-R-9` (service side: same id, disabled while alive); `APF-R-20`; `APF-R-6` C/D model parts; `APF-AC-11`, `APF-AC-13` (gate: not visible → notice set), `APF-AC-14` (copy table); JD: JA-10, JA-12 (model is input-driven), JA-13
 - **Design refs:** §6.2 (model, service, API), `APF-DD-6`, `APF-DD-7`, `APF-DD-9`
 - **Files (expected):** `onecgiar-pr-client/src/app/pages/bilateral/bilateral-ai-job.model.ts` (+ spec), `services/bilateral-ai.service.ts` (+ spec), `shared/services/api/bilateral-api.service.ts` (+ spec), `pages/bilateral/bilateral-ai-job.fixtures.ts` (captured `getJob` payloads: pending with position, processing per stage, retrying, failed per code, completed)
 - **Depends on:** — (contract frozen in design §4.1/§3.1; runs in parallel with the server tasks) · **Blocks:** `APF-T-6`, `APF-T-7`
@@ -164,7 +164,7 @@
 
 - **Type:** `client`
 - **Description:** `AiProvenanceNoticeComponent` (`variant: banner | badge | line`, one copy constant, info token pair, full sentence in `aria-label`/`title` for the badge). Mount: Draft Results list header (line, when ≥ 1 AI draft), draft card (badge — replaces the ad-hoc `bp-ai-badge` copy), promoted result editor (banner, dismissible per session via `sessionStorage`, only when `creation_method = 'AI'`), result detail read-only view (badge), completion dialog (line above actions on success).
-- **Implements:** `APF-R-12` (scenario, table of five surfaces, BUT absent on manual results, AND persists after edits); `APF-AC-18`; `APF-R-8` B (dialog unchanged otherwise — regression test)
+- **Implements:** `APF-R-12` (scenario, table of five surfaces, BUT absent on manual results, AND persists after edits); `APF-AC-18`; `APF-R-8` B and `APF-AC-13` (terminal while elsewhere → dialog only, unchanged otherwise — regression test through the real service with `panelVisible = false`)
 - **Design refs:** §6.2 (notice, dialog), §6.3 provenance tokens, `APF-DD-10`
 - **Files (expected):** `components/ai-provenance-notice/ai-provenance-notice.component.{ts,html,spec.ts}`, `pages/my-draft-results/my-draft-results.component.{html,spec.ts}`, `pages/bilateral-result-creator/bilateral-result-creator.component.{html,spec.ts}` (or `section-general-info` header — locate at execute), the read-only detail template + spec, `components/bilateral-ai-completion-dialog/bilateral-ai-completion-dialog.component.{html,spec.ts}`
 - **Depends on:** — (disjoint from `APF-T-6/7`; check the pre-flight uncommitted-edits rule for `my-draft-results` and `bilateral-result-creator`) · **Blocks:** `APF-T-10`
@@ -244,7 +244,7 @@ APF-T-8 (provenance notice ×5 + dialog line) ┘ (disjoint; joins at T-10)
 | R-5 scenario · BUT 409 alive/completed · AND owner-only + no re-upload + 410 | T-4 · live T-10 (410) |
 | R-6 A queued copy · A AND update in place · B stages · B BUT no percentage · B AND aria-live · C retrying · C AND stepper not failed · D range · D BUT < 5 samples · D AND served by API | T-6 (render) · T-5 (model) · T-4 (API) · live T-10 |
 | R-7 still running · BUT no client failure / copy removed · AND resume regardless of age · AND stop on 404/410 | T-5 · T-6 (render) |
-| R-8 A inline only · B dialog only · C copy by code · C BUT no raw text | T-5 (gate) · T-6 (inline, copy) · T-8 (dialog regression) · live T-10 |
+| R-8 A inline only · B dialog only (AC-13) · C copy by code · C BUT no raw text | T-5 (gate) · T-6 (inline, copy) · T-8 (dialog regression, AC-13) · live T-10 |
 | R-9 same id · BUT disabled while alive · AND 410 → form | T-5 · T-6 · live T-10 |
 | R-10 chip · BUT other centers / after terminal · AND keyboard, name, reduced motion | T-7 · T-9 (375) · live T-10 |
 | R-11 disclosure · BUT selection/cards unchanged | T-7 |
