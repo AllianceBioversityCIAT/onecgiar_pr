@@ -66,3 +66,35 @@
 **Decisions made:** none beyond the design as written — no deviation from `design.md` §5.2.
 
 **Issues encountered:** none.
+
+### `KPH-T-3` — Patch `result-creator.component.ts` and `aow-hlo-create-modal.component.ts` in place
+
+- **Final status:** PASS
+- **Date:** 2026-09-15
+- **Attempts:** 1
+- **Requirements covered:** `KPH-R-4`, both Scenarios
+
+**Attempt 1**
+
+- **Implementer (akili-implementer wrapper, effort medium, skills: `angular-developer`):**
+  - Files changed: `result-creator.component.ts` + spec, `aow-hlo-create-modal.component.ts` + spec.
+  - Copied the same extended regex pattern from `KP_HANDLE_REGEX` into both files' local literals (not imported — per `KPH-DD-1`); imported only the pure `normalizeKpHandle` into both; called it on the validated handler before the API call in each file's own idiom (`result-creator`: plain field assignment; `aow-hlo-create-modal`: `signal.set({...})` spread, preserving the file's existing pattern).
+  - TDD evidence: both new regression tests red (`Expected: false, Received: true`) before the fix, green after. `npx jest --silent --no-coverage --testPathPattern="(result-creator|aow-hlo-create-modal).component"` → 326 passed / 326 total. Lint clean.
+  - Not Done / Assumptions: none reported.
+- **Reviewer (akili-reviewer wrapper, lens checklist mode; advisory block suppressed — diff ~40 LOC, per persona's own depth rule):**
+  - `STATUS: PASS`. Independently compared the copied regex character-by-character against `KPH-T-1`'s canonical `KP_HANDLE_REGEX` — byte-identical, confirming no regression on the existing URL alternatives (`KPH-AC-3`) and no widening (`KPH-R-5`) by construction. Confirmed `KPH-DD-1` respected: neither file imports `validateKpHandle`, only the pure `normalizeKpHandle`. Confirmed `normalizeKpHandle` runs after validation/error-reset and before both the API call and the persisted `handler` assignment in both files — satisfying the Scenario's `BUT` clause (normalized value persisted, not the typed bare string), not just the "sent to the API" half. Verified the pre-existing unsupported-handle rejection tests in both specs survive unchanged. Noted (not a gap): the `99999/1` over-acceptance negative case is `KPH-T-1`'s test responsibility per `requirements.md` §6, not this task's — sound delegation since the regex is proven byte-identical to the one that test already covers.
+
+**Verification:** `npx jest --silent --no-coverage --testPathPattern="(result-creator|aow-hlo-create-modal).component"` — 326/326 passed. `npx ng lint --quiet` — clean.
+
+**Decisions made:** none beyond the design as written — no deviation from `design.md` §5.3 / `KPH-DD-1`.
+
+**Issues encountered:** none.
+
+## Summary — all tasks complete
+
+All three tasks (`KPH-T-1`, `KPH-T-2`, `KPH-T-3`) PASSed on the first attempt, no rework, no pivots, no HALTs. Every regression test was confirmed red before its corresponding fix and green after. The reported bug (bare CGSpace handle rejected in Manual entry) is fixed at its root — the shared `KP_HANDLE_REGEX` — and the same fix reached all three duplicated Sync handlers, including the two the reviewer independently confirmed keep their local regex copies per `KPH-DD-1` rather than being folded into an unrequested de-duplication refactor.
+
+**Open items carried forward (from `tasks.md` §7 Cleanup):**
+- Update `.../shared/report-result/CLAUDE.md`'s "Dónde se usa"/"Pendiente" notes and re-stamp `Verified:` — named as this spec's own deliverable in `tasks.md` §7 and `design.md`'s cross-references ("update after execution"); addressed in a follow-up commit on this branch.
+- `KPH-OQ-1` (optional live QA on a real MELSpace/WorldFish bare handle) — not performed in this session; recommended before/at rollout if a test item is available (see `tasks.md` §6).
+- The deferred de-duplication of `result-creator.component.ts`/`aow-hlo-create-modal.component.ts` onto the shared validator (`KPH-DD-1`) remains open, tracked outside this spec.

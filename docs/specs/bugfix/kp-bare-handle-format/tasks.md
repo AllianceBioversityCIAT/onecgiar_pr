@@ -6,7 +6,7 @@
 - **Linked spec:** `docs/specs/bugfix/kp-bare-handle-format/requirements.md` + `design.md`
 - **Depth:** Lite (Bug Mode)
 - **Owner / driver:** M.Giraldo@cgiar.org
-- **Status:** in-progress
+- **Status:** done
 
 ## 2. Pre-flight checklist
 
@@ -55,7 +55,7 @@
   - [ ] Lint clean; `npx jest --silent --no-coverage --testPathPattern="report-result-form.component.spec"` green.
   - [ ] Code merged via `🔧 fix(report-result-form): accept bare handle in Manual entry Sync and use the shared validator`.
 
-### [ ] `KPH-T-3` — Patch `result-creator.component.ts` and `aow-hlo-create-modal.component.ts` in place
+### [x] `KPH-T-3` — Patch `result-creator.component.ts` and `aow-hlo-create-modal.component.ts` in place
 
 - **Type:** `client`
 - **Description:** In both files' `GET_mqapValidation()` (`result-creator.component.ts:439`, `aow-hlo-create-modal.component.ts:414`), replace the local `regex` literal with the same extended pattern from `KPH-T-1` (copied, not imported — matches `KPH-DD-1`), and insert a call to the newly-exported `normalizeKpHandle()` (imported from `kp-handle.validator.ts`) on the validated value before it is assigned to `handler` / `createResultBody().handler` and sent to each file's `GET_mqapValidation` call. No other logic in either handler changes.
