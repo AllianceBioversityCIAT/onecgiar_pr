@@ -122,6 +122,8 @@
                   [busy]="validatingHandler() || creatingResult()"
                   [phaseYear]="phaseYear()"
                   [isAdmin]="isAdmin()"
+                  [programCode]="entityAowService.entityDetails()?.officialCode || ''"
+                  [programName]="entityAowService.entityDetails()?.shortName || entityAowService.entityDetails()?.name || ''"
                   (itemSelected)="onCgspaceItemSelected($event)"
                   (switchToManual)="kpEntryMode.set('manual')">
                 </app-kp-cgspace-browse>

@@ -1428,4 +1428,208 @@ describe('KpCgspaceBrowseComponent', () => {
       windowOpenSpy.mockRestore();
     });
   });
+
+  describe('KPAM: Science Program Accelerator Match and Badging', () => {
+    const createItem = (id: string, title: string, accelerators?: string[]): CgspaceItemDto => ({
+      uuid: `uuid-${id}`,
+      handle: `10568/${id}`,
+      handleUrl: `https://hdl.handle.net/10568/${id}`,
+      itemUrl: `https://cgspace.cgiar.org/items/uuid-${id}`,
+      title,
+      type: 'Journal Article',
+      year: 2026,
+      authors: ['Author One'],
+      affiliations: ['Alliance of Bioversity and CIAT'],
+      countries: ['Kenya'],
+      doi: null,
+      uri: `https://hdl.handle.net/10568/${id}`,
+      repository: 'cgspace',
+      programAccelerators: accelerators
+    });
+
+    describe('Gate D2 / KPAM-AC-4: String Normalization and Matching (matchesProgram)', () => {
+      beforeEach(() => {
+        fixture.componentRef.setInput('programCode', 'SP01');
+        fixture.componentRef.setInput('programName', 'Sustainable Farming');
+        fixture.detectChanges();
+      });
+
+      const namingVariations = [
+        { label: 'Exact program name', accelerator: 'Sustainable Farming' },
+        { label: 'Prefixed code and name (SP01 - Sustainable Farming)', accelerator: 'SP01 - Sustainable Farming' },
+        { label: 'Code only (SP01)', accelerator: 'SP01' },
+        { label: 'Case-insensitive lowercase (sustainable farming)', accelerator: 'sustainable farming' },
+        { label: 'Whitespace padded (  Sustainable Farming  )', accelerator: '  Sustainable Farming  ' },
+        { label: 'Hyphenated naming (Sustainable-Farming)', accelerator: 'Sustainable-Farming' },
+        { label: 'Colon separator (SP01: Sustainable Farming)', accelerator: 'SP01: Sustainable Farming' },
+        { label: 'Parentheses format (Sustainable Farming (SP01))', accelerator: 'Sustainable Farming (SP01)' }
+      ];
+
+      namingVariations.forEach(({ label, accelerator }) => {
+        it(`should match variation: ${label}`, () => {
+          const item = createItem('test', 'Test Publication', [accelerator]);
+          expect(component.matchesProgram(item)).toBe(true);
+        });
+      });
+
+      it('should match if at least one accelerator in multiple entries matches', () => {
+        const item = createItem('multi', 'Multi Accelerator Paper', ['Agroecology', 'SP01 - Sustainable Farming', 'Policy']);
+        expect(component.matchesProgram(item)).toBe(true);
+      });
+
+      it('should return false for missing, empty, or non-matching accelerators', () => {
+        expect(component.matchesProgram(createItem('none', 'No Accelerators', []))).toBe(false);
+        expect(component.matchesProgram(createItem('undef', 'Undefined Accelerators', undefined))).toBe(false);
+        expect(component.matchesProgram(createItem('diff', 'Different SP', ['SP02 - Climate Resilience']))).toBe(false);
+        expect(component.matchesProgram(createItem('other', 'Other Tag', ['Gender Equality']))).toBe(false);
+      });
+
+      it('should return false when program inputs are empty', () => {
+        fixture.componentRef.setInput('programCode', '');
+        fixture.componentRef.setInput('programName', '');
+        fixture.detectChanges();
+
+        const item = createItem('test', 'Test Publication', ['Sustainable Farming']);
+        expect(component.matchesProgram(item)).toBe(false);
+      });
+    });
+
+    describe('Gate D3 / KPAM-AC-3 / KPAM-R-5 / KPAM-R-6: Soft-Boost Ranking and Non-Restriction', () => {
+      it('should soft-boost matching items to top while preserving all items and relative order', () => {
+        fixture.componentRef.setInput('programCode', 'SP01');
+        fixture.componentRef.setInput('programName', 'Sustainable Farming');
+        fixture.detectChanges();
+
+        const item1 = createItem('1', 'Non-match A', ['Agroecology']);
+        const item2 = createItem('2', 'Match SP01 A', ['SP01 - Sustainable Farming']);
+        const item3 = createItem('3', 'Non-match B', []);
+        const item4 = createItem('4', 'Match SP01 B', ['Sustainable Farming']);
+        const item5 = createItem('5', 'Non-match C', ['SP03 - Nutrition']);
+
+        component.items.set([item1, item2, item3, item4, item5]);
+
+        // KPAM-R-5 / Gate D3: Non-restriction - all 5 items remain present
+        expect(component.displayItems().length).toBe(5);
+
+        // KPAM-R-6 / KPAM-AC-3: Matching items appear first, preserving relative order
+        expect(component.displayItems()).toEqual([item2, item4, item1, item3, item5]);
+        expect(component.matchCount()).toBe(2);
+      });
+
+      it('should return raw items unchanged when matchCount is 0', () => {
+        fixture.componentRef.setInput('programCode', 'SP01');
+        fixture.componentRef.setInput('programName', 'Sustainable Farming');
+        fixture.detectChanges();
+
+        const item1 = createItem('1', 'Paper 1', ['Climate']);
+        const item2 = createItem('2', 'Paper 2', ['Water']);
+
+        component.items.set([item1, item2]);
+        expect(component.matchCount()).toBe(0);
+        expect(component.displayItems()).toEqual([item1, item2]);
+      });
+    });
+
+    describe('Gate D4 / KPAM-AC-2: UI Badging and Left Accent', () => {
+      it('should render [Matches ...] badge and border accent on matching cards only', () => {
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.componentRef.setInput('programCode', 'SP01');
+        fixture.componentRef.setInput('programName', 'Sustainable Farming');
+        fixture.detectChanges();
+
+        const matchingItem = createItem('1', 'Matching Paper', ['Sustainable Farming']);
+        const otherItem = createItem('2', 'Other Paper', []);
+
+        component.status.set('results');
+        component.items.set([otherItem, matchingItem]);
+        fixture.detectChanges();
+
+        const cards = fixture.nativeElement.querySelectorAll('.rounded-xl.p-4.bg-white');
+        expect(cards.length).toBe(2);
+
+        // First displayed card is the soft-boosted matching item
+        const firstCard = cards[0];
+        expect(firstCard.classList.contains('border-l-4')).toBe(true);
+
+        const matchBadge = firstCard.querySelector('.kp-sp-match-badge');
+        expect(matchBadge).toBeTruthy();
+        expect(matchBadge.textContent.trim()).toContain('Matches Sustainable Farming');
+        expect(matchBadge.getAttribute('aria-label')).toBe('Matches Science Program: Sustainable Farming');
+        expect(matchBadge.getAttribute('data-test')).toBe('kp-sp-match-uuid-1');
+
+        // Second displayed card is the non-matching item
+        const secondCard = cards[1];
+        expect(secondCard.classList.contains('border-l-4')).toBe(false);
+        expect(secondCard.querySelector('.kp-sp-match-badge')).toBeNull();
+      });
+    });
+
+    describe('KPAM-AC-5 & KPAM-AC-6: Match Counter and Toggle Chip', () => {
+      it('should display match count and toggle chip when matchCount > 0, and filter when toggled', () => {
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.componentRef.setInput('programCode', 'SP01');
+        fixture.componentRef.setInput('programName', 'Sustainable Farming');
+        fixture.detectChanges();
+
+        const match1 = createItem('1', 'Match 1', ['Sustainable Farming']);
+        const match2 = createItem('2', 'Match 2', ['SP01']);
+        const other1 = createItem('3', 'Other 1', []);
+        const other2 = createItem('4', 'Other 2', ['Climate']);
+        const other3 = createItem('5', 'Other 3', []);
+
+        component.status.set('results');
+        component.items.set([other1, match1, other2, match2, other3]);
+        component.total.set(5);
+        fixture.detectChanges();
+
+        // KPAM-AC-5: Counter displays match count and toggle chip
+        const counter = fixture.nativeElement.querySelector('[data-test="kp-results-counter"]');
+        expect(counter).toBeTruthy();
+        expect(counter.textContent).toContain('2 match Sustainable Farming');
+
+        const toggleBtn = fixture.nativeElement.querySelector('[data-test="kp-only-matches-toggle"]');
+        expect(toggleBtn).toBeTruthy();
+        expect(toggleBtn.textContent.trim()).toContain('Show matches only (2)');
+        expect(toggleBtn.getAttribute('aria-pressed')).toBe('false');
+
+        // Verify default view shows all 5 items
+        expect(component.displayItems().length).toBe(5);
+
+        // KPAM-AC-6: Activate toggle chip
+        toggleBtn.click();
+        fixture.detectChanges();
+
+        expect(component.onlyMatches()).toBe(true);
+        expect(toggleBtn.getAttribute('aria-pressed')).toBe('true');
+        expect(toggleBtn.textContent.trim()).toContain('Show all results');
+        expect(component.displayItems().length).toBe(2);
+        expect(component.displayItems()).toEqual([match1, match2]);
+
+        // Toggle back: restores all 5 items
+        toggleBtn.click();
+        fixture.detectChanges();
+
+        expect(component.onlyMatches()).toBe(false);
+        expect(toggleBtn.getAttribute('aria-pressed')).toBe('false');
+        expect(toggleBtn.textContent.trim()).toContain('Show matches only (2)');
+        expect(component.displayItems().length).toBe(5);
+      });
+
+      it('should not show toggle chip when matchCount is 0', () => {
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.componentRef.setInput('programCode', 'SP01');
+        fixture.componentRef.setInput('programName', 'Sustainable Farming');
+        fixture.detectChanges();
+
+        const item = createItem('1', 'No Match', ['Climate']);
+        component.status.set('results');
+        component.items.set([item]);
+        component.total.set(1);
+        fixture.detectChanges();
+
+        const toggleBtn = fixture.nativeElement.querySelector('[data-test="kp-only-matches-toggle"]');
+        expect(toggleBtn).toBeNull();
+      });
+    });
+  });
 });
