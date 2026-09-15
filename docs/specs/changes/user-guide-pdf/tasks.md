@@ -124,7 +124,7 @@ Block execution until every box is ticked.
   - [ ] Deliberately pointing `readySelector` at a selector that will never appear causes a non-zero exit naming the specific route — verified once as a negative-path check.
   - [ ] Code review confirms no interaction beyond `goto`/read-only queries/`screenshot` (no `.click()` on create/submit/delete controls).
 
-### `UG-T-8` — Resolve the guide's sign-in URL reference (`UG-OQ-4`)
+### `UG-T-8` — Resolve the guide's sign-in URL reference (`UG-OQ-4`) — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** docs
 - **Description:** Obtain, from the user/product owner, the real deployed origin (staging or production) the guide's body text should tell end users to sign in at, since the 6 target routes are `localhost:4200` (capture-only). Record the answer in this task's notes for `UG-T-9` to consume.
@@ -134,7 +134,7 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-9`
 - **Estimate:** XS
 - **Definition of done:**
-  - [ ] A real origin (or an explicit "use a generic phrase, no URL" decision) is confirmed by the user, not guessed.
+  - [x] A real origin (or an explicit "use a generic phrase, no URL" decision) is confirmed by the user, not guessed.
 
 ### `UG-T-9` — Author guide content (intro + 6 sections)
 

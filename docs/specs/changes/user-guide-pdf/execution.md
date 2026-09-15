@@ -81,6 +81,17 @@
 
 ---
 
+### `UG-T-8` — Resolve the guide's sign-in URL reference (`UG-OQ-4`)
+
+- **Status:** PASS (docs task, Leader-recorded — the deliverable is the user's decision, already captured in §3 of this log on 2026-09-15; no code, no Reviewer needed)
+- **Date:** 2026-09-15
+- **Files changed:** `tooling/content/NOTES.md` (new — records the decision for `UG-T-9`).
+- **Decision:** the guide body references **no** environment or URL; generic phrasing only ("sign in to the Reporting Tool"). Confirmed by the user, not guessed (DoD satisfied).
+- **Requirements covered:** `UG-R-11`; closes `UG-OQ-4`.
+- **Final verification result:** PASS.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -107,4 +118,4 @@ Before starting `UG-T-2`, pre-flight environment verification found:
 
 ## 5. Summary (updated as tasks complete)
 
-2 of 16 tasks complete (`UG-T-1`, `UG-T-2`); `UG-T-4`/`UG-T-5`/`UG-T-6` code landed unreviewed in `b885c5f18` — Reviewer pending (see §3a). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+3 of 16 tasks complete (`UG-T-1`, `UG-T-2`, `UG-T-8`); `UG-T-4`/`UG-T-5`/`UG-T-6` code landed unreviewed in `b885c5f18` — Reviewer pending (see §3a). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
