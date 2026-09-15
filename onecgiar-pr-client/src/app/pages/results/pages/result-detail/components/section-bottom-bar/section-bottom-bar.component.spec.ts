@@ -586,33 +586,40 @@ describe('SectionBottomBarComponent', () => {
   });
 
   /*
-   * 15-sep-2026. La vuelta de tuerca del caso de arriba: lo que sobrevive al pliegue es SOLO
-   * `Save draft`. El indicador de campos pendientes se va con la franja, porque al leer hacia
-   * abajo la barra entera tiene que desaparecer — Back, Next, la posición y el contador.
-   * Sigue anclado (no se desmonta) para que el hueco mantenga a `Save draft` en su sitio, así
-   * que lo que se vigila es que quede INVISIBLE y FUERA DE ALCANCE, no que deje de existir.
+   * 15-sep-2026. Lo que se pliega al leer hacia abajo es EL TOOLBAR: la superficie blanca, su
+   * regla superior y el alto que reservaba. Los dos controles que hacen falta mientras se escribe
+   * —cuánto falta y cómo guardar— se quedan, flotando sobre el formulario. jsdom no pinta, así que
+   * lo que se vigila es lo que decide el pintado: qué clases lleva el contenedor y que los dos
+   * controles sigan montados y alcanzables.
    */
-  describe('qué sobrevive al pliegue', () => {
+  describe('qué se pliega y qué se queda flotando', () => {
+    const bar = () => q('[data-testid="section-bottom-bar"]');
     const progress = () => q('[data-testid="section-bottom-bar-progress"]');
 
-    it('fades the progress indicator out and takes it out of reach while folded', async () => {
+    it('drops the white surface, its rule and its reserved height', async () => {
       await build();
       const chromeSE = TestBed.inject(ScrollChromeService);
 
-      // Control positivo: desplegada, el indicador es visible y clicable.
-      expect(progress().className).toContain('opacity-100');
-      expect(progress().className).not.toContain('pointer-events-none');
-      expect(progress().getAttribute('aria-hidden')).toBeNull();
+      // Control positivo: desplegado, el toolbar ES la superficie blanca.
+      expect(bar().className).toContain('bg-white');
+      expect(bar().className).toContain('border-t');
+      expect(bar().className).toContain('min-h-[66px]');
 
       chromeSE.hidden.set(true);
       fixture.detectChanges();
 
-      expect(progress().className).toContain('opacity-0');
-      expect(progress().className).toContain('pointer-events-none');
-      expect(progress().getAttribute('aria-hidden')).toBe('true');
+      expect(bar().className).toContain('bg-transparent');
+      expect(bar().className).not.toContain('bg-white');
+      expect(bar().className).not.toContain('border-t');
+      // Altura cero: es lo que devuelve el espacio a `.rd_scroll` y lo que deja a la fila anclada
+      // dibujándose por encima del área de lectura.
+      expect(bar().className).toContain('min-h-0');
+      expect(bar().className).not.toContain('min-h-[66px]');
     });
 
-    it('keeps Save draft untouched through the fold', async () => {
+    it('keeps the indicator and Save draft mounted and reachable while folded', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal(['Result title', 'Description']);
       await build();
       const chromeSE = TestBed.inject(ScrollChromeService);
 
@@ -620,30 +627,38 @@ describe('SectionBottomBarComponent', () => {
       fixture.detectChanges();
 
       const save = q('[data-testid="section-bottom-bar-save"]');
+      const pending = q('[data-testid="section-bottom-bar-pending"]');
       expect(save).toBeTruthy();
-      // Ni desvanecido ni inalcanzable: el indicador se va, el guardado no.
-      expect(save.closest('[data-testid="section-bottom-bar-progress"]')).toBeNull();
-      expect(save.hasAttribute('aria-hidden')).toBe(false);
+      expect(pending).toBeTruthy();
+      expect(pending.textContent).toContain('2 fields missing');
+      // Nada oculto ni fuera de alcance: el toolbar se va, los controles no.
+      expect(progress().className).not.toContain('opacity-0');
+      expect(progress().className).not.toContain('pointer-events-none');
+      expect(progress().getAttribute('aria-hidden')).toBeNull();
     });
 
-    it('closes the "Still missing" list when the strip folds', async () => {
-      sectionIsDone = false;
-      dataControlMock.fieldFeedbackList = signal(['Result title', 'Description']);
+    /*
+     * Sin la franja blanca detrás, el indicador se apoya directamente sobre el texto del
+     * formulario. Con el toolbar puesto no necesita superficie propia — la franja ya es su fondo.
+     */
+    it('gives the two controls ONE surface, and only once they are floating', async () => {
       await build();
       const chromeSE = TestBed.inject(ScrollChromeService);
+      const anchored = () => q('[data-testid="section-bottom-bar-anchored"]');
 
-      // Control positivo: sin el chip pendiente no habría lista que cerrar y el caso pasaría solo.
-      expect(q('[data-testid="section-bottom-bar-pending"]')).toBeTruthy();
-
-      component.openPending();
-      fixture.detectChanges();
-      expect(component.pendingOpen()).toBe(true);
+      expect(anchored().className).not.toContain('bg-white');
+      expect(anchored().className).not.toContain('rounded-full');
 
       chromeSE.hidden.set(true);
       fixture.detectChanges();
 
-      expect(component.pendingOpen()).toBe(false);
-      expect(q('#sbb-pending-list')).toBeNull();
+      expect(anchored().className).toContain('bg-white');
+      expect(anchored().className).toContain('rounded-full');
+      expect(anchored().className).toContain('shadow-[var(--pr-shadow-2)]');
+      // Una sola cápsula: si cada control se trajera la suya, entre ambas se leería el formulario.
+      expect(anchored().contains(q('[data-testid="section-bottom-bar-save"]'))).toBe(true);
+      expect(anchored().contains(progress())).toBe(true);
+      expect(progress().className).not.toContain('bg-white');
     });
   });
 });

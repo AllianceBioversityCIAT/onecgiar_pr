@@ -16,7 +16,16 @@
      La superficie —blanco y regla superior— es del contenedor EXTERIOR, que es quien tiene que
      seguir pintando el piso cuando la franja ya no está; su `min-h` reserva justo el alto de la
      fila anclada más su respiro. -->
-<div data-testid="section-bottom-bar" class="relative min-h-[66px] w-full border-t border-[var(--pr-border)] bg-white">
+<!-- 🛑 La superficie blanca ES el toolbar, y es lo que se va al leer hacia abajo (Yeck,
+     15-sep-2026): el blanco, su regla superior y el alto que reservaba. Los dos controles que el
+     reportero necesita mientras escribe —cuánto le falta y cómo guardar— NO se van: se quedan
+     FLOTANDO sobre el formulario. Eso sale solo de colapsar este contenedor: la fila de abajo está
+     anclada a él con `bottom`, así que a altura cero se dibuja por encima del área de lectura, y
+     `.rd_scroll` —su hermano, `flex: 1`— se queda con los 66px que esto suelta. -->
+<div
+  data-testid="section-bottom-bar"
+  class="relative w-full"
+  [ngClass]="scrollChromeSE.hidden() ? 'min-h-0 bg-transparent' : 'min-h-[66px] border-t border-[var(--pr-border)] bg-white'">
   <div appChromeFold="down" class="w-full">
     <div class="flex flex-wrap items-center justify-between gap-[16px] px-[40px] py-[14px]">
     <div class="flex items-center gap-[12px]">
@@ -57,21 +66,19 @@
 
   </div>
 
-  <!-- Anclado. De lo que vive aquí, lo único que NUNCA se pliega es `Save draft`: guardar tiene que
-       estar a un clic desde cualquier punto del formulario. `min-w` mantiene honesto el hueco
-       reservado arriba cuando la etiqueta pasa a "Saving…". -->
-  <div class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]">
-      <!-- 🛑 El indicador SÍ se va con la franja (Yeck, 15-sep-2026): al leer hacia abajo se pliega
-           la barra ENTERA — Back, Next, la posición y también "N fields missing" — y solo queda
-           `Save draft`. Se desvanece en vez de desmontarse a propósito: el hueco que ocupa es lo que
-           mantiene a `Save draft` clavado en su sitio, así que quitarlo del flujo haría saltar el
-           botón a la derecha en cada pliegue. Con `pointer-events-none` tampoco queda un objetivo
-           invisible sobre la franja. -->
-      <div
-        class="flex items-center gap-[12px] transition-[opacity,transform] duration-200"
-        [ngClass]="scrollChromeSE.hidden() ? 'pointer-events-none translate-y-[6px] opacity-0' : 'translate-y-0 opacity-100'"
-        [attr.aria-hidden]="scrollChromeSE.hidden() ? 'true' : null"
-        data-testid="section-bottom-bar-progress">
+  <!-- Anclado, y lo que queda EN PANTALLA cuando el toolbar se va: cuánto falta y cómo guardar.
+       `min-w` mantiene honesto el hueco reservado arriba cuando la etiqueta pasa a "Saving…".
+       🛑 Flotando necesita superficie propia, y tiene que ser UNA para los dos controles, no una
+       por control: con una cápsula cada uno, por los 12px de separación se leía el formulario de
+       fondo y el conjunto quedaba sucio (medido en pantalla el 15-sep-2026, resultado 9139). Con
+       el toolbar puesto no lleva ninguna — la franja blanca ya es su fondo. -->
+  <div
+    class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]"
+    [ngClass]="scrollChromeSE.hidden() ? 'rounded-full border border-[var(--pr-border)] bg-white pl-[14px] pr-[6px] py-[6px] shadow-[var(--pr-shadow-2)]' : ''"
+    data-testid="section-bottom-bar-anchored">
+      <!-- El indicador se queda cuando el toolbar se va: saber cuánto falta es justo lo que hace
+           falta MIENTRAS se llenan campos. -->
+      <div class="flex items-center gap-[12px]" data-testid="section-bottom-bar-progress">
       @if (isComplete()) {
         <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
              "2 of 7 required" y "5 fields missing" — diciendo lo mismo con dos formas distintas. -->
