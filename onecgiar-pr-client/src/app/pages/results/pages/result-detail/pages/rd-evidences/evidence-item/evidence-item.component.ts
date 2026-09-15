@@ -170,11 +170,36 @@ export class EvidenceItemComponent {
     return this.evidence.link && regex.test(this.evidence.link?.trim());
   }
 
+  /**
+   * 🛑 FUENTE ÚNICA de lo que se acepta. Había TRES listas para la misma regla y no coincidían:
+   * esta validación (9 extensiones), el `accept` del input (6) y el texto bajo el icono (5). El
+   * resultado es el defecto que Yeck encontró el 15-sep-2026: **un `.jpeg` es válido para el
+   * sistema pero el selector de archivos de macOS lo pintaba en gris**, porque el `accept` no lo
+   * incluía. El usuario no puede elegir un archivo que la plataforma sí habría aceptado, y nada le
+   * dice por qué.
+   * 🛑 La lista NO se amplía: son exactamente las que la validación ya daba por buenas.
+   */
+  static readonly ACCEPTED_FILE_TYPES = ['.jpg', '.jpeg', '.png', '.pdf', '.doc', '.docx', '.pptx', '.xlsx', '.xlsm'];
+  static readonly MAX_FILE_SIZE_GB = 1;
+
+  /** Para el `accept` del `<input type="file">`. */
+  get acceptedFileTypes(): string {
+    return EvidenceItemComponent.ACCEPTED_FILE_TYPES.join(',');
+  }
+
+  /** Para lo que se le dice al usuario, derivado de la misma lista y no escrito a mano otra vez. */
+  get acceptedFileTypesLabel(): string {
+    const names = EvidenceItemComponent.ACCEPTED_FILE_TYPES.map(e => e.slice(1).toUpperCase()).join(', ');
+    return `${names} · up to ${EvidenceItemComponent.MAX_FILE_SIZE_GB} GB`;
+  }
+
   validateFileTypes(file: File) {
-    const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.docx', '.pptx', '.jpeg', '.xlsx', '.xlsm'];
-    const extension = '.' + file.name.split('.').pop();
+    // `toLowerCase`: la extensión venía del nombre tal cual, así que `FOTO.JPG` —lo que devuelve
+    // una cámara o un Windows— se rechazaba mientras `foto.jpg` pasaba. La misma imagen, dos
+    // respuestas.
+    const extension = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
     const fileSizeInGB = file.size / (1024 * 1024 * 1024);
-    return validFileTypes.includes(extension) && fileSizeInGB <= 1;
+    return EvidenceItemComponent.ACCEPTED_FILE_TYPES.includes(extension) && fileSizeInGB <= EvidenceItemComponent.MAX_FILE_SIZE_GB;
   }
 
   isInvalidLink(value: string) {

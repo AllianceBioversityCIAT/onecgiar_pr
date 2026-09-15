@@ -27,11 +27,12 @@
       margin: 4px 0;
     }
 
-    // Dropzone — keep the PRMS indigo dashed border (brand), add the mockup rounding/padding/soft bg
+    // 🛑 Este bloque ANIDADO gana por especificidad al de nivel raíz de más abajo, así que tiene
+    // que decir lo mismo o no decir nada. Pisaba el radio, el relleno y el fondo del rediseño del
+    // 15-sep-2026 con los valores anteriores — y `--pr-color-accents-1` es de la paleta previa al
+    // revamp. Se queda solo con lo que aquí es distinto: un poco más de aire dentro del modal.
     .drag-and-drop-field {
-      border-radius: 10px;
-      padding: 40px 0px;
-      background: var(--pr-color-accents-1);
+      padding: 30px 20px;
     }
   }
 
@@ -175,29 +176,62 @@
   }
 }
 
+// Zona de subida — 15-sep-2026. Era un marco de 2px punteado en MORADO SATURADO a ancho completo:
+// el elemento más fuerte del formulario era su caja vacía, por encima de la pregunta que hay que
+// responder antes. El punteado se afina y se apaga; el morado se guarda para el botón y para el
+// momento en que arrastras algo encima, que es cuando la caja sí es la protagonista.
 .drag-and-drop-field {
-  border: 2px dashed var(--pr-color-primary-300);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  padding: 30px 0px;
-  margin-bottom: 0px;
-  transition: all 0.3s ease-in-out;
+  padding: 26px 20px;
+  margin-bottom: 0;
+  border: 1px dashed var(--pr-border-strong);
+  border-radius: 12px;
+  background: var(--pr-surface-subtle);
+  transition: border-color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    border-color: var(--pr-color-primary-200);
+    background: var(--pr-color-primary-25);
+  }
 
   .content {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
+    gap: 10px;
 
-    .title {
-      font-weight: 500;
+    // El icono, en un disco. Suelto y en morado a 40px competía con el botón de justo debajo.
+    .dd_icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--pr-surface-ground);
+      color: var(--pr-text-muted);
+
+      i {
+        font-size: 22px;
+      }
     }
 
+    .title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--pr-text-secondary);
+    }
+
+    // Los formatos van DEBAJO del botón, no encima: es la letra pequeña, y leerla antes de la
+    // acción obliga a procesar nueve extensiones para llegar a un botón que dice "Select file".
     .description {
-      color: rgba(var(--pr-color-black-rgb), 0.5);
-      transition: all 0.3s ease-in-out;
+      font-size: 11px;
+      color: var(--pr-text-subtle);
+      letter-spacing: 0.01em;
     }
   }
 }

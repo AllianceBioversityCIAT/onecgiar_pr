@@ -238,7 +238,11 @@
       margin-top: 2px;
     }
 
-    // La clase de evidencia, ahora un chip junto al nombre. Lleva el color de su sello, así que
+    .ev_kindrow {
+      margin-top: 2px;
+    }
+
+    // La clase de evidencia, en su propia línea bajo el nombre. Lleva el color de su sello, así que
     // enlace y archivo se distinguen dos veces sin repetir una palabra.
     .ev_kind {
       flex: none;
