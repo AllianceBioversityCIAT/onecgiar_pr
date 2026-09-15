@@ -30,6 +30,7 @@ jest.mock('pusher', () => {
 
 describe('AuthService', () => {
   let service: AuthService;
+  let jwtService: JwtService;
   let userService: UserService;
   let userRepository: UserRepository;
   let handlersError: HandlersError;
@@ -224,6 +225,7 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    jwtService = module.get<JwtService>(JwtService);
     otpChallengeService = module.get<OtpChallengeService>(OtpChallengeService);
     emailNotification = module.get<EmailNotificationManagementService>(
       EmailNotificationManagementService,
@@ -2030,6 +2032,126 @@ describe('AuthService', () => {
       expect(stored).not.toContain('a@icrisat.org');
       expect(stored).not.toContain('icrisat.org');
       expect(stored).not.toContain(code);
+    });
+  });
+
+  // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-3, R-10)
+  describe('auth_method claim in the session JWT (BIL-HO-T-3, R-10)', () => {
+    it('singIn (custom credentials route) signs the JWT with auth_method "password"', async () => {
+      jest.spyOn(userRepository, 'findOne').mockResolvedValue(mockUser as any);
+      jest
+        .spyOn(authMicroservice, 'authenticateWithCustomCredentials')
+        .mockResolvedValue(mockAuthResponse as any);
+      jest
+        .spyOn(userRepository, 'updateLastLoginUserByEmail')
+        .mockResolvedValue(undefined);
+
+      await service.singIn({
+        email: 'test@example.com',
+        password: 'password123',
+      } as UserLoginDto);
+
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({ auth_method: 'password' }),
+        { secret: 'test-secret' },
+      );
+    });
+
+    it('validateAuthCode (CGIAR provider callback) signs the JWT with auth_method "saml"', async () => {
+      const mockAuthCodeResponse = {
+        ...mockAuthResponse,
+        userInfo: {
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+        },
+      };
+      jest
+        .spyOn(authMicroservice, 'validateAuthorizationCode')
+        .mockResolvedValue(mockAuthCodeResponse as any);
+      jest
+        .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
+        .mockResolvedValue(mockUser as any);
+      jest.spyOn(userRepository, 'update').mockResolvedValue(undefined as any);
+
+      await service.validateAuthCode({
+        code: 'mock-auth-code',
+      } as AuthCodeValidationDto);
+
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({ auth_method: 'saml' }),
+        { secret: 'test-secret' },
+      );
+    });
+
+    it('completePasswordChallenge (custom credentials route) signs the JWT with auth_method "password"', async () => {
+      jest.spyOn(userRepository, 'findOne').mockResolvedValue(mockUser as any);
+      jest
+        .spyOn(authMicroservice, 'completeNewPasswordChallenge')
+        .mockResolvedValue(mockAuthResponse as any);
+      jest
+        .spyOn(userRepository, 'updateLastLoginUserByEmail')
+        .mockResolvedValue(undefined);
+
+      await service.completePasswordChallenge({
+        username: 'test@example.com',
+        newPassword: 'newPassword123',
+        session: 'mock-session',
+      } as CompletePasswordChallengeDto);
+
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({ auth_method: 'password' }),
+        { secret: 'test-secret' },
+      );
+    });
+
+    it('verifyOtp (email-code verify route) signs the JWT with auth_method "otp"', async () => {
+      jest
+        .spyOn(globalParameterCacheService, 'getParam')
+        .mockResolvedValue('icrisat.org');
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue(mockOtpUser as any);
+      jest
+        .spyOn(userService, 'createOrUpdateUserFromAuthProvider')
+        .mockResolvedValue(mockOtpUser as any);
+
+      const started = await service.startOtp({
+        email: 'a@icrisat.org',
+      } as OtpStartDto);
+      const session = started.response.session as string;
+      const code = codeFromLastEmail();
+
+      await service.verifyOtp({
+        email: 'a@icrisat.org',
+        code,
+        session,
+      } as OtpVerifyDto);
+
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({ auth_method: 'otp' }),
+        { secret: 'test-secret' },
+      );
+    });
+
+    it('the signed payload has exactly the keys id, email, first_name, last_name, auth_method — no more, no less', async () => {
+      jest.spyOn(userRepository, 'findOne').mockResolvedValue(mockUser as any);
+      jest
+        .spyOn(authMicroservice, 'authenticateWithCustomCredentials')
+        .mockResolvedValue(mockAuthResponse as any);
+      jest
+        .spyOn(userRepository, 'updateLastLoginUserByEmail')
+        .mockResolvedValue(undefined);
+
+      await service.singIn({
+        email: 'test@example.com',
+        password: 'password123',
+      } as UserLoginDto);
+
+      const payload = (jwtService.sign as jest.Mock).mock.calls[0][0];
+      expect(Object.keys(payload).sort()).toEqual(
+        ['auth_method', 'email', 'first_name', 'id', 'last_name'].sort(),
+      );
     });
   });
 });

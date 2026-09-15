@@ -29,6 +29,10 @@ import {
 import { OTP_EMAIL_SENDER_NAME, buildOtpEmail } from './otp/otp-email.template';
 import { EmailNotificationManagementService } from '../shared/microservices/email-notification-management/email-notification-management.service';
 
+// @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-3, R-10) — how the session
+// carrying this claim was opened; set by the sign-in path that produced the JWT.
+export type AuthMethod = 'saml' | 'password' | 'otp';
+
 // @akili-spec changes/cognito-email-otp-login (OTP-T-4, OTP-R-9)
 export const OTP_ALLOWED_EMAIL_DOMAINS_PARAM = 'OTP_ALLOWED_EMAIL_DOMAINS';
 
@@ -282,6 +286,8 @@ export class AuthService {
         return this.createSuccessfulLoginResponse(
           existingUser,
           authResponse.tokens,
+          undefined,
+          'password',
         );
       } catch (error) {
         this._logger.error(
@@ -748,7 +754,7 @@ export class AuthService {
 
       // OTP-R-38 — the standard PRMS session, with no Cognito tokens: the API
       // validates only PRMS's own JWT, and nothing downstream reads `auth_tokens`.
-      return this.createSuccessfulLoginResponse(user, null);
+      return this.createSuccessfulLoginResponse(user, null, undefined, 'otp');
     } catch (error) {
       // An account deactivated between the gate above and this call still answers
       // neutrally — `createOrUpdateUserFromAuthProvider` rethrows the inactive case
@@ -1282,7 +1288,12 @@ export class AuthService {
         expiresIn: authResponse.expiresIn,
       };
 
-      return this.createSuccessfulLoginResponse(user, authTokens);
+      return this.createSuccessfulLoginResponse(
+        user,
+        authTokens,
+        undefined,
+        'saml',
+      );
     } catch (error) {
       this._logger.error(`An error ocurred: ${error.message}`, error.stack);
       return this._handlersError.returnErrorRes({ error });
@@ -1338,6 +1349,7 @@ export class AuthService {
         existingUser,
         authResponse.tokens,
         'Password set successfully. Login completed.',
+        'password',
       );
     } catch (error) {
       this._logger.error(
@@ -1359,6 +1371,7 @@ export class AuthService {
     user: any,
     authTokens: any,
     successMessage: string = 'Successful login',
+    authMethod: AuthMethod,
   ) {
     if (!user.obj_role_by_user || user.obj_role_by_user.length === 0) {
       this._logger.warn(`User ${user.email} has no roles assigned`);
@@ -1373,11 +1386,13 @@ export class AuthService {
     }
 
     const jwtToken = this._jwtService.sign(
+      // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-3, R-10)
       {
         id: user.id,
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
+        auth_method: authMethod,
       },
       {
         secret: env.JWT_SKEY,
