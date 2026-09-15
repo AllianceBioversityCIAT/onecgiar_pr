@@ -120,14 +120,45 @@ npm run test:coverage       # Jest with coverage
 npm run test:coverage:html  # Coverage with text-summary, cobertura, lcov reporters
 npm run lint                # ng lint
 npm run lint:fix            # ng lint --fix
+npm run ram                 # memory traffic light + what is holding it (see below)
 npm run cypress:open        # Cypress GUI (E2E)
 npm run cypress:run         # Cypress headless (E2E)
 npm run cypress:component   # Cypress GUI (component testing)
-npm run test:ct             # Cypress component tests, headless
+npm run test:ct             # Cypress component tests, headless, batched + memory-guarded
+npm run test:ct:unbatched   # one Cypress process for every spec — escape hatch, see below
 ```
 
 > Cypress is **local-only** — there is no Cypress GitHub Actions workflow. It exists for local
 > and AI-agent self-verification (see §9 Component tests).
+
+### 🛑 Memory: why `test:ct` is batched and guarded
+
+A component-test run costs a few GB **on top of** whatever the machine already holds, because the
+Angular/webpack dev-server behind component testing keeps the compiled module graph of every spec
+it has served alive for the life of the process. On a 16 GB Mac with a couple of `ng serve`
+already resident that does not produce a red suite — it produces a **frozen laptop**.
+
+Two things protect against it, both in `scripts/`:
+
+- **`scripts/run-ct-batched.js`** — restarts Cypress every `CT_BATCH_SIZE` specs (default 8, or 4
+  when memory is tight) so the module graph is handed back to the OS between batches. It also
+  stops mid-run rather than take the machine down if memory turns red.
+- **`scripts/ram-guard.js`** — measures available RAM and swap first and **refuses to start** when
+  the machine is already out of memory, naming what is holding it. `npm run ram` runs it on its
+  own; `npm run cypress:run` gates on it too.
+
+```bash
+npm run ram                         # green / amber / red + the dev-servers and browsers open
+CT_BATCH_SIZE=2 npm run test:ct     # lower peak, more startup cost
+CT_HEAP_MB=1536 npm run test:ct     # tighter heap cap for both Electron and the dev-server
+RAM_GUARD=off npm run test:ct       # run anyway on a red machine (it will hurt)
+```
+
+**The usual cause of a red machine is not the test run — it is idle dev-servers.** Each warm
+`ng serve` is ~600 MB, and parallel agent sessions accumulate them across worktrees. `npm run ram`
+lists them, plus any headless browser a crashed Playwright/Cypress run left behind (with the `kill`
+command ready to paste). It **never lists a real browser window** — only headless ones, and it
+never kills anything on its own.
 
 ### Coverage thresholds (enforced in `package.json`)
 
