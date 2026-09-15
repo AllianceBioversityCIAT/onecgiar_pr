@@ -7,7 +7,7 @@
 - **Depth:** Full · **Approval Mode:** gated · **Budget (design §Budget):** 9 tasks · ~1,050 LOC · 2 review rounds — `/akili-execute` stops and escalates when actuals exceed this
 - **Owner / driver:** Juan David Delgado
 - **Branch base:** `performance-refactor` (bilateral work never bases on `staging`)
-- **Status:** implementation complete, uncommitted (2026-09-15: T-1…T-7 PASS; T-8 repo part PASS, ops part owner-pending; T-9 owner HITL pending after deploy + config). Open: Pivot Record on R-6's 503 clause, `exchange` envelope vs contract, Jira key → commits. See `execution.md` §Summary.
+- **Status:** merged to `performance-refactor` 2026-09-15 (9 commits, `63e936832..53d1e965d`, fast-forward; no Jira key yet). T-1…T-7 PASS; T-8 repo part PASS, ops part owner-pending; T-9 owner HITL on TEST pending. Open: Pivot Record on R-6's 503 clause, `exchange` envelope vs contract v0.3, Jira key. See `execution.md` §Summary.
 
 ## 2. Pre-flight checklist
 
@@ -39,7 +39,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
   - [x] Entity has no `email`, no claims column, no plaintext code column (0 hits in declarations; doc comments mention what is not stored, as the OTP exemplar does).
   - [x] Unique index on `code_hash`; composite index `(user_id, consumed_at, expires_at)`.
   - [ ] `down` verified locally: `migration:run` then `migration:revert` leaves no table (owner runs migrations; agents never do).
-  - [ ] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: add handoff code table` (held: Jira key pending, owner said no commits for now).
+  - [x] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: add handoff code table` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-2` — `VerifiedSessionGuard` — [x]
 
@@ -55,7 +55,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
 - **Verification:** `npx jest --testPathPattern="verified-session" --silent --reporters=summary` green with ≥ 4 cases: no `req.user` → 401; `req.user = {id: 0}` → 401; header present but no `req.user` (the unverified case) → 401; `req.user = {id: 7}` → pass. *Disqualifier:* a spec that constructs `req.user` from the header itself tests the wrong thing — the guard must be fed `req.user` directly, as the middleware would. *Falsifying input:* an implementation that calls `processUserToken`/`@UserToken()` turns case 3 red.
 - **Definition of done:**
   - [x] `grep -n "UserToken\|headers\['auth'\]\|headers.auth" verified-session.guard.ts` = 0 hits.
-  - [ ] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: verified-session guard` (held: Jira key pending).
+  - [x] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: verified-session guard` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-3` — `auth_method` claim in the session JWT — [x]
 
@@ -72,7 +72,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
 - **Definition of done:**
   - [x] Four callers pass a method; no caller left with the old arity.
   - [x] `expiresIn` and `secret` options untouched (diff shows only the payload line and the parameter).
-  - [ ] Commit `✨ feat(auth) [P2-XXXX]: record auth_method in the session JWT` (held: Jira key pending).
+  - [x] Commit `✨ feat(auth) [P2-XXXX]: record auth_method in the session JWT` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-4` — `BilateralHandoffService` (start, exchange, claims, purge) — [x]
 
@@ -100,7 +100,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
   - [x] `grep -n "SELECT" bilateral-handoff.service.ts` shows no read of the code row before the consume `UPDATE`.
   - [x] `grep -n "randomBytes(32)" bilateral-handoff.service.ts` = 1 hit; no `Math.random`.
   - [ ] Fixture file committed; reviewer compares it to contract v0.3 §4 (**HITL, T-9**) — fixture written and key-tree verified by the Reviewer against the §4 copy; commit held.
-  - [ ] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: mint and exchange handoff codes` (held: Jira key pending).
+  - [x] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: mint and exchange handoff codes` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-5` — Controller, DTOs, guards, Swagger — [x]
 
@@ -118,7 +118,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
   - [x] `grep -n "UserToken" bilateral-handoff.controller.ts` = 0 hits (R-1 DoD from the proposal).
   - [ ] Swagger renders both routes with request/response schemas (`GET /api-docs` locally) — decorators asserted via metadata in the spec; visual check when the owner next runs the app.
   - [x] `npx eslint "src/api/bilateral/**/*.ts" --quiet` clean (touched files; pre-existing prettier debt in `bilateral-center.*` untouched).
-  - [ ] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: handoff start and exchange routes` (held: Jira key pending).
+  - [x] Commit `✨ feat(bilateral-handoff) [P2-XXXX]: handoff start and exchange routes` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-6` — Client API method — [x]
 
@@ -134,7 +134,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
 - **Verification:** `npx jest src/app/shared/services/api/auth.service --silent --no-coverage` green (or T-7's test flushes the exact URL and method). *Disqualifier:* asserting against a hard-coded `localhost` URL — assert against `environment.apiBaseUrl` (repo rule). *Falsifying input:* changing the method to `GET` or the path segment turns the `expectOne` red.
 - **Definition of done:**
   - [x] Name follows `HTTP_METHOD_descriptiveName`; no `Authorization` header set manually.
-  - [ ] Commit `✨ feat(auth-service) [P2-XXXX]: POST_bilateralHandoffStart` (held: Jira key pending).
+  - [x] Commit `✨ feat(auth-service) [P2-XXXX]: POST_bilateralHandoffStart` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-7` — CTA: link → button with mint-then-navigate — [x]
 
@@ -152,7 +152,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
   - [x] Existing tests for `href`/`target`/`rel` removed **and** replaced (not merely deleted) — DD-5.
   - [x] No new `.scss`; `grep -c "class=" html` unchanged ±1 (43 → 44).
   - [x] `npx ng lint --quiet` clean.
-  - [ ] Commit `♻️ refactor(bilateral-page-header) [P2-XXXX]: mint a handoff code before opening the Bulk Uploader` (held: Jira key pending).
+  - [x] Commit `♻️ refactor(bilateral-page-header) [P2-XXXX]: mint a handoff code before opening the Bulk Uploader` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-8` — Configuration and documentation — [~]
 
@@ -170,7 +170,7 @@ Skill map for this spec (from `.agents/model-routing.md`): server tasks → `nes
   - [x] No secret value in any doc (`.cursorrules`); only key names.
   - [ ] Partner acknowledged v0.3 path (owner; decide the `exchange` envelope question first — see `execution.md` T-5).
   - [ ] Keys set in TEST (server ×3 + client `bulkUploaderUrl`), same host (owner / DevOps).
-  - [ ] Commit `📝 docs(bilateral) [P2-XXXX]: handoff env keys and contract change-log row` (held: Jira key pending).
+  - [x] Commit `📝 docs(bilateral) [P2-XXXX]: handoff env keys and contract change-log row` — landed 2026-09-15 without a Jira key (owner's call); add `[P2-XXXX]` when the ticket exists.
 
 ### `BIL-HO-T-9` — HITL verification on TEST
 

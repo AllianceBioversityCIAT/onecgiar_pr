@@ -278,3 +278,21 @@ Untracked/unrelated: `package-lock.json` was already modified at session start (
 - **Attempt 3 fix (test-only) — Reviewer PASS:** R-4 assertion now `qb.update.mock.invocationCallOrder[0] < qb.insert.mock.invocationCallOrder[0]`; red/green proven (moving the invalidation after the INSERT fails exactly that test, `Expected: < 73, Received: 78`); service byte-identical. Reviewer confirmed the two mocks are distinct `jest.fn()`s, each called once in `start` (purge goes through `repository.query`), and that R-7/R-8 stayed non-tautological under the shared-builder mock. jest 27 passed; eslint clean.
 - **T-4 final status: PASS (attempt 3).** Live evidence on the dev DB above (120 s TTL on the DB clock; supersede on re-mint).
 
+
+## Landed — 2026-09-15
+
+Owner asked to commit, push and merge. The temporary WIP commit was split into the spec's nine commits (no Jira key yet — owner's call; messages carry `[SPEC:bilateral/bulk-uploader-handoff]`), pushed to `origin/JuanGuzman-io/fix-bulk-results-uploader`, and `origin/performance-refactor` was fast-forwarded `575649f20..53d1e965d` from this worktree (`git push origin HEAD:performance-refactor`, exit 0). Base moved by four unrelated upstream commits between the rebase and the push; verified no file overlap, scoped server (127) and client (77) tests green on the new base before pushing.
+
+| Commit | Task |
+|---|---|
+| `63e936832` add handoff code table | T-1 |
+| `8660fa108` verified-session guard | T-2 |
+| `dda249ee5` record auth_method in the session JWT | T-3 |
+| `ff32436ad` mint and exchange handoff codes | T-4 |
+| `1c38c4440` handoff start and exchange routes | T-5 |
+| `95c5137c9` handoff env keys and contract change-log row | T-8 (repo) |
+| `aed47d955` POST_bilateralHandoffStart | T-6 |
+| `29299d4be` mint a handoff code before opening the Bulk Uploader | T-7 |
+| `53d1e965d` spec documents | — |
+
+Next: TEST deploy via the pipeline (migration `1789478669369-BilateralHandoffCodes` runs there), keys in TEST, contract v0.4 to the partner (envelope decision), T-9.
