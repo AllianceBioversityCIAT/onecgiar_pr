@@ -34,3 +34,30 @@
     animation: none;
   }
 }
+
+// @akili-spec changes/my-work-editing-reorder (MWER-T-2, design.md §6.4)
+// Jira-like list motion: siblings slide on transform; dropped card settles into place.
+$my-work-drag-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+$my-work-drag-duration: 280ms;
+$my-work-drag-settle: 340ms;
+
+.pr-my-work-editing-drop-list.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-preview) {
+  transition: transform $my-work-drag-duration $my-work-drag-ease;
+}
+
+.pr-my-work-editing-drop-list .cdk-drag-animating {
+  transition: transform $my-work-drag-settle $my-work-drag-ease;
+}
+
+.pr-my-work-editing-drop-list .cdk-drag-placeholder {
+  min-height: 0;
+  transition: transform $my-work-drag-duration $my-work-drag-ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-my-work-editing-drop-list.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-preview),
+  .pr-my-work-editing-drop-list .cdk-drag-animating,
+  .pr-my-work-editing-drop-list .cdk-drag-placeholder {
+    transition: none;
+  }
+}

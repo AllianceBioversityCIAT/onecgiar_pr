@@ -110,6 +110,40 @@ export function orderEditing(rows: ProgrammeResultRow[]): ProgrammeResultRow[] {
   });
 }
 
+// @akili-spec changes/my-work-editing-reorder (MWER-T-1, MWER-R-2, MWER-DD-3)
+/**
+ * Merges a saved manual code sequence with live Editing rows (`MWER-R-2`). Saved codes keep
+ * relative order; rows not in the saved list append after, sorted among themselves by
+ * `orderEditing()`. When `savedCodes` is empty, returns `orderEditing(rows)`. Does not mutate inputs.
+ */
+export function applyManualEditingOrder(rows: ProgrammeResultRow[], savedCodes: readonly string[]): ProgrammeResultRow[] {
+  const source = rows ?? [];
+  if (!savedCodes?.length) return orderEditing(source);
+
+  const byCode = new Map<string, ProgrammeResultRow>();
+  for (const row of source) {
+    const code = row?.code;
+    if (code !== null && code !== undefined && String(code).length) {
+      byCode.set(String(code), row);
+    }
+  }
+
+  const ordered: ProgrammeResultRow[] = [];
+  const used = new Set<string>();
+
+  for (const code of savedCodes) {
+    const key = String(code);
+    const row = byCode.get(key);
+    if (row) {
+      ordered.push(row);
+      used.add(key);
+    }
+  }
+
+  const remainder = source.filter(row => !used.has(String(row?.code ?? '')));
+  return [...ordered, ...orderEditing(remainder)];
+}
+
 /** Every other column's order (`MWB-R-5`): newest `created` first. Does not mutate the input. */
 export function orderByCreatedDesc(rows: ProgrammeResultRow[]): ProgrammeResultRow[] {
   return [...(rows ?? [])].sort((a, b) => createdTime(b) - createdTime(a));

@@ -1,6 +1,7 @@
 @use './styles/fonts.scss' as fonts; // SCSS @use must precede all other rules
 @use './styles/field-card.scss';
 @use './styles/row-menu.scss';
+@use './styles/my-work-drag.scss';
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 // Tailwind's global preflight (base reset) — RE-ENABLED now that PrimeNG was removed

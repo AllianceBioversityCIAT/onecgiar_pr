@@ -8,6 +8,7 @@ import { BehaviorSubject, of } from 'rxjs';
 
 import { MyWorkBoardComponent } from './my-work-board.component';
 import { MyWorkBoardService } from './services/my-work-board.service';
+import { MyWorkEditingOrderService } from './services/my-work-editing-order.service';
 import { MyWorkCountService } from './services/my-work-count.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
 import { MyWorkColumn, MyWorkTotals } from './my-work.view-model';
@@ -111,6 +112,7 @@ class FakeMyWorkBoardService {
   readonly selectedCategories = signal<string[]>([]);
   readonly selectedOrigins = signal<string[]>([]);
   readonly selectedCenters = signal<string[]>([]);
+  readonly reorderEnabled = signal(false);
 
   load = jest.fn();
   setScope = jest.fn();
@@ -168,7 +170,8 @@ describe('MyWorkBoardComponent', () => {
             otherSPsList: () => [],
             otherProjectsList: () => []
           }
-        }
+        },
+        { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 42 } } } }
       ]
     });
 
@@ -179,7 +182,7 @@ describe('MyWorkBoardComponent', () => {
     // `set` REPLACES the component's providers array — `ProgrammeResultsFilterService` is
     // page-provided since `MWB-T-9`, so it has to be re-listed or the toolbar cannot be injected.
     TestBed.overrideComponent(MyWorkBoardComponent, {
-      set: { providers: [ProgrammeResultsFilterService, { provide: MyWorkBoardService, useValue: service }] }
+      set: { providers: [ProgrammeResultsFilterService, MyWorkEditingOrderService, { provide: MyWorkBoardService, useValue: service }] }
     });
 
     fixture = TestBed.createComponent(MyWorkBoardComponent);
@@ -542,6 +545,81 @@ describe('MyWorkBoardComponent', () => {
     fixture.detectChanges();
 
     expect(root().querySelector('.pr-board-fade')).toBeTruthy();
+  });
+
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-3, MWER-R-1, MWER-R-4, MWER-R-5)
+  describe('manual editing reorder wiring (MWER-T-3)', () => {
+    const FULL_COLUMNS: MyWorkColumn[] = [
+      { key: 'editing', label: 'Editing', group: 'action', rows: [row(), row({ code: '4701' })] },
+      { key: 'pending', label: 'Pending review', group: 'waiting', rows: [] },
+      { key: 'submitted', label: 'Submitted', group: 'waiting', rows: [] },
+      { key: 'inQa', label: 'In QA', group: 'done', rows: [] },
+      { key: 'approved', label: 'Approved', group: 'done', rows: [] },
+      { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [] },
+      { key: 'rejected', label: 'Rejected', group: 'closed', rows: [] }
+    ];
+
+    const showBoard = () => {
+      service.loading.set(false);
+      service.error.set(null);
+      service.columns.set(FULL_COLUMNS);
+      service.visibleRows.set([row(), row({ code: '4701' })]);
+      component.isNarrow.set(false);
+      service.scope.set('mine');
+      fixture.detectChanges();
+    };
+
+    const editingColumn = () =>
+      fixture.debugElement
+        .queryAll(By.directive(MyWorkColumnComponent))
+        .map(de => de.componentInstance as MyWorkColumnComponent)
+        .find(col => col.column().key === 'editing');
+
+    const pendingColumn = () =>
+      fixture.debugElement
+        .queryAll(By.directive(MyWorkColumnComponent))
+        .map(de => de.componentInstance as MyWorkColumnComponent)
+        .find(col => col.column().key === 'pending');
+
+    it('enables reorder on Mine + desktop and mirrors into the board service', () => {
+      showBoard();
+      expect(component.reorderEnabled()).toBe(true);
+      expect(service.reorderEnabled()).toBe(true);
+      expect(editingColumn()?.reorderable()).toBe(true);
+    });
+
+    it('disables reorder on All program results scope', () => {
+      showBoard();
+      service.scope.set('all');
+      fixture.detectChanges();
+
+      expect(component.reorderEnabled()).toBe(false);
+      expect(editingColumn()?.reorderable()).toBe(false);
+    });
+
+    it('disables reorder on narrow viewport', () => {
+      showBoard();
+      component.isNarrow.set(true);
+      fixture.detectChanges();
+
+      expect(component.reorderEnabled()).toBe(false);
+      expect(editingColumn()?.reorderable()).toBe(false);
+    });
+
+    it('does not mark non-Editing columns reorderable', () => {
+      showBoard();
+      expect(pendingColumn()?.reorderable()).toBe(false);
+    });
+
+    it('resetManualOrder clears the editing order service', () => {
+      showBoard();
+      component.editingOrder.save(['4712', '4701']);
+      expect(component.editingOrder.hasManualOrder()).toBe(true);
+
+      component.resetManualOrder();
+
+      expect(component.editingOrder.hasManualOrder()).toBe(false);
+    });
   });
 });
 
@@ -1535,7 +1613,7 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
     });
     TestBed.overrideComponent(MyWorkBoardComponent, { remove: { imports: [ReportingProgramBandComponent] }, add: { imports: [BandStubComponent] } });
     TestBed.overrideComponent(MyWorkBoardComponent, {
-      set: { providers: [ProgrammeResultsFilterService, { provide: MyWorkBoardService, useValue: service }] }
+      set: { providers: [ProgrammeResultsFilterService, MyWorkEditingOrderService, { provide: MyWorkBoardService, useValue: service }] }
     });
 
     fixture = TestBed.createComponent(MyWorkBoardComponent);

@@ -1,4 +1,5 @@
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-T-8, MWB-T-9, MWB-T-10, MWB-T-11, MWB-T-12, MWB-R-1, R-2, R-3, R-7, R-9, R-10, design.md §2.2, §6.1-6.6, MWB-DD-9, MWB-DD-11)
+// @akili-spec changes/my-work-editing-reorder (MWER-T-3, MWER-R-1, MWER-R-4, MWER-R-5, MWER-R-6, design.md §6.6)
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -25,6 +26,7 @@ import { debounceTime, map } from 'rxjs/operators';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideSearch, lucideX } from '@ng-icons/lucide';
 
+import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
@@ -42,8 +44,10 @@ import {
 } from '../programme-results/services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { MyWorkBoardService } from './services/my-work-board.service';
+import { MyWorkEditingOrderService } from './services/my-work-editing-order.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
-import { MyWorkColumn, MyWorkScope } from './my-work.view-model';
+import { MY_WORK_EDITING_REORDER_COPY } from './my-work-editing-reorder.copy';
+import { groupByColumn, MyWorkColumn, MyWorkScope } from './my-work.view-model';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 
@@ -268,13 +272,14 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   ],
   // `MWB-T-9`: `ProgrammeResultsFilterService` is page-scoped exactly like on the Results tab —
   // filters must not survive navigating to another programme. `MyWorkBoardService` injects it.
-  providers: [ProgrammeResultsFilterService, MyWorkBoardService],
+  providers: [ProgrammeResultsFilterService, MyWorkBoardService, MyWorkEditingOrderService],
   viewProviders: [provideIcons({ lucideSearch, lucideX })]
 })
 export class MyWorkBoardComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly smartNav = inject(SmartNavigationService);
+  private readonly api = inject(ApiService);
   private readonly dataControlSE = inject(DataControlService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly destroyRef = inject(DestroyRef);
@@ -283,6 +288,11 @@ export class MyWorkBoardComponent {
   /** Page-scoped board data (`MWB-T-3`) — providing it HERE, not root, drops the rows on leaving
    *  the tab instead of leaking one programme into the next (same reasoning as `ProgrammeResultsService`). */
   readonly data = inject(MyWorkBoardService);
+
+  /** Page-scoped manual Editing order (`MWER-T-3`, design.md §6.1). */
+  readonly editingOrder = inject(MyWorkEditingOrderService);
+
+  readonly reorderCopy = MY_WORK_EDITING_REORDER_COPY;
 
   /** `MWB-T-9` — the Results tab's filter state, shared verbatim (same `ProgrammeResultRow`, same
    *  chips, same predicates). The template binds to it directly, as `programme-results` does. */
@@ -331,6 +341,9 @@ export class MyWorkBoardComponent {
   private readonly narrowQuery =
     typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(MY_WORK_NARROW_QUERY) : null;
   readonly isNarrow = signal(this.narrowQuery?.matches ?? false);
+
+  /** True when the Editing column may be reordered (`MWER-R-1`, `MWER-R-4`). */
+  readonly reorderEnabled = computed(() => this.data.scope() === 'mine' && !this.isNarrow());
 
   /** The Closed group is a 44px rail ONLY while the lock is engaged: below 900 a rail would be an
    *  unreachable sliver on a strip the user swipes, so those columns render expanded (`MWB-T-11` (1)). */
@@ -632,6 +645,13 @@ export class MyWorkBoardComponent {
 
   // ── Board layout groups (design.md §6.3, `MWB-R-2`) ────────────────────────────────────────
   readonly editingColumn = computed(() => this.data.columns().find(column => column.key === 'editing') ?? null);
+
+  /** Editing result codes before manual reorder — used to prune storage without re-entering the
+   *  reorder loop (`MWER-T-3` fix: `columns()` must not be this effect's dependency). */
+  private readonly editingCodesInView = computed(() => {
+    const editing = groupByColumn(this.data.visibleRows()).find(column => column.key === 'editing');
+    return (editing?.rows ?? []).map(row => String(row.code));
+  });
   readonly waitingColumns = computed(() => this.data.columns().filter(column => column.group === 'waiting'));
   /** *Done*: In QA (W1/W2) + Approved (W3) — always expanded, never rails. */
   readonly doneColumns = computed(() => this.data.columns().filter(column => column.group === 'done'));
@@ -746,6 +766,30 @@ export class MyWorkBoardComponent {
       untracked(() => {
         this.data.currentPhaseName.set(this.dataControlSE?.reportingCurrentPhase?.phaseName ?? null);
         if (code) this.data.load(code);
+      });
+    });
+
+    // @akili-spec changes/my-work-editing-reorder (MWER-T-3) — mirror reorder gate into the board
+    // service so `columns()` can merge manual order; scope/viewport only, never All or narrow.
+    effect(() => {
+      this.data.reorderEnabled.set(this.reorderEnabled());
+    });
+
+    // @akili-spec changes/my-work-editing-reorder (MWER-T-3, MWER-R-6) — load the storage key for
+    // the active programme + phase; prune stale codes once Editing rows are known.
+    effect(() => {
+      const code = this.programmeCode();
+      const phase = this.data.effectivePhase();
+      const userId = this.api.authSE?.localStorageUser?.id;
+      untracked(() => {
+        if (!userId || !code || !phase) return;
+        this.editingOrder.loadForKey(userId, code, phase);
+      });
+    });
+    effect(() => {
+      const editingCodes = this.editingCodesInView();
+      untracked(() => {
+        if (editingCodes.length) this.editingOrder.pruneToExisting(editingCodes);
       });
     });
 
@@ -1075,6 +1119,11 @@ export class MyWorkBoardComponent {
   private syncFilterPhase(): void {
     const phase = this.data.effectivePhase();
     if (this.filter.selectedPhase() !== phase) this.filter.selectedPhase.set(phase);
+  }
+
+  /** Clears manual Editing order for the current storage key (`MWER-R-5`). */
+  resetManualOrder(): void {
+    this.editingOrder.clear();
   }
 
   // ── Deletion reload (DEL-T-3, DEL-R-4, DEL-AC-7, Defect gate D5) ──────────────────────────

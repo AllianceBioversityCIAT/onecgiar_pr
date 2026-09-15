@@ -1,6 +1,7 @@
 // @akili-spec changes/my-work-board (MWB-T-2, MWB-R-2, R-3, R-5, R-11)
 import { ProgrammeResultRow } from '../programme-results/services/programme-results.service';
 import {
+  applyManualEditingOrder,
   badgeCount,
   columnForStatus,
   filterByPhase,
@@ -155,6 +156,44 @@ describe('my-work.view-model', () => {
     it('reports readyCount 1 for the Editing column', () => {
       const editing = groupByColumn(rows).find(column => column.key === 'editing');
       expect(readyCount(editing?.rows ?? [])).toBe(1);
+    });
+  });
+
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-1, MWER-R-2, MWER-R-3)
+  describe('applyManualEditingOrder()', () => {
+    it('returns orderEditing(rows) when savedCodes is empty', () => {
+      const rows = [
+        row({ code: '9176', completeness: { complete: 5, total: 5, missing: [] } }),
+        row({ code: '9177', completeness: null })
+      ];
+      expect(applyManualEditingOrder(rows, []).map(r => r.code)).toEqual(orderEditing(rows).map(r => r.code));
+    });
+
+    it('preserves saved relative order over orderEditing default (MWER-R-2)', () => {
+      const a = row({ code: '9176', completeness: { complete: 5, total: 5, missing: [] }, created: '2026-01-01T00:00:00.000Z' });
+      const b = row({ code: '9177', completeness: null, created: '2026-02-01T00:00:00.000Z' });
+      // Default orderEditing would put 9177 (null completeness) before 9176.
+      expect(applyManualEditingOrder([a, b], ['9177', '9176']).map(r => r.code)).toEqual(['9177', '9176']);
+    });
+
+    it('appends new cards after the manual block sorted by orderEditing (MWER-R-2)', () => {
+      const saved = row({ code: '9176', completeness: { complete: 1, total: 5, missing: ['x'] } });
+      const newer = row({ code: '9200', completeness: { complete: 2, total: 5, missing: ['y'] }, created: '2026-03-01T00:00:00.000Z' });
+      const older = row({ code: '9201', completeness: { complete: 2, total: 5, missing: ['y'] }, created: '2026-01-01T00:00:00.000Z' });
+
+      expect(applyManualEditingOrder([saved, newer, older], ['9176']).map(r => r.code)).toEqual(['9176', '9200', '9201']);
+    });
+
+    it('omits stale saved codes that are no longer in rows (MWER-R-2 prune)', () => {
+      const live = row({ code: '9176' });
+      expect(applyManualEditingOrder([live], ['9999', '9176']).map(r => r.code)).toEqual(['9176']);
+    });
+
+    it('does not mutate the input rows array', () => {
+      const rows = [row({ code: '9176' }), row({ code: '9177' })];
+      const copy = [...rows];
+      applyManualEditingOrder(rows, ['9177', '9176']);
+      expect(rows).toEqual(copy);
     });
   });
 
