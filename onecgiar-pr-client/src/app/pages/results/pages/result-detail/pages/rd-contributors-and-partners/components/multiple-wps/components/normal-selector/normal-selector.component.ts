@@ -155,6 +155,18 @@ export class CPNormalSelectorComponent {
     this.rdPartnersSE.setPossibleLeadPartners(true);
   }
 
+  /**
+   * El "no aplica" del campo de socios, ahora un interruptor propio en vez de `app-pr-checkbox`
+   * (Yeck, 15-sep-2026: el control va al frente de la banda, como el Yes/No). Reproduce lo que
+   * hacía el checkbox: invertir el valor y, fuera de Knowledge Product, rehacer el lead —
+   * `updateLeadData` era el `selectOptionEvent` de antes, con la misma guarda.
+   */
+  toggleNotApplicable(): void {
+    const body = this.rdPartnersSE.partnersBody;
+    body.no_applicable_partner = !body.no_applicable_partner;
+    if (!this.dataControlSE.isKnowledgeProduct) this.updateLeadData();
+  }
+
   updateLeadData() {
     if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
       this.rdPartnersSE.partnersBody.is_lead_by_partner = false;

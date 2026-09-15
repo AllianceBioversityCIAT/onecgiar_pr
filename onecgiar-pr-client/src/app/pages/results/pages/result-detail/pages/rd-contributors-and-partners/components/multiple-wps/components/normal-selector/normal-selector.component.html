@@ -9,16 +9,33 @@
     !!this.rdPartnersSE.partnersBody.no_applicable_partner ||
     !!this.institutionsNoSentinel.length ||
     !!this.rdPartnersSE.otherPartnersSelected?.length
-  ">
-  <div [ngSwitch]="this.rolesSE.readOnly">
-    <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
-    <div *ngSwitchCase="false">
-      <app-pr-checkbox
-        label="Select this option if the partner section is not applicable"
-        [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-        (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
-      </app-pr-checkbox>
-    </div>
+  "
+  description="Select this option if the partner section is not applicable"
+  layout="inline">
+  <!-- El control va AL FRENTE de la banda (`layout="inline"`), como el Yes/No — y con su mismo
+       idioma: control segmentado sobre blanco, gris oscuro al elegirlo. Marcar "no aplica" no es
+       un acierto ni un fallo, así que no lleva ni verde ni rojo.
+       La frase larga se queda como guía del campo: el botón dice la acción, la guía dice cuándo. -->
+  <div>
+    @if (this.rolesSE.readOnly) {
+      <span class="fc-switch-readonly">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '—' }}</span>
+    } @else {
+      <button
+        type="button"
+        class="fc-switch"
+        role="switch"
+        [class.on]="!!this.rdPartnersSE.partnersBody.no_applicable_partner"
+        [attr.aria-checked]="!!this.rdPartnersSE.partnersBody.no_applicable_partner"
+        data-testid="partners-not-applicable"
+        (click)="toggleNotApplicable()">
+        <span class="fcs_box" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.2 8.4l3 3 6.6-6.8" />
+          </svg>
+        </span>
+        Not applicable
+      </button>
+    }
   </div>
 </app-field-card>
 <app-alert-status
