@@ -32,4 +32,16 @@ export enum EmailTemplate {
    * that a forced redirect removed 2026-09-04).
    */
   BILATERAL_AI_RESULTS_READY = 'email_template_bilateral_ai_results_ready',
+  /**
+   * `APF-T-1`/`APF-R-4`. Tells the uploader their bilateral AI text-mining job finished but no
+   * result drafts could be identified, with a link back to the upload step to try again with
+   * more context. Lookup-only, like `BILATERAL_AI_RESULTS_READY`.
+   */
+  BILATERAL_AI_NO_CANDIDATES = 'email_template_bilateral_ai_no_candidates',
+  /**
+   * `APF-T-1`/`APF-R-4`. Tells the uploader their bilateral AI text-mining job failed, with the
+   * cause in plain words and a "Try again" link that re-enqueues the same stored sources
+   * (`APF-R-5`). Lookup-only.
+   */
+  BILATERAL_AI_FAILED = 'email_template_bilateral_ai_failed',
 }

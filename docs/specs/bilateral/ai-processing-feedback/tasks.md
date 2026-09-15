@@ -45,10 +45,11 @@
 - **Verification:** `cd onecgiar-pr-server && npm run migration:check && npx jest src/api/bilateral-ai/bilateral-ai.config.spec.ts --silent && npx eslint "src/migrations/*BilateralAi*.ts" "src/api/bilateral-ai/**/*.ts" --quiet`
 - **Input that would make the check fail:** a `down` that drops the generated column before the index; a template `down` that deletes instead of restoring the results-ready body; `BILATERAL_AI_ATTEMPT_TIMEOUT_MS` defaulting to 35 min (the superseded value).
 - **What this cannot prove / disqualifier:** `migration:check` proves pending-state bookkeeping, not that the migration ran on prtest — the live proof is `APF-T-10`'s `DESCRIBE bilateral_ai_jobs`. A green run with the `down` never executed is not evidence of reversibility; run `down` once locally and paste the row count.
+- **Status:** `[x]` PASS — 2026-09-15, attempt 1 (see `execution.md`; `migration:check` shows the 3 migrations Pending by design — not run against the shared dev DB; live proof in `APF-T-10`)
 - **Definition of done:**
-  - [ ] `migration:check` green; config spec green; lint clean.
-  - [ ] Entity, enums and config exported; no other service edited.
-  - [ ] Commit: `🗃️ feat(bilateral-ai) [<ticket>]: job stage, queue-entry clock, retry fields; notification type and terminal mail templates`.
+  - [x] `migration:check` green; config spec green; lint clean.
+  - [x] Entity, enums and config exported; no other service edited.
+  - [x] Commit: `🗃️ feat(bilateral-ai) [<ticket>]: job stage, queue-entry clock, retry fields; notification type and terminal mail templates`.
 
 ### `APF-T-2` — `processJob` lifecycle: stages, conditional transitions, retry semantics, late-completion reuse, richer `getJob`
 
