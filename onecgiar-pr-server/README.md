@@ -32,6 +32,16 @@
 $ npm install
 ```
 
+## Environment
+
+Keys read directly via `process.env` (no `.env.example` in this package — mirror these locally):
+
+- `BULK_HANDOFF_CALLBACK_URL` — partner callback the `redirect_url` is built from (a trailing slash is enforced on the path; `code` and `env` are appended as query params); example `https://staging.bilateral-results-uploader.synapsis-analytics.com/entry/` (TEST).
+- `BULK_HANDOFF_AUDIENCES` — comma-separated allow-list of partner audiences; the first entry is the default when the client sends none; example `w3-bilateral-uploader:test`.
+- `BULK_HANDOFF_ENV` — environment label sent as `env` and returned as `issued_for_env` (`test` / `prod`).
+
+Missing any of the three degrades `POST /api/bilateral/center/handoff` to a `503` and the uploader CTA shows an error; leaving them unset keeps PROD dark by design.
+
 ## Running the app
 
 ```bash

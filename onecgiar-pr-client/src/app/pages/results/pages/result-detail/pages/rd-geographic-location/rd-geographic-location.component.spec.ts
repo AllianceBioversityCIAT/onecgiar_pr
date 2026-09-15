@@ -165,6 +165,34 @@ describe('RdGeographicLocationComponent', () => {
         expect(payload.extra_regions).toEqual([{ id: 7 }]);
       });
     });
+
+    /**
+     * 🛑 A result with no geographic focus chosen reads back as `geo_scope_id: 0` — the server's own
+     * "none" placeholder. Sending that 0 back is what the column cannot take: `clarisa_geographic_scope`
+     * never holds 0 (`GeoScopeEnum`: 1, 2, 3, 5, 50), so the write died on the foreign key with a 500 that never reached the
+     * reporter. Measured 15-Sep-2026: 40 of 60 sampled 2026 results carry `geo_scope_id = 0`.
+     */
+    describe('main geographic scope, when none has been chosen', () => {
+      const saveWithScope = (geoScopeId: number) => {
+        (component.fieldsManagerSE as any).isP25 = () => true;
+        component.geographicLocationBody.geo_scope_id = geoScopeId;
+        const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSectionp25');
+        component.onSaveSection();
+        return spy.mock.calls[spy.mock.calls.length - 1][0];
+      };
+
+      it('sends NULL rather than the 0 placeholder, so the foreign key holds', () => {
+        expect(saveWithScope(0).geo_scope_id).toBeNull();
+      });
+
+      it.each([
+        ['Global', GeoScopeEnum.GLOBAL],
+        ['Country', GeoScopeEnum.COUNTRY],
+        ['yet to be determined', GeoScopeEnum.DETERMINED]
+      ])('still sends %s untouched', (_label, scopeId) => {
+        expect(saveWithScope(scopeId as number).geo_scope_id).toBe(scopeId);
+      });
+    });
   });
 
   describe('onSyncSection()', () => {

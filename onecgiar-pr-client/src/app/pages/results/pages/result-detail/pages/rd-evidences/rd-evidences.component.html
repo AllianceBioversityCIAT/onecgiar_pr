@@ -19,12 +19,70 @@
   <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning"> </app-alert-status>
 
   <div class="evidences">
-    <!-- P2-2935: flat (non-collapsible) evidence card — all info fits, no accordion -->
+    <!-- Tarjeta de evidencia, rediseñada el 15-sep-2026.
+         Antes era una franja de cabecera con el TIPO por título ("Link Evidence") y el dato real
+         —el enlace— relegado a una línea de cuerpo con un icono gris delante. Estaba al revés: el
+         tipo lo dice el icono en dos píxeles, y lo que el reportero busca al recorrer la lista es
+         QUÉ evidencia es, no de qué clase.
+         Tres columnas: el sello (tipo + posición), el contenido, y las acciones. El titular es el
+         enlace; debajo, una sola línea de metadatos; la descripción va como cita, con su regla a la
+         izquierda, porque es texto del usuario y no un campo del sistema. -->
     <div class="evidence_card" *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
-      <div class="ev_card_top">
-        <div class="ev_index">{{ i + 1 }}</div>
-        <div class="ev_type_row">
-          <span class="ev_type">{{ evidenceTypeLabel(evidence) }}</span>
+      <!-- Sello: dice de un vistazo si es enlace o archivo, y lleva su número encima como una
+           chapa. El número seguía siendo útil (la gente dice "la evidencia 2"), pero ocupaba una
+           columna entera para tres píxeles de información. -->
+      <!-- El sello reconoce lo que tiene delante: una imagen se ve, un documento dice su formato, y
+           un enlace lleva su icono. Una miniatura que no carga —archivo privado, enlace caducado,
+           subida a medias— cae de vuelta al sello por `(error)`: lo único que una tarjeta no puede
+           mostrar es una imagen rota. -->
+      @if (showThumb(evidence)) {
+        <button
+          type="button"
+          class="ev_seal ev_seal_thumb"
+          (click)="openPreview(evidence)"
+          [attr.aria-label]="'Preview ' + evidenceDisplayName(evidence)">
+          <img [src]="evidence.link" [alt]="evidenceDisplayName(evidence)" (error)="onThumbError(evidence)" />
+          <span class="ev_zoom" aria-hidden="true"><i class="material-icons-round">zoom_in</i></span>
+          <span class="ev_num">{{ i + 1 }}</span>
+        </button>
+      } @else {
+        <div class="ev_seal" [class.is_file]="isFileEvidence(evidence)">
+          @if (isFileEvidence(evidence) && evidenceFormatLabel(evidence)) {
+            <span class="ev_format">{{ evidenceFormatLabel(evidence) }}</span>
+          } @else {
+            <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
+          }
+          <span class="ev_num">{{ i + 1 }}</span>
+        </div>
+      }
+
+      <div class="ev_main">
+        <div class="ev_headline">
+          <!-- Mientras el archivo sube: nombre + barra, y todavía no hay enlace que abrir. -->
+          <ng-container *ngIf="isEvidenceUploading(evidence); else evidenceReady">
+            <span class="ev_title ev_title_plain">{{ evidenceUploadingName(evidence) }}</span>
+            <div class="pr-skeleton ev_skeleton" style="width: 160px; height: 9px; border-radius: 6px"></div>
+          </ng-container>
+          <ng-template #evidenceReady>
+            <!-- El enlace, con jerarquía: el DOMINIO manda —dice de dónde sale la evidencia: una
+                 revista, un repositorio, un Drive— y la ruta va detrás en tinta suave. Un enlace
+                 entero al mismo peso es una cadena que nadie lee. -->
+            <a
+              *ngIf="evidence.link; else roPlainName"
+              [href]="evidence.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ev_title ev_title_link"
+              [prTooltip]="evidence.link"
+              prTooltipPosition="top">
+              <span class="ev_host">{{ evidenceHost(evidence) }}</span
+              ><span class="ev_path" *ngIf="evidenceRest(evidence)">{{ evidenceRest(evidence) }}</span>
+            </a>
+            <ng-template #roPlainName>
+              <span class="ev_title ev_title_plain">{{ evidenceDisplayName(evidence) || '—' }}</span>
+            </ng-template>
+          </ng-template>
+
           <i
             *ngIf="isFileEvidence(evidence)"
             class="material-icons-round ev_lock"
@@ -34,67 +92,87 @@
             prTooltipPosition="top">
             {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
           </i>
-          <span class="ev_date" *ngIf="evidence.creation_date || evidence.last_updated_date">
-            <ng-container *ngIf="evidence.creation_date">Added: {{ evidence.creation_date | date: 'MMM d, y' }}</ng-container>
-            <ng-container *ngIf="evidence.last_updated_date"> | Updated: {{ evidence.last_updated_date | date: 'MMM d, y' }}</ng-container>
-          </span>
         </div>
-        <div class="ev_actions">
-          <button
-            type="button"
-            class="ev_edit"
-            *ngIf="!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
-            prTooltip="Edit evidence"
-            prTooltipPosition="top"
-            (click)="editEvidence(i)">
-            <i class="material-icons-round">edit</i>
-          </button>
-          <button
-            type="button"
-            class="ev_delete"
-            *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
-            prTooltip="Delete evidence"
-            prTooltipPosition="top"
-            (click)="deleteEvidenceWithConfirm(i)">
-            <i class="material-icons-round">delete</i>
-          </button>
+
+        <!-- La clase de evidencia, DEBAJO del nombre (Yeck, 15-sep-2026). En la misma línea, el
+             chip quedaba a la distancia que dejara el nombre: con "images.png" caía a un sitio y
+             con un enlace largo a otro, así que dos tarjetas seguidas nunca lo tenían alineado.
+             Debajo arranca siempre en el mismo punto. -->
+        <div class="ev_kindrow">
+          <span class="ev_kind" [class.is_file]="isFileEvidence(evidence)">{{ evidenceTypeLabel(evidence) }}</span>
+        </div>
+
+        <!-- Texto escrito por el reportero: se presenta como cita, no como un campo más. -->
+        <p class="ev_desc" *ngIf="evidence.description">{{ evidence.description }}</p>
+
+        <div class="ev_tags" *ngIf="getSelectedImpactTags(evidence).length">
+          <span class="ev_tag" *ngFor="let tag of getSelectedImpactTags(evidence)">{{ tag }}</span>
         </div>
       </div>
 
-      <div class="ev_card_body">
-        <span class="ev_ro_item ev_ro_main">
-          <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
-          <!-- While the file is being uploaded: show its name + a skeleton, then switch to the link -->
-          <span class="ev_ro_uploading" *ngIf="isEvidenceUploading(evidence); else evidenceReady">
-            <span class="ev_ro_name">{{ evidenceUploadingName(evidence) }}</span>
-            <div class="pr-skeleton ev_ro_skeleton" style="width:160px;height:9px;border-radius:6px"></div>
-          </span>
-          <ng-template #evidenceReady>
-            <a
-              *ngIf="evidence.link; else roPlainName"
-              [href]="evidence.link"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="ev_ro_link"
-              >{{ evidenceDisplayName(evidence) }}</a
-            >
-            <ng-template #roPlainName>
-              <span class="ev_ro_name">{{ evidenceDisplayName(evidence) || '—' }}</span>
-            </ng-template>
-          </ng-template>
-        </span>
+      <div class="ev_aside">
+        <!-- Abrir, dicho con todas las letras. El título es clicable, pero un enlace de texto no
+             anuncia que se abre en otra pestaña hasta que lo pulsas; el botón sí, y de paso da a
+             la tarjeta la acción principal que le faltaba. -->
+        <a
+          class="ev_open"
+          *ngIf="evidence.link && !isEvidenceUploading(evidence)"
+          [href]="evidence.link"
+          target="_blank"
+          rel="noopener noreferrer"
+          prTooltip="Open in a new tab"
+          prTooltipPosition="top">
+          <span>{{ showThumb(evidence) ? 'View' : 'Open' }}</span>
+          <i class="material-icons-round" aria-hidden="true">{{ showThumb(evidence) ? 'visibility' : 'open_in_new' }}</i>
+        </a>
 
-        <span class="ev_ro_item" *ngIf="getSelectedImpactTags(evidence).length">
-          <i class="material-icons-round">sell</i>
-          <span class="ev_ro_tags">
-            <span class="ev_tag" *ngFor="let tag of getSelectedImpactTags(evidence)">{{ tag }}</span>
-          </span>
-        </span>
+        <!-- Descargar, solo para un archivo del repositorio: un enlace externo no es nuestro para
+             ofrecerlo como descarga, y abrirlo ya es lo que hace el botón de al lado. -->
+        <a
+          class="ev_open ev_download"
+          *ngIf="isFileEvidence(evidence) && evidence.link && !isEvidenceUploading(evidence)"
+          [href]="evidence.link"
+          [attr.download]="evidenceDisplayName(evidence)"
+          target="_blank"
+          rel="noopener noreferrer"
+          prTooltip="Download the file"
+          prTooltipPosition="top"
+          [attr.aria-label]="'Download ' + evidenceDisplayName(evidence)">
+          <i class="material-icons-round" aria-hidden="true">download</i>
+        </a>
 
-        <span class="ev_ro_item ev_ro_details" *ngIf="evidence.description">
-          <i class="material-icons-round">notes</i>
-          <span>{{ evidence.description }}</span>
-        </span>
+        <!-- Las fechas suben a la esquina, con su propia forma: no son un chip (un chip clasifica)
+             ni una línea de metadatos bajo el título, que era donde le robaban el sitio a la
+             descripción. Aquí ocupan un hueco que estaba vacío y liberan una línea del cuerpo. -->
+        <div class="ev_when" *ngIf="evidence.creation_date || evidence.last_updated_date">
+          <span class="ev_when_row" *ngIf="evidence.creation_date">
+            <span class="ev_when_label">Added</span>{{ evidence.creation_date | date: 'MMM d, y' }}
+          </span>
+          <span class="ev_when_row" *ngIf="evidence.last_updated_date">
+            <span class="ev_when_label">Updated</span>{{ evidence.last_updated_date | date: 'MMM d, y' }}
+          </span>
+        </div>
+
+        <div class="ev_actions">
+        <button
+          type="button"
+          class="ev_edit"
+          *ngIf="!api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+          prTooltip="Edit evidence"
+          prTooltipPosition="top"
+          (click)="editEvidence(i)">
+          <i class="material-icons-round">edit</i>
+        </button>
+        <button
+          type="button"
+          class="ev_delete"
+          *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
+          prTooltip="Delete evidence"
+          prTooltipPosition="top"
+          (click)="deleteEvidenceWithConfirm(i)">
+          <i class="material-icons-round">delete</i>
+        </button>
+        </div>
       </div>
     </div>
   </div>
@@ -120,6 +198,28 @@
 </div>
 
 <app-section-bottom-bar [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()" />
+
+<!-- Visor de la imagen. Vive fuera de la lista y no dentro de cada tarjeta: una sola instancia
+     para las seis, y así ninguna arrastra un diálogo oculto. -->
+<app-pr-dialog
+  [visible]="!!previewEvidence"
+  (visibleChange)="!$event && closePreview()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  (onHide)="closePreview()"
+  styleClass="evidence-preview-dialog">
+  <div class="ev_preview" *ngIf="previewEvidence">
+    <div class="ev_preview_top">
+      <span class="ev_preview_name">{{ evidenceDisplayName(previewEvidence) }}</span>
+      <button type="button" class="modal_close" prTooltip="Close" (click)="closePreview()">
+        <i class="material-icons-round">close</i>
+      </button>
+    </div>
+    <img [src]="previewEvidence.link" [alt]="evidenceDisplayName(previewEvidence)" (error)="onThumbError(previewEvidence); closePreview()" />
+  </div>
+</app-pr-dialog>
 
 <!-- P2-2935: evidence creation modal -->
 <app-pr-dialog

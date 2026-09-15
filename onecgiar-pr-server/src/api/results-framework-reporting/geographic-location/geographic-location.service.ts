@@ -43,7 +43,18 @@ export class GeographicLocationService {
       await this._resultCountriesService.createV2(createResultGeo, user);
 
       await this._resultRepository.update(createResultGeo.result_id, {
-        geographic_scope_id: createResultGeo.geo_scope_id,
+        // `findGeographicLocation` below answers `geo_scope_id: 0` for a result with no scope —
+        // `let scope = 0` is this service's own "none" placeholder. Clients hand that number back
+        // untouched on the next save, and 0 is the one value the column cannot take:
+        // the table holds 1, 2, 3, 4, 5 and 50 and no 0 — read off prdb (test) on 15-Sep-2026, and
+        // corroborated without the VPN by `getGeoScopeV2` below, which compares against 4 twice.
+        // 🛑 Don't reach for the client's `GeoScopeEnum` here: it lists 1, 2, 3, 5, 50 because the
+        // front folds the legacy 4 ("National") into COUNTRY on the way in. Fewer ids than the
+        // table actually has — right for the client, wrong for the column. So the write died on
+        // `FK_c02a8848d0317d55d1bd882833e` with a 500 the reporter never saw. Stored, "none" is
+        // NULL — 2,223 rows in prdb are NULL and not one is 0 — so the placeholder is normalised
+        // back to NULL here, the same guard `extra_geo_scope_id` has always had on the next line.
+        geographic_scope_id: createResultGeo.geo_scope_id || null,
         extra_geo_scope_id: createResultGeo.extra_geo_scope_id ?? null,
         has_extra_geo_scope: createResultGeo.has_extra_geo_scope,
         has_regions: createResultGeo.has_regions,

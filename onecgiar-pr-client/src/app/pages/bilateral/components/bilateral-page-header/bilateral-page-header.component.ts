@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Params, Router, RouterLink } from '@angular/router';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { AuthService } from '../../../../shared/services/api/auth.service';
+import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
@@ -44,6 +46,9 @@ export class BilateralPageHeaderComponent {
     const cycle = this.reportingCycleLabel();
     return cycle ? `CGIAR Center · ${cycle}` : 'CGIAR Center';
   });
+
+  private readonly authService = inject(AuthService);
+  private readonly customAlertService = inject(CustomizedAlertsFeService);
 
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'reporting' | 'results' | 'drafts' | null>(null);
@@ -132,6 +137,64 @@ export class BilateralPageHeaderComponent {
   );
 
   readonly showBulkCta = computed(() => !!this.bulkUploaderUrl());
+
+  /** BIL-HO-T-7: true while the handoff code is being minted — drives `[disabled]`/`aria-busy`. */
+  readonly isMinting = signal(false);
+
+  /**
+   * @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-7)
+   *
+   * Order of operations per `design.md` §6.2 / R-12 "order of operations": the tab MUST open
+   * before the HTTP request is issued, so a popup blocker (which only allows `window.open` from
+   * inside the click handler, not from inside a `subscribe` callback) does not get a stale HTTP
+   * call with nowhere to send its result.
+   *
+   * `noopener` vs a navigable handle: `window.open(url, target, 'noopener')` returns `null` by
+   * spec, but steps (4)/(5) below need a handle to navigate or close the tab on success/failure.
+   * Resolved by opening plain (`window.open('', '_blank')`) and immediately severing the reverse
+   * link with `tab.opener = null` — the same security property `rel="noopener"` gives an anchor
+   * (the partner tab never gets a `window.opener` back to PRMS), without losing the handle.
+   */
+  openBulkUploader(): void {
+    // (1) Open synchronously, before any HTTP call.
+    const tab = window.open('', '_blank');
+
+    // (2) Blocked popup: no handle, no HTTP call.
+    if (!tab) {
+      this.showBulkHandoffError();
+      return;
+    }
+
+    // Sever the reverse link — the partner tab gets no handle back to this window.
+    tab.opener = null;
+
+    // (3) Mint the code.
+    this.isMinting.set(true);
+    this.authService
+      .POST_bilateralHandoffStart({ center_code: this.ctx.centerId() || this.ctx.centerAcronym() || '' })
+      .subscribe({
+        next: ({ response }) => {
+          // (4) Success: navigate the already-open tab.
+          tab.location.href = response.redirect_url;
+          this.isMinting.set(false);
+        },
+        error: err => {
+          // (5) Failure: close the tab, never leave a blank one open, and alert.
+          tab.close();
+          this.showBulkHandoffError(err?.error?.message);
+          this.isMinting.set(false);
+        }
+      });
+  }
+
+  private showBulkHandoffError(description?: string): void {
+    this.customAlertService.show({
+      id: 'bulkHandoffAlert',
+      title: 'Oops!',
+      description: description || 'The Bulk Results Uploader could not be opened. Please try again.',
+      status: 'error'
+    });
+  }
 
   /** Optional explicit override for the back button label. */
   readonly backLabelOverride = input<string>('');

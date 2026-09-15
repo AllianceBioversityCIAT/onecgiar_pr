@@ -331,7 +331,13 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
           has_regions: this.geographicLocationBody.has_regions,
           regions: this.geographicLocationBody.regions,
           countries: this.geographicLocationBody.countries,
-          geo_scope_id: this.geographicLocationBody.geo_scope_id,
+          // A result with no geographic focus chosen yet reads back as `geo_scope_id: 0` — the
+          // server's own "none" placeholder (`geographic-location.service.ts`: `let scope = 0`).
+          // Sending that 0 straight back is what the column cannot take: `clarisa_geographic_scope`
+          // never holds 0 (`GeoScopeEnum`: 1, 2, 3, 5, 50), so the write dies on the foreign key with a 500 that never
+          // reaches the reporter — Save draft simply appears to do nothing. Stored, "none" is NULL,
+          // so that is what goes back on the wire, exactly like `extra_geo_scope_id` already does.
+          geo_scope_id: this.geographicLocationBody.geo_scope_id || null,
           extra_geo_scope_id: mainFocusHidesExtraScope ? null : this.extraGeographicLocationBody.geo_scope_id,
           extra_regions: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.regions,
           extra_countries: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.countries,
