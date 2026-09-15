@@ -35,8 +35,10 @@
             {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
           </i>
           <span class="ev_date" *ngIf="evidence.creation_date || evidence.last_updated_date">
-            <ng-container *ngIf="evidence.creation_date">Added: {{ evidence.creation_date | date: 'MMM d, y' }}</ng-container>
-            <ng-container *ngIf="evidence.last_updated_date"> | Updated: {{ evidence.last_updated_date | date: 'MMM d, y' }}</ng-container>
+            <ng-container *ngIf="evidence.creation_date">Added {{ evidence.creation_date | date: 'MMM d, y' }}</ng-container>
+            <ng-container *ngIf="evidence.last_updated_date">
+              <span class="ev_dot" aria-hidden="true">·</span>Updated {{ evidence.last_updated_date | date: 'MMM d, y' }}</ng-container
+            >
           </span>
         </div>
         <div class="ev_actions">
@@ -84,15 +86,17 @@
           </ng-template>
         </span>
 
-        <span class="ev_ro_item" *ngIf="getSelectedImpactTags(evidence).length">
-          <i class="material-icons-round">sell</i>
+        <!-- Sin icono delante: un chip ya se lee como chip, y la columna de iconos grises de la
+             izquierda era la que hacía que las tres filas del cuerpo se vieran como una lista de
+             sistema en vez de como el contenido de la evidencia. El icono se queda SOLO en el
+             enlace, donde sí informa — dice si es un enlace o un archivo. -->
+        <span class="ev_ro_item ev_ro_tagrow" *ngIf="getSelectedImpactTags(evidence).length">
           <span class="ev_ro_tags">
             <span class="ev_tag" *ngFor="let tag of getSelectedImpactTags(evidence)">{{ tag }}</span>
           </span>
         </span>
 
         <span class="ev_ro_item ev_ro_details" *ngIf="evidence.description">
-          <i class="material-icons-round">notes</i>
           <span>{{ evidence.description }}</span>
         </span>
       </div>
