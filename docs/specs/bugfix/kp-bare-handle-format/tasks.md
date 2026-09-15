@@ -6,7 +6,7 @@
 - **Linked spec:** `docs/specs/bugfix/kp-bare-handle-format/requirements.md` + `design.md`
 - **Depth:** Lite (Bug Mode)
 - **Owner / driver:** M.Giraldo@cgiar.org
-- **Status:** done
+- **Status:** shipped
 
 ## 2. Pre-flight checklist
 
@@ -103,8 +103,8 @@ Client coverage must stay ≥ 50/60/60/60 (all four files already have specs; th
 
 ## 7. Cleanup & follow-ups
 
-- [ ] Move spec status to `shipped`.
-- [ ] Update `onecgiar-pr-client/.../shared/report-result/CLAUDE.md`'s "Dónde se usa" / "Pendiente" notes: `report-result-form.component.ts`'s Manual-entry Sync now also uses `validateKpHandle`/`normalizeKpHandle`; `aow-hlo-create-modal.component.ts` and `result-creator.component.ts` still hold local regex copies, now current (bare-handle-aware) rather than stale.
+- [x] Move spec status to `shipped`.
+- [x] Update `onecgiar-pr-client/.../shared/report-result/CLAUDE.md`'s "Dónde se usa" / "Pendiente" notes: `report-result-form.component.ts`'s Manual-entry Sync now also uses `validateKpHandle`/`normalizeKpHandle`; `aow-hlo-create-modal.component.ts` and `result-creator.component.ts` still hold local regex copies, now current (bare-handle-aware) rather than stale. Also corrected a stale `guided-creation.component.ts` mention (it has no handle-validation logic — verified during diagnosis).
 - [ ] File a follow-up spec for the deferred de-duplication (`KPH-DD-1`) if the team decides to pursue it.
 
 ## 8. Roll-back plan
