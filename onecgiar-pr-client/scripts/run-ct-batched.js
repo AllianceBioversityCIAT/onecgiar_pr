@@ -18,7 +18,7 @@
  *   npm run test:ct -- 'src/app/custom-fields/pr-input/**'   # only matching specs
  *   RAM_GUARD=off npm run test:ct         # run anyway on a red machine
  */
-const { spawnSync } = require('node:child_process');
+const { spawnSync, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const ram = require('./ram-guard');
@@ -42,10 +42,22 @@ function collectSpecs(dir, found = []) {
   return found;
 }
 
-let specs = collectSpecs(path.join(ROOT, 'src')).sort();
-if (filter) {
-  const needle = filter.replace(/\*/g, '');
-  specs = specs.filter(spec => spec.includes(needle));
+let specs;
+if (filter === '--changed') {
+  // Only the specs whose import graph reaches something you touched — see ct-affected.js.
+  specs = execFileSync(process.execPath, [path.join(__dirname, 'ct-affected.js')], {
+    cwd: ROOT,
+    encoding: 'utf8'
+  })
+    .split('\n')
+    .filter(Boolean);
+  console.log(`> picking specs affected by your changes (node scripts/ct-affected.js --explain to see why)`);
+} else {
+  specs = collectSpecs(path.join(ROOT, 'src')).sort();
+  if (filter) {
+    const needle = filter.replace(/\*/g, '');
+    specs = specs.filter(spec => spec.includes(needle));
+  }
 }
 
 if (specs.length === 0) {

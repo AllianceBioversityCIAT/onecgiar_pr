@@ -23,7 +23,10 @@
     "test:ct": "node scripts/run-ct-batched.js",
     "test:ct:batch": "node scripts/run-ct-batched.js",
     "test:ct:unbatched": "ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 cypress run --component",
-    "cypress:run:video": "CYPRESS_VIDEO=true npm run cypress:run"
+    "cypress:run:video": "CYPRESS_VIDEO=true npm run cypress:run",
+    "test:changed": "node scripts/run-jest-local.js --changed",
+    "test:ct:changed": "node scripts/run-ct-batched.js --changed",
+    "affected": "node scripts/ct-affected.js --explain"
   },
   "private": true,
   "dependencies": {

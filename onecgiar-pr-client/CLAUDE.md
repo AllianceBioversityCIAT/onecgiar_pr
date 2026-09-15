@@ -203,6 +203,31 @@ npm install cypress-real-events@1.15.0 --no-save --no-package-lock   # restores 
 avoid duplicating 1.5 GB, so a reinstall here pulls the floor out from under several working trees
 at once — and from anyone mid-capture against a running `ng serve`.
 
+### Run only the specs your change can actually break
+
+```bash
+npm run test:changed       # Jest: every spec reachable from a changed file
+npm run test:ct:changed    # Cypress CT: the same, via scripts/ct-affected.js
+npm run affected           # which CT specs would run, and WHY each one was picked
+```
+
+🥇 **This is a dependency-graph question, not a filename question.** Jest's `--changedSince` walks
+its own module graph; `scripts/ct-affected.js` walks the imports of each `*.cy.ts` the same way,
+including the `.html` / `.scss` that Angular reaches through `templateUrl` rather than an import.
+Measured: editing `pr-input.component.ts` pulls in Jest specs under `bilateral`,
+`programme-results` and `user-management` — none of which share a folder or a name with it. The
+naive "run the spec next to the file" reports green while the thing it missed is broken.
+
+Scale on this repo: **574 Jest specs → 119** for one branch's changes (-79 %). For CT, one changed
+file selects **2 of 63** — unless it lives in `custom-fields/`, where `cypress/support/ct-utils.ts`
+imports the whole `CustomFieldsModule`, so every field reaches every other and the answer is 52.
+That number is correct, not a bug: those specs really do recompile the whole module.
+
+⚠️ The baseline is the branch the work forked from (`origin/performance-refactor`), **not `HEAD`** —
+otherwise a spec broken three commits ago silently stops running. Override with `CHANGED_SINCE=…`.
+
+Measured timings and the ideas not yet tried: [`docs/test-runtime-notes.md`](./docs/test-runtime-notes.md).
+
 ### Coverage thresholds (enforced in `package.json`)
 
 - branches **50%**, functions **60%**, lines **60%**, statements **60%**.

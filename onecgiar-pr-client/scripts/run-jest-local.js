@@ -12,8 +12,10 @@
  *
  * Usage:
  *   npm run test:local                          # whole suite, workers sized to free memory
+ *   npm run test:changed                        # only the specs your changes can break
  *   npm run test:local -- --testPathPattern=foo # every jest flag passes straight through
  *   JEST_WORKERS=1 npm run test:local           # force it
+ *   CHANGED_SINCE=origin/master npm run test:changed
  */
 const { spawnSync } = require('node:child_process');
 const ram = require('./ram-guard');
@@ -32,10 +34,31 @@ function workersFor() {
   return String(Math.max(2, Math.min(6, Math.floor(state.freeGB / 1.5))));
 }
 
-const workers = workersFor();
-const args = ['jest', '--no-coverage', ...(workers ? [`--maxWorkers=${workers}`] : []), ...process.argv.slice(2)];
+/**
+ * `--changedSince` is not "the spec next to the file you edited" — Jest walks the real import
+ * graph, so editing `pr-input.component.ts` pulls in specs from bilateral, programme-results and
+ * user-management, which no name-based guess would ever find. That is the whole point: code
+ * touches other code.
+ *
+ * The baseline is the branch this work forked from, not HEAD, so a spec broken three commits ago
+ * still runs. Uncommitted work is included either way.
+ */
+const CHANGED_SINCE = process.env.CHANGED_SINCE || 'origin/performance-refactor';
+const onlyChanged = process.argv.includes('--changed');
+const passthrough = process.argv.slice(2).filter(a => a !== '--changed');
 
-if (workers) console.log(`> jest with ${workers} worker(s) - ${ram.format(state)}\n`);
+const workers = workersFor();
+const args = [
+  'jest',
+  '--no-coverage',
+  ...(workers ? [`--maxWorkers=${workers}`] : []),
+  ...(onlyChanged ? [`--changedSince=${CHANGED_SINCE}`] : []),
+  ...passthrough
+];
+
+if (workers) console.log(`> jest with ${workers} worker(s) - ${ram.format(state)}`);
+if (onlyChanged) console.log(`> only specs reachable from files changed since ${CHANGED_SINCE}`);
+console.log('');
 
 const result = spawnSync('npx', args, { stdio: 'inherit', cwd: require('node:path').resolve(__dirname, '..') });
 process.exit(result.status ?? 1);
