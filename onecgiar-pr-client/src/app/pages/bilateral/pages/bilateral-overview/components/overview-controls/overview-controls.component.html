@@ -1,21 +1,36 @@
 <!-- @akili-spec bilateral/center-overview-tab (COV-T-5, COV-R-2, COV-R-3, COV-R-18) -->
 <div class="flex flex-wrap items-center gap-[10px] px-[16px] sm:px-[32px] py-[10px]">
-  <!-- ── Phase selector (COV-R-2) ─────────────────────────────────────────────────────────── -->
   <span class="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--pr-text-subtle)] flex-none">Phase</span>
 
-  <div class="ov-phase w-full sm:w-[210px] flex-none" data-testid="overview-phase-select">
-    <app-pr-select
-      [options]="phaseSelectOptions()"
-      [ngModel]="selectedPhaseId()"
-      (selectOptionEvent)="onPhasePicked($event?.id)"
-      optionLabel="select_label"
-      optionValue="id"
-      optionBadgeLabel="select_badge"
-      optionBadgeTone="select_badge_tone"
-      placeholder="Select phase"
-      [required]="false"
-      [editable]="true"
-      [overlayToBody]="true" />
+  <!--
+    Phase selector (`COV-R-2`) — a token-styled `role="combobox"` trigger over a hand-rolled ARIA 1.2
+    listbox in the SAME `cdkConnectedOverlay` the Filter popover below uses, so both controls open,
+    dismiss (backdrop / `Escape`) and restore focus identically. Replaces the legacy `pr-select`
+    primitive, whose grey-input + solid-chevron look was rejected on the live page (`COV-T-8` H-3).
+  -->
+  <div class="w-full min-[640px]:w-auto min-[640px]:min-w-[210px] flex-none" data-testid="overview-phase-select">
+    <button
+      #phaseTrigger
+      type="button"
+      cdkOverlayOrigin
+      #phaseOrigin="cdkOverlayOrigin"
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-label="Phase"
+      data-testid="overview-phase-trigger"
+      class="flex h-[30px] w-full items-center justify-between gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none transition-colors duration-150 motion-reduce:transition-none hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+      [attr.aria-expanded]="phaseOpen() ? 'true' : 'false'"
+      [attr.aria-controls]="phaseListboxId"
+      (click)="togglePhaseListbox()"
+      (keydown)="onPhaseTriggerKeydown($event)">
+      <span class="truncate" [title]="selectedPhaseLabel()">{{ selectedPhaseLabel() }}</span>
+      <i
+        class="material-icons-round flex-none text-[16px] text-[var(--pr-text-subtle)] transition-transform duration-200 motion-reduce:transition-none"
+        [class.rotate-180]="phaseOpen()"
+        aria-hidden="true"
+        >expand_more</i
+      >
+    </button>
   </div>
 
   @if (selectedPhase(); as phase) {
@@ -277,5 +292,52 @@
         Apply
       </button>
     </div>
+  </div>
+</ng-template>
+
+<!-- Phase listbox (`COV-R-2` B/C) — transparent backdrop + positions mirror the Filter popover. -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="phaseOrigin"
+  [cdkConnectedOverlayOpen]="phaseOpen()"
+  [cdkConnectedOverlayPositions]="popoverPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="closePhaseListbox()"
+  (overlayKeydown)="onPhaseOverlayKeydown($event)"
+  (detach)="closePhaseListbox()">
+  <div
+    #phaseList
+    [id]="phaseListboxId"
+    role="listbox"
+    tabindex="0"
+    aria-label="Phase"
+    data-testid="overview-phase-listbox"
+    [attr.aria-activedescendant]="activePhaseId() === null ? null : phaseOptionId(activePhaseId())"
+    (keydown)="onPhaseListKeydown($event)"
+    class="flex w-[240px] max-w-[calc(100vw-32px)] max-h-[min(60vh,320px)] flex-col gap-[2px] overflow-y-auto custom_scroll rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[5px] shadow-[var(--pr-shadow-2)] outline-none">
+    @for (option of phaseOptions(); track option.id) {
+      <button
+        type="button"
+        role="option"
+        [id]="phaseOptionId(option.id)"
+        [attr.data-testid]="'overview-phase-option-' + option.id"
+        [attr.aria-selected]="selectedPhaseId() === option.id"
+        (click)="selectPhase(option.id)"
+        (mouseenter)="activePhaseId.set(option.id)"
+        class="flex w-full items-center justify-between gap-[8px] rounded-[6px] border-2 px-[10px] py-[7px] text-left text-[13px] font-medium text-[var(--pr-text-heading)] cursor-pointer outline-none"
+        [class]="phaseOptionClass(option.id)">
+        <span class="truncate">{{ option.label }}</span>
+        @if (option.isOpen) {
+          <span
+            class="flex-none inline-flex items-center h-[20px] px-[8px] rounded-[10px] text-[10px] font-bold bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)]"
+            data-testid="overview-phase-option-open-badge">
+            Open
+          </span>
+        }
+      </button>
+    } @empty {
+      <span class="px-[10px] py-[7px] text-[12px] text-[var(--pr-text-secondary)]">No phases available</span>
+    }
   </div>
 </ng-template>

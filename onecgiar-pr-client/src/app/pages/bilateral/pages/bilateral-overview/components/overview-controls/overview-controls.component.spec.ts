@@ -117,15 +117,54 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
 
   afterEach(() => {
     component.closePopover();
+    component.closePhaseListbox(false);
     fixture.destroy();
     jest.restoreAllMocks();
   });
 
-  describe('phase selector (COV-R-2)', () => {
-    it('labels every option «phase_name» · «phase_year» and badges the Open one', () => {
-      const options = component.phaseSelectOptions();
-      expect(options[0]).toEqual(expect.objectContaining({ id: 36, select_label: 'Reporting 2026 · 2026', select_badge: 'Open' }));
-      expect(options[1]).toEqual(expect.objectContaining({ id: 35, select_label: 'Reporting 2025 · 2025', select_badge: '' }));
+  describe('phase combobox + listbox (COV-R-2, COV-R-3 C)', () => {
+    function openListbox(): HTMLElement {
+      (el('overview-phase-trigger').nativeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+      return overlay('[data-testid="overview-phase-listbox"]')!;
+    }
+
+    it('labels every option «phase_name» · «phase_year», sorted phase_year desc, badging the Open one', () => {
+      fixture.componentRef.setInput('phases', [CLOSED_PHASE, OPEN_PHASE]); // API order is not guaranteed
+      fixture.detectChanges();
+
+      expect(component.phaseOptions()).toEqual([
+        { id: OPEN_PHASE_ID, label: 'Reporting 2026 · 2026', isOpen: true },
+        { id: CLOSED_PHASE_ID, label: 'Reporting 2025 · 2025', isOpen: false },
+      ]);
+    });
+
+    it('shows the selected phase on a collapsed combobox trigger', () => {
+      const trigger = el('overview-phase-trigger').nativeElement as HTMLButtonElement;
+
+      expect(trigger.getAttribute('role')).toBe('combobox');
+      expect(trigger.getAttribute('aria-haspopup')).toBe('listbox');
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(trigger.getAttribute('aria-controls')).toBe(component.phaseListboxId);
+      expect(trigger.textContent!.replace(/\s+/g, ' ')).toContain('Reporting 2026 · 2026');
+      expect(overlay('[data-testid="overview-phase-listbox"]')).toBeFalsy();
+    });
+
+    it('opens a listbox with one option per phase and marks the selected one', () => {
+      const listbox = openListbox();
+
+      expect(el('overview-phase-trigger').nativeElement.getAttribute('aria-expanded')).toBe('true');
+      expect(listbox.getAttribute('role')).toBe('listbox');
+
+      const options = listbox.querySelectorAll('button[role="option"]');
+      expect(options.length).toBe(2);
+      expect(options[0].getAttribute('data-testid')).toBe(`overview-phase-option-${OPEN_PHASE_ID}`);
+      expect(options[0].getAttribute('aria-selected')).toBe('true');
+      expect(options[1].getAttribute('data-testid')).toBe(`overview-phase-option-${CLOSED_PHASE_ID}`);
+      expect(options[1].getAttribute('aria-selected')).toBe('false');
+      // The Open pill repeats inside its own row, next to the label.
+      expect(options[0].querySelector('[data-testid="overview-phase-option-open-badge"]')).toBeTruthy();
+      expect(options[1].querySelector('[data-testid="overview-phase-option-open-badge"]')).toBeFalsy();
     });
 
     it('renders the Open badge next to the trigger only while the selected phase is open', () => {
@@ -134,6 +173,79 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
       fixture.componentRef.setInput('selectedPhaseId', CLOSED_PHASE_ID);
       fixture.detectChanges();
       expect(el('overview-phase-open-badge')).toBeFalsy();
+    });
+
+    it('clicking an option emits the numeric id and closes the listbox', () => {
+      const emitted: number[] = [];
+      component.phaseChange.subscribe(value => emitted.push(value));
+
+      const listbox = openListbox();
+      (listbox.querySelector(`[data-testid="overview-phase-option-${CLOSED_PHASE_ID}"]`) as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(emitted).toEqual([CLOSED_PHASE_ID]);
+      expect(typeof emitted[0]).toBe('number');
+      expect(component.phaseOpen()).toBe(false);
+      expect(overlay('[data-testid="overview-phase-listbox"]')).toBeFalsy();
+    });
+
+    it('ArrowDown on the trigger opens it, then ArrowDown + Enter select the next phase', () => {
+      const emitted: number[] = [];
+      component.phaseChange.subscribe(value => emitted.push(value));
+
+      component.onPhaseTriggerKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      fixture.detectChanges();
+      expect(component.phaseOpen()).toBe(true);
+      // Opening starts on the SELECTED option, not on the first one by accident.
+      expect(component.activePhaseId()).toBe(OPEN_PHASE_ID);
+
+      component.onPhaseListKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      expect(component.activePhaseId()).toBe(CLOSED_PHASE_ID);
+      component.onPhaseListKeydown(new KeyboardEvent('keydown', { key: 'Enter' }));
+      fixture.detectChanges();
+
+      expect(emitted).toEqual([CLOSED_PHASE_ID]);
+      expect(component.phaseOpen()).toBe(false);
+    });
+
+    it('Home and End jump to the first and last option', () => {
+      openListbox();
+
+      component.onPhaseListKeydown(new KeyboardEvent('keydown', { key: 'End' }));
+      expect(component.activePhaseId()).toBe(CLOSED_PHASE_ID);
+      component.onPhaseListKeydown(new KeyboardEvent('keydown', { key: 'Home' }));
+      expect(component.activePhaseId()).toBe(OPEN_PHASE_ID);
+    });
+
+    it('Escape closes without emitting and returns focus to the trigger', async () => {
+      const emitted = jest.fn();
+      component.phaseChange.subscribe(emitted);
+
+      const trigger = el('overview-phase-trigger').nativeElement as HTMLButtonElement;
+      trigger.focus();
+      trigger.click();
+      fixture.detectChanges();
+
+      component.onPhaseListKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+      await settleFocus();
+
+      expect(component.phaseOpen()).toBe(false);
+      expect(emitted).not.toHaveBeenCalled();
+      expect(overlay('[data-testid="overview-phase-listbox"]')).toBeFalsy();
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('a backdrop click closes it without emitting', () => {
+      const emitted = jest.fn();
+      component.phaseChange.subscribe(emitted);
+
+      openListbox();
+      (document.querySelector('.cdk-overlay-backdrop') as HTMLElement).click();
+      fixture.detectChanges();
+
+      expect(component.phaseOpen()).toBe(false);
+      expect(emitted).not.toHaveBeenCalled();
     });
 
     it('emits the picked phase once, and not when it is already selected', () => {
@@ -148,18 +260,12 @@ describe('OverviewControlsComponent (COV-T-5)', () => {
     });
 
     /** HITL H-2 — the selection has to resolve against the string ids the API actually sends. */
-    it('resolves the selection from the API string ids and hands numeric option values to the select', async () => {
-      // `ngModel` writes the value into the select on a microtask, so the trigger's label is only
-      // rendered after the fixture settles.
-      await fixture.whenStable();
-      fixture.detectChanges();
-
-      const trigger = (el('overview-phase-select').nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
-      expect(trigger).toContain('Reporting 2026');
-      expect(component.phaseSelectOptions().map(option => option.id)).toEqual([OPEN_PHASE_ID, CLOSED_PHASE_ID]);
+    it('resolves the selection from the API string ids and exposes numeric option values', () => {
+      expect(component.selectedPhase()?.phase_name).toBe('Reporting 2026');
+      expect(component.phaseOptions().map(option => option.id)).toEqual([OPEN_PHASE_ID, CLOSED_PHASE_ID]);
     });
 
-    it('emits a NUMBER even when the raw string id comes back from the select', () => {
+    it('emits a NUMBER even when the raw string id comes back', () => {
       const emitted: number[] = [];
       component.phaseChange.subscribe(value => emitted.push(value));
 

@@ -1,9 +1,17 @@
 // @akili-spec bilateral/center-overview-tab (COV-T-5, COV-R-2, COV-R-3, COV-R-4, COV-R-18)
-import { ChangeDetectionStrategy, Component, computed, input, output, signal, viewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
-import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { Phases } from '../../../../../../shared/interfaces/phasesList.interface';
 import {
   BilateralMethod,
@@ -32,19 +40,18 @@ const ROLE_LABELS: Record<BilateralRole, string> = { lead: 'Lead', contributing:
 const SOURCE_LABELS: Record<BilateralSource, string> = { w3: 'W3/Bilateral', w1w2: 'W1/W2' };
 const METHOD_LABELS: Record<BilateralMethod, string> = { ai: 'AI-assisted', manual: 'Manual' };
 
-/** Phase option shape handed to `app-pr-select` (`optionLabel`/`optionValue`/`optionBadgeLabel`). */
-interface PhaseSelectOption {
+/** One row of the phase listbox (`COV-R-2` A: `«phase_name» · «phase_year»` + an "Open" badge). */
+export interface OverviewPhaseOption {
   id: number;
-  select_label: string;
-  select_badge: string;
-  select_badge_tone: string;
+  label: string;
+  isOpen: boolean;
 }
 
 /**
  * `COV-R-2` C — `GET /api/versioning` delivers `Phases.id` as a **string** (`'34'`) although the
  * interface types it `number`. `selectedPhaseId` is numeric, so an un-normalized `phase.id ===`
- * matched nothing: the option value handed to `app-pr-select` never equalled its `ngModel` and the
- * selector stayed on whatever the page had resolved by fallback.
+ * matched nothing: the listbox option value never equalled the selected id and the trigger stayed
+ * on whatever the page had resolved by fallback.
  */
 function phaseVersionId(phase: Phases): number {
   return Number(phase.id);
@@ -64,11 +71,18 @@ function phaseVersionId(phase: Phases): number {
  * closes (`COV-R-3` C "keyboard-operable", hard rule 4): the CDK appends the overlay at the END of
  * `<body>`, so without the trap a keyboard user would have to tab through the whole page to reach
  * a dialog that visually sits under the button they just pressed.
+ *
+ * The phase control is a token-styled `role="combobox"` trigger over a hand-rolled ARIA 1.2
+ * `role="listbox"` in the SAME `cdkConnectedOverlay` mechanism the Filter popover uses, so both
+ * open, dismiss and restore focus identically (design §6.2, corrected at `COV-T-8` H-3: the
+ * original `pr-select` primitive rendered the legacy grey-input + solid-chevron look and was
+ * rejected on the live page). Anchors: the SP Overview "Scope" control and the Drafts project
+ * filter.
  */
 @Component({
   selector: 'app-overview-controls',
   standalone: true,
-  imports: [FormsModule, A11yModule, OverlayModule, CustomFieldsModule],
+  imports: [A11yModule, OverlayModule],
   templateUrl: './overview-controls.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -90,8 +104,28 @@ export class OverviewControlsComponent {
 
   readonly popoverOpen = signal(false);
 
+  /** Phase listbox open state (`COV-R-2` B) — same overlay mechanism as the Filter popover. */
+  readonly phaseOpen = signal(false);
+  /** The option the arrow keys are currently on (`aria-activedescendant`), not the selection. */
+  readonly activePhaseId = signal<number | null>(null);
+  /** Ties the trigger's `aria-controls` to the listbox panel. */
+  readonly phaseListboxId = 'overview-phase-listbox';
+
   /** The Filter trigger — focus goes back to it whenever the popover closes. */
   private readonly filterOrigin = viewChild<CdkOverlayOrigin>('filterOrigin');
+  private readonly phaseTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('phaseTrigger');
+  private readonly phaseListRef = viewChild<ElementRef<HTMLDivElement>>('phaseList');
+
+  constructor() {
+    // Moves DOM focus into the listbox once the overlay's content is actually in the DOM — the
+    // portal attaches on the next tick, so a synchronous `.focus()` right after `phaseOpen.set(true)`
+    // would miss it (same shape as the SP Overview scope control).
+    effect(() => {
+      if (this.phaseOpen()) {
+        queueMicrotask(() => this.phaseListRef()?.nativeElement.focus());
+      }
+    });
+  }
 
   /** The popover's in-progress edit; committed only by `Apply`. */
   private readonly draft = signal<BilateralQueryParams | null>(null);
@@ -114,18 +148,26 @@ export class OverviewControlsComponent {
     { value: 'manual', label: METHOD_LABELS.manual },
   ];
 
-  readonly phaseSelectOptions = computed<PhaseSelectOption[]>(() =>
-    this.phases().map(phase => ({
-      id: phaseVersionId(phase),
-      select_label: `${phase.phase_name} · ${phase.phase_year}`,
-      select_badge: phase.status ? 'Open' : '',
-      select_badge_tone: 'match',
-    })),
+  /** `COV-R-2` A — one row per phase, most recent cycle first. */
+  readonly phaseOptions = computed<OverviewPhaseOption[]>(() =>
+    [...this.phases()]
+      .sort((a, b) => Number(b.phase_year) - Number(a.phase_year))
+      .map(phase => ({
+        id: phaseVersionId(phase),
+        label: `${phase.phase_name} · ${phase.phase_year}`,
+        isOpen: Boolean(phase.status),
+      })),
   );
 
   readonly selectedPhase = computed<Phases | null>(
     () => this.phases().find(phase => phaseVersionId(phase) === this.selectedPhaseId()) ?? null,
   );
+
+  /** What the closed trigger reads; the placeholder only shows while the phase list is loading. */
+  readonly selectedPhaseLabel = computed<string>(() => {
+    const phase = this.selectedPhase();
+    return phase ? `${phase.phase_name} · ${phase.phase_year}` : 'Select phase';
+  });
 
   /** `COV-R-3` A — one badge unit per ACTIVE dimension, not per selected value. */
   readonly activeFilterCount = computed(() => this.chips().length);
@@ -217,6 +259,96 @@ export class OverviewControlsComponent {
    */
   private restoreTriggerFocus(): void {
     this.filterOrigin()?.elementRef.nativeElement.focus();
+  }
+
+  // ── Phase combobox + listbox (`COV-R-2`, `COV-R-3` C keyboard rules) ─────────────────────────
+
+  togglePhaseListbox(): void {
+    this.phaseOpen() ? this.closePhaseListbox() : this.openPhaseListbox();
+  }
+
+  openPhaseListbox(): void {
+    if (this.phaseOpen()) return;
+    this.activePhaseId.set(this.selectedPhaseId());
+    this.phaseOpen.set(true);
+  }
+
+  /** Closes WITHOUT emitting; focus returns to the trigger so the keyboard never lands nowhere. */
+  closePhaseListbox(refocusTrigger = true): void {
+    if (!this.phaseOpen()) return;
+    this.phaseOpen.set(false);
+    if (refocusTrigger) {
+      queueMicrotask(() => this.phaseTriggerRef()?.nativeElement.focus());
+    }
+  }
+
+  selectPhase(phaseId: number): void {
+    this.onPhasePicked(phaseId);
+    this.closePhaseListbox();
+  }
+
+  /** Stable id per option for `aria-activedescendant`. */
+  phaseOptionId(phaseId: number | null): string {
+    return `overview-phase-option-${phaseId ?? 'none'}`;
+  }
+
+  /** Variable half of an option row's class list — whole strings so Tailwind's scan sees them. */
+  phaseOptionClass(phaseId: number): string {
+    return this.activePhaseId() === phaseId
+      ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-surface-subtle)]'
+      : 'border-transparent';
+  }
+
+  onPhaseTriggerKeydown(event: KeyboardEvent): void {
+    if (this.phaseOpen()) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.openPhaseListbox();
+    }
+  }
+
+  onPhaseListKeydown(event: KeyboardEvent): void {
+    const ids = this.phaseOptions().map(option => option.id);
+    if (!ids.length) return;
+    const currentIndex = ids.indexOf(this.activePhaseId() as number);
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activePhaseId.set(ids[currentIndex < 0 ? 0 : Math.min(currentIndex + 1, ids.length - 1)]);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activePhaseId.set(ids[currentIndex < 0 ? 0 : Math.max(currentIndex - 1, 0)]);
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.activePhaseId.set(ids[0]);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.activePhaseId.set(ids[ids.length - 1]);
+        break;
+      case 'Enter':
+      case ' ': {
+        event.preventDefault();
+        const active = this.activePhaseId();
+        if (active !== null) this.selectPhase(active);
+        break;
+      }
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.closePhaseListbox();
+        break;
+    }
+  }
+
+  /** The overlay's own key stream — `Escape` anywhere in the panel closes without emitting. */
+  onPhaseOverlayKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      this.closePhaseListbox();
+    }
   }
 
   onPhasePicked(phaseId: number | string | null | undefined): void {

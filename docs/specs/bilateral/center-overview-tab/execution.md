@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | **Spec Path** | `docs/specs/bilateral/center-overview-tab/` |
-| **Status** | `complete` — all 8 tasks PASS; spec status `executed` (PRs still to open) |
+| **Status** | `complete` — all 8 tasks PASS + 3 HITL findings fixed and reviewed; spec status `executed` (PRs still to open) |
 | **Started** | 2026-09-14 |
 | **Leader** | AKILI execute session (T1 — Fable 5.1). Registry T1 entry (`opus`) is older than the session model; flagged for default-branch refresh, not edited here |
 | **Implementer / Reviewer** | `.claude/agents/akili-implementer.md` (sonnet) / `.claude/agents/akili-reviewer.md` (opus) — author ≠ auditor by wrapper binding |
@@ -202,6 +202,7 @@ Tab order: Overview · Reporting · Results · AI Draft Results. Implementer not
 | 7 | `bilateral-projects-panel.component.html` | Nine legacy `pi pi-*` PrimeIcons predate this spec — separate icon-migration cleanup (hard rule 21) | T-7 grep gate |
 | 8 | `bilateral-query-params.ts` / `bilateral-results-list.component.ts` / `bilateral-overview.charts.ts` | Hoist the duplicated `STATUS_KEY_LABELS` map into the contract file | T-4 review advisory |
 | 9 | `bilateral-overview.component.html` | Pair the `--pr-focus-ring` halo with a solid `focus-visible` border on KPI cards/tiles/rows (done for the popover controls only) | T-5 review advisory |
+| 12 | `overview-controls.component.html` + `program-overview.component.html` scope control | Listbox options need `tabindex="-1"` (single tab stop, ARIA 1.2); same gap in both combobox controls | H-3 review advisory |
 | 11 | `bilateral-results-list.component.ts` `asCurrentResult` | Pre-existing `item.id === result.version_id` with string `Phases.id` — change-phase modal "From phase" label likely blank; same class as H-2, fix in a follow-up | H-2 review advisory |
 | 10 | `docs/specs/kaizen/` | Kaizen entry candidates: (a) budget mis-sized 3× because tests were estimated at ~40 % of LOC and landed at ~60 %; (b) Reviewer advisories twice exposed Leader design gaps (`COV-DD-3` twice) — clarifications made at execute time need an immediate delta review; (c) named-vs-arbitrary breakpoint mix as a new grep gate; (d) provider session limits killed 4 workers — rotation opus/sonnet/session-model kept author ≠ auditor | this run |
 
@@ -267,13 +268,17 @@ Tab order: Overview · Reporting · Results · AI Draft Results. Implementer not
 
 **Decisions.** The two HITL findings were treated as T-8 findings fixed inside T-8 (the task's own DoD: "mismatches raised as findings before close-out"), not as re-opened T-5/T-7 — each fix got its own independent review. Gate auto-approved (pre-approved mode).
 
+**Finding H-3 (user HITL, 2026-09-15 ~21:35 Bogotá): phase selector renders the legacy design.** The user's screenshot of the live controls row shows the `app-pr-select` (PrimeNG) look — grey bordered input with a solid purple chevron button — while the module's modern pattern (SP Overview "Scope", Drafts project filter) is a token-styled combobox trigger with an ARIA listbox in a CDK overlay. The design named `app-pr-select` (§6.2), so this is a design correction, not an Implementer defect: `design.md` §6.2 updated; fix dispatched to the controls component only (trigger + listbox reusing the component's existing `cdkConnectedOverlay` mechanism, keyboard + focus per `COV-R-3` C / `COV-R-18`, string-id normalization untouched).
+
+**H-3 fixed, reviewed (sonnet, PASS) and re-verified live (21:55 Bogotá).** `overview-controls` now renders a token-styled combobox trigger (`role="combobox"`, 30 px, `rounded-[8px]`, `--pr-border`, `expand_more` chevron, focus ring + solid focus border) over an ARIA listbox in the component's existing `cdkConnectedOverlay` (transparent backdrop, `aria-activedescendant`, `aria-selected`, Arrow/Home/End/Enter/Escape, focus returns to the trigger); `app-pr-select`, `FormsModule` and `CustomFieldsModule` removed from the component. 11 spec cases replace the 5 select-driven ones; `tsc` clean · `jest …/bilateral-overview` 4 suites, **117/117** · lint clean · grep gate 0 (`app-pr-select` included) · `build:dev` complete. Live: no PrimeNG element on the page; trigger height 30 px, radius 8 px, border `rgb(227,227,232)`; open → "Reporting 2026 · 2026 Open" (selected) and "Reporting 2025 · 2025", focus inside the listbox; picking 2025 → `?phase=34`, badge hidden, hero 168. Screenshot `evidence/overview-phase-listbox-open.png`. **ADVISORY (recorded → archive item 12):** option buttons lack `tabindex="-1"` so `Tab` walks the options instead of treating the listbox as one tab stop — an exact reproduction of the SP Overview scope control's gap; follow-up against both controls together.
+
 ---
 
 ## Summary
 
 All eight tasks PASS. Server: one additive `project_id` column. Client: a shared query-param contract and filter used by every center tab, an Overview data service with per-stream cache, pure aggregation and chart builders, the Overview page + controls, the route and first tab, URL-driven Results / Reporting / Drafts tabs, a CT layout gate and two folder guides. Live reconciliation on AfricaRice (phases 2026 and 2025) matches on every deep link.
 
-**What the gates caught that reviews did not:** (1) Tailwind v4 named-vs-arbitrary breakpoint cascade capping the KPI deck at two columns — CT only; (2) string ids from the projects and versioning APIs defeating strict comparisons in three components — live HITL only (Jest fixtures used numbers; now string ids everywhere). Both are recorded as archive/kaizen items.
+**What the gates caught that reviews did not:** (0) the user's own look at the live page caught the legacy `app-pr-select` styling the design itself had named (H-3); (1) Tailwind v4 named-vs-arbitrary breakpoint cascade capping the KPI deck at two columns — CT only; (2) string ids from the projects and versioning APIs defeating strict comparisons in three components — live HITL only (Jest fixtures used numbers; now string ids everywhere). Both are recorded as archive/kaizen items.
 
 **Runtime.** ≈ 7 h wall clock (2026-09-14 16:25 → 2026-09-15 ~21:15 Bogotá). Provider session limits killed four workers (sonnet at 17:20, session model at ~19:00); rotation opus / sonnet / session model kept author ≠ auditor on every round. Sonnet was back at 19:40, the session model still limited at close.
 
