@@ -200,6 +200,7 @@
 - **Verification:** `cd onecgiar-pr-client && CT_DEV_SERVER_PORT=<free port> npx cypress run --component --spec "src/app/pages/bilateral/**/*.cy.ts" && npm run build:dev`
 - **Input that would make the check fail:** a step box with `min-w-[180px]` (six boxes overflow 900 px); the chip pushing the tab strip past `clientWidth` at 375; a pulse keyframe not disabled under the stubbed media query.
 - **What this cannot prove / disqualifier:** CT proves layout with fixtures, not data — reconciliation is `APF-T-10`; a CT run whose dev server compiled with the primeicons noise but reported a failing spec is a real failure (memory: judge by spec results). The `build:dev` proves AOT of the new components only if they are reachable from a route (they are, via the upload step).
+- **Status:** `[~]` PIVOT PENDING — 2026-09-15: panel CT 3/3 green and `build:dev` green; header CT red because the pre-existing tab strip already overflows at 375 px without the chip (see `execution.md` → Pivot Record `APF-T-9`; user decision required)
 - **Definition of done:**
   - [ ] CT green at all viewports; `build:dev` green.
   - [ ] Commit: `✅ test(bilateral-ai) [<ticket>]: CT layout gate for the processing panel and header chip`.
