@@ -80,3 +80,28 @@ grep -rn "Processing timed out" src/app/pages/bilateral/    → 0 matches
 
 **Requirements covered:** `APF-R-7` (service side), `APF-R-8` A/B gate, `APF-R-9` service side, `APF-R-20`, `APF-R-6` C/D model parts; `APF-AC-11`, `APF-AC-13` (gate), `APF-AC-14` (copy table). **Gate:** auto-approved (pre-approved mode).
 
+### `APF-T-2` — `processJob` lifecycle, conditional transitions, retry semantics, late-completion reuse, richer `getJob` — **PASS** (attempt 1)
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-09-15 (10:57 → 11:21, America/Bogota) |
+| **Implementer** | `akili-implementer` (sonnet) · skills `nestjs-expert`, `tdd` · effort high |
+| **Reviewer** | `akili-reviewer` (opus) · lens checklist mode |
+| **Attempts** | 1 |
+
+**Files changed (5, +824/−52):** `onecgiar-pr-server/src/api/bilateral-ai/services/bilateral-ai.service.ts` (`attemptStart` conditional update with `@akili-spec` tag, `intermediateStage`, `setStage`, `notifyTerminal` seam, `processJob` retry-vs-final flow, lookup-first reuse in `createDraftFromCandidate`, `getJob` + `queue_position`/`max_attempts`), `bilateral-ai.service.spec.ts` (~20 cases), `bilateral-ai.consumer.ts` (+ spec: reads `getBilateralAiMaxAttempts()`), new `dto/bilateral-ai-job-response.dto.ts`.
+
+**Implementer verification:** `npx jest src/api/bilateral-ai --silent --reporters=summary --forceExit` → `Test Suites: 7 passed, 7 total`, `Tests: 130 passed, 130 total` · `npx eslint "src/api/bilateral-ai/**/*.ts" --quiet` → exit 0 · `tsc --noEmit` clean. Old bounce assertion (~line 1062: immediate `FAILED` on any retryable error) rewritten to "attempt 1 of `max_attempts` stays `PROCESSING`, `retrying: true`, `stage: queued`, still throws for nack"; old text preserved in a comment.
+
+**Implementer `Not Done / Assumptions` (verbatim):** "Did not add a `bilateral-result-summaries.en.md` change-log row … only `queue_position` and `max_attempts` are genuinely new. Flagging for the Leader to route." — Leader: owned by `APF-T-4` (its file list names the doc). / "The late-completion test proves the reuse mechanism … via a repository mock, not an actual sweeper-induced race" — accepted (D1). / "`attemptStart` uses two mutually-exclusive `Repository#update` calls … functionally equivalent" — Reviewer judged it sound and narrower than the single `IN` statement.
+
+**Reviewer verdict — `STATUS: PASS`:** "Every gate in `APF-T-2` holds. Attempt start writes `PROCESSING`/`uploading`/`attempts+1`/`retrying:false`/`started_date` with `error_code`/`error_message` absent from the SET, each branch carrying its own `WHERE status` … and returns before any mining call on `affected = 0`. Stages come only from the 8-value vocabulary … `extracting` before the mining call … Retry semantics keep the job `PROCESSING` … flip to `FAILED` with the last code on the final attempt, and call the notify seam once and only when `affected > 0`. The consumer reads `getBilateralAiMaxAttempts()` … `getJob` computes `queue_position` from a `LessThan(queue_entry_date)` count … only for a `PENDING` job." Race check (`APF-DD-3` item 4): a row the sweeper flipped to `FAILED` matches neither branch → `processJob` returns. Reviewer had no execution tools; Jest/ESLint evidence is the Implementer's, assertions judged behavioural.
+
+**ADVISORY (4R, recorded) — with Leader routing:**
+- *Risk* — `getJob` spreads the entity, so the response also carries `retried_date` and `queue_entry_date`; the DTO omits `queue_entry_date`. **Forward pointer → T-4**: the change-log row enumerates `stage`, `stage_updated_date`, `retrying`, `retried_date`, `queue_entry_date`, `queue_position`, `max_attempts`; add `queue_entry_date` to the DTO.
+- *Resilience* — `notifyTerminal(job, outcome)` has no `late` flag and the `COMPLETED` branch never learns the prior status. **Forward pointer → T-3**: extend the seam (capture the pre-write status, pass `late = true` when the row was `FAILED/TIMED_OUT`).
+- *Readability* — `BilateralAiJobStage` is a private const in the service; sweeper (T-3) and `retryJob` (T-4) both write `queued`. **Forward pointer → T-3**: export it.
+- *Observability* — design §9 asks `info` logs on stage transitions; `setStage` logs only the 0-row miss at `debug`. Recorded (§9 not among T-2's refs); T-3 may add the `info` line while wiring notifications if it is in the same statement, otherwise archive note.
+
+**Requirements covered:** `APF-R-1` A/B, `APF-R-3`, `APF-R-2` A AND-IT-MUST (reuse); `APF-AC-1`, `APF-AC-2`, `APF-AC-5`. **Gate:** auto-approved (pre-approved mode).
+

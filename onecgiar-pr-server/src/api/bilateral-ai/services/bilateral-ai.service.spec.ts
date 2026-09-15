@@ -15,7 +15,10 @@ describe('BilateralAiService (unit)', () => {
       create: jest.fn((x) => x),
       save: jest.fn(async (x) => ({ ...x, job_id: 'job-uuid-1' })),
       findOne: jest.fn(),
-      update: jest.fn(),
+      // Default: every conditional UPDATE "wins" (affected: 1). Tests exercising a lost race
+      // (attempt-start, stage advancement, retry/final writes) override this per-call.
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      count: jest.fn(),
     };
     const draftRepository = {
       create: jest.fn((x) => x),
@@ -275,18 +278,24 @@ describe('BilateralAiService (unit)', () => {
   });
 
   describe('getJob', () => {
-    it('should return job when found', async () => {
+    it('should return job when found, with queue_position null and max_attempts filled in for a non-PENDING job', async () => {
       const { service, stubs } = makeService();
-      const mockJob = { job_id: 'j1', user_id: 42 };
+      const mockJob = {
+        job_id: 'j1',
+        user_id: 42,
+        status: BilateralAiJobStatus.PROCESSING,
+      };
       stubs.jobRepository.findOne.mockResolvedValue(mockJob);
 
       const result = await service.getJob('j1', 42);
 
       expect(result).toEqual({
-        response: mockJob,
+        response: { ...mockJob, queue_position: null, max_attempts: 3 },
         message: 'AI job found',
         status: 200,
       });
+      // PROCESSING jobs never compute a position (APF-R-1 A: PENDING only).
+      expect(stubs.jobRepository.count).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when job not found', async () => {
@@ -307,6 +316,56 @@ describe('BilateralAiService (unit)', () => {
       expect(stubs.jobRepository.findOne).toHaveBeenCalledWith({
         where: { job_id: 'j1', user_id: 42 },
       });
+    });
+
+    // `APF-AC-1`, `APF-R-1` A: position is a mocked count over `queue_entry_date`, never a stored
+    // column — computed fresh on every read.
+    it('computes queue_position for a PENDING job from a count keyed on queue_entry_date', async () => {
+      const { service, stubs } = makeService();
+      const myQueueEntryDate = new Date('2026-09-10T00:00:00.000Z');
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        user_id: 42,
+        status: BilateralAiJobStatus.PENDING,
+        queue_entry_date: myQueueEntryDate,
+      });
+      stubs.jobRepository.count.mockResolvedValue(2);
+
+      const result = await service.getJob('j1', 42);
+
+      expect(result.response.queue_position).toBe(2);
+      expect(stubs.jobRepository.count).toHaveBeenCalledTimes(1);
+      const { where } = stubs.jobRepository.count.mock.calls[0][0];
+      // The count is scoped to this job's own queue-entry clock (never `created_date`) and to
+      // non-terminal jobs only.
+      expect(where.queue_entry_date.type).toBe('lessThan');
+      expect(where.queue_entry_date.value).toEqual(myQueueEntryDate);
+      expect(where.status.type).toBe('in');
+      expect(where.status.value).toEqual([
+        BilateralAiJobStatus.PENDING,
+        BilateralAiJobStatus.PROCESSING,
+      ]);
+    });
+
+    it('reads max_attempts from BILATERAL_AI_MAX_ATTEMPTS', async () => {
+      const { service, stubs } = makeService();
+      const original = process.env.BILATERAL_AI_MAX_ATTEMPTS;
+      process.env.BILATERAL_AI_MAX_ATTEMPTS = '5';
+      try {
+        stubs.jobRepository.findOne.mockResolvedValue({
+          job_id: 'j1',
+          user_id: 42,
+          status: BilateralAiJobStatus.FAILED,
+        });
+
+        const result = await service.getJob('j1', 42);
+
+        expect(result.response.max_attempts).toBe(5);
+      } finally {
+        if (original === undefined)
+          delete process.env.BILATERAL_AI_MAX_ATTEMPTS;
+        else process.env.BILATERAL_AI_MAX_ATTEMPTS = original;
+      }
     });
   });
 
@@ -822,7 +881,11 @@ describe('BilateralAiService (unit)', () => {
       expect(stubs.jobRepository.update).not.toHaveBeenCalled();
     });
 
-    it('should set status to PROCESSING and increment attempts', async () => {
+    // `design.md` §5 "Attempt start" / `APF-DD-3` item 2: `error_code`/`error_message` are the
+    // only record of the last error once retries no longer bounce through FAILED, so this write
+    // must preserve them (they are simply absent from the payload below, unlike the old
+    // `error_code: null, error_message: null` this test used to assert).
+    it('attempt-start: PENDING job → PROCESSING/uploading, attempts+1, retrying cleared, error_* preserved', async () => {
       const { service, stubs } = makeService();
       stubs.jobRepository.findOne.mockResolvedValue({
         job_id: 'j1',
@@ -833,17 +896,250 @@ describe('BilateralAiService (unit)', () => {
         audio_keys: [],
         text_context: null,
         user_id: 42,
+        error_code: 'HTTP_503',
+        error_message: 'previous failure',
       });
 
       await service.processJob('j1');
 
-      expect(stubs.jobRepository.update).toHaveBeenCalledWith('j1', {
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PENDING },
+        {
+          status: BilateralAiJobStatus.PROCESSING,
+          stage: 'uploading',
+          stage_updated_date: expect.any(Date),
+          attempts: 3,
+          retrying: false,
+          started_date: expect.any(Date),
+        },
+      );
+    });
+
+    it('attempt-start: PROCESSING & retrying job uses that WHERE clause', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
         status: BilateralAiJobStatus.PROCESSING,
-        attempts: 3,
-        started_date: expect.any(Date),
-        error_code: null,
-        error_message: null,
+        retrying: true,
+        attempts: 1,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
       });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        {
+          job_id: 'j1',
+          status: BilateralAiJobStatus.PROCESSING,
+          retrying: true,
+        },
+        {
+          status: BilateralAiJobStatus.PROCESSING,
+          stage: 'uploading',
+          stage_updated_date: expect.any(Date),
+          attempts: 2,
+          retrying: false,
+          started_date: expect.any(Date),
+        },
+      );
+    });
+
+    it('does not touch the DB or call text mining when the job is not eligible for a new attempt', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.FAILED,
+        retrying: false,
+        attempts: 3,
+      });
+
+      await service.processJob('j1');
+
+      expect(stubs.jobRepository.update).not.toHaveBeenCalled();
+      expect(stubs.textMining.extract).not.toHaveBeenCalled();
+    });
+
+    it('returns immediately when the attempt-start update affects 0 rows — text mining is never called', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 0 });
+
+      await service.processJob('j1');
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledTimes(1);
+      expect(stubs.textMining.extract).not.toHaveBeenCalled();
+    });
+
+    // `APF-R-1` B: the three intermediate stages are pre-set from the source mix, before the
+    // mining call — never claimed as observed progress the server cannot see.
+    it('stage sequence — documents only: uploading → reading → extracting → validating → creating_drafts', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: ['doc1'],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      const stages = stubs.jobRepository.update.mock.calls
+        .map((call) => call[1]?.stage)
+        .filter((stage) => stage !== undefined);
+      expect(stages).toEqual([
+        'uploading',
+        'reading',
+        'extracting',
+        'validating',
+        'creating_drafts',
+      ]);
+    });
+
+    it('stage sequence — audio only: uploading → transcribing → extracting → validating → creating_drafts', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: ['audio1'],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      const stages = stubs.jobRepository.update.mock.calls
+        .map((call) => call[1]?.stage)
+        .filter((stage) => stage !== undefined);
+      expect(stages).toEqual([
+        'uploading',
+        'transcribing',
+        'extracting',
+        'validating',
+        'creating_drafts',
+      ]);
+    });
+
+    it('stage sequence — documents and audio: uploading → reading_transcribing → extracting → validating → creating_drafts', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: ['doc1'],
+        audio_keys: ['audio1'],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      const stages = stubs.jobRepository.update.mock.calls
+        .map((call) => call[1]?.stage)
+        .filter((stage) => stage !== undefined);
+      expect(stages).toEqual([
+        'uploading',
+        'reading_transcribing',
+        'extracting',
+        'validating',
+        'creating_drafts',
+      ]);
+    });
+
+    it('stage sequence — text-context only: skips reading/transcribing entirely', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: 'some notes',
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      const stages = stubs.jobRepository.update.mock.calls
+        .map((call) => call[1]?.stage)
+        .filter((stage) => stage !== undefined);
+      expect(stages).toEqual([
+        'uploading',
+        'extracting',
+        'validating',
+        'creating_drafts',
+      ]);
+    });
+
+    it('sets stage=extracting before calling text mining, not after', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+      let extractingWritesWhenMiningWasCalled = -1;
+      stubs.textMining.extract.mockImplementation(async () => {
+        extractingWritesWhenMiningWasCalled =
+          stubs.jobRepository.update.mock.calls.filter(
+            (call) => call[1]?.stage === 'extracting',
+          ).length;
+        return {};
+      });
+
+      await service.processJob('j1');
+
+      expect(extractingWritesWhenMiningWasCalled).toBe(1);
     });
 
     it('should call textMining.extract with correct parameters', async () => {
@@ -893,15 +1189,63 @@ describe('BilateralAiService (unit)', () => {
 
       await service.processJob('j1');
 
-      expect(stubs.jobRepository.update).toHaveBeenCalledWith('j1', {
-        status: BilateralAiJobStatus.COMPLETED,
-        result_count: 0,
-        external_interaction_id: 'int-123',
-        response_snapshot: expect.any(Object),
-        completed_date: expect.any(Date),
-      });
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1' },
+        {
+          status: BilateralAiJobStatus.COMPLETED,
+          result_count: 0,
+          external_interaction_id: 'int-123',
+          response_snapshot: expect.any(Object),
+          completed_date: expect.any(Date),
+        },
+      );
       // Zero candidates → nothing to review → no mail.
       expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
+    });
+
+    // `APF-R-2` A "AND IT MUST accept a late mining response... idempotently": a re-run for the
+    // same (job_id, candidate_index) — the mining response arriving after the sweeper already
+    // flipped the row, or a redelivered message — must reuse the existing draft/result instead of
+    // creating a second `Result`.
+    it('late completion: reuses an existing draft per (job_id, candidate_index) instead of creating a duplicate Result', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [{ indicator: 'Number of innovations' }],
+        interactionId: null,
+      });
+      const existingDraft = {
+        id: 77,
+        job_id: 'j1',
+        candidate_index: 0,
+        result_id: 555,
+      };
+      stubs.draftRepository.findOne.mockResolvedValue(existingDraft);
+
+      await service.processJob('j1');
+
+      expect(stubs.draftRepository.findOne).toHaveBeenCalledWith({
+        where: { job_id: 'j1', candidate_index: 0 },
+      });
+      expect(stubs.resultRepository.save).not.toHaveBeenCalled();
+      expect(stubs.draftRepository.save).not.toHaveBeenCalled();
+      expect(stubs.evidenceRepository.save).not.toHaveBeenCalled();
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1' },
+        expect.objectContaining({
+          status: BilateralAiJobStatus.COMPLETED,
+          result_count: 1,
+        }),
+      );
     });
 
     // 2026-09-04: the client no longer force-redirects on completion, so this mail is what brings
@@ -1020,7 +1364,7 @@ describe('BilateralAiService (unit)', () => {
       await expect(service.processJob('j1')).resolves.toBeUndefined();
 
       expect(stubs.jobRepository.update).toHaveBeenCalledWith(
-        'j1',
+        { job_id: 'j1' },
         expect.objectContaining({ status: BilateralAiJobStatus.COMPLETED }),
       );
     });
@@ -1059,7 +1403,13 @@ describe('BilateralAiService (unit)', () => {
       );
     });
 
-    it('should mark job as FAILED and throw on retryable errors', async () => {
+    // `APF-DD-3` reversion: this test used to assert an immediate bounce to FAILED on any
+    // retryable error (`jobRepository.update` called with `'j1', { status: FAILED, error_code:
+    // 'PROCESSING_ERROR', error_message: 'Service down', completed_date: expect.any(Date) }`,
+    // criteria as a bare job-id string). That behaviour is exactly the bug this spec fixes: on
+    // attempt 1 of `max_attempts` (default 3) a retryable failure must stay PROCESSING with
+    // `retrying = true`, not bounce through FAILED (`APF-R-3`).
+    it('retryable error on attempt 1 of max_attempts stays PROCESSING with retrying=true and throws (for the consumer to nack/requeue)', async () => {
       const { service, stubs } = makeService();
       stubs.jobRepository.findOne.mockResolvedValue({
         job_id: 'j1',
@@ -1077,12 +1427,52 @@ describe('BilateralAiService (unit)', () => {
 
       await expect(service.processJob('j1')).rejects.toThrow('Service down');
 
-      expect(stubs.jobRepository.update).toHaveBeenCalledWith('j1', {
-        status: BilateralAiJobStatus.FAILED,
-        error_code: 'PROCESSING_ERROR',
-        error_message: 'Service down',
-        completed_date: expect.any(Date),
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PROCESSING },
+        {
+          retrying: true,
+          stage: 'queued',
+          stage_updated_date: expect.any(Date),
+          error_code: 'PROCESSING_ERROR',
+          error_message: 'Service down',
+        },
+      );
+      expect(stubs.jobRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: BilateralAiJobStatus.FAILED }),
+      );
+    });
+
+    // `APF-R-3` "AND IT MUST set FAILED with the last error_code after attempt max_attempts".
+    it('retryable error on the final attempt (max_attempts) sets FAILED with the last error_code and still throws', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 2, // default max_attempts = 3 → this is the 3rd, final attempt
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
       });
+      const error = new Error('Service down again');
+      (error as any).status = 503;
+      stubs.textMining.extract.mockRejectedValue(error);
+
+      await expect(service.processJob('j1')).rejects.toThrow(
+        'Service down again',
+      );
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PROCESSING },
+        {
+          status: BilateralAiJobStatus.FAILED,
+          error_code: 'HTTP_503',
+          error_message: 'Service down again',
+          completed_date: expect.any(Date),
+        },
+      );
     });
 
     it('should mark job as FAILED without throwing on 4xx errors', async () => {
@@ -1103,12 +1493,15 @@ describe('BilateralAiService (unit)', () => {
 
       await service.processJob('j1');
 
-      expect(stubs.jobRepository.update).toHaveBeenCalledWith('j1', {
-        status: BilateralAiJobStatus.FAILED,
-        error_code: 'HTTP_400',
-        error_message: 'Bad request',
-        completed_date: expect.any(Date),
-      });
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PROCESSING },
+        {
+          status: BilateralAiJobStatus.FAILED,
+          error_code: 'HTTP_400',
+          error_message: 'Bad request',
+          completed_date: expect.any(Date),
+        },
+      );
     });
   });
 });

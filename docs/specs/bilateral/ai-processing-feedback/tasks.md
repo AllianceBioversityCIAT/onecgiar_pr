@@ -65,10 +65,11 @@
 - **Verification:** `cd onecgiar-pr-server && npx jest src/api/bilateral-ai --silent && npx eslint "src/api/bilateral-ai/**/*.ts" --quiet`
 - **Input that would make the check fail:** attempt-start update writing `error_code: null` (the preserve test fails); `stage` set to `extracting` after the mining call instead of before; a second `resultRepository.save` for an existing candidate index; consumer with a literal `3`.
 - **What this cannot prove / disqualifier:** repository mocks prove the SQL intent, not MySQL's row-affected semantics under two processes — the multi-instance race is an accepted risk (requirements §9 D1); a mocked `queue_position` proves the expression, the live count is `APF-T-10`.
+- **Status:** `[x]` PASS — 2026-09-15, attempt 1 (see `execution.md`; forward pointers to T-3/T-4 recorded there)
 - **Definition of done:**
-  - [ ] Spec green (including the rewritten bounce case); lint clean; no controller/route change yet.
-  - [ ] `@akili-spec bilateral/ai-processing-feedback` comment on the conditional-update helper.
-  - [ ] Commit: `✨ feat(bilateral-ai) [<ticket>]: job stages, conditional transitions, retries stay PROCESSING, late-completion reuse`.
+  - [x] Spec green (including the rewritten bounce case); lint clean; no controller/route change yet.
+  - [x] `@akili-spec bilateral/ai-processing-feedback` comment on the conditional-update helper.
+  - [x] Commit: `✨ feat(bilateral-ai) [<ticket>]: job stages, conditional transitions, retries stay PROCESSING, late-completion reuse`.
 
 ### `APF-T-3` — Sweeper cron, terminal notifications (in-app direct rows + mail rule), notification read-path branch
 

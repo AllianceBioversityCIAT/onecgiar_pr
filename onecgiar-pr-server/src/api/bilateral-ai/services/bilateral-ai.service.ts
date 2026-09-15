@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { In, Repository } from 'typeorm';
+import { In, LessThan, Repository } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -40,6 +40,22 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { getBilateralAiMaxAttempts } from '../bilateral-ai.config';
+
+/**
+ * The complete server `stage` vocabulary (`design.md` §3.1, `requirements.md` §2 Glossary).
+ * Nothing else is ever written to `BilateralAiJob.stage`.
+ */
+const BilateralAiJobStage = {
+  QUEUED: 'queued',
+  UPLOADING: 'uploading',
+  READING: 'reading',
+  TRANSCRIBING: 'transcribing',
+  READING_TRANSCRIBING: 'reading_transcribing',
+  EXTRACTING: 'extracting',
+  VALIDATING: 'validating',
+  CREATING_DRAFTS: 'creating_drafts',
+} as const;
 
 const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
   'Policy Change': { type: 1, level: 3 },
@@ -145,12 +161,41 @@ export class BilateralAiService {
     };
   }
 
+  /**
+   * `APF-R-1` A: `queue_position` is computed at read time from `bilateral_ai_jobs` — never
+   * stored — and is meaningful only while this job itself is `PENDING` (`design.md` §4.1). It
+   * counts non-terminal jobs (`PENDING`/`PROCESSING`) whose queue-entry clock is older than this
+   * job's own `queue_entry_date = COALESCE(retried_date, created_date)`, so a retried job takes
+   * its place at the back of the queue instead of ranking by `created_date`.
+   */
   async getJob(jobId: string, userId: number) {
     const job = await this.jobRepository.findOne({
       where: { job_id: jobId, user_id: userId },
     });
     if (!job) throw new NotFoundException('AI job not found.');
-    return { response: job, message: 'AI job found', status: 200 };
+
+    let queue_position: number | null = null;
+    if (job.status === BilateralAiJobStatus.PENDING) {
+      queue_position = await this.jobRepository.count({
+        where: {
+          status: In([
+            BilateralAiJobStatus.PENDING,
+            BilateralAiJobStatus.PROCESSING,
+          ]),
+          queue_entry_date: LessThan(job.queue_entry_date),
+        },
+      });
+    }
+
+    return {
+      response: {
+        ...job,
+        queue_position,
+        max_attempts: getBilateralAiMaxAttempts(),
+      },
+      message: 'AI job found',
+      status: 200,
+    };
   }
 
   async getSignedUrl(key: string, user: TokenDto) {
@@ -382,16 +427,117 @@ export class BilateralAiService {
     };
   }
 
+  /**
+   * Attempt-start conditional update (`design.md` §5 "Attempt start", `APF-DD-3`). A job's
+   * `status` is never both `PENDING` and `PROCESSING` at once, so trying the condition that
+   * matches the already-read row (`PENDING`, or `PROCESSING & retrying`) and reading `affected`
+   * is equivalent to the single `WHERE status IN (PENDING, PROCESSING & retrying)` statement in
+   * the design doc, while keeping the criteria a plain `Repository#update` `where` object the
+   * spec can assert directly. `error_code`/`error_message` are intentionally **absent** from the
+   * `SET` — they are the "last error" the retry panel reads (`APF-R-3`) and must survive this
+   * write. `retrying` is set to `false` unconditionally so nothing else has to remember to clear
+   * it. Any other `status` (already `COMPLETED`/`FAILED` — the sweeper or another consumer won)
+   * skips the write entirely and reports "not started".
+   *
+   * @akili-spec bilateral/ai-processing-feedback
+   */
+  private async attemptStart(job: BilateralAiJob): Promise<boolean> {
+    const now = new Date();
+    const set = {
+      status: BilateralAiJobStatus.PROCESSING,
+      stage: BilateralAiJobStage.UPLOADING,
+      stage_updated_date: now,
+      attempts: job.attempts + 1,
+      retrying: false,
+      started_date: now,
+    };
+    let result: { affected?: number } | undefined;
+    if (job.status === BilateralAiJobStatus.PENDING) {
+      result = await this.jobRepository.update(
+        { job_id: job.job_id, status: BilateralAiJobStatus.PENDING },
+        set,
+      );
+    } else if (job.status === BilateralAiJobStatus.PROCESSING && job.retrying) {
+      result = await this.jobRepository.update(
+        {
+          job_id: job.job_id,
+          status: BilateralAiJobStatus.PROCESSING,
+          retrying: true,
+        },
+        set,
+      );
+    } else {
+      return false;
+    }
+    return (result?.affected ?? 0) > 0;
+  }
+
+  /**
+   * `reading` when only documents are present, `transcribing` when only audio, `reading_transcribing`
+   * when both — the three are pre-set from the source mix because the mining call is one opaque
+   * request (`APF-R-1` B, `design.md` §5 "Stage advancement"). `null` when the job carries neither
+   * (text-context-only jobs skip straight from `uploading` to `extracting`).
+   */
+  private intermediateStage(
+    job: Pick<BilateralAiJob, 'document_keys' | 'audio_keys'>,
+  ): string | null {
+    const hasDocs = (job.document_keys?.length ?? 0) > 0;
+    const hasAudio = (job.audio_keys?.length ?? 0) > 0;
+    if (hasDocs && hasAudio) return BilateralAiJobStage.READING_TRANSCRIBING;
+    if (hasDocs) return BilateralAiJobStage.READING;
+    if (hasAudio) return BilateralAiJobStage.TRANSCRIBING;
+    return null;
+  }
+
+  /**
+   * Stage-advancement conditional update (`design.md` §5 "Conditional transitions"): every write
+   * is scoped to `status = PROCESSING`, the status `attemptStart` just set. A 0-row result means
+   * another actor (the sweeper) already moved the job off `PROCESSING` — logged at `debug`, never
+   * thrown, since the in-flight mining call cannot be cancelled either way.
+   */
+  private async setStage(jobId: string, stage: string): Promise<void> {
+    const result = await this.jobRepository.update(
+      { job_id: jobId, status: BilateralAiJobStatus.PROCESSING },
+      { stage, stage_updated_date: new Date() },
+    );
+    if (!result?.affected) {
+      this.logger.debug(
+        `Bilateral AI job ${jobId} stage update to "${stage}" affected 0 rows — status changed concurrently.`,
+      );
+    }
+  }
+
+  /**
+   * Seam for `APF-T-3` (`design.md` §5 "Terminal notifications", §6.4). No-op today: that task
+   * replaces this body with `emitBilateralAiJobNotification` (in-app row) plus the mail dispatch
+   * for the `COMPLETED`-with-zero-drafts and `FAILED` cases. The existing results-ready mail
+   * (`sendResultsReadyEmail`, below) keeps firing unchanged until then.
+   */
+  private async notifyTerminal(
+    job: BilateralAiJob,
+    outcome: 'completed' | 'failed',
+  ): Promise<void> {
+    this.logger.debug(
+      `Bilateral AI job ${job.job_id} reached terminal state (${outcome}); notification not yet wired (APF-T-3).`,
+    );
+  }
+
   async processJob(jobId: string): Promise<void> {
     const job = await this.jobRepository.findOne({ where: { job_id: jobId } });
     if (!job || job.status === BilateralAiJobStatus.COMPLETED) return;
-    await this.jobRepository.update(jobId, {
-      status: BilateralAiJobStatus.PROCESSING,
-      attempts: job.attempts + 1,
-      started_date: new Date(),
-      error_code: null,
-      error_message: null,
-    });
+
+    const started = await this.attemptStart(job);
+    if (!started) {
+      // The sweeper or another consumer already owns/terminated this job — calling mining for a
+      // terminated job would burn a 10-minute request and could resurrect a FAILED row
+      // (`design.md` §5 "Attempt start").
+      this.logger.debug(
+        `Bilateral AI job ${jobId} attempt-start affected 0 rows; already claimed or already terminal.`,
+      );
+      return;
+    }
+    const attemptNumber = job.attempts + 1;
+
     try {
       const user = await this.userRepository.findOne({
         where: { id: job.user_id },
@@ -402,6 +548,10 @@ export class BilateralAiService {
           'The user email could not be resolved for AI processing.',
         );
       }
+
+      const stage = this.intermediateStage(job);
+      if (stage) await this.setStage(jobId, stage);
+      await this.setStage(jobId, BilateralAiJobStage.EXTRACTING);
 
       this.logger.log(
         `Sending job ${jobId} to bilateral AI text mining (bucket: ${job.bucket_name}, documents: ${job.document_keys?.length ?? 0}, audio: ${job.audio_keys?.length ?? 0}).`,
@@ -415,7 +565,11 @@ export class BilateralAiService {
         project_id: job.project_id,
         program_code: job.program_code,
       });
+
+      await this.setStage(jobId, BilateralAiJobStage.VALIDATING);
       const normalized = this.textMining.normalize(response);
+
+      await this.setStage(jobId, BilateralAiJobStage.CREATING_DRAFTS);
       let resultCount = 0;
       for (let index = 0; index < normalized.results.length; index += 1) {
         const candidate = normalized.results[index];
@@ -426,13 +580,21 @@ export class BilateralAiService {
         );
         if (draft) resultCount += 1;
       }
-      await this.jobRepository.update(jobId, {
-        status: BilateralAiJobStatus.COMPLETED,
-        result_count: resultCount,
-        external_interaction_id: normalized.interactionId,
-        response_snapshot: response,
-        completed_date: new Date(),
-      });
+
+      // Unconditional on `job_id` alone (not scoped to `status = PROCESSING`): a late mining
+      // response must still be able to flip a `FAILED`/`TIMED_OUT` row to `COMPLETED`
+      // (`APF-R-2` A, `design.md` §5 "Late completion") — the draft-level idempotency lives in
+      // `createDraftFromCandidate`, not in this write's WHERE clause.
+      await this.jobRepository.update(
+        { job_id: jobId },
+        {
+          status: BilateralAiJobStatus.COMPLETED,
+          result_count: resultCount,
+          external_interaction_id: normalized.interactionId,
+          response_snapshot: response,
+          completed_date: new Date(),
+        },
+      );
 
       // Processing can take minutes and the uploader has usually moved on; the client no longer
       // force-redirects on completion (2026-09-04), so the mail is what tells them the drafts are
@@ -440,17 +602,41 @@ export class BilateralAiService {
       if (resultCount > 0) {
         await this.sendResultsReadyEmail(job, user, resultCount);
       }
+      await this.notifyTerminal(job, 'completed');
     } catch (error: any) {
       const status = error?.status;
       const retryable = !status || status >= 500;
       const failure =
         error instanceof Error ? error.message : 'AI processing failed.';
-      await this.jobRepository.update(jobId, {
-        status: BilateralAiJobStatus.FAILED,
-        error_code: status ? `HTTP_${status}` : 'PROCESSING_ERROR',
-        error_message: failure,
-        completed_date: new Date(),
-      });
+      const errorCode = status ? `HTTP_${status}` : 'PROCESSING_ERROR';
+
+      if (retryable && attemptNumber < getBilateralAiMaxAttempts()) {
+        // Retry semantics (`APF-R-3`, `APF-DD-3`): stay PROCESSING, never bounce through FAILED.
+        await this.jobRepository.update(
+          { job_id: jobId, status: BilateralAiJobStatus.PROCESSING },
+          {
+            retrying: true,
+            stage: BilateralAiJobStage.QUEUED,
+            stage_updated_date: new Date(),
+            error_code: errorCode,
+            error_message: failure,
+          },
+        );
+        throw error;
+      }
+
+      const result = await this.jobRepository.update(
+        { job_id: jobId, status: BilateralAiJobStatus.PROCESSING },
+        {
+          status: BilateralAiJobStatus.FAILED,
+          error_code: errorCode,
+          error_message: failure,
+          completed_date: new Date(),
+        },
+      );
+      if (result?.affected) {
+        await this.notifyTerminal(job, 'failed');
+      }
       if (retryable) throw error;
     }
   }
@@ -549,6 +735,15 @@ export class BilateralAiService {
     candidate: Record<string, unknown>,
     candidateIndex: number,
   ): Promise<BilateralAiDraft | null> {
+    // Late-completion idempotency, before any write (`APF-R-2` A, `design.md` §5 "Late
+    // completion"): a re-run for this (job_id, candidate_index) — the mining response arriving
+    // after the sweeper already flipped the row, or a redelivered RMQ message — reuses the
+    // existing draft/result instead of creating a second `Result` row.
+    const existing = await this.draftRepository.findOne({
+      where: { job_id: job.job_id, candidate_index: candidateIndex },
+    });
+    if (existing) return existing;
+
     const indicator = String(candidate.indicator || '');
     const mapping = TYPE_BY_INDICATOR[indicator];
     // Knowledge Product candidates are intentionally not drafted (out of scope):
