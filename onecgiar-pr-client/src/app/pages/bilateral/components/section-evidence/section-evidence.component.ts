@@ -543,7 +543,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     this.mdsTracker.setSectionFields('evidence', [
       {
         key: 'valid-link',
-        label: 'Evidence with valid link',
+        // El rótulo que el reportero ve en la tarjeta, palabra por palabra: la entrada del panel
+        // "Still missing" se ancla al campo por ese texto, y un nombre que no está en pantalla deja
+        // la fila sin su botón `Go`. El requisito completo lo explica la descripción de la tarjeta.
+        label: 'Evidence',
         filled: this.hasValidLink,
       },
     ]);

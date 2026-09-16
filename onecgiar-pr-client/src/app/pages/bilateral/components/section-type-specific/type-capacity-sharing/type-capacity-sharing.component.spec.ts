@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { of, throwError, Subject } from 'rxjs';
@@ -582,6 +585,34 @@ describe('TypeCapacitySharingComponent', () => {
         (b: any) => ['Save', 'Saving...'].includes(b.textContent.trim())
       );
       expect(saveButtons).toHaveLength(0);
+    });
+  });
+
+  /**
+   * The group is the requirement, and until now only a `*` said so — a marker that says "this is
+   * mandatory" but never "this is what you are missing". The footer counted the group while nothing
+   * on screen was marked, which is the complaint JC reported (16-Sep-2026). The card and the
+   * checklist read the SAME predicate so they cannot drift apart.
+   */
+  describe('the people-trained group is one marked field', () => {
+    it('is unanswered until one of the four counts has a value', () => {
+      build();
+      component.body = {};
+      expect(component.peopleTrainedFilled).toBe(false);
+
+      component.body = { non_binary_using: 0 };
+      expect(component.peopleTrainedFilled).toBe(true);
+    });
+
+    it('feeds the card and the checklist item from that same predicate', () => {
+      const html = readFileSync(join(__dirname, 'type-capacity-sharing.component.html'), 'utf8');
+      expect(html).toContain('<app-field-card label="Number of people trained" [required]="true" [hasValue]="peopleTrainedFilled"');
+
+      build();
+      component.body = { female_using: 3 };
+      component.updateMds();
+      const [, fields] = mdsTracker.setSectionFields.mock.calls.at(-1);
+      expect(fields).toContainEqual(expect.objectContaining({ key: 'people-trained', filled: true }));
     });
   });
 });
