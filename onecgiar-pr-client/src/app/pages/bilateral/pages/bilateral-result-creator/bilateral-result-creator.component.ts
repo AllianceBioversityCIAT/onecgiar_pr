@@ -318,7 +318,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     const wanted = BilateralResultCreatorComponent.normaliseLabel(entry.replace(/\s*\(.*\)\s*$/, ''));
     if (!wanted) return null;
 
-    const matches = [...document.querySelectorAll<HTMLElement>('.bcr-content .fch_title, .bcr-content .pr_label')]
+    // `Array.from`, not a spread: this package compiles without `downlevelIteration`, so spreading a
+    // NodeList is a TS2488 that only `build:dev` reports — `tsc --noEmit` and Jest never see it.
+    const matches = Array.from(document.querySelectorAll<HTMLElement>('.bcr-content .fch_title, .bcr-content .pr_label'))
       .filter(node => {
         const label = BilateralResultCreatorComponent.normaliseLabel(node.innerText ?? node.textContent ?? '');
         // Either the same field, or the on-screen label carrying the checklist's shorter name in
