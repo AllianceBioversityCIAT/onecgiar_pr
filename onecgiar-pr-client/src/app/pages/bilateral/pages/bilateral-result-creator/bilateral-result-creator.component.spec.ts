@@ -587,6 +587,19 @@ describe('BilateralResultCreatorComponent', () => {
       expect(q('[data-testid="bilateral-footer-position"]').textContent.replace(/\s+/g, ' ').trim()).toBe('Section 3 of 6');
     });
 
+    // Sin franja a lo ancho (Yeck, 16-sep-2026): dos cápsulas, una por grupo, como la barra de W1/W2.
+    it('splits the footer into two floating capsules: navigation left, state and save right', () => {
+      enterEditor();
+      const footer = q('[data-testid="bilateral-section-footer"]');
+      const groups = footer.querySelectorAll(':scope > .bcr-editor-footer__group');
+      expect(groups.length).toBe(2);
+      expect(groups[0].classList.contains('bcr-editor-footer__group--start')).toBe(true);
+      expect(groups[1].classList.contains('bcr-editor-footer__group--end')).toBe(true);
+      expect(groups[0].querySelector('[data-testid="bilateral-footer-next"]')).not.toBeNull();
+      expect(groups[1].querySelector('[data-testid="bilateral-footer-save"]')).not.toBeNull();
+      expect(footer.querySelector('.bcr-editor-footer__inner')).toBeNull();
+    });
+
     it('makes Next the one primary action and Save draft secondary, as on the W1/W2 bar', () => {
       enterEditor();
       const next = q('[data-testid="bilateral-footer-next"]');
