@@ -213,6 +213,19 @@
 
 ---
 
+### `UG-T-12` — `assemble.ts` · `UG-T-13` — `verify-structure.ts` · `UG-T-14` — `pdf.ts` + PDF — PASS (attempt 1) + polish round
+
+- **Attempt 1 (2026-09-15):** one `akili-implementer` (sonnet), skill `playwright-cli`, effort high, chained. Killed by HTTP 429 (sonnet, reset 02:10) at its final step (cleanup/report) **after** all three files and the build were complete; tree probe found no scratch leftovers. Leader re-ran the verification inline: `npm run typecheck` clean; `npm run build-guide` exit 0 (assemble → verify-structure "OK — structure matches template/README.md's contract" → pdf, fonts Manrope/JetBrains Mono available); `pdfinfo` 20 pages, 612×792 pt Letter, 2.5 MB; assembled HTML 9 `<h2>`, 6 `<img>`, 0 `{{`, 0 literal `null`; `dist/guide-assembled.html` ignored, PDF not ignored.
+- **Leader-executed DoD items:** `UG-T-13` negative paths — deleting the Results Center `<h2>` → exit 1 ("Section "section-results-center" has <h2> text "" but expected "Results Center"; Expected 9 <h2> … found 8"); swapping sections 5/6 → exit 1 naming both positions/ids. `UG-T-14` — PDF byte scan: 24 link annotations, 8 GoTo destinations (TOC + glossary), backgrounds/gradients visibly rendered on cover and section bands (Leader viewed all 20 pages).
+- **Reviewer verdict: `UG-T-12` PASS · `UG-T-13` PASS · `UG-T-14` PASS** — `akili-reviewer` (opus). Placeholder contract honoured with exactly-once guards and a post-scan; stylesheet inlined (relative href would have 404'd from `dist/`); section ids/order/titles 1:1 with README and TOC; 6 meaningful `alt`s; route `<code>` is a path; token shape guard; markdown renderer matches the content actually present (paragraphs + bold only); glossary 23 pairs, no empty `<dd>`, `<cite>` with link or PRMS source, OICR (null) skipped; `pdf.ts` options exact (`preferCSSPageSize` proven by 612×792); fonts gate; no secrets/origin logged; no new deps.
+- **ADVISORY (recorded):** per-section titles/eyebrows/alt/captions hardcoded in `assemble.ts` rather than content/config (readability); `assemble.ts` does not check `raw/<id>.png` exists / `verify-structure` does not assert `img.naturalWidth > 0` (reliability — adopted in polish); `**`/`##` leak checks run over raw HTML incl. inlined CSS (reliability); `buildDateIso()` uses UTC → cover reads "Built 2026-09-16" on a 2026-09-15 build (risk — adopted in polish); null-definition glossary entries dropped silently → `console.warn` (adopted in polish).
+- **Leader HITL findings (viewed all 20 pages) → polish round:** (1) section 01's figure (`home.png`, 1280×1903) is taller than the page, so `.ug-figure { break-inside: avoid }` cannot hold and the caption lands alone on the next page → cap `.ug-figure img` height so image + caption fit one page; (2) glossary `<dt>` orphaned at page bottom ("High Level Output (HLO)", "Innovation Packages and Scaling Readiness (IPSR)") → keep `dt` with its `dd`; (3) build date local, not UTC. Scope: `template/guide.css`, `src/assemble.ts` (+ `verify-structure.ts` image assertion). These are quality defects in the spec's own deliverable (`UG-R-1`, `UG-R-20`), not new scope.
+- **Files:** `tooling/src/assemble.ts` (411 L), `tooling/src/verify-structure.ts` (190 L), `tooling/src/pdf.ts` (101 L), `tooling/package.json` (scripts `assemble`, `verify-structure`, `pdf`, `build-guide`), `tooling/dist/reporting-tool-user-guide.pdf` (committed after the polish round + `UG-T-15`/`UG-T-16`, per `tasks.md` §6).
+- **Requirements covered:** `UG-R-1`, `UG-R-4`, `UG-R-5`, `UG-R-12`, `UG-R-20`, `UG-AC-1`, `UG-DD-5`.
+- **Final verification result:** PASS ×3.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -247,4 +260,4 @@ Output directory fixed at `tooling/dist/` (the `UG-T-1` Reviewer's RELIABILITY a
 
 ## 5. Summary (updated as tasks complete)
 
-11 of 16 tasks complete (`UG-T-1` … `UG-T-11` all done); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: `UG-T-12` → `UG-T-13` → `UG-T-14` (one Implementer, chained), then `UG-T-15` + `UG-T-16`. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+14 of 16 tasks complete (`UG-T-1` … `UG-T-14`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: polish round (layout + build date), then `UG-T-15` audit and `UG-T-16` HITL sign-off, then commit the PDF. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.

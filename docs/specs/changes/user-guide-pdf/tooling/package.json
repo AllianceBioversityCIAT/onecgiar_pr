@@ -6,10 +6,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "capture": "ts-node src/capture.ts",
-    "assemble": "echo \"assemble.ts not implemented yet (see UG-T-12)\" && exit 1",
-    "verify-structure": "echo \"verify-structure.ts not implemented yet (see UG-T-13)\" && exit 1",
-    "pdf": "echo \"pdf.ts not implemented yet (see UG-T-14)\" && exit 1",
-    "build-guide": "echo \"full pipeline not wired yet (see UG-T-7, UG-T-12..14)\" && exit 1"
+    "assemble": "ts-node src/assemble.ts",
+    "verify-structure": "ts-node src/verify-structure.ts",
+    "pdf": "ts-node src/pdf.ts",
+    "build-guide": "npm run assemble && npm run verify-structure && npm run pdf"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

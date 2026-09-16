@@ -179,7 +179,7 @@ Block execution until every box is ticked.
   - [x] TOC anchors (`<a href="#section-id">`) resolve to a matching `id` on each section header.
   - [x] Cover page renders a build/version date stamp (`UG-R-20`).
 
-### `UG-T-12` — `assemble.ts`
+### `UG-T-12` — `assemble.ts` — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Read `tokens.json`, `content/intro.md`, `content/sections/*.md`, `content/glossary.json`, and `raw/*.png`, and render them into `template/guide.html` → `dist/guide-assembled.html`. Each screenshot `<img>` gets an `alt` attribute derived from its section's caption (`UG-R-12`).
@@ -189,11 +189,11 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-13`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] `dist/guide-assembled.html` opens correctly in a browser with all 6 screenshots, captions, and the glossary rendered.
-  - [ ] Every `<img>` has a non-empty `alt` attribute.
-  - [ ] No unrendered template placeholder or unconverted markdown syntax (e.g. `{{...}}`, stray `**`/`##`) appears anywhere in the assembled HTML — spot-checked (closes the `UG-R-1` scenario's `AND IT MUST` clause).
+  - [x] `dist/guide-assembled.html` opens correctly in a browser with all 6 screenshots, captions, and the glossary rendered.
+  - [x] Every `<img>` has a non-empty `alt` attribute.
+  - [x] No unrendered template placeholder or unconverted markdown syntax (e.g. `{{...}}`, stray `**`/`##`) appears anywhere in the assembled HTML — spot-checked (closes the `UG-R-1` scenario's `AND IT MUST` clause).
 
-### `UG-T-13` — `verify-structure.ts` (automated structural gate)
+### `UG-T-13` — `verify-structure.ts` (automated structural gate) — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** tests
 - **Description:** Parse `dist/guide-assembled.html` and assert: the 6 expected section `<h2>` headings exist, in the specified order, plus an intro block and a glossary block. Exit non-zero naming the missing/misordered section if the assertion fails.
@@ -203,10 +203,10 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-14`
 - **Estimate:** S
 - **Definition of done:**
-  - [ ] Running against the real `dist/guide-assembled.html` passes.
-  - [ ] Deliberately reordering or deleting one section heading in a scratch copy causes the script to fail with a message naming that section — verified once as a negative-path check.
+  - [x] Running against the real `dist/guide-assembled.html` passes.
+  - [x] Deliberately reordering or deleting one section heading in a scratch copy causes the script to fail with a message naming that section — verified once as a negative-path check.
 
-### `UG-T-14` — `pdf.ts` (final render)
+### `UG-T-14` — `pdf.ts` (final render) — **[x] COMPLETE** (PASS; PDF committed after UG-T-15/16, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Load `dist/guide-assembled.html` in Playwright and call `page.pdf({ format: 'Letter', printBackground: true, ... })` to produce `dist/reporting-tool-user-guide.pdf`.
@@ -216,8 +216,8 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-15`, `UG-T-16`
 - **Estimate:** S
 - **Definition of done:**
-  - [ ] The PDF opens in a standard reader with backgrounds/gradients rendered (not stripped by print defaults).
-  - [ ] TOC anchor links are clickable and jump to the correct section inside the PDF.
+  - [x] The PDF opens in a standard reader with backgrounds/gradients rendered (not stripped by print defaults).
+  - [x] TOC anchor links are clickable and jump to the correct section inside the PDF.
 
 ### `UG-T-15` — Credential-leak and read-only audit
 
