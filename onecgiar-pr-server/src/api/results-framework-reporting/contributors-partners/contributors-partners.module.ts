@@ -17,6 +17,9 @@ import { ResultsCapacityDevelopmentsRepository } from '../../results/summary/rep
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
 import { ResultsPolicyChangesRepository } from '../../results/summary/repositories/results-policy-changes.repository';
 import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
+// Read-only here: the save guard uses it to say WHO deleted the result and WHEN, instead of the
+// bare "Result not found." that reads as a platform failure.
+import { ResultDeletionAuditModule } from '../../results/result-deletion-audit/result-deletion-audit.module';
 @Module({
   controllers: [ContributorsPartnersController],
   providers: [
@@ -39,6 +42,7 @@ import { ResultAnswerRepository } from '../../results/result-questions/repositor
     ResultsByInstitutionsModule,
     ResultsTocResultsModule,
     LinkedResultsModule,
+    ResultDeletionAuditModule,
   ],
   exports: [ContributorsPartnersService, ContributionConsistencyService],
 })
