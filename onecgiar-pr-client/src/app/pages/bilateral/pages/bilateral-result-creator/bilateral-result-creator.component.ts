@@ -445,18 +445,33 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.lastLoadRequest = { resultCode, versionId };
         this.creationService.loadResult(resultCode, versionId);
       } else {
-        // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
-        const preselected = this.creationService.selectedProject();
-        this.isCreating.set(true);
-        this.resultId.set(null);
-        this.selectedReportingWay.set(null);
-        this.manualCreateFlow.closeDrawer();
-        this.autoSaveService.reset();
-        this.mdsTracker.reset();
-        this.creationService.resetWizard();
-        if (preselected) {
-          this.creationService.selectProject(preselected);
+        const jobId = this.route.snapshot?.queryParams?.['job'];
+        if (jobId) {
+          this.isCreating.set(true);
+          this.resultId.set(null);
+          this.selectedReportingWay.set('ai');
+          this.manualCreateFlow.closeDrawer();
+        } else {
+          // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
+          const preselected = this.creationService.selectedProject();
+          this.isCreating.set(true);
+          this.resultId.set(null);
+          this.selectedReportingWay.set(null);
+          this.manualCreateFlow.closeDrawer();
+          this.autoSaveService.reset();
+          this.mdsTracker.reset();
+          this.creationService.resetWizard();
+          if (preselected) {
+            this.creationService.selectProject(preselected);
+          }
         }
+      }
+    });
+
+    this.route.queryParams?.subscribe(queryParams => {
+      const jobId = queryParams?.['job'];
+      if (jobId && this.isCreating()) {
+        this.selectedReportingWay.set('ai');
       }
     });
   }

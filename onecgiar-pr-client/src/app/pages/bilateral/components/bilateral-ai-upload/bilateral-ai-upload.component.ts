@@ -67,6 +67,7 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
   now = signal(Date.now());
   /** `APF-R-6` D: served by the API, cached per mix by the service — never computed client-side. */
   expectation = signal<BilateralAiExpectations | null>(null);
+  readonly startedAt = computed(() => this.bilateralAiService.getActiveJobSnapshot()?.startedAt ?? null);
 
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private lastExpectationMix: BilateralAiMixClass | null = null;

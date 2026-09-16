@@ -69,6 +69,8 @@ export class AiProcessingPanelComponent {
   readonly expectation = input<BilateralAiExpectations | null>(null);
   /** Tick supplied by the host (1 s `setInterval` while a job is alive) — never read from `Date.now()` here. */
   readonly now = input<number>(Date.now());
+  /** Client-side local startedAt timestamp to protect against server clock skew. */
+  readonly startedAt = input<number | null>(null);
 
   /** "Try again" on a FAILED job — the host calls `BilateralAiService.retryJob`. */
   readonly retry = output<void>();
@@ -107,7 +109,9 @@ export class AiProcessingPanelComponent {
   readonly elapsedLabel = computed(() => {
     const job = this.job();
     if (!job) return '00:00';
-    return formatElapsed(elapsedSeconds(job, this.now()));
+    const serverEntryMs = job.queueEntryDate.getTime();
+    const startMs = serverEntryMs > this.now() && this.startedAt() ? this.startedAt()! : serverEntryMs;
+    return formatElapsed(Math.max(0, Math.floor((this.now() - startMs) / 1000)));
   });
 
   readonly queuePositionLine = computed(() => {

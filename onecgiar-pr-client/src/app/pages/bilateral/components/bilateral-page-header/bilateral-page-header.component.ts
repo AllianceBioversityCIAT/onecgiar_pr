@@ -91,7 +91,8 @@ export class BilateralPageHeaderComponent {
     if (!active) return null;
 
     const job = this.bilateralAiService.currentJob();
-    const startMs = job && job.jobId === active.jobId ? job.queueEntryDate.getTime() : active.snapshot.startedAt;
+    const serverEntryMs = job && job.jobId === active.jobId ? job.queueEntryDate.getTime() : active.snapshot.startedAt;
+    const startMs = serverEntryMs > Date.now() ? active.snapshot.startedAt : serverEntryMs;
     const elapsed = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;

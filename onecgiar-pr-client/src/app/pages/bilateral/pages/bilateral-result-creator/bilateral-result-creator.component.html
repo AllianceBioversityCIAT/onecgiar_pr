@@ -9,7 +9,7 @@
 
 @if (isCreating()) {
 <div class="bilateral-creator">
-  @if (isCreating()) {
+  @if (isCreating() && (!isAiProcessing() || creationService.selectedProject())) {
     <div [class.bcr-step--locked]="isAiProcessing()">
       <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
     </div>
