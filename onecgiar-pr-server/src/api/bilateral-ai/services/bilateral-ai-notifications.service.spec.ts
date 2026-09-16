@@ -5,7 +5,26 @@ import {
 } from '../entities/bilateral-ai-job.entity';
 
 describe('BilateralAiNotificationsService (unit)', () => {
-  const makeService = () => {
+  /**
+   * `elapsedSeconds` is what MySQL's
+   * `TIMESTAMPDIFF(SECOND, queue_entry_date, COALESCE(completed_date, NOW()))` returns for the
+   * job. It replaces the `terminalDate` every case used to pass: the duration is no longer
+   * computed in the process, so the only way to drive it in a unit test is to mock the row the
+   * database hands back. `null` models an unreadable clock (missing row / NULL column).
+   */
+  const makeService = (elapsedSeconds: number | null = 360) => {
+    const durationQueryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getRawOne: jest
+        .fn()
+        .mockResolvedValue(
+          elapsedSeconds === null ? undefined : { seconds: elapsedSeconds },
+        ),
+    };
+    const jobRepository = {
+      createQueryBuilder: jest.fn(() => durationQueryBuilder),
+    };
     const notificationService = {
       emitBilateralAiJobNotification: jest
         .fn()
@@ -32,6 +51,7 @@ describe('BilateralAiNotificationsService (unit)', () => {
       userRepository as any,
       clarisaInstitutionsRepository as any,
       templateRepository as any,
+      jobRepository as any,
       emailService as any,
     );
 
@@ -42,6 +62,8 @@ describe('BilateralAiNotificationsService (unit)', () => {
         userRepository,
         clarisaInstitutionsRepository,
         templateRepository,
+        jobRepository,
+        durationQueryBuilder,
         emailService,
       },
     };
@@ -81,11 +103,9 @@ describe('BilateralAiNotificationsService (unit)', () => {
     it('persists exactly one notification row (mix + duration) and mails when >= 2 min', async () => {
       const { service, stubs } = makeService();
       const job = baseJob({ result_count: 2 });
-      const terminalDate = new Date('2026-09-15T10:06:00Z'); // 6 min after queue_entry_date
 
       await service.notifyTerminal(job, 'results_ready', {
         resultCount: 2,
-        terminalDate,
       });
 
       expect(
@@ -101,13 +121,12 @@ describe('BilateralAiNotificationsService (unit)', () => {
     });
 
     it('writes the in-app row but skips the mail when the job ran under 2 minutes', async () => {
-      const { service, stubs } = makeService();
+      // Was: `const terminalDate = new Date('2026-09-15T10:01:30Z'); // 90s` passed as an option.
+      const { service, stubs } = makeService(90);
       const job = baseJob({ result_count: 1 });
-      const terminalDate = new Date('2026-09-15T10:01:30Z'); // 90s
 
       await service.notifyTerminal(job, 'results_ready', {
         resultCount: 1,
-        terminalDate,
       });
 
       expect(
@@ -121,12 +140,10 @@ describe('BilateralAiNotificationsService (unit)', () => {
     it('marks the copy "arrived after all" when late=true', async () => {
       const { service, stubs } = makeService();
       const job = baseJob({ result_count: 1 });
-      const terminalDate = new Date('2026-09-15T10:20:00Z');
 
       await service.notifyTerminal(job, 'results_ready', {
         resultCount: 1,
         late: true,
-        terminalDate,
       });
 
       const text =
@@ -140,11 +157,9 @@ describe('BilateralAiNotificationsService (unit)', () => {
     it('renders the "found no results" copy and mails via the NO_CANDIDATES template', async () => {
       const { service, stubs } = makeService();
       const job = baseJob({ result_count: 0 });
-      const terminalDate = new Date('2026-09-15T10:06:00Z');
 
       await service.notifyTerminal(job, 'no_candidates', {
         resultCount: 0,
-        terminalDate,
       });
 
       const text =
@@ -165,9 +180,8 @@ describe('BilateralAiNotificationsService (unit)', () => {
         error_code: 'TIMED_OUT',
         result_count: 0,
       });
-      const terminalDate = new Date('2026-09-15T10:20:00Z');
 
-      await service.notifyTerminal(job, 'failed', { terminalDate });
+      await service.notifyTerminal(job, 'failed');
 
       const text =
         stubs.notificationService.emitBilateralAiJobNotification.mock
@@ -188,11 +202,9 @@ describe('BilateralAiNotificationsService (unit)', () => {
         acronym: 'Bioversity (Alliance)',
       });
       const job = baseJob({ result_count: 1 });
-      const terminalDate = new Date('2026-09-15T10:06:00Z');
 
       await service.notifyTerminal(job, 'results_ready', {
         resultCount: 1,
-        terminalDate,
       });
 
       const text =
@@ -211,12 +223,10 @@ describe('BilateralAiNotificationsService (unit)', () => {
           '{{user_name}}|{{center_acronym}}|{{result_count}}|{{result_plural}}',
       });
       const job = baseJob({ result_count: 2 });
-      const terminalDate = new Date('2026-09-15T10:06:00Z');
 
       await service.notifyTerminal(job, 'results_ready', {
         resultCount: 2,
         late: false,
-        terminalDate,
       });
 
       const body =
@@ -231,12 +241,10 @@ describe('BilateralAiNotificationsService (unit)', () => {
         template: '{{user_name}}{{#if late}}|LATE{{/if}}',
       });
       const job = baseJob({ result_count: 1 });
-      const terminalDate = new Date('2026-09-15T10:20:00Z');
 
       await service.notifyTerminal(job, 'results_ready', {
         resultCount: 1,
         late: true,
-        terminalDate,
       });
 
       const body =
@@ -252,11 +260,9 @@ describe('BilateralAiNotificationsService (unit)', () => {
           '{{user_name}}|{{center_acronym}}|{{source_plural}}|{{source_mix}}|{{duration_minutes}}',
       });
       const job = baseJob({ result_count: 0 });
-      const terminalDate = new Date('2026-09-15T10:06:00Z');
 
       await service.notifyTerminal(job, 'no_candidates', {
         resultCount: 0,
-        terminalDate,
       });
 
       const body =
@@ -275,9 +281,8 @@ describe('BilateralAiNotificationsService (unit)', () => {
         error_code: 'TIMED_OUT',
         result_count: 0,
       });
-      const terminalDate = new Date('2026-09-15T10:20:00Z');
 
-      await service.notifyTerminal(job, 'failed', { terminalDate });
+      await service.notifyTerminal(job, 'failed');
 
       const body =
         stubs.emailService.sendEmail.mock.calls[0][0].emailBody.message
@@ -288,17 +293,100 @@ describe('BilateralAiNotificationsService (unit)', () => {
     });
   });
 
+  describe('timezone skew regression: the queue duration is measured by the database, never from the process clock', () => {
+    it('asks MySQL for TIMESTAMPDIFF(SECOND, queue_entry_date, COALESCE(completed_date, NOW())) scoped to the job', async () => {
+      const { service, stubs } = makeService(360);
+
+      await service.notifyTerminal(baseJob(), 'results_ready', {
+        resultCount: 2,
+      });
+
+      expect(stubs.jobRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'job',
+      );
+      expect(stubs.durationQueryBuilder.select).toHaveBeenCalledWith(
+        'TIMESTAMPDIFF(SECOND, job.queue_entry_date, COALESCE(job.completed_date, NOW()))',
+        'seconds',
+      );
+      expect(stubs.durationQueryBuilder.where).toHaveBeenCalledWith(
+        'job.job_id = :jobId',
+        { jobId: 'job-1' },
+      );
+    });
+
+    it("renders the DB-computed duration even when the row's own JS timestamps would say something else", async () => {
+      // The skew this fixes: `queue_entry_date` is generated by MySQL in the DB session zone while
+      // a JS `new Date()` terminal instant is serialized in the Node process zone. Here the row
+      // carries a `queue_entry_date` 5 h away from any plausible process clock; the copy must still
+      // read "6 min", because 360 s is what the database answered.
+      const { service, stubs } = makeService(360);
+      const job = baseJob({
+        queue_entry_date: new Date('2026-09-15T05:00:00Z'),
+        completed_date: new Date('2026-09-15T10:06:00Z'),
+      });
+
+      await service.notifyTerminal(job, 'results_ready', { resultCount: 2 });
+
+      const text =
+        stubs.notificationService.emitBilateralAiJobNotification.mock
+          .calls[0][1];
+      expect(text).toContain('2 documents · 6 min');
+      expect(text).not.toContain('300 min');
+    });
+
+    it('drives the 2-minute mail rule off the DB value: 90 s sends no mail, 360 s does', async () => {
+      const under = makeService(90);
+      await under.service.notifyTerminal(baseJob(), 'results_ready', {
+        resultCount: 1,
+      });
+      expect(under.stubs.emailService.sendEmail).not.toHaveBeenCalled();
+
+      const over = makeService(360);
+      await over.service.notifyTerminal(baseJob(), 'results_ready', {
+        resultCount: 1,
+      });
+      expect(over.stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails open when the duration query returns no row: the in-app row still goes out and the mail is sent', async () => {
+      const { service, stubs } = makeService(null);
+
+      await service.notifyTerminal(baseJob(), 'results_ready', {
+        resultCount: 1,
+      });
+
+      const text =
+        stubs.notificationService.emitBilateralAiJobNotification.mock
+          .calls[0][1];
+      expect(text).toContain('· 0 min');
+      expect(stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('a failing duration query never suppresses the in-app notification', async () => {
+      const { service, stubs } = makeService(360);
+      stubs.durationQueryBuilder.getRawOne.mockRejectedValue(
+        new Error('db down'),
+      );
+
+      await expect(
+        service.notifyTerminal(baseJob(), 'results_ready', { resultCount: 1 }),
+      ).resolves.toBeUndefined();
+
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('resilience — never fails the job it reports on (APF-R-4)', () => {
     it('a mail failure is swallowed with a warn; the in-app row already went out', async () => {
       const { service, stubs } = makeService();
       stubs.templateRepository.findOne.mockRejectedValue(new Error('db down'));
       const job = baseJob({ result_count: 1 });
-      const terminalDate = new Date('2026-09-15T10:06:00Z');
 
       await expect(
         service.notifyTerminal(job, 'results_ready', {
           resultCount: 1,
-          terminalDate,
         }),
       ).resolves.toBeUndefined();
 
@@ -328,19 +416,25 @@ describe('BilateralAiNotificationsService (unit)', () => {
         findOne: jest.fn().mockResolvedValue({ acronym: 'AfricaRice' }),
       };
       const templateRepository = { findOne: jest.fn() };
+      const jobRepository = {
+        createQueryBuilder: jest.fn(() => ({
+          select: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getRawOne: jest.fn().mockResolvedValue({ seconds: 360 }),
+        })),
+      };
       const service = new BilateralAiNotificationsService(
         notificationService as any,
         userRepository as any,
         clarisaInstitutionsRepository as any,
         templateRepository as any,
+        jobRepository as any,
         undefined,
       );
       const job = baseJob({ result_count: 1 });
-      const terminalDate = new Date('2026-09-15T10:06:00Z');
 
       await service.notifyTerminal(job, 'results_ready', {
         resultCount: 1,
-        terminalDate,
       });
 
       expect(

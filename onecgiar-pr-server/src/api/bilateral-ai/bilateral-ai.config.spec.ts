@@ -5,6 +5,7 @@ import {
   getBilateralAiMaxAttempts,
   getBilateralAiAttemptTimeoutMs,
   getBilateralAiQueueStallMs,
+  bilateralAiDbNow,
 } from './bilateral-ai.config';
 
 describe('bilateral-ai.config', () => {
@@ -87,6 +88,16 @@ describe('bilateral-ai.config', () => {
       expect(getBilateralAiMaxAttempts()).toBe(
         BILATERAL_AI_MAX_ATTEMPTS_DEFAULT,
       );
+    });
+  });
+
+  describe('bilateralAiDbNow (timezone skew regression)', () => {
+    it('is a function returning the literal SQL "CURRENT_TIMESTAMP", never a JS Date instance', () => {
+      // timezone skew regression: lifecycle timestamps are written in DB time, never from the
+      // process clock — a `Repository#update` raw-SQL value must be a function TypeORM calls to
+      // get the SQL fragment, not a computed `new Date()`.
+      expect(typeof bilateralAiDbNow).toBe('function');
+      expect(bilateralAiDbNow()).toBe('CURRENT_TIMESTAMP');
     });
   });
 });

@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { In, LessThan, MoreThan, Repository } from 'typeorm';
+import { In, LessThan, Repository } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -36,7 +36,10 @@ import {
 import { CreateBilateralAiJobDto } from '../dto/create-bilateral-ai-job.dto';
 import { BilateralService } from '../../bilateral/bilateral.service';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
-import { getBilateralAiMaxAttempts } from '../bilateral-ai.config';
+import {
+  getBilateralAiMaxAttempts,
+  bilateralAiDbNow,
+} from '../bilateral-ai.config';
 import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
 import {
   BilateralAiExpectationsMix,
@@ -159,7 +162,7 @@ export class BilateralAiService {
         status: BilateralAiJobStatus.FAILED,
         error_code: 'QUEUE_NOT_AVAILABLE',
         error_message: 'The AI processing queue could not accept the job.',
-        completed_date: new Date(),
+        completed_date: bilateralAiDbNow,
       });
       throw error;
     }
@@ -267,20 +270,22 @@ export class BilateralAiService {
       }
     }
 
-    const now = new Date();
+    // `stage_updated_date` and `retried_date` share `bilateralAiDbNow`: MySQL evaluates
+    // `CURRENT_TIMESTAMP` once per statement, so both columns land on the exact same DB-time
+    // instant within this single UPDATE — the same consistency a shared JS `now` gave before.
     const reset = await this.jobRepository.update(
       { job_id: jobId, status: BilateralAiJobStatus.FAILED },
       {
         status: BilateralAiJobStatus.PENDING,
         stage: BilateralAiJobStage.QUEUED,
-        stage_updated_date: now,
+        stage_updated_date: bilateralAiDbNow,
         attempts: 0,
         retrying: false,
         error_code: null,
         error_message: null,
         started_date: null,
         completed_date: null,
-        retried_date: now,
+        retried_date: bilateralAiDbNow,
       },
     );
     if (!reset?.affected) {
@@ -302,7 +307,7 @@ export class BilateralAiService {
         status: BilateralAiJobStatus.FAILED,
         error_code: 'QUEUE_NOT_AVAILABLE',
         error_message: 'The AI processing queue could not accept the job.',
-        completed_date: new Date(),
+        completed_date: bilateralAiDbNow,
       });
       throw error;
     }
@@ -337,16 +342,31 @@ export class BilateralAiService {
       };
     }
 
-    const since = new Date(
-      Date.now() - BilateralAiService.EXPECTATIONS_SAMPLE_WINDOW_MS,
+    // Timezone-skew fix: the 90-day sample window is evaluated by MySQL, not by the Node process.
+    // `completed_date` is written in DB time (`bilateralAiDbNow`), so a JS
+    // `MoreThan(new Date(Date.now() - window))` cutoff compared a process-zone instant against a
+    // DB-zone column and shifted the whole window by the offset (5 h on a Bogota laptop against a
+    // UTC database). `sampleWindowSeconds` is derived from a `static readonly` number and never
+    // from request input, so it is interpolated as a SQL literal rather than bound — the generated
+    // interval is what the regression test pins.
+    const sampleWindowSeconds = Math.round(
+      BilateralAiService.EXPECTATIONS_SAMPLE_WINDOW_MS / 1000,
     );
-    const rows = await this.jobRepository.find({
-      where: {
+    const rows = await this.jobRepository
+      .createQueryBuilder('job')
+      .select([
+        'job.job_id',
+        'job.audio_keys',
+        'job.started_date',
+        'job.completed_date',
+      ])
+      .where('job.status = :status', {
         status: BilateralAiJobStatus.COMPLETED,
-        completed_date: MoreThan(since),
-      },
-      select: { audio_keys: true, started_date: true, completed_date: true },
-    });
+      })
+      .andWhere(
+        `job.completed_date > DATE_SUB(NOW(), INTERVAL ${sampleWindowSeconds} SECOND)`,
+      )
+      .getMany();
 
     const durationsSeconds = rows
       .filter((row) => this.mixClass(row) === mix)
@@ -656,14 +676,15 @@ export class BilateralAiService {
    * @akili-spec bilateral/ai-processing-feedback
    */
   private async attemptStart(job: BilateralAiJob): Promise<boolean> {
-    const now = new Date();
+    // `stage_updated_date` and `started_date` share `bilateralAiDbNow` — one `CURRENT_TIMESTAMP`
+    // evaluation per UPDATE statement keeps them identical, as a shared JS `now` did before.
     const set = {
       status: BilateralAiJobStatus.PROCESSING,
       stage: BilateralAiJobStage.UPLOADING,
-      stage_updated_date: now,
+      stage_updated_date: bilateralAiDbNow,
       attempts: job.attempts + 1,
       retrying: false,
-      started_date: now,
+      started_date: bilateralAiDbNow,
     };
     let result: { affected?: number } | undefined;
     if (job.status === BilateralAiJobStatus.PENDING) {
@@ -712,7 +733,7 @@ export class BilateralAiService {
   private async setStage(jobId: string, stage: string): Promise<void> {
     const result = await this.jobRepository.update(
       { job_id: jobId, status: BilateralAiJobStatus.PROCESSING },
-      { stage, stage_updated_date: new Date() },
+      { stage, stage_updated_date: bilateralAiDbNow },
     );
     if (!result?.affected) {
       this.logger.debug(
@@ -798,8 +819,10 @@ export class BilateralAiService {
       // Unconditional on `job_id` alone (not scoped to `status = PROCESSING`): a late mining
       // response must still be able to flip a `FAILED`/`TIMED_OUT` row to `COMPLETED`
       // (`APF-R-2` A, `design.md` §5 "Late completion") — the draft-level idempotency lives in
-      // `createDraftFromCandidate`, not in this write's WHERE clause.
-      const completedAt = new Date();
+      // `createDraftFromCandidate`, not in this write's WHERE clause. `completed_date` is written
+      // in DB time (`bilateralAiDbNow`); `notifyTerminal` re-reads it from the row itself to
+      // compute the queue duration, rather than being passed the JS instant this write no longer
+      // computes (timezone-skew fix).
       await this.jobRepository.update(
         { job_id: jobId },
         {
@@ -807,7 +830,7 @@ export class BilateralAiService {
           result_count: resultCount,
           external_interaction_id: normalized.interactionId,
           response_snapshot: response,
-          completed_date: completedAt,
+          completed_date: bilateralAiDbNow,
         },
       );
 
@@ -818,7 +841,7 @@ export class BilateralAiService {
       await this.notificationsService.notifyTerminal(
         job,
         resultCount > 0 ? 'results_ready' : 'no_candidates',
-        { resultCount, late, terminalDate: completedAt },
+        { resultCount, late },
       );
     } catch (error: any) {
       const status = error?.status;
@@ -834,7 +857,7 @@ export class BilateralAiService {
           {
             retrying: true,
             stage: BilateralAiJobStage.QUEUED,
-            stage_updated_date: new Date(),
+            stage_updated_date: bilateralAiDbNow,
             error_code: errorCode,
             error_message: failure,
           },
@@ -842,14 +865,13 @@ export class BilateralAiService {
         throw error;
       }
 
-      const completedAt = new Date();
       const result = await this.jobRepository.update(
         { job_id: jobId, status: BilateralAiJobStatus.PROCESSING },
         {
           status: BilateralAiJobStatus.FAILED,
           error_code: errorCode,
           error_message: failure,
-          completed_date: completedAt,
+          completed_date: bilateralAiDbNow,
         },
       );
       if (result?.affected) {
@@ -861,7 +883,6 @@ export class BilateralAiService {
         await this.notificationsService.notifyTerminal(
           { ...job, error_code: errorCode },
           'failed',
-          { terminalDate: completedAt },
         );
       }
       if (retryable) throw error;
