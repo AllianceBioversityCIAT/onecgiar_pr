@@ -2,6 +2,15 @@
   <!-- Same control W1/W2 uses for this question (rd-contributors-and-partners → app-pr-yes-or-not):
        standard header + the Yes/No chips. UI only — the handler and the wording (P2-3142) are unchanged. -->
   <div class="st-field st-field--planned" data-testid="toc-planned-question">
+    <app-pr-checkbox
+      label="I'm not sure, the P/A will complete the ToC mapping"
+      [required]="false"
+      [isStatic]="true"
+      [ngModel]="paWillCompleteTocMapping()"
+      (ngModelChange)="onPaWillCompleteChange($event)"
+      data-testid="toc-pa-defer-checkbox">
+    </app-pr-checkbox>
+
     @if (showPlannedQuestion()) {
       <app-pr-yes-or-not
         label="Can this result be mapped to a ToC KPI?"
@@ -11,15 +20,6 @@
         (selectOptionEvent)="onPlannedChange($event)">
       </app-pr-yes-or-not>
     }
-
-    <app-pr-checkbox
-      label="I'm not sure, the P/A will complete the ToC mapping"
-      [required]="false"
-      [isStatic]="true"
-      [ngModel]="paWillCompleteTocMapping()"
-      (ngModelChange)="onPaWillCompleteChange($event)"
-      data-testid="toc-pa-defer-checkbox">
-    </app-pr-checkbox>
   </div>
 
   @if (showWhyReported()) {
@@ -33,13 +33,6 @@
         [ngModel]="whyReported()"
         (ngModelChange)="onWhyReportedInput($event)">
       </app-pr-textarea>
-    </div>
-  }
-
-  @if (isPlanned() === null) {
-    <div class="st-empty">
-      <i class="material-icons-round st-empty-icon">help_outline</i>
-      <span>Please select "Yes" or "No" above to continue.</span>
     </div>
   }
 
