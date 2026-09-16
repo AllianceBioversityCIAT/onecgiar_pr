@@ -219,7 +219,7 @@ Block execution until every box is ticked.
   - [x] The PDF opens in a standard reader with backgrounds/gradients rendered (not stripped by print defaults).
   - [x] TOC anchor links are clickable and jump to the correct section inside the PDF.
 
-### `UG-T-15` — Credential-leak and read-only audit
+### `UG-T-15` — Credential-leak and read-only audit — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** tests
 - **Description:** Grep `tooling/` (source, config, and any captured console output/logs from a real run) for credential-shaped strings (JWT patterns, `password`, `token=`), and re-confirm via code review that `capture.ts`/`annotate.ts` never call a mutating action.
@@ -229,8 +229,8 @@ Block execution until every box is ticked.
 - **Blocks:** none
 - **Estimate:** S
 - **Definition of done:**
-  - [ ] Grep finds zero credential-shaped strings in committed files.
-  - [ ] Code review sign-off that `capture.ts`/`annotate.ts` are read-only.
+  - [x] Grep finds zero credential-shaped strings in committed files.
+  - [x] Code review sign-off that `capture.ts`/`annotate.ts` are read-only.
 
 ### `UG-T-16` — HITL review: click-target accuracy and glossary fidelity
 

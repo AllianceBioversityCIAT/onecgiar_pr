@@ -226,6 +226,15 @@
 
 ---
 
+### `UG-T-15` — Credential-leak and read-only audit — PASS
+
+- **Date:** 2026-09-15. **Auditor:** `akili-reviewer` (opus), independent of every Implementer. **Leader pre-flight:** `git ls-files` + unignored-files grep for JWT shapes → none; `tooling/.env` gitignored; PDF bytes contain neither `eyJ` nor `reporting.cgiar.org`.
+- **Verdict: PASS.** Grep table (spec dir, gitignored paths skipped): JWT shape 0; literal-valued `password|secret|api_key|token` assignments 0; `TEST_TOKEN|TEST_USER_*` with values 0 (empty keys in `.env.example` only); `authorization|bearer|webhook|amazonaws|AKIA` 0; `localhost` 2 benign (`.env.example` default, `NOTES.md` prohibition); URLs only in `auth.ts` doc comment, `.env.example`, glossary CLARISA `sourceUrl` ×17, Google Fonts links in the template; `reporting.cgiar.org` only in spec docs + one `auth.ts` `@param` example — **zero in `content/**`, `template/**`, `routes.config.json`, `dist/`**. Read-only review of all seven `src/*.ts`: no mutation call (`click/fill/press/type/check/selectOption/dispatchEvent/setInputFiles/route/submit`); the four `page.evaluate` sites are the sanctioned `localStorage` injection (`UG-DD-4`), the overlay inject/remove (`UG-DD-3`), a pure read in capture.ts, and tokens.ts's throwaway font probe; no `console.*`/`Error(...)` interpolates the token, user object or any `.env` value; route `<code>` renders relative paths only, so no origin reaches the PDF.
+- **ADVISORY (recorded):** tokens.ts font probe `<span>` is removed inline rather than in `finally` and is a third DOM injection not enumerated in design §7 — tag it `data-ug-annotation` or wrap in `try/finally`; the PDF embeds production data (program names, result counts, notification senders, "JC" avatar initials) → explicit accept at `UG-T-16`; the live production JWT in `tooling/.env` is protected only by `.gitignore` → **recommend deleting `tooling/.env` once re-runs are no longer needed**.
+- **Requirements covered:** `UG-AC-6`, design §7. Both DoD items satisfied.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -260,4 +269,4 @@ Output directory fixed at `tooling/dist/` (the `UG-T-1` Reviewer's RELIABILITY a
 
 ## 5. Summary (updated as tasks complete)
 
-14 of 16 tasks complete (`UG-T-1` … `UG-T-14`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: polish round (layout + build date), then `UG-T-15` audit and `UG-T-16` HITL sign-off, then commit the PDF. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+15 of 16 tasks complete (`UG-T-1` … `UG-T-15`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: polish round (layout + build date) → regenerate + commit the PDF → `UG-T-16` HITL sign-off. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
