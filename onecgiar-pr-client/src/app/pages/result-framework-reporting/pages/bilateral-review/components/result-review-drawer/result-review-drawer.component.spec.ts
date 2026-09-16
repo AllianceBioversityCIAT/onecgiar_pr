@@ -682,10 +682,21 @@ describe('ResultReviewDrawerComponent', () => {
       expect(component.showConfirmSaveChangesDialog()).toBe(false);
     });
 
-    it('AC1 — it is refused just the same when the section never loaded a scope at all', () => {
+    /**
+     * 🛑 The opposite of AC1, and it has to hold or the fix becomes a trap.
+     *
+     * The scope field lives behind `@if (fields?.geographicScope)`, and the loader stores `null`
+     * when the server sends no block at all. Demanding an answer there would disable the save over
+     * a field the screen never shows — an admin could not even fix a title. The rule is "answer the
+     * question when it is asked", not "always have a scope".
+     */
+    it('does NOT block a result that has no geographic scope section on screen', () => {
       asAdminWithScope(null);
+
+      expect(component.isGeoScopeCompleted()).toBe(true);
+
       component.onSaveDataStandardChanges();
-      expect(component.showConfirmSaveChangesDialog()).toBe(false);
+      expect(component.showConfirmSaveChangesDialog()).toBe(true);
     });
 
     it('AC1 — and the save goes through once a scope is selected', () => {

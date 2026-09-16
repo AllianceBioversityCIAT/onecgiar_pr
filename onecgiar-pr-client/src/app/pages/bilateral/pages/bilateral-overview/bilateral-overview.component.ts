@@ -104,6 +104,7 @@ function emptyParams(): BilateralQueryParams {
     source: null,
     method: null,
     search: '',
+    createdBy: [],
     multi: false,
   };
 }

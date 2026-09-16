@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { BehaviorSubject, of } from 'rxjs';
 
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
@@ -593,6 +594,28 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
     expect(rdPartnersSE.otherCentersSelected.length).toBe(1);
     expect(markerFieldEl().classList.contains('complete')).toBe(false);
     expect(scan().labels).toContain(TOC_LABEL);
+  });
+
+  // P2-3738 (found by the DeepSeek sweep): the card read "filled" because the "Other(s)" sentinel is a
+  // selection, while the counter above kept the field as missing. The colour now follows the counter.
+  it('does not paint the centres card green while only the "Other(s)" sentinel sits in the ToC dropdown', async () => {
+    const cardState = () =>
+      fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center"] [data-state]')?.getAttribute('data-state');
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+    rdPartnersSE.partnersBody.contributing_center = [{ code: fixture.componentInstance.OTHER_CENTERS_CODE } as any];
+    rdPartnersSE.otherCentersSelected = [CATALOG[2]] as any;
+    // ngModel hands the new array to the control a tick after the first pass; a second pass paints it.
+    await repaint();
+    await repaint();
+
+    const multi = fixture.debugElement.query(By.css('[data-testid="cp-field-contributing_center"]')).componentInstance;
+    expect(multi.hasSelection).toBe(true); // the sentinel IS a selection — that is what used to paint it green
+    expect(cardState()).toBe('todo');
+
+    rdPartnersSE.partnersBody.contributing_center = [CATALOG[0]] as any;
+    await repaint();
+    await repaint();
+    expect(cardState()).toBe('ok');
   });
 
   it('accepts an "Other(s)" centre alone when the ToC brought no centres at all (P2-3324 / P2-3326 branch)', async () => {

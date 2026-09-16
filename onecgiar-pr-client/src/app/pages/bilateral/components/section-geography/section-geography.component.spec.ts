@@ -222,6 +222,8 @@ describe('SectionGeographyComponent', () => {
 
     it('keeps the extra scope id when there is one', () => {
       build();
+      creation.resultTypeId.set(7);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
       component.extraGeographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.REGIONAL }));
       component.queueGeographySave();
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
@@ -237,6 +239,9 @@ describe('SectionGeographyComponent', () => {
     // saved with the flag stuck at false silently deletes the countries the user just picked.
     it('sends has_extra_countries true with the countries for a sub-national extra scope', () => {
       build();
+      creation.resultTypeId.set(7);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      autoSave.schedulePayload.mockClear();
       component.setHasExtraScope(true);
       component.onExtraScopeChange(GeoScopeEnum.SUB_NATIONAL);
       component.onExtraCountriesChange([{ id: 40, sub_national: [{ id: 1 }] }]);
@@ -496,6 +501,140 @@ describe('SectionGeographyComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith(
         'geography',
         expect.arrayContaining([expect.objectContaining({ key: 'geo-scope', filled: true })])
+      );
+    });
+  });
+
+  // Country / Sub-national main scope must match W1/W2: no "regions for this result?" gate — the
+  // country multi-select appears directly; the extra-scope card keeps its own Yes/No below.
+  describe('main scope Country (W1/W2 parity)', () => {
+    it('does not offer a regions Yes/No when the focus is Country', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      expect(component.showsMainRegionsYesNo).toBe(false);
+    });
+
+    it('does not offer a regions Yes/No when the focus is Sub-national', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.SUB_NATIONAL }));
+      expect(component.showsMainRegionsYesNo).toBe(false);
+    });
+
+    it('does not offer a regions Yes/No when the focus is Regional', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.REGIONAL }));
+      expect(component.showsMainRegionsYesNo).toBe(false);
+    });
+
+    it('onScopeChange(Country) enables countries and clears regions flags', () => {
+      build();
+      component.onScopeChange(GeoScopeEnum.COUNTRY);
+      const b = component.geographicLocationBody();
+      expect(b.has_countries).toBe(true);
+      expect(b.has_regions).toBe(false);
+      expect(b.regions).toEqual([]);
+    });
+  });
+
+  describe('extra-scope visibility (W1/W2 parity)', () => {
+    const INNOVATION_LABEL =
+      'Are there any other geographic areas where the innovation could be impactful (beyond current development and use)?';
+    const LEGACY_LABEL = 'Are there any regions that you wish to specify for this Output?';
+
+    it('does not show the extra-scope question for non-innovation result types', () => {
+      build();
+      creation.resultTypeId.set(8);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
+      expect(component.requiresExtraScopeAnswer).toBe(false);
+    });
+
+    it('shows the extra-scope question only for innovation result types', () => {
+      build();
+      creation.resultTypeId.set(7);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      expect(component.showExtraGeoScopeQuestion()).toBe(true);
+      expect(component.requiresExtraScopeAnswer).toBe(true);
+    });
+
+    it('clears extra-scope data in the payload for non-innovation results', () => {
+      build();
+      creation.resultTypeId.set(8);
+      component.geographicLocationBody.set({
+        has_countries: true,
+        has_regions: false,
+        regions: [],
+        countries: [{ id: 9 }],
+        geo_scope_id: GeoScopeEnum.COUNTRY
+      });
+      component.extraGeographicLocationBody.update(b => ({
+        ...b,
+        has_extra_geo_scope: true,
+        geo_scope_id: GeoScopeEnum.REGIONAL,
+        regions: [{ id: 1 }]
+      }));
+      component.queueGeographySave();
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
+        'geography',
+        expect.objectContaining({
+          has_extra_geo_scope: false,
+          extra_geo_scope_id: null,
+          extra_regions: [],
+          has_extra_regions: false
+        }),
+        expect.any(Object)
+      );
+    });
+  });
+
+  // The scope the RADIO is shown, which is not the same as the scope the PAYLOAD carries.
+  // Measured on prtest (result 9386 / internal id 11854, 16-Sep-2026): the endpoint answers
+  // `geo_scope_id: 0` for a result whose scope was never chosen, `pr-radio-button.hasValue` only
+  // rejects null/undefined, and the card therefore painted GREEN ("required and filled") over an
+  // empty radio group while the footer said "1 field missing". W1/W2 cannot show that because its
+  // count and its marking are the same DOM scan.
+  describe('scope shown to the radio (0 is not an answer)', () => {
+    it('shows no selection when the stored scope is the 0 placeholder', () => {
+      bilateralApi.GET_geographic.mockReturnValue(
+        of({ response: { geo_scope_id: 0, has_regions: 0, has_countries: 0, regions: [], countries: [] } })
+      );
+      build();
+      fixture.detectChanges();
+
+      expect(component.geographicLocationBody().geo_scope_id).toBe(0);
+      expect(component.scopeSelection()).toBeNull();
+    });
+
+    it('shows no selection when nothing was ever stored', () => {
+      build();
+      fixture.detectChanges();
+      expect(component.scopeSelection()).toBeNull();
+      expect(component.extraScopeSelection()).toBeNull();
+    });
+
+    it('shows the scope once one is chosen', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      component.extraGeographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.REGIONAL }));
+
+      expect(component.scopeSelection()).toBe(GeoScopeEnum.COUNTRY);
+      expect(component.extraScopeSelection()).toBe(GeoScopeEnum.REGIONAL);
+    });
+
+    // 🛑 The fix must not reach the column: `buildGeographyPayload()` serialises the SIGNAL, and
+    // this is the invariant that keeps it that way.
+    it('leaves the saved payload untouched', () => {
+      bilateralApi.GET_geographic.mockReturnValue(
+        of({ response: { geo_scope_id: 0, has_regions: 0, has_countries: 0, regions: [], countries: [] } })
+      );
+      build();
+      fixture.detectChanges();
+
+      component.queueGeographySave(0);
+      expect(autoSave.schedulePayload).toHaveBeenLastCalledWith(
+        'geography',
+        expect.objectContaining({ geo_scope_id: 0 }),
+        expect.anything()
       );
     });
   });

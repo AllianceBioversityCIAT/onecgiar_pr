@@ -190,11 +190,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
 
     this.api.resultsSE.GET_mergeSplitTargetInnovations(resultId).subscribe({
       next: ({ response }) => {
-        this.mergeSplitCatalogue = (response ?? []).map(innovation => ({
-          ...innovation,
-          // The story asks the option to read "Innovation ID + Innovation title".
-          label: `${innovation.result_code} - ${innovation.title}`
-        }));
+        this.mergeSplitCatalogue = this.mapMergeSplitCandidates(response);
         this.mergeSplitCatalogueLoading = false;
       },
       error: () => {
@@ -202,6 +198,74 @@ export class RdAnnualUpdatingComponent implements OnInit {
         this.mergeSplitCatalogueLoading = false;
       }
     });
+  }
+
+  /**
+   * SIP-T-5 — narrows the catalogue as the reporter types, WITHOUT the fetch-once guard above.
+   *
+   * 🛑 Deliberately does not read/set `mergeSplitCatalogueRequested`: that flag exists solely to
+   * stop the initial `loadMergeSplitCatalogue()` from firing twice (see its own doc comment).
+   * Reusing it here would make every search after the first one a silent no-op (`RES-DD-3` point 1).
+   *
+   * Two things keep this safe for the dropdown bound to it:
+   * - **Selection-preserving merge**: a candidate already referenced by
+   *   `generalInfoBody.merge_split_targets` (either transition type) is carried over from the
+   *   PREVIOUS catalogue when the new search response does not include it, so narrowing the search
+   *   can never make an already-picked target vanish from what the dropdown can display.
+   * - **Reference stability**: `mergeSplitCatalogue` is only reassigned a NEW array reference when
+   *   its content actually changed (same id at each index otherwise) — the same discipline
+   *   `selectedTargets()`/`selectionCache` already apply to the selection subset, applied here to
+   *   the catalogue array itself, so a search that resolves to the same set does not requalify the
+   *   `[options]` binding.
+   */
+  searchMergeSplitCatalogue(term: string): void {
+    const resultId = Number(this.api.dataControlSE.currentResult?.id);
+    if (!Number.isInteger(resultId) || resultId <= 0) return;
+
+    this.mergeSplitCatalogueLoading = true;
+
+    this.api.resultsSE.GET_mergeSplitTargetInnovations(resultId, term).subscribe({
+      next: ({ response }) => {
+        const searched = this.mapMergeSplitCandidates(response);
+
+        // Ids the form currently has stored, for either transition type — losing the OBJECT from
+        // the catalogue must never look like losing the ANSWER (see `storedTargets`).
+        const storedIds = new Set((this.generalInfoBody.merge_split_targets ?? []).map(target => Number(target.target_result_id)));
+
+        const searchedIds = new Set(searched.map(option => Number(option.id)));
+        const preserved = this.mergeSplitCatalogue.filter(option => storedIds.has(Number(option.id)) && !searchedIds.has(Number(option.id)));
+
+        const merged = preserved.length ? [...searched, ...preserved] : searched;
+
+        this.mergeSplitCatalogue = this.stableCatalogueReference(merged);
+        this.mergeSplitCatalogueLoading = false;
+      },
+      // Fail-soft: a search that cannot be read must not blank out what is already on screen — that
+      // would be worse than just showing stale results while the reporter keeps typing.
+      error: () => {
+        this.mergeSplitCatalogueLoading = false;
+      }
+    });
+  }
+
+  /** The story's label rule ("Innovation ID + Innovation title"), shared by every catalogue fetch. */
+  private mapMergeSplitCandidates(list: any[]): any[] {
+    return (list ?? []).map(innovation => ({
+      ...innovation,
+      label: `${innovation.result_code} - ${innovation.title}`
+    }));
+  }
+
+  /**
+   * Returns the EXISTING `mergeSplitCatalogue` reference when `candidate` has the same content
+   * (same length, same `id` at each index), so a search that resolves to the same set does not
+   * requalify the `[options]` binding; otherwise returns `candidate` as the new reference to
+   * assign. Isolated so the reassignment guard reads as one line at each call site.
+   */
+  private stableCatalogueReference(candidate: any[]): any[] {
+    const current = this.mergeSplitCatalogue;
+    const unchanged = current.length === candidate.length && current.every((option, i) => Number(option?.id) === Number(candidate[i]?.id));
+    return unchanged ? current : candidate;
   }
 
   /**

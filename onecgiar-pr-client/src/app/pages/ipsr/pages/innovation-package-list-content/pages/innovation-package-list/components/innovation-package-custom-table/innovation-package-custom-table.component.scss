@@ -168,6 +168,21 @@ td {
   border-radius: 3px;
   color: var(--pr-color-white);
   height: 17px;
+
+  &.prev-reported {
+    background-color: var(--pr-color-primary-100, #ede9fe);
+    color: var(--pr-color-primary-700, #4c2882);
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+    height: auto;
+    white-space: nowrap;
+  }
 }
 .table_menu_item {
   display: flex;

@@ -250,7 +250,8 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   @ViewChild('table') table: PrTableComponent;
-  @ViewChild('filters') filters: ResultsListFiltersComponent;
+  // static: the side-column filter mode renders the child's template on the first pass.
+  @ViewChild('filters', { static: true }) filters: ResultsListFiltersComponent;
 
   // Action menu overlay state (replaces PrimeNG p-popover)
   menuOpen = signal(false);
@@ -510,6 +511,15 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-color-orange-200)] bg-[var(--pr-color-orange-50)] text-[var(--pr-color-orange-700)]`;
   readonly fundingChipUnknown =
     `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-border)] bg-[var(--pr-surface-app)] text-[var(--pr-text-muted)]`;
+
+  readonly emergingChipClass = this.fundingChipUnknown;
+
+  /** P25 reporting phases are the only scope for the emerging-result label. */
+  isEmerging(result: CurrentResult): boolean {
+    const year = Number(result?.phase_year ?? result?.reported_year);
+    const portfolio = String(result?.acronym ?? result?.portfolio ?? result?.phase_name ?? '');
+    return Number(result?.planned_result) === 0 && /\bP25\b/i.test(portfolio) && year >= 2025 && year <= 2030;
+  }
 
   fundingChipClass(result: CurrentResult): string {
     const label = this.fundingLabel(result);

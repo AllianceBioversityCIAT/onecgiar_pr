@@ -659,6 +659,7 @@ export class IpsrRepository
             CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
             v.status as phase_status,
             r.in_qa as inQA,
+            r.is_replicated,
             ci.portfolio_id,
             cp.name as portfolio_name,
             cp.acronym as acronym,
@@ -746,6 +747,7 @@ export class IpsrRepository
             CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
             v.status as phase_status,
             r.in_qa as inQA,
+            r.is_replicated,
             ci.portfolio_id,
             cp.name as portfolio_name,
             cp.acronym as acronym

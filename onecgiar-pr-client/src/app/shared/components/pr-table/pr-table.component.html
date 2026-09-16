@@ -27,7 +27,7 @@
     </tbody>
   </table>
 
-  @if (paginator && effectiveRows() > 0 && totalRecords() > effectiveRows()) {
+  @if (showPaginator()) {
     <div class="pr-paginator">
       <button
         type="button"

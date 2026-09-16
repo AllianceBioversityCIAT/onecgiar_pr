@@ -587,6 +587,19 @@ describe('BilateralResultCreatorComponent', () => {
       expect(q('[data-testid="bilateral-footer-position"]').textContent.replace(/\s+/g, ' ').trim()).toBe('Section 3 of 6');
     });
 
+    // Sin franja a lo ancho (Yeck, 16-sep-2026): dos cápsulas, una por grupo, como la barra de W1/W2.
+    it('splits the footer into two floating capsules: navigation left, state and save right', () => {
+      enterEditor();
+      const footer = q('[data-testid="bilateral-section-footer"]');
+      const groups = footer.querySelectorAll(':scope > .bcr-editor-footer__group');
+      expect(groups.length).toBe(2);
+      expect(groups[0].classList.contains('bcr-editor-footer__group--start')).toBe(true);
+      expect(groups[1].classList.contains('bcr-editor-footer__group--end')).toBe(true);
+      expect(groups[0].querySelector('[data-testid="bilateral-footer-next"]')).not.toBeNull();
+      expect(groups[1].querySelector('[data-testid="bilateral-footer-save"]')).not.toBeNull();
+      expect(footer.querySelector('.bcr-editor-footer__inner')).toBeNull();
+    });
+
     it('makes Next the one primary action and Save draft secondary, as on the W1/W2 bar', () => {
       enterEditor();
       const next = q('[data-testid="bilateral-footer-next"]');
@@ -613,8 +626,35 @@ describe('BilateralResultCreatorComponent', () => {
       // Unsaved wins over complete: the user has to know the green check is for what is saved.
       pendingSections.set(new Set(['general-info']));
       fixture.detectChanges();
-      expect(state()).toContain('Unsaved changes');
+      expect(q('[data-testid="bilateral-footer-state"]')).toBeNull();
+      expect(q('[data-testid="bilateral-footer-dirty"]').textContent).toContain('Unsaved changes');
       expect(q('[data-testid="bilateral-sections-rail"] .bcr-rail__dirty')).not.toBeNull();
+    });
+
+    /**
+     * JC's second screenshot (16-Sep-2026): a section with `Description of Result` empty, and the
+     * footer showing nothing but "Unsaved changes" — the count of what is still missing vanished
+     * exactly while he was typing, which is when it is worth reading. It used to be an `@else if`
+     * chain, so the dirty state SUPPRESSED the counter. The green check still yields to it (it
+     * speaks about what is saved); the counter does not.
+     */
+    it('keeps the missing-field counter while the section has unsaved changes', () => {
+      const pendingSections = signal<Set<string>>(new Set(['general-info']));
+      autoSaveService.hasPendingFor.mockImplementation((name: string) => pendingSections().has(name));
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'partial',
+          fields: [
+            { key: 'title', label: 'Title of Result', filled: true },
+            { key: 'description', label: 'Description of Result', filled: false },
+          ],
+        },
+      ]);
+      enterEditor();
+
+      expect(q('[data-testid="bilateral-footer-dirty"]').textContent).toContain('Unsaved changes');
+      expect(q('[data-testid="bilateral-footer-state"]').textContent.replace(/\s+/g, ' ')).toContain('1 field missing');
     });
 
     it('names the missing required fields in the footer and lists them on click', () => {
@@ -637,8 +677,65 @@ describe('BilateralResultCreatorComponent', () => {
 
       state.click();
       fixture.detectChanges();
-      const items = Array.from(q('[data-testid="bilateral-footer-pending-list"]').querySelectorAll('li')).map((li: any) => li.textContent.trim());
+      const items = Array.from(q('[data-testid="bilateral-footer-pending-list"]').querySelectorAll('li')).map((li: any) =>
+        li.querySelector('span').textContent.trim()
+      );
       expect(items).toEqual(['Title of Result', 'Description']);
+    });
+
+    /**
+     * The other half of JC's report: W1/W2 puts a **Go** on every entry that scrolls to the field
+     * and flashes it, and this list had none — it named a field and left the reporter to find it.
+     * The lookup is by the visible LABEL (this editor never scans the DOM, so there is no
+     * `data-pr-feedback` to key off), and only when exactly one label matches.
+     */
+    it('offers Go for an entry that matches one field on screen, and jumps to it', () => {
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'partial',
+          fields: [{ key: 'description', label: 'Description', filled: false }],
+        },
+      ]);
+      enterEditor();
+
+      // The real sections are stubbed in this spec, so stand in for the field the way the DOM
+      // carries it: a labelled host with its `.fch_title` inside the editor content. Mounted
+      // BEFORE the panel opens, which is when the reachable set is resolved.
+      const host = document.createElement('app-pr-textarea');
+      host.innerHTML = '<span class="fch_title">Description of Result</span>';
+      Object.defineProperty(host, 'getBoundingClientRect', { value: () => ({ height: 120 }) });
+      q('.bcr-content').appendChild(host);
+
+      q('[data-testid="bilateral-footer-state"]').click();
+      fixture.detectChanges();
+
+      expect(component.canGoToField('Description')).toBe(true);
+      const go = q('[data-testid="bilateral-footer-pending-list"] .bcr-pending-list__go');
+      expect(go).not.toBeNull();
+
+      host.scrollIntoView = jest.fn();
+      go.click();
+
+      expect(host.scrollIntoView).toHaveBeenCalled();
+      expect(host.classList.contains('pr-field-flash')).toBe(true);
+      expect(component.pendingOpen()).toBe(false);
+    });
+
+    it('renders no Go button when the entry matches nothing on screen', () => {
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'partial',
+          fields: [{ key: 'valid-link', label: 'Evidence with valid link', filled: false }],
+        },
+      ]);
+      enterEditor();
+      q('[data-testid="bilateral-footer-state"]').click();
+      fixture.detectChanges();
+
+      expect(component.canGoToField('Evidence with valid link')).toBe(false);
+      expect(q('[data-testid="bilateral-footer-pending-list"] .bcr-pending-list__go')).toBeNull();
     });
 
     it('draws the in-flow detail header instead of the centre band', () => {
@@ -770,7 +867,7 @@ describe('BilateralResultCreatorComponent', () => {
       expect(backLink).not.toBeNull();
       expect(backLink.getAttribute('title')).toBe('Back');
       expect(backLink.textContent.trim()).toContain('Back');
-      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backLink()).toEqual(['/bilateral', 'ABC', 'results']);
       expect(component.backQueryParams()).toBeNull();
     });
 
@@ -784,7 +881,20 @@ describe('BilateralResultCreatorComponent', () => {
       const backLink = q('[data-testid="bilateral-rail-back-link"]');
       expect(backLink).not.toBeNull();
       expect(backLink.textContent.trim()).toBe('chevron_leftBack');
-      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backLink()).toEqual(['/bilateral', 'ABC', 'results']);
+      expect(component.backQueryParams()).toEqual({ phase: '36' });
+    });
+
+    it('does not double-encode center acronyms with spaces or parentheses in the back link', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      const center = 'Bioversity (Alliance)';
+      ctxService.setCenter(center, 'Alliance of Bioversity International and CIAT');
+      smartNav.recordUrl(`/bilateral/${encodeURIComponent(center)}/home?phase=36`);
+      smartNav.recordUrl(`/bilateral/${encodeURIComponent(center)}/result/9384?phase=36`);
+      mockRouter.url = `/bilateral/${encodeURIComponent(center)}/result/9384?phase=36`;
+      enterEditor(9384);
+
+      expect(component.backLink()).toEqual(['/bilateral', center, 'home']);
       expect(component.backQueryParams()).toEqual({ phase: '36' });
     });
 
@@ -798,7 +908,7 @@ describe('BilateralResultCreatorComponent', () => {
       const backLink = q('[data-testid="bilateral-rail-back-link"]');
       expect(backLink).not.toBeNull();
       expect(backLink.textContent.trim()).toBe('chevron_leftBack');
-      expect(component.backLink()).toBe('/result/results-outlet/results-list');
+      expect(component.backLink()).toEqual(['/result', 'results-outlet', 'results-list']);
       expect(component.backQueryParams()).toBeNull();
     });
 

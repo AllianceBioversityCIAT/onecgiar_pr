@@ -1,4 +1,6 @@
 import { Component, inject, signal, computed, OnInit, effect, input } from '@angular/core';
+
+const PA_TOC_DEFER_STORAGE_PREFIX = 'prms.bilateralPaTocDefer:';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -38,6 +40,9 @@ export class SectionTocComponent implements OnInit {
   resultLevelId = input<number | null>(null);
 
   isPlanned = signal<boolean | null>(null);
+  /** When true, the reporter defers ToC mapping to the Program/Accelerator team (W3 bilateral only). */
+  paWillCompleteTocMapping = signal(false);
+  readonly showPlannedQuestion = computed(() => !this.paWillCompleteTocMapping());
   tocLevels = signal<any[]>([]);
   outputList = signal<any[]>([]);
   outcomeList = signal<any[]>([]);
@@ -60,7 +65,7 @@ export class SectionTocComponent implements OnInit {
 
   readonly initiativeId = signal<number | null>(null);
 
-  readonly showWhyReported = computed(() => this.isPlanned() === false);
+  readonly showWhyReported = computed(() => !this.paWillCompleteTocMapping() && this.isPlanned() === false);
 
   readonly showLevelSelector = computed(() => {
     const levelId = this.resultLevelId();
@@ -180,6 +185,10 @@ export class SectionTocComponent implements OnInit {
     return !inds.some((i: any) => i.matchInfo.cssClass === 'bp-toc-match--match');
   });
 
+  private plannedSelectionLocked = false;
+  private tocStateRequestId = 0;
+  private loadedInitiativeId: number | null = null;
+
   constructor() {
     effect(() => {
       const iId = this.creationService.resultInitiativeId();
@@ -189,11 +198,19 @@ export class SectionTocComponent implements OnInit {
     });
 
     effect(() => {
+      const resultId = this.resultId();
+      if (!resultId) return;
+      this.plannedSelectionLocked = false;
+      this.loadedInitiativeId = null;
+      this.paWillCompleteTocMapping.set(this.readPaDeferStorage(resultId));
+    });
+
+    effect(() => {
       const iId = this.initiativeId();
-      if (!iId) return;
+      if (!iId || this.loadedInitiativeId === iId) return;
+      this.loadedInitiativeId = iId;
       this.loadTocLevels();
-      this.fetchLists();
-      this.loadTocState();
+      void this.loadTocState();
     });
 
     effect(() => {
@@ -202,17 +219,31 @@ export class SectionTocComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.initiativeId()) {
+    const iId = this.initiativeId();
+    if (iId && this.loadedInitiativeId !== iId) {
+      this.loadedInitiativeId = iId;
       this.loadTocLevels();
-      this.fetchLists();
-      this.loadTocState();
+      void this.loadTocState();
     }
   }
 
   private async loadTocState(): Promise<void> {
+    const requestId = ++this.tocStateRequestId;
     const state = await this.autoSave.loadTocState();
-    if (state.planned_result !== null) {
-      this.isPlanned.set(state.planned_result);
+    if (requestId !== this.tocStateRequestId) return;
+
+    if (!this.plannedSelectionLocked) {
+      if (state.planned_result !== null) {
+        this.isPlanned.set(state.planned_result);
+        this.paWillCompleteTocMapping.set(false);
+        this.clearPaDeferStorage();
+        if (state.planned_result === true && this.initiativeId()) {
+          this.fetchLists();
+        }
+      } else if (this.readPaDeferStorage()) {
+        this.paWillCompleteTocMapping.set(true);
+        this.isPlanned.set(null);
+      }
     }
     if (state.toc_level_id !== null) {
       this.selectedLevelId.set(state.toc_level_id);
@@ -239,6 +270,60 @@ export class SectionTocComponent implements OnInit {
   }
 
   private _tocSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private clearTocDebouncers(): void {
+    if (this._tocSaveTimer) {
+      clearTimeout(this._tocSaveTimer);
+      this._tocSaveTimer = null;
+    }
+    if (this._narrativeTimer) {
+      clearTimeout(this._narrativeTimer);
+      this._narrativeTimer = null;
+    }
+    if (this._whyReportedTimer) {
+      clearTimeout(this._whyReportedTimer);
+      this._whyReportedTimer = null;
+    }
+  }
+
+  private readPaDeferStorage(resultId = this.resultId()): boolean {
+    if (!resultId) return false;
+    try {
+      return sessionStorage.getItem(`${PA_TOC_DEFER_STORAGE_PREFIX}${resultId}`) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private persistPaDeferStorage(deferred: boolean): void {
+    const resultId = this.resultId();
+    if (!resultId) return;
+    try {
+      if (deferred) {
+        sessionStorage.setItem(`${PA_TOC_DEFER_STORAGE_PREFIX}${resultId}`, '1');
+      } else {
+        sessionStorage.removeItem(`${PA_TOC_DEFER_STORAGE_PREFIX}${resultId}`);
+      }
+    } catch {
+      // Private mode / quota — UI state still works for this session.
+    }
+  }
+
+  private clearPaDeferStorage(): void {
+    this.persistPaDeferStorage(false);
+  }
+
+  private clearTocSelection(): void {
+    this.selectedTocResultId.set(null);
+    this.selectedIndicatorId.set(null);
+    this.contributionValue.set(null);
+    this.narrative.set('');
+    this.whyReported.set('');
+    this.outputList.set([]);
+    this.outcomeList.set([]);
+    this.eoiList.set([]);
+    this.selectedLevelId.set(null);
+  }
 
   private saveTocDebounced(): void {
     if (this._tocSaveTimer) clearTimeout(this._tocSaveTimer);
@@ -282,20 +367,15 @@ export class SectionTocComponent implements OnInit {
   }
 
   onPlannedChange(planned: boolean): void {
+    this.clearTocDebouncers();
+    this.plannedSelectionLocked = true;
+    this.paWillCompleteTocMapping.set(false);
+    this.clearPaDeferStorage();
     this.isPlanned.set(planned);
-    this.selectedTocResultId.set(null);
-    this.selectedIndicatorId.set(null);
-    this.contributionValue.set(null);
-    this.narrative.set('');
-    this.whyReported.set('');
-    this.outputList.set([]);
-    this.outcomeList.set([]);
-    this.eoiList.set([]);
+    this.clearTocSelection();
 
     if (this.resultLevelId() === 1 && planned) {
       this.selectedLevelId.set(1);
-    } else {
-      this.selectedLevelId.set(null);
     }
 
     const programCode = this.creationService.selectedPrimarySp()?.programCode;
@@ -305,6 +385,19 @@ export class SectionTocComponent implements OnInit {
     });
     if (planned && this.initiativeId()) {
       this.fetchLists();
+    }
+  }
+
+  onPaWillCompleteChange(deferred: boolean): void {
+    this.clearTocDebouncers();
+    this.plannedSelectionLocked = true;
+    this.paWillCompleteTocMapping.set(deferred);
+    this.persistPaDeferStorage(deferred);
+
+    if (deferred) {
+      this.isPlanned.set(null);
+      this.clearTocSelection();
+      return;
     }
   }
 
@@ -406,7 +499,7 @@ export class SectionTocComponent implements OnInit {
       {
         key: 'toc-planned',
         label: 'Mapped to planned ToC indicator',
-        filled: planned !== null,
+        filled: this.paWillCompleteTocMapping() || planned !== null,
         optional: true,
       },
     ];

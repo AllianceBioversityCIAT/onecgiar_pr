@@ -366,3 +366,42 @@ describe('CPNormalSelectorComponent - Other-exclusive role block (PRL-T-1)', () 
     expect(tocOption.delivery.map((d: any) => d.partner_delivery_type_id).sort()).toEqual([1, 2]);
   });
 });
+
+/**
+ * P2-3738 — the partner cards turn green only when every selected partner has a role, which is the
+ * same rule the hidden `Partner role: <name>` markers report to the missing-field counter.
+ */
+describe('CPNormalSelectorComponent — partner cards need every role (P2-3738)', () => {
+  const withRole = (id: number) => ({ institutions_id: id, delivery: [{ partner_delivery_type_id: 1 }] });
+  const withoutRole = (id: number) => ({ institutions_id: id, delivery: [] });
+
+  const selector = (institutions: any[], others: any[], notApplicable = false) => {
+    const component = Object.create(CPNormalSelectorComponent.prototype);
+    component.OTHER_PARTNERS_CODE = -1;
+    component.rdPartnersSE = {
+      partnersBody: { institutions, no_applicable_partner: notApplicable },
+      otherPartnersSelected: others
+    };
+    return component as CPNormalSelectorComponent;
+  };
+
+  it('is not complete with partners selected but a role missing', () => {
+    expect(selector([withRole(1), withoutRole(2)], []).partnersCardComplete).toBe(false);
+    expect(selector([withRole(1)], [withoutRole(3)]).partnersCardComplete).toBe(false);
+  });
+
+  it('is complete once every selected partner has a role, the "Other" sentinel aside', () => {
+    expect(selector([withRole(1), { institutions_id: -1 }], [withRole(3)]).partnersCardComplete).toBe(true);
+  });
+
+  it('is complete when the section is marked not applicable, and never with nothing selected', () => {
+    expect(selector([], [], true).partnersCardComplete).toBe(true);
+    expect(selector([], []).partnersCardComplete).toBe(false);
+  });
+
+  it('judges the "Other(s)" card on its own partners only', () => {
+    expect(selector([withoutRole(1)], [withRole(3)]).otherPartnersRolesComplete).toBe(true);
+    expect(selector([withRole(1)], [withoutRole(3)]).otherPartnersRolesComplete).toBe(false);
+    expect(selector([withRole(1)], []).otherPartnersRolesComplete).toBe(false);
+  });
+});

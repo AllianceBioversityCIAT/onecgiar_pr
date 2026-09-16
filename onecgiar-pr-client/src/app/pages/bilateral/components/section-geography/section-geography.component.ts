@@ -47,6 +47,23 @@ export class SectionGeographyComponent {
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
 
+  /**
+   * The scope the RADIO is told to show — `null` whenever nothing is chosen.
+   *
+   * 🛑 `geographic-location/get/geographic` returns `geo_scope_id: 0` for a result whose scope was
+   * never picked (measured on result 9386 / internal id 11854, prtest, 16-Sep-2026), and
+   * `pr-radio-button.hasValue` only rejects `null`/`undefined` — so the card read `0` as an answer
+   * and painted itself GREEN ("required and filled") over an empty radio group, while the footer,
+   * which counts off the MDS tracker (`!!scopeId`), said "1 field missing". The reporter saw a
+   * number naming a field that nothing on screen marked as pending, which is exactly what W1/W2
+   * never does: there the count and the marking come from the same DOM scan.
+   *
+   * Normalised HERE and not in `geographicLocationBody`, on purpose: the signal is what
+   * `buildGeographyPayload()` serialises, and changing what it holds would change what is written
+   * to the column. This only changes what the control is shown.
+   */
+  readonly scopeSelection = computed<number | null>(() => this.geographicLocationBody().geo_scope_id || null);
+  readonly extraScopeSelection = computed<number | null>(() => this.extraGeographicLocationBody().geo_scope_id || null);
 
   /**
    * The initial GET must never replace a value the user has already edited.
@@ -136,6 +153,9 @@ export class SectionGeographyComponent {
     return typeId === INNOVATION_USE_TYPE_ID || typeId === INNOVATION_DEVELOPMENT_TYPE_ID;
   });
 
+  /** W1/W2 hides `[geoscope-management]-has_extra_geo_scope` for every non-innovation result. */
+  readonly showExtraGeoScopeQuestion = computed(() => this.isInnovationResult());
+
   readonly extraScopeQuestionLabel = computed(() =>
     this.isInnovationResult()
       ? 'Are there any other geographic areas where the innovation could be impactful (beyond current development and use)?'
@@ -172,12 +192,17 @@ export class SectionGeographyComponent {
     this.bilateralApi.GET_geographic(resultId).subscribe({
       next: ({ response }) => {
         if (response && !this.hasLocalGeographyChanges) {
+          const scopeId = Number(response.geo_scope_id);
+          const isCountryOrSubNational =
+            scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL;
           this.geographicLocationBody.update(b => ({
             ...b,
             geo_scope_id: response.geo_scope_id,
-            has_regions: this.toBoolean(response.has_regions),
-            has_countries: this.toBoolean(response.has_countries),
-            regions: response.regions || [],
+            has_regions: isCountryOrSubNational ? false : this.toBoolean(response.has_regions),
+            has_countries: isCountryOrSubNational
+              ? true
+              : this.toBoolean(response.has_countries),
+            regions: isCountryOrSubNational ? [] : response.regions || [],
             countries: response.countries || []
           }));
 
@@ -208,6 +233,27 @@ export class SectionGeographyComponent {
   private buildGeographyPayload(): Record<string, unknown> {
     const geo = this.geographicLocationBody();
     const extra = this.extraGeographicLocationBody();
+    const extraScopeHidden =
+      !this.isInnovationResult() ||
+      geo.geo_scope_id === GeoScopeEnum.GLOBAL ||
+      geo.geo_scope_id === GeoScopeEnum.DETERMINED;
+
+    if (extraScopeHidden) {
+      return {
+        has_countries: geo.has_countries,
+        has_regions: geo.has_regions,
+        regions: geo.regions,
+        countries: geo.countries,
+        geo_scope_id: geo.geo_scope_id,
+        extra_geo_scope_id: null,
+        extra_regions: [],
+        extra_countries: [],
+        has_extra_countries: false,
+        has_extra_regions: false,
+        has_extra_geo_scope: false
+      };
+    }
+
     return {
       has_countries: geo.has_countries,
       has_regions: geo.has_regions,
@@ -257,7 +303,10 @@ export class SectionGeographyComponent {
         has_countries: false,
         countries: []
       }));
-      this.extraGeographicLocationBody.update(b => ({ ...b, has_extra_geo_scope: null }));
+      this.extraGeographicLocationBody.update(b => ({
+        ...b,
+        has_extra_geo_scope: this.isInnovationResult() ? null : false
+      }));
     } else if (scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL) {
       this.geographicLocationBody.update(b => ({
         ...b,
@@ -266,7 +315,10 @@ export class SectionGeographyComponent {
         has_regions: false,
         regions: []
       }));
-      this.extraGeographicLocationBody.update(b => ({ ...b, has_extra_geo_scope: null }));
+      this.extraGeographicLocationBody.update(b => ({
+        ...b,
+        has_extra_geo_scope: this.isInnovationResult() ? null : false
+      }));
     } else {
       this.geographicLocationBody.update(b => ({ ...b, geo_scope_id: scopeId }));
     }
@@ -421,9 +473,24 @@ export class SectionGeographyComponent {
     }));
   }
 
+  /**
+   * W1/W2 `app-geoscope-management` hides the main "regions for this result?" Yes/No when the
+   * focus is Country or Sub-national (scope 3 / 5) and goes straight to the country multi-select.
+   * Regional (2) also skips the Yes/No here and shows "Select regions" directly.
+   */
+  get showsMainRegionsYesNo(): boolean {
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    return (
+      !!scopeId &&
+      scopeId !== GeoScopeEnum.REGIONAL &&
+      scopeId !== GeoScopeEnum.COUNTRY &&
+      scopeId !== GeoScopeEnum.SUB_NATIONAL
+    );
+  }
+
   /** Regions multiSelect is visible for Regional, or when user opted into regions. */
   get requiresRegionsSelection(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     if (!scopeId || scopeId === GeoScopeEnum.GLOBAL || scopeId === GeoScopeEnum.DETERMINED) {
       return false;
     }
@@ -432,7 +499,7 @@ export class SectionGeographyComponent {
 
   /** Countries multiSelect is visible for Country/Sub-national, or when user opted into countries. */
   get requiresCountriesSelection(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     if (!scopeId || scopeId === GeoScopeEnum.GLOBAL || scopeId === GeoScopeEnum.DETERMINED) {
       return false;
     }
@@ -478,7 +545,10 @@ export class SectionGeographyComponent {
   }
 
   get requiresExtraScopeAnswer(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    if (!this.isInnovationResult()) {
+      return false;
+    }
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     return (
       !!scopeId &&
       scopeId !== GeoScopeEnum.GLOBAL &&
@@ -517,7 +587,7 @@ export class SectionGeographyComponent {
   }
 
   isGeographyComplete(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     if (!scopeId) return false;
 
     if (scopeId === GeoScopeEnum.GLOBAL || scopeId === GeoScopeEnum.DETERMINED) {
@@ -545,7 +615,7 @@ export class SectionGeographyComponent {
       return false;
     }
 
-    if (this.extraGeographicLocationBody().has_extra_geo_scope) {
+    if (this.isInnovationResult() && this.extraGeographicLocationBody().has_extra_geo_scope) {
       if (!this.extraGeographicLocationBody().geo_scope_id) return false;
       if (this.extraRegionsSelectionMissing || this.extraCountriesSelectionMissing) return false;
       if (this.extraSubNationalSelectionMissing) return false;
@@ -555,7 +625,7 @@ export class SectionGeographyComponent {
   }
 
   updateTracker(): void {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     const items: { key: string; label: string; filled: boolean }[] = [
       {
         key: 'geo-scope',
@@ -591,12 +661,14 @@ export class SectionGeographyComponent {
           filled: !this.subNationalSelectionMissing,
         });
       }
-      items.push({
-        key: 'extra-geo-answer',
-        label: 'Extra geographic areas (Yes/No)',
-        filled: !this.extraScopeAnswerMissing,
-      });
-      if (this.extraGeographicLocationBody().has_extra_geo_scope === true) {
+      if (this.isInnovationResult()) {
+        items.push({
+          key: 'extra-geo-answer',
+          label: 'Extra geographic areas (Yes/No)',
+          filled: !this.extraScopeAnswerMissing,
+        });
+      }
+      if (this.isInnovationResult() && this.extraGeographicLocationBody().has_extra_geo_scope === true) {
         items.push({
           key: 'extra-geo-scope',
           label: 'Extra geographic scope',

@@ -1,6 +1,6 @@
 # pr-multi-select
 
-**Verified:** 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
+**Verified:** 2026-09-16 · performance-refactor · merge con SIP-T-7 · input `complete` + apertura hacia arriba (P2-3737/P2-3738); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 rework (attempt 2): fixed the option-row `min-height`/`itemSize` mismatch the Reviewer caught (global `height: 30px` made the new `padding: 16px 20px` a no-op; added `height: auto; min-height: 52px` + a matching `virtualOptionItemSize` computed driving the CDK `[itemSize]`); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 adds opt-in visual variant (`resultPickerStyle` input, off by default) mirroring `rd-contributors-and-partners`'s linked-result picker — no filter chips, per `SIP-R-20`/`SIP-OQ-3`; prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-3 adds opt-in server-search mode (`serverSearchDebounceMs` input, `searchTextChange` output); prior: 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
 
 ## Qué es
 
@@ -31,13 +31,69 @@ El dropdown multi-selección de toda la app: buscador, `select all` opcional, mo
   🛑 El hueco es SOLO para chips. El marcador `appFeedbackValidation` de la sección sigue
   siendo hermano del dropdown: anidarlo haría que `mandatoryFieldLabel` reportara la
   etiqueta del desplegable en vez de la suya.
+- `complete` — `boolean | null`, default `null` (P2-3738). Sobrescribe lo que la tarjeta llama
+  "lleno": con `null` sigue siendo `hasSelection`. Úsalo cuando el campo pide MÁS que elegir algo
+  y el contador de faltantes lo juzga con otra regla: hoy `rd-contributors-and-partners`
+  (centros: el centinela "Other(s)" no cuenta) y su `normal-selector` (cada partner necesita rol).
+  🛑 Sin él, la tarjeta se pinta verde mientras "N fields missing" sigue nombrando el campo.
+- **Se abre hacia arriba cuando no cabe abajo** (P2-3737, `../dropdown-placement.ts`, compartido con
+  `pr-select` en modo en línea). Se decide al PRESIONAR el campo (`pointerdown` nativo, fuera de la
+  zona de Angular, medido un frame después); una presión dentro del panel abierto no lo recalcula,
+  para que la lista no salte bajo el puntero. Clase `options_up` puesta en el nodo, sin estado.
+  ⚠️ **No uses `focusin`** (ni binding ni listener nativo, ni siquiera vacío): medido el 16-sep-2026,
+  cualquier listener de `focusin` en este host pone 3 rojos NUEVOS en `pr-multi-select.contract.cy.ts`
+  (reasignación del modelo, opciones tardías, modelo antes que opciones). Con `pointerdown` el archivo
+  queda en sus 9 rojos conocidos. Coste aceptado: abrir con Tab no voltea el panel.
+  El piso es el borde del scroll MENOS su `padding-bottom`: `.rd_scroll` y `.bcr-scroll` reservan
+  ahí la zona de la barra inferior flotante.
 - Gates de render: `readOnly` · `RolesService.readOnly` (global, **default TRUE**) ·
   `isStatic` (fuerza el control aunque sea read-only) · `hideSelect`.
 - `required` — **default `true`**. Ver la trampa ⚠️ #1: hoy es casi inerte.
 - Es `ControlValueAccessor`: valor por `ngModel` / `writeValue`. `writeValue` conserva la
   **referencia** del array cuando todas las entradas ya son objetos, porque varios padres
   mutan el modelo in place (`splice`) y eso jamás dispara `writeValue`.
-- Outputs: `selectOptionEvent` · `removeOptionEvent`.
+- Outputs: `selectOptionEvent` · `removeOptionEvent` · `searchTextChange` (see below).
+- **Server-search mode (SIP-T-3, additive/opt-in)** — flat mode only, not `group`. Two new members,
+  meaningless unless used together:
+  - `serverSearchDebounceMs` — input, default `300`. Debounce window before `searchTextChange` emits.
+  - `searchTextChange` — output, emits the **trimmed** search term, debounced. The parent is expected
+    to call the server and reassign `[options]` with the (already-filtered) response.
+  - **Wiring detection:** the component checks whether a parent template actually bound
+    `(searchTextChange)` via `OutputEmitterRef.listeners` (`null` until a template binding
+    subscribes) — `isServerSearchWired()` in the `.ts`. This is Angular's **internal, undocumented**
+    runtime shape, verified against the pinned `@angular/core` **21.2.22**
+    (`node_modules/@angular/core/fesm2022/_resource-chunk.mjs`). If a future Angular upgrade changes
+    this shape, `isServerSearchWired()` must be revisited — the fallback design (if `.listeners` ever
+    stops working) is an explicit `serverSearch` boolean input the parent sets alongside the output.
+  - When wired: the search `<input>` still updates `searchText` locally (existing consumers reading
+    it keep working) but also pushes into a debounced `Subject` that emits `searchTextChange`;
+    `filterFlatOptions()` **skips local filtering entirely** and returns `options` as-is (the parent
+    already filtered server-side — filtering again would double-filter or filter on stale text).
+  - When NOT wired (the other ~78 instances): zero behavior change. No subscription is created
+    (`ngOnInit` only sets it up when `isServerSearchWired()` is true), `filterFlatOptions()` filters
+    by `searchText` exactly as before.
+- **`resultPickerStyle` visual variant (SIP-T-7, additive/opt-in, off by default)** — a single boolean
+  input, `false`/unset by default. When `true`, the `.options` dropdown panel gets the `.result_picker_style`
+  class (bound in the `.html`), which scopes a new SCSS block mirroring `rd-contributors-and-partners`'s
+  linked-result picker (`.custom-dropdown-panel` / `.search-bar` / `.results-list.compact-list
+  .result-list-item` in that file, NOT touched by this change — reference only): rounded panel
+  (`border-radius: 8px`) + `box-shadow: var(--pr-shadow-2)` + white background; a bordered search
+  input with the icon positioned absolute inside it (same pattern as `pr-select.component.scss:97-108`);
+  option rows with `padding: 16px 20px` — since `custom-fields.scss:173-178` globally pins `.option`
+  to a fixed `height: 30px` (a no-op under border-box sizing once 16px top + 16px bottom padding is
+  added, the padding has nowhere to go), the variant also overrides `height: auto; min-height: 52px`
+  so the row actually renders at the intended size (52px ≈ 16+16 padding + 18px `pr-body-2` line-height
+  + 1px border) — a bottom divider (`var(--pr-border-divider)`), and a hover swap to
+  `var(--pr-surface-raised-soft)`. The 52px row height (`.scss`) and the flat-mode
+  `cdk-virtual-scroll-viewport [itemSize]` **must stay numerically in sync**: `virtualOptionItemSize`
+  (`.ts`) returns `52` when `resultPickerStyle` is on, `30` (the `custom-fields.scss` global) otherwise
+  — same paired-value pattern as `pr-select.component.ts:60-61`'s `virtualOptionItemSize`. Change one,
+  change both, or the CDK viewport's scroll math goes wrong (too-short scrollbar, unreachable rows).
+  **Deliberately NOT the filter-chip set** (typology/portfolio/
+  funding source) — out of scope per `SIP-R-20`/`SIP-OQ-3` (not needed for a single-typology candidate
+  list). All rules live under `.options.result_picker_style` in the `.scss` (extra-class override, not
+  `!important`) so the other ~78 unwired call sites are visually byte-for-byte unchanged. Only consumer
+  today: `rd-annual-updating`'s merge/split pickers (`[resultPickerStyle]="true"` on both instances).
 
 ## Trampas (⚠️ = ya rompió algo)
 

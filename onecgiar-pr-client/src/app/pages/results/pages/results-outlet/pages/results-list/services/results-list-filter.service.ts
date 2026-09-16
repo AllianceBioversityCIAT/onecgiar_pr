@@ -29,10 +29,33 @@ export function getFullMetadataExportBlockedReason(
   return null;
 }
 
+export type ResultsFilterLayout = 'menu' | 'sidebar';
+const FILTER_LAYOUT_STORAGE_KEY = 'rc-filter-layout';
+
+function readStoredFilterLayout(): ResultsFilterLayout {
+  try {
+    return localStorage.getItem(FILTER_LAYOUT_STORAGE_KEY) === 'sidebar' ? 'sidebar' : 'menu';
+  } catch {
+    return 'menu';
+  }
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsListFilterService {
+  /** Results Center filters as a floating menu (default) or as a column beside the table; remembered per browser. */
+  readonly filterLayout = signal<ResultsFilterLayout>(readStoredFilterLayout());
+
+  setFilterLayout(layout: ResultsFilterLayout): void {
+    this.filterLayout.set(layout);
+    try {
+      localStorage.setItem(FILTER_LAYOUT_STORAGE_KEY, layout);
+    } catch {
+      // Private mode or blocked storage: the choice still applies for this visit.
+    }
+  }
+
   /**
    * Full-metadata export state lives here, not on the filters COMPONENT, because the
    * Results Center toolbar (the parent) renders the export button. Reading it off a

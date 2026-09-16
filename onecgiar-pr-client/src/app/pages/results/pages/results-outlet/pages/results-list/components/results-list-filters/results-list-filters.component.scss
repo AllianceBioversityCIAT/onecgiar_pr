@@ -355,6 +355,17 @@
   width: min(420px, calc(100vw - 32px));
   max-height: min(70vh, 560px);
   overflow-y: auto;
+
+  // Cancel/Apply stay pinned while only the fields scroll (bottom/margins cancel the panel's 16px padding).
+  .rc-more-footer {
+    position: sticky;
+    bottom: -16px;
+    z-index: 2;
+    margin: 4px -16px -16px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--pr-border-divider, #eeeef1);
+    background: #fff;
+  }
 }
 
 .rc-more-field {
