@@ -1570,7 +1570,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const state = row?.sectionState;
         if (state === 'loading') return '';
         if (state === 'error' || state === 'version-mismatch') return '—';
-        const label = sectionLabel(row?.section);
+        const label = sectionLabel(row?.section, row?.plannedResult);
         const extra = (row?.aowCodes?.length ?? 0) > 1 ? ` +${(row?.aowCodes?.length ?? 0) - 1}` : '';
         return `${label}${extra}`;
       }

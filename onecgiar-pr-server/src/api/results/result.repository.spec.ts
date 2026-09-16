@@ -68,6 +68,11 @@ describe('ResultRepository (unit)', () => {
 
     expect(params).toEqual([7, 'I1', 'I2', 1, 2, 10, 3, 5, 1, 2]);
 
+    expect(queryMock.mock.calls[0][0]).toContain('MAX(rtr.planned_result)');
+    expect(queryMock.mock.calls[0][0]).toContain('AND rtr.initiative_id = rbi.inititiative_id');
+    expect(queryMock.mock.calls[0][0]).toContain('END AS planned_result');
+    expect(queryMock.mock.calls[0][0]).not.toMatch(/JOIN\s+results_toc_result/);
+
     const [countSql, countParams] = queryMock.mock.calls[1];
     expect(countSql).toContain('SELECT COUNT(1) as total FROM (');
     expect(countParams).toEqual(params);
