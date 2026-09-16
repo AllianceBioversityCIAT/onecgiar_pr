@@ -50,7 +50,7 @@
   - *Falsifying input:* an entity column typed `datetime` with a JS `Date` default → `created_at` would be born in local time (vault rule); the review greps `new Date()` in the entity and fails on a hit.
 - **Definition of done:** migration present, pruned, reversible; `migration:check` green; `bilateral.module.ts` registers entity + repository; commit `✨ feat(bilateral) [P2-3698]: …`.
 
-### [ ] `BIL-QAI-T-3` — Pure rules: grey, KP decision tree, content hash, outstanding flags (TDD)
+### [x] `BIL-QAI-T-3` — Pure rules: grey, KP decision tree, content hash, outstanding flags (TDD)
 
 - **Type:** `server`
 - **Description:** `bilateral-quality-rules.ts` exporting four pure functions per `design.md` §5: `applyGreyRule(response, payload)`, `evaluateKpRule(input)`, `contentHash(payload)`, `hasOutstandingFlags(row)`. Table-driven tests written **first**.

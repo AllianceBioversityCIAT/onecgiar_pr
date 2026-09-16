@@ -72,3 +72,31 @@ Reviewer (opus, same session) → **PASS**. Summary: "The README insertion point
 | Forward pointers | → `T-4`/`T-5`: derive `constraints.timeout_seconds` from `BILATERAL_AI_QUALITY_TIMEOUT_MS` (advisory RELIABILITY) · → owner at gate: decide whether to drop "in this order" and add the AI-side grey trigger to the contract copy (advisories RISK/READABILITY — out of T-1 scope, not minted as tasks) |
 | Commit | see below |
 
+### `BIL-QAI-T-3` — Pure rules: grey, KP decision tree, content hash, outstanding flags (TDD)
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (attempt 1 of 3) |
+| Date | 2026-09-16 |
+| Skills assigned | `tdd`, `nestjs-expert` (task list, no deviation) |
+| Effort | `high` (business rules with literal expectations) |
+| Files | `onecgiar-pr-server/src/api/bilateral/services/quality-assessment/bilateral-quality-rules.ts` (+358), `.../bilateral-quality-rules.spec.ts` (+615) — both new |
+| Requirements covered | `BIL-QAI-R-3` (grey clause), `R-4` (grey never recolours), `R-6` (hash determinism), `R-8` (outstanding flags), `R-9` (all three scenarios), `AC-10`, `AC-11` (rule half) |
+
+**Attempt 1** — Implementer (sonnet). Red → green: spec written first (import error), then implementation. Verification (verbatim): `npx jest --silent --reporters=summary --forceExit --testPathPattern="bilateral-quality-rules"` → `Test Suites: 1 passed · Tests: 61 passed`; coverage `bilateral-quality-rules.ts | 100 | 100 | 100 | 100`; `npx eslint "src/api/bilateral/services/quality-assessment/**/*.ts" --quiet` → exit 0; grep for `@nestjs`/`typeorm` imports → none. Note: `--collectCoverageFrom` must be relative to `src/` (jest `rootDir`). No `Not Done`.
+
+Implementer judgment calls: (1) `is_melia = true` + Journal Article + agreeing rows → `green` (design §5 branch 2 has no MELIA guard); (2) `KpRuleInput.evidence_count?: number` as the KP evidence shape; (3) removed a defensive `payload.sections?.evidence ?? []`.
+
+**Leader adjudication (1):** `green` is correct. The owner's original SQL tree in the vault note (*Árbol KP*) has no MELIA guard on the Journal Article branch; `requirements.md` R-9 *Fallthrough* "a KP that is MELIA" is shorthand for the non-JA MELIA case. Reviewer concurred.
+
+Reviewer (opus) → **PASS**. Summary: "`bilateral-quality-rules.ts` implements the four pure functions exactly as `design.md` §5 specifies, the reason/rationale strings match the design and the frozen contract character-for-character, and the 61-test table-driven suite carries literal expectations (no tautology) including both falsifying inputs from the work order; purity, `@akili-spec` header, 100 % branch coverage and lint are satisfied."
+
+ADVISORY (recorded, not gating — none minted as tasks):
+- RELIABILITY/RISK: `applyGreyRule` joins AI `evidence[]` to payload evidence by **array position** and ignores `item.index`, which the contract carries as the join key. A reordered response grades the wrong item grey; a private item the AI omits never gets a grey entry, although R-3 says it "MUST be graded grey regardless of what the AI answers". Not gated because design §5 literally writes `evidence[i]`. → **Escalated to the owner at the gate as a design clarification** (design §5 *Grey rule*: match by `index`, append grey for missing items). If approved, folded into the brief of the task that consumes the rule (`T-6`).
+- RESILIENCE: 100 % branch coverage does not exercise the length-mismatch path (`response.evidence` longer than payload evidence). One extra case would pin it.
+- RISK: `contentHash(payload: Record<string, unknown>)` rejects a value typed as the exported `QualityPayload` (TS2345, no implicit index signature). → **Forward pointer to `T-4`**: widen to `QualityPayload | Record<string, unknown>` and add one spec case `contentHash(buildPayload())` (compile-fix inside T-4's `tsc --noEmit` DoD).
+- RELIABILITY: with the defensive `?? []` removed, `applyGreyRule` throws on a 2xx body lacking `evidence`/`sections`/per-section arrays. → **Forward pointer to `T-5`**: the light schema check MUST treat `sections`, `evidence` and each section's `strengths`/`issues` arrays as required keys (else `malformed`), so the orchestrator never 500s (R-7).
+- READABILITY: `is_isi`/`is_peer_reviewed` both `false` is reported as "do not match" although the rule is "both must be true"; `evidence_count` optional means a forgetful caller silently drops the KP evidence listing (→ `T-6` brief: always pass it). Spec file lacks the literal `@akili-spec` tag (cosmetic).
+
+| Commit | see below |
+
