@@ -33,7 +33,7 @@
   overflow: hidden;
 }
 
-// Sections rail: 240px, white, 1px right rule, 24/20 padding, 44px rows — the W1/W2 numbers.
+// Sections rail: 240px, white, 1px right rule, 20px padding, 44px rows — the W1/W2 numbers.
 .bcr-rail {
   flex: none;
   display: flex;
@@ -41,7 +41,7 @@
   width: 240px;
   height: 100%;
   overflow-y: auto;
-  padding: 24px 20px;
+  padding: 20px;
   border-right: 1px solid var(--pr-border);
   background: var(--pr-surface-card);
 }
@@ -340,13 +340,47 @@
 
 .bcr-pending-list__items {
   margin: 0;
-  padding-left: 18px;
+  // Sin viñeta: cada fila pasa a ser nombre + acción, y el disco dejaba el "Go" descolgado del
+  // borde. Misma forma que la lista de la barra de W1/W2.
+  padding-left: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  list-style: disc;
+  gap: 2px;
+  list-style: none;
 
-  li { font-size: 13px; line-height: 1.45; color: var(--pr-text); }
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--pr-text);
+
+    &:hover { background: var(--pr-surface-app); }
+  }
+}
+
+// El "Go" de la barra de W1/W2, verbatim: secundario neutro con tinta violeta, que es lo que lo
+// lee como acción sin competir con `Save draft`.
+.bcr-pending-list__go {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--pr-border);
+  border-radius: 6px;
+  background: var(--pr-surface-card);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+
+  &:hover {
+    border-color: var(--pr-color-primary-200);
+    background: var(--pr-color-primary-25);
+  }
 }
 
 // Buttons straight off the W1/W2 bar. Violet goes on the ONE primary action of a group (Next);

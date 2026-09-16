@@ -4,6 +4,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 // @akili-spec changes/my-work-board (MWB-T-2, MWB-DD-3)
 import { ScienceProgramIdService } from '../../../services/science-program-id.service';
 import {
+  formatProgrammeResultPhaseShort,
   joinResultScope,
   PROGRAMME_RESULTS_PAGE_LIMIT,
   ProgrammeResultsService,
@@ -146,6 +147,8 @@ describe('ProgrammeResultsService', () => {
           versionId: '34',
           phaseName: '',
           phaseYear: null,
+          phaseAcronym: '',
+          phaseSort: '0000_',
           submitterCode: 'SP01',
           // P2-3508 — the untouched item rides along so the "Update result" eligibility rule and
           // the phase modal can read the same object the old Results list reads.
@@ -510,12 +513,24 @@ describe('ProgrammeResultsService', () => {
     });
   });
 
+  describe('formatProgrammeResultPhaseShort()', () => {
+    it('renders `year · portfolio` when both are present', () => {
+      expect(formatProgrammeResultPhaseShort({ phaseYear: 2026, phaseAcronym: 'P25', phaseName: 'Reporting 2026' })).toBe('2026 · P25');
+    });
+
+    it('parses year and portfolio from a long phase name when acronym is absent', () => {
+      expect(formatProgrammeResultPhaseShort({ phaseYear: null, phaseAcronym: '', phaseName: 'Reporting 2026 - P26' })).toBe('2026 · P26');
+    });
+  });
+
   describe('toProgrammeResultRow()', () => {
     it('keeps indicator and section empty even when the payload sneaks values in', () => {
       const row = toProgrammeResultRow(rawResult({ indicator: 'IND-1', section: 'AoW1', acronym: 'P25' } as any));
 
       expect(row.indicator).toBe('');
       expect(row.section).toBe('');
+      expect(row.phaseAcronym).toBe('P25');
+      expect(row.phaseSort).toBe('0000_P25');
     });
 
     it('reads updated from last_updated_date when the backend starts sending it', () => {

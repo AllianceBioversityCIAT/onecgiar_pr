@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { AuthService } from './auth.service';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -292,6 +293,50 @@ describe('AuthService', () => {
       });
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}login/otp/verify`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(mockBody);
+
+      req.flush(mockResponse);
+    });
+  });
+
+  // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-6)
+  describe('POST_bilateralHandoffStart', () => {
+    it('should POST the center code and return the minted code, ttl and redirect url', done => {
+      const mockBody = { center_code: 'CENTER-05', audience: 'w3-bilateral-uploader:test' };
+      const mockResponse = {
+        response: {
+          code: '0'.repeat(43),
+          expires_in: 120,
+          redirect_url: 'https://bulk-uploader.example.org/handoff/?code=' + '0'.repeat(43) + '&env=test'
+        }
+      };
+
+      service.POST_bilateralHandoffStart(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        expect(response.response.code).toBe(mockResponse.response.code);
+        expect(response.response.expires_in).toBe(120);
+        expect(response.response.redirect_url).toBe(mockResponse.response.redirect_url);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/handoff`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(mockBody);
+
+      req.flush(mockResponse);
+    });
+
+    it('should POST without an audience when it is omitted', done => {
+      const mockBody = { center_code: 'CENTER-05' };
+      const mockResponse = { response: { code: '1'.repeat(43), expires_in: 120, redirect_url: 'https://bulk-uploader.example.org/handoff/?code=' + '1'.repeat(43) } };
+
+      service.POST_bilateralHandoffStart(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/handoff`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(mockBody);
 

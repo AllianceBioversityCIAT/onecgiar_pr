@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSearch } from '@ng-icons/lucide';
+import { lucideSearch, lucideHistory } from '@ng-icons/lucide';
 import { BrnCommandImports, BrnCommand } from '@spartan-ng/brain/command';
 import { HlmDialogImports } from '@spartan/dialog';
 import { HlmNativeSelectImports } from '@spartan/native-select';
@@ -54,7 +54,7 @@ export function programDotColor(code: string | null | undefined): string {
   selector: 'app-global-search-palette',
   standalone: true,
   imports: [...HlmDialogImports, ...BrnCommandImports, ...HlmNativeSelectImports, NgIcon],
-  providers: [GlobalSearchPaletteService, provideIcons({ lucideSearch })],
+  providers: [GlobalSearchPaletteService, provideIcons({ lucideSearch, lucideHistory })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './global-search-palette.component.html'
 })
@@ -130,7 +130,9 @@ export class GlobalSearchPaletteComponent {
   private readonly rowsFingerprint = computed(() =>
     [
       ...this.search.resultRows().map((r) => this.resultValue(r)),
-      ...this.search.programHits().map((p) => this.programValue(p))
+      ...this.search.programHits().map((p) => this.programValue(p)),
+      // Only relevant while idle (empty query) — that's the only state recent searches render in.
+      ...(this.search.resultsIdle() ? this.search.recentQueries().map((q) => this.recentValue(q)) : [])
     ].join('|')
   );
 
@@ -138,7 +140,9 @@ export class GlobalSearchPaletteComponent {
     const result = this.search.resultRows().find((r) => this.resultValue(r) === value);
     if (result) return this.resultAriaLabel(result);
     const program = this.search.programHits().find((p) => this.programValue(p) === value);
-    return program ? this.programAriaLabel(program) : '';
+    if (program) return this.programAriaLabel(program);
+    const recent = this.search.recentQueries().find((q) => this.recentValue(q) === value);
+    return recent ? `Recent search: ${recent}` : '';
   }
 
   // ── open / close ───────────────────────────────────────────────────────────────────────────────
@@ -171,6 +175,9 @@ export class GlobalSearchPaletteComponent {
   programValue(row: PaletteProgramRow): string {
     return `program:${row.code}`;
   }
+  recentValue(term: string): string {
+    return `recent:${term}`;
+  }
 
   statusFg(statusId: number): string {
     return STATUS_TOKENS[String(statusId)]?.fg ?? 'var(--pr-status-not-started-fg)';
@@ -200,6 +207,7 @@ export class GlobalSearchPaletteComponent {
   // ── activation ─────────────────────────────────────────────────────────────────────────────────
 
   openResult(row: PaletteResultRow): void {
+    this.search.recordSearch(this.search.query());
     this.closePalette();
     this.router.navigate(['/result', 'result-detail', row.code, 'general-information'], {
       queryParams: { phase: row.versionId }
@@ -207,8 +215,31 @@ export class GlobalSearchPaletteComponent {
   }
 
   openProgram(row: PaletteProgramRow): void {
+    this.search.recordSearch(this.search.query());
     this.closePalette();
     this.router.navigate(['/result-framework-reporting', 'entity-details', row.code, 'overview']);
+  }
+
+  /** Re-runs a past query instead of navigating — matches the term-recall behaviour in the design. */
+  openRecent(term: string): void {
+    this.search.query.set(term);
+  }
+
+  /**
+   * Splits `text` into plain/matched segments around the first (case-insensitive) occurrence of
+   * `query`, for bolding the hit like Jira's search results — via interpolation, never `innerHTML`,
+   * so no sanitization concern even though `text` is user-authored result data.
+   */
+  highlightParts(text: string, query: string): { text: string; match: boolean }[] {
+    const q = query.trim();
+    if (!q || !text) return [{ text, match: false }];
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return [{ text, match: false }];
+    const parts: { text: string; match: boolean }[] = [];
+    if (idx > 0) parts.push({ text: text.slice(0, idx), match: false });
+    parts.push({ text: text.slice(idx, idx + q.length), match: true });
+    if (idx + q.length < text.length) parts.push({ text: text.slice(idx + q.length), match: false });
+    return parts;
   }
 
   /**

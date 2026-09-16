@@ -1,6 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { BILATERAL_AI_PROCESSING_RMQ_PATTERN } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.constants';
+import { getBilateralAiMaxAttempts } from './bilateral-ai.config';
 import { BilateralAiService } from './services/bilateral-ai.service';
 
 @Controller()
@@ -14,7 +15,10 @@ export class BilateralAiConsumer {
     @Payload() payload: { jobId: string },
     @Ctx() context: RmqContext,
   ) {
-    const maxRetries = 3;
+    // `BILATERAL_AI_MAX_ATTEMPTS` (design.md §5 "Retry semantics") — the same ceiling
+    // `processJob`'s attempt-start reads; a second, hardcoded ceiling here would strand a
+    // `retrying = 1` job the moment the two disagree (`APF-DD-3`).
+    const maxRetries = getBilateralAiMaxAttempts();
     try {
       await this.bilateralAiService.processJob(payload.jobId);
       context.getChannelRef().ack(context.getMessage());

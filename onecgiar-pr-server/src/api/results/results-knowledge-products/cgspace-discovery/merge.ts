@@ -190,6 +190,9 @@ export function dedupe(
     }
 
     const alsoIn: CgspaceAlsoInDto[] = [...(items[survivorIdx].alsoIn ?? [])];
+    const programAcceleratorsSet = new Set<string>(
+      items[survivorIdx].programAccelerators ?? [],
+    );
     for (const idx of groupIndices) {
       if (idx === survivorIdx) {
         continue;
@@ -201,10 +204,19 @@ export function dedupe(
         handleUrl: dropped.handleUrl,
         itemUrl: dropped.itemUrl,
       });
+      for (const pa of dropped.programAccelerators ?? []) {
+        if (pa) {
+          programAcceleratorsSet.add(pa);
+        }
+      }
       dedupedCount++;
     }
 
-    outItems.push({ ...items[survivorIdx], alsoIn });
+    outItems.push({
+      ...items[survivorIdx],
+      alsoIn,
+      programAccelerators: Array.from(programAcceleratorsSet),
+    });
   }
 
   return { items: outItems, dedupedCount };

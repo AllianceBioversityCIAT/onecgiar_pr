@@ -55,6 +55,38 @@ describe('MyDraftResultsComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('AI provenance notice line (APF-R-12, APF-T-8)', () => {
+    const line = () => fixture.debugElement.query(By.css('[data-testid="mdr-ai-provenance-line"]'));
+
+    it('is absent while the centre has no drafts', () => {
+      bilateralAiService.draftList.set([]);
+      fixture.detectChanges();
+      expect(component.hasAnyDrafts()).toBe(false);
+      expect(line()).toBeNull();
+    });
+
+    it('renders under the tab title once the centre has at least one AI draft', () => {
+      bilateralAiService.draftList.set([draftStub]);
+      fixture.detectChanges();
+      expect(component.hasAnyDrafts()).toBe(true);
+      expect(line()).not.toBeNull();
+      expect(line().nativeElement.textContent).toContain(
+        'Generated with AI assistance from your sources. Review and edit before submitting.',
+      );
+    });
+
+    it('stays present even when a project filter hides every draft on screen', () => {
+      // `hasAnyDrafts()` reads the unfiltered list — the notice is about the centre's drafts, not
+      // about what a filter currently shows.
+      bilateralAiService.draftList.set([draftStub]);
+      fixture.detectChanges();
+      component.filter.selectProject('does-not-exist');
+      fixture.detectChanges();
+      expect(component.isFilteredEmpty()).toBe(true);
+      expect(line()).not.toBeNull();
+    });
+  });
+
   describe('relative date calculation (BADR-R-11, BADR-AC-8, Defect Gate D3)', () => {
     it('should format today correctly', () => {
       expect(component.formatDate(new Date().toISOString())).toBe('Today');
@@ -189,9 +221,34 @@ describe('MyDraftResultsComponent', () => {
     const textOf = (selector: string): string =>
       fixture.debugElement.query(By.css(selector))?.nativeElement.textContent.trim() ?? '';
 
-    it('shows the suggested title and the suggested indicator category', () => {
+    it('shows the suggested title with tooltip and the suggested indicator category', () => {
       expect(textOf('.mdr-card-title')).toBe('A draft title');
+      const titleEl = fixture.debugElement.query(By.css('.mdr-card-title'));
+      const tooltip = titleEl.injector.get(PrTooltipDirective);
+      expect(tooltip.text).toBe('A draft title');
       expect(textOf('.mdr-card-type')).toBe('Capacity Sharing');
+    });
+
+    it('renders colgroup with fixed column classes so Status and Actions stay separated', () => {
+      const colgroup = fixture.debugElement.query(By.css('.mdr-session-table colgroup'));
+      expect(colgroup).toBeTruthy();
+      const cols = colgroup.queryAll(By.css('col'));
+      expect(cols.length).toBe(5);
+      expect(cols[0].nativeElement.classList.contains('mdr-col-title')).toBe(true);
+      expect(cols[1].nativeElement.classList.contains('mdr-col-category')).toBe(true);
+      expect(cols[2].nativeElement.classList.contains('mdr-col-level')).toBe(true);
+      expect(cols[3].nativeElement.classList.contains('mdr-col-status')).toBe(true);
+      expect(cols[4].nativeElement.classList.contains('mdr-col-actions')).toBe(true);
+    });
+
+    it('keeps the status chip and Review control in separate table cells (responsive overlap fix)', () => {
+      const row = fixture.debugElement.query(By.css('.mdr-session-table tbody tr'));
+      const statusCell = row.query(By.css('.mdr-col-status'));
+      const actionsCell = row.query(By.css('.mdr-col-actions'));
+
+      expect(statusCell.query(By.css('.mdr-status'))).toBeTruthy();
+      expect(statusCell.query(By.css('.mdr-btn--review'))).toBeFalsy();
+      expect(actionsCell.query(By.css('.mdr-btn--review'))).toBeTruthy();
     });
 
     it('shows the suggested result type as Output or Outcome, from result.result_level_id', () => {
@@ -319,7 +376,7 @@ describe('MyDraftResultsComponent', () => {
       const discardBtn = actions.query(By.css('.mdr-btn--discard'));
       expect(discardBtn).toBeTruthy();
       expect(discardBtn.nativeElement.getAttribute('aria-label')).toBe('Delete draft');
-      expect(discardBtn.query(By.css('i'))?.nativeElement.textContent.trim()).toBe('delete_outline');
+      expect(discardBtn.query(By.css('i'))?.nativeElement.textContent.trim()).toBe('delete');
     });
   });
 
@@ -699,6 +756,131 @@ describe('MyDraftResultsComponent', () => {
       expect(fixture.nativeElement.querySelector('.mdr-filter-chip')).toBeNull();
       const count = fixture.nativeElement.querySelector('[data-testid="mdr-filter-count"]');
       expect(count).toBeNull();
+    });
+  });
+
+  describe('Creator identification and guidance UX (quick/draft-results-creator-ux)', () => {
+    afterEach(() => {
+      localStorage.removeItem('user');
+    });
+
+    it('renders guidance banner above session list explaining review & creation steps', () => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const banner = fixture.nativeElement.querySelector('.mdr-guidance-banner');
+      expect(banner).toBeTruthy();
+      expect(banner.textContent).toContain('Candidate Results Ready for Review & Creation');
+      expect(banner.textContent).toContain('Next Steps');
+      expect(banner.textContent).toContain('Review');
+      expect(banner.textContent).toContain('Create Result');
+    });
+
+    it('identifies sessions created by the current user with "Created by you" badge and .mdr-session-card--me accent styling', () => {
+      const myDraft = {
+        ...draftStub,
+        id: 101,
+        job_id: 'user-session-1111',
+        job: { ...draftStub.job, job_id: 'user-session-1111', user_id: 42 },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([myDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(true);
+      expect(group.creatorName).toBe('Created by you');
+      expect(group.creatorTooltip).toContain('Dr. Maria Santos');
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      expect(card.classes['mdr-session-card--me']).toBe(true);
+
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.classes['mdr-creator-badge--me']).toBe(true);
+      expect(badge.nativeElement.textContent).toContain('Created by you');
+    });
+
+    it('identifies sessions created by another user with their full name badge when user object is available', () => {
+      const colleagueDraft = {
+        ...draftStub,
+        id: 102,
+        job_id: 'colleague-session-2222',
+        job: {
+          ...draftStub.job,
+          job_id: 'colleague-session-2222',
+          user_id: 99,
+          user: { id: 99, first_name: 'Carlos', last_name: 'Mendez', email: 'c.mendez@cgiar.org' },
+        },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([colleagueDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(false);
+      expect(group.creatorName).toBe('Carlos Mendez');
+      expect(group.creatorTooltip).toContain('Carlos Mendez');
+      expect(group.creatorTooltip).toContain('c.mendez@cgiar.org');
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      expect(card.classes['mdr-session-card--me']).toBeFalsy();
+
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.classes['mdr-creator-badge--other']).toBe(true);
+      expect(badge.nativeElement.textContent).toContain('Carlos Mendez');
+    });
+
+    it('displays "Center Colleague" instead of raw ID when colleague name is not yet available', () => {
+      const colleagueDraft = {
+        ...draftStub,
+        id: 102,
+        job_id: 'colleague-session-2222',
+        job: { ...draftStub.job, job_id: 'colleague-session-2222', user_id: 99 },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([colleagueDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(false);
+      expect(group.creatorName).toBe('Center Colleague');
+      expect(group.creatorTooltip).toBe('AI extraction session created by a Center team member');
+
+      const badge = fixture.debugElement.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.nativeElement.textContent).toContain('Center Colleague');
+      expect(badge.nativeElement.textContent).not.toContain('User #99');
+    });
+
+    it('handles missing user_id gracefully without creator badge', () => {
+      const legacyDraft = {
+        ...draftStub,
+        id: 103,
+        job_id: 'legacy-session-3333',
+        job: { ...draftStub.job, job_id: 'legacy-session-3333', user_id: null },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([legacyDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.creatorName).toBe('');
+      expect(group.isCurrentUser).toBe(false);
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeNull();
     });
   });
 });

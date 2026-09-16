@@ -1,4 +1,26 @@
-// Tailwind-first (onecgiar-pr-client/CLAUDE.md §5) — no new styling here.
+// Tailwind-first (onecgiar-pr-client/CLAUDE.md §5)
 :host {
   display: block;
+}
+
+// @akili-spec changes/my-work-editing-reorder (MWER-T-2) — suppress hover lift while dragging.
+article.pr-my-work-card--reorderable.cdk-drag-dragging {
+  opacity: 0.28;
+  transition: opacity 160ms ease-out;
+}
+
+// Placeholder stays in-column; preview styles live in `src/styles/my-work-drag.scss`.
+.pr-my-work-drag-placeholder {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  border-radius: 10px;
+  border: 2px dashed var(--pr-color-primary-200);
+  background: color-mix(in srgb, var(--pr-color-primary-50) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  article.pr-my-work-card--reorderable.cdk-drag-dragging {
+    transition: none;
+  }
 }

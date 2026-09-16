@@ -1,6 +1,6 @@
 # bilateral-ai-upload
 
-**Verified:** 2026-08-25 · branch performance-refactor · bc25304fb
+**Verified:** 2026-09-15 · branch qa-development-2026 · a6de3fadf (`APF-T-6`)
 
 ## Qué es
 Paso "AI" del creador de resultados bilaterales: el usuario sube documentos,
@@ -23,6 +23,13 @@ a `My Drafts`.
     `/bilateral/<acronym-del-job>/drafts`). Historia: redirect forzado (quitado 2026-09-04) →
     toast 10 s (nadie lo vio) → modal.
   - `clearUploadState()` vuelve a `idle`.
+  - **`APF-T-6` (2026-09-15):** este componente ya no renderiza sus propios bloques
+    inline de queued/processing/retrying/failed/completed/no-candidates/still-running.
+    Todo estado distinto de `idle | uploading` delega en
+    `<app-ai-processing-panel>` (`../ai-processing-panel/`), presentacional y sin
+    timer propio — el host (`now`, `expectation`) le da el tick de 1 s y el rango
+    esperado por mezcla de fuentes. `onPanelRetry` / `onPanelReset` / `onPanelOpenDrafts`
+    son los tres únicos puentes hacia `BilateralAiService`.
 - Proyecto y Science Program se leen de `BilateralCreationService.selectedProject()`
   y `.selectedPrimarySp()`; sin ambos el submit avisa y no envía.
 - Endpoint: `POST api/bilateral/center/ai/jobs` vía
@@ -52,10 +59,11 @@ Espejo obligatorio de
   (26.214.400 B) pasaría el cliente y el servidor lo rechazaría igual.
 - ⚠️ **El texto de contexto cuenta como una fuente.** Antes el cliente contaba
   6 ficheros *sin* el texto y el servidor devolvía 400 con 6 ficheros + texto.
-- ⚠️ **El HTML no renderiza nada para `completed`, `promoted` ni `discarded`.**
-  Hoy no es alcanzable porque el creador limpia el estado al entrar a la vía
-  "ai", pero cualquier ruta nueva que monte este componente sin pasar por ahí
-  verá una pantalla en blanco.
+- ⚠️ **Superado por `APF-T-6`:** ya no es cierto que el HTML no renderice nada
+  para `completed`/`pending`/`processing`/`still_running`/`failed`/`completed_no_candidates`
+  — esos seis estados los cubre `<app-ai-processing-panel>`. Solo `promoted` y
+  `discarded` siguen sin bloque propio (no alcanzables hoy: el creador limpia el
+  estado al entrar a la vía "ai").
 - El `CreateBilateralAiJobDto` del servidor **no se valida**: no hay
   `ValidationPipe` global ni en `BilateralAiController`, así que sus
   `@IsInt()`/`@MaxLength()` son decorativos. Quien valida de verdad es

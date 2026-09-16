@@ -554,70 +554,63 @@ describe('SectionBottomBarComponent', () => {
       expect(anchored.contains(save)).toBe(true);
     });
 
-    it('never lets Save draft be a bare child of the strip', async () => {
+    /*
+     * 15-sep-2026. Ángel reportó que «no se ven los botones de next y back… si muevo el scroll
+     * hacia abajo desaparece», y su vídeo (jam.dev/c/b908dd61) muestra a un reportero subiendo el
+     * scroll para poder volver a la sección anterior. Respuesta de Yeck: que NADA de esta barra se
+     * oculte, y que no haya superficie blanca. jsdom no pinta, así que lo que se vigila es lo que
+     * decide el pintado: las clases del contenedor, que no quede ni rastro del plegado, y que los
+     * controles sigan montados cuando el servicio dice que el chrome está oculto.
+     */
+    it('paints no strip of its own — no white, no rule, no reserved height', async () => {
+      await build();
+
+      const cls = q('[data-testid="section-bottom-bar"]').className;
+      expect(cls).toContain('bg-transparent');
+      expect(cls).toContain('min-h-0');
+      expect(cls).not.toContain('bg-white');
+      expect(cls).not.toContain('border-t');
+      expect(cls).not.toContain('min-h-[66px]');
+    });
+
+    it('anchors BOTH groups, so neither rides the scrolling form', async () => {
+      await build();
+
+      const toolbar = q('[data-testid="section-bottom-bar-toolbar"]');
+      const anchored = q('[data-testid="section-bottom-bar-anchored"]');
+
+      expect(toolbar.className).toContain('absolute');
+      expect(toolbar.className).toContain('bottom-[14px]');
+      expect(anchored.className).toContain('absolute');
+      expect(anchored.className).toContain('bottom-[14px]');
+      // Hermanos, no anidados: el de la izquierda no puede arrastrar al de la derecha.
+      expect(toolbar.contains(anchored)).toBe(false);
+    });
+
+    it('keeps Save draft inside its anchored row, never a bare child of the bar', async () => {
       await build();
 
       const save = q('[data-testid="section-bottom-bar-save"]');
-      const strip = fixture.nativeElement.querySelector('[appChromeFold], [ng-reflect-app-chrome-fold]');
+      const anchored = q('[data-testid="section-bottom-bar-anchored"]');
+      const bar = q('[data-testid="section-bottom-bar"]');
 
-      // Hijo directo de la franja = el bug: sin posicionamiento propio, se va al flujo.
-      if (strip) expect(save.parentElement).not.toBe(strip);
+      expect(anchored.contains(save)).toBe(true);
+      // Hijo directo de la barra = sin posicionamiento propio, se iría al flujo.
+      expect(save.parentElement).not.toBe(bar);
     });
 
-    /*
-     * El segundo fallo de la misma barra, el mismo día. `appChromeFold` NO encoge la franja: la
-     * desliza con `transform` y recupera el hueco con un margen negativo. Un `transform` convierte
-     * a su elemento en el bloque contenedor de todo `position: absolute` de dentro — así que la
-     * fila anclada, mientras vivió dentro, se iba de la pantalla con la franja justo cuando el
-     * reportero baja a leer, que es cuando el contador y el guardado hacen falta.
-     * Medido con el viewport en 820px: `Save draft` pasaba de `top: 768` a `top: 835`.
-     */
-    it('keeps the anchored row OUTSIDE the folding strip, so it survives the fold', async () => {
+    /* El plegado se fue del template: ni la directiva ni sus clases pueden quedar sueltas. */
+    it('carries no trace of the fold', async () => {
       await build();
 
-      const anchored = fixture.nativeElement.querySelector('.absolute.bottom-\\[14px\\].right-\\[40px\\]');
-      const folding = fixture.nativeElement.querySelector('[appChromeFold], [ng-reflect-app-chrome-fold], .chrome-fold');
-
-      expect(anchored).toBeTruthy();
-      expect(folding).toBeTruthy();
-      // Dentro del host que se transforma = el bug.
-      expect(folding.contains(anchored)).toBe(false);
-    });
-  });
-
-  /*
-   * 15-sep-2026. Lo que se pliega al leer hacia abajo es EL TOOLBAR: la superficie blanca, su
-   * regla superior y el alto que reservaba. Los dos controles que hacen falta mientras se escribe
-   * —cuánto falta y cómo guardar— se quedan, flotando sobre el formulario. jsdom no pinta, así que
-   * lo que se vigila es lo que decide el pintado: qué clases lleva el contenedor y que los dos
-   * controles sigan montados y alcanzables.
-   */
-  describe('qué se pliega y qué se queda flotando', () => {
-    const bar = () => q('[data-testid="section-bottom-bar"]');
-    const progress = () => q('[data-testid="section-bottom-bar-progress"]');
-
-    it('drops the white surface, its rule and its reserved height', async () => {
-      await build();
-      const chromeSE = TestBed.inject(ScrollChromeService);
-
-      // Control positivo: desplegado, el toolbar ES la superficie blanca.
-      expect(bar().className).toContain('bg-white');
-      expect(bar().className).toContain('border-t');
-      expect(bar().className).toContain('min-h-[66px]');
-
-      chromeSE.hidden.set(true);
-      fixture.detectChanges();
-
-      expect(bar().className).toContain('bg-transparent');
-      expect(bar().className).not.toContain('bg-white');
-      expect(bar().className).not.toContain('border-t');
-      // Altura cero: es lo que devuelve el espacio a `.rd_scroll` y lo que deja a la fila anclada
-      // dibujándose por encima del área de lectura.
-      expect(bar().className).toContain('min-h-0');
-      expect(bar().className).not.toContain('min-h-[66px]');
+      const folding = fixture.nativeElement.querySelector(
+        '[appChromeFold], [ng-reflect-app-chrome-fold], .chrome-fold, .chrome-fold--folded, .chrome-fold--down'
+      );
+      expect(folding).toBeNull();
     });
 
-    it('keeps the indicator and Save draft mounted and reachable while folded', async () => {
+    /* La prueba de fondo: el servicio que antes la plegaba ya no la toca. */
+    it('shows Back, Next, the indicator and Save even while the chrome reports itself hidden', async () => {
       sectionIsDone = false;
       dataControlMock.fieldFeedbackList = signal(['Result title', 'Description']);
       await build();
@@ -626,32 +619,21 @@ describe('SectionBottomBarComponent', () => {
       chromeSE.hidden.set(true);
       fixture.detectChanges();
 
+      const back = q('[data-testid="section-bottom-bar-back"]');
+      const next = q('[data-testid="section-bottom-bar-next"]');
       const save = q('[data-testid="section-bottom-bar-save"]');
       const pending = q('[data-testid="section-bottom-bar-pending"]');
+
+      expect(back).toBeTruthy();
+      expect(next).toBeTruthy();
       expect(save).toBeTruthy();
       expect(pending).toBeTruthy();
-      expect(pending.textContent).toContain('2 fields missing');
-      // Nada oculto ni fuera de alcance: el toolbar se va, los controles no.
-      expect(progress().className).not.toContain('opacity-0');
-      expect(progress().className).not.toContain('pointer-events-none');
-      expect(progress().getAttribute('aria-hidden')).toBeNull();
-    });
-
-    /* Sin contenedor: al plegarse el toolbar los dos controles quedan flotando tal cual, cada uno
-     * con la superficie que ya trae. Nada de cápsula alrededor (Yeck, 15-sep-2026). */
-    it('adds no container of its own around the floating controls', async () => {
-      await build();
-      const chromeSE = TestBed.inject(ScrollChromeService);
-      const anchored = () => q('[data-testid="section-bottom-bar-anchored"]');
-      const before = anchored().className;
-
-      chromeSE.hidden.set(true);
-      fixture.detectChanges();
-
-      expect(anchored().className).toBe(before);
-      expect(anchored().className).not.toContain('bg-white');
-      expect(anchored().className).not.toContain('rounded-full');
-      expect(anchored().className).not.toContain('shadow-');
+      for (const el of [back, next, save, pending]) {
+        expect(el.className).not.toContain('opacity-0');
+        expect(el.className).not.toContain('pointer-events-none');
+        expect(el.getAttribute('aria-hidden')).toBeNull();
+      }
+      expect(q('[data-testid="section-bottom-bar"]').className).toContain('bg-transparent');
     });
   });
 });

@@ -13,11 +13,13 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { computed, signal, Injectable } from '@angular/core';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 
 @Injectable()
 class MockBilateralAiService {
   draftCount = signal(0);
-  uploadState = signal('idle');
+  uploadState = signal<{ status: string }>({ status: 'idle' });
   isUploading = signal(false);
   errorMessage = signal<string | null>(null);
   canUseAi = signal(true);
@@ -94,6 +96,7 @@ describe('BilateralResultCreatorComponent', () => {
       isEditableByCenterUser: signal(true) as any,
       resultTitle: signal('') as any,
       isLoadingResult: signal(false) as any,
+      loadFailed: signal(false) as any,
       // Signals the editor sections read once they mount.
       resultDescription: signal('') as any,
       resultLeadContact: signal('') as any,
@@ -169,6 +172,8 @@ describe('BilateralResultCreatorComponent', () => {
     mockRouter = {
       navigate: jest.fn().mockResolvedValue(true),
       url: '/bilateral/test',
+      createUrlTree: jest.fn((commands, extras) => ({ commands, extras })),
+      serializeUrl: jest.fn(tree => (Array.isArray(tree?.commands) ? tree.commands.join('/') : tree?.commands || '/bilateral/test')),
     };
 
     mockAiService = new MockBilateralAiService();
@@ -318,6 +323,24 @@ describe('BilateralResultCreatorComponent', () => {
     manualCreateFlow.drawerOpen.set(true);
     component.onReportingWaySelected('ai');
     expect(manualCreateFlow.closeDrawer).toHaveBeenCalled();
+  });
+
+  describe('isAiProcessing (APF-T-6 forward pointer 1)', () => {
+    it.each(['uploading', 'pending', 'processing', 'still_running'])(
+      'locks the AI step while the job is alive (%s)',
+      status => {
+        mockAiService.uploadState.set({ status });
+        expect(component.isAiProcessing()).toBe(true);
+      },
+    );
+
+    it.each(['idle', 'completed', 'completed_no_candidates', 'failed'])(
+      'does not lock the AI step once the job is terminal or not started (%s)',
+      status => {
+        mockAiService.uploadState.set({ status });
+        expect(component.isAiProcessing()).toBe(false);
+      },
+    );
   });
 
   describe('header title (P2-3352)', () => {
@@ -590,8 +613,35 @@ describe('BilateralResultCreatorComponent', () => {
       // Unsaved wins over complete: the user has to know the green check is for what is saved.
       pendingSections.set(new Set(['general-info']));
       fixture.detectChanges();
-      expect(state()).toContain('Unsaved changes');
+      expect(q('[data-testid="bilateral-footer-state"]')).toBeNull();
+      expect(q('[data-testid="bilateral-footer-dirty"]').textContent).toContain('Unsaved changes');
       expect(q('[data-testid="bilateral-sections-rail"] .bcr-rail__dirty')).not.toBeNull();
+    });
+
+    /**
+     * JC's second screenshot (16-Sep-2026): a section with `Description of Result` empty, and the
+     * footer showing nothing but "Unsaved changes" — the count of what is still missing vanished
+     * exactly while he was typing, which is when it is worth reading. It used to be an `@else if`
+     * chain, so the dirty state SUPPRESSED the counter. The green check still yields to it (it
+     * speaks about what is saved); the counter does not.
+     */
+    it('keeps the missing-field counter while the section has unsaved changes', () => {
+      const pendingSections = signal<Set<string>>(new Set(['general-info']));
+      autoSaveService.hasPendingFor.mockImplementation((name: string) => pendingSections().has(name));
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'partial',
+          fields: [
+            { key: 'title', label: 'Title of Result', filled: true },
+            { key: 'description', label: 'Description of Result', filled: false },
+          ],
+        },
+      ]);
+      enterEditor();
+
+      expect(q('[data-testid="bilateral-footer-dirty"]').textContent).toContain('Unsaved changes');
+      expect(q('[data-testid="bilateral-footer-state"]').textContent.replace(/\s+/g, ' ')).toContain('1 field missing');
     });
 
     it('names the missing required fields in the footer and lists them on click', () => {
@@ -614,14 +664,303 @@ describe('BilateralResultCreatorComponent', () => {
 
       state.click();
       fixture.detectChanges();
-      const items = Array.from(q('[data-testid="bilateral-footer-pending-list"]').querySelectorAll('li')).map((li: any) => li.textContent.trim());
+      const items = Array.from(q('[data-testid="bilateral-footer-pending-list"]').querySelectorAll('li')).map((li: any) =>
+        li.querySelector('span').textContent.trim()
+      );
       expect(items).toEqual(['Title of Result', 'Description']);
+    });
+
+    /**
+     * The other half of JC's report: W1/W2 puts a **Go** on every entry that scrolls to the field
+     * and flashes it, and this list had none — it named a field and left the reporter to find it.
+     * The lookup is by the visible LABEL (this editor never scans the DOM, so there is no
+     * `data-pr-feedback` to key off), and only when exactly one label matches.
+     */
+    it('offers Go for an entry that matches one field on screen, and jumps to it', () => {
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'partial',
+          fields: [{ key: 'description', label: 'Description', filled: false }],
+        },
+      ]);
+      enterEditor();
+
+      // The real sections are stubbed in this spec, so stand in for the field the way the DOM
+      // carries it: a labelled host with its `.fch_title` inside the editor content. Mounted
+      // BEFORE the panel opens, which is when the reachable set is resolved.
+      const host = document.createElement('app-pr-textarea');
+      host.innerHTML = '<span class="fch_title">Description of Result</span>';
+      Object.defineProperty(host, 'getBoundingClientRect', { value: () => ({ height: 120 }) });
+      q('.bcr-content').appendChild(host);
+
+      q('[data-testid="bilateral-footer-state"]').click();
+      fixture.detectChanges();
+
+      expect(component.canGoToField('Description')).toBe(true);
+      const go = q('[data-testid="bilateral-footer-pending-list"] .bcr-pending-list__go');
+      expect(go).not.toBeNull();
+
+      host.scrollIntoView = jest.fn();
+      go.click();
+
+      expect(host.scrollIntoView).toHaveBeenCalled();
+      expect(host.classList.contains('pr-field-flash')).toBe(true);
+      expect(component.pendingOpen()).toBe(false);
+    });
+
+    it('renders no Go button when the entry matches nothing on screen', () => {
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'general-info',
+          status: 'partial',
+          fields: [{ key: 'valid-link', label: 'Evidence with valid link', filled: false }],
+        },
+      ]);
+      enterEditor();
+      q('[data-testid="bilateral-footer-state"]').click();
+      fixture.detectChanges();
+
+      expect(component.canGoToField('Evidence with valid link')).toBe(false);
+      expect(q('[data-testid="bilateral-footer-pending-list"] .bcr-pending-list__go')).toBeNull();
     });
 
     it('draws the in-flow detail header instead of the centre band', () => {
       enterEditor();
       expect(q('app-bilateral-page-header')).not.toBeNull();
       expect(q('app-bilateral-page-header').getAttribute('variant')).toBe('detail');
+    });
+  });
+
+  /**
+   * `APF-R-12` / `APF-DD-10` — two of the five provenance surfaces live on this page: the
+   * dismissible banner while the result is still editable, and the static badge (rendered by
+   * `bilateral-page-header`) once it is read-only. They never show together.
+   */
+  describe('AI provenance notice (APF-R-12, APF-T-8)', () => {
+    const q = (selector: string) => fixture.nativeElement.querySelector(selector);
+    const banner = () => q('[data-testid="bilateral-editor-ai-provenance-banner"]');
+    const badge = () => q('[data-testid="ai-provenance-badge"]');
+
+    function enterEditor(id = 42): void {
+      component.isCreating.set(false);
+      component.resultId.set(id);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      sessionStorage.clear();
+      // The badge is rendered by the real `bilateral-page-header`, whose entire template is
+      // gated on `ctx.centerAcronym()` — unset in the base fixture, since most tests in this
+      // file never render the header's identity strip.
+      TestBed.inject(BilateralContextService).setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+    });
+    afterEach(() => sessionStorage.clear());
+
+    it('shows the dismissible banner, and no badge, for an AI-generated result while editable', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+
+      expect(banner()).not.toBeNull();
+      expect(banner().textContent).toContain(
+        'Generated with AI assistance from your sources. Review and edit before submitting.',
+      );
+      expect(badge()).toBeNull();
+    });
+
+    it('shows the badge next to the status pill, and no banner, once the result is read-only', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(false);
+      enterEditor();
+
+      expect(badge()).not.toBeNull();
+      expect(banner()).toBeNull();
+    });
+
+    it('shows neither surface for a manually created result, editable or not', () => {
+      creationService.isAiGenerated.set(false);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+      expect(banner()).toBeNull();
+      expect(badge()).toBeNull();
+
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+      expect(badge()).toBeNull();
+    });
+
+    it('dismissing the banner hides it and persists the dismissal in sessionStorage, per result', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor(42);
+      expect(banner()).not.toBeNull();
+
+      q('[data-testid="bilateral-editor-ai-provenance-dismiss"]').click();
+      fixture.detectChanges();
+
+      expect(banner()).toBeNull();
+      expect(sessionStorage.getItem('prms.bilateral-ai.provenance-dismissed.42')).toBe('1');
+
+      // Simulate returning to the SAME result (e.g. a reload within the session): the dismissal
+      // must still hold.
+      component.resultId.set(null);
+      fixture.detectChanges();
+      component.resultId.set(42);
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+    });
+
+    it('does not carry a dismissal over to a different result', () => {
+      creationService.isAiGenerated.set(true);
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor(42);
+      q('[data-testid="bilateral-editor-ai-provenance-dismiss"]').click();
+      fixture.detectChanges();
+      expect(banner()).toBeNull();
+
+      component.resultId.set(43);
+      fixture.detectChanges();
+      expect(banner()).not.toBeNull();
+    });
+  });
+
+  describe('BRRA-T-1: Rail back link and identity card', () => {
+    const q = (selector: string) => fixture.nativeElement.querySelector(selector);
+    let ctxService: BilateralContextService;
+
+    function enterEditor(id = 42): void {
+      mockRouter.url = `/bilateral/ABC/result/${id}`;
+      component.isCreating.set(false);
+      component.resultId.set(id);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      ctxService = TestBed.inject(BilateralContextService);
+      ctxService.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      creationService.resultCode.set(null);
+      creationService.resultTypeName.set(null);
+      creationService.resultStatusId.set(null);
+      creationService.isLoadingResult.set(false);
+    });
+
+    it('renders the persistent back link with label "Back" returning to results or origin (BRRA-R-1, Gate D1)', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      (smartNav as any).history = ['/bilateral/ABC/result/42'];
+      enterEditor(42);
+      const backLink = q('[data-testid="bilateral-rail-back-link"]');
+      expect(backLink).not.toBeNull();
+      expect(backLink.getAttribute('title')).toBe('Back');
+      expect(backLink.textContent.trim()).toContain('Back');
+      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backQueryParams()).toBeNull();
+    });
+
+    it('returns to where the user came from (e.g. results?phase=36) with query params intact', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      smartNav.recordUrl('/bilateral/ABC/results?phase=36');
+      smartNav.recordUrl('/bilateral/ABC/result/42');
+      mockRouter.url = '/bilateral/ABC/result/42';
+      enterEditor(42);
+
+      const backLink = q('[data-testid="bilateral-rail-back-link"]');
+      expect(backLink).not.toBeNull();
+      expect(backLink.textContent.trim()).toBe('chevron_leftBack');
+      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backQueryParams()).toEqual({ phase: '36' });
+    });
+
+    it('returns to Results Center when navigating from Results Center to bilateral editor', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      smartNav.recordUrl('/result/results-outlet/results-list');
+      smartNav.recordUrl('/bilateral/ABC/result/42');
+      mockRouter.url = '/bilateral/ABC/result/42';
+      enterEditor(42);
+
+      const backLink = q('[data-testid="bilateral-rail-back-link"]');
+      expect(backLink).not.toBeNull();
+      expect(backLink.textContent.trim()).toBe('chevron_leftBack');
+      expect(component.backLink()).toBe('/result/results-outlet/results-list');
+      expect(component.backQueryParams()).toBeNull();
+    });
+
+    it('preserves phase query param in rail back link when selectedVersionId is set (BRRA-R-1, Gate D1)', () => {
+      ctxService.selectedVersionId.set(2025);
+      enterEditor(42);
+      expect(component.backQueryParams()).toEqual({ phase: 2025 });
+    });
+
+    it('renders result identity block with code and copy button (BRRA-R-2, BRRA-AC-1, Gate D2)', () => {
+      creationService.resultCode.set('9368');
+      enterEditor(42);
+
+      const identity = q('[data-testid="bilateral-rail-identity"]');
+      expect(identity).not.toBeNull();
+
+      const codeEl = q('[data-testid="bilateral-rail-code"]');
+      expect(codeEl).not.toBeNull();
+      expect(codeEl.textContent.trim()).toContain('Result code #9368');
+
+      const copyBtn = identity.querySelector('app-copy-button');
+      expect(copyBtn).not.toBeNull();
+    });
+
+    it('renders uppercase result type name in rail identity card (BRRA-R-2, BRRA-AC-2, Gate D2)', () => {
+      creationService.resultTypeName.set('Capacity sharing for development');
+      enterEditor(42);
+
+      const typeEl = q('[data-testid="bilateral-rail-type"]');
+      expect(typeEl).not.toBeNull();
+      expect(typeEl.textContent.trim()).toBe('Capacity sharing for development');
+      expect(typeEl.className).toContain('uppercase');
+    });
+
+    it('renders status pill badge with correct token styles for statuses (BRRA-R-5, Gate D3)', () => {
+      // Status 1: Editing
+      creationService.resultStatusId.set(1);
+      enterEditor(42);
+
+      let statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl).not.toBeNull();
+      expect(statusEl.textContent.trim()).toBe('Editing');
+      expect(component.statusFg()).toBe('var(--pr-status-in-progress-fg)');
+      expect(component.statusBg()).toBe('var(--pr-status-in-progress-bg)');
+
+      // Status 5: Pending review
+      creationService.resultStatusId.set(5);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Pending review');
+      expect(component.statusFg()).toBe('#B45309');
+      expect(component.statusBg()).toBe('#FEF3C7');
+
+      // Status 6: Approved
+      creationService.resultStatusId.set(6);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Approved');
+      expect(component.statusFg()).toBe('var(--pr-status-approved-fg)');
+      expect(component.statusBg()).toBe('var(--pr-status-approved-bg)');
+
+      // Status 7: Rejected
+      creationService.resultStatusId.set(7);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Rejected');
+      expect(component.statusFg()).toBe('var(--pr-status-rejected-fg)');
+      expect(component.statusBg()).toBe('var(--pr-status-rejected-bg)');
+    });
+
+    it('renders identity skeleton loader when isLoadingResult is true and resultId is null (BRRA-R-2)', () => {
+      component.isCreating.set(false);
+      component.resultId.set(null);
+      creationService.isLoadingResult.set(true);
+      fixture.detectChanges();
+
+      const skeleton = q('[data-testid="bilateral-rail-identity-skeleton"]');
+      expect(skeleton).not.toBeNull();
     });
   });
 });

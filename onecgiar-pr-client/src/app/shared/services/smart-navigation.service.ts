@@ -36,6 +36,14 @@ export function isResultDetailUrl(url: string): boolean {
   return url.includes('/result/result-detail/');
 }
 
+export function isResultEditorUrl(url: string): boolean {
+  if (!url) return false;
+  return (
+    (url.includes('/bilateral/') && (url.includes('/result/') || url.includes('/create'))) ||
+    url.includes('/result/result-detail/')
+  );
+}
+
 export function isResultsCenterList(url: string): boolean {
   return url.includes('/results-outlet/results-list');
 }
@@ -73,6 +81,18 @@ export function isKnownResultDetailOrigin(url: string): boolean {
 
 /** Survives the full page load from the Science Program Results tab into `/result/result-detail`. */
 export const RESULT_DETAIL_ORIGIN_STORAGE_KEY = 'prms.resultDetailBackOrigin';
+
+/** Survives page reloads on a bilateral result editor or creator into `/bilateral/:center/result/:id`. */
+export const BILATERAL_RESULT_ORIGIN_STORAGE_KEY = 'prms.bilateralResultBackOrigin';
+
+export function isKnownBilateralOrigin(url: string): boolean {
+  if (!url) return false;
+  return (
+    url.includes('/bilateral') &&
+    !url.includes('/result/') &&
+    !url.includes('/create')
+  );
+}
 
 /** Split a stored history URL so `[routerLink]` + `[queryParams]` can consume it. */
 export function splitNavUrl(url: string): { path: string; queryParams: Record<string, string> } {
@@ -212,41 +232,35 @@ export class SmartNavigationService {
     if (isBilateralCreateOrDetail || (center && (active.includes('/create') || active.includes('/result/')))) {
       for (let i = this.history.length - 1; i >= 0; i--) {
         const prev = this.history[i];
-        if (prev && prev !== active) {
-          if (prev.includes('/results')) {
-            return { url: prev, label: 'Back to Center results' };
-          }
-          if (prev.includes('/drafts')) {
-            return { url: prev, label: 'Back to Center drafts' };
-          }
-          if (center && (prev.includes(encodeURIComponent(center)) || prev.includes(center))) {
-            return { url: prev, label: 'Back to Center overview' };
-          }
-          if (prev.includes('/bilateral')) {
-            return { url: prev, label: 'Back to Centers' };
-          }
-          if (prev.includes('/portfolio-overview')) {
-            return { url: prev, label: 'Back to Portfolio overview' };
-          }
-          if (prev.includes('/result-framework-reporting/home') || prev === '/home') {
-            return { url: prev, label: 'Back to Science programs' };
-          }
-          if (prev.includes('/results-outlet/results-list')) {
-            return { url: prev, label: 'Back to Results list' };
-          }
-          return { url: prev, label: 'Back' };
+        if (!prev || prev === active) continue;
+        if (isResultEditorUrl(prev)) continue;
+
+        return { url: prev, label: 'Back' };
+      }
+
+      const persistedBilateral = this.readPersistedBilateralOrigin();
+      if (persistedBilateral && persistedBilateral !== active && isKnownBilateralOrigin(persistedBilateral)) {
+        if (!center || persistedBilateral.includes(`/${encodeURIComponent(center)}/`) || persistedBilateral.includes(`/${center}/`)) {
+          return { url: persistedBilateral, label: 'Back' };
         }
       }
 
+      const persistedResultDetail = this.readPersistedOrigin();
+      if (persistedResultDetail && persistedResultDetail !== active && isKnownResultDetailOrigin(persistedResultDetail)) {
+        return { url: persistedResultDetail, label: 'Back' };
+      }
+
       if (center) {
+        const phaseMatch = active.match(/[?&]phase=([^&#]+)/);
+        const phaseParam = phaseMatch ? `?phase=${phaseMatch[1]}` : '';
         return {
-          url: `/bilateral/${encodeURIComponent(center)}/home`,
-          label: 'Back to Center overview'
+          url: `/bilateral/${encodeURIComponent(center)}/results${phaseParam}`,
+          label: 'Back'
         };
       }
       return {
         url: '/bilateral',
-        label: 'Back to Centers'
+        label: 'Back'
       };
     }
 
@@ -389,20 +403,40 @@ export class SmartNavigationService {
   }
 
   private persistKnownOrigin(url: string): void {
-    if (!isKnownResultDetailOrigin(url)) return;
-    try {
-      sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, url);
-    } catch {
-      // Private mode / quota — memory history still works inside the same heap.
+    if (isKnownResultDetailOrigin(url)) {
+      try {
+        sessionStorage.setItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY, url);
+      } catch {
+        // Private mode / quota — memory history still works inside the same heap.
+      }
+    }
+    if (isKnownBilateralOrigin(url)) {
+      try {
+        sessionStorage.setItem(BILATERAL_RESULT_ORIGIN_STORAGE_KEY, url);
+      } catch {
+        // Private mode / quota — memory history still works inside the same heap.
+      }
     }
   }
 
-  private readPersistedOrigin(): string {
+  readPersistedOrigin(): string {
     try {
       return this.sanitizeUrl(sessionStorage.getItem(RESULT_DETAIL_ORIGIN_STORAGE_KEY));
     } catch {
       return '';
     }
+  }
+
+  readPersistedBilateralOrigin(): string {
+    try {
+      return this.sanitizeUrl(sessionStorage.getItem(BILATERAL_RESULT_ORIGIN_STORAGE_KEY));
+    } catch {
+      return '';
+    }
+  }
+
+  rememberBilateralResultOrigin(url?: string): void {
+    this.persistKnownOrigin(this.sanitizeUrl(url ?? this.router?.url));
   }
 
   private extractProgramCode(url: string): string | null {
@@ -412,7 +446,7 @@ export class SmartNavigationService {
 
   private extractCenterAcronym(url: string): string | null {
     const match = url.match(/\/bilateral\/([^/?#]+)/);
-    if (!match || match[1] === 'home') return null;
+    if (!match || match[1] === 'home' || match[1] === 'create') return null;
     return decodeURIComponent(match[1]);
   }
 }

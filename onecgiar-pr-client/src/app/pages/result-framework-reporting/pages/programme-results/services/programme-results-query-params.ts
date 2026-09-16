@@ -7,13 +7,14 @@
  */
 export const PROGRAMME_RESULTS_PHASE_QUERY_PARAM = 'phase';
 export const PROGRAMME_RESULTS_STATUS_QUERY_PARAM = 'status';
+// @akili-spec result-framework-reporting/programme-results-multiselect-filters (PRM-T-1)
+// `phase`, `status`, and `createdBy` are MULTI-VALUE: comma-separated lists (`?phase=A,B`,
+// `?status=Editing,Submitted`, `?createdBy=Ana,Ruiz`), encoded by `joinListParam` and decoded by
+// `parseListParam` (`programme-results-filter.service.ts`). A SINGLE value stays valid and hydrates
+// as a one-element array — legacy deep links keep working unchanged.
 // @akili-spec changes/my-work-board (MWB-T-13)
-// The next three are MULTI-VALUE: a comma-separated list (`?center=CIAT,IWMI`), the same shape
-// `?section=` uses, encoded by `joinListParam` and decoded by `parseListParam`
-// (`programme-results-filter.service.ts`). A SINGLE value stays valid and hydrates as a
-// one-element array — that is what keeps the Overview → Results deep links working, since the
-// heatmap and card links emit exactly one `category`/`origin`/`center` (`RFD-*`). Both hosts of
-// these dimensions (the Results tab and the My results board) read and write them this way.
+// The next three share the same shape. Both hosts (Results tab and My results board) read and write
+// them this way; Overview → Results deep links still emit one `category`/`origin`/`center`.
 export const PROGRAMME_RESULTS_CATEGORY_QUERY_PARAM = 'category';
 export const PROGRAMME_RESULTS_ORIGIN_QUERY_PARAM = 'origin';
 export const PROGRAMME_RESULTS_CENTER_QUERY_PARAM = 'center';

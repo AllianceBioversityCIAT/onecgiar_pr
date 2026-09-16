@@ -6,9 +6,14 @@
      app's existing reduced-motion convention (see `styles/collapse.scss`, `pr-band-fade`): the
      hover STATE still applies, only the animated transition between states is removed. -->
 <article
+  cdkDrag
+  [cdkDragDisabled]="!reorderable()"
+  (cdkDragStarted)="dragSessionStarted.emit()"
+  (cdkDragEnded)="dragSessionEnded.emit()"
   class="relative flex flex-col gap-[8px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_12px_10px] shadow-[0_1px_2px_rgba(25,21,36,0.05)] transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out hover:bg-[var(--pr-surface-subtle-hover)] hover:-translate-y-[1px] hover:border-[var(--pr-color-primary-200)] hover:shadow-[0_4px_12px_rgba(25,21,36,0.08)] motion-reduce:transition-none"
   [class.pointer-events-none]="isDeleting()"
-  [class.opacity-60]="isDeleting()">
+  [class.opacity-60]="isDeleting()"
+  [class.pr-my-work-card--reorderable]="reorderable()">
   @if (isDeleting()) {
     <div
       class="absolute inset-0 z-10 flex items-center justify-center gap-[8px] rounded-[10px] bg-[color-mix(in_srgb,var(--pr-surface-card)_85%,transparent)] backdrop-blur-[1px]">
@@ -20,6 +25,15 @@
        spilling past the 240/260px column and each list grew a horizontal scrollbar); the category chip truncates with an ellipsis
        when it alone is wider than the row. -->
   <div class="flex min-w-0 flex-wrap items-center gap-x-[8px] gap-y-[4px]">
+    @if (reorderable()) {
+      <button
+        type="button"
+        cdkDragHandle
+        class="flex size-[24px] flex-none cursor-grab items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:bg-[var(--pr-surface-subtle-hover)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] active:cursor-grabbing"
+        [attr.aria-label]="reorderCopy.dragHandleLabel">
+        <span class="material-icons-round text-[18px]" aria-hidden="true">drag_indicator</span>
+      </button>
+    }
     <span class="font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]">{{ row().code }}</span>
     @if (row().category) {
       <span
@@ -137,6 +151,28 @@
         <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</span>
       </button>
     </div>
+  }
+
+  @if (reorderable()) {
+    <!-- Compact Jira-like ghost: code + title only — lighter than cloning the full card. -->
+    <ng-template cdkDragPreview>
+      <div class="pr-my-work-drag-preview">
+        <div class="flex min-w-0 items-center gap-[8px]">
+          <span class="material-icons-round flex-none text-[16px] text-[var(--pr-color-primary-400)]" aria-hidden="true">drag_indicator</span>
+          <span class="font-mono text-[11px] font-semibold tracking-[0.04em] text-[var(--pr-text-subtle)]">{{ row().code }}</span>
+          @if (row().category) {
+            <span
+              class="inline-block max-w-[140px] truncate rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase leading-[16px] tracking-[0.06em] text-[var(--pr-color-primary-400)]">
+              {{ row().category }}
+            </span>
+          }
+        </div>
+        <p class="m-0 line-clamp-2 text-[13px] font-semibold leading-[1.35] text-[var(--pr-text-heading)]">{{ row().title }}</p>
+      </div>
+    </ng-template>
+    <ng-template cdkDragPlaceholder>
+      <div class="pr-my-work-drag-placeholder" aria-hidden="true"></div>
+    </ng-template>
   }
 </article>
 

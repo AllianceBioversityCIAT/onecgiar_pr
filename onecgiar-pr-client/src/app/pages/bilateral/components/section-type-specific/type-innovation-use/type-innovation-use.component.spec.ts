@@ -574,6 +574,21 @@ describe('TypeInnovationUseComponent', () => {
       expect(lastFields()).toContainEqual({ ...LEVEL, filled: true });
     });
 
+    /**
+     * The use ladder is an MDS item this section counts (`use-level`), so an empty one is part of
+     * the footer's "N fields missing". `pr-range-level` only paints its pending marker when the
+     * caller asks for it — without this the reporter reads a count naming a field that looks no
+     * different from a finished one, which is the complaint that reached us for the geographic
+     * scope. `innovation-use-form` (the W1/W2 form for the same question) already passes it.
+     * Asserted as text because this spec `overrideTemplate`s, same approach as the tests above.
+     */
+    it('asks the use ladder to show its pending marker', () => {
+      const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+      expect(html).toContain(`[options]="innovationControlListSE.useLevelsList"
+      [required]="true"`);
+    });
+
     it('P2-3428 — renders bilateral investment as MDS and optional Program/Partner tables as full metadata', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 

@@ -1,0 +1,352 @@
+import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
+import {
+  BilateralAiJob,
+  BilateralAiJobStatus,
+} from '../entities/bilateral-ai-job.entity';
+
+describe('BilateralAiNotificationsService (unit)', () => {
+  const makeService = () => {
+    const notificationService = {
+      emitBilateralAiJobNotification: jest
+        .fn()
+        .mockResolvedValue({ notification_id: 1 }),
+    };
+    const userRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        email: 'uploader@cgiar.org',
+        first_name: 'Cristian',
+      }),
+    };
+    const clarisaInstitutionsRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 7, acronym: 'AfricaRice' }),
+    };
+    const templateRepository = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ template: '<p>{{center_acronym}}</p>' }),
+    };
+    const emailService = { sendEmail: jest.fn() };
+
+    const service = new BilateralAiNotificationsService(
+      notificationService as any,
+      userRepository as any,
+      clarisaInstitutionsRepository as any,
+      templateRepository as any,
+      emailService as any,
+    );
+
+    return {
+      service,
+      stubs: {
+        notificationService,
+        userRepository,
+        clarisaInstitutionsRepository,
+        templateRepository,
+        emailService,
+      },
+    };
+  };
+
+  const baseJob = (overrides: Partial<BilateralAiJob> = {}): BilateralAiJob =>
+    ({
+      job_id: 'job-1',
+      user_id: 42,
+      center_id: 7,
+      project_id: 1,
+      program_code: 'SP06',
+      bucket_name: 'bucket',
+      document_keys: ['doc1', 'doc2'],
+      audio_keys: [],
+      text_context: null,
+      status: BilateralAiJobStatus.COMPLETED,
+      attempts: 1,
+      external_interaction_id: null,
+      response_snapshot: null,
+      result_count: 2,
+      error_code: null,
+      error_message: null,
+      stage: 'creating_drafts',
+      stage_updated_date: null,
+      retrying: false,
+      retried_date: null,
+      created_date: new Date('2026-09-15T10:00:00Z'),
+      started_date: new Date('2026-09-15T10:00:05Z'),
+      completed_date: null,
+      last_updated_date: new Date('2026-09-15T10:00:05Z'),
+      queue_entry_date: new Date('2026-09-15T10:00:00Z'),
+      ...overrides,
+    }) as BilateralAiJob;
+
+  describe('notifyTerminal — results_ready', () => {
+    it('persists exactly one notification row (mix + duration) and mails when >= 2 min', async () => {
+      const { service, stubs } = makeService();
+      const job = baseJob({ result_count: 2 });
+      const terminalDate = new Date('2026-09-15T10:06:00Z'); // 6 min after queue_entry_date
+
+      await service.notifyTerminal(job, 'results_ready', {
+        resultCount: 2,
+        terminalDate,
+      });
+
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
+      const [targetUserId, text] =
+        stubs.notificationService.emitBilateralAiJobNotification.mock.calls[0];
+      expect(targetUserId).toBe(42);
+      expect(text).toContain('2 documents · 6 min');
+      expect(text).toContain('/bilateral/AfricaRice/drafts');
+
+      expect(stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes the in-app row but skips the mail when the job ran under 2 minutes', async () => {
+      const { service, stubs } = makeService();
+      const job = baseJob({ result_count: 1 });
+      const terminalDate = new Date('2026-09-15T10:01:30Z'); // 90s
+
+      await service.notifyTerminal(job, 'results_ready', {
+        resultCount: 1,
+        terminalDate,
+      });
+
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
+      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('notifyTerminal — late completion (APF-R-2 A)', () => {
+    it('marks the copy "arrived after all" when late=true', async () => {
+      const { service, stubs } = makeService();
+      const job = baseJob({ result_count: 1 });
+      const terminalDate = new Date('2026-09-15T10:20:00Z');
+
+      await service.notifyTerminal(job, 'results_ready', {
+        resultCount: 1,
+        late: true,
+        terminalDate,
+      });
+
+      const text =
+        stubs.notificationService.emitBilateralAiJobNotification.mock
+          .calls[0][1];
+      expect(text).toContain('arrived after all');
+    });
+  });
+
+  describe('notifyTerminal — no_candidates', () => {
+    it('renders the "found no results" copy and mails via the NO_CANDIDATES template', async () => {
+      const { service, stubs } = makeService();
+      const job = baseJob({ result_count: 0 });
+      const terminalDate = new Date('2026-09-15T10:06:00Z');
+
+      await service.notifyTerminal(job, 'no_candidates', {
+        resultCount: 0,
+        terminalDate,
+      });
+
+      const text =
+        stubs.notificationService.emitBilateralAiJobNotification.mock
+          .calls[0][1];
+      expect(text).toContain('found no results');
+      expect(stubs.templateRepository.findOne).toHaveBeenCalledWith({
+        where: { name: 'email_template_bilateral_ai_no_candidates' },
+      });
+    });
+  });
+
+  describe('notifyTerminal — failed', () => {
+    it('names the cause in plain words and deep-links to the create step with the job id', async () => {
+      const { service, stubs } = makeService();
+      const job = baseJob({
+        status: BilateralAiJobStatus.FAILED,
+        error_code: 'TIMED_OUT',
+        result_count: 0,
+      });
+      const terminalDate = new Date('2026-09-15T10:20:00Z');
+
+      await service.notifyTerminal(job, 'failed', { terminalDate });
+
+      const text =
+        stubs.notificationService.emitBilateralAiJobNotification.mock
+          .calls[0][1];
+      expect(text).toContain('failed for AfricaRice');
+      expect(text).toContain('/bilateral/AfricaRice/create?job=job-1');
+      expect(stubs.templateRepository.findOne).toHaveBeenCalledWith({
+        where: { name: 'email_template_bilateral_ai_failed' },
+      });
+    });
+  });
+
+  describe('deep link encoding', () => {
+    it('percent-encodes the centre acronym, parentheses included', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaInstitutionsRepository.findOne.mockResolvedValue({
+        id: 7,
+        acronym: 'Bioversity (Alliance)',
+      });
+      const job = baseJob({ result_count: 1 });
+      const terminalDate = new Date('2026-09-15T10:06:00Z');
+
+      await service.notifyTerminal(job, 'results_ready', {
+        resultCount: 1,
+        terminalDate,
+      });
+
+      const text =
+        stubs.notificationService.emitBilateralAiJobNotification.mock
+          .calls[0][1];
+      expect(text).toContain('/bilateral/Bioversity%20%28Alliance%29/drafts');
+      expect(text).not.toContain('/bilateral/Bioversity (Alliance)/drafts');
+    });
+  });
+
+  describe('mail template variables (design.md T-1 forward pointer)', () => {
+    it('binds the RESULTS_READY variables', async () => {
+      const { service, stubs } = makeService();
+      stubs.templateRepository.findOne.mockResolvedValue({
+        template:
+          '{{user_name}}|{{center_acronym}}|{{result_count}}|{{result_plural}}',
+      });
+      const job = baseJob({ result_count: 2 });
+      const terminalDate = new Date('2026-09-15T10:06:00Z');
+
+      await service.notifyTerminal(job, 'results_ready', {
+        resultCount: 2,
+        late: false,
+        terminalDate,
+      });
+
+      const body =
+        stubs.emailService.sendEmail.mock.calls[0][0].emailBody.message
+          .socketFile;
+      expect(body).toBe('Cristian|AfricaRice|2|s');
+    });
+
+    it('renders the {{#if late}} block when late=true', async () => {
+      const { service, stubs } = makeService();
+      stubs.templateRepository.findOne.mockResolvedValue({
+        template: '{{user_name}}{{#if late}}|LATE{{/if}}',
+      });
+      const job = baseJob({ result_count: 1 });
+      const terminalDate = new Date('2026-09-15T10:20:00Z');
+
+      await service.notifyTerminal(job, 'results_ready', {
+        resultCount: 1,
+        late: true,
+        terminalDate,
+      });
+
+      const body =
+        stubs.emailService.sendEmail.mock.calls[0][0].emailBody.message
+          .socketFile;
+      expect(body).toBe('Cristian|LATE');
+    });
+
+    it('binds the NO_CANDIDATES variables', async () => {
+      const { service, stubs } = makeService();
+      stubs.templateRepository.findOne.mockResolvedValue({
+        template:
+          '{{user_name}}|{{center_acronym}}|{{source_plural}}|{{source_mix}}|{{duration_minutes}}',
+      });
+      const job = baseJob({ result_count: 0 });
+      const terminalDate = new Date('2026-09-15T10:06:00Z');
+
+      await service.notifyTerminal(job, 'no_candidates', {
+        resultCount: 0,
+        terminalDate,
+      });
+
+      const body =
+        stubs.emailService.sendEmail.mock.calls[0][0].emailBody.message
+          .socketFile;
+      expect(body).toBe('Cristian|AfricaRice|s|2 documents|6');
+    });
+
+    it('binds the FAILED variables', async () => {
+      const { service, stubs } = makeService();
+      stubs.templateRepository.findOne.mockResolvedValue({
+        template: '{{user_name}}|{{center_acronym}}|{{error_cause}}',
+      });
+      const job = baseJob({
+        status: BilateralAiJobStatus.FAILED,
+        error_code: 'TIMED_OUT',
+        result_count: 0,
+      });
+      const terminalDate = new Date('2026-09-15T10:20:00Z');
+
+      await service.notifyTerminal(job, 'failed', { terminalDate });
+
+      const body =
+        stubs.emailService.sendEmail.mock.calls[0][0].emailBody.message
+          .socketFile;
+      expect(body).toBe(
+        'Cristian|AfricaRice|the AI service did not respond in time',
+      );
+    });
+  });
+
+  describe('resilience — never fails the job it reports on (APF-R-4)', () => {
+    it('a mail failure is swallowed with a warn; the in-app row already went out', async () => {
+      const { service, stubs } = makeService();
+      stubs.templateRepository.findOne.mockRejectedValue(new Error('db down'));
+      const job = baseJob({ result_count: 1 });
+      const terminalDate = new Date('2026-09-15T10:06:00Z');
+
+      await expect(
+        service.notifyTerminal(job, 'results_ready', {
+          resultCount: 1,
+          terminalDate,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('never throws when the in-app notification write itself fails', async () => {
+      const { service, stubs } = makeService();
+      stubs.notificationService.emitBilateralAiJobNotification.mockRejectedValue(
+        new Error('db down'),
+      );
+      const job = baseJob({ result_count: 1 });
+
+      await expect(
+        service.notifyTerminal(job, 'results_ready', { resultCount: 1 }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('skips the mail (without throwing) when the email service is not configured', async () => {
+      const notificationService = {
+        emitBilateralAiJobNotification: jest.fn().mockResolvedValue({}),
+      };
+      const userRepository = { findOne: jest.fn() };
+      const clarisaInstitutionsRepository = {
+        findOne: jest.fn().mockResolvedValue({ acronym: 'AfricaRice' }),
+      };
+      const templateRepository = { findOne: jest.fn() };
+      const service = new BilateralAiNotificationsService(
+        notificationService as any,
+        userRepository as any,
+        clarisaInstitutionsRepository as any,
+        templateRepository as any,
+        undefined,
+      );
+      const job = baseJob({ result_count: 1 });
+      const terminalDate = new Date('2026-09-15T10:06:00Z');
+
+      await service.notifyTerminal(job, 'results_ready', {
+        resultCount: 1,
+        terminalDate,
+      });
+
+      expect(
+        notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
+      expect(templateRepository.findOne).not.toHaveBeenCalled();
+    });
+  });
+});

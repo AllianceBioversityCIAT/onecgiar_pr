@@ -225,6 +225,24 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     this.body.lead_contact_person_data = null;
   }
 
+  /**
+   * Lets the user keep a typed name that has no CGIAR AD match, instead of blocking the field.
+   * Mirrors how a hydrated free-text name (pre-AD-link results, W3/Bilateral) is already accepted —
+   * this just lets the user opt into that same "name only, no directory record" state explicitly.
+   */
+  acceptTypedNameAnyway(): void {
+    const name = this.userSearchService.searchQuery.trim();
+    if (!name) return;
+
+    this.userSearchService.selectedUser = null;
+    this.userSearchService.hasValidContact = true;
+    this.userSearchService.showContactError = false;
+    this.queryCameFromHydration = true;
+
+    this.body.lead_contact_person = name;
+    this.body.lead_contact_person_data = null;
+  }
+
   onContactBlur(): void {
     // Only what the user typed can be "not found". A name hydrated from the result — the
     // free-text fallback the API stores when the directory has no match — is valid data, and

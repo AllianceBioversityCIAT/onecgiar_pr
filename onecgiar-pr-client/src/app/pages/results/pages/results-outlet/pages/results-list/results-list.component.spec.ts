@@ -959,6 +959,22 @@ describe('ResultsListComponent', () => {
       expect(component.getResultQueryParams(result)).toEqual({ reviewResult: 'R-2', reviewResultId: 'id-2' });
     });
 
+    it('should link an Editing W3/Bilaterals result to the center editor', () => {
+      const result = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Editing',
+        status_id: 1,
+        lead_center: 'AfricaRice',
+        result_code: '9368',
+        version_id: 36,
+        id: 'id-9'
+      } as any;
+
+      expect(component.getResultLink(result)).toEqual(['/bilateral', 'AfricaRice', 'result', '9368']);
+      expect(component.getResultQueryParams(result)).toEqual({ phase: 36 });
+    });
+
     it('should return the same object identity for the same result (cached for routerLink)', () => {
       const result = { source_name: 'Initiative', result_code: 'R-3', version_id: 10 } as any;
 
@@ -973,6 +989,24 @@ describe('ResultsListComponent', () => {
     beforeEach(() => {
       component.bilateralResultsService.currentResultToReview.set(null);
       component.bilateralResultsService.showReviewDrawer.set(false);
+    });
+
+    it('should not preload the review drawer for an Editing W3/Bilaterals result', () => {
+      const editingResult = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Editing',
+        status_id: 1,
+        lead_center: 'AfricaRice',
+        result_code: '9368',
+        version_id: 36,
+        id: 'id-9'
+      } as any;
+
+      component.onResultLinkClick({ button: 0 } as MouseEvent, editingResult);
+
+      expect(component.bilateralResultsService.currentResultToReview()).toBeNull();
+      expect(component.bilateralResultsService.showReviewDrawer()).toBe(false);
     });
 
     it('should preload the review drawer state on a plain left click', () => {

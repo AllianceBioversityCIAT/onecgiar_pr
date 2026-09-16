@@ -889,7 +889,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly canReportEmerging = computed(() => {
     const sp = this.selected();
-    return !!sp && !isAvisaInitiative({ initiativeCode: sp.initiativeCode, initiativeId: sp.initiativeId });
+    return (
+      !!sp &&
+      !isAvisaInitiative({ initiativeCode: sp.initiativeCode, initiativeId: sp.initiativeId }) &&
+      this.entityAowService.canReportResults()
+    );
   });
 
   openReportModal(): void {

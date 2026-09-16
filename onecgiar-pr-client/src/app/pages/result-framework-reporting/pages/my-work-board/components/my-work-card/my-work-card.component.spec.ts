@@ -1,9 +1,11 @@
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-T-7, MWB-R-4, R-6)
 // @akili-spec changes/delete-result-action (DEL-T-3, DEL-R-2, DEL-AC-6, DEL-AC-7)
+// @akili-spec changes/my-work-editing-reorder (MWER-T-2, MWER-R-1, MWER-AC-6)
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MyWorkCardComponent } from './my-work-card.component';
+import { MY_WORK_EDITING_REORDER_COPY } from '../../my-work-editing-reorder.copy';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 import { ResultDeletionService } from '../../../../services/result-deletion.service';
@@ -58,7 +60,7 @@ describe('MyWorkCardComponent', () => {
     document.querySelectorAll('.cdk-overlay-container').forEach(container => container.remove());
   });
 
-  const build = async (inputs: { row: ProgrammeResultRow; inEditingColumn?: boolean }) => {
+  const build = async (inputs: { row: ProgrammeResultRow; inEditingColumn?: boolean; reorderable?: boolean }) => {
     await TestBed.configureTestingModule({
       imports: [MyWorkCardComponent],
       providers: [
@@ -72,16 +74,44 @@ describe('MyWorkCardComponent', () => {
     component = fixture.componentInstance;
     fixture.componentRef.setInput('row', inputs.row);
     fixture.componentRef.setInput('inEditingColumn', inputs.inEditingColumn ?? false);
+    if (inputs.reorderable !== undefined) fixture.componentRef.setInput('reorderable', inputs.reorderable);
     fixture.detectChanges();
   };
 
   const root = () => fixture.nativeElement as HTMLElement;
   const text = () => root().textContent ?? '';
 
-  it('does not render any draggable attribute anywhere on the card (MWB-DD-6)', async () => {
+  it('does not render any draggable attribute when reorderable is false (MWB-DD-6, MWER-R-4)', async () => {
     await build({ row: row({ completeness: { complete: 2, total: 5, missing: ['geographic-location'] } }), inEditingColumn: true });
 
     expect(root().querySelectorAll('[draggable]').length).toBe(0);
+    expect(root().querySelector('button[cdkDragHandle]')).toBeNull();
+  });
+
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-2, MWER-R-1)
+  describe('reorderable drag handle (MWER-T-2)', () => {
+    it('renders a labelled drag handle when reorderable', async () => {
+      await build({ row: row(), inEditingColumn: true, reorderable: true });
+
+      const handle = root().querySelector(`button[aria-label="${MY_WORK_EDITING_REORDER_COPY.dragHandleLabel}"]`);
+      expect(handle).toBeTruthy();
+      expect(root().querySelector('article')?.className).toContain('pr-my-work-card--reorderable');
+    });
+
+    it('Continue still navigates when reorderable is true (MWER-AC-6)', async () => {
+      await build({
+        row: row({ completeness: { complete: 2, total: 5, missing: ['geographic-location'] }, versionId: '36' }),
+        inEditingColumn: true,
+        reorderable: true
+      });
+      const router = TestBed.inject(Router);
+      const navSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      const btn = Array.from(root().querySelectorAll('button')).find(b => b.textContent?.includes('Continue')) as HTMLButtonElement;
+      btn.click();
+
+      expect(navSpy).toHaveBeenCalledWith(['/result', 'result-detail', '4712', 'geographic-location'], { queryParams: { phase: 36 } });
+    });
   });
 
   describe('editing variant', () => {

@@ -84,7 +84,7 @@ export class ContributionConsistencyService {
   private async capacityDevelopmentOf(resultId: number) {
     return (
       (await this._capacityDevelopmentsRepository.findOne({
-        where: { result_id: resultId, is_active: true },
+        where: { result_object: { id: resultId }, is_active: true },
       })) ?? null
     );
   }

@@ -164,6 +164,77 @@ describe('ResultRepository (unit)', () => {
     });
   });
 
+  /**
+   * P2- global-search-palette: a numeric query like a result code (e.g. "20694") must match, and
+   * an exact/prefix hit must rank ahead of a mid-string LIKE hit — otherwise a 5-row LIMIT (the
+   * palette's page size) can push the exact result the user typed off the page.
+   */
+  describe('AllResultsByRoleUserAndInitiativeFiltered — title/code search relevance', () => {
+    it('matches on result_code as well as title, not title alone', async () => {
+      queryMock
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([{ total: 1 }]);
+
+      await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        { title: '20694' },
+        [10, 11],
+        { limit: 5, offset: 0 },
+      );
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain(
+        '(LOWER(r.title) LIKE LOWER(?) OR r.result_code LIKE ?)',
+      );
+      expect(params).toEqual(expect.arrayContaining(['%20694%', '%20694%']));
+    });
+
+    it('orders an exact code match and a title-prefix match ahead of a mid-string match', async () => {
+      queryMock
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([{ total: 1 }]);
+
+      await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        { title: 'maize' },
+        [10, 11],
+        { limit: 5, offset: 0 },
+      );
+
+      const [sql, params] = queryMock.mock.calls[0];
+      const normalized = sql.replace(/\s+/g, ' ');
+      expect(normalized).toContain(
+        'ORDER BY (r.result_code = ?) DESC, (LOWER(r.title) LIKE LOWER(?)) DESC, v.status DESC, r.id DESC',
+      );
+      expect(normalized.indexOf('ORDER BY')).toBeGreaterThan(
+        normalized.indexOf('WHERE'),
+      );
+      expect(normalized.indexOf('ORDER BY')).toBeLessThan(
+        normalized.indexOf('LIMIT'),
+      );
+      // Two ORDER BY placeholders (exact code, title-prefix) come AFTER the WHERE's two LIKE params.
+      expect(params).toEqual([1, '%maize%', '%maize%', 'maize', 'maize%']);
+    });
+
+    it('does not touch ordering or params for callers that pass no title (no regression)', async () => {
+      queryMock
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([{ total: 1 }]);
+
+      await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        { statusId: [1] },
+        [10, 11],
+        { limit: 5, offset: 0 },
+      );
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('ORDER BY v.status DESC, r.id DESC');
+      expect(sql).not.toContain('r.result_code = ?');
+      expect(params).toEqual([1, 1]);
+    });
+  });
+
   it('supports single filter values without pagination', async () => {
     const items = [{ id: 2 }];
     queryMock.mockResolvedValueOnce(items);

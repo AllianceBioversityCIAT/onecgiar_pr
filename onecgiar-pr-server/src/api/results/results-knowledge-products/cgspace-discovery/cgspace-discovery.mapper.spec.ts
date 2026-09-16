@@ -125,6 +125,7 @@ describe('CgspaceDiscoveryMapper', () => {
         CGSPACE_PRE_CHANGE_ITEMS.map((item) => ({
           ...item,
           repository: 'cgspace',
+          programAccelerators: [],
         })),
       );
     });
@@ -311,6 +312,7 @@ describe('CgspaceDiscoveryMapper', () => {
         doi: null,
         uri: '',
         repository: 'cgspace',
+        programAccelerators: [],
       });
     });
 
@@ -335,6 +337,60 @@ describe('CgspaceDiscoveryMapper', () => {
         'https://digitalarchive.worldfishcenter.org/items/test-uuid-456',
       );
       expect(item.repository).toBe('worldfish');
+    });
+  });
+
+  describe('toItem — programAccelerators extraction (KPAM-R-1, KPAM-AC-1, KPAM-AC-7)', () => {
+    it('extracts programAccelerators when cg.contributor.programAccelerator has entries', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'sp-item-uuid',
+            handle: '10568/12345',
+            metadata: {
+              'cg.contributor.programAccelerator': [
+                { value: 'Sustainable Farming' },
+              ],
+            },
+          },
+        },
+      };
+
+      const item = mapper.toItem(node, cgspaceAdapter);
+      expect(item.programAccelerators).toEqual(['Sustainable Farming']);
+    });
+
+    it('returns empty array when cg.contributor.programAccelerator is absent or empty', () => {
+      const nodeWithoutField = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'mel-uuid',
+            handle: '20.500.11766/100',
+            metadata: {},
+          },
+        },
+      };
+
+      const itemWithoutField = mapper.toItem(nodeWithoutField, melspaceAdapter);
+      expect(itemWithoutField.programAccelerators).toEqual([]);
+
+      const nodeWithEmptyField = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'wf-uuid',
+            handle: '20.500.12348/200',
+            metadata: {
+              'cg.contributor.programAccelerator': [],
+            },
+          },
+        },
+      };
+
+      const itemWithEmptyField = mapper.toItem(
+        nodeWithEmptyField,
+        worldfishAdapter,
+      );
+      expect(itemWithEmptyField.programAccelerators).toEqual([]);
     });
   });
 

@@ -1,88 +1,72 @@
-<!-- Two boxes on purpose. The OUTER one is the strip: white, full width of the content column,
-     with a top rule that runs from edge to edge — that rule is what separates the bar from the
-     scrolling form above it, and it only reads as a floor if it spans the whole column.
-     The INNER one carries the controls at the column's own 40px padding, the same one
-     `.rd_scroll` uses, so Back and Save line up with the card's left and right edges.
-     No margin-top: the bar is no longer the last thing inside the form, it is the column's floor. -->
-<!-- The strip FOLDS while the user reads downwards (ScrollChromeService); the progress indicator
-     and `Save draft` do NOT — they are the two things the reporter needs WHILE filling the form.
-     🛑 Por eso viven FUERA del elemento que lleva `appChromeFold`, como hermanos suyos, y no
-     dentro. La directiva no encoge la franja: la DESLIZA con `transform` y recupera el hueco con
-     un margen negativo (el porqué está en `chrome-fold.directive.ts`). Y un `transform` convierte
-     a su elemento en el bloque contenedor de TODO `position: absolute` que tenga dentro — así que
-     la fila anclada, mientras estuvo dentro, viajaba con la franja y se iba de la pantalla con
-     ella. Medido el 14-sep-2026 con el viewport en 820px: al plegar pasaba de `top: 768` a
-     `top: 835`, es decir, por debajo del borde inferior.
-     La superficie —blanco y regla superior— es del contenedor EXTERIOR, que es quien tiene que
-     seguir pintando el piso cuando la franja ya no está; su `min-h` reserva justo el alto de la
-     fila anclada más su respiro. -->
-<!-- 🛑 La superficie blanca ES el toolbar, y es lo que se va al leer hacia abajo (Yeck,
-     15-sep-2026): el blanco, su regla superior y el alto que reservaba. Los dos controles que el
-     reportero necesita mientras escribe —cuánto le falta y cómo guardar— NO se van: se quedan
-     FLOTANDO sobre el formulario. Eso sale solo de colapsar este contenedor: la fila de abajo está
-     anclada a él con `bottom`, así que a altura cero se dibuja por encima del área de lectura, y
-     `.rd_scroll` —su hermano, `flex: 1`— se queda con los 66px que esto suelta. -->
-<div
-  data-testid="section-bottom-bar"
-  class="relative w-full"
-  [ngClass]="scrollChromeSE.hidden() ? 'min-h-0 bg-transparent' : 'min-h-[66px] border-t border-[var(--pr-border)] bg-white'">
-  <div appChromeFold="down" class="w-full">
-    <div class="flex flex-wrap items-center justify-between gap-[16px] px-[40px] py-[14px]">
-    <div class="flex items-center gap-[12px]">
-      <!-- Secondary button, straight off the mockup: 1px #e3e3e8 rule, white fill, #2b2838 ink,
+<!-- 🛑 NADA DE ESTA BARRA SE OCULTA, Y NO HAY SUPERFICIE BLANCA (Yeck, 15-sep-2026).
+     Antes la franja se plegaba al leer hacia abajo y sólo el indicador y `Save draft` se quedaban.
+     Ángel lo reportó como bug el mismo día: «no se ven los botones de next y back… si muevo el
+     scroll hacia abajo desaparece» — y en su vídeo (jam.dev/c/b908dd61) lo que se ve es a un
+     reportero teniendo que subir el scroll para poder volver a la sección anterior. Un control de
+     navegación que hay que ir a buscar no es un control.
+     Así que el contenedor ya no pinta nada —ni blanco, ni regla, ni alto reservado— y sus DOS
+     grupos van anclados con `bottom`, flotando sobre el formulario: Back/Next a la izquierda,
+     progreso y guardado a la derecha. A altura cero, `.rd_scroll` —su hermano, `flex: 1`— se queda
+     con todo el espacio de lectura.
+     El `ScrollChromeService` sigue vivo: lo usa la barra superior, y esta lo sigue llamando para
+     suspender el plegado durante un scroll que ejecuta la app (`goToField`). Lo que se fue de aquí
+     es `appChromeFold`, no el servicio. -->
+<div data-testid="section-bottom-bar" class="relative min-h-0 w-full bg-transparent">
+  <!-- Cada grupo va dentro de su propio contenedor (Yeck, 16-sep-2026). Sin él, los controles
+       flotan sueltos y el formulario se lee ENTRE ellos: en la captura, "Section 1 of 5" y el
+       contador de campos quedaban cruzados con las filas de Impact Area que pasan por detrás. La
+       cápsula agrupa lo que es un mismo mando y le devuelve un fondo propio contra el que leerse. -->
+  <div
+    class="absolute bottom-[14px] left-[40px] flex items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-white px-[10px] py-[8px] shadow-[var(--pr-shadow-2)]"
+    data-testid="section-bottom-bar-toolbar">
+    <!-- Secondary button, straight off the mockup: 1px #e3e3e8 rule, white fill, #2b2838 ink,
            weight 500, and a NEUTRAL hover (#f7f7f9 / #d5d5dc) — not the violet tint this used to
            have. The mockup spends violet on the one primary action of a group and nothing else. -->
-      <button
-        type="button"
-        class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
-        [disabled]="!hasPrevious()"
-        (click)="goPrevious()"
-        data-testid="section-bottom-bar-back">
-        <span aria-hidden="true">&#8592;</span> Back
-      </button>
+    <button
+      type="button"
+      class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+      [disabled]="!hasPrevious()"
+      (click)="goPrevious()"
+      data-testid="section-bottom-bar-back">
+      <span aria-hidden="true">&#8592;</span> Back
+    </button>
 
-      <!-- The one primary action of the strip, using the mockup's primary pair verbatim:
+    <!-- The one primary action of the strip, using the mockup's primary pair verbatim:
            #6b46e5 → #5733c4 on hover, white ink, weight 600, no rule, and `opacity: .35` when
            disabled — the exact treatment its blocked "Submit result" button gets. -->
-      <button
-        type="button"
-        class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[16px] text-[14px] font-semibold text-white transition-colors enabled:hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-[0.35]"
-        [disabled]="!hasNext() || savingBeforeNext()"
-        (click)="goNext()"
-        data-testid="section-bottom-bar-next">
-        {{ savingBeforeNext() ? 'Saving…' : 'Next' }} <span aria-hidden="true">&#8594;</span>
-      </button>
+    <button
+      type="button"
+      class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[16px] text-[14px] font-semibold text-white transition-colors enabled:hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-[0.35]"
+      [disabled]="!hasNext() || savingBeforeNext()"
+      (click)="goNext()"
+      data-testid="section-bottom-bar-next">
+      {{ savingBeforeNext() ? 'Saving…' : 'Next' }} <span aria-hidden="true">&#8594;</span>
+    </button>
 
-      @if (showPosition()) {
-        <span class="h-[20px] w-px bg-[var(--pr-border)]" aria-hidden="true"></span>
-        <span class="text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="section-bottom-bar-position">
-          Section {{ position() }} of {{ total() }}
-        </span>
-      }
-    </div>
-
-    <div class="flex items-center gap-[12px]"></div>
+    @if (showPosition()) {
+      <!-- Ya no lleva píldora propia: el contenedor del grupo es la superficie, y una cápsula
+             dentro de otra se lee como un segundo control. Queda como lo que es, una etiqueta. -->
+      <span class="px-[4px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="section-bottom-bar-position">
+        Section {{ position() }} of {{ total() }}
+      </span>
+    }
   </div>
 
-  </div>
-
-  <!-- Anclado, y lo que queda EN PANTALLA cuando el toolbar se va: cuánto falta y cómo guardar.
-       Sin contenedor propio — flotan tal cual, cada uno con lo que ya trae (Yeck, 15-sep-2026).
-       `min-w` mantiene honesto el hueco reservado arriba cuando la etiqueta pasa a "Saving…". -->
-  <div class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]" data-testid="section-bottom-bar-anchored">
-      <!-- El indicador se queda cuando el toolbar se va: saber cuánto falta es justo lo que hace
-           falta MIENTRAS se llenan campos. -->
-      <div class="flex items-center gap-[12px]" data-testid="section-bottom-bar-progress">
-      @if (isComplete()) {
-        <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
+  <!-- El otro grupo anclado: cuánto le falta al reportero y cómo guardar. Las dos cosas que hacen
+       falta MIENTRAS se llenan campos, así que nunca se han plegado (Yeck, 14-sep-2026). -->
+  <div
+    class="absolute bottom-[14px] right-[40px] flex items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-white px-[10px] py-[8px] shadow-[var(--pr-shadow-2)]"
+    data-testid="section-bottom-bar-anchored">
+    @if (isComplete()) {
+      <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
              "2 of 7 required" y "5 fields missing" — diciendo lo mismo con dos formas distintas. -->
-        <span
-          #progressTarget
-          class="inline-flex items-center gap-[8px] rounded-full bg-[var(--pr-status-approved-bg)] px-[10px] py-[4px] text-[14px] font-semibold text-[var(--pr-status-approved-fg)] transition-transform duration-200"
-          [class.scale-110]="ringPulsing()"
-          data-testid="section-bottom-bar-complete">
-          @if (showRing()) {
-            <svg viewBox="0 0 22 22" width="22" height="22" class="block -rotate-90" aria-hidden="true">
+      <span
+        #progressTarget
+        class="inline-flex items-center gap-[8px] rounded-full bg-[var(--pr-status-approved-bg)] px-[10px] py-[4px] text-[14px] font-semibold text-[var(--pr-status-approved-fg)] transition-transform duration-200"
+        [class.scale-110]="ringPulsing()"
+        data-testid="section-bottom-bar-complete">
+        @if (showRing()) {
+          <svg viewBox="0 0 22 22" width="22" height="22" class="block -rotate-90" aria-hidden="true">
             <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="3.5" />
             <circle
               cx="11"
@@ -96,110 +80,107 @@
               [attr.stroke-dasharray]="ringCircumference"
               [attr.stroke-dashoffset]="ringOffset()" />
           </svg>
-          } @else {
-            <i class="material-icons-round text-[18px]" aria-hidden="true">check</i>
-          }
-          Section complete
-        </span>
-      } @else {
-        <!-- Clickable counterpart of "Section complete": it names what is missing instead of only
+        } @else {
+          <i class="material-icons-round text-[18px]" aria-hidden="true">check</i>
+        }
+        Section complete
+      </span>
+    } @else {
+      <!-- Clickable counterpart of "Section complete": it names what is missing instead of only
            saying that something is. Same list the floating "N alerts" chip used to show. -->
-        <div class="relative" (mouseenter)="openPending()" (mouseleave)="schedulePendingClose()">
-          <button
-            type="button"
-            class="-mx-[10px] -my-[5px] inline-flex items-center gap-[6px] rounded-[8px] border border-transparent px-[10px] py-[5px] text-[14px] font-medium text-[var(--pr-color-orange-700)] transition-colors hover:border-[var(--pr-color-orange-200)] hover:bg-[var(--pr-color-orange-50)]"
-            [attr.aria-expanded]="pendingOpen()"
-            aria-controls="sbb-pending-list"
-            (click)="togglePending()"
-            data-testid="section-bottom-bar-pending">
-            @if (showRing()) {
-              <span #progressTarget class="inline-flex transition-transform duration-200" [class.scale-110]="ringPulsing()">
-                <svg viewBox="0 0 22 22" width="22" height="22" class="block -rotate-90" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="3.5" />
-            <circle
-              cx="11"
-              cy="11"
-              r="8"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="3.5"
-              stroke-linecap="round"
-              class="transition-[stroke-dashoffset] duration-500"
-              [attr.stroke-dasharray]="ringCircumference"
-              [attr.stroke-dashoffset]="ringOffset()" />
-          </svg>
-              </span>
-            } @else {
-              <i class="material-icons-round text-[18px]" aria-hidden="true">error_outline</i>
-            }
-            {{ pendingLabel() }}
-          </button>
+      <div class="relative" (mouseenter)="openPending()" (mouseleave)="schedulePendingClose()">
+        <button
+          type="button"
+          class="-mx-[10px] -my-[5px] inline-flex items-center gap-[6px] rounded-[8px] border border-transparent px-[10px] py-[5px] text-[14px] font-medium text-[var(--pr-color-orange-700)] transition-colors hover:border-[var(--pr-color-orange-200)] hover:bg-[var(--pr-color-orange-50)]"
+          [attr.aria-expanded]="pendingOpen()"
+          aria-controls="sbb-pending-list"
+          (click)="togglePending()"
+          data-testid="section-bottom-bar-pending">
+          @if (showRing()) {
+            <span #progressTarget class="inline-flex transition-transform duration-200" [class.scale-110]="ringPulsing()">
+              <svg viewBox="0 0 22 22" width="22" height="22" class="block -rotate-90" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="3.5" />
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="8"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3.5"
+                  stroke-linecap="round"
+                  class="transition-[stroke-dashoffset] duration-500"
+                  [attr.stroke-dasharray]="ringCircumference"
+                  [attr.stroke-dashoffset]="ringOffset()" />
+              </svg>
+            </span>
+          } @else {
+            <i class="material-icons-round text-[18px]" aria-hidden="true">error_outline</i>
+          }
+          {{ pendingLabel() }}
+        </button>
 
-          @if (pendingOpen()) {
-            <div
-              class="absolute bottom-[calc(100%+10px)] right-0 z-30 max-h-[320px] w-[300px] overflow-y-auto rounded-[12px] border border-[var(--pr-border)] bg-white px-[14px] py-[12px] shadow-[var(--pr-shadow-2)]"
-              id="sbb-pending-list"
-              role="dialog"
-              aria-label="Fields still missing">
-              <div
-                class="mb-[8px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-muted)]">
-                <span>Still missing</span>
-                <button type="button" class="flex text-[var(--pr-text-muted)]" (click)="closePending()" aria-label="Close">
-                  <i class="material-icons-round text-[16px]" aria-hidden="true">close</i>
-                </button>
-              </div>
-              @if (missingFields().length) {
-                <ul class="m-0 flex list-none flex-col gap-[2px] p-0">
-                  <li
-                    class="flex items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[4px] text-[13px] leading-[1.45] text-[var(--pr-text)] hover:bg-[var(--pr-surface-app)]"
-                    *ngFor="let field of missingFields(); trackBy: trackByField">
-                    <span class="min-w-0">{{ field }}</span>
-                    <!-- Only for entries the scan could actually pin to an element on screen. -->
-                    @if (canGoToField(field)) {
-                      <button
-                        type="button"
-                        class="shrink-0 rounded-[6px] border border-[var(--pr-border)] bg-white px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:border-[var(--pr-color-primary-200)] hover:bg-[var(--pr-color-primary-25)]"
-                        (click)="goToField(field)"
-                        [attr.aria-label]="'Go to ' + field">
-                        Go
-                      </button>
-                    }
-                  </li>
-                </ul>
-              } @else {
-                <!-- P2-3542: the section is red for a requirement no rendered field carries — a
+        @if (pendingOpen()) {
+          <div
+            class="absolute bottom-[calc(100%+10px)] right-0 z-30 max-h-[320px] w-[300px] overflow-y-auto rounded-[12px] border border-[var(--pr-border)] bg-white px-[14px] py-[12px] shadow-[var(--pr-shadow-2)]"
+            id="sbb-pending-list"
+            role="dialog"
+            aria-label="Fields still missing">
+            <div class="mb-[8px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-muted)]">
+              <span>Still missing</span>
+              <button type="button" class="flex text-[var(--pr-text-muted)]" (click)="closePending()" aria-label="Close">
+                <i class="material-icons-round text-[16px]" aria-hidden="true">close</i>
+              </button>
+            </div>
+            @if (missingFields().length) {
+              <ul class="m-0 flex list-none flex-col gap-[2px] p-0">
+                <li
+                  class="flex items-center justify-between gap-[8px] rounded-[6px] px-[6px] py-[4px] text-[13px] leading-[1.45] text-[var(--pr-text)] hover:bg-[var(--pr-surface-app)]"
+                  *ngFor="let field of missingFields(); trackBy: trackByField">
+                  <span class="min-w-0">{{ field }}</span>
+                  <!-- Only for entries the scan could actually pin to an element on screen. -->
+                  @if (canGoToField(field)) {
+                    <button
+                      type="button"
+                      class="shrink-0 rounded-[6px] border border-[var(--pr-border)] bg-white px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:border-[var(--pr-color-primary-200)] hover:bg-[var(--pr-color-primary-25)]"
+                      (click)="goToField(field)"
+                      [attr.aria-label]="'Go to ' + field">
+                      Go
+                    </button>
+                  }
+                </li>
+              </ul>
+            } @else {
+              <!-- P2-3542: the section is red for a requirement no rendered field carries — a
                      contributing partner or center, or a mandatory field on a ToC tab that is not
                      the active one. Naming zero fields would contradict the state being shown. -->
-                <p class="m-0 text-[13px] leading-[1.45] text-[var(--pr-text)]">
-                  This section still has pending requirements. Check the contributing partners and centers, and every ToC tab.
-                </p>
-              }
-            </div>
-          }
-        </div>
-      }
-
+              <p class="m-0 text-[13px] leading-[1.45] text-[var(--pr-text)]">
+                This section still has pending requirements. Check the contributing partners and centers, and every ToC tab.
+              </p>
+            }
+          </div>
+        }
       </div>
+    }
 
-      <!-- Slot for Knowledge Product Sync button -->
-      <div class="sbb-sync-slot inline-flex items-center empty:hidden" #syncSlot></div>
+    <!-- Slot for Knowledge Product Sync button -->
+    <div class="sbb-sync-slot inline-flex items-center empty:hidden" #syncSlot></div>
 
-      <!-- 🛑 `Save draft` va DENTRO de esta fila anclada, no detrás de ella. Antes el botón llevaba
+    <!-- 🛑 `Save draft` va DENTRO de esta fila anclada, no detrás de ella. Antes el botón llevaba
            `absolute bottom-[14px] right-[40px]` en su propia clase; al sacar el indicador a este
            contenedor se le quitó el posicionamiento y el botón cayó al flujo normal: se pintaba en
            una segunda línea, pegado a la izquierda, y de paso estiraba el alto del bloque, con lo
            que el indicador absoluto se iba con él fuera de la franja (14-sep-2026).
            `.sbb-save` NO tiene estilos propios en ninguna hoja — el posicionamiento es solo este
            contenedor, así que sacarlo de aquí vuelve a romperlo. -->
-      @if (canSave) {
-        <button
-          type="button"
-          class="sbb-save h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] shadow-[var(--pr-shadow-1)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
-          [disabled]="saveButtonSE.isSaving() || disabled"
-          (click)="onClickSave()"
-          data-testid="section-bottom-bar-save">
-          {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
-        </button>
-      }
-    </div>
+    @if (canSave) {
+      <button
+        type="button"
+        class="sbb-save h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+        [disabled]="saveButtonSE.isSaving() || disabled"
+        (click)="onClickSave()"
+        data-testid="section-bottom-bar-save">
+        {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
+      </button>
+    }
+  </div>
 </div>

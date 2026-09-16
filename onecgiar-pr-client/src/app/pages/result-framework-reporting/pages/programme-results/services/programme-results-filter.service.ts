@@ -23,14 +23,14 @@ export interface ProgrammeResultsStatusCount {
 export interface ProgrammeResultsFilterState {
   searchText: string;
   selectedSections: string[];
-  selectedPhase: string | null;
-  selectedStatus: string | null;
-  // @akili-spec changes/my-work-board (MWB-T-13) — the three dimensions the Results tab and the
-  // My results board share are MULTI-value: OR within, AND across. `[]` is "no filter".
+  // @akili-spec result-framework-reporting/programme-results-multiselect-filters (PRM-T-1)
+  selectedPhases: string[];
+  selectedStatuses: string[];
+  // @akili-spec changes/my-work-board (MWB-T-13) — OR within, AND across. `[]` is "no filter".
   selectedCategories: string[];
   selectedOrigins: string[];
   selectedCenters: string[];
-  selectedCreatedBy: string | null;
+  selectedCreatedBy: string[];
 }
 
 /** Which dimensions to skip. Used for the status counters, which must ignore the status filter. */
@@ -193,6 +193,26 @@ export function matchesProgrammeResultSearch(row: ProgrammeResultRow, searchText
   return normalize(sectionLabel(row?.section)).includes(needle);
 }
 
+// @akili-spec result-framework-reporting/programme-results-multiselect-filters (PRM-T-1)
+/** True when `row` belongs to the given phase label (name, year, versionId, or legacy aliases). */
+export function matchesProgrammeResultPhase(row: ProgrammeResultRow, selectedPhase: string): boolean {
+  const sel = normalize(selectedPhase);
+  if (!sel) return true;
+  const pName = normalize(row?.phaseName);
+  const pYear = normalize(row?.phaseYear);
+  const vId = normalize(row?.versionId);
+  const pPhaseYear = normalize(`Phase ${row?.phaseYear}`);
+
+  return (
+    sel === pName ||
+    sel === pYear ||
+    sel === vId ||
+    sel === pPhaseYear ||
+    (!!pYear && (sel === pYear || sel.includes(pYear))) ||
+    (!!pName && (sel.includes(pName) || pName.includes(sel)))
+  );
+}
+
 /** The whole predicate for one row against one filter state. Pure — the spec drives it directly. */
 export function matchesProgrammeResultFilters(
   row: ProgrammeResultRow,
@@ -207,25 +227,13 @@ export function matchesProgrammeResultFilters(
     return false;
   }
 
-  if (state.selectedPhase) {
-    const sel = normalize(state.selectedPhase);
-    const pName = normalize(row?.phaseName);
-    const pYear = normalize(row?.phaseYear);
-    const vId = normalize(row?.versionId);
-    const pPhaseYear = normalize(`Phase ${row?.phaseYear}`);
+  const phases = state.selectedPhases ?? [];
+  if (phases.length && !phases.some(phase => matchesProgrammeResultPhase(row, phase))) return false;
 
-    const matches =
-      sel === pName ||
-      sel === pYear ||
-      sel === vId ||
-      sel === pPhaseYear ||
-      (pYear && (sel === pYear || sel.includes(pYear))) ||
-      (pName && (sel.includes(pName) || pName.includes(sel)));
-
-    if (!matches) return false;
+  const statuses = state.selectedStatuses ?? [];
+  if (!options.ignoreStatus && statuses.length && !statuses.some(status => normalize(status) === normalize(row?.statusName))) {
+    return false;
   }
-
-  if (!options.ignoreStatus && state.selectedStatus && normalize(state.selectedStatus) !== normalize(row?.statusName)) return false;
 
   // @akili-spec changes/my-work-board (MWB-T-13) — Category / Funding source / Center are
   // multi-select: OR inside a dimension, AND across them (the exact semantics the My results
@@ -242,7 +250,8 @@ export function matchesProgrammeResultFilters(
   const centers = state.selectedCenters ?? [];
   if (centers.length && !centers.some(value => normalize(value) === normalize(row?.center))) return false;
   // @akili-spec result-framework-reporting/programme-results-created-by-filter
-  if (state.selectedCreatedBy && normalize(state.selectedCreatedBy) !== normalize(row?.createdBy)) return false;
+  const creators = state.selectedCreatedBy ?? [];
+  if (creators.length && !creators.some(value => normalize(value) === normalize(row?.createdBy))) return false;
 
   return true;
 }
@@ -291,10 +300,11 @@ export class ProgrammeResultsFilterService {
    */
   readonly selectedSections = signal<string[]>([]);
 
-  /** SINGLE-select, matched against `row.phaseName` / `row.phaseYear` / `row.versionId`. */
-  readonly selectedPhase = signal<string | null>(null);
-  /** SINGLE-select, matched against `row.statusName`. `null` = no status filter. */
-  readonly selectedStatus = signal<string | null>(null);
+  // @akili-spec result-framework-reporting/programme-results-multiselect-filters (PRM-T-1)
+  /** MULTI-select, matched against `row.phaseName` / `row.phaseYear` / `row.versionId`. `[]` = no filter. */
+  readonly selectedPhases = signal<string[]>([]);
+  /** MULTI-select, matched against `row.statusName`. `[]` = no status filter. */
+  readonly selectedStatuses = signal<string[]>([]);
 
   // @akili-spec changes/my-work-board (MWB-T-13)
   /**
@@ -317,15 +327,15 @@ export class ProgrammeResultsFilterService {
   /** Matched against `row.center` (`lead_center`). */
   readonly selectedCenters = signal<string[]>([]);
   // @akili-spec result-framework-reporting/programme-results-created-by-filter
-  /** SINGLE-select, matched against `row.createdBy` (`create_first_name` + `create_last_name`). */
-  readonly selectedCreatedBy = signal<string | null>(null);
+  /** MULTI-select, matched against `row.createdBy` (`create_first_name` + `create_last_name`). */
+  readonly selectedCreatedBy = signal<string[]>([]);
 
   /** Plain snapshot of all eight dimensions — what the pure predicates take. */
   readonly state = computed<ProgrammeResultsFilterState>(() => ({
     searchText: this.searchText(),
     selectedSections: this.selectedSections(),
-    selectedPhase: this.selectedPhase(),
-    selectedStatus: this.selectedStatus(),
+    selectedPhases: this.selectedPhases(),
+    selectedStatuses: this.selectedStatuses(),
     selectedCategories: this.selectedCategories(),
     selectedOrigins: this.selectedOrigins(),
     selectedCenters: this.selectedCenters(),
@@ -351,10 +361,12 @@ export class ProgrammeResultsFilterService {
       // `clearChip`/the predicate must keep matching exactly what is stored, never the label.
       if (section) chips.push({ label: `Section: ${sectionLabel(section)}`, dimension: 'section', value: section });
     }
-    const phase = this.selectedPhase();
-    if (phase) chips.push({ label: `Phase: ${phase}`, dimension: 'phase', value: phase });
-    const status = this.selectedStatus();
-    if (status) chips.push({ label: `Status: ${status}`, dimension: 'status', value: status });
+    for (const phase of this.selectedPhases()) {
+      if (phase) chips.push({ label: `Phase: ${phase}`, dimension: 'phase', value: phase });
+    }
+    for (const status of this.selectedStatuses()) {
+      if (status) chips.push({ label: `Status: ${status}`, dimension: 'status', value: status });
+    }
     // @akili-spec changes/my-work-board (MWB-T-13) — ONE chip per selected value, in selection
     // order, for each of the three multi dimensions. `value` stays the raw stored string so
     // `clearChip()` removes exactly this one and leaves the dimension's other values alone.
@@ -370,8 +382,9 @@ export class ProgrammeResultsFilterService {
     for (const center of this.selectedCenters()) {
       if (center) chips.push({ label: `Center: ${center}`, dimension: 'center', value: center });
     }
-    const createdBy = this.selectedCreatedBy();
-    if (createdBy) chips.push({ label: `Created by: ${createdBy}`, dimension: 'createdBy', value: createdBy });
+    for (const createdBy of this.selectedCreatedBy()) {
+      if (createdBy) chips.push({ label: `Created by: ${createdBy}`, dimension: 'createdBy', value: createdBy });
+    }
 
     return chips;
   });
@@ -403,9 +416,10 @@ export class ProgrammeResultsFilterService {
     this.selectedCenters.update(current => toggleInList(current, center));
   }
 
-  /** Sets the status filter; passing the value already selected clears it (pill toggling). */
+  /** Adds or removes one status (status-counter pill toggling). */
   toggleStatus(status: string | null): void {
-    this.selectedStatus.set(this.selectedStatus() === status ? null : status);
+    if (!status) return;
+    this.selectedStatuses.update(current => toggleInList(current, status));
   }
 
   clearSearch(): void {
@@ -421,12 +435,22 @@ export class ProgrammeResultsFilterService {
     this.selectedSections.set(this.selectedSections().filter(value => value !== section));
   }
 
-  clearPhase(): void {
-    this.selectedPhase.set(null);
+  /** Removes one phase, or all of them when called with no argument. */
+  clearPhases(phase?: string): void {
+    if (phase === undefined) {
+      this.selectedPhases.set([]);
+      return;
+    }
+    this.selectedPhases.update(current => current.filter(value => value !== phase));
   }
 
-  clearStatus(): void {
-    this.selectedStatus.set(null);
+  /** Removes one status, or all of them when called with no argument. */
+  clearStatuses(status?: string): void {
+    if (status === undefined) {
+      this.selectedStatuses.set([]);
+      return;
+    }
+    this.selectedStatuses.update(current => current.filter(value => value !== status));
   }
 
   // @akili-spec changes/my-work-board (MWB-T-13) — same shape as `clearSections`: one value, or
@@ -458,8 +482,13 @@ export class ProgrammeResultsFilterService {
     this.selectedCenters.update(current => current.filter(value => value !== center));
   }
 
-  clearCreatedBy(): void {
-    this.selectedCreatedBy.set(null);
+  /** Removes one creator, or all of them when called with no argument. */
+  clearCreatedBy(createdBy?: string): void {
+    if (createdBy === undefined) {
+      this.selectedCreatedBy.set([]);
+      return;
+    }
+    this.selectedCreatedBy.update(current => current.filter(value => value !== createdBy));
   }
 
   /** Removes exactly the filter a chip stands for. Wire it to the chip's X button. */
@@ -472,10 +501,10 @@ export class ProgrammeResultsFilterService {
         this.clearSections(chip.value);
         return;
       case 'phase':
-        this.clearPhase();
+        this.clearPhases(chip.value);
         return;
       case 'status':
-        this.clearStatus();
+        this.clearStatuses(chip.value);
         return;
       // @akili-spec changes/my-work-board (MWB-T-13) — one value, not the dimension.
       case 'category':
@@ -488,7 +517,7 @@ export class ProgrammeResultsFilterService {
         this.clearCenter(chip.value);
         return;
       case 'createdBy':
-        this.clearCreatedBy();
+        this.clearCreatedBy(chip.value);
         return;
       default:
         return;
@@ -499,12 +528,12 @@ export class ProgrammeResultsFilterService {
   clearAll(): void {
     this.searchText.set('');
     this.selectedSections.set([]);
-    this.selectedPhase.set(null);
-    this.selectedStatus.set(null);
+    this.selectedPhases.set([]);
+    this.selectedStatuses.set([]);
     this.selectedCategories.set([]);
     this.selectedOrigins.set([]);
     this.selectedCenters.set([]);
-    this.selectedCreatedBy.set(null);
+    this.selectedCreatedBy.set([]);
   }
 }
 

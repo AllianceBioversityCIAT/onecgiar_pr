@@ -1,5 +1,10 @@
 @use '../../../styles/fonts.scss' as fonts;
 
+// Alerts and Save stack instead of sitting side by side. In a row the pair is 345 px wide and
+// reaches 142 px further left than Save itself needs, which put it on top of the page's own text:
+// on the first step of the result creator it covered the last three lines of the Outcome card's
+// description, the text the reporter has to read to choose between Output and Outcome. Stacked,
+// the block is 203 px wide and clears the content column.
 .fixed_button {
   position: fixed;
   right: 0;
@@ -8,8 +13,9 @@
   margin-bottom: 50px;
   z-index: 5;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 // PDF export grouped with the Save button

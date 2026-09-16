@@ -73,6 +73,39 @@ export class BilateralAiJob {
   @Column({ name: 'error_message', type: 'text', nullable: true })
   error_message: string | null;
 
+  /**
+   * PRMS-controlled step inside `status = PROCESSING` (`APF-R-1` B, `design.md` §3.1). One of the
+   * 8 server values: `queued` · `uploading` · `reading` · `transcribing` · `reading_transcribing`
+   * · `extracting` · `validating` · `creating_drafts`. `varchar(32)` because the longest value,
+   * `reading_transcribing`, is 20 chars.
+   */
+  @Column({
+    name: 'stage',
+    type: 'varchar',
+    length: 32,
+    default: 'queued',
+  })
+  stage: string;
+
+  @Column({ name: 'stage_updated_date', type: 'timestamp', nullable: true })
+  stage_updated_date: Date | null;
+
+  /**
+   * Set while a retryable failure is being requeued mid-job (`APF-DD-3`): the job stays
+   * `PROCESSING` instead of bouncing through `FAILED`. Cleared by the next attempt-start
+   * statement (`design.md` §5 "Attempt start").
+   */
+  @Column({ name: 'retrying', type: 'boolean', default: false })
+  retrying: boolean;
+
+  /**
+   * Set by `retryJob` ("Try again", `APF-R-5`) to the retry moment; `created_date` is left
+   * untouched so the original upload time stays readable for provenance. Feeds `queue_entry_date`
+   * below.
+   */
+  @Column({ name: 'retried_date', type: 'timestamp', nullable: true })
+  retried_date: Date | null;
+
   @CreateDateColumn({ name: 'created_date', type: 'timestamp' })
   created_date: Date;
 
@@ -84,4 +117,22 @@ export class BilateralAiJob {
 
   @UpdateDateColumn({ name: 'last_updated_date', type: 'timestamp' })
   last_updated_date: Date;
+
+  /**
+   * `queue_entry_date = COALESCE(retried_date, created_date)` — the moment the job entered the
+   * queue in its current life (`design.md` §3.1 "Queue-entry clock"). STORED generated column
+   * (M1) so the sweeper's stall scan and `queue_position` ordering can use it through
+   * `IDX_bilateral_ai_jobs_status_queue_entry`. Read-only: TypeORM never writes this column
+   * (`insert: false, update: false`) — MySQL computes it.
+   */
+  @Column({
+    name: 'queue_entry_date',
+    type: 'datetime',
+    generatedType: 'STORED',
+    asExpression: 'COALESCE(`retried_date`, `created_date`)',
+    insert: false,
+    update: false,
+    nullable: true,
+  })
+  queue_entry_date: Date;
 }

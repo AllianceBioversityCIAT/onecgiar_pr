@@ -251,4 +251,19 @@ export class BilateralApiService {
       params: new HttpParams().set('key', key),
     });
   }
+
+  /** `APF-R-5`/`APF-R-9`: re-enqueues the same stored sources under the same job id. 202 on success. */
+  POST_bilateralAiJobRetry(jobId: string) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs/${jobId}/retry`, {});
+  }
+
+  /**
+   * `APF-R-6` D: the route sits under `center/ai/`, NOT `center/ai/jobs/` — `jobs/expectations`
+   * would be swallowed by the `jobs/:jobId` parameter route (`design.md` §4.1).
+   */
+  GET_bilateralAiJobExpectations(mix: 'documents' | 'audio') {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/expectations`, {
+      params: new HttpParams().set('mix', mix),
+    });
+  }
 }

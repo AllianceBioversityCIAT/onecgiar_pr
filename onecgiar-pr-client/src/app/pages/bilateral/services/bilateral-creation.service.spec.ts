@@ -247,6 +247,34 @@ describe('BilateralCreationService', () => {
     expect(service.isAiGenerated()).toBe(true);
   });
 
+  // APF-R-12 AND / APF-T-8: the provenance notice's dismiss/hide logic gates on `isAiGenerated()`,
+  // and `clearEditorState()` unconditionally sets it back to `false` — the same reset that
+  // `reloadAfterResultTypeChange()` (bilateral-result-creator.component.ts, P2-3233) runs before
+  // re-issuing `loadResult()` on an edit that changes the result type. A component-level test can't
+  // exercise that sequence because the component spec mocks `loadResult`/`clearEditorState` as
+  // no-ops; this test drives the real service through the exact clear-then-reload sequence instead.
+  it('banner-gating invariant: clearEditorState() followed by a reload carrying creation_method "AI" restores isAiGenerated() to true (edit-path regression for APF-R-12 AND)', () => {
+    service.isAiGenerated.set(true);
+
+    service.clearEditorState();
+    expect(service.isAiGenerated()).toBe(false); // documents the risky intermediate state
+
+    mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
+      subscribe: ({ next }: any) =>
+        next({
+          response: {
+            commonFields: { creation_method: 'AI' },
+            contributingProjects: [],
+            contributingCenters: [],
+          },
+        }),
+    } as any);
+
+    service.loadResult(8706);
+
+    expect(service.isAiGenerated()).toBe(true);
+  });
+
   // ---------------------------------------------------------------------------
 
   describe('getProjects', () => {

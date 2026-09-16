@@ -8,6 +8,7 @@ import { BehaviorSubject, of } from 'rxjs';
 
 import { MyWorkBoardComponent } from './my-work-board.component';
 import { MyWorkBoardService } from './services/my-work-board.service';
+import { MyWorkEditingOrderService } from './services/my-work-editing-order.service';
 import { MyWorkCountService } from './services/my-work-count.service';
 import { MyWorkColumnComponent } from './components/my-work-column/my-work-column.component';
 import { MyWorkColumn, MyWorkTotals } from './my-work.view-model';
@@ -111,6 +112,7 @@ class FakeMyWorkBoardService {
   readonly selectedCategories = signal<string[]>([]);
   readonly selectedOrigins = signal<string[]>([]);
   readonly selectedCenters = signal<string[]>([]);
+  readonly reorderEnabled = signal(false);
 
   load = jest.fn();
   setScope = jest.fn();
@@ -168,7 +170,8 @@ describe('MyWorkBoardComponent', () => {
             otherSPsList: () => [],
             otherProjectsList: () => []
           }
-        }
+        },
+        { provide: ApiService, useValue: { authSE: { localStorageUser: { id: 42 } } } }
       ]
     });
 
@@ -179,7 +182,7 @@ describe('MyWorkBoardComponent', () => {
     // `set` REPLACES the component's providers array — `ProgrammeResultsFilterService` is
     // page-provided since `MWB-T-9`, so it has to be re-listed or the toolbar cannot be injected.
     TestBed.overrideComponent(MyWorkBoardComponent, {
-      set: { providers: [ProgrammeResultsFilterService, { provide: MyWorkBoardService, useValue: service }] }
+      set: { providers: [ProgrammeResultsFilterService, MyWorkEditingOrderService, { provide: MyWorkBoardService, useValue: service }] }
     });
 
     fixture = TestBed.createComponent(MyWorkBoardComponent);
@@ -433,7 +436,7 @@ describe('MyWorkBoardComponent', () => {
     // five-param mirror effect, so the navigate call now carries the whole param map. The
     // assertion's substance is unchanged: `phase` reaches the URL with `merge` + `replaceUrl`.
     it('re-groups (no request) and mirrors the URL with replaceUrl + merge on change', () => {
-      component.onPhaseChange('Reporting 2025');
+      component.onPhasesChange(['Reporting 2025']);
       expect(service.setPhase).toHaveBeenCalledWith('Reporting 2025');
 
       // The real service resolves the new label inside `setPhase()`; the fake needs it spelled out.
@@ -468,7 +471,7 @@ describe('MyWorkBoardComponent', () => {
       expect(filterRow.getAttribute('role')).toBe('search');
       expect(filterRow.getAttribute('aria-label')).toBe('My results filters');
       expect(filterRow.querySelector('[aria-label="My results board controls"] [role="tablist"]')).toBeTruthy();
-      expect(filterRow.querySelector('app-pr-filter-select')).toBeTruthy();
+      expect(filterRow.querySelector('[data-testid="my-work-filter-button"]')).toBeTruthy();
       expect(filterRow.textContent).toContain('Phase');
 
       expect(root().querySelector('app-pr-tab-intro')).toBeNull();
@@ -542,6 +545,81 @@ describe('MyWorkBoardComponent', () => {
     fixture.detectChanges();
 
     expect(root().querySelector('.pr-board-fade')).toBeTruthy();
+  });
+
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-3, MWER-R-1, MWER-R-4, MWER-R-5)
+  describe('manual editing reorder wiring (MWER-T-3)', () => {
+    const FULL_COLUMNS: MyWorkColumn[] = [
+      { key: 'editing', label: 'Editing', group: 'action', rows: [row(), row({ code: '4701' })] },
+      { key: 'pending', label: 'Pending review', group: 'waiting', rows: [] },
+      { key: 'submitted', label: 'Submitted', group: 'waiting', rows: [] },
+      { key: 'inQa', label: 'In QA', group: 'done', rows: [] },
+      { key: 'approved', label: 'Approved', group: 'done', rows: [] },
+      { key: 'discontinued', label: 'Discontinued', group: 'closed', rows: [] },
+      { key: 'rejected', label: 'Rejected', group: 'closed', rows: [] }
+    ];
+
+    const showBoard = () => {
+      service.loading.set(false);
+      service.error.set(null);
+      service.columns.set(FULL_COLUMNS);
+      service.visibleRows.set([row(), row({ code: '4701' })]);
+      component.isNarrow.set(false);
+      service.scope.set('mine');
+      fixture.detectChanges();
+    };
+
+    const editingColumn = () =>
+      fixture.debugElement
+        .queryAll(By.directive(MyWorkColumnComponent))
+        .map(de => de.componentInstance as MyWorkColumnComponent)
+        .find(col => col.column().key === 'editing');
+
+    const pendingColumn = () =>
+      fixture.debugElement
+        .queryAll(By.directive(MyWorkColumnComponent))
+        .map(de => de.componentInstance as MyWorkColumnComponent)
+        .find(col => col.column().key === 'pending');
+
+    it('enables reorder on Mine + desktop and mirrors into the board service', () => {
+      showBoard();
+      expect(component.reorderEnabled()).toBe(true);
+      expect(service.reorderEnabled()).toBe(true);
+      expect(editingColumn()?.reorderable()).toBe(true);
+    });
+
+    it('disables reorder on All program results scope', () => {
+      showBoard();
+      service.scope.set('all');
+      fixture.detectChanges();
+
+      expect(component.reorderEnabled()).toBe(false);
+      expect(editingColumn()?.reorderable()).toBe(false);
+    });
+
+    it('disables reorder on narrow viewport', () => {
+      showBoard();
+      component.isNarrow.set(true);
+      fixture.detectChanges();
+
+      expect(component.reorderEnabled()).toBe(false);
+      expect(editingColumn()?.reorderable()).toBe(false);
+    });
+
+    it('does not mark non-Editing columns reorderable', () => {
+      showBoard();
+      expect(pendingColumn()?.reorderable()).toBe(false);
+    });
+
+    it('resetManualOrder clears the editing order service', () => {
+      showBoard();
+      component.editingOrder.save(['4712', '4701']);
+      expect(component.editingOrder.hasManualOrder()).toBe(true);
+
+      component.resetManualOrder();
+
+      expect(component.editingOrder.hasManualOrder()).toBe(false);
+    });
   });
 });
 
@@ -725,10 +803,8 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     expect(filterRow.querySelector('[aria-label="My results board controls"] [role="tablist"]')).toBeTruthy();
     expect(filterRow.querySelector('[data-testid="my-work-search"]')).toBeTruthy();
     expect(filterRow.querySelector('[data-testid="my-work-filter-button"]')).toBeTruthy();
-    // The `MWB-T-8` bare select is gone: the only `app-pr-filter-select`s left are inside the popover.
-    expect(filterRow.querySelectorAll('[data-testid="my-work-filter-popover"] app-pr-filter-select').length).toBe(
-      filterRow.querySelectorAll('app-pr-filter-select').length
-    );
+    // The `MWB-T-8` bare select is gone: filter controls live inside the popover as multiselects.
+    expect(filterRow.querySelectorAll('app-pr-filter-select').length).toBe(0);
     expect(chipLabels()).toEqual(['Phase: Reporting 2026']);
   });
 
@@ -827,7 +903,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     build();
     expect(board.badge()).toBe(5);
 
-    component.onPhaseChange('Reporting 2025');
+    component.onPhasesChange(['Reporting 2025']);
     fixture.detectChanges();
 
     httpMock.expectNone(req => req.url.includes('get/all/roles/filter'));
@@ -836,7 +912,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     // One phase source: the chip, the columns and the badge all read the same resolved label.
     expect(chipLabels()).toEqual(['Phase: Reporting 2025']);
     expect(board.badge()).toBe(1);
-    expect(filter.selectedPhase()).toBe('Reporting 2025');
+    expect(filter.selectedPhases()).toEqual(['Reporting 2025']);
   });
 
   it('mirrors a category choice to the URL with merge + replaceUrl', () => {
@@ -882,7 +958,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     expect(publishedPhases).not.toContain(null);
 
     expect(board.effectivePhase()).toBe('Reporting 2025');
-    expect(filter.selectedPhase()).toBe('Reporting 2025');
+    expect(filter.selectedPhases()).toEqual(['Reporting 2025']);
     expect(chipLabels()).toEqual(['Phase: Reporting 2025']);
     expect(cardTitles()).toEqual(['Legacy irrigation study']);
   });
@@ -908,7 +984,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
 
     expect(root().querySelector('[aria-label="Filter by created by"]')).toBeTruthy();
 
-    component.onCreatedByChange('Ana Ruiz');
+    component.filter.selectedCreatedBy.set(['Ana Ruiz']);
     fixture.detectChanges();
     expect(cardTitles().sort()).toEqual(['Seed multiplication guide', 'Seed systems brief', 'Water accounting tool']);
     expect(chipLabels()).toContain('Created by: Ana Ruiz');
@@ -920,7 +996,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
     fixture.detectChanges();
 
     expect(root().querySelector('[aria-label="Filter by created by"]')).toBeNull();
-    expect(filter.selectedCreatedBy()).toBeNull();
+    expect(filter.selectedCreatedBy()).toEqual([]);
     expect(cardCount()).toBe(5);
   });
 
@@ -985,7 +1061,8 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
       }
       // The `.mwb-filter` wrapper is what the T-8 `.custom_select` reshape hangs off — it must
       // survive the swap or the three controls fall back to the legacy 40px violet form shell.
-      expect(popover.querySelectorAll('.mwb-filter app-pr-filter-multiselect').length).toBe(3);
+      expect(popover.querySelectorAll('[data-dimension="phase"] app-pr-filter-multiselect').length).toBe(1);
+      expect(popover.querySelectorAll('[data-dimension="category"] app-pr-filter-multiselect, [data-dimension="origin"] app-pr-filter-multiselect, [data-dimension="center"] app-pr-filter-multiselect').length).toBe(3);
     });
 
     it('ORs the values inside Category and adds one chip per value', () => {
@@ -1452,7 +1529,7 @@ describe('MyWorkBoardComponent — filter row (MWB-T-9)', () => {
         fixture.detectChanges();
         expect(component.chipsExpanded()).toBe(true);
 
-        component.onPhaseChange('Reporting 2025');
+        component.onPhasesChange(['Reporting 2025']);
         fixture.detectChanges();
 
         expect(component.chipsExpanded()).toBe(false);
@@ -1535,7 +1612,7 @@ describe('MyWorkBoardComponent — narrow viewport (MWB-T-11)', () => {
     });
     TestBed.overrideComponent(MyWorkBoardComponent, { remove: { imports: [ReportingProgramBandComponent] }, add: { imports: [BandStubComponent] } });
     TestBed.overrideComponent(MyWorkBoardComponent, {
-      set: { providers: [ProgrammeResultsFilterService, { provide: MyWorkBoardService, useValue: service }] }
+      set: { providers: [ProgrammeResultsFilterService, MyWorkEditingOrderService, { provide: MyWorkBoardService, useValue: service }] }
     });
 
     fixture = TestBed.createComponent(MyWorkBoardComponent);
