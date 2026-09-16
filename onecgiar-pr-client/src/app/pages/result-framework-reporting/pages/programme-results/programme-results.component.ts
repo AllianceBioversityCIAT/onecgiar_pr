@@ -43,11 +43,12 @@ import {
 import { SpTabEmptyStateComponent } from '../dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { BilateralResultsService } from '../bilateral-review/services/bilateral-results.service';
 import {
-  BilateralResultsService,
-  REVIEW_RESULT_ID_QUERY_PARAM,
-  REVIEW_RESULT_QUERY_PARAM
-} from '../bilateral-review/services/bilateral-results.service';
+  isW3BilateralForUpdate,
+  resolveBilateralResultOpenRoute,
+  usesBilateralReviewFlow as usesBilateralReviewFlowUtil
+} from '../../../../shared/routing/bilateral-result-open-route.util';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import {
   formatProgrammeResultPhaseShort,
@@ -1415,7 +1416,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
     if (!result) return false;
 
     const phase = this.dataControlSE.reportingCurrentPhase;
-    return this.usesBilateralReviewFlow(row)
+    return this.isW3BilateralForUpdate(row)
       ? this.api.canUpdateBilateral(result, phase)
       : this.api.shouldShowUpdate(result, phase);
   }
@@ -1464,38 +1465,40 @@ export class ProgrammeResultsComponent implements OnDestroy {
   }
 
   // ── Row activation ──────────────────────────────────────────────────────────────────────
-  /**
-   * AVISA (`SGP-02`) reports bilaterals through the normal Result Detail, not the review drawer.
-   * Same guard as `results-list.component.ts:358`.
-   */
-  private isW3BilateralsAvisa(row: ProgrammeResultRow): boolean {
-    if (row?.origin !== 'W3/Bilaterals') return false;
-    return row?.submitterCode === 'SGP-02' || row?.submitterCode === 'SGP02';
+  private toOpenRouteInput(row: ProgrammeResultRow) {
+    return {
+      sourceOrOrigin: row?.origin,
+      statusId: row?.statusId,
+      statusName: row?.statusName,
+      leadCenter: row?.center,
+      resultCode: row?.code,
+      versionId: row?.versionId,
+      submitterCode: row?.submitterCode,
+      resultId: row?.id,
+      programmeCodeFallback: this.programmeCode()
+    };
+  }
+
+  /** W3 bilateral carry-forward menu rules — broader than review-drawer open routing. */
+  isW3BilateralForUpdate(row: ProgrammeResultRow): boolean {
+    return isW3BilateralForUpdate(this.toOpenRouteInput(row));
   }
 
   /** True when the result opens in the bilateral review drawer instead of Result Detail. */
   usesBilateralReviewFlow(row: ProgrammeResultRow): boolean {
-    if (this.isW3BilateralsAvisa(row) || row?.statusName === 'Approved') return false;
-    return row?.origin === 'W3/Bilaterals';
+    return usesBilateralReviewFlowUtil(this.toOpenRouteInput(row));
   }
 
   /**
-   * Destination for one result. Same branching as `results-list.component.ts:634 getResultRoute()`
-   * — a W3/Bilaterals result that is neither AVISA nor Approved deep-links into the programme's
-   * `bilateral-review` drawer; everything else opens Result Detail with its `?phase=`.
+   * Destination for one result. Same branching as `results-list.component.ts getResultRoute()`
+   * — Editing W3 opens the center editor; in-review W3 deep-links into `bilateral-review`;
+   * everything else opens Result Detail with its `?phase=`.
    */
   // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
+  // @akili-spec bugfix/bilateral-w3-editing-route (BIL-T-2, BIL-R-1)
   resultRoute(row: ProgrammeResultRow): PgrResultRoute {
-    if (this.usesBilateralReviewFlow(row)) {
-      return {
-        commands: ['/result-framework-reporting', 'entity-details', row?.submitterCode || this.programmeCode(), 'bilateral-review'],
-        queryParams: { [REVIEW_RESULT_QUERY_PARAM]: row?.code, [REVIEW_RESULT_ID_QUERY_PARAM]: row?.id }
-      };
-    }
-    return {
-      commands: ['/result', 'result-detail', row?.code, 'general-information'],
-      queryParams: { phase: row?.versionId }
-    };
+    const { commands, queryParams } = resolveBilateralResultOpenRoute(this.toOpenRouteInput(row));
+    return { commands, queryParams };
   }
 
   /** Row click and the menu's "Open result" — one behaviour, per the design. */

@@ -1580,26 +1580,18 @@ describe('ProgrammeResultsComponent', () => {
     });
   });
 
-  it('ships View indicator DISABLED and the other three live (P2-3395; P2-3396 closed 2026-08-24)', () => {
+  it('ships live options in row menu (P2-3395; P2-3396 closed 2026-08-24)', () => {
     component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
     fixture.detectChanges();
 
     const items = rowMenuItems();
     const labels = items.map(item => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
-    expect(labels).toEqual(['Open result', 'View indicator Coming soon', 'Download PDF', 'Copy link']);
-
-    // View indicator is the ONLY one left tagged — it still has no payload to open.
-    const viewIndicator = items[1] as HTMLButtonElement;
-    expect(viewIndicator.disabled).toBe(true);
-    expect(viewIndicator.getAttribute('aria-disabled')).toBe('true');
-    expect(viewIndicator.className).toContain('cursor-not-allowed');
-    expect(viewIndicator.getAttribute('title')).toBeTruthy();
-    expect(viewIndicator.textContent).toContain('Coming soon');
+    expect(labels).toEqual(['Open result', 'Download PDF', 'Copy link']);
 
     // The three live ones are not disabled and carry no tag.
     expect((items[0] as HTMLButtonElement).disabled).toBe(false);
-    expect((items[2] as HTMLAnchorElement).getAttribute('target')).toBe('_blank');
-    const copyLink = items[3] as HTMLButtonElement;
+    expect((items[1] as HTMLAnchorElement).getAttribute('target')).toBe('_blank');
+    const copyLink = items[2] as HTMLButtonElement;
     expect(copyLink.disabled).toBe(false);
     expect(copyLink.className).not.toContain('cursor-not-allowed');
     expect(copyLink.textContent).not.toContain('Coming soon');
@@ -1620,7 +1612,7 @@ describe('ProgrammeResultsComponent', () => {
       const api = TestBed.inject(ApiService) as any;
       api.shouldShowUpdate.mockReturnValue(true);
 
-      expect(openMenu()).toEqual(['Open result', 'Update result', 'View indicator Coming soon', 'Download PDF', 'Copy link']);
+      expect(openMenu()).toEqual(['Open result', 'Update result', 'Download PDF', 'Copy link']);
     });
 
     it('hides it when the row is not eligible, exactly as the old Results list does', () => {
@@ -1819,7 +1811,7 @@ describe('ProgrammeResultsComponent', () => {
     fixture.detectChanges();
 
     const items = rowMenuItems();
-    expect(items.length).toBe(4);
+    expect(items.length).toBe(3);
     for (const item of items) {
       expect(item.className).toContain('whitespace-nowrap');
     }
@@ -1857,7 +1849,13 @@ describe('ProgrammeResultsComponent', () => {
     const clipboard = TestBed.inject(Clipboard);
     const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
 
-    const row = { ...component.data.rows()[0], origin: 'W3/Bilaterals', statusName: 'Submitted', submitterCode: 'SP01' };
+    const row = {
+      ...component.data.rows()[0],
+      origin: 'W3/Bilaterals',
+      statusName: 'Submitted',
+      statusId: 3,
+      submitterCode: 'SP01'
+    };
     expect(component.usesBilateralReviewFlow(row)).toBe(true);
 
     component.copyLink(row);
@@ -1931,6 +1929,54 @@ describe('ProgrammeResultsComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'SP01', 'bilateral-review'], {
       queryParams: { reviewResult: '5003', reviewResultId: 3 }
     });
+  });
+
+  it('opens an Editing W3/Bilaterals result in the center editor, not the review drawer', () => {
+    const row = {
+      ...component.data.rows()[2],
+      statusName: 'Editing',
+      statusId: 1,
+      center: 'AfricaRice',
+      code: '9368',
+      versionId: '36'
+    };
+
+    expect(component.usesBilateralReviewFlow(row)).toBe(false);
+    expect(component.resultRoute(row)).toEqual({
+      commands: ['/bilateral', 'AfricaRice', 'result', '9368'],
+      queryParams: { phase: '36' }
+    });
+
+    const bilateral = TestBed.inject(BilateralResultsService);
+    const drawerSpy = jest.spyOn(bilateral.showReviewDrawer, 'set');
+    component.openResult(row);
+    expect(bilateral.currentResultToReview.set).not.toHaveBeenCalled();
+    expect(drawerSpy).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'AfricaRice', 'result', '9368'], {
+      queryParams: { phase: '36' }
+    });
+  });
+
+  it('copies the center-editor url for an Editing W3/Bilaterals result', () => {
+    const clipboard = TestBed.inject(Clipboard);
+    const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+
+    const row = {
+      ...component.data.rows()[2],
+      origin: 'W3/Bilaterals',
+      statusName: 'Editing',
+      statusId: 1,
+      center: 'AfricaRice',
+      code: '9368',
+      versionId: '36'
+    };
+
+    component.copyLink(row);
+
+    const copied = copySpy.mock.calls[0][0];
+    expect(copied).toContain('/bilateral/AfricaRice/result/9368');
+    expect(copied).toContain('phase=36');
+    expect(copied).not.toContain('/bilateral-review');
   });
 
   it('keeps an Approved or AVISA bilateral on Result Detail', () => {
