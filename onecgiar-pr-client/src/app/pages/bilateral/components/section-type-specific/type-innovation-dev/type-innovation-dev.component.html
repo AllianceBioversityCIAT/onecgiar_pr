@@ -59,6 +59,7 @@
       optionLabel="name"
       optionValue="id"
       [options]="innovationControlListSE.readinessLevelsList"
+      [required]="true"
       [(ngModel)]="body.innovation_readiness_level_id"
       (ngModelChange)="onFieldChange()">
     </app-pr-range-level>
