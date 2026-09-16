@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   applyGreyRule,
   contentHash,
@@ -10,6 +12,14 @@ import {
   QualitySectionKey,
   QualityVerdict,
 } from './bilateral-quality-rules';
+import { BilateralQualityPayloadBuilder } from './bilateral-quality-payload.builder';
+
+const knowledgeProductFixture = JSON.parse(
+  fs.readFileSync(
+    path.join(__dirname, './fixtures/knowledge-product.fixture.json'),
+    'utf8',
+  ),
+);
 
 /**
  * BIL-QAI-T-3 — pure rules: grey rule, KP decision tree, content hash, outstanding flags.
@@ -54,6 +64,7 @@ const buildAiResponse = (
 const buildPayload = (
   evidence: QualityPayload['sections']['evidence'] = [],
 ): QualityPayload => ({
+  contract_version: '0.1',
   request_id: 'req-1',
   result: { type: 'Innovation development' },
   sections: {
@@ -130,6 +141,33 @@ describe('contentHash', () => {
   it('returns a 64-char hex sha256 digest', () => {
     const hash = contentHash({ result: { type: 'Knowledge product' } });
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  // BIL-QAI-T-4 forward pointer (from the T-3 review): contentHash(payload: Record<string,
+  // unknown>) did not structurally accept a `QualityPayload` (TS2345) — the payload builder's
+  // return type. Widened to `QualityPayload | Record<string, unknown>`; this case hashes an
+  // actual built payload to prove the widened signature compiles and behaves.
+  it('hashes a payload produced by BilateralQualityPayloadBuilder without a type error', () => {
+    const builder = new BilateralQualityPayloadBuilder(
+      undefined as never,
+      undefined as never,
+    );
+    const payload: QualityPayload = builder.project(
+      knowledgeProductFixture.detail,
+      knowledgeProductFixture.formDetail,
+      { requestId: 'req-hash-test', timeoutSeconds: 60 },
+    );
+
+    const hash = contentHash(payload);
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+
+    // Same content, different request_id/constraints/timeout -> same hash (design.md §5 "Hash").
+    const samePayloadDifferentRequest: QualityPayload = builder.project(
+      knowledgeProductFixture.detail,
+      knowledgeProductFixture.formDetail,
+      { requestId: 'req-hash-test-2', timeoutSeconds: 30 },
+    );
+    expect(contentHash(samePayloadDifferentRequest)).toBe(hash);
   });
 });
 

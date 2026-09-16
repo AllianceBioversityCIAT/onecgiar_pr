@@ -1,0 +1,158 @@
+{
+  "detail": {
+    "id": 4102,
+    "result_type_id": 5,
+    "title": "Farmer field school on integrated pest management",
+    "description": "Series of training sessions delivered to smallholder farmer groups on IPM practices.",
+    "is_lead_by_partner": false,
+    "no_applicable_partner": false,
+    "obj_result_type": { "id": 5, "name": "Capacity Sharing for Development" },
+    "obj_result_level": { "id": 8, "name": "Output" },
+    "obj_version": { "id": 55, "phase_year": 2026, "phase_name": "Reporting 2026" },
+    "obj_geographic_scope": { "id": 4, "name": "Sub-national" },
+    "leading_result": {
+      "lead_kind": "center",
+      "id": 9002,
+      "code": "IITA",
+      "name": "International Institute of Tropical Agriculture",
+      "acronym": "IITA"
+    },
+    "result_region_array": [],
+    "result_country_array": [
+      {
+        "result_country_id": 502,
+        "country_id": 45,
+        "is_active": true,
+        "country_object": { "id": 45, "name": "Nigeria", "iso_alpha_3": "NGA" },
+        "result_countries_subnational_array": [
+          {
+            "result_country_subnational_id": 91,
+            "is_active": true,
+            "clarisa_subnational_scope_code": "NG-OY",
+            "clarisa_subnational_scope_object": { "code": "NG-OY", "name": "Oyo State" }
+          }
+        ]
+      }
+    ],
+    "result_center_array": [
+      {
+        "result_center_id": 702,
+        "center_id": "IITA",
+        "is_leading_result": true,
+        "is_active": true,
+        "clarisa_center_object": {
+          "code": "IITA",
+          "institutionId": 9002,
+          "clarisa_institution": { "id": 9002, "name": "International Institute of Tropical Agriculture", "acronym": "IITA" }
+        }
+      }
+    ],
+    "result_by_institution_array": [],
+    "evidence_array": [
+      {
+        "id": 30021,
+        "link": "https://example.org/reports/ipm-training-report.pdf",
+        "description": "Training attendance report",
+        "gender_related": true,
+        "youth_related": true,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 0,
+        "evidenceSharepointArray": []
+      },
+      {
+        "id": 30022,
+        "link": "https://prms.internal/sharepoint/attendance-list",
+        "description": "Raw attendance list with participant contacts",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 1,
+        "evidenceSharepointArray": [
+          {
+            "id": 901,
+            "document_id": "doc-def-456",
+            "file_name": "attendance.xlsx",
+            "folder_path": "/internal/capdev",
+            "is_public_file": 0
+          }
+        ]
+      }
+    ],
+    "obj_results_toc_result": [
+      {
+        "official_code": "SP02",
+        "name": "Resilient Agrifood Systems",
+        "initiative_role": "Owner",
+        "toc_mappings": [
+          {
+            "toc_result_id": 20045,
+            "official_code": "SP02",
+            "name": "Resilient Agrifood Systems",
+            "aow": "AOW2",
+            "planned_result": "Yes",
+            "level": "Intermediate Outcome",
+            "title": "Farmers apply integrated pest management practices"
+          }
+        ]
+      }
+    ],
+    "bilateral_projects": [],
+    "capacity_development_summary": {}
+  },
+  "formDetail": {
+    "commonFields": {
+      "id": 4102,
+      "result_title": "Farmer field school on integrated pest management",
+      "result_description": "Series of training sessions delivered to smallholder farmer groups on IPM practices.",
+      "lead_contact_person_id": 5502,
+      "lead_contact_person_data": { "id": 5502, "display_name": "Emeka Obi", "mail": "e.obi@example.org" },
+      "no_applicable_partner": false,
+      "is_lead_by_partner": false
+    },
+    "tocMetadata": {
+      "planned_result": true,
+      "initiative_id": 302,
+      "official_code": "SP02",
+      "short_name": "Resilient Agrifood Systems",
+      "result_toc_results": [
+        {
+          "result_toc_result_id": 88010,
+          "toc_result_id": 20045,
+          "planned_result": true,
+          "initiative_id": 302,
+          "toc_progressive_narrative": "Training builds farmer capacity to reduce pesticide misuse under AOW2.",
+          "toc_level_id": 3
+        }
+      ]
+    },
+    "geographicScope": {},
+    "contributingCenters": [],
+    "contributingInstitutions": [],
+    "contributingProjects": [],
+    "contributingInitiatives": {
+      "contributing_and_primary_initiative": [],
+      "accepted_contributing_initiatives": [],
+      "pending_contributing_initiatives": []
+    },
+    "evidence": [{ "id": 30021, "link": "https://example.org/reports/ipm-training-report.pdf", "is_sharepoint": 0 }],
+    "resultTypeResponse": [
+      {
+        "result_capacity_development_id": 5001,
+        "female_using": "48",
+        "male_using": "52",
+        "non_binary_using": "1",
+        "has_unkown_using": "3",
+        "capdev_term_id": 12,
+        "capdev_delivery_method_id": 3,
+        "delivery_method_name": "In person",
+        "term_name": "Short-term",
+        "term_term": "< 3 months"
+      }
+    ],
+    "impactAreaScores": []
+  }
+}

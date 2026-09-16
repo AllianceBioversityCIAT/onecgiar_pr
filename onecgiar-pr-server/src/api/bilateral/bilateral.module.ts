@@ -60,6 +60,9 @@ import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-ce
 import { BilateralHandoffCode } from './entities/bilateral-handoff-code.entity';
 import { BilateralQualityAssessment } from './entities/bilateral-quality-assessment.entity';
 import { BilateralQualityAssessmentRepository } from './repositories/bilateral-quality-assessment.repository';
+import { BilateralQualityPayloadBuilder } from './services/quality-assessment/bilateral-quality-payload.builder';
+import { INDICATOR_DESCRIPTION_RESOLVER } from './services/quality-assessment/indicator-description-resolver';
+import { TocIndicatorDescriptionResolver } from './services/quality-assessment/toc-indicator-description-resolver.service';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
@@ -207,6 +210,22 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
     // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-2) — thin repository over
     // `bilateral_quality_assessments`; T-6/T-7 inject it directly, same module, no export needed.
     BilateralQualityAssessmentRepository,
+    // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-4) — definitions-only payload
+    // builder for the AI traffic light. Depends only on `BilateralService`, `ResultsService`
+    // (both already resolvable in this module) and the indicator-description resolver below —
+    // no new module imports, so no new cross-module cycle. T-6 injects it directly for the
+    // orchestrator; no export needed (mirrors the T-2 repository above).
+    BilateralQualityPayloadBuilder,
+    // Concrete `IndicatorDescriptionResolver` (see
+    // `./services/quality-assessment/indicator-description-resolver.ts` for why no existing
+    // provider in this module's reach could fill the token instead): queries
+    // `${DB_TOC}.toc_results_indicators` directly through the already-injected `DataSource`,
+    // the same connection `BilateralService` itself already uses for raw queries.
+    TocIndicatorDescriptionResolver,
+    {
+      provide: INDICATOR_DESCRIPTION_RESOLVER,
+      useExisting: TocIndicatorDescriptionResolver,
+    },
   ],
   // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
   // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second

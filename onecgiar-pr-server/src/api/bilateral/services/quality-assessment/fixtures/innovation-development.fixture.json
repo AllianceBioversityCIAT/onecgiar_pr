@@ -1,0 +1,168 @@
+{
+  "detail": {
+    "id": 4103,
+    "result_type_id": 7,
+    "title": "Solar-powered cold storage unit for dairy cooperatives",
+    "description": "A modular solar-powered cold storage unit designed for smallholder dairy cooperatives to reduce post-harvest losses.",
+    "is_lead_by_partner": false,
+    "no_applicable_partner": false,
+    "obj_result_type": { "id": 7, "name": "Innovation Development" },
+    "obj_result_level": { "id": 8, "name": "Output" },
+    "obj_version": { "id": 55, "phase_year": 2026, "phase_name": "Reporting 2026" },
+    "obj_geographic_scope": { "id": 2, "name": "Regional" },
+    "leading_result": {
+      "lead_kind": "center",
+      "id": 9003,
+      "code": "ILRI",
+      "name": "International Livestock Research Institute",
+      "acronym": "ILRI"
+    },
+    "result_region_array": [
+      { "result_region_id": 601, "region_id": 2, "is_active": true, "region_object": { "um49Code": 2, "name": "Africa" } }
+    ],
+    "result_country_array": [],
+    "result_center_array": [
+      {
+        "result_center_id": 703,
+        "center_id": "ILRI",
+        "is_leading_result": true,
+        "is_active": true,
+        "clarisa_center_object": {
+          "code": "ILRI",
+          "institutionId": 9003,
+          "clarisa_institution": { "id": 9003, "name": "International Livestock Research Institute", "acronym": "ILRI" }
+        }
+      }
+    ],
+    "result_by_institution_array": [
+      {
+        "institutions_id": 8802,
+        "name": "East Africa Dairy Cooperative Union",
+        "acronym": "EADCU",
+        "is_predicted": false,
+        "is_leading_result": false,
+        "institution_type_name": "Farmer cooperative"
+      }
+    ],
+    "evidence_array": [
+      {
+        "id": 30031,
+        "link": "https://example.org/reports/cold-storage-pilot.pdf",
+        "description": "Pilot deployment report",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": true,
+        "environmental_biodiversity_related": true,
+        "poverty_related": false,
+        "is_sharepoint": 0,
+        "evidenceSharepointArray": []
+      },
+      {
+        "id": 30032,
+        "link": "https://prms.internal/sharepoint/design-schematics",
+        "description": "Confidential engineering schematics",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 1,
+        "evidenceSharepointArray": [
+          {
+            "id": 902,
+            "document_id": "doc-ghi-789",
+            "file_name": "schematics.pdf",
+            "folder_path": "/internal/innovation",
+            "is_public_file": 0
+          }
+        ]
+      }
+    ],
+    "obj_results_toc_result": [
+      {
+        "official_code": "SP03",
+        "name": "Livestock and Dairy Systems",
+        "initiative_role": "Owner",
+        "toc_mappings": [
+          {
+            "toc_result_id": 20067,
+            "official_code": "SP03",
+            "name": "Livestock and Dairy Systems",
+            "aow": "AOW1",
+            "planned_result": "No",
+            "level": "High Level Output",
+            "title": "Cold-chain innovations reduce dairy post-harvest losses"
+          }
+        ]
+      }
+    ],
+    "bilateral_projects": [{ "short_name": "DairyCool", "organization_code": "IFAD" }]
+  },
+  "formDetail": {
+    "commonFields": {
+      "id": 4103,
+      "result_title": "Solar-powered cold storage unit for dairy cooperatives",
+      "result_description": "A modular solar-powered cold storage unit designed for smallholder dairy cooperatives to reduce post-harvest losses.",
+      "lead_contact_person_id": 5503,
+      "lead_contact_person_data": { "id": 5503, "display_name": "Amina Yusuf", "mail": "a.yusuf@example.org" },
+      "no_applicable_partner": false,
+      "is_lead_by_partner": false
+    },
+    "tocMetadata": {
+      "planned_result": false,
+      "initiative_id": 303,
+      "official_code": "SP03",
+      "short_name": "Livestock and Dairy Systems",
+      "result_toc_results": [
+        {
+          "result_toc_result_id": 88020,
+          "toc_result_id": 20067,
+          "planned_result": false,
+          "initiative_id": 303,
+          "toc_progressive_narrative": "An unplanned innovation reported because of an emerging cold-chain gap identified mid-cycle.",
+          "toc_level_id": 2
+        }
+      ]
+    },
+    "geographicScope": {},
+    "contributingCenters": [],
+    "contributingInstitutions": [],
+    "contributingProjects": [
+      {
+        "id": 6602,
+        "is_lead": true,
+        "obj_clarisa_project": {
+          "id": 7702,
+          "shortName": "DairyCool",
+          "fullName": "Dairy Cold-Chain Innovation Fund",
+          "obj_organization": { "id": 8803, "name": "International Fund for Agricultural Development", "acronym": "IFAD" }
+        }
+      }
+    ],
+    "contributingInitiatives": {
+      "contributing_and_primary_initiative": [],
+      "accepted_contributing_initiatives": [],
+      "pending_contributing_initiatives": []
+    },
+    "evidence": [{ "id": 30031, "link": "https://example.org/reports/cold-storage-pilot.pdf", "is_sharepoint": 0 }],
+    "resultTypeResponse": [
+      {
+        "result_innovation_dev_id": 4001,
+        "innovation_nature_id": 12,
+        "innovation_type_id": 12,
+        "innovation_type_name": "Technological innovation",
+        "innovation_developers": "ILRI Engineering Team, EADCU",
+        "innovation_readiness_level_id": 6,
+        "readinness_level_id": 6,
+        "level": 6,
+        "name": "Proven innovation ready for uptake",
+        "project_name": "DairyCool",
+        "project_id": 7702,
+        "non_pooled_projetct_budget_id": 1201,
+        "kind_cash": "In-kind",
+        "is_determined": true
+      }
+    ],
+    "impactAreaScores": []
+  }
+}

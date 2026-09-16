@@ -1,0 +1,158 @@
+{
+  "detail": {
+    "id": 4105,
+    "result_type_id": 1,
+    "title": "National seed policy revised to fast-track climate-resilient varieties",
+    "description": "Government adopts a revised seed policy that fast-tracks registration of climate-resilient crop varieties.",
+    "is_lead_by_partner": true,
+    "no_applicable_partner": false,
+    "obj_result_type": { "id": 1, "name": "Policy Change" },
+    "obj_result_level": { "id": 2, "name": "Outcome" },
+    "obj_version": { "id": 55, "phase_year": 2026, "phase_name": "Reporting 2026" },
+    "obj_geographic_scope": { "id": 3, "name": "National" },
+    "leading_result": {
+      "lead_kind": "partner",
+      "id": 8804,
+      "code": null,
+      "name": "Ministry of Agriculture, Ethiopia",
+      "acronym": "MoA-ET"
+    },
+    "result_region_array": [],
+    "result_country_array": [
+      {
+        "result_country_id": 504,
+        "country_id": 68,
+        "is_active": true,
+        "country_object": { "id": 68, "name": "Ethiopia", "iso_alpha_3": "ETH" },
+        "result_countries_subnational_array": []
+      }
+    ],
+    "result_center_array": [
+      {
+        "result_center_id": 705,
+        "center_id": "ILRI",
+        "is_leading_result": false,
+        "is_active": true,
+        "clarisa_center_object": {
+          "code": "ILRI",
+          "institutionId": 9003,
+          "clarisa_institution": { "id": 9003, "name": "International Livestock Research Institute", "acronym": "ILRI" }
+        }
+      }
+    ],
+    "result_by_institution_array": [
+      {
+        "institutions_id": 8804,
+        "name": "Ministry of Agriculture, Ethiopia",
+        "acronym": "MoA-ET",
+        "is_predicted": false,
+        "is_leading_result": true,
+        "institution_type_name": "Government"
+      }
+    ],
+    "evidence_array": [
+      {
+        "id": 30051,
+        "link": "https://example.org/policy/seed-policy-gazette.pdf",
+        "description": "Official gazette notice of the revised seed policy",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": true,
+        "poverty_related": false,
+        "is_sharepoint": 0,
+        "evidenceSharepointArray": []
+      },
+      {
+        "id": 30052,
+        "link": "https://prms.internal/sharepoint/ministry-briefing",
+        "description": "Internal ministry briefing note",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 1,
+        "evidenceSharepointArray": [
+          {
+            "id": 904,
+            "document_id": "doc-mno-654",
+            "file_name": "briefing.pdf",
+            "folder_path": "/internal/policy",
+            "is_public_file": 0
+          }
+        ]
+      }
+    ],
+    "obj_results_toc_result": [
+      {
+        "official_code": "SP05",
+        "name": "Policy Innovation for Agrifood Systems",
+        "initiative_role": "Owner",
+        "toc_mappings": [
+          {
+            "toc_result_id": 20101,
+            "official_code": "SP05",
+            "name": "Policy Innovation for Agrifood Systems",
+            "aow": "AOW2",
+            "planned_result": "Yes",
+            "level": "2030 Outcome",
+            "title": "Seed policies enable faster release of climate-resilient varieties"
+          }
+        ]
+      }
+    ],
+    "bilateral_projects": [],
+    "policy_change_summary": {}
+  },
+  "formDetail": {
+    "commonFields": {
+      "id": 4105,
+      "result_title": "National seed policy revised to fast-track climate-resilient varieties",
+      "result_description": "Government adopts a revised seed policy that fast-tracks registration of climate-resilient crop varieties.",
+      "lead_contact_person_id": 5505,
+      "lead_contact_person_data": { "id": 5505, "display_name": "Tesfaye Bekele", "mail": "t.bekele@example.org" },
+      "no_applicable_partner": false,
+      "is_lead_by_partner": true
+    },
+    "tocMetadata": {
+      "planned_result": true,
+      "initiative_id": 305,
+      "official_code": "SP05",
+      "short_name": "Policy Innovation for Agrifood Systems",
+      "result_toc_results": [
+        {
+          "result_toc_result_id": 88040,
+          "toc_result_id": 20101,
+          "planned_result": true,
+          "initiative_id": 305,
+          "toc_progressive_narrative": "The ministry credits PRMS-supported evidence for the fast-track clause in the revised policy.",
+          "toc_level_id": 4
+        }
+      ]
+    },
+    "geographicScope": {},
+    "contributingCenters": [],
+    "contributingInstitutions": [],
+    "contributingProjects": [],
+    "contributingInitiatives": {
+      "contributing_and_primary_initiative": [],
+      "accepted_contributing_initiatives": [],
+      "pending_contributing_initiatives": []
+    },
+    "evidence": [{ "id": 30051, "link": "https://example.org/policy/seed-policy-gazette.pdf", "is_sharepoint": 0 }],
+    "resultTypeResponse": [
+      {
+        "result_policy_change_id": 2001,
+        "policy_type_id": 4,
+        "policy_stage_id": 7,
+        "policy_stage_name": "Enacted / adopted",
+        "policy_type_name": "Regulation / legal instrument",
+        "implementing_organization": [
+          { "institution_id": 8804, "acronym": "MoA-ET", "institution_name": "Ministry of Agriculture, Ethiopia" }
+        ]
+      }
+    ],
+    "impactAreaScores": []
+  }
+}

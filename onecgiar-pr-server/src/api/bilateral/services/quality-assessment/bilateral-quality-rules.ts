@@ -60,6 +60,12 @@ export interface QualityPayloadEvidenceItem {
 
 /** The definitions-only payload built from the persisted result (contract v0.1). */
 export interface QualityPayload {
+  /**
+   * Echoed contract version (`docs/bilateral-module/integration-contracts.md` → "Quality
+   * assessment (outbound)"). Stays inside the content hash — unlike `request_id` and
+   * `constraints`, a contract bump legitimately changes what was assessed.
+   */
+  contract_version: string;
   request_id?: string;
   result: Record<string, unknown>;
   sections: {
@@ -75,9 +81,13 @@ export interface QualityPayload {
 /**
  * sha256 hex of the definitions-only payload with keys sorted recursively and
  * `request_id` / `constraints` stripped (design.md §5 "Hash"). Arrays keep
- * their order — only object keys are sorted.
+ * their order — only object keys are sorted. Accepts a built `QualityPayload` directly
+ * (BIL-QAI-T-4 forward pointer from the `T-3` review: the plain `Record<string, unknown>`
+ * signature did not structurally accept the payload builder's typed output).
  */
-export function contentHash(payload: Record<string, unknown>): string {
+export function contentHash(
+  payload: QualityPayload | Record<string, unknown>,
+): string {
   const rest: Record<string, unknown> = { ...payload };
   delete rest.request_id;
   delete rest.constraints;

@@ -1,0 +1,131 @@
+{
+  "detail": {
+    "id": 4106,
+    "result_type_id": 8,
+    "title": "Regional data-sharing protocol for agroclimatic monitoring",
+    "description": "A protocol enabling regional partners to share standardized agroclimatic monitoring data.",
+    "is_lead_by_partner": false,
+    "no_applicable_partner": true,
+    "obj_result_type": { "id": 8, "name": "Other output" },
+    "obj_result_level": { "id": 8, "name": "Output" },
+    "obj_version": { "id": 55, "phase_year": 2026, "phase_name": "Reporting 2026" },
+    "obj_geographic_scope": { "id": 2, "name": "Regional" },
+    "leading_result": {
+      "lead_kind": "center",
+      "id": 9005,
+      "code": "CIMMYT",
+      "name": "International Maize and Wheat Improvement Center",
+      "acronym": "CIMMYT"
+    },
+    "result_region_array": [
+      { "result_region_id": 602, "region_id": 5, "is_active": true, "region_object": { "um49Code": 5, "name": "South America" } }
+    ],
+    "result_country_array": [],
+    "result_center_array": [
+      {
+        "result_center_id": 706,
+        "center_id": "CIMMYT",
+        "is_leading_result": true,
+        "is_active": true,
+        "clarisa_center_object": {
+          "code": "CIMMYT",
+          "institutionId": 9005,
+          "clarisa_institution": { "id": 9005, "name": "International Maize and Wheat Improvement Center", "acronym": "CIMMYT" }
+        }
+      }
+    ],
+    "result_by_institution_array": [],
+    "evidence_array": [
+      {
+        "id": 30061,
+        "link": "https://example.org/protocols/agroclimatic-data-protocol.pdf",
+        "description": "Signed data-sharing protocol",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": true,
+        "poverty_related": false,
+        "is_sharepoint": 0,
+        "evidenceSharepointArray": []
+      },
+      {
+        "id": 30062,
+        "link": "https://prms.internal/sharepoint/draft-protocol-comments",
+        "description": "Draft protocol with partner review comments",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 1,
+        "evidenceSharepointArray": [
+          {
+            "id": 905,
+            "document_id": "doc-pqr-987",
+            "file_name": "draft-comments.docx",
+            "folder_path": "/internal/other-output",
+            "is_public_file": 0
+          }
+        ]
+      }
+    ],
+    "obj_results_toc_result": [
+      {
+        "official_code": "SP06",
+        "name": "Digital and Data-Driven Agriculture",
+        "initiative_role": "Owner",
+        "toc_mappings": [
+          {
+            "toc_result_id": 20123,
+            "official_code": "SP06",
+            "name": "Digital and Data-Driven Agriculture",
+            "aow": "AOW1",
+            "planned_result": "No",
+            "level": "High Level Output",
+            "title": "Regional partners share standardized agroclimatic data"
+          }
+        ]
+      }
+    ],
+    "bilateral_projects": []
+  },
+  "formDetail": {
+    "commonFields": {
+      "id": 4106,
+      "result_title": "Regional data-sharing protocol for agroclimatic monitoring",
+      "result_description": "A protocol enabling regional partners to share standardized agroclimatic monitoring data.",
+      "lead_contact_person_id": 5506,
+      "lead_contact_person_data": { "id": 5506, "display_name": "Sofia Reyes", "mail": "s.reyes@example.org" },
+      "no_applicable_partner": true,
+      "is_lead_by_partner": false
+    },
+    "tocMetadata": {
+      "planned_result": false,
+      "initiative_id": 306,
+      "official_code": "SP06",
+      "short_name": "Digital and Data-Driven Agriculture",
+      "result_toc_results": [
+        {
+          "result_toc_result_id": 88050,
+          "toc_result_id": 20123,
+          "planned_result": false,
+          "initiative_id": 306,
+          "toc_progressive_narrative": "An opportunistic regional agreement reported outside the original plan.",
+          "toc_level_id": 2
+        }
+      ]
+    },
+    "geographicScope": {},
+    "contributingCenters": [],
+    "contributingInstitutions": [],
+    "contributingProjects": [],
+    "contributingInitiatives": {
+      "contributing_and_primary_initiative": [],
+      "accepted_contributing_initiatives": [],
+      "pending_contributing_initiatives": []
+    },
+    "evidence": [{ "id": 30061, "link": "https://example.org/protocols/agroclimatic-data-protocol.pdf", "is_sharepoint": 0 }],
+    "resultTypeResponse": null,
+    "impactAreaScores": []
+  }
+}
