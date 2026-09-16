@@ -250,7 +250,8 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   @ViewChild('table') table: PrTableComponent;
-  @ViewChild('filters') filters: ResultsListFiltersComponent;
+  // static: the side-column filter mode renders the child's template on the first pass.
+  @ViewChild('filters', { static: true }) filters: ResultsListFiltersComponent;
 
   // Action menu overlay state (replaces PrimeNG p-popover)
   menuOpen = signal(false);

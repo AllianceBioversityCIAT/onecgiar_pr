@@ -56,34 +56,6 @@ import { ResultStatusData } from '../../shared/constants/result-status.enum';
  *
  * Change THIS constant — and nothing else — if the set moves again.
  */
-/**
- * P2-3292 Step 3 — statuses an innovation may have to be offered as a MERGE or SPLIT target.
- *
- * 🛑 Deliberately NOT `QA_LINKABLE_INNOVATION_STATUS_IDS`: that set includes Discontinued(4) on
- * purpose, and Step 3 says "Not discontinued" in writing. An innovation that is itself closed
- * cannot be where another one continued.
- *
- * Includes Approved(6) alongside QualityAssessed(2) for the same reason its sibling does: a
- * W3/bilateral innovation completes the same quality process and lands on 6, so leaving it out
- * would make every bilateral innovation invisible as a target. **Confirmed live on 4 Sep 2026**:
- * result 8970 "test bilateral JD" comes back in status 6, so with status 2 alone a reporter who
- * merged into it would have no way to say so. If business means status 2 alone, this constant is
- * the only thing to change.
- *
- * 🛑 DO NOT "UNIFY" THIS WITH THE ENABLERS FILTER OF P2-3572. `getResultByTypes` (used by
- * Innovation Packages Step 2) filters to statuses 2 and 3 and deliberately leaves Approved OUT —
- * and that is also correct, because ITS story says "Quality Assessed and Submitted" verbatim while
- * this one says "QA'd" without qualification. Two stories, two filters; the difference lives in
- * each story's text, not in a technical preference. Measured on 4 Sep: 6 Policy change, 16
- * Innovation use, 15 Capacity sharing and 14 Innovation development sit in status 6 and are
- * excluded there — the last figure since before P2-3572 existed, so it is a pre-existing rule
- * awaiting a business decision, not a gap. Making the two constants agree breaks one of them.
- */
-export const MERGE_SPLIT_TARGET_STATUS_IDS: number[] = [
-  ResultStatusData.QualityAssessed.value, // 2 — QAed
-  ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral)
-];
-
 export const QA_LINKABLE_INNOVATION_STATUS_IDS: number[] = [
   ResultStatusData.QualityAssessed.value, // 2 — QAed
   ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral and W1/W2 alike)
@@ -759,6 +731,7 @@ WHERE
         CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
         v.status as phase_status,
         r.in_qa as inQA,
+        r.is_replicated,
         ci.portfolio_id,
         cp.name as portfolio_name,
         cp.acronym as acronym,
@@ -2981,16 +2954,13 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
    *
    * ## What the story fixes, verbatim (P2-3292, Steps 3A and 3B)
    *   - "one or more innovations from the full PRMS portfolio"  → no phase filter, multi-select
-   *   - "Status = QA'd (completed QA process)"                  → see the status note below
-   *   - "Not discontinued"                                      → status 4 excluded, explicitly
+   *   - "Status = QA'd (completed QA process)"                  → superseded, see note below
+   *   - "Not discontinued"                                      → still enforced via `is_discontinued`
    *   - "Innovation ID + Innovation title"                      → `result_code` and `title`
    *
-   * ⚠️ **What "QA'd" means here is a business nuance, not a code detail.** In PRMS it is result
-   * status 2 (`quality-assessed`), but W3/bilateral innovations complete the same process and land
-   * on status 6 (`approved`) — which is why `QA_LINKABLE_INNOVATION_STATUS_IDS` treats 2 and 6 as
-   * equivalent. This method follows that precedent and offers both, so a bilateral innovation is
-   * not invisible as a merge target. If business means status 2 alone, this is the one constant to
-   * change. Ángel also quoted Nicoleta with "reported/QA'ed/updated", which is wider still.
+   * ⚠️ Eligibility: any active, non-discontinued (`is_discontinued` flag) Innovation Development
+   * result, any `status_id` — the P2-3292 Step 3 QA'd/Approved gate was superseded 2026-09-16, see
+   * `docs/specs/results/expand-split-innovation-picker` RES-DD-1.
    *
    * ⚠️ ONE ROW PER INNOVATION. A result is replicated into every phase keeping its `result_code`
    * and title, so without the `NOT EXISTS` the reporter sees the same innovation once per phase
@@ -3013,11 +2983,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     ownerInitiativeId?: number;
     limit?: number;
   }) {
-    const statusPlaceholders = MERGE_SPLIT_TARGET_STATUS_IDS.map(
-      () => '?',
-    ).join(', ');
-
-    const params: any[] = [...MERGE_SPLIT_TARGET_STATUS_IDS];
+    const params: any[] = [];
     const conditions: string[] = [];
 
     if (options?.excludeResultCode) {
@@ -3046,9 +3012,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       params.push(`%${trimmedSearch}%`, `%${trimmedSearch}%`);
     }
 
-    // The de-duplication subquery repeats the status set.
-    params.push(...MERGE_SPLIT_TARGET_STATUS_IDS);
-
     const limit = Number.isInteger(options?.limit) ? options.limit : 50;
     params.push(limit);
 
@@ -3067,7 +3030,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id
     WHERE r.is_active = TRUE
       AND r.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
-      AND r.status_id IN (${statusPlaceholders})
       AND (r.is_discontinued IS NULL OR r.is_discontinued = FALSE)
       ${conditions.join('\n      ')}
       AND NOT EXISTS (
@@ -3078,7 +3040,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         WHERE newer.result_code = r.result_code
           AND newer.is_active = TRUE
           AND newer.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
-          AND newer.status_id IN (${statusPlaceholders})
           AND (newer.is_discontinued IS NULL OR newer.is_discontinued = FALSE)
           AND newer.id > r.id
       )
@@ -4122,6 +4083,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.result_type_id,
         rs.result_status_id AS status_id,
         rs.status_name,
+        r.created_by,
+        (
+          SELECT
+            NULLIF(
+              TRIM(
+                CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+              ),
+              ''
+            )
+          FROM users u
+          WHERE u.id = r.created_by
+        ) AS created_by_name,
         r.created_date,
         r.version_id,
         r.source,

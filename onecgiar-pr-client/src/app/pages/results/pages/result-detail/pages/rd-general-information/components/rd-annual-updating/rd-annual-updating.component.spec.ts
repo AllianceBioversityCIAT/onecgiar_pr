@@ -483,4 +483,53 @@ describe('RdAnnualUpdatingComponent', () => {
       expect(c.generalInfoBody.is_discontinued).toBe(false);
     });
   });
+
+  /**
+   * SIP-T-5 / SIP-AC-4 — the merge/split dropdown description strings, read from the rendered DOM.
+   *
+   * This component's own CLAUDE.md warns that a class-field assertion cannot see what
+   * `app-pr-field-header` actually appends (the missing-colon defect above is the proof: twelve
+   * class-field tests stayed green while it shipped). The `description` here does not go through
+   * `headerLabel`, it flows into `app-pr-multi-select`'s own `[description]` input and renders via
+   * `app-field-card`'s `.desc_text` — a template-string assertion on the component's own HTML
+   * literal would not prove what the reporter sees any more than a class-field read would have
+   * caught the colon. Only a rendered-DOM read does.
+   */
+  describe('SIP-T-5 — merge/split description strings, as rendered in the DOM', () => {
+    const MERGE_REASON = 'Discontinued: merging with another innovation';
+    const SPLIT_REASON = 'Discontinued: splitting into multiple innovations';
+    const EXPECTED_DESCRIPTION = 'Only active, non-discontinued innovations can be selected.';
+
+    /**
+     * Renders with BOTH the merge and split reasons already ticked, so both `app-pr-multi-select`
+     * instances mount. Same `fixture.destroy()` precaution as `renderFor`/`renderChecklistFor` (see
+     * the note on `renderFor`). `GET_mergeSplitTargetInnovations` is stubbed too: `ngOnInit` calls
+     * `loadMergeSplitCatalogue()` because `is_discontinued` is true here.
+     */
+    const renderMergeSplitFor = (currentResult: any): HTMLElement => {
+      fixture.destroy();
+      dataControlSE.currentResult = currentResult;
+      const renderedFixture = TestBed.createComponent(RdAnnualUpdatingComponent);
+      jest.spyOn(renderedFixture.componentInstance.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of({ response: { value: '' } }));
+      jest.spyOn(renderedFixture.componentInstance.api.resultsSE, 'GET_mergeSplitTargetInnovations').mockReturnValue(of({ response: [] }));
+      renderedFixture.componentInstance.generalInfoBody.is_discontinued = true;
+      renderedFixture.componentInstance.generalInfoBody.discontinued_options = [
+        { investment_discontinued_option_id: 40, option: MERGE_REASON, value: true },
+        { investment_discontinued_option_id: 41, option: SPLIT_REASON, value: true }
+      ];
+      renderedFixture.detectChanges();
+      return renderedFixture.nativeElement;
+    };
+
+    it('reads "Only active, non-discontinued innovations can be selected." on both dropdowns, with no "quality-assessed" anywhere', () => {
+      const root = renderMergeSplitFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25' });
+
+      const mergeDescription = root.querySelector('[data-testid="au-field-merge-targets"] .desc_text');
+      const splitDescription = root.querySelector('[data-testid="au-field-split-targets"] .desc_text');
+
+      expect(mergeDescription?.textContent?.trim()).toBe(EXPECTED_DESCRIPTION);
+      expect(splitDescription?.textContent?.trim()).toBe(EXPECTED_DESCRIPTION);
+      expect(root.innerHTML.toLowerCase()).not.toContain('quality-assessed');
+    });
+  });
 });

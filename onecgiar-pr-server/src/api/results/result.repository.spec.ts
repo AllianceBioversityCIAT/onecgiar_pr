@@ -62,6 +62,7 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('rt.id IN (?)');
     expect(sql).toContain('ci.portfolio_id IN (?)');
     expect(sql).toContain('r.status_id IN (?,?)');
+    expect(sql).toContain('r.is_replicated');
     expect(sql).toContain('LIMIT 10');
     expect(sql).toContain('OFFSET 0');
 
@@ -301,6 +302,18 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('LEFT JOIN version v');
     expect(sql).toContain('rt.name AS result_category');
     expect(params).toEqual([8731]);
+  });
+
+  it('returns created_by and created_by_name for the bilateral centre dashboard', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.created_by');
+    expect(sql).toContain('AS created_by_name');
+    expect(sql).toContain('FROM users u');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
   it('includes AI provenance fields in bilateral center results ordered newest first', async () => {

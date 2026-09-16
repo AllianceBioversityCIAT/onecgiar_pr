@@ -31,6 +31,7 @@ describe('parseBilateralQueryParams', () => {
       source: null,
       method: null,
       search: '',
+      createdBy: [],
       multi: false,
     });
     expect(stripped).toEqual([]);
@@ -302,6 +303,21 @@ describe('parseBilateralQueryParams', () => {
     });
   });
 
+  describe('createdBy', () => {
+    it('parses comma-separated creator display names and marks the key present', () => {
+      const { params, stripped, present } = parseBilateralQueryParams(
+        convertToParamMap({ createdBy: 'Angel Jarrin,Santiago Sanchez' }),
+      );
+      expect(params.createdBy).toEqual(['Angel Jarrin', 'Santiago Sanchez']);
+      expect(stripped).toEqual([]);
+      expect(present).toEqual(['createdBy']);
+    });
+
+    it('defaults to an empty array when absent', () => {
+      expect(parseBilateralQueryParams(emptyMap).params.createdBy).toEqual([]);
+    });
+  });
+
   describe('multi', () => {
     it('parses "1" as true', () => {
       const { params, stripped } = parseBilateralQueryParams(convertToParamMap({ multi: '1' }));
@@ -339,6 +355,7 @@ describe('serializeBilateralQueryParams', () => {
       source: 'w3',
       method: 'ai',
       search: 'cocoa',
+      createdBy: ['Angel Jarrin'],
       multi: true,
     });
 
@@ -352,6 +369,7 @@ describe('serializeBilateralQueryParams', () => {
       source: 'w3',
       method: 'ai',
       search: 'cocoa',
+      createdBy: 'Angel Jarrin',
       multi: '1',
     });
   });
@@ -391,6 +409,7 @@ describe('serializeBilateralQueryParams', () => {
       source: 'w3' as const,
       method: 'ai' as const,
       search: 'cocoa',
+      createdBy: [],
       multi: true,
     };
     const serialized = serializeBilateralQueryParams(original);

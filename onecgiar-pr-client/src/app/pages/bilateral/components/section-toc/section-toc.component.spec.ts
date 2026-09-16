@@ -544,6 +544,80 @@ describe('SectionTocComponent', () => {
   });
 
   // ── planned change ─────────────────────────────────────────────────
+  describe('planned_result selection stability', () => {
+    it('does not overwrite a user Yes/No change with a stale loadTocState response', async () => {
+      let resolveLoad: (value: unknown) => void = () => undefined;
+      autoSave.loadTocState.mockReturnValue(
+        new Promise(resolve => {
+          resolveLoad = resolve;
+        }),
+      );
+
+      fixture.detectChanges();
+      component.onPlannedChange(true);
+      expect(component.isPlanned()).toBe(true);
+
+      resolveLoad({
+        planned_result: false,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: 'test',
+      });
+      await Promise.resolve();
+
+      expect(component.isPlanned()).toBe(true);
+    });
+
+    it('clears pending why-reported saves when switching from No to Yes', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      component.onPlannedChange(false);
+      component.onWhyReportedInput('test');
+      component.onPlannedChange(true);
+      jest.advanceTimersByTime(2000);
+      expect(autoSave.saveTocMapping).not.toHaveBeenCalled();
+      jest.useRealTimers();
+    });
+  });
+
+  describe('P/A defer checkbox (W3 bilateral)', () => {
+    beforeEach(() => {
+      sessionStorage.clear();
+    });
+
+    it('hides the Yes/No control and satisfies the checklist when defer is checked', () => {
+      fixture.detectChanges();
+      component.onPaWillCompleteChange(true);
+      expect(component.showPlannedQuestion()).toBe(false);
+      expect(component.isPlanned()).toBeNull();
+    });
+
+    it('restores the Yes/No control when defer is unchecked', () => {
+      fixture.detectChanges();
+      component.onPaWillCompleteChange(true);
+      component.onPaWillCompleteChange(false);
+      expect(component.showPlannedQuestion()).toBe(true);
+    });
+
+    it('persists defer choice per result in sessionStorage', () => {
+      fixture.detectChanges();
+      component.onPaWillCompleteChange(true);
+      expect(sessionStorage.getItem('prms.bilateralPaTocDefer:123')).toBe('1');
+      component.onPaWillCompleteChange(false);
+      expect(sessionStorage.getItem('prms.bilateralPaTocDefer:123')).toBeNull();
+    });
+
+    it('clears defer when the user picks Yes or No', () => {
+      fixture.detectChanges();
+      component.onPaWillCompleteChange(true);
+      component.onPlannedChange(false);
+      expect(component.paWillCompleteTocMapping()).toBe(false);
+      expect(sessionStorage.getItem('prms.bilateralPaTocDefer:123')).toBeNull();
+    });
+  });
+
   describe('onPlannedChange', () => {
     it('preselects level 1 for a planned output result', () => {
       fixture.detectChanges();
@@ -806,11 +880,18 @@ describe('SectionTocComponent', () => {
       expect(api.tocApiSE.GET_tocLevelsByconfig).not.toHaveBeenCalled();
     });
 
-    it('re-fetches on init when the initiative is already known', () => {
-      fixture.detectChanges();
-      component.isPlanned.set(true);
+    it('fetches lists after hydrating a saved planned result', async () => {
+      autoSave.loadTocState.mockResolvedValue({
+        planned_result: true,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: null,
+      });
       api.tocApiSE.GET_tocLevelsByconfig.mockClear();
-      component.ngOnInit();
+      fixture.detectChanges();
+      await Promise.resolve();
       expect(api.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalled();
     });
 
@@ -885,6 +966,12 @@ describe('SectionTocComponent template — ToC question wording (P2-3142)', () =
     const question: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="toc-planned-question"] app-pr-yes-or-not');
     expect(question).not.toBeNull();
     expect(question?.textContent).toContain(TOC_QUESTION_LABEL);
+  });
+
+  it('renders the P/A defer checkbox and keeps the ToC KPI question optional for W3 bilateral', () => {
+    const checkbox = fixture.nativeElement.querySelector('[data-testid="toc-pa-defer-checkbox"]');
+    expect(checkbox).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain("I'm not sure, the P/A will complete the ToC mapping");
   });
 
   it('no longer renders the pre-P2-3142 wording', () => {

@@ -1,6 +1,8 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { env } from 'node:process';
 import * as handlebars from 'handlebars';
+import { Repository } from 'typeorm';
 import { BilateralAiJob } from '../entities/bilateral-ai-job.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
@@ -25,12 +27,11 @@ export interface NotifyTerminalOptions {
   /** `true` when the row was `FAILED`/`TIMED_OUT` immediately before this terminal write —
    * the mining response arrived after the sweeper already gave up on the job (`APF-R-2` A). */
   late?: boolean;
-  /** The exact `completed_date` this terminal state was written with. Defaults to `new Date()`
-   * so a caller that just wrote the row a moment ago doesn't have to thread it through, but the
-   * sweeper and `processJob` both pass the value they wrote, to keep the duration this method
-   * computes in sync with the persisted row. */
-  terminalDate?: Date;
 }
+// Removed (timezone-skew fix): `terminalDate?: Date`. Callers used to pass the JS instant they had
+// just written into `completed_date`; that instant lived in the Node process's zone while
+// `queue_entry_date` lives in the DB's, so `terminalDate − queue_entry_date` could be off by the
+// whole offset. The duration is now read back from the row with `TIMESTAMPDIFF` instead.
 
 /**
  * `APF-T-3` — one notification per terminal bilateral AI job state (`design.md` §5 "Terminal
@@ -53,17 +54,25 @@ export class BilateralAiNotificationsService {
     private readonly userRepository: UserRepository,
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly templateRepository: TemplateRepository,
+    // Only ever read here, and only to let MySQL compute the queue duration (`queueElapsedSeconds`)
+    // — this service writes no job row. `BilateralAiJob` is already in `BilateralModule`'s
+    // `TypeOrmModule.forFeature`, so no module change is needed.
+    @InjectRepository(BilateralAiJob)
+    private readonly jobRepository: Repository<BilateralAiJob>,
     @Optional()
     private readonly emailService?: EmailNotificationManagementService,
   ) {}
 
   /**
    * Writes the in-app row (always) and dispatches the matching mail iff the job ran at least two
-   * minutes from `queue_entry_date` to `terminalDate` (`APF-R-4`, `design.md` §5 "Terminal
+   * minutes from `queue_entry_date` to its terminal instant (`APF-R-4`, `design.md` §5 "Terminal
    * notifications"). Called from `processJob`'s COMPLETED and final-FAILED branches and from
    * `BilateralAiSweeperCron`'s TIMED_OUT/QUEUE_STALLED flips — every call site passes the exact
-   * `job_id`/`user_id`/`center_id`/source-key/`queue_entry_date` the row was flipped with, since
-   * the log-only failure contract here means a bad read is silent, not thrown.
+   * `job_id`/`user_id`/`center_id`/source-key the row was flipped with, since the log-only
+   * failure contract here means a bad read is silent, not thrown.
+   *
+   * The duration is measured by MySQL from the persisted row (`queueElapsedSeconds`), never from
+   * the calling process's clock — see that method for the timezone-skew this fixes.
    */
   async notifyTerminal(
     job: BilateralAiJob,
@@ -71,18 +80,16 @@ export class BilateralAiNotificationsService {
     options: NotifyTerminalOptions = {},
   ): Promise<void> {
     try {
-      const terminalDate = options.terminalDate ?? new Date();
-      const queueEntryDate = job.queue_entry_date ?? job.created_date;
-      const elapsedMs = queueEntryDate
-        ? terminalDate.getTime() - new Date(queueEntryDate).getTime()
-        : Number.POSITIVE_INFINITY;
-      const durationMinutes = Number.isFinite(elapsedMs)
-        ? Math.max(0, Math.round(elapsedMs / 60_000))
-        : 0;
-      // Fail-open on a missing clock (never observed in practice — every job carries either
+      // Was: `elapsedMs = (options.terminalDate ?? new Date()).getTime() -
+      // new Date(job.queue_entry_date ?? job.created_date).getTime()`.
+      const elapsedSeconds = await this.queueElapsedSeconds(job.job_id);
+      const durationMinutes =
+        elapsedSeconds == null
+          ? 0
+          : Math.max(0, Math.round(elapsedSeconds / 60));
+      // Fail-open on an unreadable clock (never observed in practice — every job carries either
       // `retried_date` or `created_date`): mail rather than silently dropping the mail entirely.
-      const mailEligible =
-        !Number.isFinite(elapsedMs) || elapsedMs >= 2 * 60_000;
+      const mailEligible = elapsedSeconds == null || elapsedSeconds >= 120;
 
       const institution = await this.clarisaInstitutionsRepository.findOne({
         where: { id: job.center_id },
@@ -125,6 +132,46 @@ export class BilateralAiNotificationsService {
       this.logger.warn(
         `Bilateral AI terminal notification failed (jobId=${job.job_id}, outcome=${outcome}, error_code=${job.error_code ?? 'none'}, error_name=${errorName}).`,
       );
+    }
+  }
+
+  /**
+   * Whole seconds from `queue_entry_date` to the job's terminal instant, computed **by MySQL**:
+   * `TIMESTAMPDIFF(SECOND, queue_entry_date, COALESCE(completed_date, NOW()))`.
+   *
+   * Timezone-skew fix (post-archive bug on `bilateral/ai-processing-feedback`): `queue_entry_date`
+   * is a STORED generated column MySQL fills in its own session zone, while the `terminalDate`
+   * this method used to receive was a JS `Date` serialized by mysql2 in the **Node process's**
+   * zone (there is no `timezone` option in `src/config/orm.config.ts`). Subtracting one from the
+   * other on a Bogota laptop against a UTC database was off by 5 h — enough to flip the 2-minute
+   * mail rule in both directions and to print a nonsense "· N min" in the in-app row copy. Both
+   * operands and `NOW()` now live in the same (database) zone, so the difference is correct
+   * whatever zone the API, the consumer or the cron happens to run in.
+   *
+   * `COALESCE(…, NOW())` covers the one caller that notifies without a terminal write of its own;
+   * every caller in this module writes `completed_date` immediately before notifying.
+   *
+   * Returns `null` when the duration cannot be read — a missing row, a NULL clock or a failed
+   * query. Callers fail open on `null` (mail rather than drop), exactly as the previous
+   * `Number.POSITIVE_INFINITY` branch did. The local try/catch is deliberate: this extra read must
+   * never be the reason the in-app notification row is skipped (`APF-R-4` "never fail the job
+   * because a notification failed").
+   */
+  private async queueElapsedSeconds(jobId: string): Promise<number | null> {
+    try {
+      const row = await this.jobRepository
+        .createQueryBuilder('job')
+        .select(
+          'TIMESTAMPDIFF(SECOND, job.queue_entry_date, COALESCE(job.completed_date, NOW()))',
+          'seconds',
+        )
+        .where('job.job_id = :jobId', { jobId })
+        .getRawOne<{ seconds: number | string | null }>();
+      if (row?.seconds == null) return null;
+      const seconds = Number(row.seconds);
+      return Number.isFinite(seconds) ? seconds : null;
+    } catch {
+      return null;
     }
   }
 

@@ -55,3 +55,67 @@
   top: auto;
   bottom: calc(100% + 8px);
 }
+
+/* SIP-T-7: opt-in visual variant (off by default via the `resultPickerStyle` input) mirroring
+   `rd-contributors-and-partners`'s linked-result picker (`.custom-dropdown-panel` / `.search-bar` /
+   `.results-list.compact-list .result-list-item` in that file's `.scss`). Scoped entirely under
+   `.result_picker_style`, bound on `.options`, so the other ~78 unwired call sites are byte-for-byte
+   unchanged. Kept as SCSS rather than Tailwind utilities in the template (project convention is
+   Tailwind-first) for two concrete reasons: (1) `.options .option` and the `hlmInput` classes above
+   already carry class-selector specificity that a single new utility class is not guaranteed to beat
+   depending on stylesheet bundling order, while an extra class on the same compound selector
+   (`.options.result_picker_style ...`) reliably does; (2) `pr-select.component.scss` (`:97-108`)
+   already solves the identical "icon absolute-positioned inside the input" problem this way — one
+   SCSS block keeps the three coordinated declarations (container `relative`, icon `absolute`, input
+   `padding-left`) together instead of splitting them across per-element class bindings. */
+.options.result_picker_style {
+  border-radius: 8px;
+  box-shadow: var(--pr-shadow-2);
+  background-color: var(--pr-color-white);
+
+  .search_input_container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px 10px 20px;
+
+    .search_icon {
+      position: absolute;
+      left: 32px;
+      font-size: 18px;
+      color: var(--pr-text-muted);
+      pointer-events: none;
+    }
+
+    input {
+      flex: 1;
+      border: 1px solid var(--pr-color-neutral-1000);
+      border-radius: 6px;
+      padding: 8px 12px;
+      padding-left: 35px;
+      color: var(--pr-text);
+    }
+  }
+
+  // Rework (attempt 2): the global `.custom_select .field .options .virtual_scroll .option` rule
+  // (`custom-fields.scss:173-178`) pins `height: 30px`. With Tailwind preflight's border-box sizing,
+  // a fixed 30px height makes 16px top + 16px bottom padding collapse the content box to 0 — the
+  // padding never rendered. `height: auto; min-height: 52px` overrides the fixed height so the row
+  // can actually grow: 16px + 16px padding + 18px content line-height (`pr-body-2`, `fonts.scss:89-95`)
+  // + 1px `border-bottom` (border-box) = 51px; 52px leaves a 1px rounding buffer. This value MUST
+  // stay in sync with `virtualOptionItemSize` in `pr-multi-select.component.ts` — that computed drives
+  // the CDK `[itemSize]` on the same rows (see `pr-select.component.ts:60-61` for the identical
+  // paired-value pattern this mirrors).
+  .option {
+    height: auto;
+    min-height: 52px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--pr-border-divider);
+    background-color: var(--pr-color-white);
+
+    &:hover {
+      background-color: var(--pr-surface-raised-soft);
+    }
+  }
+}

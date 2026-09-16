@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   BilateralAiJob,
   BilateralAiJobStatus,
 } from './entities/bilateral-ai-job.entity';
 import {
+  bilateralAiDbNow,
   getBilateralAiAttemptTimeoutMs,
   getBilateralAiQueueStallMs,
 } from './bilateral-ai.config';
@@ -24,6 +25,19 @@ import { BilateralAiNotificationsService } from './services/bilateral-ai-notific
  * (`Repository#update`'s scoped `where`), and `notifyTerminal` only runs when that update
  * actually affected a row — so two API instances racing the same tick notify at most once
  * between them (`APF-R-2` C, D1).
+ *
+ * **All clocks in this cron are the database's.** Both windows are expressed as
+ * `DATE_SUB(NOW(), INTERVAL <n> SECOND)` and both terminal writes use `bilateralAiDbNow`, so the
+ * sweeper never mixes a process-zone `Date` with a DB-zone column. Before this fix the cutoffs
+ * were built as `new Date(Date.now() - ms)` and serialized by mysql2 in the **Node process's**
+ * local zone (there is no `timezone` option in `src/config/orm.config.ts`): a consumer on a
+ * developer laptop (America/Bogota) writing `started_date` and this cron on prtest (UTC) reading
+ * it disagreed by the whole 5 h offset, which timed a live job out ~48 s after it started and
+ * declared `QUEUE_STALLED` while a consumer was demonstrably alive.
+ *
+ * The `INTERVAL` seconds are interpolated rather than bound: they come from the config getters
+ * (`Math.round(ms / 1000)` of a JS number), never from request input, and the generated SQL is
+ * what the regression tests pin.
  */
 @Injectable()
 export class BilateralAiSweeperCron {
@@ -67,16 +81,21 @@ export class BilateralAiSweeperCron {
    * or the whole process died mid-attempt.
    */
   private async sweepTimedOutAttempts(): Promise<void> {
-    const cutoff = new Date(Date.now() - getBilateralAiAttemptTimeoutMs());
-    const staleAttempts = await this.jobRepository.find({
-      where: {
+    // Was: `started_date: LessThan(new Date(Date.now() - getBilateralAiAttemptTimeoutMs()))`.
+    const attemptTimeoutSeconds = Math.round(
+      getBilateralAiAttemptTimeoutMs() / 1000,
+    );
+    const staleAttempts = await this.jobRepository
+      .createQueryBuilder('job')
+      .where('job.status = :status', {
         status: BilateralAiJobStatus.PROCESSING,
-        started_date: LessThan(cutoff),
-      },
-    });
+      })
+      .andWhere(
+        `job.started_date < DATE_SUB(NOW(), INTERVAL ${attemptTimeoutSeconds} SECOND)`,
+      )
+      .getMany();
 
     for (const job of staleAttempts) {
-      const terminalDate = new Date();
       const result = await this.jobRepository.update(
         { job_id: job.job_id, status: BilateralAiJobStatus.PROCESSING },
         {
@@ -84,17 +103,18 @@ export class BilateralAiSweeperCron {
           error_code: 'TIMED_OUT',
           error_message:
             'The AI service did not respond within the attempt timeout.',
-          completed_date: terminalDate,
+          completed_date: bilateralAiDbNow,
         },
       );
       if (!result?.affected) continue; // another instance (or the consumer) already won this flip
       this.logger.warn(
         `Bilateral AI job attempt timed out (jobId=${job.job_id}, error_code=TIMED_OUT).`,
       );
+      // No `terminalDate` is threaded through any more: `notifyTerminal` re-reads the duration
+      // from the row with `TIMESTAMPDIFF`, so the instant MySQL just wrote is the one it measures.
       await this.notificationsService.notifyTerminal(
         { ...job, error_code: 'TIMED_OUT' },
         'failed',
-        { terminalDate },
       );
     }
   }
@@ -106,27 +126,33 @@ export class BilateralAiSweeperCron {
    * advancing.
    */
   private async sweepStalledQueue(): Promise<void> {
-    const cutoff = new Date(Date.now() - getBilateralAiQueueStallMs());
-    const oldestPending = await this.jobRepository.findOne({
-      where: {
-        status: BilateralAiJobStatus.PENDING,
-        queue_entry_date: LessThan(cutoff),
-      },
-      order: { queue_entry_date: 'ASC' },
-    });
+    // Was: `queue_entry_date: LessThan(new Date(Date.now() - getBilateralAiQueueStallMs()))` with
+    // the same JS cutoff reused for the liveness count below.
+    const queueStallSeconds = Math.round(getBilateralAiQueueStallMs() / 1000);
+    const oldestPending = await this.jobRepository
+      .createQueryBuilder('job')
+      .where('job.status = :status', { status: BilateralAiJobStatus.PENDING })
+      .andWhere(
+        `job.queue_entry_date < DATE_SUB(NOW(), INTERVAL ${queueStallSeconds} SECOND)`,
+      )
+      .orderBy('job.queue_entry_date', 'ASC')
+      .getOne();
     if (!oldestPending) return;
 
     // Table-wide on purpose — not scoped to PENDING/PROCESSING or to this job: any recent
     // `started_date`/`stage_updated_date` anywhere is evidence a worker is alive right now.
-    const activeElsewhere = await this.jobRepository.count({
-      where: [
-        { started_date: MoreThan(cutoff) },
-        { stage_updated_date: MoreThan(cutoff) },
-      ],
-    });
+    // Was: `count({ where: [{ started_date: MoreThan(cutoff) }, { stage_updated_date:
+    // MoreThan(cutoff) }] })` — the OR is now one SQL predicate over the same DB-side window, so
+    // a live consumer in another time zone is still seen as live (the exact case that produced a
+    // spurious `QUEUE_STALLED` on prtest).
+    const activeElsewhere = await this.jobRepository
+      .createQueryBuilder('job')
+      .where(
+        `job.started_date > DATE_SUB(NOW(), INTERVAL ${queueStallSeconds} SECOND) OR job.stage_updated_date > DATE_SUB(NOW(), INTERVAL ${queueStallSeconds} SECOND)`,
+      )
+      .getCount();
     if (activeElsewhere > 0) return;
 
-    const terminalDate = new Date();
     const result = await this.jobRepository.update(
       { job_id: oldestPending.job_id, status: BilateralAiJobStatus.PENDING },
       {
@@ -134,7 +160,7 @@ export class BilateralAiSweeperCron {
         error_code: 'QUEUE_STALLED',
         error_message:
           'No AI worker picked up this job before the queue-stall window elapsed.',
-        completed_date: terminalDate,
+        completed_date: bilateralAiDbNow,
       },
     );
     if (!result?.affected) return;
@@ -144,7 +170,6 @@ export class BilateralAiSweeperCron {
     await this.notificationsService.notifyTerminal(
       { ...oldestPending, error_code: 'QUEUE_STALLED' },
       'failed',
-      { terminalDate },
     );
   }
 }

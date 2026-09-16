@@ -1,6 +1,6 @@
 # pr-multi-select
 
-**Verified:** 2026-09-16 · performance-refactor · 01891aebd · input `complete` + apertura hacia arriba (P2-3737/P2-3738); prior: 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
+**Verified:** 2026-09-16 · performance-refactor · merge con SIP-T-7 · input `complete` + apertura hacia arriba (P2-3737/P2-3738); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 rework (attempt 2): fixed the option-row `min-height`/`itemSize` mismatch the Reviewer caught (global `height: 30px` made the new `padding: 16px 20px` a no-op; added `height: auto; min-height: 52px` + a matching `virtualOptionItemSize` computed driving the CDK `[itemSize]`); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 adds opt-in visual variant (`resultPickerStyle` input, off by default) mirroring `rd-contributors-and-partners`'s linked-result picker — no filter chips, per `SIP-R-20`/`SIP-OQ-3`; prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-3 adds opt-in server-search mode (`serverSearchDebounceMs` input, `searchTextChange` output); prior: 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
 
 ## Qué es
 
@@ -52,7 +52,48 @@ El dropdown multi-selección de toda la app: buscador, `select all` opcional, mo
 - Es `ControlValueAccessor`: valor por `ngModel` / `writeValue`. `writeValue` conserva la
   **referencia** del array cuando todas las entradas ya son objetos, porque varios padres
   mutan el modelo in place (`splice`) y eso jamás dispara `writeValue`.
-- Outputs: `selectOptionEvent` · `removeOptionEvent`.
+- Outputs: `selectOptionEvent` · `removeOptionEvent` · `searchTextChange` (see below).
+- **Server-search mode (SIP-T-3, additive/opt-in)** — flat mode only, not `group`. Two new members,
+  meaningless unless used together:
+  - `serverSearchDebounceMs` — input, default `300`. Debounce window before `searchTextChange` emits.
+  - `searchTextChange` — output, emits the **trimmed** search term, debounced. The parent is expected
+    to call the server and reassign `[options]` with the (already-filtered) response.
+  - **Wiring detection:** the component checks whether a parent template actually bound
+    `(searchTextChange)` via `OutputEmitterRef.listeners` (`null` until a template binding
+    subscribes) — `isServerSearchWired()` in the `.ts`. This is Angular's **internal, undocumented**
+    runtime shape, verified against the pinned `@angular/core` **21.2.22**
+    (`node_modules/@angular/core/fesm2022/_resource-chunk.mjs`). If a future Angular upgrade changes
+    this shape, `isServerSearchWired()` must be revisited — the fallback design (if `.listeners` ever
+    stops working) is an explicit `serverSearch` boolean input the parent sets alongside the output.
+  - When wired: the search `<input>` still updates `searchText` locally (existing consumers reading
+    it keep working) but also pushes into a debounced `Subject` that emits `searchTextChange`;
+    `filterFlatOptions()` **skips local filtering entirely** and returns `options` as-is (the parent
+    already filtered server-side — filtering again would double-filter or filter on stale text).
+  - When NOT wired (the other ~78 instances): zero behavior change. No subscription is created
+    (`ngOnInit` only sets it up when `isServerSearchWired()` is true), `filterFlatOptions()` filters
+    by `searchText` exactly as before.
+- **`resultPickerStyle` visual variant (SIP-T-7, additive/opt-in, off by default)** — a single boolean
+  input, `false`/unset by default. When `true`, the `.options` dropdown panel gets the `.result_picker_style`
+  class (bound in the `.html`), which scopes a new SCSS block mirroring `rd-contributors-and-partners`'s
+  linked-result picker (`.custom-dropdown-panel` / `.search-bar` / `.results-list.compact-list
+  .result-list-item` in that file, NOT touched by this change — reference only): rounded panel
+  (`border-radius: 8px`) + `box-shadow: var(--pr-shadow-2)` + white background; a bordered search
+  input with the icon positioned absolute inside it (same pattern as `pr-select.component.scss:97-108`);
+  option rows with `padding: 16px 20px` — since `custom-fields.scss:173-178` globally pins `.option`
+  to a fixed `height: 30px` (a no-op under border-box sizing once 16px top + 16px bottom padding is
+  added, the padding has nowhere to go), the variant also overrides `height: auto; min-height: 52px`
+  so the row actually renders at the intended size (52px ≈ 16+16 padding + 18px `pr-body-2` line-height
+  + 1px border) — a bottom divider (`var(--pr-border-divider)`), and a hover swap to
+  `var(--pr-surface-raised-soft)`. The 52px row height (`.scss`) and the flat-mode
+  `cdk-virtual-scroll-viewport [itemSize]` **must stay numerically in sync**: `virtualOptionItemSize`
+  (`.ts`) returns `52` when `resultPickerStyle` is on, `30` (the `custom-fields.scss` global) otherwise
+  — same paired-value pattern as `pr-select.component.ts:60-61`'s `virtualOptionItemSize`. Change one,
+  change both, or the CDK viewport's scroll math goes wrong (too-short scrollbar, unreachable rows).
+  **Deliberately NOT the filter-chip set** (typology/portfolio/
+  funding source) — out of scope per `SIP-R-20`/`SIP-OQ-3` (not needed for a single-typology candidate
+  list). All rules live under `.options.result_picker_style` in the `.scss` (extra-class override, not
+  `!important`) so the other ~78 unwired call sites are visually byte-for-byte unchanged. Only consumer
+  today: `rd-annual-updating`'s merge/split pickers (`[resultPickerStyle]="true"` on both instances).
 
 ## Trampas (⚠️ = ya rompió algo)
 
