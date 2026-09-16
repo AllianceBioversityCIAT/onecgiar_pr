@@ -258,6 +258,18 @@
 
 ---
 
+### `UG-T-18` — Author the callouts per route · `UG-T-19` — Regenerate the guide — PASS (Leader visual pass = the DoD gate)
+
+- **Date:** 2026-09-16. `UG-T-18` Implementer `akili-implementer` (sonnet), effort high, ~10 capture iterations; the task's own DoD names the Leader/user visual pass as the gate, so no separate diff Reviewer was spawned for the JSON (every selector is machine-verified by `capture.ts`'s `count() === 1` rule on each run).
+- **Final callouts (22, all selectors → exactly 1 element, capture exit 0):** home — Open Center reporting (primary), Open a Program, Current reporting phase, Portfolio progress · overview — Continue reporting (primary), Results this cycle, KPIs left per AoW · reporting-aows — Where to report (primary), Filter by result type, Open one Area of Work, Expand every AoW, Search AoWs and KPIs · results-list — Update result (primary), Find a result, Filter by phase or status, Export the table · notifications-received — A pending request (primary), Requests or Updates, Accept or decline · ipsr-innovation-list — Open a package (primary), Filter the list, Export the table. Four suggested callouts were dropped because no placement avoided covering neighbouring UI text (overview "Not sure where? Start here", results-list "One row per result", ipsr "Start a new package" and "Track each package's status") — every route still has 3–5.
+- **Implementer observations (report-only):** the collision check only protects other callouts, not arbitrary page text — cramped toolbars leave no clean side; a responsively hidden text node passes `count()` but has no bounding box (selector-authoring pitfall: target the always-visible parent).
+- **Leader `UG-T-19` run:** two viewports tightened to the content height (`reporting-aows`, `results-list` → 1280×1000; their 1800 px frames were two-thirds empty and shrank the labels) — config-only change, then `npm run capture` exit 0 and `npm run build-guide` exit 0 (verify-structure OK, fonts available); **19 pages**, Letter, 2.6 MB. Frames: home 1280×1903, ipsr 1280×1541, overview 1280×1800, notifications 1280×1800, reporting-aows 1280×1000, results-list 1280×1000.
+- **Leader visual pass (all six figure pages at print scale):** every callout points at the element its label names; chips legible on screen (≈ 6–8 pt on paper — small but readable; larger would need a chip font bump in `annotate.ts`). Residual overlaps to put before the user at `UG-T-16`: reporting-aows "Where to report" chip touches the top-nav "Support" item and "Search AoWs and KPIs" sits over the page title/tab row; ipsr "Open a package" chip covers the first row's Submitter cell; home "Open a Program" touches the section heading. Fix options: (a) accept; (b) one small round adding an optional per-callout `offset` to `CalloutSpec` so the author can push those chips onto whitespace.
+- **Requirements covered:** `UG-R-21`, `UG-R-1`, `UG-R-7`. DoD: `UG-T-18` 3/3 (third = this visual pass), `UG-T-19` 2/2 (label legibility accepted with the caveat above).
+- **PDF commit:** deferred to `UG-T-16` sign-off per `tasks.md` §6; `routes.config.json` committed now.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -292,4 +304,4 @@ Output directory fixed at `tooling/dist/` (the `UG-T-1` Reviewer's RELIABILITY a
 
 ## 5. Summary (updated as tasks complete)
 
-16 of 19 tasks complete (`UG-T-1` … `UG-T-15`, `UG-T-17`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. In flight: `UG-T-18` (callout authoring). Next: `UG-T-19` regenerate → `UG-T-16` sign-off → commit PDF. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+18 of 19 tasks complete — only `UG-T-16` (HITL sign-off) open; `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: `UG-T-16` user sign-off → commit `tooling/dist/reporting-tool-user-guide.pdf` → `/akili-test` (if desired) → `/akili-archive`. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.

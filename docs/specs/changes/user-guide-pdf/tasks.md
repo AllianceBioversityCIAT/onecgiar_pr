@@ -261,7 +261,7 @@ Block execution until every box is ticked.
   - [x] A selector matching 0 or 2+ elements fails loudly naming route + label + selector.
   - [x] Zero `[data-ug-annotation]` nodes remain before the next route (existing gate still passes).
 
-### `UG-T-18` — Author the callouts per route (`routes.config.json`) *(added 2026-09-16, `UG-R-21`)*
+### `UG-T-18` — Author the callouts per route (`routes.config.json`) *(added 2026-09-16, `UG-R-21`)* — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** content/config
 - **Description:** For each of the 6 routes define 2–5 `annotations` naming the main functionalities a P/A uses on that screen (labels ≤ 5 words, consistent with `content/sections/*.md` vocabulary; primary click target labelled). Verify every selector live (`count() === 1`), run `npm run capture`, view all 6 PNGs.
@@ -271,11 +271,11 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-19`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] Every route has 2–5 labelled callouts; labels are U.S. English reader words (no selectors, no codes).
-  - [ ] All selectors resolve to exactly one element; all 6 captures regenerate with exit 0.
-  - [ ] Leader/user visual pass: every callout points at the element its label names.
+  - [x] Every route has 2–5 labelled callouts; labels are U.S. English reader words (no selectors, no codes).
+  - [x] All selectors resolve to exactly one element; all 6 captures regenerate with exit 0.
+  - [x] Leader/user visual pass: every callout points at the element its label names.
 
-### `UG-T-19` — Regenerate the guide with callouts and re-run the gates *(added 2026-09-16)*
+### `UG-T-19` — Regenerate the guide with callouts and re-run the gates *(added 2026-09-16)* — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** infra
 - **Description:** `npm run build-guide` on the new captures; `verify-structure` passes; Leader views every figure page; PDF committed after `UG-T-16` sign-off.
@@ -285,8 +285,8 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-16`
 - **Estimate:** S
 - **Definition of done:**
-  - [ ] `build-guide` exit 0; page count and figure pages recorded in `execution.md`.
-  - [ ] Every figure page shows its callouts legibly at Letter scale (labels readable without zoom).
+  - [x] `build-guide` exit 0; page count and figure pages recorded in `execution.md`.
+  - [x] Every figure page shows its callouts legibly at Letter scale (labels readable without zoom).
 
 ## 4. Dependency graph
 
