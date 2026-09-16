@@ -56,7 +56,7 @@ Block execution until every box is ticked.
   - [x] All 6 target routes render non-empty, representative content when visited manually while logged in.
   - [x] A valid `TEST_TOKEN` is available locally (never committed).
 
-### `UG-T-3` — Define `routes.config.json`
+### `UG-T-3` — Define `routes.config.json` — **[~] IN PROGRESS** (drafted, live verification pending — see `execution.md` §3b)
 
 - **Type:** infra
 - **Description:** For each of the 6 routes, record: `url`, `readySelector` (a DOM selector present only once real content has loaded — proves the route did not land on login/error/empty state), `clickTarget` (selector for the element the annotation marks), and `captionKey` (links to the matching content file in `UG-T-9`).
@@ -110,7 +110,7 @@ Block execution until every box is ticked.
   - [ ] The overlay is confirmed removed from the DOM after the screenshot (no residual node before the next route navigates).
   - [ ] On at least one route, the orange marker is visually confirmed distinct from the app's own violet brand accent in the same screenshot — not blending in (closes the `UG-R-3` scenario's `AND IT MUST` clause).
 
-### `UG-T-7` — `capture.ts` (orchestration)
+### `UG-T-7` — `capture.ts` (orchestration) — **[~] IN PROGRESS** (Implementer re-spawned after 429 — see `execution.md` §3b)
 
 - **Type:** infra
 - **Description:** For each route in `routes.config.json`: `page.goto()`, wait for `readySelector` (timeout → non-zero exit with the failing route/selector named in the error), call `annotate.ts` on `clickTarget`, `page.screenshot({ fullPage: true })` to `raw/<route-id>.png`, remove the overlay. Log one line per route per `design.md` §9. The script must not click, submit, or otherwise mutate any data (read-only).
@@ -164,7 +164,7 @@ Block execution until every box is ticked.
   - [x] No term unrelated to the 6 flows is included.
   - [x] Any in-flow term not found on CLARISA is explicitly flagged, not omitted.
 
-### `UG-T-11` — Build `template/guide.html` + `guide.css`
+### `UG-T-11` — Build `template/guide.html` + `guide.css` — **[~] IN PROGRESS** (attempt 1 Reviewer FAIL, attempt 2 dispatched — see `execution.md`)
 
 - **Type:** infra
 - **Description:** Build the static HTML skeleton (cover, intro placeholder, TOC placeholder with anchor links per `UG-DD-5`, 6 section containers, glossary container) and its CSS, consuming color/font values from `tokens.json` (`UG-T-5`) via CSS custom properties injected at render time — never hardcoded hex/px duplicates. Cover uses the navy-carbon chrome gradient; section header bands reuse the same; body text meets 4.5:1 contrast (dark ink on white/light backgrounds).
