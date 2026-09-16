@@ -53,14 +53,16 @@ describe('BilateralResultsListComponent', () => {
   };
 
   const chipTexts = (): string[] =>
-    Array.from(fixture.nativeElement.querySelectorAll('button.brl_chip') as NodeListOf<HTMLElement>).map(
+    Array.from(fixture.nativeElement.querySelectorAll('.pr-chip.brl-chip') as NodeListOf<HTMLElement>).map(
       chip => (chip.textContent ?? '').replace(/\s+/g, ' ').trim(),
     );
 
-  const chipButton = (label: string): HTMLButtonElement | undefined =>
-    Array.from(fixture.nativeElement.querySelectorAll('button.brl_chip') as NodeListOf<HTMLButtonElement>).find(chip =>
-      (chip.textContent ?? '').includes(label),
-    );
+  const chipRemoveButton = (labelPart: string): HTMLButtonElement | undefined => {
+    const chip = Array.from(
+      fixture.nativeElement.querySelectorAll('.pr-chip.brl-chip') as NodeListOf<HTMLElement>,
+    ).find(el => (el.textContent ?? '').includes(labelPart));
+    return chip?.querySelector('button.brl-chip-remove') as HTMLButtonElement | undefined;
+  };
 
   const result = (overrides: Partial<BilateralCenterResult> = {}): BilateralCenterResult => ({
     id: 1,
@@ -350,27 +352,27 @@ describe('BilateralResultsListComponent', () => {
       expect(component.projectFilter()).toEqual([118]);
       expect(component.filteredResults().map(r => r.id)).toEqual([1]);
 
-      // Both chips are rendered, with the project's real name rather than its id.
-      expect(chipTexts().some(text => text.startsWith('Pending review'))).toBe(true);
-      expect(chipTexts().some(text => text.startsWith('Rice for Africa'))).toBe(true);
+      // Both chips are rendered with dimension labels, using the project's real name rather than its id.
+      expect(chipTexts().some(text => text.includes('Status: Pending review'))).toBe(true);
+      expect(chipTexts().some(text => text.includes('Project: Rice for Africa'))).toBe(true);
 
       // …and both are removable: clicking one drops its param from the URL and its chip from the strip.
-      chipButton('Rice for Africa')!.click();
+      chipRemoveButton('Project: Rice for Africa')!.click();
       tick();
       fixture.detectChanges();
 
       expect(component.projectFilter()).toEqual([]);
       expect('project' in queryParams$.value).toBe(false);
-      expect(chipTexts().some(text => text.startsWith('Rice for Africa'))).toBe(false);
+      expect(chipTexts().some(text => text.includes('Project: Rice for Africa'))).toBe(false);
       expect(component.filteredResults().map(r => r.id)).toEqual([1, 3, 4]);
 
-      chipButton('Pending review')!.click();
+      chipRemoveButton('Status: Pending review')!.click();
       tick();
       fixture.detectChanges();
 
       expect(component.statusFilter()).toEqual([]);
       expect('status' in queryParams$.value).toBe(false);
-      expect(chipTexts().some(text => text.startsWith('Pending review'))).toBe(false);
+      expect(chipTexts().some(text => text.includes('Status: Pending review'))).toBe(false);
     }));
 
     it('strips an invalid status token from the URL exactly once, keeping the valid ones', fakeAsync(() => {
@@ -405,7 +407,7 @@ describe('BilateralResultsListComponent', () => {
     });
 
     /** `COV-R-5` A — the shared signal the other tabs read must be a NUMBER, not the API's string. */
-    it('writes a numeric phase id to the shared signal when a phase tab is picked', () => {
+    it('writes a numeric phase id to the shared signal when a phase filter chip is picked', () => {
       phasesService.phases.reporting = [
         { id: '35', phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
         { id: '36', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
@@ -413,11 +415,13 @@ describe('BilateralResultsListComponent', () => {
       recreateOn();
 
       // `phases` keeps the service's order, so index 0 is the CLOSED 2025 phase.
-      component.selectPhase(component.phases()[0]);
+      component.togglePhase(component.phases()[0]);
       fixture.detectChanges();
 
-      expect(TestBed.inject(BilateralContextService).selectedVersionId()).toBe(35);
-      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenLastCalledWith('CIAT-BIOVERSITY', 35);
+      expect(component.selectedPhaseIds()).toEqual([35, 36]);
+      expect(TestBed.inject(BilateralContextService).selectedVersionId()).toBe(36);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledWith('CIAT-BIOVERSITY', 35);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledWith('CIAT-BIOVERSITY', 36);
     });
 
     it('still focuses the row deep-linked by ?result=, and leaves that param alone', () => {
@@ -438,7 +442,7 @@ describe('BilateralResultsListComponent', () => {
       recreateOn({ search: 'kenya' });
 
       expect(component.searchQuery()).toBe('kenya');
-      expect((fixture.nativeElement.querySelector('input.brl_search_input') as HTMLInputElement).value).toBe('kenya');
+      expect((fixture.nativeElement.querySelector('input[aria-label="Search results"]') as HTMLInputElement).value).toBe('kenya');
     });
   });
 
@@ -451,7 +455,7 @@ describe('BilateralResultsListComponent', () => {
    */
   describe('COV-R-13 — the search box stays usable while it drives the URL', () => {
     const searchInput = (): HTMLInputElement =>
-      fixture.nativeElement.querySelector('input.brl_search_input') as HTMLInputElement;
+      fixture.nativeElement.querySelector('input[aria-label="Search results"]') as HTMLInputElement;
 
     /**
      * Types one character at a time onto the value the component owns. `[value]="searchQuery()"`
@@ -495,7 +499,7 @@ describe('BilateralResultsListComponent', () => {
 
     it('clears the box and the param when the clear button is used', fakeAsync(() => {
       typeInto('kenya risk');
-      (fixture.nativeElement.querySelector('button.brl_search_clear') as HTMLButtonElement).click();
+      (fixture.nativeElement.querySelector('button[aria-label="Clear search"]') as HTMLButtonElement).click();
       tick();
       fixture.detectChanges();
 

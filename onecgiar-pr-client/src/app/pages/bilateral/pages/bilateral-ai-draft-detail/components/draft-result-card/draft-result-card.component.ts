@@ -5,10 +5,11 @@ import { catchError } from 'rxjs/operators';
 import { BilateralAiService } from '../../../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../../../services/bilateral-ai.interfaces';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
+import { AiProvenanceNoticeComponent } from '../../../../components/ai-provenance-notice/ai-provenance-notice.component';
 
 @Component({
   selector: 'app-draft-result-card',
-  imports: [CommonModule],
+  imports: [CommonModule, AiProvenanceNoticeComponent],
   templateUrl: './draft-result-card.component.html',
   styleUrl: './draft-result-card.component.scss',
 })

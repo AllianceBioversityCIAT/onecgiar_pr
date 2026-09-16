@@ -234,13 +234,14 @@
                 <div class="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
                   <div class="mwb-filter relative" data-dimension="phase" aria-label="Filter by phase">
                     <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]"> Phase </label>
-                    <app-pr-filter-select
+                    <app-pr-filter-multiselect
                       [options]="phaseSelectOptions()"
                       optionLabel="label"
                       optionValue="value"
                       placeholder="Phase"
-                      [ngModel]="selectValue(filter.selectedPhase())"
-                      (changed)="onPhaseChange($event)"></app-pr-filter-select>
+                      countLabel="phases"
+                      [ngModel]="filter.selectedPhases()"
+                      (changed)="onPhasesChange($event)"></app-pr-filter-multiselect>
                   </div>
                   <!-- `MWB-T-12`: Category is MULTI-select — the same `app-pr-filter-multiselect` the
                        Results tab mounts for Areas of Work, inside the same `.mwb-filter` wrapper so
@@ -295,15 +296,16 @@
                       <label class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
                         Created by
                       </label>
-                      <app-pr-filter-select
+                      <app-pr-filter-multiselect
                         [options]="createdBySelectOptions()"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Created by"
+                        countLabel="creators"
                         [filter]="true"
                         filterPlaceholder="Search user..."
-                        [ngModel]="selectValue(filter.selectedCreatedBy())"
-                        (changed)="onCreatedByChange($event)"></app-pr-filter-select>
+                        [ngModel]="filter.selectedCreatedBy()"
+                        (changed)="filter.selectedCreatedBy.set($event)"></app-pr-filter-multiselect>
                     </div>
                   </div>
                 }
@@ -562,7 +564,12 @@
                   <span class="block h-[14px] whitespace-nowrap px-[2px] text-[10px] font-bold uppercase leading-[14px] tracking-[0.08em] text-[var(--pr-color-primary-400)]"
                     >Needs my action</span
                   >
-                  <app-my-work-column [column]="editing" (deleted)="onResultDeleted()" />
+                  <app-my-work-column
+                    [column]="editing"
+                    [reorderable]="reorderEnabled()"
+                    [hasManualOrder]="editingOrder.hasManualOrder()"
+                    (manualOrderReset)="resetManualOrder()"
+                    (deleted)="onResultDeleted()" />
                 </div>
               }
 

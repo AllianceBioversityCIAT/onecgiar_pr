@@ -16,6 +16,30 @@ export const PALETTE_RESULT_LIMIT = 5;
  */
 export const PALETTE_DEBOUNCE_MS = 250;
 
+/** localStorage key for the "Recent searches" list (Jira-style — global search polish). */
+const RECENT_SEARCHES_KEY = 'pr-palette-recent-searches';
+/** The design draws a short list, not a scrollable one — same reasoning as `PALETTE_RESULT_LIMIT`. */
+export const PALETTE_RECENT_LIMIT = 5;
+
+function loadRecentSearches(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string').slice(0, PALETTE_RECENT_LIMIT) : [];
+  } catch {
+    // Private browsing / blocked storage — recent searches are a convenience, not a requirement.
+    return [];
+  }
+}
+
+function saveRecentSearches(terms: string[]): void {
+  try {
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(terms));
+  } catch {
+    // Same as above — silently skip persistence rather than break the palette.
+  }
+}
+
 export interface PaletteResultRow {
   id: number;
   code: number;
@@ -52,6 +76,26 @@ export class GlobalSearchPaletteService {
   readonly query = signal('');
   /** `null` = the design's default `All programs`. Otherwise a science programme `initiativeId`. */
   readonly scope = signal<number | null>(null);
+
+  /**
+   * Persisted across opens (and page reloads) via localStorage — unlike `query`/`scope`, `reset()`
+   * deliberately does NOT clear this. Most-recent first, deduped case-insensitively, capped at
+   * `PALETTE_RECENT_LIMIT`.
+   */
+  readonly recentQueries = signal<string[]>(loadRecentSearches());
+
+  /** Called on activating a result/program row — NOT on every keystroke, or every debounce tick
+   * would spam the list with partial queries the user never meant to keep. */
+  recordSearch(query: string): void {
+    const q = query.trim();
+    if (!q) return;
+    const next = [q, ...this.recentQueries().filter((r) => r.toLowerCase() !== q.toLowerCase())].slice(
+      0,
+      PALETTE_RECENT_LIMIT
+    );
+    this.recentQueries.set(next);
+    saveRecentSearches(next);
+  }
 
   /** Every programme the user can see, in the sidebar's own order. Already in memory — no request. */
   readonly programs = computed<SPProgress[]>(() => [

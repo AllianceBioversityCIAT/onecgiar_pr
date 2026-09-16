@@ -1,5 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ViewChild } from '@angular/core';
 import { ApiService } from '../../../../../shared/services/api/api.service';
+import { MassivePhaseShiftComponent } from './components/massive-phase-shift/massive-phase-shift.component';
 
 @Component({
     selector: 'app-other-functionalities',
@@ -10,6 +11,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 export class OtherFunctionalitiesComponent {
   @Input() replicateIPSR: boolean = false;
   @Input() replicateInnovationUse: boolean = false;
+  @ViewChild(MassivePhaseShiftComponent) massivePhaseShiftModal!: MassivePhaseShiftComponent;
 
   constructor(public api: ApiService) {}
 
@@ -26,6 +28,6 @@ export class OtherFunctionalitiesComponent {
   }
 
   execute() {
-    this.api.dataControlSE.showMassivePhaseShiftModal = true;
+    this.massivePhaseShiftModal.visible = true;
   }
 }

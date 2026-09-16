@@ -1,0 +1,28 @@
+/**
+ * My work Editing reorder — drag preview ghost (MWER).
+ * CDK portals `.cdk-drag-preview` to `document.body`, so these rules stay global
+ * (same pattern as `.pr-row-menu` in `row-menu.scss`).
+ */
+.pr-my-work-drag-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: min(100%, 320px);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--pr-color-primary-200);
+  background: var(--pr-surface-card);
+  box-shadow:
+    0 18px 44px rgba(25, 21, 36, 0.16),
+    0 4px 12px rgba(25, 21, 36, 0.08);
+  transform: rotate(1.25deg);
+  pointer-events: none;
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-my-work-drag-preview {
+    transform: none;
+  }
+}

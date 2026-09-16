@@ -1,5 +1,8 @@
 @use '../../../styles/fonts.scss' as fonts;
 
+// Propuesta 04 (Yeck, 15-sep-2026): aro + cifra. El literal "Max N words:" se cayó del template,
+// así que el bloque es la mitad de ancho y ya no empuja nada.
+//
 // El mockup lo define como 12px/400 pegado al borde derecho del campo. Estaba en `body-3`
 // (10px) y en --pr-color-secondary-100: a ese tamaño el contador dejaba de ser legible justo
 // cuando más importa, que es al acercarse al límite.
@@ -11,6 +14,13 @@
   color: var(--pr-text-secondary);
   @include fonts.pr-typography('body-2');
   font-size: 12px;
+  // Las cifras no deben bailar mientras se escribe: de 9 a 10 el bloque cambia de ancho y, alineado
+  // a la derecha, eso mueve el aro un píxel en cada tecla.
+  font-variant-numeric: tabular-nums;
+
+  // Color del aro por estado. Vive en una variable propia porque el aro NO sigue al texto: con el
+  // campo holgado la cifra es gris (es un dato secundario) y el aro verde (es el estado).
+  --wc-accent: var(--pr-color-green-400);
 
   .limitBreaker {
     font-weight: 700;
@@ -21,10 +31,49 @@
   }
 }
 
+// Aro. `-90deg` para que empiece a llenarse desde arriba, como el de la barra inferior.
+.wc_ring {
+  display: block;
+  flex: none;
+  transform: rotate(-90deg);
+}
+
+.wc_ring_track {
+  fill: none;
+  stroke: var(--pr-border);
+  stroke-width: 2.5;
+}
+
+.wc_ring_value {
+  fill: none;
+  stroke: var(--wc-accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s ease, stroke 0.2s ease;
+}
+
+// Aviso antes del accidente: naranja desde el 85% del presupuesto. No bloquea nada.
+.near-limit {
+  --wc-accent: var(--pr-color-orange-500);
+  color: var(--pr-color-orange-700) !important;
+}
+
 .invalid {
   color: var(--pr-color-red-300) !important;
 }
 
+// El `.word_counter` pasado de límite tiñe también su aro; `.invalid` se aplica además a la cifra,
+// donde solo cambia el color del texto.
+.word_counter.invalid {
+  --wc-accent: var(--pr-color-red-300);
+}
+
 .warning {
   color: var(--pr-color-black) !important;
+}
+
+// Texto autogenerado por la plataforma: se avisa, no se rechaza — así que el aro tampoco se pone
+// rojo. Lleno y neutro dice "ya no cabe más" sin culpar al reportero de algo que él no escribió.
+.word_counter.warning {
+  --wc-accent: var(--pr-text-secondary);
 }

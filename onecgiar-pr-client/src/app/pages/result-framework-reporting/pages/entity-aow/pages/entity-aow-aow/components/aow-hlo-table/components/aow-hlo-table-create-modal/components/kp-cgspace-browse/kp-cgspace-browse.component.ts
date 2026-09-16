@@ -46,6 +46,9 @@ export interface CgspaceItemDto {
   // @akili-spec changes/kp-multi-repository-browse — design §4.1 / KPM-R-5 (additive)
   /** Secondary repositories collapsed into this card by dedup; empty/absent when no match. */
   alsoIn?: { repository: KpRepository; handle: string; handleUrl: string; itemUrl: string }[];
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-1 / KPAM-DD-3 (additive)
+  /** Science Programs or Accelerators tagged on the item. */
+  programAccelerators?: string[];
 }
 
 // @akili-spec changes/kp-multi-repository-browse — design §4.1
@@ -223,6 +226,9 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly showBusyOverlay = input<boolean>(true);
   readonly phaseYear = input<number>(new Date().getFullYear());
   readonly isAdmin = input<boolean>(false);
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-2
+  readonly programCode = input<string>('');
+  readonly programName = input<string>('');
 
   // Outputs
   readonly itemSelected = output<CgspaceItemDto>();
@@ -233,6 +239,8 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly selectedType = signal<string | null>(null);
   readonly selectedCenter = signal<string | null>(null);
   readonly selectedYear = signal<number | string | null>(null);
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-7 / KPAM-DD-4
+  readonly onlyMatches = signal<boolean>(false);
   readonly items = signal<CgspaceItemDto[]>([]);
   readonly total = signal<number>(0);
   readonly page = signal<number>(0);
@@ -341,6 +349,79 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     const base = `Showing ${this.items().length} of ${this.total()} items`;
     const answered = this.answeredSourcesText();
     return answered ? `${base} · ${answered}` : base;
+  });
+
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-3 / Gate D2
+  matchesProgram(item: CgspaceItemDto): boolean {
+    if (!item?.programAccelerators || !Array.isArray(item.programAccelerators) || item.programAccelerators.length === 0) {
+      return false;
+    }
+
+    const rawCode = this.programCode()?.trim() || '';
+    const rawName = this.programName()?.trim() || '';
+    if (!rawCode && !rawName) {
+      return false;
+    }
+
+    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const compact = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const normCode = normalize(rawCode);
+    const compactCode = compact(rawCode);
+    const normName = normalize(rawName);
+    const compactName = compact(rawName);
+
+    return item.programAccelerators.some(acc => {
+      if (!acc || typeof acc !== 'string') return false;
+
+      const normAcc = normalize(acc);
+      const compactAcc = compact(acc);
+      if (!normAcc && !compactAcc) return false;
+
+      // Match against code
+      if (compactCode) {
+        if (compactAcc === compactCode || normAcc === normCode) return true;
+        const tokens = normAcc.split(' ');
+        if (tokens.includes(normCode) || tokens.includes(compactCode)) return true;
+        if (compactAcc.startsWith(compactCode) || compactAcc.includes(compactCode)) return true;
+      }
+
+      // Match against name
+      if (compactName && compactName.length >= 3) {
+        if (compactAcc === compactName || normAcc === normName) return true;
+        if (normAcc.includes(normName) || compactAcc.includes(compactName)) return true;
+        if (compactAcc.length >= 3 && (normName.includes(normAcc) || compactName.includes(compactAcc))) return true;
+      }
+
+      return false;
+    });
+  }
+
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-7
+  readonly matchCount = computed<number>(() => {
+    return this.items().filter(item => this.matchesProgram(item)).length;
+  });
+
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-5 / KPAM-R-6 / KPAM-DD-1
+  readonly displayItems = computed<CgspaceItemDto[]>(() => {
+    const raw = this.items();
+    if (this.onlyMatches()) {
+      return raw.filter(item => this.matchesProgram(item));
+    }
+    if (this.matchCount() === 0) {
+      return raw;
+    }
+    // Soft-boost: matching items first, preserving original relative order
+    const matches: CgspaceItemDto[] = [];
+    const others: CgspaceItemDto[] = [];
+    for (const item of raw) {
+      if (this.matchesProgram(item)) {
+        matches.push(item);
+      } else {
+        others.push(item);
+      }
+    }
+    return [...matches, ...others];
   });
 
   /** Natural-language join ("A", "A and B", "A, B and C") for the error/empty copy (`KPM-R-7`, `KPM-R-11`). */

@@ -4,6 +4,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { Router } from '@angular/router';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
+import { SpReportingAccessNoticeComponent } from '../sp-reporting-access-notice/sp-reporting-access-notice.component';
 import { resolveReportResultTypeId, resolveReportResultTypeName } from '../../../../shared/report-result/create-result-payload.util';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
@@ -107,6 +108,7 @@ export function toReportedResultRow(dto: any, phases: any[]): ReportedResultRow 
   imports: [
     DecimalPipe,
     LabReportFormComponent,
+    SpReportingAccessNoticeComponent,
     OverlayModule,
     // @akili-spec changes/indicator-reported-results — the Reported results table (IRR-R-2)
     PrTableComponent,

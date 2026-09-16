@@ -1,5 +1,7 @@
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-4, R-6, design.md §6.2, §6.3, DD-6)
 // @akili-spec changes/delete-result-action (DEL-T-3, DEL-R-2, DEL-R-4, DEL-DD-2, DEL-DD-3)
+// @akili-spec changes/my-work-editing-reorder (MWER-T-2, MWER-R-1, MWER-R-7, design.md §6.5)
+import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
@@ -11,6 +13,7 @@ import { SmartNavigationService } from '../../../../../../shared/services/smart-
 import { PrToastService } from '../../../../../../shared/components/pr-toast';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { DeleteEligibility, ResultDeletionService } from '../../../../services/result-deletion.service';
+import { MY_WORK_EDITING_REORDER_COPY } from '../../my-work-editing-reorder.copy';
 
 /** The four visual variants `MWB-R-4` names. Derived, never passed in — a caller only says
  *  whether this card sits in the Editing column (`inEditingColumn`); the card works out which of
@@ -35,7 +38,7 @@ function formatDate(value: string): string {
 @Component({
   selector: 'app-my-work-card',
   standalone: true,
-  imports: [RouterLink, OverlayModule, PrTooltipDirectiveModule],
+  imports: [RouterLink, OverlayModule, PrTooltipDirectiveModule, CdkDrag, CdkDragHandle],
   templateUrl: './my-work-card.component.html',
   styleUrls: ['./my-work-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -51,7 +54,13 @@ export class MyWorkCardComponent {
   /** Whether this card is rendered inside the Editing column — the only column that shows
    *  completeness at all (`MWB-R-4`). Every other column renders the waiting/closed shape. */
   readonly inEditingColumn = input<boolean>(false);
+  /** When true, exposes a handle-only drag surface (`MWER-R-1`). */
+  readonly reorderable = input<boolean>(false);
   readonly deleted = output<ProgrammeResultRow>();
+  readonly dragSessionStarted = output<void>();
+  readonly dragSessionEnded = output<void>();
+
+  readonly reorderCopy = MY_WORK_EDITING_REORDER_COPY;
 
   readonly isMenuOpen = signal<boolean>(false);
 

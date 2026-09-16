@@ -8,6 +8,7 @@ import { SaveButtonService } from '../../../../../custom-fields/save-button/save
 import { ScienceProgramIdService } from '../../../services/science-program-id.service';
 import { ProgrammeResultsFilterService } from '../../programme-results/services/programme-results-filter.service';
 import { MyWorkCountService } from './my-work-count.service';
+import { MyWorkEditingOrderService } from './my-work-editing-order.service';
 import { MyWorkBoardService } from './my-work-board.service';
 
 /**
@@ -71,7 +72,8 @@ describe('MyWorkBoardService', () => {
           deps: [ResultsApiService]
         },
         { provide: ScienceProgramIdService, useValue: { resolve } },
-        { provide: MyWorkCountService, useValue: { set: countSet, ensure: jest.fn(), count: jest.fn() } }
+        { provide: MyWorkCountService, useValue: { set: countSet, ensure: jest.fn(), count: jest.fn() } },
+        MyWorkEditingOrderService
       ]
     });
 
@@ -286,6 +288,46 @@ describe('MyWorkBoardService', () => {
     });
   });
 
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-1, MWER-R-2)
+  describe('manual editing order merge (MWER-T-1)', () => {
+    it('columns() applies saved order to Editing when reorderEnabled is true', () => {
+      const editingOrder = TestBed.inject(MyWorkEditingOrderService);
+      service.load('SP01');
+      expectListRequest().flush(
+        resultsResponse([
+          rawResult({ result_code: '9176', status_id: '1', completeness: { complete: 5, total: 5, missing: [] } }),
+          rawResult({ id: '8102', result_code: '9177', status_id: '1', completeness: null })
+        ])
+      );
+
+      editingOrder.loadForKey(userId, 'SP01', 'Reporting 2026');
+      editingOrder.save(['9177', '9176']);
+      service.reorderEnabled.set(true);
+
+      const editing = service.columns().find(column => column.key === 'editing');
+      expect(editing?.rows.map(row => row.code)).toEqual(['9177', '9176']);
+    });
+
+    it('columns() ignores manual order when reorderEnabled is false', () => {
+      const editingOrder = TestBed.inject(MyWorkEditingOrderService);
+      service.load('SP01');
+      expectListRequest().flush(
+        resultsResponse([
+          rawResult({ result_code: '9176', status_id: '1', completeness: { complete: 5, total: 5, missing: [] } }),
+          rawResult({ id: '8102', result_code: '9177', status_id: '1', completeness: null })
+        ])
+      );
+
+      editingOrder.loadForKey(userId, 'SP01', 'Reporting 2026');
+      // Saved order inverts the default — must NOT apply while reorderEnabled is false.
+      editingOrder.save(['9176', '9177']);
+      service.reorderEnabled.set(false);
+
+      const editing = service.columns().find(column => column.key === 'editing');
+      expect(editing?.rows.map(row => row.code)).toEqual(['9177', '9176']);
+    });
+  });
+
   // @akili-spec changes/my-work-board (MWB-T-9) — the toolbar's non-phase dimensions.
   describe('toolbar filters (MWB-T-9)', () => {
     /**
@@ -339,7 +381,7 @@ describe('MyWorkBoardService', () => {
     it('never applies a Status dimension — the columns already are the status (ignoreStatus)', () => {
       loadSixRows();
 
-      filter.selectedStatus.set('Submitted');
+      filter.selectedStatuses.set(['Submitted']);
 
       expect(service.visibleRows().length).toBe(6);
       expect(service.columns().find(column => column.key === 'submitted')?.rows.length).toBe(1);

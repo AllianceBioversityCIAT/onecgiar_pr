@@ -189,6 +189,37 @@ describe('BilateralProjectsPanelComponent', () => {
     expect(manualCreateFlow.drawerOpen()).toBe(true);
   });
 
+  /**
+   * `APF-T-7` rework, DI regression (Reviewer FAIL, issue 1): this panel unconditionally mounts
+   * `<app-bilateral-manual-create-drawer-host>`, which mounts `app-bilateral-sp-selector`, whose
+   * "Contributing Science Programs" disclosure (`APF-DD-11`) is `app-bilateral-accordion`. None of
+   * this test file's providers supply `BilateralAutoSaveService` — the same production DI shape as
+   * the real app (that service is only provided component-locally on `bilateral-result-creator`).
+   * Before the fix, picking a primary SP on a project with secondary SPs threw `NullInjectorError`
+   * the moment the accordion instantiated, taking the whole drawer down.
+   */
+  it('lets a primary SP pick with secondary SPs render the "coming soon" accordion in the manual-create drawer without throwing', () => {
+    const event = { preventDefault: jest.fn() } as unknown as Event;
+    // B-A1368 (mockProjects[1]) carries 2 sciencePrograms — Breeding (primary pick) + Genebank
+    // (left over as a secondary chip), so `showSpSelectionInDrawer()` is true and no SP is
+    // auto-selected.
+    component.openManualCreate(mockProjects[1], event);
+    fixture.detectChanges();
+
+    expect(manualCreateFlow.drawerOpen()).toBe(true);
+    expect(manualCreateFlow.showSpSelectionInDrawer()).toBe(true);
+
+    const primaryOption = fixture.nativeElement.querySelector('.sps-option--list') as HTMLElement | null;
+    expect(primaryOption).toBeTruthy();
+
+    expect(() => {
+      primaryOption!.click();
+      fixture.detectChanges();
+    }).not.toThrow();
+
+    expect(fixture.nativeElement.querySelector('.bp-accordion-header')).toBeTruthy();
+  });
+
   it('should set error state if API fails', () => {
     bilateralApiService.GET_bilateralProjects.mockReturnValue(throwError(() => new Error('API error')));
 

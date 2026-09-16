@@ -24,6 +24,7 @@ const mockNotificationTypeRepository = {
 const mockNotificationRepository = {
   save: jest.fn(),
   findOne: jest.fn(),
+  find: jest.fn(),
   createQueryBuilder: jest.fn(),
 };
 
@@ -32,9 +33,12 @@ const mockSocketManagementService = {
   sendNotificationToUsers: jest.fn(),
 };
 
-const mockShareResultRequestService = {};
+const mockShareResultRequestService = {
+  getReceivedResultRequestPopUp: jest.fn(),
+};
 const mockUserRepository = {
   InitiativeByUser: jest.fn(),
+  findOne: jest.fn(),
 };
 
 const mockResultByInitiativesRepository = {
@@ -46,6 +50,12 @@ describe('NotificationService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Default: an unmocked `.find()` behaves like a real repository call that matched nothing,
+    // not like a call nobody expected — pre-existing tests in this file never mock `.find()`
+    // because `getRecentResultActivity` used to call only `.createQueryBuilder()`; the
+    // `BILATERAL_AI_JOB_FINISHED` read-path branch (`design.md` §6.4) now calls `.find()` there
+    // too, alongside `getAllNotifications`/`getPopUpNotifications`, which already did.
+    mockNotificationRepository.find.mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -468,6 +478,244 @@ describe('NotificationService', () => {
       expect(desc).toBe(
         '❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program.',
       );
+    });
+  });
+
+  // `APF-T-3` / `design.md` §6.4 "Write path".
+  describe('emitBilateralAiJobNotification', () => {
+    it('writes a direct row: result_id NULL, target_user = the job owner, RESULT level', async () => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 9,
+      });
+      mockNotificationRepository.save.mockResolvedValue({
+        notification_id: 501,
+      });
+
+      const result = await service.emitBilateralAiJobNotification(
+        42,
+        'AI-assisted processing finished — 2 drafts ready for AfricaRice · 2 documents · 6 min https://x/bilateral/AfricaRice/drafts',
+      );
+
+      expect(mockNotificationLevelRepository.findOne).toHaveBeenCalledWith({
+        where: { type: NotificationLevelEnum.RESULT },
+      });
+      expect(mockNotificationTypeRepository.findOne).toHaveBeenCalledWith({
+        where: { type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED },
+      });
+      expect(mockNotificationRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target_user: 42,
+          result_id: null,
+          notification_level: 2,
+          notification_type: 9,
+          text: expect.stringContaining('2 documents · 6 min'),
+        }),
+      );
+      expect(result).toEqual({ notification_id: 501 });
+    });
+
+    it('never throws — returns null when the notification catalog is missing', async () => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue(null);
+      mockNotificationTypeRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.emitBilateralAiJobNotification(42, 'text');
+
+      expect(result).toBeNull();
+      expect(mockNotificationRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('never throws — returns null when the write itself fails', async () => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 9,
+      });
+      mockNotificationRepository.save.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.emitBilateralAiJobNotification(42, 'text'),
+      ).resolves.toBeNull();
+    });
+  });
+
+  // `design.md` §6.4 "Read path": a job notification has no result, so the existing
+  // `obj_result`-filtered queries can never return it — each read path gains a branch.
+  describe('read-path branch for BILATERAL_AI_JOB_FINISHED (design.md §6.4)', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'uploader@cgiar.org',
+      first_name: 'Uploader',
+      last_name: 'User',
+    };
+
+    const jobRow = (overrides: Record<string, any> = {}) => ({
+      notification_id: '900',
+      target_user: 42,
+      result_id: null,
+      obj_result: null,
+      obj_notification_type: {
+        type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+      },
+      text: 'AI-assisted processing finished — 1 draft ready for AfricaRice · 1 document · 3 min https://x/drafts',
+      created_date: new Date('2026-09-15T12:00:00Z'),
+      read: false,
+      ...overrides,
+    });
+
+    describe('getAllNotifications', () => {
+      it('merges a job-type row into notificationsPending for the uploader', async () => {
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // notificationsViewed (result-based)
+          .mockResolvedValueOnce([]) // notificationsPending (result-based)
+          .mockResolvedValueOnce([]) // notificationAnnouncement
+          .mockResolvedValueOnce([]) // job-finished, viewed
+          .mockResolvedValueOnce([jobRow()]); // job-finished, pending
+
+        const result = await service.getAllNotifications(user);
+
+        expect(result.status).toBe(200);
+        expect(result.response.notificationsPending).toEqual([jobRow()]);
+        expect(result.response.notificationsViewed).toEqual([]);
+        // The job-finished lookups are scoped to the recipient, not to a result.
+        expect(mockNotificationRepository.find).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              target_user: 42,
+              read: false,
+              obj_notification_type: {
+                type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+              },
+            }),
+          }),
+        );
+      });
+    });
+
+    describe('getPopUpNotifications', () => {
+      it('includes an unread job-type row for the uploader', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // result-based pop-ups
+          .mockResolvedValueOnce([jobRow()]); // job-finished pop-ups
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+
+        const result = await service.getPopUpNotifications(user);
+
+        expect(result.response).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ notification_id: '900' }),
+          ]),
+        );
+      });
+
+      it('excludes it for a different recipient (scoped to target_user)', async () => {
+        mockUserRepository.findOne.mockResolvedValue({
+          last_pop_up_viewed: null,
+        });
+        mockNotificationRepository.find
+          .mockResolvedValueOnce([]) // result-based pop-ups
+          .mockResolvedValueOnce([]); // this recipient has no job-finished rows
+        mockShareResultRequestService.getReceivedResultRequestPopUp.mockResolvedValue(
+          [],
+        );
+
+        const result = await service.getPopUpNotifications({
+          ...user,
+          id: 999,
+        });
+
+        expect(result.response).toEqual([]);
+        expect(mockNotificationRepository.find).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({
+            where: expect.objectContaining({ target_user: 999 }),
+          }),
+        );
+      });
+    });
+
+    describe('getRecentResultActivity', () => {
+      it('merges a job-type row for the uploader alongside result-based activity (regression: a result-type row still requires the initiative relation)', async () => {
+        mockNotificationLevelRepository.findOne.mockResolvedValue({
+          notifications_level_id: 2,
+        });
+        mockUserRepository.InitiativeByUser.mockResolvedValue([{ id: 1 }]);
+
+        const queryBuilder: any = {
+          innerJoinAndSelect: jest.fn().mockReturnThis(),
+          innerJoin: jest.fn().mockReturnThis(),
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          andWhere: jest.fn().mockReturnThis(),
+          orderBy: jest.fn().mockReturnThis(),
+          take: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue([
+            {
+              notification_id: '1',
+              result_id: 200,
+              obj_result: {
+                result_code: 1234,
+                title: 'Result with owner',
+                obj_result_by_initiatives: [
+                  {
+                    initiative_role_id: 1,
+                    is_active: true,
+                    initiative_id: 55,
+                    obj_initiative: {
+                      name: 'Primary Initiative',
+                      official_code: 'PI-1',
+                    },
+                  },
+                ],
+              },
+              obj_notification_type: {
+                type: NotificationTypeEnum.RESULT_SUBMITTED,
+              },
+              obj_emitter_user: null,
+              emitter_user: null,
+              created_date: new Date('2026-09-15T09:00:00Z'),
+            },
+          ]),
+        };
+        mockNotificationRepository.createQueryBuilder.mockReturnValue(
+          queryBuilder,
+        );
+        mockNotificationRepository.find.mockResolvedValue([
+          jobRow({ created_date: new Date('2026-09-15T13:00:00Z') }),
+        ]);
+
+        const result = await service.getRecentResultActivity(user, 5);
+
+        expect(result.status).toBe(200);
+        // Still-required regression: the result-type row keeps needing the owner initiative
+        // relation — it is present here because the fixture carries it, not because the branch
+        // relaxed that requirement.
+        expect(result.response).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              resultId: 200,
+              initiativeOfficialCode: 'PI-1',
+            }),
+            expect.objectContaining({
+              resultId: null,
+              eventType: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+              message: expect.stringContaining('1 document · 3 min'),
+            }),
+          ]),
+        );
+        // The job row is the most recent (13:00 vs 09:00) so it sorts first.
+        expect(result.response[0]).toMatchObject({
+          eventType: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+        });
+      });
     });
   });
 });

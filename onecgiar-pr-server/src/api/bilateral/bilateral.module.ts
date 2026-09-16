@@ -52,10 +52,12 @@ import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
 import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-validation.service';
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
 import { BilateralCenterController } from './bilateral-center.controller';
+import { BilateralHandoffController } from './bilateral-handoff.controller';
 import { BilateralProjectsService } from './services/bilateral-projects.service';
 import { BilateralCenterService } from './services/bilateral-center.service';
 import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { BilateralHandoffCode } from './entities/bilateral-handoff-code.entity';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
@@ -68,6 +70,8 @@ import { BilateralAiConsumer } from '../bilateral-ai/bilateral-ai.consumer';
 import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.service';
 import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
 import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
+import { BilateralAiNotificationsService } from '../bilateral-ai/services/bilateral-ai-notifications.service';
+import { BilateralAiSweeperCron } from '../bilateral-ai/bilateral-ai-sweeper.cron';
 import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
 import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
 import { AdUsersModule } from '../ad_users/ad_users.module';
@@ -79,6 +83,7 @@ import { BilateralWebhookController } from './bilateral-webhook.controller';
 import { BilateralWebhookService } from './services/bilateral-webhook.service';
 import { SummaryModule } from '../results/summary/summary.module';
 import { InnovationUseMdsValidator } from './services/innovation-use-mds-validator.service';
+import { BilateralHandoffService } from './services/bilateral-handoff.service';
 
 @Module({
   imports: [
@@ -91,6 +96,7 @@ import { InnovationUseMdsValidator } from './services/innovation-use-mds-validat
       BilateralAiJob,
       BilateralAiDraft,
       DraftEvidence,
+      BilateralHandoffCode,
     ]),
     ResultsModule,
     VersioningModule,
@@ -144,6 +150,14 @@ import { InnovationUseMdsValidator } from './services/innovation-use-mds-validat
   ],
   controllers: [
     BilateralWebhookController,
+    // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-5) — registered before
+    // BilateralCenterController. Not strictly required today (every route Nest would need
+    // to disambiguate under `center/*` — `projects`, `create-header`, `change-type/:id`,
+    // `primary-assignment/:id`, `submit-for-review/:id`, `planned-result/:id`,
+    // `toc-mapping/:id`, `contributors/:id` — has a literal first segment, so none can
+    // shadow the literal `center/handoff`), but registering it first keeps this controller
+    // safe against a future `center/:param`-shaped route being added ahead of it.
+    BilateralHandoffController,
     BilateralCenterController,
     BilateralController,
     BilateralAiController,
@@ -173,7 +187,20 @@ import { InnovationUseMdsValidator } from './services/innovation-use-mds-validat
     BilateralAiService,
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
+    // `APF-T-3`: the terminal-notification writer (in-app row + mail) shared by `processJob`'s
+    // COMPLETED/FAILED branches and the sweeper below, and the sweeper cron itself. No dedicated
+    // `bilateral-ai.module.ts` exists — this module is where every other `bilateral-ai/*`
+    // provider is already registered, so these two follow the same wiring rather than starting a
+    // module split this task was not asked to do.
+    BilateralAiNotificationsService,
+    BilateralAiSweeperCron,
     BilateralWebhookService,
+    // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-4) — RoleByUserRepository,
+    // ClarisaCentersRepository, ClarisaInstitutionsRepository, UserRepository and
+    // VersioningService are already resolvable here via RoleByUserModule, ClarisaCentersModule,
+    // ClarisaInstitutionsModule, UserModule and VersioningModule (all imported above) — no new
+    // module imports needed.
+    BilateralHandoffService,
   ],
   // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
   // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second

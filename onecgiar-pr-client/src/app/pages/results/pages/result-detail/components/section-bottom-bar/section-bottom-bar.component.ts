@@ -25,7 +25,6 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { FieldCompletionFlightService } from '../../../../../../shared/services/field-completion-flight.service';
 import { UnsavedNavigationIntentService } from '../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 import { ScrollChromeService } from '../../../../../../shared/services/scroll-chrome.service';
-import { ChromeFoldDirective } from '../../../../../../shared/directives/chrome-fold.directive';
 
 /**
  * Bottom bar of a result-detail section: section-to-section navigation, the position in the
@@ -51,7 +50,7 @@ import { ChromeFoldDirective } from '../../../../../../shared/directives/chrome-
   // `z-[6]` stays: the floating "Links to results" helpers still overlap this strip.
   host: { class: 'relative z-[6] block w-full flex-none' },
   standalone: true,
-  imports: [CommonModule, ChromeFoldDirective],
+  imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
@@ -63,7 +62,10 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   @Output() clickSave = new EventEmitter();
 
   readonly saveButtonSE = inject(SaveButtonService);
-  /** Folds the strip away while the user reads downwards; `Save draft` stays put. */
+  /** 🛑 This bar no longer folds — nothing in it hides on scroll (Yeck, 15-sep-2026; see the
+   *  header comment in the template). The service stays for the one thing still needed here:
+   *  telling it that the next scroll is the app's own (`goToField`), so the TOP bar — which does
+   *  still fold — is left exactly as the user had it. */
   readonly scrollChromeSE = inject(ScrollChromeService);
   readonly dataControlSE = inject(DataControlService);
   readonly rolesSE = inject(RolesService);

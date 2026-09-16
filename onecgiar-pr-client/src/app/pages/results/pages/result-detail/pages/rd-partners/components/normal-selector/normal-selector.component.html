@@ -1,16 +1,40 @@
-<div class="column_title">
-  {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'Partners' }}
-</div>
-<div [ngSwitch]="this.rolesSE.readOnly">
-  <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
-  <div *ngSwitchCase="false">
-    <app-pr-checkbox
-      label="This section is not applicable."
-      [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-      (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
-    </app-pr-checkbox>
+<!-- Misma tarjeta que su gemelo de `rd-contributors-and-partners` (propuesta 18). Aquí el título
+     NO llevaba `required`, así que la tarjeta tampoco: el campo es opcional y la ausencia del tag
+     ES el marcador. -->
+<app-field-card
+  [label]="dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'Partners'"
+  [required]="false"
+  [hasValue]="!!this.rdPartnersSE.partnersBody.no_applicable_partner || !!this.rdPartnersSE.partnersBody.institutions?.length"
+  tooltip="Select this option if the partner section is not applicable"
+  layout="inline">
+  <!-- El control va AL FRENTE de la banda (`layout="inline"`), como el Yes/No — y con su mismo
+       idioma: control segmentado sobre blanco, gris oscuro al elegirlo. Marcar "no aplica" no es
+       un acierto ni un fallo, así que no lleva ni verde ni rojo.
+       La frase larga va de `tooltip`, no de `description`: así se pliega detrás del ⓘ de la
+       cabecera como en todos los demás campos, en vez de quedarse abierta en un bloque gris
+       a todo el ancho — que era la forma de las fases anteriores (Yeck, 15-sep-2026). -->
+  <div>
+    @if (this.rolesSE.readOnly) {
+      <span class="fc-switch-readonly">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '—' }}</span>
+    } @else {
+      <button
+        type="button"
+        class="fc-switch"
+        role="switch"
+        [class.on]="!!this.rdPartnersSE.partnersBody.no_applicable_partner"
+        [attr.aria-checked]="!!this.rdPartnersSE.partnersBody.no_applicable_partner"
+        data-testid="partners-not-applicable"
+        (click)="toggleNotApplicable()">
+        <span class="fcs_box" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.2 8.4l3 3 6.6-6.8" />
+          </svg>
+        </span>
+        Not applicable
+      </button>
+    }
   </div>
-</div>
+</app-field-card>
 <app-alert-status
   *ngIf="dataControlSE.isKnowledgeProduct"
   description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">

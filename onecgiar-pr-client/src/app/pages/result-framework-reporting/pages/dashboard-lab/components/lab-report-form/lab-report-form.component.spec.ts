@@ -8,6 +8,7 @@ import { LabReportFormComponent } from './lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
+import { ResultFrameworkReportingHomeService } from '../../../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { NO_ERRORS_SCHEMA, WritableSignal, computed, signal } from '@angular/core';
 
 /**
@@ -48,6 +49,7 @@ describe('LabReportFormComponent', () => {
   type SetupOptions = {
     phaseYear?: number;
     centersService?: { getData: () => Promise<any>; centersList: any[]; centers?: WritableSignal<any[]> };
+    homeService?: any;
   };
 
   async function setup(inputs: Record<string, any> = {}, phaseYearOrOptions?: number | SetupOptions) {
@@ -70,7 +72,8 @@ describe('LabReportFormComponent', () => {
         { provide: ApiService, useValue: api },
         { provide: CentersService, useValue: centersMock },
         { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSig, outputOutcomeLevelsSig } },
-        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
+        ...(options.homeService ? [{ provide: ResultFrameworkReportingHomeService, useValue: options.homeService }] : [])
       ]
     })
       .overrideComponent(LabReportFormComponent, { set: { template: '' } })
@@ -638,6 +641,58 @@ describe('LabReportFormComponent', () => {
       expect(template.indexOf('Manual entry')).toBeGreaterThan(-1);
       expect(template.indexOf('app-kp-cgspace-browse')).toBeGreaterThan(-1);
       expect(template.indexOf('Repository link/handle')).toBeGreaterThan(-1);
+      // @akili-spec changes/kp-program-accelerator-match (KPAM-T-3, KPAM-R-2, Defect Gate D6)
+      expect(template.indexOf('[programCode]="programCode()"')).toBeGreaterThan(-1);
+      expect(template.indexOf('[programName]="resolvedProgramName()"')).toBeGreaterThan(-1);
+    });
+
+    describe('resolvedProgramName (KPAM-T-3, KPAM-R-2, Defect Gate D6)', () => {
+      it('returns explicit programName input when provided', async () => {
+        await setup({ programName: 'Custom Breeding Program', programCode: 'SP01' });
+        expect(component.resolvedProgramName()).toBe('Custom Breeding Program');
+      });
+
+      it('resolves standard SP name from programCode via SCIENCE_PROGRAM_NAMES', async () => {
+        await setup({ programCode: 'SP02' });
+        expect(component.resolvedProgramName()).toBe('Sustainable Farming');
+      });
+
+      it('resolves SP01 as Breeding for Tomorrow', async () => {
+        await setup({ programCode: 'SP01' });
+        expect(component.resolvedProgramName()).toBe('Breeding for Tomorrow');
+      });
+
+      it('resolves from homeSE.mySPsList when matching initiativeCode', async () => {
+        const mockHomeSE = {
+          mySPsList: signal([
+            { initiativeCode: 'SP99', initiativeName: 'Custom Science Program 99', initiativeShortName: 'CSP99', initiativeId: 99 }
+          ]),
+          otherSPsList: signal([])
+        };
+        await setup({ programCode: 'SP99' }, { homeService: mockHomeSE } as any);
+        expect(component.resolvedProgramName()).toBe('Custom Science Program 99');
+      });
+
+      it('resolves from api.dataControlSE.myInitiativesList when matching official_code', async () => {
+        await setup({ programCode: 'INIT-10' });
+        (api as any).dataControlSE = {
+          ...api.dataControlSE,
+          myInitiativesList: [
+            { official_code: 'INIT-10', name: 'Initiative 10 Name', short_name: 'Init10' }
+          ]
+        };
+        expect(component.resolvedProgramName()).toBe('Initiative 10 Name');
+      });
+
+      it('resolves from tocNode.official_code when programCode is empty', async () => {
+        await setup({ programCode: '', tocNode: { official_code: 'SP03' } });
+        expect(component.resolvedProgramName()).toBe('Climate Action');
+      });
+
+      it('falls back to programCode string when no name mapping exists', async () => {
+        await setup({ programCode: 'UNKNOWN_CODE' });
+        expect(component.resolvedProgramName()).toBe('UNKNOWN_CODE');
+      });
     });
 
     it('emits loadingOverlayChange for MQAP sync and create, and marks the form aria-busy', async () => {

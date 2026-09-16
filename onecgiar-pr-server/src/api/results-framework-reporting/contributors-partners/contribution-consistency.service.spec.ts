@@ -126,7 +126,7 @@ describe('ContributionConsistencyService (P2-2932)', () => {
     expect((capDevRepo as any).save).toBeUndefined();
     expect((actorsRepo as any).save).toBeUndefined();
     expect(capDevRepo.findOne).toHaveBeenCalledWith({
-      where: { result_id: 1, is_active: true },
+      where: { result_object: { id: 1 }, is_active: true },
     });
   });
 

@@ -739,6 +739,10 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/last-pop-up-viewed/${userId}`, {});
   }
 
+  GET_userById(userId: number | string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/${userId}`);
+  }
+
   GET_userAllNotificationSettings() {
     return this.http.get<any>(`${this.baseApiBaseUrl}user-notification-settings/all`);
   }

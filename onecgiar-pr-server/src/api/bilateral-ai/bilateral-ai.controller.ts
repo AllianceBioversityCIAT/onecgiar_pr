@@ -19,6 +19,7 @@ import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { BilateralAiService } from './services/bilateral-ai.service';
 import { CreateBilateralAiJobDto } from './dto/create-bilateral-ai-job.dto';
+import { BilateralAiExpectationsMix } from './dto/bilateral-ai-expectations.dto';
 
 @Controller('center/ai')
 @ApiTags('Bilateral Center AI')
@@ -58,6 +59,32 @@ export class BilateralAiController {
   @Get('jobs/:jobId')
   getJob(@Param('jobId') jobId: string, @UserToken() user: TokenDto) {
     return this.bilateralAiService.getJob(jobId, user.id);
+  }
+
+  @Post('jobs/:jobId/retry')
+  @HttpCode(202)
+  @ApiOperation({
+    summary:
+      'Retry ("Try again") a FAILED AI job — re-enqueues the same stored sources, same job id.',
+  })
+  retryJob(@Param('jobId') jobId: string, @UserToken() user: TokenDto) {
+    return this.bilateralAiService.retryJob(jobId, user);
+  }
+
+  // Declared as its own top-level path under `center/ai/` — NOT `jobs/expectations` — so it can
+  // never be shadowed by the `jobs/:jobId` parameter route above (`design.md` §4.1).
+  @Get('expectations')
+  @ApiOperation({
+    summary:
+      'Expected processing-time range (P25-P75 minutes) for a source-mix class, from job history.',
+  })
+  @ApiQuery({
+    name: 'mix',
+    required: true,
+    enum: BilateralAiExpectationsMix,
+  })
+  getExpectations(@Query('mix') mix: string) {
+    return this.bilateralAiService.getExpectations(mix);
   }
 
   @Get('drafts')

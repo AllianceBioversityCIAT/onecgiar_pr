@@ -1,0 +1,29 @@
+{
+  "iss": "https://prtest.ciat.cgiar.org",
+  "aud": "w3-bilateral-uploader:test",
+  "iat": 1757808000,
+  "issued_for_env": "test",
+  "user": {
+    "user_id": 1234,
+    "email": "j.doe@cgiar.org",
+    "first_name": "J",
+    "last_name": "Doe",
+    "auth_method": "saml"
+  },
+  "center": {
+    "clarisa_code": "CENTER-XX",
+    "acronym": "AfricaRice",
+    "name": "Africa Rice Center",
+    "institution_id": 42
+  },
+  "role": {
+    "role_id": 5,
+    "description": "Centre member",
+    "is_admin": false
+  },
+  "reporting_phase": {
+    "phase_id": 17,
+    "name": "2026 Annual Reporting",
+    "status": "open"
+  }
+}

@@ -1,5 +1,5 @@
 import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -7,6 +7,7 @@ import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-
 import { BilateralAutoSaveService, BilateralEditorSection } from '../../services/bilateral-auto-save.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { SmartNavigationService, splitNavUrl } from '../../../../shared/services/smart-navigation.service';
 import { BilateralAiUploadComponent } from '../../components/bilateral-ai-upload/bilateral-ai-upload.component';
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
@@ -23,10 +24,14 @@ import { BilateralPageHeaderComponent } from '../../components/bilateral-page-he
 import { FormSkeletonComponent } from '../../components/form-skeleton/form-skeleton.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
+import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
+import { CopyButtonComponent } from '../../../../shared/components/copy-button/copy-button.component';
 
 @Component({
   selector: 'app-bilateral-result-creator',
   imports: [
+    RouterLink,
+    CopyButtonComponent,
     PhaseSwitcherModule,
     SectionZeroDashboardComponent,
     BilateralProjectSelectorComponent,
@@ -40,7 +45,8 @@ import { PhaseSwitcherModule } from '../../../../shared/components/phase-switche
     SectionEvidenceComponent,
     SectionTypeSpecificComponent,
     BilateralPageHeaderComponent,
-    FormSkeletonComponent
+    FormSkeletonComponent,
+    AiProvenanceNoticeComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -60,6 +66,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);
   readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
   private readonly ctx = inject(BilateralContextService);
+  private readonly smartNav = inject(SmartNavigationService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
@@ -94,6 +101,95 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * load fails — falling back to "Report New Bilateral Result" told the user they were creating a
    * result when they were editing one. A neutral label is honest in both states.
    */
+  private static readonly STATUS_LABELS: Record<number, string> = {
+    1: 'Editing',
+    5: 'Pending review',
+    6: 'Approved',
+    7: 'Rejected',
+  };
+
+  readonly backTarget = computed(() => {
+    const activeUrl = this.router.url?.includes('/result/') || this.router.url?.includes('/create')
+      ? this.router.url
+      : (this.resultId() && !this.isCreating()
+        ? `/bilateral/${this.ctx.centerAcronym()}/result/${this.resultId()}`
+        : this.router.url);
+    const center = this.ctx.centerAcronym() ?? undefined;
+    return this.smartNav.getBackTarget(activeUrl, center);
+  });
+
+  readonly backLink = computed(() => splitNavUrl(this.backTarget().url).path);
+
+  readonly backQueryParams = computed<Record<string, string | number> | null>(() => {
+    const targetUrl = this.backTarget().url;
+    const params: Record<string, string | number> = { ...splitNavUrl(targetUrl).queryParams };
+    const phase = this.ctx.selectedVersionId();
+    if (targetUrl.includes('/bilateral') && !params['phase'] && phase != null) {
+      params['phase'] = phase;
+    }
+    return Object.keys(params).length > 0 ? params : null;
+  });
+
+  readonly backTitle = computed(() => 'Back');
+  readonly resultCode = computed(() => {
+    const code = this.creationService.resultCode();
+    return code != null && String(code).trim() !== '' ? String(code) : '';
+  });
+  readonly resultTypeName = computed(() => this.creationService.resultTypeName() ?? '');
+  readonly statusLabel = computed(() => {
+    const id = this.creationService.resultStatusId();
+    return id != null ? BilateralResultCreatorComponent.STATUS_LABELS[Number(id)] ?? '' : '';
+  });
+  readonly statusFg = computed(() => {
+    const id = this.creationService.resultStatusId();
+    switch (Number(id)) {
+      case 1:
+        return 'var(--pr-status-in-progress-fg)';
+      case 5:
+        return '#B45309';
+      case 6:
+        return 'var(--pr-status-approved-fg)';
+      case 7:
+        return 'var(--pr-status-rejected-fg)';
+      default:
+        return 'var(--pr-status-not-started-fg)';
+    }
+  });
+  readonly statusBg = computed(() => {
+    const id = this.creationService.resultStatusId();
+    switch (Number(id)) {
+      case 1:
+        return 'var(--pr-status-in-progress-bg)';
+      case 5:
+        return '#FEF3C7';
+      case 6:
+        return 'var(--pr-status-approved-bg)';
+      case 7:
+        return 'var(--pr-status-rejected-bg)';
+      default:
+        return 'var(--pr-status-not-started-bg)';
+    }
+  });
+  readonly isLoadingResult = computed(() => this.creationService.isLoadingResult());
+
+  readonly resultLevelName = computed(() => {
+    const levelId = this.creationService.resultLevelId();
+    switch (Number(levelId)) {
+      case 3:
+        return 'Output';
+      case 4:
+        return 'Outcome';
+      case 2:
+        return 'End of Initiative Outcome';
+      case 1:
+        return 'Initiative';
+      default:
+        return null;
+    }
+  });
+
+  readonly areaOfWork = computed(() => this.creationService.selectedProject()?.shortName || null);
+
   readonly headerTitle = computed(() => {
     if (this.isCreating()) return 'Report New Bilateral Result';
     return this.creationService.resultTitle() || 'Bilateral result';
@@ -184,7 +280,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   isAiProcessing = computed(() => {
     const status = this.bilateralAiService.uploadState().status;
-    return status === 'uploading' || status === 'pending' || status === 'processing';
+    // `still_running` (`APF-R-7`) is still an alive job past the client's old polling ceiling —
+    // the host step must stay locked exactly as it does for `pending`/`processing`.
+    return status === 'uploading' || status === 'pending' || status === 'processing' || status === 'still_running';
   });
 
   overallPct = this.mdsTracker.overallPercentage;
@@ -224,10 +322,68 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     effect(() => {
       this.autoSaveService.setReadOnly(!this.creationService.isEditableByCenterUser());
     });
+
+    /**
+     * `APF-R-12` — reads this result's banner dismissal back from `sessionStorage` whenever the
+     * bound result changes (new visit, or navigating between results), so a session-scoped
+     * dismissal survives a reload of the SAME result but never leaks onto a different one.
+     */
+    effect(() => {
+      const rid = this.resultId();
+      if (rid == null) {
+        this.provenanceBannerDismissed.set(false);
+        return;
+      }
+      let dismissed = false;
+      try {
+        dismissed = sessionStorage.getItem(BilateralResultCreatorComponent.provenanceDismissKey(rid)) === '1';
+      } catch {
+        // sessionStorage unavailable — treat as not dismissed.
+      }
+      this.provenanceBannerDismissed.set(dismissed);
+    });
   }
 
   /** P2-3520 — single gate the sections and the Submit button read, so no template knows the status numbers. */
   readonly isFormReadOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+  /**
+   * `APF-R-12` / `APF-DD-10` — two of the five provenance surfaces live on this page, split by
+   * `isFormReadOnly()` so they never show together: the editable editor gets the dismissible
+   * banner, the read-only "result detail" state gets the static badge next to the status pill
+   * (`bilateral-page-header`'s `showAiProvenanceBadge`). Both gate on the same normalized
+   * presence rule the editor's `loadResult` already computes (`creationService.isAiGenerated`),
+   * never on `is_ai_generated` truthiness — see that signal's own comment.
+   */
+  readonly showAiProvenanceBadge = computed(() => this.isFormReadOnly() && this.creationService.isAiGenerated());
+
+  /** sessionStorage key the editor banner's per-result dismissal is stored under (Leader decision). */
+  private static provenanceDismissKey(resultId: number): string {
+    return `prms.bilateral-ai.provenance-dismissed.${resultId}`;
+  }
+
+  private readonly provenanceBannerDismissed = signal(false);
+
+  readonly showAiProvenanceBanner = computed(
+    () =>
+      this.resultId() != null &&
+      !this.isFormReadOnly() &&
+      this.creationService.isAiGenerated() &&
+      !this.provenanceBannerDismissed()
+  );
+
+  /** Dismisses the AI provenance banner for this result, for the rest of the browser session. */
+  dismissAiProvenanceBanner(): void {
+    const rid = this.resultId();
+    this.provenanceBannerDismissed.set(true);
+    if (rid == null) return;
+    try {
+      sessionStorage.setItem(BilateralResultCreatorComponent.provenanceDismissKey(rid), '1');
+    } catch {
+      // sessionStorage unavailable (private mode, disabled storage): the dismissal just won't
+      // persist across a reload — the banner is not shown again this instance regardless.
+    }
+  }
 
   /**
    * P2-3229 AC5. Feeds `app-phase-switcher` the phases this result exists in, so a result
@@ -289,18 +445,33 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.lastLoadRequest = { resultCode, versionId };
         this.creationService.loadResult(resultCode, versionId);
       } else {
-        // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
-        const preselected = this.creationService.selectedProject();
-        this.isCreating.set(true);
-        this.resultId.set(null);
-        this.selectedReportingWay.set(null);
-        this.manualCreateFlow.closeDrawer();
-        this.autoSaveService.reset();
-        this.mdsTracker.reset();
-        this.creationService.resetWizard();
-        if (preselected) {
-          this.creationService.selectProject(preselected);
+        const jobId = this.route.snapshot?.queryParams?.['job'];
+        if (jobId) {
+          this.isCreating.set(true);
+          this.resultId.set(null);
+          this.selectedReportingWay.set('ai');
+          this.manualCreateFlow.closeDrawer();
+        } else {
+          // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
+          const preselected = this.creationService.selectedProject();
+          this.isCreating.set(true);
+          this.resultId.set(null);
+          this.selectedReportingWay.set(null);
+          this.manualCreateFlow.closeDrawer();
+          this.autoSaveService.reset();
+          this.mdsTracker.reset();
+          this.creationService.resetWizard();
+          if (preselected) {
+            this.creationService.selectProject(preselected);
+          }
         }
+      }
+    });
+
+    this.route.queryParams?.subscribe(queryParams => {
+      const jobId = queryParams?.['job'];
+      if (jobId && this.isCreating()) {
+        this.selectedReportingWay.set('ai');
       }
     });
   }

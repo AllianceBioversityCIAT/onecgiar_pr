@@ -4,6 +4,8 @@ import { provideRouter } from '@angular/router';
 import { MyWorkColumnComponent } from './my-work-column.component';
 import { MyWorkCardComponent } from '../my-work-card/my-work-card.component';
 import { MyWorkColumn } from '../../my-work.view-model';
+import { MyWorkEditingOrderService } from '../../services/my-work-editing-order.service';
+import { MY_WORK_EDITING_REORDER_COPY } from '../../my-work-editing-reorder.copy';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 
 function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
@@ -45,10 +47,17 @@ describe('MyWorkColumnComponent', () => {
   let fixture: ComponentFixture<MyWorkColumnComponent>;
   let component: MyWorkColumnComponent;
 
-  const build = async (inputs: { column: MyWorkColumn; rail?: boolean; collapsed?: boolean; collapsible?: boolean }) => {
+  const build = async (inputs: {
+    column: MyWorkColumn;
+    rail?: boolean;
+    collapsed?: boolean;
+    collapsible?: boolean;
+    reorderable?: boolean;
+    hasManualOrder?: boolean;
+  }) => {
     await TestBed.configureTestingModule({
       imports: [MyWorkColumnComponent],
-      providers: [provideRouter([])]
+      providers: [provideRouter([]), MyWorkEditingOrderService]
     }).compileComponents();
     fixture = TestBed.createComponent(MyWorkColumnComponent);
     component = fixture.componentInstance;
@@ -56,6 +65,8 @@ describe('MyWorkColumnComponent', () => {
     if (inputs.rail !== undefined) fixture.componentRef.setInput('rail', inputs.rail);
     if (inputs.collapsed !== undefined) fixture.componentRef.setInput('collapsed', inputs.collapsed);
     if (inputs.collapsible !== undefined) fixture.componentRef.setInput('collapsible', inputs.collapsible);
+    if (inputs.reorderable !== undefined) fixture.componentRef.setInput('reorderable', inputs.reorderable);
+    if (inputs.hasManualOrder !== undefined) fixture.componentRef.setInput('hasManualOrder', inputs.hasManualOrder);
     fixture.detectChanges();
   };
 
@@ -213,6 +224,58 @@ describe('MyWorkColumnComponent', () => {
       (root().querySelector('button') as HTMLButtonElement).click();
 
       expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-2, MWER-R-1, MWER-R-5)
+  describe('manual reorder (MWER-T-2)', () => {
+    it('wires cdkDropList on the list when reorderable', async () => {
+      await build({ column: column({ key: 'editing', rows: [row(), row({ code: '4701' })] }), reorderable: true });
+
+      const list = root().querySelector('[data-testid="my-work-column-list"]') as HTMLElement;
+      expect(list.className).toContain('cdk-drop-list');
+      expect(list.className).toContain('pr-my-work-editing-drop-list');
+    });
+
+    it('shows Reset to default order when reorderable and hasManualOrder', async () => {
+      await build({ column: column({ key: 'editing', rows: [row()] }), reorderable: true, hasManualOrder: true });
+
+      const reset = Array.from(root().querySelectorAll('button')).find(btn => btn.textContent?.includes(MY_WORK_EDITING_REORDER_COPY.resetOrderLabel));
+      expect(reset).toBeTruthy();
+    });
+
+    it('emits manualOrderReset when reset is clicked', async () => {
+      await build({ column: column({ key: 'editing', rows: [row()] }), reorderable: true, hasManualOrder: true });
+      const spy = jest.fn();
+      component.manualOrderReset.subscribe(spy);
+
+      const reset = Array.from(root().querySelectorAll('button')).find(btn => btn.textContent?.includes(MY_WORK_EDITING_REORDER_COPY.resetOrderLabel)) as HTMLButtonElement;
+      reset.click();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('onDrop saves reordered codes via MyWorkEditingOrderService', async () => {
+      await build({
+        column: column({ key: 'editing', rows: [row({ code: '9176' }), row({ code: '9177' })] }),
+        reorderable: true
+      });
+      const orderService = TestBed.inject(MyWorkEditingOrderService);
+      orderService.loadForKey(1, 'SP01', 'Reporting 2026');
+      const saveSpy = jest.spyOn(orderService, 'save');
+      fixture.detectChanges();
+
+      component.onDrop({
+        previousIndex: 0,
+        currentIndex: 1,
+        item: {} as any,
+        container: { data: component['dragList'] } as any,
+        previousContainer: {} as any,
+        isPointerOverContainer: true,
+        distance: { x: 0, y: 0 }
+      });
+
+      expect(saveSpy).toHaveBeenCalledWith(['9177', '9176']);
     });
   });
 

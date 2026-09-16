@@ -7,11 +7,13 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ScienceProgramIdService } from '../../../services/science-program-id.service';
 import {
   matchesProgrammeResultCategory,
+  matchesProgrammeResultPhase,
   normalize,
   ProgrammeResultsFilterService
 } from '../../programme-results/services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_PAGE_LIMIT, ProgrammeResultRow, toProgrammeResultRow } from '../../programme-results/services/programme-results.service';
 import {
+  applyManualEditingOrder,
   badgeCount,
   filterByPhase,
   groupByColumn,
@@ -23,6 +25,7 @@ import {
   totals as totalsOf
 } from '../my-work.view-model';
 import { MyWorkCountService } from './my-work-count.service';
+import { MyWorkEditingOrderService } from './my-work-editing-order.service';
 
 /** Envelope of `GET /api/results/get/all/roles/filter/{userId}` — restated (not exported by
  *  `programme-results.service.ts`); `MyWorkCountService` restates the same shape. */
@@ -46,6 +49,9 @@ export class MyWorkBoardService {
   private readonly api = inject(ApiService);
   private readonly scienceProgramIdSE = inject(ScienceProgramIdService);
   private readonly countSE = inject(MyWorkCountService);
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-1) — page-scoped; optional so existing
+  // specs without the provider keep working until T-3 wires both on the component.
+  private readonly editingOrderSE = inject(MyWorkEditingOrderService, { optional: true });
 
   // @akili-spec changes/my-work-board (MWB-T-9) — the Results tab's own filter state object,
   // page-provided beside this service (`MyWorkBoardComponent.providers`). Injecting it here rather
@@ -67,6 +73,10 @@ export class MyWorkBoardService {
 
   /** `'mine'` by default (`MWB-R-3`). */
   readonly scope = signal<MyWorkScope>('mine');
+
+  // @akili-spec changes/my-work-editing-reorder (MWER-T-1, MWER-T-3) — flipped by the board when
+  // scope is Mine and viewport is desktop; merge runs only while true.
+  readonly reorderEnabled = signal(false);
   /** The URL-driven phase label; `null` before the page sets one. */
   readonly phase = signal<string | null>(null);
 
@@ -109,7 +119,14 @@ export class MyWorkBoardService {
    *  This is the PHASE-ONLY view: the tab badge (`MWB-R-1`) and the segment totals (`MWB-R-3`
    *  "its total count for the selected phase") are defined on it, so a toolbar filter never
    *  rewrites either of those two numbers. */
-  readonly phaseRows = computed<ProgrammeResultRow[]>(() => filterByPhase(this.rows(), this.effectivePhase()));
+  readonly phaseRows = computed<ProgrammeResultRow[]>(() => {
+    const selected = this.filter.selectedPhases();
+    if (selected.length > 1) {
+      return this.rows().filter(row => selected.some(phase => matchesProgrammeResultPhase(row, phase)));
+    }
+    if (selected.length === 1) return filterByPhase(this.rows(), selected[0]);
+    return filterByPhase(this.rows(), this.effectivePhase());
+  });
 
   // @akili-spec changes/my-work-board (MWB-T-9, MWB-DD-11)
   /**
@@ -118,7 +135,7 @@ export class MyWorkBoardService {
    * already are the status — offering a Status dimension would let the filter and the grouping
    * fight each other (`MWB-T-9` FAIL input).
    *
-   * The filter service's own `selectedPhase` is mirrored to `effectivePhase()` by the page, so its
+   * The filter service's own `selectedPhases` is mirrored to `effectivePhase()` by the page, so its
    * phase predicate re-asserts a narrowing `phaseRows()` has already applied — a deliberate no-op
    * that keeps ONE phase source (`MyWorkBoardService.phase` → `effectivePhase`) while still
    * producing the `Phase: …` chip from the same `activeChips()` the other dimensions use.
@@ -137,7 +154,17 @@ export class MyWorkBoardService {
     );
   });
 
-  readonly columns = computed<MyWorkColumn[]>(() => groupByColumn(this.visibleRows()));
+  readonly columns = computed<MyWorkColumn[]>(() => {
+    const grouped = groupByColumn(this.visibleRows());
+    if (!this.reorderEnabled() || !this.editingOrderSE) return grouped;
+
+    const savedCodes = this.editingOrderSE.orderedCodes();
+    if (!savedCodes.length) return grouped;
+
+    return grouped.map(column =>
+      column.key === 'editing' ? { ...column, rows: applyManualEditingOrder(column.rows, savedCodes) } : column
+    );
+  });
 
   // @akili-spec changes/my-work-board (MWB-T-9) — grouping of the PHASE-ONLY rows, read by
   // `syncMineBadge()` alone: `MWB-R-1` defines the tab badge as the Mine Editing count of the

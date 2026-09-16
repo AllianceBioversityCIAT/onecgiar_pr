@@ -1,5 +1,12 @@
 <app-bilateral-page-header activeTab="drafts" />
 
+@if (hasAnyDrafts()) {
+  <!-- `APF-R-12`: one line under the tab title while the center has at least one AI draft. -->
+  <div class="px-[16px] pt-[10px] sm:px-[32px]" data-testid="mdr-ai-provenance-line">
+    <app-ai-provenance-notice variant="line" />
+  </div>
+}
+
 <!-- Docked bar: Project filter dropdown and active filter chips directly below tabs band -->
 @if (bilateralAiService.isDraftListLoaded() && hasAnyDrafts()) {
   <div
@@ -126,9 +133,35 @@
   class="min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-y-auto custom_scroll">
   <div class="mdr">
     @if (hasDrafts()) {
+      <!-- Action Guidance Banner -->
+      <div class="mdr-guidance-banner mb-[20px] rounded-[12px] border border-blue-200 bg-gradient-to-r from-blue-50/90 to-indigo-50/60 p-[16px] text-blue-950 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-200 shadow-xs">
+        <div class="flex items-start gap-[14px]">
+          <div class="flex h-[36px] w-[36px] flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
+            <i class="material-icons-round text-[20px]">auto_awesome</i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center justify-between gap-[8px]">
+              <h3 class="text-[14px] font-semibold text-blue-950 dark:text-blue-100 flex items-center gap-[6px]">
+                Candidate Results Ready for Review & Creation
+              </h3>
+              <span class="inline-flex items-center gap-[4px] text-[11px] font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/60 px-[8px] py-[2px] rounded-full">
+                <i class="material-icons-round text-[13px]">info</i>
+                Next Steps
+              </span>
+            </div>
+            <p class="mt-[4px] text-[12px] text-blue-900/80 dark:text-blue-200/80 leading-relaxed">
+              The AI Assistant analyzed your uploaded project documents and identified candidate results below.
+              Inspect each draft by clicking <strong class="font-semibold text-blue-950 dark:text-white">Review</strong>, then click <strong class="font-semibold text-emerald-800 dark:text-emerald-300">Create Result</strong> to validate and officially add it to your Center's reporting.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div class="mdr-session-list flex flex-col gap-[20px]">
         @for (group of sessionGroups(); track group.sessionId) {
-          <div class="mdr-session-card bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm">
+          <div
+            class="mdr-session-card bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm transition-all"
+            [class.mdr-session-card--me]="group.isCurrentUser">
             <!-- Session Header -->
             <div class="mdr-session-header flex flex-wrap items-center justify-between gap-[12px] px-[20px] py-[12px] bg-[var(--pr-surface-page)] border-b border-[var(--pr-border-divider)]">
               <div class="flex flex-wrap items-center gap-[10px] min-w-0">
@@ -139,6 +172,19 @@
                   </span>
                   <span class="mdr-date sr-only">{{ group.formattedDate }}</span>
                 </div>
+
+                <!-- Creator Badge -->
+                @if (group.creatorName) {
+                  <span
+                    class="mdr-creator-badge inline-flex items-center gap-[5px] px-[8px] py-[2px] text-[11px] font-medium rounded-full"
+                    [ngClass]="group.isCurrentUser ? 'mdr-creator-badge--me' : 'mdr-creator-badge--other'"
+                    [prTooltip]="group.creatorTooltip"
+                    prTooltipPosition="top">
+                    <i class="material-icons-round text-[14px]">{{ group.isCurrentUser ? 'person' : 'person_outline' }}</i>
+                    <span class="font-semibold">{{ group.creatorName }}</span>
+                  </span>
+                }
+
                 <span class="inline-flex items-center px-[8px] py-[1px] text-[11px] font-semibold rounded-full bg-[var(--pr-surface-hover)] text-[var(--pr-text-secondary)] border border-[var(--pr-border-divider)]">
                   {{ group.drafts.length }} {{ group.drafts.length === 1 ? 'draft' : 'drafts' }}
                 </span>
@@ -168,20 +214,30 @@
             <!-- Compact Results Table -->
             <div class="mdr-table-container overflow-x-auto custom_scroll">
               <table class="mdr-session-table w-full text-left border-collapse text-[13px]">
+                <colgroup>
+                  <col class="mdr-col-title" />
+                  <col class="mdr-col-category" />
+                  <col class="mdr-col-level" />
+                  <col class="mdr-col-status" />
+                  <col class="mdr-col-actions" />
+                </colgroup>
                 <thead>
                   <tr class="border-b border-[var(--pr-border-divider)] text-[11px] font-semibold uppercase tracking-wider text-[var(--pr-text-secondary)] bg-[var(--pr-surface-card)]">
-                    <th scope="col" class="py-[10px] pl-[20px] pr-[16px]">Result Title</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap w-[200px]">Category</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap w-[100px]">Level</th>
-                    <th scope="col" class="py-[10px] px-[12px] whitespace-nowrap w-[90px]">Status</th>
-                    <th scope="col" class="py-[10px] pl-[12px] pr-[20px] text-right whitespace-nowrap w-[250px]">Actions</th>
+                    <th scope="col" class="mdr-col-title py-[10px] pl-[20px] pr-[16px]">Result Title</th>
+                    <th scope="col" class="mdr-col-category py-[10px] px-[12px] whitespace-nowrap">Category</th>
+                    <th scope="col" class="mdr-col-level py-[10px] px-[12px] whitespace-nowrap">Level</th>
+                    <th scope="col" class="mdr-col-status py-[10px] px-[12px] whitespace-nowrap">Status</th>
+                    <th scope="col" class="mdr-col-actions py-[10px] pl-[12px] pr-[20px] text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--pr-border-subtle)]">
                   @for (draft of group.drafts; track draft.id) {
                     <tr class="mdr-card-row hover:bg-[var(--pr-surface-hover)] transition-colors">
-                      <td class="py-[12px] pl-[20px] pr-[16px] align-middle">
-                        <div class="mdr-card-title font-semibold text-[14px] text-[var(--pr-text-heading)] leading-snug">
+                      <td class="py-[12px] pl-[20px] pr-[16px] align-middle overflow-hidden">
+                        <div
+                          class="mdr-card-title font-semibold text-[14px] text-[var(--pr-text-heading)] leading-snug truncate cursor-default"
+                          [prTooltip]="getDraftTitle(draft)"
+                          prTooltipPosition="top">
                           {{ getDraftTitle(draft) }}
                         </div>
                         @if (draft.mapping_warnings?.length) {
@@ -195,34 +251,35 @@
                           </div>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap">
+                      <td class="mdr-col-category py-[12px] px-[12px] align-middle whitespace-nowrap overflow-hidden">
                         @if (getDraftIndicator(draft)) {
                           <span class="mdr-card-type">{{ getDraftIndicator(draft) }}</span>
                         } @else {
                           <span class="text-[var(--pr-text-muted)]">—</span>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap">
+                      <td class="mdr-col-level py-[12px] px-[12px] align-middle whitespace-nowrap">
                         @if (getDraftLevel(draft); as level) {
                           <span class="mdr-card-level">{{ level }}</span>
                         } @else {
                           <span class="text-[var(--pr-text-muted)]">—</span>
                         }
                       </td>
-                      <td class="py-[12px] px-[12px] align-middle whitespace-nowrap">
+                      <td class="mdr-col-status py-[12px] px-[12px] align-middle">
                         <span [class]="getDraftStatusClass(draft)">{{ getDraftStatus(draft) }}</span>
                       </td>
-                      <td class="py-[12px] pl-[12px] pr-[20px] align-middle text-right whitespace-nowrap">
+                      <td class="mdr-col-actions py-[12px] pl-[16px] pr-[20px] align-middle text-right whitespace-nowrap">
                         <div class="mdr-actions inline-flex items-center justify-end gap-[8px]">
                           <button
                             type="button"
                             class="mdr-btn mdr-btn--review"
+                            [attr.aria-label]="reviewTooltip"
                             [prTooltip]="reviewTooltip"
                             prTooltipPosition="top"
                             (click)="onReview(draft)"
                           >
-                            <i class="material-icons-round">visibility</i>
-                            Review
+                            <i class="material-icons-round" aria-hidden="true">visibility</i>
+                            <span class="mdr-btn-label">Review</span>
                           </button>
                           <button
                             type="button"
@@ -242,7 +299,7 @@
                             prTooltipPosition="top"
                             (click)="onDiscardClick(draft)"
                           >
-                            <i class="material-icons-round">delete_outline</i>
+                            <i class="material-icons-round" aria-hidden="true">delete</i>
                           </button>
                         </div>
                       </td>
