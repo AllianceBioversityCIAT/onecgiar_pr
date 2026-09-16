@@ -269,11 +269,91 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   togglePending(): void {
-    this.pendingOpen.update(open => !open);
+    const opening = !this.pendingOpen();
+    // Resolved ONCE, when the panel opens — never from the template. `canGoToField` reads the DOM,
+    // and a DOM read inside a binding answers differently on the render pass and on the
+    // verification pass the moment anything mounts in between, which is an NG0100 with the
+    // component's name on it. The panel is a snapshot of that instant anyway.
+    if (opening) this.reachableFields.set(new Set(this.missingFields().filter(entry => !!this.fieldElement(entry))));
+    this.pendingOpen.set(opening);
   }
 
   closePending(): void {
     this.pendingOpen.set(false);
+  }
+
+  /**
+   * ── "Go", the half of the W1/W2 control this list never had ──────────────
+   *
+   * JC's report (16-Sep-2026) was a screenshot of this very panel: "1 field missing / External
+   * partners", and nothing to click. On W1/W2 (`section-bottom-bar`) every entry carries a **Go**
+   * that scrolls to the field and flashes it, which is what makes the count actionable — naming a
+   * field the reporter then has to hunt for down a six-section form is barely better than not
+   * naming it.
+   *
+   * 🛑 It cannot be ported as-is. W1/W2 tags each missing field in the DOM during its scan
+   * (`data-pr-feedback`) and looks it up by that key; this editor never scans — its list comes from
+   * the MDS checklist each section declares by hand. So the only link between an entry and a
+   * control is the one the reporter can also see: the LABEL. Matched normalised, and only when
+   * exactly one label on screen matches — an ambiguous match would scroll to the wrong field, which
+   * is worse than no button, and that is why `canGoToField` gates each entry separately (same rule
+   * W1/W2 applies for its own reasons).
+   */
+  private static normaliseLabel(text: string): string {
+    return (text ?? '')
+      .toLowerCase()
+      .replace(/\(.*?\)/g, ' ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  /** The labelled field hosts a `Go` may land on. Mirrors `DataControlService.HIGHLIGHT_HOSTS`. */
+  private static readonly FIELD_HOSTS =
+    'app-pr-input,app-pr-textarea,app-pr-select,app-pr-multi-select,app-pr-checkbox,app-pr-radio-button,' +
+    'app-pr-yes-or-not,app-pr-range-level,app-field-card,app-lead-contact-person-field';
+
+  private fieldElement(entry: string): HTMLElement | null {
+    // The footer appends a reason to invalid entries ("Short title (over 10 words)"); the label is
+    // what precedes it.
+    const wanted = BilateralResultCreatorComponent.normaliseLabel(entry.replace(/\s*\(.*\)\s*$/, ''));
+    if (!wanted) return null;
+
+    const matches = [...document.querySelectorAll<HTMLElement>('.bcr-content .fch_title, .bcr-content .pr_label')]
+      .filter(node => {
+        const label = BilateralResultCreatorComponent.normaliseLabel(node.innerText ?? node.textContent ?? '');
+        // Either the same field, or the on-screen label carrying the checklist's shorter name in
+        // front of it ("Title" → "Title of Result"), never a mid-word hit.
+        return label === wanted || label.startsWith(wanted + ' ');
+      })
+      .map(node => (node.closest(BilateralResultCreatorComponent.FIELD_HOSTS) as HTMLElement) ?? node)
+      // `[hidden]` keeps every other section mounted but collapsed, so a zero box means "in a
+      // section that is not the open one" — nothing to scroll to there.
+      .filter(el => el.getBoundingClientRect().height > 0);
+
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  /** Entries the open panel could pin to a control on screen. See `togglePending`. */
+  private readonly reachableFields = signal<Set<string>>(new Set());
+
+  canGoToField(entry: string): boolean {
+    return this.reachableFields().has(entry);
+  }
+
+  goToField(entry: string): void {
+    const el = this.fieldElement(entry);
+    if (!el) return;
+
+    this.closePending();
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Re-adding the class is what replays the animation for a field visited twice; reading
+    // `offsetWidth` forces the style flush without which the browser coalesces remove+add into
+    // nothing at all. Same trick, and the same shared `.pr-field-flash`, as W1/W2.
+    el.classList.remove('pr-field-flash');
+    void el.offsetWidth;
+    el.classList.add('pr-field-flash');
+    setTimeout(() => el.classList.remove('pr-field-flash'), 2000);
   }
 
   canUseAi = computed(() => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp());

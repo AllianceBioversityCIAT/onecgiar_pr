@@ -284,16 +284,27 @@
             </div>
 
             <div class="bcr-editor-footer__group">
+              <!-- 🛑 "Unsaved changes" no SUSTITUYE al contador (Yeck/JC, 16-sep-2026). Lo hacía, y
+                   entonces el aviso de campos que faltan desaparecía justo mientras el reportero
+                   escribe, que es cuando lo necesita: JC mandó la captura de una sección con
+                   `Description of Result` vacío y el pie diciendo solo "Unsaved changes". En W1/W2
+                   las dos cosas conviven — el guardado lo cuenta cada tarjeta y la barra no deja de
+                   mostrar el progreso. Aquí el guardado pasa a ser un acompañante del contador. -->
               @if (autoSaveService.hasPendingFor(openSectionName())) {
-                <span class="bcr-editor-footer__state bcr-editor-footer__state--dirty" data-testid="bilateral-footer-state">
+                <span class="bcr-editor-footer__state bcr-editor-footer__state--dirty" data-testid="bilateral-footer-dirty">
                   <i class="material-icons-round" aria-hidden="true">error_outline</i>
                   Unsaved changes
                 </span>
-              } @else if (currentSectionComplete()) {
-                <span class="bcr-editor-footer__state bcr-editor-footer__state--done" data-testid="bilateral-footer-state">
-                  <i class="material-icons-round" aria-hidden="true">check</i>
-                  Section complete
-                </span>
+              }
+              @if (currentSectionComplete()) {
+                <!-- El verde habla de lo GUARDADO, así que sigue cediendo ante "Unsaved changes":
+                     eso no cambia. Lo que cambia es el caso de abajo. -->
+                @if (!autoSaveService.hasPendingFor(openSectionName())) {
+                  <span class="bcr-editor-footer__state bcr-editor-footer__state--done" data-testid="bilateral-footer-state">
+                    <i class="material-icons-round" aria-hidden="true">check</i>
+                    Section complete
+                  </span>
+                }
               } @else if (missingFields().length) {
                 <!-- Names what is missing instead of only saying the draft is saved — the W1/W2 bar's
                      "N fields missing" control. -->
@@ -318,13 +329,23 @@
                       </div>
                       <ul class="bcr-pending-list__items">
                         @for (field of missingFields(); track field) {
-                          <li>{{ field }}</li>
+                          <li>
+                            <span>{{ field }}</span>
+                            <!-- Only for entries that resolve to exactly one field on screen: an
+                                 ambiguous jump lands on the wrong control, which is worse than no
+                                 button. Same per-entry rule as the W1/W2 bar. -->
+                            @if (canGoToField(field)) {
+                              <button type="button" class="bcr-pending-list__go" (click)="goToField(field)" [attr.aria-label]="'Go to ' + field">
+                                Go
+                              </button>
+                            }
+                          </li>
                         }
                       </ul>
                     </div>
                   }
                 </div>
-              } @else {
+              } @else if (!autoSaveService.hasPendingFor(openSectionName())) {
                 <span class="bcr-editor-footer__state" data-testid="bilateral-footer-state">Draft up to date</span>
               }
 
