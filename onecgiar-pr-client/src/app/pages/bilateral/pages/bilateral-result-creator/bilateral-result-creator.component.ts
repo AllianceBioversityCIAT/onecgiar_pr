@@ -7,7 +7,7 @@ import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-
 import { BilateralAutoSaveService, BilateralEditorSection } from '../../services/bilateral-auto-save.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
-import { SmartNavigationService, splitNavUrl } from '../../../../shared/services/smart-navigation.service';
+import { SmartNavigationService, navUrlToRouterLink, splitNavUrl } from '../../../../shared/services/smart-navigation.service';
 import { BilateralAiUploadComponent } from '../../components/bilateral-ai-upload/bilateral-ai-upload.component';
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
@@ -118,7 +118,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     return this.smartNav.getBackTarget(activeUrl, center);
   });
 
-  readonly backLink = computed(() => splitNavUrl(this.backTarget().url).path);
+  readonly backLink = computed(() => navUrlToRouterLink(this.backTarget().url));
 
   readonly backQueryParams = computed<Record<string, string | number> | null>(() => {
     const targetUrl = this.backTarget().url;

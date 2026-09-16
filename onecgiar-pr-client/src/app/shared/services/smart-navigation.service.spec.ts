@@ -6,6 +6,7 @@ import {
   isBilateralReviewTab,
   isKnownBilateralOrigin,
   isReportingTab,
+  navUrlToRouterLink,
   RESULT_DETAIL_ORIGIN_STORAGE_KEY,
   SmartNavigationService
 } from './smart-navigation.service';
@@ -101,6 +102,20 @@ describe('SmartNavigationService', () => {
     it('does not match sibling tabs or the bare program path', () => {
       expect(isBilateralReviewTab('/result-framework-reporting/entity-details/SP02')).toBe(false);
       expect(isBilateralReviewTab('/result-framework-reporting/entity-details/SP02/my-work')).toBe(false);
+    });
+  });
+
+  describe('navUrlToRouterLink', () => {
+    it('decodes percent-encoded path segments for routerLink commands', () => {
+      expect(navUrlToRouterLink('/bilateral/Bioversity%20%28Alliance%29/home?phase=36')).toEqual([
+        '/bilateral',
+        'Bioversity (Alliance)',
+        'home'
+      ]);
+    });
+
+    it('leaves plain segments unchanged', () => {
+      expect(navUrlToRouterLink('/bilateral/ABC/results')).toEqual(['/bilateral', 'ABC', 'results']);
     });
   });
 

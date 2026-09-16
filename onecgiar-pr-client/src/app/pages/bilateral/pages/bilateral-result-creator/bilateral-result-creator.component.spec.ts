@@ -770,7 +770,7 @@ describe('BilateralResultCreatorComponent', () => {
       expect(backLink).not.toBeNull();
       expect(backLink.getAttribute('title')).toBe('Back');
       expect(backLink.textContent.trim()).toContain('Back');
-      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backLink()).toEqual(['/bilateral', 'ABC', 'results']);
       expect(component.backQueryParams()).toBeNull();
     });
 
@@ -784,7 +784,20 @@ describe('BilateralResultCreatorComponent', () => {
       const backLink = q('[data-testid="bilateral-rail-back-link"]');
       expect(backLink).not.toBeNull();
       expect(backLink.textContent.trim()).toBe('chevron_leftBack');
-      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backLink()).toEqual(['/bilateral', 'ABC', 'results']);
+      expect(component.backQueryParams()).toEqual({ phase: '36' });
+    });
+
+    it('does not double-encode center acronyms with spaces or parentheses in the back link', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      const center = 'Bioversity (Alliance)';
+      ctxService.setCenter(center, 'Alliance of Bioversity International and CIAT');
+      smartNav.recordUrl(`/bilateral/${encodeURIComponent(center)}/home?phase=36`);
+      smartNav.recordUrl(`/bilateral/${encodeURIComponent(center)}/result/9384?phase=36`);
+      mockRouter.url = `/bilateral/${encodeURIComponent(center)}/result/9384?phase=36`;
+      enterEditor(9384);
+
+      expect(component.backLink()).toEqual(['/bilateral', center, 'home']);
       expect(component.backQueryParams()).toEqual({ phase: '36' });
     });
 
@@ -798,7 +811,7 @@ describe('BilateralResultCreatorComponent', () => {
       const backLink = q('[data-testid="bilateral-rail-back-link"]');
       expect(backLink).not.toBeNull();
       expect(backLink.textContent.trim()).toBe('chevron_leftBack');
-      expect(component.backLink()).toBe('/result/results-outlet/results-list');
+      expect(component.backLink()).toEqual(['/result', 'results-outlet', 'results-list']);
       expect(component.backQueryParams()).toBeNull();
     });
 
