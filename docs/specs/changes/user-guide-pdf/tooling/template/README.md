@@ -74,7 +74,10 @@ DoD.
 
 - **Location:** `<section id="glossary">`, inside `.ug-glossary` (a `<dl>`).
 - **Replace with:** `<dt>` (term) / `<dd>` (definition + `<cite>` source + accessed-on date)
-  pairs, one per curated glossary entry.
+  pairs, one per curated glossary entry. `assemble.ts` wraps each `<dt>`/`<dd>` pair in
+  `<div class="ug-glossary__entry">` (still a valid child of the outer `<dl>`) so `guide.css` can
+  keep a term and its definition on the same printed page — see `guide.css`'s
+  `.ug-glossary__entry` comment for the orphaned-term rationale.
 
 ## Heading-count contract (for `UG-T-13`)
 
@@ -82,6 +85,37 @@ The fully assembled document has **9 `<h2>` elements total**: intro (1), TOC (1)
 `#sections` headings (6), glossary (1). `UG-T-13`'s structural gate counts **exactly 6 `<h2>`
 inside `#sections`** — the other 3 (intro/TOC/glossary) are outside that container and must not
 be counted toward the 6.
+
+## `routes.config.json` — `annotations[]` (`UG-T-17`, `UG-DD-7`, `UG-R-21`)
+
+Each route MAY carry `annotations: CalloutSpec[]` (2-5 entries, `UG-T-18` authors the real
+content) — the labelled feature callouts drawn on that route's screenshot, in addition to (or
+instead of) the single silent click-target ring `UG-R-3` always required. Shape (see
+`tooling/src/annotate.ts`'s exported `CalloutSpec`):
+
+```json
+{
+  "selector": "css or Playwright locator string — MUST resolve to exactly 1 element",
+  "label": "reader-facing text, <= 5 words, U.S. English (UG-R-21)",
+  "role": "primary | feature",
+  "placement": "left | right | above | below (optional, defaults to \"right\")"
+}
+```
+
+- `role: "primary"` gets the existing 4px ring and should be the section's main click target
+  (labelled too, per `UG-R-21`); `role: "feature"` gets a 3px ring — both are the same orange
+  token, only the ring weight differs.
+- `placement` is which side of the target the label chip is drawn on; `annotate.ts` auto-flips it
+  to the opposite side (then tries the remaining sides, then nudges along the free axis) when the
+  requested side would fall outside the captured frame or would cover another callout's target or
+  an already-placed chip.
+- **When a route has no `annotations` field at all** (or an empty array), `capture.ts` synthesizes
+  a single fallback entry — `{ selector: route.clickTarget, role: "primary", label: "" }` — so
+  that route renders exactly as it always has: one ring, no chip, no connector. Labels are content
+  and always live here, never hardcoded in `annotate.ts`/`capture.ts`.
+- Every `selector` in `annotations` (not just the legacy top-level `clickTarget`) is checked live
+  against `count() === 1` before capture; a route with 0 or 2+ matches for any entry fails the
+  build loudly, naming the route id, that entry's `label`, and its `selector`.
 
 ## Token bridge (`--ug-*` neutrals)
 

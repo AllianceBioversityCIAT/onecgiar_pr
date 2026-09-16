@@ -25,6 +25,14 @@
  * Credential handling (§7): `CLIENT_BASE_URL` and `TEST_TOKEN` come from
  * `.env` only (never hardcoded) and are never logged/printed.
  *
+ * UG-T-17 addition (`UG-DD-7` / `UG-R-21`): a route may carry `annotations: CalloutSpec[]` — 2-5
+ * labelled feature callouts instead of just the one silent click-target ring. When a route has no
+ * `annotations`, this file synthesizes a single-entry fallback `[{ selector: clickTarget, role:
+ * 'primary', label: '' }]` so unconfigured routes render EXACTLY as before (ring only, no chip —
+ * `annotateCallouts` draws no chip for an empty `label`). Every selector in `annotations` — not
+ * just `clickTarget` — is checked for `count() === 1` before annotating, and a route with 2+ or 0
+ * matches for ANY entry fails loudly naming the route id, that entry's label, and its selector.
+ *
  * Attempt-2 rework (Reviewer FAIL on attempt 1, recorded in `execution.md`):
  * `overview`, `reporting-aows`, `results-list`, and `notifications-received`
  * all lay out their real content inside an inner-scrolling container, not
@@ -52,7 +60,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { injectAuth } from './auth';
 import { extractTokens, writeTokensJson } from './tokens';
-import { annotateClickTarget, removeAnnotation, OVERLAY_ATTR } from './annotate';
+import { annotateCallouts, removeAnnotation, OVERLAY_ATTR, type CalloutSpec } from './annotate';
 
 interface RouteViewport {
   width: number;
@@ -75,6 +83,12 @@ interface RouteConfig {
    * screenshot against a `viewport` tall enough to hold their content.
    */
   fullPage?: boolean;
+  /**
+   * 2-5 labelled feature callouts (`UG-T-17`, `UG-DD-7`, `UG-R-21`). When omitted, `main()`
+   * synthesizes a single `{ selector: clickTarget, role: 'primary', label: '' }` fallback entry
+   * so the route renders exactly as it did before this field existed (ring only, no chip).
+   */
+  annotations?: CalloutSpec[];
 }
 
 const READY_SELECTOR_TIMEOUT_MS = 25_000;
@@ -239,25 +253,43 @@ async function main(): Promise<void> {
       await waitForNoVisibleSkeletons(page, route, !fullPage);
       console.log(`[capture] ${route.id}: ready`);
 
-      const target = page.locator(route.clickTarget);
-      const count = await target.count();
-      if (count !== 1) {
-        throw new RouteCaptureError(
-          route.id,
-          `clickTarget "${route.clickTarget}" resolved to ${count} element(s) (expected exactly 1)`,
-        );
+      // UG-T-17 (UG-DD-7 / UG-R-21): a route with no `annotations[]` gets a single synthesized
+      // primary entry with an EMPTY label, so `annotateCallouts` draws a ring only — identical
+      // to this pipeline's pre-UG-T-17 output — never a fabricated fallback label.
+      const specs: CalloutSpec[] =
+        route.annotations && route.annotations.length > 0
+          ? route.annotations
+          : [{ selector: route.clickTarget, role: 'primary', label: '' }];
+
+      const callouts: Array<{ locator: ReturnType<Page['locator']>; spec: CalloutSpec }> = [];
+      for (const spec of specs) {
+        const locator = page.locator(spec.selector);
+        const count = await locator.count();
+        if (count !== 1) {
+          throw new RouteCaptureError(
+            route.id,
+            `callout "${spec.label || '(unlabeled)'}" selector "${spec.selector}" resolved to ` +
+              `${count} element(s) (expected exactly 1)`,
+          );
+        }
+        callouts.push({ locator, spec });
       }
 
-      // No scrolling: each route's `viewport` (routes.config.json, UG-T-3) is chosen so the
-      // `clickTarget` and the meaningful top of the page both fall inside the frame that will
+      // No scrolling: each route's `viewport` (routes.config.json, UG-T-3) is chosen so every
+      // callout target and the meaningful top of the page both fall inside the frame that will
       // actually be captured, verified per-route against the live app before this config was
       // written (see the file header). Scrolling was previously required to pull below-the-fold,
       // visibility-gated widgets into view for a `fullPage: true` capture — but a full-page
       // scroll is also what broke `notifications-received` (it fetches more items on scroll,
-      // invalidating the exactly-one-match `clickTarget` count above), so removing the scroll
-      // step entirely, in favor of a viewport tall enough to make it unnecessary, fixes both.
+      // invalidating the exactly-one-match callout count above), so removing the scroll step
+      // entirely, in favor of a viewport tall enough to make it unnecessary, fixes both.
       try {
-        await annotateClickTarget(page, target, orange);
+        await annotateCallouts(
+          page,
+          callouts,
+          { ring: orange, chipBg: tokens['--pr-color-secondary-400'] },
+          { fullPage },
+        );
         await page.screenshot({
           path: path.join(RAW_DIR, `${route.id}.png`),
           fullPage,
@@ -265,8 +297,7 @@ async function main(): Promise<void> {
       } catch (err) {
         throw new RouteCaptureError(
           route.id,
-          `annotate/screenshot failed for clickTarget "${route.clickTarget}": ` +
-            `${err instanceof Error ? err.message : String(err)}`,
+          `annotate/screenshot failed: ${err instanceof Error ? err.message : String(err)}`,
         );
       } finally {
         await removeAnnotation(page);
@@ -279,7 +310,6 @@ async function main(): Promise<void> {
           `${residual} residual [${OVERLAY_ATTR}] node(s) remained after removeAnnotation()`,
         );
       }
-
       console.log(`[capture] ${route.id}: screenshot saved`);
     }
   } finally {

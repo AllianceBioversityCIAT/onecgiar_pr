@@ -246,6 +246,18 @@
 
 ---
 
+### `UG-T-17` — Labelled multi-callout annotations — PASS (attempt 1)
+
+- **Date:** 2026-09-16. Implementer `akili-implementer` (sonnet), skill `playwright-cli`, effort high · Reviewer `akili-reviewer` (**fable** — opus weekly-limited).
+- **Files:** `tooling/src/annotate.ts` (+`CalloutSpec`, `CalloutColors`, `AnnotateCalloutsOptions`, `annotateCallouts()`; `annotateClickTarget`/`removeAnnotation` unchanged), `tooling/src/capture.ts` (reads `route.annotations[]`, fallback `[{ clickTarget, primary, '' }]` → ring-only as before; `count()===1` per selector with `RouteCaptureError` naming route + label + selector; one `annotateCallouts` call per route; residual gate unchanged), `tooling/template/README.md` (`annotations[]` shape + `.ug-glossary__entry` note), `tooling/routes.config.json` (temporary 3-callout example on `home`, superseded by `UG-T-18`).
+- **Implementation:** ring (primary 4 px / feature 3 px, orange token) + label chip (bg `--pr-color-secondary-400`, white text, 2 px orange border, 16 px/600, inherits Manrope) + SVG connector (2.5 px orange line + arrowhead) from chip edge to ring edge; placement requested → opposite → remaining sides, checked against the captured frame (viewport for `fullPage:false`, document for `fullPage:true`) and against other rings/chips, then ±16–80 px nudges; last resort = first in-frame candidate (never throws). All nodes direct `body` children tagged `OVERLAY_ATTR`, `aria-hidden`, `pointer-events:none`. Deviations accepted by the Reviewer: `annotateClickTarget` kept rather than wrapped; 4th optional `options { fullPage, padding }` param; feature ring 3 px (recorded here so it is not read as drift).
+- **Evidence:** typecheck clean; capture exit 0; Leader viewed `home.png` — three rings, three chips ("Open reporting", "Open a Program", "Portfolio progress"), three connectors, legible; `results-list.png` unchanged (fallback); negative paths: 0-match → exit 1 "callout "Open a Program" selector "…" resolved to 0 element(s)", many-match `a` → "resolved to 17 element(s)"; residual gate 0 nodes on all 6 routes.
+- **Reviewer verdict: PASS** — read-only guarantee holds; every injected node covered by the residual gate; colours from tokens only (white text = DD-7 neutral); coordinate/frame math correct; no secret/origin in messages; fallback behaviour-identical; README accurate. Leader's observation (chip over the neighbouring SP02 card text) ruled a placement/authoring concern for `UG-T-18`, not a `UG-R-21` violation.
+- **ADVISORY (recorded):** return per-entry `collisionFree` so `capture.ts` can `console.warn` when the last-resort placement fires; dedupe the ring style block; the `rgba(0,0,0,0.35)` chip shadow and the pre-existing halo are literals — reword the "only accepted neutral literal" comment or drop the shadow; connectors of earlier entries are not part of the collision check.
+- **Requirements covered:** `UG-R-21`, `UG-R-3`. All 3 DoD items satisfied.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -280,4 +292,4 @@ Output directory fixed at `tooling/dist/` (the `UG-T-1` Reviewer's RELIABILITY a
 
 ## 5. Summary (updated as tasks complete)
 
-15 of 16 tasks complete (`UG-T-1` … `UG-T-15`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: polish re-review (fable) → `UG-T-17` → `UG-T-18` → `UG-T-19` → `UG-T-16` sign-off → commit PDF. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+16 of 19 tasks complete (`UG-T-1` … `UG-T-15`, `UG-T-17`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. In flight: `UG-T-18` (callout authoring). Next: `UG-T-19` regenerate → `UG-T-16` sign-off → commit PDF. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.

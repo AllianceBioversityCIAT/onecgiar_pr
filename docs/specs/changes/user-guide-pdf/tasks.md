@@ -247,7 +247,7 @@ Block execution until every box is ticked.
 
 ---
 
-### `UG-T-17` — Labelled multi-callout annotations (`annotate.ts` + `capture.ts`) *(added 2026-09-16, `UG-R-21`)*
+### `UG-T-17` — Labelled multi-callout annotations (`annotate.ts` + `capture.ts`) *(added 2026-09-16, `UG-R-21`)* — **[x] COMPLETE** (PASS, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Implement `UG-DD-7`: `annotate.ts` gains `annotateCallouts(page, annotations, colors)` drawing ring + label chip + connector per entry (chip placement with auto-flip inside the captured frame; nothing covers another callout's target or label); `capture.ts` reads `annotations[]` per route (falls back to `[{ selector: clickTarget, role: "primary", label }]` when absent), enforces `count() === 1` per selector, keeps the residual-node gate. Colours from `tokens.json` only.
@@ -257,9 +257,9 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-18`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] `npm run typecheck` clean; a route with 3+ annotations renders all chips/rings/connectors inside the frame, none overlapping a target or another label (visual check).
-  - [ ] A selector matching 0 or 2+ elements fails loudly naming route + label + selector.
-  - [ ] Zero `[data-ug-annotation]` nodes remain before the next route (existing gate still passes).
+  - [x] `npm run typecheck` clean; a route with 3+ annotations renders all chips/rings/connectors inside the frame, none overlapping a target or another label (visual check).
+  - [x] A selector matching 0 or 2+ elements fails loudly naming route + label + selector.
+  - [x] Zero `[data-ug-annotation]` nodes remain before the next route (existing gate still passes).
 
 ### `UG-T-18` — Author the callouts per route (`routes.config.json`) *(added 2026-09-16, `UG-R-21`)*
 
