@@ -48,6 +48,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   readonly cannotRemoveOptionValues = input<any[]>([]);
   readonly displayLabelFormatter = input<(option: any) => string>();
   readonly showDescriptionLabel = input<boolean>(true);
+  /**
+   * P2-3738: overrides what the card calls "filled". `null` (the default, every existing call site)
+   * keeps `hasSelection`; a consumer whose field needs more than a selection — partners that each
+   * need a role — passes its own verdict so the colour and the missing-field counter agree.
+   */
+  readonly complete = input<boolean | null>(null);
 
   readonly selectOptionEvent = output<any>();
   readonly removeOptionEvent = output<any>();
