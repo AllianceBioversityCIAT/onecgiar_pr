@@ -8,7 +8,7 @@
 - **Owner / driver:** Juan David Delgado
 - **Approval Mode:** gated
 - **Status:** in-progress, **amended to contract v0.2** (pivot at execution gate 2, 2026-09-16; `execution.md` § *Pivot Record: contract v0.2*). `T-1`, `T-2`, `T-3`, `T-4`, `T-5` are PASSed and committed; `T-1b`, `T-4b`, `T-5b` rework three of them in place. Amendment pending owner approval before execution resumes.
-- **Budget (from `design.md`, re-baselined at the v0.2 pivot, owner approval pending):** **16 tasks · ~1 900 production LOC + ~1 600 test LOC · 5 review rounds; tripwire > 19 tasks / > 2 600 LOC / > 7 review rounds — re-baselined at the v0.2 pivot, owner approval pending.** The original 11-task budget was tripped by the pivot (its tripwire was > 14 tasks); three of the five rework rounds are already consumed (`T-1`, `T-5`, `T-4`).
+- **Budget (from `design.md`, re-baselined at the v0.2 pivot, approved by the owner at gate 3 (2026-09-16)):** **16 tasks · ~1 900 production LOC + ~1 600 test LOC · 5 review rounds; tripwire > 19 tasks / > 2 600 LOC / > 7 review rounds — re-baselined at the v0.2 pivot, owner approval pending.** The original 11-task budget was tripped by the pivot (its tripwire was > 14 tasks); three of the five rework rounds are already consumed (`T-1`, `T-5`, `T-4`).
 - **Target branch:** `performance-refactor` (memory rule: bilateral work never bases on `staging`). Work on a feature branch; no merge without the owner.
 
 ## 2. Pre-flight checklist
@@ -17,7 +17,7 @@
 - [ ] **v0.2 amendment approved by the owner** (`requirements.md` `R-2`/`R-3`/`R-4`/`R-7`/`R-8`/`R-15`, `design.md` §3–§6 + `DD-11`/`DD-12`, this list). Blocks every `*b` task, `T-12`, and the resumption of `T-6`.
 - [x] `BIL-QAI-OQ-1` resolved (contract copy → `docs/bilateral-module/integration-contracts.md`). `OQ-4`/`OQ-5` carried as contract defaults (AI returns overall; no `result_code`). `OQ-3` accepted risk. `OQ-2` is a human gate inside `BIL-QAI-T-11`, required **before `BIL-QAI-T-8`** starts.
 - [x] No conflicting in-flight spec touching `bilateral-center.service.ts` / `submitForReview` (search `docs/specs/`; `notifications/bilateral-review-decision` is shipped and only gets a note).
-- [~] `npm run migration:check` — baseline was clean (0 pending) before T-2; the T-2 migration is generated and **pending the owner's `migration:run`** on the dev DB.
+- [x] `npm run migration:check` green — T-2 migration `BilateralQualityAssessments1789566953005` applied by the owner on the dev DB (2026-09-16).
 - [x] Skills available to the Implementer: `nestjs-expert`, `api-design-principles`, `error-handling-patterns`, `tdd`, `angular-developer`, `ui-ux-pro-max`.
 
 ## 3. Task list

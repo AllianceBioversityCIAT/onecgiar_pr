@@ -8,7 +8,7 @@
 | Module code | `BIL-QAI` |
 | Depth | **Full** |
 | Approval Mode | gated |
-| Status | **amended v0.2 — pending owner approval** (2026-09-16). Base text approved at the Phase 2 gate (owner, 2026-09-16; Phase 3 tasks approved same day). The v0.2 amendment covers §3.1, §3.2, §4.1/§4.2, §4.5, §5, §6.2/§6.3, §10, the Budget table, new `BIL-QAI-DD-11` / `DD-12` and §13. Amendment record: `execution.md` § *Pivot Record: contract v0.2*. |
+| Status | **amended v0.2 — approved** (owner, execution gate 3, 2026-09-16). Base text approved at the Phase 2 gate (owner, 2026-09-16; Phase 3 tasks approved same day). The v0.2 amendment covers §3.1, §3.2, §4.1/§4.2, §4.5, §5, §6.2/§6.3, §10, the Budget table, new `BIL-QAI-DD-11` / `DD-12` and §13. Amendment record: `execution.md` § *Pivot Record: contract v0.2*. |
 | Owner | Juan David Delgado |
 | Date | 2026-09-16 |
 | Requirements | `./requirements.md` (approved Phase 1 gate, owner, 2026-09-16) |
@@ -346,7 +346,7 @@ None new. The existing submitted notification fires after the actual transition,
 
 ## Budget (Step 2.4)
 
-**Re-baselined at the v0.2 pivot (2026-09-16), owner approval pending.** The original budget (11 tasks · ~1 500 production LOC + ~1 300 test LOC · 3 review rounds; tripwire > 14 tasks / > 2 200 LOC / > 5 rounds) was tripped by the pivot: contract v0.2 mints `T-1b`, `T-2b`, `T-4b`, `T-5b` and `T-12`, taking the list to **16 tasks** — above the 14 tripwire — which is why the numbers below replace it rather than sit beside it.
+**Re-baselined at the v0.2 pivot (2026-09-16), approved by the owner at execution gate 3.** The original budget (11 tasks · ~1 500 production LOC + ~1 300 test LOC · 3 review rounds; tripwire > 14 tasks / > 2 200 LOC / > 5 rounds) was tripped by the pivot: contract v0.2 mints `T-1b`, `T-2b`, `T-4b`, `T-5b` and `T-12`, taking the list to **16 tasks** — above the 14 tripwire — which is why the numbers below replace it rather than sit beside it.
 
 | Signal | Estimate | vs. Full depth |
 |---|---|---|
@@ -440,7 +440,7 @@ Why not split into the three-child family now: the five new tasks are edits to c
   - *Keep v0.1 and let the AI parse the labelled strings on its side* — **rejected:** it makes a RED verdict depend on string parsing of text PRMS is free to reword, which is exactly the class of silent breakage a versioned contract exists to prevent. The failure mode is invisible: a reworded label degrades a score instead of raising an error.
   - *Defer `impact_areas` to a follow-up* — **rejected by the owner:** the data is already on the result (Section 1 tag levels), the mapper is one small function, and shipping the block optional-and-unpenalised costs the AI side nothing while it waits for the rest. Deferring would have meant a third contract version within the same feature.
   - *Treat `partial` as `unavailable`* — **rejected:** it throws away a usable verdict and mislabels the user's decision as `submitted_without_check`.
-- **Consequences:** budget re-baselined to 16 tasks (above the original tripwire, owner approval pending); a second additive migration; the form's visible labels become contract surface, so a copy edit to a field label now requires a version bump and a message to Daniela; `DD-2` extends (the builder now also reads the Section-1 tag levels); `DD-1`…`DD-10` stand unchanged and no TRD ADR is overturned.
+- **Consequences:** budget re-baselined to 16 tasks (above the original tripwire; approved by the owner at gate 3); a second additive migration; the form's visible labels become contract surface, so a copy edit to a field label now requires a version bump and a message to Daniela; `DD-2` extends (the builder now also reads the Section-1 tag levels); `DD-1`…`DD-10` stand unchanged and no TRD ADR is overturned.
 
 ### `BIL-QAI-DD-12` — Innovation developers restored as a real field in the bilateral form
 - **Context:** the bilateral creator removed the *Innovation Developer* textarea (`type-innovation-dev.component.html:44-46`) and writes `results_innovations_dev.innovation_developers` silently from the Section-1 *Lead contact person* (`type-innovation-dev.component.ts:277`; the ingest handler falls back the same way, `handlers/innovation-development.handler.ts:56-75,95`). Daniela asked for the field as its own contract field and specifically asked that it not be substituted by the lead contact.

@@ -8,7 +8,7 @@
 | Module code | `BIL-QAI` |
 | Type | Change · Depth: **Full** (new external contract, new persistence + migration, additive bilateral payload, new client flow) |
 | Approval Mode | gated (inherited from `proposal.md`) |
-| Status | **amended v0.2 — pending owner approval** (2026-09-16). Base text approved at the Phase 1 gate (owner, 2026-09-16); the v0.2 amendment covers `R-2`, `R-3`, `R-4`, `R-7`, `R-8`, new `R-15`, `AC-16`–`AC-18`. Amendment record: `execution.md` § *Pivot Record: contract v0.2*. |
+| Status | **amended v0.2 — approved** (owner, execution gate 3, 2026-09-16). Base text approved at the Phase 1 gate (owner, 2026-09-16); the v0.2 amendment covers `R-2`, `R-3`, `R-4`, `R-7`, `R-8`, new `R-15`, `AC-16`–`AC-18`. Amendment record: `execution.md` § *Pivot Record: contract v0.2*. |
 | Owner | Juan David Delgado (PRMS) · AI service: Daniela Gómez · Product: Ángel Jarrín |
 | Date | 2026-09-16 |
 | Baseline | `docs/prd.md` — G2 (M2.1 first-pass QA rate), US-S1, US-S4, **AC-2**, **AC-4**, **AC-8**, **AC-9**, OQ-5 · `docs/ux-ui/design.md` — F1 step 6–7, §6 *Drawers and modals* / *Empty-error-loading*, §7 tokens + DD-12, §8 component rules, §10 a11y · `docs/trd/trd.md` — **W1**, **W8**, ADR-004, QAS-3, QAS-9, QAS-10, QAS-12 |
