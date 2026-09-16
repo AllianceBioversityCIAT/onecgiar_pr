@@ -99,7 +99,9 @@ export class BilateralCenterService {
   ) {
     const parsedResultId = Number(resultId);
     if (!Number.isInteger(parsedResultId) || parsedResultId <= 0) {
-      throw new BadRequestException('The resultId parameter must be a valid positive number.');
+      throw new BadRequestException(
+        'The resultId parameter must be a valid positive number.',
+      );
     }
 
     const result = await this.resultRepository.findOne({
@@ -140,8 +142,7 @@ export class BilateralCenterService {
 
     const primaryProgram = project.sciencePrograms.find(
       (program) =>
-        Number(program.programId) ===
-        Number(dto.primary_science_program_id),
+        Number(program.programId) === Number(dto.primary_science_program_id),
     );
     if (!primaryProgram) {
       throw new BadRequestException(
@@ -169,7 +170,9 @@ export class BilateralCenterService {
     const primaryChanged = await this.resultRepository.manager.transaction(
       async (manager) => {
         const projectRepository = manager.getRepository(ResultsByProjects);
-        const initiativeRepository = manager.getRepository(ResultsByInititiative);
+        const initiativeRepository = manager.getRepository(
+          ResultsByInititiative,
+        );
         const tocRepository = manager.getRepository(ResultsTocResult);
         const requestRepository = manager.getRepository(ShareResultRequest);
 
@@ -219,7 +222,9 @@ export class BilateralCenterService {
             is_active: true,
           },
         });
-        const currentPrimaryId = Number(activePrimaryRows[0]?.initiative_id ?? 0);
+        const currentPrimaryId = Number(
+          activePrimaryRows[0]?.initiative_id ?? 0,
+        );
         const nextPrimaryId = Number(primaryInitiative.id);
         const changed = currentPrimaryId !== nextPrimaryId;
 
@@ -247,7 +252,9 @@ export class BilateralCenterService {
               shared_inititiative_id: nextPrimaryId,
               is_active: true,
               is_map_to_toc: false,
-              request_status_id: In(BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES),
+              request_status_id: In(
+                BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES,
+              ),
             },
             { is_active: false },
           );
@@ -343,8 +350,7 @@ export class BilateralCenterService {
 
     // @akili-spec bilateral/manual-create-drawer (BIL-MCD-T-1)
     const clientTitle = dto.title?.trim();
-    const initialTitle =
-      clientTitle || `Bilateral Draft ${Date.now()}`;
+    const initialTitle = clientTitle || `Bilateral Draft ${Date.now()}`;
 
     const result = await this.resultRepository.save({
       created_by: user.id,
@@ -587,7 +593,8 @@ export class BilateralCenterService {
         result_level_id: dto.result_level_id,
         result_type_id: dto.result_type_id,
       },
-      message: 'Result type changed successfully. Complete the new type-specific fields before submitting for review.',
+      message:
+        'Result type changed successfully. Complete the new type-specific fields before submitting for review.',
     };
   }
 
@@ -598,18 +605,49 @@ export class BilateralCenterService {
     userId: number,
   ): Promise<void> {
     const updates: Array<[string, unknown[]]> = [
-      ['UPDATE results_policy_changes SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
-      ['UPDATE results_innovations_use_measures m INNER JOIN results_innovations_use u ON u.result_innovation_use_id = m.result_innovation_use_id SET m.is_active = 0, m.last_updated_by = ? WHERE u.results_id = ?', [userId, resultId]],
-      ['UPDATE results_innovations_use SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
-      ['UPDATE results_innovations_dev SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
-      ['UPDATE results_capacity_developments SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
-      ['UPDATE result_actors SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
-      ['UPDATE results_knowledge_product SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
-      ['UPDATE non_pooled_projetct_budget budget INNER JOIN results_by_projects project ON project.id = budget.result_project_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE project.result_id = ?', [userId, resultId]],
-      ['UPDATE result_initiative_budget budget INNER JOIN results_by_inititiative initiative ON initiative.id = budget.result_initiative_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE initiative.result_id = ?', [userId, resultId]],
-      ['UPDATE result_institutions_budget budget INNER JOIN results_by_institution institution ON institution.id = budget.result_institution_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE institution.result_id = ?', [userId, resultId]],
+      [
+        'UPDATE results_policy_changes SET is_active = 0, last_updated_by = ? WHERE result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_innovations_use_measures m INNER JOIN results_innovations_use u ON u.result_innovation_use_id = m.result_innovation_use_id SET m.is_active = 0, m.last_updated_by = ? WHERE u.results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_innovations_use SET is_active = 0, last_updated_by = ? WHERE results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_innovations_dev SET is_active = 0, last_updated_by = ? WHERE results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_capacity_developments SET is_active = 0, last_updated_by = ? WHERE result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE result_actors SET is_active = 0, last_updated_by = ? WHERE result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_knowledge_product SET is_active = 0, last_updated_by = ? WHERE results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE non_pooled_projetct_budget budget INNER JOIN results_by_projects project ON project.id = budget.result_project_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE project.result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE result_initiative_budget budget INNER JOIN results_by_inititiative initiative ON initiative.id = budget.result_initiative_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE initiative.result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE result_institutions_budget budget INNER JOIN results_by_institution institution ON institution.id = budget.result_institution_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE institution.result_id = ?',
+        [userId, resultId],
+      ],
     ];
-    for (const [sql, parameters] of updates) await manager.query(sql, parameters);
+    for (const [sql, parameters] of updates)
+      await manager.query(sql, parameters);
   }
 
   async getResultInitiativeId(resultId: number) {

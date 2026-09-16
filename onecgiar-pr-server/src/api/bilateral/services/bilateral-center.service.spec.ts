@@ -221,7 +221,9 @@ describe('BilateralCenterService', () => {
           provide: ResultsKnowledgeProductsService,
           useValue: {
             populateKPFromCGSpace: jest.fn().mockResolvedValue({}),
-            validateBilateralKPHandle: jest.fn().mockResolvedValue({ title: 'KP', description: 'Metadata' }),
+            validateBilateralKPHandle: jest
+              .fn()
+              .mockResolvedValue({ title: 'KP', description: 'Metadata' }),
             populateBilateralKPFromMetadata: jest.fn().mockResolvedValue({}),
           },
         },
@@ -254,9 +256,10 @@ describe('BilateralCenterService', () => {
     bilateralProjectsService = module.get<BilateralProjectsService>(
       BilateralProjectsService,
     );
-    resultsKnowledgeProductsService = module.get<ResultsKnowledgeProductsService>(
-      ResultsKnowledgeProductsService,
-    );
+    resultsKnowledgeProductsService =
+      module.get<ResultsKnowledgeProductsService>(
+        ResultsKnowledgeProductsService,
+      );
   });
 
   it('should be defined', () => {
@@ -1154,34 +1157,67 @@ describe('BilateralCenterService', () => {
   });
 
   describe('changeResultType', () => {
-    const user: TokenDto = { id: 42, email: 'center@cgiar.org', first_name: 'Center', last_name: 'User' };
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
     const promotedDraft = {
-      id: 77, source: SourceEnum.Bilateral, is_active: true,
-      creation_method: 'AI', status_id: ResultStatusData.Editing.value,
-      result_level_id: 3, result_type_id: 2,
+      id: 77,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      creation_method: 'AI',
+      status_id: ResultStatusData.Editing.value,
+      result_level_id: 3,
+      result_type_id: 2,
     };
 
     it('resets only type-specific records, updates the header and records the justification', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(promotedDraft);
 
       const response = await service.changeResultType(user, 77, {
-        result_level_id: 4, result_type_id: 7, justification: 'Classification corrected',
+        result_level_id: 4,
+        result_type_id: 7,
+        justification: 'Classification corrected',
       });
 
-      expect(response.response).toEqual({ resultId: 77, result_level_id: 4, result_type_id: 7 });
+      expect(response.response).toEqual({
+        resultId: 77,
+        result_level_id: 4,
+        result_type_id: 7,
+      });
       expect(resultRepository.manager.transaction).toHaveBeenCalled();
     });
 
     it('refuses a manual bilateral result', async () => {
-      (resultRepository.findOne as jest.Mock).mockResolvedValue({ ...promotedDraft, creation_method: 'MANUAL' });
-      await expect(service.changeResultType(user, 77, { result_level_id: 4, result_type_id: 7, justification: 'Correction' })).rejects.toThrow('Only a result promoted from an AI draft');
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...promotedDraft,
+        creation_method: 'MANUAL',
+      });
+      await expect(
+        service.changeResultType(user, 77, {
+          result_level_id: 4,
+          result_type_id: 7,
+          justification: 'Correction',
+        }),
+      ).rejects.toThrow('Only a result promoted from an AI draft');
     });
 
     it('validates and hydrates a Knowledge Product without using the legacy converter', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(promotedDraft);
-      await service.changeResultType(user, 77, { result_level_id: 4, result_type_id: 6, justification: 'It is a repository item', handle: '10568/175322' });
-      expect(resultsKnowledgeProductsService.validateBilateralKPHandle).toHaveBeenCalledWith('10568/175322', user);
-      expect(resultsKnowledgeProductsService.populateBilateralKPFromMetadata).toHaveBeenCalledWith(77, expect.any(Object), '10568/175322', user);
+      await service.changeResultType(user, 77, {
+        result_level_id: 4,
+        result_type_id: 6,
+        justification: 'It is a repository item',
+        handle: '10568/175322',
+      });
+      expect(
+        resultsKnowledgeProductsService.validateBilateralKPHandle,
+      ).toHaveBeenCalledWith('10568/175322', user);
+      expect(
+        resultsKnowledgeProductsService.populateBilateralKPFromMetadata,
+      ).toHaveBeenCalledWith(77, expect.any(Object), '10568/175322', user);
     });
   });
 
@@ -1210,13 +1246,24 @@ describe('BilateralCenterService', () => {
 
     const configureTransaction = () => {
       const projectRepository = {
-        find: jest.fn().mockResolvedValue([{ id: 1, project_id: 10, is_lead: true, is_active: true }]),
+        find: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 1, project_id: 10, is_lead: true, is_active: true },
+          ]),
         findOne: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({}),
         save: jest.fn().mockResolvedValue({}),
       };
       const initiativeRepository = {
-        find: jest.fn().mockResolvedValue([{ id: 2, initiative_id: 100, initiative_role_id: 1, is_active: true }]),
+        find: jest.fn().mockResolvedValue([
+          {
+            id: 2,
+            initiative_id: 100,
+            initiative_role_id: 1,
+            is_active: true,
+          },
+        ]),
         findOne: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({}),
         save: jest.fn().mockResolvedValue({}),
@@ -1225,18 +1272,20 @@ describe('BilateralCenterService', () => {
       const requestRepository = { update: jest.fn().mockResolvedValue({}) };
       const historyRepository = { save: jest.fn().mockResolvedValue({}) };
 
-      (resultRepository.manager.transaction as jest.Mock).mockImplementationOnce(
-        async (callback: any) =>
-          callback({
-            getRepository: (entity: any) => {
-              if (entity.name === 'ResultsByProjects') return projectRepository;
-              if (entity.name === 'ResultsByInititiative') return initiativeRepository;
-              if (entity.name === 'ResultsTocResult') return tocRepository;
-              if (entity.name === 'ShareResultRequest') return requestRepository;
-              if (entity.name === 'ResultReviewHistory') return historyRepository;
-              throw new Error(`Unexpected repository: ${entity.name}`);
-            },
-          }),
+      (
+        resultRepository.manager.transaction as jest.Mock
+      ).mockImplementationOnce(async (callback: any) =>
+        callback({
+          getRepository: (entity: any) => {
+            if (entity.name === 'ResultsByProjects') return projectRepository;
+            if (entity.name === 'ResultsByInititiative')
+              return initiativeRepository;
+            if (entity.name === 'ResultsTocResult') return tocRepository;
+            if (entity.name === 'ShareResultRequest') return requestRepository;
+            if (entity.name === 'ResultReviewHistory') return historyRepository;
+            throw new Error(`Unexpected repository: ${entity.name}`);
+          },
+        }),
       );
 
       return { initiativeRepository };
@@ -1244,11 +1293,19 @@ describe('BilateralCenterService', () => {
 
     it('stores the internal CLARISA initiative id, not the W3 project-mapping id', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
-      (bilateralProjectsService.getProjectsByCenter as jest.Mock).mockResolvedValue({
+      (
+        bilateralProjectsService.getProjectsByCenter as jest.Mock
+      ).mockResolvedValue({
         projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
       });
-      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(ClarisaInitiativesRepository) as any;
-      clarisaInitiatives.findOne.mockResolvedValue({ id: 404, official_code: 'SP04', active: true });
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      ) as any;
+      clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP04',
+        active: true,
+      });
       const { initiativeRepository } = configureTransaction();
 
       const response = await service.updatePrimaryAssignment(user, 11513, {
@@ -1269,10 +1326,14 @@ describe('BilateralCenterService', () => {
 
     it('fails before opening a transaction when the mapped program is absent from CLARISA', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
-      (bilateralProjectsService.getProjectsByCenter as jest.Mock).mockResolvedValue({
+      (
+        bilateralProjectsService.getProjectsByCenter as jest.Mock
+      ).mockResolvedValue({
         projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
       });
-      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(ClarisaInitiativesRepository) as any;
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      ) as any;
       clarisaInitiatives.findOne.mockResolvedValue(null);
 
       await expect(
