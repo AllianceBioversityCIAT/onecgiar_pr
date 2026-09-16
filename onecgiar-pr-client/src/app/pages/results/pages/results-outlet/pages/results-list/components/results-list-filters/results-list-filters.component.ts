@@ -11,6 +11,7 @@ import {
   viewChild,
   ElementRef,
   HostListener,
+  effect,
 } from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -277,6 +278,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   visible = signal(false);
   /** CURRENT "More filters" popover open state */
   moreFiltersOpen = signal(false);
+  /** The popover opens below the toolbar, so `70vh` alone let it run past the bottom of short screens and hid Apply. */
+  readonly filterPanel = viewChild<ElementRef<HTMLElement>>('filterPanel');
+  filterPanelMaxHeight = signal<number | null>(null);
+  private static readonly FILTER_PANEL_MAX_PX = 560;
+  private static readonly FILTER_PANEL_MIN_PX = 240;
+  private static readonly FILTER_PANEL_BOTTOM_GAP_PX = 16;
   clarisaPortfolios = signal([]);
   navbarHeight = signal(0);
   private resizeObserver: ResizeObserver | null = null;
@@ -482,6 +489,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     private readonly exportTablesSE: ExportTablesService,
     private readonly customAlertsSE: CustomizedAlertsFeService
   ) {
+    effect(() => {
+      if (this.filterPanel()) this.fitFilterPanelToViewport();
+    });
+
     // Calculate navbar height after render
     afterNextRender(() => {
       this.calculateNavbarHeight();
@@ -735,6 +746,21 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.skipNextDocClick = true;
     this.moreFiltersOpen.set(true);
     this.visible.set(false);
+  }
+
+  /** Caps the popover at the space left below its top edge so the Cancel/Apply footer stays on screen. */
+  fitFilterPanelToViewport(): void {
+    const panel = this.filterPanel()?.nativeElement;
+    if (!panel) return;
+    const available = window.innerHeight - panel.getBoundingClientRect().top - ResultsListFiltersComponent.FILTER_PANEL_BOTTOM_GAP_PX;
+    this.filterPanelMaxHeight.set(
+      Math.min(ResultsListFiltersComponent.FILTER_PANEL_MAX_PX, Math.max(ResultsListFiltersComponent.FILTER_PANEL_MIN_PX, Math.floor(available)))
+    );
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (this.moreFiltersOpen()) this.fitFilterPanelToViewport();
   }
 
   toggleMoreFilters(event?: Event): void {

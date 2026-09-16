@@ -36,7 +36,9 @@
 
       @if (moreFiltersOpen()) {
         <div
+          #filterPanel
           class="rc-more-panel rc-filter-panel"
+          [style.max-height.px]="filterPanelMaxHeight()"
           role="dialog"
           aria-label="Filters"
           (click)="$event.stopPropagation()">

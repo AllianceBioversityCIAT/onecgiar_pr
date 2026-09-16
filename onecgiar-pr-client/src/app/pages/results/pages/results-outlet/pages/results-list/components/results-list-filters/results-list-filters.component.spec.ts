@@ -1108,6 +1108,49 @@ describe('ResultsListFiltersComponent', () => {
     });
   });
 
+  describe('fitFilterPanelToViewport', () => {
+    const openPanelAt = (top: number, innerHeight: number) => {
+      Object.defineProperty(window, 'innerHeight', { value: innerHeight, configurable: true });
+      component.moreFiltersOpen.set(true);
+      fixture.detectChanges();
+      const panel = fixture.nativeElement.querySelector('.rc-filter-panel') as HTMLElement;
+      jest.spyOn(panel, 'getBoundingClientRect').mockReturnValue({ top } as DOMRect);
+      component.fitFilterPanelToViewport();
+      fixture.detectChanges();
+      return panel;
+    };
+
+    it('should cap the panel at the space left below it so Apply stays on a short screen', () => {
+      const panel = openPanelAt(259, 701);
+
+      expect(component.filterPanelMaxHeight()).toBe(426);
+      expect(panel.style.maxHeight).toBe('426px');
+    });
+
+    it('should keep the 560px ceiling on tall screens', () => {
+      openPanelAt(259, 1200);
+
+      expect(component.filterPanelMaxHeight()).toBe(560);
+    });
+
+    it('should not shrink below 240px on very short screens', () => {
+      openPanelAt(259, 400);
+
+      expect(component.filterPanelMaxHeight()).toBe(240);
+    });
+
+    it('should re-measure on window resize only while the panel is open', () => {
+      const spy = jest.spyOn(component, 'fitFilterPanelToViewport');
+
+      component.onWindowResize();
+      expect(spy).not.toHaveBeenCalled();
+
+      component.moreFiltersOpen.set(true);
+      component.onWindowResize();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('applyFilters', () => {
     it('should copy temp values to applied filter signals and close the Filter popover', () => {
       component.tempSelectedPhases.set([{ id: 3 }] as any);
