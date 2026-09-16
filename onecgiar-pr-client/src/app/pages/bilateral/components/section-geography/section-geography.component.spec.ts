@@ -500,6 +500,37 @@ describe('SectionGeographyComponent', () => {
     });
   });
 
+  // Country / Sub-national main scope must match W1/W2: no "regions for this result?" gate — the
+  // country multi-select appears directly; the extra-scope card keeps its own Yes/No below.
+  describe('main scope Country (W1/W2 parity)', () => {
+    it('does not offer a regions Yes/No when the focus is Country', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      expect(component.showsMainRegionsYesNo).toBe(false);
+    });
+
+    it('does not offer a regions Yes/No when the focus is Sub-national', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.SUB_NATIONAL }));
+      expect(component.showsMainRegionsYesNo).toBe(false);
+    });
+
+    it('does not offer a regions Yes/No when the focus is Regional', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.REGIONAL }));
+      expect(component.showsMainRegionsYesNo).toBe(false);
+    });
+
+    it('onScopeChange(Country) enables countries and clears regions flags', () => {
+      build();
+      component.onScopeChange(GeoScopeEnum.COUNTRY);
+      const b = component.geographicLocationBody();
+      expect(b.has_countries).toBe(true);
+      expect(b.has_regions).toBe(false);
+      expect(b.regions).toEqual([]);
+    });
+  });
+
   // P2-3504 — the classic form asks innovations "…other geographic areas where the innovation could
   // be impactful…" while this one still asked the legacy "…regions … for this Output?". Same result,
   // two different questions depending on which form you opened.

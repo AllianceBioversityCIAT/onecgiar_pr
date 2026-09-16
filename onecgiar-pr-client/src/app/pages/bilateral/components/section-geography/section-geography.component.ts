@@ -172,12 +172,17 @@ export class SectionGeographyComponent {
     this.bilateralApi.GET_geographic(resultId).subscribe({
       next: ({ response }) => {
         if (response && !this.hasLocalGeographyChanges) {
+          const scopeId = Number(response.geo_scope_id);
+          const isCountryOrSubNational =
+            scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL;
           this.geographicLocationBody.update(b => ({
             ...b,
             geo_scope_id: response.geo_scope_id,
-            has_regions: this.toBoolean(response.has_regions),
-            has_countries: this.toBoolean(response.has_countries),
-            regions: response.regions || [],
+            has_regions: isCountryOrSubNational ? false : this.toBoolean(response.has_regions),
+            has_countries: isCountryOrSubNational
+              ? true
+              : this.toBoolean(response.has_countries),
+            regions: isCountryOrSubNational ? [] : response.regions || [],
             countries: response.countries || []
           }));
 
@@ -419,6 +424,21 @@ export class SectionGeographyComponent {
       regions: [],
       countries: []
     }));
+  }
+
+  /**
+   * W1/W2 `app-geoscope-management` hides the main "regions for this result?" Yes/No when the
+   * focus is Country or Sub-national (scope 3 / 5) and goes straight to the country multi-select.
+   * Regional (2) also skips the Yes/No here and shows "Select regions" directly.
+   */
+  get showsMainRegionsYesNo(): boolean {
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    return (
+      !!scopeId &&
+      scopeId !== GeoScopeEnum.REGIONAL &&
+      scopeId !== GeoScopeEnum.COUNTRY &&
+      scopeId !== GeoScopeEnum.SUB_NATIONAL
+    );
   }
 
   /** Regions multiSelect is visible for Regional, or when user opted into regions. */
