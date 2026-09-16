@@ -6,7 +6,7 @@
 - **Linked spec:** `docs/specs/changes/user-guide-pdf/requirements.md` + `design.md`
 - **Sprint / target phase:** none specified
 - **Owner / driver:** unassigned (see `requirements.md` §1)
-- **Status:** in-progress (`UG-T-1` complete; see `execution.md`)
+- **Status:** in-progress — 15/16 original tasks done; `UG-T-17`–`UG-T-19` added 2026-09-16 for `UG-R-21` (see `execution.md`)
 
 **Granularity note:** the design's budget (§ Design Decisions → Budget) estimated ~10 tasks / ~650–850 LOC / ~2 review rounds. This list decomposes into **16 finer-grained tasks** for clearer per-session scoping, but the **LOC and review-round totals stay within the same budgeted range** — the finer split does not represent scope growth, and `/akili-execute` should track the LOC/review-round dimension, not raw task count, against the tripwire.
 
@@ -246,6 +246,47 @@ Block execution until every box is ticked.
   - [ ] Every glossary entry is confirmed traceable to CLARISA (or explicitly flagged as not found there).
 
 ---
+
+### `UG-T-17` — Labelled multi-callout annotations (`annotate.ts` + `capture.ts`) *(added 2026-09-16, `UG-R-21`)*
+
+- **Type:** infra
+- **Description:** Implement `UG-DD-7`: `annotate.ts` gains `annotateCallouts(page, annotations, colors)` drawing ring + label chip + connector per entry (chip placement with auto-flip inside the captured frame; nothing covers another callout's target or label); `capture.ts` reads `annotations[]` per route (falls back to `[{ selector: clickTarget, role: "primary", label }]` when absent), enforces `count() === 1` per selector, keeps the residual-node gate. Colours from `tokens.json` only.
+- **Implements:** `UG-R-21`, `UG-R-3`
+- **Files (expected):** `tooling/src/annotate.ts`, `tooling/src/capture.ts`, `tooling/template/README.md` (config shape note)
+- **Depends on:** `UG-T-7`
+- **Blocks:** `UG-T-18`
+- **Estimate:** M
+- **Definition of done:**
+  - [ ] `npm run typecheck` clean; a route with 3+ annotations renders all chips/rings/connectors inside the frame, none overlapping a target or another label (visual check).
+  - [ ] A selector matching 0 or 2+ elements fails loudly naming route + label + selector.
+  - [ ] Zero `[data-ug-annotation]` nodes remain before the next route (existing gate still passes).
+
+### `UG-T-18` — Author the callouts per route (`routes.config.json`) *(added 2026-09-16, `UG-R-21`)*
+
+- **Type:** content/config
+- **Description:** For each of the 6 routes define 2–5 `annotations` naming the main functionalities a P/A uses on that screen (labels ≤ 5 words, consistent with `content/sections/*.md` vocabulary; primary click target labelled). Verify every selector live (`count() === 1`), run `npm run capture`, view all 6 PNGs.
+- **Implements:** `UG-R-21`
+- **Files (expected):** `tooling/routes.config.json`
+- **Depends on:** `UG-T-17`
+- **Blocks:** `UG-T-19`
+- **Estimate:** M
+- **Definition of done:**
+  - [ ] Every route has 2–5 labelled callouts; labels are U.S. English reader words (no selectors, no codes).
+  - [ ] All selectors resolve to exactly one element; all 6 captures regenerate with exit 0.
+  - [ ] Leader/user visual pass: every callout points at the element its label names.
+
+### `UG-T-19` — Regenerate the guide with callouts and re-run the gates *(added 2026-09-16)*
+
+- **Type:** infra
+- **Description:** `npm run build-guide` on the new captures; `verify-structure` passes; Leader views every figure page; PDF committed after `UG-T-16` sign-off.
+- **Implements:** `UG-R-1`, `UG-R-7`, `UG-R-21`
+- **Files (expected):** `tooling/dist/reporting-tool-user-guide.pdf`
+- **Depends on:** `UG-T-18`
+- **Blocks:** `UG-T-16`
+- **Estimate:** S
+- **Definition of done:**
+  - [ ] `build-guide` exit 0; page count and figure pages recorded in `execution.md`.
+  - [ ] Every figure page shows its callouts legibly at Letter scale (labels readable without zoom).
 
 ## 4. Dependency graph
 

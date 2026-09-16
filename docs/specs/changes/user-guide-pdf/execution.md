@@ -235,6 +235,16 @@
 
 ---
 
+## 3c. Spec amendment — labelled feature callouts (2026-09-16)
+
+**Trigger:** first HITL look by the user (2026-09-16): "La guía quedó perfecta, solo deberíamos adicionar más de los recuadros naranja sobre las principales funcionalidades de cada imagen … eso es lo que nos falta, adicionar más información dentro de las imágenes", with an example image (ring around a Program card, arrow, chip "Click to go SP"). This is a user-requested widening of `UG-R-3` (one marker) — recorded as **`UG-R-21`** in `requirements.md`, **`UG-DD-7`** in `design.md`, and tasks **`UG-T-17`–`UG-T-19`** in `tasks.md` (spec's own files). Approval mode stays pre-approved per the user's standing direction.
+
+**Budget tripwire (reported here, not silently pushed through):** `design.md` estimated ~650–850 LOC / ~2 review rounds. Actual code before this amendment: ~1,900 LOC across `tooling/src/*.ts` + `guide.css` (tests are none; content/JSON excluded), and 7 review rounds (2 rework rounds on `UG-T-3/7`, `UG-T-9`, `UG-T-11`). Causes: production-capture realities (inner-scroll routes, skeleton gates, per-route viewports), a full structural verifier and font/token guards that the estimate under-scoped, and the retroactive audit of unrecorded work. The user was informed in the 2026-09-16 status message; the amendment adds ≈ +260 LOC/config and one review round.
+
+**Runtime:** opus hit its **weekly** limit (resets 2026-09-17 03:00 America/Bogota) during the polish re-review — Reviewer rotated to `fable` (session model); Implementers stay on `sonnet` (session limit reset 02:10).
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -269,4 +279,4 @@ Output directory fixed at `tooling/dist/` (the `UG-T-1` Reviewer's RELIABILITY a
 
 ## 5. Summary (updated as tasks complete)
 
-15 of 16 tasks complete (`UG-T-1` … `UG-T-15`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: polish round (layout + build date) → regenerate + commit the PDF → `UG-T-16` HITL sign-off. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+15 of 16 tasks complete (`UG-T-1` … `UG-T-15`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: polish re-review (fable) → `UG-T-17` → `UG-T-18` → `UG-T-19` → `UG-T-16` sign-off → commit PDF. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.

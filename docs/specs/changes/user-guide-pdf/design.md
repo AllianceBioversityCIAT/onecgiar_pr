@@ -229,6 +229,13 @@ No server/client Jest or Cypress coverage thresholds apply — this spec adds no
 
 **Step 2.3 reversion challenge:** none of the above decisions revert any already-delivered behavior — all are net-new, isolated additions. `UG-DD-6` changes an execution-time target value, not a delivered behavior. The challenge is not applicable to this design.
 
+### `UG-DD-7` — Labelled feature callouts driven by `routes.config.json` (added 2026-09-16)
+
+- **Context:** after the first HITL look the user judged the guide complete but asked for more orange markers per image, each labelled, over the main functionalities of every screen (example: a ring around a Program card with an arrow to a chip reading "Click to go SP"). `UG-R-3` allowed "at least one" marker; `UG-R-21` now requires 2–5 labelled callouts per screenshot.
+- **Decision:** extend the per-route config with `annotations: [{ selector, label, role: "primary" | "feature", placement?: "left" | "right" | "above" | "below" }]`. `annotate.ts` draws, for every entry, the existing ring geometry plus a **label chip** (small rounded box, background `--pr-color-secondary-400`, white text, orange 2 px border) and a **connector** (short line with an arrowhead, orange) from the chip to the ring. Chips are placed on the requested side and auto-flipped when they would fall outside the captured frame; every injected node is a direct `document.body` child tagged `data-ug-annotation`, `pointer-events: none`, `aria-hidden`, so the existing residual-node gate covers them. `capture.ts` iterates `annotations` (the legacy `clickTarget` is kept as the `primary` entry's selector for backward compatibility) and applies the same `count() === 1` rule to every selector. Labels are content, so they live in `routes.config.json` next to the selector, never in code.
+- **Alternatives considered:** post-processing PNGs with an image library (rejected, same reasons as `UG-DD-3`); hand-annotating in a design tool (rejected — `UG-R-7` re-runnability).
+- **Consequences:** one more colour surface (chip text white) — white is an already-accepted neutral (overlay halo); the orange/secondary tokens still come from `tokens.json`. Captions and section copy may name the labelled features but are not required to change. Budget: ≈ +200 LOC in `annotate.ts`/`capture.ts`, ≈ +60 config lines, one review round.
+
 ### Budget (Step 2.4)
 
 | Signal | Estimate |

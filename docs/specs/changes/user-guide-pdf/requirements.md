@@ -112,6 +112,7 @@ Refines: none directly in `docs/prd.md` (this is a new onboarding capability); c
 ### Could / Nice-to-have (MAY)
 
 - **`UG-R-20`** The cover page MAY include a version/date stamp so staleness is visible at a glance.
+- **`UG-R-21`** *(added 2026-09-16, user request after the first HITL look)* Every screenshot MUST carry, in addition to the primary click-target marker (`UG-R-3`), **feature callouts** for the main functionalities visible on that screen: each callout is a ring around one UI element plus a short label (≤ 5 words, U.S. English, reader vocabulary consistent with the section copy) connected to the ring, in the guide's marker style. Target 2–5 callouts per screenshot, the primary click target labelled too. Callouts MUST NOT cover another callout's target or its own label, MUST come from configuration (not code), and MUST be visually verified per screenshot (`UG-T-16`).
 
 ---
 
@@ -215,6 +216,7 @@ Cross-cutting project ACs that already apply (do NOT restate, do refer):
 | `UG-R-11` | SHOULD | Guide text references real deployed origin, not localhost |
 | `UG-R-12` | SHOULD | Screenshot alt-text/captions |
 | `UG-R-20` | MAY | Cover version/date stamp |
+| `UG-R-21` | MUST | Labelled feature callouts (2–5) on every screenshot, from configuration |
 | `UG-AC-1..6` | Acceptance | See §9 |
 
 ---
