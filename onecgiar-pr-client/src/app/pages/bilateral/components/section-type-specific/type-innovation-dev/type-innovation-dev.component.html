@@ -41,9 +41,17 @@
     (ngModelChange)="onFieldChange()">
   </app-pr-select>
 
-  <!-- No Innovation Developer field: for a bilateral innovation the Lead contact person (Section 1)
-       IS the developer (Nicoleta Trifa via Ángel Jarrín, 2026-09-03). `buildPayload()` still fills
-       `innovation_developers` from that contact so the API summary keeps a value. -->
+  <!-- BIL-QAI-R-15 / DD-12 (2026-09-16): Innovation developers restored as its own optional field —
+       Program reviewers need the user's real answer, not a copy of the Lead contact person. Prefilled
+       once on load only when empty (`applyInnovationDevelopersPrefill()`); never overwritten on save.
+       Matches the standard PRMS result form (pages/results/.../innovation-dev-info.component.html). -->
+  <app-pr-textarea
+    placeholder="Contact persons info goes here..."
+    [required]="false"
+    label="Innovation developers"
+    [(ngModel)]="body.innovation_developers"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-textarea>
 
   <app-pr-field-header
     label="How would you assess the current readiness of this innovation?"

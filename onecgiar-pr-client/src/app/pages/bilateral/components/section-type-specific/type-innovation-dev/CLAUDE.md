@@ -1,11 +1,47 @@
 # type-innovation-dev (bilateral)
 
-**Verified:** 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
+**Verified:** 2026-09-16 · spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` (`BIL-QAI-R-15`/`DD-12`) — Innovation developers restored as its own field; prior: 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
-Section 5 of the bilateral form: Innovation Development. Shows the **MDS** (2 mandatory fields since 2026-09-03: typology + readiness — the Innovation Developer is the Lead contact person of Section 1) and
-hides the rest of the pooled-funding form behind the **Complete full metadata** button (P2-3391,
-QA-verified via P2-3327). The full metadata includes the three "Investment (USD)" tables (P2-3390).
+Section 5 of the bilateral form: Innovation Development. Shows the **MDS** (2 mandatory fields:
+typology + readiness) and hides the rest of the pooled-funding form behind the **Complete full
+metadata** button (P2-3391, QA-verified via P2-3327). The full metadata includes the three
+"Investment (USD)" tables (P2-3390).
+
+## Innovation developers — removed, then restored (read both dates)
+
+- **2026-09-03 (product decision, Nicoleta Trifa via Ángel Jarrín):** the field was removed from the
+  form on the reasoning that "for a bilateral innovation the Lead contact person IS the developer".
+  `buildPayload()` was changed to silently copy `creationService.resultLeadContact()` into
+  `innovation_developers` on every save, falling back to whatever was stored.
+- **2026-09-16 (`BIL-QAI-R-15` / `BIL-QAI-DD-12`, spec `bilateral/qa-ai-traffic-light`, `T-12`):**
+  reversed. The AI service team (Daniela) asked for the column verbatim, never substituted, and
+  Program reviewers need the real answer — the substitution made a QA check over this column
+  unfalsifiable, since the column was never empty and never said anything the lead contact did not
+  already say. The field is back (`app-pr-textarea`, optional, label "Innovation developers",
+  same slot the 2026-09-03 removal vacated), and `buildPayload()` no longer reads
+  `resultLeadContact()` at save time at all.
+  - **Prefill, once, on load only when empty:** `applyInnovationDevelopersPrefill()` runs right
+    after the GET resolves and copies `creationService.resultLeadContact()` into the field **only**
+    if `body.innovation_developers` is empty — same rule and shape as the pooled-funding form's
+    `applyInnovationDeveloperAutoFill()` (`pages/results/.../innovation-dev-info.component.ts:372-378`).
+    It never runs again: no effect watches `resultLeadContact()`, so editing the Lead contact person
+    afterwards, or clearing this field and saving, never re-fills it.
+  - **Save sends exactly what is on screen:** `buildPayload()` sends
+    `this.body.innovation_developers?.trim() || null` — a cleared field persists as `null`, never a
+    substituted value.
+  - **Optional, outside the MDS:** `updateMds()` was NOT touched — the green check still counts only
+    `nature` + `readiness`, exactly as it did through both dates.
+  - **Server round-trip verified, not implemented, by `T-12`:** `summary.service.ts` destructures
+    `innovation_developers` off `CreateInnovationDevDto` and assigns it unconditionally onto the
+    entity in both the update branch (`innDevExists.innovation_developers = innovation_developers`,
+    ~line 628) and the create branch (`newInnDev.innovation_developers = innovation_developers`,
+    ~line 659) — a plain assignment, so an explicit `null` persists via TypeORM `save()` just like any
+    other value would (only an `undefined` property is skipped by `save()`'s diff, and this client
+    never omits the key). No server change was needed.
+  - The bulk-upload ingest handler's own lead-contact fallback
+    (`handlers/innovation-development.handler.ts:56-75,95`) is **out of scope** for this client-only
+    task — different module, different owner, notified per the module-ownership rule.
 
 ## Contract
 - Endpoint: **the same one pooled funding's summary uses** —
@@ -16,10 +52,9 @@ QA-verified via P2-3327). The full metadata includes the three "Investment (USD)
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
   **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
 - Green check: `BilateralMdsTrackerService.setSectionFields('type-specific', …)`. **Two items only**:
-  `nature`, `readiness`. Everything else is full metadata and does not count. The Innovation
-  Developer field is gone (Nicoleta Trifa via Ángel, 2026-09-03): `buildPayload()` fills
-  `innovation_developers` with `creationService.resultLeadContact()` (else the stored value) so the
-  API summary keeps a value.
+  `nature`, `readiness`. Everything else — including the restored Innovation developers field
+  (`BIL-QAI-R-15`) — is untracked and does not count. See "Innovation developers — removed, then
+  restored" above for the field's own history and current save contract.
 - Toggle: `BilateralExpandableStateService.get/setShowAllFields(resultId, 'type-specific')` — the
   open/closed state survives navigation between sections.
 - Catalogues: `InnovationControlListService` (`typeList`, `characteristicsList`,

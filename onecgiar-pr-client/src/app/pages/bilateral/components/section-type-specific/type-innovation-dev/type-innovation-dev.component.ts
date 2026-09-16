@@ -165,6 +165,7 @@ export class TypeInnovationDevComponent implements OnInit {
       next: ({ response }) => {
         this.body = response || {};
         this.hydrateInvestmentTables();
+        this.applyInnovationDevelopersPrefill();
         this.loaded.set(true);
         this.updateMds();
       },
@@ -266,15 +267,38 @@ export class TypeInnovationDevComponent implements OnInit {
     this.body.investment_partners = this.body.investment_partners ?? [];
   }
 
+  /**
+   * BIL-QAI-R-15 / DD-12 (2026-09-16) — restores the field the removal (2026-09-03, Nicoleta Trifa
+   * via Ángel Jarrín) replaced with a silent copy of the Section-1 Lead contact person on every save.
+   * That substitution made a QA check over this column unfalsifiable: the column was never empty and
+   * never said anything the lead contact did not already say.
+   *
+   * Prefill runs **once, right after load, only when the stored value is empty** — same rule and
+   * same shape as the pooled-funding form's `applyInnovationDeveloperAutoFill()`
+   * (`pages/results/.../innovation-dev-info.component.ts:372-378`). It never runs again afterwards:
+   * there is no effect watching `resultLeadContact()`, so editing the Lead contact person later, or
+   * clearing this field and saving, never re-fills it. `buildPayload()` is the other half of the
+   * fix — it now sends exactly what is on screen, trimmed, or `null`.
+   */
+  private applyInnovationDevelopersPrefill(): void {
+    if (this.body.innovation_developers?.trim()) return;
+    const leadContact = this.creationService.resultLeadContact()?.trim();
+    if (!leadContact) return;
+    this.body.innovation_developers = leadContact;
+  }
+
   private buildPayload(): Record<string, unknown> {
     const { reference_materials } = this.body as { reference_materials?: unknown };
     const payload: Record<string, unknown> = {
       short_title: this.body.short_title ?? null,
       innovation_characterization_id: this.body.innovation_characterization_id ?? null,
       innovation_nature_id: this.body.innovation_nature_id ?? null,
-      // The Lead contact person is the innovation developer (2026-09-03): the field left the form, but
-      // the column keeps a value for the API summary — the contact's name, else whatever was stored.
-      innovation_developers: this.creationService.resultLeadContact()?.trim() || this.body.innovation_developers || null,
+      // BIL-QAI-R-15 / DD-12 (2026-09-16) — sends exactly what is on screen, never a substitution.
+      // A cleared field persists as `null`, and changing the Lead contact person afterwards never
+      // touches this key: the only place that reads `resultLeadContact()` is the one-time prefill in
+      // `applyInnovationDevelopersPrefill()`, run on load, not on save. Supersedes the 2026-09-03
+      // removal, which copied the Lead contact person in here on every save.
+      innovation_developers: this.body.innovation_developers?.trim() || null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
       is_new_variety: this.body.is_new_variety ?? null,
       number_of_varieties: this.body.number_of_varieties ?? null,
@@ -301,10 +325,11 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   /**
-   * P2-3391 AC9/AC10 named three MDS fields — typology, innovation developer, readiness level. Since
-   * 2026-09-03 the innovation developer is the Lead contact person (Section 1, already mandatory), so
-   * the green check here is typology + readiness level and nothing else. Short title is full metadata
-   * (AC8: strictly optional) and cannot hold the section back.
+   * P2-3391 AC9/AC10 named three MDS fields — typology, innovation developer, readiness level. The
+   * green check here is typology + readiness level only: Innovation developers (`BIL-QAI-R-15`,
+   * restored 2026-09-16) is deliberately kept OUT of `updateMds()` — optional, per the requirement —
+   * so it never blocks Submit even though the field is visible again. Short title is full metadata
+   * (AC8: strictly optional) and cannot hold the section back either.
    *
    * P2-3340 still applies though: the 10-word ceiling on the short title is only painted red by
    * `pr-input`, so it is reported here as an INVALID item — but only while it is actually over the
