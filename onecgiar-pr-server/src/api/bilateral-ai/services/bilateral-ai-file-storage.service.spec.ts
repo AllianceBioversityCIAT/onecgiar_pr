@@ -259,4 +259,60 @@ describe('BilateralAiFileStorageService', () => {
       expect((service as any).s3.putObject).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('getObjectStream', () => {
+    it('should throw when bucket is not configured', async () => {
+      delete process.env.BILATERAL_AI_BUCKET_NAME;
+      service = new BilateralAiFileStorageService();
+
+      await expect(service.getObjectStream('some/key')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should return the object stream and its size from HeadObject, without buffering', async () => {
+      const fakeStream = { pipe: jest.fn(), on: jest.fn() };
+      const headObjectMock = {
+        promise: jest.fn().mockResolvedValue({ ContentLength: 12345 }),
+      };
+      const getObjectMock = {
+        createReadStream: jest.fn().mockReturnValue(fakeStream),
+      };
+      (service as any).s3 = {
+        headObject: jest.fn().mockReturnValue(headObjectMock),
+        getObject: jest.fn().mockReturnValue(getObjectMock),
+      };
+
+      const result = await service.getObjectStream('prms/test/job-1/file.pdf');
+
+      expect((service as any).s3.headObject).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+        Key: 'prms/test/job-1/file.pdf',
+      });
+      expect((service as any).s3.getObject).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+        Key: 'prms/test/job-1/file.pdf',
+      });
+      // getObject().promise() is never called — proves the object is streamed, not buffered.
+      expect(getObjectMock).not.toHaveProperty('promise');
+      expect(result).toEqual({ stream: fakeStream, size: 12345 });
+    });
+
+    it('should default size to 0 when HeadObject returns no ContentLength', async () => {
+      const headObjectMock = {
+        promise: jest.fn().mockResolvedValue({}),
+      };
+      const getObjectMock = {
+        createReadStream: jest.fn().mockReturnValue({}),
+      };
+      (service as any).s3 = {
+        headObject: jest.fn().mockReturnValue(headObjectMock),
+        getObject: jest.fn().mockReturnValue(getObjectMock),
+      };
+
+      const result = await service.getObjectStream('prms/test/job-1/empty.pdf');
+
+      expect(result.size).toBe(0);
+    });
+  });
 });

@@ -127,6 +127,28 @@ export class EvidenceItemComponent {
     return this.api.dataControlSE?.currentResult?.result_type_id;
   }
 
+  /**
+   * Si alguna casilla está marcada. Solo alimenta el tinte de la tarjeta: el campo es OPCIONAL, así
+   * que vacío se queda neutro y marcado se pone verde — nunca naranja, que significaría "te falta".
+   */
+  anyImpactAreaChecked(): boolean {
+    const e: any = this.evidence ?? {};
+    return [
+      e.gender_related,
+      e.youth_related,
+      e.nutrition_related,
+      e.environmental_biodiversity_related,
+      e.poverty_related,
+      e.innovation_readiness_related,
+      e.innovation_use_related,
+      e.policy_change_related,
+      e.capacity_sharing_related,
+      e.knowledge_product_metadata_related,
+      e.other_output_related,
+      e.other_outcome_related
+    ].some(Boolean);
+  }
+
   getEvidenceRelatedTitle() {
     const label = this.resultTypeLabels[this.resultTypeId];
     const base = 'Indicate whether this evidence is related to an Impact Area score of 2';

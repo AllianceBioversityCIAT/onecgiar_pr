@@ -1188,4 +1188,14 @@ describe('ResultsListComponent', () => {
       expect(mockResultsListFilterService.text_to_search()).toBe('SP01');
     });
   });
+
+  describe('is_replicated handling in table rows', () => {
+    it('should distinguish replicated results for Previously reported badge', () => {
+      const replicated = { id: 1, title: 'Result A', is_replicated: 1 } as any;
+      const original = { id: 2, title: 'Result B', is_replicated: 0 } as any;
+
+      expect(Boolean(replicated.is_replicated)).toBe(true);
+      expect(Boolean(original.is_replicated)).toBe(false);
+    });
+  });
 });

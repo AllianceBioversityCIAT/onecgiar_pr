@@ -41,10 +41,12 @@ import {
   bilateralAiDbNow,
 } from '../bilateral-ai.config';
 import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
+import { BilateralAiEvidenceTransferService } from './bilateral-ai-evidence-transfer.service';
 import {
   BilateralAiExpectationsMix,
   BilateralAiExpectationsResponseDto,
 } from '../dto/bilateral-ai-expectations.dto';
+import { isQualifyingEvidenceDocument } from '../constants/evidence-formats.constant';
 
 /**
  * The complete server `stage` vocabulary (`design.md` §3.1, `requirements.md` §2 Glossary).
@@ -109,6 +111,7 @@ export class BilateralAiService {
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly notificationsService: BilateralAiNotificationsService,
+    private readonly evidenceTransferService: BilateralAiEvidenceTransferService,
   ) {}
 
   async createJob(
@@ -609,6 +612,26 @@ export class BilateralAiService {
       status_id: ResultStatusData.Editing.value,
     });
 
+    // ▶ NEW (`ADE-T-4`, `@akili-spec docs/specs/bilateral/ai-draft-evidence-promotion`) —
+    // attaches this draft's qualifying documents as formal evidence on the result just moved to
+    // Editing (`design.md` §3.1). Scoped to THIS draft's own `id`/`result_id`, read above — never
+    // a sibling draft's (`ADE-AC-1`). Runs after the point of no return so a transfer fault can
+    // never strand the result in `Draft` (`ADE-R-5`). `transferForDraft` already isolates and
+    // logs every document's own failure and never throws; the `try` here is defense in depth only,
+    // so a defect in that contract still cannot cost the promotion its success response.
+    try {
+      await this.evidenceTransferService.transferForDraft(
+        draft.id,
+        draft.result_id,
+        userId,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `AI evidence transfer step failed unexpectedly for draft ${draft.id} (result ${draft.result_id}): ${message}`,
+      );
+    }
+
     await this.draftRepository.update(draft.id, { is_discarded: true });
 
     return {
@@ -947,14 +970,20 @@ export class BilateralAiService {
       }),
     );
     for (const key of job.document_keys ?? []) {
+      const fileName = key.split('/').pop() ?? key;
       await this.evidenceRepository.save({
         draft_id: draft.id,
         source_type: DraftEvidenceSourceType.DOCUMENT,
         object_key: key,
-        file_name: key.split('/').pop() ?? key,
+        file_name: fileName,
         mime_type: null,
         file_size: null,
-        is_formal_evidence: false,
+        // ADE-R-6 / DD-5: descriptive in v1, not load-bearing — `ADE-T-1`'s predicate decides
+        // what `promoteDraft`'s transfer selects, this flag only records intent.
+        is_formal_evidence: isQualifyingEvidenceDocument({
+          source_type: DraftEvidenceSourceType.DOCUMENT,
+          file_name: fileName,
+        }),
         file_management_reference: null,
         is_active: true,
       });

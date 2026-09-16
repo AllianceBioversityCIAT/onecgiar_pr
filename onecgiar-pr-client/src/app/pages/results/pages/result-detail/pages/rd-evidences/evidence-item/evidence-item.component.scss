@@ -156,10 +156,15 @@
     gap: 8px;
   }
 
+  // 15-sep-2026: rejilla en vez de `flex-wrap`. Con el wrap, las doce casillas caían donde les
+  // tocaba según el largo de su texto y no había dos columnas alineadas; en la captura se veía
+  // "Climate adaptation" arrancando a media pantalla de "Gender equality". Columnas de 240px
+  // mínimo: alinean siempre, y en pantalla estrecha caen a una sola sin tocar nada.
   .checkboxes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px 24px;
+    padding-top: 4px;
   }
 }
 

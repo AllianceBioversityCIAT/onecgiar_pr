@@ -6,7 +6,10 @@ import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-trac
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
-import { InnovationUseResultsService } from '../../../../../shared/services/global/innovation-use-results.service';
+import {
+  QaInnovationDevelopmentResultsService,
+  QaInnovationDevelopmentOption
+} from '../../../../../shared/services/global/qa-innovation-development-results.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
 import { EstimatesCgiarComponent } from '../../../../../shared/components/innovation-use-form/components/estimates/estimates.component';
 
@@ -38,15 +41,6 @@ const MDS_INFO_NOTE =
 const LOAD_ERROR_NOTE =
   'We could not load the information saved for this section, so the fields below are empty and nothing typed here will be saved. ' +
   'Please reload the page to try again — the information reported earlier has not been changed.';
-
-/**
- * P2-3424: "QA'd" asumido como status_id = 2 (Quality Assessed) — supuesto declarado por el PO, pendiente de confirmación de negocio
- * (Ángel Jarrín, 23-ago-2026, comentario en P2-3424; ver `result-status.enum.ts` del server).
- */
-const QUALITY_ASSESSED_STATUS_ID = 2;
-
-/** Result-type label returned by `GET /v2/api/results/get/innov-use-linked-results` for Innovation Development. */
-const INNOVATION_DEVELOPMENT_TYPE_NAME = 'innovation development';
 
 /**
  * P2-3424 (PO instruction recorded on the ticket, 23-ago-2026): the link-to-a-QA'd-Innovation-Development
@@ -84,7 +78,7 @@ export class TypeInnovationUseComponent implements OnInit {
   private readonly expandableState = inject(BilateralExpandableStateService);
   readonly innovationControlListSE = inject(InnovationControlListService);
   /** Same catalog the W1/W2 Contributors & Partners dropdown consumes — reused, not re-fetched here. */
-  readonly innovationUseResultsSE = inject(InnovationUseResultsService);
+  readonly qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
 
   body: any = {};
   actorsTypeList: any[] = [];
@@ -201,28 +195,47 @@ export class TypeInnovationUseComponent implements OnInit {
   }
 
   /**
-   * P2-3424 — Innovation Development results the user may link to.
+   * P2-3424 AC4 — the Innovation Development results the user may link to.
    *
-   * ⚠️ The catalog endpoint (`GET /v2/api/results/get/innov-use-linked-results`,
-   * `result.repository.ts:2645 getResultsForInnovUse`) selects only id, acronym, phase_year, result_code,
-   * name and title — it carries NO `status_id`, so the Quality-Assessed gate below cannot bite today.
-   * Options that do not carry the field are let through on purpose: filtering them out would render an
-   * always-empty dropdown. The moment the backend exposes `status_id`, the filter starts applying with no
-   * further change here. Reported on the ticket; do not "fix" it by inventing a status client-side.
+   * 🛑 This reads the SAME catalogue as W1/W2 (`QaInnovationDevelopmentResultsService`, owned by
+   * P2-3422), so the two routes can no longer offer different lists for the same question. It used
+   * to read `InnovationUseResultsService`, which is a different thing: the wide Contributors &
+   * Partners list — every phase, no de-duplication by result code — narrowed here by a client-side
+   * filter that asked for `status_id === 2`.
+   *
+   * That filter was justified by a comment claiming the endpoint "carries NO status_id". It does:
+   * `getResultsForInnovUse` (result.repository.ts:3079) selects `r.status_id` and already filters
+   * `IN (2, 6)`. So the client filter was not inert — it silently dropped every Approved (6)
+   * result, which is precisely what a bilateral Innovation Development is, and left the dropdown
+   * missing the results AC4 asks for.
+   *
+   * ⚠️ The stored link is only an id, and the catalogue lists what is linkable TODAY. Keeping the
+   * saved id as an option is what stops a previously linked result from painting an empty select
+   * and being wiped on the next save (AC8/AC9). Same fallback wording as the W1/W2 twin.
    */
-  get qaInnovationDevelopmentResults(): any[] {
-    return (this.innovationUseResultsSE.resultsList ?? []).filter((r: any) => this.isLinkableInnovationDevelopment(r));
-  }
-
-  private isLinkableInnovationDevelopment(result: any): boolean {
-    if (String(result?.name ?? '').trim().toLowerCase() !== INNOVATION_DEVELOPMENT_TYPE_NAME) return false;
-    if (result?.status_id === null || result?.status_id === undefined) return true;
-    return Number(result.status_id) === QUALITY_ASSESSED_STATUS_ID;
+  get qaInnovationDevelopmentResults(): QaInnovationDevelopmentOption[] {
+    const options = this.qaInnovationsSE.options();
+    const selected = this.body?.linked_result_id;
+    if (selected == null || options.some(option => option.id === selected)) return options;
+    return [
+      {
+        id: selected,
+        result_code: selected,
+        title: '',
+        status_id: 0,
+        phase_year: 0,
+        acronym: null,
+        display: `${selected} - (linked result outside the QA’d list)`
+      },
+      ...options
+    ];
   }
 
   ngOnInit(): void {
     const resultId = this.creationService.currentResultId();
     this.showAllFields.set(this.expandableState.getShowAllFields(resultId ?? 0, SECTION_NAME));
+    // P2-3424 AC4: idempotent — the first surface to ask fetches, the rest reuse the cached list.
+    if (this.showInnovationLinkQuestion) this.qaInnovationsSE.load();
     this.loadData();
   }
 

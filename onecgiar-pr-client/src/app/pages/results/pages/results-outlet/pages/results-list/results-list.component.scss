@@ -777,6 +777,21 @@
   }
 }
 
+.rc-badge-replicated {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  background: var(--pr-color-primary-100, #ede9fe);
+  color: var(--pr-color-primary-700, #4c2882);
+  white-space: nowrap;
+}
+
 /* Status chips — CURRENT palette (force inside table cells) */
 .status_tag {
   display: inline-flex;

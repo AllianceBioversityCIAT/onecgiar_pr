@@ -103,6 +103,9 @@ describe('BilateralAiService (unit)', () => {
     const notificationsService = {
       notifyTerminal: jest.fn().mockResolvedValue(undefined),
     };
+    const evidenceTransferService = {
+      transferForDraft: jest.fn().mockResolvedValue([]),
+    };
 
     const service = new BilateralAiService(
       jobRepository as any,
@@ -121,6 +124,7 @@ describe('BilateralAiService (unit)', () => {
       clarisaCentersRepository as any,
       clarisaInstitutionsRepository as any,
       notificationsService as any,
+      evidenceTransferService as any,
     );
 
     Object.assign(service, overrides);
@@ -145,6 +149,7 @@ describe('BilateralAiService (unit)', () => {
         clarisaCentersRepository,
         clarisaInstitutionsRepository,
         notificationsService,
+        evidenceTransferService,
       },
     };
   };
@@ -1099,6 +1104,195 @@ describe('BilateralAiService (unit)', () => {
       await expect(service.promoteDraft(5, 42)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    // `ADE-T-4` — the live dispatch chain (`design.md` §3.1): the transfer runs once, scoped to
+    // THIS draft's own `result_id`/`id`, after the `status_id` write and before the discard.
+    it('calls the evidence transfer for this draft only, after the status write and before the discard', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+
+      await service.promoteDraft(5, 42);
+
+      expect(
+        stubs.evidenceTransferService.transferForDraft,
+      ).toHaveBeenCalledWith(5, 100, 42);
+      const statusUpdateOrder =
+        stubs.resultRepository.update.mock.invocationCallOrder[0];
+      const transferOrder =
+        stubs.evidenceTransferService.transferForDraft.mock
+          .invocationCallOrder[0];
+      const discardOrder =
+        stubs.draftRepository.update.mock.invocationCallOrder[0];
+      expect(statusUpdateOrder).toBeLessThan(transferOrder);
+      expect(transferOrder).toBeLessThan(discardOrder);
+    });
+
+    // ADE-R-5 / defense in depth: even if the transfer service's own "never throws" contract were
+    // violated, promoteDraft still resolves with its unchanged response — the result already
+    // reached Editing above and nothing downstream may strand it.
+    it('still resolves with the unchanged response contract if the evidence transfer rejects outright', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+      stubs.resultRepository.findOneOrFail.mockResolvedValue({
+        id: 100,
+        result_code: 9046,
+        version_id: 36,
+      });
+      stubs.evidenceTransferService.transferForDraft.mockRejectedValue(
+        new Error('unexpected transfer defect'),
+      );
+
+      const res = await service.promoteDraft(5, 42);
+
+      expect(res).toEqual({
+        response: { resultId: 100, resultCode: 9046, versionId: 36 },
+        message: 'Draft promoted to bilateral result',
+        status: 200,
+      });
+      expect(stubs.resultRepository.update).toHaveBeenCalledWith(100, {
+        status_id: expect.any(Number),
+      });
+      expect(stubs.draftRepository.update).toHaveBeenCalledWith(5, {
+        is_discarded: true,
+      });
+    });
+  });
+
+  // `ADE-T-2` (`ADE-R-6`, DD-5): `createDraftFromCandidate` defaults `is_formal_evidence` per
+  // source. Only the document site changes — it reuses `ADE-T-1`'s predicate; audio and text
+  // context stay hard-coded `false`.
+  describe('createDraftFromCandidate — is_formal_evidence defaults (ADE-T-2)', () => {
+    it('defaults true for every qualifying document extension and false for .txt, audio and text context', async () => {
+      const { service, stubs } = makeService();
+      const evidenceRows: any[] = [];
+      stubs.evidenceRepository.save.mockImplementation(async (row: any) => {
+        const saved = { ...row, id: evidenceRows.length + 1 };
+        evidenceRows.push(saved);
+        return saved;
+      });
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [
+          'prms/j1/report.pdf',
+          'prms/j1/report.docx',
+          'prms/j1/sheet.xls',
+          'prms/j1/sheet.xlsx',
+          'prms/j1/deck.pptx',
+          'prms/j1/notes.txt',
+        ],
+        audio_keys: ['prms/j1/note.m4a'],
+        text_context: 'free-form notes captured alongside the upload',
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [{ indicator: 'Innovation Development', title: 'X' }],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      const byFileName = (fileName: string) =>
+        evidenceRows.find((row) => row.file_name === fileName);
+
+      expect(byFileName('report.pdf').is_formal_evidence).toBe(true);
+      expect(byFileName('report.docx').is_formal_evidence).toBe(true);
+      expect(byFileName('sheet.xls').is_formal_evidence).toBe(true);
+      expect(byFileName('sheet.xlsx').is_formal_evidence).toBe(true);
+      expect(byFileName('deck.pptx').is_formal_evidence).toBe(true);
+      // `.txt` is an accepted DOCUMENT upload but never qualifying evidence (ADE-T-1).
+      expect(byFileName('notes.txt').is_formal_evidence).toBe(false);
+
+      const voiceRow = evidenceRows.find(
+        (row) => row.source_type === DraftEvidenceSourceType.VOICE_NOTE,
+      );
+      expect(voiceRow.is_formal_evidence).toBe(false);
+
+      const textRow = evidenceRows.find(
+        (row) => row.source_type === DraftEvidenceSourceType.TEXT_CONTEXT,
+      );
+      expect(textRow.is_formal_evidence).toBe(false);
+    });
+
+    // The negative constraint this task names as the regression it is most likely to cause: if
+    // the flag were set for EVERY source (not just qualifying documents), the voice note above
+    // would also default `true`, and `promoteDraft`'s existing non-DOCUMENT validation
+    // (`bilateral-ai.service.ts:547-556`) would throw `BadRequestException` on promotion — this
+    // test drives that same mixed-source draft through `promoteDraft` end to end and asserts it
+    // still succeeds. A test that only inspected the created rows (the test above) would never
+    // exercise that guard, per this task's Disqualifier.
+    it('a job carrying one .pdf and one .m4a still promotes successfully end to end (guard regression)', async () => {
+      const { service, stubs } = makeService();
+      const evidenceRows: any[] = [];
+      stubs.evidenceRepository.save.mockImplementation(async (row: any) => {
+        const saved = { ...row, id: evidenceRows.length + 1 };
+        evidenceRows.push(saved);
+        return saved;
+      });
+      stubs.evidenceRepository.find.mockImplementation(
+        async () => evidenceRows,
+      );
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: ['prms/j1/report.pdf'],
+        audio_keys: ['prms/j1/note.m4a'],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [
+          { indicator: 'Innovation Development', title: 'Mixed source' },
+        ],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      // Sanity check on the defaults this test depends on: exactly one row is formal (the
+      // document); the voice note is not.
+      expect(evidenceRows).toHaveLength(2);
+      const documentRow = evidenceRows.find(
+        (row) => row.source_type === DraftEvidenceSourceType.DOCUMENT,
+      );
+      const voiceRow = evidenceRows.find(
+        (row) => row.source_type === DraftEvidenceSourceType.VOICE_NOTE,
+      );
+      expect(documentRow.is_formal_evidence).toBe(true);
+      expect(voiceRow.is_formal_evidence).toBe(false);
+
+      // `draftRepository.save`'s default stub (see `makeService`) returns the created draft as
+      // id 1 — wire `getDraftRaw`'s lookup for the promote call that follows.
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 1,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+
+      await expect(service.promoteDraft(1, 42)).resolves.toMatchObject({
+        status: 200,
+      });
     });
   });
 

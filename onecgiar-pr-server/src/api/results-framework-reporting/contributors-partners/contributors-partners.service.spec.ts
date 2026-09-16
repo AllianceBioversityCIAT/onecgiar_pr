@@ -17,6 +17,7 @@ import { ResultsInnovationsDevRepository } from '../../results/summary/repositor
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 import { ContributionConsistencyService } from './contribution-consistency.service';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { ResultDeletionAuditService } from '../../results/result-deletion-audit/result-deletion-audit.service';
 
 describe('ContributorsPartnersService', () => {
   let service: ContributorsPartnersService;
@@ -32,9 +33,11 @@ describe('ContributorsPartnersService', () => {
   let resultsInnovationsDevRepository: jest.Mocked<ResultsInnovationsDevRepository>;
   let resultsInnovationsUseRepository: jest.Mocked<ResultsInnovationsUseRepository>;
   let handlersError: { returnErrorRes: jest.Mock };
+  let deletionAudit: { describeDeletion: jest.Mock };
 
   beforeEach(async () => {
     handlersError = { returnErrorRes: jest.fn() };
+    deletionAudit = { describeDeletion: jest.fn().mockResolvedValue(null) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -135,6 +138,10 @@ describe('ContributorsPartnersService', () => {
         {
           provide: HandlersError,
           useValue: handlersError,
+        },
+        {
+          provide: ResultDeletionAuditService,
+          useValue: deletionAudit,
         },
       ],
     }).compile();
@@ -477,6 +484,70 @@ describe('ContributorsPartnersService', () => {
         user,
       );
       expect(response).toBe(expected);
+    });
+  });
+
+  describe('updateContributorsAndPartners — the result is gone', () => {
+    const user = { id: 12 } as TokenDto;
+
+    /**
+     * The reporter keeps a section open while somebody deletes the result from Manage Data. The
+     * save then fails, and the only thing they see is whatever this guard puts in `message`
+     * (the client prints it inside "There was an error saving the section"). Reported on
+     * 16-sep-2026: deleted at 09:57, saved at 10:09, opened as a platform bug because the text
+     * said nothing. The audit row already knew who and when.
+     */
+    it('names who deleted the result and when, when the audit knows', async () => {
+      resultRepository.getResultById.mockResolvedValue(undefined as any);
+      deletionAudit.describeDeletion.mockResolvedValue(
+        'This result was deleted on 16 Sep 2026, 14:57 UTC by Juan Carlos Cadavid (j.cadavid@cgiar.org). Nothing you entered was saved. Please contact them if it needs to be restored.',
+      );
+
+      await service.updateContributorsAndPartners(
+        11856,
+        { institutions: [] } as UpdateContributorsPartnersDto,
+        user,
+      );
+
+      expect(deletionAudit.describeDeletion).toHaveBeenCalledWith(11856);
+      const { error } = handlersError.returnErrorRes.mock.calls[0][0];
+      expect(error.status).toBe(HttpStatus.NOT_FOUND);
+      expect(error.message).toContain('Juan Carlos Cadavid');
+      expect(error.message).toContain('16 Sep 2026, 14:57 UTC');
+    });
+
+    // An id that never existed has no audit row, and for that case the old wording is still the
+    // honest answer. Guarding it so the enrichment can never turn into "deleted by nobody".
+    it('keeps the original message when there is no deletion on record', async () => {
+      resultRepository.getResultById.mockResolvedValue(undefined as any);
+      deletionAudit.describeDeletion.mockResolvedValue(null);
+
+      await service.updateContributorsAndPartners(
+        999999,
+        { institutions: [] } as UpdateContributorsPartnersDto,
+        user,
+      );
+
+      const { error } = handlersError.returnErrorRes.mock.calls[0][0];
+      expect(error.message).toBe('Result not found.');
+      expect(error.status).toBe(HttpStatus.NOT_FOUND);
+    });
+
+    // The lookup is decoration on an error path: if it blows up, the user must still get the 404,
+    // never a 500. `describeDeletion` swallows its own failures — this pins the contract from the
+    // caller's side in case that ever changes.
+    it('still answers 404 if the audit lookup itself fails', async () => {
+      resultRepository.getResultById.mockResolvedValue(undefined as any);
+      deletionAudit.describeDeletion.mockResolvedValue(null);
+
+      await service.updateContributorsAndPartners(
+        11856,
+        { institutions: [] } as UpdateContributorsPartnersDto,
+        user,
+      );
+
+      const { error } = handlersError.returnErrorRes.mock.calls[0][0];
+      expect(error.status).toBe(HttpStatus.NOT_FOUND);
     });
   });
 
