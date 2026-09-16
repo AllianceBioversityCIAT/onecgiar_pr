@@ -32,7 +32,7 @@ Feature deltas only. Project-level `QAS-1..12` in `docs/trd/trd.md` continue to 
 |---|---|---|---|
 | `ADE-QAS-1` | **Performance** | Submitter → promotes a draft carrying one representative document (≤ 5 MB) on `POST /drafts/:id/promote` during normal ops ⇒ result reaches Editing with evidence attached, measured by **p95 ≤ 3 s end to end**, of which **≤ 2 s** is attributable to the transfer | Bound execution times; reduce overhead (stream, do not buffer) |
 | `ADE-QAS-2` | **Performance (worst case)** | Submitter → promotes a draft whose job carried the maximum 6 sources, all 25 MB documents ⇒ all six attach, measured by **p95 ≤ 45 s**; exceeding it triggers the async escalation in DD-2, not a silent accept | Bound execution times; (rejected: introduce concurrency — DD-2) |
-| `ADE-QAS-3` | **Availability** | Microsoft Graph or S3 → unavailable or hanging during a promotion ⇒ the promotion still succeeds and the result still reaches Editing, measured by **0 promotions failed by a transfer fault** and **every attempt bounded by the DD-3 timeout** | Detect faults (timeouts); graceful degradation |
+| `ADE-QAS-3` | **Availability** | Microsoft Graph or S3 → unavailable or hanging during a promotion ⇒ the promotion still succeeds and the result still reaches Editing, measured by **0 promotions failed by a transfer fault** and **every call this spec adds bounded by the DD-3 timeout** (the `saveSPData` leg is an inherited unbounded window — DD-3 *Scope correction*) | Detect faults (timeouts); graceful degradation |
 | `ADE-QAS-4` | **Availability (partial)** | One document of several → fails mid-batch ⇒ the successful documents stay attached and the failed one is absent, measured by **0 rollbacks of a committed document** and **0 duplicates on a subsequent run** | Checkpoint per document (the `file_management_reference` stamp) |
 | `ADE-QAS-5` | **Security / Privacy** | The platform → mints a sharing link for an AI-screened document ⇒ the document is not anonymously reachable, measured by **0 attached evidences stored as public** and **0 stored as private without `verifiedPrivate` confirming it** | Limit exposure; fail closed (inherited from `saveSPData`) |
 | `ADE-QAS-6` | **Observability** | Operator → asks why a result has fewer evidences than its job had documents ⇒ the reason is in the logs, measured by **one structured line per document outcome** and **0 tokens, signed URLs or sharing URLs in them** (`AC-9`) | Structured logging; redaction |
@@ -201,10 +201,29 @@ The new method mints the session the same way, then performs the `PUT` itself wi
 
 ### DD-3 — A timeout on the Graph calls is part of this change
 - **Issue:** `ADE-R-5` promises the promotion survives a file-management fault. It cannot, today: `replicateSPFiles`' own docblock records that these are *"~6 Microsoft Graph round-trips per evidence on an HttpModule with no timeout"*. A hanging Graph call does not fail — it hangs the promotion forever.
-- **Decision:** the transfer bounds every outbound call with an explicit timeout and treats expiry as an ordinary per-document failure.
+- **Decision:** the transfer bounds **every outbound call this spec adds** with an explicit timeout and treats expiry as an ordinary per-document failure.
 - **Alternatives:** rely on the platform default (rejected — there is none); a global `HttpModule` timeout (rejected — it would change behavior for `evidences`, `toc-results` and `versioning`, which is out of scope and unreviewed here).
 - **Implications:** "fail soft" becomes reachable rather than aspirational. A slow-but-viable upload can be abandoned — the trade-off disclosed in §2.
-- **Open:** the timeout value is an execution-time decision informed by the `ADE-QAS-1` measurement; `tasks.md` sets it, `design.md` only mandates that one exists.
+- **Open:** the timeout value is an execution-time decision informed by the `ADE-QAS-1` measurement; `tasks.md` sets it, `design.md` only mandates that one exists. *Resolved at execution:* 30 s, applied once to the session-mint chain and once to the byte PUT (`ADE-T-3`).
+
+> **Scope correction — applied during `/akili-execute` with the user's approval (2026-09-16).** As
+> originally written this Decision said "every outbound call", which **DD-4 makes unachievable**:
+> DD-4 mandates reusing `EvidencesService.saveSPData` *unchanged*, and its `addFileAccess` leg
+> (`share-point.service.ts:193` — `removeAllFilePermissions` + `getToken` + `createLink`) is ~6 Graph
+> round-trips on the same timeout-less `HttpModule`. `ADE-T-3` delivered the bound for the two calls
+> this spec adds (`createUploadSession` chain, byte `PUT`); the `saveSPData` leg remains unbounded.
+> A hang there still blocks the `promoteDraft` request — the result is already `Editing`, so it is
+> never stranded (`ADE-R-5` holds), but the HTTP response and the draft discard wait.
+>
+> **Racing a timeout around `saveSPData` is rejected as actively dangerous:** the abandoned call can
+> still write `evidence.link` and `evidence_sharepoint` *after* `ADE-T-4`'s compensation has
+> deactivated the evidence row, producing exactly the inconsistent state `ADE-AC-3` forbids.
+>
+> The inherited window is therefore **accepted for v1** and measured by `ADE-T-5`. Bounding
+> `SharePointService.addFileAccess` itself is a **follow-up proposal** (see `tasks.md` §9) — it is a
+> shared service `evidences`, `toc-results` and `versioning` also depend on, so it earns its own
+> spec and its own review rather than a late amendment here. Surfaced by the Resilience lens
+> reviewer during `ADE-T-4`; full record in `execution.md` → *Pivot Record: `ADE-T-4`*.
 
 ### DD-4 — Reuse `saveSPData`, including its refusal
 - **Issue:** our rows are created not-public, which walks into the confidentiality guard at `evidences.service.ts:503-543` — the guard that **refuses** an evidence when `revocation.verifiedPrivate === false`, and which fails closed so "could not check" never reads as "private".
@@ -226,6 +245,17 @@ The new method mints the session the same way, then performs the `PUT` itself wi
 - **Decision:** `file_management_reference` is written only after the evidence and its SharePoint row exist.
 - **Alternatives:** stamp right after the upload (rejected — a failure in `saveSPData` would then leave a stamped row whose evidence does not exist, i.e. an attachment the user can never see and the system will never retry).
 - **Implications:** a retry after a mid-sequence crash may upload the file a second time, leaving an orphan in SharePoint. Accepted: orphans are inert and unreferenced, and Graph writes on this path already have no compensating delete (`replicateSPFiles` docblock). A duplicate *visible evidence* would be worse than an invisible orphan file.
+- **Implications (second window — added at execution, 2026-09-16, user-approved).** The bullet above
+  prices only the crash window *before* the evidence exists. There is a second window **after**
+  `saveSPData` resolves and before the `file_management_reference` UPDATE lands: the evidence is
+  complete, linked and visible, but the draft row is unstamped, so a later run re-uploads and creates
+  a **duplicate visible evidence** — the outcome this DD itself names as strictly worse than an
+  orphan file. It is narrowed, not eliminated, by `getDraftRaw`'s `is_discarded: false` guard
+  (`bilateral-ai.service.ts:501`): a second promotion requires **both** the stamp write and the
+  discard write to be lost, i.e. a compound failure. **No fix exists inside this design** — stamping
+  earlier contradicts DD-6's whole point, and a DB transaction spanning a Graph call is outside the
+  LITE tier (ADR-001). Recorded so the accounting is honest, not because the ordering changes.
+  Surfaced by the Resilience lens reviewer during `ADE-T-4`.
 
 ## 11. Budget (Step 2.4 — the `/akili-execute` tripwire)
 

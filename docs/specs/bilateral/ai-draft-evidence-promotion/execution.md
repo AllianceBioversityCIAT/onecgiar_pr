@@ -612,3 +612,36 @@ stamping earlier contradicts DD-6, a transaction spanning a Graph call is outsid
 mitigation (the discard guard), so the design text matches what was measured.
 
 No TRD ADR is overturned by either gap; both are feature-level DDs.
+
+### Pivot resolution — user decisions (2026-09-16)
+
+Both gaps in *Pivot Record: `ADE-T-4`* were presented at the gate and resolved by the user. No code
+changed; `ADE-T-4` stays `[x]` (its diff implemented `design.md` §3.2 correctly — the design *text*
+was what was incomplete).
+
+| # | Decision | Applied |
+|---|---|---|
+| Gap 1 (DD-3 vs DD-4) | **Amend DD-3 now; follow-up spec for `addFileAccess`** | `design.md` DD-3 gains a *Scope correction* block; `ADE-QAS-3`'s measure now reads "every call this spec adds"; `tasks.md` `ADE-T-3`'s description scoped to match; follow-up registered as `tasks.md` §9 row 4 |
+| Gap 2 (DD-6 pricing) | **Amend DD-6** | `design.md` DD-6 gains a second *Implications* bullet naming the post-`saveSPData` window, its duplicate-visible-evidence cost, and the `is_discarded` guard that narrows it |
+| Advisory (unguarded compensation) | **Promote to approved scope on `ADE-T-2`** | `tasks.md` `ADE-T-2` gains an *Added scope* block + a Done item + `ADE-R-8`/`ADE-AC-3` in its Implements line |
+
+**Correction Closure — two-direction sweep run** (per `/akili-specify` → *Correction Closure*), not
+just the sites the pivot analysis cited:
+
+- **Forward** (the superseded value, `every outbound call` / `every attempt bounded`): 3 sites found
+  — `design.md:35` (`ADE-QAS-3` measure), `design.md:204` (DD-3 Decision), `tasks.md:73` (`ADE-T-3`
+  description). **All 3 corrected.** The `tasks.md` site belongs to an already-`[x]` task; its claim
+  was *scoped*, not deleted, so the completed task's record stays truthful.
+- **Backward** (documents citing DD-3 / DD-6): `tasks.md:75, :80, :82, :99, :137` re-read. `ADE-T-3`'s
+  negative constraints and Disqualifier remain accurate — they concern the calls that task added,
+  which are bounded. `ADE-T-5`'s `DD-2, DD-3` design ref is now *more* load-bearing: the measurement
+  must cover the unbounded `saveSPData` leg, which is why Gap 1's option (a) routes it there.
+- Re-verified after editing: `grep` for the absolute claim returns nothing outside `execution.md`.
+
+**Scope-growth guard.** The advisory became work only by an explicit user decision recorded as a
+`tasks.md` amendment — the Leader did **not** mint it, widen `ADE-T-4` to absorb it, or let it ride
+in as an advisory. `/akili-execute` §2.4's *Advisory Never Becomes A Task* is satisfied by routing it
+through the user, which is the one path that rule leaves open.
+
+**Budget impact:** the `ADE-T-2` amendment adds ~4 implementation lines and ~25 test lines to the
+corrected §11 budget (~200 / ~370). Immaterial; no new tripwire.

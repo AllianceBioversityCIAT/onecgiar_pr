@@ -60,9 +60,25 @@
 - **Verification:** `npx jest --testPathPattern="bilateral-ai.service"`
 - **The input that would make this FAIL:** a job carrying one `.pdf` **and** one `.m4a`, promoted end to end. If the flag were set for every source, the existing validation throws and the promote test fails. A test that only creates drafts and inspects rows would never exercise that guard.
 - **Disqualifier:** asserting only that the flag is `true` for the `.pdf` is a half-test; the run is inconclusive unless it also asserts the promote of that same draft still succeeds.
+- **Added scope (user-approved amendment, 2026-09-16) — guard the compensating write.** Three
+  independent lens reviewers flagged on `ADE-T-4` that the compensation in
+  `bilateral-ai-evidence-transfer.service.ts` (`evidencesRepository.update(id, { is_active: 0, … })`
+  inside the `saveSPData` catch) is itself unguarded. If that UPDATE rejects, two things go wrong at
+  once: the half-written evidence row `ADE-AC-3` forbids survives active, **and** the UPDATE's own
+  error replaces the original cause in both `outcomes[].errorMessage` and the `warn` line — so a DD-4
+  confidentiality refusal is reported to the operator as a database error, defeating `ADE-R-8`.
+  Wrap the compensating write in its own `try`/`catch` that logs its failure (no secret — `AC-9`) and
+  **re-throws the original `error`**, never the compensation's. This is the one compound path
+  `ADE-T-4`'s `never throws` describe does not exercise; add a test for it.
+  *Recorded as an amendment to approved scope, not as an advisory absorbed during execution.*
+- **Implements (added):** `ADE-R-8` (accuracy of the recorded outcome) · `ADE-AC-3` (the
+  half-written-row clause, under compound failure)
 - **Done:**
   - [ ] `.pdf`/`.docx`/`.xls`/`.xlsx`/`.pptx` sources created with `true`; `.txt`, audio and text context with `false`.
   - [ ] A promote test over a mixed-source job passes, proving the non-`DOCUMENT` guard is still satisfied.
+  - [ ] The compensating write is wrapped; a test makes it reject and asserts the **original**
+        `saveSPData` error still surfaces in the outcome, the service still does not throw, and the
+        compensation's own failure is logged without a secret.
   - [ ] Lint clean.
 
 ---
@@ -70,7 +86,7 @@
 ### `ADE-T-3` — Server-side SharePoint upload, with a bounded timeout  `[x]` PASS — see `execution.md`
 
 - **Type:** `server`
-- **Description:** Two additions that together move bytes without a browser. (a) `BilateralAiFileStorageService` gains a method returning an object's readable stream plus its size. (b) `SharePointService` gains `uploadFromStream`: mint the upload session exactly as `createUploadSession` does, then `PUT` the stream with `Content-Type: application/octet-stream` and `Content-Range: bytes 0-{size-1}/{size}`, returning the driveItem `id` and `name`. **Every outbound Graph call is bounded by an explicit timeout** (DD-3) — without it `ADE-R-5` is unreachable, because the `HttpModule` these calls ride has none.
+- **Description:** Two additions that together move bytes without a browser. (a) `BilateralAiFileStorageService` gains a method returning an object's readable stream plus its size. (b) `SharePointService` gains `uploadFromStream`: mint the upload session exactly as `createUploadSession` does, then `PUT` the stream with `Content-Type: application/octet-stream` and `Content-Range: bytes 0-{size-1}/{size}`, returning the driveItem `id` and `name`. **Every outbound Graph call *this task adds* is bounded by an explicit timeout** (DD-3 as corrected 2026-09-16 — the `saveSPData` leg reused under DD-4 stays unbounded and is measured by `ADE-T-5`) — without it `ADE-R-5` is unreachable, because the `HttpModule` these calls ride has none.
 - **Implements:** `ADE-R-3` · `ADE-R-5` (the fault-*detection* half) · `ADE-QAS-3`
 - **Design refs:** §7.2 · DD-3
 - **Files (expected):** `onecgiar-pr-server/src/shared/services/share-point/share-point.service.ts` · `onecgiar-pr-server/src/api/bilateral-ai/services/bilateral-ai-file-storage.service.ts` + both specs
@@ -243,3 +259,4 @@ Should `ADE-T-5` trigger DD-2's async escalation, **that** becomes its own PR ag
 | 1 | The opt-out UI — wire the existing `PATCH .../evidence/:evidenceId` to a toggle in `draft-evidence-list`, and make `promoteDraft` gate on `is_formal_evidence` (DD-5 makes it descriptive in v1) | New spec + ticket under P2-2338 |
 | 2 | Backfill for AI results already created with an empty Evidence section (result 9349 and others) | Separate ticket if Ángel asks; needs an S3-liveness check on old jobs first |
 | 3 | TRD correction: deploy target is a container, not Lambda (`design.md` §12) | Pending write, applied on `master`, never from this branch |
+| 4 | Bound `SharePointService.addFileAccess`'s ~6 Graph round-trips with an explicit timeout (DD-3 *Scope correction*). Must **not** be a `Promise.race` at the `saveSPData` call site — an abandoned call can still write after the caller compensated; the bound belongs inside the shared service | New spec + ticket. Shared service: `evidences`, `toc-results` and `versioning` all depend on it |
