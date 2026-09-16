@@ -133,6 +133,7 @@
       optionLabel="name"
       optionValue="id"
       [options]="innovationControlListSE.useLevelsList"
+      [required]="true"
       [(ngModel)]="body.innovation_use_level_id"
       (ngModelChange)="onUseLevelChange()">
     </app-pr-range-level>
@@ -316,12 +317,19 @@
           </app-pr-radio-button>
 
           @if (body.has_innovation_link === true) {
+            <!--
+              P2-3424 AC4: `optionLabel="display"` is load-bearing — app-pr-select type-aheads on
+              optionLabel and nothing else, so binding "title" made the Innovation ID unsearchable
+              while the AC asks for search by BOTH id and title. Same bindings as the W1/W2 twin
+              (innovation-use-info.component.html:30-38) so the two routes stay identical.
+            -->
             <app-pr-select
-              label="Please select a result"
-              placeholder="Search an Innovation Development result"
+              label="Please select an Innovation Development result"
+              placeholder="Search by Innovation ID or title"
               [options]="qaInnovationDevelopmentResults"
-              optionLabel="title"
+              optionLabel="display"
               optionValue="id"
+              [showClear]="true"
               [required]="false"
               [(ngModel)]="body.linked_result_id"
               (ngModelChange)="onFieldChange()">

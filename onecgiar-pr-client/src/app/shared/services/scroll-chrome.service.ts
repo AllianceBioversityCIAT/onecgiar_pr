@@ -58,6 +58,14 @@ export class ScrollChromeService {
     return true;
   }
 
+  /**
+   * Record the position without deciding anything. For scrolls the user did not drive with the
+   * page in mind — see `HideChromeOnScrollDirective` and open dropdowns.
+   */
+  rebaseline(top: number): void {
+    this.lastTop = top;
+  }
+
   track(top: number): void {
     if (this.isProgrammatic(performance.now())) {
       this.lastTop = top;

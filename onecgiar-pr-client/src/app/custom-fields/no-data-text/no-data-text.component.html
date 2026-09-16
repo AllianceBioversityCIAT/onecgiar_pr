@@ -1,1 +1,7 @@
-<div class="no_data_text" [innerHTML]="title"></div>
+<!-- 🛑 El texto va en un hijo, no en el contenedor. El `title` de dos pantallas de IPSR trae
+     marcado dentro (`goToStep()` devuelve un `<a class='open_route'>`), y al pasar el contenedor a
+     `flex-direction: column` cada nodo interpolado se convertía en un ítem de flex: la frase se
+     partía en tres renglones con el enlace suelto en medio. Con un único hijo, el flex ordena el
+     icono y el texto, y el texto se maqueta como el párrafo que es.
+     Ningún consumidor cambia: la API sigue siendo un solo `title`. -->
+<div class="no_data_text"><span class="ndt_text" [innerHTML]="title"></span></div>

@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import { SharePointService } from './share-point.service';
 
 describe('SharePointService', () => {
@@ -332,5 +333,113 @@ describe('SharePointService', () => {
     (service as any).creationTime = new Date().getTime() / 1000;
     (service as any).expiresIn = 9999;
     expect((service as any).isTokenExpired()).toBe(false);
+  });
+
+  describe('uploadFromStream (ADE-T-3, DD-3)', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should return { id, name } from the final Graph response', async () => {
+      const http = makeHttp();
+      http.put.mockReturnValue({
+        toPromise: jest.fn().mockResolvedValue({
+          data: { id: 'driveItem-1', name: 'result-R1-Document-1.pdf' },
+        }),
+      });
+
+      const service = new SharePointService(
+        http as any,
+        makeGpCache() as any,
+        makeEvidencesRepo() as any,
+      );
+      jest.spyOn(service, 'createUploadSession').mockResolvedValue({
+        response: 'https://graph.example/upload-session',
+        message: 'Upload session created',
+        statusCode: 200,
+      } as any);
+
+      const stream = new Readable({ read() {} });
+      const result = await service.uploadFromStream(
+        '1',
+        'file.pdf',
+        stream,
+        100,
+      );
+
+      expect(result).toEqual({
+        id: 'driveItem-1',
+        name: 'result-R1-Document-1.pdf',
+      });
+      expect(service.createUploadSession).toHaveBeenCalledWith({
+        fileName: 'file.pdf',
+        resultId: '1',
+        count: 1,
+      });
+      expect(http.put).toHaveBeenCalledWith(
+        'https://graph.example/upload-session',
+        stream,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/octet-stream',
+            'Content-Range': 'bytes 0-99/100',
+          }),
+        }),
+      );
+    });
+
+    // The disqualifying input (task ADE-T-3): a Graph stub that never settles. Without a
+    // real timeout this would hang to the Jest per-test timeout and FAIL; `http.put`'s stub
+    // here never resolves and never rejects on its own — jest.advanceTimersByTimeAsync fires
+    // the fake clock instead of real wall time, so a prompt rejection here can only come from
+    // `withGraphTimeout`'s own `setTimeout`, not from Jest giving up.
+    it('should abandon a never-settling Graph PUT and reject promptly (DD-3 timeout, not the Jest default)', async () => {
+      jest.useFakeTimers();
+
+      const http = makeHttp();
+      http.put.mockReturnValue({
+        toPromise: jest.fn(() => new Promise(() => {})),
+      });
+
+      const service = new SharePointService(
+        http as any,
+        makeGpCache() as any,
+        makeEvidencesRepo() as any,
+      );
+      jest.spyOn(service, 'createUploadSession').mockResolvedValue({
+        response: 'https://graph.example/upload-session',
+      } as any);
+
+      const stream = new Readable({ read() {} });
+      const pending = service.uploadFromStream('1', 'file.pdf', stream, 100);
+      const assertion = expect(pending).rejects.toThrow(/timed out/i);
+
+      await jest.advanceTimersByTimeAsync(30_000);
+
+      await assertion;
+    });
+
+    it('should also abandon a never-settling createUploadSession (the session-mint step)', async () => {
+      jest.useFakeTimers();
+
+      const http = makeHttp();
+      const service = new SharePointService(
+        http as any,
+        makeGpCache() as any,
+        makeEvidencesRepo() as any,
+      );
+      jest
+        .spyOn(service, 'createUploadSession')
+        .mockReturnValue(new Promise(() => {}) as any);
+
+      const stream = new Readable({ read() {} });
+      const pending = service.uploadFromStream('1', 'file.pdf', stream, 100);
+      const assertion = expect(pending).rejects.toThrow(/timed out/i);
+
+      await jest.advanceTimersByTimeAsync(30_000);
+
+      await assertion;
+      expect(http.put).not.toHaveBeenCalled();
+    });
   });
 });

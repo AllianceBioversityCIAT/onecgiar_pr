@@ -81,11 +81,16 @@
     line-height: 1.35;
     color: var(--fc-ink);
 
+    // 15-sep-2026: el título ENVUELVE, no se corta. Truncar con "…" venía de proteger a la píldora
+    // de guardado en un campo estrecho, pero el precio lo pagaba el label largo: el de la evidencia
+    // ("Please provide details of where evidence can be found within the source link (e.g. page
+    // number,…") perdía la mitad de la frase, y una instrucción a medias no instruye. Envolver
+    // resuelve el mismo caso —la cabecera crece una línea en vez de comerse el texto— y ningún
+    // campo depende de que su cabecera mida exactamente una línea.
     .fch_title {
       min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     // 🛑 The ONLY requiredness marker. The optional field deliberately carries NO counterpart:

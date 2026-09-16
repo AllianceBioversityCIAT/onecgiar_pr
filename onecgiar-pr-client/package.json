@@ -8,6 +8,7 @@
     "build:dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
     "test": "jest --no-coverage",
+    "test:local": "node scripts/run-jest-local.js",
     "test:watch": "jest --watch --no-coverage",
     "test:coverage": "jest --coverage",
     "test:coverage:html": "jest --coverage --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcov",
@@ -15,12 +16,17 @@
     "lint:fix": "ng lint --fix",
     "start:e2e": "ng serve --configuration e2e",
     "tunnel": "ng serve --allowed-hosts true --host 0.0.0.0",
+    "ram": "node scripts/ram-guard.js",
     "cypress:open": "cypress open --e2e",
-    "cypress:run": "ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 cypress run --e2e",
+    "cypress:run": "node scripts/ram-guard.js && ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 NODE_OPTIONS=--max-old-space-size=2048 cypress run --e2e",
     "cypress:component": "cypress open --component",
-    "test:ct": "ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 cypress run --component",
+    "test:ct": "node scripts/run-ct-batched.js",
     "test:ct:batch": "node scripts/run-ct-batched.js",
-    "cypress:run:video": "CYPRESS_VIDEO=true npm run cypress:run"
+    "test:ct:unbatched": "ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 cypress run --component",
+    "cypress:run:video": "CYPRESS_VIDEO=true npm run cypress:run",
+    "test:changed": "node scripts/run-jest-local.js --changed",
+    "test:ct:changed": "node scripts/run-ct-batched.js --changed",
+    "affected": "node scripts/ct-affected.js --explain"
   },
   "private": true,
   "dependencies": {

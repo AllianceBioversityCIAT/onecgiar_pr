@@ -47,6 +47,23 @@ export class SectionGeographyComponent {
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
 
+  /**
+   * The scope the RADIO is told to show — `null` whenever nothing is chosen.
+   *
+   * 🛑 `geographic-location/get/geographic` returns `geo_scope_id: 0` for a result whose scope was
+   * never picked (measured on result 9386 / internal id 11854, prtest, 16-Sep-2026), and
+   * `pr-radio-button.hasValue` only rejects `null`/`undefined` — so the card read `0` as an answer
+   * and painted itself GREEN ("required and filled") over an empty radio group, while the footer,
+   * which counts off the MDS tracker (`!!scopeId`), said "1 field missing". The reporter saw a
+   * number naming a field that nothing on screen marked as pending, which is exactly what W1/W2
+   * never does: there the count and the marking come from the same DOM scan.
+   *
+   * Normalised HERE and not in `geographicLocationBody`, on purpose: the signal is what
+   * `buildGeographyPayload()` serialises, and changing what it holds would change what is written
+   * to the column. This only changes what the control is shown.
+   */
+  readonly scopeSelection = computed<number | null>(() => this.geographicLocationBody().geo_scope_id || null);
+  readonly extraScopeSelection = computed<number | null>(() => this.extraGeographicLocationBody().geo_scope_id || null);
 
   /**
    * The initial GET must never replace a value the user has already edited.
@@ -423,7 +440,7 @@ export class SectionGeographyComponent {
 
   /** Regions multiSelect is visible for Regional, or when user opted into regions. */
   get requiresRegionsSelection(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     if (!scopeId || scopeId === GeoScopeEnum.GLOBAL || scopeId === GeoScopeEnum.DETERMINED) {
       return false;
     }
@@ -432,7 +449,7 @@ export class SectionGeographyComponent {
 
   /** Countries multiSelect is visible for Country/Sub-national, or when user opted into countries. */
   get requiresCountriesSelection(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     if (!scopeId || scopeId === GeoScopeEnum.GLOBAL || scopeId === GeoScopeEnum.DETERMINED) {
       return false;
     }
@@ -478,7 +495,7 @@ export class SectionGeographyComponent {
   }
 
   get requiresExtraScopeAnswer(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     return (
       !!scopeId &&
       scopeId !== GeoScopeEnum.GLOBAL &&
@@ -517,7 +534,7 @@ export class SectionGeographyComponent {
   }
 
   isGeographyComplete(): boolean {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     if (!scopeId) return false;
 
     if (scopeId === GeoScopeEnum.GLOBAL || scopeId === GeoScopeEnum.DETERMINED) {
@@ -555,7 +572,7 @@ export class SectionGeographyComponent {
   }
 
   updateTracker(): void {
-    const scopeId = Number(this.geographicLocationBody().geo_scope_id);
+    const scopeId = Number(this.geographicLocationBody().geo_scope_id || null);
     const items: { key: string; label: string; filled: boolean }[] = [
       {
         key: 'geo-scope',

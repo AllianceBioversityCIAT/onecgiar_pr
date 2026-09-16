@@ -76,6 +76,8 @@ import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.servic
 import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
 import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
 import { BilateralAiNotificationsService } from '../bilateral-ai/services/bilateral-ai-notifications.service';
+import { BilateralAiEvidenceTransferService } from '../bilateral-ai/services/bilateral-ai-evidence-transfer.service';
+import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 import { BilateralAiSweeperCron } from '../bilateral-ai/bilateral-ai-sweeper.cron';
 import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
 import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
@@ -153,6 +155,11 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
     // SocketManagement, Versioning, forwardRef(ShareResultRequest) and bare entities — nothing
     // that imports back into this module.
     NotificationModule,
+    // `ADE-T-4`: `BilateralAiEvidenceTransferService` reuses `SharePointService` for the
+    // server-side upload and `EvidenceSharepointRepository` transitively via `saveSPData`.
+    // `EvidencesModule` (already imported above) exports `EvidencesRepository`/`EvidencesService`
+    // but not `SharePointService` itself (`design.md` §13 out-of-band note), hence this import.
+    SharePointModule,
   ],
   controllers: [
     BilateralWebhookController,
@@ -199,6 +206,11 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
     // provider is already registered, so these two follow the same wiring rather than starting a
     // module split this task was not asked to do.
     BilateralAiNotificationsService,
+    // `ADE-T-4` (`docs/specs/bilateral/ai-draft-evidence-promotion`): the evidence transfer step
+    // `promoteDraft` calls once, after the `status_id` write. No dedicated `bilateral-ai.module.ts`
+    // exists (see the note on `BilateralAiNotificationsService` above) — registered here with
+    // every other `bilateral-ai/*` provider.
+    BilateralAiEvidenceTransferService,
     BilateralAiSweeperCron,
     BilateralWebhookService,
     // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-4) — RoleByUserRepository,

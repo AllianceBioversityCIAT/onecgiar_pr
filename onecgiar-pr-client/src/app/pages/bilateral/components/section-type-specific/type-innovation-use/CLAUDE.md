@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-09-09 · P2-3428 worktree implementation
+**Verified:** 2026-09-14 · P2-3424 AC4 — dropdown moved onto the shared QA catalogue (was P2-3428 worktree implementation, 2026-09-09)
 
 ## What it is
 Section 5 of the W3/bilateral result creator when the type is **Innovation Use**. Shows the MDS fields
@@ -20,7 +20,10 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 - `BilateralExpandableStateService` — remembers the toggle per result + section.
 - `InnovationControlListService.useLevelsList` — catalog `{ id, level, name, definition }`. ⚠️ the form
   stores the **`id`** and the gates read the **`level`** → `useLevelNumber`.
-- `InnovationUseResultsService.resultsList` — catalog for P2-3424's dropdown (reused from W1/W2).
+- `QaInnovationDevelopmentResultsService.options()` — catalog for P2-3424's dropdown. **The same
+  service W1/W2 reads** (`innovation-use-info`), so the two routes cannot offer different lists for
+  the same question. `load()` is idempotent; this section calls it from `ngOnInit` when the 2026 gate
+  is open.
 - Endpoints: `GET/PATCH /api/results/summary/innovation-use/{get|create}/result/:id` via
   `BilateralApiService.GET_innovationUse` / `PATCH_innovationUse`. **The same endpoint serves the legacy
   W1/W2 Innovation Use form** (`results-api.service.ts:460`), so every contract change must be additive
@@ -79,11 +82,21 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 - ⚠️ **MySQL returns `tinyint` as `1`/`0` and the radios bind `true`/`false`.** `normalizeStoredBoolean()`
   covers `innov_use_to_be_determined` (P2-3533 — it was missing, and it gates the whole Actors block),
   `has_scaling_studies`, `innov_use_2030_to_be_determined` and `has_innovation_link`.
-- ⚠️ **`status_id` is not in P2-3424's dropdown catalog.** `getResultsForInnovUse`
-  (`result.repository.ts:2645`) selects `id, acronym, phase_year, result_code, name, title` — no status. So
-  `isLinkableInnovationDevelopment()` lets an option through when the field is absent; filtering strictly
-  would leave the dropdown permanently empty. Assumption: **"QA'd" = `status_id = 2`**, declared by the PO
-  (Ángel Jarrín, 23-Aug-2026 on P2-3424) and still awaiting business confirmation.
+- 🛑 **The old note here said `status_id` is not in P2-3424's dropdown catalog. That was FALSE, and it
+  cost the AC.** `getResultsForInnovUse` (`result.repository.ts:3079` — the line number in the old note
+  was stale too) selects `r.status_id` and already filters `IN (2, 6)`. So the client-side filter that
+  the note declared inert was doing real work: it demanded `status_id === 2` and silently dropped every
+  **Approved (6)** result — which is exactly what a bilateral Innovation Development is. AC4 asks for the
+  QA'd Innovation Developments of the previous phase and the dropdown was missing them.
+  The fix was not a better filter: this section now reads the shared `QaInnovationDevelopmentResultsService`
+  (the W1/W2 catalogue, owned by P2-3422), which resolves phase, statuses and de-duplication server-side.
+  **Do not reintroduce a client-side status filter here** — a spec guards it.
+- ⚠️ **A link saved earlier survives a catalogue that no longer lists it.** The getter prepends the stored
+  id as an option labelled `(linked result outside the QA'd list)`. Without it the select paints empty and
+  the next autosave wipes a link the user never touched (AC8/AC9). Same fallback as the W1/W2 twin.
+- ⚠️ **`optionLabel="display"` is load-bearing.** `app-pr-select` type-aheads on `optionLabel` and nothing
+  else, so `optionLabel="title"` made the Innovation ID unsearchable while AC4 asks for search by **both**
+  id and title. `display` is precomputed by the service as `[result_code] - [title]`.
 - ⚠️ **PHASE ≠ PORTFOLIO.** P2-3424's gate is `reportingYear() >= 2026` (local constant
   `INNOVATION_LINK_MIN_PHASE_YEAR`), **not** `isP25()`: prtest holds 2025-phase results inside the P25
   portfolio and a portfolio gate would switch the field on for them.

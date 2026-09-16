@@ -3,6 +3,17 @@
 .tsf-row {
   display: flex;
   gap: 12px;
+
+  // 🛑 Los hijos son componentes (`app-pr-input`), no divs: sin base flex el navegador les da el
+  // ancho de su contenido y, desde que el campo vive dentro de `app-field-card`, ese contenido no
+  // empuja — los cuatro conteos de "Number of people trained" se pintaban como cuadritos de 0 px
+  // de ancho (medido en prtest el 16-sep-2026, reportado por JC con captura). `.tsf-field--half`
+  // existía para esto pero la plantilla no lo pone en ningún sitio, así que la regla va al hijo
+  // directo, que es lo que no se puede olvidar de escribir.
+  > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }
 
 .tsf-field--half {
