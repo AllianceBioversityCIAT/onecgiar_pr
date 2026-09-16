@@ -12,7 +12,7 @@
 | Approval Mode | **gated** (inherited from `proposal.md` via `requirements.md` Document Control) |
 | Branch | `JuanGuzman-io/bug-p2-2340-ai` |
 | Baseline commit | `d3d58a986` |
-| Budget (`design.md` §11) | 5 tasks · ~300 LOC · 2 review rounds |
+| Budget (`design.md` §11) | 5 tasks · ~300 LOC · 2 review rounds → **corrected after `ADE-T-3`** to ~570 code-only · 4 review rounds (see *Budget Tripwire*) |
 | Started | 2026-09-16 |
 
 ### Leader decisions recorded at Step 0
@@ -298,3 +298,10 @@ not the execution.
 `ADE-T-2` and `ADE-T-4` have no review rounds left in the §11 budget — a second, related overrun the
 user should weigh alongside the LOC one, since `ADE-T-4` is the task most likely to need a rework
 round.
+
+**User decision (2026-09-16):** option 1 — *amend §11, then continue*. `design.md` §11 now carries the
+approved figures in one column and the corrected ones (~570 code-only: ≈200 implementation, ≈370
+tests; 4 review rounds, one per code task) in a second, with the cause recorded in place. Next task
+by the user's choice: **`ADE-T-4` alone**, effort `xhigh`, parallel lens reviewers; `ADE-T-2` follows.
+Rationale for not pairing them: both edit `bilateral-ai.service.ts` (`promoteDraft` vs
+`createDraftFromCandidate`) — different methods, same file, a concrete collision.

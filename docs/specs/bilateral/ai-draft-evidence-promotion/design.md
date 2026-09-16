@@ -229,11 +229,20 @@ The new method mints the session the same way, then performs the `PUT` itself wi
 
 ## 11. Budget (Step 2.4 — the `/akili-execute` tripwire)
 
-| Signal | Expected |
-|---|---|
-| Tasks | **5** |
-| Lines of code | **~300** (≈170 implementation, ≈130 tests) |
-| Review rounds | **2** |
+| Signal | Expected (approved 2026-09-16) | Corrected (execution, 2026-09-16) |
+|---|---|---|
+| Tasks | **5** | **5** — unchanged |
+| Lines of code | **~300** (≈170 implementation, ≈130 tests) | **~570 code-only** (≈200 implementation, ≈370 tests) |
+| Review rounds | **2** | **4** — one per code task; rework, if any, is reported against this |
+
+> **Budget correction — applied during `/akili-execute` with the user's approval, recorded in
+> `execution.md` → *Budget Tripwire*.** After `ADE-T-1` and `ADE-T-3`, implementation measured 95
+> code-only lines against ~100 estimated — on budget — while tests measured 212 against the ~130
+> budgeted for *all four* code tasks. The overrun is test volume only, and it is what `tasks.md`
+> §5/§6 mandate: a named falsifying input and a Disqualifier per task, plus a seven-row clause
+> coverage table for `ADE-T-4`. The original ≈130 test line never agreed with that task list; the
+> correction aligns the budget with the coverage the spec already owns rather than cutting coverage
+> to fit a number. The original figures are kept in the first column for traceability.
 
 Matches the declared **Standard** depth — not a candidate to drop to Lite (five tasks, a new integration path, a documented platform defect in the blast radius), not a candidate for Full (no migration, no auth change, no payload change, no rollout sequencing). Exceeding any of these is an escalation to the user, not a reason to continue quietly.
 
