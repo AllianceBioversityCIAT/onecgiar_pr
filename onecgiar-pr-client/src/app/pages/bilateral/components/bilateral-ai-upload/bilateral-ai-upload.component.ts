@@ -58,6 +58,7 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
   isUploading = signal(false);
   isDragging = signal(false);
   isRecording = signal(false);
+  recordingError = signal<string | null>(null);
 
   uploadState = this.bilateralAiService.uploadState;
 
@@ -73,6 +74,7 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
   private lastExpectationMix: BilateralAiMixClass | null = null;
 
   private mediaRecorder: MediaRecorder | null = null;
+  private currentStream: MediaStream | null = null;
   private audioChunks: Blob[] = [];
   recordingDuration = signal(0);
   private recordingTimer: ReturnType<typeof setInterval> | null = null;
@@ -171,9 +173,22 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.bilateralAiService.setPanelVisible(false);
     this.stopTick();
-    this.stopRecording();
+    this.cancelRecording();
     this.stopAudio();
     this.files().forEach(f => this.revokeUrl(f));
+  }
+
+  showToast(severity: 'success' | 'info' | 'warn' | 'error', summary: string, detail: string): void {
+    this.messageService.add({
+      key: 'globalUserNotification',
+      severity,
+      summary,
+      detail,
+    });
+  }
+
+  clearRecordingError(): void {
+    this.recordingError.set(null);
   }
 
   private startTick(): void {
@@ -260,6 +275,25 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
+  getFileIcon(file: File): string {
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (ext === '.pdf') return 'picture_as_pdf';
+    if (ext === '.docx' || ext === '.doc') return 'article';
+    if (['.xls', '.xlsx', '.csv'].includes(ext)) return 'table_chart';
+    if (['.ppt', '.pptx'].includes(ext)) return 'slideshow';
+    if (DOCUMENT_EXTENSIONS.includes(ext)) return 'description';
+    return 'audiotrack';
+  }
+
+  getFileIconClass(file: File): string {
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (ext === '.pdf') return 'aiu-file-badge--pdf';
+    if (ext === '.docx' || ext === '.doc') return 'aiu-file-badge--doc';
+    if (['.xls', '.xlsx', '.csv'].includes(ext)) return 'aiu-file-badge--sheet';
+    if (['.ppt', '.pptx'].includes(ext)) return 'aiu-file-badge--pres';
+    return 'aiu-file-badge--audio';
+  }
+
   private getFileType(file: File): 'document' | 'audio' | null {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
     if (DOCUMENT_EXTENSIONS.includes(ext)) return 'document';
@@ -269,30 +303,30 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
 
   private addFile(file: File, type: 'document' | 'audio'): void {
     if (this.sourceCount() >= MAX_SOURCES) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Limit reached',
-        detail: `A maximum of ${MAX_SOURCES} sources is allowed. The additional context text counts as one source.`,
-      });
+      this.showToast(
+        'warn',
+        'Limit reached',
+        `A maximum of ${MAX_SOURCES} sources is allowed. The additional context text counts as one source.`,
+      );
       return;
     }
 
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
 
     if (type === 'document' && !DOCUMENT_EXTENSIONS.includes(ext)) {
-      this.messageService.add({ severity: 'error', summary: 'Invalid format', detail: `${file.name} is not a supported document format.` });
+      this.showToast('error', 'Invalid format', `${file.name} is not a supported document format.`);
       return;
     }
     if (type === 'audio' && !AUDIO_EXTENSIONS.includes(ext)) {
-      this.messageService.add({ severity: 'error', summary: 'Invalid format', detail: `${file.name} is not a supported audio format.` });
+      this.showToast('error', 'Invalid format', `${file.name} is not a supported audio format.`);
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'File too large',
-        detail: `${file.name} exceeds the ${MAX_FILE_SIZE_LABEL} limit.`,
-      });
+      this.showToast(
+        'error',
+        'File too large',
+        `${file.name} exceeds the ${MAX_FILE_SIZE_LABEL} limit.`,
+      );
       return;
     }
 
@@ -326,7 +360,7 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     };
 
     audio.play().catch(() => {
-      this.messageService.add({ severity: 'error', summary: 'Playback failed', detail: 'Could not play this audio file.' });
+      this.showToast('error', 'Playback failed', 'Could not play this audio file.');
     });
 
     this.audioElement = audio;
@@ -362,37 +396,93 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
   // ── Audio Recording ─────────────────────────────────────────────────
 
   async startRecording(): Promise<void> {
-    let stream: MediaStream | null = null;
+    this.recordingError.set(null);
+    this.recordingSaved.set(false);
+
+    if (this.sourceCount() >= MAX_SOURCES) {
+      this.showToast(
+        'warn',
+        'Limit reached',
+        `A maximum of ${MAX_SOURCES} sources is allowed. Remove a file or context text to record a voice note.`,
+      );
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      const isSecure = typeof window !== 'undefined' ? window.isSecureContext : true;
+      const detail = !isSecure
+        ? 'Voice recording requires a secure connection (HTTPS or localhost). Please access this site over HTTPS or localhost.'
+        : 'Audio recording is not supported in this browser. Please use Chrome, Edge, Safari, or Firefox.';
+      this.recordingError.set(detail);
+      this.showToast('error', 'Recording unavailable', detail);
+      return;
+    }
+
+    if (typeof MediaRecorder === 'undefined') {
+      const detail = 'Your browser does not support MediaRecorder. Please try using a recent version of Chrome, Edge, Safari, or Firefox.';
+      this.recordingError.set(detail);
+      this.showToast('error', 'Recording unavailable', detail);
+      return;
+    }
+
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeTypes = ['audio/webm', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', ''];
+      this.currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const candidateTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/aac',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+      ];
       let selectedMimeType = '';
-      for (const mime of mimeTypes) {
-        if (!mime || MediaRecorder.isTypeSupported(mime)) {
+      for (const mime of candidateTypes) {
+        if (typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(mime)) {
           selectedMimeType = mime;
           break;
         }
       }
 
-      this.mediaRecorder = new MediaRecorder(stream, selectedMimeType ? { mimeType: selectedMimeType } : undefined);
+      this.mediaRecorder = new MediaRecorder(
+        this.currentStream,
+        selectedMimeType ? { mimeType: selectedMimeType } : undefined,
+      );
       this.audioChunks = [];
-      const ext = selectedMimeType.includes('mp4') ? '.m4a' : selectedMimeType.includes('ogg') ? '.ogg' : '.webm';
-      const finalMime = selectedMimeType || 'audio/webm';
 
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) this.audioChunks.push(event.data);
+      let ext = '.webm';
+      const finalMime = this.mediaRecorder.mimeType || selectedMimeType || 'audio/webm';
+      if (finalMime.includes('mp4') || finalMime.includes('m4a') || finalMime.includes('aac')) {
+        ext = '.m4a';
+      } else if (finalMime.includes('ogg')) {
+        ext = '.ogg';
+      } else if (finalMime.includes('wav')) {
+        ext = '.wav';
+      }
+
+      this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          this.audioChunks.push(event.data);
+        }
       };
 
       this.mediaRecorder.onstop = () => {
         const blob = new Blob(this.audioChunks, { type: finalMime });
+        if (blob.size === 0) {
+          this.recordingError.set('No audio was captured. Please check your microphone and try again.');
+          this.showToast('warn', 'Empty recording', 'No audio was detected in the recording.');
+          this.stopStream();
+          this.mediaRecorder = null;
+          return;
+        }
+
         const friendlyName = `Voice Recording (${this.formatDuration(this.recordingDuration())})${ext}`;
         const file = new File([blob], friendlyName, { type: finalMime });
         this.lastRecordingName = friendlyName;
         this.addFile(file, 'audio');
         this.recordingSaved.set(true);
-        stream?.getTracks().forEach(t => t.stop());
+        this.stopStream();
         this.mediaRecorder = null;
-        this.messageService.add({ severity: 'success', summary: 'Recording saved', detail: `"${friendlyName}" added to your files.` });
+        this.showToast('success', 'Recording saved', `"${friendlyName}" added to your files.`);
       };
 
       this.mediaRecorder.start(1000);
@@ -402,20 +492,76 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
       this.recordingTimer = setInterval(() => {
         this.recordingDuration.update(d => d + 1);
       }, 1000);
-    } catch {
-      stream?.getTracks().forEach(t => t.stop());
-      this.messageService.add({ severity: 'error', summary: 'Recording failed', detail: 'Could not start voice recording. Check your microphone permissions or try using Chrome/Edge.' });
+    } catch (err: unknown) {
+      this.stopStream();
+      this.mediaRecorder = null;
+      let detail = 'Could not start voice recording. Check your microphone permissions or try using Chrome/Edge.';
+      if (err && typeof err === 'object' && 'name' in err) {
+        const name = (err as { name?: string }).name;
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          detail = 'Microphone access was denied. Please allow microphone permissions in your browser address bar and try again.';
+        } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+          detail = 'No microphone was detected on this device. Please connect a microphone and try again.';
+        } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+          detail = 'The microphone is already in use by another application or browser tab.';
+        } else if (name === 'SecurityError') {
+          detail = 'Microphone access is blocked by browser security policy (requires HTTPS or localhost).';
+        }
+      } else if (err instanceof Error && err.message) {
+        detail = err.message;
+      }
+      this.recordingError.set(detail);
+      this.showToast('error', 'Recording failed', detail);
     }
+  }
+
+  cancelRecording(): void {
+    if (this.mediaRecorder) {
+      this.mediaRecorder.onstop = null;
+      if (this.mediaRecorder.state !== 'inactive') {
+        try {
+          this.mediaRecorder.stop();
+        } catch {
+          // ignore
+        }
+      }
+      this.mediaRecorder = null;
+    }
+    this.stopStream();
+    this.audioChunks = [];
+    this.isRecording.set(false);
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+    this.recordingDuration.set(0);
   }
 
   stopRecording(): void {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+      try {
+        this.mediaRecorder.stop();
+      } catch {
+        // ignore
+      }
     }
     this.isRecording.set(false);
     if (this.recordingTimer) {
       clearInterval(this.recordingTimer);
       this.recordingTimer = null;
+    }
+  }
+
+  private stopStream(): void {
+    if (this.currentStream) {
+      this.currentStream.getTracks().forEach(t => {
+        try {
+          t.stop();
+        } catch {
+          // ignore
+        }
+      });
+      this.currentStream = null;
     }
   }
 
@@ -433,7 +579,7 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     const project = this.creationService.selectedProject();
     const sp = this.creationService.selectedPrimarySp();
     if (!project?.id || !sp?.programCode || !project?.leadCenter?.id) {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Project and Science Program required.' });
+      this.showToast('error', 'Error', 'Project and Science Program required.');
       return;
     }
 
@@ -482,15 +628,15 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     const status = err.status;
     if (status === 400) {
       const detail = err.error?.message ?? 'Check file format and try again.';
-      this.messageService.add({ severity: 'error', summary: 'Invalid request', detail });
+      this.showToast('error', 'Invalid request', detail);
     } else if (status === 413) {
-      this.messageService.add({ severity: 'error', summary: 'File too large', detail: 'Each source must be no larger than 25 MB.' });
+      this.showToast('error', 'File too large', 'Each source must be no larger than 25 MB.');
     } else if (status === 415) {
-      this.messageService.add({ severity: 'error', summary: 'Unsupported format', detail: 'Accepted documents: PDF, DOCX, TXT, XLS, XLSX, PPTX. Audio: MP3, WAV, M4A, OGG, FLAC, WEBM.' });
+      this.showToast('error', 'Unsupported format', 'Accepted documents: PDF, DOCX, TXT, XLS, XLSX, PPTX. Audio: MP3, WAV, M4A, OGG, FLAC, WEBM.');
     } else if (status === 503) {
-      this.messageService.add({ severity: 'error', summary: 'Service unavailable', detail: 'AI service temporarily unavailable. Please try again later.' });
+      this.showToast('error', 'Service unavailable', 'AI service temporarily unavailable. Please try again later.');
     } else {
-      this.messageService.add({ severity: 'error', summary: 'Upload failed', detail: err.error?.message || 'An unexpected error occurred.' });
+      this.showToast('error', 'Upload failed', err.error?.message || 'An unexpected error occurred.');
     }
   }
 }

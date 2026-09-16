@@ -292,13 +292,29 @@ describe('BilateralPageHeaderComponent', () => {
       expect(backBtn).toBeNull();
     });
 
-    it('does NOT render back button in band mode with pageTitle', () => {
+    it('renders back button in band mode with pageTitle when activeTab is null and handles goBack()', () => {
       ctx.setCenter('SMO', 'CGIAR System Organization');
       fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
       fixture.detectChanges();
 
       const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      expect(backBtn).toBeNull();
+      expect(backBtn).not.toBeNull();
+      expect(backBtn.nativeElement.textContent).toContain('Back');
+
+      const spy = jest.spyOn(component, 'goBack');
+      backBtn.nativeElement.click();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('respects backLabelOverride in band mode with pageTitle', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
+      fixture.componentRef.setInput('backLabelOverride', 'Back to Results list');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn).not.toBeNull();
+      expect(backBtn.nativeElement.textContent).toContain('Back to Results list');
     });
 
     it('does NOT render back button in detail variant as navigation is anchored in rail (BRRA-R-3, Gate D4)', () => {

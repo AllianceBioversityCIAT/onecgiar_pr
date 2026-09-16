@@ -50,12 +50,22 @@
       @if (pageTitle(); as title) {
         <nav class="min-w-0" aria-label="Breadcrumb">
           <ol class="m-0 flex min-w-0 list-none items-center gap-[6px] p-0 text-[12px] leading-none">
-            <li class="shrink-0 font-medium text-[var(--pr-text-subtle)]">CGIAR Center</li>
+            <li class="shrink-0 font-medium text-[var(--pr-text-subtle)]">
+              <a
+                routerLink="/bilateral"
+                class="no-underline text-[var(--pr-text-subtle)] hover:text-[var(--pr-color-primary-400)] transition-colors">
+                CGIAR Center
+              </a>
+            </li>
             <li class="shrink-0 text-[var(--pr-text-subtle)]" aria-hidden="true">&gt;</li>
             <li
               class="min-w-0 truncate font-semibold text-[var(--pr-text-secondary)]"
               aria-current="page">
-              {{ centerBreadcrumbLabel() }}
+              <a
+                [routerLink]="['/bilateral', ctx.centerAcronym(), 'results']"
+                class="no-underline text-[var(--pr-text-secondary)] hover:text-[var(--pr-color-primary-400)] transition-colors">
+                {{ centerBreadcrumbLabel() }}
+              </a>
             </li>
           </ol>
         </nav>
@@ -224,6 +234,20 @@
             <span class="hidden sm:inline">{{ bulkCtaLabel() }}</span>
             <span class="sm:hidden">Bulk</span>
           </a>
+        </div>
+      }
+
+      @if (!activeTab()) {
+        <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[8px] sm:gap-[10px]">
+          <button
+            type="button"
+            class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] sm:text-[13px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+            [attr.aria-label]="backLabel()"
+            data-testid="bilateral-header-back-btn"
+            (click)="goBack()">
+            <span class="material-icons-round text-[16px] leading-none">arrow_back</span>
+            <span>{{ backLabel() }}</span>
+          </button>
         </div>
       }
     </div>

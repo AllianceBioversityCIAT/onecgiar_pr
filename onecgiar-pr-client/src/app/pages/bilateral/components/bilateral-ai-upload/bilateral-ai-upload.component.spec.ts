@@ -357,4 +357,192 @@ describe('BilateralAiUploadComponent', () => {
       expect(aiService.startJob).not.toHaveBeenCalled();
     });
   });
+
+  describe('Audio voice recording & error handling', () => {
+    let originalMediaDevices: unknown;
+    let originalMediaRecorder: unknown;
+
+    beforeEach(() => {
+      originalMediaDevices = navigator.mediaDevices;
+      originalMediaRecorder = (globalThis as unknown as { MediaRecorder?: unknown }).MediaRecorder;
+    });
+
+    afterEach(() => {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: originalMediaDevices,
+        configurable: true,
+        writable: true,
+      });
+      (globalThis as unknown as { MediaRecorder?: unknown }).MediaRecorder = originalMediaRecorder;
+    });
+
+    it('handles unsupported getUserMedia or insecure context with inline error and globalUserNotification toast', async () => {
+      const toastService = TestBed.inject(PrToastService);
+      const toastSpy = jest.spyOn(toastService, 'add');
+
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: undefined,
+        configurable: true,
+      });
+
+      await component.startRecording();
+      fixture.detectChanges();
+
+      expect(component.recordingError()).toMatch(/secure connection|not supported/i);
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'globalUserNotification',
+          severity: 'error',
+          summary: 'Recording unavailable',
+        }),
+      );
+
+      const alert = fixture.nativeElement.querySelector('.aiu-alert--error');
+      expect(alert).toBeTruthy();
+      expect(alert.textContent).toContain('Microphone Access Issue');
+
+      component.clearRecordingError();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.aiu-alert--error')).toBeNull();
+    });
+
+    it('handles microphone permission denial (NotAllowedError) gracefully', async () => {
+      const toastService = TestBed.inject(PrToastService);
+      const toastSpy = jest.spyOn(toastService, 'add');
+
+      const mockGetUserMedia = jest.fn().mockRejectedValue(new DOMException('Permission denied', 'NotAllowedError'));
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: { getUserMedia: mockGetUserMedia },
+        configurable: true,
+      });
+
+      (globalThis as unknown as { MediaRecorder?: unknown }).MediaRecorder = class MockMediaRecorder {
+        static isTypeSupported = jest.fn().mockReturnValue(true);
+      };
+
+      await component.startRecording();
+      fixture.detectChanges();
+
+      expect(component.recordingError()).toContain('Microphone access was denied');
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'globalUserNotification',
+          severity: 'error',
+          summary: 'Recording failed',
+          detail: expect.stringContaining('denied'),
+        }),
+      );
+    });
+
+    it('prevents recording when source count limit is reached', async () => {
+      const toastService = TestBed.inject(PrToastService);
+      const toastSpy = jest.spyOn(toastService, 'add');
+
+      // Add 6 dummy files
+      for (let i = 0; i < 6; i++) {
+        addFile(`file${i}.pdf`, 100, 'document');
+      }
+
+      await component.startRecording();
+
+      expect(component.isRecording()).toBe(false);
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'globalUserNotification',
+          severity: 'warn',
+          summary: 'Limit reached',
+        }),
+      );
+    });
+
+    it('successfully records audio, tracks duration, and saves file with globalUserNotification toast', async () => {
+      const toastService = TestBed.inject(PrToastService);
+      const toastSpy = jest.spyOn(toastService, 'add');
+
+      const mockTrack = { stop: jest.fn() };
+      const mockStream = {
+        getTracks: jest.fn().mockReturnValue([mockTrack]),
+      };
+      const mockGetUserMedia = jest.fn().mockResolvedValue(mockStream);
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: { getUserMedia: mockGetUserMedia },
+        configurable: true,
+      });
+
+      (globalThis as unknown as { MediaRecorder?: unknown }).MediaRecorder = class MockMediaRecorder {
+        static isTypeSupported = jest.fn().mockReturnValue(true);
+        state = 'inactive';
+        mimeType = 'audio/webm';
+        ondataavailable: ((e: { data: Blob }) => void) | null = null;
+        onstop: (() => void) | null = null;
+
+        start = jest.fn().mockImplementation(() => {
+          this.state = 'recording';
+        });
+
+        stop = jest.fn().mockImplementation(() => {
+          this.state = 'inactive';
+          if (this.ondataavailable) {
+            this.ondataavailable({ data: new Blob(['dummy audio content'], { type: 'audio/webm' }) });
+          }
+          if (this.onstop) {
+            this.onstop();
+          }
+        });
+      };
+
+      await component.startRecording();
+      fixture.detectChanges();
+
+      expect(component.isRecording()).toBe(true);
+      expect(fixture.nativeElement.querySelector('.aiu-recording-studio')).toBeTruthy();
+
+      // Stop recording
+      component.stopRecording();
+      fixture.detectChanges();
+
+      expect(component.isRecording()).toBe(false);
+      expect(component.recordingSaved()).toBe(true);
+      expect(component.fileList().length).toBe(1);
+      expect(component.fileList()[0].type).toBe('audio');
+      expect(mockTrack.stop).toHaveBeenCalled();
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'globalUserNotification',
+          severity: 'success',
+          summary: 'Recording saved',
+        }),
+      );
+    });
+
+    it('cancels active recording without saving a file', async () => {
+      const mockTrack = { stop: jest.fn() };
+      const mockStream = {
+        getTracks: jest.fn().mockReturnValue([mockTrack]),
+      };
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: { getUserMedia: jest.fn().mockResolvedValue(mockStream) },
+        configurable: true,
+      });
+
+      (globalThis as unknown as { MediaRecorder?: unknown }).MediaRecorder = class MockMediaRecorder {
+        static isTypeSupported = jest.fn().mockReturnValue(true);
+        state = 'recording';
+        start = jest.fn();
+        stop = jest.fn();
+        ondataavailable = null;
+        onstop = jest.fn();
+      };
+
+      await component.startRecording();
+      expect(component.isRecording()).toBe(true);
+
+      component.cancelRecording();
+      fixture.detectChanges();
+
+      expect(component.isRecording()).toBe(false);
+      expect(component.fileList().length).toBe(0);
+      expect(mockTrack.stop).toHaveBeenCalled();
+    });
+  });
 });
