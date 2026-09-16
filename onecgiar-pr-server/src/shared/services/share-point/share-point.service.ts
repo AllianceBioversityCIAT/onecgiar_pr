@@ -144,6 +144,18 @@ export class SharePointService {
    * Does not change `createUploadSession`'s signature or behavior — it is called exactly as any
    * other caller would call it, just bounded here by `withGraphTimeout` so a hang cannot strand
    * `promoteDraft` (DD-3, `ADE-R-5`).
+   *
+   * 🛑 `Content-Length` is set EXPLICITLY here and must stay explicit — do not "clean this up" by
+   * letting axios infer it. The client path (`results-api.service.ts:334-355`) never has this
+   * problem because the browser uploads a `Blob`, and `XMLHttpRequest`/`fetch` compute and set
+   * `Content-Length` for a `Blob` body on their own. This path uploads a Node `Readable`, and
+   * axios 1.x cannot determine the length of a stream, so it drops `Content-Length` and Node
+   * falls back to `Transfer-Encoding: chunked`. Microsoft Graph's upload-session PUT rejects a
+   * chunked request outright (`411 Length Required` / a opaque `400 invalidRequest`), so every
+   * document silently failed to upload in production even though `promoteDraft` returned 200 —
+   * the per-document catch swallowed the failure and the `evidence` table stayed empty. Passing
+   * `size` (already required to build `Content-Range`) as `Content-Length` is what makes Graph
+   * accept the PUT.
    */
   async uploadFromStream(
     resultId: string,
@@ -151,6 +163,15 @@ export class SharePointService {
     stream: Readable,
     size: number,
   ): Promise<{ id: string; name: string }> {
+    // Fails BEFORE the network call so the error names the file and size instead of surfacing as
+    // Graph's opaque 400 on `Content-Range: bytes 0--1/0`. `size` also drives `Content-Length`
+    // above, so a bad value here would otherwise corrupt both headers at once.
+    if (!Number.isInteger(size) || size <= 0) {
+      throw new Error(
+        `SharePoint uploadFromStream: invalid size (${size}) for file "${fileName}" — size must be a positive integer`,
+      );
+    }
+
     const session = await this.withGraphTimeout(
       this.createUploadSession({ fileName, resultId, count: 1 }),
       'createUploadSession',
@@ -162,6 +183,7 @@ export class SharePointService {
         .put(uploadUrl, stream, {
           headers: {
             'Content-Type': 'application/octet-stream',
+            'Content-Length': String(size),
             'Content-Range': `bytes 0-${size - 1}/${size}`,
           },
           maxBodyLength: Infinity,
