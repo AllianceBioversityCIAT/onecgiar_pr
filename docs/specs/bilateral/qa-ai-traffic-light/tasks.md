@@ -64,7 +64,7 @@
   - *Falsifying input:* JA with `is_isi` true on CGSpace and `null` on WoS must yield `grey` naming `is_isi`; if the rule returns `green`, FAIL. A section verdict that changes after `applyGreyRule` → FAIL.
 - **Definition of done:** 100 % branch coverage on the rules file; no imports from Nest/TypeORM (pure); lint clean.
 
-### [ ] `BIL-QAI-T-4` — Definitions-only payload builder with per-type fixtures
+### [x] `BIL-QAI-T-4` — Definitions-only payload builder with per-type fixtures
 
 - **Type:** `server`
 - **Description:** `bilateral-quality-payload.builder.ts`: five section mappers projecting the enriched detail (`BilateralService.findOne` + `ResultsService.getBilateralResultById` blocks) to labels; evidence mapper (`source`, `visibility`, `link: null` for private, no `sp_*` keys); type-specific mapper per `ResultTypeEnum`; final denylist pass (`/_id$|^id$|_code$/`, bare integers outside the numeric-label allowlist). Fixtures: one saved-result snapshot per result type (6) captured from TEST-like data, serialized payload asserted.

@@ -1,0 +1,47 @@
+{
+  "request_id": "b6f21b8e-8a1a-4b7a-9c9a-9b7a6b1a2b3c",
+  "criteria_version": "QA-2026-v1",
+  "overall": {
+    "verdict": "amber",
+    "score": 68,
+    "summary": "Overall quality is acceptable but the evidence section needs strengthening."
+  },
+  "sections": {
+    "general_information": {
+      "verdict": "green",
+      "score": 91,
+      "comments": "Title and description are clear and specific.",
+      "strengths": ["Clear title", "Well-scoped description"],
+      "issues": []
+    },
+    "contributors_and_partners": {
+      "verdict": "amber",
+      "score": 62,
+      "comments": "Partner roles could be described in more detail.",
+      "strengths": [],
+      "issues": ["Partner contribution is not fully explained"]
+    },
+    "geographic_location": {
+      "verdict": "green",
+      "comments": "Country selection matches the described scope.",
+      "strengths": ["Consistent with the national scope"],
+      "issues": []
+    },
+    "evidence": {
+      "verdict": "red",
+      "comments": "Evidence does not substantiate the claimed result.",
+      "strengths": [],
+      "issues": ["No evidence item links the claim to a verifiable source"]
+    },
+    "type_specific": {
+      "verdict": "amber",
+      "comments": "The innovation readiness level is plausible but under-justified.",
+      "strengths": [],
+      "issues": ["Readiness level rationale is thin"]
+    }
+  },
+  "evidence": [
+    { "index": 0, "verdict": "green", "reason": "Public URL resolves to a relevant document." },
+    { "index": 1, "verdict": "grey", "reason": "Private repository file — not evaluated" }
+  ]
+}
