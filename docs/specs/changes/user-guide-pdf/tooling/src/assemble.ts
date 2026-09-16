@@ -266,8 +266,14 @@ function buildTokensCss(tokens: TokensJson): string {
   return TOKENS_CSS_ORDER.map((key) => `${key}: ${tokens[key]};`).join('\n    ');
 }
 
-function buildDateIso(): string {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * `YYYY-MM-DD` in the **builder's local timezone**, not UTC. `toISOString()` was previously used
+ * here and stamped the cover with tomorrow's date for anyone building in a timezone behind UTC
+ * (a 2026-09-15 evening build read "Built 2026-09-16"). `en-CA` is the locale whose short date
+ * format is exactly `YYYY-MM-DD`, so no manual padding/reordering is needed.
+ */
+function buildDateLocal(): string {
+  return new Date().toLocaleDateString('en-CA');
 }
 
 // ============================================================================
@@ -290,6 +296,20 @@ async function renderSections(routes: RouteConfig[]): Promise<string> {
       const contentPath = path.join(SECTIONS_DIR, meta.contentFile);
       const raw = await fs.readFile(contentPath, 'utf-8');
       const prose = renderMarkdown(raw);
+
+      // Fail here, naming the route, rather than emitting an <img> whose src 404s: a missing
+      // capture otherwise surfaces only as a blank box in the final PDF (verify-structure.ts
+      // checks `naturalWidth` as the second line of defence, this is the first).
+      const capturePath = path.join(TOOLING_ROOT, 'raw', `${route.id}.png`);
+      try {
+        await fs.access(capturePath);
+      } catch {
+        throw new Error(
+          `[assemble] Missing screenshot for route id "${route.id}" (section "${meta.sectionId}"): ` +
+            `expected ${capturePath}. Re-run "npm run capture" to regenerate it.`
+        );
+      }
+
       const imgSrc = path.posix.join('..', 'raw', `${route.id}.png`);
 
       return [
@@ -338,12 +358,30 @@ function renderGlossaryCitation(entry: GlossaryEntry): string {
 /**
  * Renders `<dt>`/`<dd>` pairs. Entries with `definition: null` (e.g. "OICR
  * (Outcome Impact Case Report)") are skipped — never rendering a literal
- * "null" or an empty `<dd>` (Leader decision).
+ * "null" or an empty `<dd>` (Leader decision) — and each skipped term is named
+ * on stderr so a silently-dropped glossary entry is visible in the build log.
+ *
+ * Each pair is wrapped in `<div class="ug-glossary__entry">` so `guide.css` can
+ * hold the term and its definition on one page with `break-inside: avoid`;
+ * a `<div>` grouping a `<dt>`/`<dd>` pair inside a `<dl>` is valid HTML5 and
+ * leaves the `<dt>`/`<dd>` descendant counts `verify-structure.ts` (UG-T-13)
+ * asserts against unchanged.
  */
 function renderGlossary(entries: GlossaryEntry[]): string {
-  const renderable = entries.filter(
-    (entry) => typeof entry.definition === 'string' && entry.definition.trim().length > 0
-  );
+  const renderable: GlossaryEntry[] = [];
+  const skipped: string[] = [];
+
+  for (const entry of entries) {
+    if (typeof entry.definition === 'string' && entry.definition.trim().length > 0) {
+      renderable.push(entry);
+    } else {
+      skipped.push(entry.term);
+    }
+  }
+
+  for (const term of skipped) {
+    console.warn(`[assemble] glossary entry "${term}" skipped — its "definition" is null/empty.`);
+  }
 
   if (renderable.length === 0) {
     throw new Error('[assemble] glossary.json produced zero renderable entries (all definitions null/empty?).');
@@ -353,7 +391,7 @@ function renderGlossary(entries: GlossaryEntry[]): string {
     .map((entry) => {
       const dt = `<dt>${escapeHtml(entry.term)}</dt>`;
       const dd = `<dd>${escapeHtml((entry.definition as string).trim())} ${renderGlossaryCitation(entry)}</dd>`;
-      return `${dt}\n      ${dd}`;
+      return `<div class="ug-glossary__entry">\n        ${dt}\n        ${dd}\n      </div>`;
     })
     .join('\n      ');
 }
@@ -386,7 +424,7 @@ async function main(): Promise<void> {
     'inlined guide.css (path-relative <link> would break once moved into dist/)'
   );
   html = replacePlaceholderOnce(html, '{{TOKENS_CSS}}', buildTokensCss(tokens), 'design tokens');
-  html = replacePlaceholderOnce(html, '{{BUILD_DATE}}', `Built ${buildDateIso()}`, 'build date');
+  html = replacePlaceholderOnce(html, '{{BUILD_DATE}}', `Built ${buildDateLocal()}`, 'build date');
   html = replacePlaceholderOnce(html, '{{INTRO}}', renderMarkdown(introRaw), 'intro');
   html = replacePlaceholderOnce(html, '{{SECTIONS}}', await renderSections(routes), 'sections');
   html = replacePlaceholderOnce(html, '{{GLOSSARY}}', renderGlossary(glossaryEntries), 'glossary');

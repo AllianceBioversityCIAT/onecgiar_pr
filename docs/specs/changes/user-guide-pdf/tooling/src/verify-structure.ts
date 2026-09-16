@@ -14,6 +14,8 @@
  *   - 9 `<h2>` elements total (intro + TOC + 6 sections + glossary);
  *   - the glossary block has >= 1 `<dt>` and zero empty `<dd>`;
  *   - every `<img>` has a non-empty `alt`;
+ *   - every `<img>` actually decoded (`naturalWidth > 0`) — a broken/missing
+ *     screenshot otherwise reaches the PDF as a silent blank box;
  *   - no leftover `{{...}}` placeholder;
  *   - no stray unconverted markdown (`**` or a literal `##` heading marker).
  *
@@ -60,6 +62,8 @@ interface PageStructure {
   emptyDdCount: number;
   imageCount: number;
   imagesMissingAlt: number;
+  /** `alt` (or `src` when `alt` is empty) of every `<img>` whose bitmap did not decode. */
+  unloadedImages: string[];
 }
 
 async function readStructure(targetPath: string): Promise<PageStructure & { rawHtml: string }> {
@@ -95,7 +99,23 @@ async function readStructure(targetPath: string): Promise<PageStructure & { rawH
       const imageCount = imgs.length;
       const imagesMissingAlt = imgs.filter((img) => (img.getAttribute('alt') ?? '').trim().length === 0).length;
 
-      return { totalH2Count, introExists, sectionHeadings, glossaryDtCount, emptyDdCount, imageCount, imagesMissingAlt };
+      // `page.goto` resolves on the `load` event, so every <img> has finished loading (or
+      // failed) by now: `naturalWidth === 0` means the bitmap never decoded — a missing or
+      // corrupt `raw/*.png`, or a src that does not resolve from dist/.
+      const unloadedImages = imgs
+        .filter((img) => img.naturalWidth === 0)
+        .map((img) => (img.getAttribute('alt') ?? '').trim() || img.getAttribute('src') || '(no alt, no src)');
+
+      return {
+        totalH2Count,
+        introExists,
+        sectionHeadings,
+        glossaryDtCount,
+        emptyDdCount,
+        imageCount,
+        imagesMissingAlt,
+        unloadedImages
+      };
     });
 
     return { ...structure, rawHtml };
@@ -156,6 +176,14 @@ function assertStructure(structure: PageStructure & { rawHtml: string }): void {
 
   if (structure.imagesMissingAlt > 0) {
     errors.push(`${structure.imagesMissingAlt} <img> element(s) have an empty/missing "alt" attribute.`);
+  }
+
+  if (structure.unloadedImages.length > 0) {
+    errors.push(
+      `${structure.unloadedImages.length} <img> element(s) did not load (naturalWidth === 0) — the PDF ` +
+        `would show a blank box instead of a screenshot:\n` +
+        structure.unloadedImages.map((label) => `  - ${label}`).join('\n')
+    );
   }
 
   if (structure.rawHtml.includes('{{')) {
