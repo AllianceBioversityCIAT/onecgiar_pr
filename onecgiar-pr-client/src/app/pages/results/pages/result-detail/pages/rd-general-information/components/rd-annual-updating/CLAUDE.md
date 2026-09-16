@@ -1,7 +1,8 @@
 # rd-annual-updating
 
-**Verified:** 2026-09-08 · branch performance-refactor (P2-3292 QA findings A/B: the stored flag is a
-`tinyint`, not a boolean); prior: 2026-09-03
+**Verified:** 2026-09-16 · branch qa-development-2026-ss (SIP-T-5: wired the merge/split catalogue to
+the broadened, server-searchable picker); prior: 2026-09-08 · branch performance-refactor (P2-3292 QA
+findings A/B: the stored flag is a `tinyint`, not a boolean); prior: 2026-09-03
 
 ## What it is
 
@@ -150,6 +151,27 @@ ticked reason (the parent still owns the save).
   the lead-in twice on 2025 results.
 - The Step 2 hint passes `[showDescriptionLabel]="false"`, otherwise `app-pr-field-header` prefixes
   it with a bold `Description:` chip (`pr-field-header.component.ts:26-28`).
+
+## Merge/split catalogue search (SIP-T-5)
+
+`searchMergeSplitCatalogue(term)` wires `(searchTextChange)` on both `app-pr-multi-select`
+instances to `GET_mergeSplitTargetInnovations(resultId, term)` (server-side search, `SIP-T-3`).
+
+- 🛑 **Deliberately not gated by `mergeSplitCatalogueRequested`** — that flag exists only to stop
+  the initial `loadMergeSplitCatalogue()` firing twice; reusing it here would make every search
+  after the first a silent no-op.
+- **Selection-preserving merge**: a candidate the search response drops but that is still
+  referenced by `generalInfoBody.merge_split_targets` (either transition type) is carried over
+  from the previous catalogue, so narrowing the search can never make an already-picked target
+  vanish from what the dropdown can display.
+- **Reference stability**: `mergeSplitCatalogue` is only reassigned a new array reference when its
+  content actually changed (id-by-index compare) — same discipline as `selectedTargets()` /
+  `selectionCache`, applied to the catalogue array itself.
+- Both fetches share one label-mapping helper (`mapMergeSplitCandidates`), so `loadMergeSplitCatalogue`
+  and `searchMergeSplitCatalogue` never drift on the `"code - title"` label rule.
+- The two dropdown `description` strings no longer say "quality-assessed" (`SIP-R-4`/`SIP-AC-4`:
+  eligibility is now any active, non-discontinued Innovation Development result). Kept identical
+  between merge and split, as before.
 
 ## Pending / Coming soon
 

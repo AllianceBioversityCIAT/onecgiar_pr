@@ -1,5 +1,7 @@
-import { Component, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, computed, forwardRef, inject, input, output, signal, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -17,7 +19,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
   ],
   standalone: false
 })
-export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
+export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, OnInit, OnDestroy {
   readonly optionLabel = input<string>();
   readonly optionValue = input<string>();
   readonly options = input<any>();
@@ -48,12 +50,32 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   readonly cannotRemoveOptionValues = input<any[]>([]);
   readonly displayLabelFormatter = input<(option: any) => string>();
   readonly showDescriptionLabel = input<boolean>(true);
+  // SIP-T-3: only meaningful when `searchTextChange` is wired by the parent (server-search mode).
+  readonly serverSearchDebounceMs = input<number>(300);
+  // SIP-T-7: opt-in visual variant (rounded panel + shadow, bordered search bar with an inset icon,
+  // spaced/divided/hoverable option rows) mirroring `rd-contributors-and-partners`'s linked-result
+  // picker. Off by default — the other ~78 existing call sites are visually unchanged. See
+  // `pr-multi-select/CLAUDE.md`.
+  readonly resultPickerStyle = input<boolean>(false);
+
+  /** Must match `.options.result_picker_style .option` min-height in `pr-multi-select.component.scss`
+   * (52px) when `resultPickerStyle` is on; 30px (the `custom-fields.scss` global row height) otherwise.
+   * Drives the flat-mode `cdk-virtual-scroll-viewport [itemSize]` — same paired-value pattern as
+   * `pr-select.component.ts:60-61`'s `virtualOptionItemSize`. If either value changes, change both. */
+  readonly virtualOptionItemSize = computed(() => (this.resultPickerStyle() ? 52 : 30));
 
   readonly selectOptionEvent = output<any>();
   readonly removeOptionEvent = output<any>();
+  // SIP-T-3: opt-in server-search mode. Emits the trimmed search term, debounced by
+  // `serverSearchDebounceMs()`, ONLY when a parent template wires `(searchTextChange)` — see
+  // `isServerSearchWired()`. The ~78 existing instances that don't bind it are unaffected.
+  readonly searchTextChange = output<string>();
 
   selectAll = null;
   public searchText: string;
+
+  private readonly _searchTextSubject = new Subject<string>();
+  private _searchTextSubscription: Subscription | null = null;
 
   private readonly _valueSig = signal<any[]>([]);
 
@@ -68,6 +90,34 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['options'] || changes['group']) {
       this.syncSelectionFlags();
+    }
+  }
+
+  ngOnInit(): void {
+    // Only pay for the debounce pipeline on the instances that actually wire the output.
+    if (this.isServerSearchWired()) {
+      this._searchTextSubscription = this._searchTextSubject
+        .pipe(debounceTime(this.serverSearchDebounceMs()), distinctUntilChanged())
+        .subscribe(term => this.searchTextChange.emit(term.trim()));
+    }
+  }
+
+  ngOnDestroy(): void {
+    this._searchTextSubscription?.unsubscribe();
+    this._searchTextSubscription = null;
+  }
+
+  /** OutputEmitterRef.listeners is Angular's internal (undocumented) subscriber list — null until
+   * a template `(searchTextChange)` binding subscribes. Pinned to @angular/core 21.2.x; if a future
+   * Angular upgrade changes this internal shape, this must be revisited (see pr-multi-select/CLAUDE.md). */
+  private isServerSearchWired(): boolean {
+    return !!(this.searchTextChange as any).listeners?.length;
+  }
+
+  onSearchInputChange(value: string): void {
+    this.searchText = value;
+    if (this.isServerSearchWired()) {
+      this._searchTextSubject.next(value);
     }
   }
 
@@ -322,6 +372,9 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
 
   filterFlatOptions(options: any[]): any[] {
     if (!options?.length) return [];
+    // SIP-T-3: when server-search is wired, the parent already sent us the pre-filtered result set
+    // via `[options]` — filtering again here would double-filter or filter on stale local text.
+    if (this.isServerSearchWired()) return options;
     if (!this.searchText) return options;
     const optionLabel = this.optionLabel();
     const searchLower = this.searchText.toLowerCase();

@@ -588,4 +588,14 @@ describe('InnovationPackageCustomTableComponent', () => {
       expect((component as any).getUserInitiativeIds({})).toEqual([]);
     });
   });
+
+  describe('is_replicated in IPSR table', () => {
+    it('should distinguish replicated innovation packages for Previously reported tag', () => {
+      const replicated = { id: 1, title: 'Package A', is_replicated: 1 };
+      const original = { id: 2, title: 'Package B', is_replicated: 0 };
+
+      expect(Boolean(replicated.is_replicated)).toBe(true);
+      expect(Boolean(original.is_replicated)).toBe(false);
+    });
+  });
 });

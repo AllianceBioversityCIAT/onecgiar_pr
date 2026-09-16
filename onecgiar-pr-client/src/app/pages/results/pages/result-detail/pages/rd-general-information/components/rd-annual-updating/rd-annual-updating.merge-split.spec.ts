@@ -541,4 +541,123 @@ describe('RdAnnualUpdatingComponent — merge / split targets (P2-3292 Step 3)',
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
+
+  /**
+   * SIP-T-5 — server-side search wiring (`searchMergeSplitCatalogue`), `RES-DD-3`.
+   *
+   * `design.md` §10's testing plan calls out the exact gap these cases close: it is not enough to
+   * assert the call fired with the right term — the catalogue (and therefore the rendered options)
+   * must actually narrow to the response, a selection already made must survive a search that no
+   * longer returns it, and the array reference discipline that fixed NG0103 for the initial load
+   * must hold for the search path too.
+   */
+  describe('SIP-T-5 — search wiring', () => {
+    it('calls GET_mergeSplitTargetInnovations with (resultId, term) — TWO arguments, unlike loadMergeSplitCatalogue()', () => {
+      const spy = jest.spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations').mockReturnValue(of({ response: [] }) as any);
+
+      const component = build([ticked(MERGE_REASON)]);
+      component.searchMergeSplitCatalogue('some term');
+
+      expect(spy).toHaveBeenCalledWith(11494, 'some term');
+    });
+
+    it('narrows mergeSplitCatalogue to exactly the response, not merely firing the call', () => {
+      // Nothing selected/stored, so the merge with `preserved` items never engages — the assertion
+      // is purely on what the search response contributes.
+      const component = build([ticked(MERGE_REASON)], true, CATALOGUE_CODES);
+      expect(component.mergeSplitCatalogue).toHaveLength(CATALOGUE_CODES.length);
+
+      jest
+        .spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations')
+        .mockReturnValue(of({ response: asCatalogue([900, 701]) }) as any);
+
+      component.searchMergeSplitCatalogue('90');
+
+      expect(component.mergeSplitCatalogue.map((o: any) => o.result_code)).toEqual([900, 701]);
+    });
+
+    /**
+     * 🛑 EL CANDADO DE `RES-DD-3` — la razón de ser de toda la decisión de diseño.
+     *
+     * Un target ya elegido no puede desaparecer del desplegable solo porque el término de búsqueda
+     * ya no lo trae de vuelta. (a) es trivialmente cierto porque la búsqueda nunca toca el
+     * almacenamiento — se afirma igual, tal como pide la tarea. (b) es la parte que de verdad
+     * fallaría SIN el merge que preserva la selección: `X` ya no está en el catálogo crudo que
+     * devolvió la búsqueda, así que `selectedTargets('merge')` no podría resolverlo.
+     */
+    it('RES-DD-3 — a selected target survives a search whose response excludes it', () => {
+      const component = build([ticked(MERGE_REASON)], true, CATALOGUE_CODES);
+      component.onTargetsChange('merge', [idOf(900)]);
+      expect(shownCodes(component, 'merge')).toEqual([900]);
+
+      // El término de búsqueda no trae 900 de vuelta — simula que ya no matchea.
+      jest
+        .spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations')
+        .mockReturnValue(of({ response: asCatalogue([701, 702]) }) as any);
+
+      component.searchMergeSplitCatalogue('7');
+
+      // (a) lo GUARDADO nunca se toca — la búsqueda no escribe en `merge_split_targets`.
+      expect(storedFor(component, 'merge')).toEqual([idOf(900)]);
+      // (b) lo MOSTRADO tampoco se pierde — el candidato sobrevive desde el catálogo anterior.
+      expect(shownCodes(component, 'merge')).toEqual([900]);
+    });
+
+    describe('estabilidad de referencia de la búsqueda (mismo candado NG0103, aplicado al catálogo)', () => {
+      it('devuelve LA MISMA instancia de mergeSplitCatalogue cuando dos búsquedas resuelven el mismo set', () => {
+        const component = build([ticked(MERGE_REASON)], true, CATALOGUE_CODES);
+        const response = asCatalogue([900, 901]);
+        jest.spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations').mockReturnValue(of({ response }) as any);
+
+        component.searchMergeSplitCatalogue('90');
+        const first = component.mergeSplitCatalogue;
+
+        component.searchMergeSplitCatalogue('90');
+        const second = component.mergeSplitCatalogue;
+
+        // toBe, no toEqual: toEqual pasaría con dos arrays distintos de igual contenido, que es
+        // precisamente el bug que este candado vigila.
+        expect(second).toBe(first);
+
+        jest
+          .spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations')
+          .mockReturnValue(of({ response: asCatalogue([701, 702, 703]) }) as any);
+
+        component.searchMergeSplitCatalogue('7');
+        const third = component.mergeSplitCatalogue;
+
+        expect(third).not.toBe(second);
+      });
+    });
+
+    it('SIP-AC-5 — is not gated by mergeSplitCatalogueRequested: a search after the initial load still fires', () => {
+      const spy = jest.spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations').mockReturnValue(of({ response: [] }) as any);
+
+      const component = build([ticked(MERGE_REASON)]);
+      component.ensureMergeSplitCatalogue(); // Consumes the fetch-once guard.
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      component.searchMergeSplitCatalogue('term');
+
+      // If the guard had silently swallowed the search, this would still read 1.
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves mergeSplitCatalogue untouched on error — asymmetric on purpose vs. loadMergeSplitCatalogue()', () => {
+      // Contrast: `loadMergeSplitCatalogue()`'s own error handler DOES clear to `[]` (see
+      // 'leaves an empty list and stops loading when the request fails' above in this file). The
+      // search path fails soft instead — a search that cannot be read must not blank out what is
+      // already on screen while the reporter keeps typing.
+      const component = build([ticked(MERGE_REASON)], true, CATALOGUE_CODES);
+      const before = component.mergeSplitCatalogue;
+
+      jest.spyOn(api.resultsSE, 'GET_mergeSplitTargetInnovations').mockReturnValue(throwError(() => new Error('boom')) as any);
+
+      expect(() => component.searchMergeSplitCatalogue('term')).not.toThrow();
+
+      expect(component.mergeSplitCatalogue).toBe(before);
+      expect(component.mergeSplitCatalogue).toEqual(asCatalogue(CATALOGUE_CODES));
+      expect(component.mergeSplitCatalogueLoading).toBe(false);
+    });
+  });
 });
