@@ -102,19 +102,87 @@
           </span>
         </div>
 
-        <!-- Center acronym title and center name subtitle -->
-        <div class="min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]">
-          <div class="flex min-w-0 items-baseline gap-[8px]">
+        <!-- Center acronym title, info popover, and center name subtitle (ⓘ sits on the title row, SP band parity) -->
+        <div class="relative min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]">
+          <div class="flex min-w-0 items-center gap-[8px]">
             <h1
               class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
               {{ ctx.centerAcronym() }}
             </h1>
+
+            @if (activeTab()) {
+              <button
+                type="button"
+                class="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-all hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+                [attr.aria-label]="copy.infoButtonAriaLabel"
+                [attr.aria-expanded]="infoOpen()"
+                [attr.aria-controls]="'bilateral-header-info-popover'"
+                data-testid="bilateral-header-info-button"
+                (click)="toggleInfo($event)">
+                <ng-icon name="lucideInfo" class="text-[13px]" />
+              </button>
+            }
+
             @if (ctx.centerName()) {
               <p class="m-0 min-w-0 truncate text-[12px] sm:text-[13px] font-normal text-[var(--pr-text-secondary)]">
                 {{ ctx.centerName() }}
               </p>
             }
           </div>
+
+          @if (activeTab() && infoOpen()) {
+              <div
+                id="bilateral-header-info-popover"
+                role="dialog"
+                [attr.aria-label]="copy.popoverAriaLabel"
+                class="absolute left-0 top-[32px] z-30 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+                data-testid="bilateral-header-info-popover"
+                (click)="$event.stopPropagation()">
+                <div class="mb-[12px] flex items-center justify-between gap-[8px]">
+                  <div class="flex min-w-0 items-center gap-[8px]">
+                    <span class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+                      <ng-icon name="lucideInfo" class="text-[14px]" />
+                    </span>
+                    <span class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)]">
+                      {{ headerTitle() }}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)]"
+                    aria-label="Close"
+                    (click)="closeInfo()">
+                    <ng-icon name="lucideX" class="text-[14px]" />
+                  </button>
+                </div>
+
+                <div class="mb-[14px] rounded-[10px] bg-[var(--pr-color-primary-25)] border border-[var(--pr-color-primary-100)] p-[12px]">
+                  <div class="mb-[4px] flex items-center gap-[6px]">
+                    <span class="inline-block rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-color-primary-700)]">
+                      {{ activeTabInfo().title }}
+                    </span>
+                    <span class="text-[11.5px] font-medium text-[var(--pr-text-subtle)]">{{ copy.activeViewLabel }}</span>
+                  </div>
+                  <p class="m-0 text-[12.5px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+                    {{ activeTabInfo().description }}
+                  </p>
+                </div>
+
+                <div>
+                  <span class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+                    {{ copy.centerOverviewHeading }}
+                  </span>
+                  <div class="max-h-[140px] overflow-y-auto text-[13px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
+                    {{ centerOverviewDescription() }}
+                  </div>
+                </div>
+
+                <div class="mt-[14px] flex items-center justify-between border-t border-[var(--pr-border-divider)] pt-[10px] text-[12px] font-medium text-[var(--pr-text-secondary)]">
+                  <span>{{ centerMeta() }}</span>
+                  <span class="font-mono text-[11px] text-[var(--pr-text-subtle)]">{{ ctx.centerAcronym() }}</span>
+                </div>
+              </div>
+          }
         </div>
 
         <!-- "AI job running" chip (< 640px): renders in the identity block so it stays visible without scrolling (Pivot Option A) -->

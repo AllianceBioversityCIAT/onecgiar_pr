@@ -1,16 +1,20 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, input, signal } from '@angular/core';
 import { Params, Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideInfo, lucideX } from '@ng-icons/lucide';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { environment } from '../../../../../environments/environment';
+import { BILATERAL_HEADER_INFO_COPY } from '../../../../internationalization/bilateral-header-info.copy';
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink, AiProvenanceNoticeComponent],
+  imports: [RouterLink, AiProvenanceNoticeComponent, NgIcon],
+  providers: [provideIcons({ lucideInfo, lucideX })],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -126,6 +130,12 @@ export class BilateralPageHeaderComponent {
     return cycle ? `CGIAR Center · ${cycle}` : 'CGIAR Center';
   });
 
+  readonly copy = BILATERAL_HEADER_INFO_COPY;
+
+  /** Info popover open state — click toggles; Escape / outside click close (mirrors SP program band). */
+  readonly infoOpen = signal(false);
+  private skipNextDocumentClick = false;
+
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'reporting' | 'results' | 'drafts' | null>(null);
 
@@ -226,6 +236,33 @@ export class BilateralPageHeaderComponent {
     return name ? `${name} (${acronym})` : acronym;
   });
 
+  readonly headerTitle = computed(() => this.ctx.centerName() || this.ctx.centerAcronym() || '');
+
+  readonly centerOverviewDescription = computed(() => {
+    const name = this.ctx.centerName() || this.ctx.centerAcronym();
+    return name ? this.copy.centerOverview(name) : this.copy.fallbackCenterOverview;
+  });
+
+  readonly activeTabInfo = computed(() => {
+    switch (this.activeTab()) {
+      case 'overview':
+        return this.copy.tabs.overview;
+      case 'reporting':
+        return this.copy.tabs.reporting;
+      case 'results':
+        return this.copy.tabs.results;
+      case 'drafts':
+        return this.copy.tabs.drafts;
+      default:
+        return this.copy.tabs.reporting;
+    }
+  });
+
+  readonly centerMeta = computed(() => {
+    const parts = [this.reportingCycleLabel(), this.ctx.centerAcronym()].filter(Boolean);
+    return parts.join(' · ');
+  });
+
   readonly bulkCtaLabel = computed(() => 'Bulk Results Uploader');
 
   /**
@@ -271,5 +308,29 @@ export class BilateralPageHeaderComponent {
         : url;
     const target = this.navSE.getBackTarget(effectiveUrl, this.ctx.centerAcronym() ?? undefined);
     this.navSE.back(target.url, this.ctx.centerAcronym() ?? undefined);
+  }
+
+  toggleInfo(event: Event): void {
+    event.stopPropagation();
+    this.skipNextDocumentClick = true;
+    this.infoOpen.update(open => !open);
+  }
+
+  closeInfo(): void {
+    this.infoOpen.set(false);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.skipNextDocumentClick) {
+      this.skipNextDocumentClick = false;
+      return;
+    }
+    if (this.infoOpen()) this.infoOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.infoOpen()) this.infoOpen.set(false);
   }
 }

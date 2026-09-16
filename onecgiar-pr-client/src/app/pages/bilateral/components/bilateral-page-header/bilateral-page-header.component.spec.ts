@@ -107,6 +107,56 @@ describe('BilateralPageHeaderComponent', () => {
     expect(nav.nativeElement.classList.contains('no-scrollbar')).toBe(true);
   });
 
+  it('shows the info button on tabbed pages and opens tab-specific explainer copy', () => {
+    ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    fixture.componentRef.setInput('activeTab', 'reporting');
+    fixture.detectChanges();
+
+    const infoButton = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]') as HTMLButtonElement;
+    expect(infoButton).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]')).toBeNull();
+
+    infoButton.click();
+    fixture.detectChanges();
+
+    const popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
+    expect(popover).toBeTruthy();
+    expect(popover.textContent).toContain('Reporting');
+    expect(popover.textContent).toContain('Browse bilateral projects mapped to Science Programs');
+    expect(popover.textContent).toContain('Africa Rice Center');
+  });
+
+  it('updates the info popover when the active tab changes', () => {
+    ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.detectChanges();
+
+    const infoButton = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]') as HTMLButtonElement;
+    infoButton.click();
+    fixture.detectChanges();
+
+    let popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
+    expect(popover.textContent).toContain('Overview');
+    expect(popover.textContent).toContain('dashboard of your center');
+
+    component.closeInfo();
+    fixture.componentRef.setInput('activeTab', 'drafts');
+    fixture.detectChanges();
+
+    infoButton.click();
+    fixture.detectChanges();
+
+    popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
+    expect(popover.textContent).toContain('AI Draft Results');
+    expect(popover.textContent).toContain('AI-generated draft results');
+  });
+
+  it('hides the info button when activeTab is not set', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]')).toBeNull();
+  });
+
   it('does not display a dividing line between hero and tabs when activeTab is set', () => {
     ctx.setCenter('SMO', 'CGIAR System Organization');
     fixture.componentRef.setInput('activeTab', 'reporting');
