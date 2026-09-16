@@ -56,7 +56,7 @@ Block execution until every box is ticked.
   - [x] All 6 target routes render non-empty, representative content when visited manually while logged in.
   - [x] A valid `TEST_TOKEN` is available locally (never committed).
 
-### `UG-T-3` — Define `routes.config.json` — **[~] IN PROGRESS** (attempt 1 Reviewer FAIL, attempt 2 dispatched — see `execution.md`)
+### `UG-T-3` — Define `routes.config.json` — **[x] COMPLETE** (PASS on attempt 2, see `execution.md`)
 
 - **Type:** infra
 - **Description:** For each of the 6 routes, record: `url`, `readySelector` (a DOM selector present only once real content has loaded — proves the route did not land on login/error/empty state), `clickTarget` (selector for the element the annotation marks), and `captionKey` (links to the matching content file in `UG-T-9`).
@@ -66,8 +66,8 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-7`, `UG-T-9`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] Each `readySelector` is verified to be absent on the login page and present only after real data loads (manually confirmed once per route).
-  - [ ] Each `clickTarget` resolves to exactly one element via `page.locator(...).count() === 1`.
+  - [x] Each `readySelector` is verified to be absent on the login page and present only after real data loads (manually confirmed once per route).
+  - [x] Each `clickTarget` resolves to exactly one element via `page.locator(...).count() === 1`.
 
 ### `UG-T-4` — `auth.ts` (localStorage token+user injection) — **[x] COMPLETE** (PASS, retroactive Reviewer audit, see `execution.md`)
 
@@ -110,7 +110,7 @@ Block execution until every box is ticked.
   - [x] The overlay is confirmed removed from the DOM after the screenshot (no residual node before the next route navigates).
   - [x] On at least one route, the orange marker is visually confirmed distinct from the app's own violet brand accent in the same screenshot — not blending in (closes the `UG-R-3` scenario's `AND IT MUST` clause).
 
-### `UG-T-7` — `capture.ts` (orchestration) — **[~] IN PROGRESS** (attempt 1 Reviewer FAIL, attempt 2 dispatched — see `execution.md`)
+### `UG-T-7` — `capture.ts` (orchestration) — **[x] COMPLETE** (PASS on attempt 2, see `execution.md`)
 
 - **Type:** infra
 - **Description:** For each route in `routes.config.json`: `page.goto()`, wait for `readySelector` (timeout → non-zero exit with the failing route/selector named in the error), call `annotate.ts` on `clickTarget`, `page.screenshot({ fullPage: true })` to `raw/<route-id>.png`, remove the overlay. Log one line per route per `design.md` §9. The script must not click, submit, or otherwise mutate any data (read-only).
@@ -120,9 +120,9 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-12`, `UG-T-15`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] A full run against the seeded local environment (`UG-T-2`) produces 6 annotated `raw/*.png` files.
-  - [ ] Deliberately pointing `readySelector` at a selector that will never appear causes a non-zero exit naming the specific route — verified once as a negative-path check.
-  - [ ] Code review confirms no interaction beyond `goto`/read-only queries/`screenshot` (no `.click()` on create/submit/delete controls).
+  - [x] A full run against the seeded local environment (`UG-T-2`) produces 6 annotated `raw/*.png` files.
+  - [x] Deliberately pointing `readySelector` at a selector that will never appear causes a non-zero exit naming the specific route — verified once as a negative-path check.
+  - [x] Code review confirms no interaction beyond `goto`/read-only queries/`screenshot` (no `.click()` on create/submit/delete controls).
 
 ### `UG-T-8` — Resolve the guide's sign-in URL reference (`UG-OQ-4`) — **[x] COMPLETE** (PASS, see `execution.md`)
 

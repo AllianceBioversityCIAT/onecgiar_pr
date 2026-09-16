@@ -4,7 +4,8 @@
   "private": true,
   "description": "Standalone, dev-only Playwright pipeline that captures annotated screenshots of the reporting tool and assembles them into the end-user PDF guide. Not wired into onecgiar-pr-client or onecgiar-pr-server.",
   "scripts": {
-    "capture": "echo \"capture.ts not implemented yet (see UG-T-7)\" && exit 1",
+    "typecheck": "tsc --noEmit",
+    "capture": "ts-node src/capture.ts",
     "assemble": "echo \"assemble.ts not implemented yet (see UG-T-12)\" && exit 1",
     "verify-structure": "echo \"verify-structure.ts not implemented yet (see UG-T-13)\" && exit 1",
     "pdf": "echo \"pdf.ts not implemented yet (see UG-T-14)\" && exit 1",

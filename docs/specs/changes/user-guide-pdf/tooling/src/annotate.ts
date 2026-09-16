@@ -38,8 +38,12 @@
 
 import type { Locator, Page } from '@playwright/test';
 
-/** Attribute used to tag every node this module injects, so removal is exhaustive and idempotent. */
-const OVERLAY_ATTR = 'data-ug-annotation';
+/**
+ * Attribute used to tag every node this module injects, so removal is exhaustive and idempotent.
+ * Exported so `capture.ts` (UG-T-7) can query for residual `[${OVERLAY_ATTR}]` nodes after
+ * `removeAnnotation()` without duplicating this string.
+ */
+export const OVERLAY_ATTR = 'data-ug-annotation';
 
 /** Effectively unbounded: the highest value CSS accepts as an integer z-index. */
 const OVERLAY_Z_INDEX = '2147483647';
@@ -61,7 +65,7 @@ const DEFAULT_PADDING = 10;
 const DEFAULT_BORDER_WIDTH = 4;
 
 /**
- * Inject a fixed-position highlight ring around `locator`'s current bounding
+ * Inject an absolute-positioned (document coordinates) highlight ring around `locator`'s current bounding
  * box, appended directly to `document.body`.
  *
  * The ring is a hollow rectangle (transparent fill, colored border + glow)

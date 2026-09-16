@@ -1,0 +1,52 @@
+[
+  {
+    "id": "home",
+    "url": "/result-framework-reporting/home",
+    "readySelector": "app-result-framework-reporting-center-card-item",
+    "clickTarget": "app-result-framework-reporting-center-card-item:nth-of-type(1) a:has-text(\"Report\")",
+    "captionKey": "01-landing"
+  },
+  {
+    "id": "overview",
+    "url": "/result-framework-reporting/entity-details/SP01/overview",
+    "readySelector": "[data-testid=\"aow-rows\"]",
+    "clickTarget": "text=Continue reporting",
+    "captionKey": "02-overview",
+    "viewport": { "width": 1280, "height": 1800 },
+    "fullPage": false
+  },
+  {
+    "id": "reporting-aows",
+    "url": "/result-framework-reporting/entity-details/SP01?tocView=aows",
+    "readySelector": ".pr-reporting-row",
+    "clickTarget": "text=Where to report",
+    "captionKey": "03-reporting",
+    "viewport": { "width": 1280, "height": 1800 },
+    "fullPage": false
+  },
+  {
+    "id": "results-list",
+    "url": "/result/results-outlet/results-list",
+    "readySelector": "table.pr-table tbody tr td:nth-child(2)",
+    "clickTarget": "text=Update result",
+    "captionKey": "04-results-center",
+    "viewport": { "width": 1280, "height": 1800 },
+    "fullPage": false
+  },
+  {
+    "id": "notifications-received",
+    "url": "/result/results-outlet/results-notifications/requests/received",
+    "readySelector": "app-notification-item",
+    "clickTarget": "app-notification-item:nth-of-type(1)",
+    "captionKey": "05-notifications",
+    "viewport": { "width": 1280, "height": 1800 },
+    "fullPage": false
+  },
+  {
+    "id": "ipsr-innovation-list",
+    "url": "/ipsr/list/innovation-list",
+    "readySelector": "table.pr-table tbody tr td:nth-child(2)",
+    "clickTarget": "table.pr-table tbody tr:first-child a.notCenter",
+    "captionKey": "06-innovation-packages"
+  }
+]
