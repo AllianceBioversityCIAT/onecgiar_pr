@@ -645,3 +645,110 @@ through the user, which is the one path that rule leaves open.
 
 **Budget impact:** the `ADE-T-2` amendment adds ~4 implementation lines and ~25 test lines to the
 corrected §11 budget (~200 / ~370). Immaterial; no new tripwire.
+
+### `ADE-T-2` — Default `is_formal_evidence` for qualifying documents at draft creation (+ approved amendment)
+
+| Field | Value |
+|---|---|
+| Status | **PASS** |
+| Date | 2026-09-16 |
+| Implementer attempts | 1 |
+| Effort | `medium` (Part A) / `high` (Part B) |
+| Skills loaded | `nestjs-expert` |
+| Review mode | Lens checklist (single Reviewer, 4R advisory) |
+
+**Requirements covered:** `ADE-R-6` · contributes to `ADE-AC-1`, `ADE-AC-2` · **and, via the
+amendment,** `ADE-R-8` and `ADE-AC-3`'s half-written-row clause under compound failure.
+
+**Two parts.** Part A is the task's original scope. Part B is the user-approved `tasks.md` amendment
+of 2026-09-16, promoting the advisory all three `ADE-T-4` lens reviewers raised into approved scope.
+
+#### Attempt 1
+
+**Files changed (4)**
+
+- `bilateral-ai.service.ts` — Part A: one predicate call at the `DOCUMENT` site, `file_name` hoisted
+  to a `const` so the stored column and the predicate see the same string; one import.
+- `bilateral-ai.service.spec.ts` — Part A: new describe with the six-extension/source matrix driven
+  through `processJob`, plus the mixed-source end-to-end promote.
+- `bilateral-ai-evidence-transfer.service.ts` — Part B: the compensating write wrapped in its own
+  `try`/`catch`; the compensation's failure logged; **the original `error` re-thrown**.
+- `bilateral-ai-evidence-transfer.service.spec.ts` — Part B: one test in the `never throws` describe.
+
+**Implementer verification**
+
+- `npx jest --testPathPattern="bilateral-ai"` → 11 suites / **207** passed (204 before — three
+  additions, zero rewrites, which is itself evidence nothing existing was disturbed)
+- `npx jest --testPathPattern="evidences"` → 4 suites / 47 passed (unchanged)
+- `npx tsc --noEmit` → clean
+- `npx eslint <4 touched files> --quiet` → one prettier line-wrap, fixed with `--fix`, re-run clean
+
+**Implementer `Not Done / Assumptions`: none** (stated explicitly).
+
+**Reviewer verdict: `STATUS: PASS`**
+
+> Part A changes only the `DOCUMENT` site to the `ADE-T-1` predicate, keeps `VOICE_NOTE`/`TEXT_CONTEXT`
+> literally `false` as DD-5's blast-radius invariant requires, stores an identical `file_name`, and
+> discharges the Disqualifier with a real `processJob` → `promoteDraft` run whose guard at
+> `:551-556` would throw under the counterfactual; Part B wraps the compensating write, re-throws the
+> original `saveSPData` error with no escape path for the compensation's, and pins both the preserved
+> outcome message and the separate compensation log line.
+
+Adjudications the Reviewer reached from source:
+
+1. **Hard-coding `false` at the two non-document sites is correct, not a latent inconsistency.**
+   DD-5's *Blast radius checked* line rests on the invariant "we only ever set it true for
+   documents"; a literal `false` **states** that invariant rather than inferring it. Routing the
+   audio row through a predicate whose second half is an extension test would imply `note.m4a`'s
+   *extension* is what decides — the exact misreading `ADE-R-2`/DD-5 warn against. Stronger still for
+   `TEXT_CONTEXT`, whose `file_name` is `null`: the predicate would return `false` for a reason
+   unrelated to the requirement. Blast radius re-verified independently: `is_formal_evidence` is read
+   in exactly two server places (`:550` guard, `:539` PATCH setter) and written-but-never-read in the
+   client (`bilateral-api.service.ts:237`).
+2. **The `file_name` hoist is a pure refactor.** Same expression, same `??` operator (a trailing-slash
+   key still stores `''` exactly as before), evaluated once instead of once. The predicate sees the
+   identical string the column gets — which is what keeps the flag consistent with `ADE-T-4`'s
+   selection, since that also reads the stored `file_name`.
+3. **The Disqualifier is discharged — traced, not assumed.** The guard-regression test calls the real
+   `processJob` → `createDraftFromCandidate` (the `save` stub captures what production computes; the
+   flags are *not* injected by the fixture), then the real `promoteDraft`. Guard trace with that
+   fixture: `formalEvidence = rows.filter(r => r.is_formal_evidence)` holds only the `.pdf` row →
+   `some(r => r.source_type !== DOCUMENT)` is `false` → no throw. Under the counterfactual the
+   `VOICE_NOTE` row enters the array, `some(...)` is `true`, `BadRequestException` throws at `:556`
+   before any other collaborator runs, and `resolves.toMatchObject({ status: 200 })` fails. The
+   row-inspection test alone never enters the guard — which is precisely what `tasks.md` said.
+4. **Part B has no escape path for the compensation's error.** The inner `catch` has no re-throw and
+   no conditional; `throw error` sits outside it but inside the outer `catch`, so it runs on both
+   branches. The only theoretical escape is `logger.warn` itself throwing.
+5. **Nothing else in `transferOne` moved** — soft delete target and payload, DD-6 stamp position
+   (still last, still outside the catch), the selection, and both pre-existing log formats are
+   byte-identical. The 204 → 207 delta corroborates it.
+6. **`jest.spyOn((service as any).logger, 'warn')` is sound here** — `logger` is a per-instance
+   `private readonly`, and `makeService()` builds a fresh service per test, so the spy cannot leak
+   across tests. A `Logger.prototype` spy would be shared state and worse.
+7. **No DI sweep owed** — neither constructor changed; the added import is a pure function from a
+   constant file, not a provider. The standing constructor rule correctly did not trigger.
+
+#### `ADVISORY` (recorded, never gating, never minted into tasks)
+
+- **RELIABILITY** — the compensation `warn` carries only `evidenceId`, unlike every other line in the
+  service (which carry `draftId`/`resultId`). In the one state it reports — an `is_active = 1`
+  evidence with an empty `link` that no retry will clean up — the operator must join back from the
+  PK to find the result. `resultId` is already in scope as a `transferOne` parameter.
+- **TESTING** — the new test's `not.toMatch(/https?:\/\//)` and `/token/i` assertions are
+  **tautological over their own fixture** (no stub in that test carries a URL or a token), exactly as
+  the `ADE-T-4` sibling assertion was. Harmless — `tasks.md` designates the **grep gate** as the
+  encoding for `ADE-AC-3`'s no-secret clause, and the added line assembles only a PK and a driver
+  message — but **it must not be counted as secret-leak coverage.**
+- **TESTING** — in the guard-regression test, `evidenceRepository.find` is stubbed to ignore its
+  `where`, so the link between created rows and the promoted draft is the shared array, not a
+  `draft_id` filter. The guard *is* genuinely exercised (what this task owes); draft-scoping is
+  `ADE-T-4`'s clause. **This test is not scoping coverage** and must not be read as such.
+
+**Decisions made:** single Reviewer at `high` in lens-checklist mode rather than the parallel-lens
+mode `ADE-T-4` got — Part A is ~10 production lines and Part B is a bounded addition to code three
+lens reviewers had already audited, with the amendment's intent fully specified. Proportionate.
+
+**Issues encountered:** none.
+
+**Final verification:** `bilateral-ai` 207/207 · `evidences` 47/47 · `tsc` clean · lint clean.

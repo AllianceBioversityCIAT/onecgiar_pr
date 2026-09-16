@@ -43,6 +43,7 @@ import {
   BilateralAiExpectationsMix,
   BilateralAiExpectationsResponseDto,
 } from '../dto/bilateral-ai-expectations.dto';
+import { isQualifyingEvidenceDocument } from '../constants/evidence-formats.constant';
 
 /**
  * The complete server `stage` vocabulary (`design.md` §3.1, `requirements.md` §2 Glossary).
@@ -948,14 +949,20 @@ export class BilateralAiService {
       }),
     );
     for (const key of job.document_keys ?? []) {
+      const fileName = key.split('/').pop() ?? key;
       await this.evidenceRepository.save({
         draft_id: draft.id,
         source_type: DraftEvidenceSourceType.DOCUMENT,
         object_key: key,
-        file_name: key.split('/').pop() ?? key,
+        file_name: fileName,
         mime_type: null,
         file_size: null,
-        is_formal_evidence: false,
+        // ADE-R-6 / DD-5: descriptive in v1, not load-bearing — `ADE-T-1`'s predicate decides
+        // what `promoteDraft`'s transfer selects, this flag only records intent.
+        is_formal_evidence: isQualifyingEvidenceDocument({
+          source_type: DraftEvidenceSourceType.DOCUMENT,
+          file_name: fileName,
+        }),
         file_management_reference: null,
         is_active: true,
       });

@@ -362,6 +362,58 @@ describe('BilateralAiEvidenceTransferService (unit)', () => {
         },
       ]);
     });
+
+    // `ADE-T-2` amendment — the one compound path the tests above do not exercise: the
+    // compensating write ITSELF rejects. The ORIGINAL `saveSPData` error (the DD-4 confidentiality
+    // refusal) must still be what `outcomes[].errorMessage` carries, never the compensation's own
+    // DB error, and the service must still resolve rather than throw. The compensation's failure
+    // is only logged, separately, without a secret.
+    it('when the compensating deactivation also rejects, the ORIGINAL saveSPData error still surfaces and the compensation failure is only logged', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftEvidenceRepository.find.mockResolvedValue([makeRow()]);
+      const originalError = new Error(
+        'This file cannot be made confidential: it was shared publicly before and the repository did not remove that access.',
+      );
+      stubs.evidencesService.saveSPData.mockRejectedValue(originalError);
+      stubs.evidencesRepository.update.mockRejectedValue(
+        new Error('DB connection lost while deactivating evidence'),
+      );
+      const warnSpy = jest.spyOn((service as any).logger, 'warn');
+
+      const outcomes = await service.transferForDraft(5, 100, 42);
+
+      // The service still does not throw.
+      expect(outcomes).toEqual([
+        {
+          draftEvidenceId: 1,
+          fileName: 'report.pdf',
+          outcome: 'failed',
+          errorMessage: originalError.message,
+        },
+      ]);
+      const lines = warnSpy.mock.calls.map((call) => call[0] as string);
+      // The per-document outcome line still carries the ORIGINAL error, not the UPDATE's.
+      expect(
+        lines.some(
+          (line) =>
+            line.includes('draftEvidenceId=1') &&
+            line.includes(originalError.message),
+        ),
+      ).toBe(true);
+      // The compensation's own failure is logged separately, naming the evidence id, with no
+      // secret (AC-9).
+      expect(
+        lines.some(
+          (line) =>
+            line.includes('evidenceId=900') &&
+            line.includes('DB connection lost while deactivating evidence'),
+        ),
+      ).toBe(true);
+      lines.forEach((line) => {
+        expect(line).not.toMatch(/https?:\/\//);
+        expect(line).not.toMatch(/token/i);
+      });
+    });
   });
 
   // ADE-AC-3 "BUT it must NOT surface a secret" is a grep gate over this task's added log

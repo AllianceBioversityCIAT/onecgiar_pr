@@ -177,10 +177,27 @@ export class BilateralAiEvidenceTransferService {
       // deleted) so the per-document failure the caller's `try` records is accurate: this
       // document was not attached at all, and every `is_active = 1` read path treats it as if it
       // never existed.
-      await this.evidencesRepository.update(savedEvidence.id, {
-        is_active: 0,
-        last_updated_by: userId,
-      });
+      //
+      // `ADE-T-2` amendment (`ADE-R-8`, `ADE-AC-3`): the compensating write is itself unguarded
+      // I/O and can reject on its own. If it does, the ORIGINAL `saveSPData` error — a DD-4
+      // confidentiality refusal, or any other transfer fault — must still be what the caller's
+      // per-document `catch` records in `outcomes[].errorMessage` and the `warn` line, never the
+      // compensation's own error. The compensation failure is only logged here, never surfaced in
+      // its place, and never with a secret (`AC-9`).
+      try {
+        await this.evidencesRepository.update(savedEvidence.id, {
+          is_active: 0,
+          last_updated_by: userId,
+        });
+      } catch (compensationError) {
+        const compensationMessage =
+          compensationError instanceof Error
+            ? compensationError.message
+            : String(compensationError);
+        this.logger.warn(
+          `AI evidence transfer compensation failed to deactivate evidence (evidenceId=${savedEvidence.id}): ${compensationMessage}`,
+        );
+      }
       throw error;
     }
 

@@ -46,7 +46,7 @@
 
 ---
 
-### `ADE-T-2` — Default `is_formal_evidence` for qualifying documents at draft creation
+### `ADE-T-2` — Default `is_formal_evidence` for qualifying documents at draft creation  `[x]` PASS — see `execution.md`
 
 - **Type:** `server`
 - **Description:** In `createDraftFromCandidate`, set `is_formal_evidence = true` for document sources that satisfy `ADE-T-1`'s predicate, leaving every other source `false`. Per DD-5 this flag is **descriptive in v1** — it records intent and gives a future opt-out UI something to bind to; it does **not** gate what `ADE-T-4` transfers.
@@ -74,12 +74,12 @@
 - **Implements (added):** `ADE-R-8` (accuracy of the recorded outcome) · `ADE-AC-3` (the
   half-written-row clause, under compound failure)
 - **Done:**
-  - [ ] `.pdf`/`.docx`/`.xls`/`.xlsx`/`.pptx` sources created with `true`; `.txt`, audio and text context with `false`.
-  - [ ] A promote test over a mixed-source job passes, proving the non-`DOCUMENT` guard is still satisfied.
-  - [ ] The compensating write is wrapped; a test makes it reject and asserts the **original**
+  - [x] `.pdf`/`.docx`/`.xls`/`.xlsx`/`.pptx` sources created with `true`; `.txt`, audio and text context with `false`.
+  - [x] A promote test over a mixed-source job passes, proving the non-`DOCUMENT` guard is still satisfied.
+  - [x] The compensating write is wrapped; a test makes it reject and asserts the **original**
         `saveSPData` error still surfaces in the outcome, the service still does not throw, and the
         compensation's own failure is logged without a secret.
-  - [ ] Lint clean.
+  - [x] Lint clean.
 
 ---
 
