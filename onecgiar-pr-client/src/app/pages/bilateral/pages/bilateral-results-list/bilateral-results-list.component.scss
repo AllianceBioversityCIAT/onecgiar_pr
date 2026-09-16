@@ -508,6 +508,15 @@ $phase-color-border:  #cbd5e1;
         background: #fafafb;
       }
 
+      &.rc-row--skeleton {
+        cursor: default;
+        pointer-events: none;
+
+        &:hover {
+          background: transparent;
+        }
+      }
+
       &:last-child td {
         border-bottom: none !important;
       }
@@ -587,7 +596,7 @@ $phase-color-border:  #cbd5e1;
 }
 
 .rc-th-action {
-  width: 56px !important;
+  width: 90px !important;
 }
 
 // Status chips — same palette as Results Center, keyed by ResultStatusData ids (1-7).

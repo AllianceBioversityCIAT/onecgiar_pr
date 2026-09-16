@@ -260,7 +260,7 @@
     <div class="brl_body">
 
     <!-- Result count (search + filters live in the docked bar above) -->
-    @if (!loading() && !error()) {
+    @if (!initializing() && !loading() && !error() && results().length > 0) {
       <div class="brl_toolbar">
         <span class="brl_count">
           Showing {{ totalCount() }} of {{ totalLoaded() }} result{{ totalLoaded() === 1 ? '' : 's' }}.
@@ -273,7 +273,44 @@
         <span class="material-icons-round brl_state_icon">error_outline</span>
         <span>Could not load results. Please try refreshing the page.</span>
       </div>
-    } @else {
+    } @else if (isFirstLoad()) {
+      @let cols = visibleColumns();
+      <div class="table rc-table" data-testid="bilateral-results-skeleton" aria-live="polite" aria-busy="true">
+        <table class="pr-table">
+          <thead>
+            <tr>
+              @for (column of cols; track column.key) {
+                <th [style.width]="column.width">
+                  <div class="align-center">
+                    {{ column.title }}
+                  </div>
+                </th>
+              }
+              <th class="rc-th-action" style="width: 56px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <tr class="rc-row rc-row--skeleton" style="height: 48px">
+                @for (column of cols; track column.key) {
+                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                    <div class="rc-cell-link">
+                      <span
+                        class="inline-block h-[14px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)] motion-reduce:animate-none"
+                        [style.width]="column.attr === 'result_code' ? '64px' : column.attr === 'source' ? '38px' : column.attr === 'status_id' || column.attr === 'is_leading_result' ? '68px' : '80%'"
+                        aria-hidden="true"></span>
+                    </div>
+                  </td>
+                }
+                <td class="rc-td rc-td--action" style="width: 56px">
+                  <span class="inline-block size-[24px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)] ml-auto motion-reduce:animate-none" aria-hidden="true"></span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (hasRows()) {
       @let cols = visibleColumns();
 
       <!-- Results table — same visual language as the Results Center list (app-pr-table, rc-* cells, status_tag chips) -->
@@ -284,7 +321,7 @@
           [sortOrder]="-1"
           [value]="filteredResults()"
           dataKey="result_code"
-          [loading]="initializing() || loading()"
+          [loading]="loading()"
           [paginator]="filteredResults().length > 0"
           [rows]="25"
           [rowsPerPageOptions]="[25, 50, 100]"
@@ -300,9 +337,7 @@
                   </div>
                 </th>
               }
-              @if (canManageW3()) {
-                <th class="rc-th-action" style="width: 90px"></th>
-              }
+              <th class="rc-th-action" style="width: 56px"></th>
             </tr>
           </ng-template>
 
@@ -369,83 +404,150 @@
                 </td>
               }
 
-              @if (canManageW3()) {
-                <td class="rc-td rc-td--action" (click)="$event.stopPropagation()">
-                  @if (canEditResult(result)) {
-                    @if (confirmingDeleteId() === result.id) {
-                      <div class="brl_actions_confirm">
-                        <span class="brl_actions_confirm_text">Delete?</span>
-                        <button
-                          class="brl_action_btn brl_action_btn--danger"
-                          [disabled]="deletingId() === result.id"
-                          (click)="confirmDelete(result, $event)">
-                          @if (deletingId() === result.id) {
-                            <span class="material-icons-round animate-spin text-[16px]">sync</span>
-                          } @else {
-                            Yes
-                          }
-                        </button>
-                        <button class="brl_action_btn brl_action_btn--ghost" (click)="cancelDelete($event)">No</button>
-                      </div>
-                    } @else {
-                      <div class="brl_actions">
-                        <button class="brl_action_btn brl_action_btn--edit" title="Edit result" (click)="editResult(result, $event)">
-                          <span class="material-icons-round text-[16px]">edit</span>
-                        </button>
-                        @if (canUpdateResult(result)) {
-                          <!-- Same action the Results Center row menu offers (P2-3229): carry an approved
-                               result of a previous phase into the open one. -->
-                          <button
-                            class="brl_action_btn brl_action_btn--update"
-                            title="Update result"
-                            aria-label="Update result"
-                            data-testid="bilateral-update-result"
-                            (click)="updateResult(result, $event)">
-                            <span class="material-icons-round text-[16px]">content_copy</span>
-                          </button>
-                        }
-                        @if (canDeleteResult(result)) {
-                          <button class="brl_action_btn brl_action_btn--delete" title="Delete result" (click)="requestDelete(result, $event)">
-                            <span class="material-icons-round text-[16px]">delete</span>
-                          </button>
-                        }
-                      </div>
-                    }
-                  }
-                </td>
-              }
-            </tr>
-          </ng-template>
+              <td class="rc-td rc-td--action" (click)="$event.stopPropagation()">
+                <button
+                  #rowMenuTrigger="cdkOverlayOrigin"
+                  cdkOverlayOrigin
+                  type="button"
+                  class="flex size-[32px] items-center justify-center rounded-[8px] border transition-colors cursor-pointer ml-auto"
+                  [class.border-transparent]="!isMenuOpen(result)"
+                  [class.hover:border-[var(--pr-border)]]="!isMenuOpen(result)"
+                  [class.hover:bg-[#f3f2f7]]="!isMenuOpen(result)"
+                  [class.border-[var(--pr-color-secondary-300)]]="isMenuOpen(result)"
+                  [class.border-[1.5px]]="isMenuOpen(result)"
+                  [class.bg-[#f3f2f7]]="isMenuOpen(result)"
+                  aria-label="More actions"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="isMenuOpen(result)"
+                  (click)="toggleRowMenu(result, $event)">
+                  <span class="material-icons-round text-[18px] text-[var(--pr-text-secondary)]">more_horiz</span>
+                </button>
 
-          <ng-template prTableLoading>
-            <tr style="height: 200px">
-              <td [attr.colspan]="cols.length + 1" class="brl_state">
-                <span class="material-icons-round animate-spin brl_state_icon">sync</span>
-                <span>Loading results…</span>
+                <ng-template
+                  cdkConnectedOverlay
+                  [cdkConnectedOverlayOrigin]="rowMenuTrigger"
+                  [cdkConnectedOverlayOpen]="isMenuOpen(result)"
+                  [cdkConnectedOverlayPositions]="rowMenuPositions"
+                  [cdkConnectedOverlayHasBackdrop]="true"
+                  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                  (backdropClick)="closeRowMenu()"
+                  (detach)="onRowMenuDetach(result)">
+                  <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                      (click)="openResultFromMenu(result)">
+                      Open result
+                    </button>
+
+                    @if (canUpdateResult(result)) {
+                      <button
+                        type="button"
+                        role="menuitem"
+                        data-testid="bilateral-update-result"
+                        class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                        (click)="updateResult(result)">
+                        Update result
+                      </button>
+                    }
+
+                    <a
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                      [href]="pdfHref(result)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      (click)="closeRowMenu()">
+                      Download PDF
+                    </a>
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                      (click)="copyLink(result)">
+                      Copy link
+                    </button>
+
+                    @if (canDeleteResult(result)) {
+                      <div class="my-[4px] h-[1px] bg-[var(--pr-border)]"></div>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        class="flex h-[36px] w-full items-center gap-[8px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-color-red-600)] transition-colors hover:bg-[var(--pr-color-red-50)] cursor-pointer"
+                        (click)="deleteResult(result)">
+                        <span class="material-icons-round text-[16px]" aria-hidden="true">delete</span>
+                        <span>Delete</span>
+                      </button>
+                    }
+                  </div>
+                </ng-template>
               </td>
             </tr>
           </ng-template>
 
+          <ng-template prTableLoading>
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <tr class="rc-row rc-row--skeleton" style="height: 48px">
+                @for (column of cols; track column.key) {
+                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                    <div class="rc-cell-link">
+                      <span
+                        class="inline-block h-[14px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)] motion-reduce:animate-none"
+                        [style.width]="column.attr === 'result_code' ? '64px' : column.attr === 'source' ? '38px' : column.attr === 'status_id' || column.attr === 'is_leading_result' ? '68px' : '80%'"
+                        aria-hidden="true"></span>
+                    </div>
+                  </td>
+                }
+                <td class="rc-td rc-td--action" style="width: 56px">
+                  <span class="inline-block size-[24px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)] ml-auto motion-reduce:animate-none" aria-hidden="true"></span>
+                </td>
+              </tr>
+            }
+          </ng-template>
+
           <ng-template prTableEmpty>
-            <tr style="height: 200px">
-              <td [attr.colspan]="cols.length + 1" class="brl_state">
+            <tr>
+              <td [attr.colspan]="cols.length + 1" class="p-0 border-0">
                 @if (results().length === 0) {
-                  <span class="material-icons-round brl_state_icon">inbox</span>
-                  <span>No results found for this center in this phase.</span>
+                  <app-sp-tab-empty-state
+                    testId="bilateral-results-empty"
+                    icon="table_chart"
+                    title="No results reported yet"
+                    [description]="'Results reported for ' + (ctx.centerName() || 'this center') + ' will show up here.'"
+                    primaryLabel="Go to Reporting"
+                    [primaryRouterLink]="['/bilateral', ctx.centerAcronym(), 'reporting']" />
                 } @else {
-                  <span class="material-icons-round brl_state_icon">filter_alt</span>
-                  <span>
-                    No results match the active filters
-                    @if (searchQuery()) {
-                      and search query <strong>"{{ searchQuery() }}"</strong>
-                    }.
-                  </span>
+                  <app-sp-tab-empty-state
+                    testId="bilateral-results-filtered-empty"
+                    icon="filter_alt"
+                    title="No results match these filters"
+                    [description]="searchQuery() ? 'No results match the active filters and search query &quot;' + searchQuery() + '&quot;.' : 'Try removing a filter or widening your search to see more results.'"
+                    secondaryLabel="Clear all filters"
+                    (secondaryAction)="clearAllFilters()" />
                 }
               </td>
             </tr>
           </ng-template>
         </app-pr-table>
       </div>
+    } @else if (isFilteredEmpty()) {
+      <app-sp-tab-empty-state
+        testId="bilateral-results-filtered-empty"
+        icon="filter_alt"
+        title="No results match these filters"
+        [description]="searchQuery() ? 'No results match the active filters and search query &quot;' + searchQuery() + '&quot;.' : 'Try removing a filter or widening your search to see more results.'"
+        secondaryLabel="Clear all filters"
+        (secondaryAction)="clearAllFilters()" />
+    } @else if (isNothingYet()) {
+      <app-sp-tab-empty-state
+        testId="bilateral-results-empty"
+        icon="table_chart"
+        title="No results reported yet"
+        [description]="'Results reported for ' + (ctx.centerName() || 'this center') + ' will show up here.'"
+        primaryLabel="Go to Reporting"
+        [primaryRouterLink]="['/bilateral', ctx.centerAcronym(), 'reporting']" />
     }
 
   </div>

@@ -15,6 +15,10 @@ import { DatePipe } from '@angular/common';
 import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, filter, take, map, distinctUntilChanged, forkJoin, switchMap } from 'rxjs';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { PrToastService } from '../../../../shared/components/pr-toast';
+import { ResultDeletionService } from '../../../result-framework-reporting/services/result-deletion.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
@@ -34,6 +38,7 @@ import {
   PrTableEmptyDirective,
   PrTableLoadingDirective,
 } from '../../../../shared/components/pr-table';
+import { SpTabEmptyStateComponent } from '../../../result-framework-reporting/pages/dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 // @akili-spec bilateral/center-overview-tab (COV-T-2, COV-DD-11) — `BilateralCenterResult` moved
 // to a shared interface file so both the Results tab and the Overview's pure modules can import
 // the row shape without page-to-page coupling; re-exported below for existing imports.
@@ -175,6 +180,7 @@ function parsePhaseIdsFromUrl(raw: string | null): number[] {
   standalone: true,
   imports: [
     DatePipe,
+    OverlayModule,
     BilateralPageHeaderComponent,
     PrDialogComponent,
     PrTableComponent,
@@ -185,6 +191,7 @@ function parsePhaseIdsFromUrl(raw: string | null): number[] {
     PrTableEmptyDirective,
     PrTableLoadingDirective,
     ChangePhaseModalModule,
+    SpTabEmptyStateComponent,
   ],
   templateUrl: './bilateral-results-list.component.html',
   styleUrl: './bilateral-results-list.component.scss',
@@ -203,6 +210,9 @@ export class BilateralResultsListComponent implements OnInit {
   private readonly resultsApiService = inject(ResultsApiService);
   readonly api = inject(ApiService);
   readonly ctx = inject(BilateralContextService);
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
+  private readonly deletionSE = inject(ResultDeletionService);
 
   readonly phases = signal<Phases[]>([]);
   /** Reporting phases included in the current Results view — at least one must stay selected. */
@@ -255,9 +265,13 @@ export class BilateralResultsListComponent implements OnInit {
     return this.selectedPhases()[0] ?? null;
   });
 
-  // Actions
-  readonly confirmingDeleteId = signal<number | null>(null);
-  readonly deletingId = signal<number | null>(null);
+  // Row menu
+  readonly openMenuKey = signal<string | null>(null);
+
+  readonly rowMenuPositions: ConnectedPosition[] = [
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', overlayX: 'end', originY: 'top', overlayY: 'bottom', offsetY: -4 },
+  ];
 
   /**
    * P2-3157 AC3 — result code deep-linked from an approval/rejection notification (`?result=`).
@@ -343,6 +357,15 @@ export class BilateralResultsListComponent implements OnInit {
 
   readonly totalCount = computed(() => this.filteredResults().length);
   readonly totalLoaded = computed(() => this.results().length);
+
+  readonly hasRows = computed(() => this.filteredResults().length > 0);
+  readonly isFilteredEmpty = computed(
+    () => !this.initializing() && !this.loading() && !this.error() && this.results().length > 0 && !this.filteredResults().length
+  );
+  readonly isNothingYet = computed(
+    () => !this.initializing() && !this.loading() && !this.error() && this.results().length === 0
+  );
+  readonly isFirstLoad = computed(() => this.initializing() || (this.loading() && !this.hasRows()));
 
   /** `COV-R-14` — one removable chip per active status key, only when `status` is present. */
   readonly statusChips = computed(() =>
@@ -681,6 +704,7 @@ export class BilateralResultsListComponent implements OnInit {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event?: MouseEvent): void {
+    if (this.openMenuKey()) this.openMenuKey.set(null);
     if (this.columnsOpen()) this.columnsOpen.set(false);
 
     const target = event?.target as HTMLElement | null;
@@ -690,11 +714,13 @@ export class BilateralResultsListComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.openMenuKey()) this.openMenuKey.set(null);
     if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
   }
 
   toggleFilterPopover(event: Event): void {
     event.stopPropagation();
+    this.closeRowMenu();
     this.columnsOpen.set(false);
     this.filterPopoverOpen.update(open => !open);
   }
@@ -773,6 +799,7 @@ export class BilateralResultsListComponent implements OnInit {
 
   toggleColumnsPanel(event?: Event): void {
     event?.stopPropagation();
+    this.closeRowMenu();
     this.filterPopoverOpen.set(false);
     this.columnsOpen.update(v => !v);
   }
@@ -879,9 +906,73 @@ export class BilateralResultsListComponent implements OnInit {
       result.creation_method?.toUpperCase() === 'AI';
   }
 
-  editResult(result: BilateralCenterResult, event: Event): void {
+  // ── Row menu ────────────────────────────────────────────────────────────
+  rowKey(result: BilateralCenterResult): string {
+    return `${result?.result_code ?? ''}|${result?.version_id ?? ''}`;
+  }
+
+  isMenuOpen(result: BilateralCenterResult): boolean {
+    return this.openMenuKey() === this.rowKey(result);
+  }
+
+  toggleRowMenu(result: BilateralCenterResult, event: Event): void {
     event.stopPropagation();
+    this.columnsOpen.set(false);
+    this.filterPopoverOpen.set(false);
+    const key = this.rowKey(result);
+    this.openMenuKey.update(open => (open === key ? null : key));
+  }
+
+  closeRowMenu(): void {
+    this.openMenuKey.set(null);
+  }
+
+  onRowMenuDetach(result: BilateralCenterResult): void {
+    if (this.isMenuOpen(result)) this.closeRowMenu();
+  }
+
+  openResultFromMenu(result: BilateralCenterResult): void {
+    this.closeRowMenu();
     this.openResult(result);
+  }
+
+  editResult(result: BilateralCenterResult, event?: Event): void {
+    event?.stopPropagation();
+    this.closeRowMenu();
+    this.openResult(result);
+  }
+
+  pdfHref(result: BilateralCenterResult): string {
+    return `/reports/result-details/${result?.result_code}?phase=${result?.version_id}`;
+  }
+
+  resultLink(result: BilateralCenterResult): string {
+    const path = this.router.serializeUrl(
+      this.router.createUrlTree(
+        ['/bilateral', this.ctx.centerAcronym(), 'result', result.result_code],
+        { queryParams: { phase: result.version_id } },
+      ),
+    );
+    return `${window.location.origin}${path}`;
+  }
+
+  copyLink(result: BilateralCenterResult): void {
+    this.clipboard.copy(this.resultLink(result));
+    this.toastSE.add({
+      key: 'globalUserNotification',
+      severity: 'success',
+      summary: 'Result link copied',
+    });
+    this.closeRowMenu();
+  }
+
+  deleteResult(result: BilateralCenterResult): void {
+    this.closeRowMenu();
+    this.deletionSE.deleteWithConfirmation(result, {
+      onSuccess: () => {
+        this.results.update(list => list.filter(r => r.id !== result.id));
+      },
+    });
   }
 
   /**
@@ -898,8 +989,9 @@ export class BilateralResultsListComponent implements OnInit {
     return this.api.canUpdateBilateral(this.asCurrentResult(result), this.api.dataControlSE.reportingCurrentPhase);
   }
 
-  updateResult(result: BilateralCenterResult, event: Event): void {
-    event.stopPropagation();
+  updateResult(result: BilateralCenterResult, event?: Event): void {
+    event?.stopPropagation();
+    this.closeRowMenu();
     this.api.dataControlSE.currentResult = this.asCurrentResult(result);
     this.api.dataControlSE.chagePhaseModal = true;
   }
@@ -926,31 +1018,6 @@ export class BilateralResultsListComponent implements OnInit {
     if (!phase?.phase_name) return null;
     const acronym = phase.obj_portfolio?.acronym;
     return acronym ? `${phase.phase_name} - ${acronym}` : phase.phase_name;
-  }
-
-  requestDelete(result: BilateralCenterResult, event: Event): void {
-    event.stopPropagation();
-    this.confirmingDeleteId.set(result.id);
-  }
-
-  cancelDelete(event: Event): void {
-    event.stopPropagation();
-    this.confirmingDeleteId.set(null);
-  }
-
-  confirmDelete(result: BilateralCenterResult, event: Event): void {
-    event.stopPropagation();
-    this.deletingId.set(result.id);
-    this.resultsApiService.PATCH_DeleteResult(result.id).subscribe({
-      next: () => {
-        this.results.update(list => list.filter(r => r.id !== result.id));
-        this.confirmingDeleteId.set(null);
-        this.deletingId.set(null);
-      },
-      error: () => {
-        this.deletingId.set(null);
-      },
-    });
   }
 
   /**
