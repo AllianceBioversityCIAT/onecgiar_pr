@@ -245,3 +245,56 @@ budget explicitly rather than about a single document.
 that task's entry) caused no observable damage here — all three suites green.
 
 **Final verification:** green as reported; Reviewer re-derived the negative constraints from source.
+
+---
+
+## Budget Tripwire — fired after `ADE-T-3`, escalated to the user
+
+`design.md` §11 budgets **~300 LOC (≈170 implementation, ≈130 tests)**; `tasks.md` §8 breaks the same
+figure down to **~335** with a per-task table. Measured against the two completed tasks, counting
+added lines only (`git diff | grep '^+[^+]'`), and separately excluding blank and comment lines so
+docblocks do not flatter the number:
+
+| | `tasks.md` §8 estimate | Raw added | Code-only |
+|---|---|---|---|
+| `ADE-T-1` implementation | ~30 | 56 | **31** |
+| `ADE-T-3` implementation | ~70 | 115 | **64** |
+| **Implementation subtotal** | **~100** | 171 | **95** |
+| `ADE-T-1` tests | — | 86 | **77** |
+| `ADE-T-3` tests | — | 141 | **135** |
+| **Test subtotal** | **~130 (for T-1…T-4, all four)** | 227 | **212** |
+
+**The implementation is on budget. The tests are not, and they are the whole overrun.**
+Code-only implementation is 95 against ~100 estimated for these two tasks — within noise. Test code
+is 212 against the ~130 budgeted for *all four* code tasks, with `ADE-T-2` and `ADE-T-4` still to
+come. `ADE-T-4` alone owns a seven-row clause-coverage table in `tasks.md`, each row requiring its
+own named test, so it will be the largest test file in the spec.
+
+**Projection to completion** (code-only): implementation ≈ 95 + 15 (`ADE-T-2`) + 90 (`ADE-T-4`) ≈
+**200** against ~170 budgeted — a modest overshoot. Tests ≈ 212 + ~40 + ~120 ≈ **370** against ~130
+budgeted — roughly **2.8×**. Total ≈ **570** against ~300.
+
+**Cause — not scope creep.** No task was minted, no advisory became work, no task exceeded its
+declared file list, and both tasks passed review on the first attempt (2 review rounds consumed of
+the 2 budgeted, with zero rework). The overrun is entirely test volume, and it traces to an internal
+inconsistency in the approved spec: §11 budgeted ~130 test lines while `tasks.md` independently
+mandates, per task, a named falsifying input, a Disqualifier, and — for `ADE-T-4` — seven
+clause-level tests plus a blast-radius suite. Those two numbers were never consistent with each
+other. The tests written are the tests `tasks.md` demands; it is the **budget line that was wrong**,
+not the execution.
+
+**Consequences of each option** (presented to the user; execution paused pending the decision):
+
+1. **Continue and correct §11's budget** — recommended. The test volume is what `tasks.md` §5/§6
+   already committed to, and §6 *Coverage closure* assigns every clause a named owner. Nothing to cut
+   without dropping coverage the spec explicitly owns.
+2. **Continue unchanged, leave §11 stale** — cheapest now, but the next spec inherits a budget line
+   already demonstrated wrong, and the tripwire stops meaning anything.
+3. **Reduce test scope to fit ~130** — would require dropping clause coverage from `ADE-T-4`'s table.
+   Not recommended: those clauses are the `BUT` / `AND IT MUST` cases `requirements.md` §9 was written
+   around, and DC-1…DC-4 name them as the only automated gates this spec has.
+
+**Review-round budget:** 2 of 2 consumed, both PASS on first attempt, 0 rework attempts used.
+`ADE-T-2` and `ADE-T-4` have no review rounds left in the §11 budget — a second, related overrun the
+user should weigh alongside the LOC one, since `ADE-T-4` is the task most likely to need a rework
+round.
