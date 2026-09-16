@@ -888,4 +888,11 @@ describe('BilateralResultsListComponent', () => {
       expect(sortSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('BGT-T-3: Guided tour instrumentation', () => {
+    it('renders data-guide="bilateral-tab-results" on the docked container (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      const dockedEl = fixture.nativeElement.querySelector('[data-guide="bilateral-tab-results"]');
+      expect(dockedEl).toBeTruthy();
+    });
+  });
 });

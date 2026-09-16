@@ -437,4 +437,50 @@ describe('BilateralProjectsPanelComponent', () => {
       expect(card.classList.contains('bpp_card--highlight')).toBe(true);
     });
   });
+
+  describe('BGT-T-3: Guided tour instrumentation', () => {
+    it('renders data-guide="bilateral-tab-reporting" on the toolbar container (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      const reportingEl = fixture.nativeElement.querySelector('[data-guide="bilateral-tab-reporting"]');
+      expect(reportingEl).toBeTruthy();
+    });
+
+    it('renders data-guide="bilateral-reporting-kpis" on the KPI summary section', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      const kpisEl = fixture.nativeElement.querySelector('[data-guide="bilateral-reporting-kpis"]');
+      expect(kpisEl).toBeTruthy();
+    });
+
+    it('renders data-guide="bilateral-project-card" and data-guide="bilateral-project-create-result" on the first project in grid view', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cardEl = fixture.nativeElement.querySelector('[data-guide="bilateral-project-card"]');
+      expect(cardEl).toBeTruthy();
+      expect(cardEl.getAttribute('data-project-id')).toBe('101');
+
+      const createBtnEl = fixture.nativeElement.querySelector('[data-guide="bilateral-project-create-result"]');
+      expect(createBtnEl).toBeTruthy();
+      expect(createBtnEl.textContent).toContain('Create result');
+    });
+
+    it('renders data-guide="bilateral-project-card" and data-guide="bilateral-project-create-result" on the first project in list view', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const rowEl = fixture.nativeElement.querySelector('tr[data-guide="bilateral-project-card"]');
+      expect(rowEl).toBeTruthy();
+      expect(rowEl.getAttribute('data-project-id')).toBe('101');
+
+      const createBtnEl = fixture.nativeElement.querySelector('button[data-guide="bilateral-project-create-result"]');
+      expect(createBtnEl).toBeTruthy();
+      expect(createBtnEl.textContent).toContain('Create result');
+    });
+  });
 });

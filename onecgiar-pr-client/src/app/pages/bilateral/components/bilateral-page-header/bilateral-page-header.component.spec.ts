@@ -10,6 +10,7 @@ import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { normalizeJob } from '../../bilateral-ai-job.model';
 import { rawJob } from '../../bilateral-ai-job.fixtures';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
+import { BilateralTourService } from '../../services/bilateral-tour.service';
 
 describe('BilateralPageHeaderComponent', () => {
   let component: BilateralPageHeaderComponent;
@@ -895,6 +896,111 @@ describe('BilateralPageHeaderComponent', () => {
 
         expect(chip().nativeElement.textContent).toContain('00:01');
       });
+    });
+  });
+
+  describe('Bilateral Guided Tour Trigger (BGT-T-2, BGT-R-1, BGT-AC-1)', () => {
+    let tourService: BilateralTourService;
+
+    beforeEach(() => {
+      tourService = TestBed.inject(BilateralTourService);
+    });
+
+    const getTourButton = (): HTMLButtonElement | null =>
+      fixture.nativeElement.querySelector('button[data-guide="bilateral-tour-trigger"]');
+
+    it.each(['overview', 'reporting', 'results', 'drafts'] as const)(
+      'renders the tour button with data-guide="bilateral-tour-trigger" on %s tab',
+      tab => {
+        ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+        fixture.componentRef.setInput('activeTab', tab);
+        fixture.detectChanges();
+
+        const btn = getTourButton();
+        expect(btn).toBeTruthy();
+        expect(btn?.getAttribute('data-guide')).toBe('bilateral-tour-trigger');
+        expect(btn?.getAttribute('aria-label')).toBe('Start guided tour');
+
+        const icon = btn?.querySelector('.material-icons-round');
+        expect(icon?.textContent?.trim()).toBe('explore');
+        expect(icon?.classList.contains('text-[var(--pr-color-primary-500)]')).toBe(true);
+
+        const label = btn?.querySelector('span.hidden.sm\\:inline');
+        expect(label?.textContent?.trim()).toBe('Tour');
+      }
+    );
+
+    it('does not render the tour button when activeTab is null', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', null);
+      fixture.detectChanges();
+
+      expect(getTourButton()).toBeNull();
+    });
+
+    it('does not render the tour button when showBulkCta is false (bulkUploaderUrl is empty)', () => {
+      (environment as Record<string, unknown>)['bulkUploaderUrl'] = '';
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      expect(getTourButton()).toBeNull();
+    });
+
+    it('dispatches startBilateralTour with centerAcronym, centerName, cycleYear, and activeTab when clicked', () => {
+      const startSpy = jest.spyOn(tourService, 'startBilateralTour').mockImplementation(() => {});
+
+      ctx.setCenter('CIP', 'International Potato Center');
+      fixture.componentRef.setInput('activeTab', 'results');
+      fixture.componentRef.setInput('centerName', 'International Potato Center');
+      fixture.detectChanges();
+
+      const btn = getTourButton();
+      expect(btn).toBeTruthy();
+
+      btn?.click();
+      fixture.detectChanges();
+
+      expect(startSpy).toHaveBeenCalledTimes(1);
+      expect(startSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          centerAcronym: 'CIP',
+          centerName: 'International Potato Center',
+          activeTab: 'results',
+        })
+      );
+    });
+
+    it('places the tour button immediately to the left of the bulk uploader button', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      const actionGroup = fixture.nativeElement.querySelector('.absolute.right-\\[16px\\].sm\\:right-\\[32px\\]');
+      expect(actionGroup).toBeTruthy();
+
+      const buttons = actionGroup.querySelectorAll('button');
+      expect(buttons.length).toBe(2);
+      expect(buttons[0].getAttribute('data-guide')).toBe('bilateral-tour-trigger');
+      expect(buttons[1].getAttribute('data-testid')).toBe('bilateral-bulk-uploader-cta');
+      expect(buttons[1].getAttribute('data-guide')).toBe('bilateral-bulk-uploader-cta');
+    });
+
+    it('renders data-guide="bilateral-identity" on the center identity block (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.detectChanges();
+
+      const identityEl = fixture.nativeElement.querySelector('[data-guide="bilateral-identity"]');
+      expect(identityEl).toBeTruthy();
+    });
+
+    it('renders data-guide="bilateral-tabs" on the nav element when activeTab is set (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      const navTabsEl = fixture.nativeElement.querySelector('nav[data-guide="bilateral-tabs"]');
+      expect(navTabsEl).toBeTruthy();
     });
   });
 });
