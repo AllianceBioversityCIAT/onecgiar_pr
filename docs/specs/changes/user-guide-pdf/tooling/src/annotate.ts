@@ -19,6 +19,21 @@
  * context alongside the Angular app root, so a very high `z-index` there is
  * compared against the whole page rather than trapped inside some inner
  * wrapper.
+ *
+ * Below-the-fold trap (found integrating with `capture.ts` / UG-T-7, reported
+ * per the Reviewer note carried in that task's brief): `boundingBox()` returns
+ * coordinates relative to the CURRENT VIEWPORT, not the document. The overlay
+ * was originally `position: fixed` at those raw coordinates, which is correct
+ * only while the viewport used for positioning matches the viewport used for
+ * capture. `page.screenshot({ fullPage: true })` captures the FULL DOCUMENT
+ * (via CDP `captureBeyondViewport`), so a `position: fixed` node ends up
+ * anchored near the top of that expanded capture surface instead of over the
+ * target once the target sits below the fold. Fix: read `window.scrollX/Y` at
+ * annotation time and add it to the (viewport-relative) bounding box to get
+ * document-relative coordinates, then use `position: absolute` (still a
+ * direct child of `document.body`, still in the root stacking context) so the
+ * ring is pinned to the document, not the viewport — correct for both normal
+ * and full-page captures, above or below the fold.
  */
 
 import type { Locator, Page } from '@playwright/test';
@@ -80,9 +95,15 @@ export async function annotateClickTarget(
   const padding = options.padding ?? DEFAULT_PADDING;
   const borderWidth = options.borderWidth ?? DEFAULT_BORDER_WIDTH;
 
+  // boundingBox() is viewport-relative; convert to document-relative coordinates
+  // so the overlay survives a `fullPage` screenshot regardless of scroll position
+  // or whether the target is below the fold (see the "Below-the-fold trap" note
+  // at the top of this file).
+  const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
+
   await page.evaluate(
     (args) => {
-      const { box, color, padding, borderWidth, overlayAttr, zIndex } = args;
+      const { box, color, padding, borderWidth, overlayAttr, zIndex, scroll } = args;
 
       // Idempotent: clear any stale overlay first so repeated calls never stack up.
       document.querySelectorAll(`[${overlayAttr}]`).forEach((node) => node.remove());
@@ -92,14 +113,18 @@ export async function annotateClickTarget(
       ring.setAttribute('aria-hidden', 'true');
       ring.setAttribute('data-ug-purpose', 'click-target-marker');
 
-      // Positioned/sized from the target's boundingBox(), expanded outward by
-      // `padding` on every side. Because the div's own box (border-box sizing)
-      // starts `padding` px outside the target's box, the border line itself
-      // — the only visibly painted part of this div — never overlaps the
-      // target's own rendered content, so its label always stays legible.
-      ring.style.position = 'fixed';
-      ring.style.left = `${box.x - padding}px`;
-      ring.style.top = `${box.y - padding}px`;
+      // Positioned/sized from the target's boundingBox() (converted to
+      // document-relative via `scroll`), expanded outward by `padding` on
+      // every side. Because the div's own box (border-box sizing) starts
+      // `padding` px outside the target's box, the border line itself — the
+      // only visibly painted part of this div — never overlaps the target's
+      // own rendered content, so its label always stays legible.
+      // `position: absolute` (not `fixed`) anchors it to the DOCUMENT rather
+      // than the viewport, so it stays correctly placed under a `fullPage`
+      // screenshot's expanded capture surface, above or below the fold.
+      ring.style.position = 'absolute';
+      ring.style.left = `${box.x + scroll.x - padding}px`;
+      ring.style.top = `${box.y + scroll.y - padding}px`;
       ring.style.width = `${box.width + padding * 2}px`;
       ring.style.height = `${box.height + padding * 2}px`;
       ring.style.boxSizing = 'border-box';
@@ -120,7 +145,7 @@ export async function annotateClickTarget(
       // this file / UG-DD-3. Never append into any app-internal container.
       document.body.appendChild(ring);
     },
-    { box, color, padding, borderWidth, overlayAttr: OVERLAY_ATTR, zIndex: OVERLAY_Z_INDEX },
+    { box, color, padding, borderWidth, overlayAttr: OVERLAY_ATTR, zIndex: OVERLAY_Z_INDEX, scroll },
   );
 }
 

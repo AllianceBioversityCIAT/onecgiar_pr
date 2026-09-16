@@ -56,7 +56,7 @@ Block execution until every box is ticked.
   - [x] All 6 target routes render non-empty, representative content when visited manually while logged in.
   - [x] A valid `TEST_TOKEN` is available locally (never committed).
 
-### `UG-T-3` — Define `routes.config.json` — **[~] IN PROGRESS** (drafted, live verification pending — see `execution.md` §3b)
+### `UG-T-3` — Define `routes.config.json` — **[~] IN PROGRESS** (attempt 1 Reviewer FAIL, attempt 2 dispatched — see `execution.md`)
 
 - **Type:** infra
 - **Description:** For each of the 6 routes, record: `url`, `readySelector` (a DOM selector present only once real content has loaded — proves the route did not land on login/error/empty state), `clickTarget` (selector for the element the annotation marks), and `captionKey` (links to the matching content file in `UG-T-9`).
@@ -82,7 +82,7 @@ Block execution until every box is ticked.
   - [x] After running `auth.ts` standalone against a manual test page load, `window.ng.getComponent(...)`-level inspection (or an equivalent role check) confirms `isAdmin`/`readOnly` reflect a real logged-in session, not the logged-out default.
   - [x] No token/credential value is logged to console.
 
-### `UG-T-5` — `tokens.ts` (live design-token extraction) — **[~] code PASS**, live DoD pending `UG-T-7` run (see `execution.md`)
+### `UG-T-5` — `tokens.ts` (live design-token extraction) — **[x] COMPLETE** (PASS; live DoD closed in the `UG-T-7` run, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Implement `UG-DD-2`: read `getComputedStyle(document.documentElement)` on the authenticated, loaded app for `--pr-color-primary-300`, `--pr-color-primary-400`, `--pr-color-secondary-400`, `--pr-color-orange-500`, and the resolved `font-family` stacks (Manrope, JetBrains Mono), writing them to `tokens.json`. Fail loudly (throw) if any expected custom property is missing/empty rather than silently defaulting.
@@ -92,10 +92,10 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-7`, `UG-T-11`
 - **Estimate:** S
 - **Definition of done:**
-  - [ ] Running against the live app produces a `tokens.json` whose values match what DevTools shows for the same custom properties (manual spot check).
-  - [ ] Deliberately querying a non-existent custom property throws instead of returning an empty string silently.
+  - [x] Running against the live app produces a `tokens.json` whose values match what DevTools shows for the same custom properties (manual spot check).
+  - [x] Deliberately querying a non-existent custom property throws instead of returning an empty string silently.
 
-### `UG-T-6` — `annotate.ts` (DOM overlay click-target marker) — **[~] code PASS**, visual DoD pending `UG-T-7` run (see `execution.md`)
+### `UG-T-6` — `annotate.ts` (DOM overlay click-target marker) — **[x] COMPLETE** (PASS; visual DoD closed on `overview.png`/`results-list.png`, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Implement `UG-DD-3`: given a `Locator`, compute its `boundingBox()`, inject a fixed, high-`z-index` `<div>` appended to `document.body` styled as a highlight ring/arrow using the orange token (`--pr-color-orange-500`) from `UG-T-5`'s output, positioned over (but not obscuring the label of) the target element; provide a companion function to remove the overlay after the screenshot.
@@ -105,12 +105,12 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-7`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] Manual visual check on at least one route: the overlay renders on top of the target UI regardless of the app's own internal stacking contexts (per the stacking-context risk noted in `design.md` §12).
-  - [ ] The overlay does not cover the target element's own visible label text (offset the ring/arrow so the label remains legible).
-  - [ ] The overlay is confirmed removed from the DOM after the screenshot (no residual node before the next route navigates).
-  - [ ] On at least one route, the orange marker is visually confirmed distinct from the app's own violet brand accent in the same screenshot — not blending in (closes the `UG-R-3` scenario's `AND IT MUST` clause).
+  - [x] Manual visual check on at least one route: the overlay renders on top of the target UI regardless of the app's own internal stacking contexts (per the stacking-context risk noted in `design.md` §12).
+  - [x] The overlay does not cover the target element's own visible label text (offset the ring/arrow so the label remains legible).
+  - [x] The overlay is confirmed removed from the DOM after the screenshot (no residual node before the next route navigates).
+  - [x] On at least one route, the orange marker is visually confirmed distinct from the app's own violet brand accent in the same screenshot — not blending in (closes the `UG-R-3` scenario's `AND IT MUST` clause).
 
-### `UG-T-7` — `capture.ts` (orchestration) — **[~] IN PROGRESS** (Implementer re-spawned after 429 — see `execution.md` §3b)
+### `UG-T-7` — `capture.ts` (orchestration) — **[~] IN PROGRESS** (attempt 1 Reviewer FAIL, attempt 2 dispatched — see `execution.md`)
 
 - **Type:** infra
 - **Description:** For each route in `routes.config.json`: `page.goto()`, wait for `readySelector` (timeout → non-zero exit with the failing route/selector named in the error), call `annotate.ts` on `clickTarget`, `page.screenshot({ fullPage: true })` to `raw/<route-id>.png`, remove the overlay. Log one line per route per `design.md` §9. The script must not click, submit, or otherwise mutate any data (read-only).

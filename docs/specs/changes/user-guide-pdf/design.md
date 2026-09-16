@@ -202,6 +202,8 @@ No server/client Jest or Cypress coverage thresholds apply — this spec adds no
 - **Alternatives considered:** post-process the saved PNG with an image library (e.g., `sharp` + hand-computed coordinates) — rejected: requires a second coordinate system (image pixels vs. viewport), native binary dependency, and duplicated positioning logic already available for free via Playwright's own `boundingBox()`.
 - **Consequences:** the overlay must be appended at `document.body` (not inside an app-internal stacking context) to avoid the "stacking context" trap called out during design research — a nested z-index would not guarantee top-most rendering.
 
+> **Amendment 2026-09-15 (execution, `UG-T-7`):** the overlay is `position: absolute` with `boundingBox()` + `window.scrollX/Y` offsets, not `position: fixed` — a fixed ring rendered at the top of the full-page capture surface for below-the-fold targets. Still a direct `document.body` child with max `z-index`; the stacking-context reasoning above is unchanged. Recorded in `execution.md` (`UG-T-6` closure).
+
 ### `UG-DD-4` — Reuse the project's own documented auth-injection pattern for automation
 
 - **Context:** all 6 target routes are behind login (`AC-3`); a real login-form flow is slower and more brittle (2FA/session redirects) than the pattern the client team has already documented for exactly this purpose.
