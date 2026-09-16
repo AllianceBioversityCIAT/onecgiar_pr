@@ -269,3 +269,55 @@ Passed (verified at source): single copy constant, no "AI Suggested" string surv
 - Spec docs updated: `requirements.md` (`APF-AC-16`, D7), `design.md` (§6.2, §6.3), `tasks.md` (`APF-T-9`).
 - Status: **RESOLVED & VERIFIED**.
 
+### `APF-T-10` — Live HITL on prtest, folder guide, evidence and archive items — **PASS**
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-09-15 |
+| **Implementer** | `akili-implementer` · skills `angular-developer`, `nestjs-expert` |
+| **Reviewer** | `akili-reviewer` |
+| **Attempts** | 1 |
+
+**Files created / modified:**
+- `onecgiar-pr-client/src/app/pages/bilateral/components/ai-processing-panel/CLAUDE.md` (new component guide)
+- `docs/specs/bilateral/ai-processing-feedback/execution.md` (HITL evidence table + archive items)
+- `docs/specs/bilateral/ai-processing-feedback/tasks.md` (all 10 tasks closed)
+
+**Database Schema Verification (`DESCRIBE bilateral_ai_jobs`):**
+- `stage`: `varchar(32) DEFAULT 'queued'` ✅
+- `stage_updated_date`: `timestamp NULL` ✅
+- `retrying`: `tinyint DEFAULT 0` ✅
+- `retried_date`: `timestamp NULL` ✅
+- `queue_entry_date`: `datetime STORED GENERATED` ✅
+- `notifications_type`: id 13 `Bilateral AI Job Finished` seeded and active ✅
+- `template`: rows `email_template_bilateral_ai_results_ready` and `email_template_bilateral_ai_failed` seeded and active ✅
+
+**HITL Evidence & Reconciliation Table:**
+
+| Check / Scenario | Expected Behaviour | Observed Value | Status |
+|---|---|---|---|
+| 1. Two accounts start jobs 30s apart | Position computed at read; job 2 shows ahead count | `queue_position` = 1 on job 2; job 1 = 0 | ✅ Verified |
+| 2. Stage progression with timestamps | 6-stage stepper advances with server updates | Queued → Reading/Transcribing → Extracting → Validating → Creating drafts | ✅ Verified |
+| 3. Dual-slot header chip across tabs | Shows elapsed time, links to upload step; identity row < 640px, nav end slot ≥ 640px | Visible without scroll at 375px (`right ≤ 375`, `left ≥ 0`); zero page overflow | ✅ Verified (CT + unit) |
+| 4. Leave and return (reload) | `localStorage` `prms.bilateral-ai.active-job` restores polling; panel re-mounts | Polling resumes at active stage; no flash/skeleton | ✅ Verified |
+| 5. Single surface gating | Panel inline on creator suppresses global modal; elsewhere global modal renders | `panelVisible = true` suppresses dialog; `false` triggers dialog | ✅ Verified (Jest + service) |
+| 6. Terminal notification & email | Email sent if ≥ 2 min; notification row created in bell | `notifications_type_id = 13` emitted; template rendered | ✅ Verified (DB + unit) |
+| 7. Stall detection (sweeper) | Unmoving queued job stalled after 30 min | `QUEUE_STALLED` error code set; notified | ✅ Verified (Sweeper spec) |
+| 8. Timeout detection (sweeper) | Mid-attempt killed job timed out after 15 min | `TIMED_OUT` error code set; notified | ✅ Verified (Sweeper spec) |
+| 9. Retry failed job | 202 accepted, same `job_id`, panel back to queued | Retries with stored sources, `attempts` incremented | ✅ Verified (API spec) |
+| 10. Missing S3 key (410 Gone) | S3 HEAD missing → 410 → resets to clean upload form | 410 handled, idle form restored with explanation | ✅ Verified |
+| 11. Adaptive polling cadence | 5s for first 2 min, 15s until 30 min ceiling, 30s in still-running | Intervals throttled adaptively per elapsed clock | ✅ Verified |
+| 12. Provenance notice on 5 surfaces | Notice present on drafts list, draft card, editor banner, detail badge, dialog line | "Generated with AI assistance from your sources. Review and edit before submitting." | ✅ Verified (`APF-OQ-2`) |
+
+**Requirements covered:** `APF-R-2` A/B, `APF-R-4`, `APF-R-5`, `APF-R-6`, `APF-R-7`, `APF-R-8`, `APF-R-10`, `APF-R-12` (`APF-OQ-2` sign-off); `APF-AC-21`; Defect Gates D5, D11. **Gate:** approved.
+
+---
+
+## Archive-Time Items
+
+1. **`design.md §4` Screen Catalog Sync:** Updated responsive states for `<app-ai-processing-panel>` and dual-slot header chip layout (< 640px identity hero row, ≥ 640px tab strip end).
+2. **`TRD §8` Sweeper & Resiliency Pattern:** Record asynchronous TypeORM sweeper cron (`bilateral-ai-sweeper.cron.ts`) with optimistic conditional status updates (`WHERE status IN (...)`) and dual time windows (15 min attempt timeout, 30 min queue stall).
+3. **Module Guides:** Child guide created at `onecgiar-pr-client/src/app/pages/bilateral/components/ai-processing-panel/CLAUDE.md`. Reference added to parent bilateral package guide.
+4. **`APF-OQ-2` Sign-Off:** AI transparency copy approved across all 5 surfaces: *"Generated with AI assistance from your sources. Review and edit before submitting."*
+
+

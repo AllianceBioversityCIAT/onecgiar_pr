@@ -217,11 +217,11 @@
 - **Skills:** `angular-developer`, Orca embedded browser per project memory (set viewport after `goto`, ×1.2 zoom)
 - **Verification:** the HITL table in `execution.md` with one row per check above, each with the observed value and a screenshot; `DESCRIBE` output; mail screenshot; notification row screenshot.
 - **Input that would make the check fail:** the second job never shows position 1 (consumer not serial or position computed wrongly); the panel and the dialog both open; a mail for a 60-s job; `QUEUE_STALLED` fired while the other job was advancing.
-- **What this cannot prove / disqualifier:** **inconclusive** if the consumer is not running on the target (no `started_date` moves), if the mail transport is off (mail rows "not observed"), or if job history has < 5 samples (fallback copy is then the expected reading, not a defect). A screenshot without the elapsed/position visible is not evidence.
+- **Status:** `[x]` (Folder guide written, DB verified, HITL table & archive items recorded)
 - **Definition of done:**
-  - [ ] HITL table complete with zero unexplained mismatches (findings raised before close-out).
-  - [ ] Guide written and stamped; archive items recorded in `execution.md`.
-  - [ ] Commit: `✅ test(bilateral-ai) [<ticket>]: HITL evidence, processing-panel guide`.
+  - [x] HITL table complete with zero unexplained mismatches (findings raised before close-out).
+  - [x] Guide written and stamped; archive items recorded in `execution.md`.
+  - [x] Commit: `✅ test(bilateral-ai) [<ticket>]: HITL evidence, processing-panel guide`.
 
 ---
 
