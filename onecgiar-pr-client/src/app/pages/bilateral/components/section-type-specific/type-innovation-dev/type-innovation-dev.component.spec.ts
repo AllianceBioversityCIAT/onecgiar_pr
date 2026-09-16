@@ -169,6 +169,33 @@ describe('TypeInnovationDevComponent', () => {
         build();
         expect(component.body.innovation_developers).toBeUndefined();
       });
+
+      // BIL-QAI-T-12 rework — the defect the Reviewer traced: a `null` is what the server sends once
+      // a row EXISTS and the user cleared it (`InnovationDevExists` includes the key as `null` rather
+      // than omitting it — repository.ts:274-312). Truthiness cannot tell that apart from "never
+      // asked" and re-filled it; key presence can.
+      it('does NOT prefill a stored null — the column exists, the user cleared it', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        expect(component.body.innovation_developers).toBeFalsy();
+        expect(component.body.innovation_developers).not.toBe('A. Rivera');
+      });
+
+      // The other half of the defect: a wrongly re-filled value doesn't just render — it rides along
+      // on the NEXT save of any field, because `body.innovation_developers` was mutated in place.
+      it('keeps a reloaded null out of the payload even after an unrelated field changes', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.innovation_nature_id = 12;
+        component.onFieldChange();
+
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBeNull();
+      });
     });
 
     /**
@@ -773,18 +800,46 @@ describe('TypeInnovationDevComponent', () => {
       const developerTextarea = () =>
         fixture.debugElement.queryAll(By.css('app-pr-textarea')).find(d => read(d.componentInstance.label) === 'Innovation developers');
 
-      it('renders prefilled with the lead contact person when the stored value is empty', () => {
+      /**
+       * Standalone `[(ngModel)]` writes its INITIAL value to the `ControlValueAccessor` inside a
+       * `resolvedPromise.then(...)` microtask (Angular's `NgModel._updateValue`), not synchronously
+       * during `setUpControl`'s own `writeValue(control.value)` call — which fires first, with the
+       * freshly-created `FormControl`'s default `null`. A single synchronous `fixture.detectChanges()`
+       * therefore observes `PrTextareaComponent.value === null`, even though `body.innovation_developers`
+       * is already correct (proven by the plain `component.body.innovation_developers` assertions in
+       * the `loadData` describe above, which read the model directly and never touch the CVA). Flushing
+       * the microtask queue — `await fixture.whenStable()` — then re-running change detection is the
+       * same pattern already used for a deferred write elsewhere in this package
+       * (`overview-controls.component.spec.ts`'s `settleFocus()`).
+       */
+      const renderAndSettle = async (): Promise<void> => {
+        render();
+        await fixture.whenStable();
+        fixture.detectChanges();
+      };
+
+      it('renders prefilled with the lead contact person when the stored value is empty', async () => {
         creation.resultLeadContact.set('A. Rivera');
         bilateralApi.GET_innovationDev.mockReturnValue(of({ response: {} }));
-        render();
+        await renderAndSettle();
         expect(developerTextarea().componentInstance.value).toBe('A. Rivera');
       });
 
-      it('renders the stored value, NOT the lead contact person, when the stored value is not empty', () => {
+      it('renders the stored value, NOT the lead contact person, when the stored value is not empty', async () => {
         creation.resultLeadContact.set('A. Rivera');
         bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
-        render();
+        await renderAndSettle();
         expect(developerTextarea().componentInstance.value).toBe('CIAT breeding team');
+      });
+
+      // BIL-QAI-T-12 rework, AC-18's "renders empty" clause: a stored `null` (the column exists, the
+      // user cleared it) must render empty, NOT the lead contact person, on reload.
+      it('renders empty — not the lead contact person — when the stored value is a reloaded null', async () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        await renderAndSettle();
+        expect(developerTextarea().componentInstance.value).not.toBe('A. Rivera');
+        expect(developerTextarea().componentInstance.value).toBeFalsy();
       });
     });
 

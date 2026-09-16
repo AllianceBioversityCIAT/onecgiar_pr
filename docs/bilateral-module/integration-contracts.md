@@ -572,8 +572,8 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
     }
   },
   "impact_areas": [
-    { "name": "Gender", "score": "(2) Principal", "subcomponents": ["Women's empowerment"] },
-    { "name": "Youth", "score": "(1) Significant", "subcomponents": [] }
+    { "name": "Gender equality, youth and social inclusion", "score": "(2) Principal", "subcomponents": ["Gender equality", "Youth"] },
+    { "name": "Climate adaptation and mitigation", "score": "(1) Significant", "subcomponents": [] }
   ],
   "constraints": { "timeout_seconds": 60 }
 }
@@ -594,18 +594,40 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
 `impact_areas` is an **optional** top-level array, one entry per PRMS impact-area pillar the result tags in Section 1 (General information):
 
 ```json
-{ "name": "Gender", "score": "(2) Principal", "subcomponents": ["Women's empowerment"] }
+{ "name": "Gender equality, youth and social inclusion", "score": "(2) Principal", "subcomponents": ["Gender equality", "Youth"] }
 ```
 
 | Field | Type | Notes |
 |---|---|---|
-| `name` | `string` | The pillar label the form paints — `Gender`, `Youth`, `Nutrition`, `Environment & biodiversity`, `Poverty`, or `Climate`. `Climate` may appear here even though it has no evidence tag (see *Evidence rules*, GAP-6) |
+| `name` | `string` | The pillar label the form paints. There are exactly **five** values — see *Impact-area pillars* below. `Climate adaptation and mitigation` may appear here even though it has no evidence tag (see *Evidence rules*, GAP-6). The mirror is also true: `Youth` is an **evidence tag** with no pillar of its own — it is seeded as a sub-component of the `Gender equality, youth and social inclusion` pillar and must never appear as an `impact_areas[].name` |
 | `score` | `string` | The visible tag label: `(0) Not Targeted` \| `(1) Significant` \| `(2) Principal` |
 | `subcomponents` | `string[]` | **Plural** — populated only where the form populates it (Principal); `[]` otherwise |
 
 - `[]` or an absent `impact_areas` key means the result tags no pillar. This is **not applicable** — it is **not grey** and carries **no penalty** in any section. The AI must not raise an issue for it (owner decision, 2026-09-16).
 - `impact_areas` is included in `content_hash`: re-tagging a pillar invalidates a stored verdict.
 - The key is `subcomponents`, **plural** — call this out explicitly to the AI team; an earlier draft used the singular `subcomponent`, and the frozen name is plural.
+
+**Impact-area pillars.** PRMS has exactly five pillars, never six — do not confuse a pillar `name` with an evidence tag (see *Evidence rules*), even though four of the five short names look alike:
+
+| Pillar label (`name`) | Internal short name (`DAC_PILLAR_CONFIG` key — not a payload value) |
+|---|---|
+| Gender equality, youth and social inclusion | Gender |
+| Climate adaptation and mitigation | Climate |
+| Nutrition, health and food security | Nutrition |
+| Environmental health and biodiversity | Environmental |
+| Poverty reduction, livelihoods and jobs | Poverty |
+
+Verified against `DAC_PILLAR_CONFIG` (`onecgiar-pr-server/src/api/bilateral/bilateral.service.ts:164-190`, five entries: `gender · climate_change · nutrition · environmental_biodiversity · poverty`) for the short names, and the form's own section tooltips (`onecgiar-pr-client/src/app/pages/bilateral/components/section-general-info/section-general-info.component.ts:28-80`) for the pillar labels the form paints.
+
+**Sub-component catalogue.** `subcomponents[]` values come from the seeded catalogue `impact_areas_scores_components`, never free text; capitalisation below is the database's, copied verbatim from its only `INSERT` (`onecgiar-pr-server/src/migrations/1760113104098-ImpactAreasScoresComponents.ts:21-41` — no later migration inserts or updates this table):
+
+| Pillar (short name) | Sub-components (`subcomponents[]` values) |
+|---|---|
+| Gender | `Gender equality` · `Youth` · `Social Inclusion` |
+| Climate | `Adaptation` · `Mitigation` |
+| Nutrition | `Nutrition` · `Health` · `Food Security` |
+| Environmental | `Environmental health` · `Biodiversity` |
+| Poverty | `Poverty Reduction` · `Livelihoods` · `Jobs` |
 
 ### Type-specific fields (`sections.type_specific`)
 
@@ -636,7 +658,7 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
 ```json
 { "type": "innovation_use", "fields": {
   "User types": ["Farmers", "Other: Cooperative extension agents"],
-  "Number of people using": { "total": 340, "women": 120, "men": 200, "women_youth": 10, "men_youth": 10 },
+  "Number of people using": { "total": 340, "women": 100, "men": 150, "women_youth": 20, "men_youth": 15 },
   "Other quantitative measures": [{ "unit_of_measure": "Hectares", "quantity": 500 }],
   "Investment (USD)": { "total": 12000 }
 } }
@@ -648,7 +670,7 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
 { "type": "capacity_sharing", "fields": {
   "Number of people trained": { "total": 12, "female": 7, "male": 4, "non_binary": 1, "unknown": 0 },
   "Length of training": "Long-term",
-  "Delivery method": "Virtual",
+  "Delivery method": "Virtual / Online",
   "Implementing organizations": ["AfricaRice"]
 } }
 ```
@@ -674,8 +696,8 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
 Notes the AI side depends on:
 
 - **`Length of training` is one value per result**, not a per-person split: the bilateral form stores a single `training_length` term (`Long-term` / `Short-term`) on the result, not a breakdown per trainee.
-- **`Delivery method` also feeds the geography rule**: a virtual delivery method means geography is not required for that result, so a thin *Geographic location* section must not be graded down when `Delivery method` is `"Virtual"`.
-- **Innovation use carries no non-binary or unknown counts** (GAP-7) — those columns do not exist on `result_actors`. `"Number of people using"` therefore splits by women/men and youth only, and a row saved without age-and-sex disaggregation contributes its count to `total` only, so `women + men + women_youth + men_youth` can legitimately sum to less than `total`. This is not under-reporting.
+- **`Delivery method` also feeds the geography rule**: the catalogue has exactly three labels — `"Virtual / Online"`, `"In person"`, `"Blended (in-person and virtual)"`. When the delivery method is virtual (`Delivery method` = `"Virtual / Online"`, and only that value), geography is not required for that result, so a thin *Geographic location* section must not be graded down. `"Blended (in-person and virtual)"` still has an in-person component, so geography stays required for it — do not treat "blended" as exempt.
+- **Innovation use carries no non-binary or unknown counts** (GAP-7) — those columns do not exist on `result_actors`. `"Number of people using"` therefore splits by women/men and youth only, and a row saved without age-and-sex disaggregation contributes its count to `total` only, so `women + men + women_youth + men_youth` can legitimately sum to less than `total`. This is not under-reporting. `women_youth` and `men_youth` are **subsets** of `women` and `men` respectively, never a fifth and sixth bucket added on top of them — the form enforces "Youth cannot be greater than total Women/Men", so do not expect the four breakdown fields to sum to `total` even when every row is fully disaggregated.
 - **`Investment (USD)`** is the sum of `kind_cash` across the three budget sources the form exposes (initiative, bilateral project, and partner budgets); it is `null` when all three are empty — there is no innovation-use-specific USD column.
 
 ### Evidence rules
@@ -762,7 +784,7 @@ No response body, API key, or host name is ever surfaced to the user or logged (
 
 **Change log**
 - **2026-09-16** — copied contract v0.1 (request/response shapes, section keys, evidence rules, optional `score`, error/timeout semantics) from the frozen vault note into this section (`BIL-QAI-T-1`).
-- **2026-09-16** — amended to contract **v0.2** (`BIL-QAI-T-1b`): request now carries `contract_version: "0.2"` and an optional top-level `impact_areas` (sibling of `sections`, `{name, score, subcomponents[]}` — plural `subcomponents` — absent/empty ⇒ not applicable, not grey, no penalty); replaced the flat hand-written `type_specific.fields` example with a frozen per-type label table plus typed value objects (count/amount objects, single `Length of training`, `Innovation developers` never substituted) and one JSON example per type; corrected the evidence-tag vocabulary to the closed set Gender · Youth · Nutrition · Environment & biodiversity · Poverty and removed the wrong evidence-tag example that paired Gender with a non-existent Climate tag (GAP-6, no evidence tag for Climate); documented GAP-7 (Innovation use has no non-binary/unknown counts); response now requires `status` (`completed\|partial\|unavailable`) and `degraded_reason`, and `sections.<key>.verdict` widens to include `grey` (excluded from the overall); added the PRMS status-mapping table including `unavailable_reason = ai_unavailable`; dropped the ordering guarantee over the five section keys (never part of the frozen contract, was an advisory only).
+- **2026-09-16** — amended to contract **v0.2** (`BIL-QAI-T-1b`): request now carries `contract_version: "0.2"` and an optional top-level `impact_areas` (sibling of `sections`, `{name, score, subcomponents[]}` — plural `subcomponents` — absent/empty ⇒ not applicable, not grey, no penalty); replaced the flat hand-written `type_specific.fields` example with a frozen per-type label table plus typed value objects (count/amount objects, single `Length of training`, `Innovation developers` never substituted) and one JSON example per type; corrected the evidence-tag vocabulary to the closed set Gender · Youth · Nutrition · Environment & biodiversity · Poverty and removed the wrong evidence-tag example that paired Gender with a non-existent Climate tag (GAP-6, no evidence tag for Climate); documented GAP-7 (Innovation use has no non-binary/unknown counts); response now requires `status` (`completed\|partial\|unavailable`) and `degraded_reason`, and `sections.<key>.verdict` widens to include `grey` (excluded from the overall); added the PRMS status-mapping table including `unavailable_reason = ai_unavailable`; dropped the ordering guarantee over the five section keys (never part of the frozen contract, was an advisory only); added the sub-component catalogue table (13 seeded values across the five pillars, from `impact_areas_scores_components`) and replaced the invented `"Women's empowerment"` example value with the real seeded values `["Gender equality", "Youth"]` in both JSON examples (`BIL-QAI-T-1b`).
 
 ## Contract Stability Rules
 

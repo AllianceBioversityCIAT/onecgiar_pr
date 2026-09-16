@@ -268,20 +268,16 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   /**
-   * BIL-QAI-R-15 / DD-12 (2026-09-16) — restores the field the removal (2026-09-03, Nicoleta Trifa
-   * via Ángel Jarrín) replaced with a silent copy of the Section-1 Lead contact person on every save.
-   * That substitution made a QA check over this column unfalsifiable: the column was never empty and
-   * never said anything the lead contact did not already say.
-   *
-   * Prefill runs **once, right after load, only when the stored value is empty** — same rule and
-   * same shape as the pooled-funding form's `applyInnovationDeveloperAutoFill()`
-   * (`pages/results/.../innovation-dev-info.component.ts:372-378`). It never runs again afterwards:
-   * there is no effect watching `resultLeadContact()`, so editing the Lead contact person later, or
-   * clearing this field and saving, never re-fills it. `buildPayload()` is the other half of the
-   * fix — it now sends exactly what is on screen, trimmed, or `null`.
+   * BIL-QAI-R-15 / DD-12 (2026-09-16) — one-time prefill from the Lead contact person. Full
+   * history, the key-presence gate's rationale, and the save-side contract are in this folder's
+   * `CLAUDE.md` ("Innovation developers — removed, then restored").
    */
   private applyInnovationDevelopersPrefill(): void {
-    if (this.body.innovation_developers?.trim()) return;
+    // Gate on the KEY, not on truthiness: `InnovationDevExists` (server repository) omits the key
+    // entirely when no row exists yet, and includes it as `null` once a row does — so a present
+    // `null` means "the user cleared it", not "never asked". Truthiness could not tell those apart
+    // and re-filled a deliberately-cleared field on every reload (BIL-QAI-T-12 rework).
+    if ('innovation_developers' in this.body) return;
     const leadContact = this.creationService.resultLeadContact()?.trim();
     if (!leadContact) return;
     this.body.innovation_developers = leadContact;

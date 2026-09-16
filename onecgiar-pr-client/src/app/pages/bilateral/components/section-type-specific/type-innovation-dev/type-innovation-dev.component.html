@@ -41,10 +41,7 @@
     (ngModelChange)="onFieldChange()">
   </app-pr-select>
 
-  <!-- BIL-QAI-R-15 / DD-12 (2026-09-16): Innovation developers restored as its own optional field —
-       Program reviewers need the user's real answer, not a copy of the Lead contact person. Prefilled
-       once on load only when empty (`applyInnovationDevelopersPrefill()`); never overwritten on save.
-       Matches the standard PRMS result form (pages/results/.../innovation-dev-info.component.html). -->
+  <!-- BIL-QAI-R-15: optional, prefilled once from the Lead contact person on load only — see CLAUDE.md. -->
   <app-pr-textarea
     placeholder="Contact persons info goes here..."
     [required]="false"
