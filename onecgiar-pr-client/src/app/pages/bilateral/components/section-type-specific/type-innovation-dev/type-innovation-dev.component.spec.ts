@@ -13,6 +13,7 @@ import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-trac
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
+import { RolesService } from '../../../../../shared/services/global/roles.service';
 
 const MDS_NOTE =
   'The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. ' +
@@ -806,6 +807,25 @@ describe('TypeInnovationDevComponent', () => {
       const scaling = allFields().find(f => typeof f.label === 'string' && f.label.startsWith('Have any studies been conducted'));
       expect(scaling).toBeDefined();
     });
+
+    /**
+     * The readiness ladder is one of the three MDS items this section counts
+     * (`updateMds` → key `readiness`), so an empty one is part of the footer's "N fields missing".
+     * Without `[required]` the ladder shows NOTHING while empty, and the reporter reads a count
+     * naming a field that looks no different from a finished one — the same complaint that reached
+     * us for the geographic scope. `innovation-use-form` (W1/W2) already passes it.
+     */
+    it('asks the readiness ladder to show its pending marker', () => {
+      // `RolesService.readOnly` starts TRUE and is only lowered once roles resolve; the ladder
+      // suppresses its marker while the dots are inert, so a test that leaves it up measures the
+      // read-only form, not the one the reporter fills in.
+      TestBed.inject(RolesService).readOnly = false;
+      render();
+      const ladder = fixture.debugElement.query(By.css('app-pr-range-level'));
+      expect(read(ladder.componentInstance.required)).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('This field is required');
+    });
+
 
     /**
      * The PO's epic note (Ángel Jarrín, 23-Aug-2026) is explicit: "Remove" never means delete the data.

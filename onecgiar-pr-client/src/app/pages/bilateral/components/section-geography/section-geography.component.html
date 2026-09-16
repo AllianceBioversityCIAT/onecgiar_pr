@@ -19,7 +19,7 @@
       optionLabel="name"
       optionValue="id"
       [required]="true"
-      [ngModel]="geographicLocationBody().geo_scope_id"
+      [ngModel]="scopeSelection()"
       (ngModelChange)="onScopeChange($event)">
     </app-pr-radio-button>
     @if (focusDescription(geographicLocationBody().geo_scope_id); as text) {
@@ -146,7 +146,7 @@
           optionLabel="name"
           optionValue="id"
           [required]="true"
-          [ngModel]="extraGeographicLocationBody().geo_scope_id"
+          [ngModel]="extraScopeSelection()"
           (ngModelChange)="onExtraScopeChange($event)">
         </app-pr-radio-button>
 

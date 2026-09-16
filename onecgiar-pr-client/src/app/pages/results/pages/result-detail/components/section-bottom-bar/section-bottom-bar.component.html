@@ -12,9 +12,13 @@
      suspender el plegado durante un scroll que ejecuta la app (`goToField`). Lo que se fue de aquí
      es `appChromeFold`, no el servicio. -->
 <div data-testid="section-bottom-bar" class="relative min-h-0 w-full bg-transparent">
-  <!-- Los botones traen su propia superficie (regla + blanco el uno, violeta el otro), así que se
-       leen sobre el formulario sin necesitar una cápsula alrededor. -->
-  <div class="absolute bottom-[14px] left-[40px] flex items-center gap-[12px]" data-testid="section-bottom-bar-toolbar">
+  <!-- Cada grupo va dentro de su propio contenedor (Yeck, 16-sep-2026). Sin él, los controles
+       flotan sueltos y el formulario se lee ENTRE ellos: en la captura, "Section 1 of 5" y el
+       contador de campos quedaban cruzados con las filas de Impact Area que pasan por detrás. La
+       cápsula agrupa lo que es un mismo mando y le devuelve un fondo propio contra el que leerse. -->
+  <div
+    class="absolute bottom-[14px] left-[40px] flex items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-white px-[10px] py-[8px] shadow-[var(--pr-shadow-2)]"
+    data-testid="section-bottom-bar-toolbar">
     <!-- Secondary button, straight off the mockup: 1px #e3e3e8 rule, white fill, #2b2838 ink,
            weight 500, and a NEUTRAL hover (#f7f7f9 / #d5d5dc) — not the violet tint this used to
            have. The mockup spends violet on the one primary action of a group and nothing else. -->
@@ -40,11 +44,9 @@
     </button>
 
     @if (showPosition()) {
-      <!-- Sin franja detrás, un texto suelto se leería encima del formulario: se le da la misma
-             píldora blanca que ya llevan los demás controles flotantes. -->
-      <span
-        class="rounded-[8px] border border-[var(--pr-border)] bg-white px-[10px] py-[6px] text-[14px] font-normal text-[var(--pr-text-secondary)]"
-        data-testid="section-bottom-bar-position">
+      <!-- Ya no lleva píldora propia: el contenedor del grupo es la superficie, y una cápsula
+             dentro de otra se lee como un segundo control. Queda como lo que es, una etiqueta. -->
+      <span class="px-[4px] text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="section-bottom-bar-position">
         Section {{ position() }} of {{ total() }}
       </span>
     }
@@ -52,7 +54,9 @@
 
   <!-- El otro grupo anclado: cuánto le falta al reportero y cómo guardar. Las dos cosas que hacen
        falta MIENTRAS se llenan campos, así que nunca se han plegado (Yeck, 14-sep-2026). -->
-  <div class="absolute bottom-[14px] right-[40px] flex items-center gap-[12px]" data-testid="section-bottom-bar-anchored">
+  <div
+    class="absolute bottom-[14px] right-[40px] flex items-center gap-[10px] rounded-[12px] border border-[var(--pr-border)] bg-white px-[10px] py-[8px] shadow-[var(--pr-shadow-2)]"
+    data-testid="section-bottom-bar-anchored">
     @if (isComplete()) {
       <!-- Un solo indicador: el aro ES el icono del estado. Antes había dos píldoras seguidas —
              "2 of 7 required" y "5 fields missing" — diciendo lo mismo con dos formas distintas. -->
@@ -171,7 +175,7 @@
     @if (canSave) {
       <button
         type="button"
-        class="sbb-save h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] shadow-[var(--pr-shadow-1)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+        class="sbb-save h-[38px] min-w-[112px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
         [disabled]="saveButtonSE.isSaving() || disabled"
         (click)="onClickSave()"
         data-testid="section-bottom-bar-save">

@@ -133,6 +133,7 @@
       optionLabel="name"
       optionValue="id"
       [options]="innovationControlListSE.useLevelsList"
+      [required]="true"
       [(ngModel)]="body.innovation_use_level_id"
       (ngModelChange)="onUseLevelChange()">
     </app-pr-range-level>

@@ -587,6 +587,58 @@ describe('SectionGeographyComponent', () => {
     });
   });
 
+  // The scope the RADIO is shown, which is not the same as the scope the PAYLOAD carries.
+  // Measured on prtest (result 9386 / internal id 11854, 16-Sep-2026): the endpoint answers
+  // `geo_scope_id: 0` for a result whose scope was never chosen, `pr-radio-button.hasValue` only
+  // rejects null/undefined, and the card therefore painted GREEN ("required and filled") over an
+  // empty radio group while the footer said "1 field missing". W1/W2 cannot show that because its
+  // count and its marking are the same DOM scan.
+  describe('scope shown to the radio (0 is not an answer)', () => {
+    it('shows no selection when the stored scope is the 0 placeholder', () => {
+      bilateralApi.GET_geographic.mockReturnValue(
+        of({ response: { geo_scope_id: 0, has_regions: 0, has_countries: 0, regions: [], countries: [] } })
+      );
+      build();
+      fixture.detectChanges();
+
+      expect(component.geographicLocationBody().geo_scope_id).toBe(0);
+      expect(component.scopeSelection()).toBeNull();
+    });
+
+    it('shows no selection when nothing was ever stored', () => {
+      build();
+      fixture.detectChanges();
+      expect(component.scopeSelection()).toBeNull();
+      expect(component.extraScopeSelection()).toBeNull();
+    });
+
+    it('shows the scope once one is chosen', () => {
+      build();
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      component.extraGeographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.REGIONAL }));
+
+      expect(component.scopeSelection()).toBe(GeoScopeEnum.COUNTRY);
+      expect(component.extraScopeSelection()).toBe(GeoScopeEnum.REGIONAL);
+    });
+
+    // 🛑 The fix must not reach the column: `buildGeographyPayload()` serialises the SIGNAL, and
+    // this is the invariant that keeps it that way.
+    it('leaves the saved payload untouched', () => {
+      bilateralApi.GET_geographic.mockReturnValue(
+        of({ response: { geo_scope_id: 0, has_regions: 0, has_countries: 0, regions: [], countries: [] } })
+      );
+      build();
+      fixture.detectChanges();
+
+      component.queueGeographySave(0);
+      expect(autoSave.schedulePayload).toHaveBeenLastCalledWith(
+        'geography',
+        expect.objectContaining({ geo_scope_id: 0 }),
+        expect.anything()
+      );
+    });
+  });
+
   // P2-3504 — the classic form asks innovations "…other geographic areas where the innovation could
   // be impactful…" while this one still asked the legacy "…regions … for this Output?". Same result,
   // two different questions depending on which form you opened.
