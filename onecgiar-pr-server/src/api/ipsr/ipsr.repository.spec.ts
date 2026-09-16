@@ -130,6 +130,31 @@ describe('IpsrRepository (unit)', () => {
     expect(res).toEqual(rows);
   });
 
+  it('getAllInnovationPackages includes r.is_replicated in query projection', async () => {
+    const rows = [{ id: 1, is_replicated: 1 }];
+    dsQuery.mockResolvedValueOnce(rows);
+
+    const user = { id: 42 } as any;
+    const res = await repo.getAllInnovationPackages(user);
+
+    expect(dsQuery).toHaveBeenCalledTimes(1);
+    const [sql] = dsQuery.mock.calls[0];
+    expect(sql).toContain('r.is_replicated');
+    expect(res).toEqual(rows);
+  });
+
+  it('getAllInnovationPackagesFiltered includes r.is_replicated in query projection', async () => {
+    const rows = [{ id: 1, is_replicated: 1 }];
+    repoQuery.mockResolvedValueOnce(rows);
+
+    const res = await repo.getAllInnovationPackagesFiltered({ versionId: [1] });
+
+    expect(repoQuery).toHaveBeenCalledTimes(1);
+    const [sql] = repoQuery.mock.calls[0];
+    expect(sql).toContain('r.is_replicated');
+    expect(res).toEqual({ results: rows, total: 1 });
+  });
+
   describe('createQueries (replication)', () => {
     const config = {
       phase: 5,

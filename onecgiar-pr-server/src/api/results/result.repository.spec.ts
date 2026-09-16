@@ -62,6 +62,7 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('rt.id IN (?)');
     expect(sql).toContain('ci.portfolio_id IN (?)');
     expect(sql).toContain('r.status_id IN (?,?)');
+    expect(sql).toContain('r.is_replicated');
     expect(sql).toContain('LIMIT 10');
     expect(sql).toContain('OFFSET 0');
 

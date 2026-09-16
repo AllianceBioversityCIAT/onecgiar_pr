@@ -1,5 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { Readable } from 'node:stream';
 import { GlobalParameterCacheService } from '../cache/global-parameter-cache.service';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 import { CreateUploadSessionDto } from 'src/api/results/evidences/dto/create-upload-session.dto';
@@ -81,6 +82,118 @@ export class SharePointService {
         }),
       );
     }
+  }
+
+  /**
+   * `ADE-T-3` / DD-3 — bounds every outbound Graph call `uploadFromStream` makes.
+   *
+   * 30 s: generous enough that a 25 MB upload (the AI cap, `bilateral-ai-file-storage.service.ts`)
+   * completes even on a slow link — 25 MB/30 s ≈ 0.83 MB/s — while still keeping a hung
+   * `promoteDraft` request bounded well within human patience. `createUploadSession`'s own POST
+   * (a small JSON body) and the byte PUT each get this budget independently: a slow session mint
+   * does not eat into the time left for the upload that follows.
+   *
+   * `HttpModule` (`share-point.module.ts`) carries no timeout and stays that way (DD-3 rejected
+   * a global one — it would change behavior for `evidences`, `toc-results` and `versioning`).
+   * This constant is consumed only inside `uploadFromStream` via `withGraphTimeout`, so no other
+   * `SharePointService` caller is affected.
+   */
+  private static readonly UPLOAD_FROM_STREAM_GRAPH_TIMEOUT_MS = 30_000;
+
+  /**
+   * Races `promise` against a timer so a Graph call that never settles is abandoned rather than
+   * hung on forever — the mechanism DD-3 asks for. Note this does not abort the underlying
+   * axios/rxjs request (the `HttpModule` it rides has no `AbortController` wiring); it only stops
+   * this method from *waiting* on it, which is what makes a transfer failure "an ordinary
+   * per-document failure" (`ADE-R-9`) instead of a stuck promotion.
+   */
+  private async withGraphTimeout<T>(
+    promise: Promise<T>,
+    label: string,
+  ): Promise<T> {
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(
+          new Error(
+            `SharePoint Graph call timed out after ${SharePointService.UPLOAD_FROM_STREAM_GRAPH_TIMEOUT_MS}ms (${label})`,
+          ),
+        );
+      }, SharePointService.UPLOAD_FROM_STREAM_GRAPH_TIMEOUT_MS);
+    });
+    try {
+      return await Promise.race([promise, timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Server-side counterpart to `createUploadSession` (§7.2, `design.md`): mints the upload
+   * session the same way, then performs the `PUT` itself instead of handing the session URL to a
+   * browser. Mirrors the client's `PUT_loadFileInUploadSession` shape (`Content-Type:
+   * application/octet-stream`, `Content-Range: bytes 0-{size-1}/{size}`) — see
+   * `results-api.service.ts:334-355` for why the client also has a fragmenting variant and this
+   * path does not need one: Graph refuses any single request ≥ 60 MiB (P2-3318) and the AI
+   * uploader caps every source at 25 MB, so this is always a single request.
+   *
+   * `count: 1` mirrors a single-file upload session (the client's running `count` exists only to
+   * disambiguate a multi-file batch uploaded in one go); each draft-evidence document is
+   * transferred one at a time, so the caller never needs to track an index.
+   *
+   * Does not change `createUploadSession`'s signature or behavior — it is called exactly as any
+   * other caller would call it, just bounded here by `withGraphTimeout` so a hang cannot strand
+   * `promoteDraft` (DD-3, `ADE-R-5`).
+   *
+   * 🛑 `Content-Length` is set EXPLICITLY here and must stay explicit — do not "clean this up" by
+   * letting axios infer it. The client path (`results-api.service.ts:334-355`) never has this
+   * problem because the browser uploads a `Blob`, and `XMLHttpRequest`/`fetch` compute and set
+   * `Content-Length` for a `Blob` body on their own. This path uploads a Node `Readable`, and
+   * axios 1.x cannot determine the length of a stream, so it drops `Content-Length` and Node
+   * falls back to `Transfer-Encoding: chunked`. Microsoft Graph's upload-session PUT rejects a
+   * chunked request outright (`411 Length Required` / a opaque `400 invalidRequest`), so every
+   * document silently failed to upload in production even though `promoteDraft` returned 200 —
+   * the per-document catch swallowed the failure and the `evidence` table stayed empty. Passing
+   * `size` (already required to build `Content-Range`) as `Content-Length` is what makes Graph
+   * accept the PUT.
+   */
+  async uploadFromStream(
+    resultId: string,
+    fileName: string,
+    stream: Readable,
+    size: number,
+  ): Promise<{ id: string; name: string }> {
+    // Fails BEFORE the network call so the error names the file and size instead of surfacing as
+    // Graph's opaque 400 on `Content-Range: bytes 0--1/0`. `size` also drives `Content-Length`
+    // above, so a bad value here would otherwise corrupt both headers at once.
+    if (!Number.isInteger(size) || size <= 0) {
+      throw new Error(
+        `SharePoint uploadFromStream: invalid size (${size}) for file "${fileName}" — size must be a positive integer`,
+      );
+    }
+
+    const session = await this.withGraphTimeout(
+      this.createUploadSession({ fileName, resultId, count: 1 }),
+      'createUploadSession',
+    );
+    const uploadUrl: string = session?.response;
+
+    const response = await this.withGraphTimeout(
+      this.httpService
+        .put(uploadUrl, stream, {
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Content-Length': String(size),
+            'Content-Range': `bytes 0-${size - 1}/${size}`,
+          },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        })
+        .toPromise(),
+      'uploadFromStream PUT',
+    );
+
+    return { id: response?.data?.id, name: response?.data?.name };
   }
 
   /**

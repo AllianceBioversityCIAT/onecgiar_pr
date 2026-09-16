@@ -23,8 +23,25 @@ export class HideChromeOnScrollDirective implements OnDestroy {
     this.queued = true;
     requestAnimationFrame(() => {
       this.queued = false;
-      this.chromeSE.track(this.host.nativeElement.scrollTop);
+      const top = this.host.nativeElement.scrollTop;
+      if (this.dropdownOpen()) {
+        this.chromeSE.rebaseline(top);
+        return;
+      }
+      this.chromeSE.track(top);
     });
+  }
+
+  /**
+   * 🛑 With a dropdown open the chrome stays exactly as it is (Cami, 16-sep-2026). The `custom_select`
+   * lists open on `:focus-within`, so ticking a checkbox moves focus and the browser scrolls it into
+   * view; that scroll folded or unfolded the topbar, the form jumped ~175px under the pointer and the
+   * next click landed on another partner — picking several External partners in a row was a fight.
+   * Folding is for reading, not for choosing from a list.
+   */
+  private dropdownOpen(): boolean {
+    const active = document.activeElement;
+    return !!active && this.host.nativeElement.contains(active) && !!active.closest('.custom_select');
   }
 
   ngOnDestroy(): void {

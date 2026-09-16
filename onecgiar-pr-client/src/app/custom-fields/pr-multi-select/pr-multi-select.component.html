@@ -18,10 +18,10 @@
     <div class="icon_container"></div>
     <i class="pi pi-chevron-down icon_dropdown"></i>
     <div class="remove_focus" (click)="removeFocus()"></div>
-    <div class="options">
+    <div class="options" [class.result_picker_style]="resultPickerStyle()">
       <div class="search_input_container">
         <span class="material-icons-round search_icon">search</span>
-        <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
+        <input type="text" hlmInput placeholder="Search" [ngModel]="searchText" (ngModelChange)="onSearchInputChange($event)" style="width: 100%" />
       </div>
 
       <div class="util_container">
@@ -46,7 +46,7 @@
         </div>
       </ng-container>
       <ng-template #flatList>
-        <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
+        <cdk-virtual-scroll-viewport [itemSize]="virtualOptionItemSize()" class="custom_scroll virtual_scroll">
           <div *ngIf="!filterFlatOptions(optionsIntance())?.length" class="no_info">
             No information found
           </div>
