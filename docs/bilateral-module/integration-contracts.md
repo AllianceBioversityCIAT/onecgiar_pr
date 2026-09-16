@@ -565,8 +565,8 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
     "type_specific": {
       "type": "innovation_development",
       "fields": {
-        "Innovation typology": "Technological",
-        "Readiness level": "Level 6 — Proof of concept",
+        "Innovation typology": "Technological innovation",
+        "Readiness level": "Level 6 — Proven innovation ready for uptake",
         "Innovation developers": null
       }
     }
@@ -635,7 +635,7 @@ Verified against `DAC_PILLAR_CONFIG` (`onecgiar-pr-server/src/api/bilateral/bila
 
 | Result type | `fields` |
 |---|---|
-| Policy change | `"Policy type": string\|null` · `"Policy stage": string\|null` · `"Implementing organizations": string[]` · `"USD amount": { amount: number\|null, status: string\|null }` |
+| Policy change | `"Policy type": string\|null` · `"Policy stage": string\|null` · `"Implementing organizations": string[]` · `"USD amount": { amount: number\|null, status: "Confirmed"\|"Estimated"\|"Unknown"\|null }` |
 | Innovation use | `"User types": string[]` (actor type names; the free-text case is sent as `"Other: <text>"`) · `"Number of people using": { total, women, men, women_youth, men_youth }` · `"Other quantitative measures": [{ unit_of_measure: string, quantity: number\|null }]` · `"Investment (USD)": { total: number\|null }` |
 | Capacity sharing | `"Number of people trained": { total, female, male, non_binary, unknown }` · `"Length of training": "Long-term"\|"Short-term"\|null` · `"Delivery method": string\|null` · `"Implementing organizations": string[]` |
 | Innovation development | `"Innovation typology": string\|null` · `"Readiness level": string\|null` (the `Level N — name` composition) · `"Innovation developers": string\|null` |
@@ -646,12 +646,16 @@ Verified against `DAC_PILLAR_CONFIG` (`onecgiar-pr-server/src/api/bilateral/bila
 
 ```json
 { "type": "policy_change", "fields": {
-  "Policy type": "Regulation",
-  "Policy stage": "Adopted",
+  "Policy type": "Regulation / legal instrument",
+  "Policy stage": "Enacted / adopted",
   "Implementing organizations": ["Ministry of Agriculture"],
-  "USD amount": { "amount": 250000, "status": "Committed" }
+  "USD amount": { "amount": 250000, "status": "Confirmed" }
 } }
 ```
+
+`"Policy type"` and `"Policy stage"` are catalogue labels, sourced verbatim from this spec's own fixture (`fixtures/policy-change.fixture.json:116` `policy_type.name: "Regulation / legal instrument"` and `:168` `policy_type_name`; `:117` `policy_stage.name: "Enacted / adopted"` and `:167` `policy_stage_name`) — not the truncated forms `"Regulation"` / `"Adopted"`.
+
+`"USD amount".status` is the closed set `mapPolicyChangeAmountStatusLabel()` maps from the stored `1`/`2`/`3` (`onecgiar-pr-server/src/api/bilateral/bilateral.service.ts:3481-3487`; the same three options the form offers — `type-policy-change.component.ts:54-56`): `Confirmed` · `Estimated` · `Unknown`, or `null` when the reporter left the field unset.
 
 **Innovation use**
 
@@ -679,11 +683,13 @@ Verified against `DAC_PILLAR_CONFIG` (`onecgiar-pr-server/src/api/bilateral/bila
 
 ```json
 { "type": "innovation_development", "fields": {
-  "Innovation typology": "Technological",
-  "Readiness level": "Level 6 — Proof of concept",
+  "Innovation typology": "Technological innovation",
+  "Readiness level": "Level 6 — Proven innovation ready for uptake",
   "Innovation developers": null
 } }
 ```
+
+`"Innovation typology"` is a catalogue label; `"Technological innovation"` is corroborated three ways — `fixtures/innovation-development.fixture.json:153`, `handlers/innovation-development.handler.spec.ts:10`, `dto/create-bilateral.dto.ts:342`. `"Readiness level"` is the `Level N — name` composition (`mappers/type-specific.mapper.ts:154-158`, reading `row?.level` and `row?.name` off the same `resultTypeResponse` row). The pairing shown here is sourced, not illustrative: `fixtures/innovation-development.fixture.json:157-158` carries `"level": 6` and `"name": "Proven innovation ready for uptake"` on that same row — the prior copy's `"Proof of concept"` was a **eighth invented value**, never present in this fixture. `"Proof of concept"` is a real label, but for a different catalogue and a different id — `onecgiar-pr-client/src/app/custom-fields/pr-range-level/pr-range-level.contract.cy.ts:53` pairs it with `id: 3`, not `6` — so it does not belong in a `Level 6` composition. No broader `clarisa_innovation_readiness_level` seed list (ids 0–N with names) exists in-repo to corroborate level 6 beyond this fixture row, so treat the pairing as fixture-sourced rather than catalogue-confirmed; re-confirm against TEST data at the T-11 HITL pause if the two ever diverge.
 
 **Knowledge product** — unchanged from v0.1's shape; never sent to the AI, so no example is reproduced here.
 
@@ -784,7 +790,7 @@ No response body, API key, or host name is ever surfaced to the user or logged (
 
 **Change log**
 - **2026-09-16** — copied contract v0.1 (request/response shapes, section keys, evidence rules, optional `score`, error/timeout semantics) from the frozen vault note into this section (`BIL-QAI-T-1`).
-- **2026-09-16** — amended to contract **v0.2** (`BIL-QAI-T-1b`): request now carries `contract_version: "0.2"` and an optional top-level `impact_areas` (sibling of `sections`, `{name, score, subcomponents[]}` — plural `subcomponents` — absent/empty ⇒ not applicable, not grey, no penalty); replaced the flat hand-written `type_specific.fields` example with a frozen per-type label table plus typed value objects (count/amount objects, single `Length of training`, `Innovation developers` never substituted) and one JSON example per type; corrected the evidence-tag vocabulary to the closed set Gender · Youth · Nutrition · Environment & biodiversity · Poverty and removed the wrong evidence-tag example that paired Gender with a non-existent Climate tag (GAP-6, no evidence tag for Climate); documented GAP-7 (Innovation use has no non-binary/unknown counts); response now requires `status` (`completed\|partial\|unavailable`) and `degraded_reason`, and `sections.<key>.verdict` widens to include `grey` (excluded from the overall); added the PRMS status-mapping table including `unavailable_reason = ai_unavailable`; dropped the ordering guarantee over the five section keys (never part of the frozen contract, was an advisory only); added the sub-component catalogue table (13 seeded values across the five pillars, from `impact_areas_scores_components`) and replaced the invented `"Women's empowerment"` example value with the real seeded values `["Gender equality", "Youth"]` in both JSON examples (`BIL-QAI-T-1b`).
+- **2026-09-16** — amended to contract **v0.2** (`BIL-QAI-T-1b`): request now carries `contract_version: "0.2"` and an optional top-level `impact_areas` (sibling of `sections`, `{name, score, subcomponents[]}` — plural `subcomponents` — absent/empty ⇒ not applicable, not grey, no penalty); replaced the flat hand-written `type_specific.fields` example with a frozen per-type label table plus typed value objects (count/amount objects, single `Length of training`, `Innovation developers` never substituted) and one JSON example per type; corrected the evidence-tag vocabulary to the closed set Gender · Youth · Nutrition · Environment & biodiversity · Poverty and removed the wrong evidence-tag example that paired Gender with a non-existent Climate tag (GAP-6, no evidence tag for Climate); documented GAP-7 (Innovation use has no non-binary/unknown counts); response now requires `status` (`completed\|partial\|unavailable`) and `degraded_reason`, and `sections.<key>.verdict` widens to include `grey` (excluded from the overall); added the PRMS status-mapping table including `unavailable_reason = ai_unavailable`; dropped the ordering guarantee over the five section keys (never part of the frozen contract, was an advisory only); added the sub-component catalogue table (13 seeded values across the five pillars, from `impact_areas_scores_components`) and replaced the invented `"Women's empowerment"` example value with the real seeded values `["Gender equality", "Youth"]` in both JSON examples; corrected the Policy change example's invented `"USD amount".status` value `"Committed"` to the real `"Confirmed"` and enumerated the closed set `Confirmed`\|`Estimated`\|`Unknown` (`mapPolicyChangeAmountStatusLabel()`, `bilateral.service.ts:3481-3487`); corrected three further truncated/invented catalogue labels found on a second pass — Policy change's `"Policy type": "Regulation"` → `"Regulation / legal instrument"` and `"Policy stage": "Adopted"` → `"Enacted / adopted"` (both sourced to `fixtures/policy-change.fixture.json:116-117,167-168`), and Innovation development's `"Innovation typology": "Technological"` → `"Technological innovation"` in both JSON examples (`fixtures/innovation-development.fixture.json:153`, `handlers/innovation-development.handler.spec.ts:10`, `dto/create-bilateral.dto.ts:342`; the stale `"Technological"` value had already propagated into `bilateral-quality-assessment.client.spec.ts:92`, corrected alongside this doc) — and corrected the Innovation development readiness-level example, `"Level 6 — Proof of concept"` → `"Level 6 — Proven innovation ready for uptake"`, sourced to `fixtures/innovation-development.fixture.json:157-158` (the previous pairing did not appear in this or any other in-repo fixture) (`BIL-QAI-T-1b`).
 
 ## Contract Stability Rules
 

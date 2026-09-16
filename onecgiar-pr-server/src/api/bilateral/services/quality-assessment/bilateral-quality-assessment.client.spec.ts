@@ -89,7 +89,7 @@ function buildPayload(overrides: { title?: string } = {}): QualityPayload {
       ],
       type_specific: {
         type: 'innovation_development',
-        fields: { 'Innovation typology': 'Technological' },
+        fields: { 'Innovation typology': 'Technological innovation' },
       },
     },
   };
