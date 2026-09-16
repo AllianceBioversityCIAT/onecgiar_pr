@@ -127,6 +127,29 @@ describe('BilateralPageHeaderComponent', () => {
     expect(popover.textContent).toContain('Africa Rice Center');
   });
 
+  it('raises the sticky header above page toolbars while the info popover is open', () => {
+    ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.detectChanges();
+
+    const sticky = fixture.nativeElement.querySelector('[data-testid="bilateral-page-header-sticky"]') as HTMLElement;
+    expect(sticky.classList.contains('z-20')).toBe(true);
+    expect(sticky.classList.contains('z-40')).toBe(false);
+
+    const infoButton = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]') as HTMLButtonElement;
+    infoButton.click();
+    fixture.detectChanges();
+
+    expect(sticky.classList.contains('z-40')).toBe(true);
+    expect(sticky.classList.contains('z-20')).toBe(false);
+
+    component.closeInfo();
+    fixture.detectChanges();
+
+    expect(sticky.classList.contains('z-20')).toBe(true);
+    expect(sticky.classList.contains('z-40')).toBe(false);
+  });
+
   it('updates the info popover when the active tab changes', () => {
     ctx.setCenter('AfricaRice', 'Africa Rice Center');
     fixture.componentRef.setInput('activeTab', 'overview');
