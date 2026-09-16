@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { RouterModule } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { environment } from '../../../../../environments/environment';
@@ -9,6 +9,7 @@ import { BilateralContextService } from '../../services/bilateral-context.servic
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { normalizeJob } from '../../bilateral-ai-job.model';
 import { rawJob } from '../../bilateral-ai-job.fixtures';
+import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 
 describe('BilateralPageHeaderComponent', () => {
   let component: BilateralPageHeaderComponent;
@@ -457,20 +458,118 @@ describe('BilateralPageHeaderComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('CGIAR System Organization');
   });
 
-  it('points the Bulk Results Uploader CTA at the external platform, in a new tab', () => {
-    ctx.setCenter('SMO', 'CGIAR System Organization');
-    fixture.componentRef.setInput('activeTab', 'reporting');
-    fixture.detectChanges();
+  /**
+   * @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-7)
+   *
+   * The CTA is a <button> that mints a one-time handoff code, then navigates a tab it opened
+   * *before* the mint (R-12 "order of operations"). jsdom cannot observe a real popup blocker, so
+   * (a) is a call-order proxy — the real blocker behaviour is the T-9 manual/browser check.
+   */
+  describe('Bulk Results Uploader CTA — mint-then-navigate (BIL-HO-T-7)', () => {
+    const HANDOFF_URL = `${environment.apiBaseUrl}api/bilateral/center/handoff`;
 
-    const cta = fixture.debugElement.query(By.css('[data-testid="bilateral-bulk-uploader-cta"]'));
-    expect(cta).toBeTruthy();
-    // Asserted against the configured value rather than a literal: `environment.bulkUploaderUrl`
-    // is supplied per environment by CI, so a hardcoded URL here would be a different bug in
-    // every deployment.
-    expect(cta.nativeElement.getAttribute('href')).toBe(component.bulkUploaderUrl());
-    expect(cta.nativeElement.getAttribute('target')).toBe('_blank');
-    // Without noopener the opened page gets a handle on this one via window.opener.
-    expect(cta.nativeElement.getAttribute('rel')).toContain('noopener');
+    let httpMock: HttpTestingController;
+    let alertService: CustomizedAlertsFeService;
+    let openSpy: jest.SpyInstance;
+    let tabStub: { location: { href: string }; close: jest.Mock; opener: unknown };
+
+    beforeEach(() => {
+      httpMock = TestBed.inject(HttpTestingController);
+      alertService = TestBed.inject(CustomizedAlertsFeService);
+      tabStub = { location: { href: '' }, close: jest.fn(), opener: {} };
+
+      ctx.setCenter('SMO', 'CGIAR System Organization', 'SMO-CODE');
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+    });
+
+    afterEach(() => {
+      // `DataControlService` (upstream, center-overview-tab) issues an eager GET /api/versioning on
+      // construction; drain it so `verify()` only judges the handoff traffic this block is about.
+      httpMock.match(req => req.url.includes('api/versioning')).forEach(req => req.flush({ response: [] }));
+      httpMock.verify();
+      openSpy?.mockRestore();
+    });
+
+    function clickCta(): void {
+      const cta = fixture.debugElement.query(By.css('[data-testid="bilateral-bulk-uploader-cta"]'));
+      cta.nativeElement.click();
+    }
+
+    it('(a) opens the tab before the HTTP request to `start` is issued', () => {
+      const httpClient = TestBed.inject(HttpClient) as unknown as { post: HttpClient['post'] };
+      const postSpy = jest.spyOn(httpClient, 'post');
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+
+      clickCta();
+
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(postSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy.mock.invocationCallOrder[0]).toBeLessThan(postSpy.mock.invocationCallOrder[0]);
+
+      httpMock
+        .expectOne(HANDOFF_URL)
+        .flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=c' } });
+    });
+
+    it('(b) opens with no destination URL and severs the opener link before minting', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+
+      clickCta();
+
+      // No URL/features string is ever passed to `open` — `rel="noopener"` on an <a> would make
+      // `open` return null by spec, so the handle is obtained plain and the opener link severed
+      // by hand (see the docstring on `openBulkUploader`).
+      expect(openSpy).toHaveBeenCalledWith('', '_blank');
+      expect(tabStub.opener).toBeNull();
+
+      httpMock
+        .expectOne(HANDOFF_URL)
+        .flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=c' } });
+    });
+
+    it('(c) navigates the already-open tab to `redirect_url` on success', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+
+      clickCta();
+      expect(component.isMinting()).toBe(true);
+
+      httpMock
+        .expectOne(HANDOFF_URL)
+        .flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=abc' } });
+
+      expect(tabStub.location.href).toBe('https://partner.test/entry/?code=abc');
+      expect(tabStub.close).not.toHaveBeenCalled();
+      expect(component.isMinting()).toBe(false);
+    });
+
+    it('(d) on a 403 closes the tab, shows the error alert, re-enables the CTA, and never navigates', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+      // `.show()` touches the real DOM (`<app-root>`, absent in this component's test host) —
+      // stub it the way it's actually intended to be exercised: recorded, not executed.
+      const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
+
+      clickCta();
+      httpMock
+        .expectOne(HANDOFF_URL)
+        .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+      expect(tabStub.close).toHaveBeenCalledTimes(1);
+      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
+      expect(component.isMinting()).toBe(false);
+      expect(tabStub.location.href).toBe('');
+    });
+
+    it('(e) when the popup is blocked, shows the error alert and issues no HTTP request', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(null);
+      const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
+
+      clickCta();
+
+      httpMock.expectNone(HANDOFF_URL);
+      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
+      expect(component.isMinting()).toBe(false);
+    });
   });
 
   it('leaves the tabs pointing at the current center', () => {

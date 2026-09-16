@@ -26,9 +26,9 @@ describe('OtherFunctionalitiesComponent', () => {
   });
 
   describe('execute', () => {
-    it('should set showMassivePhaseShiftModal to true', () => {
+    it('should set the massive phase shift modal to visible', () => {
       component.execute();
-      expect(component.api.dataControlSE.showMassivePhaseShiftModal).toBe(true);
+      expect(component.massivePhaseShiftModal.visible).toBe(true);
     });
   });
   describe('replicateBannerText', () => {

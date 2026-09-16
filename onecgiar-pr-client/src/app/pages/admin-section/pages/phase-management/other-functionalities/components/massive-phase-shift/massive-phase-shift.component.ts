@@ -10,6 +10,7 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 export class MassivePhaseShiftComponent implements OnInit {
   @Input() replicateIPSR: boolean = false;
   @Input() replicateInnovationUse: boolean = false;
+  visible = false;
   requesting = false;
   numberOfResults = 0;
   numberOfResultsIPSR = 0;
@@ -67,7 +68,7 @@ export class MassivePhaseShiftComponent implements OnInit {
   }
 
   accept() {
-    this.api.dataControlSE.showMassivePhaseShiftModal = false;
+    this.visible = false;
     this.api.dataControlSE.massivePhaseShiftIsRunning = true;
 
     const request$ = this.replicateInnovationUse

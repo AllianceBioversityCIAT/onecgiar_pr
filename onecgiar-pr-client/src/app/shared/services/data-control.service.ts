@@ -100,7 +100,6 @@ export class DataControlService {
   show_qa_full_screen = false;
   showResultHistoryOfChangesModal = false;
   resultPhaseList = [];
-  showMassivePhaseShiftModal = false;
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
   reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null, portfolioId: null };

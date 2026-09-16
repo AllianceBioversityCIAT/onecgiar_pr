@@ -7,6 +7,14 @@ import { map } from 'rxjs';
 
 const PENDING_REDIRECT_KEY = 'pr-pending-redirect-url';
 
+// @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-6)
+/** `design.md` §4.1 — success shape of `POST /api/bilateral/center/handoff`. */
+export interface BilateralHandoffStartResponse {
+  code: string;
+  expires_in: number;
+  redirect_url: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -120,6 +128,15 @@ export class AuthService {
   /** `design.md` §4.1 — success shape matches `/login/custom` (`POST_cognitoAuth`). */
   POST_otpVerify(body: { email: string; code: string; session: string }) {
     return this.http.post<any>(`${this.apiBaseUrl}login/otp/verify`, body);
+  }
+
+  // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-6)
+  /** `design.md` §4.1 — mints a short-lived handoff code for the bulk uploader CTA. */
+  POST_bilateralHandoffStart(body: { center_code: string; audience?: string }) {
+    return this.http.post<{ response: BilateralHandoffStartResponse }>(
+      `${environment.apiBaseUrl}api/bilateral/center/handoff`,
+      body
+    );
   }
 
   GET_allRolesByUser() {

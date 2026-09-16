@@ -35,7 +35,8 @@ describe('PrWordCounterComponent — contract', () => {
   describe('reporting the count', () => {
     it('[contract] states the limit', () => {
       mount({ wordCount: 3, maxWords: 10 });
-      cy.get('.word_counter').should('contain.text', 'Max 10 words');
+      // El limite ya no se enuncia con palabras, se lee en el "/ 10" (propuesta 04, 15-sep-2026).
+      cy.get('.word_counter').should('contain.text', '/ 10');
     });
 
     it('[contract] reports the current count against the limit', () => {
@@ -116,7 +117,7 @@ describe('PrWordCounterComponent — contract', () => {
 
     it('[contract] treats a zero limit as "any word is over"', () => {
       mount({ wordCount: 1, maxWords: 0, autogenerate: false });
-      cy.get('.word_counter').should('contain.text', 'Max 0 words').and('have.class', 'invalid');
+      cy.get('.word_counter').should('contain.text', '/ 0').and('have.class', 'invalid');
     });
   });
 });

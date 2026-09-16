@@ -11,7 +11,7 @@ import { PrWordCounterComponent } from './pr-word-counter.component';
 describe('PrWordCounterComponent (CT)', () => {
   it('shows the current count and the limit', () => {
     mountComponent(PrWordCounterComponent, { componentProperties: { wordCount: 2, maxWords: 10 } });
-    cy.get('.word_counter').should('contain.text', 'Max 10 words');
+    cy.get('.word_counter').should('contain.text', '/ 10');
     cy.get('.limitBreaker').should('contain.text', '2');
   });
 

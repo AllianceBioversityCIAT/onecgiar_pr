@@ -64,7 +64,9 @@ describe('EvidenceItemComponent (zoneless change detection)', () => {
     await fixture.whenStable();
 
     expect(errorMessageEl()).toBeTruthy();
-    expect(errorMessageEl().textContent).toContain('Incorrect format');
+    // El copy cambió el 15-sep-2026 (el mensaje nombra ahora los formatos reales, sacados de
+    // `ACCEPTED_FILE_TYPES`); lo que este caso vigila es que el aviso APARECE y luego se va solo.
+    expect(errorMessageEl().textContent).toContain('cannot be uploaded');
 
     await wait(3100);
 
