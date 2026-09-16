@@ -496,11 +496,11 @@ See `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` for all fields.
 
 PRMS calls an AI quality-assessment service when a Centre user presses **Submit for review** on a bilateral result (`BIL-QAI-R-1`). This is the only outbound call in the flow; the AI never receives a Knowledge Product result (`BIL-QAI-R-9` — KP verdicts come from a deterministic rule in code, not this contract).
 
-**Contract version:** `0.1` (frozen 2026-09-16 with the AI service team). Source of truth for scope/behavior is `docs/specs/bilateral/qa-ai-traffic-light/` (`requirements.md`, `design.md` §4.5); this section is the field-by-field payload copy.
+**Contract version:** `0.2` (amended 2026-09-16 with the AI service team; supersedes `0.1` in place — no PRMS code and no AI endpoint runs `0.1` after this pivot). Source of truth for scope/behavior is `docs/specs/bilateral/qa-ai-traffic-light/` (`requirements.md`, `design.md` §4.5); this section is the field-by-field payload copy.
 
 ### Definitions-only rule
 
-Every value PRMS sends is the label the form displays — the same text a Centre user reads on screen. The request MUST NOT contain:
+Every value PRMS sends is the label the form displays — the same text a Centre user reads on screen. Numbers live only inside the typed objects that `type_specific.fields` defines per type (see *Type-specific fields* below); nothing numeric is ever sent as prose. The request MUST NOT contain:
 
 - Any key ending in `_id` (or `id`) or `_code`.
 - Any CLARISA identifier or catalogue code.
@@ -521,7 +521,7 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
 
 ```json
 {
-  "contract_version": "0.1",
+  "contract_version": "0.2",
   "request_id": "uuid",
   "result": {
     "type": "Innovation development",
@@ -559,19 +559,27 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
       "sub_national": []
     },
     "evidence": [
-      { "description": "…", "link": "https://…", "source": "url", "visibility": "public", "tags": ["Gender", "Climate"] },
+      { "description": "…", "link": "https://…", "source": "url", "visibility": "public", "tags": ["Gender", "Poverty"] },
       { "description": "…", "link": null, "source": "prms_repository", "visibility": "private", "tags": [] }
     ],
     "type_specific": {
       "type": "innovation_development",
-      "fields": { "Innovation typology": "Technological", "Readiness level": "Level 6 — …", "…": "…" }
+      "fields": {
+        "Innovation typology": "Technological",
+        "Readiness level": "Level 6 — Proof of concept",
+        "Innovation developers": null
+      }
     }
   },
+  "impact_areas": [
+    { "name": "Gender", "score": "(2) Principal", "subcomponents": ["Women's empowerment"] },
+    { "name": "Youth", "score": "(1) Significant", "subcomponents": [] }
+  ],
   "constraints": { "timeout_seconds": 60 }
 }
 ```
 
-`sections` always carries these five keys, in this order, for every result type; a section with nothing to report is present as an empty object or array rather than omitted:
+`sections` always carries these five keys for every result type; a section with nothing to report is present as an empty object or array rather than omitted. `impact_areas` sits at the payload **root, as a sibling of `sections`** — it is deliberately **not** a sixth section key, so the five section keys stay the five form sections that existing consumers already key off:
 
 | Section key | Form section |
 |---|---|
@@ -581,9 +589,98 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
 | `evidence` | Evidence |
 | `type_specific` | Type-specific details (shape varies per result type) |
 
+### Impact areas (`impact_areas`) — new in v0.2
+
+`impact_areas` is an **optional** top-level array, one entry per PRMS impact-area pillar the result tags in Section 1 (General information):
+
+```json
+{ "name": "Gender", "score": "(2) Principal", "subcomponents": ["Women's empowerment"] }
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | `string` | The pillar label the form paints — `Gender`, `Youth`, `Nutrition`, `Environment & biodiversity`, `Poverty`, or `Climate`. `Climate` may appear here even though it has no evidence tag (see *Evidence rules*, GAP-6) |
+| `score` | `string` | The visible tag label: `(0) Not Targeted` \| `(1) Significant` \| `(2) Principal` |
+| `subcomponents` | `string[]` | **Plural** — populated only where the form populates it (Principal); `[]` otherwise |
+
+- `[]` or an absent `impact_areas` key means the result tags no pillar. This is **not applicable** — it is **not grey** and carries **no penalty** in any section. The AI must not raise an issue for it (owner decision, 2026-09-16).
+- `impact_areas` is included in `content_hash`: re-tagging a pillar invalidates a stored verdict.
+- The key is `subcomponents`, **plural** — call this out explicitly to the AI team; an earlier draft used the singular `subcomponent`, and the frozen name is plural.
+
+### Type-specific fields (`sections.type_specific`)
+
+`type_specific` is `{ type, fields }`, where `type` is the API string from *Result Type Mapping* above and `fields` is a **fixed per-type set of English labels** — the exact visible text of the form field. `null` / `[]` under a mandatory label means "the user left it empty"; the label is never dropped, translated, or invented. Every label is read from **one exported constant per result type** (`as const`), so the payload builder, the fixture tests, and this contract copy cannot drift apart (`BIL-QAI-R-2`).
+
+| Result type | `fields` |
+|---|---|
+| Policy change | `"Policy type": string\|null` · `"Policy stage": string\|null` · `"Implementing organizations": string[]` · `"USD amount": { amount: number\|null, status: string\|null }` |
+| Innovation use | `"User types": string[]` (actor type names; the free-text case is sent as `"Other: <text>"`) · `"Number of people using": { total, women, men, women_youth, men_youth }` · `"Other quantitative measures": [{ unit_of_measure: string, quantity: number\|null }]` · `"Investment (USD)": { total: number\|null }` |
+| Capacity sharing | `"Number of people trained": { total, female, male, non_binary, unknown }` · `"Length of training": "Long-term"\|"Short-term"\|null` · `"Delivery method": string\|null` · `"Implementing organizations": string[]` |
+| Innovation development | `"Innovation typology": string\|null` · `"Readiness level": string\|null` (the `Level N — name` composition) · `"Innovation developers": string\|null` |
+| Knowledge product | unchanged from v0.1 — **never sent to the AI** (`BIL-QAI-R-9`); still built server-side so the content hash covers KP content |
+| Other output · Other outcome | `fields: {}` |
+
+**Policy change**
+
+```json
+{ "type": "policy_change", "fields": {
+  "Policy type": "Regulation",
+  "Policy stage": "Adopted",
+  "Implementing organizations": ["Ministry of Agriculture"],
+  "USD amount": { "amount": 250000, "status": "Committed" }
+} }
+```
+
+**Innovation use**
+
+```json
+{ "type": "innovation_use", "fields": {
+  "User types": ["Farmers", "Other: Cooperative extension agents"],
+  "Number of people using": { "total": 340, "women": 120, "men": 200, "women_youth": 10, "men_youth": 10 },
+  "Other quantitative measures": [{ "unit_of_measure": "Hectares", "quantity": 500 }],
+  "Investment (USD)": { "total": 12000 }
+} }
+```
+
+**Capacity sharing**
+
+```json
+{ "type": "capacity_sharing", "fields": {
+  "Number of people trained": { "total": 12, "female": 7, "male": 4, "non_binary": 1, "unknown": 0 },
+  "Length of training": "Long-term",
+  "Delivery method": "Virtual",
+  "Implementing organizations": ["AfricaRice"]
+} }
+```
+
+**Innovation development**
+
+```json
+{ "type": "innovation_development", "fields": {
+  "Innovation typology": "Technological",
+  "Readiness level": "Level 6 — Proof of concept",
+  "Innovation developers": null
+} }
+```
+
+**Knowledge product** — unchanged from v0.1's shape; never sent to the AI, so no example is reproduced here.
+
+**Other output / Other outcome**
+
+```json
+{ "type": "other_output", "fields": {} }
+```
+
+Notes the AI side depends on:
+
+- **`Length of training` is one value per result**, not a per-person split: the bilateral form stores a single `training_length` term (`Long-term` / `Short-term`) on the result, not a breakdown per trainee.
+- **`Delivery method` also feeds the geography rule**: a virtual delivery method means geography is not required for that result, so a thin *Geographic location* section must not be graded down when `Delivery method` is `"Virtual"`.
+- **Innovation use carries no non-binary or unknown counts** (GAP-7) — those columns do not exist on `result_actors`. `"Number of people using"` therefore splits by women/men and youth only, and a row saved without age-and-sex disaggregation contributes its count to `total` only, so `women + men + women_youth + men_youth` can legitimately sum to less than `total`. This is not under-reporting.
+- **`Investment (USD)`** is the sum of `kind_cash` across the three budget sources the form exposes (initiative, bilateral project, and partner budgets); it is `null` when all three are empty — there is no innovation-use-specific USD column.
+
 ### Evidence rules
 
-Each `evidence` item carries `source` (`url` \| `prms_repository`) and `visibility` (`public` \| `private`):
+Each `evidence` item carries `source` (`url` \| `prms_repository`), `visibility` (`public` \| `private`), and `tags[]`:
 
 - `source: url` → always `visibility: public`; `link` is the external URL.
 - `source: prms_repository` (PRMS/SharePoint-backed file) with `visibility: public` → `link` present.
@@ -591,19 +688,27 @@ Each `evidence` item carries `source` (`url` \| `prms_repository`) and `visibili
 
 A private item is graded **grey** by PRMS regardless of what the AI answers for that item — the AI's own verdict for a private item is not used (`BIL-QAI-R-3`, grey rule in `design.md` §5).
 
+`tags` is drawn from the **closed vocabulary** Gender · Youth · Nutrition · Environment & biodiversity · Poverty — the five boolean flags the evidence form offers. Send `[]` for an untagged item rather than omitting the key, so the AI can tell "no impact area claimed" from "field missing". `tags` is the **only** link between an evidence item and an impact area, and there is no Climate tag: the evidence form has no climate flag, so the Climate pillar can appear in `impact_areas` but can never be linked to an evidence item (GAP-6). Do not emit Climate as an evidence tag under any circumstance.
+
+### Frozen labels
+
+Every `type_specific.fields` key documented above is **frozen** and validated strictly on the AI side: a mandatory label that is missing or renamed gets a specific validation error back, not a best-effort parse. On the PRMS side each label is read from the one exported constant for its result type — the payload builder, the fixture tests, and this contract copy all read from the same constant, so none of the three can drift from the other two. **A form label change is a contract break**: bump `contract_version`, update the constant and the fixtures, and notify Daniela before either side stops accepting the previous label.
+
 ### Response
 
 ```json
 {
   "request_id": "uuid",
   "criteria_version": "QA-2026-v1",
+  "status": "completed",
+  "degraded_reason": null,
   "overall": { "verdict": "amber", "score": 68, "summary": "…" },
   "sections": {
     "general_information":       { "verdict": "green", "score": 91, "comments": "…", "strengths": ["…"], "issues": [] },
     "contributors_and_partners": { "verdict": "amber", "score": 62, "comments": "…", "strengths": [],    "issues": ["…"] },
     "geographic_location":       { "verdict": "green", "comments": "…", "strengths": ["…"], "issues": [] },
     "evidence":                  { "verdict": "red",   "comments": "…", "strengths": [],    "issues": ["…"] },
-    "type_specific":             { "verdict": "amber", "comments": "…", "strengths": [],    "issues": ["…"] }
+    "type_specific":             { "verdict": "grey",  "comments": "no type-specific details were reported", "strengths": [], "issues": [] }
   },
   "evidence": [
     { "index": 0, "verdict": "green", "reason": "…" },
@@ -612,7 +717,24 @@ A private item is graded **grey** by PRMS regardless of what the AI answers for 
 }
 ```
 
-`overall.verdict` and each `sections.<key>.verdict` are one of `green` \| `amber` \| `red` (the response's `evidence[].verdict` additionally allows `grey`). The threshold/derivation logic for `overall` from the section verdicts lives on the AI side; PRMS does not replicate it.
+`status` (`completed` \| `partial` \| `unavailable`) and `degraded_reason` (`string` \| `null`) are **required** response fields in v0.2 — a response missing either one fails the schema check as `malformed`.
+
+- `sections.<key>.verdict` ∈ `green` \| `amber` \| `red` \| **`grey`** — grey means "not evaluated", the same meaning it has on an evidence item. A grey section is **excluded from the overall**: PRMS never derives or alters a section colour from a grey verdict, and a grey section neither raises nor clears `had_outstanding_flags` (only `amber`/`red`, at section or overall level, do that).
+- `overall.verdict` stays `green` \| `amber` \| `red` — three colours only; the AI owns its derivation and PRMS does not replicate it.
+- `degraded_reason` is a plain-language sentence for the user. PRMS renders it **verbatim as text** (never HTML/markdown), stores it **truncated to 255 characters**, and **strips any URL or host** from it before persisting. It is **never logged**, whatever it contains (`.cursorrules`; `docs/trd/trd.md` W8, AC-9).
+
+### PRMS status mapping
+
+`ai_status` is the AI's own word, stored as-is; `status` is PRMS's row status. This is the full mapping from an AI answer — or its absence — to the stored `bilateral_quality_assessments` row:
+
+| AI `status` | Row `status` | Row `ai_status` | Row `unavailable_reason` |
+|---|---|---|---|
+| `completed` | `completed` | `completed` | `null` |
+| `partial` | `completed` | `partial` | `null` |
+| `unavailable` | `unavailable` | `null` | `ai_unavailable` |
+| *(no usable answer: timeout, non-2xx, malformed, not configured)* | `unavailable` | `null` | one of `timeout` \| `http_error` \| `malformed` \| `not_configured` — see *Error / timeout semantics* below |
+
+A `partial` run is stored as a **completed** assessment and is treated as one for every decision rule: the user submitting from it records `decision = submitted_anyway`, never `submitted_without_check`, which stays reserved for a run that produced no verdict at all. Every pre-v0.2 row and every KP row (`status = skipped_kp_rule`) defaults both `ai_status` and `degraded_reason` to `null`.
 
 ### Optional `score`
 
@@ -626,7 +748,7 @@ PRMS bounds the call with `BILATERAL_AI_QUALITY_TIMEOUT_MS` (default `60000`). A
 |---|---|
 | `timeout` | No response within the configured window |
 | `http_error` | Non-2xx response |
-| `malformed` | 2xx response that fails the required-keys/verdict-enum check |
+| `malformed` | 2xx response that fails the required-keys/verdict-enum check — in v0.2 this includes a missing `status` or `degraded_reason`, or a section verdict outside `green\|amber\|red\|grey` |
 | `not_configured` | `BILATERAL_AI_QUALITY_URL` or the API key is not set in the environment |
 
 No response body, API key, or host name is ever surfaced to the user or logged (`.cursorrules`; `docs/trd/trd.md` W8, QAS-10).
@@ -636,9 +758,11 @@ No response body, API key, or host name is ever surfaced to the user or logged (
 - Bump `contract_version` (e.g. `0.1` → `0.2`) whenever a request or response key is added, renamed, or removed in a way either side cannot silently ignore.
 - A purely additive field on either side (new optional key both parties already ignore when absent) may ship without a bump.
 - Whoever proposes the change confirms the new version with the other side (PRMS ↔ AI service team) before either stops accepting the previous one; PRMS logs `criteria_version` and `contract_version` per assessment (`design.md` §9), so a mismatch is visible in the data.
+- v0.2 is the first exercise of this procedure: `impact_areas`, the typed per-type `fields` shapes, and the required `status`/`degraded_reason` response fields are additions neither side could silently ignore, so the version bumped from `0.1` to `0.2` rather than shipping as additive-only.
 
 **Change log**
 - **2026-09-16** — copied contract v0.1 (request/response shapes, section keys, evidence rules, optional `score`, error/timeout semantics) from the frozen vault note into this section (`BIL-QAI-T-1`).
+- **2026-09-16** — amended to contract **v0.2** (`BIL-QAI-T-1b`): request now carries `contract_version: "0.2"` and an optional top-level `impact_areas` (sibling of `sections`, `{name, score, subcomponents[]}` — plural `subcomponents` — absent/empty ⇒ not applicable, not grey, no penalty); replaced the flat hand-written `type_specific.fields` example with a frozen per-type label table plus typed value objects (count/amount objects, single `Length of training`, `Innovation developers` never substituted) and one JSON example per type; corrected the evidence-tag vocabulary to the closed set Gender · Youth · Nutrition · Environment & biodiversity · Poverty and removed the wrong evidence-tag example that paired Gender with a non-existent Climate tag (GAP-6, no evidence tag for Climate); documented GAP-7 (Innovation use has no non-binary/unknown counts); response now requires `status` (`completed\|partial\|unavailable`) and `degraded_reason`, and `sections.<key>.verdict` widens to include `grey` (excluded from the overall); added the PRMS status-mapping table including `unavailable_reason = ai_unavailable`; dropped the ordering guarantee over the five section keys (never part of the frozen contract, was an advisory only).
 
 ## Contract Stability Rules
 

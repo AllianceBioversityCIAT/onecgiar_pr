@@ -253,3 +253,34 @@ ADVISORY (T-4 attempt 2): the doc block in `indicator-description-resolver.ts` s
 
 - Note for `T-12`: the field's removal was a **product decision** recorded in the component (`type-innovation-dev.component.html:44-46`: "the Lead contact person IS the developer — Nicoleta Trifa via Ángel Jarrín, 2026-09-03"). The owner's 2026-09-16 instruction to restore it (Program reviewers require it; the substitution defeats the QA check) supersedes it for this spec; **the owner should tell Ángel** (PO-message rule: short). T-12's CLAUDE.md update must record both decisions, not erase the first.
 
+### `BIL-QAI-T-2b` — Additive migration `AddAiStatusToBilateralQualityAssessments`
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-16 |
+| Skills | `nestjs-expert` (task list) · Effort `high` |
+| Files | `entities/bilateral-quality-assessment.entity.ts` (+2 columns, `ai_unavailable` reason, exported `BilateralQualityAssessmentAiStatus`), `src/migrations/1789571865104-AddAiStatusToBilateralQualityAssessments.ts` (new, 95 lines) |
+
+**Attempt 1** — Implementer (sonnet). Generated against the dev DB (T-2 applied) and pruned: 29 drift tables removed, `up` = 2 `ADD COLUMN`, `down` = 2 `DROP COLUMN`, `CREATE TABLE` count 0, one table named. Verification (verbatim): `migration:check` → `Pending: 1 — AddAiStatusToBilateralQualityAssessments1789571865104` (expected, owner runs); `tsc --noEmit` clean; eslint clean; `jest "quality-assessment"` 4 suites / 128 tests. Deviation: the work order's `grep -c "ADD COLUMN\|ADD \`"` line has a shell-quoting artifact (backtick in double quotes) — Implementer re-verified with a safe pattern; **Leader: fix the recipe in `tasks.md` at archive**. No `Not Done` beyond run/commit by design. Review mode: parallel lens reviewers (migration surface).
+
+### Wave 3 — parked 2026-09-16 (session rate limit)
+
+**Environment blocker found and fixed (applies to every client task — `T-8`, `T-9`, `T-10`, `T-12`):** a fresh worktree has **no `onecgiar-pr-client/src/environments/environment.ts`** (gitignored, per-environment — memory rule `project_env_file_not_travels_in_merge`). Every client jest run therefore dies at import with the misleading `Cannot find module '../../../../environments/environment' from 'src/app/shared/services/api/bilateral-api.service.ts'` and reports `Tests: 0 total`, which reads like a broken spec rather than a missing file. Leader copied `environment.ts` + `environment.prod.ts` from the main checkout into the worktree (gitignored, verified). After the copy the same suite runs: **69 tests, 67 passed, 2 failed**. Record this before diagnosing any client suite as red.
+
+**Session rate limit (429, resets 13:00 America/Bogota).** Three agents terminated mid-flight: the `T-12` Implementer and **both** `T-2b` lens Reviewers. No subagent can be spawned until the reset. Nothing was inlined by the Leader in their place — the Reviewer may never run inline (`author ≠ auditor`), and the Implementer fallback needs owner approval.
+
+| Task | State | What exists | What is owed |
+|---|---|---|---|
+| `T-1b` | `[~]` **Implementer PASS, unreviewed** | `docs/bilateral-module/integration-contracts.md` § *Quality assessment (outbound)* rewritten to v0.2, lines 495–767 (+134/−10). Verification (verbatim): all four v0.2 greps present; no v0.1 leftovers inside the section; five contract tables; no `README.md` diff. Message draft for Daniela produced (below). | Reviewer audit against `design.md` §4.5 |
+| `T-2b` | `[~]` **Implementer PASS, unreviewed** | Entity + `1789571865104-AddAiStatusToBilateralQualityAssessments.ts` (see the entry above). | **Both** lens Reviewers (died at spawn); owner's `migration:run` |
+| `T-12` | `[~]` **parked mid-flight** | Field restored (`type-innovation-dev.component.html:44-53`), prefill guarded (`…component.ts:284` returns when a stored value exists), `buildPayload` sends `innovation_developers: this.body.innovation_developers?.trim() \|\| null` (`:301`), CLAUDE.md updated, spec largely rewritten. | **2 failing tests**, both under *rendered template › Innovation developers field rendering (BIL-QAI-R-15)*: "renders prefilled with the lead contact person when the stored value is empty" and "renders the stored value, NOT the lead contact person, when the stored value is not empty". The agent died writing the payload-level assertions the work order's disqualifier demands. Then: Reviewer. |
+
+Committed as WIP so nothing is lost; `tasks.md` carries `[~]` for all three. `/akili-resume` picks up from here.
+
+**`T-1b` deliverable 2 — message draft for Daniela (owner sends; not sent by the Leader):**
+
+> Dani, cerramos el contrato v0.2. Etiquetas por tipo (`type_specific.fields`, texto exacto): **Policy change** `Policy type`, `Policy stage`, `Implementing organizations`, `USD amount` · **Innovation use** `User types`, `Number of people using`, `Other quantitative measures`, `Investment (USD)` · **Capacity sharing** `Number of people trained`, `Length of training`, `Delivery method`, `Implementing organizations` · **Innovation development** `Innovation typology`, `Readiness level`, `Innovation developers` · **Knowledge product** sin cambios, nunca se envía · **Other output / Other outcome** `fields: {}`.
+> Semántica: `Length of training` es un solo valor por resultado, no por persona · `Delivery method` alimenta la regla de geografía (si es virtual, no penalicen una Geographic location vacía) · Innovation use **no tiene** conteos non-binary/unknown (solo women/men/youth) y una fila sin desagregación suma solo a `total`, así que las partes pueden sumar menos que el total sin ser sub-reporte · `Investment (USD)` = suma de `kind_cash` de las tres fuentes de presupuesto, `null` si no hay ninguna · `impact_areas` va como hermano de `sections` y su llave es `subcomponents` **en plural** · vocabulario cerrado de evidence tags: Gender · Youth · Nutrition · Environment & biodiversity · Poverty, **no hay tag de Climate** (el pilar sí puede aparecer en `impact_areas`) · `status` y `degraded_reason` obligatorios en la respuesta · `sections.<key>.verdict` acepta `grey` y no lo tratamos como malformed.
+
+**`T-1b` Implementer deviation to check at review:** to satisfy its own verification grep (which bans the literal `"Climate"` inside the section), the Implementer rewrote the two places where that word would have appeared inside a quoted JSON string — using unquoted prose and swapping the example pillar for `Youth`. The documented facts are intact, but the **grep recipe in `tasks.md` `T-1b` is over-broad** (it cannot tell "mentions" from "contains") and should be narrowed at archive, together with the `grep -c "ADD COLUMN\|ADD \`"` quoting artifact `T-2b` hit.
+

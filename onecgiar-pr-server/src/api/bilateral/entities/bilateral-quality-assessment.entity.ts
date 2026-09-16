@@ -42,6 +42,12 @@ import {
  * a JS `Date` — mysql2 serialises a JS `Date` in the connection's local time
  * while `CURRENT_TIMESTAMP` is evaluated by MySQL itself, so a JS default
  * here would drift from every other timestamp on this row.
+ *
+ * `ai_status` and `degraded_reason` were added by contract v0.2
+ * (`@akili-spec bilateral/qa-ai-traffic-light BIL-QAI-T-2b`, `design.md`
+ * §3.1/§4.5) in a second additive migration rather than by editing `T-2`'s —
+ * see `1789566953005-BilateralQualityAssessments.ts` and
+ * `<ts>-AddAiStatusToBilateralQualityAssessments.ts`.
  */
 @Entity('bilateral_quality_assessments')
 @Index('IDX_bilateral_quality_assessments_result_created', [
@@ -82,6 +88,27 @@ export class BilateralQualityAssessment {
 
   @Column({ type: 'varchar', length: 32, nullable: true })
   unavailable_reason: BilateralQualityAssessmentUnavailableReason | null;
+
+  /**
+   * The AI's own `status` verbatim (`design.md` §3.1/§4.5, v0.2): `completed`
+   * or `partial`. `null` for KP rows (`skipped_kp_rule`), for `unavailable`
+   * rows that never got a usable answer, and for every pre-v0.2 row —
+   * `unavailable_reason = 'ai_unavailable'` is what distinguishes an AI
+   * `status: "unavailable"` from a timeout/http_error/malformed/not_configured
+   * no-answer, both of which also leave this column `null`.
+   */
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  ai_status: BilateralQualityAssessmentAiStatus | null;
+
+  /**
+   * The AI's plain-language sentence for a `partial` or `unavailable` run
+   * (`design.md` §4.5). Truncated to 255 on write; the client sanitises
+   * before persisting so this never contains a host, URL or response body
+   * (NFR *Privacy / secrets*, `BIL-QAI-AC-9`). `null` whenever `ai_status`
+   * is `null`.
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  degraded_reason: string | null;
 
   @Column({ type: 'varchar', length: 8, nullable: true })
   overall_verdict: QualityVerdict | null;
@@ -144,7 +171,12 @@ export type BilateralQualityAssessmentUnavailableReason =
   | 'timeout'
   | 'http_error'
   | 'malformed'
-  | 'not_configured';
+  | 'not_configured'
+  /** v0.2 — the AI answered well-formed with `status: "unavailable"`. */
+  | 'ai_unavailable';
+
+/** v0.2 — the AI's own `status` verbatim (`design.md` §3.1/§4.5). */
+export type BilateralQualityAssessmentAiStatus = 'completed' | 'partial';
 
 export type BilateralQualityAssessmentDecision =
   | 'submitted_anyway'
