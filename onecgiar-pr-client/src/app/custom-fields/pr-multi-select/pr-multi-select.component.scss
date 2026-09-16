@@ -49,3 +49,9 @@
   right: 0;
   z-index: 1000;
 }
+
+/* P2-3737: no room below the field (floating bottom bar, window edge) → the panel hangs above it. */
+.custom_select .field .options.options_up {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
