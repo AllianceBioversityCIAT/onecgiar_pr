@@ -752,3 +752,51 @@ lens reviewers had already audited, with the amendment's intent fully specified.
 **Issues encountered:** none.
 
 **Final verification:** `bilateral-ai` 207/207 · `evidences` 47/47 · `tsc` clean · lint clean.
+
+---
+
+## Budget Tripwire (second firing) — all code tasks complete, escalated to the user
+
+Measured on the quiet tree, `d3d58a986..HEAD`, code-only (blank and comment lines excluded):
+
+| | Original §11 | Corrected §11 (after `ADE-T-3`) | **Actual** |
+|---|---|---|---|
+| Implementation | ~170 | ~200 | **256** |
+| Tests | ~130 | ~370 | **708** |
+| **Total** | **~300** | **~570** | **964** |
+| Review rounds | 2 | 4 | **5** (7 reviewer spawns) |
+
+**The Leader's own correction was also too low, and that is the finding.** After `ADE-T-3` the
+Leader projected `ADE-T-4` at ~90 implementation and ~120 test lines. `ADE-T-4` actually produced a
+188-line service and a **383-line** spec — the clause-coverage table has seven rows, each needing an
+independent fixture (two drafts, three documents with the second failing, two separate service
+instances, a never-settling stub, a refusal stub), and fixtures do not amortise across clauses the
+way the projection assumed. The first correction repaired the *original* estimate's blind spot
+(it counted ~130 test lines for a task list that mandates a falsifying input and a Disqualifier per
+task) but reproduced a smaller version of the same error: it still treated clause count as roughly
+linear in line count. It is not — each `AND IT MUST` clause is a distinct world to build.
+
+**What this did and did not cost.** No task was minted, no advisory became work except by explicit
+user decision, no task exceeded its declared file list, and no spec document grew scope. The ratio is
+**2.8 test lines per implementation line**, which is what `requirements.md` §10's defect-class table
+buys: DC-1…DC-4 are the only automated gates this spec has, and they are automated *because* the
+tests carry them. The spend is in the right place; the estimate was never calibrated for it.
+
+**Review rounds: 5 used against 4 corrected.** The overrun is entirely `ADE-T-4` running
+parallel-lens mode (3 concurrent reviewers) plus one re-review after the Risk FAIL. The Leader chose
+that mode; `/akili-execute` §2.3 prescribes it for `xhigh`/security-touching tasks, so it was
+in-policy — but the §11 budget line counts *rounds*, not *reviewer spawns*, and those two numbers
+diverge by design under parallel lenses. **That is a methodology-level gap, not this spec's:** a
+budget expressed in rounds cannot price a mode that multiplies reviewers per round. Recorded for
+kaizen.
+
+**Recommendation for the next spec of this shape** (Standard depth, clause-heavy acceptance
+criteria): estimate tests at **2.5–3× implementation**, and count reviewer *spawns* rather than
+rounds wherever parallel-lens mode is plausible. Not applied to `design.md` §11 here — the work is
+done and a third rewrite of a closed budget teaches nothing; the calibration belongs in the kaizen
+entry `/akili-archive` will write.
+
+**No user decision is being requested on this firing.** All four code tasks are complete, reviewed
+and committed; nothing is pending that a budget decision would change. It is recorded because
+`/akili-execute`'s tripwire says exceeding a budget is information, and suppressing the second
+firing because the first was already handled would be the exact failure the rule exists to prevent.
