@@ -45,7 +45,7 @@
   } @else {
   <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
     <div
-      class="relative flex h-[64px] flex-col justify-center gap-[4px] sm:gap-[6px] px-[16px] sm:px-[32px]"
+      class="relative flex h-[64px] min-[640px]:h-[64px] max-[639px]:h-auto max-[639px]:py-[8px] flex-col justify-center gap-[4px] sm:gap-[6px] px-[16px] sm:px-[32px]"
       [class.border-b-band]="!activeTab()">
       @if (pageTitle(); as title) {
         <nav class="min-w-0" aria-label="Breadcrumb">
@@ -116,6 +116,27 @@
             }
           </div>
         </div>
+
+        <!-- "AI job running" chip (< 640px): renders in the identity block so it stays visible without scrolling (Pivot Option A) -->
+        @if (aiJobChip(); as chip) {
+          <div class="flex min-[640px]:hidden items-center pt-[2px]">
+            <a
+              class="flex h-[24px] shrink-0 items-center gap-[6px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              data-testid="bilateral-ai-job-chip"
+              [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
+              [queryParams]="{ job: chip.jobId }"
+              [attr.aria-label]="chip.ariaLabel">
+              <span
+                class="material-icons-round flex-none animate-pulse text-[14px] leading-none text-[var(--pr-color-primary-300)] motion-reduce:animate-none"
+                aria-hidden="true">
+                auto_awesome
+              </span>
+              <span>AI job running</span>
+              <span aria-hidden="true">·</span>
+              <span class="font-mono tabular-nums">{{ chip.elapsedLabel }}</span>
+            </a>
+          </div>
+        }
       }
 
       <!-- Action area right-aligned: the slot the [+ Report emerging result] CTA used to hold. It now
@@ -208,7 +229,7 @@
              while Overview/Reporting/Results stay left-anchored, mirroring the mockup's spacer. -->
         @if (aiJobChip(); as chip) {
           <a
-            class="ml-auto flex h-[24px] shrink-0 items-center gap-[6px] self-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+            class="ml-auto hidden min-[640px]:flex h-[24px] shrink-0 items-center gap-[6px] self-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
             data-testid="bilateral-ai-job-chip"
             [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
             [queryParams]="{ job: chip.jobId }"

@@ -294,7 +294,7 @@ In-app bell rows (existing notifications page) get a new type rendered with the 
 ### `APF-DD-8` — Chip in the header, driven by the same service signal
 
 - **Context:** the user asked whether they can leave; today nothing tells them a job is alive once they navigate. **Covers: `APF-R-10`, `APF-US-2`.**
-- **Decision:** `bilateral-page-header` renders the chip from `uploadState()` + resume record when `centerAcronym` matches; links to the panel via `?job=`.
+- **Decision:** `bilateral-page-header` renders the chip from `uploadState()` + resume record when `centerAcronym` matches; links to the panel via `?job=`. Placement is dual-slot (Pivot Option A): nav end slot ≥ 640 px (`min-[640px]:`), header identity row < 640 px (`max-[639px]:`) so the chip remains fully visible on mobile without horizontal scrolling.
 - **Alternatives:** a global toast (dismissed and gone); a sidebar indicator (outside the center context).
 
 ### `APF-DD-9` — Expected range from job history, served by the API

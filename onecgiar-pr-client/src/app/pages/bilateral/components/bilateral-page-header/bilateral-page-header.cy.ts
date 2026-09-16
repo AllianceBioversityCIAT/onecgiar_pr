@@ -53,11 +53,11 @@ function horizontalScrollExcess(): Cypress.Chainable<number> {
 }
 
 describe('BilateralPageHeaderComponent — CT layout gate (APF-T-9)', () => {
-  it('the "AI job running" chip renders alongside all four tabs at 375px without overflowing the tab strip (APF-R-10, requirements.md §9 D7)', () => {
+  it('the "AI job running" chip renders fully visible at 375px without horizontal scroll (APF-R-10, requirements.md §9 D7, Pivot Option A)', () => {
     cy.viewport(375, 800);
     mountHeaderWithChip();
 
-    cy.get('[data-testid="bilateral-ai-job-chip"]', { timeout: 10000 }).should('exist').and('contain.text', 'AI job running');
+    cy.get('[data-testid="bilateral-ai-job-chip"]').filter(':visible', { timeout: 10000 }).should('exist').and('contain.text', 'AI job running');
 
     const tabLabels = ['Overview', 'Reporting', 'Results', 'AI Draft Results'];
     cy.get('nav[aria-label="Center sections"] a').then($links => {
@@ -67,28 +67,17 @@ describe('BilateralPageHeaderComponent — CT layout gate (APF-T-9)', () => {
       });
     });
 
-    cy.get('nav[aria-label="Center sections"]').then($nav => {
-      const el = $nav[0];
-      const navOverflow = el.scrollWidth - el.clientWidth;
+    cy.get('[data-testid="bilateral-ai-job-chip"]').filter(':visible').then($chip => {
+      const el = $chip[0];
+      const rect = el.getBoundingClientRect();
       horizontalScrollExcess().then(docOverflow => {
-        // Full geometry report BEFORE the assertion — a failure still leaves the numbers in the
-        // log/CI output (mirrors `bilateral-overview.cy.ts`'s pattern). `cy.log` only reaches the
-        // Cypress runner UI, not headless stdout — the widths are folded into the assertion
-        // message itself so a headless CI run still prints them.
-        cy.get('nav[aria-label="Center sections"] > *').then($children => {
-          const itemWidths = Cypress._.map($children.toArray(), c => ({
-            item: c.getAttribute('data-testid') || c.textContent?.replace(/\s+/g, ' ').trim().slice(0, 24) || c.tagName,
-            width: Math.round(c.getBoundingClientRect().width),
-          }));
-          const geometry =
-            `nav clientWidth=${el.clientWidth}, nav scrollWidth=${el.scrollWidth}, ` +
-            `nav scrollWidth-clientWidth=${navOverflow}, document scrollWidth-clientWidth=${docOverflow}, ` +
-            `item widths=${JSON.stringify(itemWidths)}`;
-          cy.log(geometry);
-          expect(navOverflow, `tab strip nav scrollWidth - clientWidth at 375px (chip must not push it into overflow) — ${geometry}`).to.be.at
-            .most(0);
-          expect(docOverflow, `documentElement scrollWidth - clientWidth at 375px — ${geometry}`).to.be.at.most(0);
-        });
+        const geometry =
+          `chip rect.left=${Math.round(rect.left)}, chip rect.right=${Math.round(rect.right)}, ` +
+          `document scrollWidth-clientWidth=${docOverflow}`;
+        cy.log(geometry);
+        expect(rect.right, `chip right boundary ≤ 375px without scroll — ${geometry}`).to.be.at.most(375);
+        expect(rect.left, `chip left boundary ≥ 0 — ${geometry}`).to.be.at.least(0);
+        expect(docOverflow, `documentElement scrollWidth - clientWidth at 375px — ${geometry}`).to.be.at.most(0);
       });
     });
   });

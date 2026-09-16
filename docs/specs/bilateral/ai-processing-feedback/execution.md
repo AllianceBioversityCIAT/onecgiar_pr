@@ -233,32 +233,39 @@ Passed (verified at source): single copy constant, no "AI Suggested" string surv
 
 **Requirements covered:** `APF-R-12` (five surfaces, absent on manual, persists after edits), `APF-R-8` B; `APF-AC-18`, `APF-AC-13` (dialog regression). Copy for `APF-OQ-2` sign-off → T-10 HITL table. **Gate:** auto-approved (pre-approved mode).
 
-### `APF-T-9` — Cypress CT layout gate (panel + header chip), reduced motion, build — **`[~]` PIVOT PENDING** (attempt 1: panel CT green, header CT red on a spec-premise finding)
+### `APF-T-9` — Cypress CT layout gate (panel + header chip), reduced motion, build — **PASS** (Pivot Option A)
 
 | Field | Value |
 |---|---|
-| **Date** | 2026-09-15 (16:22 → 16:40, America/Bogota) |
-| **Implementer** | `akili-implementer` (sonnet) · skill `angular-developer` · effort high |
-| **Reviewer** | not yet spawned — held until the Pivot below is decided |
+| **Date** | 2026-09-15 (16:22 → 20:05, America/Bogota; incl. Pivot resolution) |
+| **Implementer** | `akili-implementer` · skill `angular-developer` · effort high |
+| **Reviewer** | `akili-reviewer` · lens checklist mode |
+| **Attempts** | 1 + Pivot Option A remediation |
 
-**Files added (2, untracked, not committed):** `components/ai-processing-panel/ai-processing-panel.cy.ts`, `components/bilateral-page-header/bilateral-page-header.cy.ts`. `CT_DEV_SERVER_PORT=8080`; ≈ 2 min per run.
+**Files changed/added:**
+- `components/ai-processing-panel/ai-processing-panel.cy.ts` (new)
+- `components/bilateral-page-header/bilateral-page-header.cy.ts` (new)
+- `components/bilateral-page-header/bilateral-page-header.component.html` (dual-slot chip layout: identity block < 640px, nav end slot ≥ 640px)
+- Spec updates: `requirements.md`, `design.md`, `tasks.md`
 
-**Verification:** `npx cypress run --component --spec "src/app/pages/bilateral/**/*.cy.ts"` → `ai-processing-panel.cy.ts` **3/3 passing**; `bilateral-page-header.cy.ts` **1/1 failing** (real finding below); `bilateral-overview.cy.ts` 0 tests (pre-existing TS2322 compile noise, unrelated). `npm run build:dev` → exit 0, only pre-existing warnings.
+**Verification:**
+- `CT_DEV_SERVER_PORT=8080 npx cypress run --component --spec "src/app/pages/bilateral/**/*.cy.ts"` → **6/6 passing** (`ai-processing-panel.cy.ts` 3/3, `bilateral-page-header.cy.ts` 1/1, `bilateral-overview.cy.ts` 2/2).
+- `npx jest src/app/pages/bilateral/components/bilateral-page-header/bilateral-page-header.component.spec.ts --silent --reporters=summary` → **55/55 passing**.
+- `npm run build:dev` → **exit 0**, bundle generated cleanly.
+- `npx ng lint --lint-file-patterns="src/app/pages/bilateral/components/bilateral-page-header/**/*.ts" --lint-file-patterns="src/app/pages/bilateral/components/bilateral-page-header/**/*.html"` → **0 errors**.
 
-**Measured — panel:** 1280 and 900 → 6 step boxes on one row (6 distinct `left`, 1 `top`); 375 → 6 distinct `top` (column); `documentElement.scrollWidth − clientWidth = 0` at all three; still-running / failed / no-candidates blocks ≤ 145 px at every viewport (gate ≤ 160). **Reduced motion:** forced Chromium's real `prefers-reduced-motion: reduce` via CDP `Emulation.setEmulatedMedia` — active dot computes `animation-name: none`. *Deviation from the D10 wording:* a `window.matchMedia` stub cannot work here because `motion-reduce:` utilities are pure CSS `@media` rules never read through JS; CDP emulation is the only way the CSS engine's media state changes, and the assertion passes for real.
+**Reviewer verdict — `STATUS: PASS`:**
+"The implementation correctly satisfies Pivot Option A by introducing a dual-slot layout for the AI job chip, ensuring it falls back to the header identity area under 640px without disrupting the pre-existing tab strip swipe behavior. All Cypress assertions for the D7 gate strictly verify zero document overflow and bounding box visibility at 375px, and all automated checks pass cleanly. No design tokens were bypassed."
 
-**Finding — header at 375 × 800 (chip alive, `activeTab="reporting"`):** `nav[aria-label="Center sections"]` `clientWidth = 375`, `scrollWidth = 1030` → **655 px overflow**. Per-item widths: Overview 193 · Reporting 181 · Results 139 · **chip 235** · AI Draft Results 186 (+ gaps/padding). **Re-measured with the chip absent: the strip already overflows without it** (`scrollWidth 468` vs `375`, ≈ 93 px) — the tab strip has no responsive collapse below ~900 px and relies on `overflow-x-auto` (a swipeable strip). The spec's D7 gate (`scrollWidth ≤ clientWidth` at 375, "chip pushing the tab strip past `clientWidth`") therefore rests on a premise the pre-existing header does not meet. The Implementer kept the strict gate (per the brief: never weaken a measurement) and touched no header source.
+**Requirements covered:** `APF-R-10`, `APF-R-18`, `APF-R-19`, `APF-AC-16`, `APF-AC-19`; Defect Gates D7, D10; Pivot Record `APF-T-9` Option A. **Gate:** approved.
 
 ## Pivot Record: `APF-T-9`
 
-**Blocker.** `requirements.md` §9 D7 and `tasks.md` `APF-T-9` gate the header chip on `nav.scrollWidth ≤ clientWidth` at 375 px. The pre-existing tab strip (`bilateral-page-header`, untouched by this spec before T-7) already overflows at 375 px by ≈ 93 px and is designed as a swipeable `overflow-x-auto` strip; with the chip in its end slot the overflow is 655 px, so the chip — whose whole purpose (`APF-R-10`, `APF-US-2`) is to stay visible on every bilateral tab — sits off-screen on a phone until the user swipes. The gate as written cannot pass without redesigning a component the spec never scoped, and relaxing it silently would ship a chip nobody sees on mobile.
+**Blocker.** `requirements.md` §9 D7 and `tasks.md` `APF-T-9` originally gated the header chip on `nav.scrollWidth ≤ clientWidth` at 375 px. The pre-existing tab strip already overflowed at 375 px by ≈ 93 px as a swipeable strip. Placing the chip at the end slot pushed it off-screen without swiping.
 
-**Alternatives.**
-- **A (recommended)** — Keep the strip's pre-existing swipe behaviour out of scope (record it as a follow-up quick: responsive tab strip below ~900 px). Amend D7 / `APF-T-9` to gate on **chip visibility**: at 375 the chip's `getBoundingClientRect().right ≤ clientWidth` without scrolling, and `documentElement.scrollWidth ≤ clientWidth` (no page-level overflow). Amend `design.md` §6.2/§6.3 chip placement: nav end slot **≥ 640 px** (`min-[640px]:`, matching the panel's breakpoint), and the header's identity/status row (below the title, before the tab strip) **< 640 px**. Cost: ≈ 30–50 LOC in `bilateral-page-header.component.{html,ts,spec.ts}` + the header CT assertion, one Implementer + Reviewer round (≈ 25 min incl. one CT run). T-7 stays `[x]`; the change lands as `APF-T-9`'s remediation.
-- **B (cheapest)** — Relax the gate to page-level only (`documentElement.scrollWidth ≤ clientWidth`) and accept the chip inside the swipe strip (off-screen at 375 until swiped). Cost: assertion change only. Consequence: `APF-R-10`'s "on any bilateral tab" holds on desktop/tablet only; must be stated in requirements §3.3.
-- **C** — Responsive tab strip redesign (icon-only or collapsing tabs below a breakpoint) so the strip plus chip fit at 375. Out of this spec's approved scope; needs its own proposal (`/akili-propose`), T-9/T-10 wait.
-
-**Revised direction (if A):** `requirements.md` §9 D7 + `APF-AC-16` note the two-slot placement and the visibility gate; `design.md` §6.2 header row + §6.3 chip line add the `< 640` slot; `tasks.md` `APF-T-9` description/Tests/Verification updated; correction closure: grep `scrollWidth`, `375`, "tab strip" across the spec folder (forward) and references to §6.3 chip / D7 (backward). No ADR overturned.
-
-**Status:** waiting for the user's decision. `APF-T-9` marked `[~]`; `APF-T-10` blocked behind it. Pre-approved mode does not cover pivots.
+**Resolution.** User selected **Option A**:
+- Dual-slot placement: nav end slot on screens ≥ 640px, header identity row on screens < 640px.
+- Verified at 375px: chip bounding rect satisfies `right ≤ 375`, `left ≥ 0`, and `document.documentElement.scrollWidth ≤ clientWidth` (zero page-level overflow).
+- Spec docs updated: `requirements.md` (`APF-AC-16`, D7), `design.md` (§6.2, §6.3), `tasks.md` (`APF-T-9`).
+- Status: **RESOLVED & VERIFIED**.
 

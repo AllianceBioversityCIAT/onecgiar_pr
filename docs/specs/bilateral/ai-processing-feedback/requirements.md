@@ -325,7 +325,7 @@ Every AI-originated artefact SHALL carry a notice: "Generated with AI assistance
 | `APF-AC-13` | terminal while elsewhere | render | dialog only | R-8 B |
 | `APF-AC-14` | each `error_code` | failed render | plain-words cause + action; no raw server text | R-8 C |
 | `APF-AC-15` | `FAILED` job | Try again | retry endpoint called, same id, panel back to queued; disabled while alive; 410 → upload form | R-9 |
-| `APF-AC-16` | job alive | any bilateral tab | header chip with elapsed time, links to the panel; gone at terminal; not for other centers | R-10 |
+| `APF-AC-16` | job alive | any bilateral tab | header chip with elapsed time, links to the panel; dual-slot placement: nav end slot ≥ 640 px, header identity row < 640 px to remain visible without scroll; gone at terminal; not for other centers | R-10 |
 | `APF-AC-17` | set-up step | render | "coming soon" collapsed behind a disclosure; SP selection and cards unchanged | R-11 |
 | `APF-AC-18` | AI draft / AI result / manual result | render surfaces | notice present on all five AI surfaces; absent on manual; present after edits | R-12 |
 | `APF-AC-19` | new / changed templates | grep | 0 hex / `pi pi-` / `rgba(`; no named+arbitrary breakpoint mix; **every `var(--pr-…)` name resolves in `onecgiar-pr-client/src/styles/colors.scss`, zero misses** | NFR |
@@ -336,23 +336,22 @@ Cross-cutting project ACs that apply without restating: `AC-3` (authorization), 
 
 ---
 
-## 9. Defect Classes → Gates
+## 9. Defect Taxonomy & Quality Gates
 
-| # | Defect class | Gate | Input that would make the gate fail | Blind spot / substitute |
+| ID | Failure mode / defect class | Prevention / verification gate (DoD) | Falsifying input | What this gate CANNOT prove |
 |---|---|---|---|---|
-| D1 | Wrong lifecycle transition (double flip, FAILED bounce, sweeper on a live job) | Server Jest on `processJob` / sweeper with a repository mock asserting conditional `UPDATE … WHERE status` and call counts | a sweeper fixture with `started_date` inside the window flipping to `TIMED_OUT` | race under two API instances is not unit-testable → **HITL on prtest with two instances is not available**; accepted risk, mitigated by conditional updates |
-| D2 | Client-declared failure / false timeout | Client Jest with fake timers advancing 30 min while the mock server keeps `PROCESSING` | any `status: 'failed'` set without a server terminal state | — |
+| D1 | Double-tick / multi-instance sweeper races | Single-instance lock query (`FOR UPDATE SKIP LOCKED` / atomic flag) in the sweeper task; concurrency test | two sweepers running against the same 5-min window | distributed clock skew across containers |
+| D2 | Premature terminal transition | Conditional update: `UPDATE … WHERE id = :id AND status IN (PENDING, PROCESSING)`; 0 rows affected → bounce | concurrent worker writing FAILED while mining succeeds | RabbitMQ redelivery reordering |
 | D3 | Double surface (panel + dialog) | Client Jest on the **`panelVisible` signal**, not the router: `panelVisible` true → the panel renders the outcome inline and `completionNotice` stays unset; `panelVisible` false → `completionNotice` is set and no inline outcome exists | a terminal state that sets `completionNotice` while `panelVisible` is true | a router-only test proves nothing — the design decides by `panelVisible` (`APF-DD-7`), and the drawer host can show the panel on any URL |
 | D4 | Dishonest copy (percentage, wrong stage, invented range) | Jest snapshot-free DOM assertions per stage; range test with 4 vs 5 samples | a `%` string in the panel; a range with 4 samples | wording judgement (does "estimated" read honestly) → human check at the HITL pause |
 | D5 | Notification duplication or silence | Server Jest: each terminal state → exactly one `createNotification` + `sendEmail` call (or none under 2 min); late completion → second "after all" | two mail calls for one terminal state | mail delivery itself → HITL: one real mail received |
 | D6 | Payload-shape drift (string dates/ids, `retrying` as `0/1`) | Client fixtures built from a **captured real `getJob` response** (`KZ-…-center-strip-and-phase-1`); `Number()`/`Boolean()` normalization tests | fixture with `attempts: "2"` and `retrying: 1` | — |
-| D7 | Layout / responsive (stepper wraps, chip overflows header at 375) | Cypress CT for the panel at 1280 / 900 / 375 and the header with the chip at 375; `scrollWidth ≤ clientWidth` | chip `min-w` pushing the tab strip into overflow | measured on the real scroller |
+| D7 | Layout / responsive (stepper wraps, chip visibility on mobile at 375) | Cypress CT for the panel at 1280 / 900 / 375 and the header with the chip at 375: chip rendered in nav end slot ≥ 640 px and in header identity row < 640 px; chip fully visible without scrolling (`getBoundingClientRect().right ≤ clientWidth`) and `documentElement.scrollWidth ≤ clientWidth` | chip pushed off-screen or causing page-level overflow | measured on chip geometry and document scroller |
 | D8 | Hard-rule drift (hex, PrimeIcons, rgba, breakpoint mix, **undefined design token**) | grep gates in DoD (`APF-AC-19`), including the token-existence gate: extract `var\(--pr-[a-z0-9-]+\)` from new/changed templates and `grep` each name in `onecgiar-pr-client/src/styles/colors.scss` | one `rgba(` in a template; **`--pr-status-rejected-fg`** — a well-formed `var()` naming a token that does not exist (only `--pr-danger` / `--pr-danger-soft` / `--pr-danger-bg` do), which the hex/icon/rgba gates pass and the browser renders as an unset colour | — |
 | D9 | Contract doc drift | Reviewer checks `bilateral-result-summaries.en.md` change log against the DTO diff | new field with no log line | — |
 | D10 | a11y (aria-live, names, reduced motion) | Jest DOM assertions for `aria-live` region text changes on stage change and for the chip name containing the time. **Reduced motion moves to Cypress CT**: stub `matchMedia` for `prefers-reduced-motion: reduce` in `onBeforeLoad`, mount the panel and the chip, assert no animation class and a computed `animation-name: none` | a pulsing active step dot under `prefers-reduced-motion: reduce`; chip as `<div (click)>` | jsdom evaluates no media query, so a `motion-reduce` class assertion there measures nothing — that row is deleted, not kept as weak evidence. Focus visibility / contrast → HITL by eye (recorded as not measured) |
 | D11 | Live behaviour (queue position under concurrency, mail, notification row, chip across tabs) | **HITL on prtest**: two jobs started 30 s apart from two accounts; screenshots per state | position never > 0 | the only proof of C1; inconclusive if the consumer is not running on prtest — check first |
 
-**Accepted risk:** multi-instance sweeper races (D1) and copy tone (D4) have no automated gate; both are named at the HITL pause.
 
 ---
 

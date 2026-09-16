@@ -189,21 +189,21 @@
 ### `APF-T-9` — Cypress CT layout gate (panel + header chip), reduced motion, build
 
 - **Type:** `tests`
-- **Description:** `ai-processing-panel.cy.ts`: mount with fixtures at 1280×800, 900×800, 375×800 — stepper horizontal ≥ 640 (six step boxes share one row: distinct `left`, equal `top`) and vertical at 375 (distinct `top`), `document.documentElement.scrollWidth ≤ clientWidth`, outcome blocks (`still running`, `failed`, `no candidates`) `getBoundingClientRect().height ≤ 160`, reduced motion: stub `matchMedia('(prefers-reduced-motion: reduce)')` in `onBeforeLoad` and assert the active dot has `animation-name: none`. `bilateral-page-header.cy.ts` (or extend the existing header CT if one exists): chip present at 375 with the four tabs → no horizontal overflow of the tab strip. `npm run build:dev` once.
-- **Implements:** `APF-R-19`-class layout properties of the panel (design §6.3 responsive), `APF-R-18` reduced motion (D10 substitute), `APF-R-10` AND keyboard/name at 375; `APF-AC-19` partial; requirements §9 D7, D10
-- **Design refs:** §6.3, §10 CT row
-- **Files (expected):** `pages/bilateral/components/ai-processing-panel/ai-processing-panel.cy.ts`, `components/bilateral-page-header/bilateral-page-header.cy.ts` (new or extended)
+- **Description:** `ai-processing-panel.cy.ts`: mount with fixtures at 1280×800, 900×800, 375×800 — stepper horizontal ≥ 640 (six step boxes share one row: distinct `left`, equal `top`) and vertical at 375 (distinct `top`), `document.documentElement.scrollWidth ≤ clientWidth`, outcome blocks (`still running`, `failed`, `no candidates`) `getBoundingClientRect().height ≤ 160`, reduced motion: stub `matchMedia('(prefers-reduced-motion: reduce)')` in `onBeforeLoad` and assert the active dot has `animation-name: none`. `bilateral-page-header.cy.ts`: chip dual-slot placement per Pivot Option A — nav end slot ≥ 640 px, header identity row < 640 px; chip fully visible without scrolling at 375 (`getBoundingClientRect().right ≤ clientWidth`) and document has no horizontal overflow (`documentElement.scrollWidth ≤ clientWidth`). `npm run build:dev` once.
+- **Implements:** `APF-R-19`-class layout properties of the panel (design §6.3 responsive), `APF-R-18` reduced motion (D10 substitute), `APF-R-10` AND keyboard/name at 375; `APF-AC-19` partial; requirements §9 D7, D10; Pivot Record `APF-T-9` Option A
+- **Design refs:** §6.2, §6.3, §10 CT row, Pivot Option A
+- **Files (expected):** `pages/bilateral/components/ai-processing-panel/ai-processing-panel.cy.ts`, `components/bilateral-page-header/bilateral-page-header.cy.ts`, `components/bilateral-page-header/bilateral-page-header.component.html`
 - **Depends on:** `APF-T-6`, `APF-T-7` · **Blocks:** `APF-T-10`
 - **Estimate:** M (two CT runs ≈ 2 × 2 min — say so in the progress line)
 - **Skills:** `angular-developer`
 - **Tests (CT):** as described; measure on the real elements, never on an `overflow-hidden` ancestor (`KZ-EVM-1`); wait for fonts/ResizeObserver with a bounded poll on `scrollWidth` stability, not a fixed `cy.wait`.
-- **Verification:** `cd onecgiar-pr-client && CT_DEV_SERVER_PORT=<free port> npx cypress run --component --spec "src/app/pages/bilateral/**/*.cy.ts" && npm run build:dev`
-- **Input that would make the check fail:** a step box with `min-w-[180px]` (six boxes overflow 900 px); the chip pushing the tab strip past `clientWidth` at 375; a pulse keyframe not disabled under the stubbed media query.
+- **Verification:** `cd onecgiar-pr-client && CT_DEV_SERVER_PORT=8080 npx cypress run --component --spec "src/app/pages/bilateral/**/*.cy.ts" && npm run build:dev`
+- **Input that would make the check fail:** a step box with `min-w-[180px]` (six boxes overflow 900 px); the chip rendered off-screen at 375 px; a pulse keyframe not disabled under the stubbed media query.
 - **What this cannot prove / disqualifier:** CT proves layout with fixtures, not data — reconciliation is `APF-T-10`; a CT run whose dev server compiled with the primeicons noise but reported a failing spec is a real failure (memory: judge by spec results). The `build:dev` proves AOT of the new components only if they are reachable from a route (they are, via the upload step).
-- **Status:** `[~]` PIVOT PENDING — 2026-09-15: panel CT 3/3 green and `build:dev` green; header CT red because the pre-existing tab strip already overflows at 375 px without the chip (see `execution.md` → Pivot Record `APF-T-9`; user decision required)
+- **Status:** `[x]` (Pivot Option A implemented and verified green)
 - **Definition of done:**
-  - [ ] CT green at all viewports; `build:dev` green.
-  - [ ] Commit: `✅ test(bilateral-ai) [<ticket>]: CT layout gate for the processing panel and header chip`.
+  - [x] CT green at all viewports; `build:dev` green.
+  - [x] Commit: `✅ test(bilateral-ai) [<ticket>]: CT layout gate for the processing panel and header chip`.
 
 ### `APF-T-10` — Live HITL on prtest, folder guide, evidence and archive items
 
