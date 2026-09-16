@@ -512,6 +512,15 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly fundingChipUnknown =
     `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-border)] bg-[var(--pr-surface-app)] text-[var(--pr-text-muted)]`;
 
+  readonly emergingChipClass = this.fundingChipUnknown;
+
+  /** P25 reporting phases are the only scope for the emerging-result label. */
+  isEmerging(result: CurrentResult): boolean {
+    const year = Number(result?.phase_year ?? result?.reported_year);
+    const portfolio = String(result?.acronym ?? result?.portfolio ?? result?.phase_name ?? '');
+    return Number(result?.planned_result) === 0 && /\bP25\b/i.test(portfolio) && year >= 2025 && year <= 2030;
+  }
+
   fundingChipClass(result: CurrentResult): string {
     const label = this.fundingLabel(result);
     if (label === 'Bilateral') return this.fundingChipBilateral;

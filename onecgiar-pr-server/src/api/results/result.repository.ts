@@ -742,6 +742,16 @@ WHERE
             WHERE rido.result_id = r.id
               AND rido.is_active = TRUE
         ) AS has_discontinued_options,
+        CASE
+          WHEN cp.acronym = 'P25' AND v.phase_year BETWEEN 2025 AND 2030 THEN (
+            SELECT MAX(rtr.planned_result)
+            FROM results_toc_result rtr
+            WHERE rtr.results_id = r.id
+              AND rtr.initiative_id = rbi.inititiative_id
+              AND rtr.is_active = 1
+          )
+          ELSE NULL
+        END AS planned_result,
         ci2.acronym as lead_center
     FROM
         result r
