@@ -587,7 +587,7 @@ $phase-color-border:  #cbd5e1;
 }
 
 .rc-th-action {
-  width: 90px !important;
+  width: 56px !important;
 }
 
 // Status chips — same palette as Results Center, keyed by ResultStatusData ids (1-7).
@@ -602,13 +602,13 @@ $phase-color-border:  #cbd5e1;
   line-height: 1.2;
 }
 
-.status_1 { color: #6b7280; background: #f3f4f6; } // Editing
-.status_2 { color: #0e7490; background: #cffafe; } // Quality Assessed
-.status_3 { color: #1d4ed8; background: #dbeafe; } // Submitted
-.status_4 { color: #6b7280; background: #f3f4f6; } // Discontinued
-.status_5 { color: #b45309; background: #fef3c7; } // Pending review
-.status_6 { color: #047857; background: #d1fae5; } // Approved
-.status_7 { color: #b91c1c; background: #fee2e2; } // Rejected
+.status_1 { color: var(--pr-status-in-progress-fg); background: var(--pr-status-in-progress-bg); } // Editing
+.status_2 { color: var(--pr-status-in-qa-fg); background: var(--pr-status-in-qa-bg); } // Quality Assessed
+.status_3 { color: var(--pr-status-submitted-fg); background: var(--pr-status-submitted-bg); } // Submitted
+.status_4 { color: var(--pr-status-not-started-fg); background: var(--pr-status-not-started-bg); } // Discontinued
+.status_5 { color: var(--pr-status-not-started-fg); background: var(--pr-status-not-started-bg); } // Pending review
+.status_6 { color: var(--pr-status-approved-fg); background: var(--pr-status-approved-bg); } // Approved
+.status_7 { color: var(--pr-status-rejected-fg); background: var(--pr-status-rejected-bg); } // Rejected
 
 // ─── Source / role / AI badges (bilateral-only concepts) ──────────────────────
 
@@ -676,92 +676,10 @@ $phase-color-border:  #cbd5e1;
 // ─── Actions column ───────────────────────────────────────────────────────────
 
 .rc-td--action {
+  width: 56px !important;
   text-align: right;
-}
-
-.brl_actions {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.brl_actions_confirm {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  justify-content: flex-end;
-  white-space: nowrap;
-}
-
-.brl_actions_confirm_text {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--pr-color-red-300);
-}
-
-.brl_action_btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.12s ease;
-
-  &:focus-visible {
-    outline: 2px solid var(--pr-color-primary-300);
-    outline-offset: 2px;
-  }
-
-  &--edit {
-    background: #f0f4ff;
-    color: var(--pr-color-primary-300);
-    border-color: #dde5ff;
-    font-size: 11px;
-
-    &:hover { background: #dde5ff; }
-  }
-
-  &--delete {
-    background: #fef2f2;
-    color: var(--pr-color-red-300);
-    border-color: #fecaca;
-    font-size: 11px;
-
-    &:hover { background: #fecaca; }
-  }
-
-  &--danger {
-    width: auto;
-    height: 22px;
-    padding: 0 8px;
-    font-size: 10px;
-    font-weight: 700;
-    background: var(--pr-color-red-300);
-    color: #fff;
-    border-color: var(--pr-color-red-300);
-
-    &:hover:not(:disabled) { filter: brightness(0.9); }
-
-    &:disabled { opacity: 0.5; cursor: not-allowed; }
-  }
-
-  &--ghost {
-    width: auto;
-    height: 22px;
-    padding: 0 8px;
-    font-size: 10px;
-    font-weight: 600;
-    background: transparent;
-    color: var(--pr-color-accents-5);
-    border-color: var(--pr-color-accents-2);
-
-    &:hover { background: var(--pr-color-accents-1); }
-  }
+  overflow: visible;
+  padding-right: 12px;
 }
 
 /* P2-3157 — rejection justification affordance + notification deep-link focus.
@@ -863,11 +781,3 @@ $phase-color-border:  #cbd5e1;
   }
 }
 
-// "Update result" (P2-3229 from the centre's own list): same neutral-violet treatment as Edit.
-.brl_action_btn--update {
-  background: #f0f4ff;
-  color: var(--pr-color-primary-300);
-  border-color: #dde5ff;
-
-  &:hover { background: #dde5ff; }
-}

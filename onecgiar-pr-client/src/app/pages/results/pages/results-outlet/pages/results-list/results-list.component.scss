@@ -770,40 +770,34 @@
   line-height: 1.2;
 }
 
-// Editing / Not started
+// Status chips — fixed fg/bg pairs from `styles/colors.scss` via `result-status-tokens.ts`.
 .status_tag.status_1 {
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-in-progress-fg) !important;
+  background: var(--pr-status-in-progress-bg) !important;
 }
-// Quality Assessed / In QA-ish
 .status_tag.status_2 {
-  color: #0e7490 !important;
-  background: #cffafe !important;
+  color: var(--pr-status-in-qa-fg) !important;
+  background: var(--pr-status-in-qa-bg) !important;
 }
-// Submitted
 .status_tag.status_3 {
-  color: #1d4ed8 !important;
-  background: #dbeafe !important;
+  color: var(--pr-status-submitted-fg) !important;
+  background: var(--pr-status-submitted-bg) !important;
 }
-// Discontinued
 .status_tag.status_4 {
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
-// Pending review / In progress
 .status_tag.status_5 {
-  color: #b45309 !important;
-  background: #fef3c7 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
-// Approved
 .status_tag.status_6 {
-  color: #047857 !important;
-  background: #d1fae5 !important;
+  color: var(--pr-status-approved-fg) !important;
+  background: var(--pr-status-approved-bg) !important;
 }
-// Rejected
 .status_tag.status_7 {
-  color: #b91c1c !important;
-  background: #fee2e2 !important;
+  color: var(--pr-status-rejected-fg) !important;
+  background: var(--pr-status-rejected-bg) !important;
 }
 
 .in-qa-tag {
@@ -878,44 +872,44 @@
 
 .status_1 {
   border-color: transparent !important;
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-in-progress-fg) !important;
+  background: var(--pr-status-in-progress-bg) !important;
 }
 
 .status_2 {
   border-color: transparent !important;
-  color: #0e7490 !important;
-  background: #cffafe !important;
+  color: var(--pr-status-in-qa-fg) !important;
+  background: var(--pr-status-in-qa-bg) !important;
 }
 
 .status_3 {
   border-color: transparent !important;
-  color: #1d4ed8 !important;
-  background: #dbeafe !important;
+  color: var(--pr-status-submitted-fg) !important;
+  background: var(--pr-status-submitted-bg) !important;
 }
 
 .status_4 {
   border-color: transparent !important;
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
 
 .status_5 {
   border-color: transparent !important;
-  color: #b45309 !important;
-  background: #fef3c7 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
 
 .status_6 {
   border-color: transparent !important;
-  color: #047857 !important;
-  background: #d1fae5 !important;
+  color: var(--pr-status-approved-fg) !important;
+  background: var(--pr-status-approved-bg) !important;
 }
 
 .status_7 {
   border-color: transparent !important;
-  color: #b91c1c !important;
-  background: #fee2e2 !important;
+  color: var(--pr-status-rejected-fg) !important;
+  background: var(--pr-status-rejected-bg) !important;
 }
 
 .status_6 {

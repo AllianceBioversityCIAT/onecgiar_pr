@@ -74,6 +74,7 @@ import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
+import { resultStatusBg, resultStatusFg } from '../../../../shared/constants/result-status-tokens';
 
 /**
  * Router commands + query params for one result. Same shape as
@@ -156,18 +157,6 @@ export function writeStoredColumnWidths(widths: Record<string, number>): void {
     // Ignore storage quota / private browsing errors
   }
 }
-
-/**
- * `status_id` → the `--pr-status-*` fg/bg token PAIRS. Copied verbatim from
- * `result-detail/components/result-header/result-header.component.ts:17` so the Results tab paints
- * a status exactly like the result page does. UI-RULES rule 9: never recombine a pair, never
- * invent a sixth colour.
- */
-const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
-  1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
-  2: { fg: 'var(--pr-status-approved-fg)', bg: 'var(--pr-status-approved-bg)' },
-  3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
-};
 
 // @akili-spec changes/results-aow-column-filter (RAC-T-3)
 /** The three fixed, program-level bucket keys, in the design's display order. */
@@ -1232,11 +1221,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
   }
 
   statusFg(statusId: number | null): string {
-    return STATUS_TOKENS[String(statusId)]?.fg ?? 'var(--pr-status-not-started-fg)';
+    return resultStatusFg(statusId);
   }
 
   statusBg(statusId: number | null): string {
-    return STATUS_TOKENS[String(statusId)]?.bg ?? 'var(--pr-status-not-started-bg)';
+    return resultStatusBg(statusId);
   }
 
   // ── Columns picker ──────────────────────────────────────────────────────────────────────
