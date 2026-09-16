@@ -145,7 +145,7 @@
 
 ---
 
-### `UG-T-11` — Build `template/guide.html` + `guide.css` — IN PROGRESS (`[~]`)
+### `UG-T-11` — Build `template/guide.html` + `guide.css` — PASS (attempt 2)
 
 - **Attempt 1 (2026-09-15):** Implementer `akili-implementer` (sonnet), skill `frontend-design`, effort medium. Files: `tooling/template/guide.html` (199 L), `tooling/template/guide.css` (355 L). Implementer evidence: grep shows no literal colour/font in `guide.css`; dummy render in headless system Chrome — no leftover `{{...}}`, 7 TOC anchors resolve, 6 `<h2>` in order, intro contrast 17.33:1, cover "Built 2026-09-15", `page.pdf` Letter → 23 pages. Placeholder contract: `{{TOKENS_CSS}}`, `{{BUILD_DATE}}`, `{{INTRO}}`, `{{SECTIONS}}`, `{{GLOSSARY}}`; section ids `section-landing … section-innovation-packages`.
 - **Leader check before review:** opened the Implementer's own dummy-render PDF — contract prose printed above the cover title, pages 2–3 full-bleed dark chrome, uppercase/italic body text. Root cause located in `guide.html`: nested `<!-- 01 -->`…`<!-- 06 -->` markers inside the header comment (L45–50) close it early. Evidence forwarded to the Reviewer.
@@ -154,7 +154,11 @@
   2. **Discovered Issue:** `--ug-color-ink: #1a1a1f` and `--ug-color-ink-muted: #53535f` (guide.html L92–93) are invented hex for the body ink while the live token `--pr-color-secondary-400` ("neutral ink" in `colors.scss` L43) is already in `TokensJson`. **Violated Rule:** `requirements.md` `UG-R-4`; `design.md` `UG-DD-2`, §6.3. **Remediation:** `--ug-color-ink: var(--pr-color-secondary-400); --ug-color-ink-muted: color-mix(in srgb, var(--pr-color-secondary-400) 72%, white);` then re-measure contrast (estimate ≈13.9:1 / ≈5.6:1; DoD wants a measured number). Scope note: the other `--ug-*` neutrals (`page-bg`, `surface-alt`, `border`, `on-chrome`, `on-chrome-muted`, `shadow`) have no live counterpart and explicitly PASS — do not churn them.
   - Explicitly PASSED audit points (not to be re-litigated): no literal colour/font or `var()` fallback in `guide.css` (`color: transparent` on the title is a functional keyword); `color-mix()` fine in Chromium print; `@page` Letter present; `print-color-adjust: exact` on `html`; `<img alt>` carried as contract; TOC hrefs/ids wiring correct once strays are gone; a11y basics good; palette clears 4.5:1 throughout; Implementer assumptions (1)–(5) all accepted.
 - **ADVISORY (attempt 1, non-gating, recorded):** RELIABILITY-1 `@page` margins are dead unless `UG-T-14` calls `page.pdf({ preferCSSPageSize: true })` or passes identical `margin` → *forward to `UG-T-14`*; RELIABILITY-2 `.ug-section { break-inside: avoid }` will overflow with real screenshots — drop it, keep `.ug-figure { break-inside: avoid }` → *forward to `UG-T-14` visual check*; RESILIENCE-1 malformed token → invalid `color-mix` → white-on-white cover; `assemble.ts` should assert colour-ish token shapes → *forward to `UG-T-12`*; RESILIENCE-2 Google Fonts fetched at render time; offline build silently falls back → *forward to `UG-T-14`* (`document.fonts.check()`); READABILITY-1 un-assembled template has 3 `<h2>` outside `#sections` → assembled total is 9; `UG-T-13` must count within `#sections` → *forward to `UG-T-13`*; RISK-1 `background-clip: text` title — add `-webkit-text-fill-color` + plain colour fallback (recorded).
-- **Attempt 2:** dispatched with the two FAIL issues verbatim, effort bumped to high.
+- **Attempt 2 (2026-09-15):** Implementer `akili-implementer` (sonnet), effort high, both FAIL issues fixed + Leader-adopted extras; contract moved to new `tooling/template/README.md`; also closed a second instance of the same hazard (literal `{{TOKENS_CSS}}` text inside the `<style>` comment). Evidence: duplicate ids `[]`; `body.firstElementChild` = `#cover`; 0 `<img>` and 3 `<h2>` un-assembled; after dummy injection 7/7 TOC hrefs resolve, 9 `<h2>` total / 6 in `#sections`; measured contrast with live `#2b2838`: ink 14.35:1 / 13.32:1, ink-muted 5.80:1 / 5.38:1; css grep → only `font-family: var(...)`; dummy PDF 10 pages. Leader inspected the render: cover, intro + marker legend, TOC, one section per page — correct.
+- **Reviewer verdict (attempt 2): PASS** — `akili-reviewer` (opus). Issue 1 fixed (one multi-line comment L8–11, single-line banners elsewhere, 5 placeholders exactly once each and never inside a comment); Issue 2 fixed (`--ug-color-ink: var(--pr-color-secondary-400)`, muted via `color-mix`); extras present; no regressions (`@page`, `print-color-adjust`, unique ids, TOC wiring, `lang`, heading hierarchy). **ADVISORY:** guide.css header still points to the HTML header instead of README (one extra hop); `color-mix` fallback behaviour acceptable for Chromium-only path.
+- **Files (final):** `tooling/template/guide.html`, `tooling/template/guide.css`, `tooling/template/README.md`.
+- **Requirements covered:** `UG-R-1` (structure), `UG-R-4`, `UG-R-20`, `UG-DD-5`.
+- **Final verification result:** PASS (attempt 2 of 3). Status: **PASS**.
 
 ---
 
@@ -163,6 +167,15 @@
 - `UG-T-3`+`UG-T-7` Implementer (`akili-implementer`, sonnet) killed mid-task. Tree probe afterwards: `tooling/routes.config.json` drafted (6 entries, count claims unverified), `tooling/src/_probefold.ts` (its below-the-fold probe) left behind, `capture.ts` absent, no `raw/`/`tokens.json`. No rework attempt consumed (runtime failure). Re-briefed with "the working tree wins".
 - `UG-T-11` Reviewer (`akili-reviewer`, opus) killed **after** delivering its FAIL report via hand-back — the verdict stands.
 - Limits reset at 21:10; both roles re-spawned on their default tier models.
+
+---
+
+### `UG-T-9` — Author guide content (intro + 6 sections) — IN PROGRESS (`[~]`, Reviewer pending)
+
+- **Attempt 1 (2026-09-15):** Implementer `akili-implementer` (sonnet), skill `cognitive-doc-design`, effort medium. Files: `tooling/content/intro.md` (219 w) + `sections/01-landing.md` … `06-innovation-packages.md` (145–170 w each), body prose only (template supplies the `<h2>`). Verification: grep for URLs/environments/`status_id`/`_id` → zero hits; click-target phrase present once per file; no URL per `NOTES.md`.
+- **Implementer `Not Done / Assumptions`:** (a) no leading `##` per template README (accepted — `design.md` has no literal "Section layout pattern" heading; pattern inferred from `tasks.md` + §6.3); (b) **02-overview names "Continue reporting" as the click target because the drafted `routes.config.json` says so, but the Leader's probe screenshot of `/entity-details/SP01/overview` shows no such text** — visible actions are **Tour**, **Report emerging result**, **Where to report**, and per-AoW **Report** buttons. Leader confirmed on the screenshot. → Resolution deferred to `UG-T-3`'s live selector verification; the section copy will be aligned to the final target before review.
+- **Glossary follow-ups requested by the author (loop back to `UG-T-10`, sanctioned by `UG-T-16`):** alias "Science Program (alias of Program)"; alias "W3/Bilateral" → existing flagged entry; new "W1/W2" (core funding); new "Key Performance Indicator (KPI)" (on-screen UI text, e.g. "0/403 KPIs").
+- **Reviewer:** to be spawned once `UG-T-3` lands, so the click-target check runs against the final config in a single round.
 
 ---
 
@@ -194,4 +207,4 @@ Before starting `UG-T-2`, pre-flight environment verification found:
 
 ## 5. Summary (updated as tasks complete)
 
-5 of 16 tasks complete (`UG-T-1`, `UG-T-2`, `UG-T-4`, `UG-T-8`, `UG-T-10`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. In flight: `UG-T-3`+`UG-T-7` (Implementer, re-spawned after 429), `UG-T-11` attempt 2 (Implementer). Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+6 of 16 tasks complete (`UG-T-1`, `UG-T-2`, `UG-T-4`, `UG-T-8`, `UG-T-10`, `UG-T-11`); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. In flight: `UG-T-3`+`UG-T-7` (Implementer, re-spawned after 429); `UG-T-9` drafted, Reviewer pending on `UG-T-3`. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.

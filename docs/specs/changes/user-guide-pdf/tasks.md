@@ -136,7 +136,7 @@ Block execution until every box is ticked.
 - **Definition of done:**
   - [x] A real origin (or an explicit "use a generic phrase, no URL" decision) is confirmed by the user, not guessed.
 
-### `UG-T-9` — Author guide content (intro + 6 sections)
+### `UG-T-9` — Author guide content (intro + 6 sections) — **[~] IN PROGRESS** (drafted, Reviewer pending on `UG-T-3` — see `execution.md`)
 
 - **Type:** docs
 - **Description:** Write `content/intro.md` (what the guide is, who it's for, how to use it) and `content/sections/01..06-*.md` — one per target route — each following the pattern in `design.md` §"Section layout pattern": what a P/A finds there, why it matters, and an explicit click-target caption matching `routes.config.json`'s `clickTarget`/`captionKey`. The Results Center section must explicitly state it's where to update the current reporting year's innovations (`UG-R-6`). Sign-in instructions use the origin resolved in `UG-T-8`, never `localhost`.
@@ -164,7 +164,7 @@ Block execution until every box is ticked.
   - [x] No term unrelated to the 6 flows is included.
   - [x] Any in-flow term not found on CLARISA is explicitly flagged, not omitted.
 
-### `UG-T-11` — Build `template/guide.html` + `guide.css` — **[~] IN PROGRESS** (attempt 1 Reviewer FAIL, attempt 2 dispatched — see `execution.md`)
+### `UG-T-11` — Build `template/guide.html` + `guide.css` — **[x] COMPLETE** (PASS on attempt 2, see `execution.md`)
 
 - **Type:** infra
 - **Description:** Build the static HTML skeleton (cover, intro placeholder, TOC placeholder with anchor links per `UG-DD-5`, 6 section containers, glossary container) and its CSS, consuming color/font values from `tokens.json` (`UG-T-5`) via CSS custom properties injected at render time — never hardcoded hex/px duplicates. Cover uses the navy-carbon chrome gradient; section header bands reuse the same; body text meets 4.5:1 contrast (dark ink on white/light backgrounds).
@@ -174,10 +174,10 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-12`
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] No hardcoded color/font value appears in `guide.css` outside of a `var(--...)` reference populated from `tokens.json`.
-  - [ ] A contrast check (manual — e.g., browser DevTools contrast tool) confirms body text ≥ 4.5:1 against its background.
-  - [ ] TOC anchors (`<a href="#section-id">`) resolve to a matching `id` on each section header.
-  - [ ] Cover page renders a build/version date stamp (`UG-R-20`).
+  - [x] No hardcoded color/font value appears in `guide.css` outside of a `var(--...)` reference populated from `tokens.json`.
+  - [x] A contrast check (manual — e.g., browser DevTools contrast tool) confirms body text ≥ 4.5:1 against its background.
+  - [x] TOC anchors (`<a href="#section-id">`) resolve to a matching `id` on each section header.
+  - [x] Cover page renders a build/version date stamp (`UG-R-20`).
 
 ### `UG-T-12` — `assemble.ts`
 
