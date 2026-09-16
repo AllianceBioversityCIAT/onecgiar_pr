@@ -18,141 +18,79 @@
 
     <div class="rc-filter-divider" aria-hidden="true"></div>
 
-    <div class="rc-more-wrap">
+    @if (!isSidebarLayout()) {
+      <div class="rc-more-wrap">
+        <button
+          type="button"
+          class="rc-filter-btn"
+          [class.rc-filter-btn--active]="moreFiltersOpen() || moreFiltersCount() > 0"
+          [attr.aria-expanded]="moreFiltersOpen()"
+          aria-haspopup="dialog"
+          aria-label="Filter results"
+          (click)="toggleMoreFilters($event)">
+          <span class="material-icons-round rc-filter-btn__icon" aria-hidden="true">filter_list</span>
+          <span>Filter</span>
+          @if (moreFiltersCount() > 0) {
+            <span class="rc-filter-badge">{{ moreFiltersCount() }}</span>
+          }
+        </button>
+
+        @if (moreFiltersOpen()) {
+          <div
+            #filterPanel
+            class="rc-more-panel rc-filter-panel"
+            [style.max-height.px]="filterPanelMaxHeight()"
+            role="dialog"
+            aria-label="Filters"
+            (click)="$event.stopPropagation()">
+            <div class="rc-filter-panel__header">
+              <span class="rc-filter-panel__title">Filters</span>
+              @if (moreFiltersCount() > 0) {
+                <button type="button" class="rc-filter-panel__clear" (click)="clearAllNewFilters(); cancelFilters()">
+                  <span class="material-icons-round" aria-hidden="true">filter_alt_off</span>
+                  Clear all
+                </button>
+              }
+              <button type="button" class="rc-filter-panel__close" aria-label="Close filters" (click)="cancelFilters()">
+                <span class="material-icons-round" aria-hidden="true">close</span>
+              </button>
+            </div>
+
+            <ng-container [ngTemplateOutlet]="filterFields" />
+
+            <div class="rc-more-footer">
+              <button type="button" class="rc-btn rc-btn--ghost" (click)="cancelFilters()">Cancel</button>
+              <button type="button" class="rc-btn rc-btn--primary" (click)="applyFilters()">Apply</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <div
+      class="inline-flex flex-none items-center gap-[2px] rounded-[8px] border border-[var(--pr-border,#e3e3e8)] bg-white p-[2px]"
+      role="group"
+      aria-label="How to show the filters">
       <button
         type="button"
-        class="rc-filter-btn"
-        [class.rc-filter-btn--active]="moreFiltersOpen() || moreFiltersCount() > 0"
-        [attr.aria-expanded]="moreFiltersOpen()"
-        aria-haspopup="dialog"
-        aria-label="Filter results"
-        (click)="toggleMoreFilters($event)">
-        <span class="material-icons-round rc-filter-btn__icon" aria-hidden="true">filter_list</span>
-        <span>Filter</span>
-        @if (moreFiltersCount() > 0) {
-          <span class="rc-filter-badge">{{ moreFiltersCount() }}</span>
-        }
+        class="inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-[6px] border-0 transition-colors"
+        [class]="!isSidebarLayout() ? 'bg-[var(--pr-color-primary-100,#ede9fe)] text-[var(--pr-color-primary-600,#5b21b6)]' : 'bg-transparent text-[var(--pr-text-secondary,#5d5872)] hover:bg-[#f1f5f9]'"
+        [attr.aria-pressed]="!isSidebarLayout()"
+        title="Filters as a menu"
+        aria-label="Filters as a menu"
+        (click)="setFilterLayout('menu')">
+        <span class="material-icons-round text-[18px]" aria-hidden="true">filter_list</span>
       </button>
-
-      @if (moreFiltersOpen()) {
-        <div
-          #filterPanel
-          class="rc-more-panel rc-filter-panel"
-          [style.max-height.px]="filterPanelMaxHeight()"
-          role="dialog"
-          aria-label="Filters"
-          (click)="$event.stopPropagation()">
-          <div class="rc-filter-panel__header">
-            <span class="rc-filter-panel__title">Filters</span>
-            @if (moreFiltersCount() > 0) {
-              <button type="button" class="rc-filter-panel__clear" (click)="clearAllNewFilters(); cancelFilters()">
-                <span class="material-icons-round" aria-hidden="true">filter_alt_off</span>
-                Clear all
-              </button>
-            }
-            <button type="button" class="rc-filter-panel__close" aria-label="Close filters" (click)="cancelFilters()">
-              <span class="material-icons-round" aria-hidden="true">close</span>
-            </button>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Program</label>
-            <app-pr-filter-multiselect
-              [filter]="resultsListFilterSE.submittersOptionsAdmin().length > 0"
-              [options]="resultsListFilterSE.submittersOptionsAdmin()"
-              [(ngModel)]="tempSelectedSubmittersAdmin"
-              placeholder="All programs"
-              optionLabel="displayName"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Phase</label>
-            <app-pr-filter-multiselect
-              [options]="filteredPhasesOptions()"
-              [(ngModel)]="tempSelectedPhases"
-              (changed)="onSelectPhases()"
-              optionLabel="name"
-              placeholder="All phases"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Indicator category</label>
-            <app-pr-filter-multiselect
-              [options]="resultsListFilterSE.filters.resultLevel | reverse"
-              [(ngModel)]="tempSelectedIndicatorCategories"
-              optionLabel="name"
-              placeholder="All categories"
-              [group]="true"
-              optionGroupChildren="options"
-              optionGroupLabel="name"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Status</label>
-            <app-pr-filter-multiselect
-              [options]="resultsListFilterSE.statusOptions()"
-              [(ngModel)]="tempSelectedStatus"
-              optionLabel="name"
-              placeholder="All statuses"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Portfolio</label>
-            <app-pr-filter-multiselect
-              [options]="clarisaPortfolios()"
-              [(ngModel)]="tempSelectedClarisaPortfolios"
-              (changed)="onSelectPortfolios()"
-              optionLabel="name"
-              placeholder="All portfolios"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Center</label>
-            <app-pr-filter-multiselect
-              [filter]="true"
-              [options]="resultsListFilterSE.centerOptions()"
-              [(ngModel)]="tempSelectedLeadCenters"
-              optionLabel="acronym"
-              placeholder="All centers"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-field">
-            <label class="rc-more-label">Funding source</label>
-            <app-pr-filter-multiselect
-              [options]="resultsListFilterSE.fundingSourceOptions()"
-              [(ngModel)]="tempSelectedFundingSource"
-              optionLabel="name"
-              placeholder="All funding sources"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="rc-more-divider" aria-hidden="true"></div>
-
-          <div class="rc-more-eyebrow">My activity</div>
-          <label class="rc-check-row" for="rcCreatedByMe">
-            <input
-              type="checkbox"
-              class="pr-native-check"
-              id="rcCreatedByMe"
-              [ngModel]="tempFilterCreatedByMe()"
-              (ngModelChange)="tempFilterCreatedByMe.set($event)" />
-            <span>Created by me</span>
-          </label>
-          <label class="rc-check-row" for="rcSubmittedByMe">
-            <input
-              type="checkbox"
-              class="pr-native-check"
-              id="rcSubmittedByMe"
-              [ngModel]="tempFilterSubmittedByMe()"
-              (ngModelChange)="tempFilterSubmittedByMe.set($event)" />
-            <span>Submitted by me</span>
-          </label>
-
-          <div class="rc-more-footer">
-            <button type="button" class="rc-btn rc-btn--ghost" (click)="cancelFilters()">Cancel</button>
-            <button type="button" class="rc-btn rc-btn--primary" (click)="applyFilters()">Apply</button>
-          </div>
-        </div>
-      }
+      <button
+        type="button"
+        class="inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-[6px] border-0 transition-colors"
+        [class]="isSidebarLayout() ? 'bg-[var(--pr-color-primary-100,#ede9fe)] text-[var(--pr-color-primary-600,#5b21b6)]' : 'bg-transparent text-[var(--pr-text-secondary,#5d5872)] hover:bg-[#f1f5f9]'"
+        [attr.aria-pressed]="isSidebarLayout()"
+        title="Filters in a side column"
+        aria-label="Filters in a side column"
+        (click)="setFilterLayout('sidebar')">
+        <span class="material-icons-round text-[18px] -scale-x-100" aria-hidden="true">view_sidebar</span>
+      </button>
     </div>
 
     @if (filterChipGroups().length > 0) {
@@ -274,3 +212,118 @@
     </div>
   </div>
 }
+
+<!-- Side column (Results Center "filters in a side column" mode) — the parent page renders it beside the table. -->
+<ng-template #filterSidebar>
+  <div class="sticky top-0 z-[2] flex items-center gap-[10px] border-b border-[var(--pr-border-divider,#eeeef1)] bg-white px-[16px] py-[12px]">
+    <span class="flex-1 text-[13.5px] font-bold text-[var(--pr-text-heading,#191524)]">Filters</span>
+    @if (moreFiltersCount() > 0) {
+      <button type="button" class="rc-filter-panel__clear" (click)="clearAllNewFilters()">
+        <span class="material-icons-round" aria-hidden="true">filter_alt_off</span>
+        Clear all
+      </button>
+    }
+  </div>
+  <div class="flex flex-col gap-[12px] p-[16px]">
+    <ng-container [ngTemplateOutlet]="filterFields" />
+  </div>
+</ng-template>
+
+<ng-template #filterFields>
+  <div class="rc-more-field">
+    <label class="rc-more-label">Program</label>
+    <app-pr-filter-multiselect
+      [filter]="resultsListFilterSE.submittersOptionsAdmin().length > 0"
+      [options]="resultsListFilterSE.submittersOptionsAdmin()"
+      [(ngModel)]="tempSelectedSubmittersAdmin"
+      (changed)="onFilterFieldChanged()"
+      placeholder="All programs"
+      optionLabel="displayName"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="rc-more-field">
+    <label class="rc-more-label">Phase</label>
+    <app-pr-filter-multiselect
+      [options]="filteredPhasesOptions()"
+      [(ngModel)]="tempSelectedPhases"
+      (changed)="onSelectPhases(); onFilterFieldChanged()"
+      optionLabel="name"
+      placeholder="All phases"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="rc-more-field">
+    <label class="rc-more-label">Indicator category</label>
+    <app-pr-filter-multiselect
+      [options]="resultsListFilterSE.filters.resultLevel | reverse"
+      [(ngModel)]="tempSelectedIndicatorCategories"
+      (changed)="onFilterFieldChanged()"
+      optionLabel="name"
+      placeholder="All categories"
+      [group]="true"
+      optionGroupChildren="options"
+      optionGroupLabel="name"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="rc-more-field">
+    <label class="rc-more-label">Status</label>
+    <app-pr-filter-multiselect
+      [options]="resultsListFilterSE.statusOptions()"
+      [(ngModel)]="tempSelectedStatus"
+      (changed)="onFilterFieldChanged()"
+      optionLabel="name"
+      placeholder="All statuses"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="rc-more-field">
+    <label class="rc-more-label">Portfolio</label>
+    <app-pr-filter-multiselect
+      [options]="clarisaPortfolios()"
+      [(ngModel)]="tempSelectedClarisaPortfolios"
+      (changed)="onSelectPortfolios(); onFilterFieldChanged()"
+      optionLabel="name"
+      placeholder="All portfolios"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="rc-more-field">
+    <label class="rc-more-label">Center</label>
+    <app-pr-filter-multiselect
+      [filter]="true"
+      [options]="resultsListFilterSE.centerOptions()"
+      [(ngModel)]="tempSelectedLeadCenters"
+      (changed)="onFilterFieldChanged()"
+      optionLabel="acronym"
+      placeholder="All centers"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="rc-more-field">
+    <label class="rc-more-label">Funding source</label>
+    <app-pr-filter-multiselect
+      [options]="resultsListFilterSE.fundingSourceOptions()"
+      [(ngModel)]="tempSelectedFundingSource"
+      (changed)="onFilterFieldChanged()"
+      optionLabel="name"
+      placeholder="All funding sources"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="rc-more-divider" aria-hidden="true"></div>
+
+  <div class="rc-more-eyebrow">My activity</div>
+  <label class="rc-check-row" for="rcCreatedByMe">
+    <input
+      type="checkbox"
+      class="pr-native-check"
+      id="rcCreatedByMe"
+      [ngModel]="tempFilterCreatedByMe()"
+      (ngModelChange)="tempFilterCreatedByMe.set($event); onFilterFieldChanged()" />
+    <span>Created by me</span>
+  </label>
+  <label class="rc-check-row" for="rcSubmittedByMe">
+    <input
+      type="checkbox"
+      class="pr-native-check"
+      id="rcSubmittedByMe"
+      [ngModel]="tempFilterSubmittedByMe()"
+      (ngModelChange)="tempFilterSubmittedByMe.set($event); onFilterFieldChanged()" />
+    <span>Submitted by me</span>
+  </label>
+</ng-template>

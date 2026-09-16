@@ -12,6 +12,9 @@ import {
   ElementRef,
   HostListener,
   effect,
+  TemplateRef,
+  ViewChild,
+  untracked,
 } from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -278,6 +281,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   visible = signal(false);
   /** CURRENT "More filters" popover open state */
   moreFiltersOpen = signal(false);
+  readonly isSidebarLayout = computed(() => this.resultsListFilterSE.filterLayout() === 'sidebar');
+  /** Filter fields shared by the menu and by the side column the parent page renders. */
+  @ViewChild('filterFields', { static: true }) filterFieldsTpl: TemplateRef<unknown>;
+  @ViewChild('filterSidebar', { static: true }) filterSidebarTpl: TemplateRef<unknown>;
   /** The popover opens below the toolbar, so `70vh` alone let it run past the bottom of short screens and hid Apply. */
   readonly filterPanel = viewChild<ElementRef<HTMLElement>>('filterPanel');
   filterPanelMaxHeight = signal<number | null>(null);
@@ -491,6 +498,23 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   ) {
     effect(() => {
       if (this.filterPanel()) this.fitFilterPanelToViewport();
+    });
+
+    // Side column applies on every change, so its controls must mirror the applied filters
+    // (default phases arriving from the API, chips removed from the toolbar, Clear all).
+    effect(() => {
+      if (!this.isSidebarLayout()) return;
+      const se = this.resultsListFilterSE;
+      se.selectedPhases();
+      se.selectedSubmittersAdmin();
+      se.selectedIndicatorCategories();
+      se.selectedStatus();
+      se.selectedClarisaPortfolios();
+      se.selectedFundingSource();
+      se.selectedLeadCenters();
+      se.filterCreatedByMe();
+      se.filterSubmittedByMe();
+      untracked(() => this.syncTempFromApplied());
     });
 
     // Calculate navbar height after render
@@ -784,8 +808,25 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempFilterSubmittedByMe.set(this.resultsListFilterSE.filterSubmittedByMe());
   }
 
+  setFilterLayout(layout: 'menu' | 'sidebar'): void {
+    if (this.moreFiltersOpen()) this.cancelFilters();
+    this.resultsListFilterSE.setFilterLayout(layout);
+    if (layout === 'sidebar') this.refreshTempSubmitterOptions();
+  }
+
+  /** Side column behaves like a shop's filter rail: each change applies at once. */
+  onFilterFieldChanged(): void {
+    if (this.isSidebarLayout()) this.commitTempFilters();
+  }
+
   // Apply all popover filters (search stays live on the toolbar).
   applyFilters() {
+    this.commitTempFilters();
+    this.moreFiltersOpen.set(false);
+    this.visible.set(false);
+  }
+
+  private commitTempFilters(): void {
     this.resultsListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
     this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
     this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
@@ -795,8 +836,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.resultsListFilterSE.selectedLeadCenters.set([...this.tempSelectedLeadCenters()]);
     this.resultsListFilterSE.filterCreatedByMe.set(this.tempFilterCreatedByMe());
     this.resultsListFilterSE.filterSubmittedByMe.set(this.tempFilterSubmittedByMe());
-    this.moreFiltersOpen.set(false);
-    this.visible.set(false);
   }
 
   // Cancel and discard More filters changes
