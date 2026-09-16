@@ -218,3 +218,10 @@ ADVISORY (T-4 attempt 2): the doc block in `indicator-description-resolver.ts` s
 | Rework rounds (budget) | cumulative **3** of 5 (T-1, T-5, T-4) |
 | Commit | see below |
 
+### Gate 2 (2026-09-16) — owner decisions
+
+- Wave 2 landed: `T-2`, `T-4`, `T-5` PASS and committed (`d214f1c0a`, `6db6dd8ac`, `50483506b`). Integrated check on the quiet tree: `--testPathPattern="quality-assessment"` → 4 suites / 128 tests green; `tsc --noEmit` clean.
+- **Pre-existing lint debt:** `npx eslint "src/api/bilateral/**/*.ts" --quiet` reported 56 prettier errors in `bilateral-center.service.ts`, `bilateral-center.service.spec.ts`, `bilateral-center.controller.spec.ts` — files untouched by this spec so far (inherited from `performance-refactor`). Leader applied `eslint --fix` (formatting only; `bilateral-center` suites re-run green) and committed it as a separate style commit so `T-6`'s functional diff stays reviewable. No production code authored by the Leader.
+- Owner: **continue with `T-6`** (single Implementer; `T-7` after it) · owner runs `npm run migration:run` on the dev DB and reports back (open gate for the server group) · **`T-11(a)` will be done by the owner before `T-8`**.
+- Owner informed of the T-11 fixture-review items (innovation-use totals `how_many` vs gender sum; add `indicators[]` to one fixture).
+
