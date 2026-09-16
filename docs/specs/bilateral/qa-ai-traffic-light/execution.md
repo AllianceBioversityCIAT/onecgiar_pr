@@ -251,3 +251,5 @@ ADVISORY (T-4 attempt 2): the doc block in `indicator-description-resolver.ts` s
 - **Wave 3:** `T-1b ∥ T-2b ∥ T-12` — disjoint files (`docs/bilateral-module/integration-contracts.md` · entity + new migration · client `type-innovation-dev` component), no shared build output between server and client packages. Effort: T-1b `high` (contract surface), T-2b `high` (migration), T-12 `high` (behavioural change in a form + payload assertion). Then `T-4b ∥ T-5b`, then `T-6`.
 - `T-11(a)` still owner-only before `T-8`.
 
+- Note for `T-12`: the field's removal was a **product decision** recorded in the component (`type-innovation-dev.component.html:44-46`: "the Lead contact person IS the developer — Nicoleta Trifa via Ángel Jarrín, 2026-09-03"). The owner's 2026-09-16 instruction to restore it (Program reviewers require it; the substitution defeats the QA check) supersedes it for this spec; **the owner should tell Ángel** (PO-message rule: short). T-12's CLAUDE.md update must record both decisions, not erase the first.
+
