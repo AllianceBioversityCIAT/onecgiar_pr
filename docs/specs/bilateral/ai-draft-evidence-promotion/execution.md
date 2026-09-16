@@ -114,3 +114,134 @@ module-resolution failure, it is to be re-verified on a quiet tree before being 
 **Decisions made:** none beyond the Step 0 entries above. No spec ambiguity surfaced; no pivot.
 
 **Final verification:** green as reported, re-confirmed by the Reviewer's count reconciliation.
+
+### `ADE-T-3` — Server-side SharePoint upload, with a bounded timeout
+
+| Field | Value |
+|---|---|
+| Status | **PASS** |
+| Date | 2026-09-16 |
+| Implementer attempts | 1 |
+| Effort | `high` |
+| Skills loaded | `nestjs-expert`, `error-handling-patterns` |
+| Review mode | Lens checklist (single Reviewer, 4R advisory) |
+
+**Requirements covered:** `ADE-R-3` · `ADE-R-5` (fault-detection half) · `ADE-QAS-3` · DD-3.
+
+#### Attempt 1
+
+**Files changed**
+
+- `onecgiar-pr-server/src/api/bilateral-ai/services/bilateral-ai-file-storage.service.ts` (+31)
+- `onecgiar-pr-server/src/api/bilateral-ai/services/bilateral-ai-file-storage.service.spec.ts` (+56)
+- `onecgiar-pr-server/src/shared/services/share-point/share-point.service.ts` (+91)
+- `onecgiar-pr-server/src/shared/services/share-point/share-point.service.spec.ts` (+109)
+
+**Implementer verification**
+
+- `npx jest --testPathPattern="share-point|bilateral-ai-file-storage" --silent --reporters=summary --forceExit`
+  → `Test Suites: 3 passed, 3 total / Tests: 49 passed, 49 total`
+- Blast radius: `npx jest --testPathPattern="evidences" --silent --reporters=summary --forceExit`
+  → `Test Suites: 4 passed, 4 total / Tests: 47 passed, 47 total`
+- `npx eslint <the 4 files> --quiet` → clean
+- Grep gate (DC-8): added lines vs `console.|logger.|.log(|.error(|.warn(|.debug(` → **no matches**
+
+**Timeout decision (DD-3 left the value to execution):** `UPLOAD_FROM_STREAM_GRAPH_TIMEOUT_MS =
+30_000`, a private static constant consumed only by a `withGraphTimeout` helper inside
+`uploadFromStream`. Applied twice — once to the session-mint chain, once to the byte PUT.
+Mechanism is a JS-level `Promise.race`, **not** an axios `timeout` config: axios config is inert
+against a fully-mocked `httpService`, which is how this codebase stubs `SharePointService`, so only
+a race is provable against the never-settling stub the task names as its Disqualifier.
+
+**Implementer `Not Done / Assumptions`, carried verbatim and adjudicated by the Reviewer rather
+than by the Leader:**
+
+> - `uploadFromStream` always passes `count: 1` to `createUploadSession` … This is a judgment call
+>   since ADE-T-4 (the actual `promoteDraft` wiring) is out of this task's scope; flagging it so the
+>   Leader/ADE-T-4 implementer can confirm the assumption holds when the loop is wired up.
+> - I did not touch `createFileFolder`'s own Graph `PUT` (invoked transitively inside
+>   `createUploadSession`) with an independent timeout beyond what wrapping the whole
+>   `createUploadSession` call already provides — wrapping the outer call bounds the full chain
+>   (folder creation + session POST) in one race, which is sufficient for DD-3 without duplicating
+>   `createUploadSession`'s internals or touching its signature.
+
+Both resolved as **conformant**, on evidence rather than on the Implementer's rationale — see below.
+Neither is outstanding scope, so this task reaches `[x]`.
+
+**Reviewer verdict: `STATUS: PASS`**
+
+> `ADE-T-3` conforms to DD-3 and §7.2 — every outbound Graph call `uploadFromStream` makes is inside
+> one of two 30 s races (the session-mint race covers `getToken`, `createFileFolder` and the session
+> POST transitively), the never-settling tests genuinely falsify "DD-3 described" rather than
+> implemented, and all four negative constraints hold against the source. `count: 1` is correct for
+> the sequential loop `ADE-T-4` will wire.
+
+Adjudications the Reviewer reached by reading the source, not the report:
+
+1. **DD-3 — bounding the chain is conformance, not a gap.** No outbound call on this path sits
+   outside a race, so no hang outlives 30 s + 30 s. Per-call bounding would be *weaker* against
+   DD-3's stated purpose (6 bounded calls × 30 s = 180 s before the promotion moves on) and would
+   require duplicating `createUploadSession`'s internals, which the task's own negative constraint
+   pushes against.
+2. **`count: 1` is correct.** `getLastSharepointId` is `SELECT MAX(id) FROM evidence_sharepoint`
+   (`evidences.repository.ts:370-386`) — a global high-water mark, not a per-result counter — and
+   each committed document writes one row in `saveSPData` (`evidences.service.ts:561`), so
+   documents 2..6 get distinct names. A running index would double-count.
+3. **The silent `undefined` id cannot corrupt the DD-6 checkpoint.** `saveSPData` throws first —
+   `evidences.service.ts:496` refuses when `!data?.link?.webUrl`, which is exactly what
+   `addFileAccess(undefined, …)` produces — so the sequence fails before any stamp is written.
+   Fail-soft outcome plus an inert orphan, which DD-6 already accepts.
+4. **The Disqualifier is discharged.** The rejection can only originate in `withGraphTimeout`: the
+   stub never settles, fake timers stop real wall time from settling anything, and the `/timed out/i`
+   matcher matches no other message in the file. With the helper removed the test cannot report green.
+
+#### `ADVISORY` (4R lens — recorded, never gating, never minted into tasks)
+
+- **RELIABILITY** — a lost race stops `uploadFromStream` *waiting* but neither destroys the S3
+  `Readable` nor aborts the axios request. An abandoned 25 MB upload holds a socket and the S3 stream
+  for its full duration on a container runtime. Suggested: `stream.destroy()` on the timeout path, or
+  an `AbortController.signal`.
+- **RELIABILITY** — `size === 0` is reachable (`validateSources` accepts a 0-byte file because
+  `Buffer.alloc(0)` is truthy) and yields `Content-Range: bytes 0--1/0`, which Graph rejects with a
+  400. It fails soft, but opaquely, and `?? 0` conflates "0-byte object" with "`HeadObject` returned
+  no `ContentLength`".
+- **RELIABILITY** — `{ id: response?.data?.id }` resolves successfully on an unexpected Graph body,
+  relocating the failure into `saveSPData`'s message rather than attributing it to the upload.
+- **READABILITY** — the timeout docblock claims the session POST and the PUT "each get this budget
+  independently"; the first budget actually covers the token mint, the folder-creation PUT, two DB
+  reads and the POST. The real worst case is 60 s per document, not 30 s + 30 s of two small calls.
+- **TESTING RIGOR** — `expect(getObjectMock).not.toHaveProperty('promise')` asserts a property of the
+  fixture the test itself built. The real no-buffering proof is that `getObjectStream` resolves
+  against a mock that has no `promise` at all.
+
+#### Forward pointers — **must be copied into `ADE-T-4`'s brief** (a pointer filed here is not carried by having been filed)
+
+1. **Order is load-bearing for naming.** The loop must call `saveSPData` (which persists
+   `evidence_sharepoint`) **before** minting the next document's session — exactly `design.md` §3.2.
+   Batching the mints, or moving `saveSPData` out of the per-document sequence, gives every document
+   of the draft the same computed name.
+2. **Persist `sp_file_name` from the `name` `uploadFromStream` returns**, never from a locally
+   recomputed name. On a partial failure (upload succeeded, `saveSPData` threw) no
+   `evidence_sharepoint` row is written, so the next document computes the *same* suffix as the
+   orphan already in the folder; the driveItem `id` from the PUT is the authoritative value.
+3. **The DC-8 grep gate will hit pre-existing `console.*` calls.** `uploadFromStream` routes through
+   `createUploadSession`'s existing `console.log({driveId, newFolderId, filePath, finalFileName})` and
+   `console.error('CreateUploadSession error:', …)` (`share-point.service.ts:46-51, 70-76`). Neither
+   carries a token (axios puts request headers on `error.config`, not `error.response`), so `AC-9`
+   is **not** breached — but they are `console.*`, not the Nest `Logger` `ADE-R-8` presumes. Not
+   `ADE-T-4`'s to fix; flagged so the gate is not surprised.
+4. **From `ADE-T-1`:** the predicate admits a leading-dot name with no basename (`'.pdf'`); and the
+   `it.each` table in `evidence-formats.constant.spec.ts` must stay literal — replacing it with
+   `QUALIFYING_EVIDENCE_EXTENSIONS.map(...)` would silently make that suite self-asserting.
+
+#### Forward pointer to `ADE-T-5` (latency)
+
+30 s + 30 s per document means a 6-document draft can legitimately spend **~6 minutes** inside the
+transfer before `ADE-QAS-2`'s 45 s p95 is even measurable. This is the timeout *ceiling* under fault,
+not the expected path, but `ADE-T-5`'s measurement and DD-2's escalation must reason about the total
+budget explicitly rather than about a single document.
+
+**Issues encountered:** none in the work. The `npm ci` run by `ADE-T-1`'s Implementer mid-flight (see
+that task's entry) caused no observable damage here — all three suites green.
+
+**Final verification:** green as reported; Reviewer re-derived the negative constraints from source.

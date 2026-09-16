@@ -67,7 +67,7 @@
 
 ---
 
-### `ADE-T-3` — Server-side SharePoint upload, with a bounded timeout
+### `ADE-T-3` — Server-side SharePoint upload, with a bounded timeout  `[x]` PASS — see `execution.md`
 
 - **Type:** `server`
 - **Description:** Two additions that together move bytes without a browser. (a) `BilateralAiFileStorageService` gains a method returning an object's readable stream plus its size. (b) `SharePointService` gains `uploadFromStream`: mint the upload session exactly as `createUploadSession` does, then `PUT` the stream with `Content-Type: application/octet-stream` and `Content-Range: bytes 0-{size-1}/{size}`, returning the driveItem `id` and `name`. **Every outbound Graph call is bounded by an explicit timeout** (DD-3) — without it `ADE-R-5` is unreachable, because the `HttpModule` these calls ride has none.
@@ -83,11 +83,11 @@
 - **Disqualifier:** a passing test whose Graph stub resolves immediately says nothing about timeout behavior — it exercises only the happy path. The timeout case is not optional coverage; without it this task's central claim is unverified.
 - **Note on chunking:** a single request is correct here — Graph refuses requests ≥ 60 MiB (P2-3318) and the AI cap is 25 MB (§7.2). Do **not** port the client's fragmenting variant; it is unreachable code on this path.
 - **Done:**
-  - [ ] `uploadFromStream` returns `{ id, name }` from the final Graph response.
-  - [ ] A never-settling stub is abandoned by the timeout and surfaces as a rejection.
-  - [ ] No existing signature changed; `npx jest --testPathPattern="evidences"` still green (blast-radius check).
-  - [ ] `grep` over the added lines shows no token, session URL or signed URL in any log statement.
-  - [ ] Lint clean.
+  - [x] `uploadFromStream` returns `{ id, name }` from the final Graph response.
+  - [x] A never-settling stub is abandoned by the timeout and surfaces as a rejection.
+  - [x] No existing signature changed; `npx jest --testPathPattern="evidences"` still green (blast-radius check).
+  - [x] `grep` over the added lines shows no token, session URL or signed URL in any log statement.
+  - [x] Lint clean.
 
 ---
 
