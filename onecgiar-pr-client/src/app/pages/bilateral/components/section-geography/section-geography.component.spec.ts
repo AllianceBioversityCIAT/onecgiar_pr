@@ -222,6 +222,8 @@ describe('SectionGeographyComponent', () => {
 
     it('keeps the extra scope id when there is one', () => {
       build();
+      creation.resultTypeId.set(7);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
       component.extraGeographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.REGIONAL }));
       component.queueGeographySave();
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
@@ -237,6 +239,9 @@ describe('SectionGeographyComponent', () => {
     // saved with the flag stuck at false silently deletes the countries the user just picked.
     it('sends has_extra_countries true with the countries for a sub-national extra scope', () => {
       build();
+      creation.resultTypeId.set(7);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      autoSave.schedulePayload.mockClear();
       component.setHasExtraScope(true);
       component.onExtraScopeChange(GeoScopeEnum.SUB_NATIONAL);
       component.onExtraCountriesChange([{ id: 40, sub_national: [{ id: 1 }] }]);
@@ -528,6 +533,57 @@ describe('SectionGeographyComponent', () => {
       expect(b.has_countries).toBe(true);
       expect(b.has_regions).toBe(false);
       expect(b.regions).toEqual([]);
+    });
+  });
+
+  describe('extra-scope visibility (W1/W2 parity)', () => {
+    const INNOVATION_LABEL =
+      'Are there any other geographic areas where the innovation could be impactful (beyond current development and use)?';
+    const LEGACY_LABEL = 'Are there any regions that you wish to specify for this Output?';
+
+    it('does not show the extra-scope question for non-innovation result types', () => {
+      build();
+      creation.resultTypeId.set(8);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
+      expect(component.requiresExtraScopeAnswer).toBe(false);
+    });
+
+    it('shows the extra-scope question only for innovation result types', () => {
+      build();
+      creation.resultTypeId.set(7);
+      component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
+      expect(component.showExtraGeoScopeQuestion()).toBe(true);
+      expect(component.requiresExtraScopeAnswer).toBe(true);
+    });
+
+    it('clears extra-scope data in the payload for non-innovation results', () => {
+      build();
+      creation.resultTypeId.set(8);
+      component.geographicLocationBody.set({
+        has_countries: true,
+        has_regions: false,
+        regions: [],
+        countries: [{ id: 9 }],
+        geo_scope_id: GeoScopeEnum.COUNTRY
+      });
+      component.extraGeographicLocationBody.update(b => ({
+        ...b,
+        has_extra_geo_scope: true,
+        geo_scope_id: GeoScopeEnum.REGIONAL,
+        regions: [{ id: 1 }]
+      }));
+      component.queueGeographySave();
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
+        'geography',
+        expect.objectContaining({
+          has_extra_geo_scope: false,
+          extra_geo_scope_id: null,
+          extra_regions: [],
+          has_extra_regions: false
+        }),
+        expect.any(Object)
+      );
     });
   });
 
