@@ -17,7 +17,10 @@
      -mt-px and top: calc(... - 1px) tuck the band 1px behind the shell topbar border
      so scrolling content never bleeds through a subpixel gap between the two sticky surfaces. ═══ -->
 <div
-  class="sticky z-20 flex-none -mt-px bg-[var(--pr-surface-band)] transition-shadow duration-[180ms] ease-out"
+  class="sticky flex-none -mt-px bg-[var(--pr-surface-band)] transition-shadow duration-[180ms] ease-out"
+  [class.z-20]="!infoOpen()"
+  [class.z-40]="infoOpen()"
+  data-testid="reporting-program-band-sticky"
   style="top: calc(var(--pr-shell-header-height, 56px) - 1px);"
   [class]="
     (isScrolled() || bandCollapsed() ? 'shadow-[0_2px_8px_rgba(25,21,36,0.08)]' : 'shadow-none') +
@@ -83,7 +86,8 @@
           id="pr-band-info-popover"
           role="dialog"
           aria-label="About this program and view"
-          class="absolute left-0 top-[32px] z-30 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+          class="absolute left-0 top-[32px] z-50 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+          data-testid="reporting-program-band-info-popover"
           (click)="$event.stopPropagation()">
           <div class="mb-[12px] flex items-center justify-between gap-[8px]">
             <div class="flex items-center gap-[8px] min-w-0">
