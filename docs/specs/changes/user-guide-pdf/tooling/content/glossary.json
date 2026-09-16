@@ -1,5 +1,11 @@
 [
   {
+    "term": "Accelerator",
+    "definition": "Accelerators will undertake strategic research in their topical areas and, through working with all other Programs, bolster CGIAR’s ability to reach and support targeted end-users while furthering collaboration, coherence, and integration across the entire Portfolio.",
+    "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
+    "accessedOn": "2026-09-15"
+  },
+  {
     "term": "Area of Work (AoW)",
     "definition": "The term “Area of Work” is used to refer to the research components of a Program/Accelerator. An Area of Work should be designed as a connected set of activities and outputs which contribute to one or more high-level outputs. An Area of Work may include research activities and/or support activities.",
     "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
@@ -7,10 +13,11 @@
   },
   {
     "term": "Bilateral / Window 3 (W3)",
-    "definition": null,
+    "definition": "Funding tied to a specific donor or project rather than pooled across the whole portfolio. Window 3 and bilateral results are reported into the Program or Accelerator they are aligned to, alongside that Program's core-funded results.",
     "sourceUrl": null,
     "accessedOn": "2026-09-15",
-    "flag": "not found on CLARISA"
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA)"
   },
   {
     "term": "Capacity sharing for development",
@@ -26,10 +33,11 @@
   },
   {
     "term": "Collaboration / contribution request",
-    "definition": null,
+    "definition": "A request from another Program, Accelerator, or Window 3/Bilateral project asking to link one of your results to theirs as a contributor, or asking you to confirm your own contribution to one of their results. You accept or decline it from Notifications.",
     "sourceUrl": null,
     "accessedOn": "2026-09-15",
-    "flag": "not found on CLARISA"
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA)"
   },
   {
     "term": "High Level Output (HLO)",
@@ -74,6 +82,14 @@
     "accessedOn": "2026-09-15"
   },
   {
+    "term": "Key Performance Indicator (KPI)",
+    "definition": "A specific, measurable target used to track a Program's progress within an Area of Work — for example, a count of results planned for a given topic. The Reporting page shows how many KPIs have been reported against the number planned for each AoW.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-15",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA)"
+  },
+  {
     "term": "Knowledge product",
     "definition": "Knowledge products are intellectual assets generated from research and development activities such as articles, briefs, reports, extension and training content, databases, software, and multimedia elements that contribute to behavioral changes in particular actors.",
     "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
@@ -88,10 +104,11 @@
   },
   {
     "term": "Phase",
-    "definition": null,
+    "definition": "A reporting cycle with its own open and close dates — for example, \"Reporting 2026 (Open)\". Results, requests, and other reporting activity are scoped to whichever phase you have selected.",
     "sourceUrl": null,
     "accessedOn": "2026-09-15",
-    "flag": "not found on CLARISA"
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA)"
   },
   {
     "term": "Policy change",
@@ -118,9 +135,25 @@
     "accessedOn": "2026-09-15"
   },
   {
+    "term": "Science Program",
+    "definition": "The Reporting Tool's on-screen label for a Program (see Program) — the two terms refer to the same entity.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-15",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA)"
+  },
+  {
     "term": "Theory of change (ToC)",
     "definition": "An explicit, testable model of how and why social change is expected to happen along an impact pathway in a development context. A basic research-for-development ToC identifies the context and key actors in a project, program or initiative and specifies the causal pathways and mechanisms by which the research aims to contribute to outcomes and impacts. This model can be used for: (i) designing and planning project logic including assumptions; (ii) monitoring and evaluation of processes and results including risk identification and mitigation; (iii) testing assumptions and identifying lessons learned, reflection for accountability and RBM, and using finding for evidence-based decision making for learning and accountability.",
     "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
     "accessedOn": "2026-09-15"
+  },
+  {
+    "term": "W1/W2 (Windows 1 and 2)",
+    "definition": "The System's pooled, core funding channels, as distinct from bilateral or Window 3 (W3) funding tied to a specific donor or project. Results are tagged with the funding window they were delivered under.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-15",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA)"
   }
 ]

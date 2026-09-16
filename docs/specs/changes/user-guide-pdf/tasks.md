@@ -136,7 +136,7 @@ Block execution until every box is ticked.
 - **Definition of done:**
   - [x] A real origin (or an explicit "use a generic phrase, no URL" decision) is confirmed by the user, not guessed.
 
-### `UG-T-9` — Author guide content (intro + 6 sections) — **[~] IN PROGRESS** (drafted, Reviewer pending on `UG-T-3` — see `execution.md`)
+### `UG-T-9` — Author guide content (intro + 6 sections) — **[x] COMPLETE** (PASS on attempt 2, see `execution.md`)
 
 - **Type:** docs
 - **Description:** Write `content/intro.md` (what the guide is, who it's for, how to use it) and `content/sections/01..06-*.md` — one per target route — each following the pattern in `design.md` §"Section layout pattern": what a P/A finds there, why it matters, and an explicit click-target caption matching `routes.config.json`'s `clickTarget`/`captionKey`. The Results Center section must explicitly state it's where to update the current reporting year's innovations (`UG-R-6`). Sign-in instructions use the origin resolved in `UG-T-8`, never `localhost`.
@@ -146,9 +146,9 @@ Block execution until every box is ticked.
 - **Blocks:** `UG-T-12`
 - **Estimate:** L
 - **Definition of done:**
-  - [ ] Every section explicitly names the click-target it pairs with (matches `routes.config.json`'s `clickTarget` for that route).
-  - [ ] All copy is U.S. English, plain-language (no internal jargon like `status_id` or entity codes without a plain explanation).
-  - [ ] Results Center section contains an explicit "update current-year innovations" statement (`UG-AC-4`).
+  - [x] Every section explicitly names the click-target it pairs with (matches `routes.config.json`'s `clickTarget` for that route).
+  - [x] All copy is U.S. English, plain-language (no internal jargon like `status_id` or entity codes without a plain explanation).
+  - [x] Results Center section contains an explicit "update current-year innovations" statement (`UG-AC-4`).
 
 ### `UG-T-10` — Curate the glossary from the CLARISA glossary — **[x] COMPLETE** (PASS, see `execution.md`)
 
