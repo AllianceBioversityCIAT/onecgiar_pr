@@ -233,6 +233,12 @@ Before starting `UG-T-2`, pre-flight environment verification found:
 
 ---
 
+### `dist/` location decided (2026-09-15, before `UG-T-12`)
+
+Output directory fixed at `tooling/dist/` (the `UG-T-1` Reviewer's RELIABILITY advisory): the existing ignore rule covers the intermediate `guide-assembled.html`, the PDF is committed from there. `design.md` §2 tree amended in place (spec's own file).
+
+---
+
 ## 4. Pending inputs
 
 - **`TEST_TOKEN`** — received from the user 2026-09-15 and stored in gitignored `tooling/.env`. Resolved.

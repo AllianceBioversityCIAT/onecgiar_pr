@@ -49,6 +49,8 @@ docs/specs/changes/user-guide-pdf/
     └── reporting-tool-user-guide.pdf   # the committed deliverable
 ```
 
+> **Amendment 2026-09-15 (execution, `UG-T-12`–`UG-T-14`):** `dist/` lives at `tooling/dist/` (inside the tooling package), not as a sibling of `tooling/`. Reason: `tooling/.gitignore`'s `dist/*.html` rule (from `UG-T-1`) only matches that location, and it keeps the pipeline self-contained. The committed deliverable is therefore `docs/specs/changes/user-guide-pdf/tooling/dist/reporting-tool-user-guide.pdf`.
+
 ### 2.2 Pipeline (sequence)
 
 ```
