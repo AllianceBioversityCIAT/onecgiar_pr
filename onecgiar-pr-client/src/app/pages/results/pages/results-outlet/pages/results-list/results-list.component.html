@@ -170,7 +170,7 @@
   <div class="flex min-h-0 flex-col min-[900px]:flex-1 min-[900px]:flex-row">
     @if (resultsListFilterSE.filterLayout() === 'sidebar' && filters?.filterSidebarTpl) {
       <aside
-        class="flex-none overflow-y-auto border-[var(--pr-border-divider,#eeeef1)] bg-white max-[899px]:mb-[16px] max-[899px]:rounded-[12px] max-[899px]:border min-[900px]:w-[280px] min-[900px]:border-r"
+        class="flex-none overflow-y-auto border-[var(--pr-border-divider,#eeeef1)] bg-white max-[899px]:mb-[16px] max-[899px]:rounded-[12px] max-[899px]:border min-[900px]:order-2 min-[900px]:w-[280px] min-[900px]:border-l"
         aria-label="Filters">
         <ng-container [ngTemplateOutlet]="filters.filterSidebarTpl" />
       </aside>
