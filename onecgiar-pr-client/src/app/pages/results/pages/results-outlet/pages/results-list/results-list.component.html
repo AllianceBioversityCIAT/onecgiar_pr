@@ -264,6 +264,12 @@
                         <i class="pi pi-exclamation-triangle"></i>
                       </span>
                     }
+                    @if (subResult?.is_replicated) {
+                      <span
+                        class="rc-badge-replicated"
+                        prTooltip="Previously reported in an earlier phase"
+                        prTooltipPosition="top">Previously reported</span>
+                    }
                     <span class="rc-title__text">{{ subResult.title }}</span>
                   </a>
                 } @else if (column.attr === 'submitter') {

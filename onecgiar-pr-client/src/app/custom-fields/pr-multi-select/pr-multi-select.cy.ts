@@ -55,6 +55,41 @@ function mountMultiSelect(model: Center[], showSelectAll = false) {
     });
 }
 
+// SIP-T-4: template variant that WIRES `(searchTextChange)` — this is what an opted-in
+// server-search consumer's template looks like (SIP-T-3). The other ~78 real call sites don't
+// bind this output and are covered by the default `TEMPLATE`/`mountMultiSelect` above.
+const TEMPLATE_WIRED = `
+  <app-pr-multi-select
+    [options]="options"
+    optionValue="code"
+    optionLabel="full_name"
+    placeholder="Select centers"
+    label="Centers"
+    selectedLabel="Selected"
+    selectedOptionLabel="full_name"
+    [showSelectAll]="showSelectAll"
+    [serverSearchDebounceMs]="serverSearchDebounceMs"
+    (searchTextChange)="onSearchTextChange($event)"
+    [(ngModel)]="model">
+  </app-pr-multi-select>
+`;
+
+/** Mount with `(searchTextChange)` bound — exercises the SIP-T-3 server-search opt-in path. */
+function mountMultiSelectWired(model: Center[], onSearchTextChange: (term: string) => void) {
+  return cy
+    .mount(TEMPLATE_WIRED, {
+      imports: [CustomFieldsModule, HttpClientTestingModule, NoopAnimationsModule],
+      providers: [provideRouter([])],
+      componentProperties: { options: OPTIONS, model, showSelectAll: false, serverSearchDebounceMs: 30, onSearchTextChange }
+    })
+    .then(wrapper => {
+      const roles = wrapper.fixture.debugElement.injector.get(RolesService);
+      roles.readOnly = false;
+      wrapper.fixture.detectChanges();
+      return cy.wrap(wrapper);
+    });
+}
+
 /** Open the dropdown (the `.options` panel is shown via `:focus-within`). */
 function openDropdown() {
   cy.get('.custom_select .field').should('exist').focus();
@@ -157,6 +192,59 @@ describe('PrMultiSelectComponent (CT)', () => {
       cy.wrap(null).then(() => {
         expect((wrapper.component as any).model.length).to.equal(3);
       });
+    });
+  });
+
+  // SIP-T-4 (wired mode): proves SIP-R-5/SIP-R-10 — typing emits the trimmed, debounced term via
+  // `(searchTextChange)`, and local filtering is bypassed (the parent owns filtering by replacing
+  // `[options]`; while wired, the dropdown must NOT hide non-matching options locally, or it would
+  // double-filter against whatever the parent already sent).
+  it('wired mode: emits the trimmed, debounced search term and bypasses local filtering', () => {
+    const onSearchTextChange = cy.stub().as('searchTextChange');
+    mountMultiSelectWired([], onSearchTextChange).then(() => {
+      openDropdown();
+
+      cy.get('.search_input_container input').type('  zzz-no-match  ', { delay: 0 });
+
+      // Debounce window is 30ms (see mountMultiSelectWired) — wait past it before asserting.
+      cy.wait(150);
+      cy.get('@searchTextChange').should('have.been.calledOnce').and('have.been.calledWith', 'zzz-no-match');
+
+      // None of the seeded options match "zzz-no-match", yet all three must still be visible:
+      // filterFlatOptions() is bypassed while server-search is wired (SIP-T-3).
+      cy.contains('.options .option', 'Center 1').should('exist');
+      cy.contains('.options .option', 'Center 2').should('exist');
+      cy.contains('.options .option', 'Center 3').should('exist');
+    });
+  });
+
+  // SIP-T-4 (unwired mode, the carried-forward coverage gap): proves the ~78 existing, unwired
+  // call sites are genuinely unaffected — same default TEMPLATE/mountMultiSelect as every other
+  // case in this file, no `(searchTextChange)` binding at all.
+  it('unwired mode (default template): search still filters locally and never emits searchTextChange', () => {
+    mountMultiSelect([]).then(wrapper => {
+      openDropdown();
+
+      const comp = wrapper.fixture.debugElement.children[0].componentInstance;
+      cy.spy(comp.searchTextChange, 'emit').as('emit');
+
+      cy.get('.search_input_container input').type('Center 1');
+
+      // Local filterFlatOptions() still narrows the list exactly as before SIP-T-3.
+      cy.contains('.options .option', 'Center 1').should('exist');
+      cy.contains('.options .option', 'Center 2').should('not.exist');
+      cy.contains('.options .option', 'Center 3').should('not.exist');
+
+      // Wait past the component's real default 300ms debounce window (serverSearchDebounceMs,
+      // pr-multi-select.component.ts:54) before asserting absence. Without this wait, the
+      // assertion runs inside that window and only proves nothing emitted synchronously — a real
+      // (regressed) emission from a debounced pipeline would not have fired yet, so the "never
+      // emits" claim would be unproven, not just unobserved-yet.
+      cy.wait(400);
+
+      // isServerSearchWired() correctly evaluates false for this instance: no debounce pipeline,
+      // no emission — proven by spying on the component's own emitter, not an external observer.
+      cy.get('@emit').should('not.have.been.called');
     });
   });
 });

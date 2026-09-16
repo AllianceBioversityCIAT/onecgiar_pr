@@ -766,7 +766,7 @@ export class ResultsController {
     summary:
       'Get the innovations a discontinued innovation may have merged into or split into',
     description:
-      "P2-3292 Steps 3A / 3B — backs the searchable multi-select shown when a reporter closes an innovation and declares where it continued. QA'd or Approved, never discontinued, one row per innovation, portfolio-wide. The result being discontinued is excluded by code so it cannot point at itself.",
+      'P2-3292 Steps 3A / 3B — backs the searchable multi-select shown when a reporter closes an innovation and declares where it continued. Any active, non-discontinued Innovation Development result, one row per innovation, portfolio-wide. The result being discontinued is excluded by code so it cannot point at itself.',
   })
   @ApiParam({
     name: 'resultId',
