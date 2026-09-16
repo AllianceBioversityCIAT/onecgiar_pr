@@ -100,3 +100,11 @@ ADVISORY (recorded, not gating — none minted as tasks):
 
 | Commit | see below |
 
+### Gate 1 (2026-09-16) — owner decisions
+
+- Continue with wave 2: `T-4 ∥ T-5` (both depend only on `T-1`/`T-3`; disjoint files under `services/quality-assessment/`; **neither edits `bilateral.module.ts`** — provider registration is `T-6`'s, entity registration `T-2`'s, to avoid a shared-file collision).
+- `T-2` DB access: owner connects VPN; Leader copied the main checkout `.env` into the worktree (gitignored, verified). `T-2` starts once a TCP probe to `DB_HOST` succeeds.
+- **Spec amendment approved:** `design.md` §5 *Grey rule* now matches response evidence by `index` and appends grey entries for omitted payload items (was the literal `evidence[i]`). `tasks.md` `T-6` description carries the rule update as approved scope. Correction closure sweep: forward grep `evidence[i]` / "by position" across the spec folder → only the design paragraph (amended) and this log; backward: `requirements.md` R-3/R-4 already state the intent, no citation asserts the old wording. No ADR overturned (not in the TRD).
+- `T-11(a)` (proxy ≥ 65 s in TEST) remains owner-only; required before `T-8`.
+- Contract-copy advisories ("in this order", AI-side grey trigger) surfaced to the owner; no change requested at this gate.
+
