@@ -382,10 +382,34 @@ describe('SharePointService', () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/octet-stream',
+            'Content-Length': '100',
             'Content-Range': 'bytes 0-99/100',
           }),
         }),
       );
+    });
+
+    it('should reject with a named error and never call http.put when size is not a positive integer', async () => {
+      const http = makeHttp();
+
+      const service = new SharePointService(
+        http as any,
+        makeGpCache() as any,
+        makeEvidencesRepo() as any,
+      );
+      jest.spyOn(service, 'createUploadSession').mockResolvedValue({
+        response: 'https://graph.example/upload-session',
+        message: 'Upload session created',
+        statusCode: 200,
+      } as any);
+
+      const stream = new Readable({ read() {} });
+
+      await expect(
+        service.uploadFromStream('1', 'file.pdf', stream, 0),
+      ).rejects.toThrow(/file\.pdf/);
+
+      expect(http.put).not.toHaveBeenCalled();
     });
 
     // The disqualifying input (task ADE-T-3): a Graph stub that never settles. Without a
