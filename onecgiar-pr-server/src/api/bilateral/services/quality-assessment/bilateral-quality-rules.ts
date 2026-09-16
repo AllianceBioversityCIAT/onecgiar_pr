@@ -58,7 +58,18 @@ export interface QualityPayloadEvidenceItem {
   tags: string[];
 }
 
-/** The definitions-only payload built from the persisted result (contract v0.1). */
+/**
+ * One entry of the top-level `impact_areas` array (contract v0.2 — new; integration-
+ * contracts.md → "Impact areas (`impact_areas`) — new in v0.2"). `subcomponents` is
+ * deliberately plural (`BIL-QAI-T-1b` corrected an earlier singular draft).
+ */
+export interface QualityPayloadImpactArea {
+  name: string;
+  score: string;
+  subcomponents: string[];
+}
+
+/** The definitions-only payload built from the persisted result (contract v0.2). */
 export interface QualityPayload {
   /**
    * Echoed contract version (`docs/bilateral-module/integration-contracts.md` → "Quality
@@ -75,6 +86,13 @@ export interface QualityPayload {
     evidence: QualityPayloadEvidenceItem[];
     type_specific: Record<string, unknown>;
   };
+  /**
+   * Sibling of `sections`, NOT a sixth section key (design.md §4.5). Optional; `[]` or absent
+   * means the result tags no pillar — not applicable, never grey, no penalty. Included in the
+   * content hash: re-tagging a pillar must invalidate a stored verdict (`BIL-QAI-R-2` scenario
+   * "Impact areas travel as an optional block").
+   */
+  impact_areas?: QualityPayloadImpactArea[];
   constraints?: { timeout_seconds: number };
 }
 

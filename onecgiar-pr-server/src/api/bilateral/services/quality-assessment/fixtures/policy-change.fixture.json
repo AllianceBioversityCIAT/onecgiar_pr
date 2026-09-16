@@ -103,7 +103,25 @@
       }
     ],
     "bilateral_projects": [],
-    "policy_change_summary": {}
+    "dac_scores": {
+      "gender": { "tag_title": "(0) Not Targeted", "impact_area_names": [] },
+      "climate_change": { "tag_title": "(1) Significant", "impact_area_names": [] },
+      "nutrition": { "tag_title": null, "impact_area_names": [] },
+      "environmental_biodiversity": { "tag_title": "(2) Principal", "impact_area_names": ["Environmental health"] },
+      "poverty": { "tag_title": null, "impact_area_names": [] }
+    },
+    "policy_change_summary": {
+      "amount": 250000,
+      "amount_status_label": "Confirmed",
+      "policy_type": { "id": 4, "name": "Regulation / legal instrument", "definition": null },
+      "policy_stage": { "id": 7, "name": "Enacted / adopted", "definition": null },
+      "linked_innovation_dev": false,
+      "linked_innovation_use": false,
+      "result_related_to": [],
+      "policy_implementing_organizations": [
+        { "id": 8804, "name": "Ministry of Agriculture, Ethiopia", "acronym": "MoA-ET", "institution_type_name": "Government" }
+      ]
+    }
   },
   "formDetail": {
     "commonFields": {

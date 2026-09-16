@@ -79,7 +79,7 @@ export class BilateralQualityAssessment {
   @Column({ type: 'char', length: 64 })
   content_hash: string;
 
-  /** Echoes the AI quality-assessment contract version, e.g. `0.1`. */
+  /** Echoes the AI quality-assessment contract version, e.g. `0.2`. */
   @Column({ type: 'varchar', length: 16 })
   contract_version: string;
 

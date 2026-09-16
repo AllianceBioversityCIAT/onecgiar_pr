@@ -111,7 +111,17 @@
           "planned_result": false,
           "initiative_id": 306,
           "toc_progressive_narrative": "An opportunistic regional agreement reported outside the original plan.",
-          "toc_level_id": 2
+          "toc_level_id": 2,
+          "indicators": [
+            {
+              "result_toc_result_indicator_id": 5502,
+              "toc_results_indicator_id": "IND-20123-1",
+              "indicator_contributing": "Yes",
+              "status_id": 1,
+              "indicator_result_type_id": null,
+              "targets": []
+            }
+          ]
         }
       ]
     },

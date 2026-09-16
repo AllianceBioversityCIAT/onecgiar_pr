@@ -101,7 +101,26 @@
       }
     ],
     "bilateral_projects": [],
-    "capacity_development_summary": {}
+    "dac_scores": {
+      "gender": { "tag_title": "(2) Principal", "impact_area_names": ["Gender equality", "Youth"] },
+      "climate_change": { "tag_title": null, "impact_area_names": [] },
+      "nutrition": { "tag_title": "(0) Not targeted", "impact_area_names": [] },
+      "environmental_biodiversity": { "tag_title": null, "impact_area_names": [] },
+      "poverty": { "tag_title": "(1) Significant", "impact_area_names": [] }
+    },
+    "capacity_development_summary": {
+      "male_using": 4,
+      "female_using": 7,
+      "non_binary_using": 1,
+      "has_unkown_using": 0,
+      "is_attending_for_organization": null,
+      "delivery_method": { "name": "In person", "description": null },
+      "training_length": { "name": "Short-term", "term": "Short-term", "description": "3 months or less" },
+      "on_behalf_organizations": [
+        { "id": 9002, "name": "International Institute of Tropical Agriculture", "acronym": "IITA", "institution_type_name": "CGIAR Center" },
+        { "id": 8805, "name": "Oyo State Ministry of Agriculture", "acronym": "OSMA", "institution_type_name": "Government" }
+      ]
+    }
   },
   "formDetail": {
     "commonFields": {

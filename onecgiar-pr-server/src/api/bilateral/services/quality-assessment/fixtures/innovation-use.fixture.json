@@ -105,7 +105,16 @@
         "level": 3,
         "name": "Level 3 — Use documented at scale",
         "definition": "Use of the innovation is documented at scale through independent evidence."
-      }
+      },
+      "initiative_budget": [
+        { "current_year": 1000, "next_year": 500, "kind_cash": 5000, "is_determined": true, "initiative": { "id": 304, "official_code": "SP04", "name": "Diversification in East and Southern Africa" } }
+      ],
+      "bilateral_project_budget": [
+        { "in_cash": 2000, "in_kind": 0, "kind_cash": 3000, "is_determined": true, "project": { "id": 7704, "short_name": "SorghumScale", "full_name": "Sorghum Scaling Fund" } }
+      ],
+      "partner_budget": [
+        { "kind_cash": 4000, "in_cash": 0, "in_kind": 0, "is_determined": true, "institutions_id": 8806, "institution": { "id": 8806, "name": "Mali National Agricultural Research Institute", "acronym": "IER", "institution_type_name": "National government" } }
+      ]
     }
   },
   "formDetail": {
@@ -149,18 +158,38 @@
         "actors": [
           {
             "result_actors_id": 4501,
-            "women": 620,
-            "women_youth": 0,
-            "men": 580,
-            "men_youth": 0,
-            "how_many": 1200,
+            "women": 300,
+            "women_youth": 50,
+            "men": 280,
+            "men_youth": 40,
+            "how_many": null,
             "has_women": true,
-            "has_women_youth": false,
+            "has_women_youth": true,
             "has_men": true,
-            "has_men_youth": false,
+            "has_men_youth": true,
+            "sex_and_age_disaggregation": true,
+            "actor_type_id": 1,
+            "obj_actor_type": { "id": 1, "name": "Farmers/ (agro)pastoralist/ herders/ fishers" },
+            "section_id": 1,
+            "result_id": 4104
+          },
+          {
+            "result_actors_id": 4502,
+            "women": null,
+            "women_youth": null,
+            "men": null,
+            "men_youth": null,
+            "men_non_youth": 0,
+            "women_non_youth": 0,
+            "how_many": 0,
+            "has_women": null,
+            "has_women_youth": null,
+            "has_men": null,
+            "has_men_youth": null,
             "sex_and_age_disaggregation": false,
-            "actor_type_id": 3,
-            "obj_actor_type": { "id": 3, "name": "Farmers" },
+            "actor_type_id": 5,
+            "other_actor_type": "Cooperative extension agents",
+            "obj_actor_type": { "id": 5, "name": "Other" },
             "section_id": 1,
             "result_id": 4104
           }
@@ -175,6 +204,15 @@
             "section_id": 1,
             "result_id": 4104,
             "result_ip_id": null
+          },
+          {
+            "result_ip_measure_id": 702,
+            "unit_of_measure": "Farmer field days conducted",
+            "quantity": 12,
+            "addressing_demands": null,
+            "section_id": 1,
+            "result_id": 4104,
+            "result_ip_id": null
           }
         ],
         "investment_partners": [],
@@ -182,5 +220,9 @@
       }
     ],
     "impactAreaScores": []
-  }
+  },
+  "rawInnovationUseActors": [
+    { "result_actors_id": 4501, "how_many": null },
+    { "result_actors_id": 4502, "how_many": 9 }
+  ]
 }

@@ -1,14 +1,21 @@
 // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-4)
 import { Inject, Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { BilateralService } from '../../bilateral.service';
 import { ResultsService } from '../../../results/results.service';
+import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
+import { ResultTypeEnum } from '../../../../shared/constants/result-type.enum';
 import { QualityPayload } from './bilateral-quality-rules';
 import { mapResultHeader } from './mappers/result-header.mapper';
 import { mapGeneralInformation } from './mappers/general-information.mapper';
 import { mapContributorsAndPartners } from './mappers/contributors-and-partners.mapper';
 import { mapGeographicLocation } from './mappers/geographic-location.mapper';
 import { mapEvidence } from './mappers/evidence.mapper';
-import { mapTypeSpecific } from './mappers/type-specific.mapper';
+import {
+  mapTypeSpecific,
+  RawInnovationUseActorHowMany,
+} from './mappers/type-specific.mapper';
+import { mapImpactAreas } from './mappers/impact-areas.mapper';
 import { stripIdentifiers } from './mappers/strip-identifiers';
 import { BilateralResultFormReadError } from './mappers/errors';
 import {
@@ -21,8 +28,11 @@ export {
   BilateralResultFormReadError,
 } from './mappers/errors';
 
-/** Frozen outbound contract version (design.md §4.5, `docs/bilateral-module/integration-contracts.md`). */
-export const BILATERAL_QUALITY_CONTRACT_VERSION = '0.1';
+/**
+ * Frozen outbound contract version (design.md §4.5, `docs/bilateral-module/integration-
+ * contracts.md`). v0.2 amended 2026-09-16 — supersedes v0.1 in place (`BIL-QAI-DD-11`).
+ */
+export const BILATERAL_QUALITY_CONTRACT_VERSION = '0.2';
 
 /**
  * `build(resultId, opts)` inputs beyond the persisted result itself — the caller (the
@@ -60,6 +70,16 @@ export class BilateralQualityPayloadBuilder {
     // no ToC indicator (`project()` never needs it in that case).
     @Inject(INDICATOR_DESCRIPTION_RESOLVER)
     private readonly indicatorDescriptionResolver?: IndicatorDescriptionResolver,
+    // `BIL-QAI-T-4b` gate fix: source of the un-post-processed `result_actors` rows for
+    // Innovation Use's "Number of people using" total (see `loadRawInnovationUseActors` below
+    // and `RawInnovationUseActorHowMany` in `./mappers/type-specific.mapper.ts` for why
+    // `formDetail.resultTypeResponse[0].actors` alone cannot be trusted for `how_many`). Same
+    // convention as `indicatorDescriptionResolver` above: required in production (`DataSource`
+    // resolves application-wide — `BilateralService` and `TocIndicatorDescriptionResolver`
+    // already inject it in this same module with no extra `bilateral.module.ts` wiring), `?` is
+    // TypeScript-only so fixture-driven unit tests can still `new` this class, and `project()`
+    // never touches it.
+    private readonly dataSource?: DataSource,
   ) {}
 
   async build(
@@ -93,7 +113,47 @@ export class BilateralQualityPayloadBuilder {
           )
         : {};
 
-    return this.project(detail, formDetail, opts, indicatorDescriptions);
+    const rawInnovationUseActors = await this.loadRawInnovationUseActors(
+      resultId,
+      detail,
+    );
+
+    return this.project(
+      detail,
+      formDetail,
+      opts,
+      indicatorDescriptions,
+      rawInnovationUseActors,
+    );
+  }
+
+  /**
+   * Queries `result_actors` directly through the already-injected `DataSource` — the same
+   * connection `BilateralService.buildInnovationUseBilateralSummary` uses for its own
+   * `dataSource.getRepository(ResultActor).find(...)` call (`bilateral.service.ts:3235-3242`) —
+   * so `how_many` reaches the mapper before `InnovationUseService.getActorsData` overwrites it
+   * (`innovation-use.service.ts:901-933`). Only Innovation Use needs this; every other type
+   * returns `[]` without a query.
+   */
+  private async loadRawInnovationUseActors(
+    resultId: number,
+    detail: Record<string, any>,
+  ): Promise<RawInnovationUseActorHowMany[]> {
+    if (
+      Number(detail?.result_type_id) !== ResultTypeEnum.INNOVATION_USE ||
+      !this.dataSource
+    ) {
+      return [];
+    }
+
+    const rows = await this.dataSource.getRepository(ResultActor).find({
+      where: { result_id: resultId, is_active: true },
+    });
+
+    return rows.map((row) => ({
+      result_actors_id: Number(row.result_actors_id),
+      how_many: row.how_many == null ? null : Number(row.how_many),
+    }));
   }
 
   project(
@@ -101,6 +161,7 @@ export class BilateralQualityPayloadBuilder {
     formDetail: Record<string, any>,
     opts: BilateralQualityPayloadBuildOptions,
     indicatorDescriptions: Record<string, string | null> = {},
+    rawInnovationUseActors: RawInnovationUseActorHowMany[] = [],
   ): QualityPayload {
     const result = mapResultHeader(detail);
     const sections = {
@@ -112,7 +173,11 @@ export class BilateralQualityPayloadBuilder {
       ),
       geographic_location: mapGeographicLocation(detail),
       evidence: mapEvidence(detail),
-      type_specific: mapTypeSpecific(detail, formDetail),
+      type_specific: mapTypeSpecific(
+        detail,
+        formDetail,
+        rawInnovationUseActors,
+      ),
     };
 
     return {
@@ -120,6 +185,11 @@ export class BilateralQualityPayloadBuilder {
       request_id: opts.requestId,
       result: stripIdentifiers(result),
       sections: stripIdentifiers(sections) as QualityPayload['sections'],
+      // Sibling of `sections`, not stripped through the id denylist — its only values are the
+      // frozen pillar/score labels and the seeded sub-component names, none of which are
+      // id-shaped (design.md §5 "Impact-areas mapper"). Inside the content hash by construction
+      // (contentHash spreads the whole payload minus request_id/constraints).
+      impact_areas: mapImpactAreas(detail),
       constraints: { timeout_seconds: opts.timeoutSeconds },
     };
   }

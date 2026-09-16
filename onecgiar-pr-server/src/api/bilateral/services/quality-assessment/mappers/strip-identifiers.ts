@@ -29,6 +29,8 @@ export const NUMERIC_LABEL_ALLOWLIST: ReadonlySet<string> = new Set<string>([
   'quantity',
   'timeout_seconds',
   'Quantity',
+  // v0.1 flat labels — superseded by the v0.2 typed objects below, kept here in case an older
+  // fixture or caller still emits them.
   'Number of women trained',
   'Number of men trained',
   'Number of non-binary people trained',
@@ -37,6 +39,21 @@ export const NUMERIC_LABEL_ALLOWLIST: ReadonlySet<string> = new Set<string>([
   'Number of men using the innovation',
   'Number of women youth using the innovation',
   'Number of men youth using the innovation',
+  // v0.2 typed-object keys (BIL-QAI-T-4b, design.md §4.5): plain-word-keyed counts and amounts
+  // inside `"Number of people trained"`, `"Number of people using"` and `"USD amount"` /
+  // `"Investment (USD)"`. Design.md §5 "Payload builder — v0.2 amendments" states these are
+  // "already inside the numeric-by-nature allowlist" — they were not; this task adds them so a
+  // v0.2 typed count/amount is not silently dropped by this pre-existing safety net.
+  'total',
+  'female',
+  'male',
+  'non_binary',
+  'unknown',
+  'women',
+  'men',
+  'women_youth',
+  'men_youth',
+  'amount',
 ]);
 
 /** Years (e.g. "CGSpace year", "WoS year", "Issue year") are numeric-by-nature by suffix. */
