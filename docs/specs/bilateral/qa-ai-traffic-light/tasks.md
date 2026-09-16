@@ -141,7 +141,7 @@
 - **Definition of done:** grep gate `grep -n "JSON.stringify" bilateral-quality-assessment.client.ts` returns no log-related hit; lint clean.
 - **Superseded by v0.2 → see `BIL-QAI-T-5b`.** The text above records what was executed; its schema check rejects a grey **section** as `malformed`, which v0.2 makes a valid answer.
 
-### [ ] `BIL-QAI-T-5b` — AI client schema check v0.2: section grey, `status`, `degraded_reason`
+### [x] `BIL-QAI-T-5b` — AI client schema check v0.2: section grey, `status`, `degraded_reason`
 
 - **Type:** `server`
 - **Description:** Widen `bilateral-quality-assessment.client.ts` to contract v0.2 (`design.md` §5 *AI client — v0.2 schema check*). (a) **Section verdict enum** widens to `green | amber | red | grey`; `overall.verdict` stays on the three colours — v0.1 rejected a grey section as `malformed`, which under v0.2 throws away a usable verdict. (b) `status` (`completed | partial | unavailable`) and `degraded_reason` (`string | null`) join the **required** keys; a body missing either is `malformed`. (c) The outcome object carries `ai_status` and `degraded_reason` through to the orchestrator alongside the existing sanitised `score`. (d) `degraded_reason` is truncated to 255 characters and stripped of anything URL- or host-shaped before it leaves the client, so a careless AI-side message cannot become a leak, and it is **never logged**. (e) Unknown response keys stay ignored (forward compatibility, unchanged). (f) The `ai-response.v0.1.json` fixture is replaced by a v0.2 fixture, plus fixtures for `partial` and for AI `unavailable`.

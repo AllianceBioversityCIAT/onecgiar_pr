@@ -10,12 +10,14 @@ import {
 import { QualityPayload } from './bilateral-quality-rules';
 
 /**
- * BIL-QAI-T-5 — AI HTTP client with timeout mapping and body-free logging.
+ * BIL-QAI-T-5 / BIL-QAI-T-5b — AI HTTP client with timeout mapping, body-free logging, and
+ * (v0.2) the widened schema check for `status` / `degraded_reason` / a grey **section**.
  *
- * Expected outcomes below are taken literally from design.md §5 "AI client" and
- * requirements.md BIL-QAI-R-7 / BIL-QAI-AC-15, never recomputed by calling the
- * client under test. Env is stubbed per test and restored — never read from a real
- * `.env` (memory rule: the environment.ts/env file never travels with the test).
+ * Expected outcomes below are taken literally from design.md §5 "AI client" / "AI client —
+ * v0.2 schema check", requirements.md BIL-QAI-R-4 / BIL-QAI-R-7 / BIL-QAI-AC-15 / AC-17, never
+ * recomputed by calling the client under test. Env is stubbed per test and restored — never
+ * read from a real `.env` (memory rule: the environment.ts/env file never travels with the
+ * test).
  */
 
 const ENV_KEYS = [
@@ -48,7 +50,7 @@ afterEach(() => {
 
 function buildPayload(overrides: { title?: string } = {}): QualityPayload {
   return {
-    contract_version: '0.1',
+    contract_version: '0.2',
     result: {
       type: 'Innovation development',
       reporting_phase: 'Reporting 2026',
@@ -93,13 +95,14 @@ function buildPayload(overrides: { title?: string } = {}): QualityPayload {
   };
 }
 
-function readFixture(): unknown {
+function readFixture(name: string): unknown {
   return JSON.parse(
-    fs.readFileSync(
-      path.join(__dirname, './fixtures/ai-response.v0.1.json'),
-      'utf8',
-    ),
+    fs.readFileSync(path.join(__dirname, `./fixtures/${name}`), 'utf8'),
   );
+}
+
+function readV02Fixture(): any {
+  return readFixture('ai-response.v0.2.json');
 }
 
 function makeClient(post: jest.Mock): BilateralQualityAssessmentClient {
@@ -191,6 +194,16 @@ describe('BilateralQualityAssessmentClient', () => {
       expect(client.timeoutMs()).toBe(60_000);
       expect(client.timeoutSeconds()).toBe(60);
     });
+
+    it('falls back to the 60000ms default when the env value is entirely unset', () => {
+      // beforeEach already deletes BILATERAL_AI_QUALITY_TIMEOUT_MS; this asserts the
+      // "unset" branch specifically, distinct from the "invalid value" case above
+      // (previously untested — Reviewer open item).
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const client = makeClient(jest.fn());
+      expect(client.timeoutMs()).toBe(60_000);
+      expect(client.timeoutSeconds()).toBe(60);
+    });
   });
 
   describe('http_error', () => {
@@ -208,7 +221,7 @@ describe('BilateralQualityAssessmentClient', () => {
       const result = await client.assess(buildPayload(), { resultId: 1 });
 
       expect(result.outcome).toBe('http_error');
-      if (result.outcome !== 'ok') {
+      if (result.outcome !== 'ok' && result.outcome !== 'ai_unavailable') {
         expect(result.http_status).toBe(503);
       }
     });
@@ -223,15 +236,76 @@ describe('BilateralQualityAssessmentClient', () => {
       const result = await client.assess(buildPayload(), { resultId: 1 });
 
       expect(result.outcome).toBe('malformed');
-      if (result.outcome !== 'ok') {
+      if (result.outcome !== 'ok' && result.outcome !== 'ai_unavailable') {
         expect(result.http_status).toBe(200);
       }
     });
 
     it('maps a 200 with one section missing `issues` to malformed', async () => {
       configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
-      const body = readFixture() as any;
+      const body = readV02Fixture();
       delete body.sections.evidence.issues;
+      const post = jest.fn(() => of({ data: body, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+    });
+
+    it('maps a 2xx text/html body to malformed', async () => {
+      // Reviewer open item: previously untested. A string body fails `isRecord` immediately.
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const post = jest.fn(() =>
+        of({ data: '<html><body>Not JSON</body></html>', status: 200 }),
+      );
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+    });
+
+    it('maps a valid v0.1-shaped body missing `status` to malformed (v0.2)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const body = readV02Fixture();
+      delete body.status;
+      const post = jest.fn(() => of({ data: body, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+    });
+
+    it('maps a body missing `degraded_reason` to malformed (v0.2)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const body = readV02Fixture();
+      delete body.degraded_reason;
+      const post = jest.fn(() => of({ data: body, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+    });
+
+    it('maps a body whose `status` is not in the enum to malformed (v0.2)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const body = readV02Fixture();
+      body.status = 'in_progress';
+      const post = jest.fn(() => of({ data: body, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+    });
+
+    it('maps a body whose `overall.verdict` is `grey` to malformed — overall stays 3-colour (v0.2)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const body = readV02Fixture();
+      body.overall.verdict = 'grey';
       const post = jest.fn(() => of({ data: body, status: 200 }));
       const client = makeClient(post);
 
@@ -242,9 +316,9 @@ describe('BilateralQualityAssessmentClient', () => {
   });
 
   describe('ok', () => {
-    it('parses the v0.1 contract fixture to the internal shape', async () => {
+    it('parses the v0.2 contract fixture to the internal shape', async () => {
       configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
-      const fixture = readFixture();
+      const fixture = readV02Fixture();
       const post = jest.fn(() => of({ data: fixture, status: 200 }));
       const client = makeClient(post);
 
@@ -261,13 +335,34 @@ describe('BilateralQualityAssessmentClient', () => {
         ]);
         expect(result.response.evidence).toHaveLength(2);
         expect(result.response.evidence[1].verdict).toBe('grey');
+        expect(result.ai_status).toBe('completed');
+        expect(result.degraded_reason).toBeNull();
       }
       expect(post).toHaveBeenCalledTimes(1);
     });
 
+    it('a grey **section** verdict is accepted and survives into the parsed shape (BIL-QAI-R-4)', async () => {
+      const fixture = readV02Fixture();
+      // Sanity: the fixture itself carries the grey section this test targets.
+      expect(fixture.sections.type_specific.verdict).toBe('grey');
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const post = jest.fn(() => of({ data: fixture, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.type_specific.verdict).toBe('grey');
+        expect(result.response.sections.type_specific.comments).toBe(
+          'no type-specific details were reported',
+        );
+      }
+    });
+
     it('keeps a valid overall score (68) untouched', async () => {
       configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
-      const body = readFixture() as any;
+      const body = readV02Fixture();
       body.overall.score = 68;
       const post = jest.fn(() => of({ data: body, status: 200 }));
       const client = makeClient(post);
@@ -282,7 +377,7 @@ describe('BilateralQualityAssessmentClient', () => {
 
     it('sanitizes a non-numeric overall score ("68") to null, outcome stays ok', async () => {
       configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
-      const body = readFixture() as any;
+      const body = readV02Fixture();
       body.overall.score = '68';
       const post = jest.fn(() => of({ data: body, status: 200 }));
       const client = makeClient(post);
@@ -297,7 +392,7 @@ describe('BilateralQualityAssessmentClient', () => {
 
     it('sanitizes an out-of-range section score (900) to null, outcome stays ok', async () => {
       configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
-      const body = readFixture() as any;
+      const body = readV02Fixture();
       body.sections.general_information.score = 900;
       const post = jest.fn(() => of({ data: body, status: 200 }));
       const client = makeClient(post);
@@ -311,12 +406,131 @@ describe('BilateralQualityAssessmentClient', () => {
     });
   });
 
+  describe('v0.2 — status / degraded_reason mapping (BIL-QAI-R-7)', () => {
+    it('`status: "partial"` ⇒ outcome carries ai_status "partial" and the reason', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const fixture = readFixture('ai-response.partial.json');
+      const post = jest.fn(() => of({ data: fixture, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.ai_status).toBe('partial');
+        expect(result.degraded_reason).toBe(
+          'One evidence link could not be opened, so the evidence section was assessed on descriptions only.',
+        );
+      }
+    });
+
+    it('`status: "unavailable"` ⇒ outcome is distinguishable from every transport failure', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const fixture = readFixture('ai-response.unavailable.json');
+      const post = jest.fn(() => of({ data: fixture, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ai_unavailable');
+      expect(result.outcome).not.toBe('ok');
+      expect([
+        'not_configured',
+        'timeout',
+        'http_error',
+        'malformed',
+      ]).not.toContain(result.outcome);
+      if (result.outcome === 'ai_unavailable') {
+        expect(result.degraded_reason).toBe(
+          'The assessment model could not produce a verdict for this submission.',
+        );
+      }
+    });
+
+    it('truncates a 400-character degraded_reason to 255', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const body = readFixture('ai-response.partial.json') as any;
+      body.degraded_reason = 'x'.repeat(400);
+      const post = jest.fn(() => of({ data: body, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.degraded_reason).toHaveLength(255);
+      }
+    });
+
+    it('strips a URL out of degraded_reason before it leaves the client (falsifying input, AC-9)', async () => {
+      const LEAK_MARKER = 'LEAK-MARKER-9f3';
+      const LEAK_URL = 'https://ai-internal.example';
+      configureEnv({ url: 'https://ai.example.test', key: 'a-key' });
+      const body = readFixture('ai-response.partial.json') as any;
+      body.degraded_reason = `${LEAK_MARKER} at ${LEAK_URL}`;
+      const post = jest.fn(() => of({ data: body, status: 200 }));
+      const client = makeClient(post);
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.degraded_reason).not.toContain(LEAK_URL);
+        expect(result.degraded_reason).not.toContain('ai-internal.example');
+      }
+    });
+  });
+
+  describe('outbound request config', () => {
+    it('posts to the configured URL + path with X-API-Key, Content-Type and the guard timeout', async () => {
+      // Reviewer open item: previously nothing asserted the outbound config.
+      configureEnv({
+        url: 'https://ai.example.test',
+        key: 'a-key-value',
+        timeoutMs: '12345',
+      });
+      const fixture = readV02Fixture();
+      const post = jest.fn(() => of({ data: fixture, status: 200 }));
+      const client = makeClient(post);
+
+      await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(post).toHaveBeenCalledTimes(1);
+      const [url, , config] = post.mock.calls[0] as unknown as [
+        string,
+        unknown,
+        Record<string, any>,
+      ];
+      expect(url).toBe('https://ai.example.test/prms/quality-assessment');
+      expect(config.headers['X-API-Key']).toBe('a-key-value');
+      expect(config.headers['Content-Type']).toBe('application/json');
+      expect(config.timeout).toBe(12345);
+      // design.md §8: JSON columns sized for ≤ 32 KB per row — the client bounds the
+      // response it will accept with headroom over that budget.
+      expect(config.maxContentLength).toBe(65_536);
+      expect(config.maxBodyLength).toBe(65_536);
+    });
+
+    it('trims trailing slashes from BILATERAL_AI_QUALITY_URL before building the request URL', async () => {
+      // Reviewer open item: previously untested.
+      configureEnv({ url: 'https://ai.example.test///', key: 'a-key' });
+      const fixture = readV02Fixture();
+      const post = jest.fn(() => of({ data: fixture, status: 200 }));
+      const client = makeClient(post);
+
+      await client.assess(buildPayload(), { resultId: 1 });
+
+      const [url] = post.mock.calls[0] as unknown as [string, unknown, unknown];
+      expect(url).toBe('https://ai.example.test/prms/quality-assessment');
+    });
+  });
+
   describe('log privacy (BIL-QAI-AC-15)', () => {
     const LEAK_TITLE = 'LEAK-MARKER-9f3';
     const LEAK_KEY = 'KEY-MARKER-a1';
     const LEAK_HOST = 'leak-host-marker.example.test';
 
-    it('never logs the payload title, the API key, or the host, on any outcome', async () => {
+    it('never logs the payload title, the API key, the host, or any part of degraded_reason, on any outcome', async () => {
       const logSpy = jest
         .spyOn(Logger.prototype, 'log')
         .mockImplementation(() => undefined);
@@ -328,12 +542,22 @@ describe('BilateralQualityAssessmentClient', () => {
         .mockImplementation(() => undefined);
 
       const payload = buildPayload({ title: LEAK_TITLE });
-      const fixture = readFixture();
+      const okFixture = readV02Fixture();
+      const LEAK_REASON = 'LEAK-REASON-7c2';
+      const unavailableFixture = readFixture(
+        'ai-response.unavailable.json',
+      ) as any;
+      unavailableFixture.degraded_reason = LEAK_REASON;
 
       // ok
       configureEnv({ url: `https://${LEAK_HOST}`, key: LEAK_KEY });
       await makeClient(
-        jest.fn(() => of({ data: fixture, status: 200 })),
+        jest.fn(() => of({ data: okFixture, status: 200 })),
+      ).assess(payload, { resultId: 1 });
+
+      // ai_unavailable (v0.2) — degraded_reason must never reach a log line
+      await makeClient(
+        jest.fn(() => of({ data: unavailableFixture, status: 200 })),
       ).assess(payload, { resultId: 1 });
 
       // http_error
@@ -379,13 +603,16 @@ describe('BilateralQualityAssessmentClient', () => {
         ...errorSpy.mock.calls,
       ].map((call) => String(call[0]));
 
-      expect(emitted.length).toBeGreaterThan(0);
+      // Reviewer open item: exact count, not just "at least one" — six assess() calls above,
+      // one terminal log line each.
+      expect(emitted).toHaveLength(6);
       for (const line of emitted) {
         expect(line).toMatch(/^event=bilateral_quality_assessment/);
         expect(line).not.toContain(LEAK_TITLE);
         expect(line).not.toContain(LEAK_KEY);
         expect(line).not.toContain(LEAK_HOST);
         expect(line).not.toContain('leak-host-marker');
+        expect(line).not.toContain(LEAK_REASON);
       }
     });
   });

@@ -1,6 +1,8 @@
 {
   "request_id": "b6f21b8e-8a1a-4b7a-9c9a-9b7a6b1a2b3c",
   "criteria_version": "QA-2026-v1",
+  "status": "completed",
+  "degraded_reason": null,
   "overall": {
     "verdict": "amber",
     "score": 68,
@@ -34,10 +36,10 @@
       "issues": ["No evidence item links the claim to a verifiable source"]
     },
     "type_specific": {
-      "verdict": "amber",
-      "comments": "The innovation readiness level is plausible but under-justified.",
+      "verdict": "grey",
+      "comments": "no type-specific details were reported",
       "strengths": [],
-      "issues": ["Readiness level rationale is thin"]
+      "issues": []
     }
   },
   "evidence": [

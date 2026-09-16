@@ -1,9 +1,10 @@
-// @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-5)
+// @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-5, BIL-QAI-T-5b)
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { env } from 'node:process';
 import { firstValueFrom } from 'rxjs';
+import { BilateralQualityAssessmentAiStatus } from '../../entities/bilateral-quality-assessment.entity';
 import {
   AiAssessmentResponse,
   QualityPayload,
@@ -22,24 +23,45 @@ import {
  * `Logger.warn` on any failure outcome) carrying only ids, status and elapsed time —
  * never the request/response body, the API key, or the AI host (`.cursorrules`,
  * design.md §7 Security, §9 Observability).
+ *
+ * **v0.2** (`BIL-QAI-T-5b`, design.md §5 "AI client — v0.2 schema check"): the response's
+ * `status` and `degraded_reason` join the required keys, and a **section** verdict may be
+ * `grey` (`overall.verdict` stays on the three-colour enum). `degraded_reason` is sanitised
+ * (URL/host stripped, truncated to 255) and threaded through to the orchestrator, but is
+ * never logged — same privacy rule as the body/key/host it already protects.
  */
 
 const QUALITY_ASSESSMENT_PATH = '/prms/quality-assessment';
 const DEFAULT_TIMEOUT_MS = 60_000;
+/**
+ * Response-size bound (design.md §8: JSON columns sized for ≤ 32 KB per row). Set with
+ * headroom over the storage budget since the wire body also carries `request_id`,
+ * `criteria_version`, etc. Axios rejects a larger body before it reaches
+ * {@link isValidAiResponse}; the rejection is folded into `http_error` by {@link classify}
+ * like any other transport failure. Not exercised by the spec's mocked `HttpService.post`,
+ * which returns a resolved value directly and never runs Axios' own content-length guard.
+ */
+const MAX_RESPONSE_BYTES = 65_536;
 
-/** The three colours a response's `overall`/section verdict may carry (never `grey`). */
+/** The three colours `overall.verdict` may carry (never `grey` — design.md §4.5). */
 const RESPONSE_VERDICTS: ReadonlyArray<QualityVerdict> = [
   'green',
   'amber',
   'red',
 ];
-/** Evidence items additionally allow `grey` (contract v0.1). */
+/**
+ * Evidence items allow `grey` (contract v0.1). **v0.2** widens **section** verdicts to the
+ * same four colours (`isValidSectionResult` below) — a `grey` section means "not evaluated",
+ * the same meaning it has on an evidence item, and must not be rejected as malformed
+ * (`BIL-QAI-R-4` "A grey section is rendered, not rejected").
+ */
 const EVIDENCE_VERDICTS: ReadonlyArray<QualityVerdict> = [
   'green',
   'amber',
   'red',
   'grey',
 ];
+const SECTION_VERDICTS: ReadonlyArray<QualityVerdict> = EVIDENCE_VERDICTS;
 
 const SECTION_KEYS: ReadonlyArray<QualitySectionKey> = [
   'general_information',
@@ -49,6 +71,32 @@ const SECTION_KEYS: ReadonlyArray<QualitySectionKey> = [
   'type_specific',
 ];
 
+/**
+ * The wire value of the response's `status` field (design.md §4.5 "PRMS status mapping").
+ * Deliberately **wider** than the persisted `ai_status` column
+ * (`BilateralQualityAssessmentAiStatus = 'completed' | 'partial'`, entity file): a third,
+ * `'unavailable'`, member here would make `ai_status = 'unavailable'` representable on the
+ * column, which the mapping table forbids (`unavailable` is stored via
+ * `unavailable_reason = 'ai_unavailable'` with `ai_status` staying `null`). Declaring this as
+ * a derivation keeps the two domains linked without widening the narrower one (forward
+ * pointer from the `T-2b` Reviewer).
+ */
+export type BilateralQualityAiResponseStatus =
+  | BilateralQualityAssessmentAiStatus
+  | 'unavailable';
+
+const RESPONSE_STATUSES: ReadonlyArray<BilateralQualityAiResponseStatus> = [
+  'completed',
+  'partial',
+  'unavailable',
+];
+
+/** The 2xx body once it has passed {@link isValidAiResponse} (v0.2 required keys). */
+interface AiResponseBodyV2 extends AiAssessmentResponse {
+  status: BilateralQualityAiResponseStatus;
+  degraded_reason: string | null;
+}
+
 export type AiClientFailureOutcome =
   | 'not_configured'
   | 'timeout'
@@ -56,7 +104,29 @@ export type AiClientFailureOutcome =
   | 'malformed';
 
 export type AiClientOutcome =
-  | { outcome: 'ok'; response: AiAssessmentResponse; elapsed_ms: number }
+  | {
+      outcome: 'ok';
+      response: AiAssessmentResponse;
+      /** The AI's own `status`, verbatim — always `completed` or `partial` on this variant. */
+      ai_status: BilateralQualityAssessmentAiStatus;
+      /** Sanitised, truncated; `null` unless the AI reported a degradation. */
+      degraded_reason: string | null;
+      elapsed_ms: number;
+    }
+  | {
+      /**
+       * The AI answered well-formed with `status: "unavailable"` — no usable verdict, but a
+       * reason. Kept off `AiClientFailureOutcome` on purpose (forward pointer from the `T-2b`
+       * Reviewer): that variant carries no field for a reason, so folding this case into it
+       * would make `degraded_reason` structurally unable to reach the orchestrator and lose
+       * `BIL-QAI-R-7`'s unavailable-reason text. `ai_status` is not carried here — the
+       * mapping table stores `ai_status = null` for this case (`unavailable_reason =
+       * 'ai_unavailable'` carries the distinction instead).
+       */
+      outcome: 'ai_unavailable';
+      degraded_reason: string | null;
+      elapsed_ms: number;
+    }
   | {
       outcome: AiClientFailureOutcome;
       elapsed_ms: number;
@@ -82,7 +152,7 @@ function isValidSectionResult(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
   }
-  if (!RESPONSE_VERDICTS.includes(value.verdict as QualityVerdict)) {
+  if (!SECTION_VERDICTS.includes(value.verdict as QualityVerdict)) {
     return false;
   }
   return Array.isArray(value.strengths) && Array.isArray(value.issues);
@@ -105,9 +175,37 @@ function isValidEvidenceItem(value: unknown): boolean {
  * `{index, verdict}` — this is the only guard for that assumption. `comments` and
  * `score` are optional on every section and on `overall`; `score`'s value is not
  * checked here — {@link sanitizeScores} normalizes it once this check succeeds.
+ *
+ * **Known over-wide spot (carried from earlier Reviewers, `BIL-QAI-T-5` / `T-5b`):** the
+ * *type* `AiAssessmentResponse` also declares `request_id`, `overall.summary`, per-section
+ * `comments` and per-evidence `reason` as required, but this predicate does not check any of
+ * them — it only guards what `applyGreyRule`/`sanitizeScores` actually read. Decision made
+ * here rather than widening the check: **the type stays as the wire contract's documentation,
+ * the predicate stays scoped to what this module dereferences.** `T-6`/`T-7` MUST NOT assume
+ * this predicate guarantees `request_id`, `overall.summary`, section `comments` or evidence
+ * `reason` are present/well-typed — read them defensively if a downstream rule needs them.
+ *
+ * **v0.2** (`BIL-QAI-T-5b`): `status` (∈ `completed | partial | unavailable`) and
+ * `degraded_reason` (`string | null`) join the required keys — a body missing either is
+ * `malformed`, same as a missing `overall`/`sections`/`evidence`. Section verdicts (not
+ * `overall`) now accept `grey` via {@link isValidSectionResult}. Unknown response keys stay
+ * ignored (forward compatibility, unchanged from v0.1) — this function never rejects on an
+ * extra key, only on a missing/invalid required one.
  */
-function isValidAiResponse(body: unknown): body is AiAssessmentResponse {
+function isValidAiResponse(body: unknown): body is AiResponseBodyV2 {
   if (!isRecord(body)) {
+    return false;
+  }
+
+  if (
+    !RESPONSE_STATUSES.includes(body.status as BilateralQualityAiResponseStatus)
+  ) {
+    return false;
+  }
+  if (
+    body.degraded_reason !== null &&
+    typeof body.degraded_reason !== 'string'
+  ) {
     return false;
   }
 
@@ -142,6 +240,51 @@ function isValidAiResponse(body: unknown): body is AiAssessmentResponse {
   return true;
 }
 
+/** Strips the request_id/overall/sections/evidence subset back out of a v0.2 body — the
+ * `'ok'` outcome's `response` field carries only the v0.1 shape; `status`/`degraded_reason`
+ * travel as separate, top-level `AiClientOutcome` fields instead of being duplicated inside
+ * `response` (keeps `sanitizeScores`'s input/output type exactly `AiAssessmentResponse`). */
+function toAiAssessmentResponse(body: AiResponseBodyV2): AiAssessmentResponse {
+  return {
+    request_id: body.request_id,
+    criteria_version: body.criteria_version,
+    overall: body.overall,
+    sections: body.sections,
+    evidence: body.evidence,
+  };
+}
+
+const MAX_DEGRADED_REASON_LENGTH = 255;
+/** Matches a scheme-qualified URL in full, including its host, so the host never survives
+ * into a truncated remainder. */
+const URL_PATTERN = /\bhttps?:\/\/\S+/gi;
+/** Matches a bare, dotted host-like token (e.g. `ai-internal.example`) left over once any
+ * `scheme://` prefix is gone — defensive: not exercised by a specific test, but cheap
+ * insurance against a host mentioned without a scheme (design.md §4.5 "stripped of anything
+ * that looks like a URL or host"). */
+const HOST_PATTERN =
+  /\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b/gi;
+const REDACTED_PLACEHOLDER = '[redacted]';
+
+/**
+ * Sanitises the AI's plain-language `degraded_reason` before it leaves the client
+ * (design.md §4.5, NFR *Privacy / secrets*, `BIL-QAI-AC-9`): strips anything URL- or
+ * host-shaped (so a careless AI-side message naming its own host cannot leak it), then
+ * truncates to 255 characters. `null` passes through unchanged — the AI has nothing to
+ * redact when it reports no degradation. Order matters: stripping first means truncation
+ * can never cut a URL in half and leave a dangling host fragment.
+ */
+function sanitizeDegradedReason(reason: string | null): string | null {
+  if (reason === null) {
+    return null;
+  }
+  const withoutUrls = reason.replace(URL_PATTERN, REDACTED_PLACEHOLDER);
+  const withoutHosts = withoutUrls.replace(HOST_PATTERN, REDACTED_PLACEHOLDER);
+  return withoutHosts.length > MAX_DEGRADED_REASON_LENGTH
+    ? withoutHosts.slice(0, MAX_DEGRADED_REASON_LENGTH)
+    : withoutHosts;
+}
+
 const MIN_SCORE = 0;
 const MAX_SCORE = 100;
 
@@ -168,6 +311,13 @@ function sanitizeScore(value: unknown): number | null {
  * `isValidAiResponse` succeeds, before `assess()` returns `outcome: 'ok'`
  * (design.md §5 "AI client"; Reviewer B, BIL-QAI-T-5 attempt 2). Never mutates
  * the Axios response body — every level that changes is rebuilt.
+ *
+ * **Deliberate side effect (carried from an earlier Reviewer, kept and documented):**
+ * `sections` is rebuilt from {@link SECTION_KEYS} — the five known keys — rather than from
+ * `Object.keys(body.sections)`, so a response carrying a sixth, unrecognised section key
+ * silently drops it on this `ok` path. This matches the "unknown key ignored" forward-
+ * compatibility rule the AI client already applies everywhere else (`BIL-QAI-T-9`'s scope
+ * assumes the same rule downstream) — it is not an oversight.
  */
 function sanitizeScores(body: AiAssessmentResponse): AiAssessmentResponse {
   const sections = {} as Record<QualitySectionKey, QualitySectionResult>;
@@ -236,10 +386,14 @@ export class BilateralQualityAssessmentClient {
 
     const url = `${this.baseUrl()}${QUALITY_ASSESSMENT_PATH}`;
     const timeoutMs = this.timeoutMs();
-    const body: QualityPayload = { ...payload, request_id: requestId };
+    const requestBody: QualityPayload = { ...payload, request_id: requestId };
 
     try {
-      const response = await this.postWithTimeoutGuard(url, body, timeoutMs);
+      const response = await this.postWithTimeoutGuard(
+        url,
+        requestBody,
+        timeoutMs,
+      );
       const elapsedMs = Date.now() - started;
 
       if (!isValidAiResponse(response.data)) {
@@ -252,13 +406,42 @@ export class BilateralQualityAssessmentClient {
         );
       }
 
-      const sanitized = sanitizeScores(response.data);
+      const body = response.data;
+      // Captured into a local so the narrowing below survives the `Logger` calls that
+      // follow it — narrowing a repeated `body.status` property read can be invalidated by
+      // an intervening function call; a local `const` cannot.
+      const status = body.status;
+      const degradedReason = sanitizeDegradedReason(body.degraded_reason);
+
+      if (status === 'unavailable') {
+        // AI-declared unavailable: well-formed 2xx, no usable verdict. Never logs
+        // `degraded_reason` (BIL-QAI-AC-15) — only ids/status/elapsed, same as every other
+        // outcome this client logs.
+        this.logger.warn(
+          `event=bilateral_quality_assessment_client result_id=${ctx.resultId} request_id=${requestId} outcome=ai_unavailable http_status=${response.status} elapsed_ms=${elapsedMs}`,
+        );
+        return {
+          outcome: 'ai_unavailable',
+          degraded_reason: degradedReason,
+          elapsed_ms: elapsedMs,
+        };
+      }
+
+      const sanitized = sanitizeScores(toAiAssessmentResponse(body));
 
       this.logger.log(
         `event=bilateral_quality_assessment_client result_id=${ctx.resultId} request_id=${requestId} outcome=ok http_status=${response.status} elapsed_ms=${elapsedMs}`,
       );
 
-      return { outcome: 'ok', response: sanitized, elapsed_ms: elapsedMs };
+      return {
+        outcome: 'ok',
+        response: sanitized,
+        // `status` is narrowed to `'completed' | 'partial'` here — the `'unavailable'`
+        // branch above already returned.
+        ai_status: status,
+        degraded_reason: degradedReason,
+        elapsed_ms: elapsedMs,
+      };
     } catch (error: unknown) {
       const elapsedMs = Date.now() - started;
       const { outcome, httpStatus } = this.classify(error);
@@ -276,30 +459,45 @@ export class BilateralQualityAssessmentClient {
    * Races the Axios call against a same-duration timer so a call the mocked (or real)
    * HTTP client never settles still yields `timeout` at exactly `timeoutMs` — the
    * `timeout` passed to Axios covers the real-network case, this guard covers the rest.
+   *
+   * The guard timer is cleared as soon as the request settles on its own (open item from an
+   * earlier Reviewer): without this, every call that resolves before the guard fires leaves
+   * a pending Node timer behind, which is why the spec needs `--forceExit`. Clearing it here
+   * does not remove that requirement (a timeout-path test still lets its own timer fire), but
+   * it stops piling one extra leaked timer per successful/failed call.
    */
   private postWithTimeoutGuard(
     url: string,
     body: QualityPayload,
     timeoutMs: number,
   ): Promise<{ data: unknown; status: number }> {
+    let guardTimer: NodeJS.Timeout | undefined;
+
     const request$ = this.httpService.post(url, body, {
       timeout: timeoutMs,
+      maxContentLength: MAX_RESPONSE_BYTES,
+      maxBodyLength: MAX_RESPONSE_BYTES,
       headers: {
         'X-API-Key': this.apiKey(),
         'Content-Type': 'application/json',
       },
     });
 
-    const requestPromise = firstValueFrom(request$).then((res) => ({
-      data: res.data as unknown,
-      status: res.status,
-    }));
+    const requestPromise = firstValueFrom(request$).then((res) => {
+      clearTimeout(guardTimer);
+      return { data: res.data as unknown, status: res.status };
+    });
     // The timeout guard may resolve first; avoid an unhandled rejection when the
     // underlying call later settles on its own (e.g. Axios' own timeout firing).
-    requestPromise.catch(() => undefined);
+    requestPromise.catch(() => {
+      clearTimeout(guardTimer);
+    });
 
     const timeoutPromise = new Promise<never>((_resolve, reject) => {
-      setTimeout(() => reject(new AiClientTimeoutError()), timeoutMs);
+      guardTimer = setTimeout(
+        () => reject(new AiClientTimeoutError()),
+        timeoutMs,
+      );
     });
 
     return Promise.race([requestPromise, timeoutPromise]);
