@@ -67,7 +67,7 @@
   - *Falsifying input:* an entity column typed `datetime` with a JS `Date` default → `created_at` would be born in local time (vault rule); the review greps `new Date()` in the entity and fails on a hit.
 - **Definition of done:** migration present, pruned, reversible; `migration:check` green; `bilateral.module.ts` registers entity + repository; commit `✨ feat(bilateral) [P2-3698]: …`.
 
-### [~] `BIL-QAI-T-2b` — Additive migration `AddAiStatusToBilateralQualityAssessments`
+### [x] `BIL-QAI-T-2b` — Additive migration `AddAiStatusToBilateralQualityAssessments`
 
 - **Type:** `db`
 - **Description:** Add two nullable columns to `BilateralQualityAssessment` per `design.md` §3.1 — `ai_status varchar(16) NULL` (the AI's own `completed` | `partial`) and `degraded_reason varchar(255) NULL` — and extend the `unavailable_reason` value set **in application code only** with `ai_unavailable` (the column is already `varchar(32)`, so no DDL). Generate the migration with `npm run migration:generate --name=AddAiStatusToBilateralQualityAssessments` and **prune it to these two columns on this one table** (reversible `down` drops both). `T-2`'s migration is **not** edited: it is already generated and queued for the owner's `migration:run`, and rewriting a migration that may have run in a dev DB is how environments diverge (`design.md` §3.2).

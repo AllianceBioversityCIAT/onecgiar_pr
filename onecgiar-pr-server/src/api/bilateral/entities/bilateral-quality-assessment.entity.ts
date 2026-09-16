@@ -47,7 +47,7 @@ import {
  * (`@akili-spec bilateral/qa-ai-traffic-light BIL-QAI-T-2b`, `design.md`
  * §3.1/§4.5) in a second additive migration rather than by editing `T-2`'s —
  * see `1789566953005-BilateralQualityAssessments.ts` and
- * `<ts>-AddAiStatusToBilateralQualityAssessments.ts`.
+ * `1789571865104-AddAiStatusToBilateralQualityAssessments.ts`.
  */
 @Entity('bilateral_quality_assessments')
 @Index('IDX_bilateral_quality_assessments_result_created', [
@@ -104,8 +104,11 @@ export class BilateralQualityAssessment {
    * The AI's plain-language sentence for a `partial` or `unavailable` run
    * (`design.md` §4.5). Truncated to 255 on write; the client sanitises
    * before persisting so this never contains a host, URL or response body
-   * (NFR *Privacy / secrets*, `BIL-QAI-AC-9`). `null` whenever `ai_status`
-   * is `null`.
+   * (NFR *Privacy / secrets*, `BIL-QAI-AC-9`). `null` for KP rows, for every
+   * pre-v0.2 row, and for a transport no-answer (`timeout`/`http_error`/
+   * `malformed`/`not_configured`) — but **set** on an AI `unavailable` row,
+   * where `ai_status` is `null` and `unavailable_reason` is `ai_unavailable`
+   * (`design.md` §4.5 mapping table, `BIL-QAI-R-7`).
    */
   @Column({ type: 'varchar', length: 255, nullable: true })
   degraded_reason: string | null;

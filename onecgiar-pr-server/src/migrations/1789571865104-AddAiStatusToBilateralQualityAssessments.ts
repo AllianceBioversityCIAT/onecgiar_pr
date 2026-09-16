@@ -39,9 +39,15 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * ## The four futures (repo rule 25)
  *   - Applied without the new code: two inert nullable columns, always null.
- *   - Code deployed without applying it: inserts/reads of `ai_status` /
- *     `degraded_reason` would fail against the missing columns — no v0.2
- *     traffic light until the migration runs.
+ *   - Code deployed without applying it: TypeORM enumerates every entity
+ *     column in its `SELECT`, so against an un-migrated DB **every** read
+ *     and write of `BilateralQualityAssessment` fails with
+ *     `ER_BAD_FIELD_ERROR` — not just `ai_status`/`degraded_reason` inserts,
+ *     but pre-v0.2 rows too, including `findLatestByResultId`. In practice
+ *     this future does not occur: the Jenkins deployment pipeline applies
+ *     migrations as part of a normal deploy (`onecgiar-pr-server/CLAUDE.md`
+ *     §5), so code and schema land together — no defensive code is added
+ *     for this case.
  *   - Applied twice: TypeORM's `migrations` table prevents a re-run; a
  *     hypothetical raw re-run would fail on `Duplicate column name`.
  *   - Reverted with rows inside: drops only the two v0.2 columns and their
@@ -50,7 +56,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * ## Pruning note
  *
- * `npm run migration:generate` diffed pre-existing drift on 29 unrelated
+ * `npm run migration:generate` diffed pre-existing drift on unrelated
  * tables alongside this one (`ai_review_event`, `ai_review_session`,
  * `bilateral_ai_draft_evidence`, `bilateral_ai_drafts`, `bilateral_ai_jobs`,
  * `clarisa_global_unit_lineage`, `clarisa_global_units`,
@@ -66,7 +72,13 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * `users`, `webhook_delivery`) — none of it caused by this change. Every one
  * of those statements was removed by hand; only `bilateral_quality_assessments`
  * is kept below, and its two `ADD COLUMN` statements match what
- * `migration:generate` emitted verbatim.
+ * `migration:generate` emitted verbatim. The count is deliberately omitted
+ * here — the list above is this run's actual by-hand pruning record, but
+ * confirming its size against a fresh `migration:generate` diff would
+ * require a live DB connection, which is out of scope for this
+ * documentation-only correction; a number that cannot be re-verified in
+ * this pass is worse than no number, so the list alone is kept as the
+ * source of truth.
  */
 export class AddAiStatusToBilateralQualityAssessments1789571865104
   implements MigrationInterface
