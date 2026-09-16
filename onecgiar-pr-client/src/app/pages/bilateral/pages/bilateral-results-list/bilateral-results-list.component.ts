@@ -6,6 +6,7 @@ import {
   effect,
   HostListener,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   untracked,
@@ -16,6 +17,8 @@ import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, filter, take, map, distinctUntilChanged, forkJoin, switchMap } from 'rxjs';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { FormsModule } from '@angular/forms';
+import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ResultDeletionService } from '../../../result-framework-reporting/services/result-deletion.service';
@@ -59,6 +62,7 @@ import {
   BILATERAL_PROJECT_QUERY_PARAM,
   BILATERAL_ROLE_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
+  BILATERAL_CREATED_BY_QUERY_PARAM,
   BILATERAL_SOURCE_QUERY_PARAM,
   BILATERAL_STATUS_QUERY_PARAM,
   BILATERAL_TYPE_QUERY_PARAM,
@@ -87,10 +91,11 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_SOURCE_QUERY_PARAM,
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
+  BILATERAL_CREATED_BY_QUERY_PARAM,
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
-type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'search';
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'createdBy' | 'search';
 
 interface BilateralFilterChip {
   dimension: BilateralFilterChipDimension;
@@ -114,27 +119,48 @@ export interface BilateralColumnDef {
   title: string;
   attr: string;
   width: string;
+  /** Minimum width (px) when the user resizes a column. */
+  minPx: number;
   /** Default visibility when no localStorage preference exists. */
   defaultOn: boolean;
 }
 
 // Versioned so older preferences cannot leave a newly required column hidden.
-// v3 — P2-3152 AC6 added Project name and Description.
-const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v3';
+// v4 — Created by column added to the centre dashboard list.
+const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v4';
+export const BILATERAL_COLUMN_WIDTHS_STORAGE_KEY = 'pr.bilateralResults.columnWidths.v1';
 
 /** Full column set (order = picker + table order). Kept to the fields BilateralCenterResult actually has. */
 export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
-  { key: 'source', title: 'Source', attr: 'source', width: '100px', defaultOn: true },
-  { key: 'code', title: 'Code', attr: 'result_code', width: '100px', defaultOn: true },
-  { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true },
+  { key: 'code', title: 'Code', attr: 'result_code', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'source', title: 'Source', attr: 'source', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'title', title: 'Title', attr: 'title', width: '280px', minPx: 160, defaultOn: true },
   // P2-3152 AC6 — Project name and Description are required on the centre dashboard.
-  { key: 'project', title: 'Project name', attr: 'project_name', width: '200px', defaultOn: true },
-  { key: 'description', title: 'Description', attr: 'description', width: '260px', defaultOn: true },
-  { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', defaultOn: true },
-  { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', defaultOn: true },
-  { key: 'status', title: 'Status', attr: 'status_id', width: '120px', defaultOn: true },
-  { key: 'created', title: 'Created', attr: 'created_date', width: '110px', defaultOn: true },
+  { key: 'project', title: 'Project name', attr: 'project_name', width: '200px', minPx: 120, defaultOn: true },
+  { key: 'description', title: 'Description', attr: 'description', width: '260px', minPx: 140, defaultOn: true },
+  { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', minPx: 120, defaultOn: true },
+  { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', minPx: 100, defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'status_id', width: '120px', minPx: 100, defaultOn: true },
+  { key: 'createdBy', title: 'Created by', attr: 'created_by_name', width: '160px', minPx: 120, defaultOn: true },
+  { key: 'created', title: 'Created', attr: 'created_date', width: '110px', minPx: 90, defaultOn: true },
 ];
+
+export function readStoredBilateralColumnWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(BILATERAL_COLUMN_WIDTHS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredBilateralColumnWidths(widths: Record<string, number>): void {
+  try {
+    localStorage.setItem(BILATERAL_COLUMN_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+  } catch {
+    // private mode — widths still work for the session
+  }
+}
 
 function readStoredColumnVisibility(): Record<string, boolean> {
   try {
@@ -181,6 +207,8 @@ function parsePhaseIdsFromUrl(raw: string | null): number[] {
   imports: [
     DatePipe,
     OverlayModule,
+    FormsModule,
+    PrFilterMultiselectModule,
     BilateralPageHeaderComponent,
     PrDialogComponent,
     PrTableComponent,
@@ -200,7 +228,7 @@ function parsePhaseIdsFromUrl(raw: string | null): number[] {
     class: 'pr-viewport-page',
   },
 })
-export class BilateralResultsListComponent implements OnInit {
+export class BilateralResultsListComponent implements OnInit, OnDestroy {
   private readonly bilateralApiService = inject(BilateralApiService);
   private readonly phasesService = inject(PhasesService);
   private readonly router = inject(Router);
@@ -237,6 +265,7 @@ export class BilateralResultsListComponent implements OnInit {
   readonly programFilter = signal<string[]>([]);
   readonly typeFilter = signal<number[]>([]);
   readonly methodFilter = signal<BilateralMethod | null>(null);
+  readonly createdByFilter = signal<string[]>([]);
 
   /** Default phase selection — the Open reporting phase, else the first loaded phase. */
   readonly defaultPhaseIds = computed(() => {
@@ -295,6 +324,10 @@ export class BilateralResultsListComponent implements OnInit {
     ...readStoredColumnVisibility(),
   });
 
+  /** User-resized column widths (px), keyed by BILATERAL_COLUMNS.key — persisted. */
+  readonly customWidths = signal<Record<string, number>>(readStoredBilateralColumnWidths());
+  readonly isResizing = signal(false);
+
   readonly columnsOpen = signal(false);
   readonly filterPopoverOpen = signal(false);
 
@@ -349,8 +382,31 @@ export class BilateralResultsListComponent implements OnInit {
       source,
       method: this.methodFilter(),
       search: this.searchQuery(),
+      createdBy: this.createdByFilter(),
       multi: false,
     };
+  });
+
+  /** Distinct creator display names from loaded rows — powers the Created by multiselect. */
+  readonly createdByOptions = computed(() => {
+    const names = new Set<string>();
+    for (const row of this.results()) {
+      const name = row.created_by_name?.trim();
+      if (name) names.add(name);
+    }
+    return [...names]
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      .map(value => ({ value, label: value }));
+  });
+
+  /** Keeps URL-selected creators tickable even when no loaded row currently carries them. */
+  readonly createdBySelectOptions = computed(() => {
+    const options = this.createdByOptions();
+    const selected = this.createdByFilter();
+    const missing = selected.filter(value => !options.some(option => option.value === value));
+    return missing.length
+      ? [...options, ...missing.map(value => ({ value, label: value }))]
+      : options;
   });
 
   readonly filteredResults = computed(() => filterCenterResults(this.results(), this.currentContractParams()));
@@ -428,6 +484,10 @@ export class BilateralResultsListComponent implements OnInit {
 
     for (const chip of this.projectChips()) {
       chips.push({ dimension: 'project', value: String(chip.id), label: `Project: ${chip.label}` });
+    }
+
+    for (const name of this.createdByFilter()) {
+      if (name) chips.push({ dimension: 'createdBy', value: name, label: `Created by: ${name}` });
     }
 
     const search = this.searchQuery().trim();
@@ -627,6 +687,7 @@ export class BilateralResultsListComponent implements OnInit {
     this.programFilter.set(params.program);
     this.typeFilter.set(params.type);
     this.methodFilter.set(params.method);
+    this.createdByFilter.set(params.createdBy);
 
     const urlPhaseIds = parsePhaseIdsFromUrl(map.get(BILATERAL_PHASE_QUERY_PARAM));
     if (urlPhaseIds.length) {
@@ -702,6 +763,17 @@ export class BilateralResultsListComponent implements OnInit {
     this.syncUrlParams();
   }
 
+  /** Removes one creator from the Created by multiselect and writes the URL. */
+  removeCreatedByFilter(name: string): void {
+    this.createdByFilter.update(values => values.filter(existing => existing !== name));
+    this.syncUrlParams();
+  }
+
+  onCreatedByFilterChange(values: string[]): void {
+    this.createdByFilter.set(values ?? []);
+    this.syncUrlParams();
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event?: MouseEvent): void {
     if (this.openMenuKey()) this.openMenuKey.set(null);
@@ -741,6 +813,7 @@ export class BilateralResultsListComponent implements OnInit {
     this.programFilter.set([]);
     this.typeFilter.set([]);
     this.methodFilter.set(null);
+    this.createdByFilter.set([]);
     this.searchQuery.set('');
     this.syncUrlParams();
   }
@@ -767,6 +840,9 @@ export class BilateralResultsListComponent implements OnInit {
         return;
       case 'project':
         this.removeProjectFilter(Number(chip.value));
+        return;
+      case 'createdBy':
+        this.removeCreatedByFilter(chip.value);
         return;
       case 'search':
         this.clearSearch();
@@ -802,6 +878,73 @@ export class BilateralResultsListComponent implements OnInit {
     this.closeRowMenu();
     this.filterPopoverOpen.set(false);
     this.columnsOpen.update(v => !v);
+  }
+
+  /** Resolved width for a column — custom resize wins over the catalog default. */
+  columnWidth(column: BilateralColumnDef): string {
+    const custom = this.customWidths()[column.key];
+    return custom ? `${custom}px` : column.width;
+  }
+
+  // ── Column resizing (Programme Results parity) ───────────────────────────────
+  private activeResize: {
+    columnKey: string;
+    startX: number;
+    startWidth: number;
+    minPx: number;
+  } | null = null;
+
+  private readonly onWindowMouseMove = (event: MouseEvent): void => {
+    if (!this.activeResize) return;
+    const deltaX = event.clientX - this.activeResize.startX;
+    const newWidth = Math.max(this.activeResize.minPx, Math.round(this.activeResize.startWidth + deltaX));
+    this.customWidths.update(prev => ({ ...prev, [this.activeResize!.columnKey]: newWidth }));
+  };
+
+  private readonly onWindowMouseUp = (): void => {
+    if (!this.activeResize) return;
+    this.activeResize = null;
+    this.isResizing.set(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+    writeStoredBilateralColumnWidths(this.customWidths());
+  };
+
+  onResizeStart(event: MouseEvent, column: BilateralColumnDef, thElement: HTMLElement): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeResize = {
+      columnKey: column.key,
+      startX: event.clientX,
+      startWidth: thElement.getBoundingClientRect().width,
+      minPx: column.minPx,
+    };
+    this.isResizing.set(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', this.onWindowMouseMove);
+    window.addEventListener('mouseup', this.onWindowMouseUp);
+  }
+
+  onResizeReset(column: BilateralColumnDef, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.customWidths.update(prev => {
+      const next = { ...prev };
+      delete next[column.key];
+      writeStoredBilateralColumnWidths(next);
+      return next;
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (!this.activeResize) return;
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
   }
 
   /** Immediate client-side CSV of the currently filtered rows and visible columns. */
@@ -843,6 +986,8 @@ export class BilateralResultsListComponent implements OnInit {
         return result.status_name;
       case 'created_date':
         return result.created_date;
+      case 'created_by_name':
+        return result.created_by_name ?? '';
       default:
         return '';
     }

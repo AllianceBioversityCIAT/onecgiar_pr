@@ -86,6 +86,12 @@ $phase-color-border:  #cbd5e1;
   }
 }
 
+.brl-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .brl_filter_group_label {
   font-size: 10px;
   font-weight: 600;
@@ -474,10 +480,26 @@ $phase-color-border:  #cbd5e1;
   border: 1px solid var(--pr-border, #e3e3e8);
   border-radius: 12px;
   background: #fff;
-  overflow-x: auto;
+  overflow-x: visible;
   overflow-y: hidden;
 
-  ::ng-deep .pr-table {
+  // app-pr-table adds its own wrap — keep a single outer shell on .table.rc-table.
+  ::ng-deep .pr-table-wrap.rc-pr-table {
+    border: none;
+    border-radius: inherit;
+    background: transparent;
+    overflow-x: auto;
+    overflow-y: visible;
+
+    .pr-paginator {
+      padding: 8px 12px;
+      border-top: 1px solid var(--pr-border-divider, #eeeef1);
+    }
+  }
+
+  > table.pr-table,
+  ::ng-deep .pr-table-wrap.rc-pr-table table.pr-table,
+  ::ng-deep table.pr-table {
     table-layout: fixed;
     min-width: 900px;
     width: 100%;
@@ -485,19 +507,62 @@ $phase-color-border:  #cbd5e1;
     border-spacing: 0;
 
     thead th {
+      position: relative;
       white-space: nowrap;
       background: #f7f7f9 !important;
-      color: #6b6580;
+      color: #6b6580 !important;
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       height: 40px;
       padding: 0 12px !important;
-      border-bottom: 1px solid #e3e3e8 !important;
-      border-right: none !important;
+      border-bottom: 1px solid var(--pr-border, #e3e3e8) !important;
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-top: none !important;
       border-left: none !important;
+      border-radius: 0 !important;
       vertical-align: middle;
+
+      &.rc-th--sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .brl-col-resizer {
+        position: absolute;
+        right: -1px;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        cursor: col-resize;
+        z-index: 2;
+        touch-action: none;
+        user-select: none;
+        transition: background-color 150ms ease;
+
+        &:hover {
+          background-color: var(--pr-color-primary-400, #6b46e5);
+        }
+      }
+
+      &:last-child:not(.rc-th-action) {
+        border-right: none !important;
+      }
+
+      // Programme Results parity — the ⋯ column stays pinned on the right during horizontal scroll.
+      &.rc-th-action {
+        position: sticky;
+        right: 0;
+        z-index: 4;
+        width: 56px !important;
+        min-width: 56px;
+        max-width: 56px;
+        padding: 0 !important;
+        border-left: 1px solid var(--pr-border-divider, #eeeef1) !important;
+        border-right: none !important;
+        background: #f7f7f9 !important;
+      }
     }
 
     tbody tr {
@@ -523,14 +588,42 @@ $phase-color-border:  #cbd5e1;
     }
 
     tbody td {
-      border-bottom: 1px solid #eeeef1 !important;
-      border-right: none !important;
+      border-bottom: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-top: none !important;
       border-left: none !important;
       font-size: 13px;
       padding: 6px 12px !important;
       vertical-align: middle;
       color: var(--pr-text, #2b2838);
       overflow: hidden;
+
+      &:last-child:not(.rc-td--action) {
+        border-right: none !important;
+      }
+
+      &.rc-td--action {
+        position: sticky;
+        right: 0;
+        z-index: 3;
+        width: 56px !important;
+        min-width: 56px;
+        max-width: 56px;
+        padding: 6px 8px 6px 4px !important;
+        border-left: 1px solid var(--pr-border-divider, #eeeef1) !important;
+        border-right: none !important;
+        background: #fff;
+        overflow: visible;
+        text-align: right;
+      }
+    }
+
+    tbody tr:hover td.rc-td--action {
+      background: #fafafb;
+    }
+
+    tbody tr.rc-row--skeleton td.rc-td--action {
+      background: #fff;
     }
   }
 
@@ -596,7 +689,7 @@ $phase-color-border:  #cbd5e1;
 }
 
 .rc-th-action {
-  width: 90px !important;
+  width: 56px !important;
 }
 
 // Status chips — same palette as Results Center, keyed by ResultStatusData ids (1-7).
@@ -686,9 +779,6 @@ $phase-color-border:  #cbd5e1;
 
 .rc-td--action {
   width: 56px !important;
-  text-align: right;
-  overflow: visible;
-  padding-right: 12px;
 }
 
 /* P2-3157 — rejection justification affordance + notification deep-link focus.

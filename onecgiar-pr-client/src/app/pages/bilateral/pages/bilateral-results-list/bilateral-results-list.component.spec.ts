@@ -8,6 +8,7 @@ import {
   BilateralResultsListComponent,
   BilateralCenterResult,
   BILATERAL_COLUMNS,
+  BILATERAL_COLUMN_WIDTHS_STORAGE_KEY,
 } from './bilateral-results-list.component';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -80,6 +81,7 @@ describe('BilateralResultsListComponent', () => {
     is_leading_result: 1,
     description: 'Profiles co-developed with the county governments of Kenya.',
     project_name: 'Accelerating Impacts of CGIAR Climate Research for Africa',
+    created_by_name: 'Angel Jarrin',
     ...overrides,
   });
 
@@ -187,7 +189,7 @@ describe('BilateralResultsListComponent', () => {
       expect(component.isColumnVisible('type')).toBe(false);
       expect(component.visibleColumns().find(c => c.key === 'type')).toBeUndefined();
 
-      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v3') ?? '{}');
+      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v4') ?? '{}');
       expect(stored.type).toBe(false);
     });
 
@@ -806,6 +808,84 @@ describe('BilateralResultsListComponent', () => {
       expect(component.hasRows()).toBe(true);
       const tableLoadingRows = fixture.nativeElement.querySelectorAll('.rc-pr-table .rc-row--skeleton');
       expect(tableLoadingRows.length).toBe(6);
+    });
+  });
+
+  describe('Created by filter and column', () => {
+    it('offers the Created by column visible by default and renders the creator name', () => {
+      expect(component.visibleColumns().map(c => c.key)).toContain('createdBy');
+      const cell = fixture.nativeElement.querySelector('td.rc-td--created_by_name');
+      expect(cell?.textContent?.trim()).toBe('Angel Jarrin');
+    });
+
+    it('builds multiselect options from loaded rows and filters the table', () => {
+      component.results.set([
+        result({ id: 1, created_by_name: 'Angel Jarrin' }),
+        result({ id: 2, result_code: '8707', created_by_name: 'Santiago Sanchez' }),
+      ]);
+      fixture.detectChanges();
+
+      expect(component.createdBySelectOptions().map(o => o.value)).toEqual(['Angel Jarrin', 'Santiago Sanchez']);
+
+      component.onCreatedByFilterChange(['Santiago Sanchez']);
+      expect(component.filteredResults()).toHaveLength(1);
+      expect(component.filteredResults()[0].result_code).toBe('8707');
+      expect(component.activeChips().some(chip => chip.label === 'Created by: Santiago Sanchez')).toBe(true);
+    });
+  });
+
+  describe('Column resize and pagination', () => {
+    const titleColumn = BILATERAL_COLUMNS.find(c => c.key === 'title')!;
+
+    beforeEach(() => {
+      component.initializing.set(false);
+      component.loading.set(false);
+      component.results.set(Array.from({ length: 12 }, (_v, i) => result({ id: i + 1, result_code: String(8700 + i) })));
+      fixture.detectChanges();
+    });
+
+    it('resolves columnWidth from defaults and custom widths', () => {
+      expect(component.columnWidth(titleColumn)).toBe('280px');
+      component.customWidths.set({ title: 360 });
+      expect(component.columnWidth(titleColumn)).toBe('360px');
+    });
+
+    it('persists resized column widths on mouseup', () => {
+      const th = document.createElement('th');
+      th.getBoundingClientRect = jest.fn(() => ({ width: 280 } as DOMRect));
+
+      component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      expect(component.customWidths().title).toBe(330);
+      expect(JSON.parse(localStorage.getItem(BILATERAL_COLUMN_WIDTHS_STORAGE_KEY) || '{}').title).toBe(330);
+    });
+
+    it('resets a column width on double-click handler', () => {
+      component.customWidths.set({ title: 400 });
+      component.onResizeReset(titleColumn, { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent);
+      expect(component.customWidths().title).toBeUndefined();
+    });
+
+    it('configures pagination to render one page at a time with always-visible controls', () => {
+      expect(component.table).toBeTruthy();
+      const tableCmp = component.table!;
+      expect(tableCmp.paginator).toBe(true);
+      expect(tableCmp.showPaginatorAlways).toBe(true);
+      expect(tableCmp.effectiveRows()).toBe(10);
+      expect(tableCmp.rowsPerPageOptions).toEqual([10, 25, 50, 100]);
+      expect(tableCmp.pagedValue()).toHaveLength(10);
+      expect(tableCmp.showPaginator()).toBe(true);
+    });
+
+    it('does not sort when clicking the column resizer handle', () => {
+      const resizer = fixture.nativeElement.querySelector('th .brl-col-resizer') as HTMLElement;
+      expect(resizer).toBeTruthy();
+
+      const sortSpy = jest.spyOn(component.table!, 'sort');
+      resizer.click();
+      expect(sortSpy).not.toHaveBeenCalled();
     });
   });
 });

@@ -303,6 +303,18 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual([8731]);
   });
 
+  it('returns created_by and created_by_name for the bilateral centre dashboard', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.created_by');
+    expect(sql).toContain('AS created_by_name');
+    expect(sql).toContain('FROM users u');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
   it('includes AI provenance fields in bilateral center results ordered newest first', async () => {
     queryMock.mockResolvedValueOnce([]);
 

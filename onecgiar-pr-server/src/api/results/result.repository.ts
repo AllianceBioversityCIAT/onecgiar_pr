@@ -4122,6 +4122,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.result_type_id,
         rs.result_status_id AS status_id,
         rs.status_name,
+        r.created_by,
+        (
+          SELECT
+            NULLIF(
+              TRIM(
+                CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+              ),
+              ''
+            )
+          FROM users u
+          WHERE u.id = r.created_by
+        ) AS created_by_name,
         r.created_date,
         r.version_id,
         r.source,

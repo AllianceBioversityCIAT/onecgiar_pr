@@ -554,7 +554,15 @@
 
   // Restore the pre-redesign table behavior: honor the fixed column widths so the columns
   // stay compact (collapse to their defined size) instead of auto-stretching to fit content.
-  ::ng-deep .pr-table {
+  ::ng-deep .pr-table-wrap.rc-pr-table {
+    border: none;
+    border-radius: inherit;
+    background: transparent;
+  }
+
+  > table.pr-table,
+  ::ng-deep .pr-table-wrap.rc-pr-table table.pr-table,
+  ::ng-deep table.pr-table {
     table-layout: fixed;
     min-width: 1100px;
     width: 100%;
@@ -564,17 +572,23 @@
     thead th {
       white-space: nowrap;
       background: #f7f7f9 !important;
-      color: #6b6580;
+      color: #6b6580 !important;
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       height: 40px;
       padding: 0 12px !important;
-      border-bottom: 1px solid #e3e3e8 !important;
-      border-right: none !important;
+      border-bottom: 1px solid var(--pr-border, #e3e3e8) !important;
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-top: none !important;
       border-left: none !important;
+      border-radius: 0 !important;
       vertical-align: middle;
+
+      &:last-child {
+        border-right: none !important;
+      }
     }
 
     tbody tr {
@@ -590,14 +604,19 @@
     }
 
     tbody td {
-      border-bottom: 1px solid #eeeef1 !important;
-      border-right: none !important;
+      border-bottom: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-top: none !important;
       border-left: none !important;
       font-size: 13px;
       padding: 6px 12px !important;
       vertical-align: middle;
       color: var(--pr-text, #2b2838);
       overflow: hidden;
+
+      &:last-child {
+        border-right: none !important;
+      }
     }
   }
 

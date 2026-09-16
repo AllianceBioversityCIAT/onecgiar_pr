@@ -610,6 +610,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         source: null,
         method: null,
         search: '',
+        createdBy: [],
         multi: false,
       };
 

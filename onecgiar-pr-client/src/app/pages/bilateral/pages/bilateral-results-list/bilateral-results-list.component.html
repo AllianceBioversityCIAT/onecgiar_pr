@@ -146,6 +146,19 @@
               </div>
             </div>
 
+            <div class="brl-filter-field" aria-label="Filter by created by">
+              <label class="brl_filter_group_label">Created by</label>
+              <app-pr-filter-multiselect
+                [options]="createdBySelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Created by"
+                countLabel="creators"
+                [filter]="true"
+                [ngModel]="createdByFilter()"
+                (changed)="onCreatedByFilterChange($event)"></app-pr-filter-multiselect>
+            </div>
+
             <div class="brl_filter_group brl_filter_group--stacked">
               <span class="brl_filter_group_label">Center role</span>
               <div class="brl_chips">
@@ -280,7 +293,7 @@
           <thead>
             <tr>
               @for (column of cols; track column.key) {
-                <th [style.width]="column.width">
+                <th [style.width]="columnWidth(column)">
                   <div class="align-center">
                     {{ column.title }}
                   </div>
@@ -293,7 +306,7 @@
             @for (row of [1, 2, 3, 4, 5, 6]; track row) {
               <tr class="rc-row rc-row--skeleton" style="height: 48px">
                 @for (column of cols; track column.key) {
-                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
                     <div class="rc-cell-link">
                       <span
                         class="inline-block h-[14px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)] motion-reduce:animate-none"
@@ -323,18 +336,28 @@
           dataKey="result_code"
           [loading]="loading()"
           [paginator]="filteredResults().length > 0"
-          [rows]="25"
-          [rowsPerPageOptions]="[25, 50, 100]"
+          [showPaginatorAlways]="true"
+          [rows]="10"
+          [rowsPerPageOptions]="[10, 25, 50, 100]"
           [first]="searchQuery() && 0"
           styleClass="rc-pr-table">
           <ng-template prTableHeader>
             <tr>
               @for (column of cols; track column.key) {
-                <th [prSortableColumn]="column.attr" [style.width]="column.width">
+                <th #thEl [prSortableColumn]="column.attr" [style.width]="columnWidth(column)" class="rc-th rc-th--sortable">
                   <div class="align-center">
                     <pr-sort-icon [field]="column.attr"></pr-sort-icon>
                     {{ column.title }}
                   </div>
+                  <div
+                    class="brl-col-resizer"
+                    role="separator"
+                    aria-orientation="vertical"
+                    [attr.aria-label]="'Resize ' + column.title + ' column'"
+                    title="Drag to resize column. Double-click to reset."
+                    (mousedown)="onResizeStart($event, column, thEl)"
+                    (dblclick)="onResizeReset(column, $event)"
+                    (click)="$event.stopPropagation()"></div>
                 </th>
               }
               <th class="rc-th-action" style="width: 56px"></th>
@@ -349,7 +372,7 @@
               tabindex="0"
               (keydown.enter)="openResult(result)">
               @for (column of cols; track column.key) {
-                <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
                   @if (column.attr === 'source') {
                     <div class="rc-cell-link">
                       @if (result.source === 'API') {
@@ -398,6 +421,8 @@
                         </button>
                       }
                     </span>
+                  } @else if (column.attr === 'created_by_name') {
+                    <span class="rc-cell-link rc-plain" [attr.title]="result.created_by_name">{{ result.created_by_name || '-' }}</span>
                   } @else if (column.attr === 'created_date') {
                     <span class="rc-cell-link rc-date">{{ result.created_date | date: 'dd MMM yyyy' }}</span>
                   }
@@ -491,7 +516,7 @@
             @for (row of [1, 2, 3, 4, 5, 6]; track row) {
               <tr class="rc-row rc-row--skeleton" style="height: 48px">
                 @for (column of cols; track column.key) {
-                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
                     <div class="rc-cell-link">
                       <span
                         class="inline-block h-[14px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)] motion-reduce:animate-none"
