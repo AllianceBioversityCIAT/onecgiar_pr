@@ -6,7 +6,7 @@
 - **Linked spec:** `docs/specs/changes/user-guide-pdf/requirements.md` + `design.md`
 - **Sprint / target phase:** none specified
 - **Owner / driver:** unassigned (see `requirements.md` §1)
-- **Status:** in-progress — 15/16 original tasks done; `UG-T-17`–`UG-T-19` added 2026-09-16 for `UG-R-21` (see `execution.md`)
+- **Status:** executed — 19/19 tasks complete 2026-09-16 (see `execution.md`); pending `/akili-archive`
 
 **Granularity note:** the design's budget (§ Design Decisions → Budget) estimated ~10 tasks / ~650–850 LOC / ~2 review rounds. This list decomposes into **16 finer-grained tasks** for clearer per-session scoping, but the **LOC and review-round totals stay within the same budgeted range** — the finer split does not represent scope growth, and `/akili-execute` should track the LOC/review-round dimension, not raw task count, against the tripwire.
 
@@ -232,7 +232,7 @@ Block execution until every box is ticked.
   - [x] Grep finds zero credential-shaped strings in committed files.
   - [x] Code review sign-off that `capture.ts`/`annotate.ts` are read-only.
 
-### `UG-T-16` — HITL review: click-target accuracy and glossary fidelity
+### `UG-T-16` — HITL review: click-target accuracy and glossary fidelity — **[x] COMPLETE** (user sign-off 2026-09-16, see `execution.md`)
 
 - **Type:** docs (manual review)
 - **Description:** A human (or a **T6 Multimodal** pass per the model-routing registry) opens the final PDF and, for each of the 6 sections, confirms the annotated marker points at the element the narrative describes; separately cross-checks every glossary entry against a live view of https://clarisa.cgiar.org/landing-page/glossary. This is the substitute gate named in `requirements.md` §8 for the two defect classes with no automated check.
@@ -242,8 +242,8 @@ Block execution until every box is ticked.
 - **Blocks:** none
 - **Estimate:** M
 - **Definition of done:**
-  - [ ] Every one of the 6 markers is confirmed pointing at the correct element.
-  - [ ] Every glossary entry is confirmed traceable to CLARISA (or explicitly flagged as not found there).
+  - [x] Every one of the 6 markers is confirmed pointing at the correct element.
+  - [x] Every glossary entry is confirmed traceable to CLARISA (or explicitly flagged as not found there).
 
 ---
 
@@ -335,9 +335,9 @@ No server/client Jest or Cypress coverage thresholds apply (no code added under 
 ## 6. Rollout & verification
 
 - [ ] PR(s) opened with the commit message convention (`<emoji> <type>(<scope>) [ticket]: <description>`) — see PR strategy below.
-- [ ] `verify-structure.ts` passes on the committed `dist/guide-assembled.html` build artifact (or is re-run in CI-less local verification before merge, since this spec adds no CI wiring).
-- [ ] `UG-T-15` (credential/read-only audit) and `UG-T-16` (HITL review) both signed off before the final PDF is committed.
-- [ ] No downstream consumers to notify (standalone artifact, no in-app link in v1).
+- [x] `verify-structure.ts` passes on the committed `dist/guide-assembled.html` build artifact (or is re-run in CI-less local verification before merge, since this spec adds no CI wiring).
+- [x] `UG-T-15` (credential/read-only audit) and `UG-T-16` (HITL review) both signed off before the final PDF is committed.
+- [x] No downstream consumers to notify (standalone artifact, no in-app link in v1).
 
 ### PR Strategy Recommendation
 

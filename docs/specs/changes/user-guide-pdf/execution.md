@@ -270,6 +270,16 @@
 
 ---
 
+### `UG-T-16` — HITL review: click-target accuracy and glossary fidelity — PASS (user sign-off)
+
+- **Date:** 2026-09-16. **Reviewer of record:** the user ("perfect"), after the Leader's T6 visual pass of all 19 pages and the explicit list of open points.
+- **Click-target / callout accuracy:** all 6 primary markers and 16 feature callouts confirmed pointing at the element each label names (Leader pass, user sign-off). **Glossary fidelity:** 24 entries — 17 verbatim CLARISA definitions (two independent Reviewer checks against the API snapshot), 7 PRMS-authored flagged entries with `source: "PRMS (not on CLARISA)"`; OICR (null) skipped at assembly with a warning.
+- **Accepted as-is by the user:** (1) three chips touching neighbouring UI text in cramped layouts (reporting-aows "Where to report" / "Search AoWs and KPIs", ipsr "Open a package"); (2) chip label size about 6-8 pt on paper; (3) production data visible in screenshots (real names in Notifications, result titles, "JC" avatar) - the guide is distributed with that content.
+- **Deliverable committed:** `docs/specs/changes/user-guide-pdf/tooling/dist/reporting-tool-user-guide.pdf` (19 pages, Letter, 2.6 MB, built 2026-09-16 from production captures with 22 callouts).
+- **Requirements covered:** `UG-AC-4`, `UG-AC-5`, `UG-R-3`, `UG-R-21`. Both DoD items satisfied.
+
+---
+
 ## 3. Design Decisions Recorded Mid-Execution
 
 ### Capture target changed: local dev → production (`UG-DD-6`, added to `design.md` 2026-09-15)
@@ -304,4 +314,4 @@ Output directory fixed at `tooling/dist/` (the `UG-T-1` Reviewer's RELIABILITY a
 
 ## 5. Summary (updated as tasks complete)
 
-18 of 19 tasks complete — only `UG-T-16` (HITL sign-off) open; `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Next: `UG-T-16` user sign-off → commit `tooling/dist/reporting-tool-user-guide.pdf` → `/akili-test` (if desired) → `/akili-archive`. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
+**19 of 19 tasks complete** (2026-09-16); `UG-T-5`/`UG-T-6` reviewed PASS on code, `[~]` until `UG-T-7`'s live run closes their visual/live DoD items. Spec execution complete. Follow-ups recorded in `tasks.md` section 7 and the advisories above. Recommended next: `/akili-archive docs/specs/changes/user-guide-pdf` (Kaizen + constitution sync; note the stale Poppins reference in `docs/ux-ui/design.md` section 7 and the dangling 'Section layout pattern' pointer in `tasks.md`). Operational reminder: delete `tooling/.env` (live production JWT) once re-runs are no longer needed. Next eligible: `UG-T-2` (Verify environment and seed data) and `UG-T-8` (Resolve sign-in URL reference) — `UG-T-8` is now effectively pre-resolved by the user's decision (no URL, generic phrasing) and only needs a one-line confirmation note when its turn comes. `UG-T-2` is blocked pending the `TEST_TOKEN` value.
