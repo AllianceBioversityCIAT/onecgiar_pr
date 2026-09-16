@@ -492,6 +492,154 @@ The sync/list export wrapper uses:
 
 See `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` for all fields.
 
+## Quality assessment (outbound)
+
+PRMS calls an AI quality-assessment service when a Centre user presses **Submit for review** on a bilateral result (`BIL-QAI-R-1`). This is the only outbound call in the flow; the AI never receives a Knowledge Product result (`BIL-QAI-R-9` — KP verdicts come from a deterministic rule in code, not this contract).
+
+**Contract version:** `0.1` (frozen 2026-09-16 with the AI service team). Source of truth for scope/behavior is `docs/specs/bilateral/qa-ai-traffic-light/` (`requirements.md`, `design.md` §4.5); this section is the field-by-field payload copy.
+
+### Definitions-only rule
+
+Every value PRMS sends is the label the form displays — the same text a Centre user reads on screen. The request MUST NOT contain:
+
+- Any key ending in `_id` (or `id`) or `_code`.
+- Any CLARISA identifier or catalogue code.
+- `result_code` or PRMS's internal `result.id`.
+
+The **only** identifier in the request is `request_id`, a UUID generated per call; it identifies the call, not the result. PRMS assembles the payload from the **persisted** result (not the client's in-memory form state), so the assessment always reflects saved content.
+
+### Request
+
+```text
+POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
+```
+
+| Header | Value |
+|---|---|
+| `X-API-Key` | reuses the existing `MICROSERVICE_API_KEY` (see server `README.md` → Environment) |
+| `Content-Type` | `application/json` |
+
+```json
+{
+  "contract_version": "0.1",
+  "request_id": "uuid",
+  "result": {
+    "type": "Innovation development",
+    "reporting_phase": "Reporting 2026",
+    "reporting_center": "AfricaRice",
+    "primary_science_program": "Sustainable Farming"
+  },
+  "sections": {
+    "general_information": {
+      "title": "…",
+      "description": "…",
+      "result_level": "Output",
+      "lead_contact_person": "…"
+    },
+    "contributors_and_partners": {
+      "lead_center": "AfricaRice",
+      "contributing_centers": ["…"],
+      "lead_project": { "title": "…", "funder": "…" },
+      "contributing_projects": [{ "title": "…" }],
+      "external_partners": [{ "name": "…", "type": "…", "role": "…" }],
+      "no_external_partners": false,
+      "theory_of_change": {
+        "planned": true,
+        "level": "Output",
+        "result": "…text of the ToC node…",
+        "indicator": "…",
+        "contribution": "…",
+        "why_reported": null
+      }
+    },
+    "geographic_location": {
+      "scope": "National",
+      "regions": [],
+      "countries": ["Côte d'Ivoire"],
+      "sub_national": []
+    },
+    "evidence": [
+      { "description": "…", "link": "https://…", "source": "url", "visibility": "public", "tags": ["Gender", "Climate"] },
+      { "description": "…", "link": null, "source": "prms_repository", "visibility": "private", "tags": [] }
+    ],
+    "type_specific": {
+      "type": "innovation_development",
+      "fields": { "Innovation typology": "Technological", "Readiness level": "Level 6 — …", "…": "…" }
+    }
+  },
+  "constraints": { "timeout_seconds": 60 }
+}
+```
+
+`sections` always carries these five keys, in this order, for every result type; a section with nothing to report is present as an empty object or array rather than omitted:
+
+| Section key | Form section |
+|---|---|
+| `general_information` | General information |
+| `contributors_and_partners` | Contributors & partners |
+| `geographic_location` | Geographic location |
+| `evidence` | Evidence |
+| `type_specific` | Type-specific details (shape varies per result type) |
+
+### Evidence rules
+
+Each `evidence` item carries `source` (`url` \| `prms_repository`) and `visibility` (`public` \| `private`):
+
+- `source: url` → always `visibility: public`; `link` is the external URL.
+- `source: prms_repository` (PRMS/SharePoint-backed file) with `visibility: public` → `link` present.
+- `source: prms_repository` with `visibility: private` → `link: null` and **no** SharePoint field (no document id, folder path, or file name) leaves PRMS.
+
+A private item is graded **grey** by PRMS regardless of what the AI answers for that item — the AI's own verdict for a private item is not used (`BIL-QAI-R-3`, grey rule in `design.md` §5).
+
+### Response
+
+```json
+{
+  "request_id": "uuid",
+  "criteria_version": "QA-2026-v1",
+  "overall": { "verdict": "amber", "score": 68, "summary": "…" },
+  "sections": {
+    "general_information":       { "verdict": "green", "score": 91, "comments": "…", "strengths": ["…"], "issues": [] },
+    "contributors_and_partners": { "verdict": "amber", "score": 62, "comments": "…", "strengths": [],    "issues": ["…"] },
+    "geographic_location":       { "verdict": "green", "comments": "…", "strengths": ["…"], "issues": [] },
+    "evidence":                  { "verdict": "red",   "comments": "…", "strengths": [],    "issues": ["…"] },
+    "type_specific":             { "verdict": "amber", "comments": "…", "strengths": [],    "issues": ["…"] }
+  },
+  "evidence": [
+    { "index": 0, "verdict": "green", "reason": "…" },
+    { "index": 1, "verdict": "grey",  "reason": "Private repository file — not evaluated" }
+  ]
+}
+```
+
+`overall.verdict` and each `sections.<key>.verdict` are one of `green` \| `amber` \| `red` (the response's `evidence[].verdict` additionally allows `grey`). The threshold/derivation logic for `overall` from the section verdicts lives on the AI side; PRMS does not replicate it.
+
+### Optional `score`
+
+`overall.score` and each section's `score` are **optional** integers `0–100`. When present, PRMS stores them verbatim (nullable) for traceability and future threshold calibration. `score` **never** colors the traffic light — the light is always driven by `verdict` (`BIL-QAI-R-12`).
+
+### Error / timeout semantics
+
+PRMS bounds the call with `BILATERAL_AI_QUALITY_TIMEOUT_MS` (default `60000`). Any failure to get a well-formed response maps to an assessment `status = unavailable` with one of these reasons, and the AI **never blocks** submission — the user still gets **Submit anyway** / **Make adjustments** (`BIL-QAI-R-7`):
+
+| Reason | Cause |
+|---|---|
+| `timeout` | No response within the configured window |
+| `http_error` | Non-2xx response |
+| `malformed` | 2xx response that fails the required-keys/verdict-enum check |
+| `not_configured` | `BILATERAL_AI_QUALITY_URL` or the API key is not set in the environment |
+
+No response body, API key, or host name is ever surfaced to the user or logged (`.cursorrules`; `docs/trd/trd.md` W8, QAS-10).
+
+### Contract version bump procedure (`BIL-QAI-GAP-5`)
+
+- Bump `contract_version` (e.g. `0.1` → `0.2`) whenever a request or response key is added, renamed, or removed in a way either side cannot silently ignore.
+- A purely additive field on either side (new optional key both parties already ignore when absent) may ship without a bump.
+- Whoever proposes the change confirms the new version with the other side (PRMS ↔ AI service team) before either stops accepting the previous one; PRMS logs `criteria_version` and `contract_version` per assessment (`design.md` §9), so a mismatch is visible in the data.
+
+**Change log**
+- **2026-09-16** — copied contract v0.1 (request/response shapes, section keys, evidence rules, optional `score`, error/timeout semantics) from the frozen vault note into this section (`BIL-QAI-T-1`).
+
 ## Contract Stability Rules
 
 - Additive fields are allowed when documented and tested.

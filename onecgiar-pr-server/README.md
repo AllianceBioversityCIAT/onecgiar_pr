@@ -42,6 +42,11 @@ Keys read directly via `process.env` (no `.env.example` in this package — mirr
 
 Missing any of the three degrades `POST /api/bilateral/center/handoff` to a `503` and the uploader CTA shows an error; leaving them unset keeps PROD dark by design.
 
+- `BILATERAL_AI_QUALITY_URL` — base URL of the AI quality-assessment service the bilateral Submit-for-review flow calls (`POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment`); see `docs/bilateral-module/integration-contracts.md` → *Quality assessment (outbound)*.
+- `BILATERAL_AI_QUALITY_TIMEOUT_MS` — request timeout in milliseconds for that call; default `60000` when unset.
+
+The quality-assessment call reuses the existing `MICROSERVICE_API_KEY` as its `X-API-Key` header — no separate key is provisioned. Missing `BILATERAL_AI_QUALITY_URL` or the API key degrades the check to `unavailable` (reason `not_configured`); the Submit flow still lets the user submit without the check.
+
 ## Running the app
 
 ```bash
