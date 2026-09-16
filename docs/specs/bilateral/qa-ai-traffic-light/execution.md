@@ -108,3 +108,71 @@ ADVISORY (recorded, not gating — none minted as tasks):
 - `T-11(a)` (proxy ≥ 65 s in TEST) remains owner-only; required before `T-8`.
 - Contract-copy advisories ("in this order", AI-side grey trigger) surfaced to the owner; no change requested at this gate.
 
+### Wave 2 (2026-09-16)
+
+`T-4 ∥ T-5` spawned after gate 1; `T-2` joined once the TCP probe to `DB_HOST` succeeded (VPN up, `.env` copied). Three concurrent workers — within the 3–4 ceiling; disjoint files (`services/quality-assessment/{builder,mappers,fixtures}` · `services/quality-assessment/client` · `entities/ + repositories/ + migrations/ + bilateral.module.ts`), no shared build output. Effort `high` on all three (T-2 would merit `max` per the effort dial for migrations, but the tier is T2 — kept at `high`, review compensates with **parallel lens reviewers**, as the command requires for migration-touching tasks).
+
+### `BIL-QAI-T-5` — AI HTTP client with timeout mapping and body-free logging
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-16 |
+| Skills assigned | `nestjs-expert`, `error-handling-patterns` (task list, no deviation) |
+| Effort | `high` |
+| Files | `services/quality-assessment/bilateral-quality-assessment.client.ts` (+304), `.spec.ts` (+346), `fixtures/ai-response.v0.1.json` (+47) — all new |
+| Forward pointers consumed | T-1 advisory → `timeoutMs()`/`timeoutSeconds()` exposed for `constraints.timeout_seconds` · T-3 advisory → schema check requires `sections` (five keys, `strengths`/`issues` arrays), `evidence[]` with `index`, verdict enums |
+
+**Attempt 1** — Implementer (sonnet). Verification (verbatim excerpts): `npx jest … --testPathPattern="bilateral-quality-assessment.client"` → `Test Suites: 1 passed · Tests: 10 passed`; `grep -n "JSON.stringify" …client.ts` → none; eslint quiet clean; `tsc --noEmit` clean (Leader re-ran after T-2 saw a transient TS2339 in the spec mid-edit: clean). Public API: `timeoutMs()`, `timeoutSeconds()`, `isConfigured()`, `assess(payload, {resultId}) → AiClientOutcome` (`ok | not_configured | timeout | http_error | malformed`, never throws). One `Logger` line per call, template `event=bilateral_quality_assessment_client …`. Axios `timeout` + `Promise.race` guard at the same ms. No `Not Done`.
+
+Review mode: **parallel lens reviewers** (security surface — secrets in logs): Reviewer A = RISK + RELIABILITY, Reviewer B = READABILITY + RESILIENCE, both gating on spec conformance.
+
+### `BIL-QAI-T-2` — Entity, repository and pruned migration for `bilateral_quality_assessments`
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-16 |
+| Skills assigned | `nestjs-expert` (task list, no deviation) |
+| Effort | `high` (T2 tier cap; migration correctness compensated by parallel lens review) |
+| Files | `entities/bilateral-quality-assessment.entity.ts` (+152), `repositories/bilateral-quality-assessment.repository.ts` (+34, new folder), `bilateral.module.ts` (+6: import, `forFeature`, provider), `src/migrations/1789566953005-BilateralQualityAssessments.ts` (+160) |
+
+**Attempt 1** — Implementer (sonnet). Migration generated against the dev DB (VPN) and **pruned**: the generator emitted drift for **31 unrelated tables** (ai_review_*, bilateral_ai_*, clarisa_project*, clarisa_global_unit*, notifications, otp_challenges, result, result_*, results_*, template, user_notification_settings, users, webhook_delivery) — all removed; only `bilateral_quality_assessments` kept verbatim (1 `CREATE TABLE`, 2 FK `ALTER TABLE`; `down` = 2 drop FK, 2 drop index, 1 drop table). Verification (verbatim excerpts): `npm run migration:check` → `Pending: 1 — BilateralQualityAssessments1789566953005` (**expected**: generated, not run; the owner runs migrations — memory rule; the check is green once applied); `tsc --noEmit` clean for the task's files; `grep -c "createTable\|CREATE TABLE"` = 1; `grep "new Date"` in the entity → none; eslint clean. Deviations recorded by the Implementer: composite index `(result_id, created_at)` **ascending** (TypeORM `@Index` has no per-column DESC precedent in this repo; `findLatestByResultId` orders `created_at DESC, id DESC` explicitly); `version_id` plain nullable bigint, no FK (design §3.1 marks no FK); repository provided but not exported (sibling pattern). No `Not Done`.
+
+Leader note: **`migration:check` green requires the owner to run the migration on the dev DB** (`npm run migration:run`) — raised at gate 2. Review mode: **parallel lens reviewers** (migration surface).
+
+**T-5 attempt 1 verdicts.** Reviewer A (RISK+RELIABILITY) → **PASS** — every log path traced (two `Logger` statements, ids/status/elapsed only; `classify()` reads only `error.code`/`response.status`); privacy test is behavioural (the `http_error` case embeds the host in `error.message` and the test proves it never surfaces); timeout proven at 4999 ms unsettled / 5000 ms `timeout`; schema check meets the Leader constraints; fixture matches the contract Response block key-for-key.
+Reviewer B (READABILITY+RESILIENCE) → **FAIL**:
+> 1. Outbound body missing `contract_version` (and `constraints.timeout_seconds` only reachable via a collaborator that does not exist yet); `QualityPayload` has no `contract_version`. Violates contract Request block / design §4.5. Remediation: set at call time next to `request_id`, or assign to T-4/T-6 and record ownership.
+> 2. `score` never validated nor normalised; JSDoc defers to "callers" that do not exist. `"68"` or `900` would reach `overall_score tinyint`. Violates the Leader constraint for T-5 backed by contract §*Optional score* and design §3.1. Remediation: `sanitizeScores` keeping only integers 0–100; two spec cases.
+
+**Leader adjudication:** Issue 1 → **out of T-5 scope, owned by `T-4`** (builder sets `contract_version: '0.1'` and `constraints.timeout_seconds` from opts; `QualityPayload` gains `contract_version` — instruction sent to the T-4 Implementer mid-run). Design §5 *Hash* keeps `contract_version` inside the hash (a contract bump ⇒ fresh assessment) — Reviewer B's counter-argument recorded, design not changed. Issue 2 → **in scope** (Leader constraint in the brief). Rework attempt 2 (effort `xhigh`) on issue 2 only; one advisory typo ("four colours") folded in as a one-word fix in the same file.
+
+ADVISORY (T-5, recorded, not gating): A: pre-existing leak in `bilateral-ai/services/bilateral-ai-text-mining.service.ts:37-57` (logs request/response bodies and host + axios message) — **outside this spec; needs its own ticket**; guard `setTimeout` never cleared on success (pending 60 s timer, hence `--forceExit`); Logger spy covers log/warn/error only and asserts `length > 0` not `5`; outbound request config (URL path, `X-API-Key`, Axios timeout) not asserted; `isValidAiResponse` predicate wider than its checks (`request_id`, `summary`, `comments`, `reason` unchecked) → **T-6/T-7 must not assume them**. B: `SECTION_KEYS` duplicated from the rules file (export + import instead); 2xx `text/html` maps to `malformed` but untested; no `maxContentLength` bound (design §8 ≤ 32 KB budget); observable not unsubscribed on guard timeout (bounded only by the equal Axios timeout — comment it); default-timeout and trailing-slash-trim branches untested; `http_status?` offered on `timeout`/`not_configured` where always absent. → `T-6` brief: pass one `requestId` end-to-end (the client currently mints its own and overwrites the builder's).
+
+**T-5 attempt 2** — Implementer (sonnet, effort `xhigh`). Files: client + spec only. Added `sanitizeScore`/`sanitizeScores` (integer 0–100 kept, anything else → `null`, new object, applied after `isValidAiResponse` and before `outcome: 'ok'`), removed the "callers treat it as absent" JSDoc, "four colours" → "three". Spec +3 cases (68 kept; `"68"` → null; section `900` → null; outcome `ok` in all). Mechanical compile fix: `buildPayload()` gained `contract_version: '0.1'` because T-4 made the field required on `QualityPayload` mid-run. Verification (verbatim): `Tests: 13 passed`; `grep JSON.stringify` → none; eslint clean; `tsc | grep client` → nothing. Re-review sent to Reviewer B with the exact attempt-1 → attempt-2 delta.
+
+Reviewer B (re-review of the delta) → **PASS**. Summary: "Issue 2 is fixed at the correct boundary with real behavioural coverage (valid score kept, string and out-of-range sanitized to `null`, outcome stays `ok` in all three), and the 'four colours' advisory is applied; Issue 1 is out of scope per the Leader's adjudication to T-4." New advisories: `sanitizeScores` rebuilds `sections` from the five known keys, so an **unknown sixth section key is dropped on the `ok` path** (matches T-9's "unknown key ignored" rule — noted here so `T-6`/`T-9` do not rediscover it); no test asserts a valid *section* score survives (fixture `general_information.score: 91` unasserted).
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (attempt 2 of 3; Reviewer A PASS on attempt 1, Reviewer B PASS on attempt 2) |
+| Requirements covered | `BIL-QAI-R-7` *Timeout* (client outcome) and *Service not configured*; NFR *Privacy / secrets*; `BIL-QAI-AC-15` |
+| Final verification | `Tests: 13 passed`; no `JSON.stringify`; eslint clean; tsc clean for the client files |
+| Decisions | `score` sanitized to `null` (not key-dropped) — matches `number \| null` types and nullable columns · `contract_version`/`constraints` are the builder's (T-4), client sends `{...payload, request_id}` |
+| Review rounds consumed (budget) | 1 extra round (T-1 and T-5 each needed one rework) — cumulative rework rounds: 2 of the 5-round tripwire |
+| Commit | chained after T-4 (spec depends on `QualityPayload.contract_version` introduced by T-4) |
+
+**T-2 attempt 1 — Reviewer A (RELIABILITY+RISK) → PASS.** All 19 columns match design §3.1 in type/length/nullability/order; `created_at` SQL-defaulted in entity and DDL; FK types match referenced PKs (`result.id` bigint, `users.id` int); `ON DELETE NO ACTION` on both FKs (correct for audit history); `down` reverses `up` with byte-identical names in the right order; exactly one table altered; ascending composite index judged conformant (MySQL serves `ORDER BY created_at DESC` via backward scan; a DESC index would re-open generator drift). `migration:check` `Pending: 1` carried as the open gate for the server group close (owner runs it).
+ADVISORY (A): `down` has no `IF EXISTS` guards — a partially applied `up` would leave the table after a failed revert; sibling migration uses a single `DROP TABLE IF EXISTS` (more robust) · `sections`/`evidence` are `json NOT NULL` with no default → **T-6 must insert `sections: {}` / `evidence: []` explicitly on the `running` row** (else `ER_NO_DEFAULT_FOR_FIELD`), and the TS type `Record<QualitySectionKey, …>` forces a cast for that row · **`decided_at` must be stamped from SQL (`NOW()`), never a JS `Date`** (mysql2 local-time rule) → T-7 brief · `migration:revert` destroys the audit trail (disclosed in header; design §11 accepts) · `IDX_…_result_id` redundant with the composite index (kept: design asks for it).
+
+**T-2 attempt 1 — Reviewer B (READABILITY+RESILIENCE) → PASS.** Column set 1:1 with §3.1; unions match spec value lists verbatim; verdict/section/evidence types imported from the rules file; `@akili-spec` on entity and migration; module registration mirrors the `BilateralHandoffCode` sibling, three additive hunks only; `findLatestByResultId` correct and T-6's other reads (latest non-running, `FOR UPDATE` lock) buildable on the inherited surface.
+ADVISORY (B): **`bigint` columns (`id`, `result_id`, `version_id`) come back from mysql2 as strings** — T-7's "same result / same assessment id" checks must coerce with `Number(...)` on both sides (`where` comparisons are unaffected); `had_outstanding_flags` is `tinyint` → test truthiness, never `=== true` · `sections`/`evidence` `json NOT NULL` need `{}`/`[]` placeholders on the `running`/`not_configured` inserts (or a follow-up making them nullable; decide in T-6) · status/decision literals: consider `const` value maps or string enums before T-6 spreads them · migration header says "never updated" while the entity JSDoc correctly says "after `decided_at` is stamped" — align wording (cosmetic) · entity JSDoc does not name `BaseEntity`/`Auditable` explicitly · `IDX_…_result_id` redundant with the composite (kept per design).
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (attempt 1 of 3; both lens Reviewers PASS) |
+| Requirements covered | `BIL-QAI-R-8` (persistence fields); NFR *Backwards compatibility* (additive table) |
+| Final verification | `tsc --noEmit` clean; `createTable` count 1; no `new Date`; eslint clean; `migration:check` → `Pending: 1` (this migration) — **open gate: owner runs `npm run migration:run` on the dev DB before the server group closes** |
+| Decisions | Ascending composite index accepted (backward scan; DESC would re-open generator drift) · `version_id` no FK · repository not exported |
+| Forward pointers | → `T-6`: insert `sections: {}` / `evidence: []` on non-terminal rows; pass `evidence_count` to `evaluateKpRule`; single `requestId` end-to-end; unknown sixth section key is dropped by the client · → `T-7`: `decided_at` from SQL `NOW()`; `Number(...)` coercion on bigint comparisons; truthiness on `had_outstanding_flags` |
+| Commit | see below |
+

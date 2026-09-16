@@ -58,6 +58,8 @@ import { BilateralCenterService } from './services/bilateral-center.service';
 import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { BilateralHandoffCode } from './entities/bilateral-handoff-code.entity';
+import { BilateralQualityAssessment } from './entities/bilateral-quality-assessment.entity';
+import { BilateralQualityAssessmentRepository } from './repositories/bilateral-quality-assessment.repository';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
@@ -97,6 +99,7 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
       BilateralAiDraft,
       DraftEvidence,
       BilateralHandoffCode,
+      BilateralQualityAssessment,
     ]),
     ResultsModule,
     VersioningModule,
@@ -201,6 +204,9 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
     // ClarisaInstitutionsModule, UserModule and VersioningModule (all imported above) — no new
     // module imports needed.
     BilateralHandoffService,
+    // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-2) — thin repository over
+    // `bilateral_quality_assessments`; T-6/T-7 inject it directly, same module, no export needed.
+    BilateralQualityAssessmentRepository,
   ],
   // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
   // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second

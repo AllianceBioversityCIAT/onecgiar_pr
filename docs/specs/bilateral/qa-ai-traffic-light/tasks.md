@@ -16,7 +16,7 @@
 - [x] `requirements.md` approved · `design.md` approved.
 - [x] `BIL-QAI-OQ-1` resolved (contract copy → `docs/bilateral-module/integration-contracts.md`). `OQ-4`/`OQ-5` carried as contract defaults (AI returns overall; no `result_code`). `OQ-3` accepted risk. `OQ-2` is a human gate inside `BIL-QAI-T-11`, required **before `BIL-QAI-T-8`** starts.
 - [x] No conflicting in-flight spec touching `bilateral-center.service.ts` / `submitForReview` (search `docs/specs/`; `notifications/bilateral-review-decision` is shipped and only gets a note).
-- [ ] `npm run migration:check` green on a clean checkout before `BIL-QAI-T-2`.
+- [~] `npm run migration:check` — baseline was clean (0 pending) before T-2; the T-2 migration is generated and **pending the owner's `migration:run`** on the dev DB.
 - [x] Skills available to the Implementer: `nestjs-expert`, `api-design-principles`, `error-handling-patterns`, `tdd`, `angular-developer`, `ui-ux-pro-max`.
 
 ## 3. Task list
@@ -36,7 +36,7 @@
   - *Presence note:* this proves the document exists, not that Daniela's endpoint matches it; the match is proven by `BIL-QAI-T-5`'s contract fixture and, later, a real call in TEST.
 - **Definition of done:** section present with a change-log line dated; README keys listed; handoff message sent and noted in the vault note.
 
-### [ ] `BIL-QAI-T-2` — Entity, repository and pruned migration for `bilateral_quality_assessments`
+### [x] `BIL-QAI-T-2` — Entity, repository and pruned migration for `bilateral_quality_assessments`
 
 - **Type:** `db`
 - **Description:** Create `BilateralQualityAssessment` entity (columns per `design.md` §3.1, `created_at` default `CURRENT_TIMESTAMP` set by SQL), a thin repository, register both in `bilateral.module.ts`. Generate the migration with `npm run migration:generate --name=BilateralQualityAssessments` and **prune it to this one table** (reversible `down`).
@@ -79,7 +79,7 @@
   - *Presence note:* the denylist regex proves absence of id-shaped keys, not that the labels are the ones the form paints; the fixture for each type is reviewed by the owner against a real result in TEST at the HITL pause (recorded in `BIL-QAI-T-11`).
 - **Definition of done:** six fixtures; denylist pass unit-tested with a deliberately id-bearing input; DI graph compiles (`npx tsc --noEmit`) — if `BilateralCenterService → orchestrator → BilateralService/ResultsService` cycles, fall back to repositories per `DD-2` and record it in `execution.md`.
 
-### [ ] `BIL-QAI-T-5` — AI HTTP client with timeout mapping and body-free logging
+### [x] `BIL-QAI-T-5` — AI HTTP client with timeout mapping and body-free logging
 
 - **Type:** `server`
 - **Description:** `bilateral-quality-assessment.client.ts` on `HttpService` (already provided by `bilateral.module.ts`): env-driven URL/timeout, `X-API-Key` from `MICROSERVICE_API_KEY`, `not_configured` short-circuit, outcome mapping `timeout | http_error | malformed | ok`, light response schema check, `Logger` lines with ids/status/elapsed only. Contract fixture test: a canned v0.1 response parses to the internal shape.
