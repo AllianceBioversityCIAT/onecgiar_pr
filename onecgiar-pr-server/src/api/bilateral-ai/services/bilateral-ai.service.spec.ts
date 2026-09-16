@@ -93,6 +93,9 @@ describe('BilateralAiService (unit)', () => {
     const notificationsService = {
       notifyTerminal: jest.fn().mockResolvedValue(undefined),
     };
+    const evidenceTransferService = {
+      transferForDraft: jest.fn().mockResolvedValue([]),
+    };
 
     const service = new BilateralAiService(
       jobRepository as any,
@@ -111,6 +114,7 @@ describe('BilateralAiService (unit)', () => {
       clarisaCentersRepository as any,
       clarisaInstitutionsRepository as any,
       notificationsService as any,
+      evidenceTransferService as any,
     );
 
     Object.assign(service, overrides);
@@ -134,6 +138,7 @@ describe('BilateralAiService (unit)', () => {
         clarisaCentersRepository,
         clarisaInstitutionsRepository,
         notificationsService,
+        evidenceTransferService,
       },
     };
   };
@@ -1087,6 +1092,72 @@ describe('BilateralAiService (unit)', () => {
       await expect(service.promoteDraft(5, 42)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    // `ADE-T-4` — the live dispatch chain (`design.md` §3.1): the transfer runs once, scoped to
+    // THIS draft's own `result_id`/`id`, after the `status_id` write and before the discard.
+    it('calls the evidence transfer for this draft only, after the status write and before the discard', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+
+      await service.promoteDraft(5, 42);
+
+      expect(
+        stubs.evidenceTransferService.transferForDraft,
+      ).toHaveBeenCalledWith(5, 100, 42);
+      const statusUpdateOrder =
+        stubs.resultRepository.update.mock.invocationCallOrder[0];
+      const transferOrder =
+        stubs.evidenceTransferService.transferForDraft.mock
+          .invocationCallOrder[0];
+      const discardOrder =
+        stubs.draftRepository.update.mock.invocationCallOrder[0];
+      expect(statusUpdateOrder).toBeLessThan(transferOrder);
+      expect(transferOrder).toBeLessThan(discardOrder);
+    });
+
+    // ADE-R-5 / defense in depth: even if the transfer service's own "never throws" contract were
+    // violated, promoteDraft still resolves with its unchanged response — the result already
+    // reached Editing above and nothing downstream may strand it.
+    it('still resolves with the unchanged response contract if the evidence transfer rejects outright', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: null, user_id: 42, center_id: 7 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+      stubs.resultRepository.findOneOrFail.mockResolvedValue({
+        id: 100,
+        result_code: 9046,
+        version_id: 36,
+      });
+      stubs.evidenceTransferService.transferForDraft.mockRejectedValue(
+        new Error('unexpected transfer defect'),
+      );
+
+      const res = await service.promoteDraft(5, 42);
+
+      expect(res).toEqual({
+        response: { resultId: 100, resultCode: 9046, versionId: 36 },
+        message: 'Draft promoted to bilateral result',
+        status: 200,
+      });
+      expect(stubs.resultRepository.update).toHaveBeenCalledWith(100, {
+        status_id: expect.any(Number),
+      });
+      expect(stubs.draftRepository.update).toHaveBeenCalledWith(5, {
+        is_discarded: true,
+      });
     });
   });
 

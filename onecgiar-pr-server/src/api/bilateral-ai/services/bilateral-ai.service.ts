@@ -38,6 +38,7 @@ import { BilateralService } from '../../bilateral/bilateral.service';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { getBilateralAiMaxAttempts } from '../bilateral-ai.config';
 import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
+import { BilateralAiEvidenceTransferService } from './bilateral-ai-evidence-transfer.service';
 import {
   BilateralAiExpectationsMix,
   BilateralAiExpectationsResponseDto,
@@ -106,6 +107,7 @@ export class BilateralAiService {
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly notificationsService: BilateralAiNotificationsService,
+    private readonly evidenceTransferService: BilateralAiEvidenceTransferService,
   ) {}
 
   async createJob(
@@ -588,6 +590,26 @@ export class BilateralAiService {
     await this.resultRepository.update(draft.result_id, {
       status_id: ResultStatusData.Editing.value,
     });
+
+    // ▶ NEW (`ADE-T-4`, `@akili-spec docs/specs/bilateral/ai-draft-evidence-promotion`) —
+    // attaches this draft's qualifying documents as formal evidence on the result just moved to
+    // Editing (`design.md` §3.1). Scoped to THIS draft's own `id`/`result_id`, read above — never
+    // a sibling draft's (`ADE-AC-1`). Runs after the point of no return so a transfer fault can
+    // never strand the result in `Draft` (`ADE-R-5`). `transferForDraft` already isolates and
+    // logs every document's own failure and never throws; the `try` here is defense in depth only,
+    // so a defect in that contract still cannot cost the promotion its success response.
+    try {
+      await this.evidenceTransferService.transferForDraft(
+        draft.id,
+        draft.result_id,
+        userId,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `AI evidence transfer step failed unexpectedly for draft ${draft.id} (result ${draft.result_id}): ${message}`,
+      );
+    }
 
     await this.draftRepository.update(draft.id, { is_discarded: true });
 

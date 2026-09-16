@@ -91,7 +91,7 @@
 
 ---
 
-### `ADE-T-4` — Evidence transfer service, wired into `promoteDraft`
+### `ADE-T-4` — Evidence transfer service, wired into `promoteDraft`  `[x]` PASS (attempt 2) — see `execution.md`
 
 - **Type:** `server`
 - **Description:** The core. New `BilateralAiEvidenceTransferService` selects the draft's qualifying, not-yet-transferred document rows and, **sequentially and independently per document**, streams S3 → SharePoint (`ADE-T-3`), inserts the `evidence` row (`result_id`, `is_sharepoint = true`, `is_public_file = false`, `evidence_type_id = 1`), calls `EvidencesService.saveSPData` to mint the link and write `evidence_sharepoint`, then stamps `file_management_reference` **last** (DD-6). Each document is wrapped so a throw is logged and the loop continues; the service never throws. `promoteDraft` calls it once, **after** the `status_id` write. `bilateral.module.ts` imports `SharePointModule` and registers the service.
@@ -118,14 +118,14 @@
 - **Disqualifier:** a green suite here proves the **shape** of the rows and the **control flow**, because Graph and S3 are stubbed throughout. It does **not** prove the link resolves, that the file is actually private, or that the folder is right — those are `ADE-T-5`'s job (DC-5, DC-6). Reading this task's green as "the feature works" is the specific misreading `KZ-EVL-1` was written about.
 - **Presence-assertion caveat (`ADE-AC-6`):** asserting the created row carries `is_active`, `result_id` and `evidence_type_id` like a manual one proves the row's *shape*, not that soft delete and "add more evidence" behave. Those run through client and controller paths this spec does not touch; `ADE-T-5` exercises them by hand. Recorded as a gap, not claimed as covered.
 - **Done:**
-  - [ ] Every clause in the table above has a named, passing test.
-  - [ ] The service never throws — asserted, not assumed.
-  - [ ] `promoteDraft`'s response contract is byte-identical to today (`resultId`, `resultCode`, `versionId`, message, 200).
-  - [ ] `bilateral.module.ts` compiles with the new provider; `npx jest --testPathPattern="app.module"` green (constructor change → per the project's standing rule).
-  - [ ] `npx tsc --noEmit` clean.
-  - [ ] No migration added; `npm run migration:check` still clean.
-  - [ ] Swagger/DTOs untouched — no API surface changed (§6).
-  - [ ] Bilateral payload change log **not** touched — no payload change (`AC-4`).
+  - [x] Every clause in the table above has a named, passing test.
+  - [x] The service never throws — asserted, not assumed.
+  - [x] `promoteDraft`'s response contract is byte-identical to today (`resultId`, `resultCode`, `versionId`, message, 200).
+  - [x] `bilateral.module.ts` compiles with the new provider; `npx jest --testPathPattern="app.module"` green (constructor change → per the project's standing rule). — *marked on static wiring verification by two reviewers; `app.module.spec.ts` does not compile a DI container (see `execution.md`)*
+  - [x] `npx tsc --noEmit` clean.
+  - [x] No migration added; `npm run migration:check` still clean. — *probe-confirmed `ECONNREFUSED` in this worktree; 0 entity/migration files changed; CI `migration:check:ci` is the gate (see `execution.md`)*
+  - [x] Swagger/DTOs untouched — no API surface changed (§6).
+  - [x] Bilateral payload change log **not** touched — no payload change (`AC-4`).
 
 ---
 
