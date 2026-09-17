@@ -554,7 +554,15 @@
 
   // Restore the pre-redesign table behavior: honor the fixed column widths so the columns
   // stay compact (collapse to their defined size) instead of auto-stretching to fit content.
-  ::ng-deep .pr-table {
+  ::ng-deep .pr-table-wrap.rc-pr-table {
+    border: none;
+    border-radius: inherit;
+    background: transparent;
+  }
+
+  > table.pr-table,
+  ::ng-deep .pr-table-wrap.rc-pr-table table.pr-table,
+  ::ng-deep table.pr-table {
     table-layout: fixed;
     min-width: 1100px;
     width: 100%;
@@ -564,17 +572,23 @@
     thead th {
       white-space: nowrap;
       background: #f7f7f9 !important;
-      color: #6b6580;
+      color: #6b6580 !important;
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       height: 40px;
       padding: 0 12px !important;
-      border-bottom: 1px solid #e3e3e8 !important;
-      border-right: none !important;
+      border-bottom: 1px solid var(--pr-border, #e3e3e8) !important;
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-top: none !important;
       border-left: none !important;
+      border-radius: 0 !important;
       vertical-align: middle;
+
+      &:last-child {
+        border-right: none !important;
+      }
     }
 
     tbody tr {
@@ -590,14 +604,19 @@
     }
 
     tbody td {
-      border-bottom: 1px solid #eeeef1 !important;
-      border-right: none !important;
+      border-bottom: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+      border-top: none !important;
       border-left: none !important;
       font-size: 13px;
       padding: 6px 12px !important;
       vertical-align: middle;
       color: var(--pr-text, #2b2838);
       overflow: hidden;
+
+      &:last-child {
+        border-right: none !important;
+      }
     }
   }
 
@@ -785,40 +804,34 @@
   line-height: 1.2;
 }
 
-// Editing / Not started
+// Status chips — fixed fg/bg pairs from `styles/colors.scss` via `result-status-tokens.ts`.
 .status_tag.status_1 {
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-in-progress-fg) !important;
+  background: var(--pr-status-in-progress-bg) !important;
 }
-// Quality Assessed / In QA-ish
 .status_tag.status_2 {
-  color: #0e7490 !important;
-  background: #cffafe !important;
+  color: var(--pr-status-in-qa-fg) !important;
+  background: var(--pr-status-in-qa-bg) !important;
 }
-// Submitted
 .status_tag.status_3 {
-  color: #1d4ed8 !important;
-  background: #dbeafe !important;
+  color: var(--pr-status-submitted-fg) !important;
+  background: var(--pr-status-submitted-bg) !important;
 }
-// Discontinued
 .status_tag.status_4 {
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
-// Pending review / In progress
 .status_tag.status_5 {
-  color: #b45309 !important;
-  background: #fef3c7 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
-// Approved
 .status_tag.status_6 {
-  color: #047857 !important;
-  background: #d1fae5 !important;
+  color: var(--pr-status-approved-fg) !important;
+  background: var(--pr-status-approved-bg) !important;
 }
-// Rejected
 .status_tag.status_7 {
-  color: #b91c1c !important;
-  background: #fee2e2 !important;
+  color: var(--pr-status-rejected-fg) !important;
+  background: var(--pr-status-rejected-bg) !important;
 }
 
 .in-qa-tag {
@@ -893,44 +906,44 @@
 
 .status_1 {
   border-color: transparent !important;
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-in-progress-fg) !important;
+  background: var(--pr-status-in-progress-bg) !important;
 }
 
 .status_2 {
   border-color: transparent !important;
-  color: #0e7490 !important;
-  background: #cffafe !important;
+  color: var(--pr-status-in-qa-fg) !important;
+  background: var(--pr-status-in-qa-bg) !important;
 }
 
 .status_3 {
   border-color: transparent !important;
-  color: #1d4ed8 !important;
-  background: #dbeafe !important;
+  color: var(--pr-status-submitted-fg) !important;
+  background: var(--pr-status-submitted-bg) !important;
 }
 
 .status_4 {
   border-color: transparent !important;
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
 
 .status_5 {
   border-color: transparent !important;
-  color: #b45309 !important;
-  background: #fef3c7 !important;
+  color: var(--pr-status-not-started-fg) !important;
+  background: var(--pr-status-not-started-bg) !important;
 }
 
 .status_6 {
   border-color: transparent !important;
-  color: #047857 !important;
-  background: #d1fae5 !important;
+  color: var(--pr-status-approved-fg) !important;
+  background: var(--pr-status-approved-bg) !important;
 }
 
 .status_7 {
   border-color: transparent !important;
-  color: #b91c1c !important;
-  background: #fee2e2 !important;
+  color: var(--pr-status-rejected-fg) !important;
+  background: var(--pr-status-rejected-bg) !important;
 }
 
 .status_6 {

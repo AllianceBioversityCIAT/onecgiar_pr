@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-10 · P2-3233 (AI-promoted draft type conversion resets editor state before reloading)
+**Verified:** 2026-09-16 · performance-refactor · 01891aebd · pie en dos cápsulas (P2-3736); prior: 2026-09-10 · P2-3233 (AI-promoted draft type conversion resets editor state before reloading)
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -24,9 +24,13 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   movido aquí desde la card Actions del Overview el 2026-09-04, gateado por `canSubmitFromRail()`:
   `mdsTracker.overallStatus() === 'complete'` + no in-flight + no read-only; `submitResult()`
   re-chequea sus propios guards), columna con scroll propio
-  (`.bcr-scroll`: header `variant="detail"`, phase switcher, card con pastilla numérica) y footer
-  fijo al piso (`.bcr-editor-footer`: Back · **Next** primario · "Section X of Y" · estado ·
-  Save draft secundario). Misma geometría que `pages/results/.../result-detail`, reconstruida aquí.
+  (`.bcr-scroll`: header `variant="detail"`, phase switcher, card con pastilla numérica) y un pie
+  SIN franja (P2-3736, 16-sep-2026): `.bcr-editor-footer` mide 0 y flota sobre el piso de
+  `.bcr-content`; solo se pintan sus dos cápsulas (izq: Back · **Next** · "Section X of Y"; der:
+  estado · Save draft). `.bcr-scroll` reserva 88px abajo para que el último campo salga de detrás.
+  ⚠️ Con "Unsaved changes" la cápsula derecha mide ~400px: bajo 820px de COLUMNA
+  (`@container` sobre `.bcr-content`) la izquierda sube una fila y el scroll reserva 152px — medido,
+  a 1024px de ventana se cruzaban 65px. Misma geometría que `section-bottom-bar` de W1/W2.
 - El marco del editor se ancla al slot de la página (`:host.bcr-host--editor { position:absolute;
   inset:0 }`, clase ligada a `!isCreating()`), no con una cadena de `height:100%`: `main` es sólo
   `min-h-svh`, así que en un formulario largo la cadena resuelve a la altura del contenido y el

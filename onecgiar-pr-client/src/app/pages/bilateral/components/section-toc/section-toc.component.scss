@@ -11,6 +11,11 @@
   gap: 8px;
 }
 
+.st-field--planned {
+  gap: 12px;
+  padding-top: 12px;
+}
+
 // Same look as the custom-fields header (pr-field-header): sentence case, 14px, weight 600. The
 // uppercase 11px eyebrow read as a different form from W1/W2's.
 .st-label {

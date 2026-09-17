@@ -587,6 +587,19 @@ describe('BilateralResultCreatorComponent', () => {
       expect(q('[data-testid="bilateral-footer-position"]').textContent.replace(/\s+/g, ' ').trim()).toBe('Section 3 of 6');
     });
 
+    // Sin franja a lo ancho (Yeck, 16-sep-2026): dos cápsulas, una por grupo, como la barra de W1/W2.
+    it('splits the footer into two floating capsules: navigation left, state and save right', () => {
+      enterEditor();
+      const footer = q('[data-testid="bilateral-section-footer"]');
+      const groups = footer.querySelectorAll(':scope > .bcr-editor-footer__group');
+      expect(groups.length).toBe(2);
+      expect(groups[0].classList.contains('bcr-editor-footer__group--start')).toBe(true);
+      expect(groups[1].classList.contains('bcr-editor-footer__group--end')).toBe(true);
+      expect(groups[0].querySelector('[data-testid="bilateral-footer-next"]')).not.toBeNull();
+      expect(groups[1].querySelector('[data-testid="bilateral-footer-save"]')).not.toBeNull();
+      expect(footer.querySelector('.bcr-editor-footer__inner')).toBeNull();
+    });
+
     it('makes Next the one primary action and Save draft secondary, as on the W1/W2 bar', () => {
       enterEditor();
       const next = q('[data-testid="bilateral-footer-next"]');
@@ -854,7 +867,7 @@ describe('BilateralResultCreatorComponent', () => {
       expect(backLink).not.toBeNull();
       expect(backLink.getAttribute('title')).toBe('Back');
       expect(backLink.textContent.trim()).toContain('Back');
-      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backLink()).toEqual(['/bilateral', 'ABC', 'results']);
       expect(component.backQueryParams()).toBeNull();
     });
 
@@ -868,7 +881,20 @@ describe('BilateralResultCreatorComponent', () => {
       const backLink = q('[data-testid="bilateral-rail-back-link"]');
       expect(backLink).not.toBeNull();
       expect(backLink.textContent.trim()).toBe('chevron_leftBack');
-      expect(component.backLink()).toBe('/bilateral/ABC/results');
+      expect(component.backLink()).toEqual(['/bilateral', 'ABC', 'results']);
+      expect(component.backQueryParams()).toEqual({ phase: '36' });
+    });
+
+    it('does not double-encode center acronyms with spaces or parentheses in the back link', () => {
+      const smartNav = TestBed.inject(SmartNavigationService);
+      const center = 'Bioversity (Alliance)';
+      ctxService.setCenter(center, 'Alliance of Bioversity International and CIAT');
+      smartNav.recordUrl(`/bilateral/${encodeURIComponent(center)}/home?phase=36`);
+      smartNav.recordUrl(`/bilateral/${encodeURIComponent(center)}/result/9384?phase=36`);
+      mockRouter.url = `/bilateral/${encodeURIComponent(center)}/result/9384?phase=36`;
+      enterEditor(9384);
+
+      expect(component.backLink()).toEqual(['/bilateral', center, 'home']);
       expect(component.backQueryParams()).toEqual({ phase: '36' });
     });
 
@@ -882,7 +908,7 @@ describe('BilateralResultCreatorComponent', () => {
       const backLink = q('[data-testid="bilateral-rail-back-link"]');
       expect(backLink).not.toBeNull();
       expect(backLink.textContent.trim()).toBe('chevron_leftBack');
-      expect(component.backLink()).toBe('/result/results-outlet/results-list');
+      expect(component.backLink()).toEqual(['/result', 'results-outlet', 'results-list']);
       expect(component.backQueryParams()).toBeNull();
     });
 

@@ -76,7 +76,9 @@ describe('ResultsListFiltersComponent', () => {
       fundingSourceOptions: createSignal<any[]>([]),
       filterCreatedByMe: createSignal(false),
       filterSubmittedByMe: createSignal(false),
-      requestingFullExport: createSignal(false)
+      requestingFullExport: createSignal(false),
+      filterLayout: createSignal<'menu' | 'sidebar'>('menu'),
+      setFilterLayout: jest.fn((layout: 'menu' | 'sidebar') => mockResultsListFilterService.filterLayout.set(layout))
     };
     // Derived the same way the real service derives it, from the mock's own signals.
     mockResultsListFilterService.fullMetadataExportBlockedReason = () =>
@@ -1105,6 +1107,103 @@ describe('ResultsListFiltersComponent', () => {
       expect(component.tempSelectedStatus()).toEqual([{ id: 6 }]);
       expect(component.tempSelectedLeadCenters()).toEqual([{ id: 7 }]);
       expect(component.moreFiltersOpen()).toBe(true);
+    });
+  });
+
+  describe('filter layout (menu / side column)', () => {
+    it('should close an open menu, discarding its unapplied picks, when switching to the side column', () => {
+      mockResultsListFilterService.selectedStatus.set([{ id: 1 }]);
+      component.moreFiltersOpen.set(true);
+      component.tempSelectedStatus.set([{ id: 9 }] as any);
+
+      component.setFilterLayout('sidebar');
+
+      expect(mockResultsListFilterService.setFilterLayout).toHaveBeenCalledWith('sidebar');
+      expect(component.moreFiltersOpen()).toBe(false);
+      expect(component.isSidebarLayout()).toBe(true);
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ id: 1 }]);
+    });
+
+    it('should apply each change at once in the side column', () => {
+      mockResultsListFilterService.filterLayout.set('sidebar');
+      component.tempSelectedFundingSource.set([{ id: 2 }] as any);
+      component.tempFilterCreatedByMe.set(true);
+
+      component.onFilterFieldChanged();
+
+      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
+      expect(mockResultsListFilterService.filterCreatedByMe()).toBe(true);
+    });
+
+    it('should wait for Apply in the menu', () => {
+      component.tempSelectedFundingSource.set([{ id: 2 }] as any);
+
+      component.onFilterFieldChanged();
+
+      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([]);
+    });
+
+    it('should mirror filters applied elsewhere (chips, defaults) into the side column controls', () => {
+      mockResultsListFilterService.filterLayout.set('sidebar');
+      fixture.detectChanges();
+
+      mockResultsListFilterService.selectedStatus.set([{ id: 4 }]);
+      mockResultsListFilterService.filterSubmittedByMe.set(true);
+      fixture.detectChanges();
+
+      expect(component.tempSelectedStatus()).toEqual([{ id: 4 }]);
+      expect(component.tempFilterSubmittedByMe()).toBe(true);
+    });
+
+    it('should hide the Filter menu button in the side column mode', () => {
+      mockResultsListFilterService.filterLayout.set('sidebar');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.rc-filter-btn')).toBeNull();
+      expect(component.filterSidebarTpl).toBeTruthy();
+    });
+  });
+
+  describe('fitFilterPanelToViewport', () => {
+    const openPanelAt = (top: number, innerHeight: number) => {
+      Object.defineProperty(window, 'innerHeight', { value: innerHeight, configurable: true });
+      component.moreFiltersOpen.set(true);
+      fixture.detectChanges();
+      const panel = fixture.nativeElement.querySelector('.rc-filter-panel') as HTMLElement;
+      jest.spyOn(panel, 'getBoundingClientRect').mockReturnValue({ top } as DOMRect);
+      component.fitFilterPanelToViewport();
+      fixture.detectChanges();
+      return panel;
+    };
+
+    it('should cap the panel at the space left below it so Apply stays on a short screen', () => {
+      const panel = openPanelAt(259, 701);
+
+      expect(component.filterPanelMaxHeight()).toBe(426);
+      expect(panel.style.maxHeight).toBe('426px');
+    });
+
+    it('should keep the 560px ceiling on tall screens', () => {
+      openPanelAt(259, 1200);
+
+      expect(component.filterPanelMaxHeight()).toBe(560);
+    });
+
+    it('should not shrink below 240px on very short screens', () => {
+      openPanelAt(259, 400);
+
+      expect(component.filterPanelMaxHeight()).toBe(240);
+    });
+
+    it('should re-measure on window resize only while the panel is open', () => {
+      const spy = jest.spyOn(component, 'fitFilterPanelToViewport');
+
+      component.onWindowResize();
+      expect(spy).not.toHaveBeenCalled();
+
+      component.moreFiltersOpen.set(true);
+      component.onWindowResize();
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 

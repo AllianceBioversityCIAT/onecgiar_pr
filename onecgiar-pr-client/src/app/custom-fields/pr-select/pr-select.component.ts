@@ -2,6 +2,7 @@ import { Component, computed, ElementRef, forwardRef, HostListener, inject, inpu
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { shouldOpenUpward } from '../dropdown-placement';
 
 @Component({
   selector: 'app-pr-select',
@@ -224,7 +225,13 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     if (this.overlayToBody()) {
       this.positionOverlay();
       if (this.overlayStyles()) this.attachScrollListener();
+      return;
     }
+    // P2-3737: inline panel opens above the trigger when it does not fit below it. A class on the node,
+    // no component state (see `pr-multi-select` for why that matters).
+    const trigger = document.getElementById(this.triggerId);
+    const panel = trigger?.querySelector<HTMLElement>('.options');
+    if (trigger && panel) panel.classList.toggle('options_up', shouldOpenUpward(trigger, panel));
   }
 
   /** Keep wheel events inside the option viewport instead of passing them to the result page. */

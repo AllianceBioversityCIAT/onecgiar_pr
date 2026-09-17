@@ -13,12 +13,157 @@
 .mdr-toolbar-docked {
   border-bottom: 1px solid var(--pr-border-divider);
   background: var(--pr-surface-card);
+  padding-block: 10px;
+
+  @media (max-width: 1199px) {
+    padding-block: 8px;
+  }
+}
+
+// Filter toolbar — stack on mobile/tablet/small laptop; single row only when content is wide enough.
+.mdr_filter_bar {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'search'
+    'facets';
+
+  @media (min-width: 1200px) {
+    grid-template-columns: minmax(200px, 240px) 1px minmax(0, 1fr);
+    grid-template-areas: 'search divider facets';
+  }
+}
+
+.mdr_filter_search {
+  grid-area: search;
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+}
+
+.mdr_filter_divider {
+  grid-area: divider;
+  display: none;
+  flex-shrink: 0;
+  width: 1px;
+  height: 22px;
+  margin-inline: 2px;
+  background: var(--pr-border-divider);
+
+  @media (min-width: 1200px) {
+    display: block;
+  }
+}
+
+.mdr_filter_facets {
+  grid-area: facets;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (min-width: 1200px) {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+.mdr-filter-created-by {
+  min-width: 0;
+
+  @media (min-width: 1200px) {
+    flex: 1 1 180px;
+    max-width: 280px;
+  }
+}
+
+.mdr-filter {
+  min-width: 0;
+
+  @media (min-width: 1200px) {
+    flex: 1 1 220px;
+    max-width: 360px;
+  }
+}
+
+.mdr-ai-provenance-line {
+  width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pr-border-divider);
+
+  ::ng-deep [data-testid='ai-provenance-line'] {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    line-height: 1.4;
+
+    @media (max-width: 1199px) {
+      font-size: 12px;
+    }
+  }
+}
+
+// Multiselect trigger should match the 34px filter row height.
+.mdr-filter-created-by ::ng-deep .pr-filter-ms .field {
+  min-height: 34px;
+}
+
+.mdr_filter_meta {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 10px;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.mdr_filter_chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mdr-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.mdr_filter_meta_actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+
+  @media (max-width: 639px) {
+    justify-content: space-between;
+    width: 100%;
+  }
 }
 
 .mdr-project-trigger {
   border: 1px solid var(--pr-border-divider);
   background: var(--pr-surface-card);
-  height: 36px;
+  height: 34px;
   border-radius: 8px;
 
   &:hover {
@@ -27,12 +172,22 @@
 }
 
 .mdr-project-dropdown {
-  min-width: 280px;
-  max-width: min(480px, calc(100vw - 32px));
+  box-sizing: border-box;
+  max-width: min(480px, calc(100vw - 16px));
   background: var(--pr-surface-card);
   border: 1px solid var(--pr-border-divider);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.mdr-project-dropdown-list {
+  max-height: min(260px, 50dvh);
+}
+
+.mdr-project-option {
+  .pr-native-check {
+    margin: 0;
+  }
 }
 
 .mdr {
@@ -41,6 +196,10 @@
   box-sizing: border-box;
   padding: 20px 32px 48px;
   overflow-x: hidden;
+
+  @media (max-width: 1199px) {
+    padding: 12px 24px 40px;
+  }
 
   @media (max-width: 640px) {
     padding: 16px 16px 32px;
@@ -116,14 +275,15 @@
 }
 
 .mdr-session-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
   padding: 12px 20px;
   background: var(--pr-surface-page, #F8FAFC);
   border-bottom: 1px solid var(--pr-border-divider, #E8ECEE);
+}
+
+.mdr-meta-item--project {
+  @media (max-width: 1199px) {
+    align-items: flex-start;
+  }
 }
 
 .mdr-table-container {

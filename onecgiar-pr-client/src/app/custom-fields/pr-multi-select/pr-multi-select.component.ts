@@ -1,10 +1,11 @@
-import { Component, computed, forwardRef, inject, input, output, signal, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
+import { Component, ElementRef, NgZone, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges, computed, OnDestroy, OnInit } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { shouldOpenUpward } from '../dropdown-placement';
 
 @Component({
   selector: 'app-pr-multi-select',
@@ -50,6 +51,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
   readonly cannotRemoveOptionValues = input<any[]>([]);
   readonly displayLabelFormatter = input<(option: any) => string>();
   readonly showDescriptionLabel = input<boolean>(true);
+  /**
+   * P2-3738: overrides what the card calls "filled". `null` (the default, every existing call site)
+   * keeps `hasSelection`; a consumer whose field needs more than a selection — partners that each
+   * need a role — passes its own verdict so the colour and the missing-field counter agree.
+   */
+  readonly complete = input<boolean | null>(null);
   // SIP-T-3: only meaningful when `searchTextChange` is wired by the parent (server-search mode).
   readonly serverSearchDebounceMs = input<number>(300);
   // SIP-T-7: opt-in visual variant (rounded panel + shadow, bordered search bar with an inset icon,
@@ -86,6 +93,13 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
   readonly rolesSE = inject(RolesService);
   private readonly customizedAlertsFeSE = inject(CustomizedAlertsFeService);
   readonly dataControlSE = inject(DataControlService);
+
+  constructor() {
+    // P2-3737: a NATIVE listener outside the Angular zone — placing a panel changes no Angular state,
+    // so it must not cost a change-detection pass. See `placeOptions` for why the measure waits a frame.
+    const host = inject(ElementRef<HTMLElement>).nativeElement as HTMLElement;
+    inject(NgZone).runOutsideAngular(() => host.addEventListener('pointerdown', event => this.placeOptions(event)));
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['options'] || changes['group']) {
@@ -312,6 +326,27 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
 
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
+  }
+
+  /**
+   * P2-3737 — decide the panel direction when the list OPENS. Focus moving between the search box and the
+   * checkboxes inside the same field is still the same open list, so it keeps its direction: a
+   * panel that flipped while the reporter ticks partners would jump under the pointer.
+   */
+  placeOptions(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    const trigger = target?.closest<HTMLElement>('.custom_select a.field');
+    if (!trigger) return;
+    // A press inside the open panel (search box, a checkbox) is the same open list: keep its direction.
+    if (target.closest('.options')) return;
+    // A class on the node, not component state — and measured one frame LATER. Forcing layout inside
+    // the focus event, while the panel is still going from `scale(0)` to visible, left the CDK virtual
+    // viewport with a stale size: options arriving afterwards never rendered (measured on the
+    // CONTRACT specs, the same three reds as the template binding).
+    requestAnimationFrame(() => {
+      const panel = trigger.querySelector<HTMLElement>('.options');
+      if (panel) panel.classList.toggle('options_up', shouldOpenUpward(trigger, panel));
+    });
   }
 
   removeFocus() {

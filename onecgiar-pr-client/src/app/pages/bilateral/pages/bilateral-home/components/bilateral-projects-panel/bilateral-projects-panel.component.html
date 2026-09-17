@@ -1,5 +1,7 @@
 <!-- Toolbar: Docked directly beneath tabs as flex-none bar -->
-<div class="bpp_toolbar bpp_toolbar_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]">
+<div
+  class="bpp_toolbar bpp_toolbar_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+  data-guide="bilateral-tab-reporting">
   <div class="bpp_toolbar_left">
     <div class="bpp_search_box">
       <span class="material-icons-round bpp_search_icon" aria-hidden="true">search</span>
@@ -107,7 +109,10 @@
     } @else {
 
       <!-- KPI Summary Quick Filter Cards -->
-      <section class="bpp_kpi_section" aria-label="Project Statistics and Filters">
+      <section
+        class="bpp_kpi_section"
+        aria-label="Project Statistics and Filters"
+        data-guide="bilateral-reporting-kpis">
         <div class="bpp_kpi_header">
           <span class="bpp_kpi_section_title">Reporting Overview & Quick Filters</span>
           <span class="bpp_kpi_hint">Click any card to filter projects below</span>
@@ -218,7 +223,8 @@
               <article
                 class="bpp_card"
                 [class.bpp_card--highlight]="isHighlighted(project)"
-                [attr.data-project-id]="project.id">
+                [attr.data-project-id]="project.id"
+                [attr.data-guide]="$first ? 'bilateral-project-card' : null">
                 <div class="bpp_card_content">
                   <!-- Card Header -->
                   <div class="bpp_card_head">
@@ -267,6 +273,7 @@
                     type="button"
                     class="bpp_cta_btn"
                     data-testid="bilateral-project-create-result"
+                    [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
                     (click)="openManualCreate(project, $event)">
                     <i class="pi pi-plus"></i>
                     Create result
@@ -294,7 +301,8 @@
                   <tr
                     class="bpp_table_row"
                     [class.bpp_card--highlight]="isHighlighted(project)"
-                    [attr.data-project-id]="project.id">
+                    [attr.data-project-id]="project.id"
+                    [attr.data-guide]="$first ? 'bilateral-project-card' : null">
                     <td class="bpp_td_code">
                       <span class="bpp_code_pill">{{ project.shortName }}</span>
                     </td>
@@ -325,6 +333,7 @@
                         type="button"
                         class="bpp_cta_btn bpp_cta_btn--table"
                         data-testid="bilateral-project-create-result"
+                        [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
                         (click)="openManualCreate(project, $event)">
                         <i class="pi pi-plus"></i>
                         <span>Create result</span>

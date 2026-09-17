@@ -7,7 +7,7 @@
   [description]="description()"
   [required]="required()"
   [useColon]="true"
-  [hasValue]="hasSelection"
+  [hasValue]="complete() ?? hasSelection"
   [labelDescInlineStyles]="labelDescInlineStyles()"
   [showDescription]="showDescriptionLabel()"
   [tooltip]="tooltip()"

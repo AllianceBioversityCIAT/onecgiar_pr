@@ -742,6 +742,16 @@ WHERE
             WHERE rido.result_id = r.id
               AND rido.is_active = TRUE
         ) AS has_discontinued_options,
+        CASE
+          WHEN cp.acronym = 'P25' AND v.phase_year BETWEEN 2025 AND 2030 THEN (
+            SELECT MAX(rtr.planned_result)
+            FROM results_toc_result rtr
+            WHERE rtr.results_id = r.id
+              AND rtr.initiative_id = rbi.inititiative_id
+              AND rtr.is_active = 1
+          )
+          ELSE NULL
+        END AS planned_result,
         ci2.acronym as lead_center
     FROM
         result r
@@ -4083,6 +4093,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.result_type_id,
         rs.result_status_id AS status_id,
         rs.status_name,
+        r.created_by,
+        (
+          SELECT
+            NULLIF(
+              TRIM(
+                CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+              ),
+              ''
+            )
+          FROM users u
+          WHERE u.id = r.created_by
+        ) AS created_by_name,
         r.created_date,
         r.version_id,
         r.source,

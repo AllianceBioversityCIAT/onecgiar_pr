@@ -160,8 +160,9 @@
   color: var(--pr-text-secondary);
 }
 
-// Content column: the scroller takes the free height, the footer sits under it.
+// Content column: the scroller takes ALL the height; the footer floats over its floor.
 .bcr-content {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -175,7 +176,11 @@
   min-height: 0;
   overflow-y: auto;
   // 32/40 — the padding the W1/W2 content column uses; it is what aligns header, phases and card.
-  padding: 32px 40px;
+  // Abajo 88px, no 32 (Yeck, 16-sep-2026): el pie ya no reserva alto y sus cápsulas ocupan 70px
+  // desde el piso (14 de `bottom` + 56 de cápsula: botón 38 + 8·2 + borde). 70 + 18 de aire = el
+  // último campo sale de detrás de ellas. Mismo número que `.rd_scroll` en W1/W2; si la cápsula
+  // cambia de alto, esto cambia con ella.
+  padding: 32px 40px 88px;
 }
 
 .bcr-phase-switcher {
@@ -234,37 +239,38 @@
   padding: 24px;
 }
 
-// Footer strip: full column width with an edge-to-edge top rule; the inner box keeps the
-// controls at the column's 40px padding so Back and Save line up with the card edges.
+// Pie sin franja (Yeck, 16-sep-2026): alto cero, sin fondo ni regla, pegado al piso de la
+// columna. Solo sus dos grupos se pintan, como cápsulas flotantes — la geometría de la barra de
+// W1/W2 (`section-bottom-bar`): bottom 14, lados 40, radio 12, padding 8/10, sombra 2. Lo que
+// queda entre las dos es formulario, no pie.
 .bcr-editor-footer {
-  flex: none;
-  width: 100%;
-  border-top: 1px solid var(--pr-border);
-  background: var(--pr-surface-card);
-}
-
-.bcr-editor-footer__inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 40px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  height: 0;
 }
 
 .bcr-editor-footer__group {
+  position: absolute;
+  bottom: 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  background: var(--pr-surface-card);
+  box-shadow: var(--pr-shadow-2);
 }
 
-.bcr-editor-footer__divider {
-  width: 1px;
-  height: 20px;
-  background: var(--pr-border);
-}
+.bcr-editor-footer__group--start { left: 40px; }
+.bcr-editor-footer__group--end { right: 40px; }
 
+// Sin separador: la cápsula ya agrupa, y queda como etiqueta (igual que en W1/W2).
 .bcr-editor-footer__position {
+  padding: 0 4px;
   font-size: 14px;
   color: var(--pr-text-secondary);
 }
@@ -283,7 +289,7 @@
 .bcr-editor-footer__state--dirty { color: var(--pr-color-orange-700); }
 .bcr-editor-footer__state--done { color: var(--pr-status-approved-fg); }
 
-// "N fields missing": a button that opens the list, anchored above the strip.
+// "N fields missing": a button that opens the list, anchored above the right capsule.
 .bcr-editor-footer__pending { position: relative; }
 
 .bcr-editor-footer__state--missing {
@@ -434,7 +440,21 @@
 @media (max-width: 900px) {
   .bcr-rail { width: 200px; padding: 16px 12px; }
   .bcr-scroll { padding: 20px 16px; }
-  .bcr-editor-footer__inner { padding: 10px 16px; }
+  .bcr-scroll { padding-bottom: 88px; }
+  .bcr-editor-footer__group--start { left: 16px; }
+  .bcr-editor-footer__group--end { right: 16px; }
+}
+
+// Columna angosta: las dos cápsulas no caben lado a lado. Medido el 16-sep-2026 (P2-3736): con
+// "Unsaved changes" visible la de la derecha mide ~400px, la de la izquierda ~310, y a 1024px de
+// ventana la columna tiene 720 → se cruzaban 65px. Por debajo de 820px de COLUMNA (no de ventana: el
+// riel y la barra lateral cambian cuánto queda) la izquierda sube encima de la derecha, y el scroll
+// reserva la segunda fila: 88 + 56 de cápsula + 8 de separación.
+.bcr-content { container-type: inline-size; }
+
+@container (max-width: 820px) {
+  .bcr-editor-footer__group--start { bottom: 78px; }
+  .bcr-scroll { padding-bottom: 152px; }
 }
 
 // Wizard column only: the editor has its own full-width frame above.

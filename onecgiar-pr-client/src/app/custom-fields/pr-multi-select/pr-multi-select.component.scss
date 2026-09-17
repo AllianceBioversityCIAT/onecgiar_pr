@@ -50,6 +50,12 @@
   z-index: 1000;
 }
 
+/* P2-3737: no room below the field (floating bottom bar, window edge) → the panel hangs above it. */
+.custom_select .field .options.options_up {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
 /* SIP-T-7: opt-in visual variant (off by default via the `resultPickerStyle` input) mirroring
    `rd-contributors-and-partners`'s linked-result picker (`.custom-dropdown-panel` / `.search-bar` /
    `.results-list.compact-list .result-list-item` in that file's `.scss`). Scoped entirely under

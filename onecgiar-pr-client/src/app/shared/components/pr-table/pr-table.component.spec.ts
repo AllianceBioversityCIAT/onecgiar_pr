@@ -233,6 +233,17 @@ describe('PrTableComponent', () => {
       expect(table.page()).toBe(0);
       expect(table.pagedValue()).toHaveLength(5);
     });
+
+    it('hides the paginator when all rows fit on one page unless showPaginatorAlways is set', () => {
+      table.paginator = true;
+      table.rows = 10;
+      table.value = Array.from({ length: 5 }, (_v, i) => ({ i }));
+
+      expect(table.showPaginator()).toBe(false);
+
+      table.showPaginatorAlways = true;
+      expect(table.showPaginator()).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------- pageRangeLabel

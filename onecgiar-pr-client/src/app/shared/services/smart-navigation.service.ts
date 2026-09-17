@@ -105,6 +105,26 @@ export function splitNavUrl(url: string): { path: string; queryParams: Record<st
   return { path: url.slice(0, qIndex), queryParams };
 }
 
+function decodeNavSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+/**
+ * Build `[routerLink]` commands from a stored navigation URL.
+ * History URLs are percent-encoded; passing them as a single string to `routerLink`
+ * double-encodes segments such as center acronyms with spaces or parentheses.
+ */
+export function navUrlToRouterLink(url: string): string[] {
+  const { path } = splitNavUrl(url);
+  const segments = path.split('/').filter(Boolean).map(decodeNavSegment);
+  if (segments.length === 0) return ['/'];
+  return [`/${segments[0]}`, ...segments.slice(1)];
+}
+
 /**
  * Smart navigation tracker that listens to router transitions and determines
  * the context-aware "Back" destination and human-readable label based on where the

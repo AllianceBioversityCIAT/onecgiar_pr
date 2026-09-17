@@ -68,6 +68,11 @@ describe('ResultRepository (unit)', () => {
 
     expect(params).toEqual([7, 'I1', 'I2', 1, 2, 10, 3, 5, 1, 2]);
 
+    expect(queryMock.mock.calls[0][0]).toContain('MAX(rtr.planned_result)');
+    expect(queryMock.mock.calls[0][0]).toContain('AND rtr.initiative_id = rbi.inititiative_id');
+    expect(queryMock.mock.calls[0][0]).toContain('END AS planned_result');
+    expect(queryMock.mock.calls[0][0]).not.toMatch(/JOIN\s+results_toc_result/);
+
     const [countSql, countParams] = queryMock.mock.calls[1];
     expect(countSql).toContain('SELECT COUNT(1) as total FROM (');
     expect(countParams).toEqual(params);
@@ -302,6 +307,18 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('LEFT JOIN version v');
     expect(sql).toContain('rt.name AS result_category');
     expect(params).toEqual([8731]);
+  });
+
+  it('returns created_by and created_by_name for the bilateral centre dashboard', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.created_by');
+    expect(sql).toContain('AS created_by_name');
+    expect(sql).toContain('FROM users u');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
   it('includes AI provenance fields in bilateral center results ordered newest first', async () => {

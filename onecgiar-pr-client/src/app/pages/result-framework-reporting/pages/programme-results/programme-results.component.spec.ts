@@ -1214,8 +1214,16 @@ describe('ProgrammeResultsComponent', () => {
   it('maps status ids to the fixed --pr-status-* token PAIRS, never a recombination', () => {
     expect(component.statusFg(1)).toBe('var(--pr-status-in-progress-fg)');
     expect(component.statusBg(1)).toBe('var(--pr-status-in-progress-bg)');
+    expect(component.statusFg(2)).toBe('var(--pr-status-in-qa-fg)');
+    expect(component.statusBg(2)).toBe('var(--pr-status-in-qa-bg)');
     expect(component.statusFg(3)).toBe('var(--pr-status-submitted-fg)');
     expect(component.statusBg(3)).toBe('var(--pr-status-submitted-bg)');
+    expect(component.statusFg(5)).toBe('var(--pr-status-not-started-fg)');
+    expect(component.statusBg(5)).toBe('var(--pr-status-not-started-bg)');
+    expect(component.statusFg(6)).toBe('var(--pr-status-approved-fg)');
+    expect(component.statusBg(6)).toBe('var(--pr-status-approved-bg)');
+    expect(component.statusFg(7)).toBe('var(--pr-status-rejected-fg)');
+    expect(component.statusBg(7)).toBe('var(--pr-status-rejected-bg)');
     expect(component.statusFg(99)).toBe('var(--pr-status-not-started-fg)');
     expect(component.statusBg(null)).toBe('var(--pr-status-not-started-bg)');
   });
@@ -2188,13 +2196,13 @@ describe('ProgrammeResultsComponent', () => {
       component.customWidths.set({});
       fixture.detectChanges();
 
-      let resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      let resetBtn = fixture.debugElement.query(By.css('[data-testid="pgr-reset-column-widths-btn"]'));
       expect(resetBtn).toBeNull();
 
       component.customWidths.set({ title: 600 });
       fixture.detectChanges();
 
-      resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      resetBtn = fixture.debugElement.query(By.css('[data-testid="pgr-reset-column-widths-btn"]'));
       expect(resetBtn).toBeTruthy();
       expect(resetBtn.nativeElement.textContent).toContain('Reset column widths');
 
