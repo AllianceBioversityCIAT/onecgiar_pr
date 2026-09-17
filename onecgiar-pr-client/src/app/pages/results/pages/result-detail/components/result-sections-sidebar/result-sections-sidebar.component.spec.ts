@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { ResultSectionsSidebarComponent } from './result-sections-sidebar.component';
-import { ResultSectionsService } from './result-sections.service';
+import { ResultSectionsService, ROLE_CANNOT_SUBMIT_NOTICE } from './result-sections.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { RESULT_DETAIL_ORIGIN_STORAGE_KEY, SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 
@@ -62,6 +62,7 @@ describe('ResultSectionsSidebarComponent', () => {
       unsubmitTooltip: 'Use this only if you need to make corrections before QA begins.',
       showQaAssessedNotice: false,
       showInQaNotice: false,
+      showRoleCannotSubmitNotice: false,
       runAiReview: jest.fn(),
       openSubmit: jest.fn(),
       openUnsubmit: jest.fn()
@@ -265,5 +266,28 @@ describe('ResultSectionsSidebarComponent', () => {
       expect(href).toContain('createdBy=42');
       expect(q('[data-testid="result-detail-back-link"]').getAttribute('title')).toBe('Back to programme results');
     });
+  });
+
+  // P2-3691: the rail must never go silent on a complete result. When the role gate removes
+  // Submit, the sentence takes its place.
+  it('replaces Submit with the role notice when the reporting role cannot submit', async () => {
+    sectionsMock.showSubmit = false;
+    sectionsMock.showRoleCannotSubmitNotice = true;
+    await build();
+
+    expect(html().querySelector('[data-testid="result-sections-submit"]')).toBeNull();
+    // Asserted against the exported copy, not against `component.roleCannotSubmitNotice`: the
+    // latter reads `undefined` on both sides when the binding is missing, so that comparison
+    // could never go red (a test that cannot fail verifies nothing).
+    expect(html().querySelector('[data-testid="result-sections-role-notice"]')?.textContent?.trim()).toBe(
+      ROLE_CANNOT_SUBMIT_NOTICE
+    );
+  });
+
+  it('shows no role notice when Submit is there', async () => {
+    await build();
+
+    expect(html().querySelector('[data-testid="result-sections-submit"]')).toBeTruthy();
+    expect(html().querySelector('[data-testid="result-sections-role-notice"]')).toBeNull();
   });
 });

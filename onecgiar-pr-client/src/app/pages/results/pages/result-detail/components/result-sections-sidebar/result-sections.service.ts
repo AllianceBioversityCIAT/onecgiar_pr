@@ -20,6 +20,18 @@ export const SECTIONS_INCOMPLETE_TOOLTIP = 'This button will become available on
 /** Clarification for why a user can un-submit before the QA process starts. */
 export const UNSUBMIT_CLARIFICATION_TOOLTIP = 'Use this only if you need to make corrections before QA begins.';
 
+/**
+ * P2-3691: shown in place of the Submit button when the REPORTING ROLE — not the form — is what
+ * removes it. Submitting is reserved to Lead / Co-Lead / Coordinator and the platform Admin, both
+ * here and in the backend (`submissions.service.ts` `submitFunction` allows roles 1/3/4/5 only and
+ * answers `401` to anyone else), so a plain `Member` of the entity never had this button. What was
+ * missing was the SENTENCE: the rail said "5 of 5 sections complete" and then showed nothing at
+ * all, which reads as a platform that lost the action rather than as a permission. QA filed it as
+ * a blocker on that reading.
+ */
+export const ROLE_CANNOT_SUBMIT_NOTICE =
+  'Only a Lead, Co-Lead or Coordinator can submit a result for review. Ask one of them to submit this result.';
+
 /** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
 const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
   1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
@@ -249,6 +261,15 @@ export class ResultSectionsService {
 
   get submitDisabled(): boolean {
     return !this.greenChecksSE.submit || this.lockedByQa;
+  }
+
+  /**
+   * The result is still being edited and everything about it says "send this now" — but the user's
+   * reporting role is what withholds Submit. Deliberately NOT shown once the result has left
+   * `Editing` (status 2 / 3 have their own notices) and never shown to someone who CAN submit.
+   */
+  get showRoleCannotSubmitNotice(): boolean {
+    return this.dataControlSE.currentResult?.status_id == 1 && !this.canChangeSubmission;
   }
 
   get showUnsubmit(): boolean {

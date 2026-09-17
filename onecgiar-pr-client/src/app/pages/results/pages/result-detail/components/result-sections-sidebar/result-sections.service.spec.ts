@@ -1,6 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { ResultSectionsService, SECTIONS_INCOMPLETE_TOOLTIP, UNSUBMIT_CLARIFICATION_TOOLTIP } from './result-sections.service';
+import {
+  ResultSectionsService,
+  ROLE_CANNOT_SUBMIT_NOTICE,
+  SECTIONS_INCOMPLETE_TOOLTIP,
+  UNSUBMIT_CLARIFICATION_TOOLTIP
+} from './result-sections.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
@@ -293,6 +298,53 @@ describe('ResultSectionsService', () => {
       build();
 
       expect(service.showSubmit).toBe(false);
+    });
+
+    // --- P2-3691. QA reported "no Submit button exists for a 100% complete result" as a blocker,
+    // reproduced on results 9352 / 9356 with an account that is a plain `Member` of SP10. The
+    // button was never missing: the role gate above removed it, and the backend agrees
+    // (`submissions.service.ts` submitFunction -> roles 1/3/4/5, `401` otherwise). What the rail
+    // owed that user was a REASON, and these lock it in. ---
+
+    it('explains why Submit is missing when the role gate is what removed it', () => {
+      dataControl.myInitiativesList = [{ initiative_id: 9, role: 'Member' }];
+      greenChecks.submit = true;
+      build();
+
+      expect(service.showSubmit).toBe(false);
+      expect(service.showRoleCannotSubmitNotice).toBe(true);
+      expect(ROLE_CANNOT_SUBMIT_NOTICE).toContain('Lead, Co-Lead or Coordinator');
+    });
+
+    it('explains it to someone who does not belong to the result entity at all', () => {
+      dataControl.myInitiativesList = [{ initiative_id: 42, role: 'Leader' }];
+      build();
+
+      expect(service.showSubmit).toBe(false);
+      expect(service.showRoleCannotSubmitNotice).toBe(true);
+    });
+
+    it('stays quiet for a user who CAN submit', () => {
+      build();
+
+      expect(service.showSubmit).toBe(true);
+      expect(service.showRoleCannotSubmitNotice).toBe(false);
+    });
+
+    it('stays quiet for an admin who is not a member', () => {
+      dataControl.myInitiativesList = [];
+      roles.isAdmin = true;
+      build();
+
+      expect(service.showRoleCannotSubmitNotice).toBe(false);
+    });
+
+    it('stays quiet once the result has left Editing', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.myInitiativesList = [{ initiative_id: 9, role: 'Member' }];
+      build();
+
+      expect(service.showRoleCannotSubmitNotice).toBe(false);
     });
 
     it('shows Submit to an admin even when not a member', () => {
