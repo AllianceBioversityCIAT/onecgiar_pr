@@ -82,6 +82,14 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
    * mandatory-but-empty form. Released on `next` AND `error`.
    */
   readonly sectionLoading = signal(true);
+  private sectionDataLoaded = false;
+  private questionsLoaded = false;
+
+  private checkSectionLoading(): void {
+    if (this.sectionDataLoaded && this.questionsLoaded) {
+      this.sectionLoading.set(false);
+    }
+  }
 
   constructor(
     private readonly api: ApiService,
@@ -94,7 +102,8 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
   }
 
   OnChangePortfolio = effect(() => {
-    if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
+    const currentResult = this.dataControlSE.currentResultSignal();
+    if (currentResult?.portfolio !== undefined && typeof currentResult?.phase_year === 'number') {
       this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
     }
   });
@@ -128,6 +137,10 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
   });
 
   getSectionInformationp25(): void {
+    this.sectionLoading.set(true);
+    this.sectionDataLoaded = false;
+    this.questionsLoaded = false;
+
     this.api.resultsSE.GET_innovationDevP25().subscribe({
       next: ({ response }) => {
         this.innovationDevInfoBody = response;
@@ -135,7 +148,8 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         this.normalizeInnovationDevBooleans();
         this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
-        this.sectionLoading.set(false);
+        this.sectionDataLoaded = true;
+        this.checkSectionLoading();
         // `UCA-T-11` — one of 3 concurrent load GETs feeding the composite snapshot; see the
         // `dirtyTracker` docstring above for why each of the 3 snapshots independently.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
@@ -143,45 +157,67 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
       error: err => {
         console.error(err);
         this.savingSection = false;
-        this.sectionLoading.set(false);
+        this.sectionDataLoaded = true;
+        this.checkSectionLoading();
       }
     });
-    this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe(({ response }) => {
-      this.innovationDevelopmentQuestions = response;
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q3);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q4);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.innovation_team_diversity);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q4);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
-      // `UCA-T-11` — see above; this is the 2nd of 3 concurrent load GETs.
-      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+    this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe({
+      next: ({ response }) => {
+        this.innovationDevelopmentQuestions = response;
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q3);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q4);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.innovation_team_diversity);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q4);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
+        this.questionsLoaded = true;
+        this.checkSectionLoading();
+        // `UCA-T-11` — see above; this is the 2nd of 3 concurrent load GETs.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+      },
+      error: err => {
+        console.error(err);
+        this.questionsLoaded = true;
+        this.checkSectionLoading();
+      }
     });
 
     this.getEvidenceDemandP25();
   }
 
   GET_questionsInnovationDevelopment() {
-    this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe(({ response }) => {
-      this.innovationDevelopmentQuestions = response;
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.innovation_team_diversity);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
-      // `UCA-T-11` — one of 2 concurrent load GETs (legacy path) feeding the composite snapshot;
-      // see the `dirtyTracker` docstring on this class for why each snapshots independently.
-      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+    this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe({
+      next: ({ response }) => {
+        this.innovationDevelopmentQuestions = response;
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.innovation_team_diversity);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
+        this.questionsLoaded = true;
+        this.checkSectionLoading();
+        // `UCA-T-11` — one of 2 concurrent load GETs (legacy path) feeding the composite snapshot;
+        // see the `dirtyTracker` docstring on this class for why each snapshots independently.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+      },
+      error: err => {
+        console.error(err);
+        this.questionsLoaded = true;
+        this.checkSectionLoading();
+      }
     });
   }
 
   getSectionInformation() {
+    this.sectionLoading.set(true);
+    this.sectionDataLoaded = false;
+    this.questionsLoaded = false;
     this.savingSection = true;
     this.GET_questionsInnovationDevelopment();
     this.api.resultsSE.GET_innovationDev().subscribe({
@@ -191,14 +227,16 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         this.normalizeInnovationDevBooleans();
         this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
-        this.sectionLoading.set(false);
+        this.sectionDataLoaded = true;
+        this.checkSectionLoading();
         // `UCA-T-11` — the 2nd of 2 concurrent load GETs (legacy path); see above.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
       },
       error: err => {
         console.error(err);
         this.savingSection = false;
-        this.sectionLoading.set(false);
+        this.sectionDataLoaded = true;
+        this.checkSectionLoading();
       }
     });
   }

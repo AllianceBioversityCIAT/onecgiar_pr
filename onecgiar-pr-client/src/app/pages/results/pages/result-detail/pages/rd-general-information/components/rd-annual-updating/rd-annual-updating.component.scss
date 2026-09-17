@@ -101,8 +101,16 @@
   padding-left: 16px;
   border-left: 1px solid var(--pr-border-strong);
 
+  // Fix (2026-09-17): `--text-color-secondary` is not a real token in this codebase (leftover from
+  // removed PrimeNG) — it resolved to nothing, so the hint rendered in default black/bold text right
+  // behind the `pr-multi-select` dropdown panel (which sits `position: absolute` above it) and read
+  // as broken/unstyled debris rather than a loading hint. `--pr-text-secondary` is the real token
+  // (src/styles/colors.scss:207). Also added a touch of vertical rhythm so the hint doesn't sit flush
+  // under an open dropdown.
   &--hint {
     font-size: 13px;
-    color: var(--text-color-secondary);
+    font-style: italic;
+    color: var(--pr-text-secondary);
+    margin-top: 2px;
   }
 }

@@ -90,6 +90,41 @@ function mountMultiSelectWired(model: Center[], onSearchTextChange: (term: strin
     });
 }
 
+// SIP-T-7: template variant that binds `[resultPickerStyle]="true"` — this is what the
+// `rd-annual-updating` merge/split pickers' template looks like (the only real consumer today).
+// The other ~78 real call sites don't bind this input and are covered by the default
+// `TEMPLATE`/`mountMultiSelect` above.
+const TEMPLATE_RESULT_PICKER_STYLE = `
+  <app-pr-multi-select
+    [options]="options"
+    optionValue="code"
+    optionLabel="full_name"
+    placeholder="Select centers"
+    label="Centers"
+    selectedLabel="Selected"
+    selectedOptionLabel="full_name"
+    [showSelectAll]="showSelectAll"
+    [resultPickerStyle]="true"
+    [(ngModel)]="model">
+  </app-pr-multi-select>
+`;
+
+/** Mount with `[resultPickerStyle]="true"` — exercises the SIP-T-7 visual variant opt-in path. */
+function mountMultiSelectResultPickerStyle(model: Center[]) {
+  return cy
+    .mount(TEMPLATE_RESULT_PICKER_STYLE, {
+      imports: [CustomFieldsModule, HttpClientTestingModule, NoopAnimationsModule],
+      providers: [provideRouter([])],
+      componentProperties: { options: OPTIONS, model, showSelectAll: false }
+    })
+    .then(wrapper => {
+      const roles = wrapper.fixture.debugElement.injector.get(RolesService);
+      roles.readOnly = false;
+      wrapper.fixture.detectChanges();
+      return cy.wrap(wrapper);
+    });
+}
+
 /** Open the dropdown (the `.options` panel is shown via `:focus-within`). */
 function openDropdown() {
   cy.get('.custom_select .field').should('exist').focus();
@@ -245,6 +280,50 @@ describe('PrMultiSelectComponent (CT)', () => {
       // isServerSearchWired() correctly evaluates false for this instance: no debounce pipeline,
       // no emission — proven by spying on the component's own emitter, not an external observer.
       cy.get('@emit').should('not.have.been.called');
+    });
+  });
+
+  // SIP-T-7: closes the verification gap flagged by two independent Reviewer passes — the PASS
+  // verdict for the option-row height correction rested on re-derived CSS math (16+16 padding +
+  // 18px line-height + 1px border = 51px, +1px rounding buffer = 52px `min-height`), never on a
+  // runnable browser measurement. This measures the ACTUAL rendered `.option` row via
+  // `getBoundingClientRect()` against the shipped `.options.result_picker_style .option` rule
+  // (`pr-multi-select.component.scss`) and the shipped `virtualOptionItemSize` computed
+  // (`pr-multi-select.component.ts`), which returns 52 when `resultPickerStyle()` is true.
+  it('SIP-T-7: resultPickerStyle=true renders option rows at ~52px and tags the panel', () => {
+    mountMultiSelectResultPickerStyle([]).then(() => {
+      openDropdown();
+
+      cy.get('.options').should('have.class', 'result_picker_style');
+
+      cy.get('.options .option')
+        .first()
+        .then($el => {
+          const height = $el[0].getBoundingClientRect().height;
+          // `min-height: 52px` with `height: auto` — tolerant bound absorbs box-model/sub-pixel
+          // rounding without being brittle to an exact-pixel assumption (per task brief).
+          expect(height).to.be.at.least(51);
+          expect(height).to.be.at.most(54);
+        });
+    });
+  });
+
+  // SIP-T-7: the opt-in boundary — proves the ~78 other (unwired) call sites keep the original
+  // 30px row height from the global `custom-fields.scss` rule when `resultPickerStyle` is unset,
+  // matching this file's established "prove the opt-in doesn't leak" pattern (see the SIP-T-4
+  // unwired-mode case above).
+  it('SIP-T-7: default (unwired) instance keeps the original 30px option row height', () => {
+    mountMultiSelect([]).then(() => {
+      openDropdown();
+
+      cy.get('.options').should('not.have.class', 'result_picker_style');
+
+      cy.get('.options .option')
+        .first()
+        .then($el => {
+          const height = $el[0].getBoundingClientRect().height;
+          expect(height).to.be.closeTo(30, 1);
+        });
     });
   });
 });

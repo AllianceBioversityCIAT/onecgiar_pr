@@ -117,7 +117,7 @@
   - [x] Manual browser verification completed with no NG0103 console warning/error observed during search-with-active-selection — performed by the user directly against real test data.
   - [x] `limit=50` spot-check result recorded — **finding:** search felt slow after the status filter removal (matches the risk `design.md` §8 anticipated); user's disposition: recorded, non-blocking, no scope expansion.
 
-### `SIP-T-7` — Visual styling correction for the merge/split picker (added post-review, see `execution.md` Pivot Record)
+### `SIP-T-7` — Visual styling correction for the merge/split picker (added post-review, see `execution.md` Pivot Record) `[x]`
 
 - **Type:** `client`
 - **Description:** Add an **opt-in visual variant** to `pr-multi-select` so the merge/split picker's search bar and option rows resemble `rd-contributors-and-partners`'s linked-result picker (reference only — that file itself is NOT touched, per `requirements.md`'s explicit out-of-scope line). Concrete visual targets, taken from `rd-contributors-and-partners.component.scss`: rounded dropdown panel (`border-radius: 8px`, `box-shadow: var(--pr-shadow-2)`), a proper search bar (icon inside the input, `border: 1px solid var(--pr-color-neutral-1000)`, `border-radius: 6px`, left-padded for the icon), and option rows with real spacing/dividers/hover (`padding: 16px 20px`, `border-bottom: 1px solid var(--pr-border-divider)`, `&:hover { background-color: var(--pr-surface-raised-soft) }`) — mirroring `.custom-dropdown-panel`, `.search-bar`, `.results-list.compact-list .result-list-item` in that file. **Explicitly OUT of scope:** the filter-chip set (typology/portfolio/funding-source toggles) — `SIP-R-20`/`SIP-OQ-3` already resolved those as unnecessary for this single-typology candidate list; do not add them.
@@ -128,12 +128,12 @@
 - **Blocks:** —
 - **Estimate:** `M`
 - **Definition of done:**
-  - [ ] Code merged via project commit convention (`🎨 style(pr-multi-select) [ticket]: <description>`).
-  - [ ] Lint clean (`npx ng lint --quiet`).
-  - [ ] The new variant is OPT-IN: confirmed by diffing `pr-multi-select`'s public API (only an addition) and confirming its default/unset behavior is visually unchanged.
-  - [ ] Both merge and split pickers in `rd-annual-updating` opt into the variant.
-  - [ ] `pr-multi-select/CLAUDE.md` updated with the new capability, `Verified:` line re-stamped in the same commit.
-  - [ ] Manual browser confirmation (by the user) that the picker now visually resembles the reference.
+  - [x] Code merged via project commit convention — committed as part of `b18c365c3` (bundled with unrelated work by the user in a separate session; not this Leader's commit).
+  - [x] Lint clean (`npx ng lint --quiet`) — confirmed twice across both rework attempts.
+  - [x] The new variant is OPT-IN: confirmed by diffing `pr-multi-select`'s public API (only an addition) and confirming its default/unset behavior is visually unchanged.
+  - [x] Both merge and split pickers in `rd-annual-updating` opt into the variant.
+  - [x] `pr-multi-select/CLAUDE.md` updated with the new capability, `Verified:` line re-stamped in the same commit.
+  - [~] Manual browser confirmation (by the user) that the picker now visually resembles the reference — **recorded gap, not silently closed:** both Reviewer passes flagged that nothing automated measures the rendered row height (jsdom cannot evaluate layout); the PASS verdict rests on independently re-derived CSS math, not a runnable measurement. This checkbox was still open under this session's tracking when the spec was archived/committed/pushed from a separate session. See `execution.md`'s `SIP-T-7` entry.
 
 ---
 

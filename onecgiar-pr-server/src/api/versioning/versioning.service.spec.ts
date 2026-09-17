@@ -73,6 +73,8 @@ import { ResultsIpActorRepository } from '../ipsr/results-ip-actors/results-ip-a
 import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
 import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { Version } from './entities/version.entity';
+import { ResultAnswer } from '../results/result-questions/entities/result-answers.entity';
 import { MQAPService } from '../m-qap/m-qap.service';
 import { MQAPModule } from '../m-qap/m-qap.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
@@ -1140,6 +1142,399 @@ describe('VersioningService', () => {
       expect(find).not.toHaveBeenCalled();
       expect(res.response).toEqual([]);
       expect(res.statusCode).toBe(HttpStatus.OK);
+    });
+  });
+
+  describe('INNDEV-TEST-2: transformInnovationDevAnswersFor2026', () => {
+    const mockUser: any = { id: 42 };
+
+    const buildMockManager = (overrides?: {
+      oldAnswers?: Partial<ResultAnswer>[];
+      existingNewAnswers?: Map<number, Partial<ResultAnswer>>;
+      phaseEntity?: Partial<Version>;
+    }) => {
+      const savedAnswers: Partial<ResultAnswer>[] = [];
+      const oldAnswers = overrides?.oldAnswers ?? [];
+      const existingNewAnswers = overrides?.existingNewAnswers ?? new Map();
+
+      const manager = {
+        find: jest.fn(async (entity: any, options: any) => {
+          if (entity === ResultAnswer || entity?.name === 'ResultAnswer') {
+            return oldAnswers;
+          }
+          return [];
+        }),
+        findOne: jest.fn(async (entity: any, options: any) => {
+          if (entity === Version || entity?.name === 'Version') {
+            return overrides?.phaseEntity ?? null;
+          }
+          if (entity === ResultAnswer || entity?.name === 'ResultAnswer') {
+            const questionId = options?.where?.result_question_id;
+            return existingNewAnswers.get(questionId) ?? null;
+          }
+          return null;
+        }),
+        create: jest.fn((entity: any, plain: any) => {
+          return { ...plain };
+        }),
+        save: jest.fn(async (entity: any, obj: any) => {
+          savedAnswers.push(obj);
+          return obj;
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      };
+
+      return { manager, savedAnswers };
+    };
+
+    it('maps affirmative legacy answers (e.g. option 104 = true) to Option 163 = true, 164 = false, 165 = false, with GESI (152 = true) and Risk (157 = true) stage 1 baseline', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        oldAnswers: [
+          { result_question_id: 104, answer_boolean: true, is_active: true } as any,
+          { result_question_id: 105, answer_boolean: false, is_active: true } as any,
+        ],
+      });
+
+      const phase: any = { id: 36, phase_year: 2026 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      // Verify Consolidated IPR options (Question 162): 163, 164, 165
+      const ans163 = savedAnswers.find((a) => a.result_question_id === 163);
+      const ans164 = savedAnswers.find((a) => a.result_question_id === 164);
+      const ans165 = savedAnswers.find((a) => a.result_question_id === 165);
+
+      expect(ans163?.answer_boolean).toBe(true);
+      expect(ans164?.answer_boolean).toBe(false);
+      expect(ans165?.answer_boolean).toBe(false);
+
+      // Verify GESI stage baseline (Question 150): 152 = true, 153..156 = false
+      const ans152 = savedAnswers.find((a) => a.result_question_id === 152);
+      expect(ans152?.answer_boolean).toBe(true);
+      for (const id of [153, 154, 155, 156]) {
+        const ans = savedAnswers.find((a) => a.result_question_id === id);
+        expect(ans?.answer_boolean).toBe(false);
+      }
+
+      // Verify Risk stage baseline (Question 151): 157 = true, 158..161 = false
+      const ans157 = savedAnswers.find((a) => a.result_question_id === 157);
+      expect(ans157?.answer_boolean).toBe(true);
+      for (const id of [158, 159, 160, 161]) {
+        const ans = savedAnswers.find((a) => a.result_question_id === id);
+        expect(ans?.answer_boolean).toBe(false);
+      }
+
+      // User attribution
+      expect(ans163?.created_by).toBe(mockUser.id);
+      expect(ans163?.last_updated_by).toBe(mockUser.id);
+    });
+
+    it('maps affirmative legacy support request (option 110 = true) to Option 163 = true', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        oldAnswers: [
+          { result_question_id: 110, answer_boolean: true, is_active: true } as any,
+        ],
+      });
+
+      const phase: any = { id: 36, phase_year: 2026 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      const ans163 = savedAnswers.find((a) => a.result_question_id === 163);
+      const ans164 = savedAnswers.find((a) => a.result_question_id === 164);
+      const ans165 = savedAnswers.find((a) => a.result_question_id === 165);
+
+      expect(ans163?.answer_boolean).toBe(true);
+      expect(ans164?.answer_boolean).toBe(false);
+      expect(ans165?.answer_boolean).toBe(false);
+    });
+
+    it('maps uncertainty legacy answers (e.g. option 105 = true) to Option 164 = true, 163 = false, 165 = false', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        oldAnswers: [
+          { result_question_id: 105, answer_boolean: true, is_active: true } as any,
+          { result_question_id: 106, answer_boolean: false, is_active: true } as any,
+        ],
+      });
+
+      const phase: any = { id: 36, phase_year: 2026 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      const ans163 = savedAnswers.find((a) => a.result_question_id === 163);
+      const ans164 = savedAnswers.find((a) => a.result_question_id === 164);
+      const ans165 = savedAnswers.find((a) => a.result_question_id === 165);
+
+      expect(ans163?.answer_boolean).toBe(false);
+      expect(ans164?.answer_boolean).toBe(true);
+      expect(ans165?.answer_boolean).toBe(false);
+    });
+
+    it('maps uncertainty legacy answer for Q103 (option 111 = true) to Option 164 = true, 163 = false, 165 = false', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        oldAnswers: [
+          { result_question_id: 111, answer_boolean: true, is_active: true } as any,
+        ],
+      });
+
+      const phase: any = { id: 36, phase_year: 2026 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      const ans163 = savedAnswers.find((a) => a.result_question_id === 163);
+      const ans164 = savedAnswers.find((a) => a.result_question_id === 164);
+      const ans165 = savedAnswers.find((a) => a.result_question_id === 165);
+
+      expect(ans163?.answer_boolean).toBe(false);
+      expect(ans164?.answer_boolean).toBe(true);
+      expect(ans165?.answer_boolean).toBe(false);
+    });
+
+    it('maps negative legacy answers (e.g. only non-affirmative options or empty) to Option 165 = true, 163 = false, 164 = false', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        oldAnswers: [
+          { result_question_id: 106, answer_boolean: true, is_active: true } as any,
+        ],
+      });
+
+      const phase: any = { id: 36, phase_year: 2026 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      const ans163 = savedAnswers.find((a) => a.result_question_id === 163);
+      const ans164 = savedAnswers.find((a) => a.result_question_id === 164);
+      const ans165 = savedAnswers.find((a) => a.result_question_id === 165);
+
+      expect(ans163?.answer_boolean).toBe(false);
+      expect(ans164?.answer_boolean).toBe(false);
+      expect(ans165?.answer_boolean).toBe(true);
+    });
+
+    it('returns early without modifying any answers when target phase_year < 2026', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        oldAnswers: [
+          { result_question_id: 104, answer_boolean: true, is_active: true } as any,
+        ],
+      });
+
+      const phase: any = { id: 34, phase_year: 2025 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      expect(savedAnswers).toHaveLength(0);
+      expect(manager.find).not.toHaveBeenCalled();
+      expect(manager.save).not.toHaveBeenCalled();
+    });
+
+    it('queries phase from database if phase.phase_year is missing and returns early if phase_year < 2026', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        phaseEntity: { id: 34, phase_year: 2025 } as any,
+      });
+
+      const phase: any = { id: 34 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      expect(manager.findOne).toHaveBeenCalledWith(Version, { where: { id: 34 } });
+      expect(savedAnswers).toHaveLength(0);
+    });
+
+    it('queries phase from database if phase.phase_year is missing and executes if phase_year >= 2026', async () => {
+      const { manager, savedAnswers } = buildMockManager({
+        phaseEntity: { id: 36, phase_year: 2026 } as any,
+        oldAnswers: [{ result_question_id: 104, answer_boolean: true, is_active: true } as any],
+      });
+
+      const phase: any = { id: 36 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      expect(manager.findOne).toHaveBeenCalledWith(Version, { where: { id: 36 } });
+      expect(savedAnswers.length).toBeGreaterThan(0);
+      const ans163 = savedAnswers.find((a) => a.result_question_id === 163);
+      expect(ans163?.answer_boolean).toBe(true);
+    });
+
+    it('updates existing answer rows when row already exists for question option', async () => {
+      const existingAnswer: any = {
+        result_answer_id: 999,
+        result_id: 2001,
+        result_question_id: 163,
+        answer_boolean: false,
+        is_active: true,
+      };
+      const existingMap = new Map<number, any>();
+      existingMap.set(163, existingAnswer);
+
+      const { manager, savedAnswers } = buildMockManager({
+        existingNewAnswers: existingMap,
+        oldAnswers: [{ result_question_id: 104, answer_boolean: true, is_active: true } as any],
+      });
+
+      const phase: any = { id: 36, phase_year: 2026 };
+      await service.transformInnovationDevAnswersFor2026(
+        manager as any,
+        1001,
+        2001,
+        phase,
+        mockUser,
+      );
+
+      expect(existingAnswer.answer_boolean).toBe(true);
+      expect(existingAnswer.last_updated_by).toBe(mockUser.id);
+      expect(existingAnswer.is_active).toBe(true);
+      expect(savedAnswers).toContain(existingAnswer);
+    });
+
+    it('calls transformInnovationDevAnswersFor2026 during $_phaseChangeReporting under case 7 (Innovation Development)', async () => {
+      const mockResult: any = {
+        id: 7001,
+        result_code: 100,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      };
+      const mockPhase: any = {
+        id: 36,
+        phase_name: 'Reporting 2026',
+        phase_year: 2026,
+      };
+      const mockNewResult: any = {
+        id: 8001,
+        result_code: 100,
+      };
+
+      const transformSpy = jest
+        .spyOn(service, 'transformInnovationDevAnswersFor2026')
+        .mockResolvedValue(undefined);
+
+      const mockManager: any = {
+        update: jest.fn().mockResolvedValue({}),
+      };
+
+      (service as any).dataSource = {
+        transaction: jest.fn(async (callback: any) => callback(mockManager)),
+      };
+      (service as any)._resultRepository = {
+        replicate: jest.fn().mockResolvedValue([mockNewResult]),
+      };
+      (service as any)._resultByInitiativesRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._shareResultRequestRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultInitiativeBudgetRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+        ensureMissingBudgetsForPrimaryInitiatives: jest
+          .fn()
+          .mockResolvedValue(undefined),
+      };
+      (service as any)._resultNonPooledProjectBudgetRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultsInnovationsDevRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultAnswerRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultActorRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultIpMeasureRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._nonPooledProjectRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultsCenterRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultByIntitutionsRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultByInstitutionsByDeliveriesTypeRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultByIntitutionsTypeRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultInstitutionsBudgetRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultCountryRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultRegionRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._linkedResultRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._evidencesRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._evidenceSharepointRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._evidencesService = {
+        replicateSPFiles: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const output = await service.$_phaseChangeReporting(
+        mockResult,
+        mockPhase,
+        mockUser,
+      );
+
+      expect(output).toEqual(mockNewResult);
+      expect(transformSpy).toHaveBeenCalledTimes(1);
+      expect(transformSpy).toHaveBeenCalledWith(
+        mockManager,
+        mockResult.id,
+        mockNewResult.id,
+        mockPhase,
+        mockUser,
+      );
     });
   });
 });
