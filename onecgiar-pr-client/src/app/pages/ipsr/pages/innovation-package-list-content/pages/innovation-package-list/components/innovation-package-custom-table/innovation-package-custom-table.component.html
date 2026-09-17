@@ -38,9 +38,10 @@
             <a
               class="ip-code"
               [routerLink]="'/ipsr/detail/' + subResult?.result_code"
-              [queryParams]="{ phase: subResult?.version_id }"
-              >{{ subResult?.result_code }}</a
-            >
+              [queryParams]="{ phase: subResult?.version_id }">
+              <span class="ip-new-dot" *ngIf="subResult.is_new && !subResult.legacy_id" title="Created recently"></span>
+              {{ subResult?.result_code }}
+            </a>
           </ng-container>
         </td>
 
@@ -57,20 +58,17 @@
                 [routerLink]="'/ipsr/detail/' + subResult?.result_code"
                 [queryParams]="{ phase: subResult?.version_id }"
                 [attr.title]="column.attr === 'title' ? subResult?.title : null">
-                <!-- Tags sit ABOVE the title instead of inline: inline, a long title pushed them
-                     off the visible area and they were the first thing worth seeing. -->
-                <span class="ip-tags" *ngIf="column.attr === 'title'">
-                  <span class="ip-tag ip-tag--new" *ngIf="subResult.is_new && !subResult.legacy_id">New</span>
-                  <span class="ip-tag ip-tag--legacy" *ngIf="subResult.legacy_id">Pre 2022</span>
-                  <span class="ip-tag ip-tag--replicated" *ngIf="subResult?.is_replicated">Previously reported</span>
-                  <span class="ip-tag ip-tag--discontinued" *ngIf="subResult?.status_id === '4'">
-                    <i class="pi pi-exclamation-triangle"></i>
-                    Discontinued
-                  </span>
-                </span>
-
+                <!-- Only the rare tags survive, and they ride inline. A pill row above every single
+                     title cost 45px per row: 89px against the Results Center's 44px, so the same
+                     screen showed half the packages. "New" moved to a dot on the code, which is how
+                     the Results Center marks a recent result. -->
                 <span [class.ip-title]="column.attr === 'title'">
                   {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
+                  <ng-container *ngIf="column.attr === 'title'">
+                    <span class="ip-tag ip-tag--legacy" *ngIf="subResult.legacy_id">Pre 2022</span>
+                    <span class="ip-tag ip-tag--replicated" *ngIf="subResult?.is_replicated">Previously reported</span>
+                    <span class="ip-tag ip-tag--discontinued" *ngIf="subResult?.status_id === '4'">Discontinued</span>
+                  </ng-container>
                 </span>
               </a>
             </ng-template>

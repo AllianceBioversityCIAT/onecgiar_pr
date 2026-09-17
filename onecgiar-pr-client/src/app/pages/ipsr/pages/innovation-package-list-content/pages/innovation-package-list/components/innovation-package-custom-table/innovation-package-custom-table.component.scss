@@ -255,22 +255,22 @@ td {
     line-height: 1.45;
   }
 
-  .ip-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 4px;
-
-    &:empty {
-      display: none;
-      margin: 0;
-    }
+  /* The recency marker, same idea as the Results Center's dot: a colour, not a row of its own. */
+  .ip-new-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 5px;
+    border-radius: 999px;
+    background: var(--pr-color-blue-500, #3b82f6);
+    vertical-align: middle;
   }
 
   .ip-tag {
     display: inline-flex;
     align-items: center;
     gap: 3px;
+    margin-left: 6px;
     padding: 1px 7px;
     border-radius: 999px;
     font-size: 10px;
@@ -362,25 +362,53 @@ td {
   /* A row can carry several versions of the same package (2025 and 2026), and every cell repeats
      its own list. Without a shared minimum height the columns drift apart and the row stops
      reading as one row. */
+  /* 🛑 The cell itself must align to the TOP. The shared table centres cell content, which is right
+     for one line per row — but a package with a 2025 and a 2026 version stacks several blocks per
+     cell, and centring a short column (the status chip) against a tall one (a two-line title) is
+     what pushed the chips 9px out of line with the titles they belong to. */
+  td {
+    vertical-align: top !important;
+  }
+
+  /* ⚠️ A shared MINIMUM, not a shared height. With one version per row (the overwhelming majority)
+     the columns line up exactly. A package carrying BOTH a 2025 and a 2026 version still drifts
+     ~10px on the second block, because a two-line title is taller than this floor and chasing it
+     with a bigger floor costs every other row 14px of height — measured: row height 59px → 73px.
+     The real fix is one TABLE ROW per version instead of stacking versions inside each cell, which
+     is a change to how the list is built, not to how it looks. Left as it was. */
   td > a,
   td > .ip-status,
   td > div,
   td > ng-container > a,
   td > ng-container > .ip-status {
-    min-height: 34px;
+    min-height: 42px;
   }
 
+  /* Top-aligned, not centred: a two-line title next to a one-line chip pushed the chip 9px down,
+     so the two versions of a package read as staggered instead of as two rows. */
   td > ng-container > a,
   td > a {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 2px;
+  }
+
+  /* Block-level, not inline-flex: as an inline box the chip sat on the cell's text baseline and
+     started 9px below the title it belongs to, so a package with a 2025 and a 2026 version read as
+     staggered. `fit-content` keeps it hugging its label. */
+  td > ng-container > .ip-status,
+  td > .ip-status {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    height: 24px;
+    min-height: 42px;
+    padding-top: 0;
+    align-content: flex-start;
   }
 
   /* The title cell holds a tag row above the text, so it aligns to the TOP: centred, the tag
      floated away from the title it belongs to. */
-  td.title > ng-container > a {
-    justify-content: flex-start;
-    gap: 2px;
-  }
+
 }
