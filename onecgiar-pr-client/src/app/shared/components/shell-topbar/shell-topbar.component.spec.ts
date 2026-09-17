@@ -428,9 +428,10 @@ describe('ShellTopbarComponent', () => {
 
       expect(html).not.toContain('aria-label="Report a bug or adjustment"');
       expect(html).not.toContain('lucideBug');
-      // Control for the two assertions above: the entry point still exists, just moved.
+      // Control for the two assertions above: the entry point still exists, just moved — into the
+      // menu that P2-3682 renamed from Support to Help.
       expect(html).toContain('openFeedbackFromSupport()');
-      expect(html).toContain('aria-label="Support"');
+      expect(html).toContain('aria-label="Help"');
     });
   });
 
@@ -439,9 +440,9 @@ describe('ShellTopbarComponent', () => {
   // so they land under Support; Text size is a per-user preference, so it lands under Settings in
   // the account menu — which is where the design puts it.
   describe('controls moved from the sidebar (P2-3682)', () => {
-    it('Support offers the CLARISA glossary as an external link', () => {
+    it('the help menu offers the CLARISA glossary as an external link', () => {
       const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
-      const support = html.slice(html.indexOf('aria-label="Support"'), html.indexOf('<!-- Notifications popover'));
+      const support = html.slice(html.indexOf('aria-label="Help"'), html.indexOf('<!-- Notifications popover'));
 
       expect(support).toContain('[href]="clarisaGlossaryUrl"');
       expect(support).toContain('target="_blank"');
@@ -454,7 +455,20 @@ describe('ShellTopbarComponent', () => {
       expect(component.clarisaGlossaryUrl).toBe(CLARISA_GLOSSARY_URL);
     });
 
-    it('Tour forwards the programme and centre context, and closes the Support menu', async () => {
+    it('the menu is labelled Help, and groups reaching a person apart from doing it yourself', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const menu = html.slice(html.indexOf('role="menu" aria-label="Help"'), html.indexOf('<!-- Notifications popover'));
+
+      expect(html).toContain('<span>Help</span>');
+      expect(html).not.toContain('<span>Support</span>');
+      expect(menu.indexOf('>Get help<')).toBeGreaterThan(-1);
+      expect(menu.indexOf('>Learn<')).toBeGreaterThan(menu.indexOf('>Get help<'));
+      // Order: the two ways of reaching a person first, then the two you use on your own.
+      expect(menu.indexOf('<span>Glossary</span>')).toBeGreaterThan(menu.indexOf('>Learn<'));
+      expect(menu.indexOf('<span>Start a support chat</span>')).toBeLessThan(menu.indexOf('>Learn<'));
+    });
+
+    it('Tour forwards the programme and centre context, and closes the help menu', async () => {
       homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01' }]);
       homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP02' }]);
       await build();
@@ -483,14 +497,17 @@ describe('ShellTopbarComponent', () => {
       });
     });
 
-    it('Settings closes the account menu and opens its own panel, instead of nesting inside it', async () => {
-      await build();
-      component.userMenuOpen.set(true);
+    it('text size keeps its own topbar button instead of hiding behind the account menu', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const topbar = html.slice(0, html.indexOf('<!-- Help menu') > -1 ? html.indexOf('<!-- Help menu') : html.indexOf('<!-- Notifications popover'));
 
-      component.openSettings();
-
-      expect(component.userMenuOpen()).toBe(false);
-      expect(component.settingsMenuOpen()).toBe(true);
+      expect(topbar).toContain('aria-label="Text size"');
+      expect(topbar).toContain('#fontTrigger="cdkOverlayOrigin"');
+      // The requirement asked for it under Settings in the account menu. Undone deliberately: an
+      // accessibility control two clicks deep, behind a name that gives no hint of it, is one
+      // nobody finds. Written up on P2-3682.
+      expect(html).not.toContain('<span>Settings</span>');
+      expect((component as unknown as Record<string, unknown>).openSettings).toBeUndefined();
     });
 
     it('picking a size delegates to the font scale service', async () => {
@@ -499,26 +516,25 @@ describe('ShellTopbarComponent', () => {
       expect(fontScaleMock.set).toHaveBeenCalledWith('large');
     });
 
-    it('escape closes the settings panel too', async () => {
+    it('escape closes the text-size panel too', async () => {
       await build();
-      component.settingsMenuOpen.set(true);
+      component.fontMenuOpen.set(true);
 
       component.onEscape();
 
-      expect(component.settingsMenuOpen()).toBe(false);
+      expect(component.fontMenuOpen()).toBe(false);
     });
 
-    it('the settings panel carries the text-size control and offers Reset only off the default', () => {
+    it('the text-size panel carries the control and offers Reset only off the default', () => {
       const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
-      const settings = html.slice(html.indexOf('<!-- Settings popover (P2-3682)'));
+      const settings = html.slice(html.indexOf('<!-- Text-size popover (P2-3682)'));
 
-      expect(settings).toContain('aria-label="Settings"');
+      expect(settings).toContain('aria-label="Text size"');
       expect(settings).toContain('role="radiogroup"');
       expect(settings).toContain('(click)="selectFontScale(option.value)"');
       expect(settings).toContain("@if (fontScaleSE.scale() !== 'default')");
       expect(settings).toContain('(click)="fontScaleSE.reset()"');
-      // The account menu keeps its own job: Settings is a sibling overlay, not a section of it.
-      expect(settings).toContain('[cdkConnectedOverlayOrigin]="userTrigger"');
+      expect(settings).toContain('[cdkConnectedOverlayOrigin]="fontTrigger"');
     });
   });
 });

@@ -14,11 +14,16 @@ Notifications in particular is reachable twice: the sidebar button and the topba
 - **Notifications leaves the sidebar with no replacement.** The topbar bell already opens the
   notifications popover and its "See all the notifications" link routes to the same page the sidebar
   button called, so nothing is lost and the duplicate entry point disappears.
-- **Text size moves into Settings**, a new entry in the topbar user-profile menu. The popover itself
-  (5 sizes + "Reset to default", backed by `FontScaleService`) is unchanged; only its trigger moves.
-- **Glossary and Tour move to the topbar Support menu.** The ticket names no destination for them;
-  Support is already "the single entry point for getting help" (P2-3683), so they keep working
-  instead of being deleted. Recorded on the ticket as a decision, not as a requirement.
+- **Text size keeps a topbar button of its own.** The requirement sends it to Settings in the account
+  menu; that was built on 17-Sep and then undone the same day at Yeck's call — it is an accessibility
+  control, and two clicks deep behind a name that gives no hint of it is where nobody finds it. The
+  popover (5 sizes + "Reset to default", backed by `FontScaleService`) is unchanged. **The Settings
+  entry is therefore not created**: text size was the only thing the ticket put in it. Written up on
+  the ticket as a deviation from the requirement.
+- **Glossary and Tour move into the help menu**, which is **renamed from "Support" to "Help"**: with
+  a glossary and a guided tour in it, the menu stopped being only about reaching a person. Its
+  entries are grouped under two labels — *Get help* (chat, feedback) and *Learn* (glossary, tour) —
+  because four flat rows of two different natures read as a junk drawer.
 - No change to what any control *does*: same routes, same service calls, same permissions.
 
 ## Capabilities
@@ -36,8 +41,9 @@ Notifications in particular is reachable twice: the sidebar button and the topba
 - `onecgiar-pr-client/src/app/shared/components/reporting-nav-sidebar/` — component, template, spec:
   Extras block trimmed; `goToNotifications()`, `startPlatformSidebarTour()`, `clarisaGlossaryUrl`,
   the text-size trigger and its CDK overlay leave this component.
-- `onecgiar-pr-client/src/app/shared/components/shell-topbar/` — component, template, spec: Support
-  menu gains Glossary and Tour; user menu gains Settings with the text-size popover.
+- `onecgiar-pr-client/src/app/shared/components/shell-topbar/` — component, template, spec: the
+  Support menu becomes Help, grouped, and gains Glossary and Tour; a text-size button joins the
+  topbar icons next to the bell.
 - `FontScaleService`, `ReportingGuideService`, `CLARISA_GLOSSARY_URL` — consumed from a different
   component; no change to the services themselves.
 - ⚠️ `ReportingGuideService.startResultSidebarHint()` and the platform tour anchor on

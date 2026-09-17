@@ -31,7 +31,21 @@ entry point for getting help".
 
 ## Decisions
 
-**1. Settings is a sibling overlay, not a nested one.**
+**1. Text size stays on the topbar; Settings is not created.**
+The requirement puts text size inside Settings, reached from the account menu. Built that way first,
+then undone on 17-Sep (Yeck): *"eso no lo va a ver nadie en el tal Settings"*. Text size is how a
+person who cannot read the platform makes it readable — it cannot cost two clicks and prior knowledge
+of a menu name. It gets its own topbar button, one click, always on screen. With text size on the
+topbar, Settings would have held nothing, so it is not created. The deviation is written on the
+ticket rather than silently absorbed.
+
+**1b. The help menu is renamed and grouped.**
+A menu holding a support chat, a feedback form, a glossary and a guided tour is not "Support" any
+more — two of those are things you do on your own. It is labelled **Help**, and its entries sit under
+two group labels, *Get help* and *Learn*. Four flat rows of two natures read as a junk drawer, which
+is exactly how the first attempt landed.
+
+**1c. (Superseded) Settings as a sibling overlay.**
 The topbar already drives Support, notifications and the user menu as three sibling
 `cdkConnectedOverlay` popovers closed by one shared `document:keydown.escape` listener. Settings
 becomes a fourth, anchored to the same `userTrigger` origin; choosing Settings closes the user menu

@@ -12,11 +12,10 @@ import {
   lucideLifeBuoy,
   lucideMegaphone,
   lucideMessageCircle,
+  lucideALargeSmall,
   lucideRotateCcw,
   lucideSearch,
-  lucideSettings,
-  lucideSparkles,
-  lucideType
+  lucideSparkles
 } from '@ng-icons/lucide';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { environment } from '../../../../environments/environment';
@@ -63,8 +62,7 @@ import { ResultFrameworkReportingHomeService } from '../../../pages/result-frame
       lucideChevronDown,
       lucideBookOpen,
       lucideSparkles,
-      lucideSettings,
-      lucideType,
+      lucideALargeSmall,
       lucideRotateCcw
     })
   ],
@@ -94,15 +92,16 @@ export class ShellTopbarComponent {
 
   private readonly supportChatSE = inject(SupportChatService);
 
-  // P2-3682: Glossary, Tour and Text size used to hang from the sidebar's EXTRAS block. Extras now
-  // holds Release notes only, so their triggers live here — help-shaped ones under Support, the
-  // per-user preference under Settings in the account menu.
+  // P2-3682: Glossary, Tour and Text size used to hang from the sidebar's EXTRAS block, which the
+  // design trims down to Release notes. Glossary and Tour moved into the Help menu; text size kept
+  // its own topbar button — the requirement sent it to Settings in the account menu, and that was
+  // built and then undone, because an accessibility control two clicks deep is one nobody finds.
   private readonly reportingGuideSE = inject(ReportingGuideService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
   readonly fontScaleSE = inject(FontScaleService);
   readonly fontScaleOptions = FONT_SCALE_OPTIONS;
   readonly clarisaGlossaryUrl = CLARISA_GLOSSARY_URL;
-  settingsMenuOpen = signal(false);
+  fontMenuOpen = signal(false);
 
   // Injected here, not used directly: the topbar mounts with the app, and
   // instantiating the service is what installs the console hooks, so errors
@@ -134,8 +133,8 @@ export class ShellTopbarComponent {
   readonly notificationsPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
-  /** Settings replaces the account menu in place, anchored to the same avatar trigger (P2-3682). */
-  readonly settingsMenuPositions: ConnectedPosition[] = [
+  /** Text size hangs from its own topbar button (P2-3682). */
+  readonly fontMenuPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
   /** Support hangs from the LEFT edge of its trigger, per the reference (P2-3683). */
@@ -293,14 +292,6 @@ export class ShellTopbarComponent {
     });
   }
 
-  /** Settings is a SIBLING of the account menu, not a panel inside it: that panel already carries
-   *  the user card, the programme list and the centre list, and nesting a 5-button grid under them
-   *  pushed the whole thing past a laptop viewport. */
-  openSettings(): void {
-    this.userMenuOpen.set(false);
-    this.settingsMenuOpen.set(true);
-  }
-
   selectFontScale(value: FontScale): void {
     this.fontScaleSE.set(value);
   }
@@ -310,6 +301,6 @@ export class ShellTopbarComponent {
     this.userMenuOpen.set(false);
     this.notificationsOpen.set(false);
     this.supportMenuOpen.set(false);
-    this.settingsMenuOpen.set(false);
+    this.fontMenuOpen.set(false);
   }
 }
