@@ -30,18 +30,18 @@ Criteria-first: match the model to the phase's dominant demand. Principles — A
 | `/akili-archive`, `/akili-quick` | T5 |
 | UI screenshot / visual checks | T6 |
 
-**Registry** — Updated: 2026-08
+**Registry** — Updated: 2026-09
 
-| Tier | Claude Code | OpenCode | Antigravity | Fallback |
-|---|---|---|---|---|
-| T1 Architect | `opus` | `opencode-go/kimi-k3` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `sonnet` |
-| T2 Coder | `sonnet` | `opencode-go/glm-5.2` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `opencode-go/deepseek-v4-flash` |
-| T3 Auditor | `opus` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `sonnet` |
-| T4 Context-Ingest | `sonnet` | `opencode-go/kimi-k3` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `haiku` |
-| T5 Fast-Cheap | `haiku` | `opencode-go/deepseek-v4-flash` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `sonnet` |
-| T6 Multimodal | `sonnet` | `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | — |
+| Tier | Claude Code | OpenCode | Antigravity | Codex | Fallback |
+|---|---|---|---|---|---|
+| T1 Architect | `opus` | `opencode-go/kimi-k3` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `sonnet` |
+| T2 Coder | `sonnet` | `opencode-go/glm-5.2` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `opencode-go/deepseek-v4-flash` |
+| T3 Auditor | `opus` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `sonnet` |
+| T4 Context-Ingest | `sonnet` | `opencode-go/kimi-k3` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `haiku` |
+| T5 Fast-Cheap | `haiku` | `opencode-go/deepseek-v4-flash` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `sonnet` |
+| T6 Multimodal | `sonnet` | `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | — |
 
-Host CLI invocations: Claude Code `claude` · OpenCode `opencode` `<CONFIRM>` · Antigravity `agy` `<CONFIRM>`.
+Host CLI invocations: Claude Code `claude` · OpenCode `opencode` `<CONFIRM>` · Antigravity `agy` `<CONFIRM>` · Codex `codex` `<CONFIRM>`.
 **Cross-host dispatch:** T6 Multimodal → Antigravity (Gemini vision). Reach across hosts only for a real capability gap — a cross-host spawn costs a fresh context, which a one-tier difference does not repay.
 
 To change models, edit only this registry table. Never pin a dated model name where a floating alias exists. Model selection is guidance only in command prompts — never add `model:` to command frontmatter; enforced bindings live only in the agent wrappers (`.claude/agents/akili-*.md`, `.opencode/agent/akili-*.md`, `.agents/agents/akili-*/agent.md`).
@@ -67,6 +67,8 @@ Stack skills are never hard-referenced by commands; this map is how they reach a
 |---|---|---|
 | `nestjs-expert` | `onecgiar-pr-server/` | Any module, DI, guard/interceptor, TypeORM, or Jest/Supertest work |
 | `angular-developer` | `onecgiar-pr-client/` | Any component, signal, form, routing, or Jest work (Angular 21 standalone + signals) |
+| `tailwind-design-system` | `onecgiar-pr-client/` | Any Tailwind CSS v4 styling, `@theme` token wiring, or utility-first layouts |
+| `spartan` | `onecgiar-pr-client/` | Any Spartan UI primitive (`@spartan-ng/brain`, `@spartan-ng/helm`) implementation |
 | `api-design-principles` | Server controllers/DTOs, `/api/bilateral/*`, `/api/platform-report/*` | New or changed endpoints and payload contracts |
 | `error-handling-patterns` | `shared/handlers`, RMQ consumers, client interceptors | Error contracts, retries, fail-soft integrations |
 | `aws-serverless` | `serverless.yaml`, `lambda.ts`, bundling | Lambda handler, cold-start, or deploy-config changes |
@@ -75,4 +77,4 @@ Stack skills are never hard-referenced by commands; this map is how they reach a
 | `systematic-debugging` | Any package | Bug/QA tickets before proposing a fix |
 | `playwright-cli` | Client E2E / browser verification | Only when installed locally (per-developer tooling) |
 
-Evidence: NestJS 11 + TypeORM + Serverless Framework (`onecgiar-pr-server/package.json`, `serverless.yaml`), Angular 21 + PrimeNG (`onecgiar-pr-client/package.json`), Jest + Cypress. No React/Tailwind/shadcn in this repo — those skills are deliberately not mapped.
+Evidence: NestJS 11 + TypeORM + Serverless Framework (`onecgiar-pr-server/package.json`, `serverless.yaml`), Angular 21 + Spartan UI / Tailwind CSS v4 (`onecgiar-pr-client/package.json`, `styles.scss`), Jest + Cypress. No React/shadcn in this repo — those skills are deliberately not mapped.
