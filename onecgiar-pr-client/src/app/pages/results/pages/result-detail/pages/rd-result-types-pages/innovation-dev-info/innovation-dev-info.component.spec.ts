@@ -24,7 +24,7 @@ import { FormsModule } from '@angular/forms';
 import { FeedbackValidationDirective } from '../../../../../../../shared/directives/feedback-validation.directive';
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
@@ -39,6 +39,8 @@ import { FieldsManagerService } from '../../../../../../../shared/services/field
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { SharePointUploadService } from '../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 import { StudiesLinkComponent } from '../../../../../../../shared/components/innovation-use-form/components/studies-link/studies-link.component';
+import { StageAssessmentComponent } from './components/stage-assessment/stage-assessment.component';
+import { IntellectualPropertyConsiderationsComponent } from './components/intellectual-property-considerations/intellectual-property-considerations.component';
 
 describe('InnovationDevInfoComponent', () => {
   // P2-3220: the upload sequence moved to `SharePointUploadService`, which owns its own spec. What
@@ -50,6 +52,7 @@ describe('InnovationDevInfoComponent', () => {
   let mockApiService: any;
   let mockInnovationControlListService: any;
   let mockInnovationDevInfoUtilsService: any;
+  let mockDataControlService: any;
 
   const mockGET_questionsInnovationDevelopmentResponse = {
     innovation_team_diversity: {
@@ -358,11 +361,18 @@ describe('InnovationDevInfoComponent', () => {
       mapBoolean: jest.fn()
     };
 
+    mockDataControlService = {
+      currentResultSignal: signal({ portfolio: 'P22' })
+    } as any;
+
     const mockFieldsManagerService = {
       isP25: jest.fn(() => false),
       // P2-3263 / P2-3264: the template gates two blocks on this. Default false = the pre-2026 form,
       // which is what the rest of this suite assumes.
-      isInnovationDevFormReduced2026: jest.fn(() => false),
+      isInnovationDevFormReduced2026: jest.fn(() => {
+        const year = mockDataControlService.currentResultSignal()?.phase_year;
+        return typeof year === 'number' && year >= 2026;
+      }),
       // P2-3272 Part 4: same default — the pre-2026 form keeps the guidance note and pre-fills nothing.
       isInnovationDeveloperAutoFilled2026: jest.fn(() => false),
       // P2-3550: same default — the pre-2026 form still asks for "Innovation reference materials",
@@ -371,10 +381,6 @@ describe('InnovationDevInfoComponent', () => {
       // `pr-input` / `pr-radio-button` resolve their label and required flag through this when a
       // `fieldRef` is set. An empty map is enough: no field in this section uses one.
       fields: jest.fn(() => ({}))
-    } as any;
-
-    const mockDataControlService = {
-      currentResultSignal: signal({ portfolio: 'P22' })
     } as any;
 
     await TestBed.configureTestingModule({
@@ -414,7 +420,9 @@ describe('InnovationDevInfoComponent', () => {
         PrCheckboxComponent,
         // `UCA-T-11` rework attempt 2 — must be the REAL component (not an unknown-element
         // stand-in) so its `ngOnInit()` genuinely seeds `scaling_studies_urls`, reproducing Issue 1.
-        StudiesLinkComponent
+        StudiesLinkComponent,
+        StageAssessmentComponent,
+        IntellectualPropertyConsiderationsComponent
       ],
       imports: [HttpClientTestingModule, FormsModule, TermPipe],
       providers: [
@@ -2079,6 +2087,172 @@ describe('InnovationDevInfoComponent', () => {
         );
         consoleSpy.mockRestore();
       }));
+    });
+  });
+
+  describe('INNDEV-TEST-1 — Client Phase Synchronization & Skeleton Gating (INNDEV-T-1 / INNDEV-R-1 / INNDEV-R-2)', () => {
+    describe('DOM component rendering driven by currentResultSignal().phase_year', () => {
+      it('when phase_year is 2025: renders legacy components and strictly omits 2026 components', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        fixture.detectChanges();
+
+        const ipRights = fixture.debugElement.query(By.directive(IntellectualPropertyRightsComponent));
+        const anticipatedUser = fixture.debugElement.query(By.directive(AnticipatedInnovationUserComponent));
+        const ipConsiderations = fixture.debugElement.query(By.directive(IntellectualPropertyConsiderationsComponent));
+        const stageAssessments = fixture.debugElement.queryAll(By.directive(StageAssessmentComponent));
+
+        expect(ipRights).toBeTruthy();
+        expect(anticipatedUser).toBeTruthy();
+        expect(ipConsiderations).toBeNull();
+        expect(stageAssessments.length).toBe(0);
+      });
+
+      it('when phase_year is 2026: renders 2026 components and strictly omits legacy components', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        fixture.detectChanges();
+
+        const ipRights = fixture.debugElement.query(By.directive(IntellectualPropertyRightsComponent));
+        const anticipatedUser = fixture.debugElement.query(By.directive(AnticipatedInnovationUserComponent));
+        const ipConsiderations = fixture.debugElement.query(By.directive(IntellectualPropertyConsiderationsComponent));
+        const stageAssessments = fixture.debugElement.queryAll(By.directive(StageAssessmentComponent));
+
+        expect(ipConsiderations).toBeTruthy();
+        expect(stageAssessments.length).toBe(2);
+        expect(ipRights).toBeNull();
+        expect(anticipatedUser).toBeNull();
+      });
+    });
+
+    describe('sectionLoading skeleton gating respects both section info and questions', () => {
+      it('sectionLoading remains true while questions are in flight, and only becomes false once BOTH have resolved (P25)', fakeAsync(() => {
+        let resolveSection: ((val: any) => void) | undefined;
+        let resolveQuestions: ((val: any) => void) | undefined;
+
+        mockApiService.resultsSE.GET_innovationDevP25 = () =>
+          new Observable(subscriber => {
+            resolveSection = () => {
+              subscriber.next({ response: mockGET_innovationDevResponse });
+              subscriber.complete();
+            };
+          });
+
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () =>
+          new Observable(subscriber => {
+            resolveQuestions = () => {
+              subscriber.next({ response: mockGET_questionsInnovationDevelopmentResponse });
+              subscriber.complete();
+            };
+          });
+
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        component.getSectionInformationp25();
+        expect(component.sectionLoading()).toBe(true);
+
+        resolveSection!();
+        tick(0);
+        expect(component.sectionLoading()).toBe(true);
+
+        resolveQuestions!();
+        tick(0);
+        expect(component.sectionLoading()).toBe(false);
+      }));
+
+      it('sectionLoading remains true while section data is in flight when questions resolve first (P25)', fakeAsync(() => {
+        let resolveSection: ((val: any) => void) | undefined;
+        let resolveQuestions: ((val: any) => void) | undefined;
+
+        mockApiService.resultsSE.GET_innovationDevP25 = () =>
+          new Observable(subscriber => {
+            resolveSection = () => {
+              subscriber.next({ response: mockGET_innovationDevResponse });
+              subscriber.complete();
+            };
+          });
+
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () =>
+          new Observable(subscriber => {
+            resolveQuestions = () => {
+              subscriber.next({ response: mockGET_questionsInnovationDevelopmentResponse });
+              subscriber.complete();
+            };
+          });
+
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        component.getSectionInformationp25();
+        expect(component.sectionLoading()).toBe(true);
+
+        resolveQuestions!();
+        tick(0);
+        expect(component.sectionLoading()).toBe(true);
+
+        resolveSection!();
+        tick(0);
+        expect(component.sectionLoading()).toBe(false);
+      }));
+
+      it('sectionLoading remains true while questions are in flight in legacy path (getSectionInformation)', fakeAsync(() => {
+        let resolveSection: ((val: any) => void) | undefined;
+        let resolveQuestions: ((val: any) => void) | undefined;
+
+        mockApiService.resultsSE.GET_innovationDev = () =>
+          new Observable(subscriber => {
+            resolveSection = () => {
+              subscriber.next({ response: mockGET_innovationDevResponse });
+              subscriber.complete();
+            };
+          });
+
+        mockApiService.resultsSE.GET_questionsInnovationDevelopment = () =>
+          new Observable(subscriber => {
+            resolveQuestions = () => {
+              subscriber.next({ response: mockGET_questionsInnovationDevelopmentResponse });
+              subscriber.complete();
+            };
+          });
+
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P22', phase_year: 2025 });
+        component.getSectionInformation();
+        expect(component.sectionLoading()).toBe(true);
+
+        resolveSection!();
+        tick(0);
+        expect(component.sectionLoading()).toBe(true);
+
+        resolveQuestions!();
+        tick(0);
+        expect(component.sectionLoading()).toBe(false);
+      }));
+
+      it('unmasks sectionLoading on error so form is not stuck shimmering', fakeAsync(() => {
+        mockApiService.resultsSE.GET_innovationDevP25 = () => throwError(() => new Error('error'));
+        mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: mockGET_questionsInnovationDevelopmentResponse });
+
+        component.getSectionInformationp25();
+        tick(0);
+        expect(component.sectionLoading()).toBe(false);
+      }));
+    });
+
+    describe('OnChangePortfolio effect gating on portfolio AND phase_year resolution', () => {
+      it('does not trigger fetch when portfolio is defined but phase_year is not resolved', () => {
+        const getSpy = jest.spyOn(component, 'getSectionInformationp25');
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+        TestBed.flushEffects();
+
+        expect(getSpy).not.toHaveBeenCalled();
+      });
+
+      it('triggers fetch when both portfolio is defined AND phase_year is resolved as a number', () => {
+        const getSpy = jest.spyOn(component, 'getSectionInformationp25').mockImplementation(() => {});
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        TestBed.flushEffects();
+
+        expect(getSpy).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });
