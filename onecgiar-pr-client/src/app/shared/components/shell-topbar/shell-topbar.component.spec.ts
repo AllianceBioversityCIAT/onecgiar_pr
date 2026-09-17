@@ -497,17 +497,32 @@ describe('ShellTopbarComponent', () => {
       });
     });
 
-    it('text size keeps its own topbar button instead of hiding behind the account menu', () => {
+    it('text size sits inside the profile panel, visible the moment it opens', () => {
       const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
-      const topbar = html.slice(0, html.indexOf('<!-- Help menu') > -1 ? html.indexOf('<!-- Help menu') : html.indexOf('<!-- Notifications popover'));
+      const from = html.indexOf('aria-label="Account menu"');
+      const to = html.indexOf('pr-topbar-logout');
+      expect(from).toBeGreaterThan(-1);
+      expect(to).toBeGreaterThan(from);
+      const panel = html.slice(from, to);
 
-      expect(topbar).toContain('aria-label="Text size"');
-      expect(topbar).toContain('#fontTrigger="cdkOverlayOrigin"');
-      // The requirement asked for it under Settings in the account menu. Undone deliberately: an
-      // accessibility control two clicks deep, behind a name that gives no hint of it, is one
-      // nobody finds. Written up on P2-3682.
+      expect(panel).toContain('role="radiogroup"');
+      expect(panel).toContain('(click)="selectFontScale(option.value)"');
+      // Neither of the two places it was tried first: not behind a Settings entry (nobody finds it
+      // there), and not a separate topbar button either. Written up on P2-3682.
       expect(html).not.toContain('<span>Settings</span>');
+      expect(html).not.toContain('#fontTrigger="cdkOverlayOrigin"');
       expect((component as unknown as Record<string, unknown>).openSettings).toBeUndefined();
+    });
+
+    it('drops the repeated CENTER- prefix without losing the id', async () => {
+      await build();
+      expect(component.shortCode('CENTER-06')).toBe('06');
+      expect(component.shortCode('center_02')).toBe('02');
+      // A code that is not a centre is left exactly as it is, and so is an empty one.
+      expect(component.shortCode('SGP-02')).toBe('SGP-02');
+      expect(component.shortCode(null)).toBe('');
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      expect(html).toContain('[title]="item.center_id"');
     });
 
     it('picking a size delegates to the font scale service', async () => {
@@ -516,25 +531,14 @@ describe('ShellTopbarComponent', () => {
       expect(fontScaleMock.set).toHaveBeenCalledWith('large');
     });
 
-    it('escape closes the text-size panel too', async () => {
-      await build();
-      component.fontMenuOpen.set(true);
-
-      component.onEscape();
-
-      expect(component.fontMenuOpen()).toBe(false);
-    });
-
-    it('the text-size panel carries the control and offers Reset only off the default', () => {
+    it('offers Reset only when a non-default size is active', () => {
       const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
-      const settings = html.slice(html.indexOf('<!-- Text-size popover (P2-3682)'));
+      const from = html.indexOf('pr-topbar-account__group--text');
+      expect(from).toBeGreaterThan(-1);
+      const group = html.slice(from, html.indexOf('pr-topbar-panel__body', from));
 
-      expect(settings).toContain('aria-label="Text size"');
-      expect(settings).toContain('role="radiogroup"');
-      expect(settings).toContain('(click)="selectFontScale(option.value)"');
-      expect(settings).toContain("@if (fontScaleSE.scale() !== 'default')");
-      expect(settings).toContain('(click)="fontScaleSE.reset()"');
-      expect(settings).toContain('[cdkConnectedOverlayOrigin]="fontTrigger"');
+      expect(group).toContain("@if (fontScaleSE.scale() !== 'default')");
+      expect(group).toContain('(click)="fontScaleSE.reset()"');
     });
   });
 
@@ -553,7 +557,7 @@ describe('ShellTopbarComponent', () => {
       expect(to).toBeGreaterThan(from);
       const cluster = right.slice(from, to);
 
-      // Two rules: Help | text size + bell | user.
+      // Two rules: Help | bell | user.
       expect((cluster.match(/pr-topbar-sep/g) || []).length).toBe(2);
       expect(cluster.indexOf('pr-topbar-actions')).toBeGreaterThan(cluster.indexOf('pr-topbar-sep'));
       expect(cluster.indexOf('class="pr-topbar-user"')).toBeGreaterThan(cluster.indexOf('pr-topbar-actions'));

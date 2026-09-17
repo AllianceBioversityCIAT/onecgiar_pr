@@ -12,7 +12,6 @@ import {
   lucideLifeBuoy,
   lucideMegaphone,
   lucideMessageCircle,
-  lucideALargeSmall,
   lucideRotateCcw,
   lucideSearch,
   lucideSparkles
@@ -62,7 +61,6 @@ import { ResultFrameworkReportingHomeService } from '../../../pages/result-frame
       lucideChevronDown,
       lucideBookOpen,
       lucideSparkles,
-      lucideALargeSmall,
       lucideRotateCcw
     })
   ],
@@ -101,7 +99,6 @@ export class ShellTopbarComponent {
   readonly fontScaleSE = inject(FontScaleService);
   readonly fontScaleOptions = FONT_SCALE_OPTIONS;
   readonly clarisaGlossaryUrl = CLARISA_GLOSSARY_URL;
-  fontMenuOpen = signal(false);
 
   // Injected here, not used directly: the topbar mounts with the app, and
   // instantiating the service is what installs the console hooks, so errors
@@ -131,10 +128,6 @@ export class ShellTopbarComponent {
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
   readonly notificationsPositions: ConnectedPosition[] = [
-    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
-  ];
-  /** Text size hangs from its own topbar button (P2-3682). */
-  readonly fontMenuPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
   /** Support hangs from the LEFT edge of its trigger, per the reference (P2-3683). */
@@ -296,11 +289,20 @@ export class ShellTopbarComponent {
     this.fontScaleSE.set(value);
   }
 
+  /**
+   * Centre ids all read `CENTER-01`, `CENTER-02`… under a heading that already says CENTERS, so the
+   * prefix was the same seven characters repeated down the column, pushing every centre name to the
+   * right for nothing. Only the prefix is dropped, and the full id stays in the row's title.
+   */
+  shortCode(code: unknown): string {
+    const text = String(code ?? '');
+    return text.replace(/^CENTER[-_\s]*/i, '') || text;
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.userMenuOpen.set(false);
     this.notificationsOpen.set(false);
     this.supportMenuOpen.set(false);
-    this.fontMenuOpen.set(false);
   }
 }

@@ -25,23 +25,33 @@ bell SHALL keep its unread badge and its "See all the notifications" link.
 - **THEN** the topbar bell shows the unread count
 - **AND** choosing "See all the notifications" routes to the notifications requests page
 
-### Requirement: Text size is one click away on the topbar
+### Requirement: Text size lives inside the profile panel
 
-Text size SHALL have its own topbar button, next to the notifications bell, opening the text-size
-panel directly. It SHALL NOT be placed behind a Settings entry in the account menu: it is an
-accessibility control, and the person who needs it is the one least able to hunt for it. The control
-SHALL keep the five sizes and the "Reset to default" action, and SHALL keep writing through
-`FontScaleService`.
+Text size SHALL sit inside the account panel that the avatar opens, visible as soon as that panel
+opens. It SHALL NOT be placed behind a Settings entry: it is an accessibility control, and the person
+who needs it is the one least able to hunt for it. The control SHALL keep the five sizes and a reset
+action, and SHALL keep writing through `FontScaleService`.
 
 #### Scenario: A reporter changes the text size
-- **WHEN** they click the text-size button on the topbar and pick a size
+- **WHEN** they open the account panel and pick a size
 - **THEN** `FontScaleService` receives that size
 - **AND** the platform text scales as it did when the control lived in the sidebar
 
 #### Scenario: No Settings entry is introduced
 - **WHEN** the account menu is opened
 - **THEN** it shows no Settings entry
-- **AND** the only preference the requirement named for it, text size, is reachable from the topbar
+- **AND** the only preference the requirement named for it, text size, is already on screen
+
+### Requirement: The account panel is one column with one rhythm
+
+The account panel SHALL group identity, text size, programmes and centres, separating groups with a
+single rule and rows with space only. Code chips SHALL share a width so the text beside them forms a
+column, and a centre's code SHALL drop the `CENTER-` prefix its heading already states, keeping the
+full id as the row's title.
+
+#### Scenario: A reporter opens the account panel
+- **THEN** no rule is drawn between two rows of the same group
+- **AND** a centre shows as `06 · International Potato Center`, with `CENTER-06` on hover
 
 #### Scenario: Reset is offered only when a non-default size is active
 - **WHEN** the active scale is the default one

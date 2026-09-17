@@ -486,9 +486,9 @@
    one table with missing headers. */
 .pr-topbar-account__id {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  padding: 14px 14px 12px;
+  padding: 12px 14px 10px;
 }
 
 .pr-topbar-account__name {
@@ -512,11 +512,9 @@
   white-space: nowrap;
 }
 
-/* Its own line: pinned next to the name it kept squeezing the name's ellipsis. */
 .pr-topbar-account__role {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 2px 7px;
+  flex: none;
+  padding: 1px 6px;
   border-radius: 999px;
   background: var(--pr-color-primary-50, #f3effc);
   font-size: 9px;
@@ -528,7 +526,7 @@
 }
 
 .pr-topbar-account__group {
-  padding: 10px 14px 12px;
+  padding: 8px 14px 10px;
 
   & + & {
     border-top: 1px solid #f1f0f5;
@@ -540,7 +538,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .pr-topbar-account__eyebrow {
@@ -564,8 +562,8 @@
 .pr-topbar-account__row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 5px 6px;
+  gap: 8px;
+  padding: 3px 6px;
   margin: 0 -6px;
   border-radius: 8px;
   transition: background-color 150ms ease;
@@ -583,7 +581,7 @@
    start the text at two different places. */
 .pr-topbar-account__code {
   flex: none;
-  width: 78px;
+  min-width: 56px;
   padding: 2px 0;
   border-radius: 5px;
   background: var(--pr-color-primary-50, #f3effc);
@@ -599,7 +597,11 @@
 }
 
 .pr-topbar-account__title {
-  display: block;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
@@ -619,5 +621,60 @@
     font-size: 10px;
     font-weight: 400;
     color: var(--pr-text-subtle, #9691a8);
+  }
+}
+
+/* Text size, inline in the profile panel (P2-3682). Five squares, no labels: the
+   letter grows across them, which says what they do without a word under each. */
+.pr-topbar-account__group--text {
+  border-top: 1px solid #f1f0f5;
+}
+
+.pr-topbar-account__scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--pr-surface-subtle, #f4f4f6);
+}
+
+.pr-topbar-account__scale-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pr-text-secondary, #5d5872);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  &--on {
+    background: #fff;
+    color: var(--pr-color-primary-400, #5733c4);
+    box-shadow: 0 0 0 1px var(--pr-color-primary-200, #c9b8f5);
+  }
+}
+
+.pr-topbar-account__reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pr-color-primary-400, #5733c4);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
   }
 }

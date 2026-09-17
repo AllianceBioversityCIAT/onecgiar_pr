@@ -14,9 +14,11 @@ Notifications in particular is reachable twice: the sidebar button and the topba
 - **Notifications leaves the sidebar with no replacement.** The topbar bell already opens the
   notifications popover and its "See all the notifications" link routes to the same page the sidebar
   button called, so nothing is lost and the duplicate entry point disappears.
-- **Text size keeps a topbar button of its own.** The requirement sends it to Settings in the account
+- **Text size sits inside the profile panel the avatar opens.** The requirement sends it to Settings in the account
   menu; that was built on 17-Sep and then undone the same day at Yeck's call — it is an accessibility
-  control, and two clicks deep behind a name that gives no hint of it is where nobody finds it. The
+  control, and two clicks deep behind a name that gives no hint of it is where nobody finds it. It
+  briefly had its own topbar button before landing in the profile panel, which shows it without
+  adding a fourth icon to the topbar. The
   popover (5 sizes + "Reset to default", backed by `FontScaleService`) is unchanged. **The Settings
   entry is therefore not created**: text size was the only thing the ticket put in it. Written up on
   the ticket as a deviation from the requirement.

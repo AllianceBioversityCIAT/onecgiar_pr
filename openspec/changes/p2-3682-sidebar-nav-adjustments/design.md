@@ -31,7 +31,15 @@ entry point for getting help".
 
 ## Decisions
 
-**1. Text size stays on the topbar; Settings is not created.**
+**1. Text size lives in the profile panel; Settings is not created.**
+It went three ways in one day, and the last one is the one that holds: first into Settings in the
+account menu (as the requirement says), then out onto its own topbar button, and finally **inside the
+account panel itself** — Yeck, 17-Sep: *"mejor dejarlo dentro de profile cuando se despliega"*. One
+click, on screen the moment the panel opens, and without adding a fourth icon to a topbar that
+already carries Help, the bell and the avatar. Settings is still not created: text size was the only
+thing the ticket put in it.
+
+**1-superseded. Text size on its own topbar button.**
 The requirement puts text size inside Settings, reached from the account menu. Built that way first,
 then undone on 17-Sep (Yeck): *"eso no lo va a ver nadie en el tal Settings"*. Text size is how a
 person who cannot read the platform makes it readable — it cannot cost two clicks and prior knowledge
