@@ -1,91 +1,200 @@
 @use '../../../../styles/fonts.scss' as fonts;
 
-.title_component {
-  color: var(--pr-color-accents-4);
-}
-
 .local_container {
   padding-bottom: 10px;
 
-  .phase_switcher {
+  .reporting_cycles_bar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
     gap: 10px;
-    background-color: var(--pr-color-neutral-1000);
-    padding: 6px;
-    border-radius: 5px;
-    @include fonts.pr-typography('body-3');
-    font-weight: 600;
+    padding-top: 12px;
+    border-top: 1px solid var(--pr-border);
+  }
 
-    .tag {
+  .left_group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .title_component {
+    @include fonts.pr-typography('body-4');
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--pr-color-accents-4);
+    white-space: nowrap;
+  }
+
+  .segmented_control {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    background-color: var(--pr-color-accents-1);
+    border: 1px solid var(--pr-border);
+    border-radius: 12px;
+
+    .cycle_pill {
       display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      color: var(--pr-color-accents-5);
+      cursor: pointer;
+      border: 1px solid transparent;
       @include fonts.pr-typography('body-3');
       font-weight: 600;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 3px;
-      gap: 4px;
-      background-color: var(--pr-color-white);
-      color: var(--pr-color-primary-300);
+      transition: all ease-in-out 0.2s;
 
-      .text {
-        @include fonts.pr-typography('body-3');
-        font-weight: 500;
+      &:hover {
+        background-color: var(--pr-color-white);
+        color: var(--pr-color-accents-7);
       }
 
       i {
-        font-size: 1.1rem;
-      }
-    }
-
-    .select_phase_button {
-      background-color: var(--pr-color-white);
-      border-radius: 5px;
-      padding: 6px 20px;
-      transition: all ease-in-out 0.3s;
-      cursor: pointer;
-      border: 1px solid var(--pr-color-white);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--pr-color-primary-300);
-
-      &.close.selected {
-        .tag {
-          background-color: var(--pr-color-neutral-1000);
-          color: var(--pr-color-accents-5);
-        }
+        font-size: 1rem;
+        color: var(--pr-color-accents-4);
       }
 
-      &.open {
-        .tag {
-          background-color: var(--pr-color-primary-300);
-          color: var(--pr-color-white);
-        }
-      }
+      &.selected:not(.open) {
+        background-color: var(--pr-color-white);
+        color: var(--pr-color-primary-300);
+        border-color: var(--pr-color-primary-100);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        font-weight: 700;
 
-      &.open.selected {
-        .tag {
-          background-color: var(--pr-color-white);
+        i {
           color: var(--pr-color-primary-300);
         }
       }
 
-      &.close {
-        background-color: var(--pr-color-neutral-1000);
-        color: var(--pr-color-accents-5);
+      &.open {
+        gap: 8px;
+        padding: 6px 12px 6px 10px;
+        background-color: var(--pr-color-primary-300);
+        color: var(--pr-color-white);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+        opacity: 0.55;
 
-        .tag {
-          background-color: var(--pr-color-accents-5);
+        &:hover {
+          background-color: var(--pr-color-primary-300);
+          color: var(--pr-color-white);
+          opacity: 0.75;
+        }
+
+        &.selected {
+          opacity: 1;
+          box-shadow: 0 0 0 2px var(--pr-color-white) inset, 0 1px 3px rgba(0, 0, 0, 0.2);
+
+          &:hover {
+            opacity: 1;
+          }
+        }
+      }
+
+      .cycle_status {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        background-color: rgba(255, 255, 255, 0.2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        @include fonts.pr-typography('body-4');
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+
+        i {
+          font-size: 0.85rem;
           color: var(--pr-color-white);
         }
       }
 
-      &.selected {
-        background-color: var(--pr-color-primary-300);
-        color: var(--pr-color-white);
-        border-color: var(--pr-color-primary-300);
+      .pulse_dot {
+        position: relative;
+        display: inline-flex;
+        width: 8px;
+        height: 8px;
+
+        .ping {
+          position: absolute;
+          inline-size: 100%;
+          block-size: 100%;
+          border-radius: 50%;
+          background-color: var(--pr-color-green-400);
+          opacity: 0.75;
+          animation: pr-cycle-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        .dot {
+          position: relative;
+          inline-size: 100%;
+          block-size: 100%;
+          border-radius: 50%;
+          background-color: var(--pr-color-green-400);
+        }
       }
     }
+  }
+
+  .right_group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .active_cycle_tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background-color: var(--pr-color-green-50);
+      color: var(--pr-color-green-600);
+      @include fonts.pr-typography('body-4');
+      font-weight: 600;
+
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--pr-color-green-500);
+      }
+    }
+
+    .cycle_year {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      @include fonts.pr-typography('body-4');
+      color: var(--pr-color-accents-4);
+
+      &::before {
+        content: '';
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background-color: var(--pr-color-accents-4);
+      }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse_dot .ping {
+    animation: none;
+  }
+}
+
+@keyframes pr-cycle-ping {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
   }
 }
