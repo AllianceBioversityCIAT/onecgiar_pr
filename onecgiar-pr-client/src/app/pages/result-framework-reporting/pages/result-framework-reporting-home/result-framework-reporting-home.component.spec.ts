@@ -126,7 +126,22 @@ describe('ResultFrameworkReportingHomeComponent', () => {
     expect(fresh.myPlaces()[0].total).toBe(0);
   });
 
-  it('keeps the rest of the portfolio closed until asked for', () => {
-    expect(component.exploreOpen()).toBe(false);
+  it('opens on Overview and offers one surface at a time', () => {
+    expect(component.activeTab()).toBe('overview');
+    expect(component.tabs.map(tab => tab.id)).toEqual(['overview', 'activity', 'portfolio']);
+  });
+
+  it('splits the status figures into meter segments that add up to the whole', () => {
+    const totals = component.myStatusTotals();
+    const sum = totals.tiles.reduce((acc, tile) => acc + tile.share, 0);
+
+    expect(Math.round(sum)).toBe(100);
+    // Reported = Submitted + Quality Assessed, the same pair the programme card uses.
+    expect(totals.reported).toBe(13);
+    expect(totals.reportedShare).toBe(9);
+  });
+
+  it('paging the rail is a no-op when there is no rail to page', () => {
+    expect(() => component.slidePlaces(1)).not.toThrow();
   });
 });

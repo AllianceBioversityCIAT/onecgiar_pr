@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultFrameworkReportingCardItemComponent } from './components/result-framework-reporting-card-item/result-framework-reporting-card-item.component';
 import { ResultFrameworkReportingCenterCardItemComponent } from './components/result-framework-reporting-center-card-item/result-framework-reporting-center-card-item.component';
-import { ResultFrameworkReportingInsightsComponent } from './components/result-framework-reporting-insights/result-framework-reporting-insights.component';
 import { ResultFrameworkReportingRecentItemComponent } from './components/result-framework-reporting-recent-item/result-framework-reporting-recent-item.component';
 import { ResultFrameworkReportingHomeService } from './services/result-framework-reporting-home.service';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -20,7 +19,6 @@ import { STATUS_META } from './status-meta';
     CommonModule,
     ResultFrameworkReportingCardItemComponent,
     ResultFrameworkReportingCenterCardItemComponent,
-    ResultFrameworkReportingInsightsComponent,
     ResultFrameworkReportingRecentItemComponent,
     CustomFieldsModule,
     RouterModule,
@@ -46,9 +44,26 @@ export class ResultFrameworkReportingHomeComponent {
 
   readonly myCentersList = computed(() => this.rolesSE.getMyCenters());
 
-  /** Whether the "explore the whole portfolio" block is open. Closed by default: it is 12+ cards
-   *  of programmes the person does not report on, and it used to be most of this page. */
-  readonly exploreOpen = signal(false);
+  /** Dashboard tabs. One surface at a time instead of four stacked blocks and a right column:
+   *  the page used to show everything at once, which is what made it hard to read. */
+  readonly tabs = [
+    { id: 'overview' as const, label: 'Overview' },
+    { id: 'activity' as const, label: 'Activity' },
+    { id: 'portfolio' as const, label: 'Portfolio' }
+  ];
+  readonly activeTab = signal<'overview' | 'activity' | 'portfolio'>('overview');
+
+  private readonly placesRail = viewChild<ElementRef<HTMLElement>>('placesRail');
+
+  /** The rail is a scroll-snap strip, so paging is a scroll, not an index: no state to keep in
+   *  sync with the DOM, and a drag or a trackpad swipe stays on the same rails as the buttons. */
+  slidePlaces(direction: -1 | 1): void {
+    const rail = this.placesRail()?.nativeElement;
+    if (!rail) return;
+    const card = rail.querySelector<HTMLElement>('[data-place-card]');
+    const step = (card?.offsetWidth ?? 280) + 12;
+    rail.scrollBy({ left: step * direction, behavior: 'smooth' });
+  }
 
   readonly userFirstName = computed(() => (this.api.authSE.localStorageUser?.user_name ?? '').split(' ')[0] ?? '');
 
@@ -75,11 +90,21 @@ export class ResultFrameworkReportingHomeComponent {
     }
 
     const tiles = Object.entries(STATUS_META)
-      .map(([id, meta]) => ({ id: Number(id), label: meta.label, dotClass: meta.dotClass, order: meta.order, count: counts.get(Number(id)) ?? 0 }))
+      .map(([id, meta]) => ({
+        id: Number(id),
+        label: meta.label,
+        dotClass: meta.dotClass,
+        barClass: meta.barClass,
+        order: meta.order,
+        count: counts.get(Number(id)) ?? 0
+      }))
       .filter(tile => tile.count > 0)
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) => a.order - b.order)
+      .map(tile => ({ ...tile, share: total > 0 ? (tile.count / total) * 100 : 0 }));
 
-    return { total, tiles };
+    const reported = (counts.get(2) ?? 0) + (counts.get(3) ?? 0);
+
+    return { total, tiles, reported, reportedShare: total > 0 ? Math.round((reported / total) * 100) : 0 };
   });
 
   /** Programmes and centres in one list: they are the same thing to the person — a place they

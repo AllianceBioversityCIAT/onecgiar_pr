@@ -1,245 +1,279 @@
 <app-alert-global-info className="section_container"></app-alert-global-info>
 
 <!--
-  The home answers "where do I stand and what do I do next", not "here is the whole portfolio".
-  It used to open with a 180px welcome banner, a density toggle and a 3D viewer, then two grids of
-  cards for the two programmes and three centres already listed in the sidebar, then twelve cards
-  for programmes the person does not report on. The numbers and the activity feed — the only parts
-  about their own work — were below the fold on the right.
+  The home as a dashboard: ONE surface at a time.
 
-  Now: the cycle and the first action, their own results by status, the places they report in as one
-  list, and the rest of the portfolio behind a disclosure at the bottom.
+  Before, every block was on screen at once — a welcome banner, two grids of cards, twelve more
+  cards, and a right column with a donut and a feed — each one boxed in its own bordered card. The
+  page was not hard to read because it lacked information; it was hard to read because nothing was
+  quieter than anything else.
 
-  Tailwind-first per the package guide: no new `.pr-*` SCSS blocks, and no rem type utilities
-  (root font-size is 12px, so `text-sm` would be 10.5px).
+  Three things carry the redesign:
+  · One headline number with a segmented meter, instead of a donut plus five tiles saying the same.
+  · Tabs, so the page shows one thing at a time.
+  · Cards that separate with space and one hairline, not with a border each. Violet appears twice:
+    the primary action and the active tab. Everything else is greys from the same scale.
 -->
-<div class="framework-reporting_container mx-auto grid min-h-screen max-w-[1600px] grid-cols-[1fr_380px] gap-5 px-[30px] pb-[120px] pt-5 max-[1115px]:grid-cols-1">
-  <div class="flex min-w-0 flex-col gap-7 max-[1115px]:gap-6">
-    <!-- Cycle strip. One line where the welcome banner was: the phase is what changes and what
-         people need to see; the greeting is not worth 180px of the fold. -->
-    <section
-      class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-5 py-4"
-      aria-label="Reporting cycle">
-      <div class="min-w-0">
-        @if (phaseLabel()) {
-          <span
-            class="inline-block rounded-full bg-[var(--pr-color-primary-50)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-primary-400)]">
-            {{ phaseLabel() }}
+<div class="mx-auto flex min-h-screen max-w-[1180px] flex-col gap-6 px-[30px] pb-[120px] pt-6 max-md:px-4">
+  <!-- Header. No card, no banner: just the cycle, the greeting and the two actions. -->
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="min-w-0">
+      @if (phaseLabel()) {
+        <p class="m-0 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--pr-color-accents-5)]">
+          {{ phaseLabel() }}
+        </p>
+      }
+      <h1 class="m-0 mt-1 text-[22px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">
+        @if (userFirstName()) {
+          Hi {{ userFirstName() }}
+        } @else {
+          Your reporting
+        }
+      </h1>
+    </div>
+
+    <div class="flex flex-none items-center gap-2">
+      <a
+        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-300 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-400"
+        routerLink="/result/result-creator">
+        <i class="material-icons-round text-[17px]" aria-hidden="true">add</i>
+        Report a result
+      </a>
+      <a
+        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-[var(--pr-color-accents-6)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
+        routerLink="/result/results-outlet/results-list">
+        My results
+        <i class="material-icons-round text-[16px]" aria-hidden="true">arrow_forward</i>
+      </a>
+    </div>
+  </header>
+
+  <!-- The headline. One number, one meter. The meter replaces the donut AND the row of tiles: the
+       same four figures were being told three ways on one screen. -->
+  @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+    <div class="pr-skeleton" style="width:100%;height:132px;border-radius:16px"></div>
+  } @else if (myStatusTotals().total > 0) {
+    <section class="rounded-2xl bg-white p-6 shadow-[0_1px_3px_rgba(25,21,36,0.06)]" aria-label="Your results this phase">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="m-0 text-[12px] font-medium text-[var(--pr-color-accents-6)]">Your results this phase</p>
+          <p class="pr-figure m-0 mt-1 font-mono text-[40px] font-semibold leading-none text-[var(--pr-color-secondary-400)]">
+            {{ myStatusTotals().total }}
+          </p>
+        </div>
+        <p class="m-0 text-[12px] text-[var(--pr-color-accents-6)]">
+          <span class="font-semibold text-[var(--pr-color-secondary-400)]">{{ myStatusTotals().reported }}</span>
+          submitted or quality assessed
+          <span class="pr-code ms-1 font-mono text-[var(--pr-color-accents-5)]">{{ myStatusTotals().reportedShare }}%</span>
+        </p>
+      </div>
+
+      <!-- Segmented meter: proportion first, exact figures underneath. -->
+      <div class="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]" role="img"
+        [attr.aria-label]="myStatusTotals().total + ' results by status'">
+        @for (tile of myStatusTotals().tiles; track tile.id) {
+          <span class="h-full" [ngClass]="tile.barClass" [style.width.%]="tile.share"></span>
+        }
+      </div>
+
+      <ul class="m-0 mt-3 flex list-none flex-wrap gap-x-6 gap-y-2 p-0">
+        @for (tile of myStatusTotals().tiles; track tile.id) {
+          <li class="flex items-center gap-2">
+            <span class="size-2 flex-none rounded-full" [ngClass]="tile.dotClass" aria-hidden="true"></span>
+            <span class="pr-code font-mono text-[13px] font-semibold text-[var(--pr-color-secondary-400)]">{{ tile.count }}</span>
+            <span class="text-[12px] text-[var(--pr-color-accents-6)]">{{ tile.label }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <!-- Tabs. The page shows one surface at a time; the count rides on the tab so you know what is
+       inside before opening it. -->
+  <div class="flex items-center gap-1 border-b border-[var(--pr-color-accents-2)]" role="tablist" aria-label="Home sections">
+    @for (tab of tabs; track tab.id) {
+      <button
+        type="button"
+        role="tab"
+        class="relative cursor-pointer border-none bg-transparent px-3 py-2.5 text-[13px] font-semibold transition-colors"
+        [attr.aria-selected]="activeTab() === tab.id"
+        [ngClass]="activeTab() === tab.id
+          ? 'text-[var(--pr-color-primary-400)] after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full after:bg-brand-300 after:content-[\'\']'
+          : 'text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'"
+        (click)="activeTab.set(tab.id)">
+        {{ tab.label }}
+        @if (tab.id === 'overview' && myPlaces().length > 0) {
+          <span class="ms-1.5 text-[11px] font-medium text-[var(--pr-color-accents-5)]">{{ myPlaces().length }}</span>
+        }
+        @if (tab.id === 'activity' && resultFrameworkReportingHomeService.recentActivityList().length > 0) {
+          <span class="ms-1.5 text-[11px] font-medium text-[var(--pr-color-accents-5)]">
+            {{ resultFrameworkReportingHomeService.recentActivityList().length }}
           </span>
         }
-        <h1 class="m-0 mt-1.5 text-[19px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">
-          @if (userFirstName()) {
-            Hi {{ userFirstName() }} — here is where your reporting stands.
-          } @else {
-            Here is where your reporting stands.
-          }
-        </h1>
-      </div>
-
-      <div class="flex flex-none flex-wrap items-center gap-2">
-        <a
-          class="inline-flex items-center gap-1.5 rounded-lg bg-brand-300 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-400"
-          routerLink="/result/result-creator">
-          <i class="material-icons-round text-[17px]" aria-hidden="true">add</i>
-          Report a result
-        </a>
-        <a
-          class="inline-flex items-center gap-1.5 rounded-lg border border-[var(--pr-color-accents-2)] bg-white px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-text-secondary,#5d5872)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
-          routerLink="/result/results-outlet/results-list">
-          <i class="material-icons-round text-[17px]" aria-hidden="true">list_alt</i>
-          My results
-        </a>
-      </div>
-    </section>
-
-    <!-- Your results this phase. Counted from the CURRENT phase only: `SPProgress.versions` holds
-         one entry per phase, so summing the programme total would mix 2025 into a 2026 number.
-         Hidden entirely when there is nothing to count, rather than showing a row of zeros. -->
-    @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
-      <div class="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-3">
-        @for (item of [0, 1, 2, 3]; track $index) {
-          <div class="pr-skeleton" style="width:100%;height:78px"></div>
+        @if (tab.id === 'portfolio' && resultFrameworkReportingHomeService.otherSPsList().length > 0) {
+          <span class="ms-1.5 text-[11px] font-medium text-[var(--pr-color-accents-5)]">
+            {{ resultFrameworkReportingHomeService.otherSPsList().length + resultFrameworkReportingHomeService.otherProjectsList().length }}
+          </span>
         }
-      </div>
-    } @else if (myStatusTotals().total > 0) {
-      <section class="flex flex-col gap-3" aria-label="Your results this phase">
-        <div class="flex items-baseline justify-between gap-3">
-          <h2 class="m-0 text-[15px] font-bold text-[var(--pr-color-secondary-400)]">Your results this phase</h2>
-          <a class="text-[12px] font-semibold text-brand-400 hover:underline" routerLink="/result/results-outlet/results-list">
-            Open the Results Center
-          </a>
-        </div>
-
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-3">
-          <div class="flex flex-col gap-1 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-4 py-3">
-            <span class="pr-figure font-mono text-[22px] font-semibold leading-none text-[var(--pr-color-secondary-400)]">
-              {{ myStatusTotals().total }}
-            </span>
-            <span class="text-[11px] font-medium text-[var(--pr-color-accents-6)]">Reported by you</span>
-          </div>
-
-          @for (tile of myStatusTotals().tiles; track tile.id) {
-            <div class="flex flex-col gap-1 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-4 py-3">
-              <span class="pr-figure font-mono text-[22px] font-semibold leading-none text-[var(--pr-color-secondary-400)]">
-                {{ tile.count }}
-              </span>
-              <span class="flex items-center gap-1.5 text-[11px] font-medium text-[var(--pr-color-accents-6)]">
-                <span class="size-2 flex-none rounded-full" [ngClass]="tile.dotClass" aria-hidden="true"></span>
-                {{ tile.label }}
-              </span>
-            </div>
-          }
-        </div>
-      </section>
+      </button>
     }
+  </div>
 
-    <!-- Where you report. Programmes and centres in one list: to the person they are the same kind
-         of thing — a place their results live — and two grids of cards for two and three items was
-         most of the old page. -->
-    <section class="flex flex-col gap-3" aria-label="Where you report">
-      <h2 class="m-0 text-[15px] font-bold text-[var(--pr-color-secondary-400)]">Where you report</h2>
-
-      @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
-        @for (item of [0, 1]; track $index) {
-          <div class="pr-skeleton" style="width:100%;height:56px"></div>
+  <!-- OVERVIEW: where you report, then what just happened. The donut that used to sit here is
+       gone: it told the same four figures as the meter above, on the same screen. -->
+  @if (activeTab() === 'overview') {
+    <div class="flex flex-col gap-6">
+    @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+      <div class="flex gap-3">
+        @for (item of [0, 1, 2]; track $index) {
+          <div class="pr-skeleton" style="width:280px;height:150px;border-radius:16px"></div>
         }
-      } @else if (myPlaces().length > 0) {
-        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+      </div>
+    } @else if (myPlaces().length > 0) {
+      <section aria-label="Where you report">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 class="m-0 text-[13px] font-bold text-[var(--pr-color-secondary-400)]">Where you report</h2>
+          <div class="flex items-center gap-1.5">
+          <button
+            type="button"
+            class="flex size-8 cursor-pointer items-center justify-center rounded-full border-none bg-white text-[var(--pr-color-accents-6)] shadow-[0_1px_3px_rgba(25,21,36,0.08)] transition-colors hover:text-[var(--pr-color-primary-400)]"
+            aria-label="Previous"
+            (click)="slidePlaces(-1)">
+            <i class="material-icons-round text-[18px]" aria-hidden="true">chevron_left</i>
+          </button>
+          <button
+            type="button"
+            class="flex size-8 cursor-pointer items-center justify-center rounded-full border-none bg-white text-[var(--pr-color-accents-6)] shadow-[0_1px_3px_rgba(25,21,36,0.08)] transition-colors hover:text-[var(--pr-color-primary-400)]"
+            aria-label="Next"
+            (click)="slidePlaces(1)">
+            <i class="material-icons-round text-[18px]" aria-hidden="true">chevron_right</i>
+          </button>
+          </div>
+        </div>
+
+        <!-- The fade is the only cue that the strip continues past the edge; without it a cut-off
+             card reads as a rendering bug. Pointer-events off so it never eats a click on a card. -->
+        <div class="relative">
+          <div
+            class="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[var(--pr-color-accents-1)] to-transparent"
+            aria-hidden="true"></div>
+          <div #placesRail class="custom_scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
           @for (place of myPlaces(); track place.kind + place.code) {
-            <li>
-              <a
-                class="flex items-center gap-3 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-4 py-3 transition-colors hover:border-[var(--pr-color-primary-200)] hover:bg-[var(--pr-color-primary-25,#faf8ff)]"
-                [routerLink]="place.link">
+            <a
+              data-place-card
+              class="flex w-[280px] flex-none snap-start flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(25,21,36,0.06)] transition-shadow hover:shadow-[0_6px_18px_rgba(25,21,36,0.10)]"
+              [routerLink]="place.link">
+              <div class="flex items-center justify-between gap-2">
                 <span
-                  class="pr-code w-[86px] flex-none truncate rounded-md px-2 py-1 text-center font-mono text-[11px] font-semibold"
+                  class="pr-code truncate rounded-md px-2 py-1 font-mono text-[11px] font-semibold"
                   [title]="place.code"
                   [ngClass]="place.kind === 'center'
                     ? 'bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-6)]'
                     : 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'">
                   {{ place.code }}
                 </span>
-
-                <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--pr-color-secondary-400)]" [title]="place.name">
-                  {{ place.name }}
+                <span class="text-[11px] text-[var(--pr-color-accents-5)]">
+                  {{ place.kind === 'center' ? 'Bilateral' : 'Science program' }}
                 </span>
+              </div>
 
-                @if (place.kind === 'program' && place.total > 0) {
-                  <span
-                    class="hidden h-1.5 w-[120px] flex-none overflow-hidden rounded-full bg-[var(--pr-color-accents-2)] sm:block"
-                    [attr.aria-label]="place.reported + ' of ' + place.total + ' reported'">
+              <p class="m-0 line-clamp-2 min-h-[36px] text-[14px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]" [title]="place.name">
+                {{ place.name }}
+              </p>
+
+              @if (place.kind === 'program' && place.total > 0) {
+                <div>
+                  <div class="flex items-baseline justify-between gap-2">
+                    <span class="pr-figure font-mono text-[20px] font-semibold leading-none text-[var(--pr-color-secondary-400)]">
+                      {{ place.total }}
+                    </span>
+                    <span class="text-[11px] text-[var(--pr-color-accents-6)]">{{ place.reported }} reported</span>
+                  </div>
+                  <span class="mt-2 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
                     <span class="block h-full rounded-full bg-brand-300" [style.width.%]="place.percent"></span>
                   </span>
-                  <span class="pr-code w-[64px] flex-none text-right font-mono text-[11px] text-[var(--pr-color-accents-6)]">
-                    {{ place.reported }}/{{ place.total }}
-                  </span>
-                } @else {
-                  <span class="w-[64px] flex-none text-right text-[11px] text-[var(--pr-color-accents-5)]">
-                    {{ place.kind === 'center' ? 'Bilateral' : 'No results' }}
-                  </span>
-                }
-
-                <i class="material-icons-round flex-none text-[18px] text-[var(--pr-color-accents-4)]" aria-hidden="true">chevron_right</i>
-              </a>
-            </li>
+                </div>
+              } @else {
+                <p class="m-0 text-[12px] text-[var(--pr-color-accents-5)]">
+                  {{ place.kind === 'center' ? 'Open the centre workspace' : 'No results yet this phase' }}
+                </p>
+              }
+            </a>
           }
-        </ul>
-      } @else {
-        <app-alert-status
-          [collapsible]="false"
-          inlineStyles="background-color: var(--pr-color-white); margin: 0;"
-          description="You do not have a member role in any Science Program, Accelerator or CGIAR Center yet. If you need access, contact your Science Program coordinator or your system administrator."></app-alert-status>
+          </div>
+        </div>
+      </section>
+    } @else {
+      <app-alert-status
+        [collapsible]="false"
+        inlineStyles="background-color: var(--pr-color-white); margin: 0;"
+        description="You do not have a member role in any Science Program, Accelerator or CGIAR Center yet. If you need access, contact your Science Program coordinator or your system administrator."></app-alert-status>
+    }
+
+      @if (resultFrameworkReportingHomeService.recentActivityList().length > 0) {
+        <section aria-label="Latest activity">
+          <div class="mb-3 flex items-baseline justify-between gap-3">
+            <h2 class="m-0 text-[13px] font-bold text-[var(--pr-color-secondary-400)]">Latest activity</h2>
+            <button
+              type="button"
+              class="cursor-pointer border-none bg-transparent p-0 text-[12px] font-semibold text-brand-400 hover:underline"
+              (click)="activeTab.set('activity')">
+              See all
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-2.5 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(25,21,36,0.06)]">
+            @for (item of resultFrameworkReportingHomeService.recentActivityList().slice(0, 3); track $index) {
+              <app-result-framework-reporting-recent-item [item]="item" />
+            }
+          </div>
+        </section>
       }
-    </section>
+    </div>
+  }
 
-    <!-- Reporting overview + recent activity, for viewports where the right column stacks. -->
-    <app-result-framework-reporting-insights class="min-[1115px]:hidden" />
-
-    <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white min-[1115px]:hidden">
-      <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
-        <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
-      </div>
-
-      <div class="flex flex-col gap-3 px-4 pb-6 pt-4">
-        @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
+  <!-- ACTIVITY -->
+  @if (activeTab() === 'activity') {
+    <section class="rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(25,21,36,0.06)]" aria-label="Recent activity">
+      @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
+        <div class="flex flex-col gap-3">
           @for (item of [0, 1, 2, 3, 4, 5]; track $index) {
             <div class="pr-skeleton" style="width:100%;height:72px"></div>
           }
-        } @else {
-          @for (item of resultFrameworkReportingHomeService.recentActivityList().slice(0, 6); track $index) {
-            <app-result-framework-reporting-recent-item [item]="item" />
-          } @empty {
-            <p class="m-0 py-6 text-center text-[13px] text-[var(--pr-color-accents-5)]">No recent activity yet</p>
-          }
-        }
-      </div>
-    </section>
-
-    <!-- The rest of the portfolio. Still reachable, no longer the page: these are the programmes the
-         person does NOT report on, and they used to fill everything below the fold. -->
-    @if (!resultFrameworkReportingHomeService.isLoadingSPLists() &&
-      (resultFrameworkReportingHomeService.otherSPsList().length > 0 || resultFrameworkReportingHomeService.otherProjectsList().length > 0)) {
-      <section class="overflow-hidden rounded-xl border border-[var(--pr-color-accents-2)] bg-white" aria-label="The rest of the portfolio">
-        <button
-          type="button"
-          class="flex w-full cursor-pointer items-center gap-2 border-none bg-transparent px-4 py-3.5 text-left transition-colors hover:bg-[var(--pr-color-accents-1)]"
-          [attr.aria-expanded]="exploreOpen()"
-          (click)="exploreOpen.set(!exploreOpen())">
-          <i
-            class="material-icons-round flex-none text-[20px] text-[var(--pr-color-accents-5)] transition-transform"
-            [class.rotate-90]="exploreOpen()"
-            aria-hidden="true">
-            chevron_right
-          </i>
-          <span class="flex-1 text-[13px] font-semibold text-[var(--pr-color-secondary-400)]">
-            Explore the rest of the portfolio
-            <span class="ms-1.5 rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[11px] font-semibold text-[var(--pr-color-accents-6)]">
-              {{ resultFrameworkReportingHomeService.otherSPsList().length + resultFrameworkReportingHomeService.otherProjectsList().length }}
-            </span>
-          </span>
-          <span class="hidden text-[11px] text-[var(--pr-color-accents-5)] md:block">
-            Science Programs, Accelerators and projects you do not report on
-          </span>
-        </button>
-
-        @if (exploreOpen()) {
-          <div class="grid grid-cols-[repeat(auto-fill,minmax(315px,1fr))] gap-4 border-t border-[var(--pr-color-accents-2)] p-4 min-[1500px]:grid-cols-3">
-            @for (item of resultFrameworkReportingHomeService.otherSPsList(); track $index) {
-              <app-result-framework-reporting-card-item [item]="item" />
-            }
-            @for (item of resultFrameworkReportingHomeService.otherProjectsList(); track $index) {
-              <app-result-framework-reporting-card-item [item]="item" />
-            }
-          </div>
-        }
-      </section>
-    }
-  </div>
-
-  <!-- Right column (desktop): reporting overview + recent activity -->
-  <div class="flex h-fit w-full flex-col gap-5 max-[1115px]:hidden">
-    <app-result-framework-reporting-insights />
-
-    <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white">
-      <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
-        <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
-      </div>
-
-      <div class="flex flex-col gap-3 px-4 pb-7 pt-4">
-        @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
-          @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
-            <div class="pr-skeleton" style="width:100%;height:72px"></div>
-          }
-        } @else {
+        </div>
+      } @else {
+        <div class="flex flex-col gap-2.5">
           @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
             <app-result-framework-reporting-recent-item [item]="item" />
           } @empty {
-            <div class="flex flex-col items-center justify-center gap-2 py-10 text-center text-[var(--pr-color-accents-5)]">
-              <i class="material-icons-round text-[32px]">history</i>
-              <p class="m-0 text-[13px]">No recent activity yet</p>
-            </div>
+            <p class="m-0 py-10 text-center text-[13px] text-[var(--pr-color-accents-5)]">No recent activity yet</p>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- PORTFOLIO: the programmes the person does not report on. A tab, not the bottom of the page. -->
+  @if (activeTab() === 'portfolio') {
+    <section aria-label="The rest of the portfolio">
+      <p class="m-0 mb-3 text-[12px] text-[var(--pr-color-accents-6)]">
+        Science Programs, Accelerators and projects you do not report on.
+      </p>
+
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+        @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+          @for (item of [0, 1, 2, 3, 4, 5]; track $index) {
+            <div class="pr-skeleton" style="width:100%;height:156px"></div>
+          }
+        } @else {
+          @for (item of resultFrameworkReportingHomeService.otherSPsList(); track $index) {
+            <app-result-framework-reporting-card-item [item]="item" />
+          }
+          @for (item of resultFrameworkReportingHomeService.otherProjectsList(); track $index) {
+            <app-result-framework-reporting-card-item [item]="item" />
           }
         }
       </div>
     </section>
-  </div>
+  }
 </div>
