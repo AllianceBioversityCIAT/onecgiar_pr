@@ -411,6 +411,19 @@ Summary: "the AI `unavailable` travels on a dedicated third union member carryin
 
 ADVISORY (T-5b, recorded): **→ `/akili-test`:** `maxBodyLength: 65_536` bounds the **outbound request**, while design §8's 32 KB figure is about stored JSON columns — a payload over 64 KB would throw pre-flight, classify as `http_error` and store `unavailable` with no distinguishing signal. Measure the largest real payload before leaving `maxBodyLength` in; consider keeping `maxContentLength` only. · `HOST_PATTERN` over-redacts prose: `report.pdf`, `data.csv` or any period not followed by a space becomes `[redacted]` in a message **rendered verbatim to the user** (design §6.3 partial notice) — watch it in TEST, consider a file-extension exclusion. · The leak marker is only injected on the `ai_unavailable` path; the `ok`/`partial` assertion is vacuous for that branch (two lines to close). · The log spy maps `String(call[0])`, so a future second argument would slip past the privacy loop — `call.map(String).join(' ')` keeps it honest. · **`T-6` must not treat the `maxContentLength` assertion as proof the bound works** — it is a presence check the code itself documents as not exercisable under the mocked `post`.
 
+### `BIL-QAI-T-6` — Orchestrator, shared pre-submit guards, running lock, and endpoints
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (Leader fallback review after Implementer handoff) |
+| Date | 2026-09-16 |
+| Verification | Focused Jest: **4 suites / 169 tests passed**; `tsc --noEmit` clean; scoped ESLint clean; `git diff --check` clean; `migration:check` reports **0 pending** (489 executed / 480 source migrations). |
+| Scope verified | `assertSubmittable` is shared by submit and assessment; assessment does not update result status, write review history, or emit the submitted notification; KP path bypasses HTTP; v0.2 status mapping and generic form-read error handling are covered; controller/module wiring is present. |
+| Concurrency correction | Added a per-result SQL mutex (`SELECT id FROM result WHERE id = ? FOR UPDATE`) before the young-running-row query. The previous query-only check allowed two concurrent transactions to both observe no running row and insert duplicates. Test asserts the mutex query and preserves the 202 existing-row path. |
+| Commit | pending existing T-6 worktree; no new commit created by this review |
+
+**Open follow-up:** T-6 still carries the T-5b owner question for Daniela about whether an AI `status: unavailable` response always includes the full verdict body. The current implementation conservatively follows the frozen v0.2 contract and treats missing required body keys as `malformed`.
+
 ### `BIL-QAI-T-4b` — Type-specific mapper v0.2, label constants, impact-areas mapper, tag-vocabulary fix
 
 | Field | Value |
@@ -477,3 +490,9 @@ Summary: "the raw `result_actors` read is genuinely un-post-processed, correctly
 
 Other advisories (recorded): `loadRawInnovationUseActors` omits `section_id: INNOVATION_USE_SECTION_CURRENT` unlike the precedent it cites — harmless today (keyed lookup against an already section-1-filtered list) but it over-fetches and loses the self-documenting intent · the falsifying test's name describes the `[]`-default path while the assertion that would go red on a regression is the `total: 589` one · the `{'IND-20123-1': …}` lookup literal is written three times in the spec; a module-level const would remove the drift surface · **`dataSource?: DataSource` is TypeScript-optional with no `@Optional()`** — production DI resolves it, but should it ever not, `build()` would silently emit the disaggregated-only total rather than failing loudly, which is the exact failure mode this task just fixed.
 
+### Outbound AI endpoint wiring check (2026-09-17)
+
+- Owner configured `BILATERAL_AI_QUALITY_URL` in the server `.env`; the value was intentionally not printed. The client already composes `{base}/prms/quality-assessment` and reuses `MICROSERVICE_API_KEY` for `X-API-Key`.
+- Per owner direction, the outbound JSON root now carries `user_id` with the authenticated Centre user's email. It is an existing transport field of the shared AI Review service, so this is additive to contract v0.2 rather than a version bump. The email is not added to `QualityPayload`, persistence or `contentHash`, and no logger template includes it.
+- Local verification: focused client/orchestrator Jest suites **2 / 50 passed**; `npx tsc --noEmit`, scoped ESLint and `git diff --check` passed. The request test asserts the configured path and body `user_id`; its privacy twin proves that email is absent from all captured `Logger` arguments.
+- Deferred live proof: invoke the authenticated bilateral assessment route with a designated TEST result. This must use a real saved result and API key, so it is not substituted with an anonymous curl probe.

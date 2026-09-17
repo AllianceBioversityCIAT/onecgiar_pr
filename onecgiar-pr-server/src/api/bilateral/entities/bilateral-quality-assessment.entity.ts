@@ -125,7 +125,11 @@ export class BilateralQualityAssessment {
 
   /** One entry per form section — verdict, optional score, comments, issues, strengths. */
   @Column({ type: 'json' })
-  sections: Record<QualitySectionKey, QualitySectionResult>;
+  /**
+   * Partial: a result type with no type-specific section has no `type_specific` verdict, so the key
+   * is simply absent. Readers iterate what is there instead of indexing the five.
+   */
+  sections: Partial<Record<QualitySectionKey, QualitySectionResult>>;
 
   /** Per-evidence verdicts, index-matched to the payload evidence list post grey-rule. */
   @Column({ type: 'json' })

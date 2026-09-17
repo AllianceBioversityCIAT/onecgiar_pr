@@ -46,6 +46,11 @@ import { ResultsKnowledgeProductsRepository } from '../../results/results-knowle
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
+import { BilateralQualityAssessmentService } from './quality-assessment/bilateral-quality-assessment.service';
+import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
+import { BilateralQualityAssessment } from '../entities/bilateral-quality-assessment.entity';
+import { hasOutstandingFlags } from './quality-assessment/bilateral-quality-rules';
+import { SubmitForReviewDto } from '../dto/submit-for-review.dto';
 import { ChangeCenterResultTypeDto } from '../dto/change-center-result-type.dto';
 import { UpdateBilateralPrimaryAssignmentDto } from '../dto/update-bilateral-primary-assignment.dto';
 import { ResultsByProjects } from '../../results/results_by_projects/entities/results_by_projects.entity';
@@ -79,6 +84,8 @@ export class BilateralCenterService {
     private readonly resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly shareResultRequestRepository: ShareResultRequestRepository,
     private readonly innovationUseMdsValidator: InnovationUseMdsValidator,
+    private readonly qualityAssessmentService: BilateralQualityAssessmentService,
+    private readonly qualityAssessmentRepository: BilateralQualityAssessmentRepository,
   ) {}
 
   async getProjects(centerId: number) {
@@ -1507,7 +1514,146 @@ export class BilateralCenterService {
    * row, and `_updateTocMapping` dereferences it on approval. Letting a result through without one
    * would produce an invisible notification and a 500 on approve.
    */
-  async submitForReview(user: TokenDto, resultId: number) {
+  async submitForReview(
+    user: TokenDto,
+    resultId: number,
+    dto: SubmitForReviewDto,
+  ) {
+    const result = await this.assertSubmittable(user, resultId);
+    const parsedResultId = result.id;
+    const assessment = await this.assertAssessmentDecision(parsedResultId, dto);
+
+    await this.resultRepository.manager.transaction(async (manager) => {
+      // The decision and status transition are one atomic event. `NOW()` is
+      // deliberate: MySQL owns the timestamp, avoiding a local JS Date.
+      await manager.query(
+        `UPDATE bilateral_quality_assessments
+           SET decision = ?, had_outstanding_flags = ?, decided_at = NOW()
+         WHERE id = ? AND result_id = ? AND decision IS NULL`,
+        [
+          dto.decision,
+          hasOutstandingFlags(assessment) ? 1 : 0,
+          Number(assessment.id),
+          parsedResultId,
+        ],
+      );
+      await manager.update(
+        Result,
+        { id: parsedResultId },
+        {
+          status_id: ResultStatusData.PendingReview.value,
+          last_updated_by: user.id,
+          // The reviewer's "Submission date" column reads `external_submitted_date`
+          // (`result.repository.ts:2844`). Only the interoperability path used to write it, so
+          // results submitted from the centre form reached the review queue with an empty date.
+          external_submitted_date: new Date().toISOString(),
+          // Same gap for "Submitted by": the drawer renders `submitter_name`, which the query builds
+          // from `LEFT JOIN users u ON r.external_submitter = u.id` (`result.repository.ts:3019-3020`),
+          // so an unstamped column left the reviewer without knowing who sent the result.
+          // The column is a FK to `users.id` (`result.entity.ts:525-535`, `@ManyToOne(() => User)`):
+          // "external" describes where the RESULT came from, not that the user must be external, so a
+          // platform user id is the value it was built for.
+          external_submitter: user.id,
+        },
+      );
+
+      // The action enum has no dedicated SUBMIT value and the column enum is narrow, so the
+      // transition is recorded as UPDATE — the same value the review-update flows already write.
+      const reviewHistory = manager.create(ResultReviewHistory, {
+        result_id: parsedResultId,
+        action: ReviewActionEnum.UPDATE,
+        comment: 'Submitted for review by the reporting center',
+        created_by: user.id,
+      });
+      await manager.save(ResultReviewHistory, reviewHistory);
+    });
+
+    // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
+    // Post-commit and non-blocking (the emitter never throws) — the submit already succeeded.
+    await this.bilateralService.emitBilateralSubmittedNotification(
+      parsedResultId,
+      user.id,
+    );
+
+    return {
+      response: {
+        resultId: parsedResultId,
+        status: ResultStatusData.PendingReview.value,
+      },
+      message: 'Result submitted for review successfully',
+    };
+  }
+
+  /**
+   * Prevents the legacy empty PATCH from bypassing the traffic-light flow.
+   * A row must belong to this result, be terminal and current, and receive
+   * the decision that its terminal state permits.
+   */
+  private async assertAssessmentDecision(
+    resultId: number,
+    dto: SubmitForReviewDto,
+  ): Promise<BilateralQualityAssessment> {
+    if (!dto || !Number.isInteger(Number(dto.assessment_id))) {
+      throw new BadRequestException(
+        'Run the quality assessment before submitting this result for review.',
+      );
+    }
+
+    const assessment = await this.qualityAssessmentRepository.findOne({
+      where: { id: Number(dto.assessment_id), result_id: resultId },
+    });
+    if (!assessment) {
+      throw new BadRequestException(
+        'The selected quality assessment does not belong to this result.',
+      );
+    }
+    if (assessment.decision || assessment.status === 'running') {
+      throw new BadRequestException(
+        'The selected quality assessment can no longer be used for submission.',
+      );
+    }
+
+    const latest = await this.qualityAssessmentService.getLatest(resultId);
+    if (
+      'latest' in latest ||
+      latest.id !== Number(assessment.id) ||
+      !latest.is_current
+    ) {
+      throw new BadRequestException(
+        'The quality assessment is stale. Run it again after changing the result.',
+      );
+    }
+
+    const allowedDecision =
+      assessment.status === 'unavailable'
+        ? 'submitted_without_check'
+        : assessment.status === 'completed' ||
+            assessment.status === 'skipped_kp_rule'
+          ? 'submitted_anyway'
+          : null;
+    if (dto.decision !== allowedDecision) {
+      throw new BadRequestException(
+        'This submission decision does not match the quality assessment status.',
+      );
+    }
+    return assessment;
+  }
+
+  /**
+   * The four pre-submit guards `submitForReview` has always run, extracted so the AI quality
+   * assessment (`assess`, below) can share them verbatim rather than duplicating them
+   * (`BIL-QAI-DD-5`, `docs/specs/bilateral/qa-ai-traffic-light/design.md` §5 "Orchestrator"
+   * step 1): the result must be an active bilateral result in Editing or Draft, the caller
+   * must hold the Center User role on its lead centre, it must have a Science Program
+   * assigned, and — for Innovation Use — its MDS tracker must already be complete. Returns
+   * the validated `Result` row so callers avoid a second lookup.
+   *
+   * @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+   */
+  private async assertSubmittable(
+    user: TokenDto,
+    resultId: number,
+  ): Promise<Result> {
     const parsedResultId = Number(resultId);
     if (
       !parsedResultId ||
@@ -1558,51 +1704,60 @@ export class BilateralCenterService {
       await this.innovationUseMdsValidator.assertPersistedMds(parsedResultId);
     }
 
-    await this.resultRepository.manager.transaction(async (manager) => {
-      await manager.update(
-        Result,
-        { id: parsedResultId },
-        {
-          status_id: ResultStatusData.PendingReview.value,
-          last_updated_by: user.id,
-          // The reviewer's "Submission date" column reads `external_submitted_date`
-          // (`result.repository.ts:2844`). Only the interoperability path used to write it, so
-          // results submitted from the centre form reached the review queue with an empty date.
-          external_submitted_date: new Date().toISOString(),
-          // Same gap for "Submitted by": the drawer renders `submitter_name`, which the query builds
-          // from `LEFT JOIN users u ON r.external_submitter = u.id` (`result.repository.ts:3019-3020`),
-          // so an unstamped column left the reviewer without knowing who sent the result.
-          // The column is a FK to `users.id` (`result.entity.ts:525-535`, `@ManyToOne(() => User)`):
-          // "external" describes where the RESULT came from, not that the user must be external, so a
-          // platform user id is the value it was built for.
-          external_submitter: user.id,
-        },
-      );
+    return result;
+  }
 
-      // The action enum has no dedicated SUBMIT value and the column enum is narrow, so the
-      // transition is recorded as UPDATE — the same value the review-update flows already write.
-      const reviewHistory = manager.create(ResultReviewHistory, {
-        result_id: parsedResultId,
-        action: ReviewActionEnum.UPDATE,
-        comment: 'Submitted for review by the reporting center',
-        created_by: user.id,
-      });
-      await manager.save(ResultReviewHistory, reviewHistory);
-    });
-
-    // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
-    // Post-commit and non-blocking (the emitter never throws) — the submit already succeeded.
-    await this.bilateralService.emitBilateralSubmittedNotification(
-      parsedResultId,
-      user.id,
+  /**
+   * `POST /api/bilateral/center/quality-assessment/:resultId` — runs (or reuses) the AI
+   * quality assessment ahead of submit, gated by the exact same preconditions as
+   * `submitForReview` (`assertSubmittable` above), and never changes `status_id`, writes
+   * review history, or fires the submitted notification (`BIL-QAI-R-1`).
+   *
+   * @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+   */
+  async assess(user: TokenDto, resultId: number) {
+    const result = await this.assertSubmittable(user, resultId);
+    const { dto, httpStatus } = await this.qualityAssessmentService.assess(
+      user,
+      result,
     );
 
     return {
-      response: {
-        resultId: parsedResultId,
-        status: ResultStatusData.PendingReview.value,
-      },
-      message: 'Result submitted for review successfully',
+      response: dto,
+      message:
+        httpStatus === 202
+          ? 'A quality assessment is already running for this result'
+          : 'Quality assessment completed',
+      status: httpStatus,
+    };
+  }
+
+  /**
+   * `GET /api/bilateral/center/quality-assessment/:resultId/latest` — read-only, gated by
+   * centre permission only (design.md §4.2): a reviewer reopening a result mid-run or after a
+   * closed tab needs this regardless of the result's current `status_id`.
+   *
+   * @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+   */
+  async getLatest(user: TokenDto, resultId: number) {
+    const parsedResultId = Number(resultId);
+    if (
+      !parsedResultId ||
+      !Number.isFinite(parsedResultId) ||
+      parsedResultId <= 0
+    ) {
+      throw new BadRequestException(
+        'The resultId parameter must be a valid positive number.',
+      );
+    }
+
+    await this.assertCenterPermission(user, parsedResultId);
+    const dto = await this.qualityAssessmentService.getLatest(parsedResultId);
+
+    return {
+      response: dto,
+      message: 'Latest quality assessment retrieved successfully',
+      status: 200,
     };
   }
 

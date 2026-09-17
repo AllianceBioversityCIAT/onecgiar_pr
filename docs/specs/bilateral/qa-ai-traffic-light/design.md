@@ -176,7 +176,8 @@ This section is the *shape*; the contract copy is the authority and is rewritten
 
 ```
 contract_version: "0.2"
-request_id:       uuid                       ← the only identifier in the request
+request_id:       uuid                       ← identifies this call, not the result
+user_id:          authenticated user email   ← transport metadata; never persisted, hashed or logged
 result:           { type, reporting_phase, reporting_center, primary_science_program }
 sections:         { general_information, contributors_and_partners, geographic_location, evidence[], type_specific }
 impact_areas:     [ { name, score, subcomponents[] } ]   ← NEW, sibling of `sections`, optional

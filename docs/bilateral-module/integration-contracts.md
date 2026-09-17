@@ -506,7 +506,7 @@ Every value PRMS sends is the label the form displays — the same text a Centre
 - Any CLARISA identifier or catalogue code.
 - `result_code` or PRMS's internal `result.id`.
 
-The **only** identifier in the request is `request_id`, a UUID generated per call; it identifies the call, not the result. PRMS assembles the payload from the **persisted** result (not the client's in-memory form state), so the assessment always reflects saved content.
+`request_id` is a UUID generated per call; it identifies the call, not the result. `user_id` is the authenticated Centre user's **email address** (the AI service's established field name is retained even though its value is an email). It is transport metadata only: PRMS never logs it, persists it in `bilateral_quality_assessments`, or includes it in the content hash. PRMS assembles the result content from the **persisted** result (not the client's in-memory form state), so the assessment always reflects saved content.
 
 ### Request
 
@@ -523,6 +523,7 @@ POST {BILATERAL_AI_QUALITY_URL}/prms/quality-assessment
 {
   "contract_version": "0.2",
   "request_id": "uuid",
+  "user_id": "centre.user@cgiar.org",
   "result": {
     "type": "Innovation development",
     "reporting_phase": "Reporting 2026",
@@ -791,6 +792,7 @@ No response body, API key, or host name is ever surfaced to the user or logged (
 **Change log**
 - **2026-09-16** — copied contract v0.1 (request/response shapes, section keys, evidence rules, optional `score`, error/timeout semantics) from the frozen vault note into this section (`BIL-QAI-T-1`).
 - **2026-09-16** — amended to contract **v0.2** (`BIL-QAI-T-1b`): request now carries `contract_version: "0.2"` and an optional top-level `impact_areas` (sibling of `sections`, `{name, score, subcomponents[]}` — plural `subcomponents` — absent/empty ⇒ not applicable, not grey, no penalty); replaced the flat hand-written `type_specific.fields` example with a frozen per-type label table plus typed value objects (count/amount objects, single `Length of training`, `Innovation developers` never substituted) and one JSON example per type; corrected the evidence-tag vocabulary to the closed set Gender · Youth · Nutrition · Environment & biodiversity · Poverty and removed the wrong evidence-tag example that paired Gender with a non-existent Climate tag (GAP-6, no evidence tag for Climate); documented GAP-7 (Innovation use has no non-binary/unknown counts); response now requires `status` (`completed\|partial\|unavailable`) and `degraded_reason`, and `sections.<key>.verdict` widens to include `grey` (excluded from the overall); added the PRMS status-mapping table including `unavailable_reason = ai_unavailable`; dropped the ordering guarantee over the five section keys (never part of the frozen contract, was an advisory only); added the sub-component catalogue table (13 seeded values across the five pillars, from `impact_areas_scores_components`) and replaced the invented `"Women's empowerment"` example value with the real seeded values `["Gender equality", "Youth"]` in both JSON examples; corrected the Policy change example's invented `"USD amount".status` value `"Committed"` to the real `"Confirmed"` and enumerated the closed set `Confirmed`\|`Estimated`\|`Unknown` (`mapPolicyChangeAmountStatusLabel()`, `bilateral.service.ts:3481-3487`); corrected three further truncated/invented catalogue labels found on a second pass — Policy change's `"Policy type": "Regulation"` → `"Regulation / legal instrument"` and `"Policy stage": "Adopted"` → `"Enacted / adopted"` (both sourced to `fixtures/policy-change.fixture.json:116-117,167-168`), and Innovation development's `"Innovation typology": "Technological"` → `"Technological innovation"` in both JSON examples (`fixtures/innovation-development.fixture.json:153`, `handlers/innovation-development.handler.spec.ts:10`, `dto/create-bilateral.dto.ts:342`; the stale `"Technological"` value had already propagated into `bilateral-quality-assessment.client.spec.ts:92`, corrected alongside this doc) — and corrected the Innovation development readiness-level example, `"Level 6 — Proof of concept"` → `"Level 6 — Proven innovation ready for uptake"`, sourced to `fixtures/innovation-development.fixture.json:157-158` (the previous pairing did not appear in this or any other in-repo fixture) (`BIL-QAI-T-1b`).
+- **2026-09-17** — the outbound call now also carries root `user_id`, whose value is the authenticated Centre user's email address. This is an additive v0.2 transport field already accepted by the shared AI Review service, so `contract_version` remains `0.2`; it is excluded from persisted assessment content, hashes and logs.
 
 ## Contract Stability Rules
 

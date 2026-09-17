@@ -46,7 +46,12 @@ export interface AiAssessmentResponse {
     score?: number | null;
     summary: string;
   };
-  sections: Record<QualitySectionKey, QualitySectionResult>;
+  /**
+   * Partial on purpose: a result type with no type-specific section (Other output, Other
+   * outcome) has nothing to judge there, so the AI omits the key rather than inventing a
+   * verdict for a section the editor does not even render. Every other key is always present.
+   */
+  sections: Partial<Record<QualitySectionKey, QualitySectionResult>>;
   evidence: QualityEvidenceItem[];
 }
 
@@ -131,6 +136,20 @@ function sortKeysDeep(value: unknown): unknown {
 }
 
 const PRIVATE_EVIDENCE_REASON = 'Private repository file — not evaluated';
+/**
+ * Reason for a grey entry appended when the AI's response omits a payload evidence item
+ * entirely (amended at execution gate 1, 2026-09-16 — `BIL-QAI-T-6`; design.md §5 "Grey
+ * rule"). No literal for this exact case exists in the contract or requirements — this text
+ * is authored for this task, not copied from a spec source, and is flagged as such in the
+ * Implementer report's self-check table.
+ */
+const OMITTED_EVIDENCE_REASON = 'Not returned by the AI — not evaluated';
+
+function isPrivateEvidence(
+  item: QualityPayloadEvidenceItem | undefined,
+): boolean {
+  return !!item && (item.visibility === 'private' || item.link === null);
+}
 
 /**
  * Forces `grey` on every evidence item the payload marks `visibility: private`
@@ -139,48 +158,77 @@ const PRIVATE_EVIDENCE_REASON = 'Private repository file — not evaluated';
  * or `overall` — grey never derives or alters a section colour (BIL-QAI-R-4
  * "Grey never colours a section"). Returns a new object; the inputs are not
  * mutated.
+ *
+ * **Amended 2026-09-16 at execution gate 1 (owner approval; applied in `BIL-QAI-T-6`,
+ * superseding the literal `evidence[i]` version `T-3` shipped):** matching is by the response
+ * item's own `index` field — the contract's join key — never by array position, and a payload
+ * evidence item the AI's response omits entirely gets a grey entry appended rather than being
+ * silently dropped. A response entry whose `index` matches no payload item (or is not an
+ * in-range integer) is itself dropped — the AI cannot invent an evidence item PRMS never sent.
  */
 export function applyGreyRule(
   response: AiAssessmentResponse,
   payload: QualityPayload,
 ): AiAssessmentResponse {
   const payloadEvidence = payload.sections.evidence;
+  const seenPayloadIndexes = new Set<number>();
 
-  const evidence = response.evidence.map((item, i) => {
-    const payloadItem = payloadEvidence[i];
-    const isForcedGrey =
-      !!payloadItem &&
-      (payloadItem.visibility === 'private' || payloadItem.link === null);
-
-    if (!isForcedGrey) {
-      return { ...item };
+  const kept: QualityEvidenceItem[] = [];
+  for (const item of response.evidence) {
+    const index = item.index;
+    const inRange =
+      Number.isInteger(index) && index >= 0 && index < payloadEvidence.length;
+    if (!inRange) {
+      // The response named an evidence item PRMS never sent — drop it rather than storing an
+      // index that cannot be resolved back to a payload item.
+      continue;
     }
 
-    if (item.verdict === 'grey') {
-      // The AI already blocked it grey — keep its own reason.
-      return { ...item };
+    const payloadItem = payloadEvidence[index];
+    seenPayloadIndexes.add(index);
+
+    const isForcedGrey = isPrivateEvidence(payloadItem);
+    if (!isForcedGrey || item.verdict === 'grey') {
+      // Either nothing forces grey, or the AI already blocked it grey — keep its own reason.
+      kept.push({ ...item });
+      continue;
     }
 
-    return {
+    kept.push({
       ...item,
       verdict: 'grey' as QualityVerdict,
       reason: PRIVATE_EVIDENCE_REASON,
-    };
+    });
+  }
+
+  const appended: QualityEvidenceItem[] = [];
+  payloadEvidence.forEach((payloadItem, index) => {
+    if (seenPayloadIndexes.has(index)) {
+      return;
+    }
+    appended.push({
+      index,
+      verdict: 'grey',
+      reason: isPrivateEvidence(payloadItem)
+        ? PRIVATE_EVIDENCE_REASON
+        : OMITTED_EVIDENCE_REASON,
+    });
   });
 
   return {
     ...response,
     sections: cloneSections(response.sections),
-    evidence,
+    evidence: [...kept, ...appended],
   };
 }
 
 function cloneSections(
-  sections: Record<QualitySectionKey, QualitySectionResult>,
-): Record<QualitySectionKey, QualitySectionResult> {
-  const cloned = {} as Record<QualitySectionKey, QualitySectionResult>;
+  sections: Partial<Record<QualitySectionKey, QualitySectionResult>>,
+): Partial<Record<QualitySectionKey, QualitySectionResult>> {
+  const cloned: Partial<Record<QualitySectionKey, QualitySectionResult>> = {};
   for (const key of Object.keys(sections) as QualitySectionKey[]) {
     const section = sections[key];
+    if (!section) continue;
     cloned[key] = {
       ...section,
       strengths: [...section.strengths],
@@ -219,7 +267,11 @@ export type KpRuleStatus = 'skipped_kp_rule';
 export interface KpRuleOutcome {
   status: KpRuleStatus;
   overall: { verdict: QualityVerdict; summary: string };
-  sections: Record<QualitySectionKey, QualitySectionResult>;
+  /**
+   * Partial: a result type with no type-specific section has no `type_specific` verdict, so the key
+   * is simply absent. Readers iterate what is there instead of indexing the five.
+   */
+  sections: Partial<Record<QualitySectionKey, QualitySectionResult>>;
   evidence: QualityEvidenceItem[];
 }
 

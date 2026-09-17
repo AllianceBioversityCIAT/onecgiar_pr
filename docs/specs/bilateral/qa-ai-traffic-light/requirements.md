@@ -445,7 +445,7 @@ Cross-cutting project ACs that already apply: AC-2 (transition recorded), AC-4 (
 
 ## Out-of-Band Notes
 
-- Contract **v0.2** supersedes v0.1 (pivot at execution gate 2, 2026-09-16; `design.md` `BIL-QAI-DD-11`). The repo copy and the per-type label enumeration are rewritten by `BIL-QAI-T-1b`; the owner sends the enumeration to Daniela. Version pinned in the payload as `contract_version: "0.2"`.
+- Contract **v0.2** supersedes v0.1 (pivot at execution gate 2, 2026-09-16; `design.md` `BIL-QAI-DD-11`). The repo copy and the per-type label enumeration are rewritten by `BIL-QAI-T-1b`; the owner sends the enumeration to Daniela. Version pinned in the payload as `contract_version: "0.2"`. The 2026-09-17 additive transport field `user_id` carries the authenticated Centre user's email only to the shared AI service; it is not result content and is never persisted, hashed or logged.
 - A change to a type-specific field's **visible label** in the form is a contract break, not a copy edit: it requires a `contract_version` bump, an update to the exported label constant and its fixtures, and a message to Daniela before either side ships.
 - Migration runs in each environment by the owner (memory rule: migrations are generated, pruned, and run by Juan David).
 - No feature flag: the flow is inert until `BILATERAL_AI_QUALITY_URL` is configured; without it the unavailable path shows and submission works as today plus the window.

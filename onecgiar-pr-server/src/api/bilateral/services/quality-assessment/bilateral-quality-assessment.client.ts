@@ -14,6 +14,14 @@ import {
 } from './bilateral-quality-rules';
 
 /**
+ * Transport envelope for the outbound call. `user_id` is the authenticated
+ * Centre user's email, retained under the AI service's existing field name.
+ * It deliberately does not belong to `QualityPayload`: it is neither result
+ * content nor a stable part of an assessment's content hash.
+ */
+type QualityAssessmentRequest = QualityPayload & { user_id: string };
+
+/**
  * HTTP client for the outbound AI quality-assessment call (design.md §5 "AI client";
  * BIL-QAI-R-7, BIL-QAI-AC-15). Reads its configuration from the environment lazily,
  * at call time, so tests can toggle it per case. Never throws for the four failure
@@ -63,11 +71,20 @@ const EVIDENCE_VERDICTS: ReadonlyArray<QualityVerdict> = [
 ];
 const SECTION_VERDICTS: ReadonlyArray<QualityVerdict> = EVIDENCE_VERDICTS;
 
-const SECTION_KEYS: ReadonlyArray<QualitySectionKey> = [
+/**
+ * The four sections every bilateral result has. `type_specific` is deliberately NOT here: Other
+ * output and Other outcome have no type-specific fields and no such section in the editor, so the
+ * AI omits the key. Demanding it turned a perfectly usable four-section verdict into `malformed`,
+ * which the user met as "Quality check unavailable" (reported 17-sep-2026, result 11883).
+ */
+const REQUIRED_SECTION_KEYS: ReadonlyArray<QualitySectionKey> = [
   'general_information',
   'contributors_and_partners',
   'geographic_location',
   'evidence',
+];
+/** Present only when the result type has one — validated when it is, never required. */
+const OPTIONAL_SECTION_KEYS: ReadonlyArray<QualitySectionKey> = [
   'type_specific',
 ];
 
@@ -221,8 +238,14 @@ function isValidAiResponse(body: unknown): body is AiResponseBodyV2 {
   if (!isRecord(sections)) {
     return false;
   }
-  for (const key of SECTION_KEYS) {
+  for (const key of REQUIRED_SECTION_KEYS) {
     if (!isValidSectionResult(sections[key])) {
+      return false;
+    }
+  }
+  // Absent is fine; present-but-malformed is not.
+  for (const key of OPTIONAL_SECTION_KEYS) {
+    if (sections[key] !== undefined && !isValidSectionResult(sections[key])) {
       return false;
     }
   }
@@ -274,6 +297,27 @@ const REDACTED_PLACEHOLDER = '[redacted]';
  * redact when it reports no degradation. Order matters: stripping first means truncation
  * can never cut a URL in half and leave a dangling host fragment.
  */
+/**
+ * The response body as it goes to the log. Everything is kept verbatim so a contract disagreement
+ * can be read off the line — except `degraded_reason`, free text from the far side and the one
+ * field known to carry a host or URL, which goes through {@link sanitizeDegradedReason}.
+ */
+function redactResponseForLog(data: unknown): unknown {
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    return data;
+  }
+  const body = data as Record<string, unknown>;
+  if (!('degraded_reason' in body)) {
+    return body;
+  }
+  const reason = body.degraded_reason;
+  return {
+    ...body,
+    degraded_reason:
+      typeof reason === 'string' ? sanitizeDegradedReason(reason) : reason,
+  };
+}
+
 function sanitizeDegradedReason(reason: string | null): string | null {
   if (reason === null) {
     return null;
@@ -313,16 +357,17 @@ function sanitizeScore(value: unknown): number | null {
  * the Axios response body — every level that changes is rebuilt.
  *
  * **Deliberate side effect (carried from an earlier Reviewer, kept and documented):**
- * `sections` is rebuilt from {@link SECTION_KEYS} — the five known keys — rather than from
+ * `sections` is rebuilt from the known keys — required plus optional — rather than from
  * `Object.keys(body.sections)`, so a response carrying a sixth, unrecognised section key
  * silently drops it on this `ok` path. This matches the "unknown key ignored" forward-
  * compatibility rule the AI client already applies everywhere else (`BIL-QAI-T-9`'s scope
  * assumes the same rule downstream) — it is not an oversight.
  */
 function sanitizeScores(body: AiAssessmentResponse): AiAssessmentResponse {
-  const sections = {} as Record<QualitySectionKey, QualitySectionResult>;
-  for (const key of SECTION_KEYS) {
+  const sections: Partial<Record<QualitySectionKey, QualitySectionResult>> = {};
+  for (const key of [...REQUIRED_SECTION_KEYS, ...OPTIONAL_SECTION_KEYS]) {
     const section = body.sections[key];
+    if (!section) continue;
     sections[key] = { ...section, score: sanitizeScore(section.score) };
   }
 
@@ -375,9 +420,18 @@ export class BilateralQualityAssessmentClient {
    */
   async assess(
     payload: QualityPayload,
-    ctx: { resultId: number },
+    ctx: { resultId: number; userEmail?: string },
   ): Promise<AiClientOutcome> {
-    const requestId = randomUUID();
+    // `BIL-QAI-T-6` forward pointer ("one `requestId` end to end"): the orchestrator mints the
+    // one true id and passes it to the payload builder (`opts.requestId`), which stamps it onto
+    // `payload.request_id`. Reusing it here — instead of minting a second one, as this client
+    // did through `T-5b` — is what makes the outbound HTTP body, this client's own log lines,
+    // and the orchestrator's log line all carry the same value. A caller that has no id yet
+    // (fixture-driven unit tests calling `assess()` directly) still gets a working uuid.
+    const requestId =
+      typeof payload.request_id === 'string' && payload.request_id.length > 0
+        ? payload.request_id
+        : randomUUID();
     const started = Date.now();
 
     if (!this.isConfigured()) {
@@ -386,7 +440,12 @@ export class BilateralQualityAssessmentClient {
 
     const url = `${this.baseUrl()}${QUALITY_ASSESSMENT_PATH}`;
     const timeoutMs = this.timeoutMs();
-    const requestBody: QualityPayload = { ...payload, request_id: requestId };
+    const requestBody: QualityAssessmentRequest = {
+      ...payload,
+      request_id: requestId,
+      user_id: ctx.userEmail?.trim() ?? '',
+    };
+    this.logOutboundPayload(requestBody, ctx.resultId, requestId);
 
     try {
       const response = await this.postWithTimeoutGuard(
@@ -395,6 +454,12 @@ export class BilateralQualityAssessmentClient {
         timeoutMs,
       );
       const elapsedMs = Date.now() - started;
+      this.logInboundResponse(
+        ctx.resultId,
+        requestId,
+        response.status,
+        response.data,
+      );
 
       if (!isValidAiResponse(response.data)) {
         return this.finish(
@@ -468,7 +533,7 @@ export class BilateralQualityAssessmentClient {
    */
   private postWithTimeoutGuard(
     url: string,
-    body: QualityPayload,
+    body: QualityAssessmentRequest,
     timeoutMs: number,
   ): Promise<{ data: unknown; status: number }> {
     let guardTimer: NodeJS.Timeout | undefined;
@@ -501,6 +566,69 @@ export class BilateralQualityAssessmentClient {
     });
 
     return Promise.race([requestPromise, timeoutPromise]);
+  }
+
+  /**
+   * Whether to dump the contract bodies. On in local development by default, and switchable in a
+   * deployed environment with `BILATERAL_AI_QUALITY_DEBUG_PAYLOADS=true` — the two live on separate
+   * switches on purpose: chasing a contract disagreement in TEST must not require flipping
+   * `NODE_ENV`, which changes unrelated behaviour across the whole server.
+   *
+   * Off by default everywhere else. These lines carry the result's full narrative content, which
+   * belongs in an operator's console on request, not in every environment's log stream by default.
+   */
+  private payloadDebugEnabled(): boolean {
+    const raw = env.BILATERAL_AI_QUALITY_DEBUG_PAYLOADS;
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
+    }
+    return process.env.NODE_ENV === 'development';
+  }
+
+  /**
+   * The exact contract body headed to the AI service. Never the email (`user_id`), never the API
+   * key, never the host — those are not in the body, and the one that is gets redacted here
+   * (`.cursorrules`, design.md §7).
+   */
+  private logOutboundPayload(
+    body: QualityAssessmentRequest,
+    resultId: number,
+    requestId: string,
+  ): void {
+    if (!this.payloadDebugEnabled()) return;
+    this.logger.debug({
+      event: 'bilateral_quality_assessment_request',
+      result_id: resultId,
+      request_id: requestId,
+      user_id: '[redacted]',
+      // Overwritten rather than omitted: the line is meant to be the body we sent, and a missing
+      // key would read as "we sent no user_id" — which is a different bug.
+      body: { ...body, user_id: '[redacted]' },
+    });
+  }
+
+  /**
+   * The body the AI answered with, verbatim except for `degraded_reason`, which goes through the
+   * same sanitiser the rest of the class uses — it is free text from the far side and is the one
+   * field that has been seen carrying a host or URL.
+   *
+   * Logged BEFORE the schema check runs, so a body that fails validation is visible: a malformed
+   * response is exactly the case where the payload is the only thing that explains the failure.
+   */
+  private logInboundResponse(
+    resultId: number,
+    requestId: string,
+    httpStatus: number,
+    data: unknown,
+  ): void {
+    if (!this.payloadDebugEnabled()) return;
+    this.logger.debug({
+      event: 'bilateral_quality_assessment_response',
+      result_id: resultId,
+      request_id: requestId,
+      http_status: httpStatus,
+      body: redactResponseForLog(data),
+    });
   }
 
   private classify(error: unknown): {

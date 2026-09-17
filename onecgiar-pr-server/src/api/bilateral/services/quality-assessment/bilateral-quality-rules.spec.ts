@@ -309,6 +309,126 @@ describe('applyGreyRule', () => {
 
     expect(result).not.toBe(response);
   });
+
+  // Amended at execution gate 1, 2026-09-16 (BIL-QAI-T-6): matching is by the response
+  // item's `index`, never by array position.
+  it('matches by index, not by array position, when the response lists evidence out of order', () => {
+    const payload = buildPayload([
+      {
+        description: 'Public item 0',
+        link: 'https://example.org/0',
+        source: 'url',
+        visibility: 'public',
+        tags: [],
+      },
+      {
+        description: 'Private item 1',
+        link: null,
+        source: 'prms_repository',
+        visibility: 'private',
+        tags: [],
+      },
+    ]);
+    // Response lists index 1 first, index 0 second — the reverse of payload order.
+    const response = buildAiResponse({
+      evidence: [
+        { index: 1, verdict: 'green', reason: 'Looks fine' },
+        { index: 0, verdict: 'amber', reason: 'Needs detail' },
+      ],
+    });
+
+    const result = applyGreyRule(response, payload);
+
+    // Position-based matching (the old `evidence[i]` bug) would force grey on the item at
+    // array position 1 (payload item 1, correctly private) but leave the item at position 0
+    // (payload item 0, public) alone — that happens to look right here, so assert on the
+    // item that exposes the bug: the one at array position 0 carries `index: 1`, which is
+    // the PRIVATE payload item, so it must be forced grey even though it sits first.
+    const byIndex = (i: number) => result.evidence.find((e) => e.index === i);
+    expect(byIndex(1)?.verdict).toBe('grey');
+    expect(byIndex(1)?.reason).toBe('Private repository file — not evaluated');
+    expect(byIndex(0)?.verdict).toBe('amber');
+    expect(byIndex(0)?.reason).toBe('Needs detail');
+  });
+
+  it('appends a grey entry for a payload evidence item the AI response omits entirely', () => {
+    const payload = buildPayload([
+      {
+        description: 'Public item 0',
+        link: 'https://example.org/0',
+        source: 'url',
+        visibility: 'public',
+        tags: [],
+      },
+      {
+        description: 'Public item 1, never answered by the AI',
+        link: 'https://example.org/1',
+        source: 'url',
+        visibility: 'public',
+        tags: [],
+      },
+    ]);
+    const response = buildAiResponse({
+      evidence: [{ index: 0, verdict: 'green', reason: 'Fine' }],
+    });
+
+    const result = applyGreyRule(response, payload);
+
+    expect(result.evidence).toHaveLength(2);
+    const appended = result.evidence.find((e) => e.index === 1);
+    expect(appended).toEqual({
+      index: 1,
+      verdict: 'grey',
+      reason: 'Not returned by the AI — not evaluated',
+    });
+  });
+
+  it('appends the private-file reason (not the omitted reason) when the omitted item is itself private', () => {
+    const payload = buildPayload([
+      {
+        description: 'Private item, never answered by the AI',
+        link: null,
+        source: 'prms_repository',
+        visibility: 'private',
+        tags: [],
+      },
+    ]);
+    const response = buildAiResponse({ evidence: [] });
+
+    const result = applyGreyRule(response, payload);
+
+    expect(result.evidence).toEqual([
+      {
+        index: 0,
+        verdict: 'grey',
+        reason: 'Private repository file — not evaluated',
+      },
+    ]);
+  });
+
+  it('drops a response entry whose index matches no payload item', () => {
+    const payload = buildPayload([
+      {
+        description: 'Only item',
+        link: 'https://example.org/0',
+        source: 'url',
+        visibility: 'public',
+        tags: [],
+      },
+    ]);
+    const response = buildAiResponse({
+      evidence: [
+        { index: 0, verdict: 'green', reason: 'Fine' },
+        { index: 7, verdict: 'red', reason: 'Invented by the AI' },
+      ],
+    });
+
+    const result = applyGreyRule(response, payload);
+
+    expect(result.evidence).toEqual([
+      { index: 0, verdict: 'green', reason: 'Fine' },
+    ]);
+  });
 });
 
 describe('evaluateKpRule', () => {

@@ -47,6 +47,16 @@ describe('BilateralCenterController', () => {
             submitForReview: jest.fn().mockResolvedValue({
               response: { resultId: 1, status: 5 },
             }),
+            assess: jest.fn().mockResolvedValue({
+              response: { id: 1, result_id: 77, status: 'completed' },
+              message: 'Quality assessment completed',
+              status: 200,
+            }),
+            getLatest: jest.fn().mockResolvedValue({
+              response: { latest: null },
+              message: 'Latest quality assessment retrieved successfully',
+              status: 200,
+            }),
           },
         },
       ],
@@ -145,10 +155,23 @@ describe('BilateralCenterController', () => {
 
   // P2-3157 — the transition that makes the review loop reachable from the centre UI.
   it('submitForReview should delegate to service', async () => {
-    await controller.submitForReview(user, 77);
+    const dto = { assessment_id: 8, decision: 'submitted_anyway' as const };
+    await controller.submitForReview(user, 77, dto);
     expect(bilateralCenterService.submitForReview).toHaveBeenCalledWith(
       user,
       77,
+      dto,
     );
+  });
+
+  // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+  it('assessQuality should delegate to service', async () => {
+    await controller.assessQuality(user, 77);
+    expect(bilateralCenterService.assess).toHaveBeenCalledWith(user, 77);
+  });
+
+  it('getLatestQualityAssessment should delegate to service', async () => {
+    await controller.getLatestQualityAssessment(user, 77);
+    expect(bilateralCenterService.getLatest).toHaveBeenCalledWith(user, 77);
   });
 });

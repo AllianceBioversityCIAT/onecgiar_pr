@@ -24,6 +24,7 @@ const ENV_KEYS = [
   'BILATERAL_AI_QUALITY_URL',
   'BILATERAL_AI_QUALITY_TIMEOUT_MS',
   'MICROSERVICE_API_KEY',
+  'BILATERAL_AI_QUALITY_DEBUG_PAYLOADS',
 ] as const;
 
 let savedEnv: Record<string, string | undefined>;
@@ -115,6 +116,7 @@ function configureEnv(
     url?: string;
     key?: string;
     timeoutMs?: string;
+    debugPayloads?: string;
   } = {},
 ): void {
   if (overrides.url !== undefined) {
@@ -125,6 +127,9 @@ function configureEnv(
   }
   if (overrides.timeoutMs !== undefined) {
     process.env.BILATERAL_AI_QUALITY_TIMEOUT_MS = overrides.timeoutMs;
+  }
+  if (overrides.debugPayloads !== undefined) {
+    process.env.BILATERAL_AI_QUALITY_DEBUG_PAYLOADS = overrides.debugPayloads;
   }
 }
 
@@ -481,6 +486,175 @@ describe('BilateralQualityAssessmentClient', () => {
     });
   });
 
+  describe('type_specific is optional', () => {
+    // 🛑 Result 11883 (Other output, 17-sep-2026): the AI answered `completed` with four good
+    // sections and no `type_specific`, because that result type HAS no type-specific section. The
+    // validator demanded all five, so a usable verdict became `malformed` and the user was told
+    // "Quality check unavailable". A section the editor does not render must not be required.
+    it('accepts a four-section response for a type with no type-specific section', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      delete body.sections.type_specific;
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 11883 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.type_specific).toBeUndefined();
+        expect(Object.keys(result.response.sections)).toHaveLength(4);
+      }
+    });
+
+    it('still rejects a response missing one of the four every result has', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      delete body.sections.geographic_location;
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+    });
+
+    // Absent is fine; present-but-broken is still a contract breach.
+    it('rejects a type_specific that is present and malformed', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.type_specific = { verdict: 'purple' };
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+    });
+  });
+
+  describe('payload debug logging', () => {
+    const LEAK_URL = 'https://ai-internal.example/v1/secret';
+
+    function debugSpy(): jest.SpyInstance {
+      return jest
+        .spyOn(Logger.prototype, 'debug')
+        .mockImplementation(() => undefined);
+    }
+
+    function lines(spy: jest.SpyInstance): any[] {
+      return spy.mock.calls.map((call) => call[0]);
+    }
+
+    it('logs neither body when the flag is off', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const spy = debugSpy();
+      const client = makeClient(
+        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
+      );
+
+      await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(lines(spy).map((line) => line?.event)).not.toContain(
+        'bilateral_quality_assessment_request',
+      );
+      expect(lines(spy).map((line) => line?.event)).not.toContain(
+        'bilateral_quality_assessment_response',
+      );
+    });
+
+    it('logs both bodies, correlated by request_id, when the flag is on', async () => {
+      configureEnv({
+        url: 'https://ai.example.test',
+        key: 'k',
+        debugPayloads: 'true',
+      });
+      const spy = debugSpy();
+      const client = makeClient(
+        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
+      );
+
+      await client.assess(buildPayload(), { resultId: 7 });
+
+      const request = lines(spy).find(
+        (line) => line?.event === 'bilateral_quality_assessment_request',
+      );
+      const response = lines(spy).find(
+        (line) => line?.event === 'bilateral_quality_assessment_response',
+      );
+      expect(request.result_id).toBe(7);
+      expect(request.body.sections).toBeDefined();
+      expect(response.http_status).toBe(200);
+      expect(response.body.overall).toBeDefined();
+      // One id end to end is what makes the pair readable in a shared log stream.
+      expect(response.request_id).toBe(request.request_id);
+    });
+
+    // 🛑 `.cursorrules`: the email is the one piece of the outbound body that must never reach a
+    // log, flag on or off. Scans the whole serialised line, not just the redacted field.
+    it('never puts the user email in either line', async () => {
+      configureEnv({
+        url: 'https://ai.example.test',
+        key: 'k',
+        debugPayloads: 'on',
+      });
+      const spy = debugSpy();
+      const client = makeClient(
+        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
+      );
+      const userEmail = 'centre.reviewer@cgiar.org';
+
+      await client.assess(buildPayload(), { resultId: 1, userEmail });
+
+      for (const line of lines(spy)) {
+        expect(JSON.stringify(line)).not.toContain(userEmail);
+      }
+      const request = lines(spy).find(
+        (line) => line?.event === 'bilateral_quality_assessment_request',
+      );
+      expect(request.user_id).toBe('[redacted]');
+    });
+
+    // degraded_reason is free text from the far side; it has already been seen carrying a host.
+    it('sanitises degraded_reason on the inbound line', async () => {
+      configureEnv({
+        url: 'https://ai.example.test',
+        key: 'k',
+        debugPayloads: '1',
+      });
+      const spy = debugSpy();
+      const body = readV02Fixture();
+      body.degraded_reason = `upstream failed at ${LEAK_URL}`;
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      await client.assess(buildPayload(), { resultId: 1 });
+
+      const response = lines(spy).find(
+        (line) => line?.event === 'bilateral_quality_assessment_response',
+      );
+      expect(JSON.stringify(response)).not.toContain(LEAK_URL);
+      expect(JSON.stringify(response)).not.toContain('ai-internal.example');
+    });
+
+    // The malformed branch returns before any verdict exists, so the body is the only evidence.
+    it('logs a body that fails the schema check', async () => {
+      configureEnv({
+        url: 'https://ai.example.test',
+        key: 'k',
+        debugPayloads: 'true',
+      });
+      const spy = debugSpy();
+      const client = makeClient(
+        jest.fn(() => of({ data: { nonsense: true }, status: 200 })),
+      );
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('malformed');
+      const response = lines(spy).find(
+        (line) => line?.event === 'bilateral_quality_assessment_response',
+      );
+      expect(response.body).toEqual({ nonsense: true });
+    });
+  });
+
   describe('outbound request config', () => {
     it('posts to the configured URL + path with X-API-Key, Content-Type and the guard timeout', async () => {
       // Reviewer open item: previously nothing asserted the outbound config.
@@ -492,16 +666,21 @@ describe('BilateralQualityAssessmentClient', () => {
       const fixture = readV02Fixture();
       const post = jest.fn(() => of({ data: fixture, status: 200 }));
       const client = makeClient(post);
+      const logSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
 
-      await client.assess(buildPayload(), { resultId: 1 });
+      const userEmail = 'centre.reviewer@cgiar.org';
+      await client.assess(buildPayload(), { resultId: 1, userEmail });
 
       expect(post).toHaveBeenCalledTimes(1);
-      const [url, , config] = post.mock.calls[0] as unknown as [
+      const [url, body, config] = post.mock.calls[0] as unknown as [
         string,
-        unknown,
+        QualityPayload & { user_id: string },
         Record<string, any>,
       ];
       expect(url).toBe('https://ai.example.test/prms/quality-assessment');
+      expect(body.user_id).toBe(userEmail);
       expect(config.headers['X-API-Key']).toBe('a-key-value');
       expect(config.headers['Content-Type']).toBe('application/json');
       expect(config.timeout).toBe(12345);
@@ -509,6 +688,10 @@ describe('BilateralQualityAssessmentClient', () => {
       // response it will accept with headroom over that budget.
       expect(config.maxContentLength).toBe(65_536);
       expect(config.maxBodyLength).toBe(65_536);
+      expect(logSpy).toHaveBeenCalled();
+      for (const call of logSpy.mock.calls) {
+        expect(call.map(String).join(' ')).not.toContain(userEmail);
+      }
     });
 
     it('trims trailing slashes from BILATERAL_AI_QUALITY_URL before building the request URL', async () => {
