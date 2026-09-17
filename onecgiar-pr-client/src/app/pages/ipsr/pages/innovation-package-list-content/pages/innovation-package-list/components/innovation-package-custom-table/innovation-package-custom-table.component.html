@@ -20,14 +20,14 @@
     [rowsPerPageOptions]="[10, 50, 100]">
     <ng-template prTableHeader>
       <tr>
-        <th id="result_code" prSortableColumn="result_code" style="width: 110px">
+        <th id="result_code" prSortableColumn="result_code" style="width: 92px">
           <span class="ip-th"><pr-sort-icon field="result_code"></pr-sort-icon>Code</span>
         </th>
         <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" [style.width]="column.width" *ngFor="let column of columnOrder">
           <span class="ip-th"><pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}</span>
         </th>
-        <th id="pdf" style="width: 64px">PDF</th>
-        <th id="action" style="width: 124px" *ngIf="!this.api.rolesSE.platformIsClosed">Actions</th>
+        <th id="pdf" style="width: 56px">PDF</th>
+        <th id="action" style="width: 116px" *ngIf="!this.api.rolesSE.platformIsClosed">Actions</th>
       </tr>
     </ng-template>
 

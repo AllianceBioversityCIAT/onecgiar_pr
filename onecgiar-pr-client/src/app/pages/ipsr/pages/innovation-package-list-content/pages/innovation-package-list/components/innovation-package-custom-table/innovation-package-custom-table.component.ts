@@ -30,11 +30,12 @@ export class InnovationPackageCustomTableComponent {
    * the fixed widths overflowed the container and the last column was cut off mid-button.
    */
   columnOrder = [
+    // Title takes whatever is left, as it does in the Results Center: it is the column people read.
     { title: 'Title', attr: 'title', class: 'notCenter', width: 'auto' },
-    { title: 'Submitter', attr: 'official_code', width: '104px' },
-    { title: 'Status', attr: 'status', width: '112px' },
-    { title: 'Phase', attr: 'phase_name', width: '140px' },
-    { title: 'Created by', attr: 'created_by', width: '128px' }
+    { title: 'Submitter', attr: 'official_code', width: '92px' },
+    { title: 'Status', attr: 'status', width: '104px' },
+    { title: 'Phase', attr: 'phase_name', width: '118px' },
+    { title: 'Created by', attr: 'created_by', width: '118px' }
   ];
 
   /**

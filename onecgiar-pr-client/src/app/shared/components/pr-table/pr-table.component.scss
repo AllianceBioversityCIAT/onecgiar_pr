@@ -130,6 +130,10 @@
   overflow: hidden;
 
   table.pr-table {
+    /* `fixed` is what makes the declared column widths win. Without it a single-line title with
+       `white-space: nowrap` stretches its column to the full text and the table runs to 3310px —
+       measured — which pushes the last column clean out of the container. */
+    table-layout: fixed;
     min-width: 980px;
     background: transparent;
 
