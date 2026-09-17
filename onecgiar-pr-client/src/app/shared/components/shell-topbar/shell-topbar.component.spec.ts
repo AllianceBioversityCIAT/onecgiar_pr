@@ -531,14 +531,20 @@ describe('ShellTopbarComponent', () => {
       expect(fontScaleMock.set).toHaveBeenCalledWith('large');
     });
 
-    it('offers Reset only when a non-default size is active', () => {
+    it('offers Reset only when a non-default size is active, and sits after the information', () => {
       const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
       const from = html.indexOf('pr-topbar-account__group--text');
+      const logout = html.indexOf('pr-topbar-logout');
       expect(from).toBeGreaterThan(-1);
-      const group = html.slice(from, html.indexOf('pr-topbar-panel__body', from));
+      expect(logout).toBeGreaterThan(from);
+      const group = html.slice(from, logout);
 
       expect(group).toContain("@if (fontScaleSE.scale() !== 'default')");
       expect(group).toContain('(click)="fontScaleSE.reset()"');
+      // You open this panel to see who you are signed in as; the control comes after that, not
+      // between the name and the programmes.
+      expect(from).toBeGreaterThan(html.indexOf('getMyCenters()'));
+      expect(from).toBeGreaterThan(html.indexOf('pr-topbar-account__id'));
     });
   });
 

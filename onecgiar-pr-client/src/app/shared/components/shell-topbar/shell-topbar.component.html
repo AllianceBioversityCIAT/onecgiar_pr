@@ -222,36 +222,6 @@
         </div>
       </div>
 
-      <!-- P2-3682: text size lives here, inside the profile panel, one click from the avatar and
-           visible the moment it opens. Not behind a "Settings" entry (nobody would find it) and no
-           longer a separate topbar button either — this is the panel a person already opens to see
-           who they are signed in as. -->
-      <div class="pr-topbar-account__group pr-topbar-account__group--text">
-        <div class="pr-topbar-account__group-head">
-          <p class="pr-topbar-account__eyebrow">Text size</p>
-          @if (fontScaleSE.scale() !== 'default') {
-            <button type="button" class="pr-topbar-account__reset" (click)="fontScaleSE.reset()">
-              <ng-icon name="lucideRotateCcw" class="text-[12px]" />
-              Reset
-            </button>
-          }
-        </div>
-        <div role="radiogroup" aria-label="Text size" class="pr-topbar-account__scale">
-          @for (option of fontScaleOptions; track option.value; let i = $index) {
-            <button
-              role="radio"
-              type="button"
-              [attr.aria-checked]="fontScaleSE.scale() === option.value"
-              [attr.aria-label]="option.label + ' text size'"
-              class="pr-topbar-account__scale-btn"
-              [class.pr-topbar-account__scale-btn--on]="fontScaleSE.scale() === option.value"
-              (click)="selectFontScale(option.value)">
-              <span class="font-bold leading-none" [style.font-size.px]="11 + i * 2" aria-hidden="true">A</span>
-            </button>
-          }
-        </div>
-      </div>
-
       @if (getInitiativeSeparatedByPortfolio().length > 0 || getMyCenters().length > 0) {
         <div class="pr-topbar-panel__body">
           @if (getInitiativeSeparatedByPortfolio().length > 0) {
@@ -292,6 +262,37 @@
           }
         </div>
       }
+
+      <!-- P2-3682: text size lives here, inside the profile panel, one click from the avatar. Not
+           behind a "Settings" entry (nobody would find it) and not a topbar icon of its own either —
+           this is a panel the person already opens. It sits AFTER the information: you open this
+           panel to check who you are signed in as and what you have access to; the control is what
+           you came for second. -->
+      <div class="pr-topbar-account__group pr-topbar-account__group--text">
+        <div class="pr-topbar-account__group-head">
+          <p class="pr-topbar-account__eyebrow">Text size</p>
+          @if (fontScaleSE.scale() !== 'default') {
+            <button type="button" class="pr-topbar-account__reset" (click)="fontScaleSE.reset()">
+              <ng-icon name="lucideRotateCcw" class="text-[12px]" />
+              Reset
+            </button>
+          }
+        </div>
+        <div role="radiogroup" aria-label="Text size" class="pr-topbar-account__scale">
+          @for (option of fontScaleOptions; track option.value; let i = $index) {
+            <button
+              role="radio"
+              type="button"
+              [attr.aria-checked]="fontScaleSE.scale() === option.value"
+              [attr.aria-label]="option.label + ' text size'"
+              class="pr-topbar-account__scale-btn"
+              [class.pr-topbar-account__scale-btn--on]="fontScaleSE.scale() === option.value"
+              (click)="selectFontScale(option.value)">
+              <span class="font-bold leading-none" [style.font-size.px]="11 + i * 2" aria-hidden="true">A</span>
+            </button>
+          }
+        </div>
+      </div>
 
       <div class="pr-topbar-panel__footer">
         <button
