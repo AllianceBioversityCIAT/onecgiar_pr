@@ -11,6 +11,10 @@ import { ResultsNotificationsService } from '../../../pages/results/pages/result
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { environment } from '../../../../environments/environment';
 import { SupportChatService } from '../../services/support-chat.service';
+import { FontScaleService } from '../../services/font-scale.service';
+import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
+import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 
 /**
  * The topbar owns the ONLY user/account menu in the shell (PROGRAM-SHELL-SPEC.md §2). The
@@ -26,6 +30,9 @@ describe('ShellTopbarComponent', () => {
   let routerMock: any;
   let notificationsMock: any;
   let filterMock: any;
+  let fontScaleMock: any;
+  let reportingGuideMock: any;
+  let homeMock: any;
 
   const build = async () => {
     await TestBed.configureTestingModule({
@@ -35,7 +42,10 @@ describe('ShellTopbarComponent', () => {
         { provide: DataControlService, useValue: dataControlMock },
         { provide: Router, useValue: routerMock },
         { provide: ResultsNotificationsService, useValue: notificationsMock },
-        { provide: ResultsListFilterService, useValue: filterMock }
+        { provide: ResultsListFilterService, useValue: filterMock },
+        { provide: FontScaleService, useValue: fontScaleMock },
+        { provide: ReportingGuideService, useValue: reportingGuideMock },
+        { provide: ResultFrameworkReportingHomeService, useValue: homeMock }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     })
@@ -64,6 +74,9 @@ describe('ShellTopbarComponent', () => {
       handlePopUpNotificationLastViewed: jest.fn()
     };
     filterMock = { text_to_search: signal('') };
+    fontScaleMock = { scale: signal('default'), set: jest.fn(), reset: jest.fn() };
+    reportingGuideMock = { startSidebarTour: jest.fn() };
+    homeMock = { mySPsList: signal([] as any[]), otherSPsList: signal([] as any[]) };
   });
 
   it('creates, and no longer syncs anything with the Results Center list filter', async () => {
@@ -418,6 +431,94 @@ describe('ShellTopbarComponent', () => {
       // Control for the two assertions above: the entry point still exists, just moved.
       expect(html).toContain('openFeedbackFromSupport()');
       expect(html).toContain('aria-label="Support"');
+    });
+  });
+
+  // ------------------------------------------------------------------ P2-3682
+  // Glossary, Tour and Text size moved out of the sidebar's EXTRAS block. Two of them are help,
+  // so they land under Support; Text size is a per-user preference, so it lands under Settings in
+  // the account menu — which is where the design puts it.
+  describe('controls moved from the sidebar (P2-3682)', () => {
+    it('Support offers the CLARISA glossary as an external link', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const support = html.slice(html.indexOf('aria-label="Support"'), html.indexOf('<!-- Notifications popover'));
+
+      expect(support).toContain('[href]="clarisaGlossaryUrl"');
+      expect(support).toContain('target="_blank"');
+      expect(support).toContain('rel="noopener noreferrer"');
+      expect(support).toContain('<span>Glossary</span>');
+    });
+
+    it('exposes clarisaGlossaryUrl from the shared CLARISA constant', async () => {
+      await build();
+      expect(component.clarisaGlossaryUrl).toBe(CLARISA_GLOSSARY_URL);
+    });
+
+    it('Tour forwards the programme and centre context, and closes the Support menu', async () => {
+      homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01' }]);
+      homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP02' }]);
+      await build();
+      component.supportMenuOpen.set(true);
+
+      component.startPlatformSidebarTour();
+
+      expect(reportingGuideMock.startSidebarTour).toHaveBeenCalledWith({
+        hasMyPrograms: true,
+        hasOtherPrograms: true,
+        hasCenters: true
+      });
+      expect(component.supportMenuOpen()).toBe(false);
+    });
+
+    it('Tour reports empty programme lists as empty, not as missing', async () => {
+      apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+      await build();
+
+      component.startPlatformSidebarTour();
+
+      expect(reportingGuideMock.startSidebarTour).toHaveBeenCalledWith({
+        hasMyPrograms: false,
+        hasOtherPrograms: false,
+        hasCenters: false
+      });
+    });
+
+    it('Settings closes the account menu and opens its own panel, instead of nesting inside it', async () => {
+      await build();
+      component.userMenuOpen.set(true);
+
+      component.openSettings();
+
+      expect(component.userMenuOpen()).toBe(false);
+      expect(component.settingsMenuOpen()).toBe(true);
+    });
+
+    it('picking a size delegates to the font scale service', async () => {
+      await build();
+      component.selectFontScale('large');
+      expect(fontScaleMock.set).toHaveBeenCalledWith('large');
+    });
+
+    it('escape closes the settings panel too', async () => {
+      await build();
+      component.settingsMenuOpen.set(true);
+
+      component.onEscape();
+
+      expect(component.settingsMenuOpen()).toBe(false);
+    });
+
+    it('the settings panel carries the text-size control and offers Reset only off the default', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const settings = html.slice(html.indexOf('<!-- Settings popover (P2-3682)'));
+
+      expect(settings).toContain('aria-label="Settings"');
+      expect(settings).toContain('role="radiogroup"');
+      expect(settings).toContain('(click)="selectFontScale(option.value)"');
+      expect(settings).toContain("@if (fontScaleSE.scale() !== 'default')");
+      expect(settings).toContain('(click)="fontScaleSE.reset()"');
+      // The account menu keeps its own job: Settings is a sibling overlay, not a section of it.
+      expect(settings).toContain('[cdkConnectedOverlayOrigin]="userTrigger"');
     });
   });
 });

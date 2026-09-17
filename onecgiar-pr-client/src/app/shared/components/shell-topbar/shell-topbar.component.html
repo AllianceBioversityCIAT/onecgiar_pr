@@ -112,6 +112,31 @@
           <span>Give feedback</span>
         </button>
       }
+
+      <!-- P2-3682: Glossary and Tour lost their slot in the sidebar's EXTRAS block, which the design
+           trims down to Release notes. The ticket names no destination for them, so they land on the
+           surface that is already "the single entry point for getting help" rather than disappearing. -->
+      <a
+        role="menuitem"
+        [href]="clarisaGlossaryUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3.5 py-2.5 text-left text-[13px] font-medium text-[var(--pr-text-heading,#191524)] transition-colors hover:bg-[#f3f2f7]"
+        (click)="supportMenuOpen.set(false)">
+        <ng-icon name="lucideBookOpen" class="text-[17px]" />
+        <span>Glossary</span>
+      </a>
+
+      <button
+        type="button"
+        role="menuitem"
+        class="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3.5 py-2.5 text-left text-[13px] font-medium text-[var(--pr-text-heading,#191524)] transition-colors hover:bg-[#f3f2f7]"
+        data-guide="platform-tour-sidebar-trigger"
+        aria-label="Start sidebar tour"
+        (click)="startPlatformSidebarTour()">
+        <ng-icon name="lucideSparkles" class="text-[17px]" />
+        <span>Tour</span>
+      </button>
     </div>
   </ng-template>
 
@@ -225,6 +250,18 @@
         </div>
       }
 
+      <!-- P2-3682: the account menu is where Settings is reached from, per the design. -->
+      <div class="py-1.5">
+        <button
+          type="button"
+          role="menuitem"
+          class="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3.5 py-2.5 text-left text-[13px] font-medium text-[var(--pr-text-heading,#191524)] transition-colors hover:bg-[#f3f2f7]"
+          (click)="openSettings()">
+          <ng-icon name="lucideSettings" class="text-[17px]" />
+          <span>Settings</span>
+        </button>
+      </div>
+
       <div class="pr-topbar-panel__footer">
         <button
           type="button"
@@ -249,4 +286,50 @@
       [visible]="reportFeedbackOpen()"
       (visibleChange)="reportFeedbackOpen.set($event)" />
   }
+
+  <!-- Settings popover (P2-3682). A SIBLING of the account menu, anchored to the same trigger: the
+       account panel already carries the user card plus the programme and centre lists, and nesting the
+       text-size grid inside it pushed the panel past a laptop viewport. The control itself is the one
+       that used to live in the sidebar, moved verbatim. -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="userTrigger"
+    [cdkConnectedOverlayOpen]="settingsMenuOpen()"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    [cdkConnectedOverlayPositions]="settingsMenuPositions"
+    (backdropClick)="settingsMenuOpen.set(false)"
+    (detach)="settingsMenuOpen.set(false)">
+    <div class="pr-topbar-panel w-[280px] p-3.5" role="dialog" aria-label="Settings" cdkTrapFocus cdkTrapFocusAutoCapture>
+      <div class="mb-1 flex items-center gap-1.5">
+        <ng-icon name="lucideType" class="text-[17px] text-[var(--pr-color-primary-400,#5733c4)]" />
+        <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Text size</p>
+      </div>
+      <p class="m-0 mb-2.5 text-[11px] leading-snug text-[var(--pr-color-accents-5)]">Make text across the platform larger. Your browser zoom still works on top of this.</p>
+      <div role="radiogroup" aria-label="Text size" class="grid grid-cols-5 gap-1 rounded-xl bg-[var(--pr-color-accents-1)] p-1">
+        @for (option of fontScaleOptions; track option.value; let i = $index) {
+          <button
+            role="radio"
+            type="button"
+            [attr.aria-checked]="fontScaleSE.scale() === option.value"
+            [attr.aria-label]="option.label + ' text size'"
+            class="flex cursor-pointer flex-col items-center gap-1 rounded-lg border-none py-2 transition-colors duration-150"
+            [ngClass]="fontScaleSE.scale() === option.value ? 'bg-white text-brand-600 ring-1 ring-brand-300' : 'bg-transparent text-[var(--pr-color-accents-6)] hover:bg-white/70'"
+            (click)="selectFontScale(option.value)">
+            <span class="font-bold leading-none" [style.font-size.px]="12 + i * 3" aria-hidden="true">A</span>
+            <span class="text-[10px] font-medium leading-none">{{ option.label }}</span>
+          </button>
+        }
+      </div>
+      @if (fontScaleSE.scale() !== 'default') {
+        <button
+          type="button"
+          class="mt-2.5 flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-transparent py-1.5 text-xs font-medium text-brand-400 transition-colors hover:bg-brand-25"
+          (click)="fontScaleSE.reset()">
+          <ng-icon name="lucideRotateCcw" class="text-[14px]" />
+          Reset to default
+        </button>
+      }
+    </div>
+  </ng-template>
 }
