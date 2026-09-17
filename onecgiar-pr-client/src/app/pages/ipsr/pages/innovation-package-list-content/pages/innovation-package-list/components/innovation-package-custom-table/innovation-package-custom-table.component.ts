@@ -24,14 +24,42 @@ export class InnovationPackageCustomTableComponent {
   @Input() total: number = 0;
   @Output() deleteEvent = new EventEmitter();
   currentInnovationPackageToAction = { id: '', title: '' };
+  /**
+   * `phase_year` and `phase_name` were two columns for one fact: the name already reads
+   * "IPSR 2026 - P25". Merging them is what buys the width the Actions column needs — with both,
+   * the fixed widths overflowed the container and the last column was cut off mid-button.
+   */
   columnOrder = [
-    { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Submitter', attr: 'official_code' },
-    { title: 'Status', attr: 'status' },
-    { title: 'Phase year', attr: 'phase_year' },
-    { title: 'Phase Portfolio', attr: 'phase_name' },
-    { title: 'Created by', attr: 'created_by' }
+    { title: 'Title', attr: 'title', class: 'notCenter', width: 'auto' },
+    { title: 'Submitter', attr: 'official_code', width: '104px' },
+    { title: 'Status', attr: 'status', width: '112px' },
+    { title: 'Phase', attr: 'phase_name', width: '140px' },
+    { title: 'Created by', attr: 'created_by', width: '128px' }
   ];
+
+  /**
+   * The status chip, using the SAME class family the rest of the platform uses for `status_id`
+   * (`styles.scss`): the list used to print the word in plain black text, so a discontinued
+   * package and an editing one looked identical while the Results Center coloured both.
+   */
+  statusChipClass(status: unknown, statusId: unknown): string {
+    const id = String(statusId ?? '');
+    const byId: Record<string, string> = {
+      '1': 'completeness-editing',
+      '2': 'completeness-quality-assessed',
+      '3': 'completeness-submitted',
+      '4': 'completeness-discontinued'
+    };
+    if (byId[id]) return byId[id];
+
+    // Fallback on the label when the row carries no id, so a chip is never colourless.
+    const label = String(status ?? '').toLowerCase();
+    if (label.includes('submit')) return 'completeness-submitted';
+    if (label.includes('quality') || label.includes('qa')) return 'completeness-quality-assessed';
+    if (label.includes('discontinued')) return 'completeness-discontinued';
+    if (label.includes('edit')) return 'completeness-editing';
+    return 'completeness-all';
+  }
 
   // Action menu overlay state (replaces PrimeNG p-popover)
   menuOpen = signal(false);

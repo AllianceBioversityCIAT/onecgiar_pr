@@ -1,32 +1,42 @@
 @let activeButtons = (this.api.dataControlSE?.myInitiativesListIPSRByPortfolio?.length > 0 && this.ipsrReportingEnabled) || this.api.rolesSE?.isAdmin;
 
 <div class="ipsr_container">
-  <app-section-header
-    titleText="Innovation Packages"
-    description="Here you will see a list of all the Innovation Packages so that you can access them.">
-  </app-section-header>
+  <!--
+    Header rebuilt 2026-09-17. It was a tinted violet panel carrying the title and a sentence of
+    copy, with two equally-weighted filled violet buttons stacked underneath — three violet
+    surfaces before a single row of data. Now: plain title, the sentence as secondary text, and
+    the actions on the same line, one primary and one secondary.
+  -->
+  <header class="ipsr_head">
+    <div class="ipsr_head__text">
+      <h1 class="ipsr_head__title">Innovation Packages</h1>
+      <p class="ipsr_head__desc">Here you will see a list of all the Innovation Packages so that you can access them.</p>
+    </div>
 
-  <div class="ipsr_buttons">
-    <a [routerLink]="activeButtons ? '/ipsr/creator' : null">
-      <app-pr-button
+    <div class="ipsr_head__actions">
+      <a
+        class="ipsr_btn ipsr_btn--primary"
         *ngIf="!this.api.rolesSE.platformIsClosed"
-        text="Create a new Innovation Package"
-        icon="add_box"
-        [reverse]="true"
-        tooltipTextPosition="bottom"
-        [tooltipText]="!activeButtons ? 'To create a result, please ensure that you have a role assigned in the active portfolio.' : null"
-        [ngClass]="{ disabledButtons: !activeButtons }"></app-pr-button>
-    </a>
+        [routerLink]="activeButtons ? '/ipsr/creator' : null"
+        [class.ipsr_btn--disabled]="!activeButtons"
+        [prTooltip]="!activeButtons ? 'To create a result, please ensure that you have a role assigned in the active portfolio.' : null"
+        prTooltipPosition="bottom">
+        <i class="material-icons-round" aria-hidden="true">add</i>
+        Create a new Innovation Package
+      </a>
 
-    <app-pr-button
-      text="Update an Innovation Package"
-      icon="moving"
-      [reverse]="true"
-      [ngClass]="{ disabledButtons: !activeButtons }"
-      tooltipTextPosition="bottom"
-      [tooltipText]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
-      (click)="activeButtons ? (this.ipsrDataControlSE.ipsrUpdateResultModal = true) : null"></app-pr-button>
-  </div>
+      <button
+        type="button"
+        class="ipsr_btn"
+        [class.ipsr_btn--disabled]="!activeButtons"
+        [prTooltip]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
+        prTooltipPosition="bottom"
+        (click)="activeButtons ? (this.ipsrDataControlSE.ipsrUpdateResultModal = true) : null">
+        <i class="material-icons-round" aria-hidden="true">moving</i>
+        Update an Innovation Package
+      </button>
+    </div>
+  </header>
 
   <app-ipsr-list-filters></app-ipsr-list-filters>
 

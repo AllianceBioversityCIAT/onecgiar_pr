@@ -1,5 +1,15 @@
+<!--
+  Rebuilt to read like the Results Center list (2026-09-17). What it looked like before: a full-width
+  navy header bar over black-on-white rows, the status printed as plain text so a discontinued
+  package looked exactly like an editing one, titles running to eight lines because nothing clamped
+  them, the creator's name broken across three lines in a 90px column, and the row menu hanging off a
+  bare `⋮` glyph with no hit area and no label.
+
+  Same data, same actions, same routes — only the presentation changed.
+-->
 <div class="table">
   <app-pr-table
+    styleClass="pr-table--data"
     sortField="result_code"
     [sortOrder]="-1"
     [value]="this.tableData"
@@ -10,67 +20,97 @@
     [rowsPerPageOptions]="[10, 50, 100]">
     <ng-template prTableHeader>
       <tr>
-        <th id="result_code" prSortableColumn="result_code" style="text-align: center">
-          <pr-sort-icon field="result_code"></pr-sort-icon>
-          Result code
+        <th id="result_code" prSortableColumn="result_code" style="width: 110px">
+          <span class="ip-th"><pr-sort-icon field="result_code"></pr-sort-icon>Code</span>
         </th>
-        <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
-          <pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}
+        <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" [style.width]="column.width" *ngFor="let column of columnOrder">
+          <span class="ip-th"><pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}</span>
         </th>
-        <th id="pdf">PDF</th>
-        <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
+        <th id="pdf" style="width: 64px">PDF</th>
+        <th id="action" style="width: 124px" *ngIf="!this.api.rolesSE.platformIsClosed">Actions</th>
       </tr>
     </ng-template>
 
     <ng-template prTableBody let-result>
       <tr>
-        <td style="text-align: center">
-          {{ result?.result_code }}
+        <td>
+          <ng-container *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
+            <a
+              class="ip-code"
+              [routerLink]="'/ipsr/detail/' + subResult?.result_code"
+              [queryParams]="{ phase: subResult?.version_id }"
+              >{{ subResult?.result_code }}</a
+            >
+          </ng-container>
         </td>
 
         <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}">
           <ng-container *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
-            <a class="{{ column.class }}" [routerLink]="'/ipsr/detail/' + subResult?.result_code" [queryParams]="{ phase: subResult?.version_id }">
-              <div class="new_tag" *ngIf="i == 1 && subResult.is_new && !subResult.legacy_id">New</div>
+            <!-- Status is a chip, in the same colours the platform uses everywhere else. -->
+            <ng-container *ngIf="column.attr === 'status'; else plainCell">
+              <span class="ip-status {{ statusChipClass(subResult?.status, subResult?.status_id) }}">{{ subResult?.status }}</span>
+            </ng-container>
 
-              <div class="new_tag pre" *ngIf="i == 1 && subResult.legacy_id">Pre 2022</div>
+            <ng-template #plainCell>
+              <a
+                class="ip-cell {{ column.class }}"
+                [routerLink]="'/ipsr/detail/' + subResult?.result_code"
+                [queryParams]="{ phase: subResult?.version_id }"
+                [attr.title]="column.attr === 'title' ? subResult?.title : null">
+                <!-- Tags sit ABOVE the title instead of inline: inline, a long title pushed them
+                     off the visible area and they were the first thing worth seeing. -->
+                <span class="ip-tags" *ngIf="column.attr === 'title'">
+                  <span class="ip-tag ip-tag--new" *ngIf="subResult.is_new && !subResult.legacy_id">New</span>
+                  <span class="ip-tag ip-tag--legacy" *ngIf="subResult.legacy_id">Pre 2022</span>
+                  <span class="ip-tag ip-tag--replicated" *ngIf="subResult?.is_replicated">Previously reported</span>
+                  <span class="ip-tag ip-tag--discontinued" *ngIf="subResult?.status_id === '4'">
+                    <i class="pi pi-exclamation-triangle"></i>
+                    Discontinued
+                  </span>
+                </span>
 
-              <div class="new_tag prev-reported" *ngIf="column.attr === 'title' && subResult?.is_replicated">Previously reported</div>
-
-              <div class="discontinued-icon" *ngIf="column.attr === 'title' && subResult?.status_id === '4'">
-                <i class="pi pi-exclamation-triangle"></i>
-              </div>
-
-              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
-            </a>
+                <span [class.ip-title]="column.attr === 'title'">
+                  {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
+                </span>
+              </a>
+            </ng-template>
           </ng-container>
         </td>
 
         <td>
           <a
-            class="subResults"
-            prTooltip="Click to view the pdf"
+            class="ip-icon-btn"
+            prTooltip="Open the PDF report"
             prTooltipPosition="bottom"
             *ngFor="let subResult of result['results']; trackBy: trackBySubResult"
             [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
             target="_blank"
-            rel="noopener noreferrer">
+            rel="noopener noreferrer"
+            aria-label="Open the PDF report">
             <app-pdf-icon></app-pdf-icon>
           </a>
         </td>
 
+        <!-- Actions: a real button with a label and a hit area. It used to be a bare `⋮` glyph
+             with neither, which is what made the row's actions read as "hidden". -->
         <td *ngIf="!this.api.rolesSE.platformIsClosed">
-          <div class="subResults" *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
-            <div class="icon_container">
-              <i class="pi pi-ellipsis-v" (click)="toggleMenu($event, subResult)"></i>
-            </div>
+          <div *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
+            <button
+              type="button"
+              class="ip-actions-btn"
+              aria-haspopup="menu"
+              [attr.aria-label]="'Actions for ' + subResult?.result_code"
+              (click)="toggleMenu($event, subResult)">
+              <i class="material-icons-round" aria-hidden="true">more_horiz</i>
+              Actions
+            </button>
           </div>
         </td>
       </tr>
     </ng-template>
   </app-pr-table>
 
-  <div class="total" *ngIf="this.tableData?.length && this.total">Total: {{ this.tableData?.length }} / {{ this.total }}</div>
+  <div class="total" *ngIf="this.tableData?.length && this.total">Showing {{ this.tableData?.length }} of {{ this.total }}</div>
 
   <div class="noDataText" *ngIf="!this.tableData?.length">There are no results for the selected filters.</div>
 </div>

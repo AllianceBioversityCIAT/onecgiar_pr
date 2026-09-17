@@ -83,6 +83,21 @@
         </div>
       }
     </div>
+    <!-- Download closes the filter row instead of floating on a line of its own below it. -->
+    <div class="ms-auto">
+    <!-- Gates on the FILTERED/searched result count (`IPSR-R-6`, `IPSR-AC-8`), not the raw unfiltered
+           list — a search/filter combination that matches nothing hides Download rather than offering an
+           empty-workbook export. Applies the same `innovationPackageListFilter` pipe the table itself uses
+           (`innovation-package-list.component.html`), so both surfaces agree on what "no results" means.
+           Re-pointed here from the IPSR-T-4 TEMPORARY unfiltered-count gate — this is now permanent. -->
+      <app-pr-button
+        *ngIf="((this.ipsrDataControlSE.ipsrResultList ?? []) | innovationPackageListFilter: this.ipsrListService.text_to_search)?.length > 0"
+        tooltipText="Download excel report"
+        text="Download"
+        (click)="onDownLoadTableAsExcel(onFilterSelectedInits(), onFilterSelectedPhases(), this.ipsrListService.text_to_search)"
+        [icon]="isLoadingReport ? 'loop' : 'file_download'"
+        [rotating]="this.isLoadingReport"></app-pr-button>
+    </div>
   </div>
 
   @if (filterChipGroups().length > 0) {
@@ -109,20 +124,7 @@
         Clear all
       </button>
     </div>
+
   }
 
-  <div class="flex justify-end">
-    <!-- Gates on the FILTERED/searched result count (`IPSR-R-6`, `IPSR-AC-8`), not the raw unfiltered
-         list — a search/filter combination that matches nothing hides Download rather than offering an
-         empty-workbook export. Applies the same `innovationPackageListFilter` pipe the table itself uses
-         (`innovation-package-list.component.html`), so both surfaces agree on what "no results" means.
-         Re-pointed here from the IPSR-T-4 TEMPORARY unfiltered-count gate — this is now permanent. -->
-    <app-pr-button
-      *ngIf="((this.ipsrDataControlSE.ipsrResultList ?? []) | innovationPackageListFilter: this.ipsrListService.text_to_search)?.length > 0"
-      tooltipText="Download excel report"
-      text="Download"
-      (click)="onDownLoadTableAsExcel(onFilterSelectedInits(), onFilterSelectedPhases(), this.ipsrListService.text_to_search)"
-      [icon]="isLoadingReport ? 'loop' : 'file_download'"
-      [rotating]="this.isLoadingReport"></app-pr-button>
-  </div>
 </div>

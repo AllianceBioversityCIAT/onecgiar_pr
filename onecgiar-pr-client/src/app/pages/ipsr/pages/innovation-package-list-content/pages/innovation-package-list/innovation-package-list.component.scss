@@ -12,3 +12,78 @@
 .disabledButtons {
   opacity: 0.5;
 }
+
+/* --------------------------------------------------------- 2026-09-17 header redesign */
+.ipsr_head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 4px;
+
+  &__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--pr-color-secondary-400, #2a2e45);
+  }
+
+  &__desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--pr-color-accents-6, #666);
+  }
+
+  &__actions {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+/* One filled violet button on the screen, per the platform rule; the second action is an outline. */
+.ipsr_btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--pr-text-secondary, #5d5872);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+
+  i {
+    font-size: 17px;
+  }
+
+  &:hover {
+    background: var(--pr-color-accents-1, #fafafa);
+    color: var(--pr-color-secondary-400, #2a2e45);
+  }
+
+  &--primary {
+    border-color: transparent;
+    background: var(--pr-color-primary-300, #6b46e5);
+    color: #fff;
+
+    &:hover {
+      background: var(--pr-color-primary-400, #5733c4);
+      color: #fff;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}

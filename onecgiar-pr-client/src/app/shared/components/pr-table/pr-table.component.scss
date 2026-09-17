@@ -114,3 +114,61 @@
     cursor: pointer;
   }
 }
+
+/* ------------------------------------------------------------------ pr-table--data
+   Opt-in "data table" look, the one the Results Center hand-rolled in its own SCSS and the
+   bilateral list copied from it. Living here means the third screen that wants it asks for it
+   with `styleClass="pr-table--data"` instead of copying 120 lines again — and nothing changes
+   for the tables that do not ask.
+
+   Light header instead of the dark chrome: a full-width navy bar over every list makes the page
+   read as a dark band with content hanging off it, which is what it looked like on /ipsr. */
+:host ::ng-deep .pr-table-wrap.pr-table--data {
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+
+  table.pr-table {
+    min-width: 980px;
+    background: transparent;
+
+    thead th {
+      background: #f7f7f9 !important;
+      color: #6b6580 !important;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      height: 40px;
+      padding: 0 12px !important;
+      white-space: nowrap;
+      text-align: left;
+      vertical-align: middle;
+      border: none !important;
+      border-bottom: 1px solid var(--pr-border, #e3e3e8) !important;
+      border-radius: 0 !important;
+    }
+
+    tbody tr {
+      background: #fff;
+
+      &:hover {
+        background: #fafafb;
+      }
+
+      &:last-child td {
+        border-bottom: none !important;
+      }
+    }
+
+    tbody td {
+      padding: 10px 12px !important;
+      font-size: 13px;
+      vertical-align: middle;
+      color: var(--pr-text, #2b2838);
+      border: none !important;
+      border-bottom: 1px solid var(--pr-border-divider, #eeeef1) !important;
+    }
+  }
+}

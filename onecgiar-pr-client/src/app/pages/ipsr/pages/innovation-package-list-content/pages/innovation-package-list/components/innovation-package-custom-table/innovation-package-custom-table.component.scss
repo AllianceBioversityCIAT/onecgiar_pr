@@ -211,3 +211,176 @@ td {
   box-shadow: 0px 0px 20px rgba(var(--pr-color-black-rgb), 0.2);
   padding: 0.25rem;
 }
+
+/* ------------------------------------------------------------- 2026-09-17 redesign
+   Cell-level presentation. The table CHROME (header, rows, borders) comes from
+   `pr-table--data` in the shared component, so this file only dresses what lives inside a cell. */
+:host ::ng-deep {
+  .ip-th {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ip-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pr-color-primary-400, #5733c4);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .ip-cell {
+    display: block;
+    color: var(--pr-text, #2b2838);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--pr-color-primary-400, #5733c4);
+    }
+  }
+
+  /* Two lines, then an ellipsis. Titles here run to 40+ words and one of them was pushing a row
+     to eight lines, which is what made the list impossible to scan. */
+  .ip-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.45;
+  }
+
+  .ip-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+
+    &:empty {
+      display: none;
+      margin: 0;
+    }
+  }
+
+  .ip-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+
+    &--new {
+      background: var(--pr-color-blue-50, #eff6ff);
+      color: var(--pr-color-blue-700, #1d4ed8);
+    }
+
+    &--legacy {
+      background: var(--pr-color-accents-1, #fafafa);
+      color: var(--pr-color-accents-6, #666);
+    }
+
+    &--replicated {
+      background: var(--pr-color-primary-50, #f3effc);
+      color: var(--pr-color-primary-400, #5733c4);
+    }
+
+    &--discontinued {
+      background: var(--pr-color-orange-75, #fff1e6);
+      color: var(--pr-color-orange-700, #c2410c);
+    }
+  }
+
+  .ip-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.7;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .ip-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    transition: background-color 150ms ease;
+
+    &:hover {
+      background: var(--pr-color-accents-1, #fafafa);
+    }
+  }
+
+  /* A labelled button, not a bare glyph: the actions were reported as "hidden" because there was
+     nothing to aim at and nothing that said what it did. */
+  .ip-actions-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid var(--pr-border, #e3e3e8);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pr-text-secondary, #5d5872);
+    transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+
+    i {
+      font-size: 16px;
+    }
+
+    &:hover {
+      border-color: var(--pr-color-primary-200, #c9b8f5);
+      background: var(--pr-color-primary-25, #faf8ff);
+      color: var(--pr-color-primary-400, #5733c4);
+    }
+  }
+
+  .total {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--pr-color-accents-6, #666);
+  }
+
+  /* A row can carry several versions of the same package (2025 and 2026), and every cell repeats
+     its own list. Without a shared minimum height the columns drift apart and the row stops
+     reading as one row. */
+  td > a,
+  td > .ip-status,
+  td > div,
+  td > ng-container > a,
+  td > ng-container > .ip-status {
+    min-height: 34px;
+  }
+
+  td > ng-container > a,
+  td > a {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* The title cell holds a tag row above the text, so it aligns to the TOP: centred, the tag
+     floated away from the title it belongs to. */
+  td.title > ng-container > a {
+    justify-content: flex-start;
+    gap: 2px;
+  }
+}

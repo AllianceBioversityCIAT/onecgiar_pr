@@ -4,30 +4,9 @@
   margin-bottom: 50px;
   overflow: hidden;
 
-  .tabs {
-    display: flex;
-
-    .active {
-      background-color: var(--pr-color-primary-300) !important;
-      color: var(--pr-color-white) !important;
-      font-weight: 600;
-    }
-
-    .tab {
-      background-color: var(--pr-color-accents-2);
-      color: var(--pr-color-accents-4);
-      text-decoration: none;
-      padding: 5px 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background-color 0.3s ease-in-out;
-    }
-  }
-
   .outlet {
-    margin-top: 20px;
-    padding: 0px 10px;
+    margin-top: 0;
+    padding: 0;
   }
 }
 

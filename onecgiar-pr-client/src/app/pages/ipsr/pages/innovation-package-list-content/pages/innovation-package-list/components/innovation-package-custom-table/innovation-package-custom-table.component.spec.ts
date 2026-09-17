@@ -3,6 +3,8 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { InnovationPackageCustomTableComponent } from './innovation-package-custom-table.component';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 describe('InnovationPackageCustomTableComponent', () => {
   let component: InnovationPackageCustomTableComponent;
@@ -596,6 +598,58 @@ describe('InnovationPackageCustomTableComponent', () => {
 
       expect(Boolean(replicated.is_replicated)).toBe(true);
       expect(Boolean(original.is_replicated)).toBe(false);
+    });
+  });
+
+  // ------------------------------------------------------------------ 2026-09-17 redesign
+  // Yeck, on the shipped list: "se ve asqueroso… importante eso de actions que no quede oculto".
+  // These lock the two things that made it unreadable, plus the promise that nothing functional
+  // moved: the routes, the menu and the columns' data are untouched.
+  describe('list presentation', () => {
+    const template = (): string =>
+      readFileSync(join(__dirname, 'innovation-package-custom-table.component.html'), 'utf8');
+
+    it('gives the row actions a label and a hit area, not a bare glyph', () => {
+      const html = template();
+
+      expect(html).toContain('class="ip-actions-btn"');
+      expect(html).toContain('>Actions');
+      expect(html).toContain('[attr.aria-label]="\'Actions for \' + subResult?.result_code"');
+      // The old bare ellipsis is gone; the click still calls the same handler.
+      expect(html).not.toContain('pi pi-ellipsis-v');
+      expect(html).toContain('toggleMenu($event, subResult)');
+    });
+
+    it('paints the status as a chip in the platform status colours', () => {
+      expect(component.statusChipClass('Editing', '1')).toBe('completeness-editing');
+      expect(component.statusChipClass('Quality Assessed', '2')).toBe('completeness-quality-assessed');
+      expect(component.statusChipClass('Submitted', '3')).toBe('completeness-submitted');
+      expect(component.statusChipClass('Discontinued', '4')).toBe('completeness-discontinued');
+      // With no id it falls back to the label, so a chip is never colourless…
+      expect(component.statusChipClass('Submitted', null)).toBe('completeness-submitted');
+      // …and an unknown value still gets a neutral chip rather than nothing.
+      expect(component.statusChipClass('Something else', null)).toBe('completeness-all');
+    });
+
+    it('asks the shared table for the data look instead of restyling it here', () => {
+      expect(template()).toContain('styleClass="pr-table--data"');
+    });
+
+    it('keeps one Phase column: the name already carries the year', () => {
+      const attrs = component.columnOrder.map(column => column.attr);
+
+      expect(attrs).toContain('phase_name');
+      expect(attrs).not.toContain('phase_year');
+      // Every column declares a width — that is what stopped the last column being cut off.
+      expect(component.columnOrder.every(column => !!column.width)).toBe(true);
+    });
+
+    it('still routes every row to the package detail with its phase', () => {
+      const html = template();
+
+      expect(html).toContain("[routerLink]=\"'/ipsr/detail/' + subResult?.result_code\"");
+      expect(html).toContain('[queryParams]="{ phase: subResult?.version_id }"');
+      expect(html).toContain("'/reports/ipsr-details/' + subResult?.result_code");
     });
   });
 });

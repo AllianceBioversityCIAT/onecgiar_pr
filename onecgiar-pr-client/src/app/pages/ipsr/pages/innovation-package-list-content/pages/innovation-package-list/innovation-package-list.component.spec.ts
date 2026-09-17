@@ -259,7 +259,7 @@ describe('InnovationPackageListComponent', () => {
 
       fixture.detectChanges();
 
-      const createAnchor: HTMLAnchorElement = fixture.nativeElement.querySelector('.ipsr_buttons a');
+      const createAnchor: HTMLAnchorElement = fixture.nativeElement.querySelector('.ipsr_head__actions a');
       // Real check, replacing the dead `ng-reflect-router-link` assertion flagged by `IPSR-T-6`'s
       // Reviewer ADVISORY (structurally incapable of failing — no `RouterLink` was registered in
       // this TestBed and Angular 21 doesn't emit `ng-reflect-*` without one). `RouterTestingModule`
@@ -267,10 +267,12 @@ describe('InnovationPackageListComponent', () => {
       // `[routerLink]="activeButtons ? '/ipsr/creator' : null"` binding — gated means no href.
       expect(createAnchor.getAttribute('href')).toBeFalsy();
 
-      const buttons = fixture.nativeElement.querySelectorAll('app-pr-button');
-      // Create button (inside the <a>) and Update button both carry the disabledButtons class.
-      expect(buttons[0].classList.contains('disabledButtons')).toBe(true);
-      expect(buttons[1].classList.contains('disabledButtons')).toBe(true);
+      const buttons = fixture.nativeElement.querySelectorAll('.ipsr_btn');
+      // Create (the anchor) and Update (the button) both carry the disabled class. The header was
+      // rebuilt on 2026-09-17 — `app-pr-button` became a plain anchor/button pair — so the selectors
+      // moved with it; what is asserted is unchanged.
+      expect(buttons[0].classList.contains('ipsr_btn--disabled')).toBe(true);
+      expect(buttons[1].classList.contains('ipsr_btn--disabled')).toBe(true);
 
       // Clicking Update must NOT open the update-result modal while gated.
       const updateButton: HTMLElement = buttons[1];
@@ -287,7 +289,7 @@ describe('InnovationPackageListComponent', () => {
 
       fixture.detectChanges();
 
-      const createAnchor: HTMLAnchorElement = fixture.nativeElement.querySelector('.ipsr_buttons a');
+      const createAnchor: HTMLAnchorElement = fixture.nativeElement.querySelector('.ipsr_head__actions a');
       expect(createAnchor.getAttribute('href')).toContain('/ipsr/creator');
     });
 
@@ -301,9 +303,9 @@ describe('InnovationPackageListComponent', () => {
 
       fixture.detectChanges();
 
-      const buttons = fixture.nativeElement.querySelectorAll('app-pr-button');
-      expect(buttons[0].classList.contains('disabledButtons')).toBe(true);
-      expect(buttons[1].classList.contains('disabledButtons')).toBe(true);
+      const buttons = fixture.nativeElement.querySelectorAll('.ipsr_btn');
+      expect(buttons[0].classList.contains('ipsr_btn--disabled')).toBe(true);
+      expect(buttons[1].classList.contains('ipsr_btn--disabled')).toBe(true);
     });
 
     it('positive control: when activeButtons is true, clicking Update DOES open the update-result modal (IPSR-T-6 forward pointer)', () => {
@@ -316,8 +318,8 @@ describe('InnovationPackageListComponent', () => {
 
       fixture.detectChanges();
 
-      const buttons = fixture.nativeElement.querySelectorAll('app-pr-button');
-      expect(buttons[1].classList.contains('disabledButtons')).toBe(false);
+      const buttons = fixture.nativeElement.querySelectorAll('.ipsr_btn');
+      expect(buttons[1].classList.contains('ipsr_btn--disabled')).toBe(false);
 
       const updateButton: HTMLElement = buttons[1];
       updateButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
