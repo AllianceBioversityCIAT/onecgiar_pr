@@ -1,0 +1,49 @@
+{
+  "request_id": "c7a32c9f-9b2b-4c8b-ad0b-0c8b7c2b3c4d",
+  "criteria_version": "QA-2026-v1",
+  "status": "partial",
+  "degraded_reason": "One evidence link could not be opened, so the evidence section was assessed on descriptions only.",
+  "overall": {
+    "verdict": "green",
+    "score": 82,
+    "summary": "Overall quality is good; one evidence item could not be verified directly."
+  },
+  "sections": {
+    "general_information": {
+      "verdict": "green",
+      "score": 88,
+      "comments": "Title and description are clear and specific.",
+      "strengths": ["Clear title"],
+      "issues": []
+    },
+    "contributors_and_partners": {
+      "verdict": "green",
+      "score": 80,
+      "comments": "Partner roles are well described.",
+      "strengths": ["Roles clearly attributed"],
+      "issues": []
+    },
+    "geographic_location": {
+      "verdict": "green",
+      "comments": "Country selection matches the described scope.",
+      "strengths": ["Consistent with the national scope"],
+      "issues": []
+    },
+    "evidence": {
+      "verdict": "amber",
+      "comments": "One evidence item was assessed on its description only, since its link could not be opened.",
+      "strengths": [],
+      "issues": ["One evidence link could not be verified"]
+    },
+    "type_specific": {
+      "verdict": "green",
+      "comments": "The type-specific fields are complete and plausible.",
+      "strengths": ["Readiness level well justified"],
+      "issues": []
+    }
+  },
+  "evidence": [
+    { "index": 0, "verdict": "amber", "reason": "Link could not be opened; assessed on the description only." },
+    { "index": 1, "verdict": "grey", "reason": "Private repository file — not evaluated" }
+  ]
+}

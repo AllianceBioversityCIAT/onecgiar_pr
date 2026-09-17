@@ -2,7 +2,7 @@ import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDe
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import { BilateralCreationService } from '../../services/bilateral-creation.service';
+import { BILATERAL_STATUS, BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService, BilateralEditorSection } from '../../services/bilateral-auto-save.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
@@ -26,6 +26,8 @@ import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
 import { CopyButtonComponent } from '../../../../shared/components/copy-button/copy-button.component';
+import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
+import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -47,6 +49,7 @@ import { CopyButtonComponent } from '../../../../shared/components/copy-button/c
     BilateralPageHeaderComponent,
     FormSkeletonComponent,
     AiProvenanceNoticeComponent
+    , BilateralQualityAssessmentDialogComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -67,15 +70,21 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
   private readonly ctx = inject(BilateralContextService);
   private readonly smartNav = inject(SmartNavigationService);
+  readonly qualityAssessment = inject(BilateralQualityAssessmentUiService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
   openSectionName = signal<BilateralEditorSection>('general-info');
-  isSubmitting = signal(false);
+  /** The rail's Submit is busy for BOTH halves of the flow: the AI check and the PATCH after it. */
+  isSubmitting = computed(() => this.qualityAssessment.isBusy());
+  /** A spinner with no words told the user nothing — the label names which half is running. */
+  submitButtonLabel = computed(() => (this.qualityAssessment.isSubmitting() ? 'Submitting…' : 'Checking quality…'));
   isManualSaving = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
   private isPageUnloading = false;
+  private qualityAssessmentResultId: number | null = null;
+  private qualityAssessmentTrigger: HTMLElement | null = null;
 
   /**
    * P2-3387: Other Output (8) and Other Outcome (4) have no type-specific fields, and the story is
@@ -388,6 +397,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.resultId.set(id);
         this.autoSaveService.setResultId(id);
         this.loadPhasesForSwitcher(id);
+        if (this.qualityAssessmentResultId !== id) {
+          this.qualityAssessmentResultId = id;
+          this.qualityAssessment.loadLatest(id).subscribe({
+            // An assessment is optional history. A failed read must never prevent editing.
+            error: () => this.qualityAssessment.reset(),
+          });
+        }
       }
     });
 
@@ -522,6 +538,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         // Drop pending writes from a previous result before binding the new id, and drop the id
         // itself: it must not survive into the next result while its detail is still loading.
         this.resultId.set(null);
+        this.qualityAssessmentResultId = null;
+        this.qualityAssessment.reset();
         this.autoSaveService.reset();
         this.mdsTracker.reset();
         this.lastLoadRequest = { resultCode, versionId };
@@ -531,6 +549,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         if (jobId) {
           this.isCreating.set(true);
           this.resultId.set(null);
+          this.qualityAssessmentResultId = null;
+          this.qualityAssessment.reset();
           this.selectedReportingWay.set('ai');
           this.manualCreateFlow.closeDrawer();
         } else {
@@ -538,6 +558,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
           const preselected = this.creationService.selectedProject();
           this.isCreating.set(true);
           this.resultId.set(null);
+          this.qualityAssessmentResultId = null;
+          this.qualityAssessment.reset();
           this.selectedReportingWay.set(null);
           this.manualCreateFlow.closeDrawer();
           this.autoSaveService.reset();
@@ -685,18 +707,44 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.isSubmitting.set(true);
-    this.creationService.submitResult(rid).subscribe({
+    this.qualityAssessment.run(rid).subscribe({
       next: () => {
-        this.isSubmitting.set(false);
+      },
+      error: (err: HttpErrorResponse | Error) => {
+        // The poll timeout arrives as a plain Error, not an HttpErrorResponse — read `message` too
+        // or the most likely failure of the whole flow reaches the user as "Unknown error".
+        const detail = (err as HttpErrorResponse).error?.message || (err as HttpErrorResponse).statusText || err.message || 'Unknown error';
+        this.api.alertsFe.show({ id: 'bilateralQualityAssessmentError', title: 'Quality check failed', description: detail, status: 'error', closeIn: 8000 });
+      }
+    });
+  }
+
+  submitAfterQualityDecision(decision: 'submitted_anyway' | 'submitted_without_check'): void {
+    const rid = this.resultId();
+    if (!rid) return;
+    this.qualityAssessment.submit(rid, decision).subscribe({
+      next: () => {
+        this.creationService.resultStatusId.set(BILATERAL_STATUS.PendingReview);
+        this.qualityAssessment.close();
         this.api.alertsFe.show({ id: 'bilateralSubmitSuccess', title: 'Submitted', description: 'Result submitted successfully', status: 'success' });
       },
       error: (err: HttpErrorResponse) => {
-        this.isSubmitting.set(false);
         const detail = err.error?.message || err.statusText || 'Unknown error';
         this.api.alertsFe.show({ id: 'bilateralSubmitError', title: 'Submit failed', description: detail, status: 'error', closeIn: 5000 });
       }
     });
+  }
+
+  openQualityAssessment(event: MouseEvent): void {
+    this.qualityAssessmentTrigger = event.currentTarget as HTMLElement;
+    this.qualityAssessment.openStored();
+  }
+
+  dismissQualityAssessment(): void {
+    this.qualityAssessment.close();
+    const trigger = this.qualityAssessmentTrigger;
+    this.qualityAssessmentTrigger = null;
+    queueMicrotask(() => trigger?.focus());
   }
 
   /** Upper bound for the manual-save wait so a stuck request can never freeze the button. */

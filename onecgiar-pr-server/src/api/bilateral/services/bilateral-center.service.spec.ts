@@ -26,6 +26,9 @@ import { ResultsKnowledgeProductsRepository } from '../../results/results-knowle
 import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
+import { BilateralQualityAssessmentService } from './quality-assessment/bilateral-quality-assessment.service';
+import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -221,7 +224,9 @@ describe('BilateralCenterService', () => {
           provide: ResultsKnowledgeProductsService,
           useValue: {
             populateKPFromCGSpace: jest.fn().mockResolvedValue({}),
-            validateBilateralKPHandle: jest.fn().mockResolvedValue({ title: 'KP', description: 'Metadata' }),
+            validateBilateralKPHandle: jest
+              .fn()
+              .mockResolvedValue({ title: 'KP', description: 'Metadata' }),
             populateBilateralKPFromMetadata: jest.fn().mockResolvedValue({}),
           },
         },
@@ -240,6 +245,32 @@ describe('BilateralCenterService', () => {
             findOne: jest.fn().mockResolvedValue(null),
           },
         },
+        // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6) — the orchestrator is a
+        // collaborator (`BIL-QAI-DD-5`); `BilateralCenterService` only owns the preconditions
+        // (`assertSubmittable`) and delegates the actual assessment to it.
+        {
+          provide: BilateralQualityAssessmentService,
+          useValue: {
+            assess: jest.fn().mockResolvedValue({
+              dto: { id: 1, result_id: 77, status: 'completed' },
+              httpStatus: 200,
+            }),
+            getLatest: jest.fn().mockResolvedValue({ latest: null }),
+          },
+        },
+        {
+          provide: BilateralQualityAssessmentRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({
+              id: 1,
+              result_id: 77,
+              status: 'completed',
+              decision: null,
+              overall_verdict: 'green',
+              sections: {},
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -254,9 +285,10 @@ describe('BilateralCenterService', () => {
     bilateralProjectsService = module.get<BilateralProjectsService>(
       BilateralProjectsService,
     );
-    resultsKnowledgeProductsService = module.get<ResultsKnowledgeProductsService>(
-      ResultsKnowledgeProductsService,
-    );
+    resultsKnowledgeProductsService =
+      module.get<ResultsKnowledgeProductsService>(
+        ResultsKnowledgeProductsService,
+      );
   });
 
   it('should be defined', () => {
@@ -1154,34 +1186,67 @@ describe('BilateralCenterService', () => {
   });
 
   describe('changeResultType', () => {
-    const user: TokenDto = { id: 42, email: 'center@cgiar.org', first_name: 'Center', last_name: 'User' };
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
     const promotedDraft = {
-      id: 77, source: SourceEnum.Bilateral, is_active: true,
-      creation_method: 'AI', status_id: ResultStatusData.Editing.value,
-      result_level_id: 3, result_type_id: 2,
+      id: 77,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      creation_method: 'AI',
+      status_id: ResultStatusData.Editing.value,
+      result_level_id: 3,
+      result_type_id: 2,
     };
 
     it('resets only type-specific records, updates the header and records the justification', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(promotedDraft);
 
       const response = await service.changeResultType(user, 77, {
-        result_level_id: 4, result_type_id: 7, justification: 'Classification corrected',
+        result_level_id: 4,
+        result_type_id: 7,
+        justification: 'Classification corrected',
       });
 
-      expect(response.response).toEqual({ resultId: 77, result_level_id: 4, result_type_id: 7 });
+      expect(response.response).toEqual({
+        resultId: 77,
+        result_level_id: 4,
+        result_type_id: 7,
+      });
       expect(resultRepository.manager.transaction).toHaveBeenCalled();
     });
 
     it('refuses a manual bilateral result', async () => {
-      (resultRepository.findOne as jest.Mock).mockResolvedValue({ ...promotedDraft, creation_method: 'MANUAL' });
-      await expect(service.changeResultType(user, 77, { result_level_id: 4, result_type_id: 7, justification: 'Correction' })).rejects.toThrow('Only a result promoted from an AI draft');
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...promotedDraft,
+        creation_method: 'MANUAL',
+      });
+      await expect(
+        service.changeResultType(user, 77, {
+          result_level_id: 4,
+          result_type_id: 7,
+          justification: 'Correction',
+        }),
+      ).rejects.toThrow('Only a result promoted from an AI draft');
     });
 
     it('validates and hydrates a Knowledge Product without using the legacy converter', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(promotedDraft);
-      await service.changeResultType(user, 77, { result_level_id: 4, result_type_id: 6, justification: 'It is a repository item', handle: '10568/175322' });
-      expect(resultsKnowledgeProductsService.validateBilateralKPHandle).toHaveBeenCalledWith('10568/175322', user);
-      expect(resultsKnowledgeProductsService.populateBilateralKPFromMetadata).toHaveBeenCalledWith(77, expect.any(Object), '10568/175322', user);
+      await service.changeResultType(user, 77, {
+        result_level_id: 4,
+        result_type_id: 6,
+        justification: 'It is a repository item',
+        handle: '10568/175322',
+      });
+      expect(
+        resultsKnowledgeProductsService.validateBilateralKPHandle,
+      ).toHaveBeenCalledWith('10568/175322', user);
+      expect(
+        resultsKnowledgeProductsService.populateBilateralKPFromMetadata,
+      ).toHaveBeenCalledWith(77, expect.any(Object), '10568/175322', user);
     });
   });
 
@@ -1210,13 +1275,24 @@ describe('BilateralCenterService', () => {
 
     const configureTransaction = () => {
       const projectRepository = {
-        find: jest.fn().mockResolvedValue([{ id: 1, project_id: 10, is_lead: true, is_active: true }]),
+        find: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 1, project_id: 10, is_lead: true, is_active: true },
+          ]),
         findOne: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({}),
         save: jest.fn().mockResolvedValue({}),
       };
       const initiativeRepository = {
-        find: jest.fn().mockResolvedValue([{ id: 2, initiative_id: 100, initiative_role_id: 1, is_active: true }]),
+        find: jest.fn().mockResolvedValue([
+          {
+            id: 2,
+            initiative_id: 100,
+            initiative_role_id: 1,
+            is_active: true,
+          },
+        ]),
         findOne: jest.fn().mockResolvedValue(null),
         update: jest.fn().mockResolvedValue({}),
         save: jest.fn().mockResolvedValue({}),
@@ -1225,18 +1301,20 @@ describe('BilateralCenterService', () => {
       const requestRepository = { update: jest.fn().mockResolvedValue({}) };
       const historyRepository = { save: jest.fn().mockResolvedValue({}) };
 
-      (resultRepository.manager.transaction as jest.Mock).mockImplementationOnce(
-        async (callback: any) =>
-          callback({
-            getRepository: (entity: any) => {
-              if (entity.name === 'ResultsByProjects') return projectRepository;
-              if (entity.name === 'ResultsByInititiative') return initiativeRepository;
-              if (entity.name === 'ResultsTocResult') return tocRepository;
-              if (entity.name === 'ShareResultRequest') return requestRepository;
-              if (entity.name === 'ResultReviewHistory') return historyRepository;
-              throw new Error(`Unexpected repository: ${entity.name}`);
-            },
-          }),
+      (
+        resultRepository.manager.transaction as jest.Mock
+      ).mockImplementationOnce(async (callback: any) =>
+        callback({
+          getRepository: (entity: any) => {
+            if (entity.name === 'ResultsByProjects') return projectRepository;
+            if (entity.name === 'ResultsByInititiative')
+              return initiativeRepository;
+            if (entity.name === 'ResultsTocResult') return tocRepository;
+            if (entity.name === 'ShareResultRequest') return requestRepository;
+            if (entity.name === 'ResultReviewHistory') return historyRepository;
+            throw new Error(`Unexpected repository: ${entity.name}`);
+          },
+        }),
       );
 
       return { initiativeRepository };
@@ -1244,11 +1322,19 @@ describe('BilateralCenterService', () => {
 
     it('stores the internal CLARISA initiative id, not the W3 project-mapping id', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
-      (bilateralProjectsService.getProjectsByCenter as jest.Mock).mockResolvedValue({
+      (
+        bilateralProjectsService.getProjectsByCenter as jest.Mock
+      ).mockResolvedValue({
         projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
       });
-      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(ClarisaInitiativesRepository) as any;
-      clarisaInitiatives.findOne.mockResolvedValue({ id: 404, official_code: 'SP04', active: true });
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      ) as any;
+      clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP04',
+        active: true,
+      });
       const { initiativeRepository } = configureTransaction();
 
       const response = await service.updatePrimaryAssignment(user, 11513, {
@@ -1269,10 +1355,14 @@ describe('BilateralCenterService', () => {
 
     it('fails before opening a transaction when the mapped program is absent from CLARISA', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
-      (bilateralProjectsService.getProjectsByCenter as jest.Mock).mockResolvedValue({
+      (
+        bilateralProjectsService.getProjectsByCenter as jest.Mock
+      ).mockResolvedValue({
         projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
       });
-      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(ClarisaInitiativesRepository) as any;
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      ) as any;
       clarisaInitiatives.findOne.mockResolvedValue(null);
 
       await expect(
@@ -1300,11 +1390,25 @@ describe('BilateralCenterService', () => {
       is_active: true,
       status_id: ResultStatusData.Editing.value,
     };
+    const decisionDto = {
+      assessment_id: 1,
+      decision: 'submitted_anyway' as const,
+    };
+
+    beforeEach(() => {
+      const assessmentService = module.get<BilateralQualityAssessmentService>(
+        BilateralQualityAssessmentService,
+      ) as any;
+      assessmentService.getLatest.mockResolvedValue({
+        id: 1,
+        is_current: true,
+      });
+    });
 
     it('moves an Editing result to PENDING_REVIEW', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
 
-      const result = await service.submitForReview(user, 77);
+      const result = await service.submitForReview(user, 77, decisionDto);
 
       expect((result.response as any).status).toBe(
         ResultStatusData.PendingReview.value,
@@ -1312,12 +1416,52 @@ describe('BilateralCenterService', () => {
       expect(resultRepository.manager.transaction).toHaveBeenCalled();
     });
 
+    it('refuses the old empty submit request before changing status', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+
+      await expect(
+        service.submitForReview(user, 77, undefined as any),
+      ).rejects.toThrow(/Run the quality assessment/);
+      expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses an assessment owned by another result', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const assessments = module.get<BilateralQualityAssessmentRepository>(
+        BilateralQualityAssessmentRepository,
+      );
+      (assessments.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/does not belong/);
+    });
+
+    it('requires submitted_without_check for an unavailable assessment', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const assessments = module.get<BilateralQualityAssessmentRepository>(
+        BilateralQualityAssessmentRepository,
+      );
+      (assessments.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 1,
+        result_id: 77,
+        status: 'unavailable',
+        decision: null,
+        overall_verdict: null,
+        sections: {},
+      });
+
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/does not match/);
+    });
+
     // 2026-09-05 — the primary SP's members are told the result is waiting for them, post-commit.
     it('announces the arrival to the primary Science Program after the transaction', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const bilateral = module.get<BilateralService>(BilateralService) as any;
 
-      await service.submitForReview(user, 77);
+      await service.submitForReview(user, 77, decisionDto);
 
       expect(bilateral.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
         77,
@@ -1332,13 +1476,14 @@ describe('BilateralCenterService', () => {
         resultRepository.manager.transaction as jest.Mock
       ).mockImplementationOnce(async (cb: any) =>
         cb({
+          query: jest.fn().mockResolvedValue({ affectedRows: 1 }),
           update,
           create: jest.fn((_entity, payload) => payload),
           save: jest.fn().mockResolvedValue({}),
         }),
       );
 
-      await service.submitForReview(user, 77);
+      await service.submitForReview(user, 77, decisionDto);
 
       const [, , patch] = update.mock.calls[0];
       expect(patch.external_submitted_date).toEqual(expect.any(String));
@@ -1357,13 +1502,14 @@ describe('BilateralCenterService', () => {
         resultRepository.manager.transaction as jest.Mock
       ).mockImplementationOnce(async (cb: any) =>
         cb({
+          query: jest.fn().mockResolvedValue({ affectedRows: 1 }),
           update,
           create: jest.fn((_entity, payload) => payload),
           save: jest.fn().mockResolvedValue({}),
         }),
       );
 
-      await service.submitForReview(user, 77);
+      await service.submitForReview(user, 77, decisionDto);
 
       const [, , patch] = update.mock.calls[0];
       expect(patch.external_submitter).toBe(user.id);
@@ -1375,7 +1521,7 @@ describe('BilateralCenterService', () => {
         status_id: ResultStatusData.Draft.value,
       });
 
-      const result = await service.submitForReview(user, 77);
+      const result = await service.submitForReview(user, 77, decisionDto);
 
       expect((result.response as any).status).toBe(
         ResultStatusData.PendingReview.value,
@@ -1388,23 +1534,23 @@ describe('BilateralCenterService', () => {
         status_id: ResultStatusData.PendingReview.value,
       });
 
-      await expect(service.submitForReview(user, 77)).rejects.toThrow(
-        /Editing or Draft/,
-      );
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/Editing or Draft/);
     });
 
     it('rejects an unknown bilateral result', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.submitForReview(user, 77)).rejects.toThrow(
-        'Bilateral result not found',
-      );
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow('Bilateral result not found');
     });
 
     it('rejects an invalid resultId', async () => {
-      await expect(service.submitForReview(user, 0 as any)).rejects.toThrow(
-        /valid positive number/,
-      );
+      await expect(
+        service.submitForReview(user, 0 as any, decisionDto),
+      ).rejects.toThrow(/valid positive number/);
     });
 
     it('refuses a user without the Center User role on the lead centre', async () => {
@@ -1415,9 +1561,9 @@ describe('BilateralCenterService', () => {
         roleByUserRepository.validationCenterPermissions as jest.Mock
       ).mockResolvedValue(0);
 
-      await expect(service.submitForReview(user, 77)).rejects.toThrow(
-        /do not have permission/,
-      );
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/do not have permission/);
     });
 
     it('refuses a result with no lead centre', async () => {
@@ -1429,9 +1575,9 @@ describe('BilateralCenterService', () => {
         resultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
       ).mockResolvedValue([{ code: 'CIAT', is_leading_result: 0 }]);
 
-      await expect(service.submitForReview(user, 77)).rejects.toThrow(
-        /no lead center/,
-      );
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/no lead center/);
     });
 
     /**
@@ -1448,8 +1594,218 @@ describe('BilateralCenterService', () => {
         resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
       ).mockResolvedValue(null);
 
-      await expect(service.submitForReview(user, 77)).rejects.toThrow(
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/no Science Program assigned/);
+    });
+  });
+
+  // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+  describe('assess', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    const editingResult = {
+      id: 77,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      status_id: ResultStatusData.Editing.value,
+      result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+    };
+
+    let qualityAssessmentService: BilateralQualityAssessmentService;
+
+    beforeEach(() => {
+      qualityAssessmentService = module.get<BilateralQualityAssessmentService>(
+        BilateralQualityAssessmentService,
+      );
+    });
+
+    it('delegates to the orchestrator with the validated result once the guards pass', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+
+      const result = await service.assess(user, 77);
+
+      expect(qualityAssessmentService.assess).toHaveBeenCalledWith(
+        user,
+        editingResult,
+      );
+      expect(result).toEqual({
+        response: { id: 1, result_id: 77, status: 'completed' },
+        message: 'Quality assessment completed',
+        status: 200,
+      });
+    });
+
+    it('never transitions the result, writes review history, or fires the submitted notification', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const bilateral = module.get<BilateralService>(BilateralService) as any;
+
+      await service.assess(user, 77);
+
+      expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+      expect(
+        bilateral.emitBilateralSubmittedNotification,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('maps a 202 (already running) outcome to the 202 envelope', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      (qualityAssessmentService.assess as jest.Mock).mockResolvedValueOnce({
+        dto: { id: 5, result_id: 77, status: 'running', is_current: true },
+        httpStatus: 202,
+      });
+
+      const result = await service.assess(user, 77);
+
+      expect(result.status).toBe(202);
+      expect(result.message).toMatch(/already running/);
+    });
+
+    /**
+     * Disqualifier (BIL-QAI-T-6 brief): a test that stubs `assertSubmittable` when testing
+     * `assess` proves nothing about gate parity. `assertSubmittable` is private and is never
+     * mocked here — every case below drives the exact same `resultRepository` /
+     * `roleByUserRepository` / `resultsCenterRepository` / `resultByInitiativesRepository`
+     * mocks, and the exact same `editingResult` shape, that the 11 `submitForReview` cases
+     * above use. A rejection message that matches `submitForReview`'s is proof both methods
+     * run through the one shared guard, not two hand-written copies that happen to agree today.
+     */
+    it('gate parity: rejects a result that is already under review, same message as submitForReview', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+
+      await expect(service.assess(user, 77)).rejects.toThrow(
+        /Editing or Draft/,
+      );
+    });
+
+    it('gate parity: rejects an unknown bilateral result, same message as submitForReview', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.assess(user, 77)).rejects.toThrow(
+        'Bilateral result not found',
+      );
+    });
+
+    it('gate parity: rejects an invalid resultId, same message as submitForReview', async () => {
+      await expect(service.assess(user, 0 as any)).rejects.toThrow(
+        /valid positive number/,
+      );
+    });
+
+    it('gate parity: refuses a user without the Center User role, same message as submitForReview', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      await expect(service.assess(user, 77)).rejects.toThrow(
+        /do not have permission/,
+      );
+      expect(qualityAssessmentService.assess).not.toHaveBeenCalled();
+    });
+
+    it('gate parity: refuses a result with no Science Program assigned, same message as submitForReview', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const resultByInitiativesRepository =
+        module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        );
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue(null);
+
+      await expect(service.assess(user, 77)).rejects.toThrow(
         /no Science Program assigned/,
+      );
+      expect(qualityAssessmentService.assess).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Falsifying input (BIL-QAI-T-6 brief): an Innovation Use result lacking MDS must make
+     * `assess` throw exactly like `submitForReview` — the MDS gate is part of the shared
+     * `assertSubmittable`, so no path may bypass it (`innovation-use-mds-validator.service.ts`
+     * header comment).
+     */
+    it('falsifying input: an Innovation Use result lacking MDS makes assess throw, and the orchestrator is never called', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        result_type_id: ResultTypeEnum.INNOVATION_USE,
+      });
+      const innovationUseMdsValidator = module.get<InnovationUseMdsValidator>(
+        InnovationUseMdsValidator,
+      );
+      (
+        innovationUseMdsValidator.assertPersistedMds as jest.Mock
+      ).mockRejectedValueOnce(new BadRequestException('MDS incomplete'));
+
+      await expect(service.assess(user, 77)).rejects.toThrow('MDS incomplete');
+      expect(qualityAssessmentService.assess).not.toHaveBeenCalled();
+    });
+  });
+
+  // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+  describe('getLatest', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    it('delegates to the orchestrator after only the centre-permission check', async () => {
+      const qualityAssessmentService =
+        module.get<BilateralQualityAssessmentService>(
+          BilateralQualityAssessmentService,
+        );
+
+      const result = await service.getLatest(user, 77);
+
+      expect(qualityAssessmentService.getLatest).toHaveBeenCalledWith(77);
+      expect(result).toEqual({
+        response: { latest: null },
+        message: 'Latest quality assessment retrieved successfully',
+        status: 200,
+      });
+    });
+
+    it('does not require Editing/Draft status — a reviewer can reopen a Pending Review result', async () => {
+      // No `resultRepository.findOne` stub is asserted here: `getLatest` never calls
+      // `assertSubmittable`, so the result's status_id is never inspected. Only
+      // `assertCenterPermission` (via `getAllResultsCenterByResultId` + role validation) runs.
+      const qualityAssessmentService =
+        module.get<BilateralQualityAssessmentService>(
+          BilateralQualityAssessmentService,
+        );
+
+      await expect(service.getLatest(user, 77)).resolves.toBeDefined();
+      expect(qualityAssessmentService.getLatest).toHaveBeenCalledWith(77);
+    });
+
+    it('still refuses a user without the Center User role on the lead centre', async () => {
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      await expect(service.getLatest(user, 77)).rejects.toThrow(
+        /do not have permission/,
+      );
+    });
+
+    it('rejects an invalid resultId', async () => {
+      await expect(service.getLatest(user, 0 as any)).rejects.toThrow(
+        /valid positive number/,
       );
     });
   });
