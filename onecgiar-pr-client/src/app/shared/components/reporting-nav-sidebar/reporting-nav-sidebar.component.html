@@ -404,17 +404,6 @@
           <li hlmSidebarMenuItem>
             <a
               hlmSidebarMenuButton
-              [href]="clarisaGlossaryUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              tooltip="Glossary">
-              <ng-icon name="lucideBookOpen" />
-              <span>Glossary</span>
-            </a>
-          </li>
-          <li hlmSidebarMenuItem>
-            <a
-              hlmSidebarMenuButton
               [href]="aiUseInPrmsUrl"
               target="_blank"
               rel="noopener noreferrer"
@@ -456,40 +445,6 @@
               <ng-icon name="lucideAward" />
               <span>License</span>
             </a>
-          </li>
-          <li hlmSidebarMenuItem>
-            <button
-              hlmSidebarMenuButton
-              type="button"
-              tooltip="Take a tour of the sidebar"
-              data-guide="platform-tour-sidebar-trigger"
-              aria-label="Start sidebar tour"
-              (click)="startPlatformSidebarTour()">
-              <ng-icon name="lucideSparkles" />
-              <span>Tour</span>
-            </button>
-          </li>
-          <li hlmSidebarMenuItem>
-            <button hlmSidebarMenuButton type="button" tooltip="Notifications" (click)="goToNotifications()">
-              <ng-icon name="lucideBell" />
-              <span>Notifications</span>
-              @if (notificationBadgeCount() > 0 && !isCollapsed()) {
-                <span class="bg-[var(--pr-color-red-300)] ms-auto flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold leading-[18px] text-white">{{ notificationBadgeCount() }}</span>
-              }
-            </button>
-          </li>
-          <li hlmSidebarMenuItem>
-            <button
-              hlmSidebarMenuButton
-              type="button"
-              tooltip="Text size"
-              cdkOverlayOrigin
-              #fontTrigger="cdkOverlayOrigin"
-              (click)="fontMenuOpen.set(!fontMenuOpen())"
-              [attr.aria-expanded]="fontMenuOpen()">
-              <ng-icon name="lucideType" />
-              <span>Text size</span>
-            </button>
           </li>
         </ul>
       </div>
@@ -581,45 +536,3 @@
   </div>
 }
 
-<!-- Text-size popover (opens upward from the footer) -->
-<ng-template
-  cdkConnectedOverlay
-  [cdkConnectedOverlayOrigin]="fontTrigger"
-  [cdkConnectedOverlayOpen]="fontMenuOpen()"
-  [cdkConnectedOverlayHasBackdrop]="true"
-  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-  [cdkConnectedOverlayPositions]="fontMenuPositions"
-  (backdropClick)="fontMenuOpen.set(false)"
-  (detach)="fontMenuOpen.set(false)">
-  <div class="overlay_panel mb-2.5 w-[280px] rounded-2xl bg-white p-3.5 shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]" cdkTrapFocus cdkTrapFocusAutoCapture>
-    <div class="mb-1 flex items-center gap-1.5">
-      <i class="material-icons-round text-[18px] text-brand-300" aria-hidden="true">format_size</i>
-      <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Text size</p>
-    </div>
-    <p class="m-0 mb-2.5 text-[11px] leading-snug text-[var(--pr-color-accents-5)]">Make text across the platform larger. Your browser zoom still works on top of this.</p>
-    <div role="radiogroup" aria-label="Text size" class="grid grid-cols-5 gap-1 rounded-xl bg-[var(--pr-color-accents-1)] p-1">
-      @for (option of fontScaleOptions; track option.value; let i = $index) {
-        <button
-          role="radio"
-          type="button"
-          [attr.aria-checked]="fontScaleSE.scale() === option.value"
-          [attr.aria-label]="option.label + ' text size'"
-          class="flex flex-col items-center gap-1 rounded-lg py-2 transition-colors duration-150"
-          [ngClass]="fontScaleSE.scale() === option.value ? 'bg-white text-brand-600 ring-1 ring-brand-300' : 'text-[var(--pr-color-accents-6)] hover:bg-white/70'"
-          (click)="selectFontScale(option.value)">
-          <span class="font-bold leading-none" [style.font-size.px]="12 + i * 3" aria-hidden="true">A</span>
-          <span class="text-[10px] font-medium leading-none">{{ option.label }}</span>
-        </button>
-      }
-    </div>
-    @if (fontScaleSE.scale() !== 'default') {
-      <button
-        type="button"
-        class="mt-2.5 flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium text-brand-400 transition-colors hover:bg-brand-25"
-        (click)="fontScaleSE.reset()">
-        <i class="material-icons-round text-[14px]" aria-hidden="true">restart_alt</i>
-        Reset to default
-      </button>
-    }
-  </div>
-</ng-template>

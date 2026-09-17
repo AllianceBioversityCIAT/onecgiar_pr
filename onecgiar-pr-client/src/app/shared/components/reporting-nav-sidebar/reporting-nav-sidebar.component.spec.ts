@@ -143,7 +143,6 @@ describe('ReportingNavSidebarComponent', () => {
     if (myAdmin >= 0) expect(qa).toBeLessThan(myAdmin);
     expect(component.rfrPlannedPath).toBe(PLANNED);
     expect(component.programGroups().find(g => g.key === 'other')?.label).toBe('Other science programs');
-    expect(component.fontScaleOptions.length).toBeGreaterThan(0);
   });
 
   // ---------------------------------------------------------------- isCollapsed
@@ -746,32 +745,9 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.centerHomeLink({ center_id: 42 })).toEqual(['/bilateral', '42', 'home']);
     });
 
-    it('notificationBadgeCount counts the pending updates and tolerates no service data', async () => {
-      notificationsMock.updatesPopUpData = [{ id: 1 }, { id: 2 }];
-      await build();
-      expect(component.notificationBadgeCount()).toBe(2);
-
-      notificationsMock.updatesPopUpData = undefined;
-      expect(component.notificationBadgeCount()).toBe(0);
-    });
-
-    it('goToNotifications navigates to the requests tab', async () => {
-      await build();
-      component.goToNotifications();
-      expect(routerMock.navigate).toHaveBeenCalledWith(['result/results-outlet/results-notifications/requests']);
-    });
-
-    it('selectFontScale delegates to the font scale service', async () => {
-      await build();
-      component.selectFontScale('large');
-      expect(fontScaleMock.set).toHaveBeenCalledWith('large');
-    });
-
     it('escape closes every overlay', async () => {
       await build();
-      component.fontMenuOpen.set(true);
       component.onEscape();
-      expect(component.fontMenuOpen()).toBe(false);
       expect(component.iconFlyout()).toBeNull();
     });
   });
@@ -779,31 +755,11 @@ describe('ReportingNavSidebarComponent', () => {
   // ------------------------------------------------------- SGL-T-2 / SGL-R-1..R-2
   // Parsed-template checks — same rationale as SBAR-T-3 below: the real template trips BrnTooltip
   // under Jest, so markup authorship is asserted from the `.html` file on disk.
-  describe('platform sidebar tour (POT-T-3)', () => {
-    it('startPlatformSidebarTour forwards program and center context to ReportingGuideService', async () => {
-      homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01' }]);
-      homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP02' }]);
-      await build();
-
-      component.startPlatformSidebarTour();
-
-      expect(reportingGuideMock.startSidebarTour).toHaveBeenCalledWith({
-        hasMyPrograms: true,
-        hasOtherPrograms: true,
-        hasCenters: true
-      });
-    });
-
-    it('authors a Tour control in EXTRAS with platform anchors', () => {
-      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
-      expect(html).toContain('data-guide="platform-tour-sidebar-trigger"');
-      expect(html).toContain('startPlatformSidebarTour()');
-      expect(html).toContain("'platform-tour-sidebar-results-center'");
-      expect(html).toContain('data-guide="platform-tour-sidebar-platform"');
-    });
-  });
-
-  describe('EXTRAS glossary link (SGL-T-2)', () => {
+  // ------------------------------------------------------------------ P2-3682
+  // The EXTRAS block used to carry five entries; the approved design carries one. Counting the
+  // menu items is the lock: asserting only the ABSENCE of the four labels would stay green if a
+  // sixth entry were added later, which is the drift this ticket exists to undo.
+  describe('About block navigation entries (P2-3682 / quick/sidebar-about-links)', () => {
     const readExtrasMarkup = (): string => {
       const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
       const start = html.indexOf('pr-nav-extras');
@@ -811,9 +767,11 @@ describe('ReportingNavSidebarComponent', () => {
       return html.slice(start, end);
     };
 
-    it('exposes clarisaGlossaryUrl from the shared CLARISA constant', async () => {
-      await build();
-      expect(component.clarisaGlossaryUrl).toBe(CLARISA_GLOSSARY_URL);
+    it('renders exactly four About entries: AI use, Release notes, Terms and conditions, License', () => {
+      const extras = readExtrasMarkup();
+      expect(extras.split('<li hlmSidebarMenuItem>').length - 1).toBe(4);
+      expect(extras).toContain('routerLink="/whats-new"');
+      expect(extras).toContain('<span>Release notes</span>');
     });
 
     it('exposes aiUseInPrmsUrl, termsAndConditionsUrl, and licenseUrl from environment', async () => {
@@ -823,19 +781,21 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.licenseUrl).toBe(environment.footerUrls.license);
     });
 
-    it('authors Glossary before Release notes with external link contract', () => {
-      const extras = readExtrasMarkup();
-      const glossaryIdx = extras.indexOf('tooltip="Glossary"');
-      const releaseIdx = extras.indexOf('routerLink="/whats-new"');
+    it('keeps Glossary, Tour, Notifications and Text size out of the whole sidebar', () => {
+      const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+      for (const gone of ['<span>Glossary</span>', '<span>Tour</span>', '<span>Notifications</span>', '<span>Text size</span>']) {
+        expect(html).not.toContain(gone);
+      }
+      // Control: the same instrument still finds the entry that is meant to be there.
+      expect(html).toContain('<span>Release notes</span>');
+    });
 
-      expect(glossaryIdx).toBeGreaterThan(-1);
-      expect(releaseIdx).toBeGreaterThan(glossaryIdx);
-      expect(extras).toContain('[href]="clarisaGlossaryUrl"');
-      expect(extras).toContain('target="_blank"');
-      expect(extras).toContain('rel="noopener noreferrer"');
-      expect(extras).toContain('name="lucideBookOpen"');
-      expect(extras).toContain('<span>Glossary</span>');
-      expect(extras.slice(glossaryIdx, releaseIdx)).not.toContain('routerLink');
+    it('drops the component members those entries needed', async () => {
+      await build();
+      const moved = component as unknown as Record<string, unknown>;
+      for (const member of ['goToNotifications', 'notificationBadgeCount', 'selectFontScale', 'startPlatformSidebarTour', 'clarisaGlossaryUrl', 'fontMenuOpen']) {
+        expect(moved[member]).toBeUndefined();
+      }
     });
 
     it('renders AI use in PRMS, Terms and conditions, and License links with external link contract', () => {

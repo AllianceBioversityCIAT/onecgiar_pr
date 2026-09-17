@@ -11,6 +11,10 @@ import { ResultsNotificationsService } from '../../../pages/results/pages/result
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { environment } from '../../../../environments/environment';
 import { SupportChatService } from '../../services/support-chat.service';
+import { FontScaleService } from '../../services/font-scale.service';
+import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
+import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 
 /**
  * The topbar owns the ONLY user/account menu in the shell (PROGRAM-SHELL-SPEC.md §2). The
@@ -26,6 +30,9 @@ describe('ShellTopbarComponent', () => {
   let routerMock: any;
   let notificationsMock: any;
   let filterMock: any;
+  let fontScaleMock: any;
+  let reportingGuideMock: any;
+  let homeMock: any;
 
   const build = async () => {
     await TestBed.configureTestingModule({
@@ -35,7 +42,10 @@ describe('ShellTopbarComponent', () => {
         { provide: DataControlService, useValue: dataControlMock },
         { provide: Router, useValue: routerMock },
         { provide: ResultsNotificationsService, useValue: notificationsMock },
-        { provide: ResultsListFilterService, useValue: filterMock }
+        { provide: ResultsListFilterService, useValue: filterMock },
+        { provide: FontScaleService, useValue: fontScaleMock },
+        { provide: ReportingGuideService, useValue: reportingGuideMock },
+        { provide: ResultFrameworkReportingHomeService, useValue: homeMock }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     })
@@ -64,6 +74,9 @@ describe('ShellTopbarComponent', () => {
       handlePopUpNotificationLastViewed: jest.fn()
     };
     filterMock = { text_to_search: signal('') };
+    fontScaleMock = { scale: signal('default'), set: jest.fn(), reset: jest.fn() };
+    reportingGuideMock = { startSidebarTour: jest.fn() };
+    homeMock = { mySPsList: signal([] as any[]), otherSPsList: signal([] as any[]) };
   });
 
   it('creates, and no longer syncs anything with the Results Center list filter', async () => {
@@ -423,9 +436,163 @@ describe('ShellTopbarComponent', () => {
 
       expect(html).not.toContain('aria-label="Report a bug or adjustment"');
       expect(html).not.toContain('lucideBug');
-      // Control for the two assertions above: the entry point still exists, just moved.
+      // Control for the two assertions above: the entry point still exists, just moved — into the
+      // menu that P2-3682 renamed from Support to Help.
       expect(html).toContain('openFeedbackFromSupport()');
-      expect(html).toContain('aria-label="Support"');
+      expect(html).toContain('aria-label="Help"');
+    });
+  });
+
+  // ------------------------------------------------------------------ P2-3682
+  // Glossary, Tour and Text size moved out of the sidebar's EXTRAS block. Two of them are help,
+  // so they land under Support; Text size is a per-user preference, so it lands under Settings in
+  // the account menu — which is where the design puts it.
+  describe('controls moved from the sidebar (P2-3682)', () => {
+    it('the help menu offers the CLARISA glossary as an external link', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const support = html.slice(html.indexOf('aria-label="Help"'), html.indexOf('<!-- Notifications popover'));
+
+      expect(support).toContain('[href]="clarisaGlossaryUrl"');
+      expect(support).toContain('target="_blank"');
+      expect(support).toContain('rel="noopener noreferrer"');
+      expect(support).toContain('<span>Glossary</span>');
+    });
+
+    it('exposes clarisaGlossaryUrl from the shared CLARISA constant', async () => {
+      await build();
+      expect(component.clarisaGlossaryUrl).toBe(CLARISA_GLOSSARY_URL);
+    });
+
+    it('the menu is labelled Help, and groups reaching a person apart from doing it yourself', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const menu = html.slice(html.indexOf('role="menu" aria-label="Help"'), html.indexOf('<!-- Notifications popover'));
+
+      expect(html).toContain('<span>Help</span>');
+      expect(html).not.toContain('<span>Support</span>');
+      expect(menu.indexOf('>Get help<')).toBeGreaterThan(-1);
+      expect(menu.indexOf('>Learn<')).toBeGreaterThan(menu.indexOf('>Get help<'));
+      // Order: the two ways of reaching a person first, then the two you use on your own.
+      expect(menu.indexOf('<span>Glossary</span>')).toBeGreaterThan(menu.indexOf('>Learn<'));
+      expect(menu.indexOf('<span>Start a support chat</span>')).toBeLessThan(menu.indexOf('>Learn<'));
+    });
+
+    it('Tour forwards the programme and centre context, and closes the help menu', async () => {
+      homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01' }]);
+      homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP02' }]);
+      await build();
+      component.supportMenuOpen.set(true);
+
+      component.startPlatformSidebarTour();
+
+      expect(reportingGuideMock.startSidebarTour).toHaveBeenCalledWith({
+        hasMyPrograms: true,
+        hasOtherPrograms: true,
+        hasCenters: true
+      });
+      expect(component.supportMenuOpen()).toBe(false);
+    });
+
+    it('Tour reports empty programme lists as empty, not as missing', async () => {
+      apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+      await build();
+
+      component.startPlatformSidebarTour();
+
+      expect(reportingGuideMock.startSidebarTour).toHaveBeenCalledWith({
+        hasMyPrograms: false,
+        hasOtherPrograms: false,
+        hasCenters: false
+      });
+    });
+
+    it('text size sits inside the profile panel, visible the moment it opens', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const from = html.indexOf('aria-label="Account menu"');
+      const to = html.indexOf('pr-topbar-logout');
+      expect(from).toBeGreaterThan(-1);
+      expect(to).toBeGreaterThan(from);
+      const panel = html.slice(from, to);
+
+      expect(panel).toContain('role="radiogroup"');
+      expect(panel).toContain('(click)="selectFontScale(option.value)"');
+      // Neither of the two places it was tried first: not behind a Settings entry (nobody finds it
+      // there), and not a separate topbar button either. Written up on P2-3682.
+      expect(html).not.toContain('<span>Settings</span>');
+      expect(html).not.toContain('#fontTrigger="cdkOverlayOrigin"');
+      expect((component as unknown as Record<string, unknown>).openSettings).toBeUndefined();
+    });
+
+    it('drops the repeated CENTER- prefix without losing the id', async () => {
+      await build();
+      expect(component.shortCode('CENTER-06')).toBe('06');
+      expect(component.shortCode('center_02')).toBe('02');
+      // A code that is not a centre is left exactly as it is, and so is an empty one.
+      expect(component.shortCode('SGP-02')).toBe('SGP-02');
+      expect(component.shortCode(null)).toBe('');
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      expect(html).toContain('[title]="item.center_id"');
+    });
+
+    it('picking a size delegates to the font scale service', async () => {
+      await build();
+      component.selectFontScale('large');
+      expect(fontScaleMock.set).toHaveBeenCalledWith('large');
+    });
+
+    it('offers Reset only when a non-default size is active, and sits after the information', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      const from = html.indexOf('pr-topbar-account__group--text');
+      const logout = html.indexOf('pr-topbar-logout');
+      expect(from).toBeGreaterThan(-1);
+      expect(logout).toBeGreaterThan(from);
+      const group = html.slice(from, logout);
+
+      expect(group).toContain("@if (fontScaleSE.scale() !== 'default')");
+      expect(group).toContain('(click)="fontScaleSE.reset()"');
+      // You open this panel to see who you are signed in as; the control comes after that, not
+      // between the name and the programmes.
+      expect(from).toBeGreaterThan(html.indexOf('getMyCenters()'));
+      expect(from).toBeGreaterThan(html.indexOf('pr-topbar-account__id'));
+    });
+  });
+
+  // ------------------------------------------------------------------ P2-3682
+  // Yeck, looking at the first pass: the right-hand controls and the account menu were "un enredo
+  // ... no se sabe dónde está cada cosa". Both were regrouped; these lock the grouping in.
+  describe('the shell chrome is grouped (P2-3682)', () => {
+    const html = () => readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+
+    it('separates the labelled action, the icon actions and the identity', () => {
+      const right = html();
+      const from = right.indexOf('class="pr-topbar-right"');
+      const to = right.indexOf('</header>');
+      // The slice has to be a real one, or the counts below would be measuring the whole file.
+      expect(from).toBeGreaterThan(-1);
+      expect(to).toBeGreaterThan(from);
+      const cluster = right.slice(from, to);
+
+      // Two rules: Help | bell | user.
+      expect((cluster.match(/pr-topbar-sep/g) || []).length).toBe(2);
+      expect(cluster.indexOf('pr-topbar-actions')).toBeGreaterThan(cluster.indexOf('pr-topbar-sep'));
+      expect(cluster.indexOf('class="pr-topbar-user"')).toBeGreaterThan(cluster.indexOf('pr-topbar-actions'));
+    });
+
+    it('the account menu groups instead of ruling off every row', () => {
+      const account = html();
+      const from = account.indexOf('aria-label="Account menu"');
+      const to = account.indexOf('pr-topbar-logout');
+      expect(from).toBeGreaterThan(-1);
+      expect(to).toBeGreaterThan(from);
+      const panel = account.slice(from, to);
+
+      expect(panel).toContain('pr-topbar-account__id');
+      expect(panel).toContain('pr-topbar-account__group');
+      expect(panel).toContain('pr-topbar-account__code');
+      // The old per-row rules came from these two classes; they are gone.
+      expect(panel).not.toContain('pr-topbar-assignment');
+      expect(panel).not.toContain('pr-topbar-user-card');
+      // The role badge is no longer pinned beside the name, where it ate the name's width.
+      expect(panel).toContain('pr-topbar-account__role');
     });
   });
 });
