@@ -39,27 +39,23 @@ export class InnovationPackageCustomTableComponent {
   ];
 
   /**
-   * The status chip, using the SAME class family the rest of the platform uses for `status_id`
-   * (`styles.scss`): the list used to print the word in plain black text, so a discontinued
-   * package and an editing one looked identical while the Results Center coloured both.
+   * The status chip, using the SAME class family the Results Center uses for `status_id`
+   * (`results-list.component.ts` → `statusClass()`: `status_tag status_<id>`). It used to return the
+   * `completeness-*` family from `styles.scss:305-323`, which is a SOLID saturated fill with white
+   * text (#6b46e5 / #fcc000 / #3b82f6 / #f97316) — that, plus a 32px floor in this file's SCSS, is
+   * what made the chip read as "colosalmente grande" next to the Results Center's pastel 20px one.
    */
   statusChipClass(status: unknown, statusId: unknown): string {
     const id = String(statusId ?? '');
-    const byId: Record<string, string> = {
-      '1': 'completeness-editing',
-      '2': 'completeness-quality-assessed',
-      '3': 'completeness-submitted',
-      '4': 'completeness-discontinued'
-    };
-    if (byId[id]) return byId[id];
+    if (['1', '2', '3', '4', '5', '6', '7', '8'].includes(id)) return `status_tag status_${id}`;
 
     // Fallback on the label when the row carries no id, so a chip is never colourless.
     const label = String(status ?? '').toLowerCase();
-    if (label.includes('submit')) return 'completeness-submitted';
-    if (label.includes('quality') || label.includes('qa')) return 'completeness-quality-assessed';
-    if (label.includes('discontinued')) return 'completeness-discontinued';
-    if (label.includes('edit')) return 'completeness-editing';
-    return 'completeness-all';
+    if (label.includes('submit')) return 'status_tag status_3';
+    if (label.includes('quality') || label.includes('qa')) return 'status_tag status_2';
+    if (label.includes('discontinued')) return 'status_tag status_4';
+    if (label.includes('edit')) return 'status_tag status_1';
+    return 'status_tag status_5';
   }
 
   // Action menu overlay state (replaces PrimeNG p-popover)

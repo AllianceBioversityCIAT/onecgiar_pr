@@ -1,35 +1,40 @@
 @use '../../../../../../../../../styles/fonts.scss' as fonts;
 
-.subResults {
-  display: flex;
-  flex-direction: column;
-  align-items: space-between;
-
-  &:not(:first-child) {
-    border-top: 1px solid var(--pr-color-accents-2);
-    margin-top: 10px;
-    padding-top: 10px;
-  }
-}
-
-.icon_container {
-  text-align: center;
-  height: 35px;
-  width: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* ═══════════════════════════════════════════════════════════════════ 2026-09-17, second pass
+   Reference, opened and copied value by value:
+   `pages/results/pages/results-outlet/pages/results-list/results-list.component.{html,scss}`.
+   Where this file and a written recipe disagreed, the reference file won — the deltas are noted
+   inline. Nothing here changes data, routes or handlers. */
 
 i {
   cursor: pointer;
 }
 
+/* The count line, above the table: `.rc-showing` in the reference (results-list.component.scss:514).
+   It used to sit UNDER the table at 12px grey, which is the one place nobody looks first. */
+.ip-showing {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pr-text-secondary, #5d5872);
+}
+
 .table {
   // overrides Tailwind's `.table` utility (display:table) that collides with this class
   display: block;
-  padding-bottom: 100px;
+  /* Was 100px — 100px of dead space under every list. The reference uses 24px
+     (results-list.component.scss: `.table { padding-bottom: 24px }`). */
+  padding-bottom: 24px;
   position: relative;
+
+  /* The card lives HERE, as it does in the reference, and the shared wrap is neutralised below.
+     That also moves the horizontal scroll from the wrap (which had `overflow: hidden` and would
+     CLIP the action column) to a scrollable box — the row actions can always be reached. */
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 12px;
+  background: #fff;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 td {
@@ -47,111 +52,6 @@ td {
   }
 }
 
-.title {
-  a {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    &:not(:first-child) {
-      border-top: 1px solid var(--pr-color-accents-2);
-      margin-top: 10px;
-      padding-top: 10px;
-    }
-  }
-
-  .discontinued-icon {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background-color: var(--pr-color-orange-500, #f97316);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-
-    i {
-      color: white;
-      font-size: 12px;
-    }
-  }
-}
-
-.official_code {
-  a {
-    height: 35px;
-    display: flex;
-    align-items: center;
-
-    &:not(:first-child) {
-      height: 45px;
-      border-top: 1px solid var(--pr-color-accents-2);
-      margin-top: 10px;
-      padding-top: 10px;
-    }
-  }
-}
-
-.status {
-  a {
-    height: 35px;
-    display: flex;
-    align-items: center;
-
-    &:not(:first-child) {
-      height: 45px;
-      border-top: 1px solid var(--pr-color-accents-2);
-      margin-top: 10px;
-      padding-top: 10px;
-    }
-  }
-}
-
-.phase_year {
-  a {
-    height: 35px;
-    display: flex;
-    align-items: center;
-
-    &:not(:first-child) {
-      height: 45px;
-      border-top: 1px solid var(--pr-color-accents-2);
-      margin-top: 10px;
-      padding-top: 10px;
-    }
-  }
-}
-
-.phase_name {
-  a {
-    height: 35px;
-    display: flex;
-    align-items: center;
-
-    &:not(:first-child) {
-      height: 45px;
-      border-top: 1px solid var(--pr-color-accents-2);
-      margin-top: 10px;
-      padding-top: 10px;
-    }
-  }
-}
-
-.created_by {
-  a {
-    height: 35px;
-    display: flex;
-    align-items: center;
-
-    &:not(:first-child) {
-      height: 45px;
-      border-top: 1px solid var(--pr-color-accents-2);
-      margin-top: 10px;
-      padding-top: 10px;
-    }
-  }
-}
-
 .noDataText {
   text-align: center;
   padding: 50px 0px;
@@ -160,36 +60,14 @@ td {
   color: var(--pr-color-primary-300);
 }
 
-.new_tag {
-  background-color: var(--pr-color-primary-300);
-  margin-right: 10px;
-  padding: 2px 3px;
-  @include fonts.pr-typography('body-3');
-  border-radius: 3px;
-  color: var(--pr-color-white);
-  height: 17px;
-
-  &.prev-reported {
-    background-color: var(--pr-color-primary-100, #ede9fe);
-    color: var(--pr-color-primary-700, #4c2882);
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 7px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 1.25;
-    letter-spacing: 0.02em;
-    height: auto;
-    white-space: nowrap;
-  }
-}
 .table_menu_item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   width: 140px;
+  color: inherit;
+  text-decoration: none;
 
   &:hover {
     background-color: var(--pr-color-primary-25);
@@ -212,14 +90,64 @@ td {
   padding: 0.25rem;
 }
 
-/* ------------------------------------------------------------- 2026-09-17 redesign
-   Cell-level presentation. The table CHROME (header, rows, borders) comes from
-   `pr-table--data` in the shared component, so this file only dresses what lives inside a cell. */
+/* ------------------------------------------------------------- Cell-level presentation
+   The table CHROME comes from `pr-table--data` in the shared component; this block dresses what
+   lives inside a cell and raises the few rules that have to beat it. */
 :host ::ng-deep {
+  /* The shared wrap already draws a card. With the card now on `.table` (as in the reference), two
+     borders would sit flush against each other and read as a 2px frame. `overflow: visible` is the
+     load-bearing part: the wrap's `overflow: hidden` would clip the table instead of letting
+     `.table` scroll it, which is exactly how a last column disappears. */
+  app-pr-table .pr-table-wrap.pr-table--data {
+    border: none;
+    border-radius: inherit;
+    background: transparent;
+    overflow: visible;
+  }
+
+  /* 🛑 Specificity, not `!important`: the shared rule is
+     `:host ::ng-deep .pr-table-wrap.pr-table--data table.pr-table tbody td` (0,4,3) with
+     `!important` on its padding. A plain `td` here is (0,1,1) and LOST — which is why this table
+     kept the shared 10px padding while claiming 6px. Naming the wrap makes it (0,4,4). */
+  app-pr-table .pr-table-wrap.pr-table--data table.pr-table {
+    /* The vertical rules are what make the Results Center's columns read as aligned. */
+    thead th {
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+
+      &:last-child {
+        border-right: none !important;
+      }
+    }
+
+    tbody tr {
+      height: 44px;
+    }
+
+    tbody td {
+      padding: 6px 12px !important;
+      font-size: 13px;
+      /* 🛑 Load-bearing, not tidy-up: a one-line title with `nowrap` does NOT clip on its own, and
+         without this the text ran across every column to its right. That was the defect the user
+         called "desalineado". */
+      overflow: hidden;
+      border-right: 1px solid var(--pr-border-divider, #eeeef1) !important;
+
+      &:last-child {
+        border-right: none !important;
+      }
+    }
+  }
+
   .ip-th {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+  }
+
+  /* 44px for one unlabelled icon button, like the reference's `.rc-th-action`. It replaces a 56px
+     PDF column plus a 116px labelled-pill column = 172px. */
+  .ip-th-action {
+    width: 44px !important;
   }
 
   .ip-code {
@@ -247,18 +175,12 @@ td {
     }
   }
 
-  /* Two lines, then an ellipsis. Titles here run to 40+ words and one of them was pushing a row
-     to eight lines, which is what made the list impossible to scan. */
-  /* ONE line, ellipsis, full text on hover — the Results Center's own title treatment. Two lines
-     cost 19px per row and pushed everything else out of alignment. */
-  .ip-title {
-    display: block;
-    /* A flex child's `min-width` defaults to `auto`, so a `nowrap` line still lays itself out at
-       full text width — clipped by the parent, but 517px wide in a 174px box, which is enough to
-       throw off anything that measures geometry. Pin it to the box. */
-    width: 100%;
+  /* One line, ellipsis, full text on hover — the reference's `.rc-title__text`. The 14px is the
+     reference's own `.rc-title` (results-list.component.scss:657), one step above the 13px the rest
+     of the cells carry: the title is the column people actually read. */
+  .ip-title__text {
+    font-size: 14px;
     min-width: 0;
-    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -276,11 +198,14 @@ td {
     vertical-align: middle;
   }
 
+  /* `flex: none` copied from `.rc-badge-replicated`: as flex siblings of the clipped text the tags
+     would otherwise shrink to nothing on a long title — the same disappearance they had when they
+     lived INSIDE the ellipsized span. */
   .ip-tag {
+    flex: none;
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    margin-left: 6px;
     padding: 1px 7px;
     border-radius: 999px;
     font-size: 10px;
@@ -299,8 +224,8 @@ td {
     }
 
     &--replicated {
-      background: var(--pr-color-primary-50, #f3effc);
-      color: var(--pr-color-primary-400, #5733c4);
+      background: var(--pr-color-primary-100, #ede9fe);
+      color: var(--pr-color-primary-700, #4c2882);
     }
 
     &--discontinued {
@@ -309,99 +234,90 @@ td {
     }
   }
 
+  /* ── Status chip ──────────────────────────────────────────────────────────────────────
+     Geometry copied from the reference's `.status_tag` (results-list.component.scss:796-806):
+     3px 9px / 12px / 500 / line-height 1.2 → ~20px tall. It was 2px 10px / 11px / 1.7 on top of a
+     32px `min-height` floor, i.e. a 32px block of solid colour.
+     ⚠️ The recipe asked for ~3px 8px and 11-12px text; the FILE says 3px 9px and 12px. File wins. */
   .ip-status {
     display: inline-flex;
     align-items: center;
-    padding: 2px 10px;
     border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.7;
-    color: #fff;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
     white-space: nowrap;
+    text-align: center;
   }
 
-  .ip-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    transition: background-color 150ms ease;
-
-    &:hover {
-      background: var(--pr-color-accents-1, #fafafa);
-    }
+  /* The fg/bg pairs, per `status_id`, from `shared/constants/result-status-tokens.ts` — the same
+     table the reference's `statusClass()` targets. NOT the `completeness-*` family from
+     `styles.scss:305-323`, which is a solid saturated fill with white text. */
+  .status_1 {
+    color: var(--pr-status-in-progress-fg) !important; // #b45309 on #fef3c7 — Editing
+    background: var(--pr-status-in-progress-bg) !important;
   }
 
-  /* A labelled button, not a bare glyph: the actions were reported as "hidden" because there was
-     nothing to aim at and nothing that said what it did. */
+  .status_2 {
+    color: var(--pr-status-in-qa-fg) !important; // #0e7490 on #cffafe — Quality Assessed
+    background: var(--pr-status-in-qa-bg) !important;
+  }
+
+  .status_3 {
+    color: var(--pr-status-submitted-fg) !important; // blue-700 on blue-100 — Submitted
+    background: var(--pr-status-submitted-bg) !important;
+  }
+
+  .status_4,
+  .status_5,
+  .status_8 {
+    color: var(--pr-status-not-started-fg) !important; // #4b5563 on #f3f4f6 — Discontinued / draft
+    background: var(--pr-status-not-started-bg) !important;
+  }
+
+  .status_6 {
+    color: var(--pr-status-approved-fg) !important;
+    background: var(--pr-status-approved-bg) !important;
+  }
+
+  .status_7 {
+    color: var(--pr-status-rejected-fg) !important;
+    background: var(--pr-status-rejected-bg) !important;
+  }
+
+  /* The row's only action button: the reference's `.rc-row-menu`, 28x28, borderless, no label.
+     The bordered labelled pill it replaces is what made two buttons per row look scattered. */
   .ip-actions-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    height: 30px;
-    padding: 0 9px;
-    border: 1px solid var(--pr-border, #e3e3e8);
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
     border-radius: 8px;
-    background: #fff;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
+    background: transparent;
     color: var(--pr-text-secondary, #5d5872);
-    transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
-
-    i {
-      font-size: 16px;
-    }
+    cursor: pointer;
 
     &:hover {
-      border-color: var(--pr-color-primary-200, #c9b8f5);
-      background: var(--pr-color-primary-25, #faf8ff);
-      color: var(--pr-color-primary-400, #5733c4);
+      background: #f3f2f7;
+    }
+
+    i {
+      font-size: 14px;
     }
   }
 
-  .total {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--pr-color-accents-6, #666);
-  }
-
-  /* A row can carry several versions of the same package (2025 and 2026), and every cell repeats
-     its own list. Without a shared minimum height the columns drift apart and the row stops
-     reading as one row. */
-  /* The Results Center's cell contract, measured off it: middle-aligned, 6px/12px, 13px. Forcing
-     top alignment here is what made this table look out of true next to it. What made the two
-     versions of a package drift was never the alignment — it was the two-line title; with one line
-     per block every column lines up on its own. */
-  td {
-    padding: 6px 12px !important;
-    /* 🛑 Both are load-bearing. A one-line title with `nowrap` inside a flex link does NOT clip on
-       its own: the link's default `min-width: auto` lets it grow to the full text, and the text ran
-       straight across every column to its right. `overflow` clips the cell, `min-width: 0` lets the
-       flex child actually shrink. Measured before the fix: a title box 1,120px wide in a 380px
-       column. */
-    overflow: hidden;
-  }
-
-  /* ⚠️ A shared MINIMUM, not a shared height. With one version per row (the overwhelming majority)
-     the columns line up exactly. A package carrying BOTH a 2025 and a 2026 version still drifts
-     ~10px on the second block, because a two-line title is taller than this floor and chasing it
-     with a bigger floor costs every other row 14px of height — measured: row height 59px → 73px.
-     The real fix is one TABLE ROW per version instead of stacking versions inside each cell, which
-     is a change to how the list is built, not to how it looks. Left as it was. */
+  /* A row can carry several versions of the same package (2025 and 2026) and every cell repeats its
+     own list, so the blocks need a shared floor or the columns drift apart. 28px = the reference's
+     `.rc-cell-link` min-height; it was 32px, which is where the chip's height came from. */
   td > a,
-  td > .ip-status,
   td > div,
-  td > ng-container > a,
-  td > ng-container > .ip-status {
-    min-height: 32px;
+  td > ng-container > a {
+    min-height: 28px;
   }
 
-  /* Top-aligned, not centred: a two-line title next to a one-line chip pushed the chip 9px down,
-     so the two versions of a package read as staggered instead of as two rows. */
   td > ng-container > a,
   td > a {
     display: flex;
@@ -412,18 +328,21 @@ td {
     overflow: hidden;
   }
 
-  /* Block-level, not inline-flex: as an inline box the chip sat on the cell's text baseline and
-     started 9px below the title it belongs to, so a package with a 2025 and a 2026 version read as
-     staggered. `fit-content` keeps it hugging its label. */
+  /* The title cell is a ROW: tags first, then the clipped text. Column direction would stack the
+     tags above the title and cost ~19px per row — measured on the first pass. */
+  td > ng-container > a.ip-title-link,
+  td > a.ip-title-link {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Block-level so several versions STACK instead of flowing side by side, `fit-content` so the
+     chip hugs its label. No `min-height` any more: that floor is what made it 32px tall. */
   td > ng-container > .ip-status,
   td > .ip-status {
     display: flex;
     align-items: center;
     width: fit-content;
-    min-height: 32px;
   }
-
-  /* The title cell holds a tag row above the text, so it aligns to the TOP: centred, the tag
-     floated away from the title it belongs to. */
-
 }

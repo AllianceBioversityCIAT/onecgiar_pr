@@ -70,10 +70,39 @@ export function buildIpsrStatusOptions(resultList: any[]): string[] {
   return Array.from(new Set(statuses));
 }
 
+/** Innovation Packages filters as a floating menu (default) or as a column beside the table. */
+export type IpsrFilterLayout = 'menu' | 'sidebar';
+
+/**
+ * IPSR's OWN key — Results Center remembers its own choice under `'rc-filter-layout'`
+ * (`results-list-filter.service.ts`), and the two lists must not overwrite each other.
+ */
+const FILTER_LAYOUT_STORAGE_KEY = 'ipsr-filter-layout';
+
+function readStoredFilterLayout(): IpsrFilterLayout {
+  try {
+    return localStorage.getItem(FILTER_LAYOUT_STORAGE_KEY) === 'sidebar' ? 'sidebar' : 'menu';
+  } catch {
+    return 'menu';
+  }
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class IpsrListFilterService {
+  /** Remembered per browser; mirrors RC's `filterLayout` (`results-list-filter.service.ts`). */
+  readonly filterLayout: WritableSignal<IpsrFilterLayout> = signal<IpsrFilterLayout>(readStoredFilterLayout());
+
+  setFilterLayout(layout: IpsrFilterLayout): void {
+    this.filterLayout.set(layout);
+    try {
+      localStorage.setItem(FILTER_LAYOUT_STORAGE_KEY, layout);
+    } catch {
+      // Private mode or blocked storage: the choice still applies for this visit.
+    }
+  }
+
   /** Program (initiative) facet — primary filter row, applied live. `IPSR-R-1`. */
   readonly programOptions: WritableSignal<IpsrProgramOption[]> = signal([]);
   /** Empty selection = unfiltered (`IPSR-DD-4`). */

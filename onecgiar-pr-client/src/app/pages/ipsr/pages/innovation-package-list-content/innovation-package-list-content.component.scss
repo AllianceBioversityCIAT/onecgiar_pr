@@ -8,6 +8,21 @@
     margin-top: 0;
     padding: 0;
   }
+
+  // Innovation Packages list is full-bleed under the shell topbar (CURRENT page shell) — copied
+  // from `results-outlet.component.scss` :6-15. It is component-scoped there, so it cannot be
+  // imported; `overflow` is the one extra line, because this container (unlike the Results
+  // outlet's) clips, and the list page pins itself to the viewport.
+  &--flush {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+  }
 }
 
 .pass_steps {

@@ -2,8 +2,13 @@
   The tab strip is gone (2026-09-17): it held exactly ONE tab, drawn as a violet slab with 100px of
   side padding, so it read as a page-wide coloured bar with no purpose. A single destination does
   not need navigation; the page title says where you are.
+
+  The white card is gone too (2026-09-17): `section_container` painted a shadowed, rounded, 90%-wide
+  slab around the list and pushed it 30px/50px off the chrome. The Innovation Packages list is now
+  full-bleed under the shell topbar, exactly like the Results Center
+  (`results-outlet.component.html` → `local_container--flush`).
 -->
-<div class="local_container section_container">
+<div class="local_container local_container--flush">
   <div class="outlet">
     <router-outlet></router-outlet>
   </div>

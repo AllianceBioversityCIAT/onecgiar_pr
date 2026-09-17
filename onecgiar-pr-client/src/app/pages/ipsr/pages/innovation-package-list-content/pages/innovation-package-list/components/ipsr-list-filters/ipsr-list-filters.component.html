@@ -1,88 +1,173 @@
 <!--
-  Primary filter row rebuilt to match Results Center's `results-list-filters.component.html`
-  shape (search, Program, Phase, Status — applied live, no Apply step). `IPSR-R-1`/`IPSR-R-2`/
-  `IPSR-R-3`/`IPSR-R-5`. "More filters" (Portfolio-only, `IPSR-DD-3` revised 2026-09-14 — Center
-  descoped, IPSR list rows carry no center field) popover + the removable chip row below, both
-  `IPSR-T-5` — mirrors RC's `.rc-more-panel` / `.rc-meta-row` almost verbatim, re-pointed at
-  `IpsrListFilterService`'s signals (`IPSR-R-4`/`IPSR-R-10`/`IPSR-DD-3`).
+  Innovation Packages filter bar — Results Center parity pass (2026-09-17).
+
+  Before: three bare 40px multiselects sat inline in the bar, the chips lived on a second row as
+  white outlined pills, "More filters" was a violet-outlined 40px button and "Clear all" a bare
+  text link. Now the bar carries only what Results Center's does — search · Filter (with its count
+  badge) · the menu/side-column toggle · the applied chips · Clear filters — and EVERY field
+  (Submitter, Phase, Package status, Portfolio) lives in the `#filterFields` template, declared
+  once and rendered by both the popover and the side column.
+
+  Classes and values are the literal ones from
+  `results/pages/results-outlet/pages/results-list/components/results-list-filters/` — its
+  `.rc-search`, `.rc-filter-btn`, `.rc-filter-badge`, `.rc-more-panel`, `.rc-chip`, `.rc-clear-all`
+  and `.rc-btn` blocks — written as utilities here because this component's .scss is out of scope
+  for this pass. Root font-size is 12px, so type is always pixel-explicit, never rem-based.
+
+  Every binding, handler and gate below is the pre-existing one (`IPSR-R-1`..`IPSR-R-6`,
+  `IPSR-T-5`, `IPSR-DD-3`): this pass moves and restyles, it does not re-point anything.
 -->
-<div class="flex flex-col gap-3 mt-[24px]">
-  <div class="flex flex-wrap items-center gap-2" role="search" aria-label="Innovation Packages filters">
-    <div class="relative flex items-center gap-2 h-[40px] min-w-[140px] max-w-[220px] flex-1 sm:flex-none px-3 border border-[var(--pr-border)] rounded-lg bg-white">
-      <i class="material-icons-round text-[16px] text-[var(--pr-text-subtle)]" aria-hidden="true">search</i>
+
+<div class="mt-[24px] w-full">
+  <div class="flex flex-wrap items-center gap-[10px]" role="search" aria-label="Innovation Packages filters">
+    <!-- Search — RC's `.rc-search`: 34px tall, 13px text, sitting on the tinted app surface, turning white on focus. -->
+    <div
+      class="relative flex h-[34px] w-[240px] max-w-full flex-[0_1_240px] items-center gap-[8px] rounded-[8px] border border-[var(--pr-border,#e3e3e8)] bg-[var(--pr-surface-app,#f8f8fa)] px-[10px] focus-within:border-[var(--pr-color-primary-300,#6b46e5)] focus-within:bg-[var(--pr-surface-card,#fff)]">
+      <i class="material-icons-round text-[15px] text-[var(--pr-text-subtle,#9691a8)]" aria-hidden="true">search</i>
       <input
         type="text"
-        class="flex-1 min-w-0 border-none outline-none bg-transparent text-[14px] text-[var(--pr-text-heading)] placeholder:text-[var(--pr-text-subtle)]"
+        class="min-w-0 flex-1 border-none bg-transparent text-[13px] font-normal text-[var(--pr-text-heading,#191524)] outline-none placeholder:text-[var(--pr-text-subtle,#9691a8)]"
         placeholder="Find result..."
         aria-label="Find result by title or code"
         [(ngModel)]="this.ipsrListService.text_to_search" />
     </div>
 
-    <div class="min-w-[140px] max-w-[220px] flex-1 sm:flex-none">
-      <app-pr-filter-multiselect
-        aria-label="Filter by submitter"
-        [options]="ipsrListFilterSE.programOptions()"
-        [ngModel]="ipsrListFilterSE.selectedPrograms()"
-        (ngModelChange)="ipsrListFilterSE.selectedPrograms.set($event)"
-        optionLabel="displayName"
-        placeholder="Submitter"></app-pr-filter-multiselect>
-    </div>
+    <div class="hidden h-[22px] w-px flex-none bg-[var(--pr-border-divider,#eeeef1)] sm:block" aria-hidden="true"></div>
 
-    <div class="min-w-[140px] max-w-[220px] flex-1 sm:flex-none">
-      <app-pr-filter-multiselect
-        aria-label="Filter by phase"
-        [options]="ipsrListFilterSE.phaseOptions()"
-        [ngModel]="ipsrListFilterSE.selectedPhases()"
-        (ngModelChange)="ipsrListFilterSE.selectedPhases.set($event)"
-        optionLabel="name"
-        placeholder="Phase"></app-pr-filter-multiselect>
-    </div>
+    @if (!isSidebarLayout()) {
+      <div class="relative flex-none">
+        <button
+          type="button"
+          class="inline-flex h-[34px] cursor-pointer items-center justify-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] shadow-[0_1px_2px_rgba(25,21,36,0.04)] transition-colors"
+          [ngClass]="
+            moreFiltersOpen() || moreFiltersCount() > 0
+              ? 'border-[var(--pr-color-primary-300,#6b46e5)] bg-[var(--pr-color-primary-50,#f5f3ff)] text-[var(--pr-color-primary-700,#4338ca)] font-semibold'
+              : 'border-[var(--pr-border,#e3e3e8)] bg-[var(--pr-surface-card,#fff)] text-[var(--pr-text-heading,#191524)] font-medium hover:border-[#94a3b8] hover:bg-[#f8fafc]'
+          "
+          [attr.aria-expanded]="moreFiltersOpen()"
+          aria-haspopup="dialog"
+          aria-label="Filter Innovation Packages"
+          data-testid="ip-more-filters-trigger"
+          (click)="toggleMoreFilters($event)">
+          <span
+            class="material-icons-round text-[18px]"
+            [ngClass]="
+              moreFiltersOpen() || moreFiltersCount() > 0 ? 'text-[var(--pr-color-primary-600,#5b21b6)]' : 'text-[var(--pr-text-muted,#78728a)]'
+            "
+            aria-hidden="true"
+            >filter_list</span
+          >
+          <span>Filter</span>
+          @if (moreFiltersCount() > 0) {
+            <span
+              class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600,#5b21b6)] px-[5px] text-[10.5px] font-bold leading-none text-white tabular-nums"
+              >{{ moreFiltersCount() }}</span
+            >
+          }
+        </button>
 
-    <div class="min-w-[140px] max-w-[220px] flex-1 sm:flex-none">
-      <app-pr-filter-multiselect
-        aria-label="Filter by package status"
-        [options]="ipsrListFilterSE.statusOptions()"
-        [ngModel]="ipsrListFilterSE.selectedStatus()"
-        (ngModelChange)="ipsrListFilterSE.selectedStatus.set($event)"
-        placeholder="Package status"></app-pr-filter-multiselect>
-    </div>
+        @if (moreFiltersOpen()) {
+          <div
+            class="absolute left-0 top-[44px] z-40 flex max-h-[min(70vh,560px)] w-[min(420px,calc(100vw-32px))] flex-col gap-[12px] overflow-y-auto rounded-[12px] border border-[var(--pr-border,#e3e3e8)] bg-white p-[16px] shadow-[0_8px_24px_rgba(25,21,36,0.1)]"
+            role="dialog"
+            aria-label="Filters"
+            (click)="$event.stopPropagation()">
+            <div
+              class="-mt-[4px] mb-[12px] flex items-center gap-[10px] border-b border-[var(--pr-border-divider,#eeeef1)] pb-[10px]">
+              <span class="flex-1 text-[13.5px] font-bold text-[var(--pr-text-heading,#191524)]">Filters</span>
+              @if (moreFiltersCount() > 0) {
+                <button
+                  type="button"
+                  class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600,#5b21b6)] hover:underline"
+                  (click)="clearAllNewFilters()">
+                  <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
+                  Clear all
+                </button>
+              }
+              <button
+                type="button"
+                class="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent text-[#94a3b8] hover:bg-[#f1f5f9] hover:text-[#475569]"
+                aria-label="Close filters"
+                (click)="cancelFilters()">
+                <span class="material-icons-round text-[16px]" aria-hidden="true">close</span>
+              </button>
+            </div>
 
-    <div class="relative">
+            <ng-container [ngTemplateOutlet]="filterFields" />
+
+            <div
+              class="sticky bottom-[-16px] z-[2] -mx-[16px] -mb-[16px] mt-[4px] flex gap-[8px] border-t border-[var(--pr-border-divider,#eeeef1)] bg-white px-[16px] py-[12px]">
+              <button
+                type="button"
+                class="inline-flex h-[36px] flex-1 cursor-pointer items-center justify-center gap-[8px] rounded-[8px] border border-[var(--pr-border,#e3e3e8)] bg-white px-[12px] text-[14px] font-medium text-[var(--pr-text,#2b2838)] transition-colors hover:bg-[#f7f7f9]"
+                (click)="cancelFilters()">
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-[36px] flex-1 cursor-pointer items-center justify-center gap-[8px] rounded-[8px] border-none bg-[var(--pr-color-primary-300,#6b46e5)] px-[14px] text-[14px] font-semibold text-white transition-colors hover:bg-[var(--pr-color-primary-400,#5733c4)]"
+                (click)="applyFilters()">
+                Apply
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Menu / side-column toggle — copied verbatim from `results-list-filters.component.html`. -->
+    <div
+      class="inline-flex flex-none items-center gap-[2px] rounded-[8px] border border-[var(--pr-border,#e3e3e8)] bg-white p-[2px]"
+      role="group"
+      aria-label="How to show the filters">
       <button
         type="button"
-        class="flex items-center gap-1 h-[40px] px-3 rounded-lg border border-[var(--pr-color-primary-300)] bg-white text-[14px] font-medium text-[var(--pr-color-primary-300)]"
-        [attr.aria-expanded]="moreFiltersOpen()"
-        aria-haspopup="dialog"
-        data-testid="ip-more-filters-trigger"
-        (click)="toggleMoreFilters($event)">
-        <i class="material-icons-round text-[16px]" aria-hidden="true">tune</i>
-        More filters
+        class="inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-[6px] border-0 transition-colors"
+        [class]="!isSidebarLayout() ? 'bg-[var(--pr-color-primary-100,#ede9fe)] text-[var(--pr-color-primary-600,#5b21b6)]' : 'bg-transparent text-[var(--pr-text-secondary,#5d5872)] hover:bg-[#f1f5f9]'"
+        [attr.aria-pressed]="!isSidebarLayout()"
+        title="Filters as a menu"
+        aria-label="Filters as a menu"
+        (click)="setFilterLayout('menu')">
+        <span class="material-icons-round text-[18px]" aria-hidden="true">filter_list</span>
       </button>
-
-      @if (moreFiltersOpen()) {
-        <div
-          class="absolute right-0 z-10 mt-1 w-[260px] flex flex-col gap-3 p-4 bg-white border border-[var(--pr-border)] rounded-lg shadow-lg"
-          role="dialog"
-          aria-label="More filters"
-          (click)="$event.stopPropagation()">
-          <div class="flex flex-col gap-1">
-            <label class="text-[12px] text-[var(--pr-text-subtle)]">Portfolio</label>
-            <app-pr-filter-multiselect
-              aria-label="Filter by portfolio"
-              [options]="ipsrListFilterSE.portfolioOptions()"
-              [ngModel]="ipsrListFilterSE.tempSelectedPortfolios()"
-              (ngModelChange)="ipsrListFilterSE.tempSelectedPortfolios.set($event)"
-              optionLabel="name"
-              placeholder="All portfolios"></app-pr-filter-multiselect>
-          </div>
-
-          <div class="flex justify-end gap-2 pt-1">
-            <app-pr-button text="Cancel" [showBackground]="false" (clickEvent)="cancelFilters()"></app-pr-button>
-            <app-pr-button text="Apply" (clickEvent)="applyFilters()"></app-pr-button>
-          </div>
-        </div>
-      }
+      <button
+        type="button"
+        class="inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-[6px] border-0 transition-colors"
+        [class]="isSidebarLayout() ? 'bg-[var(--pr-color-primary-100,#ede9fe)] text-[var(--pr-color-primary-600,#5b21b6)]' : 'bg-transparent text-[var(--pr-text-secondary,#5d5872)] hover:bg-[#f1f5f9]'"
+        [attr.aria-pressed]="isSidebarLayout()"
+        title="Filters in a side column"
+        aria-label="Filters in a side column"
+        (click)="setFilterLayout('sidebar')">
+        <span class="material-icons-round text-[18px]" aria-hidden="true">view_sidebar</span>
+      </button>
     </div>
+
+    <!-- Applied filters — RC keeps them INSIDE the bar as violet pills, not on a row of their own. -->
+    @if (filterChipGroups().length > 0) {
+      @for (group of filterChipGroups(); track group.category) {
+        @for (chip of group.chips; track chip.item ?? $index) {
+          <span
+            class="inline-flex h-[26px] flex-none items-center gap-[6px] rounded-full bg-[var(--pr-color-primary-100,#ede9fe)] pl-[10px] pr-[6px] text-[12px] font-medium leading-none text-[var(--pr-color-primary-400,#7c3aed)]">
+            <span class="text-inherit">{{ group.category }}: {{ chip.label }}</span>
+            <button
+              type="button"
+              class="inline-flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0 text-[var(--pr-color-primary-400,#7c3aed)] hover:bg-[var(--pr-color-primary-200,#ddd6fe)]"
+              [attr.aria-label]="'Remove ' + group.category + ' ' + chip.label"
+              (click)="removeFilter(chip)">
+              <i class="material-icons-round text-[12px]" aria-hidden="true">close</i>
+            </button>
+          </span>
+        }
+      }
+      <button
+        type="button"
+        class="inline-flex h-[34px] flex-none cursor-pointer items-center gap-[4px] rounded-[8px] border-none bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500,#7c3aed)] hover:bg-[var(--pr-color-primary-50,#f5f3ff)]"
+        (click)="clearAllNewFilters()">
+        <span class="material-icons-round text-[15px] text-inherit" aria-hidden="true">filter_alt_off</span>
+        Clear filters
+      </button>
+    }
+
     <!-- Download closes the filter row instead of floating on a line of its own below it. -->
     <div class="ms-auto">
     <!-- Gates on the FILTERED/searched result count (`IPSR-R-6`, `IPSR-AC-8`), not the raw unfiltered
@@ -99,32 +184,81 @@
         [rotating]="this.isLoadingReport"></app-pr-button>
     </div>
   </div>
+</div>
 
-  @if (filterChipGroups().length > 0) {
-    <div class="flex flex-wrap items-center gap-2">
-      @for (group of filterChipGroups(); track group.category) {
-        @for (chip of group.chips; track chip.item ?? $index) {
-          <span
-            class="flex items-center gap-1 h-7 pl-2 pr-1 rounded-full border border-[var(--pr-border)] bg-white text-[12px] text-[var(--pr-text-heading)]">
-            {{ group.category }}: {{ chip.label }}
-            <button
-              type="button"
-              class="flex items-center justify-center"
-              [attr.aria-label]="'Remove ' + group.category + ' ' + chip.label"
-              (click)="removeFilter(chip)">
-              <i class="material-icons-round text-[14px]" aria-hidden="true">close</i>
-            </button>
-          </span>
-        }
-      }
+<!--
+  Side column ("filters in a side column"). The page component renders it beside the table through
+  `filterSidebarTpl`, exactly as `results-list.component.html` does with RC's — this component only
+  declares it, so the fields below exist once and only once.
+-->
+<ng-template #filterSidebar>
+  <div
+    class="sticky top-0 z-[2] flex items-center gap-[10px] border-b border-[var(--pr-border-divider,#eeeef1)] bg-white px-[16px] py-[12px]">
+    <span class="flex-1 text-[13.5px] font-bold text-[var(--pr-text-heading,#191524)]">Filters</span>
+    @if (moreFiltersCount() > 0) {
       <button
         type="button"
-        class="text-[12px] text-[var(--pr-color-primary-300)]"
+        class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600,#5b21b6)] hover:underline"
         (click)="clearAllNewFilters()">
+        <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
         Clear all
       </button>
-    </div>
+    }
+  </div>
+  <div class="flex flex-col gap-[12px] p-[16px]">
+    <ng-container [ngTemplateOutlet]="filterFields" />
+  </div>
+</ng-template>
 
-  }
+<!--
+  The four facets, declared ONCE. `(changed)` commits immediately in side-column mode and waits for
+  Apply in menu mode — RC's `onFilterFieldChanged()` rule, not a new one.
+-->
+<ng-template #filterFields>
+  <div class="flex flex-col gap-[6px]">
+    <label class="text-[13px] font-medium text-[var(--pr-text-heading,#191524)]">Submitter</label>
+    <app-pr-filter-multiselect
+      aria-label="Filter by submitter"
+      [options]="ipsrListFilterSE.programOptions()"
+      [ngModel]="tempSelectedPrograms()"
+      (ngModelChange)="applyProgramsLive($event)"
+      (changed)="onFilterFieldChanged()"
+      optionLabel="displayName"
+      placeholder="All submitters"></app-pr-filter-multiselect>
+  </div>
 
-</div>
+  <div class="flex flex-col gap-[6px]">
+    <label class="text-[13px] font-medium text-[var(--pr-text-heading,#191524)]">Phase</label>
+    <app-pr-filter-multiselect
+      aria-label="Filter by phase"
+      [options]="ipsrListFilterSE.phaseOptions()"
+      [ngModel]="tempSelectedPhases()"
+      (ngModelChange)="applyPhasesLive($event)"
+      (changed)="onFilterFieldChanged()"
+      optionLabel="name"
+      placeholder="All phases"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="flex flex-col gap-[6px]">
+    <label class="text-[13px] font-medium text-[var(--pr-text-heading,#191524)]">Package status</label>
+    <app-pr-filter-multiselect
+      aria-label="Filter by package status"
+      [options]="ipsrListFilterSE.statusOptions()"
+      [ngModel]="tempSelectedStatus()"
+      (ngModelChange)="applyStatusLive($event)"
+      (changed)="onFilterFieldChanged()"
+      placeholder="All statuses"></app-pr-filter-multiselect>
+  </div>
+
+  <div class="flex flex-col gap-[6px]">
+    <label class="text-[13px] font-medium text-[var(--pr-text-heading,#191524)]">Portfolio</label>
+    <app-pr-filter-multiselect
+      aria-label="Filter by portfolio"
+      [options]="ipsrListFilterSE.portfolioOptions()"
+      [ngModel]="ipsrListFilterSE.tempSelectedPortfolios()"
+      (ngModelChange)="ipsrListFilterSE.tempSelectedPortfolios.set($event)"
+      (changed)="onFilterFieldChanged()"
+      optionLabel="name"
+      placeholder="All portfolios"></app-pr-filter-multiselect>
+  </div>
+</ng-template>

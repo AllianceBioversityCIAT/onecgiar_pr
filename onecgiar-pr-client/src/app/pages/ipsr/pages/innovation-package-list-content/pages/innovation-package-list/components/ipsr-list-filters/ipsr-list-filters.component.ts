@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, computed, signal } from '@angular/core';
+import { Component, HostListener, OnInit, TemplateRef, ViewChild, computed, effect, signal, untracked } from '@angular/core';
 import { IpsrListFilterService } from '../../services/ipsr-list-filter.service';
 import { IpsrListService } from '../../services/ipsr-list.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
@@ -27,6 +27,66 @@ export class IpsrListFiltersComponent implements OnInit {
 
   /** "More filters" (Portfolio) popover open state — `IPSR-T-5`, `design.md` §2.3. */
   moreFiltersOpen = signal(false);
+
+  /**
+   * Filters as the popover menu (default) or as the side column the page renders beside the
+   * table — mirrors RC's `isSidebarLayout` (`results-list-filters.component.ts`), reading IPSR's
+   * own remembered choice (`IpsrListFilterService.filterLayout`, key `'ipsr-filter-layout'`).
+   */
+  readonly isSidebarLayout = computed(() => this.ipsrListFilterSE.filterLayout() === 'sidebar');
+
+  /**
+   * The four facet fields are declared ONCE in `#filterFields` and rendered by both the popover
+   * and `#filterSidebar`; the page component pulls `filterSidebarTpl` into its own `<aside>`,
+   * exactly as `results-list.component.html` does with RC's.
+   */
+  @ViewChild('filterFields', { static: true }) filterFieldsTpl: TemplateRef<unknown>;
+  @ViewChild('filterSidebar', { static: true }) filterSidebarTpl: TemplateRef<unknown>;
+
+  /**
+   * Draft Submitter/Phase/Status selections — same temp-then-apply staging the Portfolio facet
+   * already had, now that every field lives inside the panel. Portfolio's twin stays on
+   * `IpsrListFilterService` (`tempSelectedPortfolios`), which owns its own apply/cancel pair.
+   */
+  readonly tempSelectedPrograms = signal<any[]>([]);
+  readonly tempSelectedPhases = signal<any[]>([]);
+  readonly tempSelectedStatus = signal<string[]>([]);
+
+  /**
+   * 🛑 IPSR-R-1 / R-2 / R-3 are approved requirements: Submitter, Phase and Package status apply
+   * LIVE, with no separate Apply step. Moving those three fields into the filter panel (so the bar
+   * stops carrying bare selects, as the Results Center's does) must not quietly turn them into
+   * draft-and-Apply fields — that would be a functional regression hiding inside a visual change.
+   * They write through to the applied signal AND keep the draft in step, so Cancel still restores
+   * Portfolio, which is the one field that genuinely is draft-and-Apply.
+   */
+  applyProgramsLive(value: any[]): void {
+    this.tempSelectedPrograms.set(value ?? []);
+    this.ipsrListFilterSE.selectedPrograms.set([...(value ?? [])]);
+  }
+
+  applyPhasesLive(value: any[]): void {
+    this.tempSelectedPhases.set(value ?? []);
+    this.ipsrListFilterSE.selectedPhases.set([...(value ?? [])]);
+  }
+
+  applyStatusLive(value: string[]): void {
+    this.tempSelectedStatus.set(value ?? []);
+    this.ipsrListFilterSE.selectedStatus.set([...(value ?? [])]);
+  }
+
+  /**
+   * Badge on the Filter button. Derived the way RC's `moreFiltersCount()` is — ONE per active
+   * facet, not one per selected value, so three phases and one portfolio read "2", not "4".
+   */
+  readonly moreFiltersCount = computed(() => {
+    let n = 0;
+    if (this.ipsrListFilterSE.selectedPrograms().length > 0) n++;
+    if (this.ipsrListFilterSE.selectedPhases().length > 0) n++;
+    if (this.ipsrListFilterSE.selectedStatus().length > 0) n++;
+    if (this.ipsrListFilterSE.selectedPortfolios().length > 0) n++;
+    return n;
+  });
 
   /**
    * One group per active facet (Submitter/Phase/Status/Portfolio) — mirrors RC's
@@ -83,7 +143,19 @@ export class IpsrListFiltersComponent implements OnInit {
     public ipsrListFilterSE: IpsrListFilterService,
     public exportTablesSE: ExportTablesService,
     public ipsrDataControlSE: IpsrDataControlService
-  ) {}
+  ) {
+    // The side column applies on every change, so its controls must mirror whatever is applied —
+    // a chip removed from the bar, Clear filters, or a facet committed from the column itself.
+    // RC keeps the same effect (`results-list-filters.component.ts`).
+    effect(() => {
+      if (!this.isSidebarLayout()) return;
+      this.ipsrListFilterSE.selectedPrograms();
+      this.ipsrListFilterSE.selectedPhases();
+      this.ipsrListFilterSE.selectedStatus();
+      this.ipsrListFilterSE.selectedPortfolios();
+      untracked(() => this.syncTempFromApplied());
+    });
+  }
 
   /**
    * Closes `IPSR-T-2`'s forward pointer: `loadSecondaryFacetOptions()` had no caller anywhere —
@@ -105,13 +177,50 @@ export class IpsrListFiltersComponent implements OnInit {
 
   /** Seeds `temp*` from the currently-applied `selected*` before the popover opens (`design.md` §2.3). */
   private openFiltersPopover(): void {
-    this.ipsrListFilterSE.cancelFilters();
+    this.syncTempFromApplied();
     this.moreFiltersOpen.set(true);
+  }
+
+  /**
+   * Remembers whether the fields show as the popover menu or as the side column — the choice
+   * survives the reload under IPSR's own key, `'ipsr-filter-layout'`.
+   */
+  setFilterLayout(layout: 'menu' | 'sidebar'): void {
+    if (this.moreFiltersOpen()) this.cancelFilters();
+    this.ipsrListFilterSE.setFilterLayout(layout);
+    if (layout === 'sidebar') this.syncTempFromApplied();
+  }
+
+  /**
+   * The side column behaves like a shop's filter rail: every change applies at once, with no
+   * Apply step. Inside the popover the same change only stages, waiting for Apply — RC's rule
+   * (`results-list-filters.component.ts#onFilterFieldChanged`).
+   */
+  onFilterFieldChanged(): void {
+    if (this.isSidebarLayout()) this.commitTempFilters();
+  }
+
+  /** Every draft back to what is applied right now. */
+  private syncTempFromApplied(): void {
+    this.tempSelectedPrograms.set([...this.ipsrListFilterSE.selectedPrograms()]);
+    this.tempSelectedPhases.set([...this.ipsrListFilterSE.selectedPhases()]);
+    this.tempSelectedStatus.set([...this.ipsrListFilterSE.selectedStatus()]);
+    // Portfolio's draft is owned by the service, whose `cancelFilters()` is exactly this reseed.
+    this.ipsrListFilterSE.cancelFilters();
+  }
+
+  /** Every draft into the applied signals the table and the Download gate read. */
+  private commitTempFilters(): void {
+    this.ipsrListFilterSE.selectedPrograms.set([...this.tempSelectedPrograms()]);
+    this.ipsrListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
+    this.ipsrListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
+    // Portfolio's commit is owned by the service (`tempSelectedPortfolios` -> `selectedPortfolios`).
+    this.ipsrListFilterSE.applyFilters();
   }
 
   /** Apply — commits `temp*` into `selected*` and closes the popover. */
   applyFilters(): void {
-    this.ipsrListFilterSE.applyFilters();
+    this.commitTempFilters();
     this.moreFiltersOpen.set(false);
   }
 
@@ -121,7 +230,7 @@ export class IpsrListFiltersComponent implements OnInit {
    * `IpsrListFilterService.cancelFilters()` — the forward pointer from `IPSR-T-2`'s Reviewer.
    */
   cancelFilters(): void {
-    this.ipsrListFilterSE.cancelFilters();
+    this.syncTempFromApplied();
     this.moreFiltersOpen.set(false);
   }
 
@@ -172,6 +281,9 @@ export class IpsrListFiltersComponent implements OnInit {
     this.ipsrListFilterSE.selectedStatus.set([]);
     this.ipsrListFilterSE.selectedPortfolios.set([]);
     this.ipsrListFilterSE.tempSelectedPortfolios.set([]);
+    this.tempSelectedPrograms.set([]);
+    this.tempSelectedPhases.set([]);
+    this.tempSelectedStatus.set([]);
     this.moreFiltersOpen.set(false);
   }
 

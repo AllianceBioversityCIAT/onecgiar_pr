@@ -2,20 +2,21 @@
 
 <div class="ipsr_container">
   <!--
-    Header rebuilt 2026-09-17. It was a tinted violet panel carrying the title and a sentence of
-    copy, with two equally-weighted filled violet buttons stacked underneath — three violet
-    surfaces before a single row of data. Now: plain title, the sentence as secondary text, and
-    the actions on the same line, one primary and one secondary.
+    Header rebuilt 2026-09-17 against the Results Center (`results-list.component.html` :18-102).
+    The header IS the tinted band now — eyebrow, title, one line of copy — and the two actions sit
+    on the same line as soft toolbar buttons: no filled violet button in a page header, and no
+    wrapping row of scattered actions.
   -->
-  <header class="ipsr_head">
+  <header class="ipsr_head flex-none">
     <div class="ipsr_head__text">
+      <p class="ipsr_head__eyebrow">PLATFORM · INNOVATION PACKAGES</p>
       <h1 class="ipsr_head__title">Innovation Packages</h1>
       <p class="ipsr_head__desc">Here you will see a list of all the Innovation Packages so that you can access them.</p>
     </div>
 
     <div class="ipsr_head__actions">
       <a
-        class="ipsr_btn ipsr_btn--primary"
+        class="ipsr_btn"
         *ngIf="!this.api.rolesSE.platformIsClosed"
         [routerLink]="activeButtons ? '/ipsr/creator' : null"
         [class.ipsr_btn--disabled]="!activeButtons"
@@ -38,12 +39,31 @@
     </div>
   </header>
 
-  <app-ipsr-list-filters></app-ipsr-list-filters>
+  <div class="ipsr_toolbar-row flex-none">
+    <app-ipsr-list-filters #filters class="ipsr_toolbar-row__filters"></app-ipsr-list-filters>
+  </div>
 
-  <app-innovation-package-custom-table
-    (deleteEvent)="this.GETAllInnovationPackages()"
-    [tableData]="this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter: this.ipsrListService.text_to_search"
-    [total]="this.totalResults"></app-innovation-package-custom-table>
+  <!--
+    The side-column layout, mirroring results-list.component.html:170-176. Without this wrapper and
+    this <aside>, choosing "sidebar" in the toggle removed EVERY filter control: the bar hides its
+    Filter button in that mode and `#filterSidebar` is a template nobody outlets.
+  -->
+  <div class="flex min-h-0 flex-col min-[900px]:flex-1 min-[900px]:flex-row">
+    @if (ipsrListFilterSE.filterLayout() === 'sidebar' && filters?.filterSidebarTpl) {
+      <aside
+        class="flex-none overflow-y-auto border-[var(--pr-border-divider,#eeeef1)] bg-white max-[899px]:mb-[16px] max-[899px]:rounded-[12px] max-[899px]:border min-[900px]:order-2 min-[900px]:w-[280px] min-[900px]:border-l"
+        aria-label="Filters">
+        <ng-container [ngTemplateOutlet]="filters.filterSidebarTpl" />
+      </aside>
+    }
+
+    <div class="ipsr_work-area custom_scroll min-w-0">
+    <app-innovation-package-custom-table
+      (deleteEvent)="this.GETAllInnovationPackages()"
+      [tableData]="this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter: this.ipsrListService.text_to_search"
+      [total]="this.totalResults"></app-innovation-package-custom-table>
+    </div>
+  </div>
 </div>
 
 <app-update-ipsr-result-modal></app-update-ipsr-result-modal>

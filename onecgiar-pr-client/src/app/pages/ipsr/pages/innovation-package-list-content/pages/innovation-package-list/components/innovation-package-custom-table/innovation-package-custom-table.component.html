@@ -5,8 +5,18 @@
   them, the creator's name broken across three lines in a 90px column, and the row menu hanging off a
   bare `⋮` glyph with no hit area and no label.
 
+  Second pass (2026-09-17, same day): the chip was still 32px of solid colour, the row spent 172px on
+  TWO action columns, and the count line sat under the table. All three now follow the Results Center
+  literally — `results-list.component.html` / `.scss` are the reference, copied value by value.
+
   Same data, same actions, same routes — only the presentation changed.
 -->
+<p class="ip-showing">
+  @if (this.tableData?.length) {
+    Showing {{ this.tableData?.length }} of {{ this.total }} results.
+  }
+</p>
+
 <div class="table">
   <app-pr-table
     styleClass="pr-table--data"
@@ -26,8 +36,9 @@
         <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" [style.width]="column.width" *ngFor="let column of columnOrder">
           <span class="ip-th"><pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}</span>
         </th>
-        <th id="pdf" style="width: 56px">PDF</th>
-        <th id="action" style="width: 116px" *ngIf="!this.api.rolesSE.platformIsClosed">Actions</th>
+        <!-- One action column, 44px, no label — the Results Center's `rc-th-action`. The PDF link
+             moved into the row menu, so the row stopped spending 172px on two of them. -->
+        <th id="action" class="ip-th-action" style="width: 44px" *ngIf="!this.api.rolesSE.platformIsClosed"></th>
       </tr>
     </ng-template>
 
@@ -35,10 +46,7 @@
       <tr>
         <td>
           <ng-container *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
-            <a
-              class="ip-code"
-              [routerLink]="'/ipsr/detail/' + subResult?.result_code"
-              [queryParams]="{ phase: subResult?.version_id }">
+            <a class="ip-code" [routerLink]="'/ipsr/detail/' + subResult?.result_code" [queryParams]="{ phase: subResult?.version_id }">
               <span class="ip-new-dot" *ngIf="subResult.is_new && !subResult.legacy_id" title="Created recently"></span>
               {{ subResult?.result_code }}
             </a>
@@ -47,7 +55,7 @@
 
         <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}">
           <ng-container *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
-            <!-- Status is a chip, in the same colours the platform uses everywhere else. -->
+            <!-- Status is a chip, in the same pastel pairs the Results Center uses for `status_id`. -->
             <ng-container *ngIf="column.attr === 'status'; else plainCell">
               <span class="ip-status {{ statusChipClass(subResult?.status, subResult?.status_id) }}">{{ subResult?.status }}</span>
             </ng-container>
@@ -55,60 +63,50 @@
             <ng-template #plainCell>
               <a
                 class="ip-cell {{ column.class }}"
+                [class.ip-title-link]="column.attr === 'title'"
                 [routerLink]="'/ipsr/detail/' + subResult?.result_code"
                 [queryParams]="{ phase: subResult?.version_id }"
                 [attr.title]="column.attr === 'title' ? subResult?.title : null">
-                <!-- Only the rare tags survive, and they ride inline. A pill row above every single
-                     title cost 45px per row: 89px against the Results Center's 44px, so the same
-                     screen showed half the packages. "New" moved to a dot on the code, which is how
-                     the Results Center marks a recent result. -->
-                <span [class.ip-title]="column.attr === 'title'">
-                  {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
-                  <ng-container *ngIf="column.attr === 'title'">
-                    <span class="ip-tag ip-tag--legacy" *ngIf="subResult.legacy_id">Pre 2022</span>
-                    <span class="ip-tag ip-tag--replicated" *ngIf="subResult?.is_replicated">Previously reported</span>
-                    <span class="ip-tag ip-tag--discontinued" *ngIf="subResult?.status_id === '4'">Discontinued</span>
-                  </ng-container>
-                </span>
+                <!-- 🛑 The tags are SIBLINGS of the clipped text and come FIRST. Inside the nowrap
+                     span they were the first thing the ellipsis ate, so a long title hid exactly the
+                     mark that said "Discontinued". `flex: none` keeps them from shrinking. -->
+                <ng-container *ngIf="column.attr === 'title'">
+                  <span class="ip-tag ip-tag--legacy" *ngIf="subResult.legacy_id">Pre 2022</span>
+                  <span class="ip-tag ip-tag--replicated" *ngIf="subResult?.is_replicated">Previously reported</span>
+                  <span class="ip-tag ip-tag--discontinued" *ngIf="subResult?.status_id === '4'">Discontinued</span>
+                  <span class="ip-title__text">{{ subResult?.title }}</span>
+                </ng-container>
+
+                <ng-container *ngIf="column.attr !== 'title'">
+                  <span>{{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}</span>
+                </ng-container>
               </a>
             </ng-template>
           </ng-container>
         </td>
 
+        <!-- Actions: one 28x28 icon button, the Results Center's `rc-row-menu`. What made the actions
+             read as "hidden" was never the label — it was the column being pushed out of the
+             container; the table now scrolls instead of clipping it. -->
+        <!-- No *ngIf on the cell: the PDF report used to live in a column of its own with no gate,
+             so a closed/read-only platform could still open it. It now lives in this menu, so the
+             menu has to exist there too — what a closed platform removes is the WRITE actions,
+             which `items` already handles. -->
         <td>
-          <a
-            class="ip-icon-btn"
-            prTooltip="Open the PDF report"
-            prTooltipPosition="bottom"
-            *ngFor="let subResult of result['results']; trackBy: trackBySubResult"
-            [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open the PDF report">
-            <app-pdf-icon></app-pdf-icon>
-          </a>
-        </td>
-
-        <!-- Actions: a real button with a label and a hit area. It used to be a bare `⋮` glyph
-             with neither, which is what made the row's actions read as "hidden". -->
-        <td *ngIf="!this.api.rolesSE.platformIsClosed">
-          <div *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
+          <div class="ip-row-actions" *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
             <button
               type="button"
               class="ip-actions-btn"
               aria-haspopup="menu"
               [attr.aria-label]="'Actions for ' + subResult?.result_code"
               (click)="toggleMenu($event, subResult)">
-              <i class="material-icons-round" aria-hidden="true">more_horiz</i>
-              Actions
+              <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
             </button>
           </div>
         </td>
       </tr>
     </ng-template>
   </app-pr-table>
-
-  <div class="total" *ngIf="this.tableData?.length && this.total">Showing {{ this.tableData?.length }} of {{ this.total }}</div>
 
   <div class="noDataText" *ngIf="!this.tableData?.length">There are no results for the selected filters.</div>
 </div>
@@ -127,6 +125,18 @@
           <span>{{ item.label }}</span>
         </div>
       }
+    }
+    <!-- The PDF report, which used to own a 56px column of its own. Same href, same new tab. -->
+    @if (this.api.dataControlSE.currentResult; as subResult) {
+      <a
+        class="table_menu_item"
+        [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
+        target="_blank"
+        rel="noopener noreferrer"
+        (click)="closeMenu()">
+        <i class="pi pi-file-pdf" style="color: var(--pr-color-primary-300)"></i>
+        <span>Download PDF</span>
+      </a>
     }
   </div>
 }

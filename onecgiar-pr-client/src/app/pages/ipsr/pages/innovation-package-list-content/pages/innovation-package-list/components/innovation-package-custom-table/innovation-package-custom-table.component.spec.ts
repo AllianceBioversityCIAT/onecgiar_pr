@@ -609,26 +609,39 @@ describe('InnovationPackageCustomTableComponent', () => {
     const template = (): string =>
       readFileSync(join(__dirname, 'innovation-package-custom-table.component.html'), 'utf8');
 
-    it('gives the row actions a label and a hit area, not a bare glyph', () => {
+    it('keeps the row actions reachable and named, in the Results Center\'s icon-button form', () => {
       const html = template();
 
+      // The control went from a labelled pill to the reference's 28x28 icon button (2026-09-17).
+      // What must survive either way: a real <button>, an accessible name, and the same handler —
+      // the user's requirement was that the actions never end up hidden.
       expect(html).toContain('class="ip-actions-btn"');
-      expect(html).toContain('>Actions');
       expect(html).toContain('[attr.aria-label]="\'Actions for \' + subResult?.result_code"');
-      // The old bare ellipsis is gone; the click still calls the same handler.
-      expect(html).not.toContain('pi pi-ellipsis-v');
+      expect(html).toContain('aria-haspopup="menu"');
       expect(html).toContain('toggleMenu($event, subResult)');
+      // A native button already fires click on Enter; the extra handler ran toggleMenu twice and
+      // handed a KeyboardEvent to a MouseEvent parameter under strictTemplates.
+      expect(html).not.toContain('(keydown.enter)="toggleMenu');
+      // And the cell is NOT gated on platformIsClosed any more: the PDF report lives in this menu
+      // now, and it used to be reachable from a column that had no gate.
+      expect(html).not.toContain('<td *ngIf="!this.api.rolesSE.platformIsClosed">');
     });
 
-    it('paints the status as a chip in the platform status colours', () => {
-      expect(component.statusChipClass('Editing', '1')).toBe('completeness-editing');
-      expect(component.statusChipClass('Quality Assessed', '2')).toBe('completeness-quality-assessed');
-      expect(component.statusChipClass('Submitted', '3')).toBe('completeness-submitted');
-      expect(component.statusChipClass('Discontinued', '4')).toBe('completeness-discontinued');
+    it('paints the status with the Results Center\'s chip family, not the solid completeness fills', () => {
+      // `completeness-*` are solid saturated fills with white text — that is what made the chip read
+      // as "colosalmente grande" beside the reference's pastel pill. The reference uses status_<id>.
+      expect(component.statusChipClass('Editing', '1')).toBe('status_tag status_1');
+      expect(component.statusChipClass('Quality Assessed', '2')).toBe('status_tag status_2');
+      expect(component.statusChipClass('Submitted', '3')).toBe('status_tag status_3');
+      expect(component.statusChipClass('Discontinued', '4')).toBe('status_tag status_4');
       // With no id it falls back to the label, so a chip is never colourless…
-      expect(component.statusChipClass('Submitted', null)).toBe('completeness-submitted');
+      expect(component.statusChipClass('Submitted', null)).toBe('status_tag status_3');
       // …and an unknown value still gets a neutral chip rather than nothing.
-      expect(component.statusChipClass('Something else', null)).toBe('completeness-all');
+      expect(component.statusChipClass('Something else', null)).toBe('status_tag status_5');
+      // Control: no path returns the old family.
+      for (const id of ['1', '2', '3', '4', null]) {
+        expect(component.statusChipClass('whatever', id)).not.toContain('completeness-');
+      }
     });
 
     it('asks the shared table for the data look instead of restyling it here', () => {

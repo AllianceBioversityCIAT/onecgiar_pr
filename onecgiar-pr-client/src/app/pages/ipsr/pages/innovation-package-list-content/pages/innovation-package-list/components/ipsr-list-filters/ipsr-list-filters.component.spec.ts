@@ -52,13 +52,30 @@ describe('IpsrListFiltersComponent', () => {
     });
   });
 
+
+  /**
+   * Opens the filter panel and returns its multiselects in declaration order:
+   * [Submitter, Phase, Package status, Portfolio].
+   *
+   * The three primary facets moved into the panel on 2026-09-17 so the filter bar stops carrying
+   * bare selects (the Results Center keeps none). They still apply LIVE — IPSR-R-1/R-2/R-3 — which
+   * is exactly what the tests below assert; only their location changed.
+   */
+  const openPanelMultiselects = () => {
+    if (!component.moreFiltersOpen()) {
+      component.moreFiltersOpen.set(true);
+      fixture.detectChanges();
+    }
+    return fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+  };
+
   describe('Program filter — live apply (IPSR-R-1)', () => {
     it('selecting a Program option updates selectedPrograms() immediately, with no Apply step', () => {
       const programOption = { official_code: 'INIT-01', displayName: 'INIT-01 Some initiative' };
       ipsrListFilterSE.programOptions.set([programOption]);
       fixture.detectChanges();
 
-      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      const multiselects = openPanelMultiselects();
       const programMultiselect = multiselects[0].componentInstance as PrFilterMultiselectComponent;
 
       programMultiselect.toggle(programOption);
@@ -85,7 +102,7 @@ describe('IpsrListFiltersComponent', () => {
       ipsrListFilterSE.phaseOptions.set([phaseOption]);
       fixture.detectChanges();
 
-      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      const multiselects = openPanelMultiselects();
       const phaseMultiselect = multiselects[1].componentInstance as PrFilterMultiselectComponent;
 
       phaseMultiselect.toggle(phaseOption);
@@ -100,7 +117,7 @@ describe('IpsrListFiltersComponent', () => {
       ipsrListFilterSE.phaseOptions.set([phaseOne, phaseTwo]);
       fixture.detectChanges();
 
-      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      const multiselects = openPanelMultiselects();
       const phaseMultiselect = multiselects[1].componentInstance as PrFilterMultiselectComponent;
 
       phaseMultiselect.toggle(phaseOne);
@@ -116,7 +133,7 @@ describe('IpsrListFiltersComponent', () => {
       ipsrListFilterSE.statusOptions.set(['Shared', 'Editing']);
       fixture.detectChanges();
 
-      const multiselects = fixture.debugElement.queryAll(By.directive(PrFilterMultiselectComponent));
+      const multiselects = openPanelMultiselects();
       const statusMultiselect = multiselects[2].componentInstance as PrFilterMultiselectComponent;
 
       statusMultiselect.toggle('Shared');
