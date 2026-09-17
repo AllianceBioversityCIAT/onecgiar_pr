@@ -255,11 +255,11 @@ Criteria-first: match the model to the phase's dominant demand. Principles — A
 
 | Tier | Claude Code | OpenCode | Antigravity | Codex | Fallback |
 |---|---|---|---|---|---|
-| T1 Architect | `opus` | `opencode-go/kimi-k3` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `sonnet` |
-| T2 Coder | `sonnet` | `opencode-go/glm-5.2` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `opencode-go/deepseek-v4-flash` |
+| T1 Architect | `opus` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `sonnet` |
+| T2 Coder | `sonnet` | `opencode-go/deepseek-v4.1-flash` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `opencode-go/deepseek-v4-flash` |
 | T3 Auditor | `opus` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `sonnet` |
-| T4 Context-Ingest | `sonnet` | `opencode-go/kimi-k3` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `haiku` |
-| T5 Fast-Cheap | `haiku` | `opencode-go/deepseek-v4-flash` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `sonnet` |
+| T4 Context-Ingest | `sonnet` | `opencode-go/deepseek-v4-pro` `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | `haiku` |
+| T5 Fast-Cheap | `haiku` | `opencode-go/deepseek-v4.1-flash` `<CONFIRM SLUG>` | Gemini Flash (`flash`) `<CONFIRM ID>` | `gpt-5.6-luna` `<CONFIRM SLUG>` | `sonnet` |
 | T6 Multimodal | `sonnet` | `<CONFIRM SLUG>` | Gemini Pro (`pro`) `<CONFIRM ID>` | `gpt-5.6-terra` `<CONFIRM SLUG>` | — |
 
 Host CLI invocations: Claude Code `claude` · OpenCode `opencode` `<CONFIRM>` · Antigravity `agy` `<CONFIRM>` · Codex `codex` `<CONFIRM>`.
