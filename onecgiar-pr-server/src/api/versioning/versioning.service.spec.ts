@@ -1158,7 +1158,7 @@ describe('VersioningService', () => {
       const existingNewAnswers = overrides?.existingNewAnswers ?? new Map();
 
       const manager = {
-        find: jest.fn(async (entity: any, options: any) => {
+        find: jest.fn(async (entity: any, _options: any) => {
           if (entity === ResultAnswer || entity?.name === 'ResultAnswer') {
             return oldAnswers;
           }
@@ -1190,8 +1190,16 @@ describe('VersioningService', () => {
     it('maps affirmative legacy answers (e.g. option 104 = true) to Option 163 = true, 164 = false, 165 = false, with GESI (152 = true) and Risk (157 = true) stage 1 baseline', async () => {
       const { manager, savedAnswers } = buildMockManager({
         oldAnswers: [
-          { result_question_id: 104, answer_boolean: true, is_active: true } as any,
-          { result_question_id: 105, answer_boolean: false, is_active: true } as any,
+          {
+            result_question_id: 104,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
+          {
+            result_question_id: 105,
+            answer_boolean: false,
+            is_active: true,
+          } as any,
         ],
       });
 
@@ -1237,7 +1245,11 @@ describe('VersioningService', () => {
     it('maps affirmative legacy support request (option 110 = true) to Option 163 = true', async () => {
       const { manager, savedAnswers } = buildMockManager({
         oldAnswers: [
-          { result_question_id: 110, answer_boolean: true, is_active: true } as any,
+          {
+            result_question_id: 110,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
         ],
       });
 
@@ -1262,8 +1274,16 @@ describe('VersioningService', () => {
     it('maps uncertainty legacy answers (e.g. option 105 = true) to Option 164 = true, 163 = false, 165 = false', async () => {
       const { manager, savedAnswers } = buildMockManager({
         oldAnswers: [
-          { result_question_id: 105, answer_boolean: true, is_active: true } as any,
-          { result_question_id: 106, answer_boolean: false, is_active: true } as any,
+          {
+            result_question_id: 105,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
+          {
+            result_question_id: 106,
+            answer_boolean: false,
+            is_active: true,
+          } as any,
         ],
       });
 
@@ -1288,7 +1308,11 @@ describe('VersioningService', () => {
     it('maps uncertainty legacy answer for Q103 (option 111 = true) to Option 164 = true, 163 = false, 165 = false', async () => {
       const { manager, savedAnswers } = buildMockManager({
         oldAnswers: [
-          { result_question_id: 111, answer_boolean: true, is_active: true } as any,
+          {
+            result_question_id: 111,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
         ],
       });
 
@@ -1313,7 +1337,11 @@ describe('VersioningService', () => {
     it('maps negative legacy answers (e.g. only non-affirmative options or empty) to Option 165 = true, 163 = false, 164 = false', async () => {
       const { manager, savedAnswers } = buildMockManager({
         oldAnswers: [
-          { result_question_id: 106, answer_boolean: true, is_active: true } as any,
+          {
+            result_question_id: 106,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
         ],
       });
 
@@ -1338,7 +1366,11 @@ describe('VersioningService', () => {
     it('returns early without modifying any answers when target phase_year < 2026', async () => {
       const { manager, savedAnswers } = buildMockManager({
         oldAnswers: [
-          { result_question_id: 104, answer_boolean: true, is_active: true } as any,
+          {
+            result_question_id: 104,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
         ],
       });
 
@@ -1370,14 +1402,22 @@ describe('VersioningService', () => {
         mockUser,
       );
 
-      expect(manager.findOne).toHaveBeenCalledWith(Version, { where: { id: 34 } });
+      expect(manager.findOne).toHaveBeenCalledWith(Version, {
+        where: { id: 34 },
+      });
       expect(savedAnswers).toHaveLength(0);
     });
 
     it('queries phase from database if phase.phase_year is missing and executes if phase_year >= 2026', async () => {
       const { manager, savedAnswers } = buildMockManager({
         phaseEntity: { id: 36, phase_year: 2026 } as any,
-        oldAnswers: [{ result_question_id: 104, answer_boolean: true, is_active: true } as any],
+        oldAnswers: [
+          {
+            result_question_id: 104,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
+        ],
       });
 
       const phase: any = { id: 36 };
@@ -1389,7 +1429,9 @@ describe('VersioningService', () => {
         mockUser,
       );
 
-      expect(manager.findOne).toHaveBeenCalledWith(Version, { where: { id: 36 } });
+      expect(manager.findOne).toHaveBeenCalledWith(Version, {
+        where: { id: 36 },
+      });
       expect(savedAnswers.length).toBeGreaterThan(0);
       const ans163 = savedAnswers.find((a) => a.result_question_id === 163);
       expect(ans163?.answer_boolean).toBe(true);
@@ -1408,7 +1450,13 @@ describe('VersioningService', () => {
 
       const { manager, savedAnswers } = buildMockManager({
         existingNewAnswers: existingMap,
-        oldAnswers: [{ result_question_id: 104, answer_boolean: true, is_active: true } as any],
+        oldAnswers: [
+          {
+            result_question_id: 104,
+            answer_boolean: true,
+            is_active: true,
+          } as any,
+        ],
       });
 
       const phase: any = { id: 36, phase_year: 2026 };
