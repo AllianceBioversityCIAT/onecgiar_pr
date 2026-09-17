@@ -297,27 +297,6 @@ const REDACTED_PLACEHOLDER = '[redacted]';
  * redact when it reports no degradation. Order matters: stripping first means truncation
  * can never cut a URL in half and leave a dangling host fragment.
  */
-/**
- * The response body as it goes to the log. Everything is kept verbatim so a contract disagreement
- * can be read off the line — except `degraded_reason`, free text from the far side and the one
- * field known to carry a host or URL, which goes through {@link sanitizeDegradedReason}.
- */
-function redactResponseForLog(data: unknown): unknown {
-  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
-    return data;
-  }
-  const body = data as Record<string, unknown>;
-  if (!('degraded_reason' in body)) {
-    return body;
-  }
-  const reason = body.degraded_reason;
-  return {
-    ...body,
-    degraded_reason:
-      typeof reason === 'string' ? sanitizeDegradedReason(reason) : reason,
-  };
-}
-
 function sanitizeDegradedReason(reason: string | null): string | null {
   if (reason === null) {
     return null;
@@ -445,8 +424,6 @@ export class BilateralQualityAssessmentClient {
       request_id: requestId,
       user_id: ctx.userEmail?.trim() ?? '',
     };
-    this.logOutboundPayload(requestBody, ctx.resultId, requestId);
-
     try {
       const response = await this.postWithTimeoutGuard(
         url,
@@ -454,12 +431,6 @@ export class BilateralQualityAssessmentClient {
         timeoutMs,
       );
       const elapsedMs = Date.now() - started;
-      this.logInboundResponse(
-        ctx.resultId,
-        requestId,
-        response.status,
-        response.data,
-      );
 
       if (!isValidAiResponse(response.data)) {
         return this.finish(
@@ -566,69 +537,6 @@ export class BilateralQualityAssessmentClient {
     });
 
     return Promise.race([requestPromise, timeoutPromise]);
-  }
-
-  /**
-   * Whether to dump the contract bodies. On in local development by default, and switchable in a
-   * deployed environment with `BILATERAL_AI_QUALITY_DEBUG_PAYLOADS=true` — the two live on separate
-   * switches on purpose: chasing a contract disagreement in TEST must not require flipping
-   * `NODE_ENV`, which changes unrelated behaviour across the whole server.
-   *
-   * Off by default everywhere else. These lines carry the result's full narrative content, which
-   * belongs in an operator's console on request, not in every environment's log stream by default.
-   */
-  private payloadDebugEnabled(): boolean {
-    const raw = env.BILATERAL_AI_QUALITY_DEBUG_PAYLOADS;
-    if (typeof raw === 'string' && raw.trim() !== '') {
-      return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
-    }
-    return process.env.NODE_ENV === 'development';
-  }
-
-  /**
-   * The exact contract body headed to the AI service. Never the email (`user_id`), never the API
-   * key, never the host — those are not in the body, and the one that is gets redacted here
-   * (`.cursorrules`, design.md §7).
-   */
-  private logOutboundPayload(
-    body: QualityAssessmentRequest,
-    resultId: number,
-    requestId: string,
-  ): void {
-    if (!this.payloadDebugEnabled()) return;
-    this.logger.debug({
-      event: 'bilateral_quality_assessment_request',
-      result_id: resultId,
-      request_id: requestId,
-      user_id: '[redacted]',
-      // Overwritten rather than omitted: the line is meant to be the body we sent, and a missing
-      // key would read as "we sent no user_id" — which is a different bug.
-      body: { ...body, user_id: '[redacted]' },
-    });
-  }
-
-  /**
-   * The body the AI answered with, verbatim except for `degraded_reason`, which goes through the
-   * same sanitiser the rest of the class uses — it is free text from the far side and is the one
-   * field that has been seen carrying a host or URL.
-   *
-   * Logged BEFORE the schema check runs, so a body that fails validation is visible: a malformed
-   * response is exactly the case where the payload is the only thing that explains the failure.
-   */
-  private logInboundResponse(
-    resultId: number,
-    requestId: string,
-    httpStatus: number,
-    data: unknown,
-  ): void {
-    if (!this.payloadDebugEnabled()) return;
-    this.logger.debug({
-      event: 'bilateral_quality_assessment_response',
-      result_id: resultId,
-      request_id: requestId,
-      http_status: httpStatus,
-      body: redactResponseForLog(data),
-    });
   }
 
   private classify(error: unknown): {

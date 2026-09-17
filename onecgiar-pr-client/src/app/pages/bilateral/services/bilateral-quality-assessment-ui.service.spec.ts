@@ -8,8 +8,8 @@ import {
 } from './bilateral-quality-assessment-ui.service';
 
 // 🛑 `src/environments/environment.ts` is gitignored and written per environment by CI, so a spec
-// that reads it dies with "Cannot find module" on a fresh worktree. Stub it — the service only ever
-// asks for `production` and the API base.
+// that reaches it dies with "Cannot find module" on a fresh worktree. The API service reads the
+// base URL from it, so stub it here rather than letting the real file decide the asserted URLs.
 jest.mock('../../../../environments/environment', () => ({
   environment: { production: false, apiBaseUrl: 'http://api.test/' },
 }));
@@ -47,7 +47,6 @@ describe('BilateralQualityAssessmentUiService', () => {
     });
     service = TestBed.inject(BilateralQualityAssessmentUiService);
     httpMock = TestBed.inject(HttpTestingController);
-    jest.spyOn(console, 'debug').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -156,6 +155,23 @@ describe('BilateralQualityAssessmentUiService', () => {
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual({ assessment_id: 9, decision: 'submitted_anyway' });
       req.flush({ response: { resultId: 42, status: 5 } });
+    });
+
+    // 🛑 The window used to survive its own submit: the component closed it on `next`, but `close()`
+    // is gated on `isBusy()` and the state was still `submitting`, so the call was a no-op — and
+    // `finalize` then put the state back to `deciding`. The user saw the success toast behind a
+    // window still offering Submit for review and Make adjustments.
+    it('closes once the submit succeeds', () => {
+      service.assessment.set(view());
+      service.state.set('deciding');
+
+      service.submit(42, 'submitted_anyway').subscribe();
+      httpMock.expectOne(submitUrl(42)).flush({ response: { resultId: 42, status: 5 } });
+
+      expect(service.isDialogOpen()).toBe(false);
+      expect(service.state()).toBe('idle');
+      // The verdict stays on the rail as history — only the detail window closed.
+      expect(service.assessment()).not.toBeNull();
     });
 
     it('returns to the verdict when the submit fails, so the decision is still on screen', () => {

@@ -1,7 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { catchError, filter, finalize, map, of, switchMap, take, tap, throwError, timeout, timer } from 'rxjs';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
-import { environment } from '../../../../environments/environment';
 
 /** How long the client waits on a `running` row before telling the user to come back. */
 const POLL_WINDOW_MS = 70_000;
@@ -73,12 +72,6 @@ export class BilateralQualityAssessmentUiService {
         )
         : of(assessment)),
       map((assessment) => {
-        // Intentional local-development aid requested during endpoint QA. Never emits in a
-        // production bundle, and the server continues to log identifiers/outcomes only.
-        if (!environment.production) {
-          // eslint-disable-next-line no-console
-          console.debug('[Bilateral quality assessment response]', assessment);
-        }
         this.assessment.set(assessment);
         this.state.set('deciding');
         return assessment;
@@ -124,9 +117,20 @@ export class BilateralQualityAssessmentUiService {
       assessment_id: assessment.id,
       decision,
     }).pipe(
-      // A failed submit returns to the verdict, not to a blank editor: the user still has to
-      // decide, and re-running the check would only produce the same row.
-      finalize(() => this.state.set(this.state() === 'submitting' ? 'deciding' : 'idle')),
+      tap({
+        // Submitted: the window has done its job and the result is now read-only. Closing here
+        // rather than from the component is what makes it stick — `close()` is gated on
+        // `isBusy()`, so a caller closing on `next` ran while the state was still `submitting`
+        // and was silently a no-op, and then the window came back.
+        next: () => this.state.set('idle'),
+        // A failed submit returns to the verdict, not to a blank editor: the user still has to
+        // decide, and re-running the check would only produce the same row.
+        error: () => this.state.set('deciding'),
+      }),
+      // Only for an early unsubscribe, which neither handler above sees.
+      finalize(() => {
+        if (this.state() === 'submitting') this.state.set('deciding');
+      }),
     );
   }
 

@@ -24,7 +24,6 @@ const ENV_KEYS = [
   'BILATERAL_AI_QUALITY_URL',
   'BILATERAL_AI_QUALITY_TIMEOUT_MS',
   'MICROSERVICE_API_KEY',
-  'BILATERAL_AI_QUALITY_DEBUG_PAYLOADS',
 ] as const;
 
 let savedEnv: Record<string, string | undefined>;
@@ -116,7 +115,6 @@ function configureEnv(
     url?: string;
     key?: string;
     timeoutMs?: string;
-    debugPayloads?: string;
   } = {},
 ): void {
   if (overrides.url !== undefined) {
@@ -127,9 +125,6 @@ function configureEnv(
   }
   if (overrides.timeoutMs !== undefined) {
     process.env.BILATERAL_AI_QUALITY_TIMEOUT_MS = overrides.timeoutMs;
-  }
-  if (overrides.debugPayloads !== undefined) {
-    process.env.BILATERAL_AI_QUALITY_DEBUG_PAYLOADS = overrides.debugPayloads;
   }
 }
 
@@ -527,131 +522,6 @@ describe('BilateralQualityAssessmentClient', () => {
       const result = await client.assess(buildPayload(), { resultId: 1 });
 
       expect(result.outcome).toBe('malformed');
-    });
-  });
-
-  describe('payload debug logging', () => {
-    const LEAK_URL = 'https://ai-internal.example/v1/secret';
-
-    function debugSpy(): jest.SpyInstance {
-      return jest
-        .spyOn(Logger.prototype, 'debug')
-        .mockImplementation(() => undefined);
-    }
-
-    function lines(spy: jest.SpyInstance): any[] {
-      return spy.mock.calls.map((call) => call[0]);
-    }
-
-    it('logs neither body when the flag is off', async () => {
-      configureEnv({ url: 'https://ai.example.test', key: 'k' });
-      const spy = debugSpy();
-      const client = makeClient(
-        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
-      );
-
-      await client.assess(buildPayload(), { resultId: 1 });
-
-      expect(lines(spy).map((line) => line?.event)).not.toContain(
-        'bilateral_quality_assessment_request',
-      );
-      expect(lines(spy).map((line) => line?.event)).not.toContain(
-        'bilateral_quality_assessment_response',
-      );
-    });
-
-    it('logs both bodies, correlated by request_id, when the flag is on', async () => {
-      configureEnv({
-        url: 'https://ai.example.test',
-        key: 'k',
-        debugPayloads: 'true',
-      });
-      const spy = debugSpy();
-      const client = makeClient(
-        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
-      );
-
-      await client.assess(buildPayload(), { resultId: 7 });
-
-      const request = lines(spy).find(
-        (line) => line?.event === 'bilateral_quality_assessment_request',
-      );
-      const response = lines(spy).find(
-        (line) => line?.event === 'bilateral_quality_assessment_response',
-      );
-      expect(request.result_id).toBe(7);
-      expect(request.body.sections).toBeDefined();
-      expect(response.http_status).toBe(200);
-      expect(response.body.overall).toBeDefined();
-      // One id end to end is what makes the pair readable in a shared log stream.
-      expect(response.request_id).toBe(request.request_id);
-    });
-
-    // 🛑 `.cursorrules`: the email is the one piece of the outbound body that must never reach a
-    // log, flag on or off. Scans the whole serialised line, not just the redacted field.
-    it('never puts the user email in either line', async () => {
-      configureEnv({
-        url: 'https://ai.example.test',
-        key: 'k',
-        debugPayloads: 'on',
-      });
-      const spy = debugSpy();
-      const client = makeClient(
-        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
-      );
-      const userEmail = 'centre.reviewer@cgiar.org';
-
-      await client.assess(buildPayload(), { resultId: 1, userEmail });
-
-      for (const line of lines(spy)) {
-        expect(JSON.stringify(line)).not.toContain(userEmail);
-      }
-      const request = lines(spy).find(
-        (line) => line?.event === 'bilateral_quality_assessment_request',
-      );
-      expect(request.user_id).toBe('[redacted]');
-    });
-
-    // degraded_reason is free text from the far side; it has already been seen carrying a host.
-    it('sanitises degraded_reason on the inbound line', async () => {
-      configureEnv({
-        url: 'https://ai.example.test',
-        key: 'k',
-        debugPayloads: '1',
-      });
-      const spy = debugSpy();
-      const body = readV02Fixture();
-      body.degraded_reason = `upstream failed at ${LEAK_URL}`;
-      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
-
-      await client.assess(buildPayload(), { resultId: 1 });
-
-      const response = lines(spy).find(
-        (line) => line?.event === 'bilateral_quality_assessment_response',
-      );
-      expect(JSON.stringify(response)).not.toContain(LEAK_URL);
-      expect(JSON.stringify(response)).not.toContain('ai-internal.example');
-    });
-
-    // The malformed branch returns before any verdict exists, so the body is the only evidence.
-    it('logs a body that fails the schema check', async () => {
-      configureEnv({
-        url: 'https://ai.example.test',
-        key: 'k',
-        debugPayloads: 'true',
-      });
-      const spy = debugSpy();
-      const client = makeClient(
-        jest.fn(() => of({ data: { nonsense: true }, status: 200 })),
-      );
-
-      const result = await client.assess(buildPayload(), { resultId: 1 });
-
-      expect(result.outcome).toBe('malformed');
-      const response = lines(spy).find(
-        (line) => line?.event === 'bilateral_quality_assessment_response',
-      );
-      expect(response.body).toEqual({ nonsense: true });
     });
   });
 
