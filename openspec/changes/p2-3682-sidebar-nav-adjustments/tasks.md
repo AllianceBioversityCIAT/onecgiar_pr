@@ -54,5 +54,5 @@
 
 ## 6. Ticket
 
-- [ ] 6.1 Comment on P2-3682 in English: what was done, why Glossary and Tour went to Support, and
+- [x] 6.1 Comment on P2-3682 in English: what was done, why Glossary and Tour went to Support, and
       that the mockup's Profile entry was left out because no profile screen exists.
