@@ -816,6 +816,13 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.clarisaGlossaryUrl).toBe(CLARISA_GLOSSARY_URL);
     });
 
+    it('exposes aiUseInPrmsUrl, termsAndConditionsUrl, and licenseUrl from environment', async () => {
+      await build();
+      expect(component.aiUseInPrmsUrl).toBe(environment.footerUrls.aiUseInPrms);
+      expect(component.termsAndConditionsUrl).toBe(environment.footerUrls.termsAndCondition);
+      expect(component.licenseUrl).toBe(environment.footerUrls.license);
+    });
+
     it('authors Glossary before Release notes with external link contract', () => {
       const extras = readExtrasMarkup();
       const glossaryIdx = extras.indexOf('tooltip="Glossary"');
@@ -829,6 +836,26 @@ describe('ReportingNavSidebarComponent', () => {
       expect(extras).toContain('name="lucideBookOpen"');
       expect(extras).toContain('<span>Glossary</span>');
       expect(extras.slice(glossaryIdx, releaseIdx)).not.toContain('routerLink');
+    });
+
+    it('renders AI use in PRMS, Terms and conditions, and License links with external link contract', () => {
+      const extras = readExtrasMarkup();
+      expect(extras).toContain('About</div>');
+
+      expect(extras).toContain('tooltip="AI use in PRMS"');
+      expect(extras).toContain('[href]="aiUseInPrmsUrl"');
+      expect(extras).toContain('<span>AI use in PRMS</span>');
+      expect(extras).toContain('name="lucideSparkles"');
+
+      expect(extras).toContain('tooltip="Terms and conditions"');
+      expect(extras).toContain('[href]="termsAndConditionsUrl"');
+      expect(extras).toContain('<span>Terms and conditions</span>');
+      expect(extras).toContain('name="lucideFileText"');
+
+      expect(extras).toContain('tooltip="License"');
+      expect(extras).toContain('[href]="licenseUrl"');
+      expect(extras).toContain('<span>License</span>');
+      expect(extras).toContain('name="lucideAward"');
     });
   });
 

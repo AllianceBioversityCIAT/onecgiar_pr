@@ -38,7 +38,8 @@ import {
   lucideScale,
   lucideGitBranch,
   lucideUsers,
-  lucideHouse
+  lucideHouse,
+  lucideAward
 } from '@ng-icons/lucide';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan/sidebar';
 import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
@@ -120,7 +121,8 @@ interface IconFlyout {
       lucideScale,
       lucideGitBranch,
       lucideUsers,
-      lucideHouse
+      lucideHouse,
+      lucideAward
     })
   ]
 })
@@ -138,8 +140,13 @@ export class ReportingNavSidebarComponent {
   readonly isProduction = environment.production;
   readonly appVersion = APP_VERSION;
   readonly fontScaleOptions = FONT_SCALE_OPTIONS;
-  /** P2-3145 — CLARISA public glossary (sidebar EXTRAS + footer). */
+  /** P2-3145 — CLARISA public glossary (sidebar ABOUT + footer). */
   readonly clarisaGlossaryUrl = CLARISA_GLOSSARY_URL;
+  readonly aiUseInPrmsUrl =
+    (environment.footerUrls as any)?.aiUseInPrms ??
+    'https://cgiar.sharepoint.com/:w:/s/PRMSProject/IQAszBnw-YhXSrQu0DcCiDg1AbPIlEF_01D-m3wEDAMHLPA?e=FelH2c';
+  readonly termsAndConditionsUrl = environment.footerUrls.termsAndCondition;
+  readonly licenseUrl = environment.footerUrls.license;
 
   /** Icon-rail mode (Spartan `collapsible="icon"` + service state). */
   readonly isCollapsed = computed(() => this.sidebarSE.state() === 'collapsed' && !this.sidebarSE.isMobile());

@@ -397,10 +397,10 @@
          second, competing divider next to the real one above the programme block. -->
     <div hlmSidebarGroup class="pr-nav-extras">
       @if (!isCollapsed()) {
-        <div class="pr-nav-section-label pr-nav-section-label--extras">Extras</div>
+        <div class="pr-nav-section-label pr-nav-section-label--extras">About</div>
       }
       <div hlmSidebarGroupContent>
-        <ul hlmSidebarMenu role="group" aria-label="Extra tools">
+        <ul hlmSidebarMenu role="group" aria-label="About and tools">
           <li hlmSidebarMenuItem>
             <a
               hlmSidebarMenuButton
@@ -415,6 +415,17 @@
           <li hlmSidebarMenuItem>
             <a
               hlmSidebarMenuButton
+              [href]="aiUseInPrmsUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              tooltip="AI use in PRMS">
+              <ng-icon name="lucideSparkles" />
+              <span>AI use in PRMS</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
               routerLink="/whats-new"
               routerLinkActive
               #rlaWhatsNew="routerLinkActive"
@@ -422,6 +433,28 @@
               tooltip="Release notes">
               <ng-icon name="lucideRocket" />
               <span>Release notes</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
+              [href]="termsAndConditionsUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              tooltip="Terms and conditions">
+              <ng-icon name="lucideFileText" />
+              <span>Terms and conditions</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
+              [href]="licenseUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              tooltip="License">
+              <ng-icon name="lucideAward" />
+              <span>License</span>
             </a>
           </li>
           <li hlmSidebarMenuItem>
