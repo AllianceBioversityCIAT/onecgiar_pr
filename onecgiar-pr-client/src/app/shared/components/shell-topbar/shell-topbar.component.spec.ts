@@ -360,8 +360,9 @@ describe('ShellTopbarComponent', () => {
       expect(insideGuards).not.toContain('aria-label="Notifications"');
       expect(insideGuards).not.toContain('<app-global-search-palette');
 
-      // The chat is NOT gated — it is the supported route in production.
+      // The chat and contact us link are NOT gated — they are supported routes in production.
       expect(insideGuards).not.toContain('openSupportChat()');
+      expect(insideGuards).not.toContain('mailto:prmstechsupport@cgiar.org');
     });
   });
 
@@ -399,6 +400,13 @@ describe('ShellTopbarComponent', () => {
 
       expect(component.supportMenuOpen()).toBe(false);
       expect(component.reportFeedbackOpen()).toBe(true);
+    });
+
+    it('offers a Contact us mailto link to prmstechsupport@cgiar.org', () => {
+      const html = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+      expect(html).toContain('mailto:prmstechsupport@cgiar.org');
+      expect(html).toContain('Contact us');
+      expect(html).toContain('lucideMail');
     });
 
     it('escape closes the support menu too', async () => {

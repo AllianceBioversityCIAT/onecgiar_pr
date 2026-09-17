@@ -9,6 +9,7 @@ import {
   lucideBell,
   lucideChevronDown,
   lucideLifeBuoy,
+  lucideMail,
   lucideMegaphone,
   lucideMessageCircle,
   lucideSearch
@@ -51,6 +52,7 @@ import { SupportChatService } from '../../services/support-chat.service';
       lucideLifeBuoy,
       lucideMessageCircle,
       lucideMegaphone,
+      lucideMail,
       lucideChevronDown
     })
   ],

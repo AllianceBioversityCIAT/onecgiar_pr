@@ -112,6 +112,15 @@
           <span>Give feedback</span>
         </button>
       }
+
+      <a
+        href="mailto:prmstechsupport@cgiar.org"
+        role="menuitem"
+        class="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3.5 py-2.5 text-left text-[13px] font-medium text-[var(--pr-text-heading,#191524)] no-underline transition-colors hover:bg-[#f3f2f7]"
+        (click)="supportMenuOpen.set(false)">
+        <ng-icon name="lucideMail" class="text-[17px]" />
+        <span>Contact us</span>
+      </a>
     </div>
   </ng-template>
 
