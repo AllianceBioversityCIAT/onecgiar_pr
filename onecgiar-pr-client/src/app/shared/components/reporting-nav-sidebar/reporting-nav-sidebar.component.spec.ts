@@ -776,7 +776,14 @@ describe('ReportingNavSidebarComponent', () => {
 
     it('exposes aiUseInPrmsUrl, termsAndConditionsUrl, and licenseUrl from environment', async () => {
       await build();
-      expect(component.aiUseInPrmsUrl).toBe(environment.footerUrls.aiUseInPrms);
+      // aiUseInPrmsUrl falls back to a hardcoded URL when a deployed environment.ts
+      // (gitignored, injected by the CI pipeline) has not been updated with
+      // footerUrls.aiUseInPrms yet — mirror that same contract here instead of
+      // assuming the key is always present.
+      const expectedAiUseInPrmsUrl =
+        (environment.footerUrls as any)?.aiUseInPrms ??
+        'https://cgiar.sharepoint.com/:w:/s/PRMSProject/IQAszBnw-YhXSrQu0DcCiDg1AbPIlEF_01D-m3wEDAMHLPA?e=FelH2c';
+      expect(component.aiUseInPrmsUrl).toBe(expectedAiUseInPrmsUrl);
       expect(component.termsAndConditionsUrl).toBe(environment.footerUrls.termsAndCondition);
       expect(component.licenseUrl).toBe(environment.footerUrls.license);
     });
