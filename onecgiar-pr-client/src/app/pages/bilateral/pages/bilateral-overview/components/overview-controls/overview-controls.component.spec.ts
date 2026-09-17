@@ -58,6 +58,7 @@ function params(overrides: Partial<BilateralQueryParams> = {}): BilateralQueryPa
     source: null,
     method: null,
     search: '',
+    createdBy: [],
     multi: false,
     ...overrides,
   };

@@ -461,3 +461,220 @@
     max-width: none;
   }
 }
+
+/* ---------------------------------------------------------------- P2-3682
+   Right cluster: one labelled action (Help), then the two icon actions, then
+   who you are. They used to sit in a single 4px row with three different
+   treatments and nothing telling them apart. */
+.pr-topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pr-topbar-sep {
+  width: 1px;
+  height: 20px;
+  flex: none;
+  margin: 0 6px;
+  background: var(--pr-border, #e3e3e8);
+}
+
+/* ---------------------------------------------------------------- P2-3682
+   Account menu. One column, one rhythm. The old markup ruled off every row,
+   which made three unrelated things (identity, programmes, centres) read as
+   one table with missing headers. */
+.pr-topbar-account__id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 10px;
+}
+
+.pr-topbar-account__name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--pr-text-heading, #191524);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-topbar-account__email {
+  margin: 1px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--pr-text-subtle, #9691a8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-topbar-account__role {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--pr-color-primary-50, #f3effc);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--pr-color-primary-400, #5733c4);
+}
+
+.pr-topbar-account__group {
+  padding: 8px 14px 10px;
+
+  & + & {
+    border-top: 1px solid #f1f0f5;
+  }
+}
+
+.pr-topbar-account__group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.pr-topbar-account__eyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pr-text-subtle, #9691a8);
+}
+
+.pr-topbar-account__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pr-topbar-account__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border-radius: 8px;
+  transition: background-color 150ms ease;
+
+  &:hover {
+    background: #f8f7fb;
+  }
+
+  &--stacked {
+    align-items: flex-start;
+  }
+}
+
+/* Fixed width so the codes form a real column: SP01 and CENTER-06 used to
+   start the text at two different places. */
+.pr-topbar-account__code {
+  flex: none;
+  min-width: 56px;
+  padding: 2px 0;
+  border-radius: 5px;
+  background: var(--pr-color-primary-50, #f3effc);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--pr-color-primary-400, #5733c4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-topbar-account__title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--pr-text, #2b2838);
+}
+
+.pr-topbar-account__meta {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pr-text-secondary, #5d5872);
+
+  &--under {
+    display: block;
+    margin: 1px 0 0;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--pr-text-subtle, #9691a8);
+  }
+}
+
+/* Text size, inline in the profile panel (P2-3682). Five squares, no labels: the
+   letter grows across them, which says what they do without a word under each. */
+.pr-topbar-account__group--text {
+  border-top: 1px solid #f1f0f5;
+}
+
+.pr-topbar-account__scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--pr-surface-subtle, #f4f4f6);
+}
+
+.pr-topbar-account__scale-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pr-text-secondary, #5d5872);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  &--on {
+    background: #fff;
+    color: var(--pr-color-primary-400, #5733c4);
+    box-shadow: 0 0 0 1px var(--pr-color-primary-200, #c9b8f5);
+  }
+}
+
+.pr-topbar-account__reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pr-color-primary-400, #5733c4);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

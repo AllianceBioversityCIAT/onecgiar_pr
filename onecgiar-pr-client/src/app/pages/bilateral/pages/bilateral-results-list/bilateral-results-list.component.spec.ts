@@ -8,12 +8,16 @@ import {
   BilateralResultsListComponent,
   BilateralCenterResult,
   BILATERAL_COLUMNS,
+  BILATERAL_COLUMN_WIDTHS_STORAGE_KEY,
 } from './bilateral-results-list.component';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { PrToastService } from '../../../../shared/components/pr-toast';
+import { ResultDeletionService } from '../../../result-framework-reporting/services/result-deletion.service';
 
 describe('BilateralResultsListComponent', () => {
   let component: BilateralResultsListComponent;
@@ -77,6 +81,7 @@ describe('BilateralResultsListComponent', () => {
     is_leading_result: 1,
     description: 'Profiles co-developed with the county governments of Kenya.',
     project_name: 'Accelerating Impacts of CGIAR Climate Research for Africa',
+    created_by_name: 'Angel Jarrin',
     ...overrides,
   });
 
@@ -184,7 +189,7 @@ describe('BilateralResultsListComponent', () => {
       expect(component.isColumnVisible('type')).toBe(false);
       expect(component.visibleColumns().find(c => c.key === 'type')).toBeUndefined();
 
-      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v3') ?? '{}');
+      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v4') ?? '{}');
       expect(stored.type).toBe(false);
     });
 
@@ -634,6 +639,260 @@ describe('BilateralResultsListComponent', () => {
 
       const table = workArea.querySelector('app-pr-table');
       expect(table).toBeTruthy();
+    });
+  });
+
+  describe('W1/W2 Aligned Row Menu', () => {
+    let mockResult: BilateralCenterResult;
+
+    beforeEach(() => {
+      mockResult = result({ id: 99, result_code: '9901', version_id: 36, title: 'Sample Result' });
+    });
+
+    it('computes correct rowKey and toggles menu state', () => {
+      expect(component.rowKey(mockResult)).toBe('9901|36');
+      expect(component.isMenuOpen(mockResult)).toBe(false);
+
+      const event = { stopPropagation: jest.fn() } as unknown as Event;
+      component.toggleRowMenu(mockResult, event);
+      expect(event.stopPropagation).toHaveBeenCalled();
+      expect(component.isMenuOpen(mockResult)).toBe(true);
+
+      // Toggling again closes it
+      component.toggleRowMenu(mockResult, event);
+      expect(component.isMenuOpen(mockResult)).toBe(false);
+    });
+
+    it('closes menu when closeRowMenu or onRowMenuDetach is called', () => {
+      component.openMenuKey.set('9901|36');
+      expect(component.isMenuOpen(mockResult)).toBe(true);
+
+      component.onRowMenuDetach(mockResult);
+      expect(component.isMenuOpen(mockResult)).toBe(false);
+    });
+
+    it('navigates to result details on openResultFromMenu', () => {
+      component.openMenuKey.set('9901|36');
+      const openSpy = jest.spyOn(component, 'openResult');
+
+      component.openResultFromMenu(mockResult);
+      expect(component.openMenuKey()).toBeNull();
+      expect(openSpy).toHaveBeenCalledWith(mockResult);
+    });
+
+    it('generates correct pdfHref and resultLink', () => {
+      expect(component.pdfHref(mockResult)).toBe('/reports/result-details/9901?phase=36');
+
+      const link = component.resultLink(mockResult);
+      expect(link).toContain('/bilateral/');
+      expect(link).toContain('/result/9901?phase=36');
+    });
+
+    it('copies result link to clipboard and triggers success toast on copyLink', () => {
+      const clipboard = TestBed.inject(Clipboard);
+      const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+      const toastSE = TestBed.inject(PrToastService);
+      const toastSpy = jest.spyOn(toastSE, 'add').mockImplementation(() => {});
+
+      component.openMenuKey.set('9901|36');
+      component.copyLink(mockResult);
+
+      expect(copySpy).toHaveBeenCalledWith(expect.stringContaining('/result/9901?phase=36'));
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'globalUserNotification',
+          severity: 'success',
+          summary: 'Result link copied',
+        }),
+      );
+      expect(component.openMenuKey()).toBeNull();
+    });
+
+    it('calls ResultDeletionService.deleteWithConfirmation on deleteResult and removes item on success', () => {
+      component.results.set([mockResult, result({ id: 100, result_code: '1000' })]);
+      const deletionSE = TestBed.inject(ResultDeletionService);
+      let successCallback: (() => void) | undefined;
+      jest.spyOn(deletionSE, 'deleteWithConfirmation').mockImplementation((res: any, options: any) => {
+        successCallback = options?.onSuccess;
+      });
+
+      component.openMenuKey.set('9901|36');
+      component.deleteResult(mockResult);
+
+      expect(component.openMenuKey()).toBeNull();
+      expect(deletionSE.deleteWithConfirmation).toHaveBeenCalledWith(mockResult, expect.any(Object));
+
+      // Invoke success callback
+      successCallback?.();
+      expect(component.results().some(r => r.id === 99)).toBe(false);
+      expect(component.results().length).toBe(1);
+    });
+
+    it('evaluates canDeleteResult properly for admins vs non-admins', () => {
+      rolesService.isAdmin = true;
+      expect(component.canDeleteResult(mockResult)).toBe(true);
+
+      rolesService.isAdmin = false;
+      // When status_id === 1 (Editing), center user can delete
+      expect(component.canDeleteResult(result({ source: 'API', status_id: 1 }))).toBe(true);
+      // When status_id !== 1 (e.g. Approved / QA), non-admin cannot delete
+      expect(component.canDeleteResult(result({ source: 'API', status_id: 6 }))).toBe(false);
+      // When source !== 'API', cannot delete
+      expect(component.canDeleteResult(result({ source: 'W1/W2', status_id: 1 }))).toBe(false);
+    });
+  });
+
+  describe('Empty States & Skeleton Loader', () => {
+    it('renders table skeleton with 6 pulsing rows when isFirstLoad is true', () => {
+      component.initializing.set(true);
+      fixture.detectChanges();
+
+      expect(component.isFirstLoad()).toBe(true);
+      const skeletonEl = fixture.nativeElement.querySelector('[data-testid="bilateral-results-skeleton"]');
+      expect(skeletonEl).not.toBeNull();
+
+      const skeletonRows = skeletonEl.querySelectorAll('.rc-row--skeleton');
+      expect(skeletonRows.length).toBe(6);
+
+      const pulseElements = skeletonEl.querySelectorAll('.animate-pulse');
+      expect(pulseElements.length).toBeGreaterThan(0);
+    });
+
+    it('renders filtered empty state when results exist but active filter yields 0 matches', () => {
+      component.initializing.set(false);
+      component.loading.set(false);
+      component.results.set([result({ title: 'Unique Result' })]);
+      component.searchQuery.set('Nonexistent 9999');
+      fixture.detectChanges();
+
+      expect(component.isFilteredEmpty()).toBe(true);
+      expect(component.hasRows()).toBe(false);
+
+      const emptyEl = fixture.nativeElement.querySelector('[data-testid="bilateral-results-filtered-empty"]');
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl.textContent).toContain('No results match these filters');
+      expect(emptyEl.textContent).toContain('Nonexistent 9999');
+
+      // Clear all filters restores the rows
+      const clearSpy = jest.spyOn(component, 'clearAllFilters');
+      const clearBtn = emptyEl.querySelector('button');
+      expect(clearBtn).not.toBeNull();
+      clearBtn.click();
+      expect(clearSpy).toHaveBeenCalled();
+    });
+
+    it('renders nothing-yet empty state when center has 0 results reported', () => {
+      component.initializing.set(false);
+      component.loading.set(false);
+      component.results.set([]);
+      fixture.detectChanges();
+
+      expect(component.isNothingYet()).toBe(true);
+      expect(component.hasRows()).toBe(false);
+
+      const emptyEl = fixture.nativeElement.querySelector('[data-testid="bilateral-results-empty"]');
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl.textContent).toContain('No results reported yet');
+
+      const reportingLink = emptyEl.querySelector('a');
+      expect(reportingLink).not.toBeNull();
+      expect(reportingLink.textContent).toContain('Go to Reporting');
+    });
+
+    it('renders skeleton rows inside prTableLoading when table reloads in the background', () => {
+      component.initializing.set(false);
+      component.loading.set(true);
+      component.results.set([result()]);
+      fixture.detectChanges();
+
+      expect(component.hasRows()).toBe(true);
+      const tableLoadingRows = fixture.nativeElement.querySelectorAll('.rc-pr-table .rc-row--skeleton');
+      expect(tableLoadingRows.length).toBe(6);
+    });
+  });
+
+  describe('Created by filter and column', () => {
+    it('offers the Created by column visible by default and renders the creator name', () => {
+      expect(component.visibleColumns().map(c => c.key)).toContain('createdBy');
+      const cell = fixture.nativeElement.querySelector('td.rc-td--created_by_name');
+      expect(cell?.textContent?.trim()).toBe('Angel Jarrin');
+    });
+
+    it('builds multiselect options from loaded rows and filters the table', () => {
+      component.results.set([
+        result({ id: 1, created_by_name: 'Angel Jarrin' }),
+        result({ id: 2, result_code: '8707', created_by_name: 'Santiago Sanchez' }),
+      ]);
+      fixture.detectChanges();
+
+      expect(component.createdBySelectOptions().map(o => o.value)).toEqual(['Angel Jarrin', 'Santiago Sanchez']);
+
+      component.onCreatedByFilterChange(['Santiago Sanchez']);
+      expect(component.filteredResults()).toHaveLength(1);
+      expect(component.filteredResults()[0].result_code).toBe('8707');
+      expect(component.activeChips().some(chip => chip.label === 'Created by: Santiago Sanchez')).toBe(true);
+    });
+  });
+
+  describe('Column resize and pagination', () => {
+    const titleColumn = BILATERAL_COLUMNS.find(c => c.key === 'title')!;
+
+    beforeEach(() => {
+      component.initializing.set(false);
+      component.loading.set(false);
+      component.results.set(Array.from({ length: 12 }, (_v, i) => result({ id: i + 1, result_code: String(8700 + i) })));
+      fixture.detectChanges();
+    });
+
+    it('resolves columnWidth from defaults and custom widths', () => {
+      expect(component.columnWidth(titleColumn)).toBe('280px');
+      component.customWidths.set({ title: 360 });
+      expect(component.columnWidth(titleColumn)).toBe('360px');
+    });
+
+    it('persists resized column widths on mouseup', () => {
+      const th = document.createElement('th');
+      th.getBoundingClientRect = jest.fn(() => ({ width: 280 } as DOMRect));
+
+      component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      expect(component.customWidths().title).toBe(330);
+      expect(JSON.parse(localStorage.getItem(BILATERAL_COLUMN_WIDTHS_STORAGE_KEY) || '{}').title).toBe(330);
+    });
+
+    it('resets a column width on double-click handler', () => {
+      component.customWidths.set({ title: 400 });
+      component.onResizeReset(titleColumn, { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent);
+      expect(component.customWidths().title).toBeUndefined();
+    });
+
+    it('configures pagination to render one page at a time with always-visible controls', () => {
+      expect(component.table).toBeTruthy();
+      const tableCmp = component.table!;
+      expect(tableCmp.paginator).toBe(true);
+      expect(tableCmp.showPaginatorAlways).toBe(true);
+      expect(tableCmp.effectiveRows()).toBe(10);
+      expect(tableCmp.rowsPerPageOptions).toEqual([10, 25, 50, 100]);
+      expect(tableCmp.pagedValue()).toHaveLength(10);
+      expect(tableCmp.showPaginator()).toBe(true);
+    });
+
+    it('does not sort when clicking the column resizer handle', () => {
+      const resizer = fixture.nativeElement.querySelector('th .brl-col-resizer') as HTMLElement;
+      expect(resizer).toBeTruthy();
+
+      const sortSpy = jest.spyOn(component.table!, 'sort');
+      resizer.click();
+      expect(sortSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('BGT-T-3: Guided tour instrumentation', () => {
+    it('renders data-guide="bilateral-tab-results" on the docked container (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      const dockedEl = fixture.nativeElement.querySelector('[data-guide="bilateral-tab-results"]');
+      expect(dockedEl).toBeTruthy();
     });
   });
 });

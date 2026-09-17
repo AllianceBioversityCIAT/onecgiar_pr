@@ -38,13 +38,34 @@ export class TawkComponent implements OnInit {
           mobile: { position: 'br', xOffset: 24, yOffset: 130 }
         }
       };
-      // P2-3683: no floating bubble in the corner any more — the only way into the chat is the
-      // topbar's Support menu (SupportChatService.open()). The bubble is hidden as soon as the
-      // embed loads, and again whenever the user minimises the conversation, because Tawk brings
-      // its launcher back on minimise and it would reappear in the corner.
-      Tawk_API.onLoad = function () { if (Tawk_API.hideWidget) Tawk_API.hideWidget(); };
-      Tawk_API.onChatMinimized = function () { if (Tawk_API.hideWidget) Tawk_API.hideWidget(); };
-      Tawk_API.onChatEnded = function () { if (Tawk_API.hideWidget) Tawk_API.hideWidget(); };
+      // Ensure the widget is hidden before it begins to load to prevent any bubble flash
+      Tawk_API.onBeforeLoad = function () {
+        if (typeof Tawk_API.hideWidget === 'function') Tawk_API.hideWidget();
+      };
+
+      // On load: if there is an active chat ongoing, keep it accessible; otherwise ensure the launcher stays hidden
+      Tawk_API.onLoad = function () {
+        if (typeof Tawk_API.isChatOngoing === 'function' && Tawk_API.isChatOngoing()) {
+          if (typeof Tawk_API.showWidget === 'function') Tawk_API.showWidget();
+        } else {
+          if (typeof Tawk_API.hideWidget === 'function') Tawk_API.hideWidget();
+        }
+      };
+
+      // On minimise: if a chat is active, keep the launcher accessible so the user can re-access it;
+      // otherwise hide the launcher
+      Tawk_API.onChatMinimized = function () {
+        if (typeof Tawk_API.isChatOngoing === 'function' && Tawk_API.isChatOngoing()) {
+          // Keep accessible while chat is active
+        } else {
+          if (typeof Tawk_API.hideWidget === 'function') Tawk_API.hideWidget();
+        }
+      };
+
+      // Once the chat ends, the icon is hidden immediately
+      Tawk_API.onChatEnded = function () {
+        if (typeof Tawk_API.hideWidget === 'function') Tawk_API.hideWidget();
+      };
       (function(){
       var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
       s1.async=true;

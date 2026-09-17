@@ -11,6 +11,7 @@ import { CustomizedAlertsFeService } from '../../../../shared/services/customize
 import { environment } from '../../../../../environments/environment';
 import { BILATERAL_HEADER_INFO_COPY } from '../../../../internationalization/bilateral-header-info.copy';
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
+import { BilateralTourService } from '../../services/bilateral-tour.service';
 
 @Component({
   selector: 'app-bilateral-page-header',
@@ -28,6 +29,7 @@ export class BilateralPageHeaderComponent {
   readonly bilateralAiService = inject(BilateralAiService);
   readonly navSE = inject(SmartNavigationService);
   readonly dataControlSE = inject(DataControlService);
+  readonly bilateralTourService = inject(BilateralTourService);
 
   /** `APF-R-10`: statuses that make a tracked job "alive" for the header chip. */
   private static readonly AI_JOB_ALIVE_STATUSES: ReadonlySet<string> = new Set(['pending', 'processing', 'still_running']);
@@ -342,6 +344,15 @@ export class BilateralPageHeaderComponent {
       title: 'Oops!',
       description: description || 'The Bulk Results Uploader could not be opened. Please try again.',
       status: 'error'
+    });
+  }
+
+  startBilateralTour(): void {
+    this.bilateralTourService.startBilateralTour({
+      centerAcronym: this.ctx.centerAcronym(),
+      centerName: this.centerName(),
+      cycleYear: this.cycleYear(),
+      activeTab: this.activeTab() ?? undefined,
     });
   }
 

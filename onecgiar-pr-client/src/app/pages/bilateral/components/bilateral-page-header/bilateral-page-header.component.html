@@ -43,7 +43,11 @@
       }
     </header>
   } @else {
-  <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
+  <div
+    class="sticky top-0 flex-none bg-[var(--pr-surface-band)]"
+    [class.z-20]="!infoOpen()"
+    [class.z-40]="infoOpen()"
+    data-testid="bilateral-page-header-sticky">
     <div
       class="relative flex h-[64px] min-[640px]:h-[64px] max-[639px]:h-auto max-[639px]:py-[8px] flex-col justify-center gap-[4px] sm:gap-[6px] px-[16px] sm:px-[32px]"
       [class.border-b-band]="!activeTab()">
@@ -113,7 +117,7 @@
         </div>
 
         <!-- Center acronym title, info popover, and center name subtitle (ⓘ sits on the title row, SP band parity) -->
-        <div class="relative min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]">
+        <div class="relative min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]" data-guide="bilateral-identity">
           <div class="flex min-w-0 items-center gap-[8px]">
             <h1
               class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
@@ -145,7 +149,7 @@
                 id="bilateral-header-info-popover"
                 role="dialog"
                 [attr.aria-label]="copy.popoverAriaLabel"
-                class="absolute left-0 top-[32px] z-30 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+                class="absolute left-0 top-[32px] z-50 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
                 data-testid="bilateral-header-info-popover"
                 (click)="$event.stopPropagation()">
                 <div class="mb-[12px] flex items-center justify-between gap-[8px]">
@@ -229,11 +233,21 @@
         <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[8px] sm:gap-[10px]">
           <button
             type="button"
+            class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+            (click)="startBilateralTour()"
+            data-guide="bilateral-tour-trigger"
+            aria-label="Start guided tour">
+            <span class="material-icons-round text-[16px] text-[var(--pr-color-primary-500)]">explore</span>
+            <span class="hidden sm:inline">Tour</span>
+          </button>
+          <button
+            type="button"
             class="flex h-[32px] sm:h-[36px] shrink-0 items-center gap-[6px] sm:gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[14px] text-[12px] sm:text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed"
             [disabled]="isMinting()"
             [attr.aria-busy]="isMinting()"
             (click)="openBulkUploader()"
             data-testid="bilateral-bulk-uploader-cta"
+            data-guide="bilateral-bulk-uploader-cta"
             [attr.aria-label]="bulkCtaLabel()">
             @if (isMinting()) {
               <span class="material-icons-round text-[16px] sm:text-[18px] animate-spin">progress_activity</span>
@@ -264,6 +278,7 @@
     @if (activeTab()) {
       <nav
         class="flex h-[48px] items-stretch gap-[16px] sm:gap-[24px] border-b border-[var(--pr-border-band)] px-[16px] sm:px-[32px] overflow-x-auto no-scrollbar"
+        data-guide="bilateral-tabs"
         aria-label="Center sections">
         <!-- Tab 1: Overview -->
         <a

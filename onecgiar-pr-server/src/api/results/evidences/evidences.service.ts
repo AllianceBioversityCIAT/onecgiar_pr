@@ -68,8 +68,15 @@ export class EvidencesService {
     }
   }
 
+  // 🛑 P2-3692: NO `g` flag here, ever. A global regex carries `lastIndex` from one `exec` to
+  // the next, and this one is an instance property of a SINGLETON Nest service, so the state
+  // survived between calls — and between requests and users. `exec` therefore alternated
+  // match / null for the very same URL. That is exactly what made the reported bug look
+  // intermittent: the first save matched, called MQAP and threw; the immediate retry did NOT
+  // match, skipped MQAP altogether and saved fine. The flag also silently skipped the handle
+  // enrichment on every other CGSpace evidence saved by the whole platform.
   kpUrlRegex =
-    /https:\/\/(cgspace\.cgiar\.org\/(items\/[a-f0-9-]+|handle(\/\d+){1,2})|hdl\.handle\.net(\/\d+){1,2})/gm;
+    /https:\/\/(cgspace\.cgiar\.org\/(items\/[a-f0-9-]+|handle(\/\d+){1,2})|hdl\.handle\.net(\/\d+){1,2})/m;
 
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
@@ -394,7 +401,19 @@ export class EvidencesService {
       const cgspaceData =
         await this._mqapService.getDataFromCGSpaceHandle(mqapParameters);
 
-      if (cgspaceData.Handle) {
+      // 🛑 P2-3692: `getDataFromCGSpaceHandle` answers `null` whenever the MQAP request itself
+      // fails (m-qap.service.ts, the `.catch` that logs and returns null) — which is what a
+      // CGSpace `items/<uuid>` link produces. Reading `.Handle` off that null threw
+      // "Cannot read properties of null (reading 'Handle')", the per-evidence guard in
+      // `_processMainEvidencesOnCreate` caught it, and the reporter was told their evidence
+      // had not been saved.
+      //
+      // The handle is an ENRICHMENT, not a requirement: when MQAP cannot resolve the link we
+      // keep the link the reporter typed instead of rejecting their evidence — correcting,
+      // not blocking, and it is also what already ended up stored on the manual retry.
+      // Same shape as the `Handle: null` guard P2-3534 added in
+      // results-knowledge-products.service.ts.
+      if (cgspaceData?.Handle) {
         return cgspaceData.Handle;
       }
     }

@@ -107,6 +107,7 @@
         optionLabel="full_name"
         optionValue="code"
         [required]="true"
+        [complete]="contributingCentersComplete"
         [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
         placeholder="Select center(s)"
         [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"

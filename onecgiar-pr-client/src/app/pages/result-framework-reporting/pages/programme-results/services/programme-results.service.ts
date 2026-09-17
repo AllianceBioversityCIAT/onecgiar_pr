@@ -86,6 +86,8 @@ export interface ProgrammeResultRow {
    * rank (loading/error/mismatch). Optional for the same reason as `aowCodes`.
    */
   sectionSort?: string;
+  /** Owner initiative's active ToC state: 0 emerging, 1 planned, null unknown. */
+  plannedResult?: number | null;
 
   // --- raw fields the "Open result" route needs -------------------------------------
   // Mirrors results-list.component.ts:634 `getResultRoute()`, whose branch reads exactly
@@ -283,6 +285,7 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
   // payload when the caller asked for `include_completeness=true`; preserve an explicit `null`
   // rather than let `??`/optional-chaining collapse it to "absent" like `undefined` would.
   const hasCompleteness = !!raw && Object.prototype.hasOwnProperty.call(raw, 'completeness');
+  const hasPlannedResult = !!raw && Object.prototype.hasOwnProperty.call(raw, 'planned_result');
 
   return {
     id: num(raw?.['id']),
@@ -306,7 +309,8 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     phaseSort: phaseSortRank(num(raw?.['phase_year']), text(raw?.['acronym']), text(raw?.['phase_name'])),
     submitterCode: text(raw?.['submitter']),
     raw: raw ?? {},
-    ...(hasCompleteness ? { completeness: raw['completeness'] } : {})
+    ...(hasCompleteness ? { completeness: raw['completeness'] } : {}),
+    ...(hasPlannedResult ? { plannedResult: num(raw['planned_result']) } : {})
   };
 }
 

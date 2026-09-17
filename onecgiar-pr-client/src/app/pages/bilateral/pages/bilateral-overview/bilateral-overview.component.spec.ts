@@ -610,6 +610,7 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
         source: null,
         method: null,
         search: '',
+        createdBy: [],
         multi: false,
       };
 
@@ -763,6 +764,14 @@ describe('BilateralOverviewComponent (COV-T-5)', () => {
       harness.detectChanges();
 
       expect(scrollIntoViewSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+    });
+
+    it('renders data-guide="bilateral-tab-overview" on the main container (BGT-T-3, BGT-R-2, Gate D1)', async () => {
+      await setup();
+      flushData();
+
+      const mainEl = harness.fixture.nativeElement.querySelector('main[data-guide="bilateral-tab-overview"]');
+      expect(mainEl).toBeTruthy();
     });
   });
 });

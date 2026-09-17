@@ -9,6 +9,7 @@ interface TawkApi {
   maximize?: () => void;
   showWidget?: () => void;
   hideWidget?: () => void;
+  isChatOngoing?: () => boolean;
 }
 
 /**
@@ -33,6 +34,11 @@ export class SupportChatService {
   /** Whether the embed is loaded and can be opened right now. */
   get available(): boolean {
     return typeof this.tawk?.maximize === 'function';
+  }
+
+  /** Whether there is an active chat session in progress right now. */
+  get isChatOngoing(): boolean {
+    return Boolean(this.tawk?.isChatOngoing?.());
   }
 
   /**

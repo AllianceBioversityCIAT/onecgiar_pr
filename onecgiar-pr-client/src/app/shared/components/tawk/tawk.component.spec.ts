@@ -117,11 +117,11 @@ describe('TawkComponent', () => {
     });
 
     /**
-     * P2-3683 removed the floating chat button from the bottom-right corner; the only way into the
-     * chat is the topbar's Support menu. Tawk brings its launcher back on its own whenever the
-     * conversation is minimised or ended, so hiding it once at load is not enough.
+     * The floating chat button from the bottom-right corner must not appear until the user clicks
+     * "Start a support chat" from Support menu. While a chat is ongoing, the user can access it;
+     * once the chat ends, the icon is hidden again.
      */
-    it('hides the floating bubble on load, on minimise and on chat end', () => {
+    it('hides the floating bubble on load, on minimise and on chat end, but keeps active chat accessible', () => {
       component.user = { name: 'Test User' };
       let container = document.querySelector('.Tawk_API_container');
       if (!container) {
@@ -132,10 +132,12 @@ describe('TawkComponent', () => {
       component.initializeTawkIo();
 
       const script = component.script.text;
+      expect(script).toContain('Tawk_API.onBeforeLoad');
       expect(script).toContain('Tawk_API.onLoad');
       expect(script).toContain('Tawk_API.onChatMinimized');
       expect(script).toContain('Tawk_API.onChatEnded');
-      expect(script.match(/hideWidget\(\)/g)?.length).toBe(3);
+      expect(script).toContain('Tawk_API.isChatOngoing');
+      expect(script.match(/hideWidget\(\)/g)?.length).toBeGreaterThanOrEqual(4);
 
       // Control: the launcher must still be reachable, or SupportChatService.open() has nothing
       // to show. Hiding it is not the same as removing the widget.

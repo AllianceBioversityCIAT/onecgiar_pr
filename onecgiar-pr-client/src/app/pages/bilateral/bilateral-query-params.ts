@@ -16,6 +16,7 @@ export const BILATERAL_ROLE_QUERY_PARAM = 'role';
 export const BILATERAL_SOURCE_QUERY_PARAM = 'source';
 export const BILATERAL_METHOD_QUERY_PARAM = 'method';
 export const BILATERAL_SEARCH_QUERY_PARAM = 'search';
+export const BILATERAL_CREATED_BY_QUERY_PARAM = 'createdBy';
 export const BILATERAL_MULTI_QUERY_PARAM = 'multi';
 
 /** `status_id` → key table (`COV-R-13`/`COV-R-7`). Editing 1 · QA 2 · Submitted 3 · Discontinued 4
@@ -59,6 +60,7 @@ export type ContractKey =
   | 'source'
   | 'method'
   | 'search'
+  | 'createdBy'
   | 'multi';
 
 /** Parsed, normalized state — every tab reads/writes through this shape (`COV-DD-3`). */
@@ -72,6 +74,8 @@ export interface BilateralQueryParams {
   source: BilateralSource | null;
   method: BilateralMethod | null;
   search: string;
+  /** Display names (`created_by_name`) selected in the Created by multiselect. */
+  createdBy: string[];
   multi: boolean;
 }
 
@@ -241,11 +245,22 @@ export function parseBilateralQueryParams(map: ParamMap): ParsedBilateralQueryPa
   const search = searchRaw ? searchRaw.trim() : '';
   if (search) present.push('search');
 
+  const createdBy = parseMultiValue(
+    BILATERAL_CREATED_BY_QUERY_PARAM,
+    map.get(BILATERAL_CREATED_BY_QUERY_PARAM),
+    token => {
+      const trimmed = token.trim();
+      return trimmed ? trimmed : null;
+    },
+    stripped,
+  );
+  if (createdBy.length) present.push('createdBy');
+
   const multi = parseMultiFlag(map.get(BILATERAL_MULTI_QUERY_PARAM), stripped);
   if (multi) present.push('multi');
 
   return {
-    params: { phase, status, project, program, type, role, source, method, search, multi },
+    params: { phase, status, project, program, type, role, source, method, search, createdBy, multi },
     stripped,
     present,
   };
@@ -284,6 +299,7 @@ export function serializeBilateralQueryParams(
   if (params.method !== null) out[BILATERAL_METHOD_QUERY_PARAM] = params.method;
 
   if (params.search.trim()) out[BILATERAL_SEARCH_QUERY_PARAM] = params.search;
+  if (params.createdBy.length) out[BILATERAL_CREATED_BY_QUERY_PARAM] = params.createdBy.join(',');
   if (params.multi) out[BILATERAL_MULTI_QUERY_PARAM] = '1';
   return out;
 }

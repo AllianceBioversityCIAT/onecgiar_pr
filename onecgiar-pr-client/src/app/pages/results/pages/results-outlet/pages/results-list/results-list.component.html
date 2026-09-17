@@ -167,7 +167,16 @@
     </div>
   </div>
 
-  <div #workArea class="rc-work-area custom_scroll">
+  <div class="flex min-h-0 flex-col min-[900px]:flex-1 min-[900px]:flex-row">
+    @if (resultsListFilterSE.filterLayout() === 'sidebar' && filters?.filterSidebarTpl) {
+      <aside
+        class="flex-none overflow-y-auto border-[var(--pr-border-divider,#eeeef1)] bg-white max-[899px]:mb-[16px] max-[899px]:rounded-[12px] max-[899px]:border min-[900px]:order-2 min-[900px]:w-[280px] min-[900px]:border-l"
+        aria-label="Filters">
+        <ng-container [ngTemplateOutlet]="filters.filterSidebarTpl" />
+      </aside>
+    }
+
+  <div #workArea class="rc-work-area custom_scroll min-w-0">
     @if (this.api.dataControlSE.resultsListNoDataMessage(); as noResultsMsg) {
       <app-alert-status
         status="warning"
@@ -248,6 +257,9 @@
                     [queryParams]="getResultQueryParams(subResult)"
                     (click)="onResultLinkClick($event, subResult)"
                     [attr.title]="subResult.title">
+                    @if (isEmerging(subResult)) {
+                      <span class="{{ emergingChipClass }}">Emerging</span>
+                    }
                     @if (
                       subResult?.status_id === '4' &&
                       (!subResult?.has_discontinued_options ||
@@ -263,6 +275,12 @@
                         prTooltipPosition="right">
                         <i class="pi pi-exclamation-triangle"></i>
                       </span>
+                    }
+                    @if (subResult?.is_replicated) {
+                      <span
+                        class="rc-badge-replicated"
+                        prTooltip="Previously reported in an earlier phase"
+                        prTooltipPosition="top">Previously reported</span>
                     }
                     <span class="rc-title__text">{{ subResult.title }}</span>
                   </a>
@@ -393,6 +411,7 @@
       </ng-template>
     </app-pr-table>
     </div>
+  </div>
   </div>
 </div>
 

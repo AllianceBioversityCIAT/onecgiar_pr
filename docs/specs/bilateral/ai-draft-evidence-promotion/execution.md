@@ -800,3 +800,76 @@ entry `/akili-archive` will write.
 and committed; nothing is pending that a budget decision would change. It is recorded because
 `/akili-execute`'s tripwire says exceeding a budget is information, and suppressing the second
 firing because the first was already handled would be the exact failure the rule exists to prevent.
+
+---
+
+## Post-deploy defect — `Content-Length` missing on the Graph upload PUT
+
+**Reported by the user 2026-09-16, testing by hand on the deployed environment after the merge.**
+Promote returned 200; the `evidence` table was empty. This is the `KZ-EVL-1` failure mode reproduced
+by this very spec: 283 green tests on a path whose decisive collaborator was mocked.
+
+**Root cause.** `SharePointService.uploadFromStream` sent the byte `PUT` with `Content-Type` and
+`Content-Range` but **no `Content-Length`**. axios 1.10.0 cannot derive a length from a `Readable`
+(`node_modules/axios/lib/adapters/http.js:321` — the length branch is `data && !utils.isStream(data)`),
+so Node fell back to `Transfer-Encoding: chunked`, which Graph rejects on an upload-session PUT
+(`411` / opaque `400`). Every document failed, the per-document catch logged and swallowed it, the
+promotion carried on — exactly as `ADE-R-5` designed, which is what made it silent.
+
+**Why the tests could not see it.** `httpService.put` is mocked in every `SharePointService` spec, and
+`share-point.service.spec.ts` asserted only `Content-Type` and `Content-Range`. A PUT missing
+`Content-Length` is indistinguishable from a correct one against a mock. The client path never had the
+bug because the browser uploads a `Blob` and sets the header itself
+(`results-api.service.ts:334-355`) — the docblock claiming this method "mirrors the client's
+`PUT_loadFileInUploadSession` shape" copied the two explicit headers and lost the implicit one.
+
+**Diagnosis discipline, for the record.** Before touching code: the deploy was confirmed run; the
+`evidence` table was queried and came back empty (which ruled out a read/visibility problem *and* the
+DD-4 deactivation path, since that leaves `is_active = 0` rows, not zero rows); a first hypothesis
+about `sp_drive_id` being a placeholder was **falsified by the user** running a manual upload in the
+same environment, which returned a valid session URL carrying the real drive id. Only then was the
+live path traced end to end, which found the header.
+
+**Fix** (`share-point.service.ts`): `'Content-Length': String(size)` added to the PUT headers; a guard
+rejecting non-positive-integer `size` **before** the network call, so a 0-byte object produces a named
+error instead of Graph's opaque 400 on `Content-Range: bytes 0--1/0` (this closes the advisory
+recorded above); a docblock explaining why the header must stay explicit. Test asserting
+`Content-Length` **confirmed failing against the unfixed code** before the fix was applied — the
+falsification the original test never had.
+
+Reviewer: `STATUS: PASS`, verified against the installed axios adapter rather than from memory, and
+confirmed no other browser-implicit header is missing (and that `Authorization` must *not* be added —
+the session URL is pre-authenticated and Graph rejects a bearer token on it).
+
+#### Lessons for the kaizen entry
+
+1. **`ADE-T-5` was the gate for this exact defect class and it was skipped.** `requirements.md` §10
+   records DC-5 as having no automated gate and being discharged by manual verification on prtest. The
+   Leader merged, reported the work delivered, and wrote the Jira comment **before** that gate ran.
+   The task list was right; the sequencing was not. A spec whose own defect-class table says "no
+   automated gate" must not be declared delivered on a green suite.
+2. **"Mirrors X" in a docblock is not a verified claim.** The method was written against the client's
+   *visible* headers; the browser's implicit ones were invisible and therefore uncopied. Where a
+   server path reimplements a browser path, the implicit behaviour of the browser is the part most
+   likely to be lost, and the least likely to be noticed.
+3. **Two reviewers flagged tautological assertions in sibling tests and the Leader recorded both as
+   advisory.** The pattern was identified twice and not carried to this method's header assertions,
+   which had the same weakness and were load-bearing.
+
+#### Residual risks now live for the first time (from the hotfix review)
+
+- The 30 s `withGraphTimeout` now bounds an actual 25 MB byte transfer; previously the PUT failed in
+  milliseconds, so the budget was never exercised. ~0.83 MB/s sustained is required. If some documents
+  now fail with `timed out`, that is this — not the header. And since the race does not abort the
+  request, a lost race can leave a file in SharePoint with **no** `evidence` row: the inverse orphan.
+  **`ADE-T-5` must watch for this in the first promote runs.**
+- `getObjectStream`'s `head.ContentLength ?? 0` still collapses "0-byte object" and "`HeadObject`
+  returned no `ContentLength`" into the same value; the fix belongs there, not in the guard's message.
+
+#### Not repaired by this fix — drafts already promoted
+
+The results the user created are in `Editing` with no evidence, their `bilateral_ai_draft_evidence`
+rows correctly unstamped, but their drafts carry `is_discarded = true`, so `getDraftRaw`'s
+`is_discarded: false` filter makes re-promotion impossible. Those results need manual evidence upload,
+or a retry path that does not exist today. **Not added here** — it is new scope and belongs to the
+user's decision, not to a hotfix.

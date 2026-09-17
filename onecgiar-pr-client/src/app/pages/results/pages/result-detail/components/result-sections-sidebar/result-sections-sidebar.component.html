@@ -160,6 +160,16 @@
       </div>
     }
 
+    <!-- P2-3691: the ONE case where the rail used to go silent. A complete result whose owner is a
+         plain Member showed a 100% progress bar and then nothing — no button, no reason — so QA
+         read it as "the platform has no Submit any more". The rule is unchanged (and enforced by
+         the backend); what is new is that it says so. -->
+    @if (sectionsSE.showRoleCannotSubmitNotice) {
+      <p class="m-0 text-[12px] font-normal text-[var(--pr-text-secondary)]" data-testid="result-sections-role-notice">
+        {{ roleCannotSubmitNotice }}
+      </p>
+    }
+
     <!-- Mirrors Submit above: the QA lock greys the button out instead of hiding it, exactly as the
          legacy panel-menu did with `globalDisabled`. The notice below explains why (P2-3434). -->
     @if (sectionsSE.showUnsubmit) {

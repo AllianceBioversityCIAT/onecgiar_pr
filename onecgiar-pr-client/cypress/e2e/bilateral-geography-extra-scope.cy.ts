@@ -16,7 +16,10 @@
 
 const RESULT_ID = 9999;
 const SCOPE = { global: 1, regional: 2, country: 3, subNational: 5, toBeDetermined: 50 };
-const YES_NO_LABEL = 'Are there any regions that you wish to specify for this Output?';
+const INNOVATION_TYPE_ID = 7;
+const YES_NO_LABEL =
+  'Are there any other geographic areas where the innovation could be impactful (beyond current development and use)?';
+const LEGACY_OUTPUT_LABEL = 'Are there any regions that you wish to specify for this Output?';
 const EXTRA_SELECT_LABEL = 'What is the geographic scope where there may be potential impact in other geographic areas?';
 
 function openSection() {
@@ -24,9 +27,8 @@ function openSection() {
     const cmp = win.ng.getComponent(win.document.querySelector('app-bilateral-result-creator'));
     cmp.isCreating.set(false);
     cmp.resultId.set(RESULT_ID);
-    // Other Output (8) has no type-specific section, so no extra fetch fires and no unhandled 404
-    // from a sibling section can fail this spec. Geography does not depend on the result type.
-    cmp.creationService.resultTypeId.set(8);
+    // Innovation Development (7) is the only typology that shows the extra-scope card, like W1/W2.
+    cmp.creationService.resultTypeId.set(INNOVATION_TYPE_ID);
     cmp.creationService.currentResultId.set(RESULT_ID);
     cmp.openSectionName.set('geography');
     win.ng.applyChanges?.(cmp);
@@ -56,24 +58,36 @@ describe('P2-3370 · bilateral extra geographic scope', () => {
 
   it('hides the extra-scope card for Global', () => {
     withScope(SCOPE.global);
-    cy.get('app-section-geography').should('not.contain.text', 'Potential Impact in other geographic areas');
+    cy.get('app-section-geography').should('not.contain.text', YES_NO_LABEL);
   });
 
   it('hides the extra-scope card for "This is yet to be determined"', () => {
     withScope(SCOPE.toBeDetermined);
-    cy.get('app-section-geography').should('not.contain.text', 'Potential Impact in other geographic areas');
+    cy.get('app-section-geography').should('not.contain.text', YES_NO_LABEL);
   });
 
-  it('shows the extra-scope card for Regional, Country and Sub-national', () => {
+  it('shows the extra-scope card for Regional, Country and Sub-national (innovations only)', () => {
     [SCOPE.regional, SCOPE.country, SCOPE.subNational].forEach(id => {
       withScope(id);
-      cy.get('app-section-geography').should('contain.text', 'Potential Impact in other geographic areas');
+      cy.get('app-section-geography').should('contain.text', YES_NO_LABEL);
     });
   });
 
-  it('uses the same Yes/No wording as W1/W2', () => {
+  it('hides the extra-scope card for non-innovation result types', () => {
+    cy.window().then((win: any) => {
+      const cmp = win.ng.getComponent(win.document.querySelector('app-bilateral-result-creator'));
+      cmp.creationService.resultTypeId.set(8);
+      win.ng.applyChanges?.(cmp);
+    });
+    withScope(SCOPE.country);
+    cy.get('app-section-geography').should('not.contain.text', LEGACY_OUTPUT_LABEL);
+    cy.get('app-section-geography').should('not.contain.text', YES_NO_LABEL);
+  });
+
+  it('uses the innovation Yes/No wording for innovation results', () => {
     withScope(SCOPE.country);
     cy.get('app-section-geography').should('contain.text', YES_NO_LABEL);
+    cy.get('app-section-geography').should('not.contain.text', LEGACY_OUTPUT_LABEL);
     cy.get('app-section-geography').should('not.contain.text', 'Are there any extra regions or countries');
   });
 

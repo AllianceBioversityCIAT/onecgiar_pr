@@ -1,7 +1,7 @@
 import { Component, DoCheck, ElementRef, OnInit, OnDestroy, ViewChild, effect, inject, signal, NgZone } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
-import { distinctUntilChanged, map } from 'rxjs/operators';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { distinctUntilChanged, filter, map } from 'rxjs/operators';
 import { HlmSidebarService } from '@spartan/sidebar';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -44,6 +44,9 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   /** Floor of the content column; each section's bottom bar teleports its host node in here. */
   @ViewChild('bottomBarSlot', { static: true }) bottomBarSlot!: ElementRef<HTMLElement>;
 
+  /** The column that scrolls — the document does not, so the router's own scroll handling never reaches it. */
+  @ViewChild('formScroll', { static: true }) formScroll!: ElementRef<HTMLElement>;
+
   constructor(
     public currentResultSE: CurrentResultService,
     private readonly shareRequestModalSE: ShareRequestModalService,
@@ -61,6 +64,7 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
     });
 
     this.watchCompactEntry();
+    this.watchSectionChange();
   }
   closeInfo = false;
 
@@ -111,6 +115,26 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
         if (!this.reportingGuideSE.isResultSidebarHintCompleted()) {
           setTimeout(() => this.reportingGuideSE.startResultSidebarHint(), 0);
         }
+      });
+  }
+
+  /**
+   * Every section opens at its top (JC, 16-sep-2026). The sections share one scrolling column that
+   * survives child-route navigation, so without this the next section opened wherever the user
+   * had left the previous one — deep down a long form. Keyed on the path only: a `?phase=` change
+   * keeps the user's place.
+   */
+  private watchSectionChange(): void {
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        map(event => event.urlAfterRedirects.split(/[?#]/)[0]),
+        distinctUntilChanged(),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => {
+        const scroller = this.formScroll?.nativeElement;
+        if (scroller) scroller.scrollTop = 0;
       });
   }
 

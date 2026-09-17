@@ -3,7 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { isMyResultsTab, isProgrammeResultsTab, SmartNavigationService, splitNavUrl } from '../../../../../../shared/services/smart-navigation.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
-import { ResultSectionsService } from './result-sections.service';
+import { ResultSectionsService, ROLE_CANNOT_SUBMIT_NOTICE } from './result-sections.service';
 import { CopyButtonComponent } from '../../../../../../shared/components/copy-button/copy-button.component';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 
@@ -78,6 +78,10 @@ export class ResultSectionsSidebarComponent {
   readonly greenChecksSE = inject(GreenChecksService);
 
   readonly idleRowClass = `${ROW_BASE} font-medium text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle-hover)]`;
+
+  /** Copy for the role notice that stands in for Submit (P2-3691). Held here so the template
+   *  binds a constant instead of repeating the sentence. */
+  readonly roleCannotSubmitNotice = ROLE_CANNOT_SUBMIT_NOTICE;
 
   /** Pending marker. Held here, not in the template: an arbitrary-value class cannot go inside
    *  a `[class.…]` binding — the brackets break Angular's template parser. */

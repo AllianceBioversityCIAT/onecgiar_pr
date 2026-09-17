@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
+**Verified:** 2026-09-16 · performance-refactor · 01891aebd · reserva de 88px bajo la barra y pliegue suspendido con un dropdown abierto; prior: 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
 
 ## Qué es
 
@@ -99,6 +99,12 @@ dueño del componente porque elimina nodos a través del padre **actual**.
   caja sí se alinearon (regla de 1px + radio 12 sin sombra, ancho completo, 24px de padding), con
   alcance **local** vía `::ng-deep`: `.section_container` y `.detail_container` son clases GLOBALES
   y las usan IPSR y el result creator, que conservan sus 80px y su hueco para el botón flotante.
+- ⚠️ `.rd_scroll` reserva **88px abajo** (Cami, 16-sep-2026, `a6bad573c`): la barra inferior flota
+  sobre el scroll con alto cero y sus cápsulas ocupan 70px desde el piso. Si la cápsula cambia de
+  alto, cambia esto. `dropdown-placement.ts` lee ese mismo `padding-bottom` como piso visible.
+- ⚠️ Con una lista `.custom_select` abierta, `HideChromeOnScrollDirective` NO pliega la barra
+  superior (`838346609`): el scroll que provoca marcar una opción movía el formulario ~110px bajo el
+  puntero.
 - ⚠️ Los tres contenedores comparten el mismo padding de columna, **40px**: `.rd_scroll`, el
   `<header>` de `result-header` y la franja interior de la barra inferior. Si mueves uno, mueve los
   tres o la pantalla se desalinea en diagonal.

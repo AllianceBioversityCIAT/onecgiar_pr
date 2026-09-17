@@ -12,11 +12,21 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 describe('BilateralAiService (unit)', () => {
   const makeService = (overrides: Partial<any> = {}) => {
+    // `getExpectations` moved its 90-day sample window into SQL (timezone-skew fix), so it runs
+    // through the query builder instead of `find` — MySQL, not the Node process, decides which
+    // rows are inside the window.
+    const jobQueryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    };
     const jobRepository = {
       create: jest.fn((x) => x),
       save: jest.fn(async (x) => ({ ...x, job_id: 'job-uuid-1' })),
       findOne: jest.fn(),
       find: jest.fn().mockResolvedValue([]),
+      createQueryBuilder: jest.fn(() => jobQueryBuilder),
       // Default: every conditional UPDATE "wins" (affected: 1). Tests exercising a lost race
       // (attempt-start, stage advancement, retry/final writes) override this per-call.
       update: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -123,6 +133,7 @@ describe('BilateralAiService (unit)', () => {
       service,
       stubs: {
         jobRepository,
+        jobQueryBuilder,
         draftRepository,
         evidenceRepository,
         resultRepository,
@@ -232,7 +243,7 @@ describe('BilateralAiService (unit)', () => {
         status: BilateralAiJobStatus.FAILED,
         error_code: 'QUEUE_NOT_AVAILABLE',
         error_message: 'The AI processing queue could not accept the job.',
-        completed_date: expect.any(Date),
+        completed_date: expect.any(Function), // was: expect.any(Date)
       });
     });
 
@@ -494,14 +505,14 @@ describe('BilateralAiService (unit)', () => {
         expect.objectContaining({
           status: BilateralAiJobStatus.PENDING,
           stage: 'queued',
-          stage_updated_date: expect.any(Date),
+          stage_updated_date: expect.any(Function), // was: expect.any(Date)
           attempts: 0,
           retrying: false,
           error_code: null,
           error_message: null,
           started_date: null,
           completed_date: null,
-          retried_date: expect.any(Date),
+          retried_date: expect.any(Function), // was: expect.any(Date)
         }),
       );
       const [, setPayload] = stubs.jobRepository.update.mock.calls[0];
@@ -542,7 +553,7 @@ describe('BilateralAiService (unit)', () => {
         status: BilateralAiJobStatus.FAILED,
         error_code: 'QUEUE_NOT_AVAILABLE',
         error_message: 'The AI processing queue could not accept the job.',
-        completed_date: expect.any(Date),
+        completed_date: expect.any(Function), // was: expect.any(Date)
       });
     });
   });
@@ -571,7 +582,7 @@ describe('BilateralAiService (unit)', () => {
     it('computes P25/P75 in whole minutes over 6 COMPLETED samples of the same mix class', async () => {
       const { service, stubs } = makeService();
       const durationsSeconds = [120, 240, 360, 480, 600, 720];
-      stubs.jobRepository.find.mockResolvedValue(
+      stubs.jobQueryBuilder.getMany.mockResolvedValue(
         durationsSeconds.map((s) => makeCompletedRow(s, 'documents')),
       );
 
@@ -591,7 +602,7 @@ describe('BilateralAiService (unit)', () => {
 
     it('returns null percentiles when fewer than 5 samples exist', async () => {
       const { service, stubs } = makeService();
-      stubs.jobRepository.find.mockResolvedValue(
+      stubs.jobQueryBuilder.getMany.mockResolvedValue(
         [60, 120, 180, 240].map((s) => makeCompletedRow(s, 'documents')),
       );
 
@@ -607,7 +618,7 @@ describe('BilateralAiService (unit)', () => {
 
     it('classifies a job with any audio key as "audio", even alongside documents', async () => {
       const { service, stubs } = makeService();
-      stubs.jobRepository.find.mockResolvedValue([
+      stubs.jobQueryBuilder.getMany.mockResolvedValue([
         makeCompletedRow(600, 'audio'),
       ]);
 
@@ -620,14 +631,15 @@ describe('BilateralAiService (unit)', () => {
 
     it('caches the result per mix — a second call within the 10-minute window skips the query', async () => {
       const { service, stubs } = makeService();
-      stubs.jobRepository.find.mockResolvedValue(
+      stubs.jobQueryBuilder.getMany.mockResolvedValue(
         [120, 240, 360, 480, 600].map((s) => makeCompletedRow(s, 'documents')),
       );
 
       const first = await service.getExpectations('documents');
       const second = await service.getExpectations('documents');
 
-      expect(stubs.jobRepository.find).toHaveBeenCalledTimes(1);
+      // Was: `expect(stubs.jobRepository.find).toHaveBeenCalledTimes(1)`.
+      expect(stubs.jobQueryBuilder.getMany).toHaveBeenCalledTimes(1);
       expect(second).toEqual(first);
     });
   });
@@ -1359,10 +1371,10 @@ describe('BilateralAiService (unit)', () => {
         {
           status: BilateralAiJobStatus.PROCESSING,
           stage: 'uploading',
-          stage_updated_date: expect.any(Date),
+          stage_updated_date: expect.any(Function), // was: expect.any(Date)
           attempts: 3,
           retrying: false,
-          started_date: expect.any(Date),
+          started_date: expect.any(Function), // was: expect.any(Date)
         },
       );
     });
@@ -1396,10 +1408,10 @@ describe('BilateralAiService (unit)', () => {
         {
           status: BilateralAiJobStatus.PROCESSING,
           stage: 'uploading',
-          stage_updated_date: expect.any(Date),
+          stage_updated_date: expect.any(Function), // was: expect.any(Date)
           attempts: 2,
           retrying: false,
-          started_date: expect.any(Date),
+          started_date: expect.any(Function), // was: expect.any(Date)
         },
       );
     });
@@ -1648,7 +1660,7 @@ describe('BilateralAiService (unit)', () => {
           result_count: 0,
           external_interaction_id: 'int-123',
           response_snapshot: expect.any(Object),
-          completed_date: expect.any(Date),
+          completed_date: expect.any(Function), // was: expect.any(Date)
         },
       );
       // `APF-T-3`: the mail rule (2-minute gate, template selection) is
@@ -1893,7 +1905,7 @@ describe('BilateralAiService (unit)', () => {
         {
           retrying: true,
           stage: 'queued',
-          stage_updated_date: expect.any(Date),
+          stage_updated_date: expect.any(Function), // was: expect.any(Date)
           error_code: 'PROCESSING_ERROR',
           error_message: 'Service down',
         },
@@ -1934,7 +1946,7 @@ describe('BilateralAiService (unit)', () => {
           status: BilateralAiJobStatus.FAILED,
           error_code: 'HTTP_503',
           error_message: 'Service down again',
-          completed_date: expect.any(Date),
+          completed_date: expect.any(Function), // was: expect.any(Date)
         },
       );
       expect(stubs.notificationsService.notifyTerminal).toHaveBeenCalledTimes(
@@ -1970,9 +1982,159 @@ describe('BilateralAiService (unit)', () => {
           status: BilateralAiJobStatus.FAILED,
           error_code: 'HTTP_400',
           error_message: 'Bad request',
-          completed_date: expect.any(Date),
+          completed_date: expect.any(Function), // was: expect.any(Date)
         },
       );
+    });
+  });
+  describe('timezone skew regression: lifecycle timestamps are written in DB time, never from the process clock', () => {
+    /**
+     * Post-archive bug on `bilateral/ai-processing-feedback`. `created_date` and the STORED
+     * `queue_entry_date` are generated by MySQL in the DB session zone, but a JS `new Date()`
+     * written into `started_date` / `stage_updated_date` / `completed_date` / `retried_date` is
+     * serialized by mysql2 in the **Node process's** local zone (`src/config/orm.config.ts` sets
+     * no `timezone`). A consumer on a Bogota laptop and the sweeper on prtest (UTC) then read each
+     * other's timestamps 5 h apart: job `6716bf59…` was created `13:50:11` UTC, stored
+     * `started_date` `08:50:12`, and was flipped to `TIMED_OUT` at `13:51:00` — 48 s into a
+     * 15-minute window.
+     *
+     * Every such write must therefore be `bilateralAiDbNow`: a function TypeORM emits as raw SQL,
+     * so MySQL stamps the row in its own session zone.
+     */
+    const DB_TIME_COLUMNS = [
+      'started_date',
+      'stage_updated_date',
+      'completed_date',
+      'retried_date',
+    ] as const;
+
+    /**
+     * Asserts every lifecycle timestamp in every recorded UPDATE payload is DB-evaluated SQL, and
+     * returns how many it checked so a case can prove it actually inspected something.
+     */
+    const expectAllTimestampsAreDbTime = (updateMock: jest.Mock): number => {
+      let asserted = 0;
+      for (const call of updateMock.mock.calls) {
+        const payload = call[1] ?? {};
+        for (const column of DB_TIME_COLUMNS) {
+          const value = payload[column];
+          // `retryJob` deliberately nulls `started_date`/`completed_date`; that is not a clock.
+          if (value === undefined || value === null) continue;
+          expect(value).not.toBeInstanceOf(Date);
+          expect(typeof value).toBe('function');
+          expect(value()).toBe('CURRENT_TIMESTAMP');
+          asserted += 1;
+        }
+      }
+      return asserted;
+    };
+
+    const pendingJob = () => ({
+      job_id: 'j1',
+      status: BilateralAiJobStatus.PENDING,
+      attempts: 0,
+      bucket_name: 'b',
+      document_keys: [],
+      audio_keys: [],
+      text_context: null,
+      user_id: 42,
+    });
+
+    it('stamps attempt start, every stage advance and the COMPLETED flip with CURRENT_TIMESTAMP', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(pendingJob());
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: 'int-123',
+      });
+
+      await service.processJob('j1');
+
+      // At minimum: `started_date` + `stage_updated_date` on attempt start, and `completed_date`
+      // on the COMPLETED write — plus one `stage_updated_date` per stage advance.
+      expect(
+        expectAllTimestampsAreDbTime(stubs.jobRepository.update),
+      ).toBeGreaterThanOrEqual(3);
+    });
+
+    it('stamps the final-FAILED flip with CURRENT_TIMESTAMP', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(pendingJob());
+      const error = new Error('Bad request');
+      (error as any).status = 400; // 4xx is terminal on the first attempt
+      stubs.textMining.extract.mockRejectedValue(error);
+
+      await service.processJob('j1');
+
+      const failedWrite = stubs.jobRepository.update.mock.calls.find(
+        ([, payload]: any[]) => payload?.status === BilateralAiJobStatus.FAILED,
+      );
+      expect(failedWrite).toBeDefined();
+      expect(failedWrite[1].completed_date()).toBe('CURRENT_TIMESTAMP');
+      expect(
+        expectAllTimestampsAreDbTime(stubs.jobRepository.update),
+      ).toBeGreaterThanOrEqual(3);
+    });
+
+    it('stamps the retry-requeue write (retrying = true) with CURRENT_TIMESTAMP', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(pendingJob());
+      const error = new Error('Service down');
+      (error as any).status = undefined; // retryable → stays PROCESSING with retrying = true
+      stubs.textMining.extract.mockRejectedValue(error);
+
+      await expect(service.processJob('j1')).rejects.toThrow('Service down');
+
+      const requeueWrite = stubs.jobRepository.update.mock.calls.find(
+        ([, payload]: any[]) => payload?.retrying === true,
+      );
+      expect(requeueWrite).toBeDefined();
+      expect(requeueWrite[1].stage_updated_date()).toBe('CURRENT_TIMESTAMP');
+      expectAllTimestampsAreDbTime(stubs.jobRepository.update);
+    });
+
+    it("stamps retryJob's reset with CURRENT_TIMESTAMP while still nulling started_date/completed_date", async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'job-1',
+        user_id: 42,
+        status: BilateralAiJobStatus.FAILED,
+        document_keys: ['doc-key-1'],
+        audio_keys: [],
+      });
+
+      await service.retryJob('job-1', user);
+
+      const [, resetPayload] = stubs.jobRepository.update.mock.calls[0];
+      expect(resetPayload.stage_updated_date()).toBe('CURRENT_TIMESTAMP');
+      expect(resetPayload.retried_date()).toBe('CURRENT_TIMESTAMP');
+      // The two cleared columns stay literal `null` — they are erasures, not clocks.
+      expect(resetPayload.started_date).toBeNull();
+      expect(resetPayload.completed_date).toBeNull();
+      expectAllTimestampsAreDbTime(stubs.jobRepository.update);
+    });
+
+    it('lets MySQL evaluate the 90-day expectations window instead of a JS cutoff', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobQueryBuilder.getMany.mockResolvedValue([]);
+
+      await service.getExpectations('documents');
+
+      expect(stubs.jobRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'job',
+      );
+      expect(stubs.jobQueryBuilder.where).toHaveBeenCalledWith(
+        'job.status = :status',
+        { status: BilateralAiJobStatus.COMPLETED },
+      );
+      // 90 days, written out independently of the service constant it must match.
+      const ninetyDaysInSeconds = 90 * 24 * 60 * 60;
+      expect(stubs.jobQueryBuilder.andWhere).toHaveBeenCalledWith(
+        `job.completed_date > DATE_SUB(NOW(), INTERVAL ${ninetyDaysInSeconds} SECOND)`,
+      );
+      // Was: `find({ where: { status: COMPLETED, completed_date: MoreThan(new Date(Date.now() -
+      //   EXPECTATIONS_SAMPLE_WINDOW_MS)) }, select: {...} })`.
+      expect(stubs.jobRepository.find).not.toHaveBeenCalled();
     });
   });
 });

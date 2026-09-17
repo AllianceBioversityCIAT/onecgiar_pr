@@ -33,6 +33,10 @@ export interface BilateralCenterResult {
   submitter?: string | null;
   status_id: number;
   status_name: string;
+  /** Numeric user id — filter/display uses `created_by_name`. */
+  created_by?: number | null;
+  /** Display name of the user who created the result (`first_name` + `last_name`). */
+  created_by_name?: string | null;
   created_date: string;
   version_id: number;
   source: 'API' | 'Result';

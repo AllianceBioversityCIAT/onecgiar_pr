@@ -135,6 +135,23 @@ export class CPNormalSelectorComponent {
     return [...this.institutionsNoSentinel, ...(this.rdPartnersSE.otherPartnersSelected || [])];
   }
 
+  /**
+   * P2-3738: the green of the partner cards follows the SAME rule the missing-field counter reads —
+   * each selected partner needs a role (`delivery`), the hidden `Partner role: <name>` markers below.
+   * Before, picking one partner turned the card green while the counter still listed every role.
+   */
+  get partnersCardComplete(): boolean {
+    if (this.rdPartnersSE.partnersBody?.no_applicable_partner) return true;
+    const partners = this.allSelectedPartners;
+    return partners.length > 0 && partners.every(partner => !!partner?.delivery?.length);
+  }
+
+  /** Same rule for the "Other(s) External Partners" dropdown, which has its own card. */
+  get otherPartnersRolesComplete(): boolean {
+    const others = this.rdPartnersSE.otherPartnersSelected || [];
+    return others.length > 0 && others.every((partner: any) => !!partner?.delivery?.length);
+  }
+
   getDisableOptions() {
     this.disableOptions = [];
 

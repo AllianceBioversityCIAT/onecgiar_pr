@@ -254,111 +254,108 @@
       </div>
 
       @if (resultId()) {
-        <!-- Floor of the content column, outside the scroll. Two boxes: the outer strip carries
-             the top rule edge to edge; the inner one keeps the controls at the column's 40px
-             padding so Back and Save line up with the card. Next is the one primary action of the
-             strip; Save draft is secondary, exactly as on the W1/W2 bar. -->
+        <!-- Sin franja (Yeck, 16-sep-2026): el pie no pinta fondo ni regla ni reserva alto. Sus dos
+             grupos son cápsulas flotantes ancladas al piso —Back/Next a la izquierda, estado y
+             guardado a la derecha— y el formulario se sigue leyendo entre ellas, igual que la barra
+             de W1/W2. Next sigue siendo la única acción primaria; Save draft, secundaria. -->
         <footer class="bcr-editor-footer" aria-label="Section actions" data-testid="bilateral-section-footer">
-          <div class="bcr-editor-footer__inner">
-            <div class="bcr-editor-footer__group">
-              <button
-                type="button"
-                class="bcr-btn bcr-btn--secondary"
-                [disabled]="isFirstSection()"
-                (click)="moveSection(-1)"
-                data-testid="bilateral-footer-back">
-                <span aria-hidden="true">&#8592;</span> Back
-              </button>
-              <button
-                type="button"
-                class="bcr-btn bcr-btn--primary"
-                [disabled]="isLastSection()"
-                (click)="moveSection(1)"
-                data-testid="bilateral-footer-next">
-                Next <span aria-hidden="true">&#8594;</span>
-              </button>
-              <span class="bcr-editor-footer__divider" aria-hidden="true"></span>
-              <span class="bcr-editor-footer__position" data-testid="bilateral-footer-position">
-                Section {{ currentSectionIndex() + 1 }} of {{ sectionNavigation().length }}
-              </span>
-            </div>
+          <div class="bcr-editor-footer__group bcr-editor-footer__group--start">
+            <button
+              type="button"
+              class="bcr-btn bcr-btn--secondary"
+              [disabled]="isFirstSection()"
+              (click)="moveSection(-1)"
+              data-testid="bilateral-footer-back">
+              <span aria-hidden="true">&#8592;</span> Back
+            </button>
+            <button
+              type="button"
+              class="bcr-btn bcr-btn--primary"
+              [disabled]="isLastSection()"
+              (click)="moveSection(1)"
+              data-testid="bilateral-footer-next">
+              Next <span aria-hidden="true">&#8594;</span>
+            </button>
+            <span class="bcr-editor-footer__position" data-testid="bilateral-footer-position">
+              Section {{ currentSectionIndex() + 1 }} of {{ sectionNavigation().length }}
+            </span>
+          </div>
 
-            <div class="bcr-editor-footer__group">
-              <!-- 🛑 "Unsaved changes" no SUSTITUYE al contador (Yeck/JC, 16-sep-2026). Lo hacía, y
-                   entonces el aviso de campos que faltan desaparecía justo mientras el reportero
-                   escribe, que es cuando lo necesita: JC mandó la captura de una sección con
-                   `Description of Result` vacío y el pie diciendo solo "Unsaved changes". En W1/W2
-                   las dos cosas conviven — el guardado lo cuenta cada tarjeta y la barra no deja de
-                   mostrar el progreso. Aquí el guardado pasa a ser un acompañante del contador. -->
-              @if (autoSaveService.hasPendingFor(openSectionName())) {
-                <span class="bcr-editor-footer__state bcr-editor-footer__state--dirty" data-testid="bilateral-footer-dirty">
-                  <i class="material-icons-round" aria-hidden="true">error_outline</i>
-                  Unsaved changes
+          <div class="bcr-editor-footer__group bcr-editor-footer__group--end">
+            <!-- 🛑 "Unsaved changes" no SUSTITUYE al contador (Yeck/JC, 16-sep-2026). Lo hacía, y
+                 entonces el aviso de campos que faltan desaparecía justo mientras el reportero
+                 escribe, que es cuando lo necesita: JC mandó la captura de una sección con
+                 `Description of Result` vacío y el pie diciendo solo "Unsaved changes". En W1/W2
+                 las dos cosas conviven — el guardado lo cuenta cada tarjeta y la barra no deja de
+                 mostrar el progreso. Aquí el guardado pasa a ser un acompañante del contador. -->
+            @if (autoSaveService.hasPendingFor(openSectionName())) {
+              <span class="bcr-editor-footer__state bcr-editor-footer__state--dirty" data-testid="bilateral-footer-dirty">
+                <i class="material-icons-round" aria-hidden="true">error_outline</i>
+                Unsaved changes
+              </span>
+            }
+            @if (currentSectionComplete()) {
+              <!-- El verde habla de lo GUARDADO, así que sigue cediendo ante "Unsaved changes":
+                   eso no cambia. Lo que cambia es el caso de abajo. -->
+              @if (!autoSaveService.hasPendingFor(openSectionName())) {
+                <span class="bcr-editor-footer__state bcr-editor-footer__state--done" data-testid="bilateral-footer-state">
+                  <i class="material-icons-round" aria-hidden="true">check</i>
+                  Section complete
                 </span>
               }
-              @if (currentSectionComplete()) {
-                <!-- El verde habla de lo GUARDADO, así que sigue cediendo ante "Unsaved changes":
-                     eso no cambia. Lo que cambia es el caso de abajo. -->
-                @if (!autoSaveService.hasPendingFor(openSectionName())) {
-                  <span class="bcr-editor-footer__state bcr-editor-footer__state--done" data-testid="bilateral-footer-state">
-                    <i class="material-icons-round" aria-hidden="true">check</i>
-                    Section complete
-                  </span>
-                }
-              } @else if (missingFields().length) {
-                <!-- Names what is missing instead of only saying the draft is saved — the W1/W2 bar's
-                     "N fields missing" control. -->
-                <div class="bcr-editor-footer__pending">
-                  <button
-                    type="button"
-                    class="bcr-editor-footer__state bcr-editor-footer__state--missing"
-                    [attr.aria-expanded]="pendingOpen()"
-                    aria-controls="bcr-pending-list"
-                    (click)="togglePending()"
-                    data-testid="bilateral-footer-state">
-                    <i class="material-icons-round" aria-hidden="true">error_outline</i>
-                    {{ missingLabel() }}
-                  </button>
-                  @if (pendingOpen()) {
-                    <div class="bcr-pending-list" id="bcr-pending-list" role="dialog" aria-label="Fields still missing" data-testid="bilateral-footer-pending-list">
-                      <div class="bcr-pending-list__head">
-                        <span>Still missing</span>
-                        <button type="button" class="bcr-pending-list__close" (click)="closePending()" aria-label="Close">
-                          <i class="material-icons-round" aria-hidden="true">close</i>
-                        </button>
-                      </div>
-                      <ul class="bcr-pending-list__items">
-                        @for (field of missingFields(); track field) {
-                          <li>
-                            <span>{{ field }}</span>
-                            <!-- Only for entries that resolve to exactly one field on screen: an
-                                 ambiguous jump lands on the wrong control, which is worse than no
-                                 button. Same per-entry rule as the W1/W2 bar. -->
-                            @if (canGoToField(field)) {
-                              <button type="button" class="bcr-pending-list__go" (click)="goToField(field)" [attr.aria-label]="'Go to ' + field">
-                                Go
-                              </button>
-                            }
-                          </li>
-                        }
-                      </ul>
+            } @else if (missingFields().length) {
+              <!-- Names what is missing instead of only saying the draft is saved — the W1/W2 bar's
+                   "N fields missing" control. -->
+              <div class="bcr-editor-footer__pending">
+                <button
+                  type="button"
+                  class="bcr-editor-footer__state bcr-editor-footer__state--missing"
+                  [attr.aria-expanded]="pendingOpen()"
+                  aria-controls="bcr-pending-list"
+                  (click)="togglePending()"
+                  data-testid="bilateral-footer-state">
+                  <i class="material-icons-round" aria-hidden="true">error_outline</i>
+                  {{ missingLabel() }}
+                </button>
+                @if (pendingOpen()) {
+                  <div class="bcr-pending-list" id="bcr-pending-list" role="dialog" aria-label="Fields still missing" data-testid="bilateral-footer-pending-list">
+                    <div class="bcr-pending-list__head">
+                      <span>Still missing</span>
+                      <button type="button" class="bcr-pending-list__close" (click)="closePending()" aria-label="Close">
+                        <i class="material-icons-round" aria-hidden="true">close</i>
+                      </button>
                     </div>
-                  }
-                </div>
-              } @else if (!autoSaveService.hasPendingFor(openSectionName())) {
-                <span class="bcr-editor-footer__state" data-testid="bilateral-footer-state">Draft up to date</span>
-              }
+                    <ul class="bcr-pending-list__items">
+                      @for (field of missingFields(); track field) {
+                        <li>
+                          <span>{{ field }}</span>
+                          <!-- Only for entries that resolve to exactly one field on screen: an
+                               ambiguous jump lands on the wrong control, which is worse than no
+                               button. Same per-entry rule as the W1/W2 bar. -->
+                          @if (canGoToField(field)) {
+                            <button type="button" class="bcr-pending-list__go" (click)="goToField(field)" [attr.aria-label]="'Go to ' + field">
+                              Go
+                            </button>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            } @else if (!autoSaveService.hasPendingFor(openSectionName())) {
+              <span class="bcr-editor-footer__state" data-testid="bilateral-footer-state">Draft up to date</span>
+            }
 
-              <button
-                type="button"
-                class="bcr-btn bcr-btn--secondary"
-                [disabled]="isManualSaving() || isFormReadOnly()"
-                [attr.aria-busy]="isManualSaving()"
-                (click)="triggerManualSave()"
-                data-testid="bilateral-footer-save">
-                {{ isManualSaving() ? 'Saving…' : 'Save draft' }}
-              </button>
-            </div>
+            <button
+              type="button"
+              class="bcr-btn bcr-btn--secondary"
+              [disabled]="isManualSaving() || isFormReadOnly()"
+              [attr.aria-busy]="isManualSaving()"
+              (click)="triggerManualSave()"
+              data-testid="bilateral-footer-save">
+              {{ isManualSaving() ? 'Saving…' : 'Save draft' }}
+            </button>
           </div>
         </footer>
       }
