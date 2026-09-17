@@ -2196,13 +2196,13 @@ describe('ProgrammeResultsComponent', () => {
       component.customWidths.set({});
       fixture.detectChanges();
 
-      let resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      let resetBtn = fixture.debugElement.query(By.css('[data-testid="pgr-reset-column-widths-btn"]'));
       expect(resetBtn).toBeNull();
 
       component.customWidths.set({ title: 600 });
       fixture.detectChanges();
 
-      resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      resetBtn = fixture.debugElement.query(By.css('[data-testid="pgr-reset-column-widths-btn"]'));
       expect(resetBtn).toBeTruthy();
       expect(resetBtn.nativeElement.textContent).toContain('Reset column widths');
 
