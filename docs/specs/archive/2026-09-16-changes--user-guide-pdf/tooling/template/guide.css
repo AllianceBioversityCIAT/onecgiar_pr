@@ -394,3 +394,16 @@ a {
   font-size: 11px;
   color: var(--ug-color-ink-muted);
 }
+
+/* Page footer (review comment 2026-09-17): version line on every printed page.
+   Chromium repeats position:fixed boxes on each page; it cannot print page counters,
+   so the version stamp stands alone. */
+.ug-footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  font-family: var(--font-manrope);
+  font-size: 7.5pt;
+  color: var(--ug-color-ink-muted);
+  letter-spacing: 0.02em;
+}
