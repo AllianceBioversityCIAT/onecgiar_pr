@@ -257,6 +257,9 @@
                     [queryParams]="getResultQueryParams(subResult)"
                     (click)="onResultLinkClick($event, subResult)"
                     [attr.title]="subResult.title">
+                    @if (isEmerging(subResult)) {
+                      <span class="{{ emergingChipClass }}">Emerging</span>
+                    }
                     @if (
                       subResult?.status_id === '4' &&
                       (!subResult?.has_discontinued_options ||

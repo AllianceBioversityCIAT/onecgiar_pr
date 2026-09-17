@@ -1,6 +1,6 @@
 # pr-multi-select
 
-**Verified:** 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 rework (attempt 2): fixed the option-row `min-height`/`itemSize` mismatch the Reviewer caught (global `height: 30px` made the new `padding: 16px 20px` a no-op; added `height: auto; min-height: 52px` + a matching `virtualOptionItemSize` computed driving the CDK `[itemSize]`); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 adds opt-in visual variant (`resultPickerStyle` input, off by default) mirroring `rd-contributors-and-partners`'s linked-result picker — no filter chips, per `SIP-R-20`/`SIP-OQ-3`; prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-3 adds opt-in server-search mode (`serverSearchDebounceMs` input, `searchTextChange` output); prior: 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
+**Verified:** 2026-09-16 · performance-refactor · merge con SIP-T-7 · input `complete` + apertura hacia arriba (P2-3737/P2-3738); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 rework (attempt 2): fixed the option-row `min-height`/`itemSize` mismatch the Reviewer caught (global `height: 30px` made the new `padding: 16px 20px` a no-op; added `height: auto; min-height: 52px` + a matching `virtualOptionItemSize` computed driving the CDK `[itemSize]`); prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-7 adds opt-in visual variant (`resultPickerStyle` input, off by default) mirroring `rd-contributors-and-partners`'s linked-result picker — no filter chips, per `SIP-R-20`/`SIP-OQ-3`; prior: 2026-09-16 · branch qa-development-2026-ss · SIP-T-3 adds opt-in server-search mode (`serverSearchDebounceMs` input, `searchTextChange` output); prior: 2026-09-14 · branch performance-refactor · hueco `selectedItems`: los chips que pinta el consumidor entran DENTRO del marco de la tarjeta; prior: 2026-09-10 · branch qa-development-2026-ss · c307e5816 (adds `tooltip` input, forwarded to the internal `app-pr-field-header` — spec `changes/info-tooltip-hover-reveal` ITR-T-8, mirrors `pr-select`'s existing pattern); prior: 2026-08-25 · performance-refactor · bc25304fb
 
 ## Qué es
 
@@ -31,6 +31,21 @@ El dropdown multi-selección de toda la app: buscador, `select all` opcional, mo
   🛑 El hueco es SOLO para chips. El marcador `appFeedbackValidation` de la sección sigue
   siendo hermano del dropdown: anidarlo haría que `mandatoryFieldLabel` reportara la
   etiqueta del desplegable en vez de la suya.
+- `complete` — `boolean | null`, default `null` (P2-3738). Sobrescribe lo que la tarjeta llama
+  "lleno": con `null` sigue siendo `hasSelection`. Úsalo cuando el campo pide MÁS que elegir algo
+  y el contador de faltantes lo juzga con otra regla: hoy `rd-contributors-and-partners`
+  (centros: el centinela "Other(s)" no cuenta) y su `normal-selector` (cada partner necesita rol).
+  🛑 Sin él, la tarjeta se pinta verde mientras "N fields missing" sigue nombrando el campo.
+- **Se abre hacia arriba cuando no cabe abajo** (P2-3737, `../dropdown-placement.ts`, compartido con
+  `pr-select` en modo en línea). Se decide al PRESIONAR el campo (`pointerdown` nativo, fuera de la
+  zona de Angular, medido un frame después); una presión dentro del panel abierto no lo recalcula,
+  para que la lista no salte bajo el puntero. Clase `options_up` puesta en el nodo, sin estado.
+  ⚠️ **No uses `focusin`** (ni binding ni listener nativo, ni siquiera vacío): medido el 16-sep-2026,
+  cualquier listener de `focusin` en este host pone 3 rojos NUEVOS en `pr-multi-select.contract.cy.ts`
+  (reasignación del modelo, opciones tardías, modelo antes que opciones). Con `pointerdown` el archivo
+  queda en sus 9 rojos conocidos. Coste aceptado: abrir con Tab no voltea el panel.
+  El piso es el borde del scroll MENOS su `padding-bottom`: `.rd_scroll` y `.bcr-scroll` reservan
+  ahí la zona de la barra inferior flotante.
 - Gates de render: `readOnly` · `RolesService.readOnly` (global, **default TRUE**) ·
   `isStatic` (fuerza el control aunque sea read-only) · `hideSelect`.
 - `required` — **default `true`**. Ver la trampa ⚠️ #1: hoy es casi inerte.

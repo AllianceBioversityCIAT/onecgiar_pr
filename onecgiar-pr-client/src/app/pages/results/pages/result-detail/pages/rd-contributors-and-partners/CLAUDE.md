@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
+**Verified:** 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
 (removed P2-3235's `tocAlignmentReadOnly()` ToC-alignment lock on the Level/HLO/Outcome/Output
 selects — explicit PO override (santiago.sanchez@cgiar.org, `proposal.md` §11), not a defect fix;
 these selects are now gated only by `editable` + the role read-only handling already inside
@@ -618,3 +618,17 @@ las filas de `linked_result` con él.
 
 ⚠️ **El borrado es CONDICIONAL a propósito.** Si se hiciera siempre, los tipos no-innovación de
 P2-3112 / P2-3358 dejarían de guardar su respuesta sin un solo error en pantalla.
+
+## ⚠️ El color de la tarjeta y el contador de faltantes usan la MISMA regla (P2-3738, 16-sep-2026)
+
+- `normal-selector`: la tarjeta de External partners (y la de "Other(s) External Partners") va verde
+  solo si cada partner elegido tiene rol (`partnersCardComplete` / `otherPartnersRolesComplete`).
+  Antes bastaba con elegir uno y la tarjeta quedaba verde con "N fields missing" pidiendo los roles.
+- Los marcadores por partner se llaman `Partner role: <nombre>`, no `Institution type`: eran seis
+  líneas idénticas en "Still missing" y el **Go** solo encontraba la primera. ⚠️ `appFeedbackValidation`
+  escribe `labelText` una vez en `ngOnInit`; el nombre sirve porque cada fila nace con su partner.
+- Contributing CGIAR Centers: el dropdown del ToC pasa `[complete]="contributingCentersComplete"`.
+  El centinela "Other(s)" es una selección para `hasSelection`, así que la tarjeta se pintaba verde
+  mientras el marcador de `requiresTocCenter` seguía incompleto (hallado por el barrido de DeepSeek;
+  candado en `rd-contributors-and-partners.zoneless.spec.ts`, «does not paint the centres card green»).
+

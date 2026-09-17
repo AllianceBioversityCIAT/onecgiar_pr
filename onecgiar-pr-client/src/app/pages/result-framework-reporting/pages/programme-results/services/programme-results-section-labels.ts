@@ -15,7 +15,8 @@ export const PROGRAMME_RESULTS_FIXED_SECTION_LABELS: Readonly<Record<string, str
 };
 
 /** `AOW01` (etc.) renders as-is; the three fixed keys translate to their display label. `''` → `''`. */
-export function sectionLabel(key: string | null | undefined): string {
+export function sectionLabel(key: string | null | undefined, plannedResult?: number | null): string {
   if (!key) return '';
+  if (key === 'UNTAGGED' && plannedResult === 0) return 'Emerging';
   return PROGRAMME_RESULTS_FIXED_SECTION_LABELS[key] ?? key;
 }
