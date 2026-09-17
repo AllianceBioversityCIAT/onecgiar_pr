@@ -1,218 +1,221 @@
 <app-alert-global-info className="section_container"></app-alert-global-info>
-<div class="framework-reporting_container mx-auto grid min-h-screen max-w-[1600px] grid-cols-[1fr_380px] gap-5 px-[30px] pb-[120px] pt-5 max-[1115px]:grid-cols-1">
-  <div class="flex min-w-0 flex-col gap-10 max-[1115px]:gap-8">
-    <!-- Hero -->
-    <section class="relative overflow-hidden rounded-xl bg-brand-900 px-10 py-8 max-md:px-6" aria-label="Welcome">
-      <div
-        class="pointer-events-none absolute inset-0 bg-[radial-gradient(115%_190%_at_88%_-25%,rgba(var(--pr-color-primary-rgb),0.55)_0%,rgba(var(--pr-color-primary-rgb),0.18)_38%,transparent_68%)]"
-        aria-hidden="true"></div>
 
-      <div class="relative flex flex-col items-start gap-2.5">
+<!--
+  The home answers "where do I stand and what do I do next", not "here is the whole portfolio".
+  It used to open with a 180px welcome banner, a density toggle and a 3D viewer, then two grids of
+  cards for the two programmes and three centres already listed in the sidebar, then twelve cards
+  for programmes the person does not report on. The numbers and the activity feed — the only parts
+  about their own work — were below the fold on the right.
+
+  Now: the cycle and the first action, their own results by status, the places they report in as one
+  list, and the rest of the portfolio behind a disclosure at the bottom.
+
+  Tailwind-first per the package guide: no new `.pr-*` SCSS blocks, and no rem type utilities
+  (root font-size is 12px, so `text-sm` would be 10.5px).
+-->
+<div class="framework-reporting_container mx-auto grid min-h-screen max-w-[1600px] grid-cols-[1fr_380px] gap-5 px-[30px] pb-[120px] pt-5 max-[1115px]:grid-cols-1">
+  <div class="flex min-w-0 flex-col gap-7 max-[1115px]:gap-6">
+    <!-- Cycle strip. One line where the welcome banner was: the phase is what changes and what
+         people need to see; the greeting is not worth 180px of the fold. -->
+    <section
+      class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-5 py-4"
+      aria-label="Reporting cycle">
+      <div class="min-w-0">
         @if (phaseLabel()) {
-          <span class="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.2px] text-white/90">
+          <span
+            class="inline-block rounded-full bg-[var(--pr-color-primary-50)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-primary-400)]">
             {{ phaseLabel() }}
           </span>
         }
-
-        <h1 class="m-0 text-[26px] font-bold leading-tight text-balance text-white">
-          Welcome{{ api.authSE.localStorageUser?.user_name ? ', ' + api.authSE.localStorageUser?.user_name : '' }}!
+        <h1 class="m-0 mt-1.5 text-[19px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">
+          @if (userFirstName()) {
+            Hi {{ userFirstName() }} — here is where your reporting stands.
+          } @else {
+            Here is where your reporting stands.
+          }
         </h1>
-        <p class="m-0 max-w-[65ch] text-[15px] font-normal leading-relaxed text-white/80">
-          Explore, create, and manage your Science Program results with ease.
-        </p>
+      </div>
+
+      <div class="flex flex-none flex-wrap items-center gap-2">
+        <a
+          class="inline-flex items-center gap-1.5 rounded-lg bg-brand-300 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-400"
+          routerLink="/result/result-creator">
+          <i class="material-icons-round text-[17px]" aria-hidden="true">add</i>
+          Report a result
+        </a>
+        <a
+          class="inline-flex items-center gap-1.5 rounded-lg border border-[var(--pr-color-accents-2)] bg-white px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-text-secondary,#5d5872)] transition-colors hover:bg-[var(--pr-color-accents-1)]"
+          routerLink="/result/results-outlet/results-list">
+          <i class="material-icons-round text-[17px]" aria-hidden="true">list_alt</i>
+          My results
+        </a>
       </div>
     </section>
 
-    <!-- Page-wide density toggle (charts + card details) -->
-    @if (!resultFrameworkReportingHomeService.isLoadingSPLists() &&
-      (resultFrameworkReportingHomeService.mySPsList().length > 0 || resultFrameworkReportingHomeService.otherSPsList().length > 0)) {
-      <div class="-mt-6 flex flex-wrap items-center justify-start gap-2 max-[1115px]:-mt-4">
-        <button
-          type="button"
-          class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors"
-          [ngClass]="resultFrameworkReportingHomeService.compactView()
-            ? 'border-brand-300 bg-brand-300 text-white hover:bg-brand-400'
-            : 'border-brand-200 bg-brand-25 text-brand-400 hover:bg-brand-50'"
-          [attr.aria-pressed]="resultFrameworkReportingHomeService.compactView()"
-          [prTooltip]="resultFrameworkReportingHomeService.compactView()
-            ? 'Show the full view again: charts in the overview and the status breakdown on every program card.'
-            : 'Minimal view: hides the charts and the status bars/chips on the cards, keeping only the key numbers.'"
-          prTooltipPosition="bottom"
-          (click)="resultFrameworkReportingHomeService.toggleCompactView()">
-          <i class="material-icons-round text-[16px]" aria-hidden="true">
-            {{ resultFrameworkReportingHomeService.compactView() ? 'unfold_more' : 'unfold_less' }}
-          </i>
-          {{ resultFrameworkReportingHomeService.compactView() ? 'Expanded view' : 'Compact view' }}
-        </button>
-
-        <!-- Explore the portfolio in 3D -->
-        <button
-          type="button"
-          class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-transparent bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[#5733c4] px-3 py-1.5 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(107,70,229,0.35)] transition-[filter] hover:brightness-110"
-          prTooltip="Explore your Science Programs and their Result Framework in an interactive 3D view."
-          prTooltipPosition="bottom"
-          (click)="show3D.set(true)">
-          <i class="material-icons-round text-[16px]" aria-hidden="true">view_in_ar</i>
-          Explore in 3D
-        </button>
+    <!-- Your results this phase. Counted from the CURRENT phase only: `SPProgress.versions` holds
+         one entry per phase, so summing the programme total would mix 2025 into a 2026 number.
+         Hidden entirely when there is nothing to count, rather than showing a row of zeros. -->
+    @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-3">
+        @for (item of [0, 1, 2, 3]; track $index) {
+          <div class="pr-skeleton" style="width:100%;height:78px"></div>
+        }
       </div>
-    }
-
-    <div class="flex flex-col gap-10 max-[1115px]:gap-8">
-      <!-- My CGIAR Centers -->
-      <section class="flex flex-col gap-4">
-        <div class="flex items-baseline gap-2.5">
-          <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">My CGIAR Centers</h2>
-          @if (myCentersList().length > 0) {
-            <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
-              {{ myCentersList().length }}
-            </span>
-          }
+    } @else if (myStatusTotals().total > 0) {
+      <section class="flex flex-col gap-3" aria-label="Your results this phase">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 class="m-0 text-[15px] font-bold text-[var(--pr-color-secondary-400)]">Your results this phase</h2>
+          <a class="text-[12px] font-semibold text-brand-400 hover:underline" routerLink="/result/results-outlet/results-list">
+            Open the Results Center
+          </a>
         </div>
 
-        <div
-          class="grid gap-4"
-          [ngClass]="myCentersList().length === 0 ? 'grid-cols-1' : 'grid-cols-[repeat(auto-fill,minmax(315px,1fr))]'">
-          @if (myCentersList().length > 0) {
-            @for (item of myCentersList(); track item.center_id) {
-              <app-result-framework-reporting-center-card-item [item]="item" />
-            }
-          } @else {
-            <div>
-              <app-alert-status
-                [collapsible]="false"
-                inlineStyles="background-color: var(--pr-color-white); margin: 0;"
-                description="You currently do not have a Center User role in any CGIAR Center. If you require access, please contact your system administrator."></app-alert-status>
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-3">
+          <div class="flex flex-col gap-1 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-4 py-3">
+            <span class="pr-figure font-mono text-[22px] font-semibold leading-none text-[var(--pr-color-secondary-400)]">
+              {{ myStatusTotals().total }}
+            </span>
+            <span class="text-[11px] font-medium text-[var(--pr-color-accents-6)]">Reported by you</span>
+          </div>
+
+          @for (tile of myStatusTotals().tiles; track tile.id) {
+            <div class="flex flex-col gap-1 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-4 py-3">
+              <span class="pr-figure font-mono text-[22px] font-semibold leading-none text-[var(--pr-color-secondary-400)]">
+                {{ tile.count }}
+              </span>
+              <span class="flex items-center gap-1.5 text-[11px] font-medium text-[var(--pr-color-accents-6)]">
+                <span class="size-2 flex-none rounded-full" [ngClass]="tile.dotClass" aria-hidden="true"></span>
+                {{ tile.label }}
+              </span>
             </div>
           }
         </div>
       </section>
+    }
 
-      <!-- My Science Programs/Accelerators -->
-      <section class="flex flex-col gap-4">
-        <div class="flex items-baseline gap-2.5">
-          <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">My Science Programs/Accelerators</h2>
-          @if (!resultFrameworkReportingHomeService.isLoadingSPLists() && resultFrameworkReportingHomeService.mySPsList().length > 0) {
-            <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
-              {{ resultFrameworkReportingHomeService.mySPsList().length }}
+    <!-- Where you report. Programmes and centres in one list: to the person they are the same kind
+         of thing — a place their results live — and two grids of cards for two and three items was
+         most of the old page. -->
+    <section class="flex flex-col gap-3" aria-label="Where you report">
+      <h2 class="m-0 text-[15px] font-bold text-[var(--pr-color-secondary-400)]">Where you report</h2>
+
+      @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+        @for (item of [0, 1]; track $index) {
+          <div class="pr-skeleton" style="width:100%;height:56px"></div>
+        }
+      } @else if (myPlaces().length > 0) {
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+          @for (place of myPlaces(); track place.kind + place.code) {
+            <li>
+              <a
+                class="flex items-center gap-3 rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-4 py-3 transition-colors hover:border-[var(--pr-color-primary-200)] hover:bg-[var(--pr-color-primary-25,#faf8ff)]"
+                [routerLink]="place.link">
+                <span
+                  class="pr-code w-[86px] flex-none truncate rounded-md px-2 py-1 text-center font-mono text-[11px] font-semibold"
+                  [title]="place.code"
+                  [ngClass]="place.kind === 'center'
+                    ? 'bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-6)]'
+                    : 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'">
+                  {{ place.code }}
+                </span>
+
+                <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--pr-color-secondary-400)]" [title]="place.name">
+                  {{ place.name }}
+                </span>
+
+                @if (place.kind === 'program' && place.total > 0) {
+                  <span
+                    class="hidden h-1.5 w-[120px] flex-none overflow-hidden rounded-full bg-[var(--pr-color-accents-2)] sm:block"
+                    [attr.aria-label]="place.reported + ' of ' + place.total + ' reported'">
+                    <span class="block h-full rounded-full bg-brand-300" [style.width.%]="place.percent"></span>
+                  </span>
+                  <span class="pr-code w-[64px] flex-none text-right font-mono text-[11px] text-[var(--pr-color-accents-6)]">
+                    {{ place.reported }}/{{ place.total }}
+                  </span>
+                } @else {
+                  <span class="w-[64px] flex-none text-right text-[11px] text-[var(--pr-color-accents-5)]">
+                    {{ place.kind === 'center' ? 'Bilateral' : 'No results' }}
+                  </span>
+                }
+
+                <i class="material-icons-round flex-none text-[18px] text-[var(--pr-color-accents-4)]" aria-hidden="true">chevron_right</i>
+              </a>
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-alert-status
+          [collapsible]="false"
+          inlineStyles="background-color: var(--pr-color-white); margin: 0;"
+          description="You do not have a member role in any Science Program, Accelerator or CGIAR Center yet. If you need access, contact your Science Program coordinator or your system administrator."></app-alert-status>
+      }
+    </section>
+
+    <!-- Reporting overview + recent activity, for viewports where the right column stacks. -->
+    <app-result-framework-reporting-insights class="min-[1115px]:hidden" />
+
+    <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white min-[1115px]:hidden">
+      <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
+        <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
+      </div>
+
+      <div class="flex flex-col gap-3 px-4 pb-6 pt-4">
+        @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
+          @for (item of [0, 1, 2, 3, 4, 5]; track $index) {
+            <div class="pr-skeleton" style="width:100%;height:72px"></div>
+          }
+        } @else {
+          @for (item of resultFrameworkReportingHomeService.recentActivityList().slice(0, 6); track $index) {
+            <app-result-framework-reporting-recent-item [item]="item" />
+          } @empty {
+            <p class="m-0 py-6 text-center text-[13px] text-[var(--pr-color-accents-5)]">No recent activity yet</p>
+          }
+        }
+      </div>
+    </section>
+
+    <!-- The rest of the portfolio. Still reachable, no longer the page: these are the programmes the
+         person does NOT report on, and they used to fill everything below the fold. -->
+    @if (!resultFrameworkReportingHomeService.isLoadingSPLists() &&
+      (resultFrameworkReportingHomeService.otherSPsList().length > 0 || resultFrameworkReportingHomeService.otherProjectsList().length > 0)) {
+      <section class="overflow-hidden rounded-xl border border-[var(--pr-color-accents-2)] bg-white" aria-label="The rest of the portfolio">
+        <button
+          type="button"
+          class="flex w-full cursor-pointer items-center gap-2 border-none bg-transparent px-4 py-3.5 text-left transition-colors hover:bg-[var(--pr-color-accents-1)]"
+          [attr.aria-expanded]="exploreOpen()"
+          (click)="exploreOpen.set(!exploreOpen())">
+          <i
+            class="material-icons-round flex-none text-[20px] text-[var(--pr-color-accents-5)] transition-transform"
+            [class.rotate-90]="exploreOpen()"
+            aria-hidden="true">
+            chevron_right
+          </i>
+          <span class="flex-1 text-[13px] font-semibold text-[var(--pr-color-secondary-400)]">
+            Explore the rest of the portfolio
+            <span class="ms-1.5 rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[11px] font-semibold text-[var(--pr-color-accents-6)]">
+              {{ resultFrameworkReportingHomeService.otherSPsList().length + resultFrameworkReportingHomeService.otherProjectsList().length }}
             </span>
-          }
-        </div>
+          </span>
+          <span class="hidden text-[11px] text-[var(--pr-color-accents-5)] md:block">
+            Science Programs, Accelerators and projects you do not report on
+          </span>
+        </button>
 
-        <div
-          class="grid gap-4"
-          [ngClass]="resultFrameworkReportingHomeService.mySPsList().length === 0 && !resultFrameworkReportingHomeService.isLoadingSPLists()
-            ? 'grid-cols-1'
-            : 'grid-cols-[repeat(auto-fill,minmax(315px,1fr))]'">
-          @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
-            @for (item of [0, 1]; track $index) {
-              <div class="pr-skeleton" style="width:100%;height:156px"></div>
-            }
-          } @else {
-            @if (resultFrameworkReportingHomeService.mySPsList().length > 0) {
-              @for (item of resultFrameworkReportingHomeService.mySPsList(); track $index) {
-                <app-result-framework-reporting-card-item [item]="item" />
-              }
-            } @else {
-              <div>
-                <app-alert-status
-                  [collapsible]="false"
-                  inlineStyles="background-color: var(--pr-color-white); margin: 0;"
-                  description=" You currently do not have a member role in any Science Program or Accelerator. If you require access or permissions, please contact
-                your Science Program or Accelerator coordinator."></app-alert-status>
-              </div>
-            }
-          }
-        </div>
-      </section>
-
-      <!-- Reporting overview (mobile/tablet) -->
-      <app-result-framework-reporting-insights class="min-[1115px]:hidden" />
-
-      <!-- Recent activity (mobile/tablet) -->
-      <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white min-[1115px]:hidden">
-        <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
-          <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
-        </div>
-
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(305px,1fr))] gap-3 px-4 pb-6 pt-4">
-          @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
-            @for (item of [0, 1, 2, 3]; track $index) {
-              <div class="pr-skeleton" style="width:100%;height:72px"></div>
-            }
-          } @else {
-            @for (item of resultFrameworkReportingHomeService.recentActivityList().slice(0, 6); track $index) {
-              <app-result-framework-reporting-recent-item [item]="item" />
-            } @empty {
-              <div class="flex flex-col items-center justify-center gap-2 py-10 text-center text-[var(--pr-color-accents-5)]">
-                <i class="material-icons-round text-[32px]">history</i>
-                <p class="m-0 text-sm">No recent activity yet</p>
-              </div>
-            }
-          }
-        </div>
-      </section>
-
-      <!-- Other Science Programs/Accelerators -->
-      <section class="flex flex-col gap-4">
-        <div class="flex flex-col gap-0.5">
-          <div class="flex items-baseline gap-2.5">
-            <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">Other Science Programs/Accelerators</h2>
-            @if (!resultFrameworkReportingHomeService.isLoadingSPLists() && resultFrameworkReportingHomeService.otherSPsList().length > 0) {
-              <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
-                {{ resultFrameworkReportingHomeService.otherSPsList().length }}
-              </span>
-            }
-          </div>
-          <p class="m-0 text-[15px] font-normal text-[var(--pr-color-accents-6)]">
-            Explore other Science Programs and Accelerators driving research, innovation, and impact.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(315px,1fr))] gap-4 min-[1500px]:grid-cols-3">
-          @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
-            @for (item of [0, 1, 2, 3, 4, 5]; track $index) {
-              <div class="pr-skeleton" style="width:100%;height:156px"></div>
-            }
-          } @else {
+        @if (exploreOpen()) {
+          <div class="grid grid-cols-[repeat(auto-fill,minmax(315px,1fr))] gap-4 border-t border-[var(--pr-color-accents-2)] p-4 min-[1500px]:grid-cols-3">
             @for (item of resultFrameworkReportingHomeService.otherSPsList(); track $index) {
               <app-result-framework-reporting-card-item [item]="item" />
-            } @empty {
-              <p class="m-0 text-sm text-[var(--pr-color-accents-5)]">No other Science Programs or Accelerators to show.</p>
             }
-          }
-        </div>
+            @for (item of resultFrameworkReportingHomeService.otherProjectsList(); track $index) {
+              <app-result-framework-reporting-card-item [item]="item" />
+            }
+          </div>
+        }
       </section>
-
-      <!-- Other projects (AVISA-excluded initiatives) -->
-      @if (resultFrameworkReportingHomeService.isLoadingSPLists() || resultFrameworkReportingHomeService.otherProjectsList().length > 0) {
-        <section class="flex flex-col gap-4">
-          <div class="flex items-baseline gap-2.5">
-            <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">Other projects</h2>
-            @if (!resultFrameworkReportingHomeService.isLoadingSPLists() && resultFrameworkReportingHomeService.otherProjectsList().length > 0) {
-              <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
-                {{ resultFrameworkReportingHomeService.otherProjectsList().length }}
-              </span>
-            }
-          </div>
-
-          <div class="grid grid-cols-[repeat(auto-fill,minmax(315px,1fr))] gap-4 min-[1500px]:grid-cols-3">
-            @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
-              @for (item of [0, 1, 2]; track $index) {
-                <div class="pr-skeleton" style="width:100%;height:156px"></div>
-              }
-            } @else {
-              @for (item of resultFrameworkReportingHomeService.otherProjectsList(); track $index) {
-                <app-result-framework-reporting-card-item [item]="item" />
-              }
-            }
-          </div>
-        </section>
-      }
-    </div>
+    }
   </div>
 
-  <!-- Right column (desktop sidebar): reporting overview + recent activity -->
+  <!-- Right column (desktop): reporting overview + recent activity -->
   <div class="flex h-fit w-full flex-col gap-5 max-[1115px]:hidden">
     <app-result-framework-reporting-insights />
 
@@ -232,7 +235,7 @@
           } @empty {
             <div class="flex flex-col items-center justify-center gap-2 py-10 text-center text-[var(--pr-color-accents-5)]">
               <i class="material-icons-round text-[32px]">history</i>
-              <p class="m-0 text-sm">No recent activity yet</p>
+              <p class="m-0 text-[13px]">No recent activity yet</p>
             </div>
           }
         }
@@ -240,8 +243,3 @@
     </section>
   </div>
 </div>
-
-<!-- Full-screen 3D "Framework Galaxy" overlay -->
-@if (show3D()) {
-  <app-result-framework-reporting-galaxy (closed)="show3D.set(false)" />
-}
