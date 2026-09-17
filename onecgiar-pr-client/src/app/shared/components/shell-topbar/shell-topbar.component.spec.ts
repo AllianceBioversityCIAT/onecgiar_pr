@@ -537,4 +537,44 @@ describe('ShellTopbarComponent', () => {
       expect(settings).toContain('[cdkConnectedOverlayOrigin]="fontTrigger"');
     });
   });
+
+  // ------------------------------------------------------------------ P2-3682
+  // Yeck, looking at the first pass: the right-hand controls and the account menu were "un enredo
+  // ... no se sabe dónde está cada cosa". Both were regrouped; these lock the grouping in.
+  describe('the shell chrome is grouped (P2-3682)', () => {
+    const html = () => readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+
+    it('separates the labelled action, the icon actions and the identity', () => {
+      const right = html();
+      const from = right.indexOf('class="pr-topbar-right"');
+      const to = right.indexOf('</header>');
+      // The slice has to be a real one, or the counts below would be measuring the whole file.
+      expect(from).toBeGreaterThan(-1);
+      expect(to).toBeGreaterThan(from);
+      const cluster = right.slice(from, to);
+
+      // Two rules: Help | text size + bell | user.
+      expect((cluster.match(/pr-topbar-sep/g) || []).length).toBe(2);
+      expect(cluster.indexOf('pr-topbar-actions')).toBeGreaterThan(cluster.indexOf('pr-topbar-sep'));
+      expect(cluster.indexOf('class="pr-topbar-user"')).toBeGreaterThan(cluster.indexOf('pr-topbar-actions'));
+    });
+
+    it('the account menu groups instead of ruling off every row', () => {
+      const account = html();
+      const from = account.indexOf('aria-label="Account menu"');
+      const to = account.indexOf('pr-topbar-logout');
+      expect(from).toBeGreaterThan(-1);
+      expect(to).toBeGreaterThan(from);
+      const panel = account.slice(from, to);
+
+      expect(panel).toContain('pr-topbar-account__id');
+      expect(panel).toContain('pr-topbar-account__group');
+      expect(panel).toContain('pr-topbar-account__code');
+      // The old per-row rules came from these two classes; they are gone.
+      expect(panel).not.toContain('pr-topbar-assignment');
+      expect(panel).not.toContain('pr-topbar-user-card');
+      // The role badge is no longer pinned beside the name, where it ate the name's width.
+      expect(panel).toContain('pr-topbar-account__role');
+    });
+  });
 });

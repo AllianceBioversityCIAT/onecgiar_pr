@@ -49,41 +49,47 @@
           [class.rotate-180]="supportMenuOpen()" />
       </button>
 
-      <!-- P2-3682: text size stays ON the topbar, not behind Settings. It is an accessibility
-           control — somebody who cannot read the platform has to be able to reach it without
-           knowing where to look first. -->
-      <button
-        type="button"
-        class="pr-topbar-icon-btn"
-        cdkOverlayOrigin
-        #fontTrigger="cdkOverlayOrigin"
-        aria-label="Text size"
-        aria-haspopup="true"
-        [attr.aria-expanded]="fontMenuOpen()"
-        [class.pr-topbar-icon-btn--active]="fontMenuOpen()"
-        (click)="fontMenuOpen.set(!fontMenuOpen())">
-        <ng-icon name="lucideALargeSmall" class="text-[19px]" />
-      </button>
+      <span class="pr-topbar-sep" aria-hidden="true"></span>
 
-      <button
-        type="button"
-        class="pr-topbar-icon-btn"
-        cdkOverlayOrigin
-        #notifTrigger="cdkOverlayOrigin"
-        aria-label="Notifications"
-        aria-haspopup="true"
-        [attr.aria-expanded]="notificationsOpen()"
-        [class.pr-topbar-icon-btn--active]="notificationsOpen() || isInNotificationsRoute()"
-        (click)="notificationsOpen.set(!notificationsOpen())">
-        @if (unreadNotifications.length === 0) {
-          <ng-icon name="lucideBell" class="text-[20px]" />
-        } @else {
-          <span class="pr-topbar-badge-wrap">
+      <div class="pr-topbar-actions">
+        <!-- P2-3682: text size stays ON the topbar, not behind Settings. It is an accessibility
+             control — somebody who cannot read the platform has to be able to reach it without
+             knowing where to look first. -->
+        <button
+          type="button"
+          class="pr-topbar-icon-btn"
+          cdkOverlayOrigin
+          #fontTrigger="cdkOverlayOrigin"
+          aria-label="Text size"
+          aria-haspopup="true"
+          [attr.aria-expanded]="fontMenuOpen()"
+          [class.pr-topbar-icon-btn--active]="fontMenuOpen()"
+          (click)="fontMenuOpen.set(!fontMenuOpen())">
+          <ng-icon name="lucideALargeSmall" class="text-[19px]" />
+        </button>
+
+        <button
+          type="button"
+          class="pr-topbar-icon-btn"
+          cdkOverlayOrigin
+          #notifTrigger="cdkOverlayOrigin"
+          aria-label="Notifications"
+          aria-haspopup="true"
+          [attr.aria-expanded]="notificationsOpen()"
+          [class.pr-topbar-icon-btn--active]="notificationsOpen() || isInNotificationsRoute()"
+          (click)="notificationsOpen.set(!notificationsOpen())">
+          @if (unreadNotifications.length === 0) {
             <ng-icon name="lucideBell" class="text-[20px]" />
-            <span class="pr-topbar-badge">{{ notificationBadgeLength() }}</span>
-          </span>
-        }
-      </button>
+          } @else {
+            <span class="pr-topbar-badge-wrap">
+              <ng-icon name="lucideBell" class="text-[20px]" />
+              <span class="pr-topbar-badge">{{ notificationBadgeLength() }}</span>
+            </span>
+          }
+        </button>
+      </div>
+
+      <span class="pr-topbar-sep" aria-hidden="true"></span>
 
       <button
         type="button"
@@ -214,35 +220,35 @@
     [cdkConnectedOverlayPositions]="userMenuPositions"
     (backdropClick)="userMenuOpen.set(false)">
     <div class="pr-topbar-panel pr-topbar-panel--user" role="menu" aria-label="Account menu">
-      <div class="pr-topbar-panel__header">
-        <div class="pr-topbar-user-card">
-          <span class="pr-topbar-avatar pr-topbar-avatar--lg">{{ getUserInitials() }}</span>
-          <div class="min-w-0 flex-1">
-            <div class="flex min-w-0 items-center gap-1.5">
-              <p class="pr-topbar-user-card__name min-w-0 truncate">{{ getUserName() }}</p>
-              <span
-                class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-400)]"
-                >{{ getPlatformRole() }}</span
-              >
-            </div>
-            <p class="pr-topbar-user-card__email">{{ api.authSE.localStorageUser?.email }}</p>
-          </div>
+      <!-- P2-3682: rebuilt. It used to be three stacked blocks with a rule under every single row —
+           identity, programmes and centres all weighted the same, codes of different widths, and the
+           role of a programme floating against the far edge while a centre's name sat next to its
+           code. One column, one rhythm: fixed-width code chip, text beside it, groups told apart by
+           space and one rule, not by a grid of lines. -->
+      <div class="pr-topbar-account__id">
+        <span class="pr-topbar-avatar pr-topbar-avatar--lg">{{ getUserInitials() }}</span>
+        <div class="min-w-0 flex-1">
+          <p class="pr-topbar-account__name">{{ getUserName() }}</p>
+          <p class="pr-topbar-account__email">{{ api.authSE.localStorageUser?.email }}</p>
+          @if (getPlatformRole()) {
+            <span class="pr-topbar-account__role">{{ getPlatformRole() }}</span>
+          }
         </div>
       </div>
 
       @if (getInitiativeSeparatedByPortfolio().length > 0 || getMyCenters().length > 0) {
         <div class="pr-topbar-panel__body">
           @if (getInitiativeSeparatedByPortfolio().length > 0) {
-            <div class="pr-topbar-panel__section">
-              <div class="pr-topbar-panel__section-head">
-                <p class="pr-topbar-panel__eyebrow">My Science Programs/Accelerators</p>
+            <div class="pr-topbar-account__group">
+              <div class="pr-topbar-account__group-head">
+                <p class="pr-topbar-account__eyebrow">Science programs</p>
                 <span class="pr-topbar-panel__count">{{ getInitiativeSeparatedByPortfolio().length }}</span>
               </div>
-              <ul class="pr-topbar-assignment-list">
+              <ul class="pr-topbar-account__list">
                 @for (item of getInitiativeSeparatedByPortfolio(); track $index) {
-                  <li class="pr-topbar-assignment pr-topbar-assignment--compact">
-                    <span class="pr-topbar-assignment__code">{{ item.official_code }}</span>
-                    <span class="pr-topbar-assignment__role">{{ item.role }}</span>
+                  <li class="pr-topbar-account__row">
+                    <span class="pr-topbar-account__code">{{ item.official_code }}</span>
+                    <span class="pr-topbar-account__meta">{{ item.role }}</span>
                   </li>
                 }
               </ul>
@@ -250,101 +256,21 @@
           }
 
           @if (getMyCenters().length > 0) {
-            <div class="pr-topbar-panel__section">
-              <div class="pr-topbar-panel__section-head">
-                <p class="pr-topbar-panel__eyebrow">My Centers</p>
+            <div class="pr-topbar-account__group">
+              <div class="pr-topbar-account__group-head">
+                <p class="pr-topbar-account__eyebrow">Centers</p>
                 <span class="pr-topbar-panel__count">{{ getMyCenters().length }}</span>
               </div>
-              <ul class="pr-topbar-assignment-list">
+              <ul class="pr-topbar-account__list">
                 @for (item of getMyCenters(); track item.center_id) {
-                  <li class="pr-topbar-assignment">
-                    <span class="pr-topbar-assignment__code" [title]="item.center_id">{{ item.center_id }}</span>
-                    <div class="pr-topbar-assignment__body">
-                      <span class="pr-topbar-assignment__title" [title]="item.center_name">{{ item.center_name }}</span>
+                  <li class="pr-topbar-account__row pr-topbar-account__row--stacked">
+                    <span class="pr-topbar-account__code" [title]="item.center_id">{{ item.center_id }}</span>
+                    <span class="min-w-0 flex-1">
+                      <span class="pr-topbar-account__title" [title]="item.center_name">{{ item.center_name }}</span>
                       @if (shouldShowAssignmentRole(item.role_name)) {
-                        <span class="pr-topbar-assignment__role">{{ item.role_name }}</span>
+                        <span class="pr-topbar-account__meta pr-topbar-account__meta--under">{{ item.role_name }}</span>
                       }
-                    </div>
-                  </li>
-                }
-              </ul>
-            </div>
-          }
-        </div>
-      }
-
-      <div class="pr-topbar-panel__footer">
-        <button
-          type="button"
-          class="pr-topbar-link"
-          (click)="goToNotifications(); notificationsOpen.set(false); handleClosePopUp()">
-          See all the notifications
-        </button>
-      </div>
-    </div>
-  </ng-template>
-
-  <!-- User menu -->
-  <ng-template
-    cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="userTrigger"
-    [cdkConnectedOverlayOpen]="userMenuOpen()"
-    [cdkConnectedOverlayHasBackdrop]="true"
-    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-    [cdkConnectedOverlayPositions]="userMenuPositions"
-    (backdropClick)="userMenuOpen.set(false)">
-    <div class="pr-topbar-panel pr-topbar-panel--user" role="menu" aria-label="Account menu">
-      <div class="pr-topbar-panel__header">
-        <div class="pr-topbar-user-card">
-          <span class="pr-topbar-avatar pr-topbar-avatar--lg">{{ getUserInitials() }}</span>
-          <div class="min-w-0 flex-1">
-            <div class="flex min-w-0 items-center gap-1.5">
-              <p class="pr-topbar-user-card__name min-w-0 truncate">{{ getUserName() }}</p>
-              <span
-                class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-400)]"
-                >{{ getPlatformRole() }}</span
-              >
-            </div>
-            <p class="pr-topbar-user-card__email">{{ api.authSE.localStorageUser?.email }}</p>
-          </div>
-        </div>
-      </div>
-
-      @if (getInitiativeSeparatedByPortfolio().length > 0 || getMyCenters().length > 0) {
-        <div class="pr-topbar-panel__body">
-          @if (getInitiativeSeparatedByPortfolio().length > 0) {
-            <div class="pr-topbar-panel__section">
-              <div class="pr-topbar-panel__section-head">
-                <p class="pr-topbar-panel__eyebrow">My Science Programs/Accelerators</p>
-                <span class="pr-topbar-panel__count">{{ getInitiativeSeparatedByPortfolio().length }}</span>
-              </div>
-              <ul class="pr-topbar-assignment-list">
-                @for (item of getInitiativeSeparatedByPortfolio(); track $index) {
-                  <li class="pr-topbar-assignment pr-topbar-assignment--compact">
-                    <span class="pr-topbar-assignment__code">{{ item.official_code }}</span>
-                    <span class="pr-topbar-assignment__role">{{ item.role }}</span>
-                  </li>
-                }
-              </ul>
-            </div>
-          }
-
-          @if (getMyCenters().length > 0) {
-            <div class="pr-topbar-panel__section">
-              <div class="pr-topbar-panel__section-head">
-                <p class="pr-topbar-panel__eyebrow">My Centers</p>
-                <span class="pr-topbar-panel__count">{{ getMyCenters().length }}</span>
-              </div>
-              <ul class="pr-topbar-assignment-list">
-                @for (item of getMyCenters(); track item.center_id) {
-                  <li class="pr-topbar-assignment">
-                    <span class="pr-topbar-assignment__code" [title]="item.center_id">{{ item.center_id }}</span>
-                    <div class="pr-topbar-assignment__body">
-                      <span class="pr-topbar-assignment__title" [title]="item.center_name">{{ item.center_name }}</span>
-                      @if (shouldShowAssignmentRole(item.role_name)) {
-                        <span class="pr-topbar-assignment__role">{{ item.role_name }}</span>
-                      }
-                    </div>
+                    </span>
                   </li>
                 }
               </ul>
