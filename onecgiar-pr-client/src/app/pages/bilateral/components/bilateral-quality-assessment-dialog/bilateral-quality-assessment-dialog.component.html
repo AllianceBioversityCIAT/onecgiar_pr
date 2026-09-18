@@ -1,13 +1,33 @@
 @if (visible()) {
-  <app-pr-dialog
-    [styleClass]="'pr-dialog bilateral-quality-assessment-dialog'"
-    [visible]="true"
-    [modal]="true"
-    [showHeader]="false"
-    [dismissableMask]="false"
-    [closeOnEscape]="!running() && !submitting()"
-    (onHide)="running() || submitting() ? null : dismissed.emit()">
-    <div class="pr-dialog-header bqa-dialog__header" [attr.data-verdict]="running() ? 'grey' : verdict()">
+  <div
+    class="bqa-scrim fixed inset-0 z-[1200] bg-[rgba(15,23,42,0.35)] backdrop-blur-[1px]"
+    (click)="requestClose()"
+    aria-hidden="true"
+    data-testid="bqa-dialog-scrim"></div>
+
+  <aside
+    #panel
+    class="bqa-panel fixed inset-y-0 right-0 z-[1201] flex max-w-[100vw] flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
+    [class.bqa-panel--mobile]="isMobile()"
+    [style.width.px]="width()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="running() ? 'Checking quality' : title()"
+    tabindex="-1"
+    (keydown.escape)="requestClose()"
+    (keydown.tab)="onTabKey($event)"
+    (keydown.shift.tab)="onTabKey($event)"
+    data-testid="bqa-dialog-panel">
+    @if (!isMobile()) {
+      <div
+        class="absolute inset-y-0 -left-1 z-[2] w-2 cursor-col-resize"
+        (mousedown)="startResize($event)"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"></div>
+    }
+
+    <div class="pr-dialog-header bqa-dialog__header shrink-0" [attr.data-verdict]="running() ? 'grey' : verdict()">
       <span class="pr-dialog-header-icon bqa-dialog__icon" [attr.data-verdict]="running() ? 'grey' : verdict()">
         @if (running()) {
           <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
@@ -16,8 +36,18 @@
         }
       </span>
       <span class="pr-dialog-header-title">{{ running() ? 'Checking quality' : title() }}</span>
+      @if (!running() && !submitting()) {
+        <button
+          type="button"
+          (click)="requestClose()"
+          aria-label="Close"
+          data-testid="bqa-dialog-close"
+          class="ml-auto inline-flex size-[32px] max-[639px]:size-[44px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+          <span class="material-icons-round text-[20px]">close</span>
+        </button>
+      }
     </div>
-    <div class="pr-dialog-body bqa-dialog__body">
+    <div class="pr-dialog-body bqa-dialog__body flex-1 min-h-0 overflow-y-auto overscroll-contain gap-[24px] px-[24px] py-[20px]">
       @if (running()) {
         <!-- The wait can run a minute. Rather than an empty spinner, it teaches the legend the user
              is about to need — P2-3150 AC2 — so the verdict lands already understood. -->
@@ -26,11 +56,11 @@
           <p class="bqa-dialog__running-lead">Reading the result against the quality criteria. This usually takes under a minute.</p>
         </div>
         <section class="bqa-dialog__group" aria-label="What the colours mean">
-          <h3>What the colours mean</h3>
+          <h3 class="mb-[10px] text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">What the colours mean</h3>
           <ul class="bqa-dialog__legend">
             @for (item of legend; track item.verdict) {
               <li>
-                <span class="bqa-dialog__pill" [attr.data-verdict]="item.verdict">{{ item.label }}</span>
+                <span class="bqa-dialog__pill px-[12px] py-[4px] text-[12px]" [attr.data-verdict]="item.verdict">{{ item.label }}</span>
                 <span>{{ item.meaning }}</span>
               </li>
             }
@@ -44,7 +74,7 @@
         @if (stale()) {
           <p class="bqa-dialog__stale">This assessment predates your latest edits. It remains available as history, but you must run it again before submitting.</p>
         }
-        <section class="bqa-dialog__overall" [attr.data-verdict]="verdict()">
+        <section class="bqa-dialog__overall rounded-[12px] py-[16px] px-[18px]" [attr.data-verdict]="verdict()">
           <span class="bqa-dialog__eyebrow">Overall result</span>
           <strong>{{ verdict() }}</strong>
           @if (assessment.overall.score !== null) { <span class="bqa-dialog__score">{{ assessment.overall.score }}/100</span> }
@@ -52,16 +82,16 @@
         </section>
         @if (sectionEntries().length) {
           <section class="bqa-dialog__group" aria-label="Assessment by section">
-            <h3>By section</h3>
-            <div class="bqa-dialog__sections">
+            <h3 class="mb-[10px] text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">By section</h3>
+            <div class="bqa-dialog__sections grid grid-cols-1 gap-[12px]">
               @for (section of sectionEntries(); track section.key) {
                 <article
-                  class="bqa-dialog__section"
+                  class="bqa-dialog__section rounded-[12px] py-[16px] px-[18px]"
                   [attr.data-verdict]="section.verdict"
                   [class.bqa-dialog__section--open]="expandedSection() === section.key">
                   <div class="bqa-dialog__section-row">
                     <strong>{{ section.label }}</strong>
-                    <span class="bqa-dialog__pill" [attr.data-verdict]="section.verdict">{{ section.verdict }}</span>
+                    <span class="bqa-dialog__pill px-[12px] py-[4px] text-[12px]" [attr.data-verdict]="section.verdict">{{ section.verdict }}</span>
                   </div>
                   @if (section.comments) { <p>{{ section.comments }}</p> }
                   <div class="bqa-dialog__actions">
@@ -122,9 +152,9 @@
         }
         @if (evidence().length) {
           <section class="bqa-dialog__group" aria-label="Evidence assessment">
-            <h3>Evidence</h3>
+            <h3 class="mb-[10px] text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">Evidence</h3>
             @for (item of evidence(); track item.index) {
-              <p class="bqa-dialog__evidence"><span [attr.data-verdict]="item.verdict">{{ item.verdict }}</span>{{ item.reason }}</p>
+              <p class="bqa-dialog__evidence rounded-[12px] py-[12px] px-[16px]"><span [attr.data-verdict]="item.verdict">{{ item.verdict }}</span>{{ item.reason }}</p>
             }
           </section>
         }
@@ -134,7 +164,7 @@
     <!-- No exits while the check runs: the row is already claimed server-side, so there is nothing
          a Cancel here could undo. -->
     @if (!running()) {
-    <div pr-dialog-footer class="pr-dialog-footer">
+    <div class="pr-dialog-footer shrink-0">
       <button hlmBtn variant="outline" type="button" [disabled]="submitting()" (click)="dismissed.emit()">Make adjustments</button>
       @if (!stale()) {
         <button
@@ -153,5 +183,5 @@
       }
     </div>
     }
-  </app-pr-dialog>
+  </aside>
 }
