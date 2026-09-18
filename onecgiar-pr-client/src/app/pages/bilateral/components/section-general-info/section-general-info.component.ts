@@ -167,6 +167,19 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
 
   /**
+   * P2-3767: bilateral shows the impact-area sub-scores from "(1) Significant" (level 2) upwards,
+   * not only on "(2) Principal" (level 3) — bilateral story P2-3367, "MODIFY — Sub-score visibility
+   * condition". The levels are the `gender-tag-levels/all` ids (1 Not targeted, 2 Significant,
+   * 3 Principal), so the rule is "targeted at all". W1/W2 is unaffected: it renders its own
+   * `== 3` conditions in `rd-general-information.component.html`.
+   *
+   * An unanswered area yields `NaN`, which fails the comparison — nothing opens until a level is picked.
+   */
+  showsSubScores(areaKey: string): boolean {
+    return Number(this.selectedDacLevels()[areaKey]) >= 2;
+  }
+
+  /**
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
