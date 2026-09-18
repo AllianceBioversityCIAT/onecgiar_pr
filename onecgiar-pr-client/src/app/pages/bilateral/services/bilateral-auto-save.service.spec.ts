@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { BilateralAutoSaveService } from './bilateral-auto-save.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
+import { ProjectDefault } from '../components/section-toc-default/section-toc-default.component';
 
 describe('BilateralAutoSaveService explicit section persistence', () => {
   let service: BilateralAutoSaveService;
@@ -71,5 +72,178 @@ describe('BilateralAutoSaveService explicit section persistence', () => {
     await service.flush(service.getEndpointKeys('general-info'));
 
     expect(bilateralApi.PATCH_generalInfo).not.toHaveBeenCalled();
+  });
+
+  describe('loadTocState and saveTocMapping contracts (BIL-TOC-T-5)', () => {
+    it('loadTocState round-trips server response containing toc_linkage_mode and project_default', async () => {
+      const mockProjectDefault: ProjectDefault = {
+        project_id: 194,
+        project_name: 'SP06 Bilateral Project',
+        nodes: [
+          {
+            toc_result_id: 123,
+            toc_level_id: 2,
+            level_name: 'OUTCOME',
+            title: 'Default Outcome Node',
+            indicators: [
+              {
+                id: 456,
+                description: 'Indicator description',
+                type: 'number',
+                targets: [{ year: 2026, value: 50 }],
+              },
+            ],
+          },
+        ],
+      };
+
+      bilateralApi.GET_tocState.mockReturnValue(
+        of({
+          response: {
+            planned_result: true,
+            toc_level_id: 2,
+            toc_result_id: 123,
+            indicator_id: 456,
+            contributing_indicator: 789,
+            toc_progressive_narrative: 'Narrative text',
+            toc_linkage_mode: 'project_default',
+            project_default: mockProjectDefault,
+          },
+        }),
+      );
+
+      const state = await service.loadTocState();
+
+      expect(bilateralApi.GET_tocState).toHaveBeenCalledWith(42);
+      expect(state).toEqual({
+        planned_result: true,
+        toc_level_id: 2,
+        toc_result_id: 123,
+        indicator_id: 456,
+        contributing_indicator: 789,
+        toc_progressive_narrative: 'Narrative text',
+        toc_linkage_mode: 'project_default',
+        project_default: mockProjectDefault,
+      });
+    });
+
+    it('loadTocState with legacy server response missing new fields yields nulls without throwing', async () => {
+      bilateralApi.GET_tocState.mockReturnValue(
+        of({
+          response: {
+            planned_result: true,
+            toc_level_id: 2,
+            toc_result_id: 123,
+            indicator_id: 456,
+            contributing_indicator: 789,
+            toc_progressive_narrative: 'Narrative text',
+          },
+        }),
+      );
+
+      const state = await service.loadTocState();
+
+      expect(state.toc_linkage_mode).toBeNull();
+      expect(state.project_default).toBeNull();
+      expect(state).toEqual({
+        planned_result: true,
+        toc_level_id: 2,
+        toc_result_id: 123,
+        indicator_id: 456,
+        contributing_indicator: 789,
+        toc_progressive_narrative: 'Narrative text',
+        toc_linkage_mode: null,
+        project_default: null,
+      });
+    });
+
+    it('loadTocState returns nulls on API error without throwing', async () => {
+      bilateralApi.GET_tocState.mockReturnValue(throwError(() => new Error('API failure')));
+
+      const state = await service.loadTocState();
+
+      expect(state).toEqual({
+        planned_result: null,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: null,
+        toc_linkage_mode: null,
+        project_default: null,
+      });
+    });
+
+    it('loadTocState returns nulls when resultId is missing', async () => {
+      service.reset();
+
+      const state = await service.loadTocState();
+
+      expect(state).toEqual({
+        planned_result: null,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: null,
+        toc_linkage_mode: null,
+        project_default: null,
+      });
+    });
+
+    it('saveTocMapping includes toc_linkage_mode in scheduled payload only when provided', async () => {
+      service.saveTocMapping({
+        planned_result: true,
+        toc_level_id: 2,
+        toc_result_id: 123,
+        toc_linkage_mode: 'project_default',
+      });
+
+      await service.flush(service.getEndpointKeys('contributors'));
+
+      expect(bilateralApi.PATCH_tocMapping).toHaveBeenCalledTimes(1);
+      const [, body] = bilateralApi.PATCH_tocMapping.mock.calls[0] as [
+        number,
+        { result_toc_result: Record<string, unknown> }
+      ];
+      expect(body.result_toc_result['toc_linkage_mode']).toBe('project_default');
+      expect(Object.prototype.hasOwnProperty.call(body.result_toc_result, 'toc_linkage_mode')).toBe(true);
+    });
+
+    it('saveTocMapping does not include toc_linkage_mode in scheduled payload when not provided', async () => {
+      service.saveTocMapping({
+        planned_result: true,
+        toc_level_id: 2,
+        toc_result_id: 123,
+      });
+
+      await service.flush(service.getEndpointKeys('contributors'));
+
+      expect(bilateralApi.PATCH_tocMapping).toHaveBeenCalledTimes(1);
+      const [, body] = bilateralApi.PATCH_tocMapping.mock.calls[0] as [
+        number,
+        { result_toc_result: Record<string, unknown> }
+      ];
+      expect(Object.prototype.hasOwnProperty.call(body.result_toc_result, 'toc_linkage_mode')).toBe(false);
+      expect(body.result_toc_result['toc_linkage_mode']).toBeUndefined();
+    });
+
+    it('saveTocMapping includes toc_linkage_mode in unplanned scheduled payload when provided', async () => {
+      service.saveTocMapping({
+        planned_result: false,
+        toc_progressive_narrative: 'Unplanned reason',
+        toc_linkage_mode: 'custom',
+      });
+
+      await service.flush(service.getEndpointKeys('contributors'));
+
+      expect(bilateralApi.PATCH_tocMapping).toHaveBeenCalledTimes(1);
+      const [, body] = bilateralApi.PATCH_tocMapping.mock.calls[0] as [
+        number,
+        { result_toc_result: Record<string, unknown> }
+      ];
+      expect(body.result_toc_result['toc_linkage_mode']).toBe('custom');
+      expect(Object.prototype.hasOwnProperty.call(body.result_toc_result, 'toc_linkage_mode')).toBe(true);
+    });
   });
 });

@@ -1478,6 +1478,21 @@ export class ResultsTocResultsService {
     return { rejectedTocResults, preservedExistingIds };
   }
 
+  /**
+   * Evaluates candidate ToC node IDs against the given result type's indicator typology pattern.
+   * Delegates to `TocResultsRepository.getTocResultTypologyVerdicts`.
+   * Returns a Map of toc_result_id -> boolean (true = matches/neutral, false = mismatched).
+   */
+  async getTocResultTypologyVerdicts(
+    tocResultIds: Array<number | string>,
+    resultTypeId: number,
+  ): Promise<Map<number, boolean>> {
+    return this._tocResultsRepository.getTocResultTypologyVerdicts(
+      tocResultIds,
+      resultTypeId,
+    );
+  }
+
   async createTocMappingV2(
     dto: CreateResultsTocResultDto | CreateResultsTocResultV2Dto,
     user: TokenDto,
