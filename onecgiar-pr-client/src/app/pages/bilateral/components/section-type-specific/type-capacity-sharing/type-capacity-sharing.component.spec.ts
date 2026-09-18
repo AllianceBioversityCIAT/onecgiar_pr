@@ -25,8 +25,8 @@ describe('TypeCapacitySharingComponent', () => {
   let institutionsSE: any;
 
   const TERMS_CATALOG = [
-    { capdev_term_id: 1, name: 'Long-term (sub A)' },
-    { capdev_term_id: 2, name: 'Long-term (sub B)' },
+    { capdev_term_id: 1, name: 'PhD' },
+    { capdev_term_id: 2, name: 'Master' },
     { capdev_term_id: 3, name: 'Short-term' },
     { capdev_term_id: 4, name: 'Long-term' },
   ];
@@ -585,6 +585,138 @@ describe('TypeCapacitySharingComponent', () => {
         (b: any) => ['Save', 'Saving...'].includes(b.textContent.trim())
       );
       expect(saveButtons).toHaveLength(0);
+    });
+    /**
+     * ── P2-3382 · CSD-T-1 — the Degree sub-term group ─────────────────────────────────────────────
+     * The defect is placement, not logic: the PhD/Master radio is guarded by `@if (showAllFields())`,
+     * which is collapsed by default, so choosing Long-term reveals nothing (`CSD-R-1`). These cases
+     * therefore NEVER touch the toggle — `showAllFields()` stays false throughout, which is also the
+     * `CSD-R-1` BUT clause ("must NOT alter the toggle state"): a fix that auto-expands the block
+     * would overwrite a persisted user preference and is not what this asks for.
+     *
+     * Groups are identified by the CATALOGUE they are bound to, never by their label: the control has
+     * no `label` today and gains one with the fix (design DD-2), so a label-based lookup would be
+     * measuring the fix with the fix. The names below only exist to make the failure legible — jest
+     * prints the received list, so an absent group reads as "the Degree group is missing" rather
+     * than as a null dereference.
+     */
+    describe('the Degree sub-term group (P2-3382)', () => {
+      const DEGREE = 'Degree (PhD / Master)';
+      const LENGTH = 'Length of training';
+      const DELIVERY = 'Delivery Method';
+      const ATTENDANCE = 'Attending on behalf of an organization';
+
+      const radioHosts = () => fixture.debugElement.queryAll(By.css('app-pr-radio-button'));
+
+      /** The rendered radio groups, in document order, named by the catalogue each one is bound to. */
+      const radioGroups = () =>
+        radioHosts().map(d => {
+          const options = d.componentInstance.options;
+          if (options === component.capdevsSubTerms) return DEGREE;
+          if (options === component.capdevsTerms) return LENGTH;
+          if (options === component.deliveryMethods) return DELIVERY;
+          if (options === component.attendanceOptions) return ATTENDANCE;
+          return `unidentified group (label: ${read(d.componentInstance.label) || 'none'})`;
+        });
+
+      const degreeGroup = () => radioHosts().find(d => d.componentInstance.options === component.capdevsSubTerms);
+
+      const optionLabelsOf = (group: any) =>
+        Array.from(group.nativeElement.querySelectorAll('label.name')).map((l: any) => l.textContent.trim());
+
+      const toggleLabel = () => fixture.nativeElement.querySelector('button.tsf-save-btn')?.textContent.trim();
+
+      /**
+       * Selecting Long-term. It goes through the component's own change handler rather than through
+       * a click on the native radio: `RolesService.readOnly` starts `true` (`roles.service.ts:22`,
+       * P2-3322) and is only lowered after the async role fetch, so every option in this fixture
+       * renders `disabled` and a DOM click is a no-op. `markForCheck()` stands in for the event that
+       * would have marked the view dirty in the browser — without it `tick()` skips the view and
+       * dev-mode change detection reports NG0100 instead of the assertion.
+       */
+      const selectLongTerm = () => {
+        component.capdevTermId1 = 4;
+        component.onCapdevTermId1Change();
+        fixture.changeDetectorRef.markForCheck();
+        fixture.detectChanges();
+      };
+
+      // CSD-R-1 / CSD-AC-1. The order assertion is the whole point: "below Length of training" is a
+      // position, and a group rendered at the bottom of the form would satisfy a presence check
+      // while still failing the reporter who is looking underneath the question they just answered.
+      it('renders the Degree group between Length of training and Delivery Method, with full metadata collapsed', () => {
+        render();
+        expect(component.showAllFields()).toBe(false);
+
+        selectLongTerm();
+
+        expect(radioGroups()).toEqual([LENGTH, DEGREE, DELIVERY]);
+      });
+
+      it('offers PhD and Master as its options', () => {
+        render();
+        selectLongTerm();
+
+        expect(radioGroups()).toContain(DEGREE);
+        expect(optionLabelsOf(degreeGroup())).toEqual(['PhD', 'Master']);
+      });
+
+      // CSD-R-5 / CSD-AC-5, defect class B. Asserted on the RENDERED class, never on the `label`
+      // input: `app-field-card` skips the whole `field_card` class when `isBare` is true
+      // (`field-card.component.ts:268`), and `isBare` is exactly what a missing label produces. The
+      // class is the effect; the input would only be its cause, and a presence-assertion on a cause
+      // proves nothing about the frame the reporter sees.
+      it('frames the Degree group in a field card, as its siblings are', () => {
+        render();
+        selectLongTerm();
+
+        expect(radioGroups()).toContain(DEGREE);
+        const card = degreeGroup().query(By.css('app-field-card > div'));
+        expect(Array.from(card.nativeElement.classList)).toContain('field_card');
+      });
+
+      // CSD-R-1, AND-IT-MUST clause: no selection, no group.
+      it('does not render the Degree group while Length of training has no selection', () => {
+        render();
+
+        expect(component.capdevTermId1).toBeNull();
+        expect(radioGroups()).not.toContain(DEGREE);
+      });
+
+      // CSD-R-2: Short-term stands alone, so the group must be gone.
+      it('does not render the Degree group for Short-term (3)', () => {
+        bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { capdev_term_id: 3 } }));
+        render();
+
+        expect(component.capdevTermId1).toBe(3);
+        expect(radioGroups()).not.toContain(DEGREE);
+      });
+
+      // CSD-R-3 / CSD-AC-3 — a saved degree survives a reload. No event is dispatched anywhere in
+      // this case on purpose: reaching that state must require no interaction at all, so everything
+      // asserted here is the state of the FIRST render after the load.
+      it('hydrates a stored Master (capdev_term_id = 2) to Long-term + Master with the toggle still collapsed', () => {
+        bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { capdev_term_id: 2 } }));
+        render();
+
+        expect(component.capdevTermId1).toBe(4);
+        expect(component.capdevTermId2).toBe(2);
+        expect(component.showAllFields()).toBe(false);
+        expect(radioGroups()).toEqual([LENGTH, DEGREE, DELIVERY]);
+      });
+
+      // CSD-R-1 BUT clause. This is the case that separates the relocation from the rejected
+      // auto-expand: the toggle is a persisted preference (`BilateralExpandableStateService`), and
+      // flipping it would drag the organization fields on screen unasked.
+      it('leaves the Complete full metadata toggle untouched when Long-term is selected', () => {
+        render();
+        selectLongTerm();
+
+        expect(component.showAllFields()).toBe(false);
+        expect(expandableState.setShowAllFields).not.toHaveBeenCalled();
+        expect(toggleLabel()).toBe('Complete full metadata');
+        expect(radioGroups()).not.toContain(ATTENDANCE);
+      });
     });
   });
 
