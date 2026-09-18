@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
+import { ProjectDefault } from '../components/section-toc-default/section-toc-default.component';
 
 export type FieldType = 'text' | 'select' | 'checkbox';
 export type FieldStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
@@ -14,6 +15,17 @@ export type EndpointKey =
   | 'typeSpecific';
 
 export type PayloadExecutor = (resultId: number, body: Record<string, unknown>) => Observable<unknown>;
+
+export interface BilateralTocState {
+  planned_result: boolean | null;
+  toc_level_id: number | null;
+  toc_result_id: number | null;
+  indicator_id: number | null;
+  contributing_indicator: number | null;
+  toc_progressive_narrative: string | null;
+  toc_linkage_mode: 'project_default' | 'custom' | null;
+  project_default: ProjectDefault | null;
+}
 
 /**
  * Editor-owned save boundaries. These deliberately describe the existing HTTP contract rather than
@@ -155,7 +167,6 @@ export class BilateralAutoSaveService {
       this._payloadExecutors.set(endpointKey, options.executor);
     }
     this.hasPendingSaves.set(true);
-
   }
 
   /**
@@ -482,6 +493,7 @@ export class BilateralAutoSaveService {
     toc_progressive_narrative?: string;
     indicator_id?: number | string;
     contributing_indicator?: number | string;
+    toc_linkage_mode?: 'project_default' | 'custom';
   }): void {
     const tocLevelId = tocData.toc_level_id ? Number(tocData.toc_level_id) : undefined;
     const tocResultId = tocData.toc_result_id ? Number(tocData.toc_result_id) : undefined;
@@ -504,6 +516,7 @@ export class BilateralAutoSaveService {
           result_toc_result: {
             planned_result: false,
             toc_progressive_narrative: tocData.toc_progressive_narrative ?? null,
+            ...(tocData.toc_linkage_mode !== undefined && { toc_linkage_mode: tocData.toc_linkage_mode }),
           },
         },
         { debounceMs: 0, statusKey: 'toc_mapping' },
@@ -514,6 +527,7 @@ export class BilateralAutoSaveService {
     const body: Record<string, unknown> = {
       result_toc_result: {
         planned_result: plannedResult,
+        ...(tocData.toc_linkage_mode !== undefined && { toc_linkage_mode: tocData.toc_linkage_mode }),
         result_toc_results: [
           {
             toc_level_id: tocLevelId,
@@ -557,14 +571,7 @@ export class BilateralAutoSaveService {
     });
   }
 
-  loadTocState(): Promise<{
-    planned_result: boolean | null;
-    toc_level_id: number | null;
-    toc_result_id: number | null;
-    indicator_id: number | null;
-    contributing_indicator: number | null;
-    toc_progressive_narrative: string | null;
-  }> {
+  loadTocState(): Promise<BilateralTocState> {
     const resultId = this._currentResultId();
     if (!resultId) {
       return Promise.resolve({
@@ -574,6 +581,8 @@ export class BilateralAutoSaveService {
         indicator_id: null,
         contributing_indicator: null,
         toc_progressive_narrative: null,
+        toc_linkage_mode: null,
+        project_default: null,
       });
     }
 
@@ -587,6 +596,8 @@ export class BilateralAutoSaveService {
             indicator_id: response?.indicator_id ?? null,
             contributing_indicator: response?.contributing_indicator ?? null,
             toc_progressive_narrative: response?.toc_progressive_narrative ?? null,
+            toc_linkage_mode: response?.toc_linkage_mode ?? null,
+            project_default: response?.project_default ?? null,
           });
         },
         error: () => {
@@ -597,6 +608,8 @@ export class BilateralAutoSaveService {
             indicator_id: null,
             contributing_indicator: null,
             toc_progressive_narrative: null,
+            toc_linkage_mode: null,
+            project_default: null,
           });
         },
       });

@@ -75,4 +75,26 @@ describe('BilateralReportingWaySelectorComponent', () => {
       expect(component.isOptionDisabled(option)).toBe(true);
     }
   });
+
+  it('should emit blockedClick and not waySelected when card is clicked while primaryReady is false', () => {
+    fixture.componentRef.setInput('primaryReady', false);
+    fixture.detectChanges();
+    const blockedSpy = jest.spyOn(component.blockedClick, 'emit');
+    const waySpy = jest.spyOn(component.waySelected, 'emit');
+
+    const manualOption = component.options.find(o => o.id === 'manual')!;
+    component.selectWay(manualOption);
+
+    expect(blockedSpy).toHaveBeenCalled();
+    expect(waySpy).not.toHaveBeenCalled();
+  });
+
+  it('should display "Requires Step 1" badge when primaryReady is false and card has no specific badge', () => {
+    fixture.componentRef.setInput('primaryReady', false);
+    fixture.detectChanges();
+
+    const waitingBadges = fixture.nativeElement.querySelectorAll('[data-testid="brws-waiting-badge"]');
+    expect(waitingBadges.length).toBeGreaterThan(0);
+    expect(waitingBadges[0].textContent?.trim()).toBe('Requires Step 1');
+  });
 });

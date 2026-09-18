@@ -74,8 +74,25 @@ describe('BilateralCenterController', () => {
 
   it('getProjects should delegate to service', async () => {
     const result = await controller.getProjects(10);
-    expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(10);
+    expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(
+      10,
+      undefined,
+    );
     expect(result).toEqual({ response: { projects: [] } });
+  });
+
+  // changes/project-multiselect-filter (PMF-DD-5): the optional `year` query is passed
+  // through untouched — the catalog service owns its normalization and active-year
+  // fallback, so a non-numeric value must reach it verbatim, never 5xx at the route.
+  it('getProjects should pass the optional year query through to the service', async () => {
+    await controller.getProjects(10, 2025);
+    expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(10, 2025);
+
+    await controller.getProjects(10, 'bogus' as any);
+    expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(
+      10,
+      'bogus',
+    );
   });
 
   it('createResultHeader should delegate to service', async () => {

@@ -23,6 +23,8 @@
         <div class="brws-card-body">
           @if (option.badge) {
             <span class="brws-badge">{{ option.badge }}</span>
+          } @else if (!primaryReady()) {
+            <span class="brws-badge brws-badge--waiting" data-testid="brws-waiting-badge">Requires Step 1</span>
           }
           <h4 class="brws-title">{{ option.label }}</h4>
           <p class="brws-subtitle">{{ option.title }}</p>

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { MultipleWPsContentComponent } from './multiple-wps-content.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MappedResultsModalComponent } from '../mapped-results-modal/mapped-results-modal.component';
@@ -78,7 +79,12 @@ describe('MultipleWPsContentComponent', () => {
           provide: ApiService,
           useValue: mockApiService
         }
-      ]
+      ],
+      // Presence-only rendering check (MHL-T-3): app-pr-select/app-pr-textarea/app-alert-status
+      // are not declared here, so NO_ERRORS_SCHEMA lets the template render without needing their
+      // real dependencies — this suite only needs to confirm the accessible disabled-reason
+      // string is present in the DOM, never real screen-reader/contrast behavior.
+      schemas: [NO_ERRORS_SCHEMA]
     })
       .compileComponents();
 
@@ -285,6 +291,19 @@ describe('MultipleWPsContentComponent', () => {
       expect(component.selectedOptionsOutput.length).toBe(1);
       expect(component.selectedOptionsOutput[0].tabId).toBe(component.activeTab.uniqueId);
       expect(component.outputList.length).toBe(1);
+    });
+
+    it('MHL: keeps an AoW sibling output enabled; disables only the exact same toc_result_id picked in another tab', () => {
+      const h1 = { toc_result_id: 10, work_package_id: 100, disabledd: false };
+      const h2 = { toc_result_id: 11, work_package_id: 100, disabledd: false };
+      component.outputList = [h1, h2];
+      component.activeTab = { uniqueId: 'tabB' };
+      component.selectedOptionsOutput = [];
+
+      component.validateSelectedOptionOutPut({ toc_result_id: 10, uniqueId: 'tabA' });
+
+      expect(component.outputList[0].disabledd).toBe(true);
+      expect(component.outputList[1].disabledd).toBe(false);
     });
   });
 
@@ -622,6 +641,61 @@ describe('MultipleWPsContentComponent', () => {
     });
   });
 
+  // MHL-T-3: validateSelectedOptionOutCome must disable only true duplicates (same toc_result_id
+  // already selected in another tab), never an AoW sibling (same work_package_id, different
+  // toc_result_id). Requirements: MHL-R-1, MHL-R-2, MHL-R-10; AC: MHL-AC-1, MHL-AC-2.
+  describe('validateSelectedOptionOutCome() — MHL-T-3 AoW-siblings vs. true duplicates', () => {
+    it('(MHL-AC-1) keeps a same-AoW sibling HLO selectable after another HLO under the same AoW is picked in a different tab', () => {
+      // H1 and H2 both live under work_package_id 100 (same AoW) — this is what diverges from
+      // the old bug: a single-AoW-single-HLO fixture would not exercise the AoW-grouping branch.
+      const h1 = { toc_result_id: 10, work_package_id: 100, disabledd: false };
+      const h2 = { toc_result_id: 11, work_package_id: 100, disabledd: false };
+      component.outcomeList = [h1, h2];
+      component.activeTab = { uniqueId: 'tabB' };
+      component.selectedOptionsOutcome = [];
+
+      // H1 gets selected from a different tab ('tabA').
+      component.validateSelectedOptionOutCome({ toc_result_id: 10, uniqueId: 'tabA' });
+
+      // H1 itself is now a true duplicate risk (same node picked elsewhere) — correctly disabled.
+      expect(component.outcomeList[0].disabledd).toBe(true);
+      // H2 shares the AoW with H1 but is a DIFFERENT toc_result_id — must remain enabled.
+      expect(component.outcomeList[1].disabledd).toBe(false);
+    });
+
+    it('(duplicate prevention preserved) keeps the exact same toc_result_id disabled everywhere else once selected in another tab', () => {
+      const h1TabA = { toc_result_id: 20, work_package_id: 200, disabledd: false };
+      component.outcomeList = [h1TabA];
+      component.activeTab = { uniqueId: 'tabB' };
+      component.selectedOptionsOutcome = [];
+
+      component.validateSelectedOptionOutCome({ toc_result_id: 20, uniqueId: 'tabA' });
+
+      expect(component.selectedOptionsOutcome[0].toc_result_id).toBe(20);
+      expect(component.outcomeList[0].disabledd).toBe(true);
+    });
+
+    it('(MHL-AC-2) an HLO excluded upstream (typology mismatch) never appears as a candidate — client relies on the server pre-filter, not a re-implemented check', () => {
+      // Simulated by simply never including the mismatched HLO in outcomeList, as the server's
+      // typology filter (_appendResultTypeIndicatorFilter) already omits it before the client sees
+      // the list (MHL-R-2). The client must not crash or fabricate a disabled entry for it.
+      const matchingHlo = { toc_result_id: 30, work_package_id: 300, disabledd: false };
+      component.outcomeList = [matchingHlo];
+      component.activeTab = { uniqueId: 'tabA' };
+      component.selectedOptionsOutcome = [];
+
+      // A tab pointing at an HLO that was never in the candidate list (id 99 — the mismatched one).
+      component.validateSelectedOptionOutCome({ toc_result_id: 99, uniqueId: 'tabC' });
+
+      // No crash, no fabricated entry: the mismatched id never surfaces in outcomeList or in the
+      // selected-options tracking — it simply isn't a candidate.
+      expect(component.outcomeList.length).toBe(1);
+      expect(component.outcomeList.some(item => item.toc_result_id === 99)).toBe(false);
+      expect(component.selectedOptionsOutcome.length).toBe(0);
+      expect(component.outcomeList[0].disabledd).toBe(false);
+    });
+  });
+
   describe('validateSelectedOptionEOI', () => {
     it('should set disabledd = true if option is selected', () => {
       const tab = { toc_result_id: 1, uniqueId: 'tab1' };
@@ -670,6 +744,25 @@ describe('MultipleWPsContentComponent', () => {
         { title: 'Phase', attr: 'phase_name' },
         { title: 'Progress narrative against the target', attr: 'toc_progressive_narrative' }
       ]);
+    });
+  });
+
+  // MHL-R-10 — presence-only check: confirms the accessible disabled-reason string is emitted in
+  // the template markup. It intentionally does NOT (and per the task's caveat, must not attempt
+  // to) assert real screen-reader announcement or contrast — that is a manual PR-review check.
+  describe('accessible disabled-reason markup (MHL-R-10)', () => {
+    it('renders an accessible "already selected in another tab" reason on the outcome selector', () => {
+      component.showMultipleWPsContent = true;
+      component.resultLevelId = 2;
+      component.activeTab = { planned_result: false, toc_level_id: 2, toc_result_id: null };
+      component.outcomeList = [];
+      component.outputList = [];
+      component.eoiList = [];
+      component.initiative = { planned_result: false };
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.innerHTML).toContain('Already selected in another tab');
     });
   });
 

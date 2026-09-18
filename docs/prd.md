@@ -84,10 +84,13 @@ Goals describe **why we invest in PRMS**. Each goal has at least one measurable 
 ### In scope
 
 - **Result capture & lifecycle** for all PRMS result types, including IPSR (innovation package) and policy change.
+- **OneCGIAR 2025–2030 portfolio architecture**: Science Programs, Accelerators, and Initiatives reporting with Theory of Change alignment and Area of Work (AoW) tracking.
 - **Submission workflow** (Editing / QA / Submitted) with review history and review drawer.
 - **Phase / version management** (`versioning` module) — reporting year + phase boundaries.
 - **Quality assurance** tooling (QA scoring per result, review comments, status transitions).
-- **Bilateral and platform-report** payload surfaces for downstream consumers, with typed summaries per result type.
+- **Bilateral result reporting & platform-report**: First-party bilateral reporting UI (`pages/bilateral`) and stable headless payload surfaces (`/api/bilateral/*`, `/api/platform-report/*`).
+- **Interactive user onboarding & tours**: Driver.js guided tours for center and program reporting flows.
+- **Multi-repository knowledge discovery**: CGSpace, MelSpace, and WorldFish integration with Science Program tag extraction and soft-boost matching.
 - **CLARISA integration** as a consumer of master data (centers, initiatives, partners, countries, regions, indicators, etc.) with scheduled syncs.
 - **Theory of Change** alignment (consume ToC trees, attach result→ToC mappings).
 - **Authentication & authorization** via AWS Cognito + AD, with role-based access in `auth/modules/role`.
@@ -217,12 +220,12 @@ Acceptance criteria here are **product-level invariants** every module spec must
 - **RabbitMQ** (`amqplib`, `amqp-connection-manager`) for `reporting-metadata-export` and related microservices.
 - **DynamoDB** for logs (`dynamodb-logs`).
 - **Pusher** + `ngx-socket-io` for real-time client events.
-- **PrimeNG + Angular 19** for the client; Jest + Cypress for tests.
-- **CGSpace** (handle-based) for knowledge product references.
+- **Angular 21 + Spartan UI / PrimeNG** for the client; Jest + Cypress for tests.
+- **CGSpace, MelSpace, & WorldFish** for multi-repository knowledge product discovery and handle references.
 
 ### Constraints
 
-- **Frontend stack:** Angular 19 (`pages/<feature>` module-per-feature), PrimeNG components, Jest unit tests, Cypress e2e — coverage thresholds in `package.json` are enforced.
+- **Frontend stack:** Angular 21 (`pages/<feature>` module-per-feature), Spartan UI / custom `pr-*` fields + Tailwind, Jest unit tests, Cypress e2e — coverage thresholds in `package.json` are enforced.
 - **Backend stack:** NestJS 11, TypeORM 0.3, MySQL, Lambda runtime — bundle size and cold-start budget apply to Lambda deploy.
 - **API conventions:** Custom `auth` header (NOT `Authorization: Bearer`); `apiBaseUrl` vs `apiBaseUrlV2` split per `onecgiar-pr-client/CLAUDE.md`; `HTTP_METHOD_descriptiveName` method naming on the client API service.
 - **Throttling:** Global throttler (60s/100 req) with bilateral routes excluded by `ThrottlerExcludeBilateralGuard`.
@@ -245,7 +248,7 @@ Acceptance criteria here are **product-level invariants** every module spec must
 
 - `docs/ux-ui/design.md` — UI/UX system blueprint.
 - `docs/trd/trd.md` — Technical implementation blueprint.
-- `docs/specs/general-setup/` — Templates `/sdd-specify` MUST follow.
+- `docs/specs/general-setup/` — Templates `/akili-specify` MUST follow.
 - `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` — Authoritative spec for bilateral result payloads.
 - `onecgiar-pr-client/CLAUDE.md` — Frontend conventions (auth header, API base URLs, commit format).
 - `.cursorrules` — Security rule (no secrets in logs).

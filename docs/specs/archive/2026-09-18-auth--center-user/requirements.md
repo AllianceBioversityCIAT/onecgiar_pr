@@ -5,7 +5,7 @@
 - **Module:** `auth`
 - **Sub-feature:** `center-user`
 - **Owner:** Platform admin / PRMS engineering
-- **Status:** `in-progress`
+- **Status:** `deferred` (archived 2026-09-18 — no active owner; partial code in repo)
 - **Ticket(s):** P2-3096, P2-3098, P2-3099
 
 ---

@@ -9,7 +9,7 @@
 | Design | `./design.md` |
 | Depth | **Standard** |
 | Budget (from `design.md` §14) | **5 tasks · ~130 LOC · 1 review round** — a tripwire; exceeding it escalates, it does not fail |
-| Status | draft |
+| Status | shipped |
 
 ---
 

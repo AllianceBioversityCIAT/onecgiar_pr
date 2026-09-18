@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -54,6 +55,16 @@ class BilateralIndicatorTargetDto {
 }
 
 class BilateralResultTocBlockDto {
+  @ApiPropertyOptional({
+    description:
+      'Request-only intent flag: project_default (YES) or custom (NO). Never stored.',
+    enum: ['project_default', 'custom'],
+  })
+  @IsIn(['project_default', 'custom'])
+  @IsString()
+  @IsOptional()
+  toc_linkage_mode?: 'project_default' | 'custom';
+
   @ApiPropertyOptional()
   @IsBoolean()
   @IsOptional()
@@ -78,6 +89,16 @@ class BilateralResultTocBlockDto {
 }
 
 export class SaveBilateralTocMappingDto {
+  @ApiPropertyOptional({
+    description:
+      'Request-only intent flag: project_default (YES) or custom (NO). Never stored.',
+    enum: ['project_default', 'custom'],
+  })
+  @IsIn(['project_default', 'custom'])
+  @IsString()
+  @IsOptional()
+  toc_linkage_mode?: 'project_default' | 'custom';
+
   @ApiPropertyOptional({ type: () => BilateralResultTocBlockDto })
   @IsObject()
   @IsOptional()

@@ -72,6 +72,25 @@ describe('BilateralCreateDrawerComponent', () => {
     expect(sp?.textContent).toContain('Climate Action');
   });
 
+  it('renders project subtitle below the title when provided', () => {
+    fixture.componentRef.setInput('projectSubtitle', 'Climate adaptation training across partner countries');
+    fixture.detectChanges();
+
+    const subtitleEl = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="bilateral-create-drawer-project-subtitle"]'
+    );
+    expect(subtitleEl?.textContent).toContain('Climate adaptation training');
+    expect(subtitleEl?.getAttribute('title')).toBe('Climate adaptation training across partner countries');
+  });
+
+  it('omits project subtitle when empty', () => {
+    fixture.componentRef.setInput('projectSubtitle', '');
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="bilateral-create-drawer-project-subtitle"]')
+    ).toBeNull();
+  });
+
   it('truncates long project titles with a native tooltip', () => {
     const longTitle = 'A very long bilateral project title that should clamp to two lines in the drawer header';
     fixture.componentRef.setInput('projectTitle', longTitle);

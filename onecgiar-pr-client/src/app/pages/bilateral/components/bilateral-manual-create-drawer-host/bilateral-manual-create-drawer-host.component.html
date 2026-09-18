@@ -2,6 +2,7 @@
   <app-bilateral-create-drawer
     [projectCode]="flow.drawerProjectCode()"
     [projectTitle]="flow.drawerProjectTitle()"
+    [projectSubtitle]="flow.drawerProjectSubtitle()"
     [programCode]="flow.drawerProgramCode()"
     [programName]="flow.drawerProgramName()"
     [restoreFocusTarget]="restoreFocusTarget()"
@@ -23,8 +24,27 @@
       @if (!flow.selectedReportingWay()) {
         <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6" data-testid="manual-drawer-setup">
           @if (flow.showSpSelectionInDrawer()) {
-            <section class="bmcdh-setup-sp" data-testid="manual-drawer-sp-gate">
-              <p class="m-0 mb-3 text-[14px] text-[var(--pr-text-subtle)]">
+            <section
+              #spSection
+              class="bmcdh-setup-sp"
+              [class.bmcdh-setup-sp--highlight]="highlightSp()"
+              data-testid="manual-drawer-sp-gate">
+              <div class="mb-2.5 flex items-center gap-2">
+                <span
+                  class="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                  [class.bg-[var(--pr-color-primary-300)]]="!flow.canShowCreateForm()"
+                  [class.bg-emerald-600]="flow.canShowCreateForm()">
+                  @if (flow.canShowCreateForm()) {
+                    <span class="material-icons-round text-[14px]">check</span>
+                  } @else {
+                    1
+                  }
+                </span>
+                <h3 class="m-0 text-[14px] font-semibold text-[var(--pr-text-primary)]">
+                  {{ copy.spGate.step1Title }}
+                </h3>
+              </div>
+              <p class="m-0 mb-3 text-[13px] text-[var(--pr-text-subtle)]">
                 {{ copy.spGate.hint }}
               </p>
               <app-bilateral-sp-selector primaryLayout="list" (primarySelected)="scrollToReportingWay()" />
@@ -36,17 +56,41 @@
             class="bmcdh-setup-way"
             [class.bmcdh-setup-way--locked]="!flow.canShowCreateForm()"
             data-testid="manual-drawer-reporting-way">
+            @if (flow.showSpSelectionInDrawer()) {
+              <div class="mb-2.5 flex items-center gap-2">
+                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--pr-color-primary-300)] text-[11px] font-bold text-white">
+                  2
+                </span>
+                <h3 class="m-0 text-[14px] font-semibold text-[var(--pr-text-primary)]">
+                  {{ copy.spGate.step2Title }}
+                </h3>
+              </div>
+            }
+
             @if (flow.showSpSelectionInDrawer() && !flow.canShowCreateForm()) {
-              <p class="bmcdh-setup-way-hint m-0 mb-3 text-[13px] text-[var(--pr-text-subtle)]">
-                {{ copy.spGate.reportingLockedHint }}
-              </p>
+              <button
+                type="button"
+                (click)="onBlockedWayClick()"
+                class="bmcdh-sp-notice mb-3 flex w-full items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left transition-colors hover:bg-amber-100/70"
+                data-testid="manual-drawer-sp-notice">
+                <span class="material-icons-round mt-0.5 text-[18px] text-amber-700" aria-hidden="true">touch_app</span>
+                <div class="flex-1">
+                  <span class="block text-[13px] font-semibold text-amber-900">
+                    {{ copy.spGate.spRequiredNoticeTitle }}
+                  </span>
+                  <span class="block text-[12px] text-amber-800">
+                    {{ copy.spGate.spRequiredNoticeDesc }}
+                  </span>
+                </div>
+              </button>
             }
             <app-bilateral-reporting-way-selector
               [isLoading]="flow.isCreating()"
               [canUseAi]="flow.canUseAi()"
               [primaryReady]="flow.canShowCreateForm()"
               [selectedWay]="flow.selectedReportingWay()"
-              (waySelected)="flow.selectReportingWay($event)" />
+              (waySelected)="flow.selectReportingWay($event)"
+              (blockedClick)="onBlockedWayClick()" />
           </section>
         </div>
       } @else if (flow.selectedReportingWay() === 'ai') {
@@ -57,6 +101,13 @@
         <app-bilateral-manual-create-form
           class="block h-full min-h-0 flex-1"
           [creating]="flow.isCreating()"
+          [projectCode]="flow.drawerProjectCode()"
+          [projectTitle]="flow.drawerProjectTitle()"
+          [projectSummary]="flow.drawerProjectSummary()"
+          [projectDescription]="flow.drawerProjectDescription()"
+          [leadCenterAcronym]="flow.drawerLeadCenterAcronym()"
+          [programCode]="flow.drawerProgramCode()"
+          [programName]="flow.drawerProgramName()"
           (create)="flow.submitCreate($event)" />
       }
     </div>

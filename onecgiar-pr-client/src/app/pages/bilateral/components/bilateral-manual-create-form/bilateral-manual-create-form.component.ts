@@ -83,6 +83,14 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
 
   readonly creating = input(false);
+  // @akili-spec changes/kp-project-match — KPPJ-R-9
+  readonly projectCode = input<string>('');
+  readonly projectTitle = input<string>('');
+  readonly projectSummary = input<string>('');
+  readonly projectDescription = input<string>('');
+  readonly leadCenterAcronym = input<string>('');
+  readonly programCode = input<string>('');
+  readonly programName = input<string>('');
   readonly create = output<BilateralManualCreatePayload>();
 
   readonly resultLevelId = signal<number | null>(null);
@@ -223,7 +231,9 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
   }
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    // Prefer hdl.handle.net link for create-header; itemUrl remains valid but needs server-side
+    // extractHandleIdentifier passthrough for DSpace `/items/<uuid>` URLs.
+    const url = item.handleUrl || item.itemUrl || item.handle;
     this.validatingKpHandle.set(true);
     this.kpEntryMode.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');

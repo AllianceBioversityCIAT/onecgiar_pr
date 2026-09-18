@@ -86,7 +86,8 @@
     @if (showIndicators() && activeTab.toc_result_id) {
       @if (this.indicatorsList().length) {
         <app-pr-select
-          [options]="this.indicatorsList()"
+          [options]="indicatorOptions()"
+          disableOptionsText="(Already selected in another tab) "
           [label]="indicatorLabel()"
           [tooltip]="indicatorHelp()"
           [editable]="editable"

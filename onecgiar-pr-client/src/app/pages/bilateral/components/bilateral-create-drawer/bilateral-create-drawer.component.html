@@ -48,6 +48,14 @@
           @if (projectTitle()) {
             <p class="bcd-context__title" [attr.title]="projectTitle()">{{ projectTitle() }}</p>
           }
+          @if (projectSubtitle()) {
+            <p
+              class="bcd-context__subtitle"
+              data-testid="bilateral-create-drawer-project-subtitle"
+              [attr.title]="projectSubtitle()">
+              {{ projectSubtitle() }}
+            </p>
+          }
         </div>
       </div>
     }

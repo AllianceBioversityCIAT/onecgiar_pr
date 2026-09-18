@@ -126,6 +126,7 @@ describe('CgspaceDiscoveryMapper', () => {
           ...item,
           repository: 'cgspace',
           programAccelerators: [],
+          projects: [],
         })),
       );
     });
@@ -313,6 +314,7 @@ describe('CgspaceDiscoveryMapper', () => {
         uri: '',
         repository: 'cgspace',
         programAccelerators: [],
+        projects: [],
       });
     });
 
@@ -391,6 +393,60 @@ describe('CgspaceDiscoveryMapper', () => {
         worldfishAdapter,
       );
       expect(itemWithEmptyField.programAccelerators).toEqual([]);
+    });
+  });
+
+  describe('toItem — projects extraction (KPPJ-R-1, KPPJ-AC-1)', () => {
+    it('extracts projects when cg.identifier.project has entries', () => {
+      const node = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'proj-item-uuid',
+            handle: '10568/54321',
+            metadata: {
+              'cg.identifier.project': [
+                { value: 'IRRI - USDA Fertilize Right Project' },
+              ],
+            },
+          },
+        },
+      };
+
+      const item = mapper.toItem(node, cgspaceAdapter);
+      expect(item.projects).toEqual(['IRRI - USDA Fertilize Right Project']);
+    });
+
+    it('returns empty array when cg.identifier.project is absent or empty', () => {
+      const nodeWithoutField = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'mel-uuid',
+            handle: '20.500.11766/100',
+            metadata: {},
+          },
+        },
+      };
+
+      const itemWithoutField = mapper.toItem(nodeWithoutField, melspaceAdapter);
+      expect(itemWithoutField.projects).toEqual([]);
+
+      const nodeWithEmptyField = {
+        _embedded: {
+          indexableObject: {
+            uuid: 'wf-uuid',
+            handle: '20.500.12348/200',
+            metadata: {
+              'cg.identifier.project': [],
+            },
+          },
+        },
+      };
+
+      const itemWithEmptyField = mapper.toItem(
+        nodeWithEmptyField,
+        worldfishAdapter,
+      );
+      expect(itemWithEmptyField.projects).toEqual([]);
     });
   });
 

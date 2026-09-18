@@ -1387,6 +1387,13 @@ describe('ProgrammeResultsComponent', () => {
       expect(component.cellText(rowFor(8702), 'aow')).toBe('Not tagged');
     });
 
+    it('renders Emerging in the AoW cell when section is UNTAGGED and plannedResult is 0 (EMG-R-4)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      const row = rowFor(8702);
+      row.plannedResult = 0;
+      expect(component.cellText(row, 'aow')).toBe('Emerging');
+    });
+
     it('renders the code in the heading colour and +N in --pr-text-muted, textContent still "AOW01 +1" (design.md §6.3)', () => {
       setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
       fixture.detectChanges();

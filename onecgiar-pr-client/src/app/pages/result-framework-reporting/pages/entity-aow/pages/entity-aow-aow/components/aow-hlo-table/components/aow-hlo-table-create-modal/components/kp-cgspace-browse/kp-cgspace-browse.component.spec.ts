@@ -236,9 +236,7 @@ describe('KpCgspaceBrowseComponent', () => {
       expect(component.status()).toBe('empty');
       const emptyEl = fixture.debugElement.query(By.css('[data-test="cgspace-empty"]'));
       expect(emptyEl).toBeTruthy();
-      expect(emptyEl.nativeElement.textContent).toContain(
-        'No items found in the selected repositories for this search. Try different terms or use Manual entry.'
-      );
+      expect(emptyEl.nativeElement.textContent).toContain('No items found for this search');
     }));
   });
 
@@ -1629,6 +1627,329 @@ describe('KpCgspaceBrowseComponent', () => {
 
         const toggleBtn = fixture.nativeElement.querySelector('[data-test="kp-only-matches-toggle"]');
         expect(toggleBtn).toBeNull();
+      });
+    });
+  });
+
+  describe('KPPJ: Project Match and Badging', () => {
+    const createProjectItem = (
+      id: string,
+      title: string,
+      projects?: string[],
+      accelerators?: string[]
+    ): CgspaceItemDto => ({
+      uuid: `uuid-${id}`,
+      handle: `10568/${id}`,
+      handleUrl: `https://hdl.handle.net/10568/${id}`,
+      itemUrl: `https://cgspace.cgiar.org/items/uuid-${id}`,
+      title,
+      type: 'Report',
+      year: 2026,
+      authors: ['Author One'],
+      affiliations: ['International Rice Research Institute'],
+      countries: ['Kenya'],
+      doi: null,
+      uri: `https://hdl.handle.net/10568/${id}`,
+      repository: 'cgspace',
+      projects,
+      programAccelerators: accelerators
+    });
+
+    describe('Gate D3 / KPPJ-R-4: matchesProject normalization', () => {
+      beforeEach(() => {
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput(
+          'projectTitle',
+          'Accelerating Impacts of CGIAR Climate Research for Africa'
+        );
+        fixture.detectChanges();
+      });
+
+      it('should match project code token in metadata tag', () => {
+        const item = createProjectItem('code', 'Code match', ['A-AG10156 - AICCRA Project']);
+        expect(component.matchesProject(item)).toBe(true);
+      });
+
+      it('should match project title substring in metadata tag', () => {
+        const item = createProjectItem('title', 'Title match', [
+          'AICCRA - Accelerating Impacts of CGIAR Climate Research for Africa'
+        ]);
+        expect(component.matchesProject(item)).toBe(true);
+      });
+
+      it('should return false for unrelated project tag', () => {
+        const item = createProjectItem('other', 'Other project', ['IRRI - USDA Fertilize Right Project']);
+        expect(component.matchesProject(item)).toBe(false);
+        expect(component.projectMatchCount()).toBe(0);
+      });
+
+      it('should return false when project inputs are empty', () => {
+        fixture.componentRef.setInput('projectCode', '');
+        fixture.componentRef.setInput('projectTitle', '');
+        fixture.detectChanges();
+
+        const item = createProjectItem('test', 'Tagged', ['A-AG10156 - AICCRA Project']);
+        expect(component.matchesProject(item)).toBe(false);
+      });
+
+      it('should match repository project tag via camelCase project title (FertilizeRight)', () => {
+        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
+        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+        fixture.detectChanges();
+
+        const plainTag = createProjectItem('plain', 'Plain tag', [
+          'IRRI - USDA Fertilize Right Project'
+        ]);
+        const prefixedTag = createProjectItem('prefixed', 'Prefixed tag', [
+          'KP1058 - IRRI - USDA Fertilize Right Project'
+        ]);
+
+        expect(component.matchesProject(plainTag)).toBe(true);
+        expect(component.matchesProject(prefixedTag)).toBe(true);
+      });
+
+      it('should match via CLARISA summary when fullName typo misses repository tag (FetilizeRight)', () => {
+        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
+        fixture.componentRef.setInput('projectTitle', 'FetilizeRight');
+        fixture.componentRef.setInput('projectSummary', 'Fertilize Right Vietnam');
+        fixture.componentRef.setInput('leadCenterAcronym', 'IRRI');
+        fixture.detectChanges();
+
+        const tagged = createProjectItem('tagged', 'Tagged', [
+          'IRRI - USDA Fertilize Right Project'
+        ]);
+
+        expect(component.matchesProject(tagged)).toBe(true);
+      });
+    });
+
+    describe('Gate D3 / KPPJ-R-8: combined soft-sort with SP context', () => {
+      beforeEach(() => {
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
+        fixture.componentRef.setInput('programCode', 'SP06');
+        fixture.componentRef.setInput('programName', 'Climate Action');
+        fixture.detectChanges();
+      });
+
+      it('should order project match, then SP-only, then neither', () => {
+        const both = createProjectItem('both', 'Both', ['A-AG10156 - AICCRA Project'], ['SP06 - Climate Action']);
+        const projectOnly = createProjectItem('proj', 'Project only', ['A-AG10156 - AICCRA Project']);
+        const spOnly = createProjectItem('sp', 'SP only', ['Other'], ['SP06 - Climate Action']);
+        const neither = createProjectItem('none', 'Neither', ['Unrelated']);
+
+        component.items.set([neither, spOnly, projectOnly, both]);
+
+        expect(component.displayItems()).toEqual([projectOnly, both, spOnly, neither]);
+      });
+    });
+
+    describe('Gate D5 / bilateral browse UX (filter clarity, no auto-search)', () => {
+      it('should not pre-fill the search box or auto-query on bilateral open', fakeAsync(() => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
+        fixture.componentRef.setInput('projectTitle', 'FetilizeRight');
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.detectChanges();
+        tick(500);
+        fixture.detectChanges();
+
+        expect(component.query()).toBe('');
+        expect(component.status()).toBe('idle');
+        expect(mockResultsApiService.GET_cgspaceSearch).not.toHaveBeenCalled();
+
+        const idleEl = fixture.nativeElement.querySelector('[data-test="cgspace-idle"]');
+        expect(idleEl.textContent).toContain('cg.identifier.project');
+      }));
+
+      it('should explain cg.identifier.project when results have no project tag matches', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
+        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.detectChanges();
+
+        const item = createProjectItem('1', 'Untagged', []);
+        component.status.set('results');
+        component.items.set([item]);
+        component.total.set(1);
+        fixture.detectChanges();
+
+        const notice = fixture.nativeElement.querySelector('[data-test="kp-project-match-zero-notice"]');
+        expect(notice).toBeTruthy();
+        expect(notice.textContent).toContain('Info');
+        expect(notice.textContent).toContain('cg.identifier.project');
+        expect(notice.textContent).toContain('No project tags matched');
+        expect(notice.textContent).toContain('still matched your search and filters');
+      });
+
+      it('should explain search text vs project tags when query is present and SP matches exist', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'R-A-2022-8');
+        fixture.componentRef.setInput('projectTitle', 'Salt-Drought Tolerant Rice Cultivars');
+        fixture.componentRef.setInput('programCode', 'SP01');
+        fixture.componentRef.setInput('programName', 'Breeding for Tomorrow');
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.detectChanges();
+
+        component.query.set('IRRI - USDA Fertilize Right');
+        component.status.set('results');
+        component.items.set([
+          createProjectItem('1', 'Tagged SP only', [], ['SP01 - Breeding for Tomorrow']),
+          createProjectItem('2', 'Untagged', [])
+        ]);
+        component.total.set(2);
+        fixture.detectChanges();
+
+        const notice = fixture.nativeElement.querySelector('[data-test="kp-project-match-zero-notice"]');
+        expect(notice?.textContent).toContain('IRRI - USDA Fertilize Right');
+        expect(notice?.textContent).toContain('title, author, or DOI');
+        expect(notice?.textContent).toContain('Matches Breeding for Tomorrow');
+        expect(notice?.textContent).toContain('Science Program highlight');
+      });
+
+      it('should render applied filters summary only in bilateral browse', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
+        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+        fixture.componentRef.setInput('phaseYear', 2026);
+        component.query.set('Fertilize Right');
+        fixture.detectChanges();
+
+        const summary = fixture.nativeElement.querySelector('[data-test="kp-active-filters-summary"]');
+        expect(summary).toBeTruthy();
+        expect(summary.textContent).toContain('Applied filters');
+        expect(summary.textContent).toContain('Filter by project tag');
+        expect(summary.textContent).toContain('OFF');
+        expect(summary.textContent).toContain('Project highlight');
+        expect(summary.textContent).toContain('R-A-2023-56');
+      });
+
+      it('should not render applied filters summary outside bilateral browse', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', false);
+        fixture.componentRef.setInput('phaseYear', 2026);
+        component.query.set('maize');
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('[data-test="kp-active-filters-summary"]')).toBeFalsy();
+      });
+
+      it('should explain unavailable repositories and active filters in bilateral empty state', fakeAsync(() => {
+        mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+          of({
+            response: {
+              items: [],
+              page: { totalElements: 0 },
+              sources: [
+                { repository: 'cgspace', status: 'timeout', total: 0 },
+                { repository: 'melspace', status: 'ok', total: 0 },
+                { repository: 'worldfish', status: 'ok', total: 0 }
+              ]
+            },
+            status: 200
+          })
+        );
+
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
+        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.detectChanges();
+
+        component.query.set('Fertilize Right');
+        component.runSearch(0);
+        tick();
+        fixture.detectChanges();
+
+        const emptyEl = fixture.nativeElement.querySelector('[data-test="cgspace-empty"]');
+        expect(emptyEl.textContent).toContain('No items found for this search');
+        expect(fixture.nativeElement.querySelector('[data-test="kp-empty-partial-notice"]')?.textContent).toContain(
+          'CGSpace did not respond'
+        );
+        expect(fixture.nativeElement.querySelector('[data-test="kp-empty-active-filters"]')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('[data-test="kp-empty-hints"]')).toBeTruthy();
+      }));
+    });
+
+    describe('Gate D4 / bilateral repository project facet filter', () => {
+      it('should omit project param by default so soft-match can surface repository-tagged items', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'R-A-2023-56');
+        fixture.componentRef.setInput('projectTitle', 'FertilizeRight');
+        fixture.detectChanges();
+
+        expect(component.projectRepositoryFilterOn()).toBe(false);
+
+        const params = (component as any).buildSearchParams(0);
+        expect(params.project).toBeUndefined();
+      });
+
+      it('should send project param when bilateral filter chip is opted in', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput(
+          'projectTitle',
+          'Accelerating Impacts of CGIAR Climate Research for Africa'
+        );
+        component.projectRepositoryFilterOn.set(true);
+        fixture.detectChanges();
+
+        const params = (component as any).buildSearchParams(0);
+        expect(params.project).toBe(
+          'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa'
+        );
+      });
+
+      it('should omit project param when bilateral filter chip is toggled off', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', true);
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
+        component.projectRepositoryFilterOn.set(false);
+        fixture.detectChanges();
+
+        const params = (component as any).buildSearchParams(0);
+        expect(params.project).toBeUndefined();
+      });
+
+      it('should not show project filter chip outside bilateral context', () => {
+        fixture.componentRef.setInput('enableProjectRepositoryFilter', false);
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.detectChanges();
+
+        expect(component.showProjectRepositoryFilterChip()).toBe(false);
+      });
+    });
+
+    describe('Gate D3 / KPPJ-R-5 / KPPJ-R-6 / KPPJ-R-7: project badge, counter, toggle', () => {
+      it('should render project badge and filter with contextual toggle', () => {
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
+        fixture.detectChanges();
+
+        const match = createProjectItem('1', 'Match', ['A-AG10156 - AICCRA Project']);
+        const other = createProjectItem('2', 'Other', ['Unrelated']);
+        const other2 = createProjectItem('3', 'Other 2', []);
+
+        component.status.set('results');
+        component.items.set([other, match, other2]);
+        component.total.set(3);
+        fixture.detectChanges();
+
+        const counter = fixture.nativeElement.querySelector('[data-test="kp-results-counter"]');
+        expect(counter.textContent).toContain('1 match A-AG10156');
+
+        const firstCard = fixture.nativeElement.querySelectorAll('.rounded-xl.p-4.bg-white')[0];
+        const projectBadge = firstCard.querySelector('.kp-project-match-badge');
+        expect(projectBadge).toBeTruthy();
+        expect(projectBadge.textContent.trim()).toContain('Matches A-AG10156');
+        expect(projectBadge.getAttribute('aria-label')).toBe('Matches project: AICCRA Project');
+
+        const toggleBtn = fixture.nativeElement.querySelector('[data-test="kp-only-matches-toggle"]');
+        toggleBtn.click();
+        fixture.detectChanges();
+
+        expect(component.displayItems()).toEqual([match]);
       });
     });
   });
