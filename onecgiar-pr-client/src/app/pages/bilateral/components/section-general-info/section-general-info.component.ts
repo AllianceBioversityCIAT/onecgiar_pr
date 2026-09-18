@@ -10,6 +10,7 @@ import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component'
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { BilateralChangeResultTypeDialogComponent } from '../bilateral-change-result-type-dialog/bilateral-change-result-type-dialog.component';
+import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { User } from '../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { environment } from '../../../../../environments/environment';
@@ -88,7 +89,7 @@ const TAG_LEVELS = [
 
 @Component({
   selector: 'app-section-general-info',
-  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule, BilateralChangeResultTypeDialogComponent],
+  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule, BilateralChangeResultTypeDialogComponent, BilateralFieldQualityFlagComponent],
   templateUrl: './section-general-info.component.html',
   styleUrl: './section-general-info.component.scss'
 })

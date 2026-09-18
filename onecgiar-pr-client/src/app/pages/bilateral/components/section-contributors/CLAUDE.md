@@ -1,11 +1,14 @@
 # section-contributors
 
-**Verified:** 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables (el bloque de ToC ya no gatea el Submit)
+**Verified:** 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección; prior: 2026-09-09 · ToC no gatea el Submit
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
 centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, socios externos, y
 —detrás del toggle Full Metadata— la pregunta de resultado enlazado/agrupado. Historia: **P2-3368**.
+
+Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de campo específica,
+`app-bilateral-field-quality-flag` muestra el feedback de Contributors & Partners.
 
 ## Contrato
 - **Estado ajeno (fuente de verdad):** `BilateralCreationService` — el resultado cargado

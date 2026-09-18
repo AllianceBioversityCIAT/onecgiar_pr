@@ -23,6 +23,8 @@ export interface BilateralQualityAssessmentView {
     score?: number | null;
     comments?: string | null;
     strengths?: string[];
+    /** AI-side field names the issues point at. Stored and carried; nothing renders them yet. */
+    fields?: string[];
     issues?: string[];
   }>;
   evidence: Array<{ index: number; verdict: QualityVerdict; reason: string }>;
@@ -97,6 +99,69 @@ export class BilateralQualityAssessmentUiService {
       map((envelope: { response: BilateralQualityAssessmentView | { latest: null } }) => envelope.response),
       map((response) => 'latest' in response ? response.latest : response),
     );
+  }
+
+  /**
+   * The AI's flag for one form field, or `null` when there is nothing to show.
+   *
+   * ⚠️ `fields` is section-level, NOT paired with `issues`: the AI sends "these are the fields this
+   * section's feedback concerns" (geographic_location came back with 1 issue and 4 fields). So the
+   * comments returned here are the SECTION's, not the field's — there is no per-field comment in
+   * the contract to return. Getting one is a contract ask, not a client change.
+   *
+   * Green and grey never flag: green has nothing to correct and grey means the AI could not
+   * evaluate it. A stale assessment STILL flags: once the reporter starts correcting a field, the
+   * server correctly invalidates the assessment for submission, but hiding the instruction at that
+   * point removes the only guidance the reporter is using to make the correction. Freshness is
+   * enforced by submit-for-review, not by this read-only aid.
+   */
+  flagForField(sectionKey: string, field: string): { verdict: QualityVerdict; issues: string[] } | null {
+    const assessment = this.assessment();
+    if (!assessment) return null;
+    const section = assessment.sections?.[sectionKey];
+    if (!section) return null;
+    if (section.verdict !== 'amber' && section.verdict !== 'red') return null;
+    if (!section.fields?.includes(field)) return null;
+    return { verdict: section.verdict, issues: section.issues ?? [] };
+  }
+
+  /**
+   * How many field-level markers are currently ON SCREEN per section, kept by the markers
+   * themselves. It exists so {@link flagForSection} can step back when the fields already carry the
+   * message: both render the same text — the issues are section-level — so showing both said
+   * everything twice (feedback 2026-09-18).
+   *
+   * A live count rather than a hand-kept list: place a field marker anywhere and the section note
+   * yields automatically, and a marker whose field the AI did not name never registers, so the
+   * section note still appears. A list would rot the first time someone forgets to update it.
+   */
+  private readonly renderedFieldMarkers = signal<Record<string, number>>({});
+
+  setFieldMarkerRendered(sectionKey: string, rendered: boolean): void {
+    this.renderedFieldMarkers.update((counts) => {
+      const next = (counts[sectionKey] ?? 0) + (rendered ? 1 : -1);
+      return { ...counts, [sectionKey]: Math.max(0, next) };
+    });
+  }
+
+  /**
+   * The AI's flag for a whole section. Same gates as {@link flagForField} — amber/red only,
+   * including an assessment that became stale while the reporter is applying its feedback.
+   *
+   * This is what guarantees the feedback is on screen wherever the window's "Go to <section>" link
+   * drops the reporter: field-level flags only exist for fields the AI named and that we placed a
+   * marker on, so without this a reporter could follow the link and arrive at a section showing
+   * nothing.
+   */
+  flagForSection(sectionKey: string): { verdict: QualityVerdict; issues: string[] } | null {
+    const assessment = this.assessment();
+    if (!assessment) return null;
+    const section = assessment.sections?.[sectionKey];
+    if (!section) return null;
+    if (section.verdict !== 'amber' && section.verdict !== 'red') return null;
+    // Yield to the fields when they are already saying it.
+    if ((this.renderedFieldMarkers()[sectionKey] ?? 0) > 0) return null;
+    return { verdict: section.verdict, issues: section.issues ?? [] };
   }
 
   openStored(): void {

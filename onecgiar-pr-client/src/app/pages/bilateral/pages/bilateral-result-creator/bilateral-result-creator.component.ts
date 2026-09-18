@@ -735,6 +735,41 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * The five AI section keys onto the editor's own section names. Closed set — these are the five
+   * of P2-3150 AC2 and the AI does not invent others; an unknown key is ignored rather than
+   * navigating somewhere arbitrary.
+   */
+  private static readonly QUALITY_SECTION_TO_EDITOR: Record<string, BilateralEditorSection> = {
+    general_information: 'general-info',
+    contributors_and_partners: 'contributors',
+    geographic_location: 'geography',
+    evidence: 'evidence',
+    type_specific: 'type-specific',
+  };
+
+  /**
+   * QA feedback (2026-09-18): the reporter reads an amber/red comment in the window and, by the
+   * time they reach the form, no longer remembers what it said. Closing straight onto the offending
+   * section is the cheap half of that ask. The verdict is not lost — it stays on the rail card and
+   * "View AI assessment" reopens this same window.
+   */
+  goToQualitySection(sectionKey: string): void {
+    const target = BilateralResultCreatorComponent.QUALITY_SECTION_TO_EDITOR[sectionKey];
+    if (!target) return;
+    // Only close once the section is known: a key we cannot map must leave the window open rather
+    // than dismiss it and do nothing, which would read as a broken button.
+    this.qualityAssessment.close();
+    this.selectSection(target);
+    // The editor renders ONE section at a time, so there is no element to scroll to — selecting it
+    // already swapped the content. What the reporter needs is the column back at the top, because
+    // they were most likely scrolled down when they opened the window.
+    setTimeout(() => {
+      const column = document.querySelector('.bcr-scroll');
+      column?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
+  }
+
   openQualityAssessment(event: MouseEvent): void {
     this.qualityAssessmentTrigger = event.currentTarget as HTMLElement;
     this.qualityAssessment.openStored();

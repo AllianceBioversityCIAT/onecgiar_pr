@@ -481,6 +481,62 @@ describe('BilateralQualityAssessmentClient', () => {
     });
   });
 
+  describe('section fields (2026-09-18)', () => {
+    // The AI started annotating which form fields each issue points at, with no contract bump.
+    // PRMS only stores them for now; the per-field traffic light is separate work.
+    it('carries fields through to the stored section', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.general_information.fields = ['title', 'description'];
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information?.fields).toEqual([
+          'title',
+          'description',
+        ]);
+      }
+    });
+
+    it('omits the key when the AI does not send it', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const client = makeClient(
+        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
+      );
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information).not.toHaveProperty(
+          'fields',
+        );
+      }
+    });
+
+    // 🛑 The `type_specific` lesson: an optional annotation must never cost the whole verdict.
+    it('cleans a malformed fields instead of rejecting the response', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.general_information.fields = 'title';
+      body.sections.evidence.fields = ['ok', 42, null];
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information).not.toHaveProperty(
+          'fields',
+        );
+        expect(result.response.sections.evidence?.fields).toEqual(['ok']);
+      }
+    });
+  });
+
   describe('type_specific is optional', () => {
     // 🛑 Result 11883 (Other output, 17-sep-2026): the AI answered `completed` with four good
     // sections and no `type_specific`, because that result type HAS no type-specific section. The
