@@ -385,6 +385,20 @@ export class BilateralCenterService {
       }
     }
 
+    if (dto.contributing_programs && dto.contributing_programs.length > 0) {
+      const contribSyncResult = {
+        savedPrograms: [] as string[],
+        failedPrograms: [] as string[],
+        deactivatedPrograms: [] as number[],
+      };
+      await this.syncContributingPrograms(
+        result.id,
+        dto.contributing_programs,
+        user,
+        contribSyncResult,
+      );
+    }
+
     // The lead centre is resolved server-side rather than trusted from the payload.
     // The client builds `lead_center` from `obj_organization`, a join on the project's
     // `organization_code` — which CLARISA's W3 sync leaves NULL for the Alliance-descended

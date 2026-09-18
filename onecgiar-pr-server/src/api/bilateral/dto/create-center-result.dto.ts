@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -9,6 +10,7 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { ContributingScienceProgramDto } from './save-bilateral-contributors.dto';
 
 export class LeadCenterDto {
   @ApiPropertyOptional({ description: 'Institution ID', example: 49 })
@@ -55,6 +57,17 @@ export class CreateCenterResultDto {
   @IsString()
   @IsOptional()
   program_code?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Contributing Science Programs / Accelerators by official code (e.g. [{ science_program_id: "SP06" }]).',
+    type: [ContributingScienceProgramDto],
+  })
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ContributingScienceProgramDto)
+  contributing_programs?: ContributingScienceProgramDto[];
 
   @ApiPropertyOptional({
     description: 'Lead center information',

@@ -634,6 +634,23 @@ describe('BilateralCreationService', () => {
       });
     });
 
+    it('sends contributing_programs when secondary SPs are selected', () => {
+      service.resetWizard();
+      service.selectPrimarySp({ programId: 1, programCode: 'SP01', allocation: '60' });
+      service.selectedSecondarySps.set([
+        { programId: 2, programCode: 'SP02', allocation: '40' },
+      ]);
+
+      service.createResult(1, 2).subscribe();
+
+      expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({
+        result_level_id: 1,
+        result_type_id: 2,
+        program_code: 'SP01',
+        contributing_programs: [{ science_program_id: 'SP02' }],
+      });
+    });
+
     it('adds the lead center and the project id from the selected project', () => {
       service.resetWizard();
       service.selectProject({

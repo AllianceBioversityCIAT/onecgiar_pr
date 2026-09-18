@@ -198,7 +198,7 @@ describe('BilateralProjectsPanelComponent', () => {
    * Before the fix, picking a primary SP on a project with secondary SPs threw `NullInjectorError`
    * the moment the accordion instantiated, taking the whole drawer down.
    */
-  it('lets a primary SP pick with secondary SPs render the "coming soon" accordion in the manual-create drawer without throwing', () => {
+  it('lets a primary SP pick with secondary SPs render the inline contributing section in the manual-create drawer without throwing', () => {
     const event = { preventDefault: jest.fn() } as unknown as Event;
     // B-A1368 (mockProjects[1]) carries 2 sciencePrograms — Breeding (primary pick) + Genebank
     // (left over as a secondary chip), so `showSpSelectionInDrawer()` is true and no SP is
@@ -217,7 +217,7 @@ describe('BilateralProjectsPanelComponent', () => {
       fixture.detectChanges();
     }).not.toThrow();
 
-    expect(fixture.nativeElement.querySelector('.bp-accordion-header')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="sps-contributing-inline"]')).toBeTruthy();
   });
 
   it('should set error state if API fails', () => {

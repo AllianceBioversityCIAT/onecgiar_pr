@@ -21,6 +21,7 @@ export class BilateralAccordionComponent {
   mdsStatus = input<MdsStatus>('empty');
   resultId = input<number | null>(null);
   openSectionName = model<string | null>(null);
+  showTracker = input<boolean>(true);
 
   private readonly expandStateService = inject(BilateralExpandableStateService);
   /**

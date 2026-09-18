@@ -127,6 +127,8 @@ describe('BilateralCenterService', () => {
           useValue: {
             getOwnerInitiativeByResult: jest.fn().mockResolvedValue({ id: 1 }),
             save: jest.fn().mockResolvedValue({}),
+            find: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue({}),
           },
         },
         {
@@ -421,6 +423,37 @@ describe('BilateralCenterService', () => {
       expect(resultRepository.update).toHaveBeenCalledWith(99, {
         title: 'Bilateral Draft #99',
       });
+    });
+
+    it('creates draft share_result_request rows when contributing_programs are supplied', async () => {
+      const clarisaRepo = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      );
+      (clarisaRepo.findOne as jest.Mock).mockImplementation(({ where }: any) => {
+        if (where.official_code === 'SP01') return Promise.resolve({ id: 10, official_code: 'SP01' });
+        if (where.official_code === 'SP02') return Promise.resolve({ id: 20, official_code: 'SP02' });
+        return Promise.resolve(null);
+      });
+
+      const shareRepo = module.get<ShareResultRequestRepository>(
+        ShareResultRequestRepository,
+      );
+
+      await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+        program_code: 'SP01',
+        contributing_programs: [{ science_program_id: 'SP02' }],
+      });
+
+      expect(shareRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 99,
+          shared_inititiative_id: 20,
+          request_status_id: 4,
+          is_active: true,
+        }),
+      );
     });
 
     it('still populates KP from CGSpace when a client title is provided', async () => {

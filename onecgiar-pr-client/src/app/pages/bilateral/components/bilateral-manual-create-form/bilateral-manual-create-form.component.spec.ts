@@ -145,6 +145,19 @@ describe('BilateralManualCreateFormComponent', () => {
     expect(component.canCreate()).toBe(false);
   }));
 
+  it('shows a full-form creating overlay with spinner while create is in flight', fakeAsync(() => {
+    fillNonKpForm();
+    completeTitleGate();
+    fixture.componentRef.setInput('creating', true);
+    fixture.detectChanges();
+
+    const overlay = fixture.nativeElement.querySelector('[data-testid="bmcf-creating-overlay"]');
+    expect(overlay).toBeTruthy();
+    expect(overlay.getAttribute('role')).toBe('status');
+    expect(overlay.querySelector('.bmcf-creating-overlay-spinner')).toBeTruthy();
+    expect(overlay.textContent).toContain('Creating…');
+  }));
+
   describe('title uniqueness gate (BIL-MCD-T-4)', () => {
     it('blocks create when exact duplicate found', fakeAsync(() => {
       api.resultsSE.GET_checkTitleUniqueness.mockReturnValue(
@@ -204,6 +217,17 @@ describe('BilateralManualCreateFormComponent', () => {
         'utf8'
       );
       expect(html).toContain('app-kp-cgspace-browse');
+    });
+
+    it('forwards project and program context to kp-cgspace-browse (KPPJ-R-9)', () => {
+      const html = readFileSync(
+        join(__dirname, 'bilateral-manual-create-form.component.html'),
+        'utf8'
+      );
+      expect(html.indexOf('[projectCode]="projectCode()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[projectTitle]="projectTitle()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[programCode]="programCode()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[programName]="programName()"')).toBeGreaterThan(-1);
     });
 
     it('requires synced handle for knowledge product type', () => {

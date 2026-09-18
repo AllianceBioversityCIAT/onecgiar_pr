@@ -83,6 +83,11 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
 
   readonly creating = input(false);
+  // @akili-spec changes/kp-project-match — KPPJ-R-9
+  readonly projectCode = input<string>('');
+  readonly projectTitle = input<string>('');
+  readonly programCode = input<string>('');
+  readonly programName = input<string>('');
   readonly create = output<BilateralManualCreatePayload>();
 
   readonly resultLevelId = signal<number | null>(null);
