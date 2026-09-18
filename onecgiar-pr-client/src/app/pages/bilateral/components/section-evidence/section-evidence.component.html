@@ -4,6 +4,8 @@
      differences, on purpose: no per-evidence impact-area / result-type checkboxes (not MDS here —
      Juan, 2026-09-03) and no readiness-level rules. -->
 <div class="sev-fields" [class.sev-fields--busy]="isSaving()">
+  <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
+  <app-bilateral-field-quality-flag section="evidence" />
   <app-alert-status
     status="info"
     [collapsible]="false"

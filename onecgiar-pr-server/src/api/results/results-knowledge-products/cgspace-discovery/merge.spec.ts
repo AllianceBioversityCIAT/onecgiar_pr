@@ -30,6 +30,7 @@ function makeItem(
     repository: overrides.repository,
     alsoIn: overrides.alsoIn,
     programAccelerators: overrides.programAccelerators,
+    projects: overrides.projects,
   };
 }
 
@@ -388,6 +389,31 @@ describe('dedupe', () => {
       'Sustainable Farming',
       'Climate Action',
       'Breeding for Tomorrow',
+    ]);
+  });
+
+  it('unions and deduplicates projects across duplicate items (KPPJ-R-2, KPPJ-AC-2)', () => {
+    const cgspace = makeItem({
+      repository: 'cgspace',
+      doi: '10.7000/kp-proj-match',
+      projects: ['A-AG10156 - AICCRA Project', 'Proj X'],
+    });
+    const melspace = makeItem({
+      repository: 'melspace',
+      doi: '10.7000/kp-proj-match',
+      projects: ['A-AG10156 - AICCRA Project', 'Proj Y'],
+    });
+
+    const { items, dedupedCount } = dedupe(
+      [cgspace, melspace],
+      ALL_REPOSITORIES,
+    );
+    expect(items).toHaveLength(1);
+    expect(dedupedCount).toBe(1);
+    expect(items[0].projects).toEqual([
+      'A-AG10156 - AICCRA Project',
+      'Proj X',
+      'Proj Y',
     ]);
   });
 });

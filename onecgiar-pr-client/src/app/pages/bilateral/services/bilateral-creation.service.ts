@@ -388,6 +388,7 @@ export class BilateralCreationService {
 
   selectPrimarySp(sp: { programId: number; programCode: string; allocation: string }): void {
     this.selectedPrimarySp.set(sp);
+    this.selectedSecondarySps.update(sps => sps.filter(s => s.programId !== sp.programId));
   }
 
   toggleSecondarySp(sp: { programId: number; programCode: string; allocation: string }): void {
@@ -407,6 +408,14 @@ export class BilateralCreationService {
     const programCode = this.selectedPrimarySp()?.programCode;
     if (programCode) {
       body['program_code'] = programCode;
+    }
+    const secondarySps = this.selectedSecondarySps().filter(
+      sp => sp.programCode !== programCode
+    );
+    if (secondarySps.length > 0) {
+      body['contributing_programs'] = secondarySps.map(sp => ({
+        science_program_id: sp.programCode,
+      }));
     }
     const leadCenter = this.selectedProject()?.leadCenter;
     if (leadCenter) {

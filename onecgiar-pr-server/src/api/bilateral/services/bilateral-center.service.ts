@@ -102,9 +102,16 @@ export class BilateralCenterService {
     private readonly aowBilateralRepository: AoWBilateralRepository,
   ) {}
 
-  async getProjects(centerId: number) {
-    const projects =
-      await this.bilateralProjectsService.getProjectsByCenter(centerId);
+  /**
+   * `changes/project-multiselect-filter` (`PMF-DD-5`): the optional `year` rides along to
+   * the catalog service untouched — that service owns the active-year fallback and the
+   * positive-integer parsing.
+   */
+  async getProjects(centerId: number, year?: number | string) {
+    const projects = await this.bilateralProjectsService.getProjectsByCenter(
+      centerId,
+      year,
+    );
     return { response: projects };
   }
 
@@ -410,6 +417,20 @@ export class BilateralCenterService {
           created_by: user.id,
         });
       }
+    }
+
+    if (dto.contributing_programs && dto.contributing_programs.length > 0) {
+      const contribSyncResult = {
+        savedPrograms: [] as string[],
+        failedPrograms: [] as string[],
+        deactivatedPrograms: [] as number[],
+      };
+      await this.syncContributingPrograms(
+        result.id,
+        dto.contributing_programs,
+        user,
+        contribSyncResult,
+      );
     }
 
     // The lead centre is resolved server-side rather than trusted from the payload.

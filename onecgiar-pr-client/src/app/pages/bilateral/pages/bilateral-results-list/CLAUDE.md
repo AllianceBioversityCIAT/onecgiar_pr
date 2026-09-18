@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-14 · branch qa-development-2026 · 576167f86 · spec `bilateral/center-overview-tab` (`COV-T-2`, `COV-T-8` H-2)
+**Verified:** 2026-09-18 · branch qa-development-2026 · 601b04dbf · spec `changes/project-multiselect-filter` (`PMF-T-1` wave 2, pivot)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -41,6 +41,31 @@ Skipping 3 renders an empty `<td>`; skipping 4 breaks only the export, silently.
 the "Update result" rule and the confirmation modal, and are deliberately absent from
 `BILATERAL_COLUMNS` — only steps 1 and the server SELECT apply to them.
 
+## Project multiselect filter (`changes/project-multiselect-filter`, `PMF-T-1` pivot)
+The Filters popover exposes the shipped `project` URL contract through the same
+`app-pr-filter-multiselect` the Created by field uses — placed between Source and Created by, group
+name `Filter by project`, visible label `Project`.
+- Options come from the **center's own catalog**, never from loaded rows (the pivot: contributing
+  rows display other Centers' projects — 14 of AfricaRice's 20 row projects were foreign — and
+  zero-row catalog projects would never appear). `BilateralApiService.GET_bilateralProjects(centerId,
+  year)` is requested once per selected phase **year** per page lifetime (`selectedPhaseYears`),
+  cached in `projectCatalogByYear`, and unioned/deduped by id into `projectOptions`: labels are
+  trimmed `shortName fullName` (`Project <id>` fallback) sorted case-insensitively, string ids
+  normalize through `normalizeProjectId` (same trap as `phaseVersionId`). A failed year is recorded
+  and never retried — options degrade to the other years or empty. A center switch resets the
+  cache. No project-specific loading/error surface; page states stay authoritative, and selecting
+  a project never refetches rows.
+- Server: `GET /api/bilateral/center/projects` takes an optional positive-integer `year` query
+  (additive, `PMF-DD-5`); `BilateralProjectsService.getProjectsByCenter` resolves
+  `targetYear = year ?? activeYear.year`, ignoring absent/invalid values (never a 5xx) and naming
+  the resolved year in its phase log line. Omitted, the endpoint keeps the old active-year behavior
+  byte-for-byte — the Overview/creation-wizard callers are untouched.
+- `projectSelectOptions` appends URL-selected ids the catalog union does not carry (`Project <id>`
+  label), so a deep link stays ticked and removable — never silently dropped.
+- `onProjectFilterChange` normalizes the emitted array and routes it through the existing
+  `projectFilter` signal, `filterCenterResults` predicate, chips and `syncUrlParams()` — no second
+  state path. Chip removal reuses `removeProjectFilter`; Clear all reuses `clearAllFilters`.
+
 ## "Update result" (P2-3229, P2-3653)
 `canUpdateResult()` delegates to `ApiService.canUpdateBilateral` so this list and the Results Center
 row menu cannot drift: previous phase, Approved, **not a Knowledge Product**, user of the lead centre
@@ -64,8 +89,8 @@ found.
   fixtures MUST use string ids.
 - ⚠️ **Bump `BILATERAL_COLUMN_STORAGE_KEY` whenever a new column must be visible by default.**
   Visibility is persisted per browser in `localStorage`, and a stored map from an older version
-  wins over `defaultOn`, so returning users would never see the new column. Currently `…v3`
-  (v3 = P2-3152 AC6 added Project name and Description). The spec asserts the key by name.
+  wins over `defaultOn`, so returning users would never see the new column. Currently `…v4`
+  (v4 = Created by column; v3 = P2-3152 AC6 Project name and Description). The spec asserts the key by name.
 - ⚠️ **Never widen the project lookup into a `LEFT JOIN` on `results_by_projects`.** A result can
   carry several active project links; the server resolves `project_name` with a correlated
   subquery precisely so the row is not multiplied. `result.repository.spec.ts` pins this.

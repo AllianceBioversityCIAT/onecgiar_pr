@@ -381,6 +381,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 
@@ -412,7 +413,53 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 10px;
+}
+
+.bpp_card_head_right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bpp_results_badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--pr-color-accents-2, #e2e8f0);
+  background: var(--pr-surface-ground, #f8fafc);
+  color: var(--pr-text-subtle, #64748b);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+
+  i {
+    font-size: 10px;
+  }
+
+  &:hover {
+    border-color: var(--pr-color-primary-300, #6b6dc4);
+    color: var(--pr-color-primary-600, #4f46e5);
+    background: var(--pr-color-primary-50, #f5f3ff);
+  }
+
+  &--has-results {
+    background: var(--pr-color-primary-50, #f5f3ff);
+    border-color: var(--pr-color-primary-200, #c7d2fe);
+    color: var(--pr-color-primary-700, #4338ca);
+    font-weight: 600;
+
+    &:hover {
+      background: var(--pr-color-primary-100, #e0e7ff);
+      border-color: var(--pr-color-primary-300, #6b6dc4);
+    }
+  }
 }
 
 .bpp_code_pill {
@@ -522,10 +569,41 @@
 .bpp_card_footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--pr-color-accents-2);
   margin-top: auto;
+}
+
+.bpp_results_footer_link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  color: var(--pr-color-primary-600, #4f46e5);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+
+  i {
+    font-size: 10px;
+    transition: transform 0.15s ease;
+  }
+
+  &:hover {
+    background: var(--pr-color-primary-50, #f5f3ff);
+    color: var(--pr-color-primary-700, #4338ca);
+
+    i {
+      transform: translateX(2px);
+    }
+  }
 }
 
 .bpp_cta_btn {
@@ -663,6 +741,12 @@
     min-width: 240px;
   }
 
+  .bpp_col_results {
+    width: 140px;
+    min-width: 130px;
+    text-align: center;
+  }
+
   .bpp_col_action {
     width: 150px;
     min-width: 140px;
@@ -671,6 +755,7 @@
 
   tbody tr.bpp_table_row {
     background: var(--pr-surface-card, #ffffff);
+    cursor: pointer;
     transition: background 0.15s ease-out;
 
     td {
@@ -717,6 +802,11 @@
 
   .bpp_td_sp {
     min-width: 220px;
+  }
+
+  .bpp_td_results {
+    text-align: center;
+    white-space: nowrap;
   }
 
   .bpp_td_action {

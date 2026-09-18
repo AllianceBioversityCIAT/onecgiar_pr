@@ -2,7 +2,7 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, Params, Router, RouterModule } from '@angular/router';
-import { BehaviorSubject, map, of } from 'rxjs';
+import { BehaviorSubject, map, of, Subject, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import {
   BilateralResultsListComponent,
@@ -91,6 +91,10 @@ describe('BilateralResultsListComponent', () => {
 
     bilateralApiService = {
       GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: [result()] })),
+      // `PMF-T-1` wave 2 — the Project options' source (the center's own catalog, per
+      // selected phase year). Default: answers empty, so the option list starts empty like
+      // a center with no reportable projects for the selected phase.
+      GET_bilateralProjects: jest.fn().mockReturnValue(of({ response: { projects: [] } })),
     };
     phasesService = {
       // `COV-R-2` C / HITL H-2 — `GET /api/versioning` delivers `id` as a STRING (`'36'`), although
@@ -831,6 +835,339 @@ describe('BilateralResultsListComponent', () => {
       expect(component.filteredResults()).toHaveLength(1);
       expect(component.filteredResults()[0].result_code).toBe('8707');
       expect(component.activeChips().some(chip => chip.label === 'Created by: Santiago Sanchez')).toBe(true);
+    });
+  });
+
+  /**
+   * `changes/project-multiselect-filter` (`PMF-T-1`, pivot) — the Project multiselect in the
+   * Filters popover. Options come from the CENTER'S OWN catalog per selected phase year, never
+   * from loaded rows: contributing rows display other Centers' projects, and catalog projects
+   * with zero rows would never appear at all. OR/AND semantics, the URL round-trip and
+   * deep-link retention drive the harness above (route subject + merge-semantics navigate
+   * spy), so what is asserted is what a real selection, deep link or chip removal produces.
+   */
+  describe('PMF-T-1 — Project multiselect filter (center catalog, phase-scoped)', () => {
+    /** A catalog entry as `GET_bilateralProjects` returns it (`BilateralProject`) — ids may arrive as strings. */
+    const catalogProject = (id: number | string, shortName: string, fullName: string) => ({
+      id,
+      shortName,
+      fullName,
+      summary: null,
+      description: null,
+      leadCenter: null,
+      sciencePrograms: [],
+    });
+
+    /** Two P25 reporting phases — closed 2025 (id 35) and open 2026 (id 36). */
+    const BOTH_PHASES = [
+      { id: '35', phase_year: 2025, status: false, obj_portfolio: { acronym: 'P25' } },
+      { id: '36', phase_year: 2026, status: true, obj_portfolio: { acronym: 'P25' } },
+    ];
+
+    const selectBothPhases = () => {
+      phasesService.phases.reporting = BOTH_PHASES;
+      bilateralApiService.GET_bilateralProjects.mockClear();
+      recreateOn({ phase: '35,36' });
+    };
+
+    it('offers no project while the catalog has not answered or answers empty', () => {
+      // The default mock answers an empty catalog for the default-selected 2026 phase.
+      expect(component.selectedPhaseYears()).toEqual([2026]);
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledWith('CIAT-BIOVERSITY', 2026);
+      expect(component.projectSelectOptions()).toEqual([]);
+    });
+
+    it('unions the two selected phase years, dedupes by id across and within years, and labels `shortName fullName`', fakeAsync(() => {
+      phasesService.phases.reporting = BOTH_PHASES;
+      bilateralApiService.GET_bilateralProjects.mockImplementation((_center: string, year: number) =>
+        of({
+          response: {
+            projects:
+              year === 2025
+                ? [
+                    catalogProject('118', 'A-AG10156', '  Accelerating Impacts of CGIAR Climate Research for Africa '),
+                    catalogProject(204, '', ''), // no usable name → Project <id>
+                    catalogProject('118', 'A-AG10156', 'Accelerating Impacts of CGIAR Climate Research for Africa'), // duplicate within the year
+                  ]
+                : [
+                    catalogProject(50, 'apple orchards', 'Apple value chains'), // first only if sort ignores case
+                    catalogProject(300, 'Banana Republic', 'Banana value chains'),
+                    catalogProject(118, 'A-AG10156', 'Accelerating Impacts of CGIAR Climate Research for Africa'), // shared across years → one option
+                  ],
+          },
+        }),
+      );
+
+      selectBothPhases();
+      tick();
+      fixture.detectChanges();
+
+      // Exactly one request per selected year, carrying the year — never an unselected one.
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(2);
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledWith('CIAT-BIOVERSITY', 2025);
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledWith('CIAT-BIOVERSITY', 2026);
+
+      // Labels are trimmed `shortName fullName` (numeric-string ids normalize), one option
+      // per id across phases, `Project <id>` fallback, sorted case-insensitively.
+      expect(component.projectSelectOptions()).toEqual([
+        { value: 118, label: 'A-AG10156 Accelerating Impacts of CGIAR Climate Research for Africa' },
+        { value: 50, label: 'apple orchards Apple value chains' },
+        { value: 300, label: 'Banana Republic Banana value chains' },
+        { value: 204, label: 'Project 204' },
+      ]);
+    }));
+
+    it('fetches each phase year once per page lifetime and only years not already requested', fakeAsync(() => {
+      bilateralApiService.GET_bilateralProjects.mockImplementation((_center: string, year: number) =>
+        of({ response: { projects: [catalogProject(year === 2025 ? 600 : 700, `P${year}`, `Catalog ${year}`)] } }),
+      );
+
+      selectBothPhases();
+      tick();
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(2);
+
+      // Repeated popover opens and selections never refetch a loaded year — neither the
+      // catalog nor the results endpoint moves.
+      const resultsCallsAfterLoad = bilateralApiService.GET_bilateralCenterResults.mock.calls.length;
+      component.filterPopoverOpen.set(true);
+      component.onProjectFilterChange([600]);
+      component.onProjectFilterChange([600, 700]);
+      tick();
+      fixture.detectChanges();
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(2);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledTimes(resultsCallsAfterLoad);
+
+      // Unselecting a year removes its projects from the offered options; a project that
+      // stays SELECTED but is no longer offered is retained with a `Project <id>` label
+      // (`PMF-DD-3` — never silently dropped), appended after the offered options.
+      component.togglePhase(component.phases()[0]); // 2025 off → [36]
+      tick();
+      fixture.detectChanges();
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(2);
+      expect(component.projectSelectOptions()).toEqual([
+        { value: 700, label: 'P2026 Catalog 2026' },
+        { value: 600, label: 'Project 600' },
+      ]);
+
+      component.togglePhase(component.phases()[0]); // 2025 back on → [35, 36]
+      tick();
+      fixture.detectChanges();
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(2);
+      expect(component.projectSelectOptions()).toEqual([
+        { value: 600, label: 'P2025 Catalog 2025' },
+        { value: 700, label: 'P2026 Catalog 2026' },
+      ]);
+    }));
+
+    it('degrades to the other years when one year fails, and never retries the failed year', fakeAsync(() => {
+      bilateralApiService.GET_bilateralProjects.mockImplementation((_center: string, year: number) =>
+        year === 2025
+          ? throwError(() => new Error('catalog unavailable'))
+          : of({ response: { projects: [catalogProject(700, 'P2026', 'Catalog 2026')] } }),
+      );
+
+      selectBothPhases();
+      tick();
+      fixture.detectChanges();
+
+      // 2026 survives; the failed 2025 is simply absent — no invented value, no error state.
+      expect(component.projectSelectOptions().map(o => o.value)).toEqual([700]);
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(2);
+
+      // Toggling the failed year off and back on must not re-request it (no retry loop).
+      component.togglePhase(component.phases()[0]); // [36]
+      tick();
+      component.togglePhase(component.phases()[0]); // [35, 36]
+      tick();
+      fixture.detectChanges();
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(2);
+      expect(component.projectSelectOptions().map(o => o.value)).toEqual([700]);
+    }));
+
+    it('keeps the current (possibly empty) options while a catalog year is still in flight', () => {
+      bilateralApiService.GET_bilateralProjects.mockReturnValue(new Subject()); // never answers
+      recreateOn();
+
+      expect(component.selectedPhaseYears()).toEqual([2026]);
+      expect(component.projectSelectOptions()).toEqual([]);
+
+      // The control itself is unaffected: same popover, same field — no project-specific
+      // loading or error surface was added.
+      component.filterPopoverOpen.set(true);
+      fixture.detectChanges();
+      const popover = fixture.nativeElement.querySelector('div[role="dialog"][aria-label="Result filters"]');
+      expect(popover).toBeTruthy();
+      expect(popover.querySelector('.brl-filter-field[aria-label="Filter by project"]')).toBeTruthy();
+    });
+
+    it('matches either selected project, ANDs with the creator filter, and never refetches', fakeAsync(() => {
+      bilateralApiService.GET_bilateralProjects.mockReturnValue(
+        of({
+          response: {
+            projects: [
+              catalogProject(118, 'A-AG10156', 'Rice for Africa'),
+              catalogProject(204, 'A-AG10171', 'Banana Republic'),
+            ],
+          },
+        }),
+      );
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(
+        of({
+          response: [
+            result({ id: 1, project_id: 118, project_name: 'Rice for Africa', created_by_name: 'Angel Jarrin' }),
+            result({ id: 2, project_id: 204, project_name: 'Banana Republic', created_by_name: 'Angel Jarrin' }),
+            result({ id: 3, project_id: 118, created_by_name: 'Santiago Sanchez' }),
+            result({ id: 4, project_id: null }),
+            result({ id: 5, project_id: 999, project_name: 'Other project' }),
+          ],
+        }),
+      );
+      recreateOn();
+      tick();
+      const resultsCallsAfterLoad = bilateralApiService.GET_bilateralCenterResults.mock.calls.length;
+      const catalogCallsAfterLoad = bilateralApiService.GET_bilateralProjects.mock.calls.length;
+      expect(resultsCallsAfterLoad).toBeGreaterThan(0);
+      expect(catalogCallsAfterLoad).toBeGreaterThan(0);
+
+      component.onCreatedByFilterChange(['Angel Jarrin']);
+      component.onProjectFilterChange([118, 204]);
+
+      // OR within projects, AND across dimensions; unlinked and unselected rows never match.
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 2]);
+      expect(component.activeChips().some(chip => chip.label === 'Project: Rice for Africa')).toBe(true);
+
+      // Only the center's catalog projects are offered: 999 rides on a loaded row but is
+      // not a catalog project of this center, so it never becomes an option.
+      expect(component.projectSelectOptions().map(o => o.value)).toEqual([118, 204]);
+
+      // Changing only the selection adds no request of any kind — results or catalog.
+      component.onProjectFilterChange([118]);
+      expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledTimes(resultsCallsAfterLoad);
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledTimes(catalogCallsAfterLoad);
+    }));
+
+    it('never offers foreign-center projects that only loaded rows carry', fakeAsync(() => {
+      bilateralApiService.GET_bilateralProjects.mockReturnValue(
+        of({ response: { projects: [catalogProject(1368, 'A-AG10171', 'Center-owned catalog project')] } }),
+      );
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(
+        of({
+          response: [
+            result({ id: 1, project_id: 1572, project_name: '1572-MIPO/CIP — a CIP project this center contributes to' }),
+            result({ id: 2, project_id: 1523, project_name: '1523-BMGF/RTB — a BMGF project this center contributes to' }),
+            result({ id: 3, project_id: 1368, project_name: 'Center-owned catalog project' }),
+          ],
+        }),
+      );
+      recreateOn();
+      tick();
+      fixture.detectChanges();
+
+      // The pivot's defect class: rows where the center only contributes display other
+      // Centers' projects — those must not leak into the option list.
+      expect(component.projectSelectOptions().map(o => o.value)).toEqual([1368]);
+    }));
+
+    it('selects two projects, writes the comma URL with ?result= kept, rehydrates, and clears each way', fakeAsync(() => {
+      bilateralApiService.GET_bilateralProjects.mockReturnValue(
+        of({
+          response: {
+            projects: [
+              catalogProject(118, 'A-AG10156', 'Rice for Africa'),
+              catalogProject(204, 'A-AG10171', 'Banana Republic'),
+            ],
+          },
+        }),
+      );
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(
+        of({
+          response: [
+            result({ id: 1, project_id: 118, project_name: 'Rice for Africa' }),
+            result({ id: 2, result_code: '8707', project_id: 204, project_name: null }),
+          ],
+        }),
+      );
+      recreateOn({ result: '8706', search: 'kenya' });
+
+      component.onProjectFilterChange([118, 204]);
+      tick();
+      fixture.detectChanges();
+
+      // Comma-separated `project`, merged with (never replacing) the unrelated params, no history entry.
+      expect(queryParams$.value['project']).toBe('118,204');
+      expect(queryParams$.value['result']).toBe('8706');
+      expect(queryParams$.value['search']).toBe('kenya');
+      expect(navigateSpy).toHaveBeenCalledTimes(1); // the write itself — no re-hydration loop
+      expect(navigateSpy).toHaveBeenLastCalledWith(
+        [],
+        expect.objectContaining({ queryParamsHandling: 'merge', replaceUrl: true }),
+      );
+
+      // Re-hydration restored both selections and both labelled chips (204 has no row name → fallback).
+      expect(component.projectFilter()).toEqual([118, 204]);
+      expect(chipTexts().some(text => text.includes('Project: Rice for Africa'))).toBe(true);
+      expect(chipTexts().some(text => text.includes('Project: Project 204'))).toBe(true);
+      expect(component.filteredResults().map(r => r.result_code)).toEqual(['8706', '8707']);
+
+      // Removing one chip drops only that project from the URL and the strip.
+      chipRemoveButton('Project: Rice for Africa')!.click();
+      tick();
+      fixture.detectChanges();
+      expect(component.projectFilter()).toEqual([204]);
+      expect(queryParams$.value['project']).toBe('204');
+      expect(queryParams$.value['result']).toBe('8706');
+      expect(chipTexts().some(text => text.includes('Project: Rice for Africa'))).toBe(false);
+
+      // Clear all removes every project selection and chip, still without touching ?result=.
+      component.clearAllFilters();
+      tick();
+      fixture.detectChanges();
+      expect(component.projectFilter()).toEqual([]);
+      expect('project' in queryParams$.value).toBe(false);
+      expect(chipTexts().some(text => text.includes('Project:'))).toBe(false);
+      expect(queryParams$.value['result']).toBe('8706');
+    }));
+
+    it('keeps a deep-linked project id selectable and removable when the catalog does not carry it', fakeAsync(() => {
+      bilateralApiService.GET_bilateralProjects.mockReturnValue(
+        of({ response: { projects: [catalogProject(118, 'A-AG10156', 'Rice for Africa')] } }),
+      );
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(
+        of({ response: [result({ id: 1, project_id: 118, project_name: 'Rice for Africa' })] }),
+      );
+      recreateOn({ project: '999' });
+
+      expect(component.projectFilter()).toEqual([999]);
+      expect(component.projectSelectOptions()).toEqual([
+        { value: 118, label: 'A-AG10156 Rice for Africa' },
+        { value: 999, label: 'Project 999' },
+      ]);
+      expect(chipTexts().some(text => text.includes('Project: Project 999'))).toBe(true);
+
+      chipRemoveButton('Project: Project 999')!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.projectFilter()).toEqual([]);
+      expect('project' in queryParams$.value).toBe(false);
+      expect(chipTexts().some(text => text.includes('Project:'))).toBe(false);
+    }));
+
+    it('renders the Project multiselect between Source and Created by with a visible label and group name', () => {
+      component.filterPopoverOpen.set(true);
+      fixture.detectChanges();
+
+      const popover = fixture.nativeElement.querySelector('div[role="dialog"][aria-label="Result filters"]');
+      expect(popover).toBeTruthy();
+
+      const labels = Array.from(popover.querySelectorAll('.brl_filter_group_label')).map(
+        el => (el.textContent ?? '').trim(),
+      );
+      expect(labels).toEqual(['Phase', 'Source', 'Project', 'Created by', 'Center role']);
+
+      const projectField = popover.querySelector('.brl-filter-field[aria-label="Filter by project"]');
+      expect(projectField).toBeTruthy();
+      expect(projectField.querySelector('app-pr-filter-multiselect')).toBeTruthy();
     });
   });
 

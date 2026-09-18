@@ -1,5 +1,5 @@
 // @akili-spec bilateral/manual-create-drawer — drawer + optional SP gate + form
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { BilateralAiUploadComponent } from '../bilateral-ai-upload/bilateral-ai-upload.component';
 import { BilateralCreateDrawerComponent } from '../bilateral-create-drawer/bilateral-create-drawer.component';
 import { BilateralManualCreateFormComponent } from '../bilateral-manual-create-form/bilateral-manual-create-form.component';
@@ -28,6 +28,10 @@ export class BilateralManualCreateDrawerHostComponent {
   /** Element that receives focus when the drawer closes. */
   readonly restoreFocusTarget = input<ElementRef<HTMLElement> | null>(null);
 
+  readonly highlightSp = signal(false);
+  private highlightTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  private readonly spSectionRef = viewChild<ElementRef<HTMLElement>>('spSection');
   private readonly reportingWaySectionRef = viewChild<ElementRef<HTMLElement>>('reportingWaySection');
 
   onDrawerClosed(): void {
@@ -38,5 +42,16 @@ export class BilateralManualCreateDrawerHostComponent {
     setTimeout(() => {
       this.reportingWaySectionRef()?.nativeElement?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
     }, 50);
+  }
+
+  onBlockedWayClick(): void {
+    this.spSectionRef()?.nativeElement?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    this.highlightSp.set(true);
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
+    }
+    this.highlightTimeout = setTimeout(() => {
+      this.highlightSp.set(false);
+    }, 1500);
   }
 }

@@ -8,7 +8,7 @@
 | Requirements | `./requirements.md` (`EMG-R-*`, `EMG-AC-*`) |
 | Depth | **Standard** |
 | Approval Mode | gated |
-| Status | draft |
+| Status | shipped |
 | Delegation | None. All exploration was CodeGraph-free direct inspection under the 4-file threshold; no subagent was spawned |
 | Verified against | `JuanGuzman-io/dogfish` @ `31562acba` (2026-09-16) |
 

@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-17 · JuanGuzman-io/feature-p2-3150-bilateral · semáforo de calidad IA en el riel y el Submit (P2-3698); prior: 2026-09-16 · 01891aebd (pie en dos cápsulas, P2-3736)
+**Verified:** 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -53,6 +53,10 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   ⚠️ `isSubmitting()` del componente es `isBusy()` (chequeo **y** envío): derivarlo de `isRunning()`
   reabre el botón a mitad del PATCH. El diálogo se liga a `isDialogOpen()`, no a `state() === 'deciding'`,
   o se cierra de golpe al pulsar la decisión.
+- **Feedback IA en el editor.** Desde el diálogo, una sección ámbar/roja navega con
+  `goToQualitySection()` a la sección correspondiente. Las marcas por campo permanecen visibles
+  aunque el assessment quede stale mientras el usuario corrige: la frescura se valida al enviar,
+  no se usa para esconder la guía. El card del riel conserva borde neutro tanto actual como stale.
 
 - **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
   única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo

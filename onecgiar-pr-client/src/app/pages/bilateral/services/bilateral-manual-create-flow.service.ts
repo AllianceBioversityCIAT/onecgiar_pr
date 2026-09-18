@@ -42,6 +42,36 @@ export class BilateralManualCreateFlowService {
     () => this.creationService.selectedProject()?.fullName || this.creationService.selectedProject()?.shortName || ''
   );
 
+  readonly drawerProjectSummary = computed(() => this.creationService.selectedProject()?.summary ?? '');
+
+  readonly drawerProjectDescription = computed(
+    () => this.creationService.selectedProject()?.description ?? ''
+  );
+
+  /** Card subtitle for the drawer context header — summary first, then description. */
+  readonly drawerProjectSubtitle = computed(() => {
+    const project = this.creationService.selectedProject();
+    if (!project) {
+      return '';
+    }
+
+    const subtitle = (project.summary?.trim() || project.description?.trim()) ?? '';
+    if (!subtitle) {
+      return '';
+    }
+
+    const title = (project.fullName?.trim() || project.shortName?.trim()) ?? '';
+    if (title && subtitle.toLowerCase() === title.toLowerCase()) {
+      return '';
+    }
+
+    return subtitle;
+  });
+
+  readonly drawerLeadCenterAcronym = computed(
+    () => this.creationService.selectedProject()?.leadCenter?.acronym ?? ''
+  );
+
   readonly drawerProgramCode = computed(() => this.creationService.selectedPrimarySp()?.programCode ?? '');
 
   readonly drawerProgramName = computed(() => {
