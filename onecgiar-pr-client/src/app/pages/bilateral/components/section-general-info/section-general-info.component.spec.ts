@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 
 import { SectionGeneralInfoComponent } from './section-general-info.component';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
@@ -44,7 +44,8 @@ describe('SectionGeneralInfoComponent', () => {
       updateField: jest.fn(),
       updateFieldsBatch: jest.fn(),
       notifyBlur: jest.fn(),
-      fieldStatus: signal<Record<string, string>>({})
+      fieldStatus: signal<Record<string, string>>({}),
+      manualSave$: new Subject<string>()
     };
     mdsTracker = { setSectionFields: jest.fn() };
     creation = {
@@ -321,6 +322,98 @@ describe('SectionGeneralInfoComponent', () => {
         lead_contact_person: null,
         lead_contact_person_data: null
       });
+    });
+
+    /**
+     * `BIL-IDP-T-1` (`docs/specs/bugfix/innovation-developer-prefill-stale-lead-contact`) — regression
+     * test, red before the fix.
+     *
+     * Case 5 (`R-3`): the constructor's mount effect (title/description/`leadContactBody` ->
+     * `updateGeneralInfoMdsFields()`) runs BEFORE the hydration effect below it has copied the loaded
+     * contact into `leadContactBody` — see the guard's own comment
+     * ("saving unconditionally PATCHed lead_contact_person: null over the stored one every time the
+     * editor was opened"). This still holds under `BIL-IDP-T-4`'s pivot: `updateGeneralInfoMdsFields()`
+     * never publishes to `creationService` at all any more (that moved to the `manualSave$` handler in
+     * `T-4`, see case 6 below), so nothing in this method can clobber the stored contact on mount
+     * regardless of hydration order.
+     */
+    it('does not clobber the stored contact through a mount-order write, and does not save on mount (R-3)', () => {
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      build();
+
+      // Before the first change detection, no effect (mount or hydration) has run at all.
+      expect(creation.resultLeadContact()).toBe('Jane Doe');
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+
+      // After the full mount flush: hydration has run, and must not have clobbered the value on the
+      // way there, and must not have produced a spurious save.
+      fixture.detectChanges();
+      expect(creation.resultLeadContact()).toBe('Jane Doe');
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Case 6 (`R-1`), retargeted by the `T-4` pivot: `DD-1` (publish inside
+     * `updateGeneralInfoMdsFields()`, i.e. on every settled contact commit) was implemented and
+     * rejected at review — it re-entered the hydration effect (`resultLeadContact`/
+     * `resultLeadContactData` are that effect's own dependencies) and rebuilt `leadContactBody` mid
+     * keystroke, blanking the Lead contact field on the reporter's first character. Full record:
+     * `execution.md` → "Pivot Record: BIL-IDP-T-2".
+     *
+     * `DD-4` publishes on the SAVE event instead: the settled contact is written to
+     * `creationService.resultLeadContact`/`resultLeadContactData` only when
+     * `autoSaveService.manualSave$` emits `'general-info'` — i.e. footer "Save draft" — never from a
+     * commit alone. Selecting a contact with no save must leave the signal untouched; emitting the
+     * save event must publish it.
+     */
+    it('publishes the settled contact to the shared signal on the manual save event, not on the commit alone (R-1)', () => {
+      build();
+      fixture.detectChanges();
+
+      const body = component.leadContactBody();
+      body.lead_contact_person = 'A. Rivera';
+      body.lead_contact_person_data = { display_name: 'A. Rivera', mail: 'a.rivera@cgiar.org', title: '' };
+
+      // The commit alone (no save yet) must not have published anything.
+      expect(creation.resultLeadContact()).toBe('');
+      expect(creation.resultLeadContactData()).toBeNull();
+
+      autoSave.manualSave$.next('general-info');
+
+      expect(creation.resultLeadContact()).toBe('A. Rivera');
+      expect(creation.resultLeadContactData()).toEqual({
+        display_name: 'A. Rivera',
+        mail: 'a.rivera@cgiar.org',
+        title: ''
+      });
+    });
+
+    /**
+     * `BIL-IDP-T-4` — the regression gate for the defect that caused the pivot (see case 6's comment).
+     * A stored FREE-TEXT contact (`lead_contact_person_data === null`) is the most common bilateral
+     * shape (every pre-`1751462633282` result, and every W3/Bilateral-API-reported one). The reporter
+     * typing into the field nulls BOTH payload keys on every keystroke
+     * (`lead-contact-person-field.component.ts` `onSearchInput()`), which — under the rejected `DD-1`
+     * placement — was a "settled contact" as far as `updateGeneralInfoMdsFields()` could tell, so it
+     * got published and blanked the field via the hydration effect. Publishing only on
+     * `manualSave$` means a mid-typing null is never even looked at until Save draft fires — and this
+     * case never fires it, so `resultLeadContact` must still hold the value the result loaded with.
+     */
+    it('does not publish a mid-typing null commit — only a manual save publishes (R-1, R-3)', () => {
+      creation.resultLeadContact.set('Arouna Dissa');
+      creation.resultLeadContactData.set(null);
+      build();
+      fixture.detectChanges();
+
+      // Simulate the keystroke commit `onSearchInput()` makes on every character: both keys nulled.
+      const body = component.leadContactBody();
+      body.lead_contact_person = null;
+      body.lead_contact_person_data = null;
+      fixture.detectChanges();
+
+      expect(creation.resultLeadContact()).toBe('Arouna Dissa');
+      expect(creation.resultLeadContactData()).toBeNull();
     });
   });
 

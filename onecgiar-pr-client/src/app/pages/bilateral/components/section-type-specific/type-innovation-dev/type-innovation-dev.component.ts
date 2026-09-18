@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed, signal } from '@angular/core';
+import { Component, inject, OnInit, computed, signal, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
@@ -110,6 +110,19 @@ export class TypeInnovationDevComponent implements OnInit {
   readonly loadErrorNote = LOAD_ERROR_NOTE;
   readonly hasScalingStudiesOptions = HAS_SCALING_STUDIES_OPTIONS;
 
+  constructor() {
+    // BIL-IDP-T-4 / DD-2: re-evaluable prefill. `loadData()` used to call
+    // `applyInnovationDevelopersPrefill()` once, from its own `next` handler, so a Lead contact
+    // person entered after this section had already loaded was never seen. Reading `loaded()` and
+    // `resultLeadContact()` here re-runs the (unchanged) key-presence-gated prefill on every
+    // settled contact — including the section's own GET, since `loaded()` is one of the deps.
+    effect(() => {
+      if (this.loaded() !== true) return;
+      this.creationService.resultLeadContact();
+      this.applyInnovationDevelopersPrefill();
+    });
+  }
+
   get isVarietyType(): boolean {
     return this.body.innovation_nature_id === VARIETY_NATURE_ID;
   }
@@ -165,7 +178,6 @@ export class TypeInnovationDevComponent implements OnInit {
       next: ({ response }) => {
         this.body = response || {};
         this.hydrateInvestmentTables();
-        this.applyInnovationDevelopersPrefill();
         this.loaded.set(true);
         this.updateMds();
       },
@@ -268,9 +280,11 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   /**
-   * BIL-QAI-R-15 / DD-12 (2026-09-16) — one-time prefill from the Lead contact person. Full
-   * history, the key-presence gate's rationale, and the save-side contract are in this folder's
-   * `CLAUDE.md` ("Innovation developers — removed, then restored").
+   * BIL-QAI-R-15 / DD-12 (2026-09-16) — prefill from the Lead contact person, while the field is
+   * still eligible. Called from the `effect()` in the constructor (`BIL-IDP-T-4`, 2026-09-18), so
+   * it re-runs on every settled Lead contact save, not just once on load. Full history, the
+   * key-presence gate's rationale, and the save-side contract are in this folder's `CLAUDE.md`
+   * ("Innovation developers — removed, then restored").
    */
   private applyInnovationDevelopersPrefill(): void {
     // Gate on the KEY, not on truthiness: `InnovationDevExists` (server repository) omits the key
@@ -291,8 +305,9 @@ export class TypeInnovationDevComponent implements OnInit {
       innovation_nature_id: this.body.innovation_nature_id ?? null,
       // BIL-QAI-R-15 / DD-12 (2026-09-16) — sends exactly what is on screen, never a substitution.
       // A cleared field persists as `null`, and changing the Lead contact person afterwards never
-      // touches this key: the only place that reads `resultLeadContact()` is the one-time prefill in
-      // `applyInnovationDevelopersPrefill()`, run on load, not on save. Supersedes the 2026-09-03
+      // touches this key: the only place that reads `resultLeadContact()` is the prefill in
+      // `applyInnovationDevelopersPrefill()`, which runs from the constructor `effect()` while the
+      // field is eligible (`BIL-IDP-T-4`, 2026-09-18) — never from a save path. Supersedes the 2026-09-03
       // removal, which copied the Lead contact person in here on every save.
       innovation_developers: this.body.innovation_developers?.trim() || null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,

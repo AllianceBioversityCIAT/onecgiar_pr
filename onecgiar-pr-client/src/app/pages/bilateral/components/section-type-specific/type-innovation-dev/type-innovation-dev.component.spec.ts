@@ -200,6 +200,66 @@ describe('TypeInnovationDevComponent', () => {
     });
 
     /**
+     * `BIL-IDP-T-1` (`docs/specs/bugfix/innovation-developer-prefill-stale-lead-contact`) — regression
+     * test, red before the fix. The block above only ever set `resultLeadContact` BEFORE `build()`,
+     * i.e. before the section's GET resolves — so it never exercised the reported failure: a reporter
+     * who sets the Lead contact person AFTER Type-specific has already loaded once. `build()` runs the
+     * first change detection (see the P2-3558 note above `build`), so by the time it returns the GET
+     * has already resolved; setting the signal and calling `fixture.detectChanges()` again is what
+     * simulates "later in the same session", not "before load".
+     */
+    describe('BIL-IDP-T-1 — in-session Lead contact changes (bugfix/innovation-developer-prefill-stale-lead-contact)', () => {
+      it('R-1 sc1: prefills from a Lead contact person entered AFTER Type-specific has already loaded (the reported failure)', () => {
+        // Eligible: the GET body carries no `innovation_developers` key at all, and the contact is
+        // still empty at the moment Type-specific loads.
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+        expect(component.body.innovation_developers).toBeUndefined();
+
+        // The reporter sets the Lead contact person only now — after the section already loaded once.
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('R-1 sc2: still prefills on load when the contact is already set before the GET resolves (unchanged path)', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('R-2 sc1: a typed value survives a later contact change', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(
+          of({ response: { innovation_developers: 'CIAT breeding team' } })
+        );
+        build();
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+      });
+
+      // Distinct from the case above: `null` is what `InnovationDevExists` returns once a row exists
+      // and the reporter cleared it (`T-12`). It is falsy, same as `''`/`undefined`, so a truthiness
+      // gate cannot tell it apart from "never asked" — only the key-presence guard can (`DD-3`).
+      it('R-2 sc2: a stored null (the T-12 shape) is not re-filled by a later contact change', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        expect(component.body.innovation_developers).toBeNull();
+
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBeNull();
+      });
+    });
+
+    /**
      * P2-3558 — the data-loss chain, cut at its root.
      *
      * `GET summary/innovation-dev/get/result/:id` answers a server-side exception with a real HTTP 500
