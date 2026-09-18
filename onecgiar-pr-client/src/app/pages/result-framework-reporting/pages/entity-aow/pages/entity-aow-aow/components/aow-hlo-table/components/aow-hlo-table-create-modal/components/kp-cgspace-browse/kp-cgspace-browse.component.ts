@@ -49,6 +49,64 @@ export interface CgspaceItemDto {
   // @akili-spec changes/kp-program-accelerator-match — KPAM-R-1 / KPAM-DD-3 (additive)
   /** Science Programs or Accelerators tagged on the item. */
   programAccelerators?: string[];
+  // @akili-spec changes/kp-project-match — KPPJ-R-1 (additive)
+  /** Project identifiers tagged on the item from cg.identifier.project. */
+  projects?: string[];
+}
+
+/** @akili-spec changes/kp-project-match — KPPJ-DD-3 shared fuzzy normalization */
+function normalizeMatchString(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function compactMatchString(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function matchesTaggedMetadata(
+  tags: string[] | undefined,
+  rawCode: string,
+  rawName: string
+): boolean {
+  if (!tags || !Array.isArray(tags) || tags.length === 0) {
+    return false;
+  }
+
+  const code = rawCode.trim();
+  const name = rawName.trim();
+  if (!code && !name) {
+    return false;
+  }
+
+  const normCode = normalizeMatchString(code);
+  const compactCode = compactMatchString(code);
+  const normName = normalizeMatchString(name);
+  const compactName = compactMatchString(name);
+
+  return tags.some(tag => {
+    if (!tag || typeof tag !== 'string') return false;
+
+    const normTag = normalizeMatchString(tag);
+    const compactTag = compactMatchString(tag);
+    if (!normTag && !compactTag) return false;
+
+    if (compactCode) {
+      if (compactTag === compactCode || normTag === normCode) return true;
+      const tokens = normTag.split(' ');
+      if (tokens.includes(normCode) || tokens.includes(compactCode)) return true;
+      if (compactTag.startsWith(compactCode) || compactTag.includes(compactCode)) return true;
+    }
+
+    if (compactName && compactName.length >= 3) {
+      if (compactTag === compactName || normTag === normName) return true;
+      if (normTag.includes(normName) || compactTag.includes(compactName)) return true;
+      if (compactTag.length >= 3 && (normName.includes(normTag) || compactName.includes(compactTag))) {
+        return true;
+      }
+    }
+
+    return false;
+  });
 }
 
 // @akili-spec changes/kp-multi-repository-browse — design §4.1
@@ -229,6 +287,9 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   // @akili-spec changes/kp-program-accelerator-match — KPAM-R-2
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
+  // @akili-spec changes/kp-project-match — KPPJ-R-3
+  readonly projectCode = input<string>('');
+  readonly projectTitle = input<string>('');
 
   // Outputs
   readonly itemSelected = output<CgspaceItemDto>();
@@ -353,75 +414,104 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
 
   // @akili-spec changes/kp-program-accelerator-match — KPAM-R-3 / Gate D2
   matchesProgram(item: CgspaceItemDto): boolean {
-    if (!item?.programAccelerators || !Array.isArray(item.programAccelerators) || item.programAccelerators.length === 0) {
-      return false;
-    }
-
-    const rawCode = this.programCode()?.trim() || '';
-    const rawName = this.programName()?.trim() || '';
-    if (!rawCode && !rawName) {
-      return false;
-    }
-
-    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-    const compact = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    const normCode = normalize(rawCode);
-    const compactCode = compact(rawCode);
-    const normName = normalize(rawName);
-    const compactName = compact(rawName);
-
-    return item.programAccelerators.some(acc => {
-      if (!acc || typeof acc !== 'string') return false;
-
-      const normAcc = normalize(acc);
-      const compactAcc = compact(acc);
-      if (!normAcc && !compactAcc) return false;
-
-      // Match against code
-      if (compactCode) {
-        if (compactAcc === compactCode || normAcc === normCode) return true;
-        const tokens = normAcc.split(' ');
-        if (tokens.includes(normCode) || tokens.includes(compactCode)) return true;
-        if (compactAcc.startsWith(compactCode) || compactAcc.includes(compactCode)) return true;
-      }
-
-      // Match against name
-      if (compactName && compactName.length >= 3) {
-        if (compactAcc === compactName || normAcc === normName) return true;
-        if (normAcc.includes(normName) || compactAcc.includes(compactName)) return true;
-        if (compactAcc.length >= 3 && (normName.includes(normAcc) || compactName.includes(compactAcc))) return true;
-      }
-
-      return false;
-    });
+    return matchesTaggedMetadata(
+      item?.programAccelerators,
+      this.programCode() ?? '',
+      this.programName() ?? ''
+    );
   }
+
+  // @akili-spec changes/kp-project-match — KPPJ-R-4
+  matchesProject(item: CgspaceItemDto): boolean {
+    return matchesTaggedMetadata(
+      item?.projects,
+      this.projectCode() ?? '',
+      this.projectTitle() ?? ''
+    );
+  }
+
+  readonly hasProjectContext = computed(
+    () => !!(this.projectCode()?.trim() || this.projectTitle()?.trim())
+  );
+
+  readonly hasProgramContext = computed(
+    () => !!(this.programCode()?.trim() || this.programName()?.trim())
+  );
+
+  readonly projectMatchLabel = computed(
+    () => this.projectCode()?.trim() || this.projectTitle()?.trim() || ''
+  );
 
   // @akili-spec changes/kp-program-accelerator-match — KPAM-R-7
   readonly matchCount = computed<number>(() => {
+    if (!this.hasProgramContext()) {
+      return 0;
+    }
     return this.items().filter(item => this.matchesProgram(item)).length;
   });
 
+  // @akili-spec changes/kp-project-match — KPPJ-R-6
+  readonly projectMatchCount = computed<number>(() => {
+    if (!this.hasProjectContext()) {
+      return 0;
+    }
+    return this.items().filter(item => this.matchesProject(item)).length;
+  });
+
+  readonly contextualMatchCount = computed<number>(() => {
+    const raw = this.items();
+    if (this.hasProjectContext() && this.hasProgramContext()) {
+      return raw.filter(item => this.matchesProject(item) || this.matchesProgram(item)).length;
+    }
+    if (this.hasProjectContext()) {
+      return this.projectMatchCount();
+    }
+    return this.matchCount();
+  });
+
+  matchesContextually(item: CgspaceItemDto): boolean {
+    if (this.hasProjectContext() && this.hasProgramContext()) {
+      return this.matchesProject(item) || this.matchesProgram(item);
+    }
+    if (this.hasProjectContext()) {
+      return this.matchesProject(item);
+    }
+    return this.matchesProgram(item);
+  }
+
   // @akili-spec changes/kp-program-accelerator-match — KPAM-R-5 / KPAM-R-6 / KPAM-DD-1
+  // @akili-spec changes/kp-project-match — KPPJ-R-7 / KPPJ-R-8 / KPPJ-DD-4
   readonly displayItems = computed<CgspaceItemDto[]>(() => {
     const raw = this.items();
     if (this.onlyMatches()) {
+      if (this.hasProjectContext() && this.hasProgramContext()) {
+        return raw.filter(item => this.matchesProject(item) || this.matchesProgram(item));
+      }
+      if (this.hasProjectContext()) {
+        return raw.filter(item => this.matchesProject(item));
+      }
       return raw.filter(item => this.matchesProgram(item));
     }
-    if (this.matchCount() === 0) {
+
+    if (this.contextualMatchCount() === 0) {
       return raw;
     }
-    // Soft-boost: matching items first, preserving original relative order
-    const matches: CgspaceItemDto[] = [];
+
+    const projectMatches: CgspaceItemDto[] = [];
+    const spOnlyMatches: CgspaceItemDto[] = [];
     const others: CgspaceItemDto[] = [];
+
     for (const item of raw) {
-      if (this.matchesProgram(item)) {
-        matches.push(item);
+      if (this.hasProjectContext() && this.matchesProject(item)) {
+        projectMatches.push(item);
+      } else if (this.hasProgramContext() && this.matchesProgram(item)) {
+        spOnlyMatches.push(item);
       } else {
         others.push(item);
       }
     }
-    return [...matches, ...others];
+
+    return [...projectMatches, ...spOnlyMatches, ...others];
   });
 
   /** Natural-language join ("A", "A and B", "A, B and C") for the error/empty copy (`KPM-R-7`, `KPM-R-11`). */

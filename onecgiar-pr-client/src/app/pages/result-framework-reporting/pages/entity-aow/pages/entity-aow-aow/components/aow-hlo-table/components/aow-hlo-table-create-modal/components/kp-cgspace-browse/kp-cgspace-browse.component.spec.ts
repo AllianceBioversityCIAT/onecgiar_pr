@@ -1632,4 +1632,121 @@ describe('KpCgspaceBrowseComponent', () => {
       });
     });
   });
+
+  describe('KPPJ: Project Match and Badging', () => {
+    const createProjectItem = (
+      id: string,
+      title: string,
+      projects?: string[],
+      accelerators?: string[]
+    ): CgspaceItemDto => ({
+      uuid: `uuid-${id}`,
+      handle: `10568/${id}`,
+      handleUrl: `https://hdl.handle.net/10568/${id}`,
+      itemUrl: `https://cgspace.cgiar.org/items/uuid-${id}`,
+      title,
+      type: 'Report',
+      year: 2026,
+      authors: ['Author One'],
+      affiliations: ['International Rice Research Institute'],
+      countries: ['Kenya'],
+      doi: null,
+      uri: `https://hdl.handle.net/10568/${id}`,
+      repository: 'cgspace',
+      projects,
+      programAccelerators: accelerators
+    });
+
+    describe('Gate D3 / KPPJ-R-4: matchesProject normalization', () => {
+      beforeEach(() => {
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput(
+          'projectTitle',
+          'Accelerating Impacts of CGIAR Climate Research for Africa'
+        );
+        fixture.detectChanges();
+      });
+
+      it('should match project code token in metadata tag', () => {
+        const item = createProjectItem('code', 'Code match', ['A-AG10156 - AICCRA Project']);
+        expect(component.matchesProject(item)).toBe(true);
+      });
+
+      it('should match project title substring in metadata tag', () => {
+        const item = createProjectItem('title', 'Title match', [
+          'AICCRA - Accelerating Impacts of CGIAR Climate Research for Africa'
+        ]);
+        expect(component.matchesProject(item)).toBe(true);
+      });
+
+      it('should return false for unrelated project tag', () => {
+        const item = createProjectItem('other', 'Other project', ['IRRI - USDA Fertilize Right Project']);
+        expect(component.matchesProject(item)).toBe(false);
+        expect(component.projectMatchCount()).toBe(0);
+      });
+
+      it('should return false when project inputs are empty', () => {
+        fixture.componentRef.setInput('projectCode', '');
+        fixture.componentRef.setInput('projectTitle', '');
+        fixture.detectChanges();
+
+        const item = createProjectItem('test', 'Tagged', ['A-AG10156 - AICCRA Project']);
+        expect(component.matchesProject(item)).toBe(false);
+      });
+    });
+
+    describe('Gate D3 / KPPJ-R-8: combined soft-sort with SP context', () => {
+      beforeEach(() => {
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
+        fixture.componentRef.setInput('programCode', 'SP06');
+        fixture.componentRef.setInput('programName', 'Climate Action');
+        fixture.detectChanges();
+      });
+
+      it('should order project match, then SP-only, then neither', () => {
+        const both = createProjectItem('both', 'Both', ['A-AG10156 - AICCRA Project'], ['SP06 - Climate Action']);
+        const projectOnly = createProjectItem('proj', 'Project only', ['A-AG10156 - AICCRA Project']);
+        const spOnly = createProjectItem('sp', 'SP only', ['Other'], ['SP06 - Climate Action']);
+        const neither = createProjectItem('none', 'Neither', ['Unrelated']);
+
+        component.items.set([neither, spOnly, projectOnly, both]);
+
+        expect(component.displayItems()).toEqual([projectOnly, both, spOnly, neither]);
+      });
+    });
+
+    describe('Gate D3 / KPPJ-R-5 / KPPJ-R-6 / KPPJ-R-7: project badge, counter, toggle', () => {
+      it('should render project badge and filter with contextual toggle', () => {
+        fixture.componentRef.setInput('phaseYear', 2026);
+        fixture.componentRef.setInput('projectCode', 'A-AG10156');
+        fixture.componentRef.setInput('projectTitle', 'AICCRA Project');
+        fixture.detectChanges();
+
+        const match = createProjectItem('1', 'Match', ['A-AG10156 - AICCRA Project']);
+        const other = createProjectItem('2', 'Other', ['Unrelated']);
+        const other2 = createProjectItem('3', 'Other 2', []);
+
+        component.status.set('results');
+        component.items.set([other, match, other2]);
+        component.total.set(3);
+        fixture.detectChanges();
+
+        const counter = fixture.nativeElement.querySelector('[data-test="kp-results-counter"]');
+        expect(counter.textContent).toContain('1 match A-AG10156');
+
+        const firstCard = fixture.nativeElement.querySelectorAll('.rounded-xl.p-4.bg-white')[0];
+        const projectBadge = firstCard.querySelector('.kp-project-match-badge');
+        expect(projectBadge).toBeTruthy();
+        expect(projectBadge.textContent.trim()).toContain('Matches A-AG10156');
+        expect(projectBadge.getAttribute('aria-label')).toBe('Matches project: AICCRA Project');
+
+        const toggleBtn = fixture.nativeElement.querySelector('[data-test="kp-only-matches-toggle"]');
+        toggleBtn.click();
+        fixture.detectChanges();
+
+        expect(component.displayItems()).toEqual([match]);
+      });
+    });
+  });
 });

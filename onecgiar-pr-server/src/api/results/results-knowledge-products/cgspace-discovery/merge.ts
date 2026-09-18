@@ -193,6 +193,7 @@ export function dedupe(
     const programAcceleratorsSet = new Set<string>(
       items[survivorIdx].programAccelerators ?? [],
     );
+    const projectsSet = new Set<string>(items[survivorIdx].projects ?? []);
     for (const idx of groupIndices) {
       if (idx === survivorIdx) {
         continue;
@@ -209,6 +210,11 @@ export function dedupe(
           programAcceleratorsSet.add(pa);
         }
       }
+      for (const project of dropped.projects ?? []) {
+        if (project) {
+          projectsSet.add(project);
+        }
+      }
       dedupedCount++;
     }
 
@@ -216,6 +222,7 @@ export function dedupe(
       ...items[survivorIdx],
       alsoIn,
       programAccelerators: Array.from(programAcceleratorsSet),
+      projects: Array.from(projectsSet),
     });
   }
 
