@@ -1084,6 +1084,49 @@ describe('ReportingAowTableComponent', () => {
       expect(title).not.toContain('zero-target');
       expect(title).toContain('QA 40%');
     });
+
+    it('renders an achievement skeleton when group is loading', async () => {
+      const g = group([], { loading: true });
+      await build([g]);
+
+      const achievementSkeleton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
+        el.className.includes('w-[168px]')
+      );
+      expect(achievementSkeleton).toBeTruthy();
+      expect(achievementSkeleton!.className).toContain('max-[1100px]:sr-only');
+      expect(achievementSkeleton!.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders an achievement skeleton when group achievement is loading asynchronously', async () => {
+      const g = group([row()], { loading: false, achievementLoading: true });
+      await build([g]);
+
+      const achievementSkeleton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
+        el.className.includes('w-[168px]')
+      );
+      expect(achievementSkeleton).toBeTruthy();
+      expect(achievementSkeleton!.className).toContain('max-[1100px]:sr-only');
+      expect(achievementSkeleton!.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders center zone progress and ratio skeletons while group is loading', async () => {
+      const g = group([], { loading: true });
+      await build([g]);
+
+      const centerSkeleton = (fixture.nativeElement as HTMLElement).querySelector('.mx-auto');
+      expect(centerSkeleton).toBeTruthy();
+      expect(centerSkeleton!.querySelectorAll('.animate-pulse').length).toBe(3);
+    });
+
+    it('omits achievement skeleton for bucket groups even when loading', async () => {
+      const g = group([], { loading: true, kind: 'intermediate' });
+      await build([g]);
+
+      const achievementEl = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('span')).find(el =>
+        el.className.includes('w-[168px]')
+      );
+      expect(achievementEl).toBeUndefined();
+    });
   });
 
   // ── filtering ─────────────────────────────────────────────────────────────
