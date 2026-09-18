@@ -127,7 +127,7 @@ export class ReportingNavSidebarComponent {
   readonly appVersion = APP_VERSION;
   readonly aiUseInPrmsUrl =
     (environment.footerUrls as any)?.aiUseInPrms ??
-    'https://cgiar.sharepoint.com/:w:/s/PRMSProject/IQAszBnw-YhXSrQu0DcCiDg1AbPIlEF_01D-m3wEDAMHLPA?e=FelH2c';
+    'https://cgiar-prms.notion.site/PRMS-AWS-Bedrock-Data-Privacy-Security-3dff2712247880468648c96cc02df681';
   readonly termsAndConditionsUrl = environment.footerUrls.termsAndCondition;
   readonly licenseUrl = environment.footerUrls.license;
 
