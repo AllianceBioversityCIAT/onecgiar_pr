@@ -40,8 +40,21 @@
     </div>
   </div>
 
-  <!-- View Switcher -->
+  <!-- View Switcher & Actions -->
   <div class="bpp_toolbar_right">
+    <button
+      type="button"
+      class="bpp_refresh_btn"
+      data-testid="bpp-refresh-button"
+      [class.bpp_refresh_btn--loading]="isRefreshing()"
+      [disabled]="isRefreshing()"
+      (click)="refresh()"
+      aria-label="Refresh projects catalog and result counts"
+      title="Refresh projects and result counts">
+      <span class="material-icons-round text-[16px]" [class.animate-spin]="isRefreshing()" aria-hidden="true">refresh</span>
+      <span class="bpp_refresh_text">Refresh</span>
+    </button>
+    <div class="bpp_toolbar_divider" aria-hidden="true"></div>
     <span class="bpp_view_label">View:</span>
     <div class="bpp_view_toggle" role="group" aria-label="View layout toggle">
       <button 

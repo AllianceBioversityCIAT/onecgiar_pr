@@ -9,6 +9,7 @@ import { BilateralContextService } from '../../../../services/bilateral-context.
 import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
 import { BilateralCenterResult } from '../../../../services/bilateral-center-result.interface';
+import { BilateralOverviewService } from '../../../../services/bilateral-overview.service';
 
 describe('BilateralProjectsPanelComponent', () => {
   let component: BilateralProjectsPanelComponent;
@@ -680,6 +681,40 @@ describe('BilateralProjectsPanelComponent', () => {
 
       expect(manualCreateFlow.drawerOpen()).toBe(true);
       expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Refresh button & catalog refresh', () => {
+    beforeEach(() => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+    });
+
+    it('renders the refresh button in the docked toolbar', () => {
+      const refreshBtn = fixture.nativeElement.querySelector('[data-testid="bpp-refresh-button"]');
+      expect(refreshBtn).toBeTruthy();
+      expect(refreshBtn.textContent).toContain('Refresh');
+    });
+
+    it('calls overviewService.invalidate and refetches projects on refresh()', () => {
+      const overviewService = TestBed.inject(BilateralOverviewService);
+      const invalidateSpy = jest.spyOn(overviewService, 'invalidate');
+      const getProjectsSpy = jest.spyOn(bilateralApiService, 'GET_bilateralProjects');
+
+      component.refresh();
+
+      expect(invalidateSpy).toHaveBeenCalledWith('Bioversity', 36);
+      expect(getProjectsSpy).toHaveBeenCalledWith('Bioversity');
+    });
+
+    it('triggers refresh when refresh button is clicked in the DOM', () => {
+      const refreshSpy = jest.spyOn(component, 'refresh');
+      const refreshBtn = fixture.nativeElement.querySelector('[data-testid="bpp-refresh-button"]') as HTMLButtonElement;
+
+      refreshBtn.click();
+
+      expect(refreshSpy).toHaveBeenCalled();
     });
   });
 });

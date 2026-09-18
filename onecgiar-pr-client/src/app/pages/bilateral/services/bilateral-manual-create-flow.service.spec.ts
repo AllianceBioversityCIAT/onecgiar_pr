@@ -8,11 +8,13 @@ import { BilateralApiService } from '../../../shared/services/api/bilateral-api.
 import { BilateralContextService } from './bilateral-context.service';
 import { BilateralCreationService } from './bilateral-creation.service';
 import { BilateralManualCreateFlowService } from './bilateral-manual-create-flow.service';
+import { BilateralOverviewService } from './bilateral-overview.service';
 
 describe('BilateralManualCreateFlowService', () => {
   let service: BilateralManualCreateFlowService;
   let creationService: BilateralCreationService;
   let router: { navigate: jest.Mock };
+  let mockOverviewService: { invalidate: jest.Mock };
 
   const singleSpProject = {
     id: 101,
@@ -26,6 +28,7 @@ describe('BilateralManualCreateFlowService', () => {
 
   beforeEach(() => {
     router = { navigate: jest.fn().mockResolvedValue(true) };
+    mockOverviewService = { invalidate: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -34,6 +37,7 @@ describe('BilateralManualCreateFlowService', () => {
         BilateralCreationService,
         BilateralContextService,
         { provide: Router, useValue: router },
+        { provide: BilateralOverviewService, useValue: mockOverviewService },
         {
           provide: BilateralApiService,
           useValue: { POST_createBilateralHeader: jest.fn().mockReturnValue(of({ response: { id: 99 } })) }
@@ -51,6 +55,8 @@ describe('BilateralManualCreateFlowService', () => {
     });
     service = TestBed.inject(BilateralManualCreateFlowService);
     creationService = TestBed.inject(BilateralCreationService);
+    const ctx = TestBed.inject(BilateralContextService);
+    ctx.setCenter('AfricaRice', 'Africa Rice Center', 'AfricaRice');
     jest.spyOn(creationService, 'createResult').mockReturnValue(
       of({ response: { id: 99, result_code: 5001, version_id: 36 } }) as any
     );
@@ -139,6 +145,7 @@ describe('BilateralManualCreateFlowService', () => {
     creationService.selectPrimarySp({ programId: 1, programCode: 'SP13', allocation: '100' });
     service.submitCreate({ levelId: 4, typeId: 8, title: 'Manual title' });
     expect(creationService.createResult).toHaveBeenCalledWith(4, 8, undefined, 'Manual title');
+    expect(mockOverviewService.invalidate).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalled();
     expect(service.drawerOpen()).toBe(false);
   });
