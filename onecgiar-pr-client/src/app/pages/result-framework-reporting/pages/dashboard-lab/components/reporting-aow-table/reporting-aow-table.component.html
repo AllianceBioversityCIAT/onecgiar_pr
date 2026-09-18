@@ -417,15 +417,14 @@
             </span>
           </div>
 
+          <!-- Center zone: Progress bar and coverage ratio -->
           @if (group.loading) {
-            <span class="flex-1"></span>
-            <span class="flex shrink-0 items-center gap-[12px]" aria-hidden="true">
-              <span class="h-[8px] w-[120px] shrink-0 animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
-              <span class="h-[16px] w-[76px] shrink-0 animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></span>
-              <span class="h-[16px] w-[44px] shrink-0 animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></span>
-            </span>
+            <div class="flex items-center gap-[8px] sm:gap-[12px] shrink-0 mx-auto" aria-hidden="true">
+              <span class="h-[7px] w-[60px] sm:w-[130px] shrink-0 animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[14px] w-[50px] sm:w-[70px] shrink-0 animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[14px] w-[34px] sm:w-[40px] shrink-0 animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+            </div>
           } @else {
-            <!-- Center zone: Progress bar and coverage ratio -->
             <div class="flex items-center gap-[8px] sm:gap-[12px] shrink-0 mx-auto" [attr.title]="rowTitle(group) || null">
               <span class="h-[7px] w-[60px] sm:w-[130px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
                 <span
@@ -443,59 +442,75 @@
                 {{ ratio.percent }}%
               </span>
             </div>
+          }
 
-            <!-- Right zone: QA / Prel achievement & By-AOW action -->
-            <div class="ml-auto flex items-center gap-[12px] shrink-0">
-              @if (group.achievement) {
-                <span
-                  class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight max-[1100px]:sr-only"
-                  [prTooltip]="achievementTooltip(group.achievement)"
-                  prTooltipPosition="top">
-                  <span class="flex items-baseline gap-[10px] whitespace-nowrap">
-                    <span class="flex items-baseline gap-[4px]">
-                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
-                      <span class="text-[13.5px] font-bold tabular-nums text-[var(--pr-text-heading)]">
-                        {{ achievementLabel(group.achievement) }}
-                      </span>
-                    </span>
-                    <span class="flex items-baseline gap-[4px]">
-                      <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
-                      <span class="text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
-                        {{ preliminaryAchievementLabel(group.achievement) }}
-                      </span>
+          <!-- Right zone: QA / Prel achievement & By-AOW action -->
+          <div class="ml-auto flex items-center gap-[12px] shrink-0">
+            @if (group.achievement) {
+              <span
+                class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight max-[1100px]:sr-only"
+                [prTooltip]="achievementTooltip(group.achievement)"
+                prTooltipPosition="top">
+                <span class="flex items-baseline gap-[10px] whitespace-nowrap">
+                  <span class="flex items-baseline gap-[4px]">
+                    <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                    <span class="text-[13.5px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                      {{ achievementLabel(group.achievement) }}
                     </span>
                   </span>
-                  @if (achievementCoverage(group.achievement)) {
-                    <span class="whitespace-nowrap text-[10px] font-medium text-[var(--pr-text-muted)]">
-                      {{ achievementCoverage(group.achievement) }}
+                  <span class="flex items-baseline gap-[4px]">
+                    <span class="text-[10px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                    <span class="text-[13.5px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                      {{ preliminaryAchievementLabel(group.achievement) }}
                     </span>
-                  }
+                  </span>
                 </span>
-              }
+                @if (achievementCoverage(group.achievement)) {
+                  <span class="whitespace-nowrap text-[10px] font-medium text-[var(--pr-text-muted)]">
+                    {{ achievementCoverage(group.achievement) }}
+                  </span>
+                }
+              </span>
+            } @else if (isAchievementLoading(group)) {
+              <span
+                class="flex w-[168px] shrink-0 flex-col items-end justify-center border-l border-[var(--pr-border)] pl-[12px] leading-tight gap-[4px] max-[1100px]:sr-only"
+                aria-hidden="true">
+                <span class="flex items-center gap-[10px] whitespace-nowrap">
+                  <span class="flex items-center gap-[4px]">
+                    <span class="h-[10px] w-[18px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
+                    <span class="h-[14px] w-[36px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
+                  </span>
+                  <span class="flex items-center gap-[4px]">
+                    <span class="h-[10px] w-[24px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
+                    <span class="h-[14px] w-[36px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
+                  </span>
+                </span>
+                <span class="h-[10px] w-[76px] animate-pulse rounded-[3px] bg-[var(--pr-surface-ground)]"></span>
+              </span>
+            }
 
-          <!-- Jump to the focused By-AOW view — the inverse of that view's "All Areas of Work"
-               button (same recipe). Real AoWs only: buckets have no By-AOW view. Nested-control
-               pattern, like the ⓘ above: emitAndStop keeps the click from toggling the card. -->
-          @if (!isBucket(group)) {
-            <!-- <900px: the header row has no more width to give (name is already min-w-0/truncate
-                 and fully squeezed to 0 there; every sibling is shrink-0). Collapse to icon-only
-                 rather than overflow the card — aria-label keeps the accessible name, so nothing is
-                 lost, only the visible label (measured: closes the 768px 798→750 overflow exactly). -->
-            <span
-              role="button"
-              tabindex="0"
-              class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] max-[900px]:w-[30px] max-[900px]:justify-center max-[900px]:px-0"
-              aria-label="Open this Area of Work in the By-AOW view"
-              title="By AOW"
-              (click)="emitAndStop(openAow, group.aow.code, $event)"
-              (keydown.enter)="emitAndStop(openAow, group.aow.code, $event)"
-              (keydown.space)="emitAndStop(openAow, group.aow.code, $event)">
-              <span class="material-icons-round text-[16px]" aria-hidden="true">folder_open</span>
-              <span class="max-[900px]:hidden">By AOW</span>
-            </span>
-          }
-            </div>
-          }
+            <!-- Jump to the focused By-AOW view — the inverse of that view's "All Areas of Work"
+                 button (same recipe). Real AoWs only: buckets have no By-AOW view. Nested-control
+                 pattern, like the ⓘ above: emitAndStop keeps the click from toggling the card. -->
+            @if (!isBucket(group)) {
+              <!-- <900px: the header row has no more width to give (name is already min-w-0/truncate
+                   and fully squeezed to 0 there; every sibling is shrink-0). Collapse to icon-only
+                   rather than overflow the card — aria-label keeps the accessible name, so nothing is
+                   lost, only the visible label (measured: closes the 768px 798→750 overflow exactly). -->
+              <span
+                role="button"
+                tabindex="0"
+                class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] max-[900px]:w-[30px] max-[900px]:justify-center max-[900px]:px-0"
+                aria-label="Open this Area of Work in the By-AOW view"
+                title="By AOW"
+                (click)="emitAndStop(openAow, group.aow.code, $event)"
+                (keydown.enter)="emitAndStop(openAow, group.aow.code, $event)"
+                (keydown.space)="emitAndStop(openAow, group.aow.code, $event)">
+                <span class="material-icons-round text-[16px]" aria-hidden="true">folder_open</span>
+                <span class="max-[900px]:hidden">By AOW</span>
+              </span>
+            }
+          </div>
         </button>
 
         <!-- Always in DOM so height can animate (no @if pop). -->

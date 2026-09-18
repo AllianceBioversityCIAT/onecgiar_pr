@@ -595,7 +595,7 @@ export class BilateralReviewTableComponent {
    *  win on hover (later in the cascade, same specificity) and erase the emphasis exactly when the
    *  pointer lands on it. */
   actionToneClass(row: ResultToReview): string {
-    return this.canReviewRow(row) ? 'text-[var(--pr-color-primary-700)] hover:text-[var(--pr-color-primary-700)] font-semibold' : '';
+    return this.canReviewRow(row) ? 'text-[var(--pr-color-primary-700)] hover:text-[var(--pr-color-primary-700)] font-semibold rounded-md' : '';
   }
 
   actionLabel(row: ResultToReview): string {

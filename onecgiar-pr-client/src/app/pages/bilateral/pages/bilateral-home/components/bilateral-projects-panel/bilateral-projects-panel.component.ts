@@ -106,6 +106,16 @@ export class BilateralProjectsPanelComponent {
   readonly selectedProgramFilter = signal<string>('ALL');
   readonly selectedMultiProgramOnly = signal<boolean>(false);
   readonly viewMode = signal<'grid' | 'list'>(getInitialViewMode());
+  readonly refreshing = signal<boolean>(false);
+
+  readonly resultsLoading = computed<boolean>(() => {
+    const centerKey = this.ctx.centerId() || this.ctx.centerAcronym();
+    const versionId = this.effectiveVersionId();
+    if (!centerKey || versionId === null) return false;
+    return this.overviewService.resultsLoading(centerKey, versionId)();
+  });
+
+  readonly isRefreshing = computed<boolean>(() => this.refreshing() || this.resultsLoading());
 
   /** `COV-R-15`/`COV-DD-9` — the project id `?project=` highlights (scroll + transient ring), for
    *  up to `PROJECT_HIGHLIGHT_DURATION_MS`. The catalog is never filtered by it — highlight, not
@@ -290,9 +300,33 @@ export class BilateralProjectsPanelComponent {
     this.selectedMultiProgramOnly.set(false);
   }
 
-  openManualCreate(project: BilateralProject, event: Event): void {
+  openManualCreate(project: BilateralProject, event?: Event): void {
     event?.stopPropagation?.();
     this.manualCreateFlow.beginFromProject(project, event);
+  }
+
+  refresh(): void {
+    const centerKey = this.ctx.centerId() || this.ctx.centerAcronym();
+    const versionId = this.effectiveVersionId();
+    this.refreshing.set(true);
+
+    if (centerKey && versionId !== null) {
+      this.overviewService.invalidate(centerKey, versionId);
+    }
+
+    if (centerKey) {
+      this.bilateralApiService.GET_bilateralProjects(centerKey).subscribe({
+        next: ({ response }) => {
+          this.projects.set(response?.projects ?? response ?? []);
+          this.refreshing.set(false);
+        },
+        error: () => {
+          this.refreshing.set(false);
+        }
+      });
+    } else {
+      this.refreshing.set(false);
+    }
   }
 
   onSearch(event: Event): void {

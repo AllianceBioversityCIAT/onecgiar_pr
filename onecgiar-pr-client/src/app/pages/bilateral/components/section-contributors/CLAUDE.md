@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección; prior: 2026-09-09 · ToC no gatea el Submit
+**Verified:** 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -92,6 +92,19 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   AC6 los deja fuera de bilateral. Pero `validation_partners_P25` exige una fila en
   `result_by_institutions_by_deliveries_type` **por cada socio**, así que el green check de partners
   no se pondrá verde en bilateral hasta que producto defina qué va ahí.
+- 🛑 **`[isStatic]` en `pr-multi-select` ANULA su solo-lectura — va atado a `!readOnly()`, nunca a
+  `true` a secas** (P2-3520, 18-sep-2026). El disparador se dibuja si
+  `(!hideSelect() && !(readOnly() || rolesSE.readOnly)) || isStatic()`
+  (`pr-multi-select.component.html:16`) y las casillas de dentro sólo obedecen a `option.disabled`:
+  con `true` fijo, un resultado en Pending Review dejaba abrir los cuatro selectores y marcar
+  opciones (medido en prtest, resultado #9464). El PATCH nunca escribió nada — el defecto era que
+  **la pantalla mentía**. Se arregló desde aquí y **no tocando `pr-multi-select`**, que es
+  compartido por toda la app; en modo editable `!readOnly()` vale `true`, o sea exactamente lo de
+  antes (`validateShowDeleteButton`, líneas 259/262, da `false` en los dos casos).
+  ⚠️ **Siguen con `[isStatic]="true"` duro**, y por tanto siguen clicables en solo-lectura, el
+  `app-pr-checkbox` *"This result has no external partners"* (línea 168) y el multi-select de
+  *Select a result* del bloque Full Metadata (línea 283, hoy tapado por `unpersistedFieldsComingSoon`).
+  Ninguno de los dos entraba en el alcance del ticket.
 - ⚠️ **`selectedProject().sciencePrograms` viene `[]` al cargar un resultado existente**
   (`bilateral-creation.service.ts:170`). El multi-select de "Contributing science programs" sólo se
   renderiza si hay opciones; en un resultado guardado se ven únicamente los chips read-only. No
@@ -125,7 +138,13 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 
 ## Tests
 `section-contributors.component.spec.ts` — 104 casos. El template se sobreescribe con
-`<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds.
+`<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds — y eso es justo lo que
+dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).
+
+`section-contributors.readonly.spec.ts` — 13 casos, y **sí renderiza el template real** (stubea solo
+`<app-section-toc>`, que arrastra el diálogo de Spartan). Mide, por cada uno de los cuatro
+selectores, cuántos nodos enfocables no deshabilitados quedan: 0 en solo-lectura, >0 en editable.
+Si añades un control nuevo a la sección, este spec lo cuenta solo.
 
 ## 2026-09-03 — Contributing science programs ya se guardan y salen siempre
 

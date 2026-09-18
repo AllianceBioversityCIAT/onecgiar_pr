@@ -145,12 +145,16 @@
             <span class="material-icons-round text-[16px]" aria-hidden="true">sync</span>
           </button>
         </div>
-        @if (kpHandleError().status) {
-          <p class="m-0 mt-1.5 text-[12.5px] text-[var(--pr-color-red-300)]" data-testid="kp-handle-error">
-            {{ kpHandleError().message }}
-          </p>
-        }
       </div>
+
+      @if (kpHandleError().status) {
+        <p
+          class="m-0 mt-3 text-[12.5px] text-[var(--pr-color-red-300)]"
+          role="alert"
+          data-testid="kp-handle-error">
+          {{ kpHandleError().message }}
+        </p>
+      }
     </div>
   }
 

@@ -16,6 +16,7 @@
 | Extends | `docs/specs/bilateral/bulk-uploader-handoff/` (external-contract discipline) · centre form gate behaviour documented in vault `w3-p2-3639-toc-no-gatea-submit.md` |
 | Authoritative external doc | `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (change-log row for the additive `quality_assessment` block) · **AI-service contract v0.2** (repo copy in `docs/bilateral-module/integration-contracts.md` § *Quality assessment (outbound)*, written by `BIL-QAI-T-1b`; vault note `CGIAR/W3/w3-bilateral-module/w3-p2-3150-ai-traffic-light-qa-on-submit.md`). v0.1 is superseded and is not implemented anywhere after the pivot. |
 | Structure decision | Single spec, three task groups (server · client · KP rule). The proposal's optional three-child family was **not** taken (owner did not opt in at the gate); revisit only if `design.md` §Budget trips Full depth. |
+| Amendment | **2026-09-18** — the verdict window's *presentation* (`BIL-QAI-R-4`, `BIL-QAI-R-10`) is superseded by `docs/specs/bilateral/qa-ai-verdict-drawer/`: centred `app-pr-dialog` modal → right-side drawer over a scrim. See the note under each requirement. Every behavioural clause of both requirements — flow, state machine, contract, service, copy — is unchanged. |
 
 ## Executive Summary
 
@@ -176,6 +177,13 @@ The system MUST send each evidence item with `source` (`url` | `prms_repository`
 
 #### `BIL-QAI-R-4` — Verdict per section and overall, in one window; grey is a valid section verdict *(amended v0.2)*
 
+> **Presentation superseded 2026-09-18.** The verdict window's presentation — a centred `app-pr-dialog`
+> modal — is superseded by `docs/specs/bilateral/qa-ai-verdict-drawer/`, which renders it as a
+> right-side drawer over a scrim instead. **Every behavioural clause below is unchanged**: the
+> content this requirement lists, the state machine, the contract, the service and every copy
+> string are untouched. Do not infer that any behaviour moved — only where the window sits on
+> screen did.
+
 The system MUST show one window with the overall verdict and one verdict per section (General information, Contributors & partners, Geographic location, Evidence, Type-specific details), each with plain-language comments; for amber/red sections what to correct, for green sections what is done well; evidence items listed with their own verdict including grey. A **section** verdict MAY be `grey` with the same meaning as an evidence grey ("not evaluated"); the overall verdict stays `green` | `amber` | `red`.
 
 ##### Scenario: Window for every colour
@@ -317,6 +325,11 @@ For a Knowledge Product result the system MUST NOT call the AI service and MUST 
 
 #### `BIL-QAI-R-10` — Working state that informs
 
+> **Presentation superseded 2026-09-18.** Same amendment as `BIL-QAI-R-4`: the window is now a
+> right-side drawer (`docs/specs/bilateral/qa-ai-verdict-drawer/`), not a centred `app-pr-dialog`
+> modal. The working-state behaviour below — what it shows, when, and how it is announced — is
+> unchanged.
+
 While the assessment runs the window MUST show a progress indicator, the elapsed time, rotating explanations of what green, amber, red and grey mean, and the statement that the user decides and the AI never blocks.
 
 ##### Scenario: Working state
@@ -367,7 +380,7 @@ For an Innovation development result the bilateral form MUST offer **Innovation 
 | **Privacy / secrets** | The HTTP client logs request id, result id, elapsed ms, HTTP status and colours only. **No request or response bodies, no API key, no host in user-facing errors** (AC-9, W8, QAS-10). |
 | **Backwards compatibility** | `PATCH submit-for-review` body is optional; bilateral detail gains one nullable block; change-log row in `bilateral-result-summaries.en.md` (AC-4, ADR-004). **(v0.2)** two nullable columns arrive in a **second additive migration**, not by editing the first — `T-2`'s migration is already queued for the owner's run, and rewriting a migration that may have run is how environments diverge. |
 | **Accessibility** | Dialog: `role="dialog"`, labelled, focus trap, Esc closes as Make adjustments, live region for state changes; colours never the only carrier (icon + label per verdict) — `docs/ux-ui/design.md` §10. |
-| **Design system** | Tailwind-first, tokens §7 (green `--pr-color-green-500`, amber `--pr-color-yellow-300`, red `--pr-color-red-300`, grey `--pr-color-accents-*`), `app-pr-dialog` identity used by the AI completion dialog, brand gradient on the primary CTA (DD-12). |
+| **Design system** | Tailwind-first, tokens §7 (green `--pr-color-green-500`, amber `--pr-color-yellow-300`, red `--pr-color-red-300`, grey `--pr-color-accents-*`), `app-pr-dialog` identity used by the AI completion dialog *(superseded for the verdict window 2026-09-18 — see the Amendment row above; the AI completion dialog itself, a separate surface, is untouched)*, brand gradient on the primary CTA (DD-12). |
 | **Observability** | One structured log line per assessment: `event=bilateral_quality_assessment`, result id, status, **`ai_status` (v0.2)**, overall, elapsed ms, criteria version. `degraded_reason` is stored but **never logged** — it is free text from an external service. |
 | **Cost** | No new always-on compute (QAS-12); synchronous call, no worker. |
 

@@ -237,10 +237,11 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
     this.validatingKpHandle.set(true);
     this.kpEntryMode.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');
+    this.kpHandleError.set({ ...KP_HANDLE_NO_ERROR });
 
     const error = validateKpHandle(url);
-    this.kpHandleError.set(error);
     if (error.status) {
+      this.surfaceKpHandleError(error.message);
       this.validatingKpHandle.set(false);
       return;
     }
@@ -252,14 +253,14 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
         this.kpHandleSynced.set(true);
         this.title.set(syncedTitle);
         this.validatingKpHandle.set(false);
+        this.kpHandleError.set({ ...KP_HANDLE_NO_ERROR });
         this.queueTitleSearch(syncedTitle);
       },
       error: (err: any) => {
         this.validatingKpHandle.set(false);
-        this.kpHandleError.set({
-          status: true,
-          message: err?.error?.message || 'Could not retrieve metadata for this item'
-        });
+        this.surfaceKpHandleError(
+          err?.error?.message || 'Could not retrieve metadata for this item'
+        );
       }
     });
   }
@@ -271,7 +272,7 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
 
     const error = validateKpHandle(handle);
     if (error.status) {
-      this.kpHandleError.set(error);
+      this.surfaceKpHandleError(error.message);
       this.validatingKpHandle.set(false);
       return;
     }
@@ -283,15 +284,25 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
         this.kpHandleSynced.set(true);
         this.title.set(syncedTitle);
         this.validatingKpHandle.set(false);
+        this.kpHandleError.set({ ...KP_HANDLE_NO_ERROR });
         this.queueTitleSearch(syncedTitle);
       },
       error: (err: any) => {
         this.validatingKpHandle.set(false);
-        this.kpHandleError.set({
-          status: true,
-          message: err?.error?.message || 'Unable to retrieve metadata for this handle.'
-        });
+        this.surfaceKpHandleError(
+          err?.error?.message || 'Unable to retrieve metadata for this handle.'
+        );
       }
+    });
+  }
+
+  private surfaceKpHandleError(message: string): void {
+    this.kpHandleError.set({ status: true, message });
+    this.api.alertsFe?.show({
+      id: 'bilateralKpHandleError',
+      title: 'Error!',
+      description: message,
+      status: 'error'
     });
   }
 

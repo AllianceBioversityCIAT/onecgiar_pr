@@ -38,7 +38,7 @@
     <!-- BRH-R-8/design.md §4.3: ROW-level 3px left border accent, matching THIS row's own status
          tone (distinct from the GROUP header's pending-vs-neutral accent on the toggle button). -->
     <td
-      class="!border-b !border-l-[3px] !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] font-mono text-[12px] tabular-nums !text-[var(--pr-text-muted)]"
+      class="!border-b !border-l-[3px] !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] font-mono text-[12px] tabular-nums text-slate-700"
       [class]="rowAccentClass(row)"
       data-testid="bilateral-review-row-code">
       <!-- BRH-T-3 attempt 3 (Reviewer FAIL, issue 1): the Contributor chip moved OUT of the
@@ -48,7 +48,7 @@
            over the Title cell. Stacked, each line only needs to fit alone. -->
       <span class="flex flex-col gap-[2px]">
         <span class="inline-flex items-center gap-[2px] whitespace-nowrap">
-          <span class="cursor-text select-text" data-testid="bilateral-review-row-code-value">{{ row.result_code }}</span>
+          <span class="cursor-text select-text font-mono text-[12px] font-semibold text-slate-700" data-testid="bilateral-review-row-code-value">{{ row.result_code }}</span>
           <!-- BRH-R-5/BRH-US-4: hover-revealed copy button for the result code. -->
           <button
             type="button"
@@ -75,7 +75,7 @@
          bigger than that remainder would reopen the exact horizontal-overflow defect this fix
          removes (e.g. remainder ≈ 100-200px at 1000px viewport once the fixed columns are laid
          out). -->
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-[13px] !text-[var(--pr-text-heading)]">
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-[13px] text-slate-900">
       <p class="m-0 line-clamp-2 leading-[17px] cursor-text select-text" [title]="row.result_title">{{ row.result_title }}</p>
       <!-- BRH-R-7/design.md §4.2: categorical semantic badge pill instead of plain grey caption.
            Reviewer FAIL (BRH-T-3 attempt 2, issue 1): the original `mt-[4px] py-0.5` pill added
@@ -138,10 +138,10 @@
             <span class="sr-only">{{ alignmentSrOnlyText(row) }}</span>
           } @else {
             @if (!isPlaceholder(row.toc_title)) {
-              <span class="block truncate max-w-[340px] text-[13px] leading-[17px] text-[var(--pr-text-secondary)] cursor-text select-text" [title]="row.toc_title">{{ row.toc_title }}</span>
+              <span class="block truncate max-w-[340px] text-[13px] leading-snug text-slate-800 cursor-text select-text" [title]="row.toc_title">{{ row.toc_title }}</span>
             }
             @if (!isPlaceholder(row.indicator)) {
-              <span class="block truncate max-w-[340px] text-[11px] leading-[14px] text-[var(--pr-text-secondary)] cursor-text select-text" [title]="row.indicator">{{ row.indicator }}</span>
+              <span class="block truncate max-w-[340px] text-[11px] leading-[14px] text-slate-500 cursor-text select-text" [title]="row.indicator">{{ row.indicator }}</span>
             }
           }
         </div>
@@ -161,10 +161,10 @@
         }
       </div>
     </td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-right font-mono text-[12px] tabular-nums !text-[var(--pr-text-secondary)] min-w-[95px]">
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-right text-[12px] tabular-nums text-slate-600 min-w-[95px]">
       {{ row.submission_date | date: 'd MMM y' }}
     </td>
-    <td class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-card)] group-hover:bg-[var(--pr-surface-app)] !px-[10px] !py-[6px] text-center min-w-[110px]">
+    <td class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-card)] group-hover:bg-[var(--pr-surface-app)] transition-colors !px-[10px] !py-[6px] text-center min-w-[110px]">
       <button
         hlmBtn
         variant="ghost"
@@ -185,7 +185,7 @@
 <ng-template #headerRowTpl>
   <tr>
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] !whitespace-nowrap">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-left !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
       {{ copy.headers.code }}
     </th>
     <!-- BRH-T-3 attempt 2 (HITL fix, BRH-R-1): no width/min-w here on purpose — the `<col>` for
@@ -194,29 +194,29 @@
          force the SAME horizontal overflow this fix removes once the fixed columns' sum leaves
          less than 280px of remainder (e.g. at 1000px viewport). -->
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] !whitespace-nowrap">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-left !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
       {{ copy.headers.title }}
     </th>
     @if (showCenterColumn()) {
       <th
-        class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] !whitespace-nowrap">
+        class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-left !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
         {{ copy.headers.center }}
       </th>
     }
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] !whitespace-nowrap">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-left !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
       {{ copy.headers.status }}
     </th>
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-left !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] !whitespace-nowrap">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-left !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
       {{ copy.headers.alignment }}
     </th>
     <th
-      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-right !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] !whitespace-nowrap">
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-right !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
       {{ copy.headers.date }}
     </th>
     <th
-      class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 !bg-[var(--pr-surface-app)] !px-[10px] !py-[8px] text-center !text-[11px] font-bold uppercase !tracking-[0.04em] !leading-none !align-middle !rounded-none !text-[var(--pr-text-muted)] !whitespace-nowrap">
+      class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-center !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
       {{ copy.headers.actions }}
     </th>
   </tr>
@@ -375,15 +375,15 @@
               [attr.aria-expanded]="isOpen"
               [attr.aria-label]="'Toggle ' + group.label"
               (click)="onToggleGroup(group, isOpen)"
-              class="flex min-h-[44px] w-full cursor-pointer flex-col justify-center gap-[4px] !border-l-[3px] bg-[var(--pr-surface-card)] px-[12px] py-[8px] text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+              class="group flex min-h-[44px] w-full cursor-pointer flex-col justify-center gap-[4px] !border-l-[3px] bg-[var(--pr-surface-card)] px-[12px] py-[8px] text-left focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
               [class]="groupAccentClass(group)"
               [class.border-b]="isOpen"
               [class.border-[var(--pr-border-divider)]]="isOpen"
               data-testid="bilateral-review-group-toggle">
               <span class="flex w-full items-center gap-[8px]">
-                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white border border-slate-200/80 text-indigo-700 shadow-2xs">
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center text-slate-500 group-hover:text-[var(--pr-color-primary-600)] transition-colors">
                   <span
-                    class="material-icons-round text-[16px] transition-transform duration-200"
+                    class="material-icons-round text-[18px] transition-transform duration-200"
                     [class.rotate-180]="isOpen"
                     aria-hidden="true">
                     expand_more
@@ -394,7 +394,7 @@
                     @let parsed = parseProjectIdentifier(group.label);
                     <span class="flex items-center gap-[6px] min-w-0">
                       @if (parsed.code) {
-                        <span class="font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded bg-indigo-100/80 text-indigo-800 border border-indigo-200/70 shrink-0" data-testid="bilateral-review-project-code">
+                        <span class="font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-[var(--pr-color-primary-700)] border border-violet-200/80 shrink-0" data-testid="bilateral-review-project-code">
                           {{ parsed.code }}
                         </span>
                       }
@@ -409,13 +409,13 @@
                   }
                 </span>
                 <span class="ml-auto flex shrink-0 items-center gap-[6px]">
-                  <span class="text-[11.5px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-summary">{{ resultsLabel(group) }}</span>
+                  <span class="text-[11.5px] font-medium text-[var(--pr-text-secondary)] tabular-nums" data-testid="bilateral-review-group-summary">{{ resultsLabel(group) }}</span>
                   @if (pendingCount(group) > 0) {
-                    <span class="rounded-full border border-transparent px-[6px] py-[1px] text-[10.5px] font-semibold" [class]="groupPendingBadgeClass()" data-testid="bilateral-review-group-pending">
+                    <span class="rounded-full border border-transparent px-[6px] py-[1px] text-[10.5px] font-semibold tabular-nums" [class]="groupPendingBadgeClass()" data-testid="bilateral-review-group-pending">
                       {{ pendingLabel(group) }}
                     </span>
                   } @else {
-                    <span class="text-[11.5px] text-[var(--pr-text-secondary)]" data-testid="bilateral-review-group-pending">{{ pendingLabel(group) }}</span>
+                    <span class="text-[11.5px] text-[var(--pr-text-secondary)] tabular-nums" data-testid="bilateral-review-group-pending">{{ pendingLabel(group) }}</span>
                   }
                 </span>
               </span>
@@ -483,23 +483,23 @@
           class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] shadow-xs transition-shadow hover:shadow-sm overflow-hidden"
           data-testid="bilateral-review-group-card">
 
-          <!-- Structured 52px Header (BRH-T-2, BRH-R-2) -->
+          <!-- Structured 52px Header (BRH-T-2, BRH-R-2, BVP-R-1) -->
           <button
             type="button"
             [attr.aria-expanded]="isOpen"
             [attr.aria-label]="'Toggle ' + group.label"
             (click)="onToggleGroup(group, isOpen)"
             data-testid="bilateral-review-group-toggle"
-            class="flex h-[52px] min-h-[52px] w-full items-center gap-[10px] !border-l-[3px] bg-[var(--pr-surface-card)] px-[16px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+            class="group flex h-[52px] min-h-[52px] w-full items-center gap-[10px] !border-l-[3px] bg-[var(--pr-surface-card)] px-[16px] sm:px-[20px] text-left cursor-pointer hover:bg-[var(--pr-surface-subtle)] transition-colors rounded-t-[12px] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
             [class]="groupAccentClass(group)"
             [class.rounded-b-[12px]]="!isOpen"
             [class.border-b]="isOpen"
             [class.border-[var(--pr-border-divider)]]="isOpen">
             
             <!-- Chevron Box -->
-            <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white border border-slate-200/80 text-indigo-700 shadow-2xs">
+            <div class="flex h-6 w-6 shrink-0 items-center justify-center text-slate-500 group-hover:text-[var(--pr-color-primary-600)] transition-colors">
               <span
-                class="material-icons-round text-[16px] transition-transform duration-200"
+                class="material-icons-round text-[20px] transition-transform duration-200"
                 [class.rotate-180]="isOpen"
                 aria-hidden="true">
                 expand_more
@@ -512,7 +512,7 @@
                 @let parsed = parseProjectIdentifier(group.label);
                 @if (parsed.code) {
                   <span
-                    class="font-mono text-[11.5px] font-bold px-2.5 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800 border border-indigo-200/70 shrink-0 cursor-text select-text"
+                    class="font-mono text-[11.5px] font-bold px-2.5 py-0.5 rounded-md bg-violet-50 text-[var(--pr-color-primary-700)] border border-violet-200/80 shrink-0 cursor-text select-text"
                     data-testid="bilateral-review-project-code"
                     (click)="$event.stopPropagation()">
                     {{ parsed.code }}
@@ -586,55 +586,59 @@
           </button>
 
           @if (isOpen) {
-            <!-- In-Card Quick Filter Toolbar (BRH-R-6) -->
+            <!-- In-Card Quick Filter Toolbar (BRH-R-6, BVP-R-2) -->
             @if (hasMultipleCardFilters(group)) {
               <div
-                class="flex flex-wrap items-center gap-[6px] sm:gap-[10px] min-h-[32px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[16px] sm:px-[20px] py-[4px] text-[11.5px]"
+                class="flex flex-wrap items-center gap-[10px] sm:gap-[16px] min-h-[34px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[16px] sm:px-[20px] py-[6px] text-[11.5px]"
                 data-testid="bilateral-review-incard-toolbar">
                 @if (distinctCardCenters(group).length > 1) {
-                  <div class="flex items-center gap-[4px] flex-wrap">
-                    <span class="font-medium text-[var(--pr-text-muted)] text-[11px] uppercase tracking-wider">Center:</span>
-                    <button
-                      type="button"
-                      (click)="setInCardCenterFilter(group.key, null)"
-                      class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
-                      [class]="getInCardCenterFilter(group.key) === null ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
-                      data-testid="incard-filter-center-all">
-                      All ({{ group.results.length }})
-                    </button>
-                    @for (item of distinctCardCenters(group); track item.center) {
+                  <div class="flex items-center gap-[6px] flex-wrap">
+                    <span class="font-semibold text-[var(--pr-text-muted)] text-[10.5px] uppercase tracking-wider">Center:</span>
+                    <div class="inline-flex items-center gap-[2px] rounded-lg bg-slate-200/60 p-[3px] border border-slate-200/60">
                       <button
                         type="button"
-                        (click)="setInCardCenterFilter(group.key, item.center)"
-                        class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
-                        [class]="getInCardCenterFilter(group.key) === item.center ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
-                        data-testid="incard-filter-center-item">
-                        {{ item.center }} ({{ item.count }})
+                        (click)="setInCardCenterFilter(group.key, null)"
+                        class="inline-flex h-[22px] cursor-pointer items-center rounded-md px-[8px] text-[11px] font-medium transition-colors"
+                        [class]="getInCardCenterFilter(group.key) === null ? 'bg-white text-[var(--pr-color-primary-700)] font-semibold shadow-2xs' : 'text-[var(--pr-text-secondary)] hover:text-slate-900 hover:bg-white/50'"
+                        data-testid="incard-filter-center-all">
+                        All ({{ group.results.length }})
                       </button>
-                    }
+                      @for (item of distinctCardCenters(group); track item.center) {
+                        <button
+                          type="button"
+                          (click)="setInCardCenterFilter(group.key, item.center)"
+                          class="inline-flex h-[22px] cursor-pointer items-center rounded-md px-[8px] text-[11px] font-medium transition-colors"
+                          [class]="getInCardCenterFilter(group.key) === item.center ? 'bg-white text-[var(--pr-color-primary-700)] font-semibold shadow-2xs' : 'text-[var(--pr-text-secondary)] hover:text-slate-900 hover:bg-white/50'"
+                          data-testid="incard-filter-center-item">
+                          {{ item.center }} ({{ item.count }})
+                        </button>
+                      }
+                    </div>
                   </div>
                 }
                 @if (distinctCardTypes(group).length > 1) {
-                  <div class="flex items-center gap-[4px] flex-wrap">
-                    <span class="font-medium text-[var(--pr-text-muted)] text-[11px] uppercase tracking-wider">Type:</span>
-                    <button
-                      type="button"
-                      (click)="setInCardTypeFilter(group.key, null)"
-                      class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
-                      [class]="getInCardTypeFilter(group.key) === null ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
-                      data-testid="incard-filter-type-all">
-                      All Types
-                    </button>
-                    @for (item of distinctCardTypes(group); track item.type) {
+                  <div class="flex items-center gap-[6px] flex-wrap">
+                    <span class="font-semibold text-[var(--pr-text-muted)] text-[10.5px] uppercase tracking-wider">Type:</span>
+                    <div class="inline-flex items-center gap-[2px] rounded-lg bg-slate-200/60 p-[3px] border border-slate-200/60">
                       <button
                         type="button"
-                        (click)="setInCardTypeFilter(group.key, item.type)"
-                        class="inline-flex h-[22px] cursor-pointer items-center rounded-[4px] px-[6px] text-[11px] font-medium transition-colors"
-                        [class]="getInCardTypeFilter(group.key) === item.type ? 'bg-white shadow-2xs font-semibold text-[var(--pr-color-primary-700)]' : 'text-[var(--pr-text-secondary)] hover:bg-white/50'"
-                        data-testid="incard-filter-type-item">
-                        {{ item.type }} ({{ item.count }})
+                        (click)="setInCardTypeFilter(group.key, null)"
+                        class="inline-flex h-[22px] cursor-pointer items-center rounded-md px-[8px] text-[11px] font-medium transition-colors"
+                        [class]="getInCardTypeFilter(group.key) === null ? 'bg-white text-[var(--pr-color-primary-700)] font-semibold shadow-2xs' : 'text-[var(--pr-text-secondary)] hover:text-slate-900 hover:bg-white/50'"
+                        data-testid="incard-filter-type-all">
+                        All Types
                       </button>
-                    }
+                      @for (item of distinctCardTypes(group); track item.type) {
+                        <button
+                          type="button"
+                          (click)="setInCardTypeFilter(group.key, item.type)"
+                          class="inline-flex h-[22px] cursor-pointer items-center rounded-md px-[8px] text-[11px] font-medium transition-colors"
+                          [class]="getInCardTypeFilter(group.key) === item.type ? 'bg-white text-[var(--pr-color-primary-700)] font-semibold shadow-2xs' : 'text-[var(--pr-text-secondary)] hover:text-slate-900 hover:bg-white/50'"
+                          data-testid="incard-filter-type-item">
+                          {{ item.type }} ({{ item.count }})
+                        </button>
+                      }
+                    </div>
                   </div>
                 }
               </div>

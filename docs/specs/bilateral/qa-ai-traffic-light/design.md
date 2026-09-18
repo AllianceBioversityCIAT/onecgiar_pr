@@ -16,10 +16,11 @@
 | Authoritative external docs | `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (change-log row) · **AI contract v0.2** — repo copy `docs/bilateral-module/integration-contracts.md` § *Quality assessment (outbound)* (rewritten by `BIL-QAI-T-1b`), vault `CGIAR/W3/w3-bilateral-module/w3-p2-3150-ai-traffic-light-qa-on-submit.md` |
 | Code anchors (scouted 2026-09-16) | Server: `bilateral-center.service.ts:1472` `submitForReview`, `:1572` `assertCenterPermission` (private), `bilateral-center.controller.ts:86`; `results.service.ts:3647` `getBilateralResultById` (what the form and the review drawer read); `bilateral.service.ts:3606` `enrichBilateralResultResponse`; `shared/constants/result-status.enum.ts` `ResultStatusData`; `result-review-history.entity.ts` (`ReviewActionEnum` APPROVED/REJECTED/UPDATE); `results_kp_metadata.source` = `'CGSpace'` vs WoS; `evidence_sharepoint.is_public_file`; `bilateral.module.ts:88` already imports `HttpModule`. Client: `bilateral-creation.service.ts:453` `submitResult` (direct `http.patch`, then `resultStatusId.set(PendingReview)`); `bilateral-result-creator.component.{ts:397,html:94-108}`; `shared/services/api/bilateral-api.service.ts`; `shared/components/pr-dialog/pr-dialog.component.ts` (inputs `visible, modal, header, showHeader, closable, closeOnEscape, dismissableMask, styleClass`; outputs `visibleChange, onHide`); `shared/directives/before-unload-warning.directive.ts`; route `result/:id` in `shared/routing/routing-data.ts:740` (no guards). |
 | Delegation record | Code scout: Explore subagent (synchronous return, ~4 min). Reversion challenge (§12 `BIL-QAI-DD-9`): Explore subagent, one question. |
+| Amendment | **2026-09-18** — §6.2, §6.3 and `BIL-QAI-DD-10` below describe the verdict window's shell as a centred `app-pr-dialog`. That **presentation** is superseded by `docs/specs/bilateral/qa-ai-verdict-drawer/`: it now renders as a right-side drawer over a scrim. Everything else in §6 — the component's inputs/outputs, the phases, the copy, the badge — is unchanged; see `requirements.md`'s amendment note on `BIL-QAI-R-4`/`BIL-QAI-R-10`. |
 
 ## 1. Summary
 
-The feature inserts one **assessment step** between the centre form's Submit button and the existing `submitForReview` transition. A new server orchestrator builds a **definitions-only** document from the persisted result, calls the AI service synchronously (60 s window) or applies the Knowledge Product rule in code, persists the outcome as one `bilateral_quality_assessments` row keyed by a content hash, and returns it. The client renders it in one `app-pr-dialog` with a working state and a verdict state; only **Submit anyway** calls the existing submit endpoint, now with an optional decision body. The biggest accepted trade-off: a synchronous HTTP call held up to 60 s (LITE tier, no worker, no queue) in exchange for zero new infrastructure and a flow that survives a closed tab because the server persists regardless of the client.
+The feature inserts one **assessment step** between the centre form's Submit button and the existing `submitForReview` transition. A new server orchestrator builds a **definitions-only** document from the persisted result, calls the AI service synchronously (60 s window) or applies the Knowledge Product rule in code, persists the outcome as one `bilateral_quality_assessments` row keyed by a content hash, and returns it. The client renders it in one `app-pr-dialog` with a working state and a verdict state (**presentation superseded 2026-09-18 by `bilateral/qa-ai-verdict-drawer` — see the Amendment row above; the working/verdict state machine itself is unchanged**); only **Submit anyway** calls the existing submit endpoint, now with an optional decision body. The biggest accepted trade-off: a synchronous HTTP call held up to 60 s (LITE tier, no worker, no queue) in exchange for zero new infrastructure and a flow that survives a closed tab because the server persists regardless of the client.
 
 ## 2. Architecture Overview
 
@@ -279,6 +280,12 @@ Sections: all five set to the overall verdict with the same rationale; evidence:
 
 ### 6.2 Components & services
 
+> **Shell superseded 2026-09-18** (`docs/specs/bilateral/qa-ai-verdict-drawer/`): the `app-pr-dialog`
+> shell described in this table's last row — and in §6.3 below (`Identity`, `Layout`'s "Dialog max
+> width 720 px", `A11y`'s "focus trap from `app-pr-dialog`") — is now a right-side drawer over a
+> scrim (760 px default, its own focus trap). The component's inputs, outputs, phases and content
+> are unchanged — only where it sits on screen moved.
+
 | Item | Path | Responsibility |
 |---|---|---|
 | `BilateralApiService` (+3 methods) | `shared/services/api/bilateral-api.service.ts` | `POST_bilateralQualityAssessment(resultId)`, `GET_bilateralQualityAssessmentLatest(resultId)`, `PATCH_bilateralSubmitForReview(resultId, body?)` — naming per `HTTP_METHOD_descriptiveName` |
@@ -429,6 +436,12 @@ Why not split into the three-child family now: the five new tasks are edits to c
 - **Decision:** keep the three guards, the alert ids and the `resultStatusId` tap exactly as they are; move only the moment the PATCH fires behind the CTA; introduce `submitPhase`; share `assertSubmittable` server-side.
 
 ### `BIL-QAI-DD-10` — Same visual essence as the existing bilateral dialogs
+
+> **Superseded 2026-09-18** for presentation only: `docs/specs/bilateral/qa-ai-verdict-drawer/`
+> replaces this centred-dialog shell with a right-side drawer. The decision, alternatives and
+> consequences below are the historical record of what shipped first; the CTA pattern and tokens
+> they describe carried over into the drawer, the centred-box mechanics did not.
+
 - **Context:** owner instruction 2026-09-16: "seguir la misma esencia que tenemos actualmente".
 - **Decision:** clone the AI completion dialog shell and CTA pattern; reuse tokens; no new components beyond the badge.
 - **Alternatives:** PrimeNG `p-dialog` directly (rejected: bypasses the project shell); bespoke overlay (rejected: new visual language).

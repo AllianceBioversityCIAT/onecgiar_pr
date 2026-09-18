@@ -15,7 +15,9 @@ import {
   centerBilateralOption,
   centerBilateralTable,
   matrixTableChartOption,
-  matrixTableChartTable
+  matrixTableChartTable,
+  truncateProgramAxisLabel,
+  PROGRAM_AXIS_LABEL_MAX_CHARS
 } from './portfolio-overview.charts';
 import type {
   PortfolioStatusSegment,
@@ -25,6 +27,20 @@ import type {
 } from './services/portfolio-overview.service';
 
 describe('portfolio-overview.charts (POV-T-2)', () => {
+  describe('truncateProgramAxisLabel', () => {
+    it('returns the label unchanged when it fits within the limit', () => {
+      expect(truncateProgramAxisLabel('Climate Action', 18)).toBe('Climate Action');
+    });
+
+    it('appends ellipsis when the programme name exceeds the limit', () => {
+      const longName =
+        'Accelerated varietal improvement and seed delivery of legumes and dryland cereals in Africa (AVISA)';
+      expect(truncateProgramAxisLabel(longName, PROGRAM_AXIS_LABEL_MAX_CHARS.vertical)).toBe(
+        'Accelerated var...'
+      );
+    });
+  });
+
   const mockTokens: ResolvedChartTokens = {
     ramp: ['#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd'],
     primary: '#8b5cf6',
@@ -268,7 +284,7 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
     ];
 
     describe('programRankingOption', () => {
-      it('configures a horizontal stacked bar chart with program codes on yAxis', () => {
+      it('configures a horizontal stacked bar chart with program names on yAxis', () => {
         const option = programRankingOption(programRows, mockTokens) as {
           xAxis: { type: string };
           yAxis: { type: string; data: string[]; inverse: boolean };
@@ -276,7 +292,7 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
 
         expect(option.xAxis.type).toBe('value');
         expect(option.yAxis.type).toBe('category');
-        expect(option.yAxis.data).toEqual(['SP01', 'SP02']);
+        expect(option.yAxis.data).toEqual(['Plant Health', 'Livestock Genetics']);
         expect(option.yAxis.inverse).toBe(true);
       });
 
@@ -311,13 +327,14 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
         expect(series[3].name).toBe('Total');
       });
 
-      it('formats tooltip showing program code, name, total, and status breakdown', () => {
+      it('formats tooltip showing program name, total, and status breakdown', () => {
         const option = programRankingOption(programRows, mockTokens);
         const tooltip = option.tooltip as { formatter: (p: unknown) => string };
 
-        expect(tooltip.formatter({ dataIndex: 0 })).toContain('SP01 - Plant Health');
+        expect(tooltip.formatter({ dataIndex: 0 })).toContain('Plant Health');
+        expect(tooltip.formatter({ dataIndex: 0 })).not.toContain('SP01');
         expect(tooltip.formatter({ dataIndex: 0 })).toContain('50 total');
-        expect(tooltip.formatter({ dataIndex: 1 })).toContain('SP02 - Livestock Genetics');
+        expect(tooltip.formatter({ dataIndex: 1 })).toContain('Livestock Genetics');
         expect(tooltip.formatter({ dataIndex: 1 })).toContain('40 total');
         expect(tooltip.formatter({ dataIndex: 99 })).toBe('');
       });
@@ -354,7 +371,11 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
         };
 
         expect(option.xAxis.type).toBe('category');
-        expect(option.xAxis.data).toEqual(['SP01', 'SP02']);
+        expect(option.xAxis.data).toEqual(['Plant Health', 'Livestock Genetics']);
+        const axisLabel = (option.xAxis as { axisLabel?: { formatter?: (v: string) => string; tooltip?: { show?: boolean } } })
+          .axisLabel;
+        expect(axisLabel?.formatter?.('Breeding for Tomorrow')).toBe('Breeding for To...');
+        expect(axisLabel?.tooltip?.show).toBe(true);
         expect(option.yAxis.type).toBe('value');
         expect(option.series.length).toBe(4);
         expect(option.series[0].name).toBe('Editing');
@@ -385,7 +406,7 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
         expect(option.xAxis.type).toBe('category');
         expect(option.xAxis.data).toEqual(['Inno-Dev', 'KP', 'Policy']);
         expect(option.yAxis.type).toBe('category');
-        expect(option.yAxis.data).toEqual(['SP01', 'SP02']);
+        expect(option.yAxis.data).toEqual(['Plant Health', 'Livestock Genetics']);
 
         expect(option.visualMap.max).toBe(12);
         expect(option.visualMap.inRange.color.length).toBeGreaterThan(1);
@@ -498,7 +519,7 @@ describe('portfolio-overview.charts (POV-T-2)', () => {
         series: { name: string; type: string; stack: string; data: number[] }[];
       };
 
-      expect(option.xAxis.data).toEqual(['SP01', 'SP02']);
+      expect(option.xAxis.data).toEqual(['Plant Health', 'Breeding']);
       expect(option.series.length).toBe(3);
       expect(option.series[0].name).toBe('KP');
       expect(option.series[0].data).toEqual([10, 12]);

@@ -89,6 +89,8 @@ export interface ReportingAowGroup {
   kind?: ReportingGroupKind;
   /** P2-3296 AC3 — this Area of Work's achievement against its ToC targets. */
   achievement?: TocAchievement | null;
+  /** When true, ToC achievement is still being fetched from the server. */
+  achievementLoading?: boolean;
 }
 
 /**
@@ -711,6 +713,16 @@ export class ReportingAowTableComponent {
   isBucket(group: ReportingAowGroup): boolean {
     const kind = group.kind ?? 'aow';
     return kind === 'intermediate' || kind === '2030';
+  }
+
+  /**
+   * Whether this Area of Work's achievement metric is currently being loaded from the server.
+   * True during initial group loading or while the async ToC achievement fetch is in-flight.
+   */
+  isAchievementLoading(group: ReportingAowGroup): boolean {
+    if (this.isBucket(group)) return false;
+    if (group.achievement) return false;
+    return !!(group.loading || group.achievementLoading);
   }
 
   /**

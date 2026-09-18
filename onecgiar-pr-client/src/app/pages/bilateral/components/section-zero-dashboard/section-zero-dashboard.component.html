@@ -61,6 +61,13 @@
       </div>
     } @else if (creationService.selectedProject(); as project) {
       <dl class="bp-project-fields">
+        <!-- P2-3759: the Lead Center is positioned ABOVE the W3/Bilateral Project field, as the story asks. -->
+        @if (project.leadCenter) {
+          <div class="bp-meta-field bp-meta-field--lead-center">
+            <dt class="bp-meta-field-label">Lead Center</dt>
+            <dd class="bp-meta-field-value" [title]="project.leadCenter.name">{{ project.leadCenter.acronym }}</dd>
+          </div>
+        }
         <div class="bp-meta-field bp-meta-field--project">
           <dt class="bp-meta-field-label">Project</dt>
           @if (canEditAssignment()) {
@@ -78,12 +85,6 @@
             </dd>
           }
         </div>
-        @if (project.leadCenter) {
-          <div class="bp-meta-field">
-            <dt class="bp-meta-field-label">Center</dt>
-            <dd class="bp-meta-field-value" [title]="project.leadCenter.name">{{ project.leadCenter.acronym }}</dd>
-          </div>
-        }
         @if (assignmentPrimary(); as primarySp) {
           <div class="bp-meta-field">
             <dt class="bp-meta-field-label">Program</dt>

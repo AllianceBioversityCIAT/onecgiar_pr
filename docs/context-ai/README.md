@@ -115,4 +115,5 @@ Si un disparador debería haber funcionado y no lo hizo, se arregla en el mismo 
 | `pendiente-defectos-formularios.md` | Los defectos de formularios pendientes del blindaje pre-producción (épico `P2-3558`, valida **Santi**) |
 | `handover-toc-user-feedback.md` | Theory of Change. 🛑 **No se toca** — es de Juan David Delgado (R18) |
 | `p2-3472-feedback-verificacion-2026-09-03.md` | El módulo de reportes: la verificación posdespliegue y 🥇 **la receta de las tres sondas de diagnóstico SIN escritura**. ⚠️ Su nombre lleva fecha del 3-sep pero se actualizó el 4 — **no es histórico** |
+| **`barrido-2026-09-18.md`** | **El barrido de los siete tipos en pantalla (18-sep).** Los siete funcionan. Trae **cinco falsos positivos con su control** — entre ellos un "resultado que nace en fase cerrada" que resultó ser la regla de negocio (la fase del knowledge product la manda el año de publicación en CGSpace, no el ciclo abierto). Léelos antes de reportar cualquiera de ellos otra vez |
 | `archivo/` | 🛑 **Historia. No se lee para trabajar.** Estados, censos, barridos y verificaciones de días pasados — ver regla 7 |

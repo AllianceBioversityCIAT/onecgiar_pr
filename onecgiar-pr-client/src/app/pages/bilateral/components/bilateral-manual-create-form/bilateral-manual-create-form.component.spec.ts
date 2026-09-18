@@ -32,6 +32,7 @@ function makeApiMock() {
   return {
     dataControlSE: { reportingCurrentPhase: { phaseYear: 2026 } },
     rolesSE: { isAdmin: false },
+    alertsFe: { show: jest.fn() },
     resultsSE: {
       GET_checkTitleUniqueness: jest.fn().mockReturnValue(of({ response: { isUnique: true } })),
       GET_depthSearch: jest.fn().mockReturnValue(of([])),
@@ -306,6 +307,43 @@ describe('BilateralManualCreateFormComponent', () => {
       expect(component.kpHandleError().status).toBe(true);
       expect(api.resultsSE.GET_mqapValidation).not.toHaveBeenCalled();
     });
+
+    it('surfaces already-reported MQAP error when selecting a browse item', fakeAsync(() => {
+      const alreadyReportedMessage =
+        'This knowledge product has already been reported in the PRMS Reporting Tool.';
+      api.resultsSE.GET_mqapValidation.mockReturnValueOnce(
+        throwError(() => ({ error: { message: alreadyReportedMessage } }))
+      );
+
+      component.onLevelSelected(4);
+      component.onTypeSelected(6);
+      component.onCgspaceItemSelected({
+        uuid: 'u1',
+        handle: '10568/182780',
+        handleUrl: 'https://hdl.handle.net/10568/182780',
+        itemUrl: 'https://cgspace.cgiar.org/items/u1',
+        title: 'PRMS Operational Report',
+        type: 'Report',
+        year: 2026,
+        authors: [],
+        affiliations: [],
+        countries: [],
+        doi: null,
+        uri: '',
+        repository: 'cgspace'
+      });
+      tick();
+
+      expect(component.kpHandleSynced()).toBe(false);
+      expect(component.kpHandleError().message).toBe(alreadyReportedMessage);
+      expect(api.alertsFe.show).toHaveBeenCalledWith(
+        expect.objectContaining({ description: alreadyReportedMessage, status: 'error' })
+      );
+
+      fixture.detectChanges();
+      const errorEl = fixture.debugElement.query(By.css('[data-testid="kp-handle-error"]'));
+      expect(errorEl?.nativeElement?.textContent?.trim()).toBe(alreadyReportedMessage);
+    }));
 
     it('emits handle in create payload for synced KP', fakeAsync(() => {
       const spy = jest.spyOn(component.create, 'emit');

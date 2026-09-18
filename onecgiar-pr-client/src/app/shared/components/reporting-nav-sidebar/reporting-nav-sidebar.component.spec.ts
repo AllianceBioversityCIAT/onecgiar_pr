@@ -782,7 +782,7 @@ describe('ReportingNavSidebarComponent', () => {
       // assuming the key is always present.
       const expectedAiUseInPrmsUrl =
         (environment.footerUrls as any)?.aiUseInPrms ??
-        'https://cgiar.sharepoint.com/:w:/s/PRMSProject/IQAszBnw-YhXSrQu0DcCiDg1AbPIlEF_01D-m3wEDAMHLPA?e=FelH2c';
+        'https://cgiar-prms.notion.site/PRMS-AWS-Bedrock-Data-Privacy-Security-3dff2712247880468648c96cc02df681';
       expect(component.aiUseInPrmsUrl).toBe(expectedAiUseInPrmsUrl);
       expect(component.termsAndConditionsUrl).toBe(environment.footerUrls.termsAndCondition);
       expect(component.licenseUrl).toBe(environment.footerUrls.license);

@@ -344,21 +344,21 @@
             </p>
           </div>
 
-          <!-- View Mode Switcher: Vertical Bar | Horizontal Bar | Heatmap -->
+          <!-- View Mode Switcher: Horizontal Bar | Vertical Bar | Heatmap -->
           <div class="inline-flex max-w-full overflow-x-auto items-center rounded-[8px] bg-[var(--pr-surface-ground)] p-[3px] border border-[var(--pr-border)]">
-            <button
-              type="button"
-              (click)="setAnalysisViewMode('vertical')"
-              class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
-              [class]="analysisViewMode() === 'vertical' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
-              Vertical Bar
-            </button>
             <button
               type="button"
               (click)="setAnalysisViewMode('horizontal')"
               class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
               [class]="analysisViewMode() === 'horizontal' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
               Horizontal Bar
+            </button>
+            <button
+              type="button"
+              (click)="setAnalysisViewMode('vertical')"
+              class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
+              [class]="analysisViewMode() === 'vertical' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+              Vertical Bar
             </button>
             <button
               type="button"
@@ -376,7 +376,7 @@
           [tableModel]="activeAnalysisTable()"
           (chartClick)="onRankingChartClick($event)"
           chartTitle="Science Programs output ranking"
-          [height]="analysisViewMode() === 'heatmap' ? '380px' : '320px'" />
+          [height]="analysisViewMode() === 'heatmap' ? '380px' : analysisViewMode() === 'vertical' ? '360px' : '320px'" />
       </div>
 
         <!-- ── Card 4: Progress by Science Program Matrix Table & Chart (POV-R-6) ────────── -->
@@ -631,9 +631,6 @@
                           class="group flex items-center gap-[10px] border-0 bg-transparent p-0 text-left cursor-pointer w-full min-w-0"
                           [attr.aria-label]="'Open the Results tab of ' + row.name"
                           (click)="openProgramme(row.code)">
-                          <span class="inline-flex h-[24px] min-w-[48px] items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11.5px] font-bold text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-100)] shrink-0 transition-all group-hover:bg-[var(--pr-color-primary-100)] group-hover:border-[var(--pr-color-primary-300)]">
-                            {{ row.code }}
-                          </span>
                           <span class="text-[13px] font-semibold text-[var(--pr-text-heading)] leading-snug group-hover:text-[var(--pr-color-primary-600)] transition-colors truncate">
                             {{ row.name }}
                           </span>
