@@ -66,6 +66,13 @@ export class CgspaceItemDto {
     type: [String],
   })
   programAccelerators?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Project identifiers tagged on the item from cg.identifier.project',
+    type: [String],
+  })
+  projects?: string[];
 }
 
 export type SourceStatus = 'ok' | 'timeout' | 'error' | 'unconfigured';

@@ -201,6 +201,34 @@ function parsePhaseIdsFromUrl(raw: string | null): number[] {
   return [...new Set(ids)];
 }
 
+/**
+ * `PMF-R-1` — the row may carry `project_id` as a number OR a numeric string (the APIs deliver ids
+ * as strings, the same trap `phaseVersionId` normalizes); anything null, non-numeric or not a
+ * positive integer is not a project option and is ignored.
+ */
+function normalizeProjectId(raw: number | string | null | undefined): number | null {
+  if (raw === null || raw === undefined) return null;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/** `PMF-R-1` — one selectable Project option, built from the center's own catalog for a phase year. */
+interface ProjectFilterOption {
+  value: number;
+  label: string;
+}
+
+/**
+ * `PMF-R-1` (pivot) — the catalog's option label: trimmed `shortName` and `fullName` joined with
+ * a space, the table column's `A-AG10156 Accelerating Impacts…` format; an entry with no usable
+ * name falls back to `Project <id>`.
+ */
+function catalogProjectLabel(project: { shortName?: unknown; fullName?: unknown }, id: number): string {
+  const shortName = typeof project.shortName === 'string' ? project.shortName.trim() : '';
+  const fullName = typeof project.fullName === 'string' ? project.fullName.trim() : '';
+  return `${shortName} ${fullName}`.trim() || `Project ${id}`;
+}
+
 @Component({
   selector: 'app-bilateral-results-list',
   standalone: true,
@@ -279,6 +307,29 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     const ids = new Set(this.selectedPhaseIds());
     return this.phases().filter(phase => ids.has(phaseVersionId(phase)));
   });
+
+  /**
+   * `PMF-R-1` (pivot) — the reporting years of the selected phases: the phase scope the center
+   * project catalog is fetched for. A year outside the selection can never produce an option.
+   */
+  readonly selectedPhaseYears = computed(() => {
+    const years = new Set<number>();
+    for (const phase of this.selectedPhases()) {
+      const year = Number(phase.phase_year);
+      if (Number.isSafeInteger(year) && year > 0) years.add(year);
+    }
+    return [...years].sort((a, b) => a - b);
+  });
+
+  // ── Project catalog (`PMF-R-1` pivot / `PMF-DD-1`) ─────────────────────────────────
+  /** Page-lifetime catalog cache keyed by phase year — one entry per year that loaded. */
+  private readonly projectCatalogByYear = signal<ReadonlyMap<number, ProjectFilterOption[]>>(new Map());
+  /** Years already requested this page lifetime, succeeded OR failed — a failed year is never
+   *  retried, so a failing catalog cannot loop requests (`PMF-NFR-1`). */
+  private readonly projectCatalogYearsRequested = new Set<number>();
+  /** The center the cached years belong to — switching centers resets the cache so two
+   *  centers' catalogs can never mix into one option list (foreign-center exclusion). */
+  private projectCatalogCenter: string | null = null;
 
   /**
    * `COV-DD-2`: the primary phase shared by the other center tabs lives on `BilateralContextService`
@@ -407,6 +458,34 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     return missing.length
       ? [...options, ...missing.map(value => ({ value, label: value }))]
       : options;
+  });
+
+  /** `PMF-R-1`/`PMF-DD-1` (pivot) — the union of the center's OWN catalog projects for the
+   *  selected phase years, deduplicated by project id across phases — never the loaded rows:
+   *  rows where the centre only contributes display other Centers' projects, and catalog
+   *  projects with zero loaded rows would never become options at all. Labels come from the
+   *  catalog (`shortName fullName`, `Project <id>` fallback) and sort case-insensitively. */
+  readonly projectOptions = computed(() => {
+    const byId = new Map<number, ProjectFilterOption>();
+    const cache = this.projectCatalogByYear();
+    for (const year of this.selectedPhaseYears()) {
+      for (const option of cache.get(year) ?? []) {
+        if (!byId.has(option.value)) byId.set(option.value, option);
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  });
+
+  /** `PMF-R-2`/`PMF-DD-3` — appends URL-selected ids the catalog union does not carry, so a
+   *  deep-linked project stays ticked, labelled `Project <id>`, and removable instead of
+   *  silently discarded. */
+  readonly projectSelectOptions = computed(() => {
+    const options = this.projectOptions();
+    const known = new Set(options.map(option => option.value));
+    const missing = this.projectFilter()
+      .filter(id => !known.has(id))
+      .map(id => ({ value: id, label: `Project ${id}` }));
+    return missing.length ? [...options, ...missing] : options;
   });
 
   readonly filteredResults = computed(() => filterCenterResults(this.results(), this.currentContractParams()));
@@ -555,6 +634,23 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
           this.loading.set(false);
         },
       });
+
+    // @akili-spec changes/project-multiselect-filter (PMF-T-1 wave 2, PMF-DD-1 pivot) — the
+    // Project multiselect's options come from the CENTER'S OWN catalog: one request per
+    // selected phase year per page lifetime, and only for years not already requested. A
+    // failed year is recorded and never retried; the union of the loaded years feeds
+    // `projectOptions` and degrades to the other years (or empty) on failure — no
+    // project-specific loading or error surface, and the results pipeline above is never
+    // touched by any of it.
+    combineLatest([
+      centerIdentifier$,
+      toObservable(this.selectedPhaseYears).pipe(
+        filter(years => years.length > 0),
+        distinctUntilChanged((a, b) => a.join(',') === b.join(',')),
+      ),
+    ])
+      .pipe(takeUntilDestroyed())
+      .subscribe(([centerId, years]) => this.loadProjectCatalog(centerId, years));
 
     // Reset the table to its default sort + page 0 whenever the filtered set changes
     // (filter chips, search, new data) — mirrors the Results Center pattern.
@@ -772,6 +868,55 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
   onCreatedByFilterChange(values: string[]): void {
     this.createdByFilter.set(values ?? []);
     this.syncUrlParams();
+  }
+
+  /** `PMF-R-1` — the multiselect's emitted array normalized to unique positive ids, then routed
+   *  through the existing project signal, predicate, chips and URL synchronization (`PMF-DD-2`:
+   *  no second state path, no HTTP call). Invalid emitted ids are ignored. */
+  onProjectFilterChange(values: number[]): void {
+    const ids = [...new Set((values ?? []).map(normalizeProjectId).filter((id): id is number => id !== null))];
+    this.projectFilter.set(ids);
+    this.syncUrlParams();
+  }
+
+  /**
+   * `PMF-R-1` (pivot) — requests the center catalog for every selected phase year not already
+   *  requested this page lifetime (`PMF-NFR-1`: at most one request per year, so repeated
+   *  popover opens, selections or phase toggles cannot refetch a loaded year, and a failing
+   *  year cannot loop). Options are derived per year, cached, and unioned by the
+   *  `projectOptions` computed; loading and failure stay implicit — the control simply shows
+   *  what the cache holds, never a project-specific loading or error state.
+   */
+  private loadProjectCatalog(centerId: string, years: number[]): void {
+    if (this.projectCatalogCenter !== centerId) {
+      this.projectCatalogByYear.set(new Map());
+      this.projectCatalogYearsRequested.clear();
+      this.projectCatalogCenter = centerId;
+    }
+
+    for (const year of years) {
+      if (this.projectCatalogYearsRequested.has(year)) continue;
+      this.projectCatalogYearsRequested.add(year);
+
+      this.bilateralApiService.GET_bilateralProjects(centerId, year).subscribe({
+        next: ({ response }) => {
+          const projects: unknown[] = response?.projects ?? [];
+          const options: ProjectFilterOption[] = [];
+          const seen = new Set<number>();
+          for (const project of projects) {
+            const id = normalizeProjectId((project as { id?: number | string })?.id);
+            if (id === null || seen.has(id)) continue;
+            seen.add(id);
+            options.push({ value: id, label: catalogProjectLabel(project as { shortName?: unknown; fullName?: unknown }, id) });
+          }
+          this.projectCatalogByYear.update(cache => new Map(cache).set(year, options));
+        },
+        error: () => {
+          // Recorded above, never retried: the year stays absent from the cache and the
+          // union degrades to what the other selected years provide (or empty).
+        },
+      });
+    }
   }
 
   @HostListener('document:click', ['$event'])

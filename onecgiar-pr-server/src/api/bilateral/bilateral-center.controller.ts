@@ -38,8 +38,18 @@ export class BilateralCenterController {
     type: Number,
     description: 'Center organization code (institution ID)',
   })
-  async getProjects(@Query('centerId') centerId: number) {
-    return this.bilateralCenterService.getProjects(centerId);
+  @ApiQuery({
+    name: 'year',
+    required: false,
+    type: Number,
+    description:
+      'Optional reporting year to scope the catalog by (positive integer; omitted or invalid falls back to the active year)',
+  })
+  async getProjects(
+    @Query('centerId') centerId: number,
+    @Query('year') year?: number,
+  ) {
+    return this.bilateralCenterService.getProjects(centerId, year);
   }
 
   @Post('create-header')

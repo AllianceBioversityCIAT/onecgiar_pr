@@ -326,6 +326,27 @@ Established 2026-09 (`docs/specs/changes/report-result-form-ux/`). All entity re
 7. **Verbatim Domain Text Preservation (`RFUX-R-1`)**:
    - Upstream text authored by scientists or project teams (e.g., indicator descriptions containing delimiter characters like `.---` or `------`) MUST be rendered verbatim without automated sanitization or regex character stripping.
 
+8. **Persistent Rail Back Navigation & Identity Card (`BRRA-DD-1..3`)**:
+   - All result detail and creation flows (e.g. `result-sections-sidebar`, `bilateral-result-creator`) MUST provide a persistent way-back link inside the rail header (`[data-testid="*-rail-back-link"]`) with a `chevron_left` icon and hover color transition (`text-[var(--pr-color-primary-400)] bg-[var(--pr-color-primary-50)]`).
+   - The rail MUST pin a dedicated Result Identity Card above the sections menu (`[data-testid="*-rail-identity"]`) displaying:
+     - Result code with inline copy button (`Result code #<code>` + `<app-copy-button>`).
+     - Uppercase semibold result type label (`text-[12px] font-semibold uppercase`).
+     - Standard status badge pill with semantic foreground/background CSS token bindings (`statusFg`, `statusBg`).
+     - Loading skeleton (`pr-skeleton`) when result data is in flight.
+
+9. **Driver.js Guided Onboarding Tour Pattern (`.driver-popover.pr-guide`)**:
+   - In-app tours (e.g., bilateral overview, reporting onboarding) use `driver.js` styled with the custom `.driver-popover.pr-guide` class.
+   - Popover geometry: dark navy-carbon surface (`#1e202f`), rounded corners (`12px`), brand violet accent buttons (`#6b6dc4 → #6461bc`), and white high-contrast text.
+   - Progress indicators: display current step count (`Step X of Y`) alongside interactive progress dot indicator (`.driver-popover-progress-dots`), allowing quick orientation and step skipping.
+
+10. **Multi-Repository Browse & Science Program Match Boost (`KPAM-DD-1..4`)**:
+    - When searching knowledge products across CGSpace, MelSpace, and WorldFish, items matching the active Science Program or Accelerator are soft-boosted to the top of the list without hiding non-matching items.
+    - Matching cards display an accent left border (`border-l-4 border-l-[var(--pr-color-primary-300)]`) and a violet badge (`bg-violet-50 text-violet-700 border-violet-200`) with a `pi-sparkles` icon (`Matches <Program>`).
+    - A 1-click filter chip allows toggling between "Show matches only (N)" and "Show all results" while keeping the total count scannable.
+
+11. **Planned vs Emerging Result Indication**:
+    - Emerging results (reported outside original planned milestones, where `Number(planned_result) === 0` with strict null/undefined differentiation) display an `Emerging` chip (`bg-amber-50 text-amber-700 border-amber-200`) on result cards and summary tables to clarify reporting context without blocking submission.
+
 ---
 
 ## 9. Responsive Behavior
@@ -441,6 +462,14 @@ User text-size scaling (§10) is driven by one lever: `--pr-font-scale` on `:roo
 ### DD-12 — 2026 brand design line: violet accent + navy-carbon chrome, Tailwind-first
 
 The redesign (branches `front-redesign-fields` / `performance-refactor`) establishes the brand line documented in §7: violet accent gradient (`#6b6dc4 → #6461bc`) as primary, navy-carbon chrome gradient (`#1e202f → #1f2235`) for dark surfaces, `material-icons-round`, and **Tailwind utilities as the only vehicle for new styling** (SCSS reserved for keyframes/pseudo-elements/`:host`/projected DOM). On these branches the base component layer is **Spartan UI (brain/helm) + the `pr-*` custom fields** — PrimeNG is removed; DD-1/DD-2's PrimeNG mirroring applies only to the legacy (`master`) lineage. **Why:** a distinctive brand identity, one styling system instead of three, and freedom from the PrimeNG upgrade treadmill (which blocked Angular 22).
+
+### DD-13 — Driver.js for guided onboarding tours
+
+We adopt `driver.js` with `.driver-popover.pr-guide` theming as the standard in-app tour library for onboarding staff to reporting workflows. **Why:** light footprint (<10KB), framework-agnostic, full keyboard/focus-trap support, and smooth step-by-step element highlighting without bespoke tooltip scaffolding.
+
+### DD-14 — Persistent rail navigation & pinned result identity card pattern
+
+Result editors (W1/W2 `result-detail` and bilateral result creator) share a unified secondary rail layout: persistent back link anchor (`chevron_left`), pinned result identity card (code with copy button, uppercase type name, semantic status badge pill), and section list with completion indicators. **Why:** eliminates repetitive navigation jumps, stabilizes spatial context, and ensures the result status is immediately legible from any sub-step.
 
 ---
 

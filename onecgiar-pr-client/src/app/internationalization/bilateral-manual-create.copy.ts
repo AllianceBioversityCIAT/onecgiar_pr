@@ -18,8 +18,17 @@ export const BILATERAL_MANUAL_CREATE_COPY = {
     backToScienceProgram: 'Back to Science Program'
   },
   spGate: {
-    hint: 'Select the primary Science Program for this bilateral result before continuing.',
-    reportingLockedHint: 'Select a primary Science Program above to unlock these options.'
+    step1Badge: 'Step 1',
+    step1Title: 'Select Primary Science Program',
+    hint: 'This project contributes to multiple Science Programs. Select the primary program for this result before continuing.',
+    step2Badge: 'Step 2',
+    step2Title: 'Choose Creation Method',
+    reportingLockedHint: 'Select a primary Science Program above to unlock these options.',
+    spRequiredNoticeTitle: 'Step 1 selection required',
+    spRequiredNoticeDesc: 'Select a Science Program in Step 1 above to enable Manual Entry or AI-Assisted creation.',
+    waitingForStep1: 'Requires Step 1',
+    contributingSpsTitle: 'Contributing Science Programs',
+    contributingSpsHint: 'Select any additional Science Programs or Accelerators from this project that contribute to this result.'
   },
   form: {
     resultTypeLabel: 'Result Type',

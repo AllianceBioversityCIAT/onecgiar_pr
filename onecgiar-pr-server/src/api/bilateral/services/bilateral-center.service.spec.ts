@@ -29,6 +29,7 @@ import { InnovationUseMdsValidator } from './innovation-use-mds-validator.servic
 import { BilateralQualityAssessmentService } from './quality-assessment/bilateral-quality-assessment.service';
 import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { AoWBilateralRepository } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -86,6 +87,7 @@ describe('BilateralCenterService', () => {
               result_code: 8852,
               version_id: 1,
             }),
+            query: jest.fn().mockResolvedValue([]),
             // P2-3157: submitForReview wraps its writes in a transaction.
             manager: {
               transaction: jest.fn(async (cb: any) =>
@@ -116,13 +118,28 @@ describe('BilateralCenterService', () => {
           useValue: {
             updatePlannedResult: jest.fn().mockResolvedValue({}),
             updateTocResultPartial: jest.fn().mockResolvedValue({}),
+            getTocResultTypologyVerdicts: jest
+              .fn()
+              .mockResolvedValue(new Map()),
           },
         },
         {
           provide: ResultsTocResultRepository,
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn().mockResolvedValue([]),
+            save: jest.fn().mockResolvedValue({}),
+            update: jest.fn().mockResolvedValue({}),
+            create: jest.fn().mockImplementation((dto) => ({ ...dto })),
+            delete: jest.fn(),
             query: jest.fn(),
+          },
+        },
+        {
+          provide: AoWBilateralRepository,
+          useValue: {
+            findLeadProjectId: jest.fn().mockResolvedValue(null),
+            findProjectTocLinkage: jest.fn().mockResolvedValue([]),
           },
         },
         {
@@ -130,6 +147,8 @@ describe('BilateralCenterService', () => {
           useValue: {
             getOwnerInitiativeByResult: jest.fn().mockResolvedValue({ id: 1 }),
             save: jest.fn().mockResolvedValue({}),
+            find: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue({}),
           },
         },
         {
@@ -300,6 +319,17 @@ describe('BilateralCenterService', () => {
     expect(result).toEqual({ response: { projects: [] } });
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
+      undefined,
+    );
+  });
+
+  // changes/project-multiselect-filter (PMF-DD-5): the optional `year` rides along to the
+  // catalog service, which owns the active-year fallback.
+  it('should forward the optional year to the catalog service', async () => {
+    await service.getProjects(10, 2025);
+    expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
+      10,
+      2025,
     );
   });
 
@@ -453,6 +483,37 @@ describe('BilateralCenterService', () => {
       expect(resultRepository.update).toHaveBeenCalledWith(99, {
         title: 'Bilateral Draft #99',
       });
+    });
+
+    it('creates draft share_result_request rows when contributing_programs are supplied', async () => {
+      const clarisaRepo = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      );
+      (clarisaRepo.findOne as jest.Mock).mockImplementation(({ where }: any) => {
+        if (where.official_code === 'SP01') return Promise.resolve({ id: 10, official_code: 'SP01' });
+        if (where.official_code === 'SP02') return Promise.resolve({ id: 20, official_code: 'SP02' });
+        return Promise.resolve(null);
+      });
+
+      const shareRepo = module.get<ShareResultRequestRepository>(
+        ShareResultRequestRepository,
+      );
+
+      await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+        program_code: 'SP01',
+        contributing_programs: [{ science_program_id: 'SP02' }],
+      });
+
+      expect(shareRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 99,
+          shared_inititiative_id: 20,
+          request_status_id: 4,
+          is_active: true,
+        }),
+      );
     });
 
     it('still populates KP from CGSpace when a client title is provided', async () => {
@@ -1807,6 +1868,744 @@ describe('BilateralCenterService', () => {
       await expect(service.getLatest(user, 0 as any)).rejects.toThrow(
         /valid positive number/,
       );
+    });
+  });
+
+  describe('getTocState (BIL-TOC-T-3)', () => {
+    let aowBilateralRepository: AoWBilateralRepository;
+    let resultsTocResultRepository: ResultsTocResultRepository;
+    let resultByInitiativesRepository: ResultByInitiativesRepository;
+    let resultsTocResultsService: ResultsTocResultsService;
+
+    beforeEach(() => {
+      aowBilateralRepository = module.get<AoWBilateralRepository>(
+        AoWBilateralRepository,
+      );
+      resultsTocResultRepository = module.get<ResultsTocResultRepository>(
+        ResultsTocResultRepository,
+      );
+      resultByInitiativesRepository = module.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      resultsTocResultsService = module.get<ResultsTocResultsService>(
+        ResultsTocResultsService,
+      );
+
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 10,
+        version_id: 1,
+        obj_version: {
+          id: 1,
+          phase_year: 2026,
+          toc_pahse_id: 'phase-uuid-2026',
+        },
+      });
+
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue({
+        id: 100,
+        official_code: 'SP06',
+        name: 'Science Program 6',
+      });
+    });
+
+    it('1. default-node rows with no indicator rows -> project_default', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+        {
+          toc_result_id: 1002,
+          category: 'OUTCOME',
+          result_title: 'Outcome 1',
+          related_node_id: 'node-2',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([
+        { project_name: 'Lead Project Alpha' },
+      ]);
+
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([
+        {
+          result_toc_result_id: 1,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1001,
+          planned_result: true,
+          toc_level_id: 1,
+          is_active: true,
+        },
+        {
+          result_toc_result_id: 2,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1002,
+          planned_result: true,
+          toc_level_id: 2,
+          is_active: true,
+        },
+      ]);
+      (resultsTocResultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const res = await service.getTocState(10);
+      expect(res.response.toc_linkage_mode).toBe('project_default');
+      expect(res.response.project_default).toEqual({
+        project_id: 501,
+        project_name: 'Lead Project Alpha',
+        nodes: [
+          expect.objectContaining({
+            toc_result_id: 1001,
+            toc_level_id: 1,
+            title: 'Output 1',
+          }),
+          expect.objectContaining({
+            toc_result_id: 1002,
+            toc_level_id: 2,
+            title: 'Outcome 1',
+          }),
+        ],
+      });
+    });
+
+    it('1b. one indicator with several per-center target rows -> one target entry per toc_indicator_target_id, center ids aggregated (post-implementation audit, 2026-09-18)', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        // Same target row (toc_indicator_target_id: 9001), fanned out by two centers.
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: 8385,
+          indicator_description: 'Indicator 8385',
+          indicator_type: 'Other Outputs',
+          toc_indicator_target_id: 9001,
+          target_value: 5,
+          center_id: 1,
+        },
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: 8385,
+          indicator_description: 'Indicator 8385',
+          indicator_type: 'Other Outputs',
+          toc_indicator_target_id: 9001,
+          target_value: 5,
+          center_id: 2,
+        },
+        // A distinct target row for the same indicator/year (toc_indicator_target_id: 9002).
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: 8385,
+          indicator_description: 'Indicator 8385',
+          indicator_type: 'Other Outputs',
+          toc_indicator_target_id: 9002,
+          target_value: 6,
+          center_id: 3,
+        },
+      ]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([
+        { project_name: 'Lead Project Alpha' },
+      ]);
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([
+        {
+          result_toc_result_id: 1,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1001,
+          planned_result: true,
+          toc_level_id: 1,
+          is_active: true,
+        },
+      ]);
+      (resultsTocResultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const res = await service.getTocState(10);
+
+      const indicators = res.response.project_default.nodes[0].indicators;
+      expect(indicators).toHaveLength(1);
+      expect(indicators[0].targets).toEqual([
+        expect.objectContaining({
+          toc_indicator_target_id: 9001,
+          value: 5,
+          center_ids: [1, 2],
+        }),
+        expect.objectContaining({
+          toc_indicator_target_id: 9002,
+          value: 6,
+          center_ids: [3],
+        }),
+      ]);
+    });
+
+    it('1c. node level_name uses the canonical PRMS naming, never "Work package Output/Outcome" (user-reported, 2026-09-18)', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+        {
+          toc_result_id: 1002,
+          category: 'OUTCOME',
+          result_title: 'Outcome 1',
+          related_node_id: 'node-2',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+        {
+          toc_result_id: 1003,
+          category: 'EOI',
+          result_title: 'EOI 1',
+          related_node_id: 'node-3',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([
+        { project_name: 'Lead Project Alpha' },
+      ]);
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([
+        {
+          result_toc_result_id: 1,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1001,
+          planned_result: true,
+          toc_level_id: 1,
+          is_active: true,
+        },
+        {
+          result_toc_result_id: 2,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1002,
+          planned_result: true,
+          toc_level_id: 2,
+          is_active: true,
+        },
+        {
+          result_toc_result_id: 3,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1003,
+          planned_result: true,
+          toc_level_id: 3,
+          is_active: true,
+        },
+      ]);
+      (resultsTocResultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const res = await service.getTocState(10);
+
+      const levelNames = res.response.project_default.nodes.map(
+        (n: any) => n.level_name,
+      );
+      expect(levelNames).toEqual([
+        'High Level Output',
+        'Intermediate Outcome',
+        'End of Initiative Outcome',
+      ]);
+      expect(levelNames).not.toContain('Work package Output');
+      expect(levelNames).not.toContain('Work package Outcome');
+    });
+
+    it('2. A row with an indicator link -> custom', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([
+        {
+          result_toc_result_id: 1,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1001,
+          planned_result: true,
+          toc_level_id: 1,
+          is_active: true,
+        },
+      ]);
+      (resultsTocResultRepository.query as jest.Mock).mockImplementation(
+        (query: string) => {
+          if (query.includes('results_toc_result_indicators')) {
+            return Promise.resolve([{ id: 'ind-123', rtri_id: 77 }]);
+          }
+          if (query.includes('result_indicators_targets')) {
+            return Promise.resolve([{ contributing_indicator: 42 }]);
+          }
+          return Promise.resolve([]);
+        },
+      );
+
+      const res = await service.getTocState(10);
+      expect(res.response.toc_linkage_mode).toBe('custom');
+      expect(res.response.indicator_id).toBe('ind-123');
+      expect(res.response.contributing_indicator).toBe(42);
+    });
+
+    it('3. A row whose node is outside the default set -> custom', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([
+        {
+          result_toc_result_id: 1,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 9999,
+          planned_result: true,
+          toc_level_id: 1,
+          is_active: true,
+        },
+      ]);
+      (resultsTocResultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const res = await service.getTocState(10);
+      expect(res.response.toc_linkage_mode).toBe('custom');
+    });
+
+    it('4. Legacy planned_result=false row -> custom and text preserved', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        null,
+      );
+
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([
+        {
+          result_toc_result_id: 1,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: null,
+          planned_result: false,
+          toc_progressive_narrative: 'Reason why result was not planned',
+          toc_level_id: 3,
+          is_active: true,
+        },
+      ]);
+      (resultsTocResultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const res = await service.getTocState(10);
+      expect(res.response.toc_linkage_mode).toBe('custom');
+      expect(res.response.planned_result).toBe(false);
+      expect(res.response.toc_progressive_narrative).toBe(
+        'Reason why result was not planned',
+      );
+    });
+
+    it('5. No rows -> null', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([]);
+
+      const res = await service.getTocState(10);
+      expect(res.response.toc_linkage_mode).toBeNull();
+      expect(res.response.planned_result).toBeNull();
+      expect(res.response.project_default).not.toBeNull();
+    });
+
+    it('6. No owner initiative -> all nulls (existing behaviour)', async () => {
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue(null);
+
+      const res = await service.getTocState(10);
+      expect(res.response).toEqual({
+        planned_result: null,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: null,
+        toc_linkage_mode: null,
+        project_default: null,
+      });
+    });
+
+    it('7. linkage query rejects -> project_default: null, no throw', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockRejectedValue(
+        new Error('Connection failure to Integration_information'),
+      );
+
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([]);
+
+      const res = await service.getTocState(10);
+      expect(res.response.project_default).toBeNull();
+      expect(res.response.toc_linkage_mode).toBeNull();
+    });
+
+    it('8. GET never calls a write method', async () => {
+      const saveTocMappingSpy = jest
+        .spyOn(service, 'saveTocMapping')
+        .mockImplementation(() => Promise.resolve({} as any));
+      const updateTocResultPartialSpy = jest.spyOn(
+        resultsTocResultsService,
+        'updateTocResultPartial',
+      );
+
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([]);
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([]);
+
+      await service.getTocState(10);
+
+      expect(saveTocMappingSpy).not.toHaveBeenCalled();
+      expect(updateTocResultPartialSpy).not.toHaveBeenCalled();
+      expect(resultRepository.save).not.toHaveBeenCalled();
+      expect(resultRepository.update).not.toHaveBeenCalled();
+      expect(resultsTocResultRepository.save).not.toHaveBeenCalled();
+      expect(resultsTocResultRepository.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('saveTocMapping (BIL-TOC-T-4)', () => {
+    let aowBilateralRepository: AoWBilateralRepository;
+    let resultsTocResultRepository: ResultsTocResultRepository;
+    let resultByInitiativesRepository: ResultByInitiativesRepository;
+    let resultsTocResultsService: ResultsTocResultsService;
+
+    const user: TokenDto = {
+      id: 42,
+      email: 'test@cgiar.org',
+      first_name: 'Test',
+      last_name: 'User',
+    };
+
+    beforeEach(() => {
+      aowBilateralRepository = module.get<AoWBilateralRepository>(
+        AoWBilateralRepository,
+      );
+      resultsTocResultRepository = module.get<ResultsTocResultRepository>(
+        ResultsTocResultRepository,
+      );
+      resultByInitiativesRepository = module.get<ResultByInitiativesRepository>(
+        ResultByInitiativesRepository,
+      );
+      resultsTocResultsService = module.get<ResultsTocResultsService>(
+        ResultsTocResultsService,
+      );
+
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 10,
+        result_type_id: 1,
+        version_id: 1,
+        obj_version: {
+          id: 1,
+          phase_year: 2026,
+          toc_pahse_id: 'phase-uuid-2026',
+        },
+      });
+
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue({
+        id: 100,
+        official_code: 'SP06',
+        name: 'Science Program 6',
+      });
+    });
+
+    it('1. YES payload carrying a forged node ID persists only re-derived default nodes, ignoring forged IDs', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([]);
+      (resultsTocResultRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      const dto = {
+        toc_linkage_mode: 'project_default' as const,
+        result_toc_result: {
+          result_toc_results: [{ toc_result_id: 9999 }],
+        },
+      };
+
+      const res = await service.saveTocMapping(10, dto as any, user);
+      expect(res.status).toBe(200);
+
+      expect(resultsTocResultRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 1001,
+          planned_result: true,
+          toc_level_id: 1,
+          is_active: true,
+        }),
+      );
+      expect(resultsTocResultRepository.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          toc_result_id: 9999,
+        }),
+      );
+    });
+
+    it('2. YES mode materializes node rows with planned_result=true, indicators not handled', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([]);
+      (resultsTocResultRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      const dto = {
+        toc_linkage_mode: 'project_default' as const,
+      };
+
+      const res = await service.saveTocMapping(10, dto as any, user);
+      expect(res.status).toBe(200);
+      expect(
+        resultsTocResultsService.updateTocResultPartial,
+      ).not.toHaveBeenCalled();
+      expect(resultsTocResultRepository.save).toHaveBeenCalled();
+    });
+
+    it('3. NO/custom mode with failing typology verdict throws BadRequestException (400) and writes nothing', async () => {
+      (
+        resultsTocResultsService.getTocResultTypologyVerdicts as jest.Mock
+      ).mockResolvedValue(new Map([[2001, false]]));
+
+      const dto = {
+        toc_linkage_mode: 'custom' as const,
+        result_toc_result: {
+          result_toc_results: [{ toc_result_id: 2001 }],
+        },
+      };
+
+      await expect(
+        service.saveTocMapping(10, dto as any, user),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Selected ToC node is incompatible with the result type',
+        ),
+      );
+
+      expect(
+        resultsTocResultsService.updateTocResultPartial,
+      ).not.toHaveBeenCalled();
+      expect(resultsTocResultRepository.save).not.toHaveBeenCalled();
+      expect(resultsTocResultRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('4. NO/custom mode with passing typology verdict delegates to updateTocResultPartial', async () => {
+      (
+        resultsTocResultsService.getTocResultTypologyVerdicts as jest.Mock
+      ).mockResolvedValue(new Map([[2001, true]]));
+      (
+        resultsTocResultsService.updateTocResultPartial as jest.Mock
+      ).mockResolvedValue({
+        status: 200,
+        response: { result_id: 10 },
+      });
+
+      const dto = {
+        toc_linkage_mode: 'custom' as const,
+        result_toc_result: {
+          result_toc_results: [{ toc_result_id: 2001 }],
+        },
+      };
+
+      const res = await service.saveTocMapping(10, dto as any, user);
+      expect(res).toEqual({
+        status: 200,
+        response: { result_id: 10 },
+      });
+      expect(
+        resultsTocResultsService.updateTocResultPartial,
+      ).toHaveBeenCalledWith(
+        10,
+        expect.objectContaining({
+          initiative_id: 100,
+          result_toc_results: [{ toc_result_id: 2001 }],
+        }),
+        user,
+      );
+    });
+
+    it('5. Switch custom -> YES deactivates prior custom rows and indicators softly (is_active=false, NO delete call)', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        501,
+      );
+      (
+        aowBilateralRepository.findProjectTocLinkage as jest.Mock
+      ).mockResolvedValue([
+        {
+          toc_result_id: 1001,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'node-1',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+
+      (resultsTocResultRepository.find as jest.Mock).mockResolvedValue([
+        {
+          result_toc_result_id: 88,
+          result_id: 10,
+          initiative_ids: 100,
+          toc_result_id: 2001,
+          is_active: true,
+        },
+      ]);
+      (resultsTocResultRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      const dto = {
+        toc_linkage_mode: 'project_default' as const,
+      };
+
+      await service.saveTocMapping(10, dto as any, user);
+
+      expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+        { result_toc_result_id: 88 },
+        { is_active: false, last_updated_by: user.id },
+      );
+
+      expect(resultsTocResultRepository.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE results_toc_result_indicators'),
+        [user.id, [88]],
+      );
+
+      expect(resultsTocResultRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('6. YES mode with no default linkage found throws BadRequestException (400)', async () => {
+      (aowBilateralRepository.findLeadProjectId as jest.Mock).mockResolvedValue(
+        null,
+      );
+
+      const dto = {
+        toc_linkage_mode: 'project_default' as const,
+      };
+
+      await expect(
+        service.saveTocMapping(10, dto as any, user),
+      ).rejects.toThrow(
+        new BadRequestException('No default ToC linkage found for this result'),
+      );
+
+      expect(resultsTocResultRepository.save).not.toHaveBeenCalled();
     });
   });
 });

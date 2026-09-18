@@ -1,5 +1,7 @@
 :host {
   display: block;
+  min-width: 0;
+  max-width: 100%;
 }
 
 :host ::ng-deep {
@@ -157,6 +159,18 @@
           }
         }
       }
+    }
+  }
+
+  @media (max-width: 479px) {
+    .kp-filter-center .custom_select .field .options {
+      min-width: min(440px, calc(100vw - 2rem)) !important;
+      max-width: calc(100vw - 2rem) !important;
+    }
+
+    .kp-filter-type .custom_select .field .options {
+      min-width: min(260px, calc(100vw - 2rem)) !important;
+      max-width: calc(100vw - 2rem) !important;
     }
   }
 }

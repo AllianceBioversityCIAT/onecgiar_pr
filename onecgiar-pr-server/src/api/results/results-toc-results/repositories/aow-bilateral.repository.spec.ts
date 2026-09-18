@@ -1013,4 +1013,232 @@ describe('AoWBilateralRepository', () => {
       expect(map.get(13)?.preliminary_progress_percentage).toBe('0%');
     });
   });
+
+  // ─── BIL-TOC-T-2 ─────────────────────────────────────────────────────────────
+
+  describe('findLeadProjectId', () => {
+    it('returns project_id from the lead row (ORDER BY is_lead DESC)', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([
+        { project_id: 101, is_lead: 1 },
+      ]);
+
+      const result = await repository.findLeadProjectId(12345);
+
+      expect(dataSourceQueryMock).toHaveBeenCalledWith(
+        expect.stringContaining('FROM main_test.results_by_projects rbp'),
+        [12345],
+      );
+      const [query] = dataSourceQueryMock.mock.calls[0];
+      expect(query).toContain('WHERE rbp.result_id = ? AND rbp.is_active = 1');
+      expect(query).toContain('ORDER BY rbp.is_lead DESC, rbp.id DESC');
+      expect(query).toContain('LIMIT 1');
+      expect(result).toBe(101);
+    });
+
+    it('returns null when no active rows exist', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      const result = await repository.findLeadProjectId(99999);
+
+      expect(dataSourceQueryMock).toHaveBeenCalledWith(
+        expect.stringContaining('FROM main_test.results_by_projects rbp'),
+        [99999],
+      );
+      expect(result).toBeNull();
+    });
+
+    it('returns null (and does not throw) when dataSource.query rejects', async () => {
+      dataSourceQueryMock.mockRejectedValueOnce(new Error('Connection lost'));
+
+      const result = await repository.findLeadProjectId(12345);
+
+      expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith({
+        error: expect.stringContaining(
+          'findLeadProjectId error for result_id=12345',
+        ),
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findProjectTocLinkage', () => {
+    const sampleLinkageRows = [
+      {
+        toc_result_id: 10,
+        category: 'OUTPUT',
+        result_title: 'Output 1',
+        related_node_id: 'NODE-10',
+        indicator_id: 101,
+        indicator_description: 'Indicator 101 description',
+        indicator_type: 'Number of Policy',
+        target_value: 5,
+      },
+    ];
+
+    it('name-collision project: query binds project_id, never project name', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce(sampleLinkageRows);
+
+      const result = await repository.findProjectTocLinkage(
+        501,
+        'SP01',
+        'PHASE-1',
+        2025,
+      );
+
+      expect(dataSourceQueryMock).toHaveBeenCalledTimes(1);
+      const [query, params] = dataSourceQueryMock.mock.calls[0];
+
+      // Bound as a string against the varchar trp.project_id column (design.md §5); never a name
+      expect(params).toContain('501');
+      expect(params).not.toContain(502);
+      expect(params).not.toContain('502');
+      expect(query).toContain('trp.project_id = ?');
+      expect(query).toContain(
+        'trit.project_id = CAST(trp.project_id AS SIGNED)',
+      );
+      expect(query).not.toContain('trp.name');
+      expect(query).not.toContain('cp.name');
+
+      expect(result).toEqual([
+        {
+          toc_result_id: 10,
+          category: 'OUTPUT',
+          result_title: 'Output 1',
+          related_node_id: 'NODE-10',
+          indicator_id: 101,
+          indicator_description: 'Indicator 101 description',
+          indicator_type: 'Number of Policy',
+          toc_indicator_target_id: null,
+          target_value: 5,
+          center_id: null,
+        },
+      ]);
+    });
+
+    it('two-Program node filter: only nodes matching programOfficialCode are returned', async () => {
+      const sp01Rows = [
+        {
+          toc_result_id: 1,
+          category: 'OUTCOME',
+          result_title: 'SP01 Outcome',
+          related_node_id: 'SP01-NODE-1',
+          indicator_id: 201,
+          indicator_description: 'SP01 Indicator',
+          indicator_type: 'Innovation Use',
+          target_value: 12,
+        },
+      ];
+      dataSourceQueryMock.mockResolvedValueOnce(sp01Rows);
+
+      const result = await repository.findProjectTocLinkage(
+        501,
+        'SP01',
+        'PHASE-1',
+        2025,
+      );
+
+      const [query, params] = dataSourceQueryMock.mock.calls[0];
+      expect(query).toContain('UPPER(TRIM(tr.official_code)) = UPPER(TRIM(?))');
+      expect(params).toContain('SP01');
+      expect(result).toHaveLength(1);
+      expect(result?.[0].toc_result_id).toBe(1);
+      expect(result?.[0].result_title).toBe('SP01 Outcome');
+    });
+
+    it('returns empty array [] when no linkage rows found', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      const result = await repository.findProjectTocLinkage(
+        999,
+        'SP01',
+        'PHASE-1',
+        2025,
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('handles null indicator and target gracefully (node with no indicator rows)', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          toc_result_id: 20,
+          category: 'EOI',
+          result_title: 'End of Initiative Outcome',
+          related_node_id: 'EOI-20',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          target_value: null,
+        },
+      ]);
+
+      const result = await repository.findProjectTocLinkage(
+        501,
+        'SP01',
+        'PHASE-1',
+        2025,
+      );
+
+      expect(result).toEqual([
+        {
+          toc_result_id: 20,
+          category: 'EOI',
+          result_title: 'End of Initiative Outcome',
+          related_node_id: 'EOI-20',
+          indicator_id: null,
+          indicator_description: null,
+          indicator_type: null,
+          toc_indicator_target_id: null,
+          target_value: null,
+          center_id: null,
+        },
+      ]);
+    });
+
+    it('returns null (and does not throw) when dataSource.query rejects', async () => {
+      dataSourceQueryMock.mockRejectedValueOnce(
+        new Error('Connection timeout'),
+      );
+
+      const result = await repository.findProjectTocLinkage(
+        501,
+        'SP01',
+        'PHASE-1',
+        2025,
+      );
+
+      expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith({
+        error: expect.stringContaining(
+          'findProjectTocLinkage error for project_id=501',
+        ),
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('parameters include programOfficialCode, phaseUuid, projectId, and reportingYear', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.findProjectTocLinkage(42, 'SP02', 'PHASE-2', 2026);
+
+      const [, params] = dataSourceQueryMock.mock.calls[0];
+      expect(params).toContain('42');
+      expect(params).toContain('SP02');
+      expect(params).toContain('PHASE-2');
+      expect(params).toContain(2026);
+    });
+
+    it('binds projectId as a string, never a number, against the varchar trp.project_id column (design.md §5 type caveat)', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.findProjectTocLinkage(194, 'SP06', 'PHASE-2026', 2026);
+
+      const [, params] = dataSourceQueryMock.mock.calls[0];
+      expect(params).toContain('194');
+      expect(params).not.toContain(194);
+    });
+  });
 });

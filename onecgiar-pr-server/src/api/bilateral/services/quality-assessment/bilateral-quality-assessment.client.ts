@@ -297,6 +297,22 @@ const REDACTED_PLACEHOLDER = '[redacted]';
  * redact when it reports no degradation. Order matters: stripping first means truncation
  * can never cut a URL in half and leave a dangling host fragment.
  */
+/**
+ * `fields` is an optional annotation, so a malformed one is cleaned away rather than rejected:
+ * dropping the whole verdict over it would repeat the `type_specific` mistake of 2026-09-17, where
+ * strictness about one non-load-bearing key turned four good sections into "Quality check
+ * unavailable". Non-array, or a non-string entry, simply does not reach the column.
+ */
+function normalizeFields(value: unknown): { fields?: string[] } {
+  if (!Array.isArray(value)) {
+    return {};
+  }
+  const fields = value.filter(
+    (item): item is string => typeof item === 'string',
+  );
+  return fields.length ? { fields } : {};
+}
+
 function sanitizeDegradedReason(reason: string | null): string | null {
   if (reason === null) {
     return null;
@@ -347,7 +363,15 @@ function sanitizeScores(body: AiAssessmentResponse): AiAssessmentResponse {
   for (const key of [...REQUIRED_SECTION_KEYS, ...OPTIONAL_SECTION_KEYS]) {
     const section = body.sections[key];
     if (!section) continue;
-    sections[key] = { ...section, score: sanitizeScore(section.score) };
+    // `fields` is destructured OUT before the spread: re-adding it conditionally cannot remove a
+    // malformed one that the spread already copied in, and `fields: undefined` would still leave
+    // the key on the row.
+    const { fields: rawFields, ...rest } = section;
+    sections[key] = {
+      ...rest,
+      score: sanitizeScore(section.score),
+      ...normalizeFields(rawFields),
+    };
   }
 
   return {

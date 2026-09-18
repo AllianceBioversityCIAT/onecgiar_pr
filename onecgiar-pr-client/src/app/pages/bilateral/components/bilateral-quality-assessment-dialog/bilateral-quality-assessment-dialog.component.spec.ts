@@ -117,6 +117,25 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
       expect(trigger.textContent).toContain('Hide feedback');
     });
 
+    // QA feedback 2026-09-18 — the reporter forgets the comment on the way to the form.
+    it('offers a way into the section only where there is something to fix', () => {
+      const cards = host().querySelectorAll('.bqa-dialog__section');
+
+      // amber
+      expect(cards[0].querySelector('.bqa-dialog__goto')!.textContent).toContain('Go to General information');
+      // green — nothing to correct, so no dead-end trip
+      expect(cards[1].querySelector('.bqa-dialog__goto')).toBeNull();
+    });
+
+    it('emits the AI section key, leaving the navigation to the creator', () => {
+      const keys: string[] = [];
+      fixture.componentInstance.sectionSelected.subscribe((k: string) => keys.push(k));
+
+      (host().querySelector('.bqa-dialog__goto') as HTMLButtonElement).click();
+
+      expect(keys).toEqual(['general_information']);
+    });
+
     it('emits the decision the verdict calls for', () => {
       const decisions: string[] = [];
       fixture.componentInstance.decisionChosen.subscribe((d: string) => decisions.push(d));

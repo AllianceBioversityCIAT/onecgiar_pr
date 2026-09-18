@@ -12,7 +12,7 @@
 | Type | Change |
 | Approval Mode | gated |
 | Owner | Juan David Delgado |
-| Status | draft |
+| Status | shipped |
 | Ticket(s) | *(none supplied)* |
 | Proposal | `./proposal.md` |
 | Verified against | `JuanGuzman-io/dogfish` @ `31562acba` (2026-09-16) |

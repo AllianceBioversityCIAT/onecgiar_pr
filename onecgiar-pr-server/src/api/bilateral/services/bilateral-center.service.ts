@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   Logger,
 } from '@nestjs/common';
@@ -57,6 +58,18 @@ import { ResultsByProjects } from '../../results/results_by_projects/entities/re
 import { ResultsByInititiative } from '../../results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsTocResult } from '../../results/results-toc-results/entities/results-toc-result.entity';
 import { ShareResultRequest } from '../../results/share-result-request/entities/share-result-request.entity';
+import {
+  AoWBilateralRepository,
+  ProjectTocLinkageNode,
+} from '../../results/results-toc-results/repositories/aow-bilateral.repository';
+
+// Canonical level names, matching result.repository.ts (~L3940) and toc-level.service.ts —
+// never "Work package Output/Outcome" (stale wording fixed 2026-09-18).
+const TOC_CATEGORY_LEVEL_MAP: Record<string, { id: number; name: string }> = {
+  OUTPUT: { id: 1, name: 'High Level Output' },
+  OUTCOME: { id: 2, name: 'Intermediate Outcome' },
+  EOI: { id: 3, name: 'End of Initiative Outcome' },
+};
 
 @Injectable()
 export class BilateralCenterService {
@@ -86,11 +99,19 @@ export class BilateralCenterService {
     private readonly innovationUseMdsValidator: InnovationUseMdsValidator,
     private readonly qualityAssessmentService: BilateralQualityAssessmentService,
     private readonly qualityAssessmentRepository: BilateralQualityAssessmentRepository,
+    private readonly aowBilateralRepository: AoWBilateralRepository,
   ) {}
 
-  async getProjects(centerId: number) {
-    const projects =
-      await this.bilateralProjectsService.getProjectsByCenter(centerId);
+  /**
+   * `changes/project-multiselect-filter` (`PMF-DD-5`): the optional `year` rides along to
+   * the catalog service untouched — that service owns the active-year fallback and the
+   * positive-integer parsing.
+   */
+  async getProjects(centerId: number, year?: number | string) {
+    const projects = await this.bilateralProjectsService.getProjectsByCenter(
+      centerId,
+      year,
+    );
     return { response: projects };
   }
 
@@ -398,6 +419,20 @@ export class BilateralCenterService {
       }
     }
 
+    if (dto.contributing_programs && dto.contributing_programs.length > 0) {
+      const contribSyncResult = {
+        savedPrograms: [] as string[],
+        failedPrograms: [] as string[],
+        deactivatedPrograms: [] as number[],
+      };
+      await this.syncContributingPrograms(
+        result.id,
+        dto.contributing_programs,
+        user,
+        contribSyncResult,
+      );
+    }
+
     // The lead centre is resolved server-side rather than trusted from the payload.
     // The client builds `lead_center` from `obj_organization`, a join on the project's
     // `organization_code` — which CLARISA's W3 sync leaves NULL for the Alliance-descended
@@ -671,6 +706,168 @@ export class BilateralCenterService {
     };
   }
 
+  private async resolveResultVersionInfo(resultId: number) {
+    const result = await this.resultRepository.findOne({
+      select: {
+        id: true,
+        result_type_id: true,
+        version_id: true,
+        obj_version: {
+          id: true,
+          phase_year: true,
+          toc_pahse_id: true,
+        },
+      },
+      where: { id: resultId, is_active: true },
+      relations: { obj_version: true },
+    });
+
+    let reportingYear = Number(result?.obj_version?.phase_year);
+    let phaseUuid = result?.obj_version?.toc_pahse_id
+      ? String(result.obj_version.toc_pahse_id).trim()
+      : null;
+
+    if (!phaseUuid && result?.version_id) {
+      try {
+        const versionRows = await this.resultRepository.query(
+          `SELECT toc_pahse_id, phase_year FROM ${process.env.DB_NAME ?? 'clarisa_rm'}.version WHERE id = ? LIMIT 1`,
+          [result.version_id],
+        );
+        if (versionRows?.[0]?.toc_pahse_id) {
+          phaseUuid = String(versionRows[0].toc_pahse_id).trim();
+        }
+        if (!Number.isFinite(reportingYear) && versionRows?.[0]?.phase_year) {
+          reportingYear = Number(versionRows[0].phase_year);
+        }
+      } catch {
+        // ignore error resolving fallback phase
+      }
+    }
+
+    if (!phaseUuid || !Number.isFinite(reportingYear)) {
+      try {
+        const activePhase = await this.versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
+        if (activePhase) {
+          if (!phaseUuid && activePhase.toc_pahse_id) {
+            phaseUuid = String(activePhase.toc_pahse_id).trim();
+          }
+          if (!Number.isFinite(reportingYear) && activePhase.phase_year) {
+            reportingYear = Number(activePhase.phase_year);
+          }
+        }
+      } catch {
+        // ignore error resolving active phase
+      }
+    }
+
+    return {
+      result,
+      phaseUuid,
+      reportingYear: Number.isFinite(reportingYear) ? reportingYear : null,
+    };
+  }
+
+  private async getProjectDefaultNodes(
+    resultId: number,
+    ownerOfficialCode: string | undefined,
+    phaseUuid: string | null,
+    reportingYear: number | null,
+  ): Promise<{
+    leadProjectId: number | null;
+    nodes: ProjectTocLinkageNode[];
+  }> {
+    const leadProjectId =
+      await this.aowBilateralRepository.findLeadProjectId(resultId);
+
+    if (
+      !leadProjectId ||
+      !ownerOfficialCode ||
+      !phaseUuid ||
+      reportingYear == null
+    ) {
+      return { leadProjectId: leadProjectId ?? null, nodes: [] };
+    }
+
+    const linkageRows = await this.aowBilateralRepository.findProjectTocLinkage(
+      leadProjectId,
+      ownerOfficialCode,
+      phaseUuid,
+      reportingYear,
+    );
+
+    if (!linkageRows || linkageRows.length === 0) {
+      return { leadProjectId, nodes: [] };
+    }
+
+    const nodesMap = new Map<number, ProjectTocLinkageNode>();
+    for (const row of linkageRows) {
+      let node = nodesMap.get(row.toc_result_id);
+      if (!node) {
+        const cat = (row.category || '').toUpperCase().trim();
+        const levelMapping = TOC_CATEGORY_LEVEL_MAP[cat];
+        node = {
+          toc_result_id: row.toc_result_id,
+          category: row.category,
+          result_title: row.result_title,
+          title: row.result_title,
+          toc_level_id: levelMapping?.id ?? null,
+          level_name: levelMapping?.name ?? null,
+          related_node_id: row.related_node_id,
+          indicators: [],
+        };
+        nodesMap.set(row.toc_result_id, node);
+      }
+
+      if (row.indicator_id != null) {
+        let indicator = node.indicators.find(
+          (ind) => ind.id === row.indicator_id,
+        );
+        if (!indicator) {
+          indicator = {
+            id: row.indicator_id,
+            description: row.indicator_description,
+            type: row.indicator_type,
+            targets: [],
+          };
+          node.indicators.push(indicator);
+        }
+        if (row.target_value !== null && row.target_value !== undefined) {
+          // One indicator/year can carry several target rows (toc_result_indicator_target's
+          // number_target), each optionally broken down by CGIAR center via
+          // toc_result_indicator_target_center. The join fans out one row per center, so dedupe
+          // on toc_indicator_target_id and collect center ids instead of pushing every fanned-out
+          // row as its own unlabeled target (post-implementation audit, 2026-09-18).
+          let target =
+            row.toc_indicator_target_id != null
+              ? indicator.targets.find(
+                  (t) =>
+                    t.toc_indicator_target_id === row.toc_indicator_target_id,
+                )
+              : undefined;
+          if (!target) {
+            target = {
+              year: reportingYear,
+              value: row.target_value,
+              toc_indicator_target_id: row.toc_indicator_target_id ?? null,
+              center_ids: [],
+            };
+            indicator.targets.push(target);
+          }
+          if (
+            row.center_id != null &&
+            !target.center_ids.includes(row.center_id)
+          ) {
+            target.center_ids.push(row.center_id);
+          }
+        }
+      }
+    }
+
+    return { leadProjectId, nodes: Array.from(nodesMap.values()) };
+  }
+
   async getTocState(resultId: number) {
     try {
       const owner =
@@ -685,12 +882,65 @@ export class BilateralCenterService {
             toc_level_id: null,
             toc_result_id: null,
             indicator_id: null,
+            contributing_indicator: null,
             toc_progressive_narrative: null,
+            toc_linkage_mode: null,
+            project_default: null,
           },
         };
       }
 
-      const activeRecord = await this.resultsTocResultRepository.findOne({
+      const { phaseUuid, reportingYear } =
+        await this.resolveResultVersionInfo(resultId);
+
+      // Step 2: Build project_default from lead project and findProjectTocLinkage
+      let projectDefault: {
+        project_id: number;
+        project_name: string | null;
+        nodes: ProjectTocLinkageNode[];
+      } | null = null;
+      let defaultNodeIds = new Set<number>();
+
+      try {
+        const { leadProjectId, nodes } = await this.getProjectDefaultNodes(
+          resultId,
+          owner.official_code,
+          phaseUuid,
+          reportingYear,
+        );
+
+        if (leadProjectId && nodes.length > 0) {
+          defaultNodeIds = new Set(nodes.map((n) => n.toc_result_id));
+
+          let projectName: string | null = null;
+          try {
+            const projectRows = await this.resultRepository.query(
+              `SELECT COALESCE(NULLIF(TRIM(full_name), ''), short_name) AS project_name
+               FROM clarisa_projects
+               WHERE id = ? LIMIT 1`,
+              [leadProjectId],
+            );
+            projectName = projectRows?.[0]?.project_name ?? null;
+          } catch {
+            // ignore error resolving project name
+          }
+
+          projectDefault = {
+            project_id: leadProjectId,
+            project_name: projectName,
+            nodes,
+          };
+        }
+      } catch (_linkageError) {
+        this.logger.warn(
+          `Failed to read project ToC linkage for result ${resultId}`,
+        );
+        projectDefault = null;
+        defaultNodeIds = new Set<number>();
+      }
+
+      // Step 3: Read ALL active results_toc_result rows for the result and owner initiative
+      const activeRecords = await this.resultsTocResultRepository.find({
         where: {
           result_id: resultId,
           initiative_ids: owner.id,
@@ -698,41 +948,38 @@ export class BilateralCenterService {
         },
       });
 
-      if (!activeRecord) {
-        return {
-          response: {
-            planned_result: null,
-            toc_level_id: null,
-            toc_result_id: null,
-            indicator_id: null,
-            toc_progressive_narrative: null,
-          },
-        };
-      }
-
+      // Step 4: Check for active indicators and retrieve indicator_id / contributing_indicator
+      let hasActiveIndicators = false;
       let indicatorId: string | null = null;
       let contributingIndicator: number | null = null;
-      if (activeRecord.result_toc_result_id) {
+
+      const activeRecordIds = activeRecords
+        .map((r) => r.result_toc_result_id)
+        .filter(Boolean);
+
+      if (activeRecordIds.length > 0) {
         const indicatorQuery = `
           SELECT 
             rtri.toc_results_indicator_id as id,
             rtri.result_toc_result_indicator_id as rtri_id
           FROM results_toc_result_indicators rtri
-          WHERE rtri.results_toc_results_id = ?
-            and rtri.is_active = 1
-          LIMIT 1
+          WHERE rtri.results_toc_results_id IN (?)
+            AND rtri.is_active = 1
         `;
         const indicatorResult: { id: string; rtri_id: number }[] =
           await this.resultsTocResultRepository.query(indicatorQuery, [
-            activeRecord.result_toc_result_id,
+            activeRecordIds,
           ]);
+
         if (indicatorResult?.length) {
+          hasActiveIndicators = true;
           indicatorId = indicatorResult[0].id;
+
           const targetQuery = `
             SELECT rit.contributing_indicator
             FROM result_indicators_targets rit
             WHERE rit.result_toc_result_indicator_id = ?
-              and rit.is_active = 1
+              AND rit.is_active = 1
             LIMIT 1
           `;
           const targetResult: { contributing_indicator: number }[] =
@@ -745,25 +992,57 @@ export class BilateralCenterService {
         }
       }
 
+      // Step 5: Derive toc_linkage_mode per BIL-TOC-DD-1
+      let tocLinkageMode: 'project_default' | 'custom' | null = null;
+
+      if (activeRecords.length === 0) {
+        tocLinkageMode = null;
+      } else {
+        const hasUnplanned = activeRecords.some(
+          (r) => r.planned_result === false,
+        );
+        const hasNodeOutsideDefault = activeRecords.some(
+          (r) =>
+            r.toc_result_id == null ||
+            !defaultNodeIds.has(Number(r.toc_result_id)),
+        );
+
+        if (hasUnplanned || hasNodeOutsideDefault || hasActiveIndicators) {
+          tocLinkageMode = 'custom';
+        } else {
+          tocLinkageMode = 'project_default';
+        }
+      }
+
+      const firstActive = activeRecords[0] ?? null;
+
       return {
         response: {
-          planned_result: activeRecord.planned_result,
-          toc_level_id: activeRecord.toc_level_id ?? null,
-          toc_result_id: activeRecord.toc_result_id ?? null,
+          planned_result: firstActive?.planned_result ?? null,
+          toc_level_id: firstActive?.toc_level_id ?? null,
+          toc_result_id: firstActive?.toc_result_id ?? null,
           indicator_id: indicatorId,
           contributing_indicator: contributingIndicator,
           toc_progressive_narrative:
-            activeRecord.toc_progressive_narrative ?? null,
+            firstActive?.toc_progressive_narrative ?? null,
+          toc_linkage_mode: tocLinkageMode,
+          project_default: projectDefault,
         },
       };
     } catch (error) {
+      this.logger.warn(
+        `Failed to get TOC state for result ${resultId}: ${error instanceof Error ? error.message : error}`,
+      );
       return {
         response: {
           planned_result: null,
           toc_level_id: null,
           toc_result_id: null,
           indicator_id: null,
+          contributing_indicator: null,
           toc_progressive_narrative: null,
+          toc_linkage_mode: null,
+          project_default: null,
         },
         message:
           error instanceof Error ? error.message : 'Failed to load TOC state',
@@ -842,6 +1121,169 @@ export class BilateralCenterService {
         };
       }
 
+      const mode =
+        dto.toc_linkage_mode ?? dto.result_toc_result?.toc_linkage_mode;
+
+      if (mode === 'project_default') {
+        const { phaseUuid, reportingYear } =
+          await this.resolveResultVersionInfo(resultId);
+
+        const { leadProjectId, nodes } = await this.getProjectDefaultNodes(
+          resultId,
+          ownerInitiative.official_code,
+          phaseUuid,
+          reportingYear,
+        );
+
+        if (!leadProjectId || nodes.length === 0) {
+          throw new BadRequestException(
+            'No default ToC linkage found for this result',
+          );
+        }
+
+        const defaultNodeIds = new Set(
+          nodes.map((n) => Number(n.toc_result_id)),
+        );
+
+        // Read all existing active records for this result and owner initiative
+        const existingActiveRecords =
+          await this.resultsTocResultRepository.find({
+            where: {
+              result_id: resultId,
+              initiative_ids: ownerInitiative.id,
+              is_active: true,
+            },
+          });
+
+        // Softly deactivate existing active rows not in the re-derived default node set
+        const recordsToDeactivate = existingActiveRecords.filter(
+          (r) =>
+            r.toc_result_id == null ||
+            !defaultNodeIds.has(Number(r.toc_result_id)),
+        );
+
+        for (const record of recordsToDeactivate) {
+          await this.resultsTocResultRepository.update(
+            { result_toc_result_id: record.result_toc_result_id },
+            { is_active: false, last_updated_by: user.id },
+          );
+        }
+
+        // Softly deactivate any active indicator rows in results_toc_result_indicators for this result
+        const allActiveRecordIds = existingActiveRecords
+          .map((r) => r.result_toc_result_id)
+          .filter(Boolean);
+
+        if (allActiveRecordIds.length > 0) {
+          await this.resultsTocResultRepository.query(
+            `UPDATE results_toc_result_indicators
+             SET is_active = 0, last_updated_by = ?
+             WHERE results_toc_results_id IN (?) AND is_active = 1`,
+            [user.id, allActiveRecordIds],
+          );
+        }
+
+        // Materialize one active row per default node (no indicator rows)
+        for (const node of nodes) {
+          const numericNodeId = Number(node.toc_result_id);
+          const existing = existingActiveRecords.find(
+            (r) => Number(r.toc_result_id) === numericNodeId,
+          );
+
+          if (existing) {
+            await this.resultsTocResultRepository.update(
+              { result_toc_result_id: existing.result_toc_result_id },
+              {
+                is_active: true,
+                planned_result: true,
+                toc_level_id: node.toc_level_id ?? undefined,
+                last_updated_by: user.id,
+              },
+            );
+          } else {
+            const existingInactive =
+              await this.resultsTocResultRepository.findOne({
+                where: {
+                  result_id: resultId,
+                  initiative_ids: ownerInitiative.id,
+                  toc_result_id: numericNodeId,
+                  is_active: false,
+                },
+              });
+
+            if (existingInactive) {
+              await this.resultsTocResultRepository.update(
+                { result_toc_result_id: existingInactive.result_toc_result_id },
+                {
+                  is_active: true,
+                  planned_result: true,
+                  toc_level_id: node.toc_level_id ?? undefined,
+                  last_updated_by: user.id,
+                },
+              );
+            } else {
+              const newRow = this.resultsTocResultRepository.create({
+                result_id: resultId,
+                initiative_ids: ownerInitiative.id,
+                toc_result_id: numericNodeId,
+                planned_result: true,
+                toc_level_id: node.toc_level_id ?? undefined,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+              await this.resultsTocResultRepository.save(newRow);
+            }
+          }
+        }
+
+        return {
+          response: { result_id: resultId },
+          message: 'Default ToC linkage saved successfully',
+          status: 200,
+        };
+      }
+
+      // Mode is 'custom' or legacy/undefined (NO write)
+      const candidateItems = dto.result_toc_result?.result_toc_results ?? [];
+      const candidateIds = [
+        ...new Set([
+          ...candidateItems
+            .map((item) => Number(item?.toc_result_id))
+            .filter((id) => Number.isFinite(id) && id > 0),
+          ...[Number((dto.result_toc_result as any)?.toc_result_id)].filter(
+            (id) => Number.isFinite(id) && id > 0,
+          ),
+        ]),
+      ];
+
+      if (candidateIds.length > 0) {
+        const resultEntity = await this.resultRepository.findOne({
+          select: { id: true, result_type_id: true },
+          where: { id: resultId, is_active: true },
+        });
+
+        if (resultEntity?.result_type_id) {
+          const verdicts =
+            await this.resultsTocResultsService.getTocResultTypologyVerdicts(
+              candidateIds,
+              resultEntity.result_type_id,
+            );
+
+          const hasMismatch = candidateIds.some(
+            (id) => verdicts.get(id) === false,
+          );
+          if (hasMismatch) {
+            this.logger.warn(
+              `Typology mismatch rejected for result ${resultId}: candidate IDs ${candidateIds.join(', ')}`,
+            );
+            throw new BadRequestException(
+              'Selected ToC node is incompatible with the result type',
+            );
+          }
+        }
+      }
+
       const resultTocResult = {
         ...dto.result_toc_result,
         initiative_id: ownerInitiative.id,
@@ -853,6 +1295,9 @@ export class BilateralCenterService {
         user,
       );
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       return {
         response: {},
         message:

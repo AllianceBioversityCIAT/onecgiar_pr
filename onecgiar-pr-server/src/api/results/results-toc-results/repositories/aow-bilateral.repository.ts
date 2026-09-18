@@ -109,6 +109,49 @@ export interface TocWorkPackageRow {
   year: number;
 }
 
+// BIL-TOC-T-2: flat row returned by findProjectTocLinkage (grouping into nodes is done by callers)
+export interface ProjectTocLinkageRow {
+  toc_result_id: number;
+  category: string;
+  result_title: string;
+  related_node_id: string | null;
+  indicator_id: number | null;
+  indicator_description: string | null;
+  indicator_type: string | null;
+  // Target row identity, distinct from indicator_id: one indicator/year can carry several target
+  // rows (toc_result_indicator_target.number_target), each optionally broken down by CGIAR
+  // center via toc_result_indicator_target_center — the fan-out this repository must NOT collapse
+  // into a single unlabeled value (post-implementation audit, 2026-09-18).
+  toc_indicator_target_id: number | null;
+  target_value: number | string | null;
+  center_id: number | null;
+}
+
+export interface ProjectTocLinkageIndicatorTarget {
+  year: number;
+  value: number | string | null;
+  toc_indicator_target_id: number | null;
+  center_ids: number[];
+}
+
+export interface ProjectTocLinkageIndicator {
+  id: number;
+  description: string | null;
+  type: string | null;
+  targets: ProjectTocLinkageIndicatorTarget[];
+}
+
+export interface ProjectTocLinkageNode {
+  toc_result_id: number;
+  category?: string;
+  result_title?: string;
+  title?: string;
+  toc_level_id?: number | null;
+  level_name?: string | null;
+  related_node_id: string | null;
+  indicators: ProjectTocLinkageIndicator[];
+}
+
 @Injectable()
 export class AoWBilateralRepository {
   constructor(
@@ -1054,6 +1097,125 @@ export class AoWBilateralRepository {
         className: AoWBilateralRepository.name,
         debug: true,
       });
+    }
+  }
+
+  // ─── BIL-TOC-T-2: lead project helper ───────────────────────────────────────
+
+  /**
+   * Returns the lead project id for a result.
+   * Uses project_id (never project name) as the join key.
+   * ORDER BY is_lead DESC, id DESC LIMIT 1 — the lead row comes first.
+   * Returns null when no active rows exist or on error (never throws).
+   */
+  async findLeadProjectId(resultId: number): Promise<number | null> {
+    const query = `
+      SELECT rbp.project_id, rbp.is_lead
+      FROM ${env.DB_NAME}.results_by_projects rbp
+      WHERE rbp.result_id = ? AND rbp.is_active = 1
+      ORDER BY rbp.is_lead DESC, rbp.id DESC
+      LIMIT 1
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [resultId]);
+      const firstRow = rows?.[0];
+      if (!firstRow || firstRow.project_id == null) {
+        return null;
+      }
+      return Number(firstRow.project_id);
+    } catch (error) {
+      this._handlersError.returnErrorRepository({
+        error: `findLeadProjectId error for result_id=${resultId}: ${error}`,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+      return null;
+    }
+  }
+
+  // ─── BIL-TOC-T-2: project ToC linkage query ─────────────────────────────────
+
+  /**
+   * Reads flat project ToC linkage rows for a project under a science program and phase.
+   * Cross-schema query starting from Integration_information.toc_result_projects.
+   * Never filters or joins by project name — project_id is the sole key (R-1, R-8).
+   * One query; grouping into ProjectTocLinkageNode[] is done by callers (design §5).
+   * Returns [] when no rows found; returns null on error and logs result context (never throws).
+   */
+  async findProjectTocLinkage(
+    projectId: number,
+    programOfficialCode: string,
+    phaseUuid: string,
+    reportingYear: number,
+  ): Promise<ProjectTocLinkageRow[] | null> {
+    const query = `
+      SELECT
+        tr.id AS toc_result_id,
+        tr.category,
+        tr.result_title,
+        tr.related_node_id,
+        tri.id AS indicator_id,
+        tri.indicator_description AS indicator_description,
+        tri.type_name AS indicator_type,
+        trit.toc_indicator_target_id AS toc_indicator_target_id,
+        trit.target_value AS target_value,
+        tritc.center_id AS center_id
+      FROM ${env.DB_TOC}.toc_result_projects trp
+      JOIN ${env.DB_TOC}.toc_results tr ON tr.related_node_id = trp.toc_result_id_toc
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators tri
+        ON tri.toc_results_id = tr.id
+        AND tri.is_active = 1
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+        ON trit.id_indicator = tri.id
+        AND (trit.project_id = CAST(trp.project_id AS SIGNED) OR trit.project_id IS NULL)
+        AND trit.target_date = ?
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc
+        ON tritc.toc_indicator_target_id = trit.toc_indicator_target_id
+      WHERE trp.project_id = ?
+        AND UPPER(TRIM(tr.official_code)) = UPPER(TRIM(?))
+        AND tr.phase = ?
+        AND tr.is_active = 1
+      ORDER BY tr.id ASC, tri.id ASC, trit.toc_indicator_target_id ASC
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [
+        reportingYear,
+        String(projectId),
+        programOfficialCode,
+        phaseUuid,
+      ]);
+
+      return (rows ?? []).map((row: any) => ({
+        toc_result_id: Number(row.toc_result_id),
+        category: row.category,
+        result_title: row.result_title,
+        related_node_id: row.related_node_id ?? null,
+        indicator_id:
+          row.indicator_id !== null && row.indicator_id !== undefined
+            ? Number(row.indicator_id)
+            : null,
+        indicator_description: row.indicator_description ?? null,
+        indicator_type: row.indicator_type ?? null,
+        toc_indicator_target_id:
+          row.toc_indicator_target_id !== null &&
+          row.toc_indicator_target_id !== undefined
+            ? Number(row.toc_indicator_target_id)
+            : null,
+        target_value: row.target_value ?? null,
+        center_id:
+          row.center_id !== null && row.center_id !== undefined
+            ? Number(row.center_id)
+            : null,
+      }));
+    } catch (error) {
+      this._handlersError.returnErrorRepository({
+        error: `findProjectTocLinkage error for project_id=${projectId}: ${error}`,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+      return null;
     }
   }
 }

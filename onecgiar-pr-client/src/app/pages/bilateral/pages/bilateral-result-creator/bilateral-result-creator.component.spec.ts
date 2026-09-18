@@ -177,6 +177,9 @@ describe('BilateralResultCreatorComponent', () => {
       close: jest.fn(),
       loadLatest: jest.fn().mockReturnValue(of(null)),
       openStored: jest.fn(),
+      // The per-field flag component calls this from any section template that mounts.
+      flagForField: jest.fn().mockReturnValue(null),
+      flagForSection: jest.fn().mockReturnValue(null),
       reset: jest.fn(),
     };
 
@@ -857,6 +860,48 @@ describe('BilateralResultCreatorComponent', () => {
 
   // 🛑 The user reported this button rendering EMPTY while the AI ran, twice. It is the only
   // feedback the rail gives during a 30-60s wait, so assert the rendered text, not the signal.
+  describe('Navigating from the verdict window to a section', () => {
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      fixture.detectChanges();
+    });
+
+    it('maps each AI section key onto its editor section', () => {
+      const cases: [string, string][] = [
+        ['general_information', 'general-info'],
+        ['contributors_and_partners', 'contributors'],
+        ['geographic_location', 'geography'],
+        ['evidence', 'evidence'],
+        ['type_specific', 'type-specific'],
+      ];
+
+      for (const [aiKey, editorSection] of cases) {
+        component.openSectionName.set('section-zero');
+        component.goToQualitySection(aiKey);
+        expect(component.openSectionName()).toBe(editorSection);
+      }
+    });
+
+    it('closes the window so the reporter lands on the form', () => {
+      component.goToQualitySection('geographic_location');
+
+      expect(qualityAssessment.close).toHaveBeenCalled();
+    });
+
+    // 🛑 A key we cannot map must not dismiss the window and do nothing — that reads as a broken
+    // button. Leaving it open keeps the verdict in front of the reporter.
+    it('ignores an unknown key without closing the window', () => {
+      component.openSectionName.set('general-info');
+      qualityAssessment.close.mockClear();
+
+      component.goToQualitySection('something_the_ai_invented');
+
+      expect(qualityAssessment.close).not.toHaveBeenCalled();
+      expect(component.openSectionName()).toBe('general-info');
+    });
+  });
+
   describe('Rail Submit while the quality check runs', () => {
     const submitButton = () => fixture.nativeElement.querySelector('[data-testid="bilateral-rail-submit"]');
 

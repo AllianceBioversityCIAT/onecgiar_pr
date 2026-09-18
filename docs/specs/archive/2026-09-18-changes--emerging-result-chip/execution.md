@@ -200,3 +200,18 @@ The Leader escalates on the purpose, not the letter. Proceeding to `EMG-T-1` wou
 | `Q-4` | Confirm the measured environment is prtest. Identified indirectly (`BULK_HANDOFF_ENV = test` + private-IP host); the numbers are reproducible and carry `version_id = 36`, so they can be re-run anywhere |
 | `Q-5` | Does the 15% relabel rate still justify Option B, or does the measurement move the answer to Option C (`Emerging` and `Not tagged` as two first-class buckets across column, filter and counters)? |
 | `Q-6` | **Resolved by investigation.** The 223 non-KP rows are split between the omitted phase-rollover call (119 replicated non-KP rows) and the generic/base creation path (104 rows). Decide whether to fix those upstream data gaps first, or explicitly accept that the label only classifies rows with an owner ToC placeholder. |
+
+---
+
+## Pre-archive remediation (2026-09-18)
+
+Validation FAIL D-3 blocked archive. Fixed and re-tested on `qa-development-2026`:
+
+| Item | Action |
+|---|---|
+| D-3 | `isEmerging()` — guard `null`/`undefined`/'' before `Number(planned) === 0` |
+| EMG-T-2 tests | `programme-results-section-labels.spec.ts`, service `planned_result` passthrough, component `cellText` Emerging |
+| EMG-T-3 tests | `results-list.component.spec.ts` — `isEmerging` matrix incl. `null` |
+| Verification | Server 52 + client 318 scoped Jest green |
+
+`EMG-T-4` manual prtest checks remain open — accepted at archive.

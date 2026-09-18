@@ -147,6 +147,22 @@
               </div>
             </div>
 
+            <!-- PMF-T-1/PMF-DD-1 (pivot)/PMF-DD-4 — Project multiselect mirrors the Created by
+                 field: options from the center's own catalog, phase-scoped per selected year,
+                 existing comma `project` URL/chip contract, no new styles. -->
+            <div class="brl-filter-field" aria-label="Filter by project">
+              <label class="brl_filter_group_label">Project</label>
+              <app-pr-filter-multiselect
+                [options]="projectSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Project"
+                countLabel="projects"
+                [filter]="true"
+                [ngModel]="projectFilter()"
+                (changed)="onProjectFilterChange($event)"></app-pr-filter-multiselect>
+            </div>
+
             <div class="brl-filter-field" aria-label="Filter by created by">
               <label class="brl_filter_group_label">Created by</label>
               <app-pr-filter-multiselect

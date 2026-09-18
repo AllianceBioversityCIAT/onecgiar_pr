@@ -15,14 +15,14 @@ PRMS is a TypeScript-based monorepo with two top-level apps:
 | Path | Stack | Deploy target |
 |---|---|---|
 | `onecgiar-pr-server/` | NestJS 11, TypeORM 0.3, MySQL, AWS Cognito, RabbitMQ, DynamoDB | AWS Lambda + API Gateway (Serverless Framework) — also containerizable (Dockerfile, Node 20). |
-| `onecgiar-pr-client/` | Angular 19, PrimeNG 19, Jest, Cypress, ngx-socket-io, chart.js | Static SPA fronted by Nginx (`nginx.conf` + Dockerfile). |
+| `onecgiar-pr-client/` | Angular 21, Spartan UI / PrimeNG, Jest, Cypress, ngx-socket-io, chart.js | Static SPA fronted by Nginx (`nginx.conf` + Dockerfile). |
 
 External systems PRMS integrates with:
 
 - **CLARISA** — read-only catalog source (institutions, centers, initiatives, ToC phases, indicators, geography, etc.).
 - **Theory of Change services** — ToC trees and outcomes (`src/toc` module).
 - **AWS Cognito + Active Directory (LDAP)** — identity and authentication (`auth-cognito` client; AD users + `ldapts` server).
-- **CGSpace** — handle source for knowledge products.
+- **CGSpace, MelSpace, & WorldFish** — multi-repository DSpace discovery proxy and handle sources for knowledge products.
 - **Pusher** + WebSocket sockets — real-time client updates.
 - **AWS DynamoDB** — operational logs.
 - **AWS S3 / SharePoint** — evidence and document storage (via `share-point` module).
@@ -32,7 +32,7 @@ External systems PRMS integrates with:
 ### High-level diagram (textual)
 
 ```
-Browser (Angular 19 SPA)
+Browser (Angular 21 SPA)
    │
    │ HTTPS, custom `auth` header (JWT)
    ▼
@@ -189,6 +189,7 @@ Top-level surfaces routed from `app-routing.module.ts` + `shared/routing/routing
 | `home` | `pages/home` | `api/home` |
 | `login`, `auth-cognito` | `pages/login`, `pages/auth-cognito` | `auth/`, AWS Cognito |
 | `results` | `pages/results` (result-creator, result-detail, results-outlet) | `api/results/*`, `api/notification`, `api/ai` |
+| `bilateral` | `pages/bilateral` (creator, overview, review hierarchy) | `api/bilateral/*`, `api/results/*` |
 | `quality-assurance` | `pages/quality-assurance` | `api/result-qaed`, review history |
 | `ipsr` | `pages/ipsr` | `api/ipsr/*` |
 | `type-one-report` | `pages/type-one-report` | `api/type-one-report` |
@@ -364,6 +365,18 @@ Headline rules:
   - Audit-logged so PMU can attribute outputs.
   - Stripped of secrets/PII before being sent to any third-party model.
 
+### W9. Multi-repository DSpace discovery
+
+- `cgspace-discovery` proxies DSpace instances across CGSpace, MelSpace, and WorldFish for knowledge product authoring.
+- Queries fan out concurrently, deduplicate by handle/DOI across repositories, union `programAccelerators` metadata tags, and synthesize `alsoIn` cross-repository attributes.
+- Failures on individual repositories degrade gracefully (`status: 'error' | 'unconfigured'`) without failing the overall discovery search.
+
+### W10. Interactive guided onboarding tours
+
+- Client-side onboarding and workflow assistance powered by `driver.js`.
+- Tours are initiated contextual to user roles and pages (e.g., Center overview, Science Program reporting, bilateral submissions).
+- Steps navigate sequentially with focus management and step completion persistence.
+
 ---
 
 ## 6. Frontend Architecture & State Boundaries
@@ -412,18 +425,19 @@ onecgiar-pr-client/src/app/
 
 ### Tooling
 
-- **Build:** `ng build` (Angular 19 CLI) → static assets served by Nginx (`nginx.conf` + Dockerfile).
+- **Build:** `ng build` (Angular 21 CLI) → static assets served by Nginx (`nginx.conf` + Dockerfile).
 - **Unit tests:** Jest (`jest-preset-angular`). Coverage thresholds in `package.json` (60/60/60/50 for lines/functions/statements/branches).
 - **E2E:** Cypress (`cypress.config.js`, `cypress.env.js.example`).
 - **Analytics:** Hotjar + Microsoft Clarity (mocked in tests via `tests/mocks/clarityMock.ts`).
-- **Charts:** chart.js + chartjs-plugin-datalabels; PDF view via `pdfjs-dist`.
+- **Charts:** chart.js + chartjs-plugin-datalabels, echarts; PDF view via `pdfjs-dist`.
+- **Tours:** driver.js for in-app guided onboarding.
 - **Excel/CSV:** `exceljs`, `file-saver`.
 
 ### Frontend rules
 
 - Hard coded English strings are anti-pattern — use `internationalization/`.
 - New API methods follow `HTTP_METHOD_descriptiveName`.
-- Use PrimeNG components and the `reportingTheme` preset; don't introduce a competing UI lib.
+- Use Spartan UI / PrimeNG components and the brand design line (DD-12); don't introduce a competing UI lib.
 - Shared section components are preferred over per-feature re-implementation.
 
 ---
@@ -562,7 +576,7 @@ onecgiar-pr-client/src/app/
 
 - **Runtime:**
   - Server: Node 20.x (Docker), Lambda runtime in serverless.
-  - Client: Angular 19.x, Node 20 build host.
+  - Client: Angular 21.x, Node 20 build host.
 - **Database:** MySQL via TypeORM 0.3 (migrations are first-class; do not edit production schema by hand).
 - **Lambda:** Bundle size, cold start, and `serverless-plugin-optimize` constraints apply.
 - **Auth header:** Custom `auth` header is non-negotiable for compatibility with existing clients and reverse proxies.
@@ -579,7 +593,7 @@ onecgiar-pr-client/src/app/
 - CLARISA and ToC services remain available as REST/HTTP integrations.
 - AD / Cognito provisioning continues to be upstream-owned.
 - RMQ continues to be the async backbone (no migration to SQS/SNS planned).
-- Angular 19 + PrimeNG 19 remain the client baseline at least through the next phase cycle.
+- Angular 21 + Spartan UI / PrimeNG remain the client baseline at least through the next phase cycle.
 
 ### Pending technical decisions
 

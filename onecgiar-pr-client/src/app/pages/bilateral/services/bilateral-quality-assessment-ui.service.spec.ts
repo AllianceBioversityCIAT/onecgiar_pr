@@ -114,6 +114,96 @@ describe('BilateralQualityAssessmentUiService', () => {
     }));
   });
 
+  describe('flagForField', () => {
+    const flagged = () => view({
+      sections: {
+        general_information: { verdict: 'red', comments: 'x', issues: ['fix the description'], fields: ['description', 'title'] },
+        contributors_and_partners: { verdict: 'green', comments: 'ok', issues: [], fields: [] },
+        geographic_location: { verdict: 'amber', comments: 'x', issues: ['set a country'], fields: ['scope', 'countries'] },
+        evidence: { verdict: 'grey', comments: 'x', issues: [], fields: ['evidence'] },
+      },
+    });
+
+    it('flags a field the AI named, with its section comments', () => {
+      service.assessment.set(flagged());
+
+      expect(service.flagForField('general_information', 'description')).toEqual({
+        verdict: 'red',
+        issues: ['fix the description'],
+      });
+      expect(service.flagForField('geographic_location', 'scope')?.verdict).toBe('amber');
+    });
+
+    it('does not flag a field the AI did not name', () => {
+      service.assessment.set(flagged());
+
+      expect(service.flagForField('general_information', 'lead_contact_person')).toBeNull();
+    });
+
+    // Green has nothing to correct; grey means the AI could not evaluate it. Neither is a defect.
+    it('never flags on green or grey', () => {
+      service.assessment.set(flagged());
+
+      expect(service.flagForField('contributors_and_partners', 'lead_center')).toBeNull();
+      expect(service.flagForField('evidence', 'evidence')).toBeNull();
+    });
+
+    // 🛑 Editing invalidates an assessment for submit-for-review, but this marker is the guidance
+    // the reporter needs while making that edit. Submission validates freshness separately.
+    it('keeps the AI guidance visible after the assessment becomes stale', () => {
+      service.assessment.set({ ...flagged(), is_current: false });
+
+      expect(service.flagForField('general_information', 'description')).toEqual({
+        verdict: 'red',
+        issues: ['fix the description'],
+      });
+    });
+
+    it('is null with no assessment at all', () => {
+      expect(service.flagForField('general_information', 'description')).toBeNull();
+    });
+  });
+
+  describe('flagForSection', () => {
+    // 🛑 This is what makes the window's "Go to <section>" link honest: field flags only exist where
+    // the AI named a field AND we placed a marker, so without a section-level note the reporter can
+    // follow the link and arrive at a section showing nothing. That happened (2026-09-18).
+    it('returns the section verdict and its issues', () => {
+      service.assessment.set(view({
+        sections: {
+          geographic_location: { verdict: 'amber', comments: 'x', issues: ['set a country'], fields: ['scope'] },
+        },
+      }));
+
+      expect(service.flagForSection('geographic_location')).toEqual({
+        verdict: 'amber',
+        issues: ['set a country'],
+      });
+    });
+
+    it('stays silent on green, grey and an absent section, but keeps stale guidance', () => {
+      service.assessment.set(view({
+        sections: {
+          contributors_and_partners: { verdict: 'green', comments: 'ok', issues: [] },
+          evidence: { verdict: 'grey', comments: 'x', issues: [] },
+        },
+      }));
+
+      expect(service.flagForSection('contributors_and_partners')).toBeNull();
+      expect(service.flagForSection('evidence')).toBeNull();
+      expect(service.flagForSection('type_specific')).toBeNull();
+
+      service.assessment.set({
+        ...view({ sections: { general_information: { verdict: 'red', comments: 'x', issues: ['a'] } } }),
+        is_current: false,
+      });
+      expect(service.flagForSection('general_information')).toEqual({
+        verdict: 'red',
+        issues: ['a'],
+      });
+    });
+  });
+
   it('openStored reopens the persisted verdict without issuing a single request', () => {
     service.assessment.set(view());
 

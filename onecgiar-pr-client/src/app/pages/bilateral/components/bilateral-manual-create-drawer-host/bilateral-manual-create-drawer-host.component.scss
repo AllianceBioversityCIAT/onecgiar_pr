@@ -2,11 +2,23 @@
   margin-bottom: 24px;
   padding-bottom: 24px;
   border-bottom: 1px solid rgba(30, 32, 47, 0.08);
+  border-radius: 8px;
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+
+  &--highlight {
+    box-shadow: 0 0 0 3px var(--pr-color-primary-200);
+    background-color: var(--pr-color-primary-25);
+    padding: 12px;
+    margin: -12px -12px 12px -12px;
+  }
 }
 
 .bmcdh-setup-way--locked {
-  opacity: 0.55;
-  pointer-events: none;
+  /* Cards themselves show 0.7 opacity, but user can click to interactively focus step 1 */
+}
+
+.bmcdh-sp-notice {
+  cursor: pointer;
 }
 
 .bmcdh-back-btn {

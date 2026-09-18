@@ -1,4 +1,4 @@
-<div class="flex flex-col gap-4 w-full">
+<div class="flex w-full min-w-0 flex-col gap-4">
   <!-- Search bar & Filters container -->
   <div class="flex flex-col gap-3">
   <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-1 / KPM-R-2 / KPM-DD-8: repository source strip -->
@@ -81,9 +81,10 @@
     </div>
 
     <!-- Filters row -->
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex w-full min-w-0 flex-col gap-2">
+      <div class="flex w-full min-w-0 flex-wrap items-center gap-2">
       <!-- Type Filter -->
-      <div class="relative w-44 min-w-[160px] kp-filter-type">
+      <div class="relative w-full min-w-0 min-[480px]:w-44 min-[480px]:min-w-[160px] kp-filter-type">
         <app-pr-select
           [options]="typeOptions()"
           optionLabel="label"
@@ -103,7 +104,7 @@
       </div>
 
       <!-- Center Filter -->
-      <div class="relative w-64 min-w-[210px] kp-filter-center">
+      <div class="relative w-full min-w-0 min-[480px]:w-64 min-[480px]:min-w-[210px] kp-filter-center">
         <app-pr-select
           [options]="centerOptions()"
           optionLabel="label"
@@ -125,13 +126,13 @@
       <!-- Year Filter: Locked chip for non-admin, editable select for admin -->
       @if (!isAdmin()) {
         <div
-          class="flex items-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-xs font-medium border border-gray-200"
+          class="flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 min-[480px]:w-auto"
           aria-disabled="true">
           <span>Year: {{ phaseYear() }}</span>
-          <span class="text-gray-500 text-[11px]">(reporting cycle)</span>
+          <span class="text-[11px] text-gray-500">(reporting cycle)</span>
         </div>
       } @else {
-        <div class="w-36 min-w-[130px]">
+        <div class="w-full min-w-0 min-[480px]:w-36 min-[480px]:min-w-[130px]">
           <app-pr-select
             [options]="adminYearOptions()"
             optionLabel="label"
@@ -143,7 +144,80 @@
           </app-pr-select>
         </div>
       }
+
+      @if (showProjectRepositoryFilterChip()) {
+        <button
+          type="button"
+          class="inline-flex h-[38px] w-full min-w-0 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition-colors cursor-pointer min-[480px]:w-auto min-[480px]:justify-start"
+          [ngClass]="projectRepositoryFilterOn()
+            ? 'border-amber-400 bg-amber-50 text-amber-900'
+            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
+          [attr.aria-pressed]="projectRepositoryFilterOn()"
+          [attr.aria-label]="projectRepositoryFilterOn()
+            ? 'Filter by project tag is on for ' + projectRepositoryFilterValue()
+            : 'Filter by project tag is off — search is broader'"
+          [attr.title]="projectRepositoryFilterOn()
+            ? 'Exact project tag on MELSpace and WorldFish only; CGSpace uses highlight matching only'
+            : 'Recommended — limits search to items tagged with your exact project label in MELSpace and WorldFish'"
+          data-test="kp-project-repository-filter"
+          (click)="toggleProjectRepositoryFilter()">
+          <i class="pi pi-filter shrink-0 text-[10px]" aria-hidden="true"></i>
+          <span class="truncate">
+            Filter by project tag:
+            <span [ngClass]="projectRepositoryFilterOn() ? 'text-amber-800' : 'text-gray-600'">
+              {{ projectRepositoryFilterOn() ? 'ON' : 'OFF' }}
+            </span>
+          </span>
+        </button>
+      }
+
+      </div>
+
+      @if (showProjectRepositoryFilterChip()) {
+        <div
+          class="box-border flex w-full min-w-0 items-start gap-1.5 rounded-md border border-dashed border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] px-3 py-2 text-xs text-[var(--pr-color-primary-700)]"
+          data-test="kp-project-match-context">
+          <i class="pi pi-bookmark mt-0.5 shrink-0 text-[10px]" aria-hidden="true"></i>
+          <span class="min-w-0 flex-1 text-left leading-snug break-words">
+            <span class="font-semibold">Project highlight:</span>
+            {{ projectCode() }}@if (projectCode() && projectTitle()) { · }{{ projectTitle() }}.
+            <span class="font-normal text-[var(--pr-color-primary-600)]">
+              Matches {{ repositoryProjectMetadataField }} using {{ bilateralProjectSourceLabel }} code, title, summary, description, and lead center. Ranks tagged items first; does not hide other items.
+            </span>
+          </span>
+        </div>
+      }
     </div>
+
+    @if (isBilateralBrowse() && activeFilterDescriptors().length) {
+      <div
+        role="status"
+        aria-live="polite"
+        class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
+        data-test="kp-active-filters-summary">
+        <p class="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Applied filters</p>
+        <ul class="m-0 mt-1.5 flex list-none flex-col gap-1.5 p-0">
+          @for (filter of activeFilterDescriptors(); track filter.key) {
+            <li
+              class="flex min-w-0 flex-col gap-0.5 text-xs leading-snug min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-baseline min-[480px]:gap-x-1.5"
+              [attr.data-test]="'kp-active-filter-' + filter.key">
+              <span
+                class="inline-flex w-fit shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                [ngClass]="{
+                  'bg-slate-200 text-slate-700': filter.tone === 'locked',
+                  'bg-emerald-100 text-emerald-800': filter.tone === 'active',
+                  'bg-gray-200 text-gray-600': filter.tone === 'inactive',
+                  'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-700)]': filter.tone === 'neutral'
+                }">
+                {{ filter.tone === 'locked' ? 'Locked' : filter.tone === 'active' ? 'Active' : filter.tone === 'inactive' ? 'Off' : 'Info' }}
+              </span>
+              <span class="shrink-0 font-semibold text-slate-800">{{ filter.label }}:</span>
+              <span class="min-w-0 break-words text-slate-700">{{ filter.detail }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
   </div>
 
   <!-- Content area for various states -->
@@ -173,6 +247,9 @@
         <i class="pi pi-search text-2xl text-gray-400 mb-2"></i>
         @if (query().trim().length > 0 && query().trim().length < 3 && !hasActiveFilter()) {
           <p class="text-[14.5px] text-gray-700 font-medium">Please enter at least 3 characters to search the selected repositories.</p>
+        } @else if (isBilateralBrowse()) {
+          <p class="text-[15px] text-gray-700 font-medium">Search CGSpace, MELSpace and WorldFish by title, author, or DOI.</p>
+          <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters to start. Project highlights compare your bilateral project to {{ repositoryProjectMetadataField }} on each item — many projects never tag that field.</p>
         } @else {
           <p class="text-[15px] text-gray-700 font-medium">Search CGSpace, MELSpace and WorldFish by title, author, or DOI to find a Knowledge Product.</p>
           <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters or select a filter above.</p>
@@ -182,9 +259,47 @@
 
     <!-- Empty State -->
     @if (status() === 'empty') {
-      <div aria-live="polite" class="flex flex-col items-center justify-center py-10 px-4 text-center border border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-empty">
-        <i class="pi pi-inbox text-3xl text-gray-400 mb-2"></i>
-        <p class="text-sm text-gray-700">No items found in the selected repositories for this search. Try different terms or use <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.</p>
+      <div aria-live="polite" class="flex flex-col gap-3 py-8 px-4 border border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-empty">
+        <div class="flex flex-col items-center text-center">
+          <i class="pi pi-inbox text-3xl text-gray-400 mb-2"></i>
+          <p class="m-0 text-sm font-semibold text-gray-800">No items found for this search</p>
+          <p class="m-0 mt-1 max-w-lg text-sm text-gray-700">
+            Nothing matched in the selected repositories with the filters below.
+            You can adjust filters, try different terms, or use
+            <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.
+          </p>
+        </div>
+
+        @if (failedSources().length) {
+          <div
+            role="alert"
+            class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-left text-xs text-amber-900"
+            data-test="kp-empty-partial-notice">
+            <span class="font-semibold">{{ failedRepositoriesText() }} did not respond.</span>
+            Results may be incomplete or empty. Retry from the repository chips above or use Manual entry.
+          </div>
+        }
+
+        @if (isBilateralBrowse() && activeFilterDescriptors().length) {
+          <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left" data-test="kp-empty-active-filters">
+            <p class="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Filters used in this search</p>
+            <ul class="m-0 mt-1.5 flex list-none flex-col gap-1 p-0 text-xs text-slate-700">
+              @for (filter of activeFilterDescriptors(); track filter.key) {
+                <li class="min-w-0 break-words">
+                  <span class="font-semibold text-slate-800">{{ filter.label }}:</span> {{ filter.detail }}
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (emptyStateHints().length) {
+          <ul class="m-0 list-disc space-y-1 pl-5 text-left text-xs text-gray-600" data-test="kp-empty-hints">
+            @for (hint of emptyStateHints(); track hint) {
+              <li>{{ hint }}</li>
+            }
+          </ul>
+        }
       </div>
     }
 
@@ -219,9 +334,9 @@
         <div aria-live="polite" class="flex flex-col gap-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="text-xs text-gray-500 font-medium" data-test="kp-results-counter">
-              {{ resultsCounterText() }}@if (matchCount() > 0) { · {{ matchCount() }} match {{ programName() || programCode() }}}
+              {{ resultsCounterText() }}@if (projectMatchCount() > 0) { · {{ projectMatchCount() }} match {{ projectMatchLabel() }} }@if (matchCount() > 0) { · {{ matchCount() }} match {{ programName() || programCode() }}}
             </div>
-            @if (matchCount() > 0) {
+            @if (contextualMatchCount() > 0) {
               <button
                 type="button"
                 class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer border"
@@ -230,10 +345,28 @@
                 data-test="kp-only-matches-toggle"
                 (click)="onlyMatches.update(v => !v)">
                 <i class="pi pi-sparkles text-[10px]" aria-hidden="true"></i>
-                <span>{{ onlyMatches() ? 'Show all results' : 'Show matches only (' + matchCount() + ')' }}</span>
+                <span>{{ onlyMatches() ? 'Show all results' : 'Show matches only (' + contextualMatchCount() + ')' }}</span>
               </button>
             }
           </div>
+
+          @if (showProjectMatchZeroNotice()) {
+            <div
+              role="status"
+              class="rounded-lg border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] px-3 py-2.5 text-left"
+              data-test="kp-project-match-zero-notice">
+              <div class="flex min-w-0 flex-col gap-1 min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-baseline min-[480px]:gap-x-1.5">
+                <span
+                  class="inline-flex w-fit shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-700)]">
+                  Info
+                </span>
+                <p class="m-0 min-w-0 flex-1 text-xs leading-snug text-[var(--pr-color-primary-700)]">
+                  <span class="font-semibold text-[var(--pr-color-primary-800)]">No project tags matched in these results.</span>
+                  {{ projectMatchZeroNoticeBody() }}
+                </p>
+              </div>
+            </div>
+          }
 
           <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-7: partial notice + per-repo retry -->
           @if (failedSources().length && items().length) {
@@ -265,10 +398,10 @@
           @for (item of displayItems(); track item.uuid || item.handle || $index) {
             <div
               class="border border-gray-200 rounded-xl p-4 bg-white hover:border-gray-300 shadow-sm transition-all flex flex-col gap-2"
-              [class.border-l-4]="matchesProgram(item)"
-              [class.border-l-[var(--pr-color-primary-300)]]="matchesProgram(item)">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
+              [class.border-l-4]="matchesProgram(item) || matchesProject(item)"
+              [class.border-l-[var(--pr-color-primary-300)]]="matchesProgram(item) || matchesProject(item)">
+              <div class="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between min-[480px]:gap-4">
+                <div class="min-w-0 flex-1">
                   <!-- @akili-spec changes/kp-multi-repository-browse — KPM-R-4 / KPM-R-5: repository badge + "Also in" -->
                   <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
                     @if (item.repository) {
@@ -289,6 +422,15 @@
                           Also in {{ kpRepositoryLabel(also.repository) }}
                         </span>
                       }
+                    }
+                    @if (matchesProject(item)) {
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 kp-project-match-badge"
+                        [attr.data-test]="'kp-project-match-' + (item.uuid || item.handle)"
+                        [attr.aria-label]="'Matches project: ' + (projectTitle() || projectCode())">
+                        <i class="pi pi-sparkles text-[10px]" aria-hidden="true"></i>
+                        Matches {{ projectMatchLabel() }}
+                      </span>
                     }
                     @if (matchesProgram(item)) {
                       <span
@@ -336,10 +478,10 @@
                 </div>
 
                 <!-- Right actions: Use this item button & View details link -->
-                <div class="flex-shrink-0 flex flex-col items-end gap-2">
+                <div class="flex w-full shrink-0 flex-col items-stretch gap-2 min-[480px]:w-auto min-[480px]:items-end">
                   <button
                     type="button"
-                    class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-400)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm border-0 min-w-[100px]"
+                    class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border-0 bg-[var(--pr-color-primary-300)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-60 min-[480px]:w-auto min-[480px]:min-w-[100px] cursor-pointer"
                     [disabled]="busy()"
                     [attr.aria-label]="'Use this item: ' + item.title"
                     (click)="onSelect(item)">

@@ -960,4 +960,26 @@ describe('ResultsTocResultsService', () => {
       expect((response as any).status).toBe(201);
     });
   });
+
+  describe('getTocResultTypologyVerdicts (BIL-TOC-T-4)', () => {
+    it('delegates to TocResultsRepository.getTocResultTypologyVerdicts', async () => {
+      const mockVerdicts = new Map([
+        [100, true],
+        [200, false],
+      ]);
+      tocResultsRepository.getTocResultTypologyVerdicts.mockResolvedValueOnce(
+        mockVerdicts,
+      );
+
+      const verdicts = await service.getTocResultTypologyVerdicts(
+        [100, 200],
+        6,
+      );
+
+      expect(
+        tocResultsRepository.getTocResultTypologyVerdicts,
+      ).toHaveBeenCalledWith([100, 200], 6);
+      expect(verdicts).toBe(mockVerdicts);
+    });
+  });
 });

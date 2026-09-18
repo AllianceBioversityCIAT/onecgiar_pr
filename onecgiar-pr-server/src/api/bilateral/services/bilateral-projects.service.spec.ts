@@ -255,6 +255,132 @@ describe('BilateralProjectsService', () => {
     expect(result.projects.map((p) => p.id)).toEqual([5]);
   });
 
+  // changes/project-multiselect-filter (PMF-DD-5): the optional `year` query scopes the
+  // catalog to a reporting year other than the active one; absent or invalid falls back
+  // to the active year without ever throwing.
+  describe('year query parameter (PMF-DD-5)', () => {
+    const center = { code: 'CENTER-99', institutionId: 5 };
+    const project = (id: number, phase: number) => ({
+      id,
+      isActive: true,
+      phase,
+      obj_organization: null,
+      obj_project_mappings: [
+        {
+          programId: 1,
+          programCode: 'SP01',
+          allocation: '100.00',
+          status: 'Confirmed',
+        },
+      ],
+    });
+
+    beforeEach(() => {
+      centerRepo.findOne.mockResolvedValue(center);
+    });
+
+    it('scopes the catalog to the requested year instead of the active one', async () => {
+      projectRepo.find.mockResolvedValueOnce([
+        project(21, 2025),
+        project(22, CURRENT_YEAR),
+      ]);
+
+      const result = await service.getProjectsByCenter(5, 2025);
+
+      expect(result.projects.map((p) => p.id)).toEqual([21]);
+    });
+
+    it('accepts the year as a numeric string (query params arrive as strings)', async () => {
+      projectRepo.find.mockResolvedValueOnce([project(23, 2025)]);
+
+      const result = await service.getProjectsByCenter(5, '2025');
+
+      expect(result.projects.map((p) => p.id)).toEqual([23]);
+    });
+
+    it('falls back to the active year when year is omitted', async () => {
+      projectRepo.find.mockResolvedValueOnce([
+        project(24, 2025),
+        project(25, CURRENT_YEAR),
+      ]);
+
+      const result = await service.getProjectsByCenter(5);
+
+      expect(result.projects.map((p) => p.id)).toEqual([25]);
+    });
+
+    it.each(['bogus', '12.5', 0, -3])(
+      'ignores an invalid year (%s) and keeps the active-year behavior without throwing',
+      async (invalid) => {
+        projectRepo.find.mockResolvedValueOnce([
+          project(26, 2025),
+          project(27, CURRENT_YEAR),
+        ]);
+
+        const result = await service.getProjectsByCenter(5, invalid as any);
+
+        expect(result.projects.map((p) => p.id)).toEqual([27]);
+      },
+    );
+
+    it('answers for an explicit valid year even when no active year is configured', async () => {
+      yearRepo.findOne.mockResolvedValueOnce(null);
+      projectRepo.find.mockResolvedValueOnce([project(28, 2025)]);
+
+      const result = await service.getProjectsByCenter(5, 2025);
+
+      expect(result.projects.map((p) => p.id)).toEqual([28]);
+    });
+
+    it('keeps the mapped response shape unchanged when a year is supplied', async () => {
+      projectRepo.find.mockResolvedValueOnce([
+        {
+          id: 29,
+          shortName: 'A-AG10156',
+          fullName: 'Accelerating Impacts of CGIAR Climate Research for Africa',
+          summary: 'AICCRA',
+          description: 'Climateresearch',
+          isActive: true,
+          phase: 2025,
+          obj_organization: { id: 5, name: 'X Center', acronym: 'XC' },
+          obj_project_mappings: [
+            {
+              programId: 1,
+              programCode: 'SP01',
+              allocation: '100.00',
+              status: 'Confirmed',
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.getProjectsByCenter(5, 2025);
+
+      expect(result).toEqual({
+        projects: [
+          {
+            id: 29,
+            shortName: 'A-AG10156',
+            fullName:
+              'Accelerating Impacts of CGIAR Climate Research for Africa',
+            summary: 'AICCRA',
+            description: 'Climateresearch',
+            leadCenter: { id: 5, name: 'X Center', acronym: 'XC' },
+            sciencePrograms: [
+              {
+                programId: 1,
+                programCode: 'SP01',
+                allocation: '100.00',
+                spName: 'SP01',
+                spShortName: 'SP01',
+              },
+            ],
+          },
+        ],
+      });
+    });
+  });
+
   // CLARISA fills only `smo_code` on the mapping's nested global_unit_object, so
   // program_name / program_short_name are null for every row and the selector
   // rendered "SP06 — SP06". The name comes from `clarisa_initiatives.official_code`,

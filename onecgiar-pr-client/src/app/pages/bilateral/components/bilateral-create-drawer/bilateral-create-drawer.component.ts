@@ -40,6 +40,8 @@ export class BilateralCreateDrawerComponent implements OnDestroy {
 
   readonly projectCode = input('');
   readonly projectTitle = input('');
+  /** Bilateral Mapping Tool summary or description shown under the project title. */
+  readonly projectSubtitle = input('');
   readonly programCode = input('');
   readonly programName = input('');
   /** Element to restore focus to when the drawer closes (BIL-MCD-R-8). */

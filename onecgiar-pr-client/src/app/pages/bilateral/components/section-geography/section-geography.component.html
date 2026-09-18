@@ -3,6 +3,8 @@
      multi-selects showing their own selected list, no per-block cards. UI only — every handler,
      value and MDS rule is the one the section already had. -->
 <div class="sg-fields" data-section="geography">
+  <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
+  <app-bilateral-field-quality-flag section="geographic_location" />
   <app-alert-status
     status="info"
     [collapsible]="false"

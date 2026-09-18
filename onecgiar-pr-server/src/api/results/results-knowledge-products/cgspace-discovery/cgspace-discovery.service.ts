@@ -225,6 +225,7 @@ export class CgspaceDiscoveryService {
       type: dto.type ?? '',
       center: dto.center ?? '',
       year: dto.year ?? '',
+      project: dto.project ?? '',
       repository,
     });
   }

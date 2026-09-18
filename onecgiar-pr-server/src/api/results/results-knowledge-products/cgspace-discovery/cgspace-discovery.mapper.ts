@@ -82,6 +82,10 @@ export class CgspaceDiscoveryMapper {
       metadata['cg.contributor.programAccelerator']
         ?.map((m: any) => m?.value)
         ?.filter(Boolean) || [];
+    const projects =
+      metadata['cg.identifier.project']
+        ?.map((m: any) => m?.value)
+        ?.filter(Boolean) || [];
 
     return {
       uuid,
@@ -98,6 +102,7 @@ export class CgspaceDiscoveryMapper {
       uri,
       repository: adapter.key,
       programAccelerators,
+      projects,
     };
   }
 

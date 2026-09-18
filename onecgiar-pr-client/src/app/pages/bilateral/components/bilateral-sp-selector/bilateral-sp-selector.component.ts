@@ -2,6 +2,7 @@ import { Component, inject, computed, signal, output, effect, input } from '@ang
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAccordionComponent } from '../bilateral-accordion/bilateral-accordion.component';
+import { BILATERAL_MANUAL_CREATE_COPY } from '../../../../internationalization/bilateral-manual-create.copy';
 
 @Component({
   selector: 'app-bilateral-sp-selector',
@@ -10,6 +11,7 @@ import { BilateralAccordionComponent } from '../bilateral-accordion/bilateral-ac
   styleUrl: './bilateral-sp-selector.component.scss'
 })
 export class BilateralSpSelectorComponent {
+  readonly copy = BILATERAL_MANUAL_CREATE_COPY;
   readonly creationService = inject(BilateralCreationService);
 
   /** `dropdown` on the wizard page; `list` shows all primary SP options inline (drawer). */

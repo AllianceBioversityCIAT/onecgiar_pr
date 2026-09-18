@@ -29,6 +29,17 @@ export interface QualitySectionResult {
   comments: string;
   strengths: string[];
   issues: string[];
+  /**
+   * The form fields the AI's issues point at, in the AI service's own naming
+   * (`description`, `title`, `scope`, `countries`, …). Appeared in the wire response on
+   * 2026-09-18 without a contract bump; declared here so it is stored deliberately instead of
+   * surviving by accident through the object spreads in `cloneSections` / `sanitizeScores`.
+   *
+   * PRMS only **persists** it today. Mapping these names onto bilateral form fields — the
+   * per-field traffic light and the deep links QA asked for — is a separate piece of work, and
+   * needs the naming agreed with the AI side first: an unmapped name is a silent no-op.
+   */
+  fields?: string[];
 }
 
 export interface QualityEvidenceItem {
@@ -233,6 +244,7 @@ function cloneSections(
       ...section,
       strengths: [...section.strengths],
       issues: [...section.issues],
+      ...(section.fields ? { fields: [...section.fields] } : {}),
     };
   }
   return cloned;

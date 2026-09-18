@@ -1,0 +1,42 @@
+@if (flag(); as flag) {
+  <div class="bfq" [attr.data-verdict]="flag.verdict" [class.bfq--field]="forField()">
+    <!-- Text, not a chip. The card's header already carries REQUIRED and the save pill, and its
+         tint already means something else (filled · empty · over limit); a fifth coloured block
+         there read as noise (feedback 2026-09-18). -->
+    <button
+      type="button"
+      class="bfq__line"
+      [attr.aria-expanded]="open()"
+      (click)="toggle()">
+      <!-- The hit area is the whole row; this decorative wrapper cannot become a smaller nested
+           hit target. Every word therefore reaches the same button and toggles the same panel. -->
+      <span class="bfq__inner" aria-hidden="true">
+        <span class="bfq__dot" aria-hidden="true"></span>
+        <span class="bfq__verdict">AI: {{ label() }}</span>
+        <span class="bfq__cue">{{ open() ? 'hide' : 'see what it flagged' }}</span>
+        <i class="material-icons-round bfq__chevron" aria-hidden="true">expand_more</i>
+      </span>
+      <span class="sr-only">AI: {{ label() }}. {{ open() ? 'Hide' : 'See what it flagged' }}.</span>
+    </button>
+
+    @if (open()) {
+      <!-- Opens ABOVE the input, pushing it down — it never covers the field being corrected. -->
+      <div
+        class="bfq__body"
+        role="button"
+        tabindex="0"
+        [attr.aria-label]="copied() ? 'AI feedback copied' : 'Copy AI feedback'"
+        (click)="copyFeedback()"
+        (keydown.enter)="copyFeedback()"
+        (keydown.space)="$event.preventDefault(); copyFeedback()">
+        <ul>
+          @for (issue of flag.issues; track issue) { <li>{{ issue }}</li> }
+        </ul>
+        <span class="bfq__copy" aria-hidden="true">
+          <i class="material-icons-round">{{ copied() ? 'check' : 'content_copy' }}</i>
+          <span>{{ copied() ? 'Copied' : 'Copy' }}</span>
+        </span>
+      </div>
+    }
+  </div>
+}
