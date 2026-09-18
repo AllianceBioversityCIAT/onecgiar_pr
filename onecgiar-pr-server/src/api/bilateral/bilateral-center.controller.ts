@@ -18,6 +18,7 @@ import { SaveBilateralTocMappingDto } from './dto/save-bilateral-toc-mapping.dto
 import { SaveBilateralContributorsDto } from './dto/save-bilateral-contributors.dto';
 import { ChangeCenterResultTypeDto } from './dto/change-center-result-type.dto';
 import { UpdateBilateralPrimaryAssignmentDto } from './dto/update-bilateral-primary-assignment.dto';
+import { SubmitForReviewDto } from './dto/submit-for-review.dto';
 
 @Controller('center')
 @ApiTags('Bilateral Center')
@@ -103,8 +104,42 @@ export class BilateralCenterController {
   async submitForReview(
     @UserToken() user: TokenDto,
     @Param('resultId') resultId: number,
+    @Body() dto: SubmitForReviewDto,
   ) {
-    return this.bilateralCenterService.submitForReview(user, resultId);
+    return this.bilateralCenterService.submitForReview(user, resultId, dto);
+  }
+
+  // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+  @Post('quality-assessment/:resultId')
+  @ApiOperation({
+    summary: 'Run (or reuse) the AI quality assessment ahead of Submit',
+    description:
+      'Runs the same pre-submit guards as submit-for-review, then builds a definitions-only ' +
+      'payload from the saved result and either calls the AI quality-assessment service or ' +
+      'applies the Knowledge Product rule in code. Never changes status_id, writes review ' +
+      'history, or fires the submitted notification. Returns 202 with the existing id when a ' +
+      'run is already in progress for this result.',
+  })
+  async assessQuality(
+    @UserToken() user: TokenDto,
+    @Param('resultId') resultId: number,
+  ) {
+    return this.bilateralCenterService.assess(user, resultId);
+  }
+
+  // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+  @Get('quality-assessment/:resultId/latest')
+  @ApiOperation({
+    summary: 'Get the latest stored AI quality assessment for a result',
+    description:
+      'Includes a running row, so the client can poll it after reopening a result while a ' +
+      'check is still in progress. Returns { latest: null } when no assessment has ever run.',
+  })
+  async getLatestQualityAssessment(
+    @UserToken() user: TokenDto,
+    @Param('resultId') resultId: number,
+  ) {
+    return this.bilateralCenterService.getLatest(user, resultId);
   }
 
   @Get('initiative/:resultId')

@@ -147,6 +147,118 @@ describe('TypeInnovationDevComponent', () => {
       expect(component.loaded()).toBe(true);
     });
 
+    // BIL-QAI-R-15 / DD-12 — prefill on first load only, never a save-time substitution.
+    describe('innovation_developers prefill (BIL-QAI-R-15)', () => {
+      it('prefills from the lead contact person when the stored value is empty', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('does NOT prefill — and keeps the stored value — when the field already holds something', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(
+          of({ response: { innovation_developers: 'CIAT breeding team' } })
+        );
+        build();
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+      });
+
+      it('leaves the field empty when there is no lead contact person to prefill from', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: {} }));
+        build();
+        expect(component.body.innovation_developers).toBeUndefined();
+      });
+
+      // BIL-QAI-T-12 rework — the defect the Reviewer traced: a `null` is what the server sends once
+      // a row EXISTS and the user cleared it (`InnovationDevExists` includes the key as `null` rather
+      // than omitting it — repository.ts:274-312). Truthiness cannot tell that apart from "never
+      // asked" and re-filled it; key presence can.
+      it('does NOT prefill a stored null — the column exists, the user cleared it', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        expect(component.body.innovation_developers).toBeFalsy();
+        expect(component.body.innovation_developers).not.toBe('A. Rivera');
+      });
+
+      // The other half of the defect: a wrongly re-filled value doesn't just render — it rides along
+      // on the NEXT save of any field, because `body.innovation_developers` was mutated in place.
+      it('keeps a reloaded null out of the payload even after an unrelated field changes', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.innovation_nature_id = 12;
+        component.onFieldChange();
+
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBeNull();
+      });
+    });
+
+    /**
+     * `BIL-IDP-T-1` (`docs/specs/bugfix/innovation-developer-prefill-stale-lead-contact`) — regression
+     * test, red before the fix. The block above only ever set `resultLeadContact` BEFORE `build()`,
+     * i.e. before the section's GET resolves — so it never exercised the reported failure: a reporter
+     * who sets the Lead contact person AFTER Type-specific has already loaded once. `build()` runs the
+     * first change detection (see the P2-3558 note above `build`), so by the time it returns the GET
+     * has already resolved; setting the signal and calling `fixture.detectChanges()` again is what
+     * simulates "later in the same session", not "before load".
+     */
+    describe('BIL-IDP-T-1 — in-session Lead contact changes (bugfix/innovation-developer-prefill-stale-lead-contact)', () => {
+      it('R-1 sc1: prefills from a Lead contact person entered AFTER Type-specific has already loaded (the reported failure)', () => {
+        // Eligible: the GET body carries no `innovation_developers` key at all, and the contact is
+        // still empty at the moment Type-specific loads.
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+        expect(component.body.innovation_developers).toBeUndefined();
+
+        // The reporter sets the Lead contact person only now — after the section already loaded once.
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('R-1 sc2: still prefills on load when the contact is already set before the GET resolves (unchanged path)', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('R-2 sc1: a typed value survives a later contact change', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(
+          of({ response: { innovation_developers: 'CIAT breeding team' } })
+        );
+        build();
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+      });
+
+      // Distinct from the case above: `null` is what `InnovationDevExists` returns once a row exists
+      // and the reporter cleared it (`T-12`). It is falsy, same as `''`/`undefined`, so a truthiness
+      // gate cannot tell it apart from "never asked" — only the key-presence guard can (`DD-3`).
+      it('R-2 sc2: a stored null (the T-12 shape) is not re-filled by a later contact change', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        expect(component.body.innovation_developers).toBeNull();
+
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBeNull();
+      });
+    });
+
     /**
      * P2-3558 — the data-loss chain, cut at its root.
      *
@@ -279,28 +391,12 @@ describe('TypeInnovationDevComponent', () => {
       expect(fields.find((f: any) => f.key === key).filled).toBe(false);
     });
 
-    // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: the Innovation Developer is the Lead contact person.
-    it('sends the lead contact person as the innovation developer', () => {
-      creation.resultLeadContact.set('Jane Smith');
+    // BIL-QAI-R-15 — the field is the user's own now; `updateMds()` never reads it.
+    it('does not touch innovation_developers at all', () => {
       build();
-      component.body = { innovation_nature_id: 12, innovation_developers: 'old free text' };
-      component.onFieldChange();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        expect.objectContaining({ innovation_developers: 'Jane Smith' }),
-        expect.anything()
-      );
-    });
-
-    it('keeps the stored developer when the result has no lead contact yet', () => {
-      build();
-      component.body = { innovation_developers: 'stored' };
-      component.onFieldChange();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        expect.objectContaining({ innovation_developers: 'stored' }),
-        expect.anything()
-      );
+      component.body = { innovation_nature_id: 12, innovation_readiness_level_id: 17, innovation_developers: 'CIAT breeding team' };
+      component.updateMds();
+      expect(trackedKeys()).toEqual(['nature', 'readiness']);
     });
 
     // P2-3340 still holds even though the short title moved to full metadata: it is reported only
@@ -569,6 +665,45 @@ describe('TypeInnovationDevComponent', () => {
       expect(payload.innovation_developers).toBe('D');
     });
 
+    // BIL-QAI-R-15 / DD-12 — the disqualifier: a test on markup alone cannot tell the overwrite is
+    // gone, since the overwrite lived in the save path. These inspect the scheduled payload itself.
+    describe('innovation_developers save contract (BIL-QAI-R-15)', () => {
+      it('a cleared field persists as null, never the lead contact person', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
+        creation.resultLeadContact.set('A. Rivera');
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.innovation_developers = '';
+        component.onFieldChange();
+
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBeNull();
+      });
+
+      it('trims the value before sending it', () => {
+        build();
+        component.body.innovation_developers = '  CIAT breeding team  ';
+        component.onSave();
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBe('CIAT breeding team');
+      });
+
+      // The falsifying input the work order names: change the lead contact AFTER load, then save —
+      // if the payload picked it up, this is exactly the "check that can never fail" behaviour BIL-QAI-T-12 removes.
+      it('changing the lead contact person after load never changes the saved payload', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
+        build();
+        creation.resultLeadContact.set('A different person entirely');
+        autoSave.schedulePayload.mockClear();
+
+        component.onFieldChange();
+
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBe('CIAT breeding team');
+      });
+    });
+
     it('onSave queues an immediate save', () => {
       build();
       component.body = {};
@@ -704,15 +839,69 @@ describe('TypeInnovationDevComponent', () => {
       expect(toggleButton().textContent.trim()).toBe('Hide full metadata');
     });
 
-    // No "Innovation Developer" field since 2026-09-03: the Lead contact person (Section 1) is the developer.
-    it('shows the two MDS fields without expanding anything, and marks them required', () => {
+    // BIL-QAI-R-15 — Innovation developers is back, always visible (not behind full metadata) and optional.
+    it('shows the two required MDS fields plus the optional Innovation developers field, without expanding anything', () => {
       render();
-      expect(labels()).toEqual(['Which of the below typologies best fits the nature of the innovation?']);
-      expect(allFields().every(f => f.required)).toBe(true);
+      expect(labels()).toEqual([
+        'Which of the below typologies best fits the nature of the innovation?',
+        'Innovation developers'
+      ]);
+      const developerField = allFields().find(f => f.label === 'Innovation developers');
+      expect(developerField.required).toBe(false);
+      expect(allFields().filter(f => f.label !== 'Innovation developers').every(f => f.required)).toBe(true);
       // The readiness level is an `app-pr-range-level`, headed by its own field header.
       expect(fixture.debugElement.query(By.css('app-pr-range-level'))).toBeTruthy();
       const headers = fixture.debugElement.queryAll(By.css('app-pr-field-header')).map(d => read(d.componentInstance.label));
       expect(headers).toContain('How would you assess the current readiness of this innovation?');
+    });
+
+    // BIL-QAI-R-15 — DOM-level: the disqualifier named in the work order forbids stopping at "the
+    // textarea exists"; this reads the value it actually renders, prefilled or not.
+    describe('Innovation developers field rendering (BIL-QAI-R-15)', () => {
+      const developerTextarea = () =>
+        fixture.debugElement.queryAll(By.css('app-pr-textarea')).find(d => read(d.componentInstance.label) === 'Innovation developers');
+
+      /**
+       * Standalone `[(ngModel)]` writes its INITIAL value to the `ControlValueAccessor` inside a
+       * `resolvedPromise.then(...)` microtask (Angular's `NgModel._updateValue`), not synchronously
+       * during `setUpControl`'s own `writeValue(control.value)` call — which fires first, with the
+       * freshly-created `FormControl`'s default `null`. A single synchronous `fixture.detectChanges()`
+       * therefore observes `PrTextareaComponent.value === null`, even though `body.innovation_developers`
+       * is already correct (proven by the plain `component.body.innovation_developers` assertions in
+       * the `loadData` describe above, which read the model directly and never touch the CVA). Flushing
+       * the microtask queue — `await fixture.whenStable()` — then re-running change detection is the
+       * same pattern already used for a deferred write elsewhere in this package
+       * (`overview-controls.component.spec.ts`'s `settleFocus()`).
+       */
+      const renderAndSettle = async (): Promise<void> => {
+        render();
+        await fixture.whenStable();
+        fixture.detectChanges();
+      };
+
+      it('renders prefilled with the lead contact person when the stored value is empty', async () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: {} }));
+        await renderAndSettle();
+        expect(developerTextarea().componentInstance.value).toBe('A. Rivera');
+      });
+
+      it('renders the stored value, NOT the lead contact person, when the stored value is not empty', async () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
+        await renderAndSettle();
+        expect(developerTextarea().componentInstance.value).toBe('CIAT breeding team');
+      });
+
+      // BIL-QAI-T-12 rework, AC-18's "renders empty" clause: a stored `null` (the column exists, the
+      // user cleared it) must render empty, NOT the lead contact person, on reload.
+      it('renders empty — not the lead contact person — when the stored value is a reloaded null', async () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        await renderAndSettle();
+        expect(developerTextarea().componentInstance.value).not.toBe('A. Rivera');
+        expect(developerTextarea().componentInstance.value).toBeFalsy();
+      });
     });
 
     it('reveals the full metadata fields on click and hides them again, in the pooled-funding order', () => {

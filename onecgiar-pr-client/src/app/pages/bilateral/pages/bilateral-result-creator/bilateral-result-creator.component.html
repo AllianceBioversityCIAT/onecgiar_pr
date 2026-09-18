@@ -41,6 +41,14 @@
 }
 
 @if (!isCreating()) {
+  <app-bilateral-quality-assessment-dialog
+    [visible]="qualityAssessment.isDialogOpen()"
+    [assessment]="qualityAssessment.assessment()"
+    [submitting]="qualityAssessment.isSubmitting()"
+    [running]="qualityAssessment.isRunning()"
+    (dismissed)="dismissQualityAssessment()"
+    (sectionSelected)="goToQualitySection($event)"
+    (decisionChosen)="submitAfterQualityDecision($event)" />
   <div class="bcr-layout" data-testid="bilateral-editor-layout">
     <!-- Sections rail: 240px, white, own scroll, right rule to the floor. -->
     <aside class="bcr-rail pr-light-scroll" data-testid="bilateral-sections-rail">
@@ -128,6 +136,29 @@
         }
       </nav>
 
+      @if (qualityAssessment.assessment(); as assessment) {
+        <section class="bcr-quality-summary" aria-label="AI quality assessment">
+          <div class="bcr-quality-summary__head">
+            <span>AI quality check</span>
+            <span class="bcr-quality-summary__verdict" [attr.data-verdict]="assessment.overall?.verdict || 'grey'">
+              {{ assessment.status === 'unavailable' ? 'Unavailable' : (assessment.overall?.verdict || assessment.status) }}
+            </span>
+          </div>
+          <p>
+            @if (!assessment.is_current) {
+              This check is from before your latest edits. Run it again before submitting.
+            } @else if (assessment.status === 'running') {
+              The quality check is still running. Reopen this result in a moment to see the verdict.
+            } @else if (assessment.status === 'unavailable') {
+              {{ assessment.degraded_reason || 'The service could not complete the check.' }}
+            } @else {
+              {{ assessment.overall?.summary || 'Open the assessment to review section comments.' }}
+            }
+          </p>
+          <button type="button" class="bcr-quality-summary__open" (click)="openQualityAssessment($event)">View AI assessment</button>
+        </section>
+      }
+
       @if (resultId()) {
         <div class="bcr-rail__progress">
           <div
@@ -150,12 +181,16 @@
           class="bcr-btn bcr-btn--primary bcr-rail__submit"
           data-testid="bilateral-rail-submit"
           [disabled]="!canSubmitFromRail()"
+          [class.bcr-rail__submit--loading]="isSubmitting()"
           [attr.aria-busy]="isSubmitting()"
           (click)="submitResult()">
-          <i class="material-icons-round" [class.animate-spin]="isSubmitting()" aria-hidden="true">
-            {{ isSubmitting() ? 'progress_activity' : 'send' }}
-          </i>
-          {{ isSubmitting() ? 'Submitting…' : 'Submit for review' }}
+          @if (isSubmitting()) {
+            <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
+            <span>{{ submitButtonLabel() }}</span>
+          } @else {
+            <i class="material-icons-round" aria-hidden="true">send</i>
+            <span>Submit for review</span>
+          }
         </button>
       }
     </aside>

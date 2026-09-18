@@ -26,6 +26,19 @@ export class PhaseSwitcherComponent implements OnInit {
     return this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.ipsrPhaseList : this.api.dataControlSE.resultPhaseList;
   }
 
+  getActivePhase() {
+    return this.getFilterPhases()?.find(phase => phase.status);
+  }
+
+  getActivePhaseYear(phase) {
+    return phase?.phase_name?.match(/\d{4}/)?.[0] ?? phase?.phase_name;
+  }
+
+  isSelectedPhase(phase): boolean {
+    const currentPhaseParam = this.activatedRoute.snapshot.queryParams['phase'];
+    return currentPhaseParam !== undefined ? String(currentPhaseParam) === String(phase?.id) : !!phase?.status;
+  }
+
   goToresultUrl(phaseId) {
     this.router.navigate([this.route], { queryParams: { phase: phaseId } }).then(() => {
       window.location.reload();

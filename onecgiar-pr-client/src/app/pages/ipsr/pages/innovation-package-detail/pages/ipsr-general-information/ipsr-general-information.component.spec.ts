@@ -789,18 +789,22 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(component.isLeadContactPersonComplete).toBe(true);
     });
 
-    it('flags an empty contact as incomplete once the gate is open', () => {
+    it('evaluates isLeadContactPersonComplete as false when contact is null, empty, or whitespace (RES-TEST-4)', () => {
       mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
       component.ipsrGeneralInformationBody.lead_contact_person = null;
       component.ipsrGeneralInformationBody.lead_contact_person_data = null;
       expect(component.isLeadContactPersonComplete).toBe(false);
+      component.ipsrGeneralInformationBody.lead_contact_person = '';
+      expect(component.isLeadContactPersonComplete).toBe(false);
+      component.ipsrGeneralInformationBody.lead_contact_person = '   ';
+      expect(component.isLeadContactPersonComplete).toBe(false);
     });
 
-    it('requires the Active Directory match, not just the typed name', () => {
+    it('evaluates isLeadContactPersonComplete as true for an accepted free-text name even if directory data is null (RES-TEST-3)', () => {
       mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
-      component.ipsrGeneralInformationBody.lead_contact_person = 'John Doe';
+      component.ipsrGeneralInformationBody.lead_contact_person = 'Santiago Sanchez';
       component.ipsrGeneralInformationBody.lead_contact_person_data = null;
-      expect(component.isLeadContactPersonComplete).toBe(false);
+      expect(component.isLeadContactPersonComplete).toBe(true);
     });
 
     it('is complete when both the name and the directory match are present', () => {

@@ -27,8 +27,12 @@ describe('BilateralCenterController', () => {
             createResultHeader: jest.fn().mockResolvedValue({
               response: { id: 99, status_id: 1 },
             }),
-            changeResultType: jest.fn().mockResolvedValue({ response: { resultId: 99 } }),
-            updatePrimaryAssignment: jest.fn().mockResolvedValue({ response: { resultId: 99 } }),
+            changeResultType: jest
+              .fn()
+              .mockResolvedValue({ response: { resultId: 99 } }),
+            updatePrimaryAssignment: jest
+              .fn()
+              .mockResolvedValue({ response: { resultId: 99 } }),
             getResultInitiativeId: jest.fn().mockResolvedValue({
               response: { initiativeId: 1 },
             }),
@@ -42,6 +46,16 @@ describe('BilateralCenterController', () => {
             }),
             submitForReview: jest.fn().mockResolvedValue({
               response: { resultId: 1, status: 5 },
+            }),
+            assess: jest.fn().mockResolvedValue({
+              response: { id: 1, result_id: 77, status: 'completed' },
+              message: 'Quality assessment completed',
+              status: 200,
+            }),
+            getLatest: jest.fn().mockResolvedValue({
+              response: { latest: null },
+              message: 'Latest quality assessment retrieved successfully',
+              status: 200,
             }),
           },
         },
@@ -91,15 +105,27 @@ describe('BilateralCenterController', () => {
   });
 
   it('changeResultType should delegate the promoted-draft conversion to the service', async () => {
-    const dto = { result_level_id: 4, result_type_id: 7, justification: 'Correction' } as any;
+    const dto = {
+      result_level_id: 4,
+      result_type_id: 7,
+      justification: 'Correction',
+    } as any;
     await controller.changeResultType(user, 99, dto);
-    expect(bilateralCenterService.changeResultType).toHaveBeenCalledWith(user, 99, dto);
+    expect(bilateralCenterService.changeResultType).toHaveBeenCalledWith(
+      user,
+      99,
+      dto,
+    );
   });
 
   it('updates the project and primary program through the dedicated atomic service', async () => {
     const dto = { project_id: 20, primary_science_program_id: 9 };
     await controller.updatePrimaryAssignment(user, 99, dto);
-    expect(bilateralCenterService.updatePrimaryAssignment).toHaveBeenCalledWith(user, 99, dto);
+    expect(bilateralCenterService.updatePrimaryAssignment).toHaveBeenCalledWith(
+      user,
+      99,
+      dto,
+    );
   });
 
   it('getResultInitiativeId should delegate to service', async () => {
@@ -146,10 +172,23 @@ describe('BilateralCenterController', () => {
 
   // P2-3157 — the transition that makes the review loop reachable from the centre UI.
   it('submitForReview should delegate to service', async () => {
-    await controller.submitForReview(user, 77);
+    const dto = { assessment_id: 8, decision: 'submitted_anyway' as const };
+    await controller.submitForReview(user, 77, dto);
     expect(bilateralCenterService.submitForReview).toHaveBeenCalledWith(
       user,
       77,
+      dto,
     );
+  });
+
+  // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+  it('assessQuality should delegate to service', async () => {
+    await controller.assessQuality(user, 77);
+    expect(bilateralCenterService.assess).toHaveBeenCalledWith(user, 77);
+  });
+
+  it('getLatestQualityAssessment should delegate to service', async () => {
+    await controller.getLatestQualityAssessment(user, 77);
+    expect(bilateralCenterService.getLatest).toHaveBeenCalledWith(user, 77);
   });
 });

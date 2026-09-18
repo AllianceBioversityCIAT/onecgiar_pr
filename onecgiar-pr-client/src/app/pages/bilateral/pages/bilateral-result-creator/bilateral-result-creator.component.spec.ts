@@ -15,6 +15,7 @@ import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
+import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
 
 @Injectable()
 class MockBilateralAiService {
@@ -75,6 +76,7 @@ describe('BilateralResultCreatorComponent', () => {
   let centersService: any;
   let mockRoute: any;
   let mockRouter: any;
+  let qualityAssessment: any;
 
   beforeEach(async () => {
     creationService = {
@@ -115,7 +117,6 @@ describe('BilateralResultCreatorComponent', () => {
       setDacSubScores: jest.fn(),
       getProjects: jest.fn(),
       createResult: jest.fn().mockReturnValue(of({ response: { id: 42 } })),
-      submitResult: jest.fn().mockReturnValue(of({})),
       selectProject: jest.fn(),
       loadResult: jest.fn(),
       resetWizard: jest.fn(),
@@ -164,6 +165,23 @@ describe('BilateralResultCreatorComponent', () => {
       loadedCenters: { subscribe: jest.fn() },
       getData: jest.fn(),
     };
+    qualityAssessment = {
+      assessment: signal(null),
+      state: signal('idle'),
+      isRunning: signal(false),
+      isSubmitting: signal(false),
+      isBusy: signal(false),
+      isDialogOpen: signal(false),
+      run: jest.fn().mockReturnValue(of({ id: 9, status: 'completed' })),
+      submit: jest.fn().mockReturnValue(of({})),
+      close: jest.fn(),
+      loadLatest: jest.fn().mockReturnValue(of(null)),
+      openStored: jest.fn(),
+      // The per-field flag component calls this from any section template that mounts.
+      flagForField: jest.fn().mockReturnValue(null),
+      flagForSection: jest.fn().mockReturnValue(null),
+      reset: jest.fn(),
+    };
 
     mockRoute = {
       params: of({}),
@@ -188,6 +206,7 @@ describe('BilateralResultCreatorComponent', () => {
         { provide: CentersService, useValue: centersService },
         { provide: BilateralAiService, useValue: mockAiService },
         { provide: BilateralManualCreateFlowService, useValue: manualCreateFlow },
+        { provide: BilateralQualityAssessmentUiService, useValue: qualityAssessment },
       ],
     })
       .overrideComponent(BilateralResultCreatorComponent, {
@@ -252,10 +271,10 @@ describe('BilateralResultCreatorComponent', () => {
     expect(creationService.resetWizard).toHaveBeenCalled();
   });
 
-  it('should emit submit action', () => {
+  it('runs the quality assessment instead of directly submitting', () => {
     component.resultId.set(42);
     component.submitResult();
-    expect(creationService.submitResult).toHaveBeenCalledWith(42);
+    expect(qualityAssessment.run).toHaveBeenCalledWith(42);
   });
 
   it('saves only the active section', async () => {
@@ -277,7 +296,7 @@ describe('BilateralResultCreatorComponent', () => {
 
     component.submitResult();
 
-    expect(creationService.submitResult).not.toHaveBeenCalled();
+    expect(qualityAssessment.run).not.toHaveBeenCalled();
     expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'bilateralSubmitUnsavedSections', status: 'warning' }));
   });
 
@@ -292,7 +311,7 @@ describe('BilateralResultCreatorComponent', () => {
 
     component.submitResult();
 
-    expect(creationService.submitResult).not.toHaveBeenCalled();
+    expect(qualityAssessment.run).not.toHaveBeenCalled();
     expect(component.isSubmitting()).toBe(false);
     expect(show).toHaveBeenCalledWith(
       expect.objectContaining({ description: 'Short title: 12 words; the maximum is 10', status: 'error' }),
@@ -431,11 +450,11 @@ describe('BilateralResultCreatorComponent', () => {
       creationService.isEditableByCenterUser.set(false);
       fixture.detectChanges();
       component.resultId.set(42);
-      creationService.submitResult.mockClear();
+      qualityAssessment.run.mockClear();
 
       component.submitResult();
 
-      expect(creationService.submitResult).not.toHaveBeenCalled();
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
     });
   });
 
@@ -836,6 +855,80 @@ describe('BilateralResultCreatorComponent', () => {
       component.resultId.set(43);
       fixture.detectChanges();
       expect(banner()).not.toBeNull();
+    });
+  });
+
+  // 🛑 The user reported this button rendering EMPTY while the AI ran, twice. It is the only
+  // feedback the rail gives during a 30-60s wait, so assert the rendered text, not the signal.
+  describe('Navigating from the verdict window to a section', () => {
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      fixture.detectChanges();
+    });
+
+    it('maps each AI section key onto its editor section', () => {
+      const cases: [string, string][] = [
+        ['general_information', 'general-info'],
+        ['contributors_and_partners', 'contributors'],
+        ['geographic_location', 'geography'],
+        ['evidence', 'evidence'],
+        ['type_specific', 'type-specific'],
+      ];
+
+      for (const [aiKey, editorSection] of cases) {
+        component.openSectionName.set('section-zero');
+        component.goToQualitySection(aiKey);
+        expect(component.openSectionName()).toBe(editorSection);
+      }
+    });
+
+    it('closes the window so the reporter lands on the form', () => {
+      component.goToQualitySection('geographic_location');
+
+      expect(qualityAssessment.close).toHaveBeenCalled();
+    });
+
+    // 🛑 A key we cannot map must not dismiss the window and do nothing — that reads as a broken
+    // button. Leaving it open keeps the verdict in front of the reporter.
+    it('ignores an unknown key without closing the window', () => {
+      component.openSectionName.set('general-info');
+      qualityAssessment.close.mockClear();
+
+      component.goToQualitySection('something_the_ai_invented');
+
+      expect(qualityAssessment.close).not.toHaveBeenCalled();
+      expect(component.openSectionName()).toBe('general-info');
+    });
+  });
+
+  describe('Rail Submit while the quality check runs', () => {
+    const submitButton = () => fixture.nativeElement.querySelector('[data-testid="bilateral-rail-submit"]');
+
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      fixture.detectChanges();
+    });
+
+    it('reads Submit for review when nothing is in flight', () => {
+      expect(submitButton().textContent).toContain('Submit for review');
+    });
+
+    it('names the AI check while it runs', () => {
+      qualityAssessment.isBusy.set(true);
+      fixture.detectChanges();
+
+      expect(submitButton().textContent).toContain('Checking quality');
+      expect(submitButton().getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('names the submit once the decision is sent', () => {
+      qualityAssessment.isBusy.set(true);
+      qualityAssessment.isSubmitting.set(true);
+      fixture.detectChanges();
+
+      expect(submitButton().textContent).toContain('Submitting');
     });
   });
 

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed, signal } from '@angular/core';
+import { Component, inject, OnInit, computed, signal, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
@@ -109,6 +109,19 @@ export class TypeInnovationDevComponent implements OnInit {
   readonly referenceMaterialsDesc = REFERENCE_MATERIALS_DESC;
   readonly loadErrorNote = LOAD_ERROR_NOTE;
   readonly hasScalingStudiesOptions = HAS_SCALING_STUDIES_OPTIONS;
+
+  constructor() {
+    // BIL-IDP-T-4 / DD-2: re-evaluable prefill. `loadData()` used to call
+    // `applyInnovationDevelopersPrefill()` once, from its own `next` handler, so a Lead contact
+    // person entered after this section had already loaded was never seen. Reading `loaded()` and
+    // `resultLeadContact()` here re-runs the (unchanged) key-presence-gated prefill on every
+    // settled contact — including the section's own GET, since `loaded()` is one of the deps.
+    effect(() => {
+      if (this.loaded() !== true) return;
+      this.creationService.resultLeadContact();
+      this.applyInnovationDevelopersPrefill();
+    });
+  }
 
   get isVarietyType(): boolean {
     return this.body.innovation_nature_id === VARIETY_NATURE_ID;
@@ -266,15 +279,37 @@ export class TypeInnovationDevComponent implements OnInit {
     this.body.investment_partners = this.body.investment_partners ?? [];
   }
 
+  /**
+   * BIL-QAI-R-15 / DD-12 (2026-09-16) — prefill from the Lead contact person, while the field is
+   * still eligible. Called from the `effect()` in the constructor (`BIL-IDP-T-4`, 2026-09-18), so
+   * it re-runs on every settled Lead contact save, not just once on load. Full history, the
+   * key-presence gate's rationale, and the save-side contract are in this folder's `CLAUDE.md`
+   * ("Innovation developers — removed, then restored").
+   */
+  private applyInnovationDevelopersPrefill(): void {
+    // Gate on the KEY, not on truthiness: `InnovationDevExists` (server repository) omits the key
+    // entirely when no row exists yet, and includes it as `null` once a row does — so a present
+    // `null` means "the user cleared it", not "never asked". Truthiness could not tell those apart
+    // and re-filled a deliberately-cleared field on every reload (BIL-QAI-T-12 rework).
+    if ('innovation_developers' in this.body) return;
+    const leadContact = this.creationService.resultLeadContact()?.trim();
+    if (!leadContact) return;
+    this.body.innovation_developers = leadContact;
+  }
+
   private buildPayload(): Record<string, unknown> {
     const { reference_materials } = this.body as { reference_materials?: unknown };
     const payload: Record<string, unknown> = {
       short_title: this.body.short_title ?? null,
       innovation_characterization_id: this.body.innovation_characterization_id ?? null,
       innovation_nature_id: this.body.innovation_nature_id ?? null,
-      // The Lead contact person is the innovation developer (2026-09-03): the field left the form, but
-      // the column keeps a value for the API summary — the contact's name, else whatever was stored.
-      innovation_developers: this.creationService.resultLeadContact()?.trim() || this.body.innovation_developers || null,
+      // BIL-QAI-R-15 / DD-12 (2026-09-16) — sends exactly what is on screen, never a substitution.
+      // A cleared field persists as `null`, and changing the Lead contact person afterwards never
+      // touches this key: the only place that reads `resultLeadContact()` is the prefill in
+      // `applyInnovationDevelopersPrefill()`, which runs from the constructor `effect()` while the
+      // field is eligible (`BIL-IDP-T-4`, 2026-09-18) — never from a save path. Supersedes the 2026-09-03
+      // removal, which copied the Lead contact person in here on every save.
+      innovation_developers: this.body.innovation_developers?.trim() || null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
       is_new_variety: this.body.is_new_variety ?? null,
       number_of_varieties: this.body.number_of_varieties ?? null,
@@ -301,10 +336,11 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   /**
-   * P2-3391 AC9/AC10 named three MDS fields — typology, innovation developer, readiness level. Since
-   * 2026-09-03 the innovation developer is the Lead contact person (Section 1, already mandatory), so
-   * the green check here is typology + readiness level and nothing else. Short title is full metadata
-   * (AC8: strictly optional) and cannot hold the section back.
+   * P2-3391 AC9/AC10 named three MDS fields — typology, innovation developer, readiness level. The
+   * green check here is typology + readiness level only: Innovation developers (`BIL-QAI-R-15`,
+   * restored 2026-09-16) is deliberately kept OUT of `updateMds()` — optional, per the requirement —
+   * so it never blocks Submit even though the field is visible again. Short title is full metadata
+   * (AC8: strictly optional) and cannot hold the section back either.
    *
    * P2-3340 still applies though: the 10-word ceiling on the short title is only painted red by
    * `pr-input`, so it is reported here as an INVALID item — but only while it is actually over the

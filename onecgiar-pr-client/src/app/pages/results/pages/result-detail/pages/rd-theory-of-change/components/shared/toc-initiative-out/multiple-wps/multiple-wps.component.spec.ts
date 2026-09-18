@@ -301,12 +301,23 @@ describe('MultipleWPsComponent', () => {
   });
 
   describe('getMaxTabNumber', () => {
-    it('should return the maximum number of tabs based on plannedResult and resultLevelId on getMaxNumberOfTabs', () => {
-      component.outputList = [{ work_package_id: 1 }, { work_package_id: 2 }, { work_package_id: 3 }];
-      component.outcomeList = [{ work_package_id: 4 }, { work_package_id: 5 }];
+    // MHL-AC-5 / MHL-R-3: two of the outcome/output candidates below deliberately SHARE the
+    // same work_package_id (AoW). Under the old AoW-distinct-count logic this collapses to 1
+    // for that AoW, which the no-pass clause requires: a fixture where every candidate has a
+    // distinct AoW would pass under both old and new logic and prove nothing.
+    it('should return the candidate-list length, not the distinct-AoW count, on getMaxNumberOfTabs', () => {
+      component.outputList = [{ work_package_id: 1 }, { work_package_id: 1 }, { work_package_id: 3 }];
+      component.outcomeList = [{ work_package_id: 4 }, { work_package_id: 4 }];
       component.eoiList = [{ toc_result_id: 'abc-1' }, { toc_result_id: 'abc-2' }, { toc_result_id: 'def-1' }];
+
+      // resultLevelId 1, planned: candidate list is outputList -> length 3 (old AoW-distinct logic gave 2).
       expect(component.getMaxNumberOfTabs(true, 1)).toBe(3);
+      // resultLevelId 1, not planned: candidate list is eoiList -> length 3.
       expect(component.getMaxNumberOfTabs(false, 1)).toBe(3);
+      // resultLevelId 2, planned: candidate lists are outcomeList + eoiList -> 2 + 3 = 5
+      // (old AoW-distinct logic unioned 1 distinct outcome AoW with 3 distinct eoi ids = 4).
+      expect(component.getMaxNumberOfTabs(true, 2)).toBe(5);
+      // resultLevelId 2, not planned: candidate list is eoiList -> length 3.
       expect(component.getMaxNumberOfTabs(false, 2)).toBe(3);
     });
   });

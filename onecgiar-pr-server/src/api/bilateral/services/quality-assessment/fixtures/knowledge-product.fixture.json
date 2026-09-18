@@ -1,0 +1,192 @@
+{
+  "detail": {
+    "id": 4101,
+    "result_type_id": 6,
+    "title": "Improved striga-resistant maize varieties released in Kenya",
+    "description": "A peer-reviewed article documenting three new striga-resistant maize varieties released for smallholder farmers.",
+    "is_lead_by_partner": false,
+    "no_applicable_partner": false,
+    "obj_result_type": { "id": 6, "name": "Knowledge Product" },
+    "obj_result_level": { "id": 4, "name": "Output" },
+    "obj_version": { "id": 55, "phase_year": 2026, "phase_name": "Reporting 2026" },
+    "obj_geographic_scope": { "id": 3, "name": "National" },
+    "leading_result": {
+      "lead_kind": "center",
+      "id": 9001,
+      "code": "CIAT",
+      "name": "Alliance Bioversity - CIAT",
+      "acronym": "CIAT"
+    },
+    "result_region_array": [],
+    "result_country_array": [
+      {
+        "result_country_id": 501,
+        "country_id": 32,
+        "is_active": true,
+        "country_object": { "id": 32, "name": "Kenya", "iso_alpha_3": "KEN" },
+        "result_countries_subnational_array": []
+      }
+    ],
+    "result_center_array": [
+      {
+        "result_center_id": 701,
+        "center_id": "CIAT",
+        "is_leading_result": true,
+        "is_active": true,
+        "clarisa_center_object": {
+          "code": "CIAT",
+          "institutionId": 9001,
+          "clarisa_institution": { "id": 9001, "name": "Alliance Bioversity - CIAT", "acronym": "CIAT" }
+        }
+      }
+    ],
+    "result_by_institution_array": [
+      {
+        "institutions_id": 8801,
+        "name": "Kenya Agricultural Research Institute",
+        "acronym": "KALRO",
+        "is_predicted": false,
+        "is_leading_result": false,
+        "institution_type_name": "National government"
+      }
+    ],
+    "evidence_array": [
+      {
+        "id": 30011,
+        "link": "https://cgspace.cgiar.org/handle/10568/135621",
+        "description": "Published article on CGSpace",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": true,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 0,
+        "evidenceSharepointArray": []
+      },
+      {
+        "id": 30012,
+        "link": "https://prms.internal/sharepoint/hidden-file",
+        "description": "Internal peer-review notes",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 1,
+        "evidenceSharepointArray": [
+          {
+            "id": 900,
+            "document_id": "doc-abc-123",
+            "file_name": "peer-review-notes.docx",
+            "folder_path": "/internal/kp",
+            "is_public_file": 0
+          }
+        ]
+      },
+      {
+        "id": 30013,
+        "link": "https://prms.internal/repository/public-brief",
+        "description": "Public-facing policy brief mirrored in the PRMS repository",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 1,
+        "evidenceSharepointArray": [
+          {
+            "id": 906,
+            "document_id": "doc-stu-111",
+            "file_name": "public-brief.pdf",
+            "folder_path": "/public/kp",
+            "is_public_file": 1
+          }
+        ]
+      }
+    ],
+    "obj_results_toc_result": [
+      {
+        "official_code": "SP01",
+        "name": "Sustainable Farming",
+        "initiative_role": "Owner",
+        "toc_mappings": [
+          {
+            "toc_result_id": 20031,
+            "official_code": "SP01",
+            "name": "Sustainable Farming",
+            "aow": "AOW1",
+            "planned_result": "Yes",
+            "level": "High Level Output",
+            "title": "Striga-resistant maize varieties adopted by smallholder farmers"
+          }
+        ]
+      }
+    ],
+    "bilateral_projects": [{ "short_name": "MaizeCRP", "organization_code": "BMGF" }],
+    "knowledge_product_summary": { "handle": "10568/135621" }
+  },
+  "formDetail": {
+    "commonFields": {
+      "id": 4101,
+      "result_title": "Improved striga-resistant maize varieties released in Kenya",
+      "result_description": "A peer-reviewed article documenting three new striga-resistant maize varieties released for smallholder farmers.",
+      "lead_contact_person_id": 5501,
+      "lead_contact_person_data": { "id": 5501, "display_name": "Grace Mwangi", "mail": "g.mwangi@example.org" },
+      "no_applicable_partner": false,
+      "is_lead_by_partner": false
+    },
+    "tocMetadata": {
+      "planned_result": null,
+      "initiative_id": 301,
+      "official_code": "SP01",
+      "short_name": "Sustainable Farming",
+      "result_toc_results": [
+        {
+          "result_toc_result_id": 88001,
+          "toc_result_id": 20031,
+          "planned_result": true,
+          "initiative_id": 301,
+          "toc_progressive_narrative": "This result directly evidences adoption of striga-resistant maize under AOW1.",
+          "toc_level_id": 2
+        }
+      ]
+    },
+    "geographicScope": {},
+    "contributingCenters": [],
+    "contributingInstitutions": [],
+    "contributingProjects": [
+      {
+        "id": 6601,
+        "is_lead": true,
+        "obj_clarisa_project": {
+          "id": 7701,
+          "shortName": "MaizeCRP",
+          "fullName": "Maize Resilience and Productivity Program",
+          "obj_organization": { "id": 8801, "name": "Bill & Melinda Gates Foundation", "acronym": "BMGF" }
+        }
+      }
+    ],
+    "contributingInitiatives": {
+      "contributing_and_primary_initiative": [],
+      "accepted_contributing_initiatives": [],
+      "pending_contributing_initiatives": []
+    },
+    "evidence": [{ "id": 30011, "link": "https://cgspace.cgiar.org/handle/10568/135621", "is_sharepoint": 0 }],
+    "resultTypeResponse": [
+      {
+        "result_knowledge_product_id": 9001,
+        "knowledge_product_type": "Journal Article",
+        "licence": "CC-BY-4.0",
+        "metadata": [
+          { "result_kp_metadata_id": 1, "source": "CGSpace", "year": 2025, "is_peer_reviewed": true, "is_isi": true, "accesibility": "Open access" },
+          { "result_kp_metadata_id": 2, "source": "WoS", "year": 2025, "is_peer_reviewed": true, "is_isi": true, "accesibility": "Open access" }
+        ],
+        "keywords": [
+          { "result_kp_keyword_id": 1, "is_agrovoc": true, "keyword": "Maize" },
+          { "result_kp_keyword_id": 2, "is_agrovoc": false, "keyword": "Striga resistance" }
+        ]
+      }
+    ],
+    "impactAreaScores": []
+  }
+}

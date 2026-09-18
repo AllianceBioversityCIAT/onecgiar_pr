@@ -232,6 +232,21 @@ export class BilateralApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs`, formData);
   }
 
+  POST_bilateralQualityAssessment(resultId: number) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}`, {});
+  }
+
+  GET_bilateralQualityAssessmentLatest(resultId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}/latest`);
+  }
+
+  PATCH_bilateralSubmitForReview(
+    resultId: number,
+    body: { assessment_id: number; decision: 'submitted_anyway' | 'submitted_without_check' },
+  ) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/submit-for-review/${resultId}`, body);
+  }
+
   GET_bilateralAiJob(jobId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs/${jobId}`);
   }

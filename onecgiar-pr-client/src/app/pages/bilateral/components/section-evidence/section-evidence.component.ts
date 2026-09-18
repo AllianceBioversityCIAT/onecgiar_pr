@@ -14,10 +14,11 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { SharePointUploadService } from '../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 import { BilateralEvidenceItem, BilateralEvidenceBody } from './section-evidence.model';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
+import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 
 @Component({
   selector: 'app-section-evidence',
-  imports: [CommonModule, FormsModule, HlmButton, PrDialogComponent, FormSkeletonComponent, CustomFieldsModule],
+  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, HlmButton, PrDialogComponent, FormSkeletonComponent, CustomFieldsModule],
   templateUrl: './section-evidence.component.html',
   styleUrl: './section-evidence.component.scss'
 })

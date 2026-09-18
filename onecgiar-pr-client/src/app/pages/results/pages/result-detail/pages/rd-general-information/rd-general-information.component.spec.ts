@@ -384,7 +384,7 @@ describe('RdGeneralInformationComponent', () => {
 
     /** 🛑 El primer `detectChanges` dispara `ngOnInit` → `getSectionInformation()`, que REEMPLAZA
      *  `generalInfoBody` con la respuesta mockeada. Asignar antes de eso se pierde. */
-    const renderWithContact = (name: string, directoryMatch: unknown = null) => {
+    const renderWithContact = (name: string | null, directoryMatch: unknown = null) => {
       mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
       fixture.detectChanges();
       component.generalInfoBody.lead_contact_person = name;
@@ -398,10 +398,10 @@ describe('RdGeneralInformationComponent', () => {
       fixture.detectChanges(false);
     };
 
-    it('counts a name with no directory match as still missing — the platform rejects it', () => {
-      renderWithContact('Zuniga, Yecksin Mauricio (Alliance Bioversity-CIAT)');
+    it('counts an accepted free-text name with no directory match as complete (RES-TEST-1)', () => {
+      renderWithContact('Santiago Sanchez', null);
 
-      expect(contactScanField().classList.contains('complete')).toBe(false);
+      expect(contactScanField().classList.contains('complete')).toBe(true);
     });
 
     it('counts it as complete once the contact is matched in the directory', () => {
@@ -410,8 +410,19 @@ describe('RdGeneralInformationComponent', () => {
       expect(contactScanField().classList.contains('complete')).toBe(true);
     });
 
-    it('counts it as missing when there is no name at all', () => {
+    it('counts it as missing when there is no name at all, empty string, or whitespace (RES-TEST-2)', () => {
       renderWithContact('   ');
+      expect(contactScanField().classList.contains('complete')).toBe(false);
+
+      renderWithContact('');
+      expect(contactScanField().classList.contains('complete')).toBe(false);
+
+      renderWithContact(null);
+      expect(contactScanField().classList.contains('complete')).toBe(false);
+    });
+
+    it('counts it as missing when search query is unconfirmed / typing in progress (RES-TEST-2)', () => {
+      renderWithContact(null, null);
 
       expect(contactScanField().classList.contains('complete')).toBe(false);
     });

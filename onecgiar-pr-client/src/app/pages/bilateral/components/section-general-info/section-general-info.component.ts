@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, effect, OnInit, OnDestroy, EventEm
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -9,6 +10,7 @@ import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component'
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { BilateralChangeResultTypeDialogComponent } from '../bilateral-change-result-type-dialog/bilateral-change-result-type-dialog.component';
+import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { User } from '../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { environment } from '../../../../../environments/environment';
@@ -87,7 +89,7 @@ const TAG_LEVELS = [
 
 @Component({
   selector: 'app-section-general-info',
-  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule, BilateralChangeResultTypeDialogComponent],
+  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule, BilateralChangeResultTypeDialogComponent, BilateralFieldQualityFlagComponent],
   templateUrl: './section-general-info.component.html',
   styleUrl: './section-general-info.component.scss'
 })
@@ -122,6 +124,8 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   private leadContactHydrated = false;
   /** Key of the lead contact last handed to autosave (or hydrated from the server). */
   private lastSyncedContactKey: string | null = null;
+  /** BIL-IDP-T-4: unsubscribed in `ngOnDestroy`, same convention as `section-evidence.component.ts`. */
+  private manualSaveSub?: Subscription;
 
   /** Innovation Development (result_type_id 7): the note under Lead contact person renders for it only. */
   readonly isInnovationDevelopment = computed(() => this.creationService.resultTypeId() === 7);
@@ -222,10 +226,25 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     // previous Result Detail visit or a different bilateral result can't leak
     // its selected/locked contact state into this one.
     this.resetUserSearchService();
+
+    // BIL-IDP-T-4 (pivot from DD-1): publish the settled contact to the shared signal the
+    // Innovation Developer prefill reads on the SAVE event, not on every commit. Publishing
+    // from `updateGeneralInfoMdsFields()` re-entered the hydration effect below (its dependency)
+    // and rebuilt `leadContactBody` mid-typing, blanking the field on the reporter's first
+    // keystroke — see `execution.md`'s `T-2` pivot record. A settled save never carries that
+    // mid-typing null, so the re-entrancy cannot occur. Same pattern as
+    // `section-evidence.component.ts:142-146`.
+    this.manualSaveSub = this.autoSaveService.manualSave$.subscribe(section => {
+      if (section !== 'general-info') return;
+      const body = this.leadContactBody();
+      this.creationService.resultLeadContact.set(body.lead_contact_person ?? '');
+      this.creationService.resultLeadContactData.set(body.lead_contact_person_data);
+    });
   }
 
   ngOnDestroy(): void {
     this.resetUserSearchService();
+    this.manualSaveSub?.unsubscribe();
   }
 
   private resetUserSearchService(): void {
