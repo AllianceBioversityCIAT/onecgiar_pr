@@ -197,3 +197,64 @@ None of these is unfinished `CSD-T-3` scope, so the task closes; items 2-4 are o
 - *Reliability — the one worth knowing about.* The `pr-radio-button` deselect-on-re-click quirk lets a **platform admin** re-clicking the already-selected *Long-term* on a PhD/Master result reach `(capdevTermId1 = null, capdevTermId2 = 1)`. That composes back to the unchanged stored `1`, so **nothing is written and Approve is unaffected** — but the idempotency guard then makes the display inconsistency **non-self-healing**: every later setter fire short-circuits on `stored === composed`, leaving *Length of training* blank and the Degree control hidden while the data still says PhD. The editor exemplar has the same quirk but self-heals precisely because it lacks the early return. Cheapest fix if ever wanted: gate the early return on the pair also being the canonical decomposition (`stored === composed && (capdevTermId2 == null || capdevTermId1 === 4)`) — **not** delete the guard, which DD-4 requires. Per the Advisory rule this is recorded and dies here; it is a candidate for a separate proposal, not scope for this spec.
 - *Risk:* `package-lock.json` shows modified but predates this session and belongs to no task — keep it out of the commit.
 - *Readability:* a line in `AGENTS.md` §8 noting that `capdev_term_id` is now written through a decompose/recompose pair would save the next reader a trip into the component. Not owed — the row stays accurate.
+
+## Pivot Record: `CSD-T-6` — the Degree becomes mandatory (2026-09-18)
+
+**Approved by Juan David Delgado, 2026-09-18**, after seeing the fix working on screen: selecting Long-term without a degree must no longer satisfy the `type-specific` green check.
+
+### What this overturns
+
+`CSD-R-4` (approved) states the Degree MUST remain optional and that selecting Long-term without one MUST still satisfy the length-of-training item. `design.md` DD-3 backs it, and `requirements.md` §3 lists "Making the Degree selection mandatory" as explicitly **out of scope**. P2-3771 (`56de75c7d`, Yecksin) recorded the same decision independently: *"Making the sub-category mandatory is a business rule, not a layout fix, and it would block Submit for results already saved as plain 'Long-term'."* Two people reached that conclusion separately; the PO has now decided against it with the consequence stated.
+
+### The consequence, stated before the decision and accepted
+
+Because the placement bug meant **no reporter could ever select a degree**, every existing bilateral long-term result is stored as `capdev_term_id = 4`. Tightening the predicate therefore turns the `type-specific` check amber for **all** of them at once, and Submit stays blocked until someone opens each result and picks PhD or Master. The user was shown this and chose "obligatorio, y asumimos el retroactivo" over two alternatives (grandfather historical `4`s; measure the affected row count first).
+
+### Technical direction
+
+Tighten the **existing** `length-of-training` predicate — filled when `capdev_term_id` is `1`, `2` or `3`, not filled when it is a bare `4` — and set `[required]="true"` on the control. **No fourth checklist item**: the tracker computes `complete` as `filledFields === totalFields`, so a fourth never-filled entry would leave the section amber permanently and disable Submit unconditionally (the P2-3348 failure recorded in the component's `CLAUDE.md`). The three-key contract survives; only one key's predicate changes.
+
+### Cross-module consequence — owed to another developer
+
+P2-3771's spec block pins the old rule in the template text: `it('is still gated on the long-term buckets and stays optional')` asserts `[required]="false"`. This pivot requires editing **another developer's test**, which encodes a decision they documented deliberately. Authorized here, renamed rather than deleted, and recorded so it is visible in review. **Juan David to notify Yecksin** — per the repo's module-ownership rule, the same obligation already outstanding for `CSD-OQ-2`.
+
+### Spec documents updated
+
+`requirements.md` (`CSD-R-4`, §3 scope), `design.md` (DD-3), `tasks.md` (new `CSD-T-6`). No ADR is affected — this is a business rule, not an architecture decision.
+
+### `CSD-T-6` — Make the Degree mandatory for Long-term — **PASS** (2026-09-18)
+
+| Field | Value |
+|---|---|
+| Implementer attempts | **1** |
+| Reviewer verdict | `STATUS: PASS` (full 4R sweep) |
+| Files changed | `…/type-capacity-sharing.component.ts` · `.html` · `.spec.ts` |
+| Verification | `npx jest … --testPathPattern="type-capacity-sharing"` → **64 passed / 64 total** (60 baseline + 4 new) · `npx ng lint --quiet` → clean |
+| Implements | `CSD-R-4` **as reversed** by the Pivot above |
+
+**The change.** One predicate moved — `length-of-training` is filled when `capdev_term_id` is present and is **not** the bare parent `4`:
+
+```ts
+get lengthOfTrainingFilled(): boolean {
+  const termId = this.body.capdev_term_id;
+  return termId != null && termId !== 4;
+}
+```
+
+plus `[required]="true"` on the control. **The checklist still publishes exactly three keys** — no fourth entry, which would have left the section amber forever and disabled Submit unconditionally.
+
+**Falsifying input, run.** Reverting the predicate to `termId != null` failed **exactly** the new bare-`4` case and nothing else — the test is tied to the rule, not to incidental state. Probe reverted; 64/64 is the post-revert run.
+
+**The denylist choice, and why the Reviewer rated it better than the Implementer argued it.** `!== 4` rather than an allowlist `1|2|3` was deliberate. The Implementer justified it by future catalogue growth; the Reviewer identified the sharper reason: the live risk on this codebase is **catalogue ids differing between environments**, already recorded as `CSD-OQ-1`. Under id drift an allowlist fails **closed** — every result reads unfilled and Submit dies platform-wide (the P2-3348 failure mode). The denylist fails **open** — a drifted id reads as answered, i.e. the pre-pivot behaviour. Since `complete === (filledFields === totalFields)` gates Submit, fail-open is the only tolerable direction.
+
+**The authorized cross-developer edit.** P2-3771's second case was **renamed** (`…and is now required`) with its assertion flipped to `[required]="true"`, guard regex kept verbatim, both tickets named in a comment. Its first case (placement) untouched.
+
+**Leader adjudication — one pre-existing test edited beyond authorization, accepted.** `it('counts a fully answered form as filled')` used `capdev_term_id: 4` with `filled: true`, which the new rule makes false by construction. The Implementer moved the **fixture** (`4` → `2`) rather than the expectation. Reviewer concurred, on three grounds: the case's contract is "a fully answered form ⇒ all three filled", and under the new rule a bare `4` *is not* a fully answered form, so keeping `4` would have made the test name assert its own opposite; nothing was lost, because the `4 → filled: false` path now has a dedicated case asserting more than the old one did; and the change is documented in place. Flipping the expectation instead would have produced a duplicate of the new case under a lying name. **No other pre-existing case was touched** — verified by enumerating every `capdev_term_id` occurrence in the spec file.
+
+**Blast radius checked:** `length-of-training` appears nowhere in `onecgiar-pr-client/src` outside this component's four files, so no unrun sibling suite asserts on the changed key and 64/64 is sufficient.
+
+**Leader error, found by the Reviewer and now closed.** The pivot's spec sync was **partial**: `CSD-R-4`'s prose was reversed but five other sites still stated the old rule — the *"Green check does not regress"* scenario, `CSD-AC-4`, the `CSD-R-4` index row, the persona table, and `CSD-R-10`'s optionality-parity clause, plus `design.md` DD-2's "`[required]` stays **false**". `CSD-AC-4` in particular said the opposite of what shipped and is exactly the line a future auditor would cite to revert this code. All six are now amended with the Correction Closure two-direction sweep the Pivot Protocol requires. **`CSD-R-10` is now a recorded deviation, not a silent one:** bilateral is `[required]="true"` and gates its check while W1/W2 stays `[required]="false"` — the two screens knowingly diverge on optionality, because the PO asked for the bilateral rule and W1/W2 is out of scope.
+
+**ADVISORY (non-gating):** if `capdev_term_id` ever arrived as a tinyint-as-string (the trap this component's `CLAUDE.md` records for `is_attending_for_organization`), `'4' !== 4` would read the bare parent as filled. Not new — `hydrateTermCascade` already strict-compares the same field, so a string would break the radio visibly first — and it fails in the safe direction.
+
+**Not run:** Cypress was not extended, so browser-level coverage of the new gate is *not run*, not passed. Carried to `CSD-T-5`.

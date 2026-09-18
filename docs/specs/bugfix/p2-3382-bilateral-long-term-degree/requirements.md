@@ -40,7 +40,7 @@ The consequence is data granularity, not corruption: every bilateral long-term t
 
 - Any change to `cap-dev-info` (W1/W2) — it is the reference behaviour and is correct.
 - Changing the MDS checklist, the three published items, or the green-check rule.
-- Making the Degree selection mandatory (see `CSD-R-4`).
+- ~~Making the Degree selection mandatory (see `CSD-R-4`).~~ → **Brought into scope by the Pivot of 2026-09-18**; delivered by `CSD-T-6`.
 - Server, DTO, migration, or `validation_capacity_dev_P25` changes.
 - Backfill of existing `capdev_term_id = 4` rows — nothing is wrong with them.
 - Read-only mode for the bilateral form (does not exist for any bilateral section; recorded as pending in the component's `CLAUDE.md`).
@@ -50,7 +50,7 @@ The consequence is data granularity, not corruption: every bilateral long-term t
 
 | Persona | What changes for them |
 |---|---|
-| Result submitter (bilateral reporter) | Choosing **Long-term** now asks for the degree, as it already does on the W1/W2 screen. Nothing they must do that they did not have to do before — the Degree stays optional |
+| Result submitter (bilateral reporter) | Choosing **Long-term** now asks for the degree, as it already does on the W1/W2 screen. ⚠️ **Pivot 2026-09-18:** the Degree is now **required** — a bare Long-term no longer completes the section, so long-term results saved before this fix read as incomplete until a degree is picked |
 | QA reviewer / PMU (bilateral review drawer) | *Length of training* now shows the stored value even when it is PhD or Master, instead of rendering blank |
 
 ## 5. User Stories
@@ -65,13 +65,13 @@ The consequence is data granularity, not corruption: every bilateral long-term t
 - **`CSD-R-1`** In the bilateral Capacity Sharing section, when *Length of training* is set to **Long-term**, the system MUST render the Degree radio group (PhD / Master) immediately below it, **independently of the state of the *Complete full metadata* toggle**.
 - **`CSD-R-2`** When *Length of training* is changed to **Short-term**, the system MUST hide the Degree group and clear any previously chosen degree, persisting `capdev_term_id = 3`.
 - **`CSD-R-3`** A stored long-term sub-term MUST round-trip: saving a degree and reloading the result MUST restore *Long-term* selected with that degree selected.
-- **`CSD-R-4`** The Degree selection MUST remain optional, and the MDS checklist for `type-specific` MUST continue to publish **exactly three** items (`people-trained`, `delivery-method`, `length-of-training`). Selecting *Long-term* without a degree MUST still satisfy the length-of-training item.
+- **`CSD-R-4`** ⚠️ **REVERSED by the Pivot of 2026-09-18** (see `execution.md` → *Pivot Record: `CSD-T-6`*). ~~The Degree selection MUST remain optional… Selecting *Long-term* without a degree MUST still satisfy the length-of-training item.~~ **Now:** the Degree selection is **MANDATORY when *Length of training* is Long-term** — a bare `capdev_term_id = 4` MUST NOT satisfy the `length-of-training` item. The MDS checklist MUST still publish **exactly three** items (`people-trained`, `delivery-method`, `length-of-training`): the rule changes one item's predicate, it does not add a fourth. A fourth never-filled item would leave the section amber permanently and disable Submit unconditionally (P2-3348). **Accepted consequence:** every result stored as a bare `4` — which, because of this very bug, is all of them — goes amber until a degree is chosen.
 - **`CSD-R-5`** The Degree group MUST render inside the standard field card, framed like every sibling question, rather than as a loose row.
 - **`CSD-R-6`** In the bilateral review drawer, a result stored with a long-term sub-term (`capdev_term_id` 1 or 2) MUST display *Length of training* as **Long-term** with that degree shown, and the drawer MUST write the reviewer's resolved choice back into `capdev_term_id` using the same parent/sub contract as the editor.
 
 ### Should (SHOULD)
 
-- **`CSD-R-10`** The bilateral Degree control SHOULD present the same label, option order and optionality as the W1/W2 control it mirrors, so the two screens do not diverge again.
+- **`CSD-R-10`** The bilateral Degree control SHOULD present the same label and option order as the W1/W2 control it mirrors, so the two screens do not diverge again. ⚠️ **Optionality deliberately diverges as of the Pivot of 2026-09-18:** bilateral is `[required]="true"` and gates its green check, while W1/W2 remains `[required]="false"` (`cap-dev-info.component.html:55`). **Recorded deviation** — the PO asked for the bilateral rule; W1/W2 was explicitly out of scope. Revisit if the rule should be unified.
 
 ### Scenarios
 
@@ -102,11 +102,11 @@ The consequence is data granularity, not corruption: every bilateral long-term t
 - AND the Degree group is rendered with **Master** selected, with the toggle still collapsed
 - AND IT MUST require no user interaction to reach that state
 
-#### Scenario: Green check does not regress *(`CSD-R-4`)*
+#### Scenario: Green check does not regress *(`CSD-R-4`)* — ⚠️ **REVERSED by the Pivot of 2026-09-18**
 
 - GIVEN a bilateral result with at least one participant count, a delivery method, and *Long-term* selected but **no** degree
 - WHEN the MDS checklist is published
-- THEN the section counts 3/3 and shows the green check
+- THEN ~~the section counts 3/3 and shows the green check~~ → **the `length-of-training` item is NOT filled, so the section does not show the green check** (a bare `capdev_term_id = 4` is a half-answer)
 - BUT it must NOT add a fourth checklist item for the degree
 - AND IT MUST keep `overallStatus()` reachable as `complete`, so Submit is never silently disabled (the failure mode of P2-3348 and of the attendance field in P2-3382)
 
@@ -142,7 +142,7 @@ The consequence is data granularity, not corruption: every bilateral long-term t
 | `CSD-AC-1` | Bilateral Capacity Sharing, full metadata collapsed | Long-term is selected | The Degree group (PhD/Master) is in the DOM, below *Length of training* |
 | `CSD-AC-2` | Long-term + Master selected | *Short-term* is selected | Degree group gone, `capdev_term_id === 3`, `capdevTermId2 === null` |
 | `CSD-AC-3` | Stored `capdev_term_id = 2` | The section loads | `capdevTermId1 === 4`, `capdevTermId2 === 2`, Degree visible with the toggle collapsed |
-| `CSD-AC-4` | Counts + delivery method + Long-term, no degree | The checklist publishes | Exactly 3 items, all filled |
+| `CSD-AC-4` | Counts + delivery method + Long-term, no degree | The checklist publishes | ⚠️ **Reversed 2026-09-18** — exactly 3 items, and `length-of-training` is **NOT** filled (section not complete). With a degree (`1`/`2`) or Short-term (`3`): 3 items, all filled |
 | `CSD-AC-5` | Degree group visible | The section renders | Its host carries the `field_card` class |
 | `CSD-AC-6` | Drawer opened on a result with `capdev_term_id = 1` | The drawer renders | Long-term + PhD shown; `hasDataStandardUnsavedChanges()` is `false` |
 
@@ -201,7 +201,7 @@ npx ng lint --quiet
 | `CSD-R-1` | Long-term reveals Degree regardless of the toggle | Long-term reveals Degree | `CSD-AC-1` |
 | `CSD-R-2` | Short-term hides and clears Degree | Short-term hides and clears | `CSD-AC-2` |
 | `CSD-R-3` | Stored sub-term round-trips | A saved degree survives a reload | `CSD-AC-3` |
-| `CSD-R-4` | Degree optional; checklist stays at three items | Green check does not regress | `CSD-AC-4` |
+| `CSD-R-4` | ⚠️ **Degree MANDATORY under Long-term** (Pivot 2026-09-18); checklist still exactly three items | Green check does not regress *(reversed)* | `CSD-AC-4` |
 | `CSD-R-5` | Degree renders inside the field card | Framed like its siblings | `CSD-AC-5` |
 | `CSD-R-6` | Reviewer drawer resolves stored sub-terms | The reviewer sees a stored degree | `CSD-AC-6` |
 | `CSD-R-10` | Parity with the W1/W2 control | (covered by `CSD-R-1`, `CSD-R-5`) | — |

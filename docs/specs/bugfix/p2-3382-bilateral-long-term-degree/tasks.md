@@ -10,7 +10,7 @@
 | Owner | Juan David Delgado |
 | Ticket | P2-3382 — closes its own AC5 / AC6 |
 | Status | `not-started` |
-| Budget (tripwire) | 5 tasks · ~190 LOC (~60 production) · 1 review round. Exceeding it → **stop and escalate**, do not absorb |
+| Budget (tripwire) | ~~5~~ **6** tasks (Pivot 2026-09-18 added `CSD-T-6`) · ~190 LOC (~60 production) · 1 review round. Exceeding it → **stop and escalate**, do not absorb |
 
 ## 2. Pre-flight checklist
 
@@ -128,6 +128,28 @@
   - [ ] The DOM-coverage gap for the drawer is recorded as an accepted risk, not silently closed
 - **Verification:** human, at the HITL pause. **There is no command for this** — jsdom cannot measure layout and the `field_card` assertion proves the frame exists, not that it matches the reference.
   - **Disqualifier:** "looks fine" is not a record. If a screenshot was not taken, the check did not happen, and `execution.md` must say so rather than claim a pass.
+
+### `CSD-T-6` — Make the Degree mandatory for Long-term *(added by Pivot, 2026-09-18)*  `[x]`
+
+- **Type:** `client`
+- **Description:** Tighten the existing `length-of-training` MDS predicate so a bare `capdev_term_id = 4` is **not** filled (`1`/`2`/`3` are), and set `[required]="true"` on the Degree control. Update P2-3771's template-text case that pins `[required]="false"`.
+- **Implements:** `CSD-R-4` **as reversed** by the Pivot (see `execution.md` → *Pivot Record: `CSD-T-6`*)
+- **Files:** `…/type-capacity-sharing.component.ts`, `…/type-capacity-sharing.component.html`, `…/type-capacity-sharing.component.spec.ts`
+- **Depends on:** `CSD-T-2` · **Blocks:** `CSD-T-5`
+- **Estimate:** `S`
+- **Skills:** `angular-developer`
+- **Scope notes:**
+  - 🛑 **No fourth checklist item.** `complete` is `filledFields === totalFields`, so a fourth never-filled entry leaves the section amber forever and disables Submit unconditionally (P2-3348). Change one predicate; keep exactly three keys.
+  - The P2-3771 block scans the template as **TEXT** (`indexOf`/regex) — no comment may place a literal control string ahead of the real markup, or its placement case fails falsely.
+  - Editing P2-3771's optionality assertion is **authorized by the Pivot** and must be renamed, not deleted. **Yecksin to be notified** (module-ownership rule).
+- **Definition of done:**
+  - [ ] Bare `4` → `length-of-training` unfilled, section not complete; `1`/`2`/`3` → filled
+  - [ ] Checklist still exactly three keys
+  - [ ] P2-3771's placement case untouched and passing
+  - [ ] Lint clean
+- **Verification:** `npx jest … --testPathPattern="type-capacity-sharing"` → PASS, then `npx ng lint --quiet`.
+  - **Falsifying input:** revert the predicate to `capdev_term_id != null` → the bare-`4` case must fail.
+  - **Accepted consequence:** every existing long-term result goes amber until a degree is picked. Signed off by the PO, 2026-09-18.
 
 ## 4. Dependency graph
 
