@@ -39,6 +39,18 @@ describe('BilateralApiService', () => {
     req.flush(mockResponse);
   });
 
+  // changes/project-multiselect-filter (PMF-DD-5): the optional year serializes as a
+  // query param; without it the URL stays exactly the pre-existing one (asserted above).
+  it('GET_bilateralProjects should send the optional year as a query param', done => {
+    service.GET_bilateralProjects('42', 2025).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/projects?centerId=42&year=2025`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
   it('POST_createBilateralHeader should POST create-header', done => {
     const body = { result_level_id: 3, result_type_id: 1 };
     service.POST_createBilateralHeader(body).subscribe(response => {

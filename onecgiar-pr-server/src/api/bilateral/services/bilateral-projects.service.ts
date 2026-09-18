@@ -135,7 +135,16 @@ export class BilateralProjectsService {
     return null;
   }
 
-  async getProjectsByCenter(centerId: number | string) {
+  /**
+   * The center's reportable bilateral project catalog. The optional `year`
+   * (`changes/project-multiselect-filter`, `PMF-DD-5`) scopes it to a specific reporting
+   * year — the catalog is inherently phase-scoped — instead of the active one. Only a
+   * positive integer counts: anything else (absent, non-numeric, zero, negative) is
+   * ignored via this parsing and the active year is used, so an invalid value keeps
+   * today's behavior instead of 5xxing. Query parameters arrive as strings, hence the
+   * `number | string` signature — same convention as `centerId`.
+   */
+  async getProjectsByCenter(centerId: number | string, year?: number | string) {
     let center = null;
     const centerIdNum = Number(centerId);
     if (!isNaN(centerIdNum)) {
@@ -159,7 +168,20 @@ export class BilateralProjectsService {
     const activeYear = await this.yearRepository.findOne({
       where: { active: true },
     });
-    if (!activeYear) {
+
+    // `PMF-DD-5`: the requested year wins when it is a valid positive integer; otherwise
+    // the active year resolves it. An explicit valid year is answerable even when no
+    // active year is configured — only when NEITHER resolves is the catalog unscopeable.
+    const requestedYear =
+      year === undefined || year === null ? null : Number(year);
+    const hasRequestedYear =
+      requestedYear !== null &&
+      Number.isSafeInteger(requestedYear) &&
+      requestedYear > 0;
+    const targetYear = hasRequestedYear
+      ? requestedYear
+      : (activeYear?.year ?? null);
+    if (targetYear === null) {
       this.logger.warn(
         'No active year configured (year.active) — cannot scope bilateral projects by phase',
       );
@@ -228,10 +250,10 @@ export class BilateralProjectsService {
     }
 
     const currentPhaseProjects = activeProjects.filter(
-      (p) => p.phase === activeYear.year,
+      (p) => p.phase === targetYear,
     );
     this.logger.log(
-      `${currentPhaseProjects.length} projects match current phase=${activeYear.year}`,
+      `${currentPhaseProjects.length} projects match current phase=${targetYear}`,
     );
 
     if (currentPhaseProjects.length === 0 && activeProjects.length > 0) {
@@ -240,7 +262,7 @@ export class BilateralProjectsService {
       );
       this.logger.warn(
         `All ${activeProjects.length} active project(s) have a phase different from ` +
-          `the current active year (${activeYear.year}) — found phase(s): ${foundPhases}. ` +
+          `the resolved year (${targetYear}) — found phase(s): ${foundPhases}. ` +
           `Check whether the CLARISA project sync is up to date for this phase.`,
       );
     }

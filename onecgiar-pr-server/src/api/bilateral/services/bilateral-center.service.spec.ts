@@ -270,6 +270,17 @@ describe('BilateralCenterService', () => {
     expect(result).toEqual({ response: { projects: [] } });
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
+      undefined,
+    );
+  });
+
+  // changes/project-multiselect-filter (PMF-DD-5): the optional `year` rides along to the
+  // catalog service, which owns the active-year fallback.
+  it('should forward the optional year to the catalog service', async () => {
+    await service.getProjects(10, 2025);
+    expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
+      10,
+      2025,
     );
   });
 

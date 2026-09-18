@@ -81,9 +81,16 @@ export class BilateralCenterService {
     private readonly innovationUseMdsValidator: InnovationUseMdsValidator,
   ) {}
 
-  async getProjects(centerId: number) {
-    const projects =
-      await this.bilateralProjectsService.getProjectsByCenter(centerId);
+  /**
+   * `changes/project-multiselect-filter` (`PMF-DD-5`): the optional `year` rides along to
+   * the catalog service untouched — that service owns the active-year fallback and the
+   * positive-integer parsing.
+   */
+  async getProjects(centerId: number, year?: number | string) {
+    const projects = await this.bilateralProjectsService.getProjectsByCenter(
+      centerId,
+      year,
+    );
     return { response: projects };
   }
 
