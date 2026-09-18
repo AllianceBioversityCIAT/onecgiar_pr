@@ -1189,6 +1189,36 @@ describe('ResultsListComponent', () => {
     });
   });
 
+  describe('Emerging result chip (EMG-T-3)', () => {
+    const p25Base = {
+      phase_year: 2026,
+      acronym: 'P25',
+      phase_name: 'Reporting 2026 P25'
+    };
+
+    it('isEmerging returns true only for planned_result 0 in P25 2025-2030', () => {
+      expect(component.isEmerging({ ...p25Base, planned_result: 0 } as any)).toBe(true);
+    });
+
+    it('isEmerging returns false for planned_result 1', () => {
+      expect(component.isEmerging({ ...p25Base, planned_result: 1 } as any)).toBe(false);
+    });
+
+    it('isEmerging returns false for planned_result null (EMG-R-5 / D-3)', () => {
+      expect(component.isEmerging({ ...p25Base, planned_result: null } as any)).toBe(false);
+    });
+
+    it('isEmerging returns false when planned_result key is absent', () => {
+      expect(component.isEmerging({ ...p25Base } as any)).toBe(false);
+    });
+
+    it('isEmerging returns false outside P25 reporting window', () => {
+      expect(
+        component.isEmerging({ phase_year: 2024, acronym: 'P24', planned_result: 0 } as any)
+      ).toBe(false);
+    });
+  });
+
   describe('is_replicated handling in table rows', () => {
     it('should distinguish replicated results for Previously reported badge', () => {
       const replicated = { id: 1, title: 'Result A', is_replicated: 1 } as any;

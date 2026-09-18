@@ -516,9 +516,13 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** P25 reporting phases are the only scope for the emerging-result label. */
   isEmerging(result: CurrentResult): boolean {
+    const planned = result?.planned_result;
+    if (planned == null) {
+      return false;
+    }
     const year = Number(result?.phase_year ?? result?.reported_year);
     const portfolio = String(result?.acronym ?? result?.portfolio ?? result?.phase_name ?? '');
-    return Number(result?.planned_result) === 0 && /\bP25\b/i.test(portfolio) && year >= 2025 && year <= 2030;
+    return planned === 0 && /\bP25\b/i.test(portfolio) && year >= 2025 && year <= 2030;
   }
 
   fundingChipClass(result: CurrentResult): string {
