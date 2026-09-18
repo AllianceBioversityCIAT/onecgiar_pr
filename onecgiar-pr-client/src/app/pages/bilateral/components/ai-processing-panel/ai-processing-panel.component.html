@@ -82,7 +82,7 @@
       </div>
 
       <div class="mt-[14px] rounded-[10px] bg-[var(--pr-color-primary-50)] px-[12px] py-[10px] text-[12px] text-[var(--pr-text-secondary)]">
-        You can leave this page. We'll notify you here and by email.
+        You can leave this page. We'll notify you here in the platform when it finishes.
       </div>
     </div>
   } @else if (viewState() === 'still_running') {
@@ -93,7 +93,7 @@
       <div class="min-w-0">
         <div aria-live="polite" data-testid="ai-panel-announce">
           <h3 class="m-0 text-[15px] font-bold text-[var(--pr-text-heading)]">Still running</h3>
-          <p class="m-0 mt-[4px] text-[12.5px] text-[var(--pr-text-secondary)]">We'll notify you here and by email when it finishes.</p>
+          <p class="m-0 mt-[4px] text-[12.5px] text-[var(--pr-text-secondary)]">We'll notify you here in the platform when it finishes.</p>
         </div>
         <div class="mt-[8px] flex flex-wrap items-center gap-[8px_16px] text-[12px] text-[var(--pr-text-secondary)]">
           <span class="font-mono text-[15px] font-bold tabular-nums text-[var(--pr-text-heading)]" data-testid="ai-panel-elapsed">{{ elapsedLabel() }}</span>
