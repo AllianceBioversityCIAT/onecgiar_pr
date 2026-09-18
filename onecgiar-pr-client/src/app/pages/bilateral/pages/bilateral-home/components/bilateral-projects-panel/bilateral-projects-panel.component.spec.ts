@@ -585,24 +585,16 @@ describe('BilateralProjectsPanelComponent', () => {
       expect(thirdCell.textContent).toContain('0');
     });
 
-    it('navigates to results tab with project filter and phase when card is clicked', () => {
+    it('opens manual create drawer when card is clicked', () => {
       component.setViewMode('grid');
       fixture.detectChanges();
 
       const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
+      expect(manualCreateFlow.drawerOpen()).toBe(false);
       cards[0].click();
 
-      expect(mockRouter.navigate).toHaveBeenCalledWith(
-        ['/bilateral', 'Bioversity', 'results'],
-        {
-          queryParams: {
-            project: 101,
-            role: 'all',
-            source: 'all',
-            phase: 36
-          }
-        }
-      );
+      expect(manualCreateFlow.drawerOpen()).toBe(true);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
 
     it('navigates to results tab when clicking results badge in card header', () => {
@@ -645,12 +637,24 @@ describe('BilateralProjectsPanelComponent', () => {
       );
     });
 
-    it('navigates to results tab when clicking row or results cell in table view', () => {
+    it('opens manual create drawer when row is clicked in table view', () => {
       component.setViewMode('list');
       fixture.detectChanges();
 
       const row = fixture.nativeElement.querySelector('.bpp_table_row') as HTMLElement;
+      expect(manualCreateFlow.drawerOpen()).toBe(false);
       row.click();
+
+      expect(manualCreateFlow.drawerOpen()).toBe(true);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('navigates to results tab when clicking results badge in table view', () => {
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const badge = fixture.nativeElement.querySelector('.bpp_td_results .bpp_results_badge') as HTMLElement;
+      badge.click();
 
       expect(mockRouter.navigate).toHaveBeenCalledWith(
         ['/bilateral', 'Bioversity', 'results'],
@@ -665,7 +669,7 @@ describe('BilateralProjectsPanelComponent', () => {
       );
     });
 
-    it('stops event propagation when Create result button is clicked so navigation is not triggered', () => {
+    it('opens manual create drawer when Create result button is clicked', () => {
       component.setViewMode('grid');
       fixture.detectChanges();
 

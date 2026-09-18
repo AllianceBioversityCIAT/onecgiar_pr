@@ -290,7 +290,7 @@ export class BilateralProjectsPanelComponent {
     this.selectedMultiProgramOnly.set(false);
   }
 
-  openManualCreate(project: BilateralProject, event: Event): void {
+  openManualCreate(project: BilateralProject, event?: Event): void {
     event?.stopPropagation?.();
     this.manualCreateFlow.beginFromProject(project, event);
   }

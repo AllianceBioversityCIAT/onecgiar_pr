@@ -225,7 +225,7 @@
                 [class.bpp_card--highlight]="isHighlighted(project)"
                 [attr.data-project-id]="project.id"
                 [attr.data-guide]="$first ? 'bilateral-project-card' : null"
-                (click)="navigateToProjectResults(project, $event)">
+                (click)="openManualCreate(project, $event)">
                 <div class="bpp_card_content">
                   <!-- Card Header -->
                   <div class="bpp_card_head">
@@ -325,7 +325,7 @@
                     [class.bpp_card--highlight]="isHighlighted(project)"
                     [attr.data-project-id]="project.id"
                     [attr.data-guide]="$first ? 'bilateral-project-card' : null"
-                    (click)="navigateToProjectResults(project, $event)">
+                    (click)="openManualCreate(project, $event)">
                     <td class="bpp_td_code">
                       <span class="bpp_code_pill">{{ project.shortName }}</span>
                     </td>
