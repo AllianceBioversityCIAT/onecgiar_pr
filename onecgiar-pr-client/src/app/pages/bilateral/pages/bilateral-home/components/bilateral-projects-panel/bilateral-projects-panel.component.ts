@@ -1,11 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { take } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
 import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
 import { BilateralManualCreateDrawerHostComponent } from '../../../../components/bilateral-manual-create-drawer-host/bilateral-manual-create-drawer-host.component';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
+import { BilateralCenterResult } from '../../../../services/bilateral-center-result.interface';
+import { BilateralOverviewService } from '../../../../services/bilateral-overview.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { Phases } from '../../../../../../shared/interfaces/phasesList.interface';
 // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15, COV-DD-9) — reads the shared
 // query-param contract; this tab only READS (`program`, `project`, `multi`), it never writes back.
 import { parseBilateralQueryParams } from '../../../../bilateral-query-params';
@@ -48,11 +54,50 @@ function getInitialViewMode(): 'grid' | 'list' {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BilateralProjectsPanelComponent {
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly phasesService = inject(PhasesService);
+  private readonly overviewService = inject(BilateralOverviewService);
   private readonly bilateralApiService = inject(BilateralApiService);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   readonly ctx = inject(BilateralContextService);
   readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
+
+  readonly phases = signal<Phases[]>([]);
+
+  readonly effectiveVersionId = computed<number | null>(() => {
+    const fromUrl = this.activatedRoute.snapshot.queryParamMap.get('phase');
+    if (fromUrl) {
+      const n = Number(fromUrl);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    const fromCtx = this.ctx.selectedVersionId();
+    if (fromCtx !== null) return fromCtx;
+    const phases = this.phases();
+    if (!phases.length) return null;
+    const open = phases.find(p => p.status) ?? phases[0];
+    return open ? Number(open.id) : null;
+  });
+
+  readonly results = computed<BilateralCenterResult[]>(() => {
+    const centerKey = this.ctx.centerId() || this.ctx.centerAcronym();
+    const versionId = this.effectiveVersionId();
+    if (!centerKey || versionId === null) return [];
+    return this.overviewService.resultsData(centerKey, versionId)() ?? [];
+  });
+
+  readonly resultsCountByProject = computed<Map<number, number>>(() => {
+    const rows = this.results();
+    const countMap = new Map<number, number>();
+    for (const row of rows) {
+      const pId = row.project_id != null ? Number(row.project_id) : null;
+      if (pId !== null && Number.isSafeInteger(pId) && pId > 0) {
+        countMap.set(pId, (countMap.get(pId) ?? 0) + 1);
+      }
+    }
+    return countMap;
+  });
 
   readonly projects = signal<BilateralProject[]>([]);
   readonly loading = signal(false);
@@ -151,6 +196,24 @@ export class BilateralProjectsPanelComponent {
   });
 
   constructor() {
+    const reportingPhases = this.phasesService.phases?.reporting;
+    if (reportingPhases?.length) {
+      this.phases.set(reportingPhases);
+    } else if (this.phasesService.getPhasesObservable) {
+      this.phasesService
+        .getPhasesObservable()
+        .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+        .subscribe(loaded => this.phases.set(loaded ?? []));
+    }
+
+    effect(() => {
+      const centerKey = this.ctx.centerId() || this.ctx.centerAcronym();
+      const versionId = this.effectiveVersionId();
+      if (centerKey && versionId !== null) {
+        this.overviewService.load(centerKey, versionId);
+      }
+    });
+
     effect(() => {
       const centerId = this.ctx.centerId() || this.ctx.centerAcronym();
       if (!centerId) return;
@@ -175,6 +238,29 @@ export class BilateralProjectsPanelComponent {
         });
       });
     });
+  }
+
+  getProjectResultsCount(project: BilateralProject): number {
+    return this.resultsCountByProject().get(Number(project.id)) ?? 0;
+  }
+
+  navigateToProjectResults(project: BilateralProject, event?: Event): void {
+    event?.stopPropagation();
+    const acronym = this.ctx.centerAcronym();
+    if (!acronym) return;
+
+    const queryParams: Record<string, unknown> = {
+      project: project.id,
+      role: 'all',
+      source: 'all',
+    };
+
+    const versionId = this.effectiveVersionId();
+    if (versionId !== null) {
+      queryParams['phase'] = versionId;
+    }
+
+    void this.router.navigate(['/bilateral', acronym, 'results'], { queryParams });
   }
 
   setProgramFilter(program: string): void {
@@ -205,6 +291,7 @@ export class BilateralProjectsPanelComponent {
   }
 
   openManualCreate(project: BilateralProject, event: Event): void {
+    event?.stopPropagation?.();
     this.manualCreateFlow.beginFromProject(project, event);
   }
 

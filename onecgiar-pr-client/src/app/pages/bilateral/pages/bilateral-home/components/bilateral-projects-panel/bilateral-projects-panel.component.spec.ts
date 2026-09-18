@@ -1,13 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { BilateralProjectsPanelComponent } from './bilateral-projects-panel.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
 import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
+import { BilateralCenterResult } from '../../../../services/bilateral-center-result.interface';
 
 describe('BilateralProjectsPanelComponent', () => {
   let component: BilateralProjectsPanelComponent;
@@ -16,6 +17,7 @@ describe('BilateralProjectsPanelComponent', () => {
   let ctx: BilateralContextService;
   let manualCreateFlow: BilateralManualCreateFlowService;
   let activatedRouteStub: { snapshot: { queryParamMap: ParamMap } };
+  let mockRouter: { navigate: jest.Mock };
 
   const mockProjects: BilateralProject[] = [
     {
@@ -54,9 +56,50 @@ describe('BilateralProjectsPanelComponent', () => {
     }
   ];
 
+  const mockCenterResults: BilateralCenterResult[] = [
+    {
+      result_id: 2001,
+      result_code: 'R-2001',
+      title: 'Result 1 for B-A1080',
+      project_id: 101,
+      center_id: 1,
+      status_name: 'Editing',
+      result_type_id: 1,
+      result_type_name: 'Policy Change',
+      version_id: 36,
+    } as BilateralCenterResult,
+    {
+      result_id: 2002,
+      result_code: 'R-2002',
+      title: 'Result 2 for B-A1080',
+      project_id: 101,
+      center_id: 1,
+      status_name: 'Submitted',
+      result_type_id: 2,
+      result_type_name: 'Innovation Use',
+      version_id: 36,
+    } as BilateralCenterResult,
+    {
+      result_id: 2003,
+      result_code: 'R-2003',
+      title: 'Result for B-A1368',
+      project_id: 102,
+      center_id: 1,
+      status_name: 'Quality Assessed',
+      result_type_id: 1,
+      result_type_name: 'Policy Change',
+      version_id: 36,
+    } as BilateralCenterResult,
+  ];
+
   beforeEach(async () => {
+    mockRouter = {
+      navigate: jest.fn().mockResolvedValue(true)
+    };
+
     const mockApiService = {
-      GET_bilateralProjects: jest.fn().mockReturnValue(of({ response: mockProjects }))
+      GET_bilateralProjects: jest.fn().mockReturnValue(of({ response: mockProjects })),
+      GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: mockCenterResults }))
     };
 
     activatedRouteStub = { snapshot: { queryParamMap: convertToParamMap({}) } };
@@ -66,6 +109,7 @@ describe('BilateralProjectsPanelComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: Router, useValue: mockRouter },
         { provide: BilateralApiService, useValue: mockApiService },
         { provide: ActivatedRoute, useValue: activatedRouteStub }
       ]
@@ -481,6 +525,157 @@ describe('BilateralProjectsPanelComponent', () => {
       const createBtnEl = fixture.nativeElement.querySelector('button[data-guide="bilateral-project-create-result"]');
       expect(createBtnEl).toBeTruthy();
       expect(createBtnEl.textContent).toContain('Create result');
+    });
+  });
+
+  describe('Project cards reported results count & navigation to results tab', () => {
+    beforeEach(() => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+    });
+
+    it('should compute resultsCountByProject correctly from overviewService results', () => {
+      expect(component.getProjectResultsCount(mockProjects[0])).toBe(2);
+      expect(component.getProjectResultsCount(mockProjects[1])).toBe(1);
+      expect(component.getProjectResultsCount(mockProjects[2])).toBe(0);
+    });
+
+    it('should render results count badge on cards in grid view', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
+      expect(cards.length).toBe(3);
+
+      const firstBadge = cards[0].querySelector('.bpp_results_badge');
+      expect(firstBadge).toBeTruthy();
+      expect(firstBadge.textContent).toContain('2 results');
+      expect(firstBadge.classList.contains('bpp_results_badge--has-results')).toBe(true);
+
+      const thirdBadge = cards[2].querySelector('.bpp_results_badge');
+      expect(thirdBadge).toBeTruthy();
+      expect(thirdBadge.textContent).toContain('0 results');
+      expect(thirdBadge.classList.contains('bpp_results_badge--has-results')).toBe(false);
+    });
+
+    it('should render results footer link in card footer in grid view', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
+      const firstLink = cards[0].querySelector('.bpp_results_footer_link');
+      expect(firstLink).toBeTruthy();
+      expect(firstLink.textContent).toContain('View results (2)');
+    });
+
+    it('should render results column and badge in table view', () => {
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const rows = fixture.nativeElement.querySelectorAll('.bpp_table_row');
+      expect(rows.length).toBe(3);
+
+      const firstCell = rows[0].querySelector('.bpp_td_results');
+      expect(firstCell).toBeTruthy();
+      expect(firstCell.textContent).toContain('2');
+
+      const thirdCell = rows[2].querySelector('.bpp_td_results');
+      expect(thirdCell).toBeTruthy();
+      expect(thirdCell.textContent).toContain('0');
+    });
+
+    it('navigates to results tab with project filter and phase when card is clicked', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
+      cards[0].click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        {
+          queryParams: {
+            project: 101,
+            role: 'all',
+            source: 'all',
+            phase: 36
+          }
+        }
+      );
+    });
+
+    it('navigates to results tab when clicking results badge in card header', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const badge = fixture.nativeElement.querySelector('.bpp_card .bpp_results_badge') as HTMLElement;
+      badge.click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        {
+          queryParams: {
+            project: 101,
+            role: 'all',
+            source: 'all',
+            phase: 36
+          }
+        }
+      );
+    });
+
+    it('navigates to results tab when clicking results footer link', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector('.bpp_card .bpp_results_footer_link') as HTMLElement;
+      link.click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        {
+          queryParams: {
+            project: 101,
+            role: 'all',
+            source: 'all',
+            phase: 36
+          }
+        }
+      );
+    });
+
+    it('navigates to results tab when clicking row or results cell in table view', () => {
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const row = fixture.nativeElement.querySelector('.bpp_table_row') as HTMLElement;
+      row.click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        {
+          queryParams: {
+            project: 101,
+            role: 'all',
+            source: 'all',
+            phase: 36
+          }
+        }
+      );
+    });
+
+    it('stops event propagation when Create result button is clicked so navigation is not triggered', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const createBtn = fixture.nativeElement.querySelector('[data-testid="bilateral-project-create-result"]') as HTMLElement;
+      mockRouter.navigate.mockClear();
+
+      createBtn.click();
+
+      expect(manualCreateFlow.drawerOpen()).toBe(true);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
   });
 });
