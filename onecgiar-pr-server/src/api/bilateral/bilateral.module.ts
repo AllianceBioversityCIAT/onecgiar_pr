@@ -93,6 +93,8 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
 import { SummaryModule } from '../results/summary/summary.module';
 import { InnovationUseMdsValidator } from './services/innovation-use-mds-validator.service';
 import { BilateralHandoffService } from './services/bilateral-handoff.service';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 
 @Module({
   imports: [
@@ -252,6 +254,8 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
       provide: INDICATOR_DESCRIPTION_RESOLVER,
       useExisting: TocIndicatorDescriptionResolver,
     },
+    HandlersError,
+    AoWBilateralRepository,
   ],
   // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
   // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second

@@ -1,24 +1,34 @@
-:host ::ng-deep app-pr-dialog .bilateral-quality-assessment-dialog {
-  width: min(680px, calc(100vw - 32px));
-  border-top: 4px solid var(--pr-color-primary-300);
-  // `.pr-dialog` scrolls as a whole by default, which on a five-section verdict scrolled the footer
-  // — and with it Submit for review — off the screen. Hold the chrome still and scroll the list.
-  overflow: hidden;
-  animation: bqa-dialog-enter 180ms cubic-bezier(.2, .8, .2, 1) both;
+:host {
+  display: contents;
 }
 
-:host ::ng-deep app-pr-dialog .bilateral-quality-assessment-dialog .pr-dialog__body {
-  display: flex;
-  flex-direction: column;
-  // A flex child will not shrink below its content without this, so the body would never scroll.
-  min-height: 0;
-  // The header and the body bring their own padding; the wrapper's would double it.
-  padding: 0;
-  overflow: hidden;
+// Enter transform (BIL-QAD-R-10, design.md §6.6): horizontal slide + scrim fade, ease-out,
+// 180–220ms. Collapsed entirely under prefers-reduced-motion below. `@if` unmounts the element
+// immediately on close, so — same as this component's own precedent above and the codebase's
+// other pr-dialog entrances — only the ENTER transition is animated; there is no exit transition.
+.bqa-panel {
+  animation: bqa-panel-enter 200ms cubic-bezier(.2, .8, .2, 1) both;
 }
 
-:host ::ng-deep app-pr-dialog .pr-dialog-mask:has(.bilateral-quality-assessment-dialog) {
-  animation: bqa-mask-enter 160ms ease-out both;
+.bqa-scrim {
+  animation: bqa-scrim-enter 160ms ease-out both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes bqa-panel-enter {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes bqa-scrim-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bqa-panel, .bqa-scrim {
+    animation: none;
+  }
 }
 
 .bqa-dialog__header { align-items: center; gap: 12px; padding: 20px 24px 16px; border-bottom: 1px solid var(--pr-border); }
@@ -27,7 +37,17 @@
 .bqa-dialog__icon[data-verdict='amber'] { background: #fef3c7; color: #b45309; }
 .bqa-dialog__icon[data-verdict='red'] { background: #fee2e2; color: #b91c1c; }
 .bqa-dialog__icon[data-verdict='grey'] { background: #e5e7eb; color: #4b5563; }
-.bqa-dialog__body { display: grid; align-content: start; gap: 20px; padding: 20px 24px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+// Inset padding moved to Tailwind utilities on the host element (BIL-QAD-T-2, DD-12).
+// Left here: display/overflow mechanics (shell plumbing owned by T-1, not this task's re-treatment)
+// AND gap. gap can't move to a `gap-*` utility: this element also carries the globally-styled
+// `.pr-dialog-body` class (src/styles.scss ~L906, `gap: 12px`, unlayered/unencapsulated), which is
+// emitted after Tailwind's utility layer and wins at equal specificity — a `gap-[24px]` utility here
+// is silently outranked and the row gap reverts to 12px. This encapsulated selector carries Angular's
+// `[_ngcontent]` attribute, so it out-specifies the global rule and is the only reliable home for any
+// property `.pr-dialog-body` also declares (display, flex-direction, gap) — min-height/overflow-y/
+// overscroll-behavior aren't declared globally, so those stay utility-safe, but they're kept here too
+// rather than split across two homes for the same box.
+.bqa-dialog__body { display: grid; align-content: start; gap: 24px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 // ── Running state ─────────────────────────────────────────────────────────────
 .bqa-dialog__running { display: grid; gap: 12px; }
 .bqa-dialog__running-lead { margin: 0; color: var(--pr-text); font-size: 14px; line-height: 1.45; }
@@ -36,13 +56,15 @@
 .bqa-dialog__progress { overflow: hidden; height: 4px; border-radius: 999px; background: var(--pr-color-primary-50); }
 .bqa-dialog__progress span { display: block; width: 40%; height: 100%; border-radius: 999px; background: var(--pr-color-primary-300); animation: bqa-progress 1.4s ease-in-out infinite; }
 .bqa-dialog__legend { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
-.bqa-dialog__legend li { display: grid; grid-template-columns: 62px 1fr; align-items: baseline; gap: 10px; color: var(--pr-text-secondary); font-size: 13px; line-height: 1.45; }
+.bqa-dialog__legend li { display: grid; grid-template-columns: 76px 1fr; align-items: baseline; gap: 10px; color: var(--pr-text-secondary); font-size: 13px; line-height: 1.45; }
 .bqa-dialog__legend .bqa-dialog__pill { justify-self: start; }
 .bqa-dialog__tip { display: flex; align-items: flex-start; gap: 8px; margin: 0; border-radius: 8px; padding: 10px 12px; background: var(--pr-surface-app); color: var(--pr-text-secondary); font-size: 12px; line-height: 1.5; }
 .bqa-dialog__tip .material-icons-round { flex: none; font-size: 16px; color: var(--pr-color-primary-400); }
 
 .bqa-dialog__stale { margin: 0; border-left: 3px solid #d97706; border-radius: 6px; padding: 9px 11px; background: #fffbeb; color: #92400e; font-size: 13px; line-height: 1.45; }
-.bqa-dialog__overall { border: 1px solid var(--pr-border); border-left: 4px solid #6b7280; border-radius: 10px; padding: 14px 16px; }
+// Radius/padding moved to Tailwind on the element (BIL-QAD-T-2, DD-12); left here: the border and
+// its DD-6 verdict-colour left-accent, reused verbatim from the parent spec's shipped tokens.
+.bqa-dialog__overall { border: 1px solid var(--pr-border); border-left: 4px solid #6b7280; }
 .bqa-dialog__overall[data-verdict='green'] { border-left-color: #16a34a; }
 .bqa-dialog__overall[data-verdict='amber'] { border-left-color: #d97706; }
 .bqa-dialog__overall[data-verdict='red'] { border-left-color: #dc2626; }
@@ -50,9 +72,9 @@
 .bqa-dialog__eyebrow, .bqa-dialog__score { color: var(--pr-text-secondary); font-size: 12px; }
 .bqa-dialog__eyebrow { display: block; margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .bqa-dialog__overall p, .bqa-dialog__section p, .bqa-dialog__evidence { margin: 7px 0 0; color: var(--pr-text-secondary); font-size: 13px; line-height: 1.45; }
-.bqa-dialog__group h3 { margin: 0 0 10px; color: var(--pr-text); font-size: 13px; }
-.bqa-dialog__sections { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.bqa-dialog__section { border: 1px solid var(--pr-border); border-left: 3px solid #6b7280; border-radius: 8px; padding: 12px 14px; }
+// Group eyebrow (BIL-QAD-T-2, design.md §6.5) and the sections grid gap are now Tailwind
+// utilities on the elements themselves — see the component template.
+.bqa-dialog__section { border: 1px solid var(--pr-border); border-left: 3px solid #6b7280; }
 .bqa-dialog__section[data-verdict='green'] { border-left-color: #16a34a; }
 .bqa-dialog__section[data-verdict='amber'] { border-left-color: #d97706; }
 .bqa-dialog__section[data-verdict='red'] { border-left-color: #dc2626; }
@@ -62,7 +84,9 @@
 
 // The verdict word carried the meaning on its own before, in the same weight as the section name.
 // A pill reads as a state at a glance and keeps the row scannable down the list.
-.bqa-dialog__pill { flex: none; border-radius: 999px; padding: 2px 9px; background: #e5e7eb; color: #374151; font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: capitalize; }
+// Padding/font-size moved to Tailwind on the element (BIL-QAD-T-2, DD-12); background/color are
+// the DD-6 verdict colour tokens and are reused verbatim, not re-picked, so they stay here.
+.bqa-dialog__pill { flex: none; border-radius: 999px; background: #e5e7eb; color: #374151; font-weight: 700; letter-spacing: .02em; text-transform: capitalize; }
 .bqa-dialog__pill[data-verdict='green'] { background: #dcfce7; color: #15803d; }
 .bqa-dialog__pill[data-verdict='amber'] { background: #fef3c7; color: #b45309; }
 .bqa-dialog__pill[data-verdict='red'] { background: #fee2e2; color: #b91c1c; }
@@ -104,13 +128,17 @@
 .bqa-dialog__feedback-block ul { margin: 0; padding-left: 18px; }
 .bqa-dialog__feedback-block li + li { margin-top: 5px; }
 .bqa-dialog__evidence span { flex: none; text-transform: capitalize; font-weight: 700; }
-.bqa-dialog__evidence { display: flex; gap: 8px; border: 1px solid var(--pr-border); border-radius: 8px; padding: 10px 12px; }
-:host ::ng-deep app-pr-dialog .bilateral-quality-assessment-dialog .pr-dialog-footer { margin: 0; padding: 16px 24px 20px; border-top: 1px solid var(--pr-border); }
+// Radius/padding moved to Tailwind on the element (BIL-QAD-T-2, DD-12).
+.bqa-dialog__evidence { display: flex; gap: 8px; border: 1px solid var(--pr-border); }
+// Was `::ng-deep app-pr-dialog .bilateral-quality-assessment-dialog .pr-dialog-footer` — the footer
+// is a direct child of this component's own `<aside>` now, so the plain scoped selector reaches it
+// without piercing anything (BIL-QAD-AC-9: no override targets `app-pr-dialog` any more).
+// These paddings stay SCSS, not `p-*`/`pt-*` utilities: the globally-styled `.pr-dialog-footer`
+// (src/styles.scss ~L1008) sets `padding-top: 4px` unlayered/unencapsulated, which would beat a
+// Tailwind padding utility on this element by the exact same specificity mechanism that broke the
+// body's gap above — a future Tailwind-first cleanup must not repeat that here.
+.pr-dialog-footer { margin: 0; padding: 16px 24px 20px; border-top: 1px solid var(--pr-border); }
 @media (max-width: 560px) { .bqa-dialog__header, .bqa-dialog__body { padding-left: 16px; padding-right: 16px; } }
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes bqa-dialog-enter { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
-  @keyframes bqa-mask-enter { from { opacity: 0; } to { opacity: 1; } }
-}
 
 // Hard UI rule 6. The disclosure still works — it just arrives at its end state immediately.
 @media (prefers-reduced-motion: no-preference) {
