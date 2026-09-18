@@ -90,3 +90,11 @@ The Implementer declared a `Not Done`: the **manual browser check** in the task'
 Reviewer's assessment of the substitution: the new DOM test covers the *first* clause ("answer No → nothing renders below the question") and does it more reliably than a human eye. It does **not** cover the remaining two — "answer Yes → level/node/indicator/contribution/pathway behave as before" and "tick the P/A checkbox → question hides" — nor anything layout-shaped, since jsdom measures nothing (a leftover empty `.st-field` gap would pass silently). The browser pass is now a narrow confirmation rather than the sole evidence.
 
 **Not committed.** Held pending the manual check and the user's decision at the gate.
+
+#### Gate decisions (user, 2026-09-18)
+
+| Decision | Outcome |
+|---|---|
+| Manual browser check | **User performs it locally.** Task stays `[~]` until they confirm; the `[x]` flip and the confirmation are recorded here afterwards |
+| Commit | Approved on `JuanGuzman-io/akili-quick` (branch re-verified immediately before). Commit `ba86226ca` — code + spec + this log. `package-lock.json` left untouched (pre-existing, unrelated modification) |
+| ADVISORY 1 (`loadTocState` without `catch`) | **Recorded only.** No follow-up spec opened; it is raised as a ticket if it ever bites |
