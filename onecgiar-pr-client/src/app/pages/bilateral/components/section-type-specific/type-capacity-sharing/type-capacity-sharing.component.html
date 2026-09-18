@@ -73,6 +73,25 @@
     (ngModelChange)="onCapdevTermId1Change()">
   </app-pr-radio-button>
 
+  <!-- P2-3771: the long-term sub-category belongs HERE, immediately under Length of training, not
+       inside the full-metadata block where it sat below the unrelated attendance question — a user
+       following the documented path picked "Long-term" and never saw it (AC5/AC6). Mirrors the W1/W2
+       cap-dev-info layout. `label` is what frames it inside a field card (P2-3385: without it the
+       control renders loose), and `[required]` MUST stay false — the parent selection already
+       satisfies the server's `valid_text(capdev_term_id)`, so flipping it would make the section
+       impossible to complete. -->
+  @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
+    <app-pr-radio-button
+      label="Degree"
+      [options]="capdevsSubTerms"
+      optionLabel="name"
+      optionValue="capdev_term_id"
+      [required]="false"
+      [(ngModel)]="capdevTermId2"
+      (ngModelChange)="onCapdevTermId2Change()">
+    </app-pr-radio-button>
+  }
+
   <app-pr-radio-button
     label="Delivery Method"
     [description]="deliveryMethodDesc"
@@ -107,17 +126,6 @@
         [(ngModel)]="body.is_attending_for_organization"
         (ngModelChange)="onAttendanceChange()">
       </app-pr-radio-button>
-
-      @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
-        <app-pr-radio-button
-          [options]="capdevsSubTerms"
-          optionLabel="name"
-          optionValue="capdev_term_id"
-          [required]="false"
-          [(ngModel)]="capdevTermId2"
-          (ngModelChange)="onCapdevTermId2Change()">
-        </app-pr-radio-button>
-      }
 
       @if (body.is_attending_for_organization) {
         <app-pr-multi-select
