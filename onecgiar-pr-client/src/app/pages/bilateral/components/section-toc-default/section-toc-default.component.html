@@ -112,7 +112,7 @@
 
   <hr class="border-0 border-t border-slate-100 my-0" />
 
-  <!-- Leave-as-is Question & YES/NO Toggle Group (BIL-TOC-R-2, BIL-TOC-R-3, BIL-TOC-R-10) -->
+  <!-- Leave-as-is Question & Keep/Customize Toggle Group (BIL-TOC-R-2, BIL-TOC-R-3, BIL-TOC-R-10) -->
   <div class="flex flex-col gap-2 p-4" data-testid="toc-leave-as-is-section">
     <div class="flex items-center gap-3 flex-wrap">
       <label id="toc-leave-as-is-label" class="text-[16px] font-semibold text-slate-900 leading-snug cursor-default">
@@ -124,35 +124,36 @@
            aria-labelledby="toc-leave-as-is-label"
            aria-label="Do you want to leave the ToC linkage as is or go further and select more details?"
            data-testid="toc-default-toggle-group">
+        <!-- User-requested rewording (2026-09-18): "Yes/No" answered nothing on its own — a
+             reader had to re-read the question to know which option kept the default. The
+             button text now IS the answer. -->
         <button
           type="button"
           hlmBtn
           [variant]="isYesSelected() ? 'brand' : 'outline'"
-          class="h-[40px]! px-5! text-[14px]! font-semibold"
+          class="h-[40px]! px-4! text-[14px]! font-semibold gap-1.5"
           [disabled]="readOnly()"
           [attr.disabled]="readOnly() ? '' : null"
           [attr.aria-pressed]="isYesSelected()"
           data-testid="toc-default-yes-btn"
           (click)="onSelectMode('project_default')">
-          Yes
+          <ng-icon name="lucideCheck" class="text-[14px]" />
+          Keep default linkage
         </button>
         <button
           type="button"
           hlmBtn
           [variant]="isNoSelected() ? 'brand' : 'outline'"
-          class="h-[40px]! px-5! text-[14px]! font-semibold"
+          class="h-[40px]! px-4! text-[14px]! font-semibold gap-1.5"
           [disabled]="readOnly()"
           [attr.disabled]="readOnly() ? '' : null"
           [attr.aria-pressed]="isNoSelected()"
           data-testid="toc-default-no-btn"
           (click)="onSelectMode('custom')">
-          No
+          <ng-icon name="lucideArrowLeftRight" class="text-[14px]" />
+          Customize linkage
         </button>
       </div>
     </div>
-
-    <p class="text-[13px] leading-relaxed text-slate-600 m-0">
-      Choose <strong>Yes</strong> to keep the project's default linkage, or <strong>No</strong> to select custom levels, indicators, and contribution targets.
-    </p>
   </div>
 </div>

@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBuilding2, lucideChevronDown, lucideChevronUp, lucideCircleCheck, lucideShapes, lucideTarget, lucideWorkflow } from '@ng-icons/lucide';
+import { lucideArrowLeftRight, lucideBuilding2, lucideCheck, lucideChevronDown, lucideChevronUp, lucideCircleCheck, lucideShapes, lucideTarget, lucideWorkflow } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan/button';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 
@@ -46,7 +46,19 @@ export interface ProjectDefaultStat {
   selector: 'app-section-toc-default',
   standalone: true,
   imports: [CommonModule, HlmButton, NgIcon],
-  providers: [provideIcons({ lucideWorkflow, lucideCircleCheck, lucideShapes, lucideTarget, lucideBuilding2, lucideChevronDown, lucideChevronUp })],
+  providers: [
+    provideIcons({
+      lucideWorkflow,
+      lucideCircleCheck,
+      lucideShapes,
+      lucideTarget,
+      lucideBuilding2,
+      lucideChevronDown,
+      lucideChevronUp,
+      lucideCheck,
+      lucideArrowLeftRight,
+    }),
+  ],
   templateUrl: './section-toc-default.component.html',
   styleUrl: './section-toc-default.component.scss',
 })
