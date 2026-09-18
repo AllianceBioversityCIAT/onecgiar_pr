@@ -4,8 +4,8 @@
 |---|---|
 | Spec path | `bugfix/innovation-developer-prefill-stale-lead-contact` |
 | Depth | Lite · Bug Mode |
-| Budget | 3 tasks · ~40 LOC · 1 review round |
-| Order | `T-1` → (`T-2` ∥ `T-3`) — `T-1` must be red before either fix lands |
+| Budget | 3 tasks · ~40 LOC · 1 review round · **exceeded — pivot on 2026-09-18, see `execution.md`** |
+| Order | `T-1` → `T-4` (`T-2` + `T-3` merged by the pivot; both superseded) |
 
 Shared verification, from `onecgiar-pr-client/`:
 
@@ -22,7 +22,7 @@ npx ng build --configuration development   # the only thing that typechecks temp
 - **Status:** `[x]`
 - **Size:** S · **Depends on:** none
 - **Requirements:** `R-1` (both scenarios), `R-2` (both scenarios + the reload clause), `R-3` (scenario + both clauses)
-- **Design:** `DD-1`, `DD-2`, `DD-3`
+- **Design:** `DD-1` (executed against it; later superseded by `DD-4`), `DD-2`, `DD-3`
 - **Skills:** `tdd`, `angular-developer`
 
 ### Scope
@@ -53,72 +53,69 @@ Add specs to the two existing files. No production code in this task.
 
 ### Input that would make this check fail
 
-Reverting either fix must turn case 1 red again. If the suite stays green with `DD-1` reverted, the test is reading the signal it set itself rather than the path through General information.
+Reverting either fix must turn **the suite** red again — each fix has its own case:
+
+| Revert | Turns red |
+|---|---|
+| the publish (`DD-4`, was `DD-1`) | case 6 |
+| the re-evaluable prefill (`DD-2`) | case 1 |
+
+**Corrected 2026-09-18.** This clause previously read *"reverting **either** fix must turn **case 1** red"*. That is unsatisfiable: case 1 lives in `type-innovation-dev.component.spec.ts`, where the creation service is a stub and General information is never mounted, so case 1 is structurally sensitive to `DD-2` only. Case 6 is the one that covers the publish. Left as written, an auditor reverting the publish would find case 1 green and wrongly conclude the test was broken.
 
 ---
 
-## `BIL-IDP-T-2` — Publish the settled contact
+## ~~`BIL-IDP-T-2` — Publish the settled contact~~ — SUPERSEDED
 
-- **Status:** `[ ]`
-- **Size:** XS · **Depends on:** `T-1`
-- **Requirements:** `R-1`, `R-3` (+ both clauses), `N-1`, `N-3`
-- **Design:** `DD-1`
-- **Skills:** `angular-developer`
-
-### Scope
-
-In `section-general-info.component.ts` → `updateGeneralInfoMdsFields()`, **below** `if (!this.leadContactHydrated) return;`, publish the current name and directory match to `creationService.resultLeadContact` / `resultLeadContactData`.
-
-Nothing above the guard. Nothing in `buildPayload()` or any save path (`N-1`).
-
-### Done
-
-- `T-1` cases 5 and 6 pass.
-- `updateFieldsBatch` call count is unchanged from before the task (`R-3` clause 2) — the publish is a signal write, not a new save.
-
-### What disqualifies this evidence
-
-A passing suite with the publish placed **above** the hydration guard: cases 5 and 6 could both pass while the stored contact is destroyed on a path the specs do not mount. Verify by reading the placement, not only the green.
-
-### Input that would make this check fail
-
-Moving the publish above the guard must turn case 5 red. If it does not, case 5 is not asserting the pre-hydration window.
+- **Status:** `[~]` → **superseded by `T-4`** (pivot, 2026-09-18)
+- Implemented once, rejected at review: publishing on every contact commit re-entered the hydration effect and blanked the Lead contact field mid-typing. Reverted. Full record in `execution.md` → `## Pivot Record: BIL-IDP-T-2`.
 
 ---
 
-## `BIL-IDP-T-3` — Make the prefill re-evaluable
+## ~~`BIL-IDP-T-3` — Make the prefill re-evaluable~~ — FOLDED INTO `T-4`
 
-- **Status:** `[ ]`
+- **Status:** `[ ]` → **folded into `T-4`** (pivot, 2026-09-18)
+- The prefill change itself is unchanged from `DD-2`; it merged into `T-4` because the pivot coupled it to the publish trigger.
+
+---
+
+## `BIL-IDP-T-4` — Publish on save, and make the prefill re-evaluable
+
+- **Status:** `[x]` — code PASS 2026-09-18; the `D5` manual browser check remains open at the HITL pause
 - **Size:** S · **Depends on:** `T-1`
-- **Requirements:** `R-1` (+ the type-7 clause), `R-2` (+ the reload clause), `N-1`, `N-2`
-- **Design:** `DD-2`, `DD-3`
+- **Requirements:** `R-1` (both scenarios + the type-7 clause), `R-2` (both scenarios + the reload clause), `R-3` (+ both clauses), `N-1`, `N-2`, `N-3`
+- **Design:** `DD-4` (supersedes `DD-1`), `DD-2`, `DD-3`
 - **Skills:** `angular-developer`
 
 ### Scope
 
-In `type-innovation-dev.component.ts`, replace the single `loadData()`-path call to `applyInnovationDevelopersPrefill()` with an `effect()` reading `loaded()` and `creationService.resultLeadContact()`.
+1. **Revert `DD-1`.** `updateGeneralInfoMdsFields()` returns to its state at `9297c4eab` — no publish inside it.
+2. **Publish on save.** In `section-general-info.component.ts`, subscribe to `autoSave.manualSave$`, filter on `'general-info'`, and publish the settled contact to `creationService.resultLeadContact` (`?? ''`) / `resultLeadContactData`. Follow the existing pattern in `section-evidence.component.ts:142-146`, including the `ngOnDestroy` unsubscribe.
+3. **Re-evaluable prefill** (`DD-2`, unchanged). In `type-innovation-dev.component.ts`, replace the single `loadData()`-path call to `applyInnovationDevelopersPrefill()` with an `effect()` reading `loaded()` and `resultLeadContact()`. **The body of `applyInnovationDevelopersPrefill()` does not change** — the key-presence guard is the whole correctness argument (`DD-3`).
+4. **Retarget `T-1` case 6** to assert on the save event rather than on the commit, and add the case named below.
+5. Update `type-innovation-dev/CLAUDE.md` and re-stamp `Verified:` in the same commit.
 
-**The body of `applyInnovationDevelopersPrefill()` does not change** — the key-presence guard is the whole correctness argument (`DD-3`).
-
-Then update `type-innovation-dev/CLAUDE.md`: add the in-session behaviour under "Innovation developers — removed, then restored", and re-stamp `Verified:` in the same commit.
-
-`updateMds()` is untouched (`N-2`).
+`updateMds()` and `buildPayload()` untouched (`N-1`, `N-2`).
 
 ### Done
 
-- `T-1` cases 1–4 pass.
+- `T-1` cases 1–5 pass; case 6 passes against the save event.
+- **New case — the mid-typing null is never published:** hydrate a stored free-text contact (`'Arouna Dissa'`, data `null`), `detectChanges()`, simulate the keystroke commit (`body.lead_contact_person = null; body.lead_contact_person_data = null`), `detectChanges()`, assert `resultLeadContact()` is **still** `'Arouna Dissa'`. This is the regression gate for the defect that caused the pivot.
+- `npx ng build --configuration development` passes (the only template type-check; carried forward as an advisory from `T-1`).
 - `CLAUDE.md` updated and re-stamped.
-- **Manual browser check** (the `D5` substitute, done at the HITL pause, not by the implementer alone): open an Innovation development bilateral result with both fields empty, set the Lead contact person, scroll to Type-specific and confirm the textarea **repaints** with the value. Record the outcome in `execution.md`.
+- **Manual browser check** (`D5` substitute, at the HITL pause): open an Innovation development bilateral result with both fields empty, set the Lead contact person, press **Save draft**, and confirm the Innovation Developer textarea repaints. Record the outcome in `execution.md`.
 
 ### The type-7 clause
 
-`R-1`'s "MUST apply only to `result_type_id` 7" is **structural, not asserted**: `app-type-innovation-dev` is mounted by `@case (7)` in `section-type-specific.component.html:21`, so the effect cannot exist for another type. Recorded as covered-by-construction. What would falsify it: mounting this component from anywhere other than that `@switch`. Grep for a second usage before closing the task.
+Unchanged from `T-3`: `app-type-innovation-dev` is mounted by `@case (7)` in `section-type-specific.component.html:21`, so the effect cannot exist for another type. Covered by construction. Grep for a second usage before closing.
 
 ### What disqualifies this evidence
 
 - Green specs with a still-blank textarea in the browser. The specs prove the model; only the manual check proves the render (`D5`).
-- If the effect writes when `loaded()` is `null`/`false`, the GET will overwrite it and the test may still pass by luck of ordering. Read the guard; do not infer it from green.
+- A publish that still fires from `updateGeneralInfoMdsFields()`. Read the placement — the whole pivot is that it does not.
+- If the effect writes when `loaded()` is `null`/`false`, the GET will overwrite it and the test may pass by luck of ordering. Read the guard.
 
 ### Input that would make this check fail
 
-Deleting the `'innovation_developers' in this.body` guard must turn case 4 red. If case 4 stays green without the guard, it is not exercising the stored-`null` shape and the `T-12` regression is unguarded.
+- Deleting the `'innovation_developers' in this.body` guard must turn `T-1` case 4 red.
+- Moving the publish back into `updateGeneralInfoMdsFields()` must turn the new mid-typing case red.
+- Reverting the `effect()` must turn case 1 red.

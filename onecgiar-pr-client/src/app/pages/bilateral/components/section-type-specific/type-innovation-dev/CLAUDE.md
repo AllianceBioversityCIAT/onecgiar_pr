@@ -1,6 +1,6 @@
 # type-innovation-dev (bilateral)
 
-**Verified:** 2026-09-16 · spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` rework — key-presence prefill gate; prior: 2026-09-16 (field restored) · 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
+**Verified:** 2026-09-18 · spec `bugfix/innovation-developer-prefill-stale-lead-contact` `BIL-IDP-T-4` — prefill is re-evaluable, fed by General information's save; prior: 2026-09-16 spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` rework — key-presence prefill gate; prior: 2026-09-16 (field restored) · 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
 Section 5 of the bilateral form: Innovation Development, rendered by
@@ -24,7 +24,11 @@ metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investm
   (`results-innovations-dev.repository.ts:274-312`) omits the key when no row exists and includes it —
   `null` or a string — once one does, so presence is a sound discriminator (no server change). A
   genuinely-`null` legacy row now stays editable instead of being prefilled — the trade `AC-18`
-  mandates. Prefill still runs once, on load; clearing the field and saving never re-fills it.
+  mandates. Prefill still runs once, on load (**superseded below**); clearing the field and saving never re-fills it.
+- **2026-09-18 (`bugfix/innovation-developer-prefill-stale-lead-contact`, `BIL-IDP-T-4`):** re-evaluable
+  now (constructor `effect()` on `loaded()`+`resultLeadContact()`; guard unchanged), fed by General
+  info's **save** (`manualSave$('general-info')`), not a live commit — commit-time publishing was
+  tried and rejected (re-entered the hydration effect, blanked the field mid-keystroke); see `execution.md`.
 
 ## Contract
 - Endpoint: **the same one pooled funding's summary uses** —
@@ -47,11 +51,8 @@ metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investm
   forever and **disables Submit** (`overallStatus() === 'complete'`). Same fall P2-3348, Capacity
   Sharing and Policy Change already took.
 - ⚠️ **The Short title 10-word ceiling (P2-3340) is still alive even though the field is no longer MDS.**
-  It is reported as an `invalid` item **only when exceeded**, with `filled: true`, so it blocks Submit
-  with a reason without touching the percentage. Listing it unconditionally breaks AC9.
-- ⚠️ **`SCALING_STUDIES_READINESS_THRESHOLD = 17` is a CLARISA ID, not the number 6.** Readiness
-  level 6 is row 17 of `readinessLevelsList`. Pooled funding says the same thing a different way with
-  `getReadinessLevelIndex() >= 6`, which is the array index.
+  It is reported as an `invalid` item **only when exceeded**, with `filled: true`, so it blocks Submit with a reason without touching the percentage. Listing it unconditionally breaks AC9.
+- ⚠️ **`SCALING_STUDIES_READINESS_THRESHOLD = 17` is a CLARISA ID, not the number 6.** Readiness level 6 is row 17 of `readinessLevelsList`. Pooled funding says the same thing a different way with `getReadinessLevelIndex() >= 6`, which is the array index.
 - ⚠️ **The scaling-studies question is gated on the PHASE YEAR, and `isP25()` must never be used for it.**
   `showScalingStudies` returns false from `ReportingDesignYear.InnovationDevFormReduction` (2026) on, at
   **every** readiness level (P2-3265); below that it falls back to `isReadyForScalingStudies`. A
@@ -63,9 +64,7 @@ metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investm
   (`shared/interceptors/general-interceptor.service.ts:81-83`), leaving `body` at `{}` with no warning —
   the first keystroke would then autosave `null` over stored data. `null` blocks too: the GET takes
   240-620 ms on prtest against an 800 ms debounce. New write paths MUST go through `queueTypeSave()`.
-- ⚠️ **A failed load shows `app-alert-status status="error"` and disables Save**, rendered on `=== false`
-  only (`!loaded()` would flash it while merely in flight), OUTSIDE the note/button row (P2-3327 AC2,
-  test-pinned).
+- ⚠️ **A failed load shows `app-alert-status status="error"` and disables Save**, rendered on `=== false` only (`!loaded()` would flash it while merely in flight), OUTSIDE the note/button row (P2-3327 AC2, test-pinned).
 - ⚠️ **`reference_materials` is OMITTED from the payload when `body` holds no array — never sent as `[]`**
   (P2-3557). The server de-activates every stored evidence of type 4 that any value other than
   `null`/`undefined` — `[]` included — leaves out (`results/summary/innovation_dev.service.ts:99-125`).

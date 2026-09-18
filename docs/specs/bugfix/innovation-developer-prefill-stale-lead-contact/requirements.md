@@ -33,9 +33,11 @@ The editor SHALL prefill **Innovation Developer** from the Lead contact person w
 
 - GIVEN a bilateral Innovation development result whose Lead contact person and Innovation Developer are both empty
 - AND the editor is open, so Type-specific details has already loaded once
-- WHEN the reporter sets a Lead contact person in General information
+- WHEN the reporter sets a Lead contact person in General information **and saves that section**
 - THEN Innovation Developer holds that contact, without reloading the page
 - AND IT MUST apply only to `result_type_id` 7
+
+> **Amended 2026-09-18 (pivot, `DD-4`).** The trigger is the **Save draft** of General information, not the keystroke that settles the contact. The first wording was written before the editor's persistence model was mapped: there is no autosave, and the footer's Save draft is what commits a section (vault: `W3/w3-bilateral-module/w3-bilateral-modelo-de-guardado-explicito.md`). Publishing on every settled commit was implemented, and it destroyed the reporter's in-progress entry — the mid-typing `(null, null)` state re-entered General information's hydration effect and blanked the field. "Without reloading the page" is unchanged and still binding: both sections are mounted from page load, so the value appears with no navigation.
 
 #### Scenario: Still works on the path that already worked
 
@@ -91,15 +93,15 @@ The classes this spec can actually produce, and what catches each:
 | D2 | Prefill overwrites a typed value | Jest, `BIL-IDP-R-2` scenario 1 |
 | D3 | A cleared field revives (the `T-12` class) | Jest, `BIL-IDP-R-2` scenario 2, asserting the stored-`null` shape |
 | D4 | The publish clobbers the loaded contact before hydration, or triggers a PATCH | Jest, `BIL-IDP-R-3`, asserting `updateFieldsBatch` call count |
-| D5 | **The model updates but the textarea does not repaint** | ⚠️ **No automated gate.** The specs assert `component.body.innovation_developers`, which proves the model, not the render. `app-pr-textarea` is a `custom-fields` component, and this repo validates those in Cypress CT because jsdom cannot lay them out (`onecgiar-pr-client/CLAUDE.md` §9) — a jest assertion on the rendered value would be a presence-assertion, not proof. **Substitute: a manual browser check at the HITL pause**, following `BIL-IDP-R-1` scenario 1. Risk is low but real: the component is `CheckAlways` and `body` is a plain object, so the late write relies on the ambient CD cycle, not on a signal read |
+| D5 | **The model updates but the textarea does not repaint** | ⚠️ **No automated gate.** The specs assert `component.body.innovation_developers`, which proves the model, not the render. `app-pr-textarea` is a `custom-fields` component, and this repo validates those in Cypress CT because jsdom cannot lay them out (`onecgiar-pr-client/CLAUDE.md` §9) — a jest assertion on the rendered value would be a presence-assertion, not proof. **Substitute: a manual browser check at the HITL pause**, following `BIL-IDP-R-1` scenario 1 — including pressing **Save draft** on General information, which is the trigger since the 2026-09-18 pivot (`DD-4`). Risk is low but real: the component is `CheckAlways` and `body` is a plain object, so the late write relies on the ambient CD cycle, not on a signal read |
 
 ## Requirement ID Index
 
 | ID | Title | Covered by |
 |---|---|---|
-| `BIL-IDP-R-1` | Prefill sees the contact just entered | `T-1`, `T-2`, `T-3` |
-| `BIL-IDP-R-2` | The reporter's own value always wins | `T-1`, `T-3` |
-| `BIL-IDP-R-3` | Publishing never destroys the stored contact | `T-1`, `T-2` |
-| `BIL-IDP-N-1` | No server change | `T-2`, `T-3` (scope limits) |
-| `BIL-IDP-N-2` | Stays optional / untracked | `T-3` |
-| `BIL-IDP-N-3` | Settled contact, not keystroke | `T-2` |
+| `BIL-IDP-R-1` | Prefill sees the contact just entered | `T-1`, `T-4` |
+| `BIL-IDP-R-2` | The reporter's own value always wins | `T-1`, `T-4` |
+| `BIL-IDP-R-3` | Publishing never destroys the stored contact | `T-1`, `T-4` (+ the mid-typing case added by the pivot) |
+| `BIL-IDP-N-1` | No server change | `T-4` (scope limits) |
+| `BIL-IDP-N-2` | Stays optional / untracked | `T-4` |
+| `BIL-IDP-N-3` | Settled contact, not keystroke | `T-4` — now satisfied by construction: the publish fires on the save event, not on a commit (`DD-4`) |
