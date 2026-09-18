@@ -226,8 +226,12 @@ describe('BilateralManualCreateFormComponent', () => {
       );
       expect(html.indexOf('[projectCode]="projectCode()"')).toBeGreaterThan(-1);
       expect(html.indexOf('[projectTitle]="projectTitle()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[projectSummary]="projectSummary()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[projectDescription]="projectDescription()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[leadCenterAcronym]="leadCenterAcronym()"')).toBeGreaterThan(-1);
       expect(html.indexOf('[programCode]="programCode()"')).toBeGreaterThan(-1);
       expect(html.indexOf('[programName]="programName()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[enableProjectRepositoryFilter]="true"')).toBeGreaterThan(-1);
     });
 
     it('requires synced handle for knowledge product type', () => {

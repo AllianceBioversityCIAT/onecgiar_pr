@@ -68,6 +68,28 @@ describe('BilateralManualCreateFlowService', () => {
     expect(service.drawerProjectTitle()).toBe('Project');
   });
 
+  it('derives drawer project subtitle from summary or description', () => {
+    service.beginFromProject({
+      ...singleSpProject,
+      summary: 'Climate adaptation training across partner countries',
+      description: 'Longer description text',
+    });
+
+    expect(service.drawerProjectSubtitle()).toBe('Climate adaptation training across partner countries');
+  });
+
+  it('forwards CLARISA summary, description, and lead center for KP project match', () => {
+    service.beginFromProject({
+      ...singleSpProject,
+      summary: 'Fertilize Right Vietnam',
+      description: 'Regional fertilize-right work',
+      leadCenter: { id: 1, name: 'IRRI', acronym: 'IRRI' }
+    });
+    expect(service.drawerProjectSummary()).toBe('Fertilize Right Vietnam');
+    expect(service.drawerProjectDescription()).toBe('Regional fertilize-right work');
+    expect(service.drawerLeadCenterAcronym()).toBe('IRRI');
+  });
+
   it('opens manual form directly when the wizard already chose manual', () => {
     service.openDrawerForManual();
     expect(service.drawerOpen()).toBe(true);

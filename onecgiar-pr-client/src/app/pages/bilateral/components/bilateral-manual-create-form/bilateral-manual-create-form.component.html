@@ -111,8 +111,12 @@
             [isAdmin]="isAdmin()"
             [projectCode]="projectCode()"
             [projectTitle]="projectTitle()"
+            [projectSummary]="projectSummary()"
+            [projectDescription]="projectDescription()"
+            [leadCenterAcronym]="leadCenterAcronym()"
             [programCode]="programCode()"
             [programName]="programName()"
+            [enableProjectRepositoryFilter]="true"
             (itemSelected)="onCgspaceItemSelected($event)"
             (switchToManual)="kpEntryMode.set('manual')">
           </app-kp-cgspace-browse>

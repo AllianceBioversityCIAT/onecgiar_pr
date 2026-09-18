@@ -2,6 +2,7 @@
   <app-bilateral-create-drawer
     [projectCode]="flow.drawerProjectCode()"
     [projectTitle]="flow.drawerProjectTitle()"
+    [projectSubtitle]="flow.drawerProjectSubtitle()"
     [programCode]="flow.drawerProgramCode()"
     [programName]="flow.drawerProgramName()"
     [restoreFocusTarget]="restoreFocusTarget()"
@@ -102,6 +103,9 @@
           [creating]="flow.isCreating()"
           [projectCode]="flow.drawerProjectCode()"
           [projectTitle]="flow.drawerProjectTitle()"
+          [projectSummary]="flow.drawerProjectSummary()"
+          [projectDescription]="flow.drawerProjectDescription()"
+          [leadCenterAcronym]="flow.drawerLeadCenterAcronym()"
           [programCode]="flow.drawerProgramCode()"
           [programName]="flow.drawerProgramName()"
           (create)="flow.submitCreate($event)" />
