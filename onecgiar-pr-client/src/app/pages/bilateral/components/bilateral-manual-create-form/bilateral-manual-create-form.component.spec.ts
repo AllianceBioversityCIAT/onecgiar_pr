@@ -220,6 +220,31 @@ describe('BilateralManualCreateFormComponent', () => {
       expect(fixture.debugElement.query(By.css('app-kp-cgspace-browse'))).toBeTruthy();
     });
 
+    it('prefers handleUrl over itemUrl when storing the synced KP link', fakeAsync(() => {
+      component.onLevelSelected(4);
+      component.onTypeSelected(6);
+      component.onCgspaceItemSelected({
+        uuid: 'b874412c-c6ba-4f68-b423-c8b785a2ad4e',
+        handle: '10568/128401',
+        handleUrl: 'https://hdl.handle.net/10568/128401',
+        itemUrl: 'https://cgspace.cgiar.org/items/b874412c-c6ba-4f68-b423-c8b785a2ad4e',
+        title: 'Browse title',
+        type: 'Article',
+        year: 2025,
+        authors: [],
+        affiliations: [],
+        countries: [],
+        doi: null,
+        uri: '',
+        repository: 'cgspace'
+      });
+      tick(500);
+      expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(
+        'https://hdl.handle.net/10568/128401'
+      );
+      expect(component.kpHandle()).toBe('https://hdl.handle.net/10568/128401');
+    }));
+
     it('populates title and handle after browse selection + MQAP sync', fakeAsync(() => {
       component.onLevelSelected(4);
       component.onTypeSelected(6);

@@ -590,9 +590,16 @@ export class ResultsKnowledgeProductsService {
     // Normalised once instead of guarding each use, which is how the third one got missed.
     const url = rawUrl ?? '';
     const hasQuery = url.indexOf('?');
-    const linkSplit = url
-      .slice(0, hasQuery != -1 ? hasQuery : url.length)
-      .split('/');
+    const normalized = url.slice(0, hasQuery != -1 ? hasQuery : url.length).trim();
+
+    // DSpace 7 item URLs from KP browse (`…/items/<uuid>`). The old last-two-segments rule turned
+    // these into `items/<uuid>`, which MQAP cannot resolve and broke bilateral `create-header` for
+    // Knowledge Products picked from CGSpace browse.
+    if (/^https?:\/\/[^/]+\/items\/[0-9a-fA-F-]{36}$/.test(normalized)) {
+      return normalized;
+    }
+
+    const linkSplit = normalized.split('/');
     return linkSplit.slice(linkSplit.length - 2).join('/');
   }
 

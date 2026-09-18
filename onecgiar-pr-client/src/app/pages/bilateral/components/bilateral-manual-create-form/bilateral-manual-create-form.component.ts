@@ -223,7 +223,9 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
   }
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    // Prefer hdl.handle.net link for create-header; itemUrl remains valid but needs server-side
+    // extractHandleIdentifier passthrough for DSpace `/items/<uuid>` URLs.
+    const url = item.handleUrl || item.itemUrl || item.handle;
     this.validatingKpHandle.set(true);
     this.kpEntryMode.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');
