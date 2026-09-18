@@ -320,6 +320,9 @@ describe('TypeCapacitySharingComponent', () => {
         capdev_term_id: 3,
         is_attending_for_organization: false,
       };
+      // P2-3771: the checklist reads the cascade, not `body`, so a Short-term answer is staged the
+      // same way the radio stages it.
+      component.capdevTermId1 = 3;
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'people-trained', label: 'Number of people trained', filled: true },
@@ -357,9 +360,13 @@ describe('TypeCapacitySharingComponent', () => {
         male_using: 2,
         non_binary_using: 1,
         capdev_delivery_method_id: 5,
-        capdev_term_id: 4,
+        capdev_term_id: 1,
         is_attending_for_organization: true,
       };
+      // P2-3771: "fully answered" now means the long-term degree is resolved too — the parent bucket
+      // on its own leaves the item unfilled, which is what this suite's sibling case proves.
+      component.capdevTermId1 = 4;
+      component.capdevTermId2 = 1;
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'people-trained', label: 'Number of people trained', filled: true },
@@ -771,13 +778,69 @@ describe('TypeCapacitySharingComponent', () => {
       expect(degreeIdx).toBeLessThan(fullMetadataIdx);
     });
 
-    it('is still gated on the long-term buckets and stays optional', () => {
+    it('is still gated on the long-term buckets', () => {
       const html = template();
       expect(html).toMatch(
         /@if \(capdevTermId1 === 4 \|\| capdevTermId1 === 1 \|\| capdevTermId1 === 2\) \{[\s\S]{0,400}label="Degree"/
       );
+    });
+  });
+  /**
+   * P2-3771 — QA (María Camila, 18-Sep-2026) confirmed the long-term degree is mandatory. The
+   * checklist is the gate that matters: Submit is disabled while the section is incomplete. Controls
+   * included on purpose — Short-term must stay complete on its own, and a stored degree (ids 1 / 2,
+   * which hydrate as parent 4 + sub) must still read as answered.
+   */
+  describe('P2-3771 - the long-term degree is mandatory', () => {
+    it('leaves Length of training unanswered while Long-term has no degree', () => {
+      build();
+      component.capdevTermId1 = 4;
+      component.onCapdevTermId1Change();
+
+      expect(component.lengthOfTrainingFilled).toBe(false);
+      const [, fields] = mdsTracker.setSectionFields.mock.calls.at(-1);
+      expect(fields).toContainEqual(expect.objectContaining({ key: 'length-of-training', filled: false }));
+    });
+
+    it('counts it as answered once a degree is picked', () => {
+      build();
+      component.capdevTermId1 = 4;
+      component.onCapdevTermId1Change();
+      component.capdevTermId2 = 1;
+      component.onCapdevTermId2Change();
+
+      expect(component.lengthOfTrainingFilled).toBe(true);
+      const [, fields] = mdsTracker.setSectionFields.mock.calls.at(-1);
+      expect(fields).toContainEqual(expect.objectContaining({ key: 'length-of-training', filled: true }));
+    });
+
+    it('control: Short-term answers on its own', () => {
+      build();
+      component.capdevTermId1 = 3;
+      component.onCapdevTermId1Change();
+
+      expect(component.lengthOfTrainingFilled).toBe(true);
+    });
+
+    it('control: a stored degree read back from the server counts as answered', () => {
+      bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { capdev_term_id: 2 } }));
+      build();
+
+      expect(component.capdevTermId1).toBe(4);
+      expect(component.capdevTermId2).toBe(2);
+      expect(component.lengthOfTrainingFilled).toBe(true);
+    });
+
+    it('control: nothing picked at all is still unanswered', () => {
+      build();
+      expect(component.lengthOfTrainingFilled).toBe(false);
+    });
+
+    it('marks the Degree radio as required in the template', () => {
+      const html = readFileSync(join(__dirname, 'type-capacity-sharing.component.html'), 'utf8');
       const degreeIdx = html.indexOf('label="Degree"');
-      expect(html.slice(degreeIdx, degreeIdx + 400)).toContain('[required]="false"');
+      expect(degreeIdx).toBeGreaterThan(-1);
+      expect(html.slice(degreeIdx, degreeIdx + 400)).toContain('[required]="true"');
     });
   });
 });
