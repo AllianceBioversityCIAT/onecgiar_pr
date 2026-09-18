@@ -153,26 +153,28 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     return tab.toc_level_id !== null && tab.toc_result_id !== null;
   }
 
+  // MHL-R-3 / MHL-AC-5: the cap must reflect the count of typology-filtered candidates
+  // already returned by the server (`outcomeList`/`outputList`/`eoiList`), not the count
+  // of distinct Areas of Work (`work_package_id`). Grouping by AoW was an accidental
+  // "one HLO per AoW" ceiling with no product justification (see design.md MHL-DD-2) —
+  // no new client-side typology check is added here, the candidate lists are already
+  // typology-pure for the planned/non-bilateral path.
   getMaxNumberOfTabs(plannedResult: boolean, resultLevelId: number | string): number {
-    let uniqueWorkPackageIds = new Set<number | string>();
-
     if (resultLevelId === 1) {
       if (plannedResult) {
-        uniqueWorkPackageIds = new Set(this.outputList.map(item => item.work_package_id));
-      } else {
-        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
+        return this.outputList.length;
       }
-    } else if (resultLevelId === 2) {
-      if (plannedResult) {
-        const uniqueWorkPackageIdsOutcome = new Set(this.outcomeList.map(item => item.work_package_id));
-        const uniqueWorkPackageIdsEOI = new Set(this.eoiList.map(item => item.toc_result_id));
-        uniqueWorkPackageIds = new Set([...uniqueWorkPackageIdsOutcome, ...uniqueWorkPackageIdsEOI]);
-      } else {
-        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
-      }
+      return this.eoiList.length;
     }
 
-    return uniqueWorkPackageIds.size;
+    if (resultLevelId === 2) {
+      if (plannedResult) {
+        return this.outcomeList.length + this.eoiList.length;
+      }
+      return this.eoiList.length;
+    }
+
+    return 0;
   }
 
   onActiveTab(tab: any) {
@@ -259,7 +261,7 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.toc_result_id !== tab?.toc_result_id);
 
     this.outputList = this.outputList.map(item => {
-      const found = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
+      const found = this.selectedOptionsOutput.find(option => option.toc_result_id === item.toc_result_id);
       item.disabledd = !!found;
       return item;
     });
@@ -268,7 +270,7 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   deleteSelectedOptionOutCome(tab: any) {
     this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.toc_result_id !== tab?.toc_result_id);
     this.outcomeList = this.outcomeList.map(item => {
-      const found = this.selectedOptionsOutcome.find(option => option.work_package_id === item.work_package_id);
+      const found = this.selectedOptionsOutcome.find(option => option.toc_result_id === item.toc_result_id);
       item.disabledd = !!found;
       return item;
     });

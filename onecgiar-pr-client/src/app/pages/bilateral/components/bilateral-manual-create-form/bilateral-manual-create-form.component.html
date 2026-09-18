@@ -1,4 +1,4 @@
-<div class="bmcf flex h-full min-h-0 flex-col">
+<div class="bmcf relative flex h-full min-h-0 flex-col">
   <div class="bmcf-scroll flex-1 overflow-y-auto px-4 pb-6 pt-4 pr-light-scroll min-[640px]:px-6">
   <div id="bmcf-level-section">
     <app-bilateral-result-level-selector
@@ -109,6 +109,14 @@
             [showBusyOverlay]="false"
             [phaseYear]="phaseYear()"
             [isAdmin]="isAdmin()"
+            [projectCode]="projectCode()"
+            [projectTitle]="projectTitle()"
+            [projectSummary]="projectSummary()"
+            [projectDescription]="projectDescription()"
+            [leadCenterAcronym]="leadCenterAcronym()"
+            [programCode]="programCode()"
+            [programName]="programName()"
+            [enableProjectRepositoryFilter]="true"
             (itemSelected)="onCgspaceItemSelected($event)"
             (switchToManual)="kpEntryMode.set('manual')">
           </app-kp-cgspace-browse>
@@ -137,12 +145,16 @@
             <span class="material-icons-round text-[16px]" aria-hidden="true">sync</span>
           </button>
         </div>
-        @if (kpHandleError().status) {
-          <p class="m-0 mt-1.5 text-[12.5px] text-[var(--pr-color-red-300)]" data-testid="kp-handle-error">
-            {{ kpHandleError().message }}
-          </p>
-        }
       </div>
+
+      @if (kpHandleError().status) {
+        <p
+          class="m-0 mt-3 text-[12.5px] text-[var(--pr-color-red-300)]"
+          role="alert"
+          data-testid="kp-handle-error">
+          {{ kpHandleError().message }}
+        </p>
+      }
     </div>
   }
 
@@ -261,7 +273,24 @@
       [attr.aria-busy]="creating()"
       (click)="onCreateClick()"
       data-testid="bilateral-manual-create-submit">
+      @if (creating()) {
+        <span class="material-icons-round bmcf-create-btn-spinner text-[18px]" aria-hidden="true">progress_activity</span>
+      }
       {{ creating() ? copy.form.creating : copy.form.createAndContinue }}
     </button>
   </div>
+
+  @if (creating()) {
+    <div
+      class="bmcf-creating-overlay"
+      role="status"
+      aria-live="polite"
+      [attr.aria-label]="copy.form.creating"
+      data-testid="bmcf-creating-overlay">
+      <div class="bmcf-creating-overlay-card">
+        <div class="bmcf-creating-overlay-spinner" aria-hidden="true"></div>
+        <span class="bmcf-creating-overlay-text">{{ copy.form.creating }}</span>
+      </div>
+    </div>
+  }
 </div>

@@ -124,7 +124,8 @@ describe('AiProcessingPanelComponent', () => {
     mount(FIXTURE_PROCESSING_EXTRACTING, 'still_running');
 
     expect(text()).toContain('Still running');
-    expect(text()).toContain("notify you here and by email");
+    expect(text()).toContain('notify you here in the platform');
+    expect(text().toLowerCase()).not.toContain('email');
     expect(text().toLowerCase()).not.toContain('timed out');
     expect(text().toLowerCase()).not.toContain('failed');
   });

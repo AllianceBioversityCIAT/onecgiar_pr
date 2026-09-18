@@ -4,8 +4,8 @@ import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
-import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { of, throwError, Subject } from 'rxjs';
 
 import { SectionGeneralInfoComponent } from './section-general-info.component';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
@@ -44,7 +44,8 @@ describe('SectionGeneralInfoComponent', () => {
       updateField: jest.fn(),
       updateFieldsBatch: jest.fn(),
       notifyBlur: jest.fn(),
-      fieldStatus: signal<Record<string, string>>({})
+      fieldStatus: signal<Record<string, string>>({}),
+      manualSave$: new Subject<string>()
     };
     mdsTracker = { setSectionFields: jest.fn() };
     creation = {
@@ -322,6 +323,98 @@ describe('SectionGeneralInfoComponent', () => {
         lead_contact_person_data: null
       });
     });
+
+    /**
+     * `BIL-IDP-T-1` (`docs/specs/bugfix/innovation-developer-prefill-stale-lead-contact`) — regression
+     * test, red before the fix.
+     *
+     * Case 5 (`R-3`): the constructor's mount effect (title/description/`leadContactBody` ->
+     * `updateGeneralInfoMdsFields()`) runs BEFORE the hydration effect below it has copied the loaded
+     * contact into `leadContactBody` — see the guard's own comment
+     * ("saving unconditionally PATCHed lead_contact_person: null over the stored one every time the
+     * editor was opened"). This still holds under `BIL-IDP-T-4`'s pivot: `updateGeneralInfoMdsFields()`
+     * never publishes to `creationService` at all any more (that moved to the `manualSave$` handler in
+     * `T-4`, see case 6 below), so nothing in this method can clobber the stored contact on mount
+     * regardless of hydration order.
+     */
+    it('does not clobber the stored contact through a mount-order write, and does not save on mount (R-3)', () => {
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      build();
+
+      // Before the first change detection, no effect (mount or hydration) has run at all.
+      expect(creation.resultLeadContact()).toBe('Jane Doe');
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+
+      // After the full mount flush: hydration has run, and must not have clobbered the value on the
+      // way there, and must not have produced a spurious save.
+      fixture.detectChanges();
+      expect(creation.resultLeadContact()).toBe('Jane Doe');
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Case 6 (`R-1`), retargeted by the `T-4` pivot: `DD-1` (publish inside
+     * `updateGeneralInfoMdsFields()`, i.e. on every settled contact commit) was implemented and
+     * rejected at review — it re-entered the hydration effect (`resultLeadContact`/
+     * `resultLeadContactData` are that effect's own dependencies) and rebuilt `leadContactBody` mid
+     * keystroke, blanking the Lead contact field on the reporter's first character. Full record:
+     * `execution.md` → "Pivot Record: BIL-IDP-T-2".
+     *
+     * `DD-4` publishes on the SAVE event instead: the settled contact is written to
+     * `creationService.resultLeadContact`/`resultLeadContactData` only when
+     * `autoSaveService.manualSave$` emits `'general-info'` — i.e. footer "Save draft" — never from a
+     * commit alone. Selecting a contact with no save must leave the signal untouched; emitting the
+     * save event must publish it.
+     */
+    it('publishes the settled contact to the shared signal on the manual save event, not on the commit alone (R-1)', () => {
+      build();
+      fixture.detectChanges();
+
+      const body = component.leadContactBody();
+      body.lead_contact_person = 'A. Rivera';
+      body.lead_contact_person_data = { display_name: 'A. Rivera', mail: 'a.rivera@cgiar.org', title: '' };
+
+      // The commit alone (no save yet) must not have published anything.
+      expect(creation.resultLeadContact()).toBe('');
+      expect(creation.resultLeadContactData()).toBeNull();
+
+      autoSave.manualSave$.next('general-info');
+
+      expect(creation.resultLeadContact()).toBe('A. Rivera');
+      expect(creation.resultLeadContactData()).toEqual({
+        display_name: 'A. Rivera',
+        mail: 'a.rivera@cgiar.org',
+        title: ''
+      });
+    });
+
+    /**
+     * `BIL-IDP-T-4` — the regression gate for the defect that caused the pivot (see case 6's comment).
+     * A stored FREE-TEXT contact (`lead_contact_person_data === null`) is the most common bilateral
+     * shape (every pre-`1751462633282` result, and every W3/Bilateral-API-reported one). The reporter
+     * typing into the field nulls BOTH payload keys on every keystroke
+     * (`lead-contact-person-field.component.ts` `onSearchInput()`), which — under the rejected `DD-1`
+     * placement — was a "settled contact" as far as `updateGeneralInfoMdsFields()` could tell, so it
+     * got published and blanked the field via the hydration effect. Publishing only on
+     * `manualSave$` means a mid-typing null is never even looked at until Save draft fires — and this
+     * case never fires it, so `resultLeadContact` must still hold the value the result loaded with.
+     */
+    it('does not publish a mid-typing null commit — only a manual save publishes (R-1, R-3)', () => {
+      creation.resultLeadContact.set('Arouna Dissa');
+      creation.resultLeadContactData.set(null);
+      build();
+      fixture.detectChanges();
+
+      // Simulate the keystroke commit `onSearchInput()` makes on every character: both keys nulled.
+      const body = component.leadContactBody();
+      body.lead_contact_person = null;
+      body.lead_contact_person_data = null;
+      fixture.detectChanges();
+
+      expect(creation.resultLeadContact()).toBe('Arouna Dissa');
+      expect(creation.resultLeadContactData()).toBeNull();
+    });
   });
 
   // ── UserSearchService reset (app-wide singleton — must not leak state) ──
@@ -493,6 +586,29 @@ describe('SectionGeneralInfoComponent', () => {
         expect.objectContaining({ gender_impact_area_ids: [10, 11] })
       );
     });
+
+    // P2-3767 — QA (result #9432, CIP, Other Output) picked "(1) Significant" and got no sub-scores.
+    // Bilateral opens them from Significant (level 2) upwards; W1/W2 keeps Principal-only in its own
+    // template. The levels are the `gender-tag-levels/all` ids: 1 Not targeted, 2 Significant,
+    // 3 Principal.
+    describe('sub-score visibility (P2-3767)', () => {
+      it('opens the sub-scores for Significant (2) and for Principal (3)', () => {
+        build();
+        component.onDacTagChange('gender', 2);
+        expect(component.showsSubScores('gender')).toBe(true);
+
+        component.onDacTagChange('gender', 3);
+        expect(component.showsSubScores('gender')).toBe(true);
+      });
+
+      it('keeps them closed for Not targeted (1) and while the area is unanswered', () => {
+        build();
+        expect(component.showsSubScores('gender')).toBe(false);
+
+        component.onDacTagChange('gender', 1);
+        expect(component.showsSubScores('gender')).toBe(false);
+      });
+    });
   });
 
   // ── show-all toggle ──────────────────────────────────────────────────
@@ -593,6 +709,107 @@ describe('SectionGeneralInfoComponent', () => {
       expect(() => component.toggleShowAll()).not.toThrow();
       getSpy.mockRestore();
       setSpy.mockRestore();
+    });
+  });
+
+  // ── the real markup ──────────────────────────────────────────────────
+  // Everything above builds with `.overrideTemplate('<div></div>')`, so a DOM assertion there passes
+  // vacuously. P2-3768 (the copy) and P2-3767 (which levels open the sub-scores) are rules that live
+  // in the template, so they are asserted against the real markup here. The child components are
+  // dropped (`imports: []` + `NO_ERRORS_SCHEMA`) so `@if`/`@for` and the literal copy render without
+  // pulling every custom field, tooltip and dialog into the test.
+  describe('rendered markup', () => {
+    const buildReal = async () => {
+      // Signals the shared mock does not need while the template is stubbed out, but the real
+      // markup reads: the change-type strip, the read-only gate and the innovation note.
+      Object.assign(creation, {
+        isAiGenerated: signal(false),
+        isEditableByCenterUser: signal(true),
+        currentResultId: signal(9432),
+        resultTypeId: signal(3),
+        resultLevelId: signal(1)
+      });
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [SectionGeneralInfoComponent],
+        providers: [
+          { provide: BilateralAutoSaveService, useValue: autoSave },
+          { provide: BilateralMdsTrackerService, useValue: mdsTracker },
+          { provide: BilateralCreationService, useValue: creation },
+          { provide: UserSearchService, useValue: userSearch },
+          { provide: HttpClient, useValue: http },
+          { provide: ActivatedRoute, useValue: route }
+        ]
+      })
+        .overrideComponent(SectionGeneralInfoComponent, { set: { imports: [], schemas: [NO_ERRORS_SCHEMA] } })
+        .compileComponents();
+      fixture = TestBed.createComponent(SectionGeneralInfoComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+      return component;
+    };
+
+    /** Collapses the template's line breaks and indentation, the way the browser paints it. */
+    const noteText = (): string => {
+      const spans: any[] = Array.from(fixture.nativeElement.querySelectorAll('span'));
+      const el = spans.find(s => s.textContent.includes('will be saved'));
+      return (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    };
+
+    // P2-3768 — with one field the note read "1 hidden fields have values and will be saved."
+    describe('hidden-fields note (P2-3768)', () => {
+      it('reads in the singular for exactly one hidden field', async () => {
+        await buildReal();
+        component.selectedDacLevels.set({ gender: 2 });
+        fixture.detectChanges();
+
+        expect(component.hiddenFieldsWithValues()).toBe(1);
+        expect(noteText()).toBe('1 hidden field has values and will be saved.');
+      });
+
+      it('stays plural from two hidden fields on', async () => {
+        await buildReal();
+        component.selectedDacLevels.set({ gender: 2, poverty: 3 });
+        fixture.detectChanges();
+
+        expect(component.hiddenFieldsWithValues()).toBe(2);
+        expect(noteText()).toBe('2 hidden fields have values and will be saved.');
+
+        component.selectedDacLevels.set({ gender: 2, poverty: 3, nutrition: 1 });
+        fixture.detectChanges();
+        expect(noteText()).toBe('3 hidden fields have values and will be saved.');
+      });
+    });
+
+    // P2-3767 — QA on prtest (result #9432, CIP, Other Output) picked "(1) Significant" and the
+    // sub-scores never appeared. The scores mock declares one active Gender component, "Score A".
+    describe('impact-area sub-scores (P2-3767)', () => {
+      const subScoreLabels = (): string[] =>
+        Array.from(fixture.nativeElement.querySelectorAll('.sgi-checkbox')).map((b: any) => b.textContent.trim());
+
+      it('renders them when the area is scored Significant (2)', async () => {
+        // Setting the loaded levels is also what opens the full-metadata block, as in the app.
+        creation.resultDacLevels.set({ gender: 2 });
+        await buildReal();
+
+        expect(component.showAllFields()).toBe(true);
+        expect(subScoreLabels()).toEqual(['Score A']);
+      });
+
+      it('still renders them when the area is scored Principal (3)', async () => {
+        creation.resultDacLevels.set({ gender: 3 });
+        await buildReal();
+
+        expect(subScoreLabels()).toEqual(['Score A']);
+      });
+
+      it('renders none while the area is Not targeted (1)', async () => {
+        creation.resultDacLevels.set({ gender: 1 });
+        await buildReal();
+
+        expect(component.showAllFields()).toBe(true);
+        expect(subScoreLabels()).toEqual([]);
+      });
     });
   });
 });

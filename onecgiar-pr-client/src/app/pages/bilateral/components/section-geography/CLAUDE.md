@@ -1,12 +1,16 @@
 # section-geography (bilateral)
 
-**Verified:** 2026-08-28 · branch performance-refactor · a9e7ae7c4
+**Verified:** 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección; prior: 2026-08-28 · performance-refactor · a9e7ae7c4
 
 ## What it is
 Geographic Focus for the W3/Bilateral result form: the main geo scope (Card 1) and the
 "potential impact in other geographic areas" follow-up (Card 2), each with its own
 regions/countries pickers. The classic form's equivalent is
 `results/pages/result-detail/pages/rd-geographic-location/`.
+
+Una evaluación IA ámbar/roja muestra `app-bilateral-field-quality-flag` arriba de la sección,
+como destino de **Go to Geographic location** desde el diálogo. La guía no desaparece al editar;
+solo el submit exige volver a evaluar una fila stale.
 
 ## Contract
 - State: **two separate bodies**, both local signals — `geographicLocationBody` (main scope) and

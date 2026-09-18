@@ -63,9 +63,6 @@
 <app-share-request-modal></app-share-request-modal>
 <!-- Outcome of an AI-assisted bilateral job, wherever the user is when it lands (2026-09-07). -->
 <app-bilateral-ai-completion-dialog />
-@if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
-  <app-footer></app-footer>
-}
 <app-pr-dialog
   [(visible)]="this.footerSE.displayContactUs"
   [modal]="true"

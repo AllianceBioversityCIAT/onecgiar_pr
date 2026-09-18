@@ -32,6 +32,7 @@ function makeApiMock() {
   return {
     dataControlSE: { reportingCurrentPhase: { phaseYear: 2026 } },
     rolesSE: { isAdmin: false },
+    alertsFe: { show: jest.fn() },
     resultsSE: {
       GET_checkTitleUniqueness: jest.fn().mockReturnValue(of({ response: { isUnique: true } })),
       GET_depthSearch: jest.fn().mockReturnValue(of([])),
@@ -145,6 +146,19 @@ describe('BilateralManualCreateFormComponent', () => {
     expect(component.canCreate()).toBe(false);
   }));
 
+  it('shows a full-form creating overlay with spinner while create is in flight', fakeAsync(() => {
+    fillNonKpForm();
+    completeTitleGate();
+    fixture.componentRef.setInput('creating', true);
+    fixture.detectChanges();
+
+    const overlay = fixture.nativeElement.querySelector('[data-testid="bmcf-creating-overlay"]');
+    expect(overlay).toBeTruthy();
+    expect(overlay.getAttribute('role')).toBe('status');
+    expect(overlay.querySelector('.bmcf-creating-overlay-spinner')).toBeTruthy();
+    expect(overlay.textContent).toContain('Creating…');
+  }));
+
   describe('title uniqueness gate (BIL-MCD-T-4)', () => {
     it('blocks create when exact duplicate found', fakeAsync(() => {
       api.resultsSE.GET_checkTitleUniqueness.mockReturnValue(
@@ -206,6 +220,21 @@ describe('BilateralManualCreateFormComponent', () => {
       expect(html).toContain('app-kp-cgspace-browse');
     });
 
+    it('forwards project and program context to kp-cgspace-browse (KPPJ-R-9)', () => {
+      const html = readFileSync(
+        join(__dirname, 'bilateral-manual-create-form.component.html'),
+        'utf8'
+      );
+      expect(html.indexOf('[projectCode]="projectCode()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[projectTitle]="projectTitle()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[projectSummary]="projectSummary()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[projectDescription]="projectDescription()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[leadCenterAcronym]="leadCenterAcronym()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[programCode]="programCode()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[programName]="programName()"')).toBeGreaterThan(-1);
+      expect(html.indexOf('[enableProjectRepositoryFilter]="true"')).toBeGreaterThan(-1);
+    });
+
     it('requires synced handle for knowledge product type', () => {
       component.onLevelSelected(4);
       component.onTypeSelected(6);
@@ -219,6 +248,31 @@ describe('BilateralManualCreateFormComponent', () => {
       fixture.detectChanges();
       expect(fixture.debugElement.query(By.css('app-kp-cgspace-browse'))).toBeTruthy();
     });
+
+    it('prefers handleUrl over itemUrl when storing the synced KP link', fakeAsync(() => {
+      component.onLevelSelected(4);
+      component.onTypeSelected(6);
+      component.onCgspaceItemSelected({
+        uuid: 'b874412c-c6ba-4f68-b423-c8b785a2ad4e',
+        handle: '10568/128401',
+        handleUrl: 'https://hdl.handle.net/10568/128401',
+        itemUrl: 'https://cgspace.cgiar.org/items/b874412c-c6ba-4f68-b423-c8b785a2ad4e',
+        title: 'Browse title',
+        type: 'Article',
+        year: 2025,
+        authors: [],
+        affiliations: [],
+        countries: [],
+        doi: null,
+        uri: '',
+        repository: 'cgspace'
+      });
+      tick(500);
+      expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(
+        'https://hdl.handle.net/10568/128401'
+      );
+      expect(component.kpHandle()).toBe('https://hdl.handle.net/10568/128401');
+    }));
 
     it('populates title and handle after browse selection + MQAP sync', fakeAsync(() => {
       component.onLevelSelected(4);
@@ -253,6 +307,43 @@ describe('BilateralManualCreateFormComponent', () => {
       expect(component.kpHandleError().status).toBe(true);
       expect(api.resultsSE.GET_mqapValidation).not.toHaveBeenCalled();
     });
+
+    it('surfaces already-reported MQAP error when selecting a browse item', fakeAsync(() => {
+      const alreadyReportedMessage =
+        'This knowledge product has already been reported in the PRMS Reporting Tool.';
+      api.resultsSE.GET_mqapValidation.mockReturnValueOnce(
+        throwError(() => ({ error: { message: alreadyReportedMessage } }))
+      );
+
+      component.onLevelSelected(4);
+      component.onTypeSelected(6);
+      component.onCgspaceItemSelected({
+        uuid: 'u1',
+        handle: '10568/182780',
+        handleUrl: 'https://hdl.handle.net/10568/182780',
+        itemUrl: 'https://cgspace.cgiar.org/items/u1',
+        title: 'PRMS Operational Report',
+        type: 'Report',
+        year: 2026,
+        authors: [],
+        affiliations: [],
+        countries: [],
+        doi: null,
+        uri: '',
+        repository: 'cgspace'
+      });
+      tick();
+
+      expect(component.kpHandleSynced()).toBe(false);
+      expect(component.kpHandleError().message).toBe(alreadyReportedMessage);
+      expect(api.alertsFe.show).toHaveBeenCalledWith(
+        expect.objectContaining({ description: alreadyReportedMessage, status: 'error' })
+      );
+
+      fixture.detectChanges();
+      const errorEl = fixture.debugElement.query(By.css('[data-testid="kp-handle-error"]'));
+      expect(errorEl?.nativeElement?.textContent?.trim()).toBe(alreadyReportedMessage);
+    }));
 
     it('emits handle in create payload for synced KP', fakeAsync(() => {
       const spy = jest.spyOn(component.create, 'emit');

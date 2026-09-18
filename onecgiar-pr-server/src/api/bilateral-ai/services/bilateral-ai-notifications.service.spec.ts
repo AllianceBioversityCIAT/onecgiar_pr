@@ -100,7 +100,7 @@ describe('BilateralAiNotificationsService (unit)', () => {
     }) as BilateralAiJob;
 
   describe('notifyTerminal — results_ready', () => {
-    it('persists exactly one notification row (mix + duration) and mails when >= 2 min', async () => {
+    it('persists exactly one notification row (mix + duration) and does not send mail (AIN-AC-1)', async () => {
       const { service, stubs } = makeService();
       const job = baseJob({ result_count: 2 });
 
@@ -117,7 +117,7 @@ describe('BilateralAiNotificationsService (unit)', () => {
       expect(text).toContain('2 documents · 6 min');
       expect(text).toContain('/bilateral/AfricaRice/drafts');
 
-      expect(stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
+      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
     });
 
     it('writes the in-app row but skips the mail when the job ran under 2 minutes', async () => {
@@ -137,7 +137,7 @@ describe('BilateralAiNotificationsService (unit)', () => {
   });
 
   describe('notifyTerminal — late completion (APF-R-2 A)', () => {
-    it('marks the copy "arrived after all" when late=true', async () => {
+    it('marks the copy "arrived after all" when late=true and suppresses mail', async () => {
       const { service, stubs } = makeService();
       const job = baseJob({ result_count: 1 });
 
@@ -146,15 +146,19 @@ describe('BilateralAiNotificationsService (unit)', () => {
         late: true,
       });
 
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
       const text =
         stubs.notificationService.emitBilateralAiJobNotification.mock
           .calls[0][1];
       expect(text).toContain('arrived after all');
+      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
     });
   });
 
   describe('notifyTerminal — no_candidates', () => {
-    it('renders the "found no results" copy and mails via the NO_CANDIDATES template', async () => {
+    it('renders the "found no results" copy and suppresses outbound email (AIN-AC-2)', async () => {
       const { service, stubs } = makeService();
       const job = baseJob({ result_count: 0 });
 
@@ -162,18 +166,20 @@ describe('BilateralAiNotificationsService (unit)', () => {
         resultCount: 0,
       });
 
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
       const text =
         stubs.notificationService.emitBilateralAiJobNotification.mock
           .calls[0][1];
       expect(text).toContain('found no results');
-      expect(stubs.templateRepository.findOne).toHaveBeenCalledWith({
-        where: { name: 'email_template_bilateral_ai_no_candidates' },
-      });
+      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
+      expect(stubs.templateRepository.findOne).not.toHaveBeenCalled();
     });
   });
 
   describe('notifyTerminal — failed', () => {
-    it('names the cause in plain words and deep-links to the create step with the job id', async () => {
+    it('names the cause in plain words, deep-links to create step, and suppresses email (AIN-AC-3)', async () => {
       const { service, stubs } = makeService();
       const job = baseJob({
         status: BilateralAiJobStatus.FAILED,
@@ -183,14 +189,16 @@ describe('BilateralAiNotificationsService (unit)', () => {
 
       await service.notifyTerminal(job, 'failed');
 
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
       const text =
         stubs.notificationService.emitBilateralAiJobNotification.mock
           .calls[0][1];
       expect(text).toContain('failed for AfricaRice');
       expect(text).toContain('/bilateral/AfricaRice/create?job=job-1');
-      expect(stubs.templateRepository.findOne).toHaveBeenCalledWith({
-        where: { name: 'email_template_bilateral_ai_failed' },
-      });
+      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
+      expect(stubs.templateRepository.findOne).not.toHaveBeenCalled();
     });
   });
 
@@ -215,8 +223,8 @@ describe('BilateralAiNotificationsService (unit)', () => {
     });
   });
 
-  describe('mail template variables (design.md T-1 forward pointer)', () => {
-    it('binds the RESULTS_READY variables', async () => {
+  describe('mail template variables (deprecated sendTerminalMail helper)', () => {
+    it('binds the RESULTS_READY variables when sendTerminalMail is called directly', async () => {
       const { service, stubs } = makeService();
       stubs.templateRepository.findOne.mockResolvedValue({
         template:
@@ -224,9 +232,13 @@ describe('BilateralAiNotificationsService (unit)', () => {
       });
       const job = baseJob({ result_count: 2 });
 
-      await service.notifyTerminal(job, 'results_ready', {
+      await (service as any).sendTerminalMail(job, 'results_ready', {
+        centerAcronym: 'AfricaRice',
+        link: 'https://reporting.cgiar.org/bilateral/AfricaRice/drafts',
+        durationMinutes: 6,
         resultCount: 2,
         late: false,
+        mix: '2 documents',
       });
 
       const body =
@@ -242,9 +254,13 @@ describe('BilateralAiNotificationsService (unit)', () => {
       });
       const job = baseJob({ result_count: 1 });
 
-      await service.notifyTerminal(job, 'results_ready', {
+      await (service as any).sendTerminalMail(job, 'results_ready', {
+        centerAcronym: 'AfricaRice',
+        link: 'https://reporting.cgiar.org/bilateral/AfricaRice/drafts',
+        durationMinutes: 6,
         resultCount: 1,
         late: true,
+        mix: '1 document',
       });
 
       const body =
@@ -261,8 +277,13 @@ describe('BilateralAiNotificationsService (unit)', () => {
       });
       const job = baseJob({ result_count: 0 });
 
-      await service.notifyTerminal(job, 'no_candidates', {
+      await (service as any).sendTerminalMail(job, 'no_candidates', {
+        centerAcronym: 'AfricaRice',
+        link: 'https://reporting.cgiar.org/bilateral/AfricaRice/create?job=job-1',
+        durationMinutes: 6,
         resultCount: 0,
+        late: false,
+        mix: '2 documents',
       });
 
       const body =
@@ -282,7 +303,14 @@ describe('BilateralAiNotificationsService (unit)', () => {
         result_count: 0,
       });
 
-      await service.notifyTerminal(job, 'failed');
+      await (service as any).sendTerminalMail(job, 'failed', {
+        centerAcronym: 'AfricaRice',
+        link: 'https://reporting.cgiar.org/bilateral/AfricaRice/create?job=job-1',
+        durationMinutes: 6,
+        resultCount: 0,
+        late: false,
+        mix: 'no sources',
+      });
 
       const body =
         stubs.emailService.sendEmail.mock.calls[0][0].emailBody.message
@@ -334,21 +362,27 @@ describe('BilateralAiNotificationsService (unit)', () => {
       expect(text).not.toContain('300 min');
     });
 
-    it('drives the 2-minute mail rule off the DB value: 90 s sends no mail, 360 s does', async () => {
+    it('does not send mail regardless of duration (90 s or 360 s) (AIN-AC-1, AIN-AC-3)', async () => {
       const under = makeService(90);
       await under.service.notifyTerminal(baseJob(), 'results_ready', {
         resultCount: 1,
       });
       expect(under.stubs.emailService.sendEmail).not.toHaveBeenCalled();
+      expect(
+        under.stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
 
       const over = makeService(360);
       await over.service.notifyTerminal(baseJob(), 'results_ready', {
         resultCount: 1,
       });
-      expect(over.stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
+      expect(over.stubs.emailService.sendEmail).not.toHaveBeenCalled();
+      expect(
+        over.stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
     });
 
-    it('fails open when the duration query returns no row: the in-app row still goes out and the mail is sent', async () => {
+    it('fails open when the duration query returns no row: the in-app row still goes out and mail is suppressed', async () => {
       const { service, stubs } = makeService(null);
 
       await service.notifyTerminal(baseJob(), 'results_ready', {
@@ -359,7 +393,10 @@ describe('BilateralAiNotificationsService (unit)', () => {
         stubs.notificationService.emitBilateralAiJobNotification.mock
           .calls[0][1];
       expect(text).toContain('· 0 min');
-      expect(stubs.emailService.sendEmail).toHaveBeenCalledTimes(1);
+      expect(stubs.emailService.sendEmail).not.toHaveBeenCalled();
+      expect(
+        stubs.notificationService.emitBilateralAiJobNotification,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it('a failing duration query never suppresses the in-app notification', async () => {

@@ -1,10 +1,14 @@
 <div class="sgi-fields">
+  <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
+  <app-bilateral-field-quality-flag section="general_information" />
   @if (canChangeResultType()) {
     <div class="sgi-change-type">
       <div><strong>Need to correct the result classification?</strong><span>Changing type clears type-specific information and keeps your common W3 information.</span></div>
       <button type="button" (click)="openChangeResultType()">Change result type</button>
     </div>
   }
+  <!-- Above the field, at title height: the AI's verdict where the correction happens. -->
+  <app-bilateral-field-quality-flag section="general_information" field="title" />
   <app-pr-input
     label="Title of Result"
     type="text"
@@ -18,6 +22,7 @@
     (focusout)="onTitleBlur()">
   </app-pr-input>
 
+  <app-bilateral-field-quality-flag section="general_information" field="description" />
   <app-pr-textarea
     label="Description of Result"
     [maxWords]="300"
@@ -62,7 +67,10 @@
   @if (showHiddenFieldsNote()) {
     <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
       <span class="font-mono font-medium">{{ hiddenFieldsWithValues() }}</span>
-      hidden fields have values and will be saved.
+      <!-- P2-3768: with one field the note read "1 hidden fields have values", which QA reported as
+           broken copy. Same ternary Contributors & Partners already renders on its own note
+           (`section-contributors.component.html`); the count itself is unchanged. -->
+      {{ hiddenFieldsWithValues() === 1 ? 'hidden field has values and will be saved.' : 'hidden fields have values and will be saved.' }}
     </span>
   }
 
@@ -107,7 +115,11 @@
                   </button>
                 }
               </div>
-              @if (selectedDacLevels()[area.key] == 3) {
+              <!-- P2-3767: in bilateral the sub-scores open for "(1) Significant" AND "(2) Principal"
+                   (bilateral story P2-3367, "MODIFY — Sub-score visibility condition"); QA found them
+                   only on Principal. W1/W2 keeps its own Principal-only rule in
+                   rd-general-information.component.html:146 — that template is separate and untouched. -->
+              @if (showsSubScores(area.key)) {
                 <div class="sgi-dac-subscores">
                   @for (opt of (impactAreaSubScores()[area.key] ?? []); track opt.id) {
                     <button

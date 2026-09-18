@@ -1847,6 +1847,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.tocAchievementByKey().get(key)?.byAow ?? {};
   });
 
+  readonly isAchievementLoading = computed<boolean>(() => {
+    const key = this.currentAchievementKey();
+    if (!key) return false;
+    return this.loadingAchievementKeys().has(key) || !this.tocAchievementByKey().has(key);
+  });
+
   /**
    * @akili-spec bugfix/kpi-count-reconciliation — basis is the AoW-**own** set from
    * `programKpiPartition()` (outputs + `is_aow: true` outcomes, cross-cut IOs excluded — KCR-R-5,
@@ -3619,7 +3625,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
               // P2-3296 AC3. Taken from the roll-up call, not recomputed from `rows`: the figure
               // describes the Area of Work, not the current filter. A percentage that moved as the
               // user narrowed the typology or the search box would not be progress.
-              achievement: this.achievementByAowCode()[aow.code] ?? null
+              achievement: this.achievementByAowCode()[aow.code] ?? null,
+              achievementLoading: this.isAchievementLoading()
             };
           })
       : [];

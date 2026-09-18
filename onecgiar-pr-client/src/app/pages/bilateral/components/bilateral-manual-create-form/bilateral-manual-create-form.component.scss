@@ -149,6 +149,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-height: 42px;
   border: 0;
   border-radius: 8px;
@@ -162,5 +163,60 @@
   &:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+  }
+}
+
+.bmcf-create-btn-spinner {
+  animation: bmcf-spin 0.8s linear infinite;
+}
+
+.bmcf-creating-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.bmcf-creating-overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 36px;
+  border-radius: 12px;
+  border: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+.bmcf-creating-overlay-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid color-mix(in srgb, var(--pr-color-primary-300) 20%, transparent);
+  border-top-color: var(--pr-color-primary-300);
+  border-radius: 50%;
+  animation: bmcf-spin 0.7s linear infinite;
+}
+
+.bmcf-creating-overlay-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pr-text-heading);
+}
+
+@keyframes bmcf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bmcf-create-btn-spinner,
+  .bmcf-creating-overlay-spinner {
+    animation: none;
   }
 }

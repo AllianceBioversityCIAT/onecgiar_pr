@@ -62,6 +62,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { ResultAnswer } from '../results/result-questions/entities/result-answers.entity';
 import { Ipsr } from '../ipsr/entities/ipsr.entity';
 import { ResultRegion } from '../results/result-regions/entities/result-region.entity';
 import { ResultCountry } from '../results/result-countries/entities/result-country.entity';
@@ -378,6 +379,13 @@ export class VersioningService {
             config,
           );
           await this._resultAnswerRepository.replicate(manager, config);
+          await this.transformInnovationDevAnswersFor2026(
+            manager,
+            result.id,
+            dataResult.id,
+            phase,
+            user,
+          );
           await this._resultActorRepository.replicate(manager, config);
           await this._resultIpMeasureRepository.replicate(manager, config);
           break;
@@ -439,6 +447,163 @@ export class VersioningService {
       `REPORTING: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
     );
     return data;
+  }
+
+  /**
+   * INNDEV-T-2 (P2-3243 / P2-3513 / P2-3467):
+   * When replicating an Innovation Development result (Type 7) into a 2026+ phase,
+   * deterministically map legacy IPR answers (101, 102, 103, 138) to consolidated question 162
+   * (options 163 Yes, 164 Not sure, 165 No) and initialize GESI/Risk Stage 1 baselines.
+   */
+  async transformInnovationDevAnswersFor2026(
+    manager: EntityManager,
+    oldResultId: number,
+    newResultId: number,
+    phase: Version,
+    user: TokenDto,
+  ): Promise<void> {
+    let targetPhaseYear = Number(phase?.phase_year);
+    if (!targetPhaseYear && phase?.phase_name) {
+      const match = String(phase.phase_name).match(/\b(20\d\d)\b/);
+      if (match) {
+        targetPhaseYear = Number(match[1]);
+      }
+    }
+    if (!targetPhaseYear && phase?.id) {
+      if (typeof manager?.findOne === 'function') {
+        const phaseEntity = await manager.findOne(Version, {
+          where: { id: phase.id },
+        });
+        targetPhaseYear = Number(phaseEntity?.phase_year);
+      } else if (typeof this._versionRepository?.findOne === 'function') {
+        const phaseEntity = await this._versionRepository.findOne({
+          where: { id: phase.id },
+        });
+        targetPhaseYear = Number(phaseEntity?.phase_year);
+      }
+    }
+
+    if (!targetPhaseYear || targetPhaseYear < 2026) {
+      return;
+    }
+
+    if (typeof manager?.find !== 'function') {
+      return;
+    }
+
+    const oldAnswers = await manager.find(ResultAnswer, {
+      where: {
+        result_id: oldResultId,
+        is_active: true,
+      },
+    });
+
+    // Affirmative options: 104 (Q101 Yes), 107 (Q102 Yes), 110 (Q103 Yes/support), 147 (Q138 Yes)
+    const affirmativeOptionIds = new Set([104, 107, 110, 147]);
+    // Uncertainty options: 105 (Q101 Not sure), 108 (Q102 Not sure), 111 (Q103 Not sure), 148 (Q138 Not sure)
+    const uncertaintyOptionIds = new Set([105, 108, 111, 148]);
+
+    const activeOldOptionIds = new Set(
+      (oldAnswers || [])
+        .filter((a) => a.answer_boolean === true)
+        .map((a) => Number(a.result_question_id)),
+    );
+
+    const hasAffirmative = Array.from(affirmativeOptionIds).some((id) =>
+      activeOldOptionIds.has(id),
+    );
+    const hasUncertainty = Array.from(uncertaintyOptionIds).some((id) =>
+      activeOldOptionIds.has(id),
+    );
+
+    let chosenIprOptionId: number;
+    if (hasAffirmative) {
+      chosenIprOptionId = 163; // "Yes"
+    } else if (hasUncertainty) {
+      chosenIprOptionId = 164; // "Not sure"
+    } else {
+      chosenIprOptionId = 165; // "No"
+    }
+
+    // Consolidated Question 162 options: [163 (Yes), 164 (Not sure), 165 (No)]
+    const iprOptionIds = [163, 164, 165];
+    for (const optionId of iprOptionIds) {
+      await this.saveOrUpdateAnswer(
+        manager,
+        newResultId,
+        optionId,
+        optionId === chosenIprOptionId,
+        user?.id,
+      );
+    }
+
+    // GESI Stage (Question 150) options: [152, 153, 154, 155, 156] (Baseline Stage 1: 152 = true, 153..156 = false)
+    const gesiOptionIds = [152, 153, 154, 155, 156];
+    for (const optionId of gesiOptionIds) {
+      await this.saveOrUpdateAnswer(
+        manager,
+        newResultId,
+        optionId,
+        optionId === 152,
+        user?.id,
+      );
+    }
+
+    // Risk Stage (Question 151) options: [157, 158, 159, 160, 161] (Baseline Stage 1: 157 = true, 158..161 = false)
+    const riskOptionIds = [157, 158, 159, 160, 161];
+    for (const optionId of riskOptionIds) {
+      await this.saveOrUpdateAnswer(
+        manager,
+        newResultId,
+        optionId,
+        optionId === 157,
+        user?.id,
+      );
+    }
+  }
+
+  private async saveOrUpdateAnswer(
+    manager: EntityManager,
+    resultId: number,
+    questionId: number,
+    answerBoolean: boolean,
+    userId: number,
+  ): Promise<void> {
+    if (
+      typeof manager?.findOne !== 'function' ||
+      typeof manager?.save !== 'function'
+    ) {
+      return;
+    }
+
+    let answer = await manager.findOne(ResultAnswer, {
+      where: {
+        result_id: resultId,
+        result_question_id: questionId,
+      },
+    });
+
+    if (answer) {
+      answer.answer_boolean = answerBoolean;
+      answer.last_updated_by = userId;
+      answer.is_active = true;
+    } else {
+      const createFn =
+        typeof manager.create === 'function'
+          ? manager.create.bind(manager)
+          : (_: any, plain: any) => plain;
+      answer = createFn(ResultAnswer, {
+        result_id: resultId,
+        result_question_id: questionId,
+        answer_boolean: answerBoolean,
+        answer_text: null,
+        created_by: userId,
+        last_updated_by: userId,
+        is_active: true,
+      });
+    }
+
+    await manager.save(ResultAnswer, answer);
   }
 
   async $_phaseChangeIPSR(

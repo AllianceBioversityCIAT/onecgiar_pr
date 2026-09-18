@@ -149,6 +149,47 @@ describe('SectionZeroDashboardComponent', () => {
       expect(el.querySelector('.bp-meta-field-value--project')?.textContent).toContain('OLDPROJ full name');
     });
 
+    // P2-3759 — QA on prtest v1.3.4: the Lead Center was drawn BELOW the W3/Bilateral Project field
+    // and labelled "Center". The story asks for it "Positioned above the W3/Bilateral Project field"
+    // and named "Lead Center". These read the rendered DOM because the field order IS the defect.
+    describe('P2-3759 Lead Center placement and label', () => {
+      const projectFieldLabels = (): string[] =>
+        Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.bp-project-fields .bp-meta-field-label')).map(
+          label => label.textContent?.trim() ?? ''
+        );
+
+      it('renders the Lead Center ABOVE the project field, labelled "Lead Center"', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        const labels = projectFieldLabels();
+        expect(labels).toContain('Lead Center');
+        expect(labels).not.toContain('Center');
+        expect(labels.indexOf('Lead Center')).toBeGreaterThanOrEqual(0);
+        expect(labels.indexOf('Lead Center')).toBeLessThan(labels.indexOf('Project'));
+      });
+
+      it('keeps the Lead Center above the project field on a read-only result too', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+        fixture.componentRef.setInput('readOnly', true);
+        fixture.detectChanges();
+
+        const labels = projectFieldLabels();
+        // The >= 0 assert is load-bearing: a missing label indexes to -1, which would satisfy
+        // "before Project" while the field is not on screen at all.
+        expect(labels.indexOf('Lead Center')).toBeGreaterThanOrEqual(0);
+        expect(labels.indexOf('Lead Center')).toBeLessThan(labels.indexOf('Project'));
+      });
+
+      it('still shows the lead centre acronym and its full name as the title', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        const leadCenter = (fixture.nativeElement as HTMLElement).querySelector('.bp-meta-field--lead-center');
+        expect(leadCenter?.querySelector('.bp-meta-field-label')?.textContent?.trim()).toBe('Lead Center');
+        expect(leadCenter?.querySelector('.bp-meta-field-value')?.textContent?.trim()).toBe('C01');
+        expect(leadCenter?.querySelector('.bp-meta-field-value')?.getAttribute('title')).toBe('Center One');
+      });
+    });
+
     it('requires a program after selecting a project with multiple allocations', () => {
       openEditableResultOn(project(12, 'OLDPROJ'));
       component.onProjectCandidate({

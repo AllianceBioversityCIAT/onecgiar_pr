@@ -6,6 +6,7 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
+import { TocLinkageSwitchDialogService } from '../toc-linkage-switch-dialog/toc-linkage-switch-dialog.service';
 
 describe('SectionTocComponent', () => {
   let component: SectionTocComponent;
@@ -59,6 +60,7 @@ describe('SectionTocComponent', () => {
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setSectionFields: jest.fn() } },
         { provide: ApiService, useValue: api },
+        { provide: TocLinkageSwitchDialogService, useValue: { openSwitchToDefault: jest.fn().mockReturnValue(of('cancel')) } },
       ],
     })
       .overrideTemplate(SectionTocComponent, '<div></div>')
@@ -237,13 +239,6 @@ describe('SectionTocComponent', () => {
       expect(component.selectedLevelName()).toBe('Outcome');
     });
 
-    it('shows the why-reported box only for unplanned results', () => {
-      expect(component.showWhyReported()).toBe(false);
-      component.isPlanned.set(false);
-      expect(component.showWhyReported()).toBe(true);
-      component.isPlanned.set(true);
-      expect(component.showWhyReported()).toBe(false);
-    });
   });
 
   // ── active list ────────────────────────────────────────────────────
@@ -570,16 +565,6 @@ describe('SectionTocComponent', () => {
       expect(component.isPlanned()).toBe(true);
     });
 
-    it('clears pending why-reported saves when switching from No to Yes', () => {
-      jest.useFakeTimers();
-      fixture.detectChanges();
-      component.onPlannedChange(false);
-      component.onWhyReportedInput('test');
-      component.onPlannedChange(true);
-      jest.advanceTimersByTime(2000);
-      expect(autoSave.saveTocMapping).not.toHaveBeenCalled();
-      jest.useRealTimers();
-    });
   });
 
   describe('P/A defer checkbox (W3 bilateral)', () => {
@@ -689,32 +674,15 @@ describe('SectionTocComponent', () => {
     jest.useRealTimers();
   });
 
-  // ── why is this result being reported (unplanned justification) ────
-  // P2 data-loss guard: this textarea is mandatory and gates Submit, so it MUST reach the server.
-  // It rides on the same `toc_progressive_narrative` column the non-bilateral form reuses
-  // (rd-contributors-and-partners.component.html:80) — there is no separate column for it.
-  describe('whyReported (unplanned justification)', () => {
-    it('debounces the justification and persists it with planned_result false', () => {
-      jest.useFakeTimers();
-      component.isPlanned.set(false);
-      component.onWhyReportedInput('first');
-      component.onWhyReportedInput('Funded outside the approved ToC');
-      expect(component.whyReported()).toBe('Funded outside the approved ToC');
-      expect(autoSave.saveTocMapping).not.toHaveBeenCalled();
-
-      jest.advanceTimersByTime(1500);
-      jest.advanceTimersByTime(1000);
-
-      expect(autoSave.saveTocMapping).toHaveBeenCalledTimes(1);
-      expect(autoSave.saveTocMapping).toHaveBeenCalledWith(
-        expect.objectContaining({
-          planned_result: false,
-          toc_progressive_narrative: 'Funded outside the approved ToC',
-        }),
-      );
-      jest.useRealTimers();
-    });
-
+  // ── whyReported: hidden carrier, not a UI field (BIL-TOC-WR) ────────
+  // The "Why is this result being reported?" textarea was removed from the bilateral ToC block
+  // (BIL-TOC-WR-R-1): answering "No" asks for nothing further. `whyReported` itself is KEPT as a
+  // silent carrier — hydrated on load, never edited from this screen, and re-sent on every
+  // autosave — because the unplanned save path deactivates the active `results_toc_result` row and
+  // INSERTS a new one with `toc_progressive_narrative: … ?? null`
+  // (results-toc-results.service.ts:2674 `_handleUnplannedSpecialCase`, :2697-2699). Dropping the
+  // key would null every previously stored justification instead of preserving it (BIL-TOC-WR-R-2).
+  describe('whyReported (unplanned justification, hidden but preserved)', () => {
     it('never sends the justification in place of the planned pathway narrative', () => {
       jest.useFakeTimers();
       component.isPlanned.set(true);
@@ -732,7 +700,8 @@ describe('SectionTocComponent', () => {
       jest.useRealTimers();
     });
 
-    it('hydrates the justification, not the pathway narrative, for a saved unplanned result', async () => {
+    it('BIL-TOC-WR-R-2: hydrates a stored justification and re-sends the identical string on the next autosave, not undefined or empty', async () => {
+      jest.useFakeTimers();
       autoSave.loadTocState.mockResolvedValue({
         planned_result: false,
         toc_level_id: null,
@@ -748,20 +717,22 @@ describe('SectionTocComponent', () => {
       expect(component.isPlanned()).toBe(false);
       expect(component.whyReported()).toBe('Because the donor asked for it');
       expect(component.narrative()).toBe('');
-    });
 
-    it('reports the justification to the MDS tracker only once it has text', () => {
-      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
-      component.isPlanned.set(false);
-      component.whyReported.set('');
-      fixture.detectChanges();
-      const emptyItems = tracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(emptyItems.find((i: any) => i.key === 'toc-why-reported').filled).toBe(false);
+      // Any ToC autosave trigger on the unplanned branch — here, a level change — must re-send the
+      // hydrated value verbatim rather than omit it or send ''/undefined.
+      component.onLevelChange(3);
+      jest.advanceTimersByTime(1000);
 
-      component.whyReported.set('A reason');
-      fixture.detectChanges();
-      const filledItems = tracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(filledItems.find((i: any) => i.key === 'toc-why-reported').filled).toBe(true);
+      expect(autoSave.saveTocMapping).toHaveBeenCalledWith(
+        expect.objectContaining({
+          planned_result: false,
+          toc_progressive_narrative: 'Because the donor asked for it',
+        }),
+      );
+      const lastCall = autoSave.saveTocMapping.mock.calls.at(-1)[0];
+      expect(lastCall.toc_progressive_narrative).not.toBeUndefined();
+      expect(lastCall.toc_progressive_narrative).not.toBe('');
+      jest.useRealTimers();
     });
 
     // 🛑 PO decision (Juan David Delgado, 9-sep-2026): choosing the Primary Science Program is enough
@@ -772,12 +743,13 @@ describe('SectionTocComponent', () => {
     describe('nothing in the ToC block is mandatory', () => {
       const publishedItems = () => (TestBed.inject(BilateralMdsTrackerService) as any).setSectionFields.mock.calls.at(-1)[1];
 
-      it('publishes the unplanned branch as optional', () => {
+      it('BIL-TOC-WR-R-3: no longer publishes toc-why-reported on the unplanned branch, and the rest stay optional', () => {
         component.isPlanned.set(false);
         fixture.detectChanges();
 
         const items = publishedItems();
-        expect(items.map((i: any) => i.key)).toEqual(['toc-planned', 'toc-why-reported']);
+        expect(items.map((i: any) => i.key)).toEqual(['toc-planned']);
+        expect(items.find((i: any) => i.key === 'toc-why-reported')).toBeUndefined();
         expect(items.every((i: any) => i.optional === true)).toBe(true);
       });
 
@@ -955,6 +927,10 @@ describe('SectionTocComponent template — ToC question wording (P2-3142)', () =
             },
           },
         },
+        {
+          provide: TocLinkageSwitchDialogService,
+          useValue: { openSwitchToDefault: jest.fn().mockReturnValue(of('cancel')) },
+        },
       ],
     }).compileComponents();
 
@@ -976,5 +952,422 @@ describe('SectionTocComponent template — ToC question wording (P2-3142)', () =
 
   it('no longer renders the pre-P2-3142 wording', () => {
     expect(fixture.nativeElement.textContent).not.toContain('planned TOC KPI or indicator');
+  });
+});
+
+// BIL-TOC-WR-R-1: answering "No" renders no justification field, and nothing below the question.
+// Rendered from the real template here (no overrideTemplate), same as the P2-3142 block above —
+// the child controls (app-pr-yes-or-not, app-pr-checkbox, app-pr-textarea) genuinely render in
+// this harness, so this is a real DOM assertion, not a member-removal fallback.
+describe('SectionTocComponent template — no why-reported field on "No" (BIL-TOC-WR-R-1)', () => {
+  let fixture: ComponentFixture<SectionTocComponent>;
+  let component: SectionTocComponent;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [SectionTocComponent],
+      providers: [
+        {
+          provide: BilateralCreationService,
+          useValue: {
+            currentResultId: signal(123),
+            resultLevelId: signal(3),
+            resultTypeId: signal(1),
+            resultInitiativeId: signal(42),
+            selectedPrimarySp: signal({ programId: 456, programCode: 'SP01', allocation: '40' }),
+          },
+        },
+        {
+          provide: BilateralAutoSaveService,
+          useValue: {
+            updateFieldsBatch: jest.fn(),
+            saveTocMapping: jest.fn(),
+            loadTocState: jest.fn().mockResolvedValue({
+              planned_result: null,
+              toc_level_id: null,
+              toc_result_id: null,
+              indicator_id: null,
+              contributing_indicator: null,
+              toc_progressive_narrative: null,
+            }),
+          },
+        },
+        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setSectionFields: jest.fn() } },
+        {
+          provide: ApiService,
+          useValue: {
+            dataControlSE: { myInitiativesList: [{ official_code: 'SP01', id: 42 }] },
+            tocApiSE: {
+              GET_AllTocLevels: jest.fn().mockReturnValue(of({ response: [] })),
+              GET_tocLevelsByconfig: jest.fn().mockReturnValue(of({ response: [] })),
+            },
+          },
+        },
+        {
+          provide: TocLinkageSwitchDialogService,
+          useValue: { openSwitchToDefault: jest.fn().mockReturnValue(of('cancel')) },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SectionTocComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('renders no "Why is this result being reported?" textarea, and no required marker for it, after answering No', () => {
+    component.onPlannedChange(false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Why is this result being reported?');
+    // The Yes/No control and the P/A defer checkbox are untouched by the removal.
+    expect(fixture.nativeElement.querySelector('[data-testid="toc-planned-question"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="toc-pa-defer-checkbox"]')).not.toBeNull();
+  });
+
+  it('reopening a result already answered No still renders no justification field or stored text', async () => {
+    (TestBed.inject(BilateralAutoSaveService) as any).loadTocState.mockResolvedValue({
+      planned_result: false,
+      toc_level_id: null,
+      toc_result_id: null,
+      indicator_id: null,
+      contributing_indicator: null,
+      toc_progressive_narrative: 'A previously stored justification',
+    });
+
+    await (component as any).loadTocState();
+    fixture.detectChanges();
+
+    expect(component.whyReported()).toBe('A previously stored justification');
+    expect(fixture.nativeElement.textContent).not.toContain('Why is this result being reported?');
+    expect(fixture.nativeElement.textContent).not.toContain('A previously stored justification');
+  });
+});
+
+describe('SectionTocComponent default linkage integration (BIL-TOC-T-7)', () => {
+  let component: SectionTocComponent;
+  let fixture: ComponentFixture<SectionTocComponent>;
+  let creationService: any;
+  let autoSave: any;
+  let api: any;
+  let tocLinkageSwitchDialog: any;
+
+  const mockProjectDefault = {
+    project_id: 501,
+    project_name: 'Lead Project Alpha',
+    nodes: [
+      {
+        toc_result_id: 1001,
+        level_name: 'OUTPUT',
+        title: 'Output 1',
+        indicators: [
+          {
+            id: 201,
+            description: 'Indicator 1',
+            type: 'standard',
+            targets: [{ year: 2026, value: 5 }],
+          },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(async () => {
+    tocLinkageSwitchDialog = {
+      openSwitchToDefault: jest.fn().mockReturnValue(of('cancel')),
+    };
+
+    creationService = {
+      currentResultId: signal(123),
+      resultLevelId: signal(3),
+      resultTypeId: signal(1),
+      resultInitiativeId: signal(42),
+      selectedPrimarySp: signal({ programId: 456, programCode: 'SP01', allocation: '40' }),
+    };
+
+    autoSave = {
+      updateFieldsBatch: jest.fn(),
+      saveTocMapping: jest.fn(),
+      loadTocState: jest.fn().mockResolvedValue({
+        planned_result: null,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: null,
+        toc_linkage_mode: null,
+        project_default: null,
+      }),
+    };
+
+    api = {
+      dataControlSE: {
+        myInitiativesList: [{ official_code: 'SP01', id: 42 }],
+      },
+      tocApiSE: {
+        GET_AllTocLevels: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_tocLevelsByconfig: jest.fn().mockReturnValue(of({ response: [] })),
+      },
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [SectionTocComponent],
+      providers: [
+        { provide: BilateralCreationService, useValue: creationService },
+        { provide: BilateralAutoSaveService, useValue: autoSave },
+        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setSectionFields: jest.fn() } },
+        { provide: ApiService, useValue: api },
+        { provide: TocLinkageSwitchDialogService, useValue: tocLinkageSwitchDialog },
+      ],
+    })
+      .overrideTemplate(SectionTocComponent, '<div></div>')
+      .compileComponents();
+
+    fixture = TestBed.createComponent(SectionTocComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('1. default present -> hasProjectDefault is true and detail form hidden initially', () => {
+    component.projectDefault.set(mockProjectDefault);
+    expect(component.hasProjectDefault()).toBe(true);
+    expect(component.showDetailForm()).toBe(false);
+  });
+
+  it('2. default null -> hasProjectDefault is false and behaves as legacy form', () => {
+    component.projectDefault.set(null);
+    expect(component.hasProjectDefault()).toBe(false);
+    expect(component.showPlannedQuestion()).toBe(true);
+  });
+
+  it('3. YES mode -> saves toc_linkage_mode project_default and detail form remains hidden', () => {
+    component.projectDefault.set(mockProjectDefault);
+    component.onModeChange('project_default');
+
+    expect(component.linkageMode()).toBe('project_default');
+    expect(component.showDetailForm()).toBe(false);
+    expect(autoSave.saveTocMapping).toHaveBeenCalledWith({
+      toc_linkage_mode: 'project_default',
+      planned_result: true,
+    });
+  });
+
+  it('4. NO mode -> detail form becomes visible and mode is custom', () => {
+    fixture.detectChanges();
+    component.projectDefault.set(mockProjectDefault);
+    component.onModeChange('custom');
+
+    expect(component.linkageMode()).toBe('custom');
+    expect(component.showDetailForm()).toBe(true);
+    expect(api.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalled();
+  });
+
+  it('5. Legacy state -> loads as custom with saved values restored', async () => {
+    autoSave.loadTocState.mockResolvedValue({
+      planned_result: true,
+      toc_level_id: 1,
+      toc_result_id: 1001,
+      indicator_id: 'ind-201',
+      contributing_indicator: 10,
+      toc_progressive_narrative: 'Existing narrative',
+      toc_linkage_mode: null,
+      project_default: mockProjectDefault,
+    });
+
+    await (component as any).loadTocState();
+
+    expect(component.hasProjectDefault()).toBe(true);
+    expect(component.linkageMode()).toBe('custom');
+    expect(component.showDetailForm()).toBe(true);
+    expect(component.selectedTocResultId()).toBe(1001);
+    expect(component.selectedIndicatorId()).toBe('ind-201');
+    expect(component.contributionValue()).toBe(10);
+    expect(component.narrative()).toBe('Existing narrative');
+  });
+
+  it('6. Legacy unplanned -> fallback with whyReported kept', async () => {
+    autoSave.loadTocState.mockResolvedValue({
+      planned_result: false,
+      toc_level_id: null,
+      toc_result_id: null,
+      indicator_id: null,
+      contributing_indicator: null,
+      toc_progressive_narrative: 'Legacy why reported reason',
+      toc_linkage_mode: null,
+      project_default: mockProjectDefault,
+    });
+
+    await (component as any).loadTocState();
+
+    expect(component.hasProjectDefault()).toBe(false);
+    expect(component.isPlanned()).toBe(false);
+    expect(component.whyReported()).toBe('Legacy why reported reason');
+  });
+
+  it('7. NO to YES with saved indicator requires confirmation; cancel leaves state untouched', () => {
+    component.projectDefault.set(mockProjectDefault);
+    component.linkageMode.set('custom');
+    component.selectedTocResultId.set(1001);
+    component.selectedIndicatorId.set('ind-201');
+    component.contributionValue.set(5);
+
+    tocLinkageSwitchDialog.openSwitchToDefault.mockReturnValue(of('cancel'));
+
+    component.onModeChange('project_default');
+
+    expect(tocLinkageSwitchDialog.openSwitchToDefault).toHaveBeenCalled();
+    expect(component.linkageMode()).toBe('custom');
+    expect(component.selectedIndicatorId()).toBe('ind-201');
+    expect(component.contributionValue()).toBe(5);
+    expect(autoSave.saveTocMapping).not.toHaveBeenCalled();
+  });
+
+  it('8. NO to YES confirmed clears custom selections and saves default mode', () => {
+    component.projectDefault.set(mockProjectDefault);
+    component.linkageMode.set('custom');
+    component.selectedTocResultId.set(1001);
+    component.selectedIndicatorId.set('ind-201');
+    component.contributionValue.set(5);
+
+    tocLinkageSwitchDialog.openSwitchToDefault.mockReturnValue(of('switch'));
+
+    component.onModeChange('project_default');
+
+    expect(tocLinkageSwitchDialog.openSwitchToDefault).toHaveBeenCalled();
+    expect(component.linkageMode()).toBe('project_default');
+    expect(component.selectedIndicatorId()).toBeNull();
+    expect(component.contributionValue()).toBeNull();
+    expect(autoSave.saveTocMapping).toHaveBeenCalledWith({
+      toc_linkage_mode: 'project_default',
+      planned_result: true,
+    });
+  });
+
+  it('9. loadTocState calls NO save methods', async () => {
+    autoSave.loadTocState.mockResolvedValue({
+      planned_result: null,
+      toc_level_id: null,
+      toc_result_id: null,
+      indicator_id: null,
+      contributing_indicator: null,
+      toc_progressive_narrative: null,
+      toc_linkage_mode: 'project_default',
+      project_default: mockProjectDefault,
+    });
+
+    await (component as any).loadTocState();
+
+    expect(autoSave.saveTocMapping).not.toHaveBeenCalled();
+    expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+  });
+
+  it('10. Typology filter hides incompatible indicators in custom branch', () => {
+    component.projectDefault.set(mockProjectDefault);
+    component.linkageMode.set('custom');
+    component.outputList.set([
+      {
+        toc_result_id: 1001,
+        indicators: [
+          {
+            related_node_id: 'ind-match',
+            indicator_description: 'Policy Indicator',
+            type_value: '%Number of Policy%',
+          },
+          {
+            related_node_id: 'ind-mismatch',
+            indicator_description: 'KP Indicator',
+            type_value: '%Number of knowledge products%',
+          },
+        ],
+      },
+    ]);
+    component.selectedLevelId.set(1);
+    component.selectedTocResultId.set(1001);
+
+    const indicators = component.indicatorsList();
+    expect(indicators.length).toBe(1);
+    expect(indicators[0].related_node_id).toBe('ind-match');
+  });
+});
+
+describe('SectionTocComponent template gating with real template (BIL-TOC-T-7)', () => {
+  let fixture: ComponentFixture<SectionTocComponent>;
+  let component: SectionTocComponent;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [SectionTocComponent],
+      providers: [
+        {
+          provide: BilateralCreationService,
+          useValue: {
+            currentResultId: signal(123),
+            resultLevelId: signal(3),
+            resultTypeId: signal(1),
+            resultInitiativeId: signal(42),
+            selectedPrimarySp: signal({ programId: 456, programCode: 'SP01', allocation: '40' }),
+          },
+        },
+        {
+          provide: BilateralAutoSaveService,
+          useValue: {
+            updateFieldsBatch: jest.fn(),
+            saveTocMapping: jest.fn(),
+            loadTocState: jest.fn().mockResolvedValue({
+              planned_result: null,
+              toc_level_id: null,
+              toc_result_id: null,
+              indicator_id: null,
+              contributing_indicator: null,
+              toc_progressive_narrative: null,
+              toc_linkage_mode: null,
+              project_default: {
+                project_id: 501,
+                project_name: 'Lead Project Alpha',
+                nodes: [
+                  {
+                    toc_result_id: 1001,
+                    level_name: 'OUTPUT',
+                    title: 'Output 1',
+                  },
+                ],
+              },
+            }),
+          },
+        },
+        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setSectionFields: jest.fn() } },
+        {
+          provide: ApiService,
+          useValue: {
+            dataControlSE: { myInitiativesList: [{ official_code: 'SP01', id: 42 }] },
+            tocApiSE: {
+              GET_AllTocLevels: jest.fn().mockReturnValue(of({ response: [] })),
+              GET_tocLevelsByconfig: jest.fn().mockReturnValue(of({ response: [] })),
+            },
+          },
+        },
+        {
+          provide: TocLinkageSwitchDialogService,
+          useValue: { openSwitchToDefault: jest.fn().mockReturnValue(of('cancel')) },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SectionTocComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('renders section-toc-default and hides legacy planned question when project default exists', async () => {
+    await (component as any).loadTocState();
+    fixture.detectChanges();
+
+    const defaultChild = fixture.nativeElement.querySelector('app-section-toc-default');
+    const plannedQuestion = fixture.nativeElement.querySelector('[data-testid="toc-planned-question"]');
+
+    expect(defaultChild).not.toBeNull();
+    expect(plannedQuestion).toBeNull();
   });
 });

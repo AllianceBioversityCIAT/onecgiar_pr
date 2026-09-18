@@ -41,9 +41,18 @@
     (ngModelChange)="onFieldChange()">
   </app-pr-select>
 
-  <!-- No Innovation Developer field: for a bilateral innovation the Lead contact person (Section 1)
-       IS the developer (Nicoleta Trifa via Ángel Jarrín, 2026-09-03). `buildPayload()` still fills
-       `innovation_developers` from that contact so the API summary keeps a value. -->
+  <!--
+    P2-3778 — "Innovation developers" is NOT rendered. The decision on the ticket (Juan David Delgado
+    relaying Nicoleta Trifa via Ángel Jarrín, 2026-09-03) is that the field is removed and "for
+    innovations this will be replaced by the lead contact person information", so the MDS zone of this
+    section holds exactly two fields: typology + readiness level. Section 1 already tells the reporter
+    so (`../../section-general-info/section-general-info.component.html:41-47`).
+    🛑 Removing the FIELD is not removing the DATA: `buildPayload()` still sends
+    `innovation_developers`, and the key-presence-gated prefill still seeds it from the Lead contact
+    person — the same value the server's ingest path stores
+    (`onecgiar-pr-server/src/api/bilateral/handlers/innovation-development.handler.ts:59-63`) — so the
+    review drawer, the exports and the PDF keep reading a populated column. See CLAUDE.md.
+  -->
 
   <app-pr-field-header
     label="How would you assess the current readiness of this innovation?"
@@ -96,8 +105,13 @@
       </app-pr-select>
 
       @if (isVarietyType) {
+        <!-- P2-3779: `pr-yes-or-not` defaults `required` to TRUE
+             (`custom-fields/pr-yes-or-not/pr-yes-or-not.component.ts:27`), so leaving the input out
+             painted the REQUIRED tag on a field that is full metadata, optional (P2-3391 AC8) and
+             outside `updateMds()`. The section saves and turns green with it empty. -->
         <app-pr-yes-or-not
           label="Are you profiling a new or improved variety or breed?"
+          [required]="false"
           [(ngModel)]="body.is_new_variety"
           (ngModelChange)="onFieldChange()">
         </app-pr-yes-or-not>
@@ -114,8 +128,12 @@
         }
       }
 
+      <!-- P2-3780: this used to share the generic "Contact persons info goes here..." with the
+           "Innovation developers" textarea, so two different questions read the same. The developers
+           field is gone (P2-3778), and this one now names what belongs in it, in the format its own
+           tooltip asks for: Collaborator Name (email address). -->
       <app-pr-textarea
-        placeholder="Contact persons info goes here..."
+        placeholder="Collaborator names and emails go here..."
         [required]="false"
         label="Innovation collaborators"
         [tooltip]="collaboratorsDesc"

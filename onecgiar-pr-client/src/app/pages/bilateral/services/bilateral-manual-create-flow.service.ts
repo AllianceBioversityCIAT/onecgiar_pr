@@ -7,6 +7,7 @@ import { BilateralManualCreatePayload } from '../components/bilateral-manual-cre
 import { BilateralContextService } from './bilateral-context.service';
 import { BilateralCreationService } from './bilateral-creation.service';
 import { BilateralProject } from './bilateral-creation.interfaces';
+import { BilateralOverviewService } from './bilateral-overview.service';
 import { BILATERAL_MANUAL_CREATE_COPY } from '../../../internationalization/bilateral-manual-create.copy';
 
 @Injectable({ providedIn: 'root' })
@@ -15,6 +16,7 @@ export class BilateralManualCreateFlowService {
   private readonly api = inject(ApiService);
   private readonly ctx = inject(BilateralContextService);
   private readonly creationService = inject(BilateralCreationService);
+  private readonly overviewService = inject(BilateralOverviewService);
 
   readonly drawerOpen = signal(false);
   readonly isCreating = signal(false);
@@ -40,6 +42,36 @@ export class BilateralManualCreateFlowService {
 
   readonly drawerProjectTitle = computed(
     () => this.creationService.selectedProject()?.fullName || this.creationService.selectedProject()?.shortName || ''
+  );
+
+  readonly drawerProjectSummary = computed(() => this.creationService.selectedProject()?.summary ?? '');
+
+  readonly drawerProjectDescription = computed(
+    () => this.creationService.selectedProject()?.description ?? ''
+  );
+
+  /** Card subtitle for the drawer context header — summary first, then description. */
+  readonly drawerProjectSubtitle = computed(() => {
+    const project = this.creationService.selectedProject();
+    if (!project) {
+      return '';
+    }
+
+    const subtitle = (project.summary?.trim() || project.description?.trim()) ?? '';
+    if (!subtitle) {
+      return '';
+    }
+
+    const title = (project.fullName?.trim() || project.shortName?.trim()) ?? '';
+    if (title && subtitle.toLowerCase() === title.toLowerCase()) {
+      return '';
+    }
+
+    return subtitle;
+  });
+
+  readonly drawerLeadCenterAcronym = computed(
+    () => this.creationService.selectedProject()?.leadCenter?.acronym ?? ''
   );
 
   readonly drawerProgramCode = computed(() => this.creationService.selectedPrimarySp()?.programCode ?? '');
@@ -104,6 +136,12 @@ export class BilateralManualCreateFlowService {
         }
 
         this.creationService.clearEditorState();
+
+        const centerKey = this.ctx.centerId() || this.ctx.centerAcronym();
+        const versionId = this.ctx.selectedVersionId() ?? (response?.version_id ? Number(response.version_id) : null);
+        if (centerKey && versionId !== null) {
+          this.overviewService.invalidate(centerKey, versionId);
+        }
 
         const resultCode = Number(response.result_code);
         const hasResultCode = Number.isFinite(resultCode) && resultCode > 0;

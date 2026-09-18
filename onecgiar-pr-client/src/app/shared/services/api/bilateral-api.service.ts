@@ -13,8 +13,18 @@ export class BilateralApiService {
   private readonly baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   private readonly resultsApiBaseUrl = environment.apiBaseUrl + 'api/results/';
 
-  GET_bilateralProjects(centerId: string | number) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/projects?centerId=${centerId}`);
+  /**
+   * `changes/project-multiselect-filter` (`PMF-DD-5`): the optional `year` scopes the
+   * catalog to a reporting phase year. Omitted, the request is byte-for-byte the
+   * pre-existing one (no `year` param) and the endpoint answers for the active year —
+   * every existing single-arg caller keeps that behavior.
+   */
+  GET_bilateralProjects(centerId: string | number, year?: number) {
+    let params = new HttpParams().set('centerId', String(centerId));
+    if (year !== undefined && year !== null) {
+      params = params.set('year', String(year));
+    }
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/projects`, { params });
   }
 
   GET_bilateralCenterResults(centerId: string, versionId: number) {
@@ -220,6 +230,21 @@ export class BilateralApiService {
 
   POST_bilateralAiJob(formData: FormData) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs`, formData);
+  }
+
+  POST_bilateralQualityAssessment(resultId: number) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}`, {});
+  }
+
+  GET_bilateralQualityAssessmentLatest(resultId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}/latest`);
+  }
+
+  PATCH_bilateralSubmitForReview(
+    resultId: number,
+    body: { assessment_id: number; decision: 'submitted_anyway' | 'submitted_without_check' },
+  ) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/submit-for-review/${resultId}`, body);
   }
 
   GET_bilateralAiJob(jobId: string) {

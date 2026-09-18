@@ -1,4 +1,10 @@
-import { forwardRef, Inject, Injectable, HttpStatus } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { In, Not } from 'typeorm';
 import { env } from 'node:process';
 import Handlebars from 'handlebars';
@@ -31,6 +37,8 @@ import { EmailNotificationManagementService } from '../../../shared/microservice
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { RESULT_TYPE_TO_INDICATOR_PATTERN } from '../../../shared/constants/indicator-type-mapping.constant';
+import { ResultTocResultItemDto } from './dto/create-results-toc-result-v2.dto';
 
 type ResultTocResultWithInitiativeInfo = Partial<ResultsTocResult> & {
   initiative_id?: number | null;
@@ -40,6 +48,8 @@ type ResultTocResultWithInitiativeInfo = Partial<ResultsTocResult> & {
 
 @Injectable()
 export class ResultsTocResultsService {
+  private readonly logger = new Logger(ResultsTocResultsService.name);
+
   constructor(
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
@@ -1323,6 +1333,166 @@ export class ResultsTocResultsService {
     }
   }
 
+  /**
+   * MHL-R-4 — drops any `ResultTocResultItemDto` whose ToC node's indicator
+   * type doesn't match the result's typology, mutating `result_toc_result`
+   * and `contributors_result_toc_result` in place so the rest of
+   * `createTocMappingV2` never sees a mismatched item (partial-success:
+   * matching items in the same request still persist — `MHL-R-5`).
+   *
+   * Reviewer fix (attempts 2 and 3):
+   * - **Issue 1** (existing rows silently deactivated): a rejected item that
+   *   already carried a `result_toc_result_id` is additionally reported via
+   *   `preservedExistingIds`. Because the guard drops the item from the
+   *   payload, nothing downstream re-activates that row — so the caller MUST
+   *   make **every** write site in `createTocMappingV2` that can deactivate
+   *   or rewrite a row skip these ids (it does so via `preservedRejectedIds`:
+   *   the planned-path `keepIds` sweep, the unplanned blanket sweep, the
+   *   unplanned "no items" special case, and the planned "no items"
+   *   existing-record lookup). Otherwise a mismatch on a *previously-saved*
+   *   link soft-deletes that link forever. With those guards the row is left
+   *   completely untouched, which satisfies the backwards-compatibility NFR
+   *   ("existing... saved links remain valid and unaffected").
+   * - **Issue 2** (drift from the candidate-list filter): match verdicts now
+   *   come from `TocResultsRepository.getTocResultTypologyVerdicts`, a
+   *   read-only batched helper that reuses the exact node-level expression
+   *   `_buildPlannedResultTypeIndicatorExistsFilter` already uses to build
+   *   the candidate list (`currentTypeExists OR NOT EXISTS other-type`) —
+   *   so a "neutral" node (zero indicators, or only inactive indicators of
+   *   another type) is never rejected here when the candidate list would
+   *   have offered it.
+   *
+   * Batches a single call across every candidate `toc_result_id` (primary +
+   * contributors) to avoid N+1 lookups when the array is large (`design.md` §5).
+   */
+  private async _rejectTypologyMismatchedTocLinks(
+    resultId: number,
+    result: { result_type_id?: number },
+    resultTocResult:
+      | CreateResultsTocResultV2Dto['result_toc_result']
+      | undefined,
+    contributorsResultTocResult: CreateResultsTocResultV2Dto['contributors_result_toc_result'],
+  ): Promise<{
+    rejectedTocResults: Array<{ toc_result_id: number; message: string }>;
+    preservedExistingIds: number[];
+  }> {
+    const rejectedTocResults: Array<{
+      toc_result_id: number;
+      message: string;
+    }> = [];
+    const preservedExistingIds: number[] = [];
+
+    const resultTypeId = result?.result_type_id;
+
+    // Permissive fallback (MHL-OQ open gap): result types with no
+    // RESULT_TYPE_TO_INDICATOR_PATTERN entry (OTHER_OUTCOME, OTHER_OUTPUT,
+    // IMPACT_CONTRIBUTION, COMPLEMENTARY_INNOVATION) can't be typology-checked,
+    // so the guard is skipped and every link is allowed through, rather than
+    // rejecting all links for result types the mapping was never extended to cover.
+    if (!RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length) {
+      return { rejectedTocResults, preservedExistingIds };
+    }
+
+    const itemLists: ResultTocResultItemDto[][] = [
+      resultTocResult?.result_toc_results ?? [],
+      ...(contributorsResultTocResult ?? []).map(
+        (contributor) => contributor?.result_toc_results ?? [],
+      ),
+    ];
+
+    const candidateTocResultIds = [
+      ...new Set(
+        itemLists
+          .flat()
+          .map((item) => Number(item?.toc_result_id))
+          .filter(
+            (tocResultId) => Number.isFinite(tocResultId) && tocResultId > 0,
+          ),
+      ),
+    ];
+
+    if (!candidateTocResultIds.length) {
+      return { rejectedTocResults, preservedExistingIds };
+    }
+
+    const typologyVerdicts =
+      await this._tocResultsRepository.getTocResultTypologyVerdicts(
+        candidateTocResultIds,
+        resultTypeId,
+      );
+
+    const dropMismatched = (
+      items: ResultTocResultItemDto[] | undefined,
+    ): ResultTocResultItemDto[] | undefined => {
+      if (!items?.length) {
+        return items;
+      }
+
+      return items.filter((item) => {
+        const tocResultId = Number(item?.toc_result_id);
+        if (!Number.isFinite(tocResultId) || tocResultId <= 0) {
+          return true;
+        }
+        if (typologyVerdicts.get(tocResultId) === true) {
+          return true;
+        }
+
+        this.logger.warn({
+          event: 'toc_result_typology_mismatch_rejected',
+          resultId,
+          tocResultId,
+        });
+        rejectedTocResults.push({
+          toc_result_id: tocResultId,
+          message: `ToC result ${tocResultId} was rejected: its indicator type does not match this result's typology.`,
+        });
+
+        const existingResultTocResultId = Number(
+          (item as any)?.result_toc_result_id,
+        );
+        if (
+          Number.isFinite(existingResultTocResultId) &&
+          existingResultTocResultId > 0
+        ) {
+          preservedExistingIds.push(existingResultTocResultId);
+        }
+
+        return false;
+      });
+    };
+
+    if (resultTocResult) {
+      resultTocResult.result_toc_results = dropMismatched(
+        resultTocResult.result_toc_results,
+      );
+    }
+
+    for (const contributor of contributorsResultTocResult ?? []) {
+      if (contributor) {
+        contributor.result_toc_results = dropMismatched(
+          contributor.result_toc_results,
+        );
+      }
+    }
+
+    return { rejectedTocResults, preservedExistingIds };
+  }
+
+  /**
+   * Evaluates candidate ToC node IDs against the given result type's indicator typology pattern.
+   * Delegates to `TocResultsRepository.getTocResultTypologyVerdicts`.
+   * Returns a Map of toc_result_id -> boolean (true = matches/neutral, false = mismatched).
+   */
+  async getTocResultTypologyVerdicts(
+    tocResultIds: Array<number | string>,
+    resultTypeId: number,
+  ): Promise<Map<number, boolean>> {
+    return this._tocResultsRepository.getTocResultTypologyVerdicts(
+      tocResultIds,
+      resultTypeId,
+    );
+  }
+
   async createTocMappingV2(
     dto: CreateResultsTocResultDto | CreateResultsTocResultV2Dto,
     user: TokenDto,
@@ -1346,6 +1516,19 @@ export class ResultsTocResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      // MHL-R-4 — reject ToC links whose HLO indicator type doesn't match the
+      // result's typology. Runs as a pre-upsert guard (before any write starts),
+      // regardless of bilateral/isUnplanned flow (MHL-DD-3): those flows skip the
+      // client-side typology filter, so this is their only enforcement point.
+      // Matching items in the same request still persist (partial-success semantics).
+      const { rejectedTocResults, preservedExistingIds } =
+        await this._rejectTypologyMismatchedTocLinks(
+          result_id,
+          result,
+          result_toc_result,
+          contributors_result_toc_result,
+        );
 
       let initSubmitter = await this._resultByInitiativesRepository.findOne({
         where: { result_id, initiative_role_id: 1 },
@@ -1513,9 +1696,29 @@ export class ResultsTocResultsService {
             .filter(Boolean),
         );
 
+      // Reviewer fix (Issue 1) — rows the typology guard rejected that already
+      // carried a `result_toc_result_id` (previously-saved links). The guard
+      // dropped them from `result_toc_result`/`contributors_result_toc_result`,
+      // so NO later loop in this method re-activates or rewrites them: every
+      // deactivation site below must therefore skip them explicitly, or the
+      // row is soft-deleted forever (requirements.md §7 Backwards
+      // compatibility / Observability, design.md §11 and `MHL-DD-3`).
+      // This set — not `keepIds` — is what the deactivation sites consult:
+      // `keepIds` also contains the *incoming* ids, and the unplanned branch
+      // deliberately deactivates-then-reactivates those (a contributor row
+      // whose initiative is inactive is intentionally left deactivated by
+      // that sweep), so reusing `keepIds` there would change behaviour beyond
+      // this fix.
+      const preservedRejectedIds = new Set<number>(
+        preservedExistingIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id) && id > 0),
+      );
+
       const keepIds = new Set<number>([
         ...incomingIdsPrimary,
         ...incomingIdsContrib,
+        ...preservedRejectedIds,
       ]);
 
       const existingAll = await this._resultsTocResultRepository.find({
@@ -1593,13 +1796,27 @@ export class ResultsTocResultsService {
             primaryInitiativeId;
 
           if (plannedInitiativeId != null) {
+            // Reviewer fix (attempt 3) — the third site that can touch a
+            // preserved row: with every item rejected, `result_toc_results` is
+            // empty and this branch would pick the rejected-but-preserved row
+            // as "the" active row for the initiative and rewrite it
+            // (`planned_result: true`). Exclude preserved ids so the existing
+            // saved link stays unaffected (no-op when nothing was rejected).
+            const existingRecordWhere: Record<string, any> = {
+              result_id,
+              initiative_ids: plannedInitiativeId,
+              is_active: true,
+            };
+
+            if (preservedRejectedIds.size) {
+              existingRecordWhere.result_toc_result_id = Not(
+                In([...preservedRejectedIds]),
+              );
+            }
+
             const existingRecord =
               await this._resultsTocResultRepository.findOne({
-                where: {
-                  result_id,
-                  initiative_ids: plannedInitiativeId,
-                  is_active: true,
-                },
+                where: existingRecordWhere,
               });
 
             if (existingRecord) {
@@ -1635,6 +1852,16 @@ export class ResultsTocResultsService {
         });
 
         for (const record of allActiveRecords ?? []) {
+          // Reviewer fix (attempt 3) — this blanket sweep is the unplanned
+          // twin of the `keepIds` sweep above: it deactivates every active row
+          // and relies on the loop below to re-activate the ones still present
+          // in the payload. A row the typology guard rejected is no longer in
+          // that payload, so it would never be re-activated — skip it here so
+          // the previously-saved link stays exactly as it was.
+          if (preservedRejectedIds.has(Number(record.result_toc_result_id))) {
+            continue;
+          }
+
           await this._resultsTocResultRepository.update(
             record.result_toc_result_id,
             {
@@ -1713,13 +1940,26 @@ export class ResultsTocResultsService {
             result_toc_result?.initiative_id;
 
           if (isSpecialCase) {
-            await this._resultsTocResultRepository.update(
-              { result_id, initiative_ids: result_toc_result.initiative_id },
-              {
-                is_active: false,
-                last_updated_by: user.id,
-              },
-            );
+            // Reviewer fix (attempt 3) — reachable precisely when the guard
+            // emptied `result_toc_results`: this criteria-based deactivation
+            // would otherwise soft-delete the rejected-but-preserved row that
+            // the sweep above just spared. Exclude the preserved ids from the
+            // criteria (no-op when nothing was rejected).
+            const specialCaseCriteria: Record<string, any> = {
+              result_id,
+              initiative_ids: result_toc_result.initiative_id,
+            };
+
+            if (preservedRejectedIds.size) {
+              specialCaseCriteria.result_toc_result_id = Not(
+                In([...preservedRejectedIds]),
+              );
+            }
+
+            await this._resultsTocResultRepository.update(specialCaseCriteria, {
+              is_active: false,
+              last_updated_by: user.id,
+            });
 
             const specialCaseInsertPayload: Record<string, any> = {
               initiative_ids: result_toc_result.initiative_id,
@@ -1961,6 +2201,7 @@ export class ResultsTocResultsService {
             result_toc_results: resultTocResults,
             toc_progressive_narrative: tocProgressiveNarrative,
             showMultipleWPsContent,
+            rejected_result_toc_results: rejectedTocResults,
           },
           contributors_result_toc_result: contributorsResp,
           impacts: null,
@@ -1970,8 +2211,19 @@ export class ResultsTocResultsService {
           bodyActionArea: [],
           email_template: dto.email_template ?? 'email_template_contribution',
         },
-        message: 'ToC mapping (P25) created/updated successfully',
-        status: HttpStatus.CREATED,
+        // Reviewer fix (Issue 1) — MHL-AC-3 requires a real validation-error
+        // signal, not just an additive response field. `ResponseInterceptor`
+        // (Return-data.interceptor.ts) sets the actual HTTP status from
+        // `status` below, so a rejection surfaces as a genuine 422 at the
+        // HTTP level while matching items in the same request (persisted
+        // above, before this return) still commit — the partial-success
+        // semantics `MHL-R-5`/design.md §4.1 require.
+        message: rejectedTocResults.length
+          ? `ToC mapping (P25) created/updated with ${rejectedTocResults.length} typology-mismatched ToC link(s) rejected: ${rejectedTocResults.map((r) => r.toc_result_id).join(', ')}. Matching links were saved.`
+          : 'ToC mapping (P25) created/updated successfully',
+        status: rejectedTocResults.length
+          ? HttpStatus.UNPROCESSABLE_ENTITY
+          : HttpStatus.CREATED,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });

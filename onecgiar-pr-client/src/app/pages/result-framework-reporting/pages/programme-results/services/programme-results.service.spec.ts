@@ -587,5 +587,21 @@ describe('ProgrammeResultsService', () => {
       const withoutFlag = toProgrammeResultRow(rawResult());
       expect(Object.prototype.hasOwnProperty.call(withoutFlag, 'completeness')).toBe(false);
     });
+
+    // @akili-spec changes/emerging-result-chip (EMG-T-1, EMG-T-2)
+    it('passes planned_result through verbatim, including explicit null, and omits the key when absent', () => {
+      const emerging = toProgrammeResultRow(rawResult({ planned_result: 0 }));
+      expect(emerging.plannedResult).toBe(0);
+
+      const planned = toProgrammeResultRow(rawResult({ planned_result: 1 }));
+      expect(planned.plannedResult).toBe(1);
+
+      const withNull = toProgrammeResultRow(rawResult({ planned_result: null }));
+      expect(withNull.plannedResult).toBeNull();
+      expect(Object.prototype.hasOwnProperty.call(withNull, 'plannedResult')).toBe(true);
+
+      const withoutFlag = toProgrammeResultRow(rawResult());
+      expect(Object.prototype.hasOwnProperty.call(withoutFlag, 'plannedResult')).toBe(false);
+    });
   });
 });

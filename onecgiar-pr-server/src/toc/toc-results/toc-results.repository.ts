@@ -571,9 +571,22 @@ export class TocResultsRepository extends Repository<TocResult> {
     };
   }
 
-  private _buildPlannedResultTypeIndicatorExistsFilter(
+  /**
+   * MHL-DD-1 / MHL-R-4 (write-guard alignment) — the single source of truth
+   * for "does this ToC node's indicator typology match `resultTypeId`",
+   * expressed as a node-level SQL boolean expression against `tr` (the
+   * aliased `toc_results` row): `currentTypeExists OR NOT EXISTS(other-type
+   * active indicator)`. A node with zero indicators, or only inactive
+   * indicators of another type, is a "neutral" node and matches (the second
+   * branch is vacuously true) — this is intentional: it is exactly the
+   * candidate-list semantics `_buildPlannedResultTypeIndicatorExistsFilter`
+   * already offers submitters, so a write-time guard reusing this same
+   * expression can never reject a node the candidate list would have shown.
+   * Mutates `params` by pushing the LIKE pattern values this expression
+   * needs, in the order they appear in the returned SQL fragment.
+   */
+  private _buildTypeIndicatorExistsExpression(
     resultTypeId: number,
-    resultId: number | undefined,
     params: (string | number)[],
   ): string {
     const currentTypePatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
@@ -607,14 +620,34 @@ export class TocResultsRepository extends Repository<TocResult> {
         `;
     }
 
+    params.push(...currentTypePatterns, ...otherTypesPatterns);
+    return `(${currentTypeExists} ${otherTypesCondition})`;
+  }
+
+  private _buildPlannedResultTypeIndicatorExistsFilter(
+    resultTypeId: number,
+    resultId: number | undefined,
+    params: (string | number)[],
+  ): string {
     const hasMappedResult =
       resultId != null && Number.isFinite(resultId) && resultId > 0;
 
+    // NOTE: params must receive the mapped-result `resultId` AFTER the LIKE
+    // pattern values the expression pushes, so build the expression into a
+    // throwaway array first and splice it in, preserving the historical
+    // param order (`...currentTypePatterns, ...otherTypesPatterns, resultId`).
+    const expressionParams: (string | number)[] = [];
+    const typeIndicatorExpression = this._buildTypeIndicatorExistsExpression(
+      resultTypeId,
+      expressionParams,
+    );
+    params.push(...expressionParams);
+
     if (hasMappedResult) {
-      params.push(...currentTypePatterns, ...otherTypesPatterns, resultId);
+      params.push(resultId);
       return `
           AND (
-            (${currentTypeExists} ${otherTypesCondition})
+            ${typeIndicatorExpression}
             OR EXISTS (
               SELECT 1
               FROM ${env.DB_NAME}.results_toc_result rtr
@@ -626,10 +659,64 @@ export class TocResultsRepository extends Repository<TocResult> {
         `;
     }
 
-    params.push(...currentTypePatterns, ...otherTypesPatterns);
     return `
-          AND (${currentTypeExists} ${otherTypesCondition})
+          AND ${typeIndicatorExpression}
         `;
+  }
+
+  /**
+   * MHL-R-4 Reviewer fix (Issue 2) — batched, read-only lookup giving the
+   * write-time guard in `createTocMappingV2` the SAME node-level match
+   * verdict the candidate-list filter (`_buildPlannedResultTypeIndicatorExistsFilter`)
+   * already offers submitters, instead of the stricter row-presence check
+   * `getTocIndicatorsByResultIds` gives (which cannot express the
+   * "neutral node" OR-NOT-EXISTS branch — a node with zero matching
+   * indicator rows simply doesn't appear there, even when it would have
+   * been offered to the submitter). Returns a verdict per `toc_result_id`;
+   * an id absent from the map means the node itself wasn't found.
+   */
+  async getTocResultTypologyVerdicts(
+    tocResultIds: Array<number | string>,
+    resultTypeId: number,
+  ): Promise<Map<number, boolean>> {
+    const numericIds = (tocResultIds ?? [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    if (
+      !numericIds.length ||
+      !RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
+    ) {
+      return new Map();
+    }
+
+    const params: (string | number)[] = [];
+    const typeIndicatorExpression = this._buildTypeIndicatorExistsExpression(
+      resultTypeId,
+      params,
+    );
+    const placeholders = numericIds.map(() => '?').join(', ');
+
+    const query = `
+      SELECT DISTINCT tr.id AS toc_result_id, ${typeIndicatorExpression} AS type_matches
+      FROM ${env.DB_TOC}.toc_results tr
+      WHERE tr.id IN (${placeholders})
+    `;
+
+    try {
+      const rows = await this.query(query, [...params, ...numericIds]);
+      return new Map(
+        (rows ?? []).map((row: any) => [
+          Number(row.toc_result_id),
+          Number(row.type_matches) === 1,
+        ]),
+      );
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocResultTypologyVerdicts error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   private _buildPlannedIndicatorFilter(

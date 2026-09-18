@@ -352,6 +352,45 @@ describe('CgspaceDiscoveryService', () => {
       ]);
     });
 
+    it('(a1b) forwards project filter as f.project on hosts that expose a project facet (KPPJ bilateral repository filter)', async () => {
+      mockSources({
+        cgspace: {
+          data: halPage('cgspace', [
+            { uuid: 'cg-1', handle: '10568/1', title: 'AICCRA paper' },
+          ]),
+        },
+        melspace: {
+          data: halPage('melspace', [
+            { uuid: 'mel-1', handle: '20.500.11766/1', title: 'AICCRA note' },
+          ]),
+        },
+        worldfish: {
+          data: halPage('worldfish', [
+            { uuid: 'wf-1', handle: '20.500.12348/1', title: 'AICCRA brief' },
+          ]),
+        },
+      });
+
+      const projectLabel =
+        'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa';
+
+      await service.search({
+        project: projectLabel,
+        page: 0,
+        size: 10,
+        year: '2026',
+        repository: [...ALL],
+      });
+
+      for (const repo of ['melspace', 'worldfish'] as KpRepository[]) {
+        const [, config] = callFor(repo);
+        expect(config.params['f.project']).toBe(`${projectLabel},equals`);
+      }
+
+      const [, cgConfig] = callFor('cgspace');
+      expect(cgConfig.params['f.project']).toBeUndefined();
+    });
+
     it('(a2) a selection of two queries only those two sources, in selection order (scenario KPM-R-8)', async () => {
       mockSources({
         cgspace: {
@@ -916,6 +955,7 @@ describe('CgspaceDiscoveryService', () => {
         type: '',
         center: '',
         year: '',
+        project: '',
         repository: 'cgspace',
       });
       expect(service.searchCache.has(oldestKey)).toBe(true);
