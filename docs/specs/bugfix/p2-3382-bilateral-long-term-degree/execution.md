@@ -258,3 +258,33 @@ plus `[required]="true"` on the control. **The checklist still publishes exactly
 **ADVISORY (non-gating):** if `capdev_term_id` ever arrived as a tinyint-as-string (the trap this component's `CLAUDE.md` records for `is_attending_for_organization`), `'4' !== 4` would read the bare parent as filled. Not new — `hydrateTermCascade` already strict-compares the same field, so a string would break the radio visibly first — and it fails in the safe direction.
 
 **Not run:** Cypress was not extended, so browser-level coverage of the new gate is *not run*, not passed. Carried to `CSD-T-5`.
+
+### ⚠️ Collision & repair — `CSD-T-6` superseded by P2-3771 (2026-09-18)
+
+**What happened.** While `CSD-T-6` was in review, Yecksin shipped `9f002ad95` — *"P2-3771: make the long-term degree mandatory on the client side"* — implementing the **same rule**, from the same QA request (María Camila, 18-Sep-2026). This is the **second** time this spec and P2-3771 independently produced the same change; the first was the editor relocation, united in `a0ebd2fc7`.
+
+**How it went wrong.** This worktree had been switched to `performance-refactor` at the user's request so they could test locally. That branch was **also checked out in the `seal` worktree**, so both share one branch ref. Yecksin's commit moved the ref underneath this session: the working tree still held files based on `fa9f78440`, but the commit `37d96167e` was written with `9f002ad95` as its parent. The result was a **silent clobber** — it reverted his `lengthOfTrainingFilled` implementation and deleted all seven of his new test cases, while every gate stayed green, because the suite only ever measured this session's own version.
+
+Nothing was pushed. The collision was caught by inspecting the commit's parent before pushing, not by any test — no suite can see work that a commit removed.
+
+**Repair.** `git checkout 9f002ad95 -- <the three component files>` restored his implementation and his tests verbatim. `CSD-T-6`'s own implementation is **withdrawn, not merged**: his covers the same rule with broader cases (Short-term standalone, a stored degree read back from the server, nothing picked at all), so uniting the code would have meant two getters for one rule.
+
+**Which implementation now stands** — his, reading the cascade rather than the persisted key:
+
+```ts
+get lengthOfTrainingFilled(): boolean {
+  if (this.capdevTermId1 == null) return false;
+  if (this.capdevTermId1 === 3) return true;
+  return this.capdevTermId2 != null;
+}
+```
+
+Functionally equivalent to `CSD-T-6`'s `termId != null && termId !== 4` across every reachable state, since `syncCapdevTermId()` keeps the two in step. His reasoning is the stronger one and is recorded in his docstring: `syncCapdevTermId()` stores the parent id `4` when no degree is chosen, which is **indistinguishable from a resolved answer** once it reaches `body.capdev_term_id` — so the cascade is the more honest source.
+
+**What `CSD-T-6` still contributes.** Its Pivot Record, the `CSD-R-4` reversal and the six-site Correction Closure sweep across `requirements.md`/`design.md` stand — P2-3771 changed the code but no spec document. Without them `CSD-AC-4` would still assert that a bare Long-term shows the green check, which is the line a future auditor would cite to revert this behaviour.
+
+**Also preserved from `CSD-T-6`'s review, since the code it described is gone:** the denylist-vs-allowlist analysis. Under the id drift recorded as `CSD-OQ-1`, an allowlist fails **closed** (everything unfilled, Submit disabled platform-wide). Both surviving implementations hardcode `3` and `4`, so `CSD-OQ-1` remains open and is now load-bearing for **Submit**, not just for display.
+
+**Owed:** Juan David to tell Yecksin that this spec twice duplicated P2-3771's work, so the two tickets stop racing.
+
+**Final state:** 345 passing across both modules, lint clean — every test from both authors coexisting.

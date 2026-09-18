@@ -90,13 +90,13 @@
        without one and the whole `field_card` class is skipped, which drew PhD / Master loose outside
        the frame every sibling question has.
 
-       P2-3382 pivot (approved by Juan David Delgado, 2026-09-18) — the Degree is now REQUIRED, and it
-       gates the green check: the long-term parent bucket on its own no longer fills the section's
-       length-of-training item. That reverses the deliberate optionality this control shipped with
-       under P2-3771, whose reasoning was that only PhD and Master are offered; the PO accepted that
-       long-term results stored on the bare parent term now read as incomplete. The gate lives in the
-       EXISTING checklist item's predicate (`lengthOfTrainingFilled`) — registering a separate entry
-       for the degree in the tracker would leave the section amber forever and disable Submit. -->
+       P2-3771 (QA decision, 18-Sep-2026): the degree IS mandatory once Long-term is picked — María
+       Camila confirmed it after reviewing the story. Note what this does NOT do: it adds no fourth
+       entry to `setSectionFields` (a never-filled entry would leave the section amber forever);
+       instead the existing "Length of training" item stays unfilled until the cascade resolves, so
+       the footer keeps naming a field the user can actually act on. The database green check
+       (`validation_capacity_dev_*`) is NOT touched here — it lives outside this repo and belongs to
+       its owner, so the server stays the laxer of the two on purpose. -->
   @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
     <app-pr-radio-button
       label="Degree"

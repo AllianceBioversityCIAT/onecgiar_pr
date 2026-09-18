@@ -129,7 +129,7 @@
 - **Verification:** human, at the HITL pause. **There is no command for this** — jsdom cannot measure layout and the `field_card` assertion proves the frame exists, not that it matches the reference.
   - **Disqualifier:** "looks fine" is not a record. If a screenshot was not taken, the check did not happen, and `execution.md` must say so rather than claim a pass.
 
-### `CSD-T-6` — Make the Degree mandatory for Long-term *(added by Pivot, 2026-09-18)*  `[x]`
+### `CSD-T-6` — Make the Degree mandatory for Long-term *(added by Pivot, 2026-09-18)*  `[x]` — ⚠️ **code withdrawn; superseded by P2-3771 `9f002ad95`. The spec/doc half stands.** See `execution.md` → *Collision & repair*
 
 - **Type:** `client`
 - **Description:** Tighten the existing `length-of-training` MDS predicate so a bare `capdev_term_id = 4` is **not** filled (`1`/`2`/`3` are), and set `[required]="true"` on the Degree control. Update P2-3771's template-text case that pins `[required]="false"`.

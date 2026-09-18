@@ -71,22 +71,19 @@ export class TypeCapacitySharingComponent implements OnInit {
       count => count != null
     );
   }
-
   /**
-   * P2-3382 (pivot approved by Juan David Delgado, 2026-09-18): a bare Long-term is a half-answer.
-   * Term `4` is only the parent bucket — the Degree underneath it (PhD `1` / Master `2`) is what makes
-   * the answer reportable, while Short-term (`3`) stands alone with nothing left to ask. This reverses
-   * the section's earlier rule, which let `4` on its own turn the check green; results already stored
-   * that way now read as incomplete, and that retroactive effect was accepted.
-   *
-   * Keyed as "anything but the parent bucket" rather than an allowlist of 1/2/3 on purpose: a term
-   * added to the catalogue later counts as answered by default, which is the only direction that
-   * cannot silently disable Submit. And it tightens the EXISTING checklist item — never a fourth one.
+   * P2-3771 — Short-term answers on its own; Long-term does not until a degree is picked. QA asked
+   * for the sub-category to be mandatory (María Camila, 18-Sep-2026), and the checklist is where
+   * that bites: Submit is gated on `overallStatus() === 'complete'`. Reading the cascade rather than
+   * `body.capdev_term_id` is deliberate — `syncCapdevTermId()` stores the parent id 4 when no degree
+   * is chosen, which is indistinguishable from a resolved answer downstream.
    */
   get lengthOfTrainingFilled(): boolean {
-    const termId = this.body.capdev_term_id;
-    return termId != null && termId !== 4;
+    if (this.capdevTermId1 == null) return false;
+    if (this.capdevTermId1 === 3) return true;
+    return this.capdevTermId2 != null;
   }
+
   readonly lengthOfTrainingDesc = LENGTH_OF_TRAINING_DESC;
   readonly deliveryMethodDesc = DELIVERY_METHOD_DESC;
   readonly loadErrorNote = LOAD_ERROR_NOTE;
@@ -257,10 +254,6 @@ export class TypeCapacitySharingComponent implements OnInit {
     // fields the UI marks optional silently held the button disabled. "Unknown" was neither required
     // nor tracked, so there was no rule at all. One group item, satisfied by any single count, matches
     // both AC1 and the on-screen guidance. `0 != null` is true, so a zero counts as answered.
-    //
-    // P2-3382 (pivot, 2026-09-18): `length-of-training` is the ONE item whose predicate moved — a bare
-    // parent term no longer fills it (see `lengthOfTrainingFilled`). The list itself is still exactly
-    // these three keys; a fourth entry for the degree would leave the section amber forever.
     this.mdsTracker.setSectionFields('type-specific', [
       {
         key: 'people-trained',

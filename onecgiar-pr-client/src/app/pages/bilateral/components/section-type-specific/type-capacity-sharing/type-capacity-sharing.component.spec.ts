@@ -320,6 +320,9 @@ describe('TypeCapacitySharingComponent', () => {
         capdev_term_id: 3,
         is_attending_for_organization: false,
       };
+      // P2-3771: the checklist reads the cascade, not `body`, so a Short-term answer is staged the
+      // same way the radio stages it.
+      component.capdevTermId1 = 3;
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'people-trained', label: 'Number of people trained', filled: true },
@@ -350,8 +353,6 @@ describe('TypeCapacitySharingComponent', () => {
       expect(items.map((i: any) => i.key)).toEqual(['people-trained', 'delivery-method', 'length-of-training']);
     });
 
-    // P2-3382 pivot (2026-09-18): the fixture's term moved from the bare parent bucket (4) to a
-    // resolved Master (2) — under the new rule a "fully answered" form is one with a degree.
     it('counts a fully answered form as filled', () => {
       build();
       component.body = {
@@ -359,46 +360,19 @@ describe('TypeCapacitySharingComponent', () => {
         male_using: 2,
         non_binary_using: 1,
         capdev_delivery_method_id: 5,
-        capdev_term_id: 2,
+        capdev_term_id: 1,
         is_attending_for_organization: true,
       };
+      // P2-3771: "fully answered" now means the long-term degree is resolved too — the parent bucket
+      // on its own leaves the item unfilled, which is what this suite's sibling case proves.
+      component.capdevTermId1 = 4;
+      component.capdevTermId2 = 1;
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'people-trained', label: 'Number of people trained', filled: true },
         { key: 'delivery-method', label: 'Delivery method', filled: true },
         { key: 'length-of-training', label: 'Length of training', filled: true },
       ]);
-    });
-
-    // P2-3382 pivot (2026-09-18) — selecting Long-term without a degree is a half-answer and must NOT
-    // turn the section green. The rule is enforced by tightening the EXISTING item: the checklist has
-    // to stay at exactly three keys, because a fourth never-filled entry leaves the section amber
-    // forever and permanently disables Submit (the P2-3348 / attendance-field failure).
-    it('does not count a bare Long-term (4) as an answered length of training', () => {
-      build();
-      component.body = { has_unkown_using: 12, capdev_delivery_method_id: 5, capdev_term_id: 4 };
-      component.updateMds();
-      const items = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(items).toHaveLength(3);
-      expect(items.map((i: any) => i.key)).toEqual(['people-trained', 'delivery-method', 'length-of-training']);
-      expect(items.find((i: any) => i.key === 'length-of-training').filled).toBe(false);
-      // filledFields !== totalFields — this is what the tracker reads as "not complete".
-      expect(items.every((i: any) => i.filled)).toBe(false);
-    });
-
-    it.each<[number, string]>([
-      [1, 'PhD'],
-      [2, 'Master'],
-      [3, 'Short-term'],
-    ])('counts a resolved term %i (%s) as an answered length of training', termId => {
-      build();
-      component.body = { has_unkown_using: 12, capdev_delivery_method_id: 5, capdev_term_id: termId };
-      component.updateMds();
-      const items = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
-      expect(items).toHaveLength(3);
-      expect(items.map((i: any) => i.key)).toEqual(['people-trained', 'delivery-method', 'length-of-training']);
-      expect(items.find((i: any) => i.key === 'length-of-training').filled).toBe(true);
-      expect(items.every((i: any) => i.filled)).toBe(true);
     });
   });
 
@@ -804,15 +778,68 @@ describe('TypeCapacitySharingComponent', () => {
       expect(degreeIdx).toBeLessThan(fullMetadataIdx);
     });
 
-    // P2-3382's pivot (approved 2026-09-18) reversed P2-3771's deliberate optionality decision: the
-    // Degree now gates the green check, so the control carries the REQUIRED badge its siblings do.
-    // Only the optionality claim moved — the guard condition below is unchanged and still worth pinning.
-    it('is still gated on the long-term buckets and is now required', () => {
+    it('is still gated on the long-term buckets', () => {
       const html = template();
       expect(html).toMatch(
         /@if \(capdevTermId1 === 4 \|\| capdevTermId1 === 1 \|\| capdevTermId1 === 2\) \{[\s\S]{0,400}label="Degree"/
       );
+    });
+  });
+  /**
+   * P2-3771 — QA (María Camila, 18-Sep-2026) confirmed the long-term degree is mandatory. The
+   * checklist is the gate that matters: Submit is disabled while the section is incomplete. Controls
+   * included on purpose — Short-term must stay complete on its own, and a stored degree (ids 1 / 2,
+   * which hydrate as parent 4 + sub) must still read as answered.
+   */
+  describe('P2-3771 - the long-term degree is mandatory', () => {
+    it('leaves Length of training unanswered while Long-term has no degree', () => {
+      build();
+      component.capdevTermId1 = 4;
+      component.onCapdevTermId1Change();
+
+      expect(component.lengthOfTrainingFilled).toBe(false);
+      const [, fields] = mdsTracker.setSectionFields.mock.calls.at(-1);
+      expect(fields).toContainEqual(expect.objectContaining({ key: 'length-of-training', filled: false }));
+    });
+
+    it('counts it as answered once a degree is picked', () => {
+      build();
+      component.capdevTermId1 = 4;
+      component.onCapdevTermId1Change();
+      component.capdevTermId2 = 1;
+      component.onCapdevTermId2Change();
+
+      expect(component.lengthOfTrainingFilled).toBe(true);
+      const [, fields] = mdsTracker.setSectionFields.mock.calls.at(-1);
+      expect(fields).toContainEqual(expect.objectContaining({ key: 'length-of-training', filled: true }));
+    });
+
+    it('control: Short-term answers on its own', () => {
+      build();
+      component.capdevTermId1 = 3;
+      component.onCapdevTermId1Change();
+
+      expect(component.lengthOfTrainingFilled).toBe(true);
+    });
+
+    it('control: a stored degree read back from the server counts as answered', () => {
+      bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { capdev_term_id: 2 } }));
+      build();
+
+      expect(component.capdevTermId1).toBe(4);
+      expect(component.capdevTermId2).toBe(2);
+      expect(component.lengthOfTrainingFilled).toBe(true);
+    });
+
+    it('control: nothing picked at all is still unanswered', () => {
+      build();
+      expect(component.lengthOfTrainingFilled).toBe(false);
+    });
+
+    it('marks the Degree radio as required in the template', () => {
+      const html = readFileSync(join(__dirname, 'type-capacity-sharing.component.html'), 'utf8');
       const degreeIdx = html.indexOf('label="Degree"');
+      expect(degreeIdx).toBeGreaterThan(-1);
       expect(html.slice(degreeIdx, degreeIdx + 400)).toContain('[required]="true"');
     });
   });
