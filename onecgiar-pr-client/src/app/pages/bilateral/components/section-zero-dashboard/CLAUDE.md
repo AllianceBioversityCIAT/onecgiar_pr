@@ -1,6 +1,6 @@
 # section-zero-dashboard (bilateral)
 
-**Verified:** 2026-09-11 · branch performance-refactor (P2-3283 primary assignment editing; Submit lives in the rail)
+**Verified:** 2026-09-18 · branch yzuniga/qa-batch-2026-09-18 (P2-3759 Lead Center above the project field)
 
 ## What it is
 Section 0 of the bilateral form: the read-mostly card that identifies the result (code, type,
@@ -31,6 +31,11 @@ card; bring it back only when one of those actions actually ships.
   `bilateral-result-creator`, and `submitResult()` re-checks its own guards regardless.
 - Every spec assertion about the project field reads the **rendered DOM** on purpose: the client runs
   zoneless, so asserting a class property passes with the defect still on screen.
+- 🛑 **P2-3759: the Lead Center field goes ABOVE the W3/Bilateral Project field and is labelled
+  "Lead Center", not "Center"** — the story says "Positioned above the W3/Bilateral Project field".
+  `.bp-project-fields` is a flex column with no `order`, so DOM order IS screen order; the specs
+  assert the label index, and they assert `indexOf(...) >= 0` too, because a missing label indexes
+  to `-1` and would otherwise satisfy "before Project" while the field is not on screen at all.
 
 ## Pending / Coming soon
 - `Generate Narrative`, `Download PDF`, `AI Review` — **not rendered at all since 2026-09-04** (the
