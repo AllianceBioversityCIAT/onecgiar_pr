@@ -31,6 +31,45 @@ export function abbreviateAxisLabel(value: string): string {
   return AXIS_LABEL_ABBREVIATIONS[value] ?? value;
 }
 
+/** Science Program axis / tooltip label — full name, code only as last resort. */
+export function programAxisLabel(row: { code: string; name: string }): string {
+  return row.name?.trim() || row.code;
+}
+
+/** Max visible characters on programme axis labels before ellipsis (view-dependent). */
+export const PROGRAM_AXIS_LABEL_MAX_CHARS = {
+  vertical: 18,
+  horizontal: 28,
+  heatmap: 28,
+  matrix: 18
+} as const;
+
+export function truncateProgramAxisLabel(label: string, maxChars: number): string {
+  const trimmed = (label ?? '').trim();
+  if (maxChars < 4 || trimmed.length <= maxChars) return trimmed;
+  return `${trimmed.slice(0, maxChars - 3).trimEnd()}...`;
+}
+
+function truncatedProgramAxisLabelConfig(
+  tokens: ResolvedChartTokens,
+  maxChars: number,
+  extra?: { rotate?: number; fontSize?: number }
+) {
+  return {
+    interval: 0,
+    rotate: extra?.rotate ?? 0,
+    hideOverlap: false,
+    fontWeight: 500,
+    color: tokens.textSecondary || '#6B6580',
+    fontSize: extra?.fontSize ?? 10,
+    formatter: (value: string) => truncateProgramAxisLabel(String(value ?? ''), maxChars),
+    tooltip: {
+      show: true,
+      formatter: (params: { value?: string | number }) => String(params?.value ?? '')
+    }
+  };
+}
+
 /**
  * Builds the ECharts donut pie chart option for Portfolio Reporting Status (POV-R-2).
  * Uses the platform's violet scale palette, non-detaching slices, and centered total.
@@ -305,13 +344,13 @@ export function programRankingOption(
         const idx = payload?.dataIndex;
         const row = typeof idx === 'number' ? rows[idx] : undefined;
         if (!row) return '';
-        return `<strong>${row.code} - ${row.name}</strong>: ${row.total} total<br/>` +
+        return `<strong>${programAxisLabel(row)}</strong>: ${row.total} total<br/>` +
           `• Editing: ${row.editing}<br/>` +
           `• Submitted / QA: ${row.submittedOrQa}<br/>` +
           `• Approved: ${row.approved}`;
       }
     },
-    grid: { left: 60, right: 36, top: 16, bottom: 24, containLabel: true },
+    grid: { left: 12, right: 36, top: 16, bottom: 24, containLabel: true },
     xAxis: {
       type: 'value',
       minInterval: 1,
@@ -320,9 +359,9 @@ export function programRankingOption(
     },
     yAxis: {
       type: 'category',
-      data: rows.map(row => row.code),
+      data: rows.map(row => programAxisLabel(row)),
       inverse: true,
-      axisLabel: { interval: 0, fontWeight: 600, color: tokens.primaryStrong || '#6B46E5' }
+      axisLabel: truncatedProgramAxisLabelConfig(tokens, PROGRAM_AXIS_LABEL_MAX_CHARS.horizontal, { fontSize: 11 })
     },
     series: [
       {
@@ -430,7 +469,7 @@ export function programRankingVerticalOption(
         const row = typeof idx === 'number' ? rows[idx] : undefined;
         if (!row) return '';
         return (
-          `<strong>${row.code} - ${row.name}</strong>: ${row.total} total<br/>` +
+          `<strong>${programAxisLabel(row)}</strong>: ${row.total} total<br/>` +
           `• Editing: ${row.editing}<br/>` +
           `• Submitted / QA: ${row.submittedOrQa}<br/>` +
           `• Approved: ${row.approved}`
@@ -443,18 +482,13 @@ export function programRankingVerticalOption(
       right: 16,
       textStyle: { color: tokens.textSecondary || '#6B6580', fontSize: 11 }
     },
-    grid: { left: 48, right: 24, top: 36, bottom: 36, containLabel: true },
+    grid: { left: 48, right: 24, top: 36, bottom: 56, containLabel: true },
     xAxis: {
       type: 'category',
-      data: rows.map(row => row.code),
-      axisLabel: {
-        interval: 0,
-        rotate: rows.length > 8 ? 35 : 0,
-        hideOverlap: true,
-        fontWeight: 600,
-        color: tokens.primaryStrong || '#6B46E5',
-        fontSize: 11
-      }
+      data: rows.map(row => programAxisLabel(row)),
+      axisLabel: truncatedProgramAxisLabelConfig(tokens, PROGRAM_AXIS_LABEL_MAX_CHARS.vertical, {
+        rotate: rows.length > 4 ? 45 : 0
+      })
     },
     yAxis: {
       type: 'value',
@@ -564,10 +598,10 @@ export function programRankingHeatmapOption(
         const row = programmeRows[progIdx];
         const category = categories[catIdx];
         if (!row || !category) return '';
-        return `<strong>${row.code} - ${row.name}</strong><br/>${category}: <strong>${count}</strong> results`;
+        return `<strong>${programAxisLabel(row)}</strong><br/>${category}: <strong>${count}</strong> results`;
       }
     },
-    grid: { left: 80, right: 30, top: 20, bottom: 60, containLabel: true },
+    grid: { left: 12, right: 30, top: 20, bottom: 60, containLabel: true },
     xAxis: {
       type: 'category',
       data: categories.map(c => abbreviateAxisLabel(c)),
@@ -576,10 +610,10 @@ export function programRankingHeatmapOption(
     },
     yAxis: {
       type: 'category',
-      data: programmeRows.map(r => r.code),
+      data: programmeRows.map(r => programAxisLabel(r)),
       inverse: true,
       splitArea: { show: true },
-      axisLabel: { interval: 0, fontWeight: 700, color: tokens.primaryStrong || '#6B46E5', fontSize: 12 }
+      axisLabel: truncatedProgramAxisLabelConfig(tokens, PROGRAM_AXIS_LABEL_MAX_CHARS.heatmap, { fontSize: 11 })
     },
     visualMap: {
       min: 0,
@@ -731,7 +765,7 @@ export function matrixTableChartOption(
         const first = payload[0] as { dataIndex?: number };
         const row = typeof first?.dataIndex === 'number' ? rows[first.dataIndex] : undefined;
         if (!row) return '';
-        let html = `<strong>${row.code} - ${row.name}</strong> (Total: <strong>${row.total}</strong>)<br/>`;
+        let html = `<strong>${programAxisLabel(row)}</strong> (Total: <strong>${row.total}</strong>)<br/>`;
         payload.forEach((p: { seriesName?: string; value?: number; color?: string }) => {
           if (typeof p.value === 'number' && p.value > 0) {
             html += `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}: <strong>${p.value}</strong><br/>`;
@@ -745,16 +779,13 @@ export function matrixTableChartOption(
       top: 0,
       textStyle: { color: tokens.textSecondary || '#6B6580', fontSize: 11 }
     },
-    grid: { left: 48, right: 24, top: 40, bottom: 36, containLabel: true },
+    grid: { left: 48, right: 24, top: 40, bottom: 56, containLabel: true },
     xAxis: {
       type: 'category',
-      data: rows.map(r => r.code),
-      axisLabel: {
-        interval: 0,
-        fontWeight: 700,
-        color: tokens.primaryStrong || '#6B46E5',
-        fontSize: 11
-      }
+      data: rows.map(r => programAxisLabel(r)),
+      axisLabel: truncatedProgramAxisLabelConfig(tokens, PROGRAM_AXIS_LABEL_MAX_CHARS.matrix, {
+        rotate: rows.length > 4 ? 45 : 0
+      })
     },
     yAxis: {
       type: 'value',

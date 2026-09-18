@@ -14,7 +14,6 @@ import { GoogleAnalyticsComponent } from './shared/components/external-tools/com
 import { ShareRequestModalModule } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.module';
 import { YmzListStructureItemModule } from './shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { ChangePhaseModalModule } from './shared/components/change-phase-modal/change-phase-modal.module';
-import { FooterModule } from './shared/components/footer/footer.module';
 import { PrDialogComponent } from './shared/components/pr-dialog/pr-dialog.component';
 import { BilateralAiCompletionDialogComponent } from './pages/bilateral/components/bilateral-ai-completion-dialog/bilateral-ai-completion-dialog.component';
 import { PrToastComponent } from './shared/components/pr-toast';
@@ -50,7 +49,6 @@ function initializeClarityService(clarityService: ClarityService) {
     ShareRequestModalModule,
     YmzListStructureItemModule,
     ChangePhaseModalModule,
-    FooterModule,
     PrDialogComponent,
     PrToastComponent,
     TawkComponent,
