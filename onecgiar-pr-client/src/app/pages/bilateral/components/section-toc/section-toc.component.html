@@ -29,20 +29,6 @@
         </app-pr-yes-or-not>
       }
     </div>
-
-    @if (showWhyReported()) {
-      <div class="st-field">
-        <app-pr-textarea
-          label="Why is this result being reported?"
-          placeholder="Enter reason"
-          [required]="true"
-          [rows]="2"
-          [maxWords]="30"
-          [ngModel]="whyReported()"
-          (ngModelChange)="onWhyReportedInput($event)">
-        </app-pr-textarea>
-      </div>
-    }
   }
 
   @if (showDetailForm()) {
