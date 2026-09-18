@@ -6,7 +6,7 @@
 |---|---|
 | Module / feature | KP project match + bilateral wiring |
 | Linked spec | `requirements.md` + `design.md` |
-| Status | `done` |
+| Status | `shipped` |
 | Estimated LOC | ~180 |
 | PR strategy | **Single PR** (server DTO + client browse + bilateral wiring tightly coupled) |
 

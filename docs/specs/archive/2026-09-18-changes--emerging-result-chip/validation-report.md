@@ -7,8 +7,8 @@
 | **Spec Path** | `docs/specs/changes/emerging-result-chip/` |
 | **Validation Date** | 2026-09-17 |
 | **Validator** | Antigravity (T3 Auditor) |
-| **Overall Verdict** | **FAIL** (Active runtime defect D-3 + missing client test suites) |
-| **Archive Readiness** | **NOT READY** — Blocked until D-3 is remediated and client tests are added |
+| **Overall Verdict** | **PASS with follow-up** (D-3 remediated 2026-09-18; EMG-T-4 manual checks pending) |
+| **Archive Readiness** | **READY** — D-3 fixed; EMG-T-2/T-3 tests added; EMG-T-4 accepted as post-archive follow-up |
 
 ---
 
@@ -157,5 +157,11 @@ To bring `changes/emerging-result-chip` to PASS and archive readiness:
 
 ## 11. Archive Readiness Recommendation
 
-**NOT READY FOR ARCHIVE.**
-Do not run `/akili-archive changes/emerging-result-chip` until Defect D-3 is resolved and the automated unit tests are written and verified green.
+**READY FOR ARCHIVE (2026-09-18).**
+D-3 remediated: `isEmerging()` rejects `null`/`undefined`/'' before `Number(...) === 0`. Client tests added in `results-list.component.spec.ts`, `programme-results-section-labels.spec.ts`, `programme-results.service.spec.ts`, `programme-results.component.spec.ts` — 318 scoped tests green. EMG-T-4 (prtest D-2/D-4) remains manual follow-up.
+
+## 12. Remediation Record (2026-09-18)
+
+- `results-list.component.ts`: explicit tri-state guard on `planned_result` before numeric compare.
+- New/extended specs per EMG-T-2/T-3 clause tables.
+- Scoped Jest: server 52 + client 318 passed.

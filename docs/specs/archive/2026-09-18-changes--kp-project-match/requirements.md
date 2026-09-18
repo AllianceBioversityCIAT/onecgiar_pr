@@ -8,7 +8,7 @@
 | Sub-feature | KP project match & highlighting |
 | Spec path | `changes/kp-project-match` |
 | Owner | Bilateral / Results platform |
-| Status | `approved` |
+| Status | `shipped` |
 | Type | Change |
 | Approval Mode | gated — requirements approved via `/akili-specify` 2026-09-18 |
 | Depends on | Shipped `changes/kp-program-accelerator-match` · `changes/kp-multi-repository-browse` |

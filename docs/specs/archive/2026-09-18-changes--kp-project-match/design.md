@@ -6,7 +6,7 @@
 |---|---|
 | Spec path | `changes/kp-project-match` |
 | Linked requirements | `requirements.md` |
-| Status | `approved` |
+| Status | `shipped` |
 | Depth | Standard |
 | Budget | **3 tasks · ~180 LOC · 1 review round** |
 
