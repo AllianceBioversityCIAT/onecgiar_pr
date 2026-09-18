@@ -322,6 +322,62 @@ describe('SectionGeneralInfoComponent', () => {
         lead_contact_person_data: null
       });
     });
+
+    /**
+     * `BIL-IDP-T-1` (`docs/specs/bugfix/innovation-developer-prefill-stale-lead-contact`) — regression
+     * test, red before the fix.
+     *
+     * Case 5 (`R-3`): the constructor's mount effect (title/description/`leadContactBody` ->
+     * `updateGeneralInfoMdsFields()`) runs BEFORE the hydration effect below it has copied the loaded
+     * contact into `leadContactBody` — see the guard's own comment
+     * ("saving unconditionally PATCHed lead_contact_person: null over the stored one every time the
+     * editor was opened"). `DD-1` adds a second write in the very same guarded block: publishing
+     * `leadContactBody()` back to `creationService.resultLeadContact`/`resultLeadContactData`. If that
+     * publish were placed ABOVE `if (!this.leadContactHydrated) return;` (the mistake `T-2`'s "what
+     * disqualifies this evidence" warns about), the pre-hydration run — body still `(null, null)` —
+     * would overwrite the service's stored contact with `''`/`null` before the hydration effect ever
+     * reads it, permanently losing what the result was loaded with. Placed correctly (after the
+     * guard), the publish only ever re-writes the value hydration itself just set, so the signal is
+     * unchanged end to end.
+     */
+    it('does not clobber the stored contact through a mount-order write, and does not save on mount (R-3)', () => {
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      build();
+
+      // Before the first change detection, no effect (mount or hydration) has run at all.
+      expect(creation.resultLeadContact()).toBe('Jane Doe');
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+
+      // After the full mount flush: hydration has run, and any publish `DD-1` adds must not have
+      // clobbered the value on the way there, and must not have produced a spurious save.
+      fixture.detectChanges();
+      expect(creation.resultLeadContact()).toBe('Jane Doe');
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Case 6 (`R-1`): `DD-1`'s other half — once mounted and hydrated, the settled contact SHALL be
+     * published to `creationService.resultLeadContact`, which is the shared signal
+     * `applyInnovationDevelopersPrefill()` reads. Today nothing publishes to it: this signal only
+     * moves when the server GET writes it (`bilateral-creation.service.ts:170`). MUST FAIL on current
+     * HEAD — selecting a contact here has no effect on the service signal at all.
+     */
+    it('publishes a newly selected contact to the shared signal the Innovation Developer prefill reads (R-1)', () => {
+      build();
+      fixture.detectChanges();
+
+      const body = component.leadContactBody();
+      body.lead_contact_person = 'A. Rivera';
+      body.lead_contact_person_data = { display_name: 'A. Rivera', mail: 'a.rivera@cgiar.org', title: '' };
+
+      expect(creation.resultLeadContact()).toBe('A. Rivera');
+      expect(creation.resultLeadContactData()).toEqual({
+        display_name: 'A. Rivera',
+        mail: 'a.rivera@cgiar.org',
+        title: ''
+      });
+    });
   });
 
   // ── UserSearchService reset (app-wide singleton — must not leak state) ──
