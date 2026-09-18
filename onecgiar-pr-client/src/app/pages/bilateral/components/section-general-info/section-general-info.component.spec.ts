@@ -4,7 +4,7 @@ import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { of, throwError, Subject } from 'rxjs';
 
 import { SectionGeneralInfoComponent } from './section-general-info.component';
@@ -586,6 +586,29 @@ describe('SectionGeneralInfoComponent', () => {
         expect.objectContaining({ gender_impact_area_ids: [10, 11] })
       );
     });
+
+    // P2-3767 — QA (result #9432, CIP, Other Output) picked "(1) Significant" and got no sub-scores.
+    // Bilateral opens them from Significant (level 2) upwards; W1/W2 keeps Principal-only in its own
+    // template. The levels are the `gender-tag-levels/all` ids: 1 Not targeted, 2 Significant,
+    // 3 Principal.
+    describe('sub-score visibility (P2-3767)', () => {
+      it('opens the sub-scores for Significant (2) and for Principal (3)', () => {
+        build();
+        component.onDacTagChange('gender', 2);
+        expect(component.showsSubScores('gender')).toBe(true);
+
+        component.onDacTagChange('gender', 3);
+        expect(component.showsSubScores('gender')).toBe(true);
+      });
+
+      it('keeps them closed for Not targeted (1) and while the area is unanswered', () => {
+        build();
+        expect(component.showsSubScores('gender')).toBe(false);
+
+        component.onDacTagChange('gender', 1);
+        expect(component.showsSubScores('gender')).toBe(false);
+      });
+    });
   });
 
   // ── show-all toggle ──────────────────────────────────────────────────
@@ -686,6 +709,107 @@ describe('SectionGeneralInfoComponent', () => {
       expect(() => component.toggleShowAll()).not.toThrow();
       getSpy.mockRestore();
       setSpy.mockRestore();
+    });
+  });
+
+  // ── the real markup ──────────────────────────────────────────────────
+  // Everything above builds with `.overrideTemplate('<div></div>')`, so a DOM assertion there passes
+  // vacuously. P2-3768 (the copy) and P2-3767 (which levels open the sub-scores) are rules that live
+  // in the template, so they are asserted against the real markup here. The child components are
+  // dropped (`imports: []` + `NO_ERRORS_SCHEMA`) so `@if`/`@for` and the literal copy render without
+  // pulling every custom field, tooltip and dialog into the test.
+  describe('rendered markup', () => {
+    const buildReal = async () => {
+      // Signals the shared mock does not need while the template is stubbed out, but the real
+      // markup reads: the change-type strip, the read-only gate and the innovation note.
+      Object.assign(creation, {
+        isAiGenerated: signal(false),
+        isEditableByCenterUser: signal(true),
+        currentResultId: signal(9432),
+        resultTypeId: signal(3),
+        resultLevelId: signal(1)
+      });
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [SectionGeneralInfoComponent],
+        providers: [
+          { provide: BilateralAutoSaveService, useValue: autoSave },
+          { provide: BilateralMdsTrackerService, useValue: mdsTracker },
+          { provide: BilateralCreationService, useValue: creation },
+          { provide: UserSearchService, useValue: userSearch },
+          { provide: HttpClient, useValue: http },
+          { provide: ActivatedRoute, useValue: route }
+        ]
+      })
+        .overrideComponent(SectionGeneralInfoComponent, { set: { imports: [], schemas: [NO_ERRORS_SCHEMA] } })
+        .compileComponents();
+      fixture = TestBed.createComponent(SectionGeneralInfoComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+      return component;
+    };
+
+    /** Collapses the template's line breaks and indentation, the way the browser paints it. */
+    const noteText = (): string => {
+      const spans: any[] = Array.from(fixture.nativeElement.querySelectorAll('span'));
+      const el = spans.find(s => s.textContent.includes('will be saved'));
+      return (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    };
+
+    // P2-3768 — with one field the note read "1 hidden fields have values and will be saved."
+    describe('hidden-fields note (P2-3768)', () => {
+      it('reads in the singular for exactly one hidden field', async () => {
+        await buildReal();
+        component.selectedDacLevels.set({ gender: 2 });
+        fixture.detectChanges();
+
+        expect(component.hiddenFieldsWithValues()).toBe(1);
+        expect(noteText()).toBe('1 hidden field has values and will be saved.');
+      });
+
+      it('stays plural from two hidden fields on', async () => {
+        await buildReal();
+        component.selectedDacLevels.set({ gender: 2, poverty: 3 });
+        fixture.detectChanges();
+
+        expect(component.hiddenFieldsWithValues()).toBe(2);
+        expect(noteText()).toBe('2 hidden fields have values and will be saved.');
+
+        component.selectedDacLevels.set({ gender: 2, poverty: 3, nutrition: 1 });
+        fixture.detectChanges();
+        expect(noteText()).toBe('3 hidden fields have values and will be saved.');
+      });
+    });
+
+    // P2-3767 — QA on prtest (result #9432, CIP, Other Output) picked "(1) Significant" and the
+    // sub-scores never appeared. The scores mock declares one active Gender component, "Score A".
+    describe('impact-area sub-scores (P2-3767)', () => {
+      const subScoreLabels = (): string[] =>
+        Array.from(fixture.nativeElement.querySelectorAll('.sgi-checkbox')).map((b: any) => b.textContent.trim());
+
+      it('renders them when the area is scored Significant (2)', async () => {
+        // Setting the loaded levels is also what opens the full-metadata block, as in the app.
+        creation.resultDacLevels.set({ gender: 2 });
+        await buildReal();
+
+        expect(component.showAllFields()).toBe(true);
+        expect(subScoreLabels()).toEqual(['Score A']);
+      });
+
+      it('still renders them when the area is scored Principal (3)', async () => {
+        creation.resultDacLevels.set({ gender: 3 });
+        await buildReal();
+
+        expect(subScoreLabels()).toEqual(['Score A']);
+      });
+
+      it('renders none while the area is Not targeted (1)', async () => {
+        creation.resultDacLevels.set({ gender: 1 });
+        await buildReal();
+
+        expect(component.showAllFields()).toBe(true);
+        expect(subScoreLabels()).toEqual([]);
+      });
     });
   });
 });
