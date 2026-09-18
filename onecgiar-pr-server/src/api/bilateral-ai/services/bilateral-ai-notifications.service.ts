@@ -87,10 +87,6 @@ export class BilateralAiNotificationsService {
         elapsedSeconds == null
           ? 0
           : Math.max(0, Math.round(elapsedSeconds / 60));
-      // Fail-open on an unreadable clock (never observed in practice — every job carries either
-      // `retried_date` or `created_date`): mail rather than silently dropping the mail entirely.
-      const mailEligible = elapsedSeconds == null || elapsedSeconds >= 120;
-
       const institution = await this.clarisaInstitutionsRepository.findOne({
         where: { id: job.center_id },
       });
@@ -114,7 +110,10 @@ export class BilateralAiNotificationsService {
         `${copy} ${link}`,
       );
 
-      if (mailEligible) {
+      // AIN-R-3 / AIN-DD-1: Bilateral AI outbound emails are suppressed per client mandate.
+      // In-app notifications via emitBilateralAiJobNotification above are the sole notification channel.
+      // sendTerminalMail invocation is bypassed to ensure zero outbound emails while preserving helper dependencies.
+      if (false as boolean) {
         await this.sendTerminalMail(job, outcome, {
           centerAcronym,
           link,
@@ -273,6 +272,10 @@ export class BilateralAiNotificationsService {
     }
   }
 
+  /**
+   * @deprecated Suppressed under AIN-R-3 / AIN-DD-1 per client mandate. Bilateral AI terminal
+   * notifications are now delivered exclusively in-platform. Retained for reference or future opt-in.
+   */
   private async sendTerminalMail(
     job: BilateralAiJob,
     outcome: BilateralAiTerminalOutcome,

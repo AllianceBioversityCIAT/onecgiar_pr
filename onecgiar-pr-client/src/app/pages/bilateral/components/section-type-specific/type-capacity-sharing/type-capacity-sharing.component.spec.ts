@@ -747,4 +747,37 @@ describe('TypeCapacitySharingComponent', () => {
       expect(fields).toContainEqual(expect.objectContaining({ key: 'people-trained', filled: true }));
     });
   });
+  /**
+   * P2-3771 (QA on P2-3382, AC5/AC6). The sub-category radio existed and its cascade was tested, but
+   * it was rendered inside the `@if (showAllFields())` block and BELOW the unrelated attendance
+   * question, so a user who picked "Long-term" on the documented path never saw it. Every behavioural
+   * test in this file still passed, because none of them looked at WHERE the control lives — which is
+   * the whole defect. These assertions read the template so a move back inside the toggle fails here.
+   */
+  describe('P2-3771 - long-term sub-category placement', () => {
+    const template = () => readFileSync(join(__dirname, 'type-capacity-sharing.component.html'), 'utf8');
+
+    it('sits between Length of training and Delivery Method, outside the full-metadata block', () => {
+      const html = template();
+      const lengthIdx = html.indexOf('label="Length of training"');
+      const degreeIdx = html.indexOf('label="Degree"');
+      const deliveryIdx = html.indexOf('label="Delivery Method"');
+      const fullMetadataIdx = html.indexOf('@if (showAllFields())');
+
+      expect(lengthIdx).toBeGreaterThan(-1);
+      expect(fullMetadataIdx).toBeGreaterThan(-1);
+      expect(degreeIdx).toBeGreaterThan(lengthIdx);
+      expect(degreeIdx).toBeLessThan(deliveryIdx);
+      expect(degreeIdx).toBeLessThan(fullMetadataIdx);
+    });
+
+    it('is still gated on the long-term buckets and stays optional', () => {
+      const html = template();
+      expect(html).toMatch(
+        /@if \(capdevTermId1 === 4 \|\| capdevTermId1 === 1 \|\| capdevTermId1 === 2\) \{[\s\S]{0,400}label="Degree"/
+      );
+      const degreeIdx = html.indexOf('label="Degree"');
+      expect(html.slice(degreeIdx, degreeIdx + 400)).toContain('[required]="false"');
+    });
+  });
 });

@@ -73,20 +73,28 @@
     (ngModelChange)="onCapdevTermId1Change()">
   </app-pr-radio-button>
 
-  <!-- P2-3382: this lives HERE, outside `@if (showAllFields())`, and not because it looks better —
-       the full-metadata block is collapsed by default, so the guard below was never evaluated and
-       choosing Long-term revealed nothing at all. The rejected alternative was to force the toggle
-       open on Long-term: `showAllFields` is a persisted user preference
-       (`BilateralExpandableStateService` → `bp_extra_<resultId>_type-specific`), and flipping it
-       would drag the organization fields on screen unasked (design DD-1). The guard condition is
-       carried over unchanged; term 4 is the parent bucket, 1 and 2 the stored sub-terms.
+  <!-- P2-3771 / P2-3382 (AC5/AC6) — the same defect reported twice, fixed once. The long-term
+       sub-category belongs HERE, immediately under Length of training and outside the full-metadata
+       block: that block is collapsed by default, so the guard below was never evaluated, and the
+       control also sat under the unrelated attendance question — a
+       reporter following the documented path picked "Long-term" and saw nothing at all. Mirrors the
+       W1/W2 `cap-dev-info` layout.
+
+       The rejected alternative was to force the toggle open on Long-term: `showAllFields` is a
+       persisted user preference (`BilateralExpandableStateService` → `bp_extra_<resultId>_type-specific`),
+       and flipping it would drag the organization fields on screen unasked. Fix where the node lives,
+       don't automate around it. The guard condition is carried over unchanged; term 4 is the parent
+       bucket, 1 and 2 the stored sub-terms.
+
        P2-3385: `label` is what makes this render inside a card — `app-field-card`'s `isBare` is true
        without one and the whole `field_card` class is skipped, which drew PhD / Master loose outside
-       the frame every sibling question has (design DD-2). `[required]` MUST stay false, matching
-       `cap-dev-info.component.html:55`: long-term training that is neither PhD nor Master would
-       otherwise make the section impossible to complete. No MDS item is registered for it either —
-       a fourth never-filled entry in `setSectionFields` leaves the section amber and disables Submit
-       (design DD-3). -->
+       the frame every sibling question has.
+
+       `[required]` MUST stay false: the parent selection already satisfies the server's
+       `valid_text(capdev_term_id)`, and only PhD and Master are offered, so long-term training that is
+       neither would otherwise make the section impossible to complete. No MDS item is registered for
+       it either — a fourth never-filled entry in `setSectionFields` leaves the section amber and
+       disables Submit. -->
   @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
     <app-pr-radio-button
       label="Degree"
