@@ -9,6 +9,7 @@
       [disabled]="!editable"
       [editable]="editable"
       placeholder="Select output"
+      disableOptionsText="(Already selected in another tab) "
       [(ngModel)]="activeTab.toc_result_id"
       [extraInformation]="true"
       (ngModelChange)="getIndicator(); validateSelectedOptionOutPut()">
@@ -37,6 +38,7 @@
       [extraInformation]="true"
       optionValue="toc_result_id"
       placeholder="Select outcome"
+      disableOptionsText="(Already selected in another tab) "
       [(ngModel)]="activeTab.toc_result_id"
       (ngModelChange)="getIndicator(); validateSelectedOptionOutCome()">
     </app-pr-select>
