@@ -64,6 +64,19 @@
                     <span class="bqa-dialog__pill" [attr.data-verdict]="section.verdict">{{ section.verdict }}</span>
                   </div>
                   @if (section.comments) { <p>{{ section.comments }}</p> }
+                  <div class="bqa-dialog__actions">
+                  @if (section.canNavigate) {
+                    <!-- QA feedback 2026-09-18: by the time the reporter reaches the form they have
+                         forgotten what the AI flagged. The window closes and the editor opens on
+                         that section; the verdict stays on the rail, reopenable. -->
+                    <button
+                      type="button"
+                      class="bqa-dialog__goto"
+                      (click)="sectionSelected.emit(section.key)">
+                      Go to {{ section.label }}
+                      <i class="material-icons-round" aria-hidden="true">arrow_forward</i>
+                    </button>
+                  }
                   @if (section.hasFeedback) {
                     <button
                       type="button"
@@ -74,6 +87,9 @@
                       <i class="material-icons-round bqa-dialog__chevron" aria-hidden="true">expand_more</i>
                       {{ expandedSection() === section.key ? 'Hide feedback' : 'See feedback' }}
                     </button>
+                  }
+                  </div>
+                  @if (section.hasFeedback) {
 
                     <!-- Inline, inside the card it belongs to. It used to render after the whole
                          list, so opening the first section pushed its feedback five cards down and

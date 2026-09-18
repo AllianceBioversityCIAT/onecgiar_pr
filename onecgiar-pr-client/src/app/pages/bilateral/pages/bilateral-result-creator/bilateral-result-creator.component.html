@@ -47,6 +47,7 @@
     [submitting]="qualityAssessment.isSubmitting()"
     [running]="qualityAssessment.isRunning()"
     (dismissed)="dismissQualityAssessment()"
+    (sectionSelected)="goToQualitySection($event)"
     (decisionChosen)="submitAfterQualityDecision($event)" />
   <div class="bcr-layout" data-testid="bilateral-editor-layout">
     <!-- Sections rail: 240px, white, own scroll, right rule to the floor. -->
@@ -136,7 +137,7 @@
       </nav>
 
       @if (qualityAssessment.assessment(); as assessment) {
-        <section class="bcr-quality-summary" [class.bcr-quality-summary--stale]="!assessment.is_current" aria-label="AI quality assessment">
+        <section class="bcr-quality-summary" aria-label="AI quality assessment">
           <div class="bcr-quality-summary__head">
             <span>AI quality check</span>
             <span class="bcr-quality-summary__verdict" [attr.data-verdict]="assessment.overall?.verdict || 'grey'">

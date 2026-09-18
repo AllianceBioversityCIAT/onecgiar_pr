@@ -1,10 +1,14 @@
 <div class="sgi-fields">
+  <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
+  <app-bilateral-field-quality-flag section="general_information" />
   @if (canChangeResultType()) {
     <div class="sgi-change-type">
       <div><strong>Need to correct the result classification?</strong><span>Changing type clears type-specific information and keeps your common W3 information.</span></div>
       <button type="button" (click)="openChangeResultType()">Change result type</button>
     </div>
   }
+  <!-- Above the field, at title height: the AI's verdict where the correction happens. -->
+  <app-bilateral-field-quality-flag section="general_information" field="title" />
   <app-pr-input
     label="Title of Result"
     type="text"
@@ -18,6 +22,7 @@
     (focusout)="onTitleBlur()">
   </app-pr-input>
 
+  <app-bilateral-field-quality-flag section="general_information" field="description" />
   <app-pr-textarea
     label="Description of Result"
     [maxWords]="300"

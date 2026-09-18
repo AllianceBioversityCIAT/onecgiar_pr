@@ -45,6 +45,8 @@ export class BilateralQualityAssessmentDialogComponent {
   /** The dialog stays open through the submit PATCH, so it owns the busy state of its own buttons. */
   readonly submitting = input(false);
   readonly dismissed = output<void>();
+  /** The AI section key the reporter wants to go and fix. The creator owns the navigation. */
+  readonly sectionSelected = output<string>();
   readonly decisionChosen = output<'submitted_anyway' | 'submitted_without_check'>();
 
   readonly unavailable = computed(() => this.assessment()?.status === 'unavailable');
@@ -83,6 +85,10 @@ export class BilateralQualityAssessmentDialogComponent {
           strengths,
           hasFeedback: issues.length + strengths.length > 0,
           panelId: `bqa-feedback-${key}`,
+          // Only where there is something to fix. Green has nothing to correct, and grey means the
+          // AI could not evaluate it — sending the reporter there would be a dead end. Widening
+          // this to green is a one-verdict change if it is ever wanted.
+          canNavigate: section.verdict === 'amber' || section.verdict === 'red',
         };
       });
   });

@@ -1,0 +1,48 @@
+:host { display: block; }
+
+// The field note belongs immediately above the field header. Cancel only the section's flex gap;
+// the FieldCard keeps its own 16px top margin as a real, pointer-safe separation. Cancelling both
+// made the card overlap this button and steal hover/click events from its last words.
+:host:has(.bfq--field) {
+  margin-bottom: calc(-1 * var(--bfq-column-gap, 22px));
+}
+
+// Full width, not `inline-flex`: content-width left every pixel to the right of the text belonging
+// to the wrapper, so a click there did nothing. A row-level control has a row-sized hit area. The
+// visual treatment still hugs the words, and its wrapper cannot capture a partial click target.
+.bfq__line { display: flex; width: 100%; justify-content: flex-start; padding: 0; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.bfq__inner { display: inline-flex; align-items: baseline; flex-wrap: nowrap; pointer-events: none; white-space: nowrap; gap: 6px; margin: -3px -6px; padding: 3px 6px; border-radius: 5px; font-size: 12px; line-height: 1.4; }
+.bfq__line:focus-visible { outline: none; }
+.bfq__line:focus-visible .bfq__inner { outline: 2px solid var(--pr-color-primary-300); outline-offset: 1px; }
+
+// Colour lives on a dot and the verdict word only — never a filled surface. A dot rather than a
+// warning glyph: the same mark the status pills elsewhere in the app use, and it reads as a state
+// at text size where a 14px icon reads as clutter.
+.bfq__dot { align-self: center; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.bfq[data-verdict='amber'] .bfq__dot, .bfq[data-verdict='amber'] .bfq__verdict { color: #b45309; }
+.bfq[data-verdict='red'] .bfq__dot, .bfq[data-verdict='red'] .bfq__verdict { color: #b91c1c; }
+.bfq__verdict { font-weight: 700; }
+
+// The WHOLE line is the control, so the whole line carries the affordance. Underlining only the
+// cue made the rest look inert and reporters aimed at text that looked dead — the click worked,
+// the invitation did not (feedback 2026-09-18).
+.bfq__cue { color: var(--pr-text-secondary); }
+.bfq__chevron { align-self: center; font-size: 15px; color: var(--pr-text-secondary); transition: transform 180ms ease-out; }
+.bfq__line[aria-expanded='true'] .bfq__chevron { transform: rotate(180deg); }
+
+// One affordance for the whole visible phrase: hovering ANY word (or the chevron) highlights the
+// complete text block. `.bfq__inner` has no pointer events, so every one of those pixels still
+// lands on the full-row button and toggles the same narrative.
+.bfq__line:hover .bfq__inner { background: rgba(0, 0, 0, .04); }
+.bfq__line:hover .bfq__cue,
+.bfq__line:hover .bfq__chevron { color: var(--pr-text); }
+
+@media (prefers-reduced-motion: reduce) { .bfq__chevron { transition-duration: 1ms; } }
+
+.bfq__body { position: relative; margin-top: 6px; border-left: 2px solid var(--pr-border); padding: 2px 34px 2px 10px; cursor: copy; }
+.bfq__body:focus-visible { outline: 2px solid var(--pr-color-primary-300); outline-offset: 3px; }
+.bfq__body ul { margin: 0; padding-left: 16px; color: var(--pr-text); font-size: 12.5px; line-height: 1.5; }
+.bfq__body li + li { margin-top: 5px; }
+.bfq__copy { position: absolute; top: 2px; right: 0; display: inline-flex; align-items: center; gap: 3px; color: var(--pr-text-secondary); font-size: 11px; opacity: 0; transition: opacity 120ms ease-out; }
+.bfq__copy .material-icons-round { font-size: 15px; }
+.bfq__body:hover .bfq__copy, .bfq__body:focus-visible .bfq__copy, .bfq__body[aria-label='AI feedback copied'] .bfq__copy { opacity: 1; }

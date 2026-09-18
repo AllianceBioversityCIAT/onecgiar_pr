@@ -67,6 +67,15 @@
 .bqa-dialog__pill[data-verdict='amber'] { background: #fef3c7; color: #b45309; }
 .bqa-dialog__pill[data-verdict='red'] { background: #fee2e2; color: #b91c1c; }
 
+// The row holds "Go to <section>" and "See feedback" side by side: go act on it, or read why first.
+.bqa-dialog__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.bqa-dialog__goto { display: inline-flex; align-items: center; gap: 4px; margin-top: 9px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--pr-color-primary-400); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.bqa-dialog__goto:hover { color: var(--pr-color-primary-300); }
+.bqa-dialog__goto:focus-visible { outline: 2px solid var(--pr-color-primary-300); outline-offset: 2px; }
+.bqa-dialog__goto .material-icons-round { font-size: 15px; transition: transform 150ms ease-out; }
+.bqa-dialog__goto:hover .material-icons-round { transform: translateX(2px); }
+@media (prefers-reduced-motion: reduce) { .bqa-dialog__goto .material-icons-round { transition-duration: 1ms; } }
+
 .bqa-dialog__details-trigger { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--pr-color-primary-400); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .bqa-dialog__details-trigger:hover { color: var(--pr-color-primary-300); }
 .bqa-dialog__details-trigger:focus-visible { outline: 2px solid var(--pr-color-primary-300); outline-offset: 2px; }

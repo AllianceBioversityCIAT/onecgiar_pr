@@ -12,6 +12,7 @@ import { InnovationUseResultsService } from '../../../../shared/services/global/
 import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 
 interface CenterOption {
   institutionId: number;
@@ -31,7 +32,7 @@ const PARTNERS_MDS_GROUP = 'partners';
 
 @Component({
   selector: 'app-section-contributors',
-  imports: [CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
+  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
   templateUrl: './section-contributors.component.html',
   styleUrl: './section-contributors.component.scss'
 })

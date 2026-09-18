@@ -9,6 +9,7 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 import { GeoscopeManagementModule } from '../../../../shared/components/geoscope-management/geoscope-management.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 
 /**
  * `result_type_id` values FieldsManagerService treats as "an innovation" (`isAnInnovation()`).
@@ -25,7 +26,7 @@ const YES_NO_OPTIONS = [
 
 @Component({
   selector: 'app-section-geography',
-  imports: [
+  imports: [BilateralFieldQualityFlagComponent,
     CommonModule,
     FormsModule,
     CustomFieldsModule,
