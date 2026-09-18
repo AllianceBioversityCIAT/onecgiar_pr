@@ -1,8 +1,15 @@
+<!-- P2-3779: the required marker follows `requiredSections`, exactly like the amount inputs below
+     (`[required]="isRequired(...)"`). It used to be hard-coded — `pr-field-header` defaults `required`
+     to TRUE (`custom-fields/pr-field-header/pr-field-header.component.ts:16`) and no caller passed it —
+     so all three tables announced themselves as mandatory on every form that renders them, including
+     the bilateral Innovation Development full metadata, where investment is optional and outside the
+     green check. Only the table a caller declares required keeps the marker (today: P2-3428's
+     W3/bilateral table in `type-innovation-use`). -->
 @if (shows('programs')) {
 <div class="segment">
     <app-pr-field-header
         [label]="'Estimation of total USD-value of investment by CGIAR Programs during the reporting period'"
-        [tooltip]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
+        [tooltip]="headerDescriptions().n1" [required]="isRequired('programs')" [useColon]="false"></app-pr-field-header>
     <table [style]="!body.investment_programs?.length ? 'margin-bottom: 5px;' : null" aria-label="Table showing estimation of total USD-value of investment by CGIAR Programs during the reporting period">
         <tr>
             <th>Entity</th>
@@ -40,7 +47,7 @@
 <div class="segment">
     <app-pr-field-header
         label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
-        [tooltip]="headerDescriptions().n2" [useColon]="false"></app-pr-field-header>
+        [tooltip]="headerDescriptions().n2" [required]="isRequired('bilateral')" [useColon]="false"></app-pr-field-header>
 
     <table style="margin-bottom: 5px;" aria-label="Table showing estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period">
         <tr>
@@ -81,7 +88,7 @@
 @if (shows('partners')) {
 <div class="segment">
     <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"
-        [tooltip]="headerDescriptions().n3" [useColon]="false"></app-pr-field-header>
+        [tooltip]="headerDescriptions().n3" [required]="isRequired('partners')" [useColon]="false"></app-pr-field-header>
 
     <table style="margin-bottom: 5px;" aria-label="Table showing Estimated total USD-value of (co-)investment by partners during the reporting period">
         <tr>

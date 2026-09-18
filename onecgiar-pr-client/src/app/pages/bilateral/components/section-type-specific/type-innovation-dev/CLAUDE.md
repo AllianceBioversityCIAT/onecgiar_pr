@@ -1,34 +1,33 @@
 # type-innovation-dev (bilateral)
 
-**Verified:** 2026-09-18 · spec `bugfix/innovation-developer-prefill-stale-lead-contact` `BIL-IDP-T-4` — prefill is re-evaluable, fed by General information's save; prior: 2026-09-16 spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` rework — key-presence prefill gate; prior: 2026-09-16 (field restored) · 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
+**Verified:** 2026-09-18 · QA batch `P2-3778` / `P2-3779` / `P2-3780` — Innovation developers unrendered, false REQUIRED markers cleared, collaborators placeholder; prior: 2026-09-18 spec `bugfix/innovation-developer-prefill-stale-lead-contact` `BIL-IDP-T-4` — prefill is re-evaluable, fed by General information's save; prior: 2026-09-16 spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` rework — key-presence prefill gate; prior: 2026-09-16 (field restored) · 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
 Section 5 of the bilateral form: Innovation Development, rendered by
-`../section-type-specific.component.html` for that result type. Shows the **MDS** (2 mandatory
-fields: typology + readiness) and hides the rest of the pooled-funding form behind **Complete full
+`../section-type-specific.component.html` for that result type. Shows the **MDS** — exactly 2 fields,
+typology + readiness (P2-3778) — and hides the rest of the pooled-funding form behind **Complete full
 metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investment (USD)" tables
 (P2-3390).
 
-## Innovation developers — removed, then restored (read both dates)
+## Innovation developers — removed, restored, removed again (the last state is the one to keep)
 
-- **2026-09-03 (Nicoleta Trifa via Ángel Jarrín):** removed; `buildPayload()` silently copied
-  `resultLeadContact()` into the column on every save, making a QA check over it unfalsifiable.
-- **2026-09-16 (`BIL-QAI-R-15`/`DD-12`, `T-12`):** restored (`app-pr-textarea`, optional, untracked by
-  `updateMds()`); `buildPayload()` sends `this.body.innovation_developers?.trim() || null`, never a
-  substitution.
-- **2026-09-16 rework (`T-12` attempt 2):** the prefill gate tested truthiness
-  (`body.innovation_developers?.trim()`), but a stored `null` — what the server returns once a row
-  exists and the user cleared it — is falsy too, so a cleared value got re-filled from the lead
-  contact on every reload and leaked into the next save of any field. Fixed: gate on **key presence**,
-  `if ('innovation_developers' in this.body) return;`. `InnovationDevExists`
-  (`results-innovations-dev.repository.ts:274-312`) omits the key when no row exists and includes it —
-  `null` or a string — once one does, so presence is a sound discriminator (no server change). A
-  genuinely-`null` legacy row now stays editable instead of being prefilled — the trade `AC-18`
-  mandates. Prefill still runs once, on load (**superseded below**); clearing the field and saving never re-fills it.
-- **2026-09-18 (`bugfix/innovation-developer-prefill-stale-lead-contact`, `BIL-IDP-T-4`):** re-evaluable
-  now (constructor `effect()` on `loaded()`+`resultLeadContact()`; guard unchanged), fed by General
-  info's **save** (`manualSave$('general-info')`), not a live commit — commit-time publishing was
-  tried and rejected (re-entered the hydration effect, blanked the field mid-keystroke); see `execution.md`.
+- 🛑 **NOT RENDERED (`P2-3778`, 2026-09-18).** The MDS zone is typology + readiness, nothing else. The
+  decision is 2026-09-03's (Nicoleta Trifa via Ángel Jarrín, re-stated on the ticket by Juan David
+  Delgado): removed, and "for innovations this will be replaced by the lead contact person information".
+  Section 1 already tells the reporter so (`../../section-general-info/…component.html:41-47`), so the
+  field's presence was a contradiction QA could see. Briefly restored 2026-09-16 (`BIL-QAI-R-15`/`DD-12`);
+  **do not restore it again without a written decision**.
+- ✅ **What deliberately stayed.** `buildPayload()` still sends `innovation_developers` (hiding a field
+  never deletes its data) and the prefill still seeds it from the Lead contact person — the substitution
+  the decision names, and the same one the server's ingest path performs
+  (`onecgiar-pr-server/src/api/bilateral/handlers/innovation-development.handler.ts:59-63`). Still read
+  by: the review drawer (`.../inno-dev-content.component.html:20`), W1/W2
+  (`.../innovation-dev-info.component.html:143`), the `s7_id_innovation_developers` export and the PDF.
+- ⚠️ **The prefill's gate is KEY PRESENCE, not truthiness** (`'innovation_developers' in this.body`).
+  `InnovationDevExists` (`results-innovations-dev.repository.ts:274-312`) omits the key when no row
+  exists and includes it — `null` or a string — once one does; truthiness re-filled a cleared value.
+- ⚠️ **It is re-evaluable** (`BIL-IDP-T-4`): constructor `effect()` on `loaded()`+`resultLeadContact()`,
+  fed by General info's **save**, never a live commit (that blanked the field mid-keystroke).
 
 ## Contract
 - Endpoint: **the same one pooled funding's summary uses** —
@@ -39,7 +38,7 @@ metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investm
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
   **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
 - Green check: `BilateralMdsTrackerService.setSectionFields('type-specific', …)`. **Two items only**:
-  `nature`, `readiness`. Innovation developers (`BIL-QAI-R-15`, see above) is untracked.
+  `nature`, `readiness`. Innovation developers is untracked and no longer rendered (P2-3778).
 - Toggle: `BilateralExpandableStateService.get/setShowAllFields(resultId, 'type-specific')` — the
   open/closed state survives navigation between sections.
 - Catalogues: `InnovationControlListService` (`typeList`, `characteristicsList`, `readinessLevelsList`).
@@ -81,6 +80,10 @@ metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investm
   (blocked on P2-3494) moves with this surface.
 - ⚠️ **The spec's `creation` mock must carry `reportingYear`.** `showScalingStudies` calls it, and a
   missing key fails every test in the file as `is not a function`.
+- ⚠️ **An optional field with no `[required]` input is painted REQUIRED** (P2-3779). `pr-yes-or-not:27`
+  and `pr-field-header:16` both default it to **true**, so the marker is opt-OUT — three full metadata
+  fields announced themselves as mandatory while the section saved and turned green with all three
+  empty. Every optional field here passes `[required]="false"`. Test-pinned.
 - ⚠️ **The MDS note goes at the very top in this section**, while Capacity Sharing and Policy Change
   paint it after their MDS fields. Deliberate: P2-3391 AC1 and P2-3327 AC2 say "at the top".
 
@@ -100,7 +103,8 @@ Would also need a `GET result-questions/innovation-development/:id` and reusing 
 
 `app-estimates-cgiar` (`shared/components/innovation-use-form/components/estimates`) — the same component
 W1/W2 renders — over `investment_programs` / `investment_bilateral` / `investment_partners`, one row per
-entity already linked to the result. Optional; `updateMds()` is untouched, so it counts for nothing.
+entity already linked to the result. Optional; `updateMds()` is untouched, so it counts for nothing —
+and since P2-3779 the headers say so too: `[required]` follows `requiredSections`, like the amount inputs.
 
 - ⚠️ **This type has TWO investment key families on the SAME endpoint, and they must not be mixed.** W1/W2
   sends the legacy `*_expected_investment` family (`InnoDevService`, resolves `non_pooled_project` by
