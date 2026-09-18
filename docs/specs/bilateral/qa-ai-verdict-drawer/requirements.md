@@ -99,7 +99,7 @@ The complete inventory that MUST survive:
 
 | State | Content that MUST be present |
 |---|---|
-| **Running** | Indeterminate progress bar · lead line *"Reading the result against the quality criteria…"* · the group *What the colours mean* · all four legend rows (green, amber, red, grey) with their exact `VERDICT_LEGEND` labels and meanings · the rotating tip (all three `TIPS`, 5 s cadence) |
+| **Running** | Indeterminate progress bar · lead line *"Reading the result against the quality criteria. This usually takes under a minute."* (**quoted in full since 2026-09-18** — the row previously truncated it with an ellipsis, which left the second sentence ungated in a table that declares itself the *complete* inventory; surfaced by `BIL-QAD-T-3`) · the group *What the colours mean* · all four legend rows (green, amber, red, grey) with their exact `VERDICT_LEGEND` labels and meanings · the rotating tip (all three `TIPS`, 5 s cadence) |
 | **Deciding — overall** | Eyebrow *Overall result* · the verdict word · the score `N/100` when non-null · the summary, with its fallback *"Review the assessment before submitting."* |
 | **Deciding — stale** | The stale banner, exact text |
 | **Deciding — sections** | Group *By section* · one card per present section in `SECTION_ORDER` · each card's label, verdict pill, comments · *Go to \<label\>* only where `canNavigate` · *See feedback* / *Hide feedback* only where `hasFeedback` · inside the panel, *What to address* (issues) and *What is working well* (strengths) with their icons |

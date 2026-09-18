@@ -37,9 +37,17 @@
 .bqa-dialog__icon[data-verdict='amber'] { background: #fef3c7; color: #b45309; }
 .bqa-dialog__icon[data-verdict='red'] { background: #fee2e2; color: #b91c1c; }
 .bqa-dialog__icon[data-verdict='grey'] { background: #e5e7eb; color: #4b5563; }
-// Spacing/gap/inset padding moved to Tailwind utilities on the host element (BIL-QAD-T-2, DD-12).
-// Left here: display/overflow mechanics, which are shell plumbing owned by T-1, not this task's re-treatment.
-.bqa-dialog__body { display: grid; align-content: start; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+// Inset padding moved to Tailwind utilities on the host element (BIL-QAD-T-2, DD-12).
+// Left here: display/overflow mechanics (shell plumbing owned by T-1, not this task's re-treatment)
+// AND gap. gap can't move to a `gap-*` utility: this element also carries the globally-styled
+// `.pr-dialog-body` class (src/styles.scss ~L906, `gap: 12px`, unlayered/unencapsulated), which is
+// emitted after Tailwind's utility layer and wins at equal specificity — a `gap-[24px]` utility here
+// is silently outranked and the row gap reverts to 12px. This encapsulated selector carries Angular's
+// `[_ngcontent]` attribute, so it out-specifies the global rule and is the only reliable home for any
+// property `.pr-dialog-body` also declares (display, flex-direction, gap) — min-height/overflow-y/
+// overscroll-behavior aren't declared globally, so those stay utility-safe, but they're kept here too
+// rather than split across two homes for the same box.
+.bqa-dialog__body { display: grid; align-content: start; gap: 24px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 // ── Running state ─────────────────────────────────────────────────────────────
 .bqa-dialog__running { display: grid; gap: 12px; }
 .bqa-dialog__running-lead { margin: 0; color: var(--pr-text); font-size: 14px; line-height: 1.45; }
@@ -125,6 +133,10 @@
 // Was `::ng-deep app-pr-dialog .bilateral-quality-assessment-dialog .pr-dialog-footer` — the footer
 // is a direct child of this component's own `<aside>` now, so the plain scoped selector reaches it
 // without piercing anything (BIL-QAD-AC-9: no override targets `app-pr-dialog` any more).
+// These paddings stay SCSS, not `p-*`/`pt-*` utilities: the globally-styled `.pr-dialog-footer`
+// (src/styles.scss ~L1008) sets `padding-top: 4px` unlayered/unencapsulated, which would beat a
+// Tailwind padding utility on this element by the exact same specificity mechanism that broke the
+// body's gap above — a future Tailwind-first cleanup must not repeat that here.
 .pr-dialog-footer { margin: 0; padding: 16px 24px 20px; border-top: 1px solid var(--pr-border); }
 @media (max-width: 560px) { .bqa-dialog__header, .bqa-dialog__body { padding-left: 16px; padding-right: 16px; } }
 

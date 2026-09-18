@@ -207,6 +207,8 @@ Mapped to the defect classes in `requirements.md` §9 — including, deliberatel
 
 **Resolution.** Keep it. Remove it only after `BIL-QAD-AC-5` is verified in a real browser **without** it (`R-11` already gates this as MAY). The default is to keep.
 
+**Outcome (`BIL-QAD-T-4`, recorded by `BIL-QAD-T-5`, 2026-09-18): KEEP.** The owner performed the `BIL-QAD-T-4` browser pass with the rescue in place and attested it; `BIL-QAD-AC-5` was **not re-measured without it**. Per `R-11`, absence of that verification means the default stands — the rescue stays. This is not a finding that the rescue is necessary, only that removal was never attempted; do not read it as "verified necessary."
+
 ### `BIL-QAD-DD-5` — Keep the component's name
 
 **Decision.** Class, selector and file names stay `…-dialog`.

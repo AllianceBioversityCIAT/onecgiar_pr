@@ -5,7 +5,7 @@
 - **Module / feature:** `bilateral` / `qa-ai-verdict-drawer` · code **`BIL-QAD`**
 - **Linked spec:** `requirements.md` + `design.md` (this folder)
 - **Owner / driver:** Juan David Delgado
-- **Status:** `in-progress`
+- **Status:** `complete` (2026-09-18 — all 5 tasks PASS; see `execution.md` §3)
 - **Budget (design.md §14):** 5 tasks · ~400 LOC · 1–2 review rounds. Exceeding it **stops and escalates**, it does not silently continue.
 
 ## 2. Pre-flight checklist
@@ -49,7 +49,7 @@
   - [x] Lint clean · N/A: migration, Swagger, i18n (no new strings), bilateral change log
   - [x] ✕ hit target 32px desktop / 44px phone in **explicit px** — the attempt-1 FAIL (`size-8` = 24px at this repo's 12px root)
 
-### `BIL-QAD-T-2` — Body re-layout into the reference's visual language, content frozen
+### `BIL-QAD-T-2` — Body re-layout into the reference's visual language, content frozen  ·  **[x] DONE** (2026-09-18, 2 attempts, Reviewer PASS)
 
 - **Type:** `client`
 - **Description:** Re-treat the body into eyebrow-grouped sections and cards per `design.md` §6.5, using Tailwind utilities (DD-12). Every content node from the `BIL-QAD-R-2` inventory is preserved with identical text. The verdict colour tokens carry over verbatim (`BIL-QAD-DD-6`).
@@ -66,15 +66,16 @@
 - **Input that would make this check FAIL:** render an assessment with all five sections, a score, a summary, issues, strengths and evidence, and assert each inventory string — deleting or rewording any one of them fails the parity assertions in `BIL-QAD-T-3`. For `BIL-QAD-AC-9`, leaving one wrapper override in the SCSS makes the grep non-empty.
 - **⚠️ Budget tripwire:** if content parity starts requiring **logic** changes, the "design only" premise is wrong. **Stop and escalate to the user** rather than changing behaviour to fit the layout.
 - **Definition of done:**
-  - [ ] Every `BIL-QAD-R-2` inventory item present with unchanged text, in every state
-  - [ ] Eyebrows, cards, chips, sub-blocks and footer follow the reference treatment
-  - [ ] Header subtitle and footer status slots left **empty**
-  - [ ] All four `app-pr-dialog` `::ng-deep` overrides deleted, not relocated (scss lines 1, 10, 20, 108)
-  - [ ] Tailwind-first; no new `.pr-*` SCSS blocks; `material-icons-round` only
-  - [ ] `aria-expanded` / `aria-controls` / `inert` / `role="status"` / `aria-live="polite"` all preserved
-  - [ ] Lint clean · N/A: migration, Swagger, i18n, bilateral change log
+  - [x] Every `BIL-QAD-R-2` inventory item present with unchanged text, in every state — *Reviewer diffed every `-`/`+` pair: changed lines differ only in `class`*
+  - [x] Eyebrows, cards, chips, sub-blocks and footer follow the reference treatment — *values are the Implementer's judgment, calibrated against the existing eyebrow; D-4 has no automated gate, so they route to the owner's screenshot review in `T-4`*
+  - [x] Header subtitle and footer status slots left **empty**
+  - [x] All four `app-pr-dialog` `::ng-deep` overrides deleted, not relocated — *done in `T-1`; `AC-9` re-verified here, the one `ng-deep` grep hit is a comment*
+  - [~] Tailwind-first; no new `.pr-*` SCSS blocks; `material-icons-round` only — **justified exception:** `gap` and the footer paddings **cannot** be utilities on these elements (unlayered global `.pr-*` rules outrank them). Reviewer ruled the SCSS home correct, not a retreat from `DD-12`
+  - [x] `aria-expanded` / `aria-controls` / `inert` / `role="status"` / `aria-live="polite"` all preserved
+  - [x] Lint clean · N/A: migration, Swagger, i18n, bilateral change log
+  - [x] Cascade collision swept — body div was the only element where a new utility was silently outranked by a global `.pr-*` rule
 
-### `BIL-QAD-T-3` — Spec: parity inventory, shell behaviour, lock restore
+### `BIL-QAD-T-3` — Spec: parity inventory, shell behaviour, lock restore  ·  **[x] DONE** (2026-09-18, 2 attempts, Reviewer PASS — 51 tests)
 
 - **Type:** `tests`
 - **Description:** Retarget the two `.pr-dialog-footer` selectors (current lines 72, 143) and add the gates for defect classes D-1, D-2 and D-6. The parity block asserts the `BIL-QAD-R-2` inventory state by state — it is the strong gate for the requirement that carries this spec's whole constraint.
@@ -86,14 +87,15 @@
 - **Input that would make this check FAIL:** each new assertion is written against a fixture that exercises it — e.g. the running-state fixture with `Escape` dispatched (fails an unguarded shell), the pre-set-`hidden` body fixture (fails blank-and-reset), the full five-section fixture (fails any dropped string). A test with no such input is removed, not kept green.
 - **What these assertions cannot prove:** they are **presence and event assertions**. They prove the right nodes exist and the right events fire; they do **not** prove the drawer is laid out correctly, that the footer stayed fixed, that anything is visible, or that contrast passes. jsdom reports every element at 0×0. D-3, D-4 and D-5 are **not covered here** and are `BIL-QAD-T-4`'s sole responsibility.
 - **Definition of done:**
-  - [ ] Both `.pr-dialog-footer` selectors retargeted; no assertion still references `app-pr-dialog`
-  - [ ] Parity assertions cover running, deciding, stale, unavailable and the footer labels
-  - [ ] Guarded-exit assertions for `running()` and `submitting()` — **and** the complementary footer assertions: absent while `running()`, present-and-fully-disabled while `submitting()` (`AC-4` / `AC-4b`, amended 2026-09-18)
-  - [ ] Body-lock restore assertion (previous value, not `''`)
-  - [ ] Every pre-existing assertion in the file still passes, unmodified where possible
-  - [ ] Suite green; thresholds met
+  - [x] Both `.pr-dialog-footer` selectors retargeted; no assertion still references `app-pr-dialog` — *no retargeting was needed: the class survived `T-2`. The one surviving `app-pr-dialog` reference is a deliberate negative assertion*
+  - [x] Parity assertions cover running, deciding, stale, unavailable and the footer labels — *running was missing on attempt 1 and is the FAIL that was fixed*
+  - [x] Guarded-exit assertions for `running()` and `submitting()` + the complementary footer assertions (`AC-4` / `AC-4b`)
+  - [x] Body-lock restore assertion — *two cases; the pair discriminates all three failure modes (no-lock, leak, blank-and-reset). A single case was the attempt-1 FAIL*
+  - [x] Every pre-existing assertion in the file still passes, unmodified — *all 32*
+  - [~] Suite green; thresholds met — **51 tests green; thresholds NOT measured.** The global 50/60/60/60 gate needs the full client suite, not run (memory AMBER; both `CLAUDE.md`s forbid unscoped runs). Coverage **cannot decrease** — `collectCoverageFrom` excludes `*.spec.ts`, so a test-only diff is monotonically non-decreasing. CI enforces the real number
+  - [~] `[disabled]` on footer buttons while submitting — **not assertable.** The Jest `BrnButton` stub declares `disabled` as a bare `@Input()` with no host bindings, so it reaches neither property nor attribute. Production is unaffected (the real directive binds `[attr.disabled]`). Documented inline, routed to `T-4`
 
-### `BIL-QAD-T-4` — Browser verification pass (the only gate for D-3, D-4, D-5)
+### `BIL-QAD-T-4` — Browser verification pass (the only gate for D-3, D-4, D-5)  ·  **[x] DONE** (2026-09-18, owner-attested)
 
 - **Type:** `tests`
 - **Description:** The manual pass that the automated suite structurally cannot perform. **This is not belt-and-braces** — for the layout, visual and focus-trap defect classes it is the only gate that exists, per `requirements.md` §9.
@@ -112,11 +114,11 @@
   - If the 375px check runs in a desktop browser's device emulator only, record it as emulated. Emulated ≠ verified for touch-target reachability.
   - **An inconclusive result is a legitimate outcome and must be reported as one.** Do not collapse "I could not reproduce five sections" into a pass.
 - **Definition of done:**
-  - [ ] Every box above ticked or explicitly recorded as not-verified with the reason
-  - [ ] Screenshots reviewed by the owner at the HITL pause (or routed to a T6 Multimodal review)
-  - [ ] `BIL-QAD-DD-4` outcome written back into `design.md`
+  - [x] Every box above ticked or explicitly recorded as not-verified with the reason — *D-3, D-5, D-4 and reduced-motion owner-attested; 375px medium recorded as **unspecified**, not device-verified*
+  - [~] Screenshots reviewed by the owner at the HITL pause — *basis is owner attestation, not screenshots filed to the spec*
+  - [x] `BIL-QAD-DD-4` outcome written back into `design.md` — **KEEP** (not re-measured; the spec's default)
 
-### `BIL-QAD-T-5` — Record the debt and amend the parent spec
+### `BIL-QAD-T-5` — Record the debt and amend the parent spec  ·  **[x] DONE** (2026-09-18, Reviewer PASS)
 
 - **Type:** `docs`
 - **Description:** Two small, factual writes. Neither is optional: the first keeps the `pr-drawer` extraction honestly counted, the second keeps the parent spec from describing a surface that no longer exists.
@@ -127,10 +129,10 @@
 - **Verification:** read back both files; the parent spec's presentation clauses point at this spec, and its behavioural clauses are stated as unchanged.
 - **Input that would make this check FAIL:** grep the parent spec for "modal" / "dialog" describing this surface — any surviving hit that now states a falsehood is a miss (the backward sweep from *Correction Closure*).
 - **Definition of done:**
-  - [ ] `bilateral-create-drawer/CLAUDE.md` *Pendiente* counts a **fourth** consumer for `shared/components/pr-drawer`
-  - [ ] Parent spec carries an amendment note: presentation superseded by `bilateral/qa-ai-verdict-drawer`, behaviour unchanged
-  - [ ] Forward + backward sweep done for the words "modal"/"dialog" across both spec folders
-  - [ ] **Shared-file discipline honoured:** no edit to root `CLAUDE.md`, `AGENTS.md`, `.agents/`, packaged templates or `docs/trd/trd.md` from this branch. `bilateral-create-drawer/CLAUDE.md` is a module guide, not a root guide — in scope
+  - [x] `bilateral-create-drawer/CLAUDE.md` *Pendiente* counts a **fourth** consumer for `shared/components/pr-drawer`
+  - [x] Parent spec carries an amendment note: presentation superseded by `bilateral/qa-ai-verdict-drawer`, behaviour unchanged — *8 additive touch-points; Reviewer ruled this correct sweep discipline, since §1, §6.2/§6.3, `DD-10` and the §8 NFR row each asserted a specific falsehood a footer note could not neutralise*
+  - [x] Forward + backward sweep done for the words "modal"/"dialog" across both spec folders — *judged hit by hit, not mass-replaced; adjacent-but-still-true text deliberately left alone*
+  - [x] **Shared-file discipline honoured:** no edit to root `CLAUDE.md`, `AGENTS.md`, `.agents/`, packaged templates or `docs/trd/trd.md` from this branch. `bilateral-create-drawer/CLAUDE.md` is a module guide, not a root guide — in scope
 
 ## 4. Dependency graph
 
