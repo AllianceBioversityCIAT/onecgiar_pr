@@ -839,69 +839,136 @@ describe('TypeInnovationDevComponent', () => {
       expect(toggleButton().textContent.trim()).toBe('Hide full metadata');
     });
 
-    // BIL-QAI-R-15 — Innovation developers is back, always visible (not behind full metadata) and optional.
-    it('shows the two required MDS fields plus the optional Innovation developers field, without expanding anything', () => {
+    /**
+     * P2-3778 — the MDS zone of this section holds exactly TWO fields: typology + readiness level.
+     * "Innovation developers" is removed (decision on the ticket, 2026-09-03: Juan David Delgado
+     * relaying Nicoleta Trifa via Ángel Jarrín — "innov developer field will be removed and for
+     * innovations this will be replaced by the lead contact person information"). Section 1 already
+     * tells the reporter so (`section-general-info.component.html:41-47`), which is what made the
+     * field's continued presence a contradiction QA could see on screen.
+     */
+    it('shows only the typology select before expanding — no Innovation developers textarea', () => {
       render();
-      expect(labels()).toEqual([
-        'Which of the below typologies best fits the nature of the innovation?',
-        'Innovation developers'
-      ]);
-      const developerField = allFields().find(f => f.label === 'Innovation developers');
-      expect(developerField.required).toBe(false);
-      expect(allFields().filter(f => f.label !== 'Innovation developers').every(f => f.required)).toBe(true);
+      expect(labels()).toEqual(['Which of the below typologies best fits the nature of the innovation?']);
+      expect(allFields().every(f => f.required)).toBe(true);
       // The readiness level is an `app-pr-range-level`, headed by its own field header.
       expect(fixture.debugElement.query(By.css('app-pr-range-level'))).toBeTruthy();
       const headers = fixture.debugElement.queryAll(By.css('app-pr-field-header')).map(d => read(d.componentInstance.label));
       expect(headers).toContain('How would you assess the current readiness of this innovation?');
     });
 
-    // BIL-QAI-R-15 — DOM-level: the disqualifier named in the work order forbids stopping at "the
-    // textarea exists"; this reads the value it actually renders, prefilled or not.
-    describe('Innovation developers field rendering (BIL-QAI-R-15)', () => {
+    /**
+     * P2-3778 — removing the FIELD is not removing the DATA. Three things are pinned together on
+     * purpose: the textarea is gone from both states of the form, the column is still seeded from the
+     * Lead contact person (the replacement the decision names), and whatever the server holds still
+     * travels back in the payload instead of being blanked by the next save.
+     */
+    describe('Innovation developers removal (P2-3778)', () => {
       const developerTextarea = () =>
         fixture.debugElement.queryAll(By.css('app-pr-textarea')).find(d => read(d.componentInstance.label) === 'Innovation developers');
 
-      /**
-       * Standalone `[(ngModel)]` writes its INITIAL value to the `ControlValueAccessor` inside a
-       * `resolvedPromise.then(...)` microtask (Angular's `NgModel._updateValue`), not synchronously
-       * during `setUpControl`'s own `writeValue(control.value)` call — which fires first, with the
-       * freshly-created `FormControl`'s default `null`. A single synchronous `fixture.detectChanges()`
-       * therefore observes `PrTextareaComponent.value === null`, even though `body.innovation_developers`
-       * is already correct (proven by the plain `component.body.innovation_developers` assertions in
-       * the `loadData` describe above, which read the model directly and never touch the CVA). Flushing
-       * the microtask queue — `await fixture.whenStable()` — then re-running change detection is the
-       * same pattern already used for a deferred write elsewhere in this package
-       * (`overview-controls.component.spec.ts`'s `settleFocus()`).
-       */
-      const renderAndSettle = async (): Promise<void> => {
+      it('renders no Innovation developers textarea while the section is collapsed', () => {
+        creation.resultLeadContact.set('A. Rivera');
         render();
-        await fixture.whenStable();
+        expect(developerTextarea()).toBeUndefined();
+        expect(labels()).not.toContain('Innovation developers');
+      });
+
+      it('renders no Innovation developers textarea inside the full metadata either', () => {
+        render();
+        toggleButton().click();
+        fixture.detectChanges();
+        expect(developerTextarea()).toBeUndefined();
+        expect(labels()).not.toContain('Innovation developers');
+      });
+
+      // The replacement the decision names: the Lead contact person still reaches the column, so the
+      // review drawer and the exports keep reading a populated field.
+      it('still seeds innovation_developers from the Lead contact person', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: {} }));
+        render();
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('still sends the stored innovation_developers back — hiding the field deletes nothing', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
+        render();
+        component.onSave();
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBe('CIAT breeding team');
+      });
+    });
+
+    /**
+     * P2-3779 — three full metadata fields announced themselves as REQUIRED while the section saves,
+     * and reaches "Section complete", with all three empty. They are optional (P2-3391 AC8) and none
+     * of them is in `updateMds()`, so the marker was the only thing lying.
+     */
+    describe('optional fields must not be styled as required (P2-3779)', () => {
+      const expandAsVariety = () => {
+        render();
+        // The variety question is gated on the typology whose innovations are varieties or breeds.
+        component.body.innovation_nature_id = 12;
+        toggleButton().click();
         fixture.detectChanges();
       };
 
-      it('renders prefilled with the lead contact person when the stored value is empty', async () => {
-        creation.resultLeadContact.set('A. Rivera');
-        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: {} }));
-        await renderAndSettle();
-        expect(developerTextarea().componentInstance.value).toBe('A. Rivera');
+      it('does not mark "Are you profiling a new or improved variety or breed?" as required', () => {
+        expandAsVariety();
+        const variety = fixture.debugElement
+          .queryAll(By.css('app-pr-yes-or-not'))
+          .map(d => ({ label: read(d.componentInstance.label), required: read(d.componentInstance.required) }))
+          .find(f => f.label === 'Are you profiling a new or improved variety or breed?');
+        expect(variety).toBeDefined();
+        expect(variety.required).toBe(false);
       });
 
-      it('renders the stored value, NOT the lead contact person, when the stored value is not empty', async () => {
-        creation.resultLeadContact.set('A. Rivera');
-        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
-        await renderAndSettle();
-        expect(developerTextarea().componentInstance.value).toBe('CIAT breeding team');
-      });
+      it('does not mark either investment (USD) table as required', () => {
+        expandAsVariety();
+        const headers = fixture.debugElement
+          .queryAll(By.css('app-pr-field-header'))
+          .map(d => ({ label: read(d.componentInstance.label), required: read(d.componentInstance.required) }));
 
-      // BIL-QAI-T-12 rework, AC-18's "renders empty" clause: a stored `null` (the column exists, the
-      // user cleared it) must render empty, NOT the lead contact person, on reload.
-      it('renders empty — not the lead contact person — when the stored value is a reloaded null', async () => {
-        creation.resultLeadContact.set('A. Rivera');
-        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
-        await renderAndSettle();
-        expect(developerTextarea().componentInstance.value).not.toBe('A. Rivera');
-        expect(developerTextarea().componentInstance.value).toBeFalsy();
+        const cgiarPrograms = headers.find(
+          h => h.label === 'Estimation of total USD-value of investment by CGIAR Programs during the reporting period'
+        );
+        const partners = headers.find(
+          h => h.label === 'Estimated total USD-value of (co-)investment by partners during the reporting period'
+        );
+
+        expect(cgiarPrograms).toBeDefined();
+        expect(partners).toBeDefined();
+        expect(cgiarPrograms.required).toBe(false);
+        expect(partners.required).toBe(false);
       });
+    });
+
+    /**
+     * P2-3780 — "Innovation developers" and "Innovation collaborators" shared the placeholder
+     * "Contact persons info goes here...", so two different questions read the same. The developers
+     * field is gone (P2-3778); the collaborators one now names what belongs in it.
+     */
+    it('gives Innovation collaborators a placeholder of its own (P2-3780)', () => {
+      render();
+      toggleButton().click();
+      fixture.detectChanges();
+
+      const collaborators = fixture.debugElement
+        .queryAll(By.css('app-pr-textarea'))
+        .find(d => read(d.componentInstance.label) === 'Innovation collaborators');
+      expect(collaborators).toBeDefined();
+
+      const placeholder = read(collaborators.componentInstance.placeholder);
+      expect(placeholder.toLowerCase()).toContain('collaborator');
+      expect(placeholder).not.toBe('Contact persons info goes here...');
+
+      // And no field anywhere in the section keeps the generic one.
+      const placeholders = [
+        ...fixture.debugElement.queryAll(By.css('app-pr-textarea')),
+        ...fixture.debugElement.queryAll(By.css('app-pr-input'))
+      ].map(d => read(d.componentInstance.placeholder));
+      expect(placeholders).not.toContain('Contact persons info goes here...');
     });
 
     it('reveals the full metadata fields on click and hides them again, in the pooled-funding order', () => {

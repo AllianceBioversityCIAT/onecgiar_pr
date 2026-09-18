@@ -73,20 +73,37 @@
     (ngModelChange)="onCapdevTermId1Change()">
   </app-pr-radio-button>
 
-  <!-- P2-3771: the long-term sub-category belongs HERE, immediately under Length of training, not
-       inside the full-metadata block where it sat below the unrelated attendance question — a user
-       following the documented path picked "Long-term" and never saw it (AC5/AC6). Mirrors the W1/W2
-       cap-dev-info layout. `label` is what frames it inside a field card (P2-3385: without it the
-       control renders loose), and `[required]` MUST stay false — the parent selection already
-       satisfies the server's `valid_text(capdev_term_id)`, so flipping it would make the section
-       impossible to complete. -->
+  <!-- P2-3771 / P2-3382 (AC5/AC6) — the same defect reported twice, fixed once. The long-term
+       sub-category belongs HERE, immediately under Length of training and outside the full-metadata
+       block: that block is collapsed by default, so the guard below was never evaluated, and the
+       control also sat under the unrelated attendance question — a
+       reporter following the documented path picked "Long-term" and saw nothing at all. Mirrors the
+       W1/W2 `cap-dev-info` layout.
+
+       The rejected alternative was to force the toggle open on Long-term: `showAllFields` is a
+       persisted user preference (`BilateralExpandableStateService` → `bp_extra_<resultId>_type-specific`),
+       and flipping it would drag the organization fields on screen unasked. Fix where the node lives,
+       don't automate around it. The guard condition is carried over unchanged; term 4 is the parent
+       bucket, 1 and 2 the stored sub-terms.
+
+       P2-3385: `label` is what makes this render inside a card — `app-field-card`'s `isBare` is true
+       without one and the whole `field_card` class is skipped, which drew PhD / Master loose outside
+       the frame every sibling question has.
+
+       P2-3771 (QA decision, 18-Sep-2026): the degree IS mandatory once Long-term is picked — María
+       Camila confirmed it after reviewing the story. Note what this does NOT do: it adds no fourth
+       entry to `setSectionFields` (a never-filled entry would leave the section amber forever);
+       instead the existing "Length of training" item stays unfilled until the cascade resolves, so
+       the footer keeps naming a field the user can actually act on. The database green check
+       (`validation_capacity_dev_*`) is NOT touched here — it lives outside this repo and belongs to
+       its owner, so the server stays the laxer of the two on purpose. -->
   @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
     <app-pr-radio-button
       label="Degree"
       [options]="capdevsSubTerms"
       optionLabel="name"
       optionValue="capdev_term_id"
-      [required]="false"
+      [required]="true"
       [(ngModel)]="capdevTermId2"
       (ngModelChange)="onCapdevTermId2Change()">
     </app-pr-radio-button>

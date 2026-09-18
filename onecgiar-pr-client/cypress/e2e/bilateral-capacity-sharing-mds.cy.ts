@@ -17,6 +17,11 @@ Cypress.on('uncaught:exception', err => !/Http failure response .*get\/result\/9
 
 const CAPACITY_SHARING = 5;
 const ATTENDANCE_Q = 'Were the trainees attending on behalf of an organization?';
+// `capdevs_term` seed values (server migrations 1668784095214 / 1668806452093): the two long-term
+// sub-terms are PhD and Master, in that order, and "Degree" is the label the W1/W2 screen already
+// uses for the group (P2-3385).
+const DEGREE_LABEL = 'Degree';
+const DEGREE_OPTIONS = ['PhD', 'Master'];
 
 function openCapacitySharing() {
   cy.window().then((win: any) => {
@@ -69,6 +74,39 @@ describe('P2-3382 · bilateral Capacity Sharing MDS', () => {
     cy.get('app-type-capacity-sharing').contains('button', 'Complete full metadata').click();
     cy.get('app-type-capacity-sharing').should('contain.text', ATTENDANCE_Q);
     cy.screenshot('p2-3382-attendance-behind-toggle', { capture: 'fullPage' });
+  });
+
+  /**
+   * P2-3382 · CSD-T-1 — the Degree sub-radio must be reachable WITHOUT opening full metadata.
+   *
+   * The precondition is asserted, never assumed: `showAllFields` persists to `localStorage`
+   * (`bp_extra_9999_type-specific`) and the case above deliberately clicks the toggle open for this
+   * same result id. Cypress isolates tests and clears storage between them — but if that ever
+   * regressed, this case must fail loudly on its precondition rather than pass because the block
+   * happened to be open already.
+   */
+  it('reveals the Degree question when Long-term is chosen, with full metadata still collapsed', () => {
+    cy.get('app-type-capacity-sharing').should('not.contain.text', ATTENDANCE_Q);
+    cy.get('app-type-capacity-sharing').contains('button', 'Complete full metadata').should('exist');
+
+    cy.get('app-type-capacity-sharing').contains('label', /^\s*Long-term\s*$/).click();
+
+    cy.get('app-type-capacity-sharing').should('contain.text', DEGREE_LABEL);
+    DEGREE_OPTIONS.forEach(option => {
+      cy.get('app-type-capacity-sharing')
+        .contains('label', new RegExp(`^\\s*${option}\\s*$`))
+        .should('exist');
+    });
+
+    // CSD-R-1, BUT clause: the toggle is a persisted user preference, so revealing the Degree must
+    // leave it exactly where it was. This is the assertion that separates this fix from the
+    // rejected "auto-expand on Long-term" approach (design DD-1) — without it, a fix that opened
+    // the full-metadata block would satisfy every other assertion in this case.
+    cy.get('app-type-capacity-sharing').contains('button', 'Complete full metadata').should('exist');
+    cy.get('app-type-capacity-sharing').contains('button', 'Hide full metadata').should('not.exist');
+    cy.get('app-type-capacity-sharing').should('not.contain.text', ATTENDANCE_Q);
+
+    cy.screenshot('p2-3382-degree-under-length-of-training', { capture: 'fullPage' });
   });
 
   it('keeps the three MDS fields visible without expanding', () => {

@@ -46,10 +46,13 @@
     </div>
   </div>
 
+  <!-- CSD-R-6 — the term cascade. `capdev_term_id` is still the single persisted key; these two
+       controls decompose it for display and recompose it on a reviewer-initiated change (design.md §3). -->
   <app-pr-radio-button
     label="Length of training"
     [description]="lengthOfTrainingDescription()"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].capdev_term_id"
+    [(ngModel)]="capdevTermId1"
+    (ngModelChange)="onCapdevTermId1Change()"
     [options]="capdevsTerms()"
     optionLabel="name"
     optionValue="capdev_term_id"
@@ -58,6 +61,21 @@
   </app-pr-radio-button>
 
   <br />
+
+  @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
+    <app-pr-radio-button
+      label="Degree"
+      [(ngModel)]="capdevTermId2"
+      (ngModelChange)="onCapdevTermId2Change()"
+      [options]="capdevsSubTerms()"
+      optionLabel="name"
+      optionValue="capdev_term_id"
+      [required]="false"
+      [disabled]="disabled">
+    </app-pr-radio-button>
+
+    <br />
+  }
 
   <app-pr-radio-button
     label="Delivery Method"

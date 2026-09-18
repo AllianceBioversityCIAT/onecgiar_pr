@@ -285,6 +285,14 @@ export class TypeInnovationDevComponent implements OnInit {
    * it re-runs on every settled Lead contact save, not just once on load. Full history, the
    * key-presence gate's rationale, and the save-side contract are in this folder's `CLAUDE.md`
    * ("Innovation developers — removed, then restored").
+   *
+   * P2-3778 (2026-09-18) — the textarea is no longer rendered, so this is now the ONLY thing that
+   * fills the column from this form. It is kept on purpose: the ticket's decision is that the field
+   * is replaced BY the lead contact person's information, and the server's ingest path already
+   * stores exactly that when a payload carries no developers
+   * (`onecgiar-pr-server/src/api/bilateral/handlers/innovation-development.handler.ts:59-63`).
+   * Dropping it would leave manually created results with an empty column where AI-ingested ones
+   * carry the contact, in the review drawer and in the exports.
    */
   private applyInnovationDevelopersPrefill(): void {
     // Gate on the KEY, not on truthiness: `InnovationDevExists` (server repository) omits the key
@@ -309,6 +317,9 @@ export class TypeInnovationDevComponent implements OnInit {
       // `applyInnovationDevelopersPrefill()`, which runs from the constructor `effect()` while the
       // field is eligible (`BIL-IDP-T-4`, 2026-09-18) — never from a save path. Supersedes the 2026-09-03
       // removal, which copied the Lead contact person in here on every save.
+      // P2-3778: the key STAYS in the payload now that the textarea is gone. Hiding a field never
+      // deletes its data — same rule the scaling-studies question follows — so what the server holds
+      // travels back untouched instead of being blanked by the next save of any other field.
       innovation_developers: this.body.innovation_developers?.trim() || null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
       is_new_variety: this.body.is_new_variety ?? null,

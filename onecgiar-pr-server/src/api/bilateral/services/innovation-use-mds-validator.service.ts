@@ -61,9 +61,11 @@ export class InnovationUseMdsValidator {
     investments: Array<{ amount: unknown; isDetermined: unknown }> | undefined;
   }): string[] {
     const errors: string[] = [];
-    const actorsToBeDetermined = input.actorsToBeDetermined;
+    const actorsToBeDetermined = this.readStoredBoolean(
+      input.actorsToBeDetermined,
+    );
 
-    if (typeof actorsToBeDetermined !== 'boolean') {
+    if (actorsToBeDetermined === null) {
       errors.push(
         'Actors: state whether innovation use is yet to be determined.',
       );
@@ -105,6 +107,32 @@ export class InnovationUseMdsValidator {
     }
 
     return errors;
+  }
+
+  /**
+   * The answer as the two callers really hand it over: `true` / `false` when it is an answer,
+   * `null` when the question was never answered.
+   *
+   * 🛑 `typeof value !== 'boolean'` was NOT a safe "unanswered" test on the persisted path.
+   * `innov_use_to_be_determined` is declared `type: 'tinyint'` on the entity
+   * (`api/results/summary/entities/results-innovations-use.entity.ts:112-117`) even though its TS
+   * type says `boolean`, and TypeORM only hydrates a column into a real boolean when the column is
+   * declared `'boolean'`. So `getInnovationUse` hands this validator a NUMBER — `1` or `0` — and
+   * every answered draft was read as unanswered: NO bilateral Innovation Use could be submitted for
+   * review, whatever the reporter picked, while the form itself showed the section green.
+   * Reported by Cristian Gamboa on prtest, 18-Sep-2026 (result code #9479, id 11947, whose stored
+   * value the API returns as `1`). `bilateral.service.ts:3216` already coerced the same field with
+   * `!!`, so the shape was known — just not here.
+   *
+   * ⚠️ The entity is deliberately left alone: that column is also read by the raw `SELECT`s in
+   * `result.repository.ts` and by the Results Framework module, so re-typing it would change what
+   * those callers receive in order to fix a bug that lives in this one file.
+   */
+  private readStoredBoolean(value: unknown): boolean | null {
+    if (typeof value === 'boolean') return value;
+    if (value === 1 || value === 0) return value === 1;
+    if (value === '1' || value === '0') return value === '1';
+    return null;
   }
 
   private isCompleteMeasure(measure: any): boolean {

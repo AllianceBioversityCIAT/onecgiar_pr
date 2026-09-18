@@ -90,8 +90,6 @@ export class SectionTocComponent implements OnInit {
 
   readonly initiativeId = signal<number | null>(null);
 
-  readonly showWhyReported = computed(() => !this.paWillCompleteTocMapping() && this.isPlanned() === false);
-
   readonly showLevelSelector = computed(() => {
     const levelId = this.resultLevelId();
     const planned = this.isPlanned();
@@ -390,10 +388,6 @@ export class SectionTocComponent implements OnInit {
       clearTimeout(this._narrativeTimer);
       this._narrativeTimer = null;
     }
-    if (this._whyReportedTimer) {
-      clearTimeout(this._whyReportedTimer);
-      this._whyReportedTimer = null;
-    }
   }
 
   private readPaDeferStorage(resultId = this.resultId()): boolean {
@@ -445,6 +439,11 @@ export class SectionTocComponent implements OnInit {
         toc_result_id: this.selectedTocResultId() ?? undefined,
         indicator_id: this.selectedIndicatorId() ?? undefined,
         contributing_indicator: this.contributionValue() ?? undefined,
+        // whyReported is hidden in the bilateral UI (no textarea renders it) but is still sent here
+        // on purpose: the unplanned save path (_handleUnplannedSpecialCase,
+        // results-toc-results.service.ts:2674) deactivates the active results_toc_result row and
+        // INSERTS a new one with `toc_progressive_narrative: … ?? null` (:2697-2699). Omitting the
+        // key here would null every previously stored justification on the next autosave.
         toc_progressive_narrative:
           (this.isPlanned() === false ? this.whyReported() : this.narrative()) || undefined,
       });
@@ -579,14 +578,6 @@ export class SectionTocComponent implements OnInit {
     this._narrativeTimer = setTimeout(() => this.saveTocDebounced(), 1500);
   }
 
-  private _whyReportedTimer: ReturnType<typeof setTimeout> | null = null;
-
-  onWhyReportedInput(value: string): void {
-    this.whyReported.set(value);
-    if (this._whyReportedTimer) clearTimeout(this._whyReportedTimer);
-    this._whyReportedTimer = setTimeout(() => this.saveTocDebounced(), 1500);
-  }
-
   getDisplayLabel(item: any): string {
     if (item.extraInformation) return item.extraInformation;
     if (item.wp_short_name && item.title) return `${item.wp_short_name} - ${item.title}`;
@@ -614,15 +605,6 @@ export class SectionTocComponent implements OnInit {
         optional: true,
       },
     ];
-
-    if (planned === false) {
-      items.push({
-        key: 'toc-why-reported',
-        label: 'Why is this result being reported',
-        filled: !!this.whyReported()?.trim(),
-        optional: true,
-      });
-    }
 
     if (planned === true) {
       if (this.showLevelSelector()) {
