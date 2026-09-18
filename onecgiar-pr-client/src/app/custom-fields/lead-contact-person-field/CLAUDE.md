@@ -1,6 +1,6 @@
 # lead-contact-person-field
 
-**Verified:** 2026-09-08 · branch qa-development-2026-ss · quick/lead-contact-clear-button (clear button relocated into the selected-contact card)
+**Verified:** 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3761 (clear button now obeys `readOnly`); prior: 2026-09-08 · quick/lead-contact-clear-button (clear button relocated into the selected-contact card)
 
 ---
 
@@ -65,9 +65,12 @@ reporting surfaces, none of which own it.
   email auto-select.
 - `changeDetection: Default` and `standalone: false` are deliberate; the field mutates plain objects
   the parent owns, which OnPush would not pick up.
-- ⚠️ **`readOnly` disables the input but NOT the clear (✕) button**, so a read-only consumer can
-  still have its `body` blanked by a click. Left as is on purpose: guarding it would change P2-3520
-  behaviour for the three editable consumers.
+- ✅ **`readOnly` now disables the clear (✕) button too** (P2-3761, 2026-09-18). It used to guard
+  only the search input, so on a bilateral result in Pending Review QA could press the ✕ and watch
+  the contact disappear from the screen — a change `BilateralAutoSaveService` would never persist.
+  The button stays **visible and disabled**, not hidden, so the field reads the same in both states.
+  🛑 Only bilateral (`section-general-info.component.html:38`) passes `readOnly`; W1/W2 and IPSR leave
+  it at its `false` default, so they are untouched — there is a spec pinning that default.
 - ⚠️ **The search input is hidden with `[hidden]`, never a structural `@if`, once a contact is
   locked in — and the clear (✕) button lives inside `.selected-contact-info`, not floating over the
   input.** (`quick/lead-contact-clear-button`, 2026-09-08: the old layout put the ✕ inside the input
@@ -88,7 +91,11 @@ reporting surfaces, none of which own it.
 
 ## Tests
 
-Cypress CT only — `custom-fields/` is excluded from Jest coverage:
+`lead-contact-person-field.readonly.spec.ts` — Jest, 7 cases, P2-3761: the ✕ disabled and inert in
+read-only, still enabled and still clearing when editable, plus the `readOnly = false` default for
+the callers that never pass it. Renders the real template.
+
+The rest is Cypress CT — `custom-fields/` is excluded from Jest coverage:
 `npx cypress run --component --spec "src/app/custom-fields/lead-contact-person-field/*.cy.ts"`.
 ⚠️ 3 of the 16 `*.contract.cy.ts` cases fail on `performance-refactor` as of 2026-09-01 and did so
 before any change here — they assert `field-card`'s `.fch_tag` / `fc-done`, not this field.
