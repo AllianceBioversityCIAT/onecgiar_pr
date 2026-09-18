@@ -251,8 +251,8 @@ export class PortfolioOverviewComponent {
     programRankingHeatmapTable(this.data.programmeRows(), this.data.categories())
   );
 
-  /** Active visualization mode for Science Programs ranking analysis (default: vertical) */
-  readonly analysisViewMode = signal<'horizontal' | 'vertical' | 'heatmap'>('vertical');
+  /** Active visualization mode for Science Programs ranking analysis (default: horizontal) */
+  readonly analysisViewMode = signal<'horizontal' | 'vertical' | 'heatmap'>('horizontal');
 
   readonly activeAnalysisOption = computed(() => {
     switch (this.analysisViewMode()) {
@@ -718,8 +718,7 @@ export class PortfolioOverviewComponent {
         }
       }
     } else if (event?.name) {
-      const code = String(event.name).split(' ')[0].trim();
-      const row = this.data.programmeRows().find(r => r.code === code || r.name === event.name);
+      const row = this.findProgrammeRowByChartLabel(String(event.name));
       if (row?.code) {
         this.navigateToResultsCenter('all', { program: row.code });
       }
@@ -744,11 +743,25 @@ export class PortfolioOverviewComponent {
 
   onMatrixChartClick(event: any): void {
     if (event?.name) {
-      const code = String(event.name).split(' ')[0].trim();
-      const row = this.data.programmeRows().find(r => r.code === code || r.name === event.name);
+      const row = this.findProgrammeRowByChartLabel(String(event.name));
       if (row?.code) {
         this.navigateToResultsCenter('all', { program: row.code });
       }
     }
+  }
+
+  /** Resolve a chart axis label (full or truncated programme name) back to its row. */
+  private findProgrammeRowByChartLabel(label: string): PortfolioRow | undefined {
+    const normalized = label.trim().toLowerCase();
+    return this.data.programmeRows().find(r => {
+      const name = r.name.trim().toLowerCase();
+      const code = r.code.trim().toLowerCase();
+      if (name === normalized || code === normalized) return true;
+      if (label.endsWith('...')) {
+        const prefix = label.slice(0, -3).trim().toLowerCase();
+        return name.startsWith(prefix);
+      }
+      return false;
+    });
   }
 }

@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { AppComponent } from './app.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { FooterComponent } from './shared/components/footer/footer.component';
 import { ShareRequestModalComponent } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.component';
 import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
 import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
@@ -14,7 +13,7 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RouterTestingModule, HttpClientTestingModule],
-      declarations: [AppComponent, FooterComponent, ShareRequestModalComponent, ExternalToolsComponent, GoogleAnalyticsComponent],
+      declarations: [AppComponent, ShareRequestModalComponent, ExternalToolsComponent, GoogleAnalyticsComponent],
       providers: []
     }).compileComponents();
     fixture = TestBed.createComponent(AppComponent);
