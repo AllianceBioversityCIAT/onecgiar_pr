@@ -109,6 +109,23 @@ describe('BilateralPageHeaderComponent', () => {
     expect(nav.nativeElement.classList.contains('no-scrollbar')).toBe(true);
   });
 
+  it('renders a truncated center subtitle on its own row with a native title tooltip', () => {
+    const longName =
+      'Alliance of Bioversity and CIAT - Regional Hub (International Center for Tropical Agriculture / Centro Internacional de Agricultura Tropical)';
+    ctx.setCenter('CIAT (Alliance)', longName);
+    fixture.componentRef.setInput('activeTab', 'reporting');
+    fixture.detectChanges();
+
+    const subtitle = fixture.nativeElement.querySelector('[data-testid="bilateral-header-center-subtitle"]') as HTMLElement;
+    expect(subtitle).toBeTruthy();
+    expect(subtitle.textContent).toContain('Alliance of Bioversity and CIAT');
+    expect(subtitle.getAttribute('title')).toBe(longName);
+    expect(subtitle.classList.contains('truncate')).toBe(true);
+
+    const title = fixture.nativeElement.querySelector('[data-guide="bilateral-identity"] h1') as HTMLElement;
+    expect(title.getAttribute('title')).toBe('CIAT (Alliance)');
+  });
+
   it('shows the info button on tabbed pages and opens tab-specific explainer copy', () => {
     ctx.setCenter('AfricaRice', 'Africa Rice Center');
     fixture.componentRef.setInput('activeTab', 'reporting');
@@ -187,7 +204,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.componentRef.setInput('activeTab', 'reporting');
     fixture.detectChanges();
 
-    const heroDiv = fixture.nativeElement.querySelector('.h-\\[64px\\]');
+    const heroDiv = fixture.nativeElement.querySelector('[data-testid="bilateral-page-header-hero"]');
     expect(heroDiv).toBeTruthy();
     expect(heroDiv.classList.contains('border-b-band')).toBe(false);
   });
@@ -197,7 +214,7 @@ describe('BilateralPageHeaderComponent', () => {
     fixture.componentRef.setInput('pageTitle', 'Create Result');
     fixture.detectChanges();
 
-    const heroDiv = fixture.nativeElement.querySelector('.h-\\[64px\\]');
+    const heroDiv = fixture.nativeElement.querySelector('[data-testid="bilateral-page-header-hero"]');
     expect(heroDiv).toBeTruthy();
     expect(heroDiv.classList.contains('border-b-band')).toBe(true);
   });
