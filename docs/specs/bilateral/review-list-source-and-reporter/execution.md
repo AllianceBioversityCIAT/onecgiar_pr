@@ -687,3 +687,82 @@ Per *Advisory Never Becomes A Task*, none of these mints a task or widens one.
 **Final verification result:** green on every gate — 54 page CT, 24 table CT, 19 Jest suites / 574 tests, D7 at 7, row-height caps unchanged, both contrast ratios above threshold, zero row multiplication across 8 program/phase pairs.
 
 **`Not Done / Assumptions`:** the falsifier-premise substitution (accepted, judged honest by the Reviewer); the tsc count correction (accepted, *Decisions* 2); the pre-existing `CLAUDE.md` length overflow (disclosed, separate ticket). **No scope owed.**
+
+---
+
+## HITL — live-page visual pass (Leader, 2026-09-21)
+
+**The deferral was probed before being accepted, per `.agents/leader.md` → *Deferring a check*.** The assumption was *"the visual pass cannot run here — Playwright is not installed."* Probed in three steps: `claude-in-chrome` reported **no connected browser**; the `orca` CLI's `browser` noun exposes only `identity get/set`; but its **`Browser Automation`** command group (`tab create` · `goto` · `screenshot` · `eval` · `snapshot`) is fully present, and `orca tab list` found a tab **already open on this worktree's dev server at the bilateral-review page for `SP01`**. The blocker was not real. Had it been accepted untested, every finding below would have been lost.
+
+**Environment, verified before trusting anything on screen:** `ng serve` on :4200 via the Orca proxy; the compiled server carries both `reporter_name` (`dist/.../result.repository.js`) and the `EXTERNAL` stamp (`dist/.../bilateral.service.js`). The page was reloaded before measuring. **No mutating control was touched** — the review queue's Approve/Reject actions were deliberately never clicked; the pass is read-only observation plus `eval` measurement.
+
+### Structure — `BSR-R-8`, `BSR-AC-9`, DD-2's Position rule
+
+Live header set: `Code · Title · Lead center · **Source** · Status · Alignment · **Submitted** · Actions` — **8 columns**, SOURCE **after Lead Center** (so Title keeps `td:nth-child(2)`, which DD-2 requires and `bilateral-review.cy.ts:1193-1194` depends on), and `DATE → SUBMITTED`. **37 rows, 37 Source chips, 37 reporter lines** — every row rendered both new surfaces. `documentElement.scrollWidth > clientWidth` → **false**. Title visibly the widest column.
+
+### The `BSR-R-4` matrix on real data — **six of seven rows live**
+
+| Chip rendered | rows |
+|---|---|
+| `Via API · STAR` | 11 |
+| placeholder `—` | 11 |
+| `Via API · W3RU` | 5 |
+| `Via API` | 4 |
+| `Via API · FETCHER` | 3 |
+| `Manual entry` | 2 |
+| `AI Result` badge | 1 |
+
+Only `BULK` is absent — owned by `bilateral/bulk-uploader-handoff` and not yet written anywhere. **This is the decisive refutation of the caveat the Leader propagated from `BSR-T-1`'s single-program sample** (*"only the `Via API` branch is observable on TEST data"*). The **trap row** — `UNKNOWN` + a platform code → `Via API · <code>`, the case `design.md` singled out as the one a naive implementation gets wrong — renders **19 times** on this one page (`STAR` 11 + `W3RU` 5 + `FETCHER` 3). A single screenshot captures the `AI Result` badge, `Manual entry` and `Via API · W3RU` together, with the AI case visually distinct from the neutral pills exactly as `BSR-DD-4` intended.
+
+### `BSR-R-5` / APF-R-12 / D9 — the AI badge, measured live
+
+| Property | Live value |
+|---|---|
+| Rendered text | `auto_awesome AI Result` (icon ligature + label) |
+| Width × height | **79px × 20px** |
+| SOURCE cell width | **116px** |
+| Single line? | **yes** (`height ≤ 24`) |
+| Fits the cell? | **yes** |
+| Accessible name | *"Generated with AI assistance from your sources. Review and edit before submitting."* |
+
+The accessible name is the delegated component's own constant — `BSR-R-5` satisfied, no second copy. **And the badge measures 79px, not `design.md` DD-2's "≈88px" — now confirmed a third time** (CT under `BSR-T-4`, the Leader's arithmetic, and now the live page), which is why DD-2 carries the falsification note.
+
+### D9 contrast — third independent confirmation, on live tokens
+
+| Element | Foreground | Background | α | Ratio |
+|---|---|---|---|---|
+| AI badge | `rgb(29, 78, 216)` | `rgb(219, 234, 254)` | 255 | **5.49:1** |
+| Neutral pill | `rgb(93, 88, 114)` | `rgb(247, 247, 249)` | 255 | **6.32:1** |
+
+Both clear WCAG AA (≥ 4.5:1) and both **match the CT figures exactly**, which in turn matched the Leader's independent recomputation. Three paths, one answer.
+
+### `BSR-R-6` / `BSR-AC-8` — the reporter line
+
+37 of 37 rows carry a named reporter; **0** placeholders on this page. Sampled cells show `scrollWidth > clientWidth` with the full value in `title` — **truncated, not clipped or wrapped**, and the row did not grow. Real names render on the second line of the SUBMITTED cell (`Daniel Lozano`, `Nicoleta Trifa`, `Jose Berenguer`). Live row heights: **min 49, max 66** — inside the 68px cap, consistent with the CT measurements.
+
+### `BSR-R-7` / D8 — the placeholder pair, and a Leader false alarm corrected
+
+A first probe reported `srOnlyPresent: false` and looked like a live `BSR-R-7` violation. **It was the probe that was wrong, not the implementation.** The query asked for `.sr-only` as a *descendant* of the element bearing the chip testid; the `sr-only` span is its **sibling**, both children of the chip host. The live markup is exactly the module convention:
+
+```html
+<span aria-hidden="true" data-testid="bilateral-review-source-chip-placeholder"
+      title="Source: not specified">—</span>
+<span class="sr-only">Source: not specified</span>
+```
+
+One `aria-hidden` dash, exactly one `sr-only` string naming the field. The cell-owned `<span class="block truncate max-w-full">` clip guard from DD-2 is also visible in the live DOM, wrapping the `display: contents` chip host — the arrangement `BSR-T-3`'s Reviewer predicted would work is what actually shipped. **Recorded because a false alarm that is quietly dropped is indistinguishable from one that was never checked.**
+
+### Screenshots
+
+`.tmp-hitl/bsr-live-wide.png` (the grouped project view: SOURCE column, two-line SUBMITTED cells, `Via API` / `Via API · W3RU` / `Via API · FETCHER` chips) and `.tmp-hitl/bsr-live-ai-badge.png` (the `AI Result` badge beside `Manual entry` and `Via API · W3RU` in adjacent rows). **Both viewed by the Leader, not merely captured.**
+
+### What this pass did **not** cover, stated plainly
+
+The Orca browser CLI exposes no viewport-resize command, so the live capture is at the **wide branch only (~1317px effective)**. The **1000px** squeeze band and the **375px** cards branch were **not** visually confirmed on the live page. They are covered by CT with rendered geometry — the 1000px real-`.overflow-x-auto`-scroller assertion (`BSR-AC-13`) and the 375px `documentElement.scrollWidth <= clientWidth` stress with an AI card and an `EXTERNAL`+`STAR` card (`BSR-AC-11`) — which for overflow and size claims is **stronger evidence than a screenshot**, since it measures rather than depicts. What remains genuinely unconfirmed is only the *aesthetic* judgement at those two widths. Recorded as a bounded, named gap rather than folded into a green tick.
+
+### Defect classes closed
+
+- **D3** (real-data aggregation): closed by `BSR-T-6`'s SQL across 8 `(programId, versionId)` pairs at both aggregation levels, **plus** this page rendering 37 rows in 22 project groups with no duplication visible. The requirements' substituted gate was a live row-count eyeball; the SQL is the stronger instrument and the live page corroborates it.
+- **D9** (contrast): closed by computed measurement in CT **and** on the live page, both ≥ 4.5:1. The manual pre-audit `requirements.md` §8 substituted for is superseded by a measurement.
+
+**Both substituted defect classes now rest on computed evidence rather than on an eyeball.** That is a stronger position than the spec asked for.

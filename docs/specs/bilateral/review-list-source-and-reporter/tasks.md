@@ -6,7 +6,7 @@
 - **Linked spec:** `./requirements.md` + `./design.md`
 - **Depth:** Lite · **Approval Mode:** pre-approved (Juan Carlos Cadavid, 2026-09-21)
 - **Owner:** Juan Carlos Cadavid
-- **Status:** in-progress
+- **Status:** executed (all 6 tasks `[x]`; `/akili-test` and `/akili-validate` still ahead of `shipped`)
 - **Budget (design.md §12A):** 6 tasks · ~680 LOC · 2 review rounds. **Tripwire:** stop and escalate above ~750 LOC or 8 tasks.
 
 ## 2. Pre-flight checklist
@@ -140,7 +140,7 @@
   - **Consumers:** `none (no shared symbol changed)`.
 - **Definition of done:**
   - [x] Full `bilateral-review` CT suite green — **54 gates**, plus 24 on the table suite and 19 Jest suites / 574 tests
-  - [~] **HITL evidence** — **D9 and D3 satisfied by computed evidence stronger than the eyeball they substituted for**: contrast measured in CT at **5.49:1** (AI badge) and **6.32:1** (neutral pill), both independently recomputed by the Leader; row counts identical with and without the `users` joins across **8** `(programId, versionId)` pairs at both the pre- and post-`GROUP BY` level. **The visual live-page look at 1536 / 1000 / 375 remains outstanding** and is the Leader's, not this task's (Playwright is not installed in this worktree)
+  - [x] **HITL evidence captured on the live page** (grouped project view, SP01, ~1317px — see `execution.md` → *HITL*): **six of the seven `BSR-R-4` rows render on real data**, including the trap row 19×; AI badge **79px in a 116px cell, single line**, accessible name supplied by the delegated APF component; contrast **5.49:1** / **6.32:1**; 37/37 rows show a chip and a named reporter, truncated with the full value in `title`; placeholder pair (`aria-hidden` dash + one `sr-only`) confirmed in the live DOM; no document overflow. **Not covered:** the visual look at **1000px** and **375px** — the Orca browser CLI exposes no viewport resize; both are covered by CT rendered-geometry gates, which measure rather than depict. D9 and D3 — **D9 and D3 satisfied by computed evidence stronger than the eyeball they substituted for**: contrast measured in CT at **5.49:1** (AI badge) and **6.32:1** (neutral pill), both independently recomputed by the Leader; row counts identical with and without the `users` joins across **8** `(programId, versionId)` pairs at both the pre- and post-`GROUP BY` level. **The visual live-page look at 1536 / 1000 / 375 remains outstanding** and is the Leader's, not this task's (Playwright is not installed in this worktree)
   - [x] Change-log entry in `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (root `CLAUDE.md` rule, **AC-4**) — corrected at attempt 2 after a Reviewer FAIL: it had named the AI-promotion path as the second stamping site instead of the knowledge-product handler
   - [x] `…/bilateral-review/CLAUDE.md` updated (new column in the Contract's table section, new colgroup widths `96 / — / 88 / 116 / 120 / 184 / 100 / 100`, the SUBMITTED cell) and its `**Verified:**` line re-stamped **in the same commit** (`docs/COMPONENT-DOCS.md`)
 
