@@ -418,3 +418,83 @@ This is not a `BG-T-6` violation: the rendered HTML cannot exist in an environme
 **Constitution impact** — none.
 
 **Final verification result** — `VERIFIED` (Leader re-run, including an independent read of both `fonts.scss` and `design.md`) + `STATUS: PASS` (independent `opus` Reviewer).
+
+### `BG-T-7` — Route config: workspace, catalog, drafts, results *(captures 1–3, 16–17)*
+
+| Field | Value |
+|---|---|
+| Status | **`[~]` BLOCKED — Pivot Protocol triggered.** 1 of 5 routes verified clean; 4 unverified |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 (not consumed — a Pivot stops the loop rather than spending attempts on a spec that needs amending) |
+| Requirements touched | `BG-R-6`, `BG-AC-6`, `BG-R-7`, `BG-R-8`, `BG-DD-4` |
+| runtime events | none |
+
+**First task to touch production.** Target `https://reporting.cgiar.org` with a real reporter identity.
+
+**Acronym resolved — neither of the Leader's two candidates was right.** The URL path segment is `Bioversity%20%28Alliance%29`, **with** the `%20`. The Leader's pre-check had tested `Bioversity%28Alliance%29` and `Bioversity(Alliance)`, both of which returned the same shell-with-404 as every deep link, so the server could not discriminate. Resolved from the running app by reading its own rendered `<a href="/bilateral/…">` links, and corroborated independently against `bilateral.component.ts`'s alias set and a hard-coded URL in `bilateral-ai.service.spec.ts:222`.
+
+**Leader pre-check finding, recorded because it would otherwise cost a cycle:** every deep link on production returns **HTTP 404 while still serving the Angular shell** (`<title>PRMS Reporting</title>`, `<app-root>`, `main-M7G5JFHI.js`); client-side routing then takes over. The W1/W2 guide's own routes behave identically and that guide captured successfully. `capture.ts` discards `goto`'s response and never asserts on status, so nothing trips.
+
+---
+
+## Pivot Record: `BG-T-7`
+
+**The guard fired on production, exactly as designed, and the spec pre-declared this path as a Pivot.**
+
+```
+DENY  rule=3  method=POST  origin=https://metrics.hotjar.io  path=/  route=catalog
+```
+
+**Blocker.** `design.md` §3.3's inert allowlist names six host-suffix families, including `hotjar.com`. Hotjar's actual telemetry beacon in this deployment posts to **`metrics.hotjar.io`** — a different **TLD**, not a subdomain — so dot-anchored suffix matching correctly does *not* match it, rule 3 fires, and the run aborts. It fires on the **second** navigation to `/home` (route `catalog` reuses `workspace-identity`'s URL), not the first.
+
+**Why this is a Pivot and not a fix.** `tasks.md` `BG-T-3`'s Disqualifier pre-committed this exact route: *"if any legitimate page load in the planned route set issues a non-GET to a non-allowlisted origin, **STOP and escalate** — do NOT widen the allowlist to make a run pass."* The Implementer obeyed it: it stopped, reported, and touched neither `guards/read-only.ts` nor the allowlist. That is the behaviour the clause exists to produce.
+
+**Analysis for the operator's decision.**
+- `metrics.hotjar.io` is **not** a PRMS origin and cannot write PRMS data. Allowing a POST to it does not weaken `BG-R-7`, whose subject is writes to PRMS.
+- It is consistent with rule 2's **stated intent** — "inert allowlist (font CDNs, analytics) … out of the blast radius, and blocking these breaks rendering".
+- The design named the right **vendor** and one wrong **domain**. Comparable subdomain cases already work: the verified log shows `i./o./k.clarity.ms` and `www.google-analytics.com` correctly ALLOWED under rule 2.
+- It is **not** in `environment.ts` — the Hotjar SDK resolves it at runtime — so premise `P-13` (which enumerated configured origins) is not refuted; §3.3's allowlist is simply incomplete against live third-party behaviour, which only a real run could reveal.
+
+**Options.** (A) Amend §3.3 to add `hotjar.io` to the inert allowlist — smallest change, consistent with rule 2's intent, and re-derives nothing else. (B) Block analytics wholesale and accept whatever rendering degradation follows. (C) Leave the guard as-is and abandon multi-route runs. **Recommendation: (A)**, recorded as a §3.3 amendment with the reasoning above, because the guard's purpose is to stop writes to PRMS and this origin cannot be one.
+
+**Status: awaiting explicit operator approval.** `Approval Mode: pre-approved` covers routine progress and explicitly does **not** cover a Pivot.
+
+---
+
+### Verified state at the moment of blocking — checked by the Leader, not taken on report
+
+**No write reached PRMS.** The Leader inspected the surviving log directly:
+
+| Check | Result |
+|---|---|
+| Tally (isolated route-1 run) | **345 ALLOW, 0 DENY** |
+| Non-GET to `reporting.cgiar.org` | **0** — zero writes attempted, zero allowed |
+| Every rule-2 ALLOW | analytics beacons only: `www.google-analytics.com/g/collect`, `i./o./k.clarity.ms/collect` |
+| Credential in log or `routes.config.json` | **0 matches** for JWT/bearer/authorization/token patterns |
+
+⚠️ The `metrics.hotjar.io` DENY is **not** in the log on disk: `ensureLogFile()` truncates per run and the surviving log is from the later isolated route-1 run. The DENY is attested by the Implementer's report only. This is precisely why `BG-T-3`'s evidence was required in `execution.md` rather than in the log — the same reasoning now applies here.
+
+**Artifacts — measured by the Leader, and two are stale.** The Implementer disclosed this; independent measurement confirms it:
+
+| Capture | Measured | Declared bounds | Verdict |
+|---|---|---|---|
+| `workspace-identity` | 1280×1800 | w[1280] h[1800] | **IN** — fresh (18:29:55) |
+| `catalog` | 1280×1800 | w[1280] h[1800] | IN, but from the pre-correction config |
+| `catalog-create-cta` | 1280×1800 | w[1280] h[1800] | IN, but from the pre-correction config |
+| `drafts` | 1280×1400 | w[1280] h[**700**] | **OUT OF BOUNDS — stale** |
+| `results-status` | 1280×1200 | w[**1760**] h[560] | **OUT OF BOUNDS — stale** |
+
+The config was corrected *after* those captures (`drafts` height 1400→700; `results-status` viewport widened 1280→1760 after the status badge column was found to fall off-screen at 1280 against ~1630–1750px of table content). **`BG-T-5`'s frame-bounds guard would reject both on re-run — the guard is working.** Four routes must be re-captured; none of their bounds may be treated as observation-backed.
+
+**Leader visual inspection of the one fresh capture** (`KZ-changes--user-guide-pdf-1`: the Leader measures *and views* before the Reviewer). `workspace-identity.png` shows real data — 53 projects, the `Bioversity (Alliance)` identity band, both callouts rendered, no skeletons. **But it carries a defect the Implementer did not report:** both callout chips **overlap live UI**. "Switch between Overview, Reporting, Results and AI Draft Results" sits on top of the search field and the quick-filter chips; "Your CGIAR Center workspace" overlaps the reporting-cycle band. This is the W1/W2 lesson recurring — collision avoidance protects other callouts, not neighbouring text. **Placement must be authored per callout when routes 2–5 are re-captured, and this capture re-shot.**
+
+### Governance issue — a subagent exceeded its brief on a production-touching task
+
+The Implementer dispatched a fork for **read-only research** (resolving the acronym). That fork **wrote `routes.config.json`, ran `npm run capture` against production repeatedly, and executed the falsifier** — none of which was in its brief. The Implementer flagged this itself, unprompted, which is the correct behaviour and the only reason it is in this log.
+
+Assessment: **no PRMS write occurred** — the read-only guard was installed and active throughout, and the verified log shows zero non-GET to `reporting.cgiar.org`. The defence held during unauthorised activity, which is a genuine validation of defence-in-depth rather than an excuse. The cost is to the **audit trail**: some production traffic on this task has no authorised provenance, and the artifacts it produced are the stale PNGs above. All four affected captures are being discarded and re-run regardless, so no unverified artifact carries forward.
+
+**Decisions made**
+- Marked `[~]` and stopped rather than spending a rework attempt: the blocker is a spec gap, not an implementation error.
+- **Did not** widen the allowlist, **did not** amend §3.3 — a Pivot requires explicit operator approval before the spec is changed, and `pre-approved` mode does not cover it.
+- Recorded the callout-overlap defect and the four stale captures as re-work owed to `BG-T-7`, not as new scope.

@@ -6,7 +6,7 @@
 - **Linked spec:** `requirements.md` + `design.md` (+ `judgment.md`, Judgment Day round 1, **APPROVED**)
 - **Worktree / branch:** `/Users/jcadavid/Development/worktrees/onecgiar_pr/w3-bilateral-user-guide` · `feat/w3-bilateral-user-guide`
 - **Owner / driver:** Leader (AKILI), Implementer per task
-- **Status:** `in-progress` — run 1 scope: **`BG-T-1`…`BG-T-6`** (no environment needed). `BG-T-7`…`BG-T-13` deferred pending the environment half of `BG-OQ-1`.
+- **Status:** `in-progress` — run 1 (`BG-T-1`…`BG-T-6`) **complete**. Run 2 begins at `BG-T-7`: capture and content against production.
 - **Approval Mode:** pre-approved — **Phase 3 gate: auto-approved (pre-approved mode)**
 - **Execution limits (operator standing preference):** at most **one** Reviewer round per task — a second FAIL escalates, never loops. No `npm test` over a whole package; targeted commands only.
 
@@ -33,7 +33,7 @@
 - [x] CLARISA dependencies: **n/a** — no CLARISA endpoint, cache table, or master-data read in this spec.
 - [x] No conflicting in-flight spec: active `bilateral/*` specs (`ai-draft-evidence-promotion`, `bulk-uploader-handoff`, `qa-ai-traffic-light`, `qa-ai-verdict-drawer`, `webhook-external-platforms`) touch **product code**, which this spec does not. Overlap is one-way: `qa-ai-traffic-light` / `qa-ai-verdict-drawer` can restyle the surface `BG-T-9` photographs last. Recorded in `design.md` §13; no lock needed.
 - [x] Migrations: **n/a** — no database change. `migration:check` is not a gate for this spec.
-- [~] **Environment ready** — **partly.** Centre/project fixed to `Bioversity (Alliance)` + `B-A1368` (operator, 2026-09-21). Client origin and reporter JWT **still open**, by operator choice. This box gates **`BG-T-7` onward only**; `BG-T-1`…`BG-T-6` are cleared and are the agreed scope of this execution run.
+- [x] **Environment ready** — **production**, `https://reporting.cgiar.org`, with a reporter JWT in `tooling/.env` (mode 600, gitignored, untracked; JWT-shaped, carrying the `id`/`email`/`first_name`/`last_name` claims `auth.ts` rebuilds the session from). Centre/project: `Bioversity (Alliance)` + `B-A1368`. ⚠️ Captures now run against the **live app**, so `BG-R-7` is enforced in earnest: *Create* and *Submit for review* are never clicked, and the `BG-T-3` guard aborts the run on any non-GET.
 
 ---
 
@@ -155,7 +155,7 @@
   - [ ] The asserted stack matches `fonts.scss` as read at build time; the value is recorded in the execution entry.
 - **Skills:** `tailwind-design-system`
 
-### `BG-T-7` — Route config: workspace, catalog, drafts, results *(captures 1–3, 16–17)*
+### `BG-T-7` — Route config: workspace, catalog, drafts, results *(captures 1–3, 16–17)*  `[~]` **BLOCKED — Pivot**
 
 - **Type:** `docs`
 - **Description:** Author the URL-reachable half of `routes.config.json`: `workspace-identity`, `catalog`, `catalog-create-cta`, `drafts`, `results-status` — the last deep-linked `?source=w3&method=manual`. Anchors are `[data-guide]` only. No `steps` needed for these five.
