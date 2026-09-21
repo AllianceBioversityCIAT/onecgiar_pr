@@ -202,3 +202,132 @@ Per *Advisory Never Becomes A Task*, none of these mints a task or widens one in
 **Final verification result:** green on all gates — scoped Jest, full server Jest, lint, and the migration gate.
 
 **`Not Done / Assumptions` (Implementer, attempt 2, verbatim):** declined the optional readability advisory (item 5) to keep the diff scoped to the falsification fix; items 1–4 complete. Adjudicated by the Leader as **no scope owed** — the declined item was tagged advisory-grade and optional in the brief, and an advisory can never be owed scope.
+
+---
+
+## Execute-time spec edit — D7's gate arithmetic (2026-09-21, before `BSR-T-3`)
+
+**Discovered by the Leader while composing the `BSR-T-3` brief**, verifying the gate before briefing anyone against it.
+
+**The defect.** Defect class **D7** was specified in four places as: `grep -rn "Generated with AI assistance" onecgiar-pr-client/src` **must return exactly 1 hit**. Run at `9660f76a1`, it returns **7**. The gate was therefore **unsatisfiable at baseline** — `BSR-T-3` would have failed its own Definition of done no matter how correctly it was implemented.
+
+**What the 7 hits actually are:**
+
+| # | Site | Kind |
+|---|---|---|
+| 1 | `ai-provenance-notice.component.ts:12` | the constant's definition — the one intended hit |
+| 2 | `ai-processing-panel.component.html:158` | **a pre-existing hard-coded duplicate in production markup** — a real APF-R-12 violation predating this spec |
+| 3–7 | `ai-processing-panel…spec.ts`, `bilateral-page-header…spec.ts`, `bilateral-result-creator…spec.ts`, `my-draft-results…spec.ts`, `bilateral-ai-completion-dialog…spec.ts` | spec-file assertions on the string |
+
+**The correction.** D7 now reads: the grep must return **7 hits, unchanged from the pre-spec baseline, with none of them introduced by this spec.**
+
+**Why this is an edit and not a Pivot.** `BSR-R-5` — *"The repository MUST NOT gain a second copy of the `AI_PROVENANCE_NOTICE_TEXT` string (APF-R-12)"* — is **untouched**, and so is `BSR-DD-4`, whose delegation of the AI case to `AiProvenanceNoticeComponent` is exactly what keeps the requirement true. Only the **gate's arithmetic** was wrong. The corrected form measures the same property (*this spec adds no copy*) with a number that is actually true, so no approved requirement changes meaning and the Pivot Protocol is not engaged.
+
+**Sites edited (two-direction sweep per `/akili-specify` → *Correction Closure*).** Forward — grepped the superseded value `"exactly 1"` / `→ 1` across the whole spec folder, finding and fixing **all four** occurrences, not only the one that surfaced:
+
+| File | Site |
+|---|---|
+| `requirements.md` | §8 defect-class table, row D7 |
+| `design.md` | `BSR-DD-4` → **Gate:** line |
+| `tasks.md` | `BSR-T-3` Definition of done |
+| `tasks.md` | §5 Test plan, `BSR-TEST-9` |
+
+Backward — grepped references *to* D7 and to `BSR-TEST-9`; all four sites above are the complete set, and each now carries the corrected number, so no surviving document asserts the false one.
+
+**Also recorded:** the pre-existing `ai-processing-panel.component.html:158` duplicate is now listed in `design.md` §13 as **out of scope, do not fix inside this spec**, beside the pre-existing `result.spec.ts` test slop. It is a real defect in the `bilateral` module that owns APF-R-12 and warrants its own follow-up — but fixing it here would be scope this spec never approved.
+
+**Carried into `BSR-T-3`'s Reviewer brief** as a named conformance check ("conformance to `requirements.md` §8 D7 as amended 2026-09-21"), per `/akili-execute` Step 2.3, and once more into the following task's brief before it drops.
+
+---
+
+### `BSR-T-3` — Source chip component + the derivation function
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (attempt 1) |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 |
+| Implementer / Reviewer models | `sonnet` (T2) / `opus` (T3) — author ≠ auditor holds |
+| Effort | `high` |
+| Skills assigned | `angular-developer`, `tailwind-design-system`, `tdd` |
+| Wave | ran alone (first client task; UI work was gated on `P-11`, now settled) |
+
+**Requirements covered:** `BSR-R-4`, `BSR-R-5`, `BSR-R-7`, `BSR-R-10`, `BSR-R-11`, `BSR-AC-4`, `BSR-AC-5`, `BSR-AC-6`.
+
+#### Attempt 1 — PASS
+
+- **runtime events:** none.
+- **Files changed / created (7):**
+  - **new** `…/bilateral-review/components/bilateral-review-source-chip/resolve-bilateral-source.ts` (81 lines) — the pure exported `resolveBilateralSource({ method, platformCode })` returning a discriminated `BilateralSourceDescriptor` (`{kind:'ai'}` / `{kind:'pill', label, accessibleName}` / `{kind:'placeholder'}`).
+  - **new** `…/resolve-bilateral-source.spec.ts` (88) — the seven-row matrix plus edge cases.
+  - **new** `…/bilateral-review-source-chip.component.ts` (45) · `.html` (34) · `.scss` (3) · `.component.spec.ts` (89).
+  - `…/bilateral-review/bilateral-review.copy.ts` (+16) — a new `sourceChip` section (pill labels, `BSR-R-11` accessible names, `placeholderSrOnly`). **`table.headers` deliberately untouched** — the `source` header key belongs to `BSR-T-4`, which must insert it *between* `center` and `status` because a spec asserts key order.
+- **The seven-row matrix as implemented**, checked row-for-row against `BSR-R-4`:
+
+  | `method` | `platformCode` | Result |
+  |---|---|---|
+  | `AI` | `'STAR'` | `{kind:'ai'}` |
+  | `MANUAL` | `'STAR'` | pill `Manual entry` |
+  | `BULK` | `null` | pill `Bulk upload` |
+  | `EXTERNAL` | `'STAR'` | pill `Via API · STAR` |
+  | `EXTERNAL` | `null` | pill `Via API` |
+  | `UNKNOWN` | `'MEL'` | pill `Via API · MEL` — **trap row 1** |
+  | `UNKNOWN` | `null` | `{kind:'placeholder'}` — **trap row 2** |
+
+  Plus edge cases: a blank/whitespace platform code on `EXTERNAL` collapses to `null`; an `undefined` method behaves as unmapped.
+
+- **Mutation proof (the task's named falsifier).** Replaced the `UNKNOWN`/unmapped branch with an unconditional `return { kind: 'placeholder' };`:
+
+  ```
+  FAIL .../resolve-bilateral-source.spec.ts
+    ● resolveBilateralSource › UNKNOWN, 'MEL' -> Via API · MEL (trap row)
+      - Expected: { accessibleName: 'Received through the MEL platform API', kind: 'pill', label: 'Via API · MEL' }
+      + Received: { kind: 'placeholder' }
+  Tests: 2 failed, 13 passed, 15 total
+  ```
+
+  Reverted immediately; green after. The matrix therefore is **not** an inert fixture — it distinguishes the naive implementation from the correct one on exactly the row the task named.
+
+- **D7 (amended gate) held: 7 before, 7 after.** The Implementer disclosed that its **first draft of the component spec introduced an 8th hit** by writing the AI sentence as a literal in an assertion; it caught this and replaced the literal with a reference to the imported `AI_PROVENANCE_NOTICE_TEXT`. **This is the corrected gate doing real work** — under the original, permanently-failing "exactly 1" wording, that signal would have been indistinguishable from the pre-existing baseline failure.
+
+- **Implementer verification:** red run before the component existed (`No tests found, exiting with code 1`), green after — `Test Suites: 2 passed, 2 total · Tests: 15 passed, 15 total`. `npx ng lint --quiet` → `All files pass linting.`
+
+- **Reviewer verdict: `PASS`.** Independently established, by reading source rather than trusting the report:
+  1. **`BSR-R-4`'s "any" is satisfied structurally, not coincidentally.** The `AI`, `MANUAL` and `BULK` branches `return` before `code` is consulted at all — `code` is computed but read only in the `EXTERNAL` and unmapped branches. This mattered because the matrix pins only one platform-code value per row, so a branch that *consulted* `platformCode` on the `AI` row would have passed the matrix and still violated the requirement.
+  2. **`{kind:'ai'}` is sufficient** — `AiProvenanceNoticeComponent` takes no input but `variant`, and supplies its own `aria-label`/`title` from the constant (`ai-provenance-notice.component.html:20-27`). `BSR-AC-5` satisfied with no second copy of the string.
+  3. **The descriptor-as-input reading is the faithful one** (see *Decisions*, below).
+  4. **Design system clean** — the pill is the Contributor chip's recipe verbatim (`bilateral-review-table.component.html:66`) plus §6.3's `whitespace-nowrap truncate max-w-full` + `title`. No hex, no `--pr-color-*-100` fill, no status-pair recombination; the only status pair present is the one the APF component ships, unmodified.
+  5. **A11y conformant** — the placeholder markup is byte-for-byte the module's Alignment convention (`bilateral-review-table.component.html:137-138`): `aria-hidden` dash + `title` + exactly one `sr-only` naming the field. Pill accessible names are all distinct from, and more descriptive than, the visible label (`BSR-R-11`).
+  6. **`display: contents` does not defeat `BSR-T-4`'s clipping guard — it is what makes it work.** The Leader raised this as the task's most consequential hand-off risk and the answer inverted the concern: `BSR-DD-2` requires the clipping wrapper to be *cell-owned*, outside the `display: contents` host. With no host box, the pill's containing block **is** T-4's `<span class="block truncate max-w-full">`, so `max-w-full` resolves against the 96px content box and the wrapper's `overflow:hidden` clips whichever variant renders, the AI badge included. **A host with its own box would have been the defect.**
+  7. The **D7 amendment itself was re-verified and found arithmetically correct** (the Reviewer was explicitly invited to reject it).
+
+#### `ADVISORY` findings (recorded, never gating — `/akili-execute` §2.4)
+
+- **RELIABILITY — `method` is matched case- and whitespace-sensitively.** A wire value of `'ai'` or `' AI '` would fall to the unmapped branch and render `Via API · <code>`, silently dropping the APF-R-12 transparency badge — the one branch carrying a compliance obligation. **Leader adjudication: recorded, not acted on.** `creation_method` is a `varchar(20)` written from exactly one source — `ResultCreationMethod`, whose five members are all uppercase (`MANUAL`/`AI`/`BULK`/`EXTERNAL`/`UNKNOWN`) — plus migration `1784921547596`, which wrote `'EXTERNAL'`. No writer can produce a lower-case or padded value, so this is speculative hardening rather than a live defect. Normalising would also be a behavior change (it would newly map values `BSR-R-4` classes as "anything unmapped"), which is scope this spec did not approve.
+- **RELIABILITY — the matrix pins one platform-code value per row**, so the "any" independence on `AI`/`MANUAL`/`BULK` rests on a source read rather than a behavioral assertion. Two extra rows (`BULK` + `'STAR'`, `AI` + `null`) would make it behavioral. Recorded; genuinely worth having, and a candidate for a follow-up rather than a widening of this task.
+- **READABILITY — `pillLabel()`/`pillAccessibleName()` as methods re-run on each change-detection pass**; `computed()` would match the module's signal idiom at no behavioral cost. The Reviewer judged the `strictTemplates` rationale for avoiding `@switch` narrowing sound and worth keeping.
+
+Per *Advisory Never Becomes A Task*, none of these mints a task or widens one in this spec.
+
+#### Evidence re-run (non-author, Step 2.3 — never waived)
+
+| Field | Value |
+|---|---|
+| Mode | Leader-inline |
+| Command | `npx jest …/bilateral-review-source-chip --silent --reporters=summary --no-coverage` |
+| Result | `Test Suites: 2 passed, 2 total · Tests: 15 passed, 15 total` — **`VERIFIED`**, identical to the Implementer's figures |
+| D7 gate | `grep -rn "Generated with AI assistance" onecgiar-pr-client/src \| wc -l` → **7**, unchanged. **`VERIFIED`** |
+| APF untouched | `git status --porcelain -- …/ai-provenance-notice/` → empty. **`VERIFIED`** |
+| `tsc --noEmit` (D6) | 1217 errors repo-wide, **zero** referencing `bilateral-review-source-chip`, `resolve-bilateral-source` or `bilateral-review.copy`; every error file is a pre-existing cypress e2e or legacy spec. **`VERIFIED` by the Leader, not taken from the Implementer** — with 1217 standing errors, `tsc` is a *baseline-comparison* gate in this repo, not a clean one, so "it passed" would have been a meaningless claim in either direction |
+| Lint | `npx ng lint --quiet` → `All files pass linting` |
+
+**Decisions made:**
+
+1. **The chip's Angular input is the already-resolved descriptor, not the raw `{ method, platformCode }` pair.** `design.md` §6.2 is ambiguous on its face — it says both *"given `{ method, platformCode }` it renders…"* and *"one input (`row`-derived source descriptor)"*. The Implementer read the input as the descriptor; the Reviewer independently confirmed that reading is the faithful one: §6.2 pins the input explicitly, the `{ method, platformCode }` clause describes what the **derivation** consumes, §2.1 places a `sourceOf()` on `BilateralReviewTableComponent`, and `BSR-T-5` needs the same function against a *different* payload type (`BilateralCommonFields`), which a raw-pair input could not serve. **Contract for `BSR-T-4` and `BSR-T-5`, to be carried in both briefs: call `resolveBilateralSource` at the call site and pass the descriptor down.** Recorded here because getting this wrong later is expensive.
+2. **No execute-time spec edit was made by this task.** The D7 amendment was made by the Leader *before* the task ran and is recorded in its own section above; it was carried into this task's Reviewer brief as a named conformance check and re-verified there.
+
+**Issues encountered:** none. No runtime events, no pivot.
+
+**Final verification result:** green on every gate — Jest, lint, the amended D7 grep, the APF-untouched check, and `tsc` against its baseline.
+
+**`Not Done / Assumptions` (Implementer, verbatim summary):** two declared judgment calls — the descriptor-as-input contract (item 1 under *Decisions*, confirmed faithful by the Reviewer) and the use of component getter methods rather than template `@switch` narrowing under `strictTemplates` (accepted; recorded as a readability advisory). **Leader adjudication: no scope owed** — both are design-interpretation calls that the Reviewer examined and upheld, not omitted work.

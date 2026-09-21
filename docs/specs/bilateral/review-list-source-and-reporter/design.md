@@ -249,7 +249,7 @@ A reporter line in the Title cell would instead add a third line under the clamp
 **Decision.** The chip branches: AI → `<app-ai-provenance-notice variant="badge">`; everything else → a local neutral pill.
 **Why.** APF-R-12 exists so the AI-transparency sentence has exactly one definition. A second "AI Result" pill in this module would be a second copy by construction. The other three values have no such constraint and do not deserve a shared component.
 **Cost accepted:** one chip renders two visually different pill styles (info pair for AI, neutral for the rest). That is the intended reading — AI provenance *is* the one value that carries a transparency obligation.
-**Gate:** D7 — `grep -rn "Generated with AI assistance" onecgiar-pr-client/src` must return exactly 1 hit.
+**Gate:** D7 — `grep -rn "Generated with AI assistance" onecgiar-pr-client/src` must return **7** hits, **unchanged from the pre-spec baseline**, none of them introduced by this spec. (Corrected at execute time 2026-09-21 — "exactly 1" was a miscount; see `requirements.md` §8 D7 and §13 below.)
 
 ### `BSR-DD-5` — Stamp `EXTERNAL` at ingestion rather than backfill
 
@@ -287,6 +287,7 @@ The estimate matches **Lite** for production code (~250 LOC) and is dominated by
 - **`BSR-OQ-2`** — Backfill `EXTERNAL` on rows ingested between migration `1784921547596` and `BSR-R-3`. Not taken (DD-5). File as a follow-up only if the HITL check finds rows with neither a `creation_method` nor a platform code.
 - **`BULK`** — when `bilateral/bulk-uploader-handoff` starts stamping it, no change is needed here: `BSR-R-4` already maps it.
 - **Pre-existing test slop** — `result.spec.ts:1522-1547` feeds the mapper `indicator_category` where the mapper reads `result_category`. Out of scope; do not fix inside this spec.
+- **Pre-existing APF-R-12 violation (found at execute time, 2026-09-21)** — `ai-processing-panel.component.html:158` hard-codes the AI-transparency sentence in production markup instead of binding `AI_PROVENANCE_NOTICE_TEXT` from `ai-provenance-notice.component.ts:12`. It is a genuine second copy of the string, and it **predates this spec**. It is what made the original D7 gate ("exactly 1 hit") unsatisfiable: the true pre-spec baseline is **7** hits — 1 constant definition, this 1 production duplicate, and 5 spec-file assertions. D7 was corrected at execute time to "7, unchanged, none introduced by this spec", which preserves `BSR-R-5`'s meaning exactly. **Out of scope — do not fix inside this spec**; file as a follow-up against the `bilateral` module that owns APF-R-12.
 
 ---
 

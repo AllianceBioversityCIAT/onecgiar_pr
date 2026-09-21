@@ -156,5 +156,21 @@ export const BILATERAL_REVIEW_COPY = {
     // @akili-spec changes/sp-bilateral-review-tab (BRT-T-5, KZ-REH-2)
     /** Row action title while a decision re-fetch is in flight (`aria-disabled`, not `disabled`). */
     decisionInFlightTitle: 'Saving the decision. Please wait.'
+  },
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-3, BSR-R-4, BSR-R-10, BSR-R-11)
+  /** `bilateral-review-source-chip` / `resolveBilateralSource` — the three neutral-pill labels and
+   *  their `BSR-R-11` accessible names, plus the absent-Source `sr-only` string. The AI case's
+   *  text is deliberately NOT here: it is owned entirely by `AI_PROVENANCE_NOTICE_TEXT`
+   *  (`AiProvenanceNoticeComponent`, APF-R-12) so the repository never gains a second copy. */
+  sourceChip: {
+    manualEntry: 'Manual entry',
+    manualEntryAccessibleName: 'Entered manually by the reporting center',
+    bulkUpload: 'Bulk upload',
+    bulkUploadAccessibleName: 'Uploaded through the bulk upload tool',
+    viaApi: 'Via API',
+    viaApiAccessibleName: 'Received through an external platform API',
+    viaApiWithCode: (code: string): string => `Via API · ${code}`,
+    viaApiWithCodeAccessibleName: (code: string): string => `Received through the ${code} platform API`,
+    placeholderSrOnly: 'Source: not specified'
   }
 };

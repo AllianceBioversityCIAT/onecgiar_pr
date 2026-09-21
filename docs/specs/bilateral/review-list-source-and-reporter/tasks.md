@@ -60,7 +60,7 @@
   - [x] No migration added (`design.md` DD-5)
   - [x] Server Jest + lint green
 
-### `BSR-T-3` — Source chip component + the derivation function
+### `BSR-T-3` — Source chip component + the derivation function `[x]`
 
 - **Type:** `client`
 - **Description:** Add a pure exported `resolveBilateralSource({ method, platformCode })` returning a discriminated descriptor, and a presentational `bilateral-review-source-chip` (`OnPush`) that renders the AI case through `AiProvenanceNoticeComponent variant="badge"`, the three neutral cases as a pill, and the absent case as the module's placeholder pair. Copy in `bilateral-review.copy.ts`.
@@ -74,11 +74,11 @@
   - **Disqualifier:** if rendering the APF badge inside a table cell forces a layout change to that shared component, stop — the chip must adapt, never the APF component (APF-R-12 owns it).
   - **Consumers:** `none (new component; no shared symbol changed)`. The APF component is **imported, not modified** — verify with `git diff --stat` that nothing under `pages/bilateral/components/ai-provenance-notice/` is touched.
 - **Definition of done:**
-  - [ ] Seven-row matrix green, including both `UNKNOWN` branches
-  - [ ] `grep -rn "Generated with AI assistance" onecgiar-pr-client/src` returns **exactly 1** hit (D7)
-  - [ ] Chip carries an accessible name; placeholder carries its `sr-only` string
-  - [ ] Only `--pr-*` tokens; no new hex; no `--pr-color-*-100` fill; no status-pair recombination
-  - [ ] All strings via `bilateral-review.copy.ts`
+  - [x] Seven-row matrix green, including both `UNKNOWN` branches — plus the named mutation proven red
+  - [x] `grep -rn "Generated with AI assistance" onecgiar-pr-client/src` returns **7** hits, **unchanged** from the pre-spec baseline, with **no new occurrence introduced by this task** (D7, corrected at execute time — see `requirements.md` §8)
+  - [x] Chip carries an accessible name; placeholder carries its `sr-only` string
+  - [x] Only `--pr-*` tokens; no new hex; no `--pr-color-*-100` fill; no status-pair recombination
+  - [x] All strings via `bilateral-review.copy.ts`
 
 ### `BSR-T-4` — SOURCE column, colgroup rebalance, SUBMITTED cell, narrow card
 
@@ -172,7 +172,7 @@ BSR-T-3 (chip + fn) ───────┤
 | `BSR-TEST-6` | CT (client, geometry) | `BSR-AC-9`, `BSR-AC-13`, layout NFRs | `…/bilateral-review-table.cy.ts` (Gate 7) |
 | `BSR-TEST-7` | CT (client, page) | `BSR-AC-10`, `BSR-AC-11` | `…/bilateral-review.cy.ts` |
 | `BSR-TEST-8` | unit (client) | `BSR-R-9`, `BSR-AC-12` | `…/result-review-drawer.component.spec.ts` |
-| `BSR-TEST-9` | grep gate | D7 (single AI string) | `grep -rn "Generated with AI assistance" onecgiar-pr-client/src` → 1 |
+| `BSR-TEST-9` | grep gate | D7 (no new AI string) | `grep -rn "Generated with AI assistance" onecgiar-pr-client/src` → **7, unchanged**; none added by this spec |
 | `BSR-TEST-10` | **HITL (manual)** | **D3** (real-data row counts), **D9** (contrast) | live page, recorded in `execution.md` |
 
 Coverage: server ≥ 5/20/35/40, client ≥ 50/60/60/60.
