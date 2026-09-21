@@ -28,6 +28,7 @@ import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-noti
 import { CopyButtonComponent } from '../../../../shared/components/copy-button/copy-button.component';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -50,6 +51,7 @@ import { BilateralQualityAssessmentDialogComponent } from '../../components/bila
     FormSkeletonComponent,
     AiProvenanceNoticeComponent
     , BilateralQualityAssessmentDialogComponent
+    , PrTooltipDirectiveModule
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -79,6 +81,16 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   isSubmitting = computed(() => this.qualityAssessment.isBusy());
   /** A spinner with no words told the user nothing — the label names which half is running. */
   submitButtonLabel = computed(() => (this.qualityAssessment.isSubmitting() ? 'Submitting…' : 'Checking quality…'));
+
+  /**
+   * QA feedback (2026-09-21), verbatim. It is accurate as written: `submitResult()` starts the AI
+   * quality check and nothing else — the PATCH that moves the result to Pending review only leaves
+   * from `submitAfterQualityDecision()`, so the reporter really can keep editing in between.
+   * Lives here rather than in the template because `prTooltip` takes a string binding.
+   */
+  readonly submitQualityCheckNote =
+    'Once you click this button, the system will first check the metadata for QA conformity. ' +
+    'You can still adjust the data to address any QA comments before the result is sent to the Program for review.';
   isManualSaving = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);

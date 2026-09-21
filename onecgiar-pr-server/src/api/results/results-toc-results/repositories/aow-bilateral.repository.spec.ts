@@ -1042,6 +1042,25 @@ describe('AoWBilateralRepository', () => {
       expect(map.get(13)?.preliminary_achieved_value_sum).toBe(0);
       expect(map.get(13)?.preliminary_progress_percentage).toBe('0%');
     });
+
+    describe('getPlannedKpisCountMap', () => {
+      it('returns mapped counts of total active indicators per program in the phase', async () => {
+        mockResolveContext();
+        dataSourceQueryMock.mockResolvedValueOnce([
+          { official_code: 'SP01', total_indicators: 415 },
+          { official_code: 'SP02', total_indicators: 197 },
+        ]);
+
+        const map = await repository.getPlannedKpisCountMap(defaultContext);
+
+        expect(map.get('SP01')).toBe(415);
+        expect(map.get('SP02')).toBe(197);
+        expect(dataSourceQueryMock).toHaveBeenCalledWith(
+          expect.stringContaining('COUNT(DISTINCT tri.id) AS total_indicators'),
+          [defaultContext.phaseUuid],
+        );
+      });
+    });
   });
 
   // ─── RFR-T-1 (bugfix/indicator-achieved-value-per-center) ─────────────────

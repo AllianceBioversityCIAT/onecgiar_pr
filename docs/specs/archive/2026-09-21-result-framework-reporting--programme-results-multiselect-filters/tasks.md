@@ -33,11 +33,11 @@
 - **Estimate:** M
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] Phase OR-match preserves existing normalize rules (phaseName, year, versionId)
-  - [ ] Status OR-match; `ignoreStatus` unchanged
-  - [ ] Created-by OR-match
-  - [ ] One chip per array element for all three dimensions
-  - [ ] `clearChip` removes single value; status/created-by clear to `[]`
+  - [x] Phase OR-match preserves existing normalize rules (phaseName, year, versionId)
+  - [x] Status OR-match; `ignoreStatus` unchanged
+  - [x] Created-by OR-match
+  - [x] One chip per array element for all three dimensions
+  - [x] `clearChip` removes single value; status/created-by clear to `[]`
 - **Verification:**
   - **Pass:** `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage --testPathPattern="programme-results-filter.service.spec"`
   - **Fail if:** any predicate scenario from PRM-R-1..3 lacks a spec case; OR semantics not asserted with multi-value arrays
@@ -59,12 +59,12 @@
 - **Estimate:** M
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] Three multiselects in Filters popover; no `app-pr-filter-select` for phase/status/createdBy
-  - [ ] `?status=Editing,Submitted` hydrates and filters correctly
-  - [ ] Legacy `?status=Submitted` still works
-  - [ ] Load without `?phase=` → `[defaultPhase()]` after loading completes
-  - [ ] Clear filters retains phase default; status/created-by fully cleared
-  - [ ] Status pill toggles multiselect membership
+  - [x] Three multiselects in Filters popover; no `app-pr-filter-select` for phase/status/createdBy
+  - [x] `?status=Editing,Submitted` hydrates and filters correctly
+  - [x] Legacy `?status=Submitted` still works
+  - [x] Load without `?phase=` → `[defaultPhase()]` after loading completes
+  - [x] Clear filters retains phase default; status/created-by fully cleared
+  - [x] Status pill toggles multiselect membership
 - **Verification:**
   - **Pass:** `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage --testPathPattern="programme-results.component.spec"`
   - **Also run if query map touched:** `npx jest --silent --reporters=summary --no-coverage --testPathPattern="dashboard-lab.scope.spec"`
@@ -88,9 +88,9 @@
 - **Estimate:** S
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] My Work filter popover shows multiselect for phase/status/createdBy
-  - [ ] URL share between Results and My Work for same params still works
-  - [ ] `CLAUDE.md` documents array-shaped phase/status/createdBy
+  - [x] My Work filter popover shows multiselect for phase/status/createdBy
+  - [x] URL share between Results and My Work for same params still works
+  - [x] `CLAUDE.md` documents array-shaped phase/status/createdBy
 - **Verification:**
   - **Pass:** `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage --testPathPattern="my-work-board.component.spec"`
   - **Fail if:** My Work still references `selectedPhase()` as scalar; build errors in my-work-board
@@ -133,8 +133,10 @@ No server changes; no migration check.
 
 ## 7. Manual HITL (post-Jest)
 
-- [ ] SP01 Results tab: open Filters, select 2 statuses + 2 phases — table and chips match
-- [ ] Copy URL, reload — selections restore
-- [ ] Status pills work with multiselect
-- [ ] Clear filters — phase retained, others cleared
-- [ ] Tab to multiselect, Escape closes panel (keyboard)
+**Run 2026-09-21** — Orca embedded browser, worktree dev server (`ng serve` from this checkout, API `localhost:3400`), SP01 Results tab. All five steps PASS; evidence in `execution.md` § HITL.
+
+- [x] SP01 Results tab: open Filters, select 2 statuses + 2 phases — table and chips match
+- [x] Copy URL, reload — selections restore
+- [x] Status pills work with multiselect
+- [x] Clear filters — phase retained, others cleared
+- [x] Tab to multiselect, Escape closes panel (keyboard)

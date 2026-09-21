@@ -279,9 +279,122 @@ describe('BilateralQualityPayloadBuilder', () => {
     );
     expect(toc.planned).toBe(true);
     expect(toc.level).toBe('High Level Output');
-    expect(toc.contribution).toBe(
+    // `contribution` carries the reported figure, not the ToC narrative — this fixture's
+    // indicator states no target, so it is null. The narrative rides on `why_reported`.
+    expect(toc.contribution).toBeNull();
+    expect(toc.why_reported).toBe(
       'This result directly evidences adoption of striga-resistant maize under AOW1.',
     );
+  });
+
+  // The defect this exists for: the figure the user types beside the indicator is persisted as
+  // `result_indicators_targets.contributing_indicator` and nothing in the mapper read it, so it
+  // never reached the AI.
+  it('sends the reported contribution figure from the indicator the payload names', () => {
+    const formDetail = structuredClone(
+      knowledgeProductFixture.formDetail,
+    ) as Record<string, any>;
+    formDetail.tocMetadata.result_toc_results[0].indicators = [
+      {
+        toc_results_indicator_id: null,
+        targets: [
+          { contributing_indicator: null },
+          { contributing_indicator: '150.00' },
+          { contributing_indicator: 55 },
+        ],
+      },
+    ];
+
+    const payload = builder.project(
+      knowledgeProductFixture.detail as Record<string, unknown>,
+      formDetail as Record<string, unknown>,
+      OPTS,
+    );
+    const toc = payload.sections.contributors_and_partners
+      .theory_of_change as Record<string, unknown>;
+
+    // Decimal string straight from MySQL, normalised; first target stating a figure wins.
+    // Emitted as a string: the AI contract types `contribution` that way and 422s on a number.
+    expect(toc.contribution).toBe('150');
+  });
+
+  // Regression guard: emitting the figure as a number is what drew the 422, and a number
+  // would additionally be dropped by the strip pass (`contribution` is not allowlisted).
+  it('keeps contribution through the identifier-strip pass, as a string', () => {
+    const formDetail = structuredClone(
+      knowledgeProductFixture.formDetail,
+    ) as Record<string, any>;
+    formDetail.tocMetadata.result_toc_results[0].indicators = [
+      {
+        toc_results_indicator_id: null,
+        targets: [{ contributing_indicator: 7 }],
+      },
+    ];
+
+    const toc = builder.project(
+      knowledgeProductFixture.detail as Record<string, unknown>,
+      formDetail as Record<string, unknown>,
+      OPTS,
+    ).sections.contributors_and_partners.theory_of_change as Record<
+      string,
+      unknown
+    >;
+
+    expect('contribution' in toc).toBe(true);
+    expect(toc.contribution).toBe('7');
+    expect(typeof toc.contribution).toBe('string');
+  });
+
+  describe('lead_contact_person falls back to the stored display string', () => {
+    const readLead = (formDetail: Record<string, any>) =>
+      (
+        builder.project(
+          knowledgeProductFixture.detail as Record<string, unknown>,
+          formDetail as Record<string, unknown>,
+          OPTS,
+        ).sections.general_information as Record<string, unknown>
+      ).lead_contact_person;
+
+    it('prefers the AD display_name when the enrichment succeeded', () => {
+      const formDetail = structuredClone(
+        knowledgeProductFixture.formDetail,
+      ) as any;
+      formDetail.commonFields.lead_contact_person = 'Stale, Name (Old)';
+      expect(readLead(formDetail)).toBe('Grace Mwangi');
+    });
+
+    it('uses result.lead_contact_person when the AD enrichment did not run', () => {
+      const formDetail = structuredClone(
+        knowledgeProductFixture.formDetail,
+      ) as any;
+      delete formDetail.commonFields.lead_contact_person_data;
+      formDetail.commonFields.lead_contact_person =
+        'Trifa, Nicoleta (CGIAR System Organization)';
+      expect(readLead(formDetail)).toBe(
+        'Trifa, Nicoleta (CGIAR System Organization)',
+      );
+    });
+
+    it('skips a blank display_name instead of emitting an empty string', () => {
+      const formDetail = structuredClone(
+        knowledgeProductFixture.formDetail,
+      ) as any;
+      formDetail.commonFields.lead_contact_person_data.display_name = '   ';
+      formDetail.commonFields.lead_contact_person =
+        'Trifa, Nicoleta (CGIAR System Organization)';
+      expect(readLead(formDetail)).toBe(
+        'Trifa, Nicoleta (CGIAR System Organization)',
+      );
+    });
+
+    it('is null when no source states a name', () => {
+      const formDetail = structuredClone(
+        knowledgeProductFixture.formDetail,
+      ) as any;
+      delete formDetail.commonFields.lead_contact_person_data;
+      formDetail.commonFields.lead_contact_person = null;
+      expect(readLead(formDetail)).toBeNull();
+    });
   });
 
   // Falsifying input (BIL-QAI-T-4 brief): a ToC node present only as `toc_result_id`, with no

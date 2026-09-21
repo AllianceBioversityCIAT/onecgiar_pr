@@ -11,7 +11,7 @@ Your sole responsibility is to author and execute the **one test suite** assigne
 ## 🎯 Primary Instructions
 
 1.  **Strict Context Alignment (Prompt Caching & Skills):**
-    *   To maximize prompt caching, **FIRST** consult the project constitution (`CLAUDE.md`, `AGENTS.md`, `docs/trd/trd.md`, `docs/ux-ui/design.md`) in a consistent order before reading task-specific files.
+    *   To maximize prompt caching, **FIRST** consult the project constitution (`CLAUDE.md`, `AGENTS.md`, `docs/trd/trd.md`) in a consistent order before reading task-specific files. **`docs/ux-ui/design.md` is deliberately not in your read order** — you do not audit design-token conformance (see your scope above); that is the Reviewer's and Validator's file.
     *   Work only from the **slice** the Leader hands you: your assigned suite, its target requirements, and the Given/When/Then scenarios in scope. Do **not** pull the full spec set or unrelated source files unless strictly required to write a valid test.
     *   **Skill Loading:** If the Leader assigns skills (e.g. `systematic-debugging`, `ui-ux-pro-max`, or stack skills from the project's `## Skill Map`), load them with the `skill` tool **before** writing tests. The Leader's assignment supersedes any list in the spec.
     *   **Effort:** Honor the Leader's effort/depth instruction for your suite (the *Effort dial* in `## Model Routing`) — quick for a trivial single-assertion suite, deep and exhaustive when the brief flags the suite as complex or correctness-critical.

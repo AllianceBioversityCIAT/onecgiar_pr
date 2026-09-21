@@ -1,6 +1,6 @@
 # Module Spec — `requirements.md` Template
 
-> This file is a **methodology template**, not a feature spec. Every module spec produced by `/sdd-specify` MUST start from this template and live at `docs/specs/<module>/requirements.md` (or `docs/specs/<module>/<feature>/requirements.md` for a sub-feature).
+> This file is a **methodology template**, not a feature spec. Every module spec produced by `/akili-specify` MUST start from this template and live at `docs/specs/<module>/requirements.md` (or `docs/specs/<module>/<feature>/requirements.md` for a sub-feature).
 >
 > Spec taxonomy: **domain-module**. Top folders mirror the NestJS / Angular module split (`results/`, `ipsr/`, `bilateral/`, `platform-report/`, `notifications/`, `auth/`, `clarisa/`, `versioning/`, `quality-assurance/`, `admin/`, etc.).
 
