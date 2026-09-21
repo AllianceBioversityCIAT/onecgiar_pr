@@ -451,6 +451,7 @@ export class BilateralService {
               bilateralDto.contributing_programs,
               userId,
               resultId,
+              bilateralDto.result_type_id,
             );
             await this.handleInstitutions(
               resultId,
@@ -1329,6 +1330,7 @@ export class BilateralService {
     contributingPrograms: any[],
     userId,
     resultId,
+    resultTypeId?: number,
   ) {
     if (!toc || typeof toc !== 'object') {
       this.logger.warn(
@@ -1532,6 +1534,13 @@ export class BilateralService {
           await this.upsertResultInitiative(resultId, init.id, roleId, userId);
           this.logger.debug(
             `Successfully upserted result_by_initiative for result ${resultId}, initiative ${init.id}`,
+          );
+          await this.saveLeadProgramInvestment(
+            resultId,
+            init.id,
+            toc,
+            resultTypeId,
+            userId,
           );
         } catch (err) {
           this.logger.error(
@@ -3948,6 +3957,34 @@ export class BilateralService {
     return Number(nonpp.usd_budget);
   }
 
+  /**
+   * Reads the `usd_budget` / `is_determined` pair off any incoming block that carries one.
+   *
+   * The three investment blocks (bilateral projects, contributing partners, the lead program)
+   * share this shape in the payload and in their three tables, which all store the amount in
+   * `kind_cash` alongside `is_determined`. `is_determined: true` means "yet to be determined",
+   * so it nulls the amount — the same rule `calculateKindCash` already applies to projects.
+   */
+  private readIncomingInvestment(source: any): {
+    amount: number | null;
+    isDetermined: boolean | null;
+  } {
+    if (!source || typeof source !== 'object') {
+      return { amount: null, isDetermined: null };
+    }
+
+    const isDetermined =
+      typeof source.is_determined === 'boolean' ? source.is_determined : null;
+    const rawAmount = source.usd_budget;
+    const hasAmount = rawAmount !== null && rawAmount !== undefined;
+    const amount =
+      isDetermined === true || !hasAmount || Number.isNaN(Number(rawAmount))
+        ? null
+        : Number(rawAmount);
+
+    return { amount, isDetermined };
+  }
+
   private async updateExistingBudget(
     existingBudget: any,
     kindCashValue: number | null,
@@ -4777,6 +4814,67 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Persists the lead science program's USD investment into `result_initiative_budget`.
+   *
+   * The amount rides on `toc_mapping` because that is where the payload names the lead program,
+   * and it hangs off the role-1 `results_by_inititiative` row `upsertResultInitiative` has just
+   * written — the only initiative row an ingested result has.
+   *
+   * 🛑 Contributing programs deliberately get NO budget row here. They are persisted as
+   * `share_result_request` drafts (see the roleId === 2 branch above), never as
+   * `results_by_inititiative` rows, so `result_initiative_budget.result_initiative_id` has
+   * nothing to point at until the contributing program accepts. Writing a role-2 row to create
+   * that anchor is explicitly forbidden — role 2 means "already accepted", it skips the
+   * contributor's consent, and the approval flow deactivates role-2 rows with no backing
+   * request. Where that amount should live before acceptance is a product decision.
+   */
+  private async saveLeadProgramInvestment(
+    resultId: number,
+    initiativeId: number,
+    toc: any,
+    resultTypeId: number | undefined,
+    userId: number,
+  ) {
+    if (!this.isInnovationType(resultTypeId)) return;
+
+    const investment = this.readIncomingInvestment(toc);
+    // Nothing stated is not the same as zero: a payload that never mentions investment must not
+    // seed an empty row, or every ingested result grows one the form then has to explain.
+    if (investment.amount === null && investment.isDetermined === null) return;
+
+    const resultInitiative = await this._resultByInitiativesRepository.findOne({
+      where: { result_id: resultId, initiative_id: initiativeId },
+    });
+    if (!resultInitiative) return;
+
+    const budgetRepository = this.dataSource.getRepository(
+      ResultInitiativeBudget,
+    );
+    const existing = await budgetRepository.findOne({
+      where: { result_initiative_id: resultInitiative.id, is_active: true },
+    });
+
+    if (existing) {
+      existing.kind_cash = investment.amount;
+      existing.is_determined = investment.isDetermined;
+      existing.last_updated_by = userId;
+      await budgetRepository.save(existing);
+      return;
+    }
+
+    await budgetRepository.save(
+      budgetRepository.create({
+        result_initiative_id: resultInitiative.id,
+        kind_cash: investment.amount,
+        is_determined: investment.isDetermined,
+        created_by: userId,
+        last_updated_by: userId,
+        is_active: true,
+      }),
+    );
+  }
+
   private async upsertResultInitiative(
     resultId: number,
     initiativeId: number,
@@ -4878,6 +4976,13 @@ export class BilateralService {
     if (!Array.isArray(institutions) || !institutions.length) return;
 
     const resolvedInstitutionIds: number[] = [];
+    // The amount each resolved institution arrived with. `resolvedInstitutionIds` is a flat id
+    // list, so without this the link back to the payload entry — and its `usd_budget` — is lost
+    // by the time the budget rows are written below.
+    const investmentByInstitutionId = new Map<
+      number,
+      { amount: number | null; isDetermined: boolean | null }
+    >();
 
     for (const input of institutions) {
       if (!input) continue;
@@ -4919,6 +5024,10 @@ export class BilateralService {
 
       if (matched && !resolvedInstitutionIds.includes(matched.id)) {
         resolvedInstitutionIds.push(matched.id);
+        investmentByInstitutionId.set(
+          matched.id,
+          this.readIncomingInvestment(input),
+        );
       }
     }
 
@@ -4974,6 +5083,12 @@ export class BilateralService {
           budget.created_by = userId;
           budget.result_institution_id = rbi.id;
           budget.is_active = true;
+          // The row used to be written with its identifiers only, so a `usd_budget` that
+          // passed DTO validation was accepted and then dropped: the amount never left this
+          // method. Carried through `investmentByInstitutionId` now.
+          const investment = investmentByInstitutionId.get(rbi.institutions_id);
+          budget.kind_cash = investment?.amount ?? null;
+          budget.is_determined = investment?.isDetermined ?? null;
           return budget;
         });
         await this._resultInstitutionsBudgetRepository.save(budgets);
