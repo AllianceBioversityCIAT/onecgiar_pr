@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { EventEmitter } from '@angular/core';
@@ -270,6 +273,61 @@ describe('SectionContributorsComponent', () => {
       centersService.centersList = null;
       centersService.loadedCenters.emit(true);
       expect(component.availableCenters()).toEqual([]);
+    });
+
+    // ── BIL-T-1: the centers-catalogue failure must be VISIBLE, never silent ──────────────────
+    // Before this fix, `loadCenters()`'s `.catch(() => {})` swallowed a `getData()` rejection with
+    // no signal: `centersReady` is only ever set from `mapCenters()` (via the `loadedCenters`
+    // subscription, which never fires on failure), so `hydrateWhenReady` stayed permanently
+    // blocked and `loadExternalPartnersState()` never ran — `partnersHydrated` stuck `false`
+    // forever with zero visible error. Mirrors the `partnersLoadFailed` regression tests above.
+    describe('when the centers catalogue cannot be read', () => {
+      const buildWithFailedCenters = async () => {
+        centersService.getData = jest.fn().mockRejectedValue(new Error('boom'));
+        build();
+        fixture.detectChanges();
+        // flush the rejected `getData()` promise's `.catch()` handler
+        await new Promise(resolve => setTimeout(resolve, 0));
+      };
+
+      it('reproduces the original bug: no error signal and the hydration chain stays stuck', async () => {
+        await buildWithFailedCenters();
+
+        expect(component.centersLoadFailed()).toBe(true);
+        // The hydration chain never advances: `loadExternalPartnersState()` never fires, so the
+        // partner block stays unhydrated and the detail GET is never even issued.
+        expect(component.partnersHydrated()).toBe(false);
+        expect(bilateralApi.GET_BilateralResultDetail).not.toHaveBeenCalled();
+      });
+
+      it('retries on demand and clears the error once the read succeeds, letting hydration proceed', async () => {
+        await buildWithFailedCenters();
+        expect(component.centersLoadFailed()).toBe(true);
+
+        centersService.getData = jest.fn().mockImplementation(() => {
+          centersService.centersList = [center(9)];
+          centersService.loadedCenters.emit(true);
+          return Promise.resolve([center(9)]);
+        });
+
+        component.retryLoadCenters();
+        fixture.detectChanges();
+
+        expect(component.centersLoadFailed()).toBe(false);
+        expect(component.availableCenters().length).toBe(1);
+        // With `centersReady` finally true, `hydrateWhenReady` runs and the normal chain resumes.
+        expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalled();
+      });
+
+      it('re-raises the error when the retry fails again', async () => {
+        await buildWithFailedCenters();
+
+        component.retryLoadCenters();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(component.centersLoadFailed()).toBe(true);
+        expect(component.partnersHydrated()).toBe(false);
+      });
     });
 
     it('maps the projects response', () => {
@@ -1295,6 +1353,31 @@ describe('SectionContributorsComponent', () => {
       const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
       expect(payload.institutions).toEqual([{ institutions_id: 7 }]);
       expect(payload.contributing_center).toBeUndefined();
+    });
+  });
+  /**
+   * P2-3776. The `.sc-block` z-index ladder assumes every multi-select drops DOWNWARDS, so each
+   * block outranks the one after it. Since P2-3737 a field close to the floor opens its panel
+   * UPWARDS, and the ladder then hides that panel behind the block above: on prtest #9432 the
+   * partners list opened over the projects chips and `elementFromPoint` inside the overlap
+   * returned `.sc-selected-chips`, so the chips both covered the options and ate their clicks.
+   *
+   * The lock is on the stylesheet because that is where the bug lives: the guarantee is that the
+   * focused block outranks every rung of the ladder, in either direction.
+   */
+  describe('P2-3776 · the focused block wins over the ladder', () => {
+    const scss = readFileSync(join(__dirname, 'section-contributors.component.scss'), 'utf8');
+
+    it('lifts the block that holds the focus', () => {
+      expect(scss).toMatch(/&:focus-within\s*\{[^}]*z-index:\s*\d+/);
+    });
+
+    it('lifts it above every rung of the ladder', () => {
+      const lift = Number(/&:focus-within\s*\{[^}]*z-index:\s*(\d+)/.exec(scss)?.[1]);
+      const rungs = [...scss.matchAll(/&--\w+\s*\{\s*z-index:\s*(\d+)/g)].map(m => Number(m[1]));
+
+      expect(rungs.length).toBeGreaterThan(1);
+      expect(lift).toBeGreaterThan(Math.max(...rungs));
     });
   });
 });

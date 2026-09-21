@@ -11,6 +11,7 @@ import { ResultRepository } from '../../results/result.repository';
 import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
 import { SourceEnum } from '../../results/entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 
 @Injectable()
 export class KnowledgeProductBilateralHandler
@@ -63,6 +64,7 @@ export class KnowledgeProductBilateralHandler
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
+      creation_method: ResultCreationMethod.EXTERNAL,
       status_id: resolveInitialStatusId(bilateralDto),
     });
 

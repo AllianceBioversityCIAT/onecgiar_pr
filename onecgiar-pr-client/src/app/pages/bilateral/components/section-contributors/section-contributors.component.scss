@@ -24,6 +24,20 @@
   &--centers { z-index: 100; }
   &--projects { z-index: 50; }
   &--partners { z-index: 20; }
+
+  // P2-3776: the ladder above only holds while every panel drops DOWNWARDS. Since P2-3737 a field
+  // near the floor opens its panel UPWARDS (`.options_up`), and then the ladder works against it:
+  // the block above has the higher z-index, so its selected chips paint over the open list AND
+  // swallow the clicks meant for the options underneath them (measured on prtest #9432: the
+  // partners panel opened upwards over the projects chips, and `elementFromPoint` inside the
+  // 41px overlap returned `.sc-selected-chips`, not `.option`).
+  //
+  // Whichever block holds the focus is the one being used, so that one wins — in either direction.
+  // `.sc-block:focus-within` (0,2,0) outranks every `&--modifier` above (0,1,0), and the lift lasts
+  // only while the panel is open, so the ladder still orders the blocks at rest.
+  &:focus-within {
+    z-index: 300;
+  }
 }
 
 // Read-only value drawn like a disabled input — the same look the W1/W2 "Submitter" select has

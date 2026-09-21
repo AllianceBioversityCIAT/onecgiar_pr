@@ -454,6 +454,14 @@ export class ResultsFrameworkReportingController {
     description:
       'Population scope: "reviewed" (default; Quality Assessed/Approved) or "all" (adds Editing, Submitted, Pending Review). Any other value is treated as "reviewed".',
   })
+  // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-AC-2)
+  @ApiQuery({
+    name: 'tocIndicatorTargetId',
+    type: Number,
+    required: false,
+    description:
+      'Optional exact combination-group anchor. When supplied, narrows the panel to results linked to this exact toc_indicator_target_id (plus a NULL-safe fallback for historical rows without the anchor, RRC-R-8). Omitting it preserves the coarse related_node_id-only behavior.',
+  })
   @ApiOkResponse({
     description: 'Contributors and partners fetched successfully.',
   })
@@ -463,12 +471,15 @@ export class ResultsFrameworkReportingController {
     @Query('tocResultIndicatorId') tocResultIndicatorId: string,
     // @akili-spec changes/indicator-reported-results
     @Query('scope') scope?: string,
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-AC-2)
+    @Query('tocIndicatorTargetId') tocIndicatorTargetId?: string,
   ) {
     return this.resultsFrameworkReportingService.getExistingResultContributorsToIndicators(
       user,
       resultTocResultId,
       tocResultIndicatorId,
       scope,
+      tocIndicatorTargetId,
     );
   }
 

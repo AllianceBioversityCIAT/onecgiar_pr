@@ -8,7 +8,8 @@
       type="number"
       [required]="false"
       [(ngModel)]="resultDetail.resultTypeResponse[0].female_using"
-      [disabled]="disabled">
+      [disabled]="disabled"
+      [readOnly]="disabled">
     </app-pr-input>
 
     <app-pr-input
@@ -17,7 +18,8 @@
       type="number"
       [required]="false"
       [(ngModel)]="resultDetail.resultTypeResponse[0].male_using"
-      [disabled]="disabled">
+      [disabled]="disabled"
+      [readOnly]="disabled">
     </app-pr-input>
 
     <app-pr-input
@@ -26,7 +28,8 @@
       type="number"
       [required]="false"
       [(ngModel)]="resultDetail.resultTypeResponse[0].non_binary_using"
-      [disabled]="disabled">
+      [disabled]="disabled"
+      [readOnly]="disabled">
     </app-pr-input>
 
     <app-pr-input
@@ -35,7 +38,8 @@
       type="number"
       [required]="false"
       [(ngModel)]="resultDetail.resultTypeResponse[0].has_unkown_using"
-      [disabled]="disabled">
+      [disabled]="disabled"
+      [readOnly]="disabled">
     </app-pr-input>
   </div>
 

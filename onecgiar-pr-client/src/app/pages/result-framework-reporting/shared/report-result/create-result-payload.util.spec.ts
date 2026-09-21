@@ -287,6 +287,20 @@ describe('buildCreateResultPayload — level and table noise', () => {
     expect(buildCreateResultPayload(options({ indicator: indicatorOfType(7) }))['toc_progressive_narrative']).toBe('');
   });
 
+  // @akili-spec bugfix/reported-results-center-scoping (RRC-AC-7, RRC-R-10)
+  it('RRC-AC-7 — carries toc_indicator_target_id inside indicators when the source row has one', () => {
+    const payload = buildCreateResultPayload(options({ indicator: indicatorOfType(7, { toc_indicator_target_id: 607878, __hloNode: { indicators: [1] } }) }));
+
+    expect(payload['indicators']['toc_indicator_target_id']).toBe(607878);
+    expect(payload['indicators']).not.toHaveProperty('__hloNode');
+  });
+
+  it('RRC-AC-7 — omits toc_indicator_target_id when the source row has none', () => {
+    const payload = buildCreateResultPayload(options({ indicator: indicatorOfType(7) }));
+
+    expect(payload['indicators']).not.toHaveProperty('toc_indicator_target_id');
+  });
+
   it('carries the indicator target and date the row was reported against', () => {
     const payload = buildCreateResultPayload(options({ indicator: indicatorOfType(7) }));
 

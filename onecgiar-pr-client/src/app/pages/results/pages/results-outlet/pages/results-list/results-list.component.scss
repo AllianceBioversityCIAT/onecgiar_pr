@@ -570,6 +570,7 @@
     border-spacing: 0;
 
     thead th {
+      position: relative;
       white-space: nowrap;
       background: #f7f7f9 !important;
       color: #6b6580 !important;
@@ -585,6 +586,28 @@
       border-left: none !important;
       border-radius: 0 !important;
       vertical-align: middle;
+
+      &.rc-th--sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .rc-col-resizer {
+        position: absolute;
+        right: -1px;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        cursor: col-resize;
+        z-index: 2;
+        touch-action: none;
+        user-select: none;
+        transition: background-color 150ms ease;
+
+        &:hover {
+          background-color: var(--pr-color-primary-400, #6b46e5);
+        }
+      }
 
       &:last-child {
         border-right: none !important;

@@ -32,15 +32,64 @@
   <h3 class="m-0 line-clamp-2 text-[15px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">{{ displayName }}</h3>
 
   <div class="mt-auto flex flex-col pt-1">
-    @if (totalResults > 0) {
-      <div class="flex items-baseline gap-1">
-        <span class="text-base font-bold text-[var(--pr-color-secondary-400)]">{{ totalResults }}</span>
-        <span class="text-xs text-[var(--pr-color-accents-5)]">{{ totalResults === 1 ? 'result' : 'results' }} this phase</span>
-      </div>
+    <div class="flex items-center justify-between gap-1.5">
+      @if (totalResults > 0) {
+        <div class="flex items-baseline gap-1">
+          <span class="text-base font-bold text-[var(--pr-color-secondary-400)]">{{ totalResults }}</span>
+          <span class="text-xs text-[var(--pr-color-accents-5)]">{{ totalResults === 1 ? 'result' : 'results' }} this phase</span>
+        </div>
+      } @else {
+        <p class="m-0 text-xs italic text-[var(--pr-color-accents-5)]">No results reported yet</p>
+      }
 
+      <span
+        class="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-200/70 bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-400"
+        prTooltip="Planned KPIs committed in the Theory of Change for 2026"
+        prTooltipPosition="top"
+        (click)="$event.stopPropagation()">
+        <i class="material-icons-round text-[12px] text-brand-300" aria-hidden="true">flag</i>
+        {{ plannedKpisDisplay }} planned KPIs
+      </span>
+    </div>
+
+    @if (totalResults > 0) {
       @if (!homeService.compactView()) {
         <div class="pr-card-meta" animate.enter="pr-card-meta--enter" animate.leave="pr-card-meta--leave">
           <div class="pr-card-meta__inner">
+            <div class="flex items-center justify-between gap-1 text-xs">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span
+                  class="inline-flex items-center gap-1 rounded bg-[var(--pr-color-accents-1)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--pr-color-accents-6)]"
+                  prTooltip="Results replicated from previous reporting phases for updating/continuation in 2026"
+                  prTooltipPosition="top"
+                  (click)="$event.stopPropagation()">
+                  <i class="material-icons-round text-[12px] text-amber-600" aria-hidden="true">sync</i>
+                  {{ replicatedResults }} replicated
+                </span>
+
+                <span
+                  class="inline-flex items-center gap-1 rounded bg-[var(--pr-color-accents-1)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--pr-color-accents-6)]"
+                  prTooltip="New results created directly in this reporting phase"
+                  prTooltipPosition="top"
+                  (click)="$event.stopPropagation()">
+                  <i class="material-icons-round text-[12px] text-emerald-600" aria-hidden="true">add_circle</i>
+                  {{ newResults }} new
+                </span>
+              </div>
+
+              <i
+                class="material-icons-round shrink-0 cursor-help text-[15px] text-[var(--pr-color-accents-4)] transition-colors hover:text-brand-400"
+                prTooltip="Results currently available are replicated from previous reporting phases for continuation and updating in 2026. New results will appear as they are reported."
+                prTooltipPosition="top"
+                aria-label="Replication information"
+                tabindex="0"
+                (click)="$event.stopPropagation()"
+                (keydown.enter)="$event.stopPropagation()"
+                (keydown.space)="$event.stopPropagation()">
+                help_outline
+              </i>
+            </div>
+
             <div class="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]" aria-hidden="true">
               @for (segment of statusSegments(); track segment.statusId) {
                 <div class="h-full" [class]="segment.barClass" [style.width.%]="segment.pct"></div>
@@ -62,7 +111,6 @@
         </div>
       }
     } @else {
-      <p class="m-0 text-xs italic text-[var(--pr-color-accents-5)]">No results reported yet</p>
       @if (!homeService.compactView()) {
         <div class="pr-card-meta" animate.enter="pr-card-meta--enter" animate.leave="pr-card-meta--leave">
           <div class="pr-card-meta__inner">

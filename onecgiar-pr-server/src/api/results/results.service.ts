@@ -1574,7 +1574,7 @@ export class ResultsService {
   private async calculateInitiativeProgress(
     initiativeCode: string,
     year: number,
-  ): Promise<number> {
+  ): Promise<{ progress: number; plannedKpis: number }> {
     try {
       const indicatorContributions =
         await this._tocResultsRepository.getIndicatorContributions(
@@ -1582,33 +1582,40 @@ export class ResultsService {
           year,
         );
 
+      const plannedKpis = indicatorContributions?.size ?? 0;
+
       let totalProgressSum = 0;
       let totalIndicatorCount = 0;
 
-      for (const contribution of indicatorContributions.values()) {
-        const targetValue = contribution.target_value_sum ?? 0;
-        const actualValue = contribution.actual_achieved_value_sum ?? 0;
+      if (indicatorContributions) {
+        for (const contribution of indicatorContributions.values()) {
+          const targetValue = contribution.target_value_sum ?? 0;
+          const actualValue = contribution.actual_achieved_value_sum ?? 0;
 
-        const indicatorProgress = this.computeProgressValue(
-          targetValue,
-          actualValue,
-        );
+          const indicatorProgress = this.computeProgressValue(
+            targetValue,
+            actualValue,
+          );
 
-        totalProgressSum += indicatorProgress;
-        totalIndicatorCount += 1;
+          totalProgressSum += indicatorProgress;
+          totalIndicatorCount += 1;
+        }
       }
 
       if (totalIndicatorCount === 0) {
-        return 0;
+        return { progress: 0, plannedKpis };
       }
 
       const averageProgress = totalProgressSum / totalIndicatorCount;
-      return Math.round(averageProgress * 10) / 10;
+      return {
+        progress: Math.round(averageProgress * 10) / 10,
+        plannedKpis,
+      };
     } catch (error) {
       this._logger.warn(
         `Failed to calculate progress for ${initiativeCode}: ${error?.message}`,
       );
-      return 0;
+      return { progress: 0, plannedKpis: 0 };
     }
   }
 
@@ -1617,6 +1624,7 @@ export class ResultsService {
     initiativesSeed: ClarisaInitiative[],
     userRoles: Map<number, { hasEdit: boolean }>,
     progressMap: Map<number, number>,
+    plannedKpisMap?: Map<number, number>,
   ): ScienceProgramProgressResponseDto {
     const metadata = new Map<
       number,
@@ -1718,6 +1726,9 @@ export class ResultsService {
             entityTypeName: info.entityTypeName,
             totalResults: 0,
             progress: 0,
+            plannedKpis: plannedKpisMap?.get(initiativeId) ?? 0,
+            replicatedResults: 0,
+            newResults: 0,
             versions: [],
           },
           editable: false,
@@ -1784,6 +1795,14 @@ export class ResultsService {
 
       container.dto.totalResults += 1;
 
+      const isReplicated = Boolean(row?.is_replicated);
+      if (isReplicated) {
+        container.dto.replicatedResults =
+          (container.dto.replicatedResults ?? 0) + 1;
+      } else {
+        container.dto.newResults = (container.dto.newResults ?? 0) + 1;
+      }
+
       const versionId = Number(row?.version_id);
       const phaseName = row?.phase_name ?? '';
       const phaseYear =
@@ -1799,6 +1818,9 @@ export class ResultsService {
             phaseName,
             phaseYear,
             totalResults: 0,
+            plannedKpis: plannedKpisMap?.get(initiativeId) ?? 0,
+            replicatedResults: 0,
+            newResults: 0,
             statuses: [],
           },
           statusesMap: new Map(),
@@ -1807,6 +1829,13 @@ export class ResultsService {
       }
 
       versionContainer.version.totalResults += 1;
+      if (isReplicated) {
+        versionContainer.version.replicatedResults =
+          (versionContainer.version.replicatedResults ?? 0) + 1;
+      } else {
+        versionContainer.version.newResults =
+          (versionContainer.version.newResults ?? 0) + 1;
+      }
 
       const statusId = Number(row?.status_id);
       const statusName = row?.status_name ?? '';
@@ -1870,6 +1899,8 @@ export class ResultsService {
       const calculatedProgress =
         progressMap.get(container.dto.initiativeId) ?? 0;
       container.dto.progress = calculatedProgress;
+      container.dto.plannedKpis =
+        plannedKpisMap?.get(container.dto.initiativeId) ?? 0;
       container.dto.totalResults = hasResults
         ? container.dto.totalResults
         : null;
@@ -1975,18 +2006,40 @@ export class ResultsService {
         : new Date().getFullYear();
 
       const progressMap = new Map<number, number>();
+      const plannedKpisMap = new Map<number, number>();
+
+      let plannedKpisByCodeMap = new Map<string, number>();
+      try {
+        if (this._tocResultsRepository?.getPlannedKpisCountMap) {
+          plannedKpisByCodeMap =
+            await this._tocResultsRepository.getPlannedKpisCountMap(
+              activeYearValue,
+            );
+        }
+      } catch (error) {
+        this._logger.warn(
+          `Failed to get planned KPIs map for year ${activeYearValue}: ${error?.message}`,
+        );
+      }
 
       const progressPromises = initiativesSeed.map(async (initiative) => {
         if (!initiative.official_code) {
           return;
         }
 
-        const progress = await this.calculateInitiativeProgress(
-          initiative.official_code,
-          activeYearValue,
-        );
+        const codeUpper = initiative.official_code.trim().toUpperCase();
+
+        const { progress, plannedKpis: calculatedPlannedKpis } =
+          await this.calculateInitiativeProgress(
+            initiative.official_code,
+            activeYearValue,
+          );
+
+        const plannedKpis =
+          plannedKpisByCodeMap.get(codeUpper) ?? calculatedPlannedKpis;
 
         progressMap.set(initiative.id, progress);
+        plannedKpisMap.set(initiative.id, plannedKpis);
       });
 
       await Promise.all(progressPromises);
@@ -1996,6 +2049,7 @@ export class ResultsService {
         initiativesSeed,
         userRoleMap,
         progressMap,
+        plannedKpisMap,
       );
 
       return {
@@ -3606,6 +3660,9 @@ export class ResultsService {
         lead_center: row.lead_center,
         initiative_role_id: row.initiative_role_id,
         initiative_role_name: row.initiative_role_name,
+        creation_method: row.creation_method,
+        external_platform_code: row.external_platform_code,
+        reporter_name: row.reporter_name,
       }));
 
       const groupedByProject = mappedResults.reduce(

@@ -168,6 +168,19 @@
                 <span class="font-medium text-slate-700">Submitted by:</span> {{ fields?.commonFields?.submitter_name }}
               </span>
             }
+            <!-- @akili-spec bilateral/review-list-source-and-reporter (BSR-T-5, BSR-R-9, BSR-AC-12) -->
+            <!-- Sibling of the Project/Submitted-by items, NOT nested inside the submitter_name @if:
+                 BSR-AC-12 attaches no submitter_name precondition — a MANUAL result with a null
+                 submitter must still show "Manual entry". The separator is conditional on there
+                 being a PRECEDING item (project_name OR submitter_name), never on submitter_name
+                 alone, so Source never leaves a dangling or leading "•". -->
+            @if (fields?.commonFields?.project_name || fields?.commonFields?.submitter_name) {
+              <span class="text-slate-300">•</span>
+            }
+            <span class="flex items-center gap-1 text-slate-600">
+              <span class="font-medium text-slate-700">Source:</span>
+              <app-bilateral-review-source-chip [source]="headerSourceOf(fields?.commonFields)" />
+            </span>
           </div>
         </div>
       }
@@ -310,7 +323,8 @@
                 placeholder="Enter text"
                 [required]="false"
                 [(ngModel)]="fields.commonFields.result_description"
-                [disabled]="!canEditDataStandards()">
+                [disabled]="!canEditDataStandards()"
+                [readOnly]="!canEditDataStandards()">
               </app-pr-textarea>
 
               <div class="pt-2 border-t border-slate-100">
@@ -522,7 +536,8 @@
                       [required]="false"
                       [(ngModel)]="evidenceLinkInput"
                       (keyup.enter)="addEvidenceLink()"
-                      [disabled]="!canEditDataStandards()">
+                      [disabled]="!canEditDataStandards()"
+                      [readOnly]="!canEditDataStandards()">
                     </app-pr-input>
                   </div>
                 }

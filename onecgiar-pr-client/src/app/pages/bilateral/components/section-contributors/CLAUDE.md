@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
+**Verified:** 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -46,6 +46,17 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 
 ## Trampas
 
+- ⚠️ **La escalera de `z-index` de `.sc-block` solo vale si el panel cae hacia ABAJO.** Los bloques
+  se apilan en orden descendente (`--toc:200 … --partners:20`) para que un multi-select abierto
+  tape al bloque siguiente (QA 2026-08-28). Desde `P2-3737` un campo pegado al suelo abre su panel
+  **hacia arriba** (`.options_up`), y entonces la escalera juega al revés: el bloque de arriba, que
+  tiene más `z-index`, pinta sus chips **encima** de la lista abierta y además **se queda con los
+  clicks** de las opciones que quedan debajo (medido en prtest #9432: 41px de solape,
+  `elementFromPoint` devolvía `.sc-selected-chips`, no `.option`). Lo arregla `&:focus-within`
+  (`z-index: 300`, `P2-3776`): manda el bloque que se está usando, abra hacia donde abra.
+  🛑 **Si añades un peldaño nuevo a la escalera, que no pase de 300** o el arreglo deja de valer —
+  el candado que lo vigila está en `section-contributors.component.spec.ts`.
+
 - ⚠️ **`contributing_center` / `contributing_bilateral_projects` no viajan hasta que
   `contributorsHydrated()` es `true`** (flag **independiente** de `partnersHydrated`). Se filtran
   contra los catálogos, así que antes de que carguen —o tras un GET fallido, que igual pone
@@ -70,6 +81,15 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   una de sus señales, y tras la carga inicial ninguna cambia. Por eso el fallo se muestra:
   `partnersLoadFailed()` pinta un `app-alert-status status="error"` con el botón
   **Retry loading partners** → `retryLoadExternalPartners()`, que es el ÚNICO camino de vuelta.
+- 🛑 **BIL-T-1 (21-sep-2026): el mismo agujero existía un paso antes, en `loadCenters()`.**
+  `CentersService.getData()` sólo emite `loadedCenters` en éxito; si agota sus reintentos y
+  rechaza, el viejo `.catch(() => {})` no dejaba rastro: `centersReady()` se quedaba en `false`
+  para siempre, `hydrateWhenReady` nunca corría, y por tanto `loadExternalPartnersState()` tampoco
+  — `partnersHydrated()` nunca llegaba a evaluarse, con cero error visible (la causa raíz original
+  de "External partners" atascado). Ahora `centersLoadFailed()` pinta el mismo patrón
+  `app-alert-status status="error"` + botón **Retry loading centers** →
+  `retryLoadCenters()`, justo antes del bloque de `partnersLoadFailed()` en el template. No se tocó
+  `CentersService` (fuera de alcance, ~25 pantallas consumidoras — Option C rechazada).
 - ⚠️ Mismo mecanismo para los socios: `saveContributors` se dispara con cada cambio de
   centro/proyecto, así que un `institutions: []` prematuro **borraría los socios guardados**. El
   `error` del GET deja `partnersHydrated` en `false` a propósito.
@@ -137,11 +157,13 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 | Green check de partners en bilateral | La función MySQL exige un delivery type por socio y bilateral no los captura (AC6). | Producto + BACK |
 
 ## Tests
-`section-contributors.component.spec.ts` — 104 casos. El template se sobreescribe con
+`section-contributors.component.spec.ts` — 111 casos (BIL-T-1 añadió 7: centers-load-failure
+regression). El template se sobreescribe con
 `<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds — y eso es justo lo que
 dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).
 
-`section-contributors.readonly.spec.ts` — 13 casos, y **sí renderiza el template real** (stubea solo
+`section-contributors.readonly.spec.ts` — 16 casos (BIL-T-1 añadió 3: banner/Retry de centers
+renderizado en el DOM real), y **sí renderiza el template real** (stubea solo
 `<app-section-toc>`, que arrastra el diálogo de Spartan). Mide, por cada uno de los cuatro
 selectores, cuántos nodos enfocables no deshabilitados quedan: 0 en solo-lectura, >0 en editable.
 Si añades un control nuevo a la sección, este spec lo cuenta solo.

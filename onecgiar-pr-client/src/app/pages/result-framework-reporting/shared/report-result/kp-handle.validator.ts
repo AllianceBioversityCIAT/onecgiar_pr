@@ -11,9 +11,14 @@
  *   https://digitalarchive.worldfishcenter.org/items/<uuid>
  *   https://hdl.handle.net/{10568|20.500.11766|20.500.12348}/<digits>
  *   https://cgspace.cgiar.org/handle/{10568|20.500.11766}/<digits>
+ *   {10568|20.500.11766|20.500.12348}/<digits>  (bare handle, no https:// prefix — the way
+ *     CGSpace/MELSpace/WorldFish display and share handles by default; see KPH-R-1)
  */
 export const KP_HANDLE_REGEX =
-  /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
+  /^(?:https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)|(?:10568|20\.500\.11766|20\.500\.12348)\/\d+)$/;
+
+/** Matches only the bare-handle alternative (no `https://` prefix), used by `normalizeKpHandle`. */
+const KP_BARE_HANDLE_REGEX = /^(10568|20\.500\.11766|20\.500\.12348)\/(\d+)$/;
 
 export const KP_HANDLE_EMPTY_MESSAGE = 'Please enter a valid handle.';
 export const KP_HANDLE_UNSUPPORTED_MESSAGE =
@@ -34,4 +39,20 @@ export function validateKpHandle(handle: string | null | undefined): KpHandleErr
   if (!handle) return { status: true, message: KP_HANDLE_EMPTY_MESSAGE };
   if (!KP_HANDLE_REGEX.test(handle)) return { status: true, message: KP_HANDLE_UNSUPPORTED_MESSAGE };
   return { ...KP_HANDLE_NO_ERROR };
+}
+
+/**
+ * Rewrite an accepted bare handle (`{10568|20.500.11766|20.500.12348}/<digits>`) to its
+ * already-proven-working canonical URL, so a caller never sends a bare handle to
+ * `GET_mqapValidation` or persists one as `handler`. The caller is expected to have validated
+ * first (`validateKpHandle`) — any other input, including an already-URL handle or an
+ * unsupported/invalid value, is returned unchanged.
+ */
+export function normalizeKpHandle(handle: string): string {
+  const match = KP_BARE_HANDLE_REGEX.exec(handle);
+  if (!match) return handle;
+
+  const [, prefix, digits] = match;
+  if (prefix === '10568') return `https://cgspace.cgiar.org/handle/${prefix}/${digits}`;
+  return `https://hdl.handle.net/${prefix}/${digits}`;
 }

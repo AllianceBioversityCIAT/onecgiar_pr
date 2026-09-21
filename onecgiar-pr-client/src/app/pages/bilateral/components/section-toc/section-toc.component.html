@@ -8,7 +8,7 @@
     </app-section-toc-default>
   } @else {
     <!-- Same control W1/W2 uses for this question (rd-contributors-and-partners → app-pr-yes-or-not):
-         standard header + the Yes/No chips. UI only — the handler and the wording (P2-3142) are unchanged. -->
+         standard header + the Yes/No chips. UI only — the handler is unchanged; wording updated (quick/toc-question-w3-bilateral). -->
     <div class="st-field st-field--planned" data-testid="toc-planned-question">
       <app-pr-checkbox
         label="I'm not sure, the P/A will complete the ToC mapping"
@@ -21,7 +21,7 @@
 
       @if (showPlannedQuestion()) {
         <app-pr-yes-or-not
-          label="Can this result be mapped to a ToC KPI?"
+          label="Is this result linked to any of the Program's ToC indicators?"
           [required]="false"
           [hideDescription]="true"
           [ngModel]="isPlanned()"

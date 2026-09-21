@@ -76,6 +76,15 @@ export class TypeInnovationDevComponent implements OnInit {
   private readonly autoSave = inject(BilateralAutoSaveService);
   private readonly expandableState = inject(BilateralExpandableStateService);
   private readonly wordCounter = inject(WordCounterService);
+
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isEditableByCenterUser()` has answered this since P2-3520 and every other section reads it;
+   * the type-specific tabs never did, so a submitted result still took input here.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   readonly innovationControlListSE = inject(InnovationControlListService);
 
   body: any = {};
@@ -286,10 +295,14 @@ export class TypeInnovationDevComponent implements OnInit {
    * key-presence gate's rationale, and the save-side contract are in this folder's `CLAUDE.md`
    * ("Innovation developers — removed, then restored").
    *
-   * P2-3778 (2026-09-18) — the textarea is no longer rendered, so this is now the ONLY thing that
-   * fills the column from this form. It is kept on purpose: the ticket's decision is that the field
-   * is replaced BY the lead contact person's information, and the server's ingest path already
-   * stores exactly that when a payload carries no developers
+   * P2-3778 (2026-09-18), REVERSED 2026-09-21 — the textarea was unrendered for three days on a
+   * relayed decision that did not match Nicoleta Trifa's email: "I told you to automatically prefill
+   * with the Lead contact information. If user wants to change, they can do so" (Ángel Jarrín
+   * confirmed the reversal). The field is rendered and EDITABLE again, so this prefill is no longer
+   * the only thing that fills the column from this form — the reporter's own typing is the other,
+   * and it wins: the key-presence gate below stops seeding the moment a row exists, which is what
+   * makes the field independent once edited. The prefill itself is kept on purpose, exactly as
+   * P2-3778 argued: the server's ingest path already stores the lead contact
    * (`onecgiar-pr-server/src/api/bilateral/handlers/innovation-development.handler.ts:59-63`).
    * Dropping it would leave manually created results with an empty column where AI-ingested ones
    * carry the contact, in the review drawer and in the exports.
@@ -317,9 +330,10 @@ export class TypeInnovationDevComponent implements OnInit {
       // `applyInnovationDevelopersPrefill()`, which runs from the constructor `effect()` while the
       // field is eligible (`BIL-IDP-T-4`, 2026-09-18) — never from a save path. Supersedes the 2026-09-03
       // removal, which copied the Lead contact person in here on every save.
-      // P2-3778: the key STAYS in the payload now that the textarea is gone. Hiding a field never
-      // deletes its data — same rule the scaling-studies question follows — so what the server holds
-      // travels back untouched instead of being blanked by the next save of any other field.
+      // P2-3778, reversed 2026-09-21: the key is sent whether or not the textarea is on screen. While
+      // it was hidden that kept the server's value from being blanked by the next save of any other
+      // field — same rule the scaling-studies question follows — and now that it is rendered again it
+      // simply carries what the reporter typed.
       innovation_developers: this.body.innovation_developers?.trim() || null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
       is_new_variety: this.body.is_new_variety ?? null,

@@ -20,8 +20,6 @@ export class AiReviewComponent {
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   alertsFe = inject(CustomizedAlertsFeService);
 
-  isValidatingAll = false;
-
   // Field values
   titleCurrentVersion = 'Small-scale Fisheries and Aquaculture Ontology';
   descriptionCurrentVersion =
@@ -72,14 +70,6 @@ export class AiReviewComponent {
     if (dacScore.canSave) return false;
 
     return Boolean(dacScore.is_validated || dacScore.user_validated);
-  }
-
-  get pendingDacScores(): DacScores[] {
-    return this.aiReviewSE.dacScores().filter(dacScore => dacScore.canSave);
-  }
-
-  get hasPendingChanges(): boolean {
-    return this.pendingDacScores.length > 0;
   }
 
   getDacScoreByFieldName(fieldName: string) {
@@ -159,48 +149,5 @@ export class AiReviewComponent {
         `"${this.getDacScoreTitle(dacScore)}" could not be saved. Please try again.`
       );
     }
-  }
-
-  async onValidateAll() {
-    if (this.isValidatingAll || !this.hasPendingChanges) return;
-
-    const pending = this.pendingDacScores;
-    const incomplete = pending.filter(dacScore => this.isIncomplete(dacScore));
-    const failed: string[] = [];
-
-    this.isValidatingAll = true;
-
-    for (const dacScore of pending.filter(item => !this.isIncomplete(item))) {
-      try {
-        await this.persistDacScore(dacScore);
-      } catch (error) {
-        console.error('Error saving DAC score:', error);
-        failed.push(this.getDacScoreTitle(dacScore));
-      }
-    }
-
-    this.isValidatingAll = false;
-
-    if (incomplete.length) {
-      this.showAlert(
-        'ai-review-validate-all-incomplete',
-        'error',
-        'Component required',
-        `Select at least one component for: ${incomplete.map(item => this.getDacScoreTitle(item)).join(', ')}.`
-      );
-      return;
-    }
-
-    if (failed.length) {
-      this.showAlert(
-        'ai-review-validate-all-error',
-        'error',
-        'Some changes were not saved',
-        `The following impact areas could not be saved: ${failed.join(', ')}. Please try again.`
-      );
-      return;
-    }
-
-    this.showAlert('ai-review-validate-all-success', 'success', 'Changes applied', 'The impact areas were updated in the result.');
   }
 }

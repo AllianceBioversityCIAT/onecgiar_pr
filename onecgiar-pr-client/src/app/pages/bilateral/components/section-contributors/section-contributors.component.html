@@ -140,6 +140,29 @@
   -->
   <div class="sc-block sc-block--partners">
     <!--
+      ── Failed read of the centers catalogue (BIL-T-1) ───────────────────────────────────
+      `loadCenters()` used to swallow a `CentersService.getData()` rejection: `centersReady` never
+      became true, `hydrateWhenReady` never ran, and every PATCH permanently omitted the partner
+      keys with zero visible error. Same banner + Retry pattern as the partners block below.
+    -->
+    @if (centersLoadFailed()) {
+      <div class="flex flex-col items-start gap-[8px]" data-testid="centers-load-error">
+        <app-alert-status
+          status="error"
+          description="We could not load the centers catalogue needed for this section, so nothing here can be saved right now. Please retry.">
+        </app-alert-status>
+        <button
+          type="button"
+          class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+          data-testid="centers-load-retry"
+          (click)="retryLoadCenters()">
+          <i class="material-icons-round text-[14px]">refresh</i>
+          Retry loading centers
+        </button>
+      </div>
+    }
+
+    <!--
       ── Failed read of the stored partner block ──────────────────────────────────────────
       The hydrate effect fires once and never re-runs on its own, so without this the section
       became a silent black hole: every PATCH dropped the partner keys while the block still

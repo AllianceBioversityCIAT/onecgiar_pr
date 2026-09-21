@@ -1,0 +1,409 @@
+/*
+ * guide.css — UG-T-11 (design.md §2.2 / §6.3, UG-DD-2, UG-DD-5)
+ *
+ * Every color and font-family value below is a `var(--...)` reference — either one of the 6
+ * live design tokens `assemble.ts` writes into `:root` from `tokens.json`
+ * (--pr-color-primary-300/400, --pr-color-secondary-400, --pr-color-orange-500,
+ * --font-manrope, --font-jetbrains-mono), or one of the additional `--ug-*` neutrals defaulted
+ * in `guide.html`'s inline <style id="ug-design-tokens"> block (see that file's header comment
+ * for the full contract). No hex/rgb/hsl literal or literal font-family list appears in this
+ * file — that is this task's DoD.
+ *
+ * Aesthetic direction: editorial-technical documentation. Navy-carbon chrome bands (cover +
+ * every section header) carry a recurring mono numeral/eyebrow motif; violet brand gradient is
+ * reserved for the cover title and TOC numerals; the orange token is reserved exclusively for
+ * the click-target legend, never reused as a generic accent, so it stays visually distinct from
+ * the app's own violet UI per UG-R-3 / design.md §6.3.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+@page {
+  size: Letter;
+  margin: 0.65in 0.75in 0.75in 0.75in;
+}
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  color-adjust: exact;
+}
+
+body {
+  margin: 0;
+  background: var(--ug-color-page-bg);
+  color: var(--ug-color-ink);
+  font-family: var(--font-manrope);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-manrope);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0;
+}
+
+h2 {
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0 0 0.85em;
+}
+
+a {
+  color: var(--pr-color-primary-400);
+}
+
+.ug-mono {
+  font-family: var(--font-jetbrains-mono);
+  letter-spacing: 0.02em;
+}
+
+/* ============================== Shared section chrome ============================== */
+
+.ug-section__header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 26px 32px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(135deg, var(--ug-color-chrome-start), var(--ug-color-chrome-end));
+  color: var(--ug-color-on-chrome);
+  box-shadow: 0 10px 24px -14px var(--ug-color-shadow);
+}
+
+.ug-section__header h2 {
+  color: var(--ug-color-on-chrome);
+}
+
+.ug-section__eyebrow {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ug-color-on-chrome-muted);
+}
+
+/* ============================== Cover ============================== */
+
+.ug-cover {
+  position: relative;
+  min-height: 9.2in;
+  padding: 64px 56px 56px;
+  background: linear-gradient(160deg, var(--ug-color-chrome-start) 0%, var(--ug-color-chrome-end) 62%, var(--pr-color-primary-400) 150%);
+  color: var(--ug-color-on-chrome);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  break-after: page;
+  page-break-after: always;
+}
+
+.ug-cover__index {
+  position: absolute;
+  top: 40px;
+  right: 48px;
+  font-family: var(--font-jetbrains-mono);
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  color: var(--ug-color-on-chrome-muted);
+}
+
+.ug-cover__body {
+  position: relative;
+  max-width: 6.3in;
+  border-top: 1px solid var(--ug-color-on-chrome-muted);
+  padding-top: 28px;
+}
+
+.ug-cover__kicker {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ug-color-on-chrome-muted);
+  margin-bottom: 18px;
+}
+
+.ug-cover__title {
+  font-size: 52px;
+  font-weight: 800;
+  margin-bottom: 22px;
+  /* Plain-colour fallback: applies unconditionally, so a renderer without background-clip:
+     text support still shows a legible solid title instead of invisible transparent text.
+     The @supports block below is the only place that overrides it with the clipped gradient. */
+  color: var(--ug-color-on-chrome);
+}
+
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .ug-cover__title {
+    background: linear-gradient(100deg, var(--ug-color-on-chrome) 15%, var(--pr-color-primary-300) 60%, var(--pr-color-primary-400) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+
+.ug-cover__subtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ug-color-on-chrome);
+  max-width: 5.4in;
+  margin-bottom: 26px;
+}
+
+.ug-cover__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--ug-color-on-chrome-muted);
+}
+
+.ug-cover__date {
+  color: var(--ug-color-on-chrome);
+}
+
+/* ============================== Intro / legend ============================== */
+
+.ug-section--intro,
+.ug-toc,
+.ug-section--glossary {
+  break-before: page;
+  page-break-before: always;
+}
+
+.ug-section--intro,
+.ug-section--glossary {
+  margin-bottom: 32px;
+}
+
+.ug-prose {
+  padding: 26px 32px 8px;
+  color: var(--ug-color-ink);
+}
+
+.ug-prose p {
+  color: var(--ug-color-ink);
+}
+
+.ug-prose h3 {
+  font-size: 16px;
+  margin: 18px 0 8px;
+  color: var(--ug-color-ink);
+}
+
+.ug-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 8px 32px 28px;
+  padding: 16px 20px;
+  border: 1px solid var(--ug-color-border);
+  border-radius: 12px;
+  background: var(--ug-color-surface-alt);
+}
+
+.ug-legend__marker {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 3px solid var(--pr-color-orange-500);
+  box-shadow: 0 0 0 4px var(--ug-color-page-bg), 0 0 0 5px var(--pr-color-orange-500);
+}
+
+.ug-legend__text {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ug-color-ink-muted);
+}
+
+.ug-legend__text strong {
+  color: var(--pr-color-orange-500);
+}
+
+/* ============================== Table of contents ============================== */
+
+.ug-toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 18px 12px 28px;
+  counter-reset: none;
+}
+
+.ug-toc__item {
+  border-bottom: 1px solid var(--ug-color-border);
+}
+
+.ug-toc__item--glossary {
+  border-bottom: none;
+}
+
+.ug-toc__item a {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding: 16px 20px;
+  text-decoration: none;
+  color: var(--ug-color-ink);
+}
+
+.ug-toc__num {
+  flex: none;
+  width: 2.4em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pr-color-primary-400);
+}
+
+.ug-toc__label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ============================== Numbered sections ============================== */
+
+.ug-sections {
+  display: block;
+}
+
+.ug-section {
+  break-before: page;
+  page-break-before: always;
+  margin-bottom: 36px;
+}
+
+.ug-section .ug-section__header h2 {
+  font-size: 24px;
+}
+
+.ug-section .ug-prose {
+  font-size: 13.5px;
+}
+
+.ug-figure {
+  margin: 8px 32px 30px;
+  break-inside: avoid;
+}
+
+/*
+ * Height cap (orphaned-caption fix): `break-inside: avoid` on `.ug-figure` can only hold if the
+ * figure actually fits one page. The printable box is 11in - 0.65in top - 0.75in bottom = 9.6in;
+ * the tallest capture (1280x1903) rendered at the 6.33in content width would be ~9.4in tall, so
+ * the figure overflowed the page and Chrome split it, stranding the `<figcaption>` alone on the
+ * next page. Capping at 8.2in leaves ~1.4in for the figure's own margins (8px + 30px) and a
+ * caption that may wrap to two lines, so image + caption always land on the same page.
+ *
+ * `width: auto` + `max-width: 100%` (rather than `width: 100%`) is required: with an explicit
+ * `width: 100%` the `max-height` would clamp the height while the width stayed full-bleed and
+ * distort the aspect ratio. With both dimensions auto, the replaced-element sizing algorithm
+ * applies both constraints and preserves the intrinsic ratio.
+ */
+.ug-figure img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 8.2in;
+  object-fit: contain;
+  margin: 0 auto;
+  border: 1px solid var(--ug-color-border);
+  border-radius: 10px;
+  box-shadow: 0 18px 36px -22px var(--ug-color-shadow);
+}
+
+.ug-caption {
+  margin-top: 10px;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--ug-color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ug-route {
+  font-style: normal;
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ug-color-border);
+  background: var(--ug-color-surface-alt);
+  color: var(--ug-color-ink-muted);
+}
+
+/* ============================== Glossary ============================== */
+
+.ug-glossary {
+  padding: 22px 32px 40px;
+  margin: 0;
+}
+
+/*
+ * Orphaned-term fix: a bare `<dt>` could land at the bottom of a page with its `<dd>` on the
+ * next one ("High Level Output (HLO)", "Innovation Packages and Scaling Readiness (IPSR)").
+ * `assemble.ts` wraps each term/definition pair in `.ug-glossary__entry` (a `<div>` inside a
+ * `<dl>` is valid HTML5 and leaves the `<dt>`/`<dd>` descendant counts `verify-structure.ts`
+ * asserts untouched), and `break-inside: avoid` keeps the pair together. The `break-after` on
+ * `<dt>` is a belt-and-braces fallback for any renderer that ignores the wrapper.
+ */
+.ug-glossary__entry {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin-top: 16px;
+}
+
+.ug-glossary__entry:first-child {
+  margin-top: 0;
+}
+
+.ug-glossary dt {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ug-color-ink);
+  margin-top: 0;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.ug-glossary dd {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--ug-color-ink-muted);
+}
+
+.ug-glossary dd cite {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--ug-color-ink-muted);
+}
+
+/* Page footer (review comment 2026-09-17): version line on every printed page.
+   Chromium repeats position:fixed boxes on each page; it cannot print page counters,
+   so the version stamp stands alone. */
+.ug-footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  font-family: var(--font-manrope);
+  font-size: 7.5pt;
+  color: var(--ug-color-ink-muted);
+  letter-spacing: 0.02em;
+}

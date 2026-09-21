@@ -13,8 +13,21 @@ import { PhaseSwitcherModule } from '../../../../shared/components/phase-switche
 import { PdfActionsModule } from '../../../results/pages/result-detail/components/pdf-actions/pdf-actions.module';
 import { PrToastComponent } from 'src/app/shared/components/pr-toast';
 
+import { IpsrSubmitProgressComponent } from './components/ipsr-submit-progress/ipsr-submit-progress.component';
+
 @NgModule({
   declarations: [InnovationPackageDetailComponent, IpsrSubmissionModalComponent, IpsrUnsubmitModalComponent],
-  imports: [CommonModule, InnovationPackageDetailRoutingModule, IpsrDetailTopMenuModule, PdfActionsModule, PrToastComponent, CustomFieldsModule, PartnersRequestModule, PrDialogComponent, PhaseSwitcherModule]
+  imports: [
+    CommonModule,
+    InnovationPackageDetailRoutingModule,
+    IpsrDetailTopMenuModule,
+    PdfActionsModule,
+    PrToastComponent,
+    CustomFieldsModule,
+    PartnersRequestModule,
+    PrDialogComponent,
+    PhaseSwitcherModule,
+    IpsrSubmitProgressComponent
+  ]
 })
 export class InnovationPackageDetailModule {}

@@ -29,6 +29,16 @@ solo el submit exige volver a evaluar una fila stale.
 - `pages/bilateral/pages/bilateral-result-creator/` — as one accordion section of the form.
 
 ## Traps (⚠️ = already broke something)
+
+- ⚠️ **The `.sg-block` z-index ladder only holds while panels drop DOWNWARDS.** `--main: 100` /
+  `--extra: 50` were written so an open multi-select would overlay the group beneath it. Since
+  `P2-3737` the extra-scope select — the last field of the section, so the one nearest the floor —
+  opens **upwards** into `--main`, which outranks it. Measured on prtest #9465 (IFPRI, Innovation
+  Development): the panel does open upwards over `--main`; nothing is hidden **today** only because
+  that strip of `--main` happens to be empty. The identical inversion in `section-contributors` was
+  a live bug (`P2-3776`): the chips above covered the open list and swallowed its clicks. Fixed the
+  same way here — `&:focus-within { z-index: 300 }`, so the block in use wins in either direction.
+  🛑 A new rung must stay below 300; the lock lives in `section-geography.component.spec.ts`.
 - ⚠️ **Card 2 is hidden when the main scope is Global (1) or To-be-determined (50).** The gate is on
   the main scope, not on the result type — so an innovation with a Global focus never sees the
   geographic-impact question at all. The classic form gates the same question on

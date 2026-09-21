@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { KnowledgeProductBilateralHandler } from './knowledge-product.handler';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
+import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 
 describe('KnowledgeProductBilateralHandler', () => {
   const baseDto: any = {
@@ -117,6 +118,19 @@ describe('KnowledgeProductBilateralHandler', () => {
       expect(response).toEqual(
         expect.objectContaining({
           resultHeader: expect.objectContaining({ id: 1 }),
+        }),
+      );
+    });
+
+    // BSR-T-2 / BSR-AC-3: this handler builds its own header and never reaches the base save
+    // in BilateralService, so it must stamp `EXTERNAL` itself or API-ingested Knowledge
+    // Products fall through to the DB's `UNKNOWN` default.
+    it('stamps creation_method EXTERNAL on the KP header it saves', async () => {
+      await handler.initializeResultHeader(baseInitContext);
+
+      expect(resultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          creation_method: ResultCreationMethod.EXTERNAL,
         }),
       );
     });

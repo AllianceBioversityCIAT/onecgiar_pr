@@ -126,13 +126,20 @@ export const BILATERAL_REVIEW_COPY = {
     // `indicator` merged into one `alignment` header IN COLUMN POSITION (between `status` and
     // `date`) — key order is load-bearing for the header-order spec (project 7 keys / center 6
     // rendered, `showCenterColumn()` hides `center`'s rendered `<th>` but the key stays here).
+    // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, design.md §1B) — `source`
+    // MUST sit between `center` and `status`: key order is load-bearing for the header-order spec
+    // (`bilateral-review-table.component.spec.ts` project/center-grouped assertions read
+    // `Object.values(...)` in insertion order).
     headers: {
       code: 'Code',
       title: 'Title',
       center: 'Lead center',
+      source: 'Source',
       status: 'Status',
       alignment: 'Alignment',
-      date: 'Date',
+      // @akili-spec bilateral/review-list-source-and-reporter (BSR-DD-3) — DATE → SUBMITTED: the
+      // cell now stacks the submission date over the reporter's name.
+      date: 'Submitted',
       actions: 'Actions'
     },
     contributorBadge: 'Contributor',
@@ -145,6 +152,11 @@ export const BILATERAL_REVIEW_COPY = {
      *  reader user still needs to know WHICH value ("TOC result" vs "Indicator") is which. */
     tocLabel: 'TOC result',
     indicatorLabel: 'Indicator',
+    // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-6, BSR-R-7)
+    /** Field name for the SUBMITTED cell's / narrow card's reporter placeholder `sr-only` text —
+     *  same convention `alignmentSrOnlyText` uses (an `aria-hidden` dash plus one `sr-only` string
+     *  naming the absent field). */
+    reporterLabel: 'Reporter',
     // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, R-12)
     /** Group header right side, split so the pending figure can carry its own tone (BRP-R-11) —
      *  replaces the combined "N results · M pending" string. */
@@ -156,5 +168,21 @@ export const BILATERAL_REVIEW_COPY = {
     // @akili-spec changes/sp-bilateral-review-tab (BRT-T-5, KZ-REH-2)
     /** Row action title while a decision re-fetch is in flight (`aria-disabled`, not `disabled`). */
     decisionInFlightTitle: 'Saving the decision. Please wait.'
+  },
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-3, BSR-R-4, BSR-R-10, BSR-R-11)
+  /** `bilateral-review-source-chip` / `resolveBilateralSource` — the three neutral-pill labels and
+   *  their `BSR-R-11` accessible names, plus the absent-Source `sr-only` string. The AI case's
+   *  text is deliberately NOT here: it is owned entirely by `AI_PROVENANCE_NOTICE_TEXT`
+   *  (`AiProvenanceNoticeComponent`, APF-R-12) so the repository never gains a second copy. */
+  sourceChip: {
+    manualEntry: 'Manual entry',
+    manualEntryAccessibleName: 'Entered manually by the reporting center',
+    bulkUpload: 'Bulk upload',
+    bulkUploadAccessibleName: 'Uploaded through the bulk upload tool',
+    viaApi: 'Via API',
+    viaApiAccessibleName: 'Received through an external platform API',
+    viaApiWithCode: (code: string): string => `Via API · ${code}`,
+    viaApiWithCodeAccessibleName: (code: string): string => `Received through the ${code} platform API`,
+    placeholderSrOnly: 'Source: not specified'
   }
 };

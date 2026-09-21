@@ -1,0 +1,34 @@
+<!-- @akili-spec bilateral/review-list-source-and-reporter (BSR-T-3, BSR-R-4, BSR-R-5, BSR-R-7, BSR-R-11) -->
+@switch (source().kind) {
+  <!-- BSR-R-5/BSR-DD-4: the AI case delegates entirely to the shared APF component — no second
+       copy of AI_PROVENANCE_NOTICE_TEXT is ever written here. -->
+  @case ('ai') {
+    <app-ai-provenance-notice variant="badge" data-testid="bilateral-review-source-chip-ai" />
+  }
+  <!-- BSR-R-4 (MANUAL / BULK / EXTERNAL / UNKNOWN+code): the Contributor chip's exact recipe
+       (design.md §6.3, bilateral-review-table.component.html:64-68), plus the wrap guard the type
+       badge needed at 1000px (whitespace-nowrap truncate max-w-full + title, design.md §6.3) since
+       this pill is not inside AiProvenanceNoticeComponent's `display: contents` host. -->
+  @case ('pill') {
+    <span
+      class="w-fit inline-flex max-w-full items-center whitespace-nowrap truncate rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[6px] py-[1px] text-[10px] leading-[16px] font-semibold text-[var(--pr-text-secondary)]"
+      [attr.aria-label]="pillAccessibleName()"
+      [title]="pillLabel()"
+      data-testid="bilateral-review-source-chip-pill"
+      >{{ pillLabel() }}</span
+    >
+  }
+  <!-- BSR-R-7: absent Source — the module's placeholder pair, an aria-hidden dash plus one
+       sr-only string naming the field (same convention as the Alignment column's
+       alignmentSrOnlyText). -->
+  @default {
+    <span
+      aria-hidden="true"
+      class="text-[var(--pr-text-subtle)]"
+      [title]="copy.placeholderSrOnly"
+      data-testid="bilateral-review-source-chip-placeholder"
+      >&mdash;</span
+    >
+    <span class="sr-only">{{ copy.placeholderSrOnly }}</span>
+  }
+}

@@ -19,7 +19,9 @@ import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeoscopeManagementModule } from '../../../../../../shared/components/geoscope-management/geoscope-management.module';
-import { ResultToReview, BilateralResultDetail } from './result-review-drawer.interfaces';
+import { ResultToReview, BilateralResultDetail, BilateralCommonFields } from './result-review-drawer.interfaces';
+import { BilateralReviewSourceChipComponent } from '../bilateral-review-source-chip/bilateral-review-source-chip.component';
+import { BilateralSourceDescriptor, resolveBilateralSource } from '../bilateral-review-source-chip/resolve-bilateral-source';
 import { KpContentComponent } from './components/kp-content/kp-content.component';
 import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
 import { CapSharingContentComponent } from './components/cap-sharing-content/cap-sharing-content.component';
@@ -52,6 +54,7 @@ import { RdContributorsAndPartnersModule } from '../../../../../../pages/results
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
     RdContributorsAndPartnersModule,
+    BilateralReviewSourceChipComponent,
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -73,6 +76,34 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   leadProjectIds = signal<string[]>([]);
 
   isLoadingInformation = signal<boolean>(true);
+
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-5, BSR-R-9, design.md §6.2)
+  /** Derives the drawer header's Source descriptor from the detail payload's `commonFields`,
+   *  reusing the SAME pure derivation the list row uses (`sourceOf` on
+   *  `BilateralReviewTableComponent`, `BSR-T-3`'s contract) — no second copy of the `BSR-R-4`
+   *  matrix. The detail query (`getCommonFieldsBilateralResultById`) does not select
+   *  `external_platform_code`, only `creation_method` (`design.md` P-5), so `platformCode` is
+   *  always `undefined` here.
+   *
+   *  CORRECTED scope (measured against the live TEST database, 1505 active bilateral results):
+   *  today, that gap is inert for `EXTERNAL` (1152 rows), `AI` (129) and `MANUAL` (129) — none of
+   *  those carry a non-blank `external_platform_code` YET. But the `EXTERNAL`-no-code premise
+   *  holds only for this pre-`BSR-T-2`, migration-backfilled population — ingestion has always
+   *  written `external_platform_code` (`bilateral.service.ts:4212`), so it is NOT a durable
+   *  property of `EXTERNAL` rows in general. The measured divergence is `UNKNOWN`: 84 of its 95
+   *  rows DO carry a code (`W3RU`=54, `STAR`=24, `FETCHER`=6), and with `platformCode: undefined`
+   *  those fall to the matrix's placeholder row (`BSR-R-4` rows 6-7) — the drawer renders an
+   *  em-dash where the list renders `Via API · W3RU`. That class is FIXED legacy, not growing:
+   *  `BSR-T-2` stamping `EXTERNAL` on ingestion moves new rows OUT of `UNKNOWN`, it cannot grow
+   *  it. What DOES grow is `EXTERNAL`+code — every row `BSR-T-2` newly stamps `EXTERNAL` also
+   *  carries the code ingestion has always captured, rendering `Via API` here vs `Via API · <code>`
+   *  in the list (`BSR-R-4` rows 4-5). Closing both classes needs a server edit to
+   *  `getCommonFieldsBilateralResultById` (add `r.external_platform_code`) — out of this task's
+   *  scope; matches `BSR-R-9`'s literal scope ("over the detail payload's `creation_method`", no
+   *  platform code mentioned). */
+  headerSourceOf(commonFields: BilateralCommonFields | undefined | null): BilateralSourceDescriptor {
+    return resolveBilateralSource({ method: commonFields?.creation_method, platformCode: undefined });
+  }
 
   disabledContributingProjectOptions = computed(() => {
     const ids = this.leadProjectIds();

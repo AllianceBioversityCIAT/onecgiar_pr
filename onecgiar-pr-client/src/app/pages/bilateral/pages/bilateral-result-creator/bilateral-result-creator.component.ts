@@ -28,6 +28,7 @@ import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-noti
 import { CopyButtonComponent } from '../../../../shared/components/copy-button/copy-button.component';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -50,6 +51,7 @@ import { BilateralQualityAssessmentDialogComponent } from '../../components/bila
     FormSkeletonComponent,
     AiProvenanceNoticeComponent
     , BilateralQualityAssessmentDialogComponent
+    , PrTooltipDirectiveModule
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -79,6 +81,16 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   isSubmitting = computed(() => this.qualityAssessment.isBusy());
   /** A spinner with no words told the user nothing — the label names which half is running. */
   submitButtonLabel = computed(() => (this.qualityAssessment.isSubmitting() ? 'Submitting…' : 'Checking quality…'));
+
+  /**
+   * QA feedback (2026-09-21), verbatim. It is accurate as written: `submitResult()` starts the AI
+   * quality check and nothing else — the PATCH that moves the result to Pending review only leaves
+   * from `submitAfterQualityDecision()`, so the reporter really can keep editing in between.
+   * Lives here rather than in the template because `prTooltip` takes a string binding.
+   */
+  readonly submitQualityCheckNote =
+    'Once you click this button, the system will first check the metadata for QA conformity. ' +
+    'You can still adjust the data to address any QA comments before the result is sent to the Program for review.';
   isManualSaving = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
@@ -244,6 +256,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   });
 
   /** 0-based index of the open section in `sectionNavigation()`; drives the number pill and the footer counter. */
+  /**
+   * Published so the sections — which are all mounted at once behind `[hidden]` and therefore never
+   * re-run their own `ngOnInit` fetch on navigation — can tell when they are the one on screen and
+   * re-read whatever they derive from a sibling section's data.
+   */
+  private readonly publishOpenSection = effect(() => this.autoSaveService.openSection.set(this.openSectionName()));
+
   readonly currentSectionIndex = computed(() => this.sectionNavigation().findIndex(section => section.name === this.openSectionName()));
   readonly currentSectionLabel = computed(() => this.sectionNavigation()[this.currentSectionIndex()]?.label ?? '');
   readonly currentSectionComplete = computed(() => this.getSectionMdsStatus(this.openSectionName()) === 'complete');
@@ -624,22 +643,46 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     return this.openSectionName() === section;
   }
 
-  selectSection(section: BilateralEditorSection): void {
+  /**
+   * BIL-T-2 (bugfix/bilateral-section-autosave-on-navigate): Next/Back/side-rail no longer show a
+   * blocking `window.confirm(...)` — they flush the outgoing section's pending edits first, the same
+   * way `triggerManualSave()` already does, and only switch sections once the flush settles without
+   * error. A failed flush keeps the user on the section with the same failure alert Save draft shows.
+   */
+  async selectSection(section: BilateralEditorSection): Promise<void> {
     const current = this.openSectionName();
     if (current === section) return;
     if (this.autoSaveService.hasPendingFor(current)) {
-      const shouldContinue = window.confirm('This section has unsaved changes. Keep them in this session and continue?');
-      if (!shouldContinue) return;
+      await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(current));
+      await this.waitForSectionSave(current);
+
+      if (this.autoSaveService.hasErrorFor(current)) {
+        const serverReason = this.autoSaveService.lastErrorMessageFor(current);
+        const missing = this.missingFieldsFor(current);
+        this.api.alertsFe.show({
+          id: 'bilateralManualSave',
+          title: 'Save failed',
+          description: [
+            serverReason ?? 'This section could not be saved. Please try again.',
+            missing.length ? `Still missing: ${missing.join(', ')}.` : ''
+          ]
+            .filter(Boolean)
+            .join(' '),
+          status: 'error',
+          closeIn: 8000
+        });
+        return;
+      }
     }
     this.pendingOpen.set(false);
     this.openSectionName.set(section);
   }
 
-  moveSection(direction: -1 | 1): void {
+  async moveSection(direction: -1 | 1): Promise<void> {
     const sections = this.sectionNavigation();
     const currentIndex = sections.findIndex(section => section.name === this.openSectionName());
     const target = sections[currentIndex + direction];
-    if (target) this.selectSection(target.name);
+    if (target) return this.selectSection(target.name);
   }
 
   isFirstSection(): boolean {

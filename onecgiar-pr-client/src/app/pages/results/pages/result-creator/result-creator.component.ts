@@ -9,6 +9,7 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { CreateResultManagementService } from './services/create-result-management.service';
 import { TerminologyService } from '../../../../internationalization/terminology.service';
 import { filterOutAvisaFromGroupedInitiativeOptions, filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
+import { normalizeKpHandle } from '../../../result-framework-reporting/shared/report-result/kp-handle.validator';
 
 /**
  * P2-3527 — the similar-results search and the uniqueness gate answer independently, so a slow
@@ -437,7 +438,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
     }
 
     const regex =
-      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
+      /^(?:https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)|(?:10568|20\.500\.11766|20\.500\.12348)\/\d+)$/;
 
     const isValid = regex.test(this.resultLevelSE.resultBody.handler);
 
@@ -455,6 +456,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
       status: false,
       message: ''
     };
+
+    this.resultLevelSE.resultBody.handler = normalizeKpHandle(this.resultLevelSE.resultBody.handler);
 
     this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe({
       next: resp => {

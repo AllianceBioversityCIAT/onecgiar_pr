@@ -15,23 +15,24 @@ const TYPE_LABELS: Record<number, string> = {
   5: 'Capacity Sharing for Development',
   6: 'Knowledge Product',
   7: 'Innovation Development',
-  8: 'Other Output',
+  8: 'Other Output'
 };
 
 const NO_TYPE_SPECIFIC = new Set([4, 8, 9]);
 
 @Component({
   selector: 'app-section-type-specific',
-  imports: [BilateralFieldQualityFlagComponent,
+  imports: [
+    BilateralFieldQualityFlagComponent,
     CommonModule,
     TypePolicyChangeComponent,
     TypeInnovationUseComponent,
     TypeCapacitySharingComponent,
     TypeKnowledgeProductComponent,
-    TypeInnovationDevComponent,
+    TypeInnovationDevComponent
   ],
   templateUrl: './section-type-specific.component.html',
-  styleUrl: './section-type-specific.component.scss',
+  styleUrl: './section-type-specific.component.scss'
 })
 export class SectionTypeSpecificComponent {
   private readonly creationService = inject(BilateralCreationService);

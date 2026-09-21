@@ -73,6 +73,44 @@ describe('InnovationUseMdsValidator', () => {
     );
   });
 
+  it('names the project that is short, not just the rule', async () => {
+    const summaryService = {
+      getInnovationUse: jest.fn().mockResolvedValue({
+        response: {
+          ...completePersisted,
+          investment_bilateral: [
+            { kind_cash: null, is_determined: true, name: 'Rice Scaling' },
+            { kind_cash: null, is_determined: null, name: 'Delta Agronomy' },
+          ],
+        },
+      }),
+    };
+    const validator = new InnovationUseMdsValidator(summaryService as any);
+
+    await expect(validator.assertPersistedMds(12)).rejects.toThrow(
+      '"Delta Agronomy"',
+    );
+  });
+
+  it('falls back to the row position when the project link carries no name', async () => {
+    const summaryService = {
+      getInnovationUse: jest.fn().mockResolvedValue({
+        response: {
+          ...completePersisted,
+          investment_bilateral: [
+            { kind_cash: 5000, is_determined: null, name: 'Rice Scaling' },
+            { kind_cash: null, is_determined: null, name: null },
+          ],
+        },
+      }),
+    };
+    const validator = new InnovationUseMdsValidator(summaryService as any);
+
+    await expect(validator.assertPersistedMds(12)).rejects.toThrow(
+      'project #2',
+    );
+  });
+
   it('accepts a complete persisted draft', async () => {
     const summaryService = {
       getInnovationUse: jest.fn().mockResolvedValue({

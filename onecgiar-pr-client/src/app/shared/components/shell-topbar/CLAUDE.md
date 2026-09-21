@@ -1,11 +1,17 @@
 # shell-topbar
 
-**Verified:** 2026-09-13 · branch performance-refactor · P2-3683 (Support menu)
+**Verified:** 2026-09-21 · branch qa-development-2026-mc · Release notes moved from sidebar EXTRAS
 
-The app shell header: centered Search · **Support menu** · notifications popover · user menu. Rendered
-by `app.component.html:38`, and hidden entirely when `dataControlSE.show_qa_full_screen` or
-`focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
+The app shell header: centered Search · **Support menu** · **Release notes** · notifications popover ·
+user menu. Rendered by `app.component.html:38`, and hidden entirely when `dataControlSE.show_qa_full_screen`
+or `focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
 `Cmd/Ctrl+K` listener**.
+
+**Release notes (`/whats-new`)** lives here now, as a plain `routerLink` icon button (`pr-topbar-icon-btn`,
+`lucideRocket`) placed between Support and the notifications bell — it used to be a link inside the
+sidebar's EXTRAS group (`reporting-nav-sidebar`) but was moved up to the toolbar, next to the bell, per
+user request. Active state via `isInWhatsNewRoute()` (checks `router.url.includes('/whats-new')`), same
+pattern as `isInNotificationsRoute()`.
 
 ⚠️ **The sidebar collapse/expand toggle no longer lives here.** Per
 `SPEC:changes/sidebar-toggle-consolidation` (STC-DD-1), the topbar's `pr-topbar-icon-btn` toggle

@@ -175,11 +175,33 @@ stays editable. Admins are out of the story's scope, so they keep full editing.
   select left the value at `1`: `pr-select` blocks in its click handler (`pr-select.component.html:69`),
   not by an `option.disabled` class — so counting `.option:not(.disabled)` is a **false alarm**,
   measure the value instead.
-- ⚠️ **Pre-existing, deliberately NOT fixed here:** the `*-content` children take `[disabled]`, which
-  in `pr-select` / `pr-input` blocks the interaction but does **not** switch the control to its
-  read-only rendering, so those fields look editable while being inert. This is how the drawer's
-  non-editable mode already behaved before P2-3154; changing it would touch every other
-  non-editable scenario, which is outside this story.
+- ✅ **CLOSED by `bilateral/review-drawer-readonly-rendering` (2026-09-21).** P2-3154 left this open:
+  the `*-content` children took only `[disabled]`, which in `pr-select` / `pr-input` / `pr-textarea`
+  blocks the interaction but does **not** switch the control to its read-only rendering — so locked
+  fields looked editable while being inert. **21 sites across the drawer and its four `*-content`
+  children now carry `[readOnly]` beside the existing `[disabled]`** (additive; `[disabled]` is
+  still the functional block). The read-only branch is keyed on `readOnly`, never on `disabled`
+  (`pr-textarea.component.html:14`, `pr-input.component.html:27`, `pr-select.component.html:19`) —
+  that asymmetry was the whole bug. `pr-radio-button` and `pr-range-level` were **deliberately left
+  alone**: both already derive a distinct locked look from `disabled` (`.block-field`,
+  `.prl--disabled`), and `pr-range-level` has no `readOnly` input at all.
+  - 🛑 **Two gates, and neither one alone is sufficient.** `result-review-drawer.readonly-bindings.spec.ts`
+    reads the five real `.html` files from disk and asserts the invariant — it proves the binding
+    exists, **not** that it renders. `result-review-drawer.readonly-render.cy.ts` mounts the real
+    children and proves the rendering. Jest cannot do the second job here: every Jest spec in this
+    folder bootstraps with `overrideComponent({ set: { template: '' } })`, so jsdom never renders
+    these templates at all.
+  - ⚠️ **A CT that mounts these children WITHOUT lowering `RolesService.readOnly` is vacuous.** The
+    flag starts `true` (`roles.service.ts:22`) and every control ORs it in, so the harness renders
+    read-only no matter what `[readOnly]` is bound to. Measured: the render spec's first run had
+    both editable falsifier cases red for exactly this reason. Lowering it also mirrors production
+    — §4 below, the drawer sets `rolesSE.readOnly = false` while open.
+  - ⚠️ **Scope a select-trigger assertion to `app-pr-select a.field`.** `pr-multi-select` renders the
+    same `a.field` trigger, so the unscoped selector over-counts.
+  - ⚠️ **Still unverified in a browser:** whether the read-only branch paints the *correct* value
+    once the live CLARISA catalogs load. `pr-select` resolves its label through
+    `optionsIntance() | labelName`, so a value whose catalog has not arrived paints `Not provided`.
+    No harness here loads those catalogs — see the spec's `tasks.md` §4.
 
 ---
 

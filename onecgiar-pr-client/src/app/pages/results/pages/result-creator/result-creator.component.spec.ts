@@ -580,6 +580,17 @@ describe('ResultCreatorComponent', () => {
       expect(component.mqapUrlError.status).toBeTruthy();
       expect(component.mqapUrlError.message).toBe('Please enter a valid handle.');
     });
+
+    it('should accept a bare CGSpace handle (KPH-R-4) and normalize it before calling GET_mqapValidation', () => {
+      component.resultLevelSE.resultBody.handler = '10568/183891';
+      jest.spyOn(mockApiService.resultsSE, 'GET_mqapValidation');
+
+      component.GET_mqapValidation();
+
+      expect(component.mqapUrlError.status).toBe(false);
+      expect(component.resultLevelSE.resultBody.handler).toBe('https://cgspace.cgiar.org/handle/10568/183891');
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith('https://cgspace.cgiar.org/handle/10568/183891');
+    });
   });
 
   /** The guidance no longer hardcodes 2025/2026/2024 — every year comes from the active reporting phase. */

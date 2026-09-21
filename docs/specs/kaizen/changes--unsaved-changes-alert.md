@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Spec Path | `changes/unsaved-changes-alert` |
-| Date | 2026-09-11 |
+| Date | 2026-09-11 (run 1) · 2026-09-21 (run 2) |
 | Branch | qa-development-2026-ss (spec branch — default is `master`) |
-| Archive Run | 1 |
+| Archive Run | 2 |
 | Approval Mode | gated |
 
 ## Metrics
@@ -21,6 +21,7 @@
 | `/akili-quick` escalations into this spec | 0 | — |
 | PRODUCT_BUGs | 0 (all findings were spec-scoped implementation bugs, fixed in-spec) | execution.md |
 | Validation FAIL / WARN | 0 (no `validation-report.md`; Reviewer PASS embedded per task) | execution.md |
+| Manual browser QA (`UCA-T-12`, run 2, 2026-09-21) | user-reported: Back/Next save, dialog Save/Discard, clean-section, browser-back, keyboard pass OK; 2 items deviate/unclear (see P4) | user report in session |
 | Deliberate protocol deviations | 1 (HALT rollback not run literally — see lesson 2) | execution.md — Rollback decision section |
 
 ## Lessons
@@ -39,6 +40,10 @@
 
 - `UCA-T-9`'s 4th attempt closing a documentation-only Reviewer finding directly (Leader fix, no 5th review round) matches established precedent from earlier in the same spec (`UCA-T-8` attempt 3, the cross-cutting routing correction) — process working as designed, not a defect.
 - The Implementer self-catching a live-reference bug (`lastDirtySnapshot` needing a JSON round-trip copy) before reporting completion on `UCA-T-9` attempt 3 is the harness working as intended.
+
+## Noted, not a lesson (run 2)
+
+- Manual QA was reported by the user in one free-text message, not per-scenario screenshots as `UCA-T-12`'s DoD asks; accepted as the evidence of record at archive.
 
 ## Pending Items
 
@@ -70,4 +75,14 @@
 | Target | `onecgiar-pr-client/src/app/pages/results/pages/result-detail/CLAUDE.md` |
 | Edit | Document the new guard/dialog mechanism (`SectionDirtyTrackerService`, `UnsavedChangesGuard`, Save/Discard dialog, `beforeunload` directive) and which sections it covers. |
 | Severity | Low |
+| Status | pending |
+
+### P4
+
+| Field | Value |
+|---|---|
+| Kind | follow-up |
+| Target | `unsaved-changes-alert` behavior (client) |
+| Edit | (a) `UCA-AC-2` deviation: with a required field left empty, Next/Back navigated and left the field empty instead of staying put with the error UI - confirm whether the section save has no required-field validation by design (then amend AC-2) or the silent save path skips it (then fix). (b) `UCA-AC-7/8`: reload after an edit showed the same info and no native `beforeunload` prompt was reported - confirm whether data was auto-saved (no dirty state) or the prompt is not firing. |
+| Severity | Medium |
 | Status | pending |

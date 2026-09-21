@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ResultsListComponent } from './results-list.component';
+import { RC_COLUMNS, RC_COLUMN_WIDTHS_STORAGE_KEY, ResultsListComponent } from './results-list.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultsListFilterPipe } from './pipes/results-list-filter.pipe';
 import { ResultsToUpdateModalComponent } from './components/results-to-update-modal/results-to-update-modal.component';
@@ -520,6 +520,42 @@ describe('ResultsListComponent', () => {
       expect(component.items[1].label).toBe('Update result');
       expect(component.items[2].label).toBe('Review result');
       expect(component.itemsWithDelete[3].label).toBe('Delete');
+    });
+  });
+
+  describe('Column resize', () => {
+    const titleColumn = RC_COLUMNS.find(c => c.key === 'title')!;
+
+    beforeEach(() => {
+      localStorage.removeItem(RC_COLUMN_WIDTHS_STORAGE_KEY);
+      mockApiService.dataControlSE.resultsListSignal = signal([
+        { result_code: '1001', title: 'Sample', results: [{ id: 1, result_code: '1001', title: 'Sample' }] }
+      ] as any);
+      fixture.detectChanges();
+    });
+
+    it('resolves columnWidth from defaults and custom widths', () => {
+      expect(component.columnWidth(titleColumn)).toBe('280px');
+      component.customWidths.set({ title: 360 });
+      expect(component.columnWidth(titleColumn)).toBe('360px');
+    });
+
+    it('persists resized column widths on mouseup', () => {
+      const th = document.createElement('th');
+      th.getBoundingClientRect = jest.fn(() => ({ width: 280 }) as DOMRect);
+
+      component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      expect(component.customWidths().title).toBe(330);
+      expect(JSON.parse(localStorage.getItem(RC_COLUMN_WIDTHS_STORAGE_KEY) || '{}').title).toBe(330);
+    });
+
+    it('resets a column width on double-click handler', () => {
+      component.customWidths.set({ title: 400 });
+      component.onResizeReset(titleColumn, { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent);
+      expect(component.customWidths().title).toBeUndefined();
     });
   });
 
@@ -1216,6 +1252,23 @@ describe('ResultsListComponent', () => {
       expect(
         component.isEmerging({ phase_year: 2024, acronym: 'P24', planned_result: 0 } as any)
       ).toBe(false);
+    });
+
+    // Every W3/bilateral result is unplanned by construction, so planned_result 0 there labels
+    // the whole population instead of a subset. The chip is W1/W2 only.
+    it('isEmerging returns false for a bilateral result that would otherwise qualify', () => {
+      const bilateral = { ...p25Base, planned_result: 0, source_name: 'W3/Bilaterals' };
+      expect(component.isEmerging(bilateral as any)).toBe(false);
+    });
+
+    it('isEmerging still returns true for the same row reported as W1/W2', () => {
+      const w1w2 = { ...p25Base, planned_result: 0, source_name: 'W1/W2' };
+      expect(component.isEmerging(w1w2 as any)).toBe(true);
+    });
+
+    it('isEmerging ignores a bare "Bilateral" source_name too', () => {
+      const bilateral = { ...p25Base, planned_result: 0, source_name: 'Bilateral' };
+      expect(component.isEmerging(bilateral as any)).toBe(false);
     });
   });
 

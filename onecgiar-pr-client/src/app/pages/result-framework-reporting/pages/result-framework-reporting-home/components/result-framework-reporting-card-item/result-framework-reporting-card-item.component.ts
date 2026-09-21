@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, Input, signal } from '@angular/core';
 import { SPProgress } from '../../../../../../shared/interfaces/SP-progress.interface';
 import { RouterLink } from '@angular/router';
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { STATUS_META } from '../../status-meta';
 import { ResultFrameworkReportingHomeService } from '../../services/result-framework-reporting-home.service';
 
@@ -17,7 +18,7 @@ interface StatusSegment {
 
 @Component({
   selector: 'app-result-framework-reporting-card-item',
-  imports: [RouterLink],
+  imports: [RouterLink, PrTooltipDirectiveModule],
   templateUrl: './result-framework-reporting-card-item.component.html',
   styleUrl: './result-framework-reporting-card-item.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -37,6 +38,21 @@ export class ResultFrameworkReportingCardItemComponent {
 
   get totalResults(): number {
     return this.item?.totalResults ?? 0;
+  }
+
+  get plannedKpisDisplay(): string {
+    if (this.item?.plannedKpis != null && this.item.plannedKpis > 0) {
+      return String(this.item.plannedKpis);
+    }
+    return '—';
+  }
+
+  get replicatedResults(): number {
+    return this.item?.replicatedResults ?? 0;
+  }
+
+  get newResults(): number {
+    return this.item?.newResults ?? 0;
   }
 
   statusSegments(): StatusSegment[] {
