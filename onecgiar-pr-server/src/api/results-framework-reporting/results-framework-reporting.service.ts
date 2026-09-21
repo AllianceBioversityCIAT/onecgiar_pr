@@ -932,11 +932,13 @@ export class ResultsFrameworkReportingService {
   }
 
   // @akili-spec changes/indicator-reported-results (IRR-R-3, IRR-R-3.1)
+  // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-AC-2)
   async getExistingResultContributorsToIndicators(
     user: TokenDto,
     resultTocResultId: string | number,
     tocResultIndicatorId: string,
     scope?: string,
+    tocIndicatorTargetId?: string | number,
   ) {
     try {
       return await this._getExistingResultContributorsToIndicatorsHandler.execute(
@@ -945,6 +947,7 @@ export class ResultsFrameworkReportingService {
           resultTocResultId,
           tocResultIndicatorId,
           scope,
+          tocIndicatorTargetId,
         ),
       );
     } catch (error) {
