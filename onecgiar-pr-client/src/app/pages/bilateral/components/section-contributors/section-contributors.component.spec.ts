@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { EventEmitter } from '@angular/core';
@@ -1295,6 +1298,31 @@ describe('SectionContributorsComponent', () => {
       const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
       expect(payload.institutions).toEqual([{ institutions_id: 7 }]);
       expect(payload.contributing_center).toBeUndefined();
+    });
+  });
+  /**
+   * P2-3776. The `.sc-block` z-index ladder assumes every multi-select drops DOWNWARDS, so each
+   * block outranks the one after it. Since P2-3737 a field close to the floor opens its panel
+   * UPWARDS, and the ladder then hides that panel behind the block above: on prtest #9432 the
+   * partners list opened over the projects chips and `elementFromPoint` inside the overlap
+   * returned `.sc-selected-chips`, so the chips both covered the options and ate their clicks.
+   *
+   * The lock is on the stylesheet because that is where the bug lives: the guarantee is that the
+   * focused block outranks every rung of the ladder, in either direction.
+   */
+  describe('P2-3776 · the focused block wins over the ladder', () => {
+    const scss = readFileSync(join(__dirname, 'section-contributors.component.scss'), 'utf8');
+
+    it('lifts the block that holds the focus', () => {
+      expect(scss).toMatch(/&:focus-within\s*\{[^}]*z-index:\s*\d+/);
+    });
+
+    it('lifts it above every rung of the ladder', () => {
+      const lift = Number(/&:focus-within\s*\{[^}]*z-index:\s*(\d+)/.exec(scss)?.[1]);
+      const rungs = [...scss.matchAll(/&--\w+\s*\{\s*z-index:\s*(\d+)/g)].map(m => Number(m[1]));
+
+      expect(rungs.length).toBeGreaterThan(1);
+      expect(lift).toBeGreaterThan(Math.max(...rungs));
     });
   });
 });

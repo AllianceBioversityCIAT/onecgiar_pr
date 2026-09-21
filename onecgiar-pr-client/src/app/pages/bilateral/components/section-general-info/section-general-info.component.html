@@ -37,8 +37,10 @@
 
   <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" [readOnly]="readOnly()" />
 
-  <!-- For innovations the Lead contact person doubles as the Innovation Developer: that field was
-       removed from Section 5 (Nicoleta Trifa via Ángel Jarrín, 2026-09-03). -->
+  <!-- For innovations the Lead contact person doubles as the Innovation Developer: Section 5's
+       "Innovation developers" field is PREFILLED from this one and stays editable (P2-3778 reversed,
+       2026-09-21). The 2026-09-03 relay that said the field had been removed misread Nicoleta Trifa's
+       email, which asked for a prefill — see `../section-type-specific/type-innovation-dev/CLAUDE.md`. -->
   @if (isInnovationDevelopment()) {
     <p class="sgi-lead-contact-note" data-testid="lead-contact-developer-note">
       <i class="material-icons-round" aria-hidden="true">info_outline</i>

@@ -46,6 +46,17 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 
 ## Trampas
 
+- ⚠️ **La escalera de `z-index` de `.sc-block` solo vale si el panel cae hacia ABAJO.** Los bloques
+  se apilan en orden descendente (`--toc:200 … --partners:20`) para que un multi-select abierto
+  tape al bloque siguiente (QA 2026-08-28). Desde `P2-3737` un campo pegado al suelo abre su panel
+  **hacia arriba** (`.options_up`), y entonces la escalera juega al revés: el bloque de arriba, que
+  tiene más `z-index`, pinta sus chips **encima** de la lista abierta y además **se queda con los
+  clicks** de las opciones que quedan debajo (medido en prtest #9432: 41px de solape,
+  `elementFromPoint` devolvía `.sc-selected-chips`, no `.option`). Lo arregla `&:focus-within`
+  (`z-index: 300`, `P2-3776`): manda el bloque que se está usando, abra hacia donde abra.
+  🛑 **Si añades un peldaño nuevo a la escalera, que no pase de 300** o el arreglo deja de valer —
+  el candado que lo vigila está en `section-contributors.component.spec.ts`.
+
 - ⚠️ **`contributing_center` / `contributing_bilateral_projects` no viajan hasta que
   `contributorsHydrated()` es `true`** (flag **independiente** de `partnersHydrated`). Se filtran
   contra los catálogos, así que antes de que carguen —o tras un GET fallido, que igual pone
