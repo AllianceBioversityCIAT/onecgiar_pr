@@ -20,6 +20,18 @@
 
   &--main { z-index: 100; }
   &--extra { z-index: 50; }
+
+  // P2-3776: same inversion as `section-contributors`. The ladder above assumes panels drop
+  // DOWNWARDS; since P2-3737 the extra-scope select — the last field of the section, so the one
+  // nearest the floor — opens UPWARDS into `--main`, which outranks it. Measured on prtest #9465
+  // (IFPRI, Innovation Development): the panel does open upwards over `--main`, and nothing is
+  // covered today only because that strip of `--main` happens to be empty. One chip, one message
+  // or one field added there and the list is behind it, clicks included.
+  //
+  // Whichever block holds the focus is the one being used, so that one wins, in either direction.
+  &:focus-within {
+    z-index: 300;
+  }
 }
 
 .sg-field {

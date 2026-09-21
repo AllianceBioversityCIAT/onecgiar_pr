@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Subject, of } from 'rxjs';
@@ -683,6 +686,28 @@ describe('SectionGeographyComponent', () => {
     it('leaves the answer unanswered rather than defaulting it to No', () => {
       build();
       expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBeNull();
+    });
+  });
+  /**
+   * P2-3776. `.sg-block` stacks its groups with a descending z-index so a panel dropping DOWNWARDS
+   * overlays the group beneath it. The extra-scope select is the last field of the section, so it
+   * opens UPWARDS (P2-3737) into `--main`, which outranks it: the day `--main` has anything in that
+   * strip, it paints over the open list and takes its clicks — the defect measured in
+   * `section-contributors` on prtest #9432. The focused block wins in either direction.
+   */
+  describe('P2-3776 · the focused block wins over the ladder', () => {
+    const scss = readFileSync(join(__dirname, 'section-geography.component.scss'), 'utf8');
+
+    it('lifts the block that holds the focus', () => {
+      expect(scss).toMatch(/&:focus-within\s*\{[^}]*z-index:\s*\d+/);
+    });
+
+    it('lifts it above every rung of the ladder', () => {
+      const lift = Number(/&:focus-within\s*\{[^}]*z-index:\s*(\d+)/.exec(scss)?.[1]);
+      const rungs = [...scss.matchAll(/&--\w+\s*\{\s*z-index:\s*(\d+)/g)].map(m => Number(m[1]));
+
+      expect(rungs.length).toBeGreaterThan(1);
+      expect(lift).toBeGreaterThan(Math.max(...rungs));
     });
   });
 });
