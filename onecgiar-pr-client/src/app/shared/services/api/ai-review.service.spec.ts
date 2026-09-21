@@ -62,6 +62,15 @@ describe('AiReviewService', () => {
       await applied;
     });
 
+    it('should keep Save changes disabled after a successful save (AIR-AC-4)', async () => {
+      const applied = service.onApplyProposal(field, 0);
+
+      resolveSave({});
+      await applied;
+
+      expect(field.canSave).toBe(false);
+    });
+
     it('should release the button when the save fails', async () => {
       const applied = service.onApplyProposal(field, 0).catch(() => undefined);
 
