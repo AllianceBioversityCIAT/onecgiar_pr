@@ -68,7 +68,7 @@ const USE_LEVEL_EXPLANATION_MAX = 9;
   selector: 'app-type-innovation-use',
   imports: [FormsModule, CustomFieldsModule, EstimatesCgiarComponent],
   templateUrl: './type-innovation-use.component.html',
-  styleUrl: './type-innovation-use.component.scss',
+  styleUrl: './type-innovation-use.component.scss'
 })
 export class TypeInnovationUseComponent implements OnInit {
   private readonly bilateralApi = inject(BilateralApiService);
@@ -140,6 +140,16 @@ export class TypeInnovationUseComponent implements OnInit {
    * reaches the handler really is one (401 on an expired token, a 5xx, an Apache 403, a dropped
    * connection), and none of them may write.
    */
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isFormReadOnly` (bilateral-result-creator) was built for exactly this in P2-3520 and every
+   * other section reads it; type-specific never did, so on a Pending Review result the ten fields
+   * here still took input (measured on prtest #9479, 2026-09-21). The autosave was already locked,
+   * so nothing reached the database — the screen simply lied about what could be changed.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   readonly loaded = signal<boolean | null>(null);
 
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
@@ -334,7 +344,7 @@ export class TypeInnovationUseComponent implements OnInit {
         // publishing nothing leaves the section at "0/0 fields", which reads as "nothing required
         // here" instead of as incomplete. Three unfilled items keep it honestly amber.
         this.updateMds();
-      },
+      }
     });
   }
 
@@ -515,7 +525,7 @@ export class TypeInnovationUseComponent implements OnInit {
     this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
       debounceMs,
       statusKey: 'type-specific',
-      executor: (resultId, body) => this.bilateralApi.PATCH_innovationUse(resultId, body),
+      executor: (resultId, body) => this.bilateralApi.PATCH_innovationUse(resultId, body)
     });
   }
 
@@ -534,7 +544,7 @@ export class TypeInnovationUseComponent implements OnInit {
       innovatonUse: {
         actors: this.body.actors ?? [],
         organization: this.buildOrganizationsForSave(),
-        measures: this.body.measures ?? [],
+        measures: this.body.measures ?? []
       },
       // P2-3424: everything below now round-trips through the legacy summary endpoint — its DTO
       // (server `api/results/summary/dto/create-innovation-use.dto.ts`) declares these keys and
@@ -555,7 +565,7 @@ export class TypeInnovationUseComponent implements OnInit {
       has_innovation_link: this.body.has_innovation_link ?? null,
       // `pr-select` hands back the catalog's raw `id`, which arrives as a numeric STRING — normalize it so
       // the contract always carries numbers, the way the W1/W2 section stores them.
-      linked_results: this.body.linked_result_id == null ? [] : [Number(this.body.linked_result_id)],
+      linked_results: this.body.linked_result_id == null ? [] : [Number(this.body.linked_result_id)]
     };
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_use_id != null) {
@@ -572,7 +582,7 @@ export class TypeInnovationUseComponent implements OnInit {
         String(m.unit_of_measure ?? '').trim() !== '' &&
         m.quantity !== null &&
         m.quantity !== undefined &&
-        String(m.quantity).trim() !== '',
+        String(m.quantity).trim() !== ''
     );
   }
 
@@ -586,17 +596,17 @@ export class TypeInnovationUseComponent implements OnInit {
         key: 'use-actors',
         label: 'Actors',
         // AC4: when the use is still to be determined no actor is requested, so the field is satisfied.
-        filled: tbdSet && (tbd === true || hasActors),
+        filled: tbdSet && (tbd === true || hasActors)
       },
       {
         key: 'use-measures',
         label: 'Other quantitative measures of innovation use',
-        filled: this.hasCompleteMeasure(),
+        filled: this.hasCompleteMeasure()
       },
       {
         key: 'use-level',
         label: 'How would you assess the current use level of the innovation?',
-        filled: this.body.innovation_use_level_id != null,
+        filled: this.body.innovation_use_level_id != null
       },
       {
         key: 'use-investment',
@@ -604,12 +614,8 @@ export class TypeInnovationUseComponent implements OnInit {
         filled:
           Array.isArray(this.body.investment_bilateral) &&
           this.body.investment_bilateral.length > 0 &&
-          this.body.investment_bilateral.every(
-            (investment: any) =>
-              (Number(investment?.kind_cash) > 0) !==
-              (investment?.is_determined === true),
-          ),
-      },
+          this.body.investment_bilateral.every((investment: any) => Number(investment?.kind_cash) > 0 !== (investment?.is_determined === true))
+      }
     ]);
   }
 }

@@ -1,5 +1,12 @@
 <div class="tsf-fields">
-  <!--
+  <!-- P2-3428 / AC17 — read-only once the result leaves Editing. `inert` rather than a flag per
+       control: it takes the whole subtree out of reach for the pointer AND the keyboard, which a
+       `disabled` on some inputs would not. `contents` keeps the wrapper out of the layout, so the
+       spacing is unchanged. The full-metadata toggle stays OUTSIDE it — AC17 locks the fields and
+       keeps the toggle working, because reading the optional metadata of a submitted result is
+       part of reviewing it (P2-3520). -->
+  <div class="contents" [inert]="readOnly()">
+    <!--
     P2-3556 — the fetch failed, so every field below is blank for a reason that has nothing to do
     with what is stored. Autosave is off while `loaded()` is not true (see `queueTypeSave`) and this
     says so, through the same `app-alert-status` the section already uses for its MDS note — no new
@@ -8,72 +15,72 @@
     Innovation Development section puts it under its note row only because that row is the first block
     of its own template, whereas here the MDS note sits halfway down the form.
   -->
-  @if (loaded() === false) {
-    <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
-  }
+    @if (loaded() === false) {
+      <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
+    }
 
-  <!-- P2-3346/P2-3348: AC1 lists "Number of people trained" as ONE mandatory MDS field, and the hint
+    <!-- P2-3346/P2-3348: AC1 lists "Number of people trained" as ONE mandatory MDS field, and the hint
        below tells the user to fall back to "Unknown" when the gender split is unavailable. So the
        GROUP is mandatory — any one of the four counts satisfies it — while the individual inputs stay
        optional. The MDS tracker registers a single `people-trained` item to match (see updateMds). -->
-  <!-- El GRUPO es el obligatorio del checklist (`people-trained`), no cada conteo: cualquiera de los
+    <!-- El GRUPO es el obligatorio del checklist (`people-trained`), no cada conteo: cualquiera de los
        cuatro lo satisface. Hasta ahora eso lo decía un `<label>` con asterisco, que dice "es
        obligatorio" pero nunca "TE FALTA": el pie contaba el grupo y en pantalla no se marcaba nada,
        así que el reportero leía un número más grande que los campos marcados (JC, 16-sep-2026).
        La tarjeta le da la misma banda que a cualquier otro campo, y `hasValue` es exactamente el
        mismo predicado que publica `updateMds`, para que no puedan discrepar. -->
-  <app-field-card label="Number of people trained" [required]="true" [hasValue]="peopleTrainedFilled" [description]="peopleTrainedDesc">
-    <div class="tsf-row">
-      <app-pr-input
-        label="Women"
-        type="number"
-        placeholder="Type quantity"
-        [required]="false"
-        [(ngModel)]="body.female_using"
-        (ngModelChange)="onFieldChange()">
-      </app-pr-input>
-      <app-pr-input
-        label="Men"
-        type="number"
-        placeholder="Type quantity"
-        [required]="false"
-        [(ngModel)]="body.male_using"
-        (ngModelChange)="onFieldChange()">
-      </app-pr-input>
-    </div>
+    <app-field-card label="Number of people trained" [required]="true" [hasValue]="peopleTrainedFilled" [description]="peopleTrainedDesc">
+      <div class="tsf-row">
+        <app-pr-input
+          label="Women"
+          type="number"
+          placeholder="Type quantity"
+          [required]="false"
+          [(ngModel)]="body.female_using"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+        <app-pr-input
+          label="Men"
+          type="number"
+          placeholder="Type quantity"
+          [required]="false"
+          [(ngModel)]="body.male_using"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+      </div>
 
-    <div class="tsf-row">
-      <app-pr-input
-        label="Non-binary"
-        type="number"
-        placeholder="Type quantity"
-        [required]="false"
-        [(ngModel)]="body.non_binary_using"
-        (ngModelChange)="onFieldChange()">
-      </app-pr-input>
-      <app-pr-input
-        label="Unknown"
-        type="number"
-        placeholder="Type quantity"
-        [required]="false"
-        [(ngModel)]="body.has_unkown_using"
-        (ngModelChange)="onFieldChange()">
-      </app-pr-input>
-    </div>
-  </app-field-card>
+      <div class="tsf-row">
+        <app-pr-input
+          label="Non-binary"
+          type="number"
+          placeholder="Type quantity"
+          [required]="false"
+          [(ngModel)]="body.non_binary_using"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+        <app-pr-input
+          label="Unknown"
+          type="number"
+          placeholder="Type quantity"
+          [required]="false"
+          [(ngModel)]="body.has_unkown_using"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+      </div>
+    </app-field-card>
 
-  <app-pr-radio-button
-    label="Length of training"
-    [description]="lengthOfTrainingDesc"
-    [options]="capdevsTerms"
-    optionLabel="name"
-    optionValue="capdev_term_id"
-    [required]="true"
-    [(ngModel)]="capdevTermId1"
-    (ngModelChange)="onCapdevTermId1Change()">
-  </app-pr-radio-button>
+    <app-pr-radio-button
+      label="Length of training"
+      [description]="lengthOfTrainingDesc"
+      [options]="capdevsTerms"
+      optionLabel="name"
+      optionValue="capdev_term_id"
+      [required]="true"
+      [(ngModel)]="capdevTermId1"
+      (ngModelChange)="onCapdevTermId1Change()">
+    </app-pr-radio-button>
 
-  <!-- P2-3771 / P2-3382 (AC5/AC6) — the same defect reported twice, fixed once. The long-term
+    <!-- P2-3771 / P2-3382 (AC5/AC6) — the same defect reported twice, fixed once. The long-term
        sub-category belongs HERE, immediately under Length of training and outside the full-metadata
        block: that block is collapsed by default, so the guard below was never evaluated, and the
        control also sat under the unrelated attendance question — a
@@ -97,29 +104,29 @@
        the footer keeps naming a field the user can actually act on. The database green check
        (`validation_capacity_dev_*`) is NOT touched here — it lives outside this repo and belongs to
        its owner, so the server stays the laxer of the two on purpose. -->
-  @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
+    @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
+      <app-pr-radio-button
+        label="Degree"
+        [options]="capdevsSubTerms"
+        optionLabel="name"
+        optionValue="capdev_term_id"
+        [required]="true"
+        [(ngModel)]="capdevTermId2"
+        (ngModelChange)="onCapdevTermId2Change()">
+      </app-pr-radio-button>
+    }
+
     <app-pr-radio-button
-      label="Degree"
-      [options]="capdevsSubTerms"
+      label="Delivery Method"
+      [description]="deliveryMethodDesc"
+      [options]="deliveryMethods"
       optionLabel="name"
-      optionValue="capdev_term_id"
+      optionValue="capdev_delivery_method_id"
       [required]="true"
-      [(ngModel)]="capdevTermId2"
-      (ngModelChange)="onCapdevTermId2Change()">
+      [(ngModel)]="body.capdev_delivery_method_id"
+      (ngModelChange)="onFieldChange()">
     </app-pr-radio-button>
-  }
-
-  <app-pr-radio-button
-    label="Delivery Method"
-    [description]="deliveryMethodDesc"
-    [options]="deliveryMethods"
-    optionLabel="name"
-    optionValue="capdev_delivery_method_id"
-    [required]="true"
-    [(ngModel)]="body.capdev_delivery_method_id"
-    (ngModelChange)="onFieldChange()">
-  </app-pr-radio-button>
-
+  </div>
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
     <app-alert-status
       class="flex-1"
@@ -132,33 +139,35 @@
     </button>
   </div>
 
-  @if (showAllFields()) {
-    <div class="flex flex-col gap-[18px]">
-      <app-pr-radio-button
-        label="Were the trainees attending on behalf of an organization?"
-        [options]="attendanceOptions"
-        optionLabel="name"
-        optionValue="id"
-        [required]="false"
-        [(ngModel)]="body.is_attending_for_organization"
-        (ngModelChange)="onAttendanceChange()">
-      </app-pr-radio-button>
-
-      @if (body.is_attending_for_organization) {
-        <app-pr-multi-select
-          [options]="institutionsSE.institutionsList"
+  <div class="contents" [inert]="readOnly()">
+    @if (showAllFields()) {
+      <div class="flex flex-col gap-[18px]">
+        <app-pr-radio-button
+          label="Were the trainees attending on behalf of an organization?"
+          [options]="attendanceOptions"
+          optionLabel="name"
+          optionValue="id"
           [required]="false"
-          selectedLabel="organization(s) selected"
-          selectedOptionLabel="institutions_name"
-          optionLabel="institutions_name"
-          optionValue="institutions_id"
-          placeholder="Select organizations"
-          [(ngModel)]="body.institutions"
-          (ngModelChange)="onFieldChange()">
-        </app-pr-multi-select>
-      }
-    </div>
-  }
+          [(ngModel)]="body.is_attending_for_organization"
+          (ngModelChange)="onAttendanceChange()">
+        </app-pr-radio-button>
+
+        @if (body.is_attending_for_organization) {
+          <app-pr-multi-select
+            [options]="institutionsSE.institutionsList"
+            [required]="false"
+            selectedLabel="organization(s) selected"
+            selectedOptionLabel="institutions_name"
+            optionLabel="institutions_name"
+            optionValue="institutions_id"
+            placeholder="Select organizations"
+            [(ngModel)]="body.institutions"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-multi-select>
+        }
+      </div>
+    }
+  </div>
 </div>
 
 <!-- No in-section Save: every change is staged and the footer's Save draft persists the section

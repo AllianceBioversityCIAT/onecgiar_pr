@@ -76,6 +76,15 @@ export class TypeInnovationDevComponent implements OnInit {
   private readonly autoSave = inject(BilateralAutoSaveService);
   private readonly expandableState = inject(BilateralExpandableStateService);
   private readonly wordCounter = inject(WordCounterService);
+
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isEditableByCenterUser()` has answered this since P2-3520 and every other section reads it;
+   * the type-specific tabs never did, so a submitted result still took input here.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   readonly innovationControlListSE = inject(InnovationControlListService);
 
   body: any = {};

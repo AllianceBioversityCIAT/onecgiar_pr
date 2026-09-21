@@ -50,12 +50,12 @@ describe('TypeInnovationUseComponent', () => {
       // Which section the editor is showing. The component re-reads its investment tables on the
       // transition INTO this one, because the sections are all mounted at once behind `[hidden]`
       // and its own `ngOnInit` fetch never runs again.
-      openSection: signal<string | null>(null),
+      openSection: signal<string | null>(null)
     };
     creation = { currentResultId: signal<number | null>(123), reportingYear: signal<number | null>(2026) };
     expandableState = {
       getShowAllFields: jest.fn().mockReturnValue(false),
-      setShowAllFields: jest.fn(),
+      setShowAllFields: jest.fn()
     };
     // Mirrors `GET /v2/clarisa/innovation-use-levels`: `id` is what the form stores, `level` is the number
     // the scaling-studies and explanation gates read.
@@ -64,8 +64,8 @@ describe('TypeInnovationUseComponent', () => {
         { id: '1', level: 0, name: 'No use' },
         { id: '4', level: 3, name: 'Level 3' },
         { id: '6', level: 5, name: 'Level 5' },
-        { id: '7', level: 6, name: 'Level 6' },
-      ],
+        { id: '7', level: 6, name: 'Level 6' }
+      ]
     };
     qaInnovationsSE = { options: signal([]), load: jest.fn() };
     bilateralApi = {
@@ -74,12 +74,12 @@ describe('TypeInnovationUseComponent', () => {
         of({
           response: [
             { code: 10, name: 'Government', childrens: [{ code: 11, name: 'Ministry' }] },
-            { code: 20, name: 'Private sector', childrens: [] },
-          ],
-        }),
+            { code: 20, name: 'Private sector', childrens: [] }
+          ]
+        })
       ),
       GET_innovationUse: jest.fn().mockReturnValue(of({ response: {} })),
-      PATCH_innovationUse: jest.fn().mockReturnValue(of({})),
+      PATCH_innovationUse: jest.fn().mockReturnValue(of({}))
     };
 
     await TestBed.configureTestingModule({
@@ -91,8 +91,8 @@ describe('TypeInnovationUseComponent', () => {
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralExpandableStateService, useValue: expandableState },
         { provide: InnovationControlListService, useValue: innovationControlListSE },
-        { provide: QaInnovationDevelopmentResultsService, useValue: qaInnovationsSE },
-      ],
+        { provide: QaInnovationDevelopmentResultsService, useValue: qaInnovationsSE }
+      ]
     })
       .overrideTemplate(TypeInnovationUseComponent, '<div></div>')
       .compileComponents();
@@ -117,7 +117,7 @@ describe('TypeInnovationUseComponent', () => {
 
     it('picks up a project linked after the section was first loaded, keeping unsaved edits', () => {
       bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { investment_bilateral: [{ project_id: 1954, name: 'Rice Scaling', kind_cash: null, is_determined: null }] } }),
+        of({ response: { investment_bilateral: [{ project_id: 1954, name: 'Rice Scaling', kind_cash: null, is_determined: null }] } })
       );
       build();
       openSection('general-info');
@@ -129,10 +129,10 @@ describe('TypeInnovationUseComponent', () => {
           response: {
             investment_bilateral: [
               { project_id: 1954, name: 'Rice Scaling', kind_cash: null, is_determined: null },
-              { project_id: 1410, name: 'Delta Agronomy', kind_cash: null, is_determined: null },
-            ],
-          },
-        }),
+              { project_id: 1410, name: 'Delta Agronomy', kind_cash: null, is_determined: null }
+            ]
+          }
+        })
       );
       openSection('type-specific');
 
@@ -155,9 +155,7 @@ describe('TypeInnovationUseComponent', () => {
 
   describe('loadData', () => {
     it('loads the body and the actor types catalog', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { innov_use_to_be_determined: false, innovation_use_level_id: 5 } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innov_use_to_be_determined: false, innovation_use_level_id: 5 } }));
       build();
       fixture.detectChanges();
       expect(component.body.innov_use_to_be_determined).toBe(false);
@@ -198,7 +196,7 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.body).toEqual({
         investment_programs: [],
         investment_bilateral: [],
-        investment_partners: [],
+        investment_partners: []
       });
       expect(component.actorsTypeList).toEqual([]);
       expect(component.institutionsTypeTreeList).toEqual([]);
@@ -209,13 +207,13 @@ describe('TypeInnovationUseComponent', () => {
       fixture.detectChanges();
       expect(component.institutionsTypeTreeList).toEqual([
         { code: 10, name: 'Government', childrens: [{ code: 11, name: 'Ministry' }] },
-        { code: 20, name: 'Private sector', childrens: [] },
+        { code: 20, name: 'Private sector', childrens: [] }
       ]);
     });
 
     it('splits a hydrated parent_institution_type_id back into a parent/sub-type pair', () => {
       bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { organization: [{ institution_types_id: 11, parent_institution_type_id: 10 }] } }),
+        of({ response: { organization: [{ institution_types_id: 11, parent_institution_type_id: 10 }] } })
       );
       build();
       fixture.detectChanges();
@@ -287,7 +285,7 @@ describe('TypeInnovationUseComponent', () => {
         ['addStudyLink', (c: any) => c.addStudyLink()],
         ['deleteStudyLink', (c: any) => c.deleteStudyLink(0)],
         ['onInnovationLinkChange', (c: any) => c.onInnovationLinkChange()],
-        ['onUseLevelChange', (c: any) => c.onUseLevelChange()],
+        ['onUseLevelChange', (c: any) => c.onUseLevelChange()]
       ])('sends nothing from %s either', (_name, act) => {
         failLoad();
         build();
@@ -295,7 +293,7 @@ describe('TypeInnovationUseComponent', () => {
           actors: [{ actor_type_id: 1, is_active: true }],
           organization: [{ institution_types_id: 10, is_active: true }],
           measures: [{ unit_of_measure: 'ha', quantity: 3, is_active: true }],
-          scaling_studies_urls: ['https://example.org'],
+          scaling_studies_urls: ['https://example.org']
         };
         autoSave.schedulePayload.mockClear();
 
@@ -382,7 +380,7 @@ describe('TypeInnovationUseComponent', () => {
     it('excludes soft-deleted actors', () => {
       build();
       component.body = {
-        actors: [{ actor_type_id: 1, is_active: true }, { actor_type_id: 2, is_active: false }, { actor_type_id: 3 }],
+        actors: [{ actor_type_id: 1, is_active: true }, { actor_type_id: 2, is_active: false }, { actor_type_id: 3 }]
       };
       expect(component.visibleActors).toEqual([{ actor_type_id: 1, is_active: true }, { actor_type_id: 3 }]);
     });
@@ -434,13 +432,21 @@ describe('TypeInnovationUseComponent', () => {
     it('exclude soft-deleted rows and tolerate an absent array', () => {
       build();
       component.body = {
-        organization: [{ institution_types_id: 1, is_active: true }, { institution_types_id: 2, is_active: false }],
+        organization: [
+          { institution_types_id: 1, is_active: true },
+          { institution_types_id: 2, is_active: false }
+        ]
       };
       expect(component.visibleOrganizations).toEqual([{ institution_types_id: 1, is_active: true }]);
       component.body = {};
       expect(component.visibleOrganizations).toEqual([]);
 
-      component.body = { measures: [{ unit_of_measure: 'ha', is_active: true }, { unit_of_measure: 'kg', is_active: false }] };
+      component.body = {
+        measures: [
+          { unit_of_measure: 'ha', is_active: true },
+          { unit_of_measure: 'kg', is_active: false }
+        ]
+      };
       expect(component.visibleMeasures).toEqual([{ unit_of_measure: 'ha', is_active: true }]);
       component.body = {};
       expect(component.visibleMeasures).toEqual([]);
@@ -529,19 +535,19 @@ describe('TypeInnovationUseComponent', () => {
   describe('updateMds — P2-3428 / P2-3331 AC1: the MDS fields published to the tracker', () => {
     const ACTORS = {
       key: 'use-actors',
-      label: 'Actors',
+      label: 'Actors'
     };
     const MEASURES = {
       key: 'use-measures',
-      label: 'Other quantitative measures of innovation use',
+      label: 'Other quantitative measures of innovation use'
     };
     const LEVEL = {
       key: 'use-level',
-      label: 'How would you assess the current use level of the innovation?',
+      label: 'How would you assess the current use level of the innovation?'
     };
     const INVESTMENT = {
       key: 'use-investment',
-      label: 'Investment by CGIAR W3 or bilateral projects',
+      label: 'Investment by CGIAR W3 or bilateral projects'
     };
 
     const lastFields = () => mdsTracker.setSectionFields.mock.calls.at(-1)[1];
@@ -554,7 +560,7 @@ describe('TypeInnovationUseComponent', () => {
         { ...ACTORS, filled: false },
         { ...MEASURES, filled: false },
         { ...LEVEL, filled: false },
-        { ...INVESTMENT, filled: false },
+        { ...INVESTMENT, filled: false }
       ]);
     });
 
@@ -640,21 +646,24 @@ describe('TypeInnovationUseComponent', () => {
     it('asks the use ladder to show its pending marker', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
-      expect(html).toContain(`[options]="innovationControlListSE.useLevelsList"
-      [required]="true"`);
+      // Asserted on the two attributes, not on their indentation: P2-3428 wrapped the fields in a
+      // `contents` div for the read-only gate and every line below shifted by two spaces. The
+      // contract is that the ladder is required, not how the file is formatted.
+      const ladder = /\[options\]="innovationControlListSE\.useLevelsList"\s*\n\s*\[required\]="true"/;
+      expect(html).toMatch(ladder);
     });
 
     it('P2-3428 — renders bilateral investment as MDS and optional Program/Partner tables as full metadata', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
-      expect(html).toContain("[sections]=\"['bilateral']\"");
-      expect(html).toContain("[requiredSections]=\"['bilateral']\"");
+      expect(html).toContain('[sections]="[\'bilateral\']"');
+      expect(html).toContain('[requiredSections]="[\'bilateral\']"');
       expect(html).toContain("[sections]=\"['programs', 'partners']\"");
       // The old placeholder and its tag are gone for good.
       expect(html).not.toContain('body.investment_bilateral_usd');
       expect(html).not.toContain('use-investment-coming-soon');
       expect(html).not.toContain('Not available yet');
-      expect(html.indexOf("[sections]=\"['bilateral']\"")).toBeLessThan(html.indexOf('mdsInfoNote'));
+      expect(html.indexOf('[sections]="[\'bilateral\']"')).toBeLessThan(html.indexOf('mdsInfoNote'));
     });
 
     it('P2-3390 — sends the three investment arrays in the payload', () => {
@@ -662,15 +671,13 @@ describe('TypeInnovationUseComponent', () => {
       component.body = {
         investment_programs: [{ id: 90, kind_cash: 100, is_determined: null }],
         investment_bilateral: [{ id: 4321, project_id: 4321, kind_cash: null, is_determined: true }],
-        investment_partners: [{ id: 77, kind_cash: 250, is_determined: null }],
+        investment_partners: [{ id: 77, kind_cash: 250, is_determined: null }]
       };
       component.onSave();
 
       const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
       expect(payload.investment_programs).toEqual([{ id: 90, kind_cash: 100, is_determined: null }]);
-      expect(payload.investment_bilateral).toEqual([
-        { id: 4321, project_id: 4321, kind_cash: null, is_determined: true },
-      ]);
+      expect(payload.investment_bilateral).toEqual([{ id: 4321, project_id: 4321, kind_cash: null, is_determined: true }]);
       expect(payload.investment_partners).toEqual([{ id: 77, kind_cash: 250, is_determined: null }]);
       // 🛑 The legacy nested keys must never be sent from here: their writer resolves the
       // `non_pooled_project` catalogue and drops every bilateral row in silence.
@@ -723,7 +730,7 @@ describe('TypeInnovationUseComponent', () => {
         actors: [{ actor_type_id: 1, is_active: true }],
         measures: [{ unit_of_measure: 'ha', quantity: 3, is_active: true }],
         innovation_use_level_id: '6',
-        investment_bilateral: [{ kind_cash: 500, is_determined: null }],
+        investment_bilateral: [{ kind_cash: 500, is_determined: null }]
       };
       component.updateMds();
       expect(lastFields().every((f: any) => f.filled)).toBe(true);
@@ -742,7 +749,7 @@ describe('TypeInnovationUseComponent', () => {
         readiness_level_explanation: 'Because the evidence says so.',
         innov_use_2030_to_be_determined: true,
         has_innovation_link: true,
-        linked_result_id: 42,
+        linked_result_id: 42
       };
       component.updateMds();
       expect(lastFields()).toEqual(before);
@@ -757,7 +764,7 @@ describe('TypeInnovationUseComponent', () => {
         innovation_use_level_id: 5,
         actors: [{ actor_type_id: 1 }],
         organization: [{ institution_types_id: 2 }],
-        measures: [{ unit_of_measure: 'ha' }],
+        measures: [{ unit_of_measure: 'ha' }]
       };
       component.onFieldChange();
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
@@ -768,10 +775,10 @@ describe('TypeInnovationUseComponent', () => {
           innovatonUse: {
             actors: [{ actor_type_id: 1 }],
             organization: [{ institution_types_id: 2 }],
-            measures: [{ unit_of_measure: 'ha' }],
-          },
+            measures: [{ unit_of_measure: 'ha' }]
+          }
         }),
-        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' }),
+        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' })
       );
     });
 
@@ -809,9 +816,7 @@ describe('TypeInnovationUseComponent', () => {
 
     // P2-3556 regression guards: the load gate must not touch the two things that legitimately save.
     it('saves normally once the body has loaded', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { innovation_use_level_id: 4, readiness_level_explanation: 'stored' } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innovation_use_level_id: 4, readiness_level_explanation: 'stored' } }));
       build();
       autoSave.schedulePayload.mockClear();
 
@@ -828,7 +833,7 @@ describe('TypeInnovationUseComponent', () => {
       const organization = { result_by_institution_type_id: 4, institution_types_id: 10, is_active: true };
       const measure = { result_ip_measure_id: 6, unit_of_measure: 'ha', quantity: 3, is_active: true };
       bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { actors: [actor], organization: [organization], measures: [measure], scaling_studies_urls: ['https://a'] } }),
+        of({ response: { actors: [actor], organization: [organization], measures: [measure], scaling_studies_urls: ['https://a'] } })
       );
       build();
 
@@ -853,11 +858,7 @@ describe('TypeInnovationUseComponent', () => {
       build();
       component.body = {};
       component.onSave();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        expect.anything(),
-        expect.objectContaining({ debounceMs: 0 }),
-      );
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith('typeSpecific', expect.anything(), expect.objectContaining({ debounceMs: 0 }));
     });
 
     it('tracks the saving state from fieldStatus', () => {
@@ -873,7 +874,7 @@ describe('TypeInnovationUseComponent', () => {
       build();
       expect(component.mdsInfoNote).toBe(
         'The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. ' +
-          'If you need to complete the full metadata for this section, click the button on the right.',
+          'If you need to complete the full metadata for this section, click the button on the right.'
       );
     });
   });
@@ -901,7 +902,7 @@ describe('TypeInnovationUseComponent', () => {
       expect(payload).toMatchObject({
         readiness_level_explanation: 'kept',
         has_scaling_studies: true,
-        scaling_studies_urls: ['https://a.b'],
+        scaling_studies_urls: ['https://a.b']
       });
     });
 
@@ -966,7 +967,7 @@ describe('TypeInnovationUseComponent', () => {
         component.body = {
           innovation_use_level_id: '7',
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://example.org/a', 'https://example.org/b'],
+          scaling_studies_urls: ['https://example.org/a', 'https://example.org/b']
         };
         component.onUseLevelChange();
         expect(component.body.has_scaling_studies).toBeNull();
@@ -979,7 +980,7 @@ describe('TypeInnovationUseComponent', () => {
         component.body = {
           innovation_use_level_id: '6',
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://example.org/a'],
+          scaling_studies_urls: ['https://example.org/a']
         };
         component.onUseLevelChange();
         expect(component.body.has_scaling_studies).toBe(true);
@@ -1000,7 +1001,7 @@ describe('TypeInnovationUseComponent', () => {
         component.body = {
           innovation_use_level_id: '7',
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://example.org/a'],
+          scaling_studies_urls: ['https://example.org/a']
         };
         component.onUseLevelChange();
         const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
@@ -1048,7 +1049,15 @@ describe('TypeInnovationUseComponent', () => {
      */
     const options = [
       { id: 1, result_code: 1001, title: 'QA-ed innovation', status_id: 2, phase_year: 2025, acronym: 'SP01', display: '1001 - QA-ed innovation' },
-      { id: 2, result_code: 1002, title: 'Approved bilateral innovation', status_id: 6, phase_year: 2025, acronym: null, display: '1002 - Approved bilateral innovation' }
+      {
+        id: 2,
+        result_code: 1002,
+        title: 'Approved bilateral innovation',
+        status_id: 6,
+        phase_year: 2025,
+        acronym: null,
+        display: '1002 - Approved bilateral innovation'
+      }
     ];
 
     it('offers the shared QA catalogue verbatim, Approved results included', () => {
@@ -1127,9 +1136,7 @@ describe('TypeInnovationUseComponent', () => {
     });
 
     it('hydrates the single selection out of the stored linked_results list', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { has_innovation_link: 1, linked_results: [{ id: 77 }] } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { has_innovation_link: 1, linked_results: [{ id: 77 }] } }));
       build();
       fixture.detectChanges();
       expect(component.body.linked_result_id).toBe(77);
@@ -1165,9 +1172,9 @@ describe('TypeInnovationUseComponent', () => {
         of({
           response: {
             innov_use_to_be_determined: 0,
-            actors: [{ actor_type_id: 1, women: 2, men: 3 }],
-          },
-        }),
+            actors: [{ actor_type_id: 1, women: 2, men: 3 }]
+          }
+        })
       );
       build();
       fixture.detectChanges();
@@ -1199,7 +1206,7 @@ describe('TypeInnovationUseComponent', () => {
   describe('P2-3424 — reload of the fields the endpoint now persists', () => {
     it('normalizes the stored tinyint answers into the booleans the radios bind', () => {
       bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { has_scaling_studies: 1, innov_use_2030_to_be_determined: 0, has_innovation_link: 0 } }),
+        of({ response: { has_scaling_studies: 1, innov_use_2030_to_be_determined: 0, has_innovation_link: 0 } })
       );
       build();
       fixture.detectChanges();
@@ -1209,9 +1216,7 @@ describe('TypeInnovationUseComponent', () => {
     });
 
     it('leaves an unanswered question unanswered instead of turning it into a No', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { has_scaling_studies: null, innov_use_2030_to_be_determined: null } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { has_scaling_studies: null, innov_use_2030_to_be_determined: null } }));
       build();
       fixture.detectChanges();
       expect(component.body.has_scaling_studies).toBeNull();
@@ -1224,9 +1229,9 @@ describe('TypeInnovationUseComponent', () => {
           response: {
             has_scaling_studies: 1,
             scaling_studies_urls: ['https://example.org/study'],
-            readiness_level_explanation: 'Because the evidence says so.',
-          },
-        }),
+            readiness_level_explanation: 'Because the evidence says so.'
+          }
+        })
       );
       build();
       fixture.detectChanges();
@@ -1238,7 +1243,7 @@ describe('TypeInnovationUseComponent', () => {
       expect(payload).toMatchObject({
         has_scaling_studies: true,
         scaling_studies_urls: ['https://example.org/study', ''],
-        readiness_level_explanation: 'Because the evidence says so.',
+        readiness_level_explanation: 'Because the evidence says so.'
       });
     });
 

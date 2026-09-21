@@ -1,4 +1,10 @@
-<div class="tsf-fields">
+<!-- P2-3428 / AC17 — read-only once the result leaves Editing. `inert` rather than a flag per
+       control: it takes the whole subtree out of reach for the pointer AND the keyboard, which a
+       `disabled` on some inputs would not. `contents` keeps the wrapper out of the layout, so the
+       spacing is unchanged. The full-metadata toggle stays OUTSIDE it — AC17 locks the fields and
+       keeps the toggle working, because reading the optional metadata of a submitted result is
+       part of reviewing it (P2-3520). -->
+<div class="tsf-fields" [inert]="readOnly()">
   @if (loading()) {
     <div class="tsf-loading">
       <i class="material-icons-round">hourglass_empty</i>
@@ -11,9 +17,7 @@
       <i class="material-icons-round">error_outline</i>
       <div>
         <p class="tsf-load-error__title">Knowledge Product metadata could not be loaded</p>
-        <p class="tsf-load-error__hint">
-          The record may not have finished syncing from CGSpace. Reload the page, and report it if it keeps failing.
-        </p>
+        <p class="tsf-load-error__hint">The record may not have finished syncing from CGSpace. Reload the page, and report it if it keeps failing.</p>
       </div>
     </div>
   } @else {
@@ -24,10 +28,14 @@
     }
     <app-alert-status
       [collapsible]="false"
-      description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{ sourceName }}. Before the end of the reporting period, metadata will be automatically refreshed on this page."></app-alert-status>
+      description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{
+        sourceName
+      }}. Before the end of the reporting period, metadata will be automatically refreshed on this page."></app-alert-status>
     <app-alert-status
       [collapsible]="false"
-      description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in {{ sourceName }}. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record."></app-alert-status>
+      description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in {{
+        sourceName
+      }}. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record."></app-alert-status>
 
     <!-- ── MELIA: the only editable block in this section ───────────────────────────────── -->
     <app-pr-yes-or-not
