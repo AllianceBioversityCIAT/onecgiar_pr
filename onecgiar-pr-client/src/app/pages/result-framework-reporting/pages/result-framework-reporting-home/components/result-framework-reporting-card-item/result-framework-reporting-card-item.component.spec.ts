@@ -130,4 +130,171 @@ describe('ResultFrameworkReportingCardItemComponent', () => {
       expect(segment.dotClass).toBe('bg-[var(--pr-color-accents-3)]');
     });
   });
+
+  // -------------------------------------------------------- plannedKpisDisplay
+  describe('plannedKpisDisplay', () => {
+    it('returns the stringified count when plannedKpis is greater than 0', () => {
+      component.item = { plannedKpis: 454 } as any;
+      expect(component.plannedKpisDisplay).toBe('454');
+    });
+
+    it('returns "—" when plannedKpis is 0', () => {
+      component.item = { plannedKpis: 0 } as any;
+      expect(component.plannedKpisDisplay).toBe('—');
+    });
+
+    it('returns "—" when plannedKpis is null', () => {
+      component.item = { plannedKpis: null } as any;
+      expect(component.plannedKpisDisplay).toBe('—');
+    });
+
+    it('returns "—" when there is no item', () => {
+      component.item = undefined as any;
+      expect(component.plannedKpisDisplay).toBe('—');
+    });
+  });
+
+  // --------------------------------------------------------- replicatedResults
+  describe('replicatedResults', () => {
+    it('returns the replicated count from the item', () => {
+      component.item = { replicatedResults: 208 } as any;
+      expect(component.replicatedResults).toBe(208);
+    });
+
+    it('falls back to 0 when replicatedResults is null', () => {
+      component.item = { replicatedResults: null } as any;
+      expect(component.replicatedResults).toBe(0);
+    });
+
+    it('falls back to 0 when there is no item', () => {
+      component.item = undefined as any;
+      expect(component.replicatedResults).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------- newResults
+  describe('newResults', () => {
+    it('returns the new results count from the item', () => {
+      component.item = { newResults: 5 } as any;
+      expect(component.newResults).toBe(5);
+    });
+
+    it('falls back to 0 when newResults is null', () => {
+      component.item = { newResults: null } as any;
+      expect(component.newResults).toBe(0);
+    });
+
+    it('falls back to 0 when there is no item', () => {
+      component.item = undefined as any;
+      expect(component.newResults).toBe(0);
+    });
+  });
+
+  // ------------------------------------------------------ DOM Template Rendering
+  describe('DOM Template Rendering', () => {
+    it('renders Tier 1 planned KPIs pill and total results (RFR-AC-1)', () => {
+      component.item = {
+        initiativeId: 1,
+        initiativeCode: 'SP01',
+        initiativeName: 'Breeding for Tomorrow',
+        totalResults: 208,
+        plannedKpis: 454,
+        replicatedResults: 208,
+        newResults: 0,
+        versions: [{ statuses: [{ statusId: 1, statusName: 'Editing', count: 208 }] }]
+      } as any;
+      component.homeService.compactView.set(false);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('208');
+      expect(el.textContent).toContain('results this phase');
+      expect(el.textContent).toContain('454 planned KPIs');
+      expect(el.textContent).toContain('208 replicated');
+      expect(el.textContent).toContain('0 new');
+    });
+
+    it('renders breakdown correctly when new results exist (RFR-AC-3)', () => {
+      component.item = {
+        initiativeId: 1,
+        initiativeCode: 'SP01',
+        initiativeName: 'Breeding for Tomorrow',
+        totalResults: 105,
+        plannedKpis: 120,
+        replicatedResults: 100,
+        newResults: 5,
+        versions: []
+      } as any;
+      component.homeService.compactView.set(false);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('100 replicated');
+      expect(el.textContent).toContain('5 new');
+      expect(component.replicatedResults + component.newResults).toBe(component.totalResults);
+    });
+
+    it('renders "— planned KPIs" when plannedKpis is null or 0 (RFR-AC-5)', () => {
+      component.item = {
+        initiativeId: 1,
+        initiativeCode: 'SP01',
+        initiativeName: 'Breeding for Tomorrow',
+        totalResults: 10,
+        plannedKpis: 0,
+        replicatedResults: 10,
+        newResults: 0,
+        versions: []
+      } as any;
+      component.homeService.compactView.set(false);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('— planned KPIs');
+    });
+
+    it('renders "No results reported yet" and planned KPIs pill when totalResults is 0', () => {
+      component.item = {
+        initiativeId: 1,
+        initiativeCode: 'SP01',
+        initiativeName: 'Breeding for Tomorrow',
+        totalResults: 0,
+        plannedKpis: 30,
+        replicatedResults: 0,
+        newResults: 0,
+        versions: []
+      } as any;
+      component.homeService.compactView.set(false);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('No results reported yet');
+      expect(el.textContent).toContain('30 planned KPIs');
+    });
+
+    it('collapses Tier 2 origin pills and status bar in compact view while keeping Tier 1 metrics (RFR-AC-4)', () => {
+      component.item = {
+        initiativeId: 1,
+        initiativeCode: 'SP01',
+        initiativeName: 'Breeding for Tomorrow',
+        totalResults: 208,
+        plannedKpis: 454,
+        replicatedResults: 208,
+        newResults: 0,
+        versions: [{ statuses: [{ statusId: 1, statusName: 'Editing', count: 208 }] }]
+      } as any;
+      component.homeService.compactView.set(true);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      // Tier 1 still rendered
+      expect(el.textContent).toContain('208');
+      expect(el.textContent).toContain('results this phase');
+      expect(el.textContent).toContain('454 planned KPIs');
+
+      // Tier 2 origin pills collapsed
+      expect(el.textContent).not.toContain('replicated');
+      expect(el.textContent).not.toContain('new');
+      expect(el.querySelector('.pr-card-meta')).toBeNull();
+    });
+  });
 });

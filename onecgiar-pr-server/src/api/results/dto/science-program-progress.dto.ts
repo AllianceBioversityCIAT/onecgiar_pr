@@ -30,6 +30,27 @@ export class VersionProgressDto {
   totalResults: number;
 
   @ApiProperty({
+    description:
+      'Number of planned ToC KPIs/indicators for the reporting phase/year.',
+    nullable: true,
+    required: false,
+  })
+  plannedKpis?: number | null;
+
+  @ApiProperty({
+    description: 'Number of results replicated from previous reporting phases.',
+    required: false,
+  })
+  replicatedResults?: number;
+
+  @ApiProperty({
+    description:
+      'Number of new results created directly in this reporting phase.',
+    required: false,
+  })
+  newResults?: number;
+
+  @ApiProperty({
     description: 'Result status distribution for the version.',
     type: () => [StatusBreakdownDto],
   })
@@ -78,6 +99,27 @@ export class ScienceProgramProgressDto {
 
   @ApiProperty({ description: 'Completion percentage for the initiative.' })
   progress: number;
+
+  @ApiProperty({
+    description:
+      'Number of planned ToC KPIs/indicators for the reporting phase/year.',
+    nullable: true,
+    required: false,
+  })
+  plannedKpis?: number | null;
+
+  @ApiProperty({
+    description: 'Number of results replicated from previous reporting phases.',
+    required: false,
+  })
+  replicatedResults?: number;
+
+  @ApiProperty({
+    description:
+      'Number of new results created directly in this reporting phase.',
+    required: false,
+  })
+  newResults?: number;
 
   @ApiProperty({
     description: 'Per-version breakdown for the initiative.',
