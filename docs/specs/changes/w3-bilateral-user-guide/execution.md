@@ -232,3 +232,61 @@ EXIT=0
 **Constitution impact** — none.
 
 **Final verification result** — `VERIFIED` (Leader re-run, including independent re-derivation of both promise semantics) + `STATUS: PASS` (round-2 `opus` Reviewer, after two `opus` lens FAILs).
+
+### `BG-T-4` — Declarative pre-capture `steps` with a fail-loud unique-selector guard
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 1, plus a Leader-directed in-scope correction) |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 |
+| Review depth | `full` (changes the shared `RouteConfig` contract) · Reviewer `opus`, Implementer `sonnet` |
+| Review rounds | 1. Cumulative: **6** of 17 |
+| Requirements covered | `BG-R-14`, `BG-R-6`, `BG-AC-6`, `BG-AC-14`, `BG-DD-2` |
+| Authored LOC | ~215 (`capture.ts` +215/−6). Cumulative: **~670** of 1,300–1,700. **No tripwire** |
+| runtime events | none |
+
+**What was built.** `Step` as a closed **four**-variant union (`click`, `waitFor`, `press`, `fill`) with a `type` discriminant, `steps?: Step[]` and a type-only `bounds?` on `RouteConfig`, and `runSteps()` executing `goto → steps → readySelector`. The uniqueness guard reads the **raw** `page.locator(selector).count()`.
+
+**Falsifier — four inputs, three red with distinct messages, one green:**
+
+| # | Input | Result |
+|---|---|---|
+| 1 | `click` selector matching 0 | `step[0] (click): selector "#missing-button" resolved to 0 element(s) (expected exactly 1)` |
+| 2 | **`click` selector matching 2+** | `step[0] (click): selector ".dup" resolved to 2 element(s) (expected exactly 1)` — **the input that proves the guard is not inert** |
+| 3 | `fill` selector matching 0 | `step[0] (fill): selector "#missing-input" resolved to 0 element(s) (expected exactly 1)` |
+| 4 | valid click → waitFor → fill | **passed**; `landingPanelVisible=false postStepsPanelVisible=true postStepsInputValue="Sample literal title text"`, and both PNGs were visually inspected before deletion — the capture reflects the **post-steps** state, not the landing state |
+
+**Leader evidence re-run — `VERIFIED`.** `tsc` exit 0; `.first()`/`.nth(`/`:nth-of-type` appear **only in comments** (`:49`, `:305`) explaining why they are not used, with `:317` reading the raw `count()`; order confirmed `goto :453 → runSteps :462 → waitForSelector :466`; **zero** `page.route(`/`context.route(` in `capture.ts`, so `BG-T-3`'s guard is not shadowed by Playwright's LIFO handler ordering.
+
+**Reviewer verdict — `STATUS: PASS`.** Confirmed the guard is un-narrowable and doubly so: `page.locator()` is strict-mode by default, so `.click()`/`.fill()` **throw** on a 2-match rather than auto-picking. The TOCTOU window between count and action is closed on both sides — 1→2 by strict mode, 1→0 by actionability auto-wait. Union closure verified: an unknown `type` and a `waitFor` with both-or-neither of `selector`/`ms` both throw. Pipeline order conforms to §3.2, with the skeleton gate reading the post-steps state.
+
+#### `P-10` settled — and the original claim was **refuted**
+
+This task owned the sweep that settles `P-10`, and the sweep **contradicted the premise as written**. The Implementer reported it exactly rather than smoothing it over, which is the behaviour the ledger depends on.
+
+- The row claimed the `RouteConfig` change has **exactly one consumer**, this copy's `capture.ts`.
+- `grep -rn "RouteConfig\|routes.config" tooling/` in fact returns **five** files.
+- Verified at source by the Leader and independently by the Reviewer: `capture.ts:159` declares `interface RouteConfig` **without `export`**, so it is structurally un-importable; `assemble.ts:54` reads the same JSON and `:63` declares its **own independent 7-field `RouteConfig`**, importing nothing from `capture.ts`; the rest are incidental filename mentions in `template/README.md`, `annotate.ts`, `tokens.ts`.
+- **Substance survives:** `assemble.ts` already omits `annotations` today and consumes only `captionKey` at `:284`; a TS `as RouteConfig[]` cast tolerates unknown extra JSON properties, so `steps`/`bounds` need no lockstep change.
+- `design.md` `P-10` and `tasks.md` `BG-T-4` *Consumers* were both rewritten to state what the command returned. **Premise Ledger is now 13 rows, 13 verified, 0 `UNVERIFIED`.**
+- Latent risk recorded, **not introduced here**: two hand-mirrored interfaces over one JSON file will drift, and one already has.
+
+**Leader-directed in-scope correction (not a new task).** The Reviewer flagged that `capture.ts:12-18` still asserted *"Strictly read-only … No `.click()`, `.fill()`"* — statements this task had just made false, in the one file whose read-only property is load-bearing, with production capture imminent. Same defect class as `BG-T-1`'s comment-claims-`HEAD` divergence, inverted. Corrected: the pipeline summary now reads `goto -> steps (BG-T-4) -> wait readySelector -> …`, and the paragraph now states that **read-only is enforced by the guard, not by the absence of clicks**, naming `guards/read-only.ts` as the backstop and stating that no step may submit a result or trigger an assessment.
+
+**The Implementer corrected the Leader, and was right.** The Leader's instruction was to use `Array.isArray(route.steps) && route.steps.length` to make a malformed `"steps": {}` fail loudly. The Implementer pointed out that this alone would still **silently skip** `{}` — exactly the original bug — because `{}.length` is `undefined` and `undefined > 0` is `false`. Failing loudly required pairing the check with an explicit `throw`, which it added, with all four cases verified (`{}` throws, `[]` throws, `undefined` skips, a valid array runs).
+
+**`ADVISORY` (recorded, never gating, never minted into a task):**
+- *Reliability* — `click`/`fill` deliberately do not wait before reading `count()`; waiting is `waitFor`'s job. **Forward pointer:** `BG-T-8`/`BG-T-9` configs must interleave a `waitFor` before any click on a not-yet-mounted target or the step reddens as "0 element(s)". Promoted out of advisory into `design.md` §5 so the capture tasks read it where they work, rather than in a report nobody re-opens.
+- *Resilience* — a TOCTOU-race failure surfaces as a raw Playwright strict-mode error naming the selector but **not** the route id; wrapping the action restores the `BG-AC-14` message shape.
+- *Reliability* — `fill` with no `value` and `press` with no `key` are not guard-covered and fail inside Playwright's parameter validator. Fail-loud, so `BG-AC-14`'s substance holds; §5 mandates only selector guards.
+
+**Decisions made**
+- **Execute-time spec edits** (all made now): `design.md` §2, §5 and `BG-DD-2` said "three-variant" against a four-row table — an inconsistency the **Leader** introduced when applying Judgment Day's `J-10` fix; corrected. `design.md` §5 gained the `waitFor`-interleaving rule. `tasks.md` `BG-T-4` *Consumers* amended to record the refuted sweep. **Carried as named conformance checks in `BG-T-5`'s Reviewer brief.**
+- Three unrequested Implementer changes accepted as in scope and behaviour-preserving: the stale `@akili-spec` tag corrected from `changes/user-guide-pdf`, `Step`/`RouteCaptureError` exported, and the bottom `main()` guarded with `require.main === module` so the module is importable by a harness without launching a real run. `capture.ts` is a **named MODIFIED exception** in `design.md` §4, so `BG-R-22` does not forbid editing it — the Reviewer confirmed that reading.
+
+**Issues encountered** — none blocking.
+
+**Constitution impact** — none.
+
+**Final verification result** — `VERIFIED` (Leader re-run) + `STATUS: PASS` (independent `opus` Reviewer).

@@ -100,7 +100,7 @@
   - [ ] **Acknowledged gap written into the log header:** WebSocket (`pusher`/`webSocketUrl`) is not intercepted by `page.route()`.
 - **Skills:** `playwright-cli`
 
-### `BG-T-4` — Declarative pre-capture `steps` with a fail-loud unique-selector guard
+### `BG-T-4` — Declarative pre-capture `steps` with a fail-loud unique-selector guard  `[x]`
 
 - **Type:** `infra`
 - **Description:** Extend the copied `RouteConfig` with an optional `steps: Step[]`, a four-variant closed union — `click` (selector, optional label), `waitFor` (selector or ms), `press` (key), `fill` (selector, literal value) — executed after `goto` and **before** `readySelector`, so the readiness gate describes the state the steps produced. Every selector-bearing step asserts `count() === 1` and fails the run naming the step and route on 0 or 2+ matches.
@@ -112,7 +112,7 @@
   - **Falsifier:** three inputs, each must fail the run with a distinct message — (1) a `click` selector matching **zero** elements; (2) one matching **two or more**; (3) a `fill` whose selector matches zero. Then one input that must **pass**: a valid three-step drawer sequence. A guard that cannot be made red by input (2) is the *inert fixture* class — `:nth-of-type` or `.first()` anywhere in the resolution path would silently make a 2-match look like a 1-match, so the assertion must read the raw `count()`.
   - **Red run:** `n/a (no test gate)` — gates are the four falsifier inputs plus `npx tsc --noEmit`.
   - **Disqualifier:** if reaching a planned state needs anything outside the four variants (conditional branching, retries, scrolling to a virtualised row), **stop and re-specify** — an escape hatch to arbitrary code reopens the rejected "imperative TS callback" alternative and its write risk.
-  - **Consumers:** `RouteConfig` is read only by this copy's `capture.ts` (`P-10`). **Re-run the sweep over the new copy** as this task's own step: `grep -rn "RouteConfig\|routes.config" tooling/` — the result must list only `capture.ts` and `routes.config.json`. `P-10` is `UNVERIFIED` and this task settles it; the outcome goes in the Done criteria.
+  - **Consumers:** **Amended at execute time (2026-09-21) — this task's own sweep refuted the expectation written here.** The line originally read "the result must list only `capture.ts` and `routes.config.json`". The sweep `grep -rn "RouteConfig\|routes.config" tooling/` in fact returns **five** files: `src/capture.ts` (the real consumer, declaration `:159` — **not exported**, so structurally un-importable), **`src/assemble.ts`, which reads the same JSON at `:54` and declares its OWN independent 7-field `RouteConfig` at `:63`**, plus incidental filename mentions in `template/README.md`, `src/annotate.ts`, `src/tokens.ts`. Substance of `P-10` survives — extra JSON keys are ignored by `assemble.ts`'s cast, so adding `steps`/`bounds` needs no lockstep change — but the literal claim was false and `design.md` `P-10` now records the corrected sweep. `P-10` is **settled: verified**.
 - **Definition of done:**
   - [ ] All four falsifier inputs executed; three red with distinct messages, one green.
   - [ ] `P-10` settled and the sweep result recorded in the execution entry.

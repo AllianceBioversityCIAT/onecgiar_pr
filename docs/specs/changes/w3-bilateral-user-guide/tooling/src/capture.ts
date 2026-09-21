@@ -1,7 +1,7 @@
 /**
  * capture.ts — pipeline orchestration (UG-T-7).
  *
- * // @akili-spec changes/user-guide-pdf
+ * // @akili-spec changes/w3-bilateral-user-guide
  *
  * Composes the primitives built by `UG-T-3` through `UG-T-6` into the full
  * capture pass described in `design.md` §2.2:
@@ -10,11 +10,23 @@
  *     -> auth.ts: injectAuth()               (UG-T-4)
  *     -> tokens.ts: extractTokens() + writeTokensJson()   (UG-T-5)
  *     -> for each route in routes.config.json (UG-T-3):
- *          goto -> wait readySelector -> skeleton gate -> annotate.ts (UG-T-6) -> screenshot -> remove overlay
+ *          goto -> steps (BG-T-4) -> wait readySelector -> skeleton gate -> annotate.ts (UG-T-6) -> screenshot -> remove overlay
  *
- * Strictly read-only (`UG-R-2`, §7 Security): only `page.goto()` and
- * read-oriented queries/screenshots are performed. No `.click()`, `.fill()`,
- * or any interaction with create/submit/delete controls.
+ * Read-only is ENFORCED BY THE GUARD, NOT BY THE ABSENCE OF CLICKS (`BG-R-7`, §7 Security,
+ * corrected by `BG-T-4` — this paragraph used to describe the pre-`BG-T-4` copy, where it was
+ * still true; it stopped being true the moment `steps` could `click`/`fill`, so treat this
+ * paragraph, not the old one, as authoritative). This module DOES perform `.click()`, `.fill()`,
+ * and `.press()` — via the declarative `steps` a route config may carry (`BG-T-4`, `design.md`
+ * §5) — and none of that is a violation of read-only, because the safety property does not
+ * live here. It lives in `guards/read-only.ts`: a default-deny request guard installed on the
+ * BROWSER CONTEXT before `injectAuth()` runs (see the `BG-T-3` note below), which inspects every
+ * outgoing request regardless of what triggered it — a real user click, a `steps` click, or
+ * anything else — and aborts the whole run on any non-GET/HEAD request outside the inert
+ * allowlist. That guard is the backstop this pipeline's read-only guarantee actually rests on;
+ * a `steps` sequence is trusted only as far as that guard lets its requests through. No `steps`
+ * sequence may be authored to submit a result, trigger an assessment, or otherwise write — not
+ * because this file refuses to call `.click()`/`.fill()` (it will), but because doing so would
+ * fire a non-GET request that `guards/read-only.ts` aborts, failing the whole run.
  *
  * Fails loudly (`UG-R-2`'s "fail loudly" scenario, §9 Observability): a
  * `readySelector` that never appears, a `clickTarget` that does not resolve
@@ -39,6 +51,23 @@
  * page load of the run. `assertReadOnlyGuardInstalled()` makes that ordering a runtime check
  * rather than a comment: it throws if the guard was not installed on this exact context
  * first. See `guards/read-only.ts`'s header for the full policy (`design.md` §3.3).
+ *
+ * BG-T-4 addition (declarative pre-capture `steps`, `design.md` §5 / §3.2, `BG-R-14`,
+ * `BG-R-6`, `BG-AC-6`, `BG-AC-14`, `BG-DD-2`): a route may carry an optional `steps: Step[]` —
+ * a CLOSED four-variant union (`click`, `waitFor`, `press`, `fill`) run after `goto` and BEFORE
+ * `readySelector` is awaited below, so the readiness gate describes the state the steps
+ * produced, not the landing page. Every selector-bearing step (`click`, `fill`, and `waitFor`
+ * when given a `selector`) is guarded exactly like the existing callout guard above: the RAW
+ * `locator.count()` is read (never `.first()`, `.nth(0)`, or a `:nth-of-type` selector — any of
+ * those would silently turn a 2-match into a false "1 match" and defeat the guard), and 0 or
+ * 2+ matches fails the whole run naming the step's array index, its variant, and the route id.
+ * `click`/`fill` do NOT themselves wait for their selector to appear — that is `waitFor`'s job
+ * (bounded timeout, its own explicit step), so a config that needs the UI to settle after a
+ * `click` inserts a `waitFor` step rather than relying on a hidden implicit wait baked into
+ * every action (`BG-DD-2`'s declarative, reviewable-timing rationale). A route whose `steps`
+ * fail is a failed route — never a silently different screenshot (`design.md` §5, `BG-AC-14`).
+ * `bounds` is also declared on `RouteConfig` by this task (type only) for `BG-T-5` to consume;
+ * this file does not assert it.
  *
  * Attempt-2 rework (Reviewer FAIL on attempt 1, recorded in `execution.md`):
  * `overview`, `reporting-aows`, `results-list`, and `notifications-received`
@@ -80,6 +109,65 @@ interface RouteViewport {
   height: number;
 }
 
+/**
+ * Declarative pre-capture interaction (`BG-T-4`, `design.md` §5). A CLOSED four-variant
+ * union — deliberately not an imperative callback (`BG-DD-2`'s rejected alternative: unbounded,
+ * unreviewable, invites arbitrary interaction including writes). Every selector-bearing variant
+ * (`click`, `fill`, `waitFor` when given `selector`) is guarded to match EXACTLY ONE element at
+ * runtime by `runSteps()` below — that guard is not expressible in the type system, only at
+ * execution time.
+ */
+export type Step = ClickStep | WaitForStep | PressStep | FillStep;
+
+/** `click` — selector must resolve to exactly one element; `label` is optional, for logging only. */
+interface ClickStep {
+  type: 'click';
+  selector: string;
+  label?: string;
+}
+
+/**
+ * `waitFor` — EXACTLY ONE of `selector` or `ms` must be set (asserted at runtime by `runSteps()`;
+ * TypeScript's structural typing cannot express "exactly one of" without splitting this into two
+ * variants, which would defeat the "four-variant union" shape `design.md` §5 specifies). Given
+ * `selector`, waits (bounded) for it to appear, then applies the same unique-match guard as
+ * `click`/`fill`. Given `ms`, waits that many milliseconds — no selector, no guard.
+ */
+interface WaitForStep {
+  type: 'waitFor';
+  selector?: string;
+  ms?: number;
+}
+
+/** `press` — a keyboard key (e.g. `'Enter'`, `'Escape'`); no selector, so no unique-match guard. */
+interface PressStep {
+  type: 'press';
+  key: string;
+}
+
+/**
+ * `fill` — selector must resolve to exactly one element. `value` is literal content authored in
+ * the route config — NEVER a credential (`design.md` §5, `.cursorrules`).
+ */
+interface FillStep {
+  type: 'fill';
+  selector: string;
+  value: string;
+}
+
+/**
+ * Frame-dimension sanity bounds (`BG-DD-6`). Declared here by `BG-T-4` on `RouteConfig`; the
+ * assertion that reads a produced PNG's real pixel dimensions and checks them against this shape
+ * is `BG-T-5`'s (`guards/frame-bounds.ts`) — this file declares the type and the optional field
+ * only, and does not consume it.
+ */
+interface RouteBounds {
+  minW: number;
+  maxW: number;
+  minH: number;
+  maxH: number;
+}
+
 interface RouteConfig {
   id: string;
   url: string;
@@ -102,6 +190,18 @@ interface RouteConfig {
    * so the route renders exactly as it did before this field existed (ring only, no chip).
    */
   annotations?: CalloutSpec[];
+  /**
+   * Declarative pre-capture interactions (`BG-T-4`, `design.md` §5). Runs after `goto` and
+   * BEFORE `readySelector` is awaited (`main()`'s loop below, `design.md` §3.2), so the
+   * readiness gate describes the state these steps produced rather than the landing page.
+   * Optional — omit for routes reachable, and fully rendered, by URL alone.
+   */
+  steps?: Step[];
+  /**
+   * Frame-dimension sanity bounds (`BG-DD-6`). Declared by `BG-T-4`; consumed by `BG-T-5`
+   * (`guards/frame-bounds.ts`), not by this file.
+   */
+  bounds?: RouteBounds;
 }
 
 const READY_SELECTOR_TIMEOUT_MS = 25_000;
@@ -127,8 +227,11 @@ const SKELETON_SELECTOR = '.pr-skeleton, [data-testid$="-skeleton"]';
 const SKELETON_GATE_TIMEOUT_MS = 10_000;
 const SKELETON_GATE_POLL_MS = 200;
 
+/** Bounded wait for a `waitFor` step given `selector` (`BG-T-4`). Named the step + route on timeout. */
+const STEP_WAIT_FOR_TIMEOUT_MS = 15_000;
+
 /** Thrown (with the route id + selector always named) when a route fails to load or annotate. */
-class RouteCaptureError extends Error {
+export class RouteCaptureError extends Error {
   constructor(routeId: string, detail: string) {
     super(`[capture] ${routeId}: ${detail}`);
     this.name = 'RouteCaptureError';
@@ -208,6 +311,112 @@ async function waitForNoVisibleSkeletons(page: Page, route: RouteConfig, clipToV
   }
 }
 
+/**
+ * Fail-loud unique-selector guard shared by every selector-bearing `Step` variant (`BG-T-4`,
+ * `design.md` §5, `BG-R-6`, `BG-AC-6`, `BG-AC-14`). Reads the RAW `locator.count()` — never
+ * `.first()`, `.nth(0)`, or a `:nth-of-type` selector anywhere in this resolution path, because
+ * any of those would silently turn a 2-match into a false "1 match" and make the guard inert
+ * (unable to be reddened by a genuine 2-match — exactly the falsifier `BG-T-4`'s brief calls out).
+ * Fails the whole run, naming `label` (which already carries the step's array index and variant,
+ * see `runSteps()`), the route id, the selector, and the actual count found.
+ */
+async function assertUniqueSelector(
+  page: Page,
+  selector: string,
+  routeId: string,
+  label: string,
+): Promise<void> {
+  const count = await page.locator(selector).count();
+  if (count !== 1) {
+    throw new RouteCaptureError(
+      routeId,
+      `${label}: selector "${selector}" resolved to ${count} element(s) (expected exactly 1)`,
+    );
+  }
+}
+
+/**
+ * Executes a route's declarative `steps` (`BG-T-4`, `design.md` §5 / §3.2, `BG-R-14`, `BG-R-6`,
+ * `BG-AC-6`, `BG-AC-14`, `BG-DD-2`). Called by `main()`'s per-route loop strictly AFTER `goto` and
+ * BEFORE `readySelector` is awaited — the readiness gate must describe the state these steps
+ * produced, not the landing page (`design.md` §3.2).
+ *
+ * `click` and `fill` do NOT wait for their selector to appear before reading its count — that is
+ * deliberate: waiting is `waitFor`'s job, as its own explicit, reviewable step. A route that needs
+ * the UI to settle after a `click` (e.g. a drawer animating open, a field revealing itself) must
+ * author an explicit `waitFor` step for it; `click`/`fill` silently retrying/waiting on the
+ * caller's behalf would reintroduce exactly the hidden-magic-wait behavior `BG-DD-2` rejected in
+ * favor of a declarative, diffable sequence.
+ *
+ * A route whose steps fail is a failed route — never a silently different screenshot: every
+ * branch below throws `RouteCaptureError`, which propagates out of `main()`'s per-route iteration
+ * exactly like every other capture failure (readySelector timeout, callout guard, skeleton gate).
+ */
+export async function runSteps(page: Page, routeId: string, steps: Step[]): Promise<void> {
+  for (let index = 0; index < steps.length; index += 1) {
+    const step = steps[index];
+    const label = `step[${index}] (${step.type})`;
+
+    switch (step.type) {
+      case 'click': {
+        await assertUniqueSelector(page, step.selector, routeId, label);
+        await page.locator(step.selector).click();
+        break;
+      }
+
+      case 'fill': {
+        await assertUniqueSelector(page, step.selector, routeId, label);
+        await page.locator(step.selector).fill(step.value);
+        break;
+      }
+
+      case 'press': {
+        await page.keyboard.press(step.key);
+        break;
+      }
+
+      case 'waitFor': {
+        const hasSelector = typeof step.selector === 'string' && step.selector.length > 0;
+        const hasMs = typeof step.ms === 'number';
+        if (hasSelector === hasMs) {
+          // Neither given, or both given — "selector or ms" (design.md §5) means exactly one.
+          throw new RouteCaptureError(
+            routeId,
+            `${label}: waitFor must specify exactly one of "selector" or "ms" (got ` +
+              `selector=${JSON.stringify(step.selector)}, ms=${JSON.stringify(step.ms)})`,
+          );
+        }
+        if (hasMs) {
+          await page.waitForTimeout(step.ms as number);
+          break;
+        }
+        const selector = step.selector as string;
+        try {
+          await page.waitForSelector(selector, { timeout: STEP_WAIT_FOR_TIMEOUT_MS });
+        } catch {
+          throw new RouteCaptureError(
+            routeId,
+            `${label}: selector "${selector}" did not appear within ${STEP_WAIT_FOR_TIMEOUT_MS}ms`,
+          );
+        }
+        // The selector appeared — now apply the same exactly-one-match guard as click/fill,
+        // since a `waitFor` step "given a selector" is selector-bearing per BG-T-4's brief.
+        await assertUniqueSelector(page, selector, routeId, label);
+        break;
+      }
+
+      default: {
+        // Exhaustiveness check: if a fifth Step variant is ever added without updating this
+        // switch, this line fails to compile — `BG-T-4`'s brief is explicit that Step is a
+        // CLOSED four-variant union, so a compile-time trip wire here is in scope, not scope
+        // creep.
+        const exhaustive: never = step;
+        throw new RouteCaptureError(routeId, `${label}: unknown step variant ${JSON.stringify(exhaustive)}`);
+      }
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const baseUrl = process.env.CLIENT_BASE_URL;
   const token = process.env.TEST_TOKEN;
@@ -254,6 +463,29 @@ async function main(): Promise<void> {
 
       console.log(`[capture] ${route.id}: navigating… (viewport ${viewport.width}x${viewport.height}, fullPage=${fullPage})`);
       await page.goto(new URL(route.url, baseUrl).toString());
+
+      // BG-T-4: declarative pre-capture steps run AFTER goto and BEFORE readySelector is
+      // awaited — design.md §3.2 is explicit that the readiness gate must describe the state
+      // the steps produced, not the landing page. A failed step fails the whole route (the
+      // RouteCaptureError it throws propagates out of this loop exactly like every other
+      // per-route failure below).
+      if (route.steps !== undefined) {
+        // BG-R-14's fail-loud contract, per Reviewer note: a malformed `"steps"` value (e.g.
+        // `{}` from a JSON authoring mistake) must fail the run naming the route, NOT be
+        // silently treated as "no steps" — the previous `route.steps && route.steps.length > 0`
+        // check did exactly that, because `{}.length` is `undefined`, so `undefined > 0` is
+        // `false` and the whole pre-capture-interaction stage was skipped without a word.
+        if (!Array.isArray(route.steps) || route.steps.length === 0) {
+          throw new RouteCaptureError(
+            route.id,
+            `route.steps is present but is not a non-empty array (got ${JSON.stringify(route.steps)}) — ` +
+              'a malformed "steps" value must fail loudly, not be silently treated as "no steps". ' +
+              'Omit "steps" entirely for a route with no pre-capture interactions.',
+          );
+        }
+        console.log(`[capture] ${route.id}: running ${route.steps.length} pre-capture step(s)…`);
+        await runSteps(page, route.id, route.steps);
+      }
 
       try {
         await page.waitForSelector(route.readySelector, { timeout: READY_SELECTOR_TIMEOUT_MS });
@@ -339,7 +571,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : err);
+    process.exitCode = 1;
+  });
+}
