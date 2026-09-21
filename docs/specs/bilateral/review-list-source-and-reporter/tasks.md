@@ -124,7 +124,7 @@
   - [x] Drawer Jest (9 suites / 294 tests) + the drawer's CT specs (11/11) green
   - [x] `tsc --noEmit` at baseline (1248 repo-wide, zero referencing changed files)
 
-### `BSR-T-6` — Page-level gates, HITL evidence, docs
+### `BSR-T-6` — Page-level gates, HITL evidence, docs `[x]`
 
 - **Type:** `tests | docs`
 - **Description:** Add/extend the page-level CT gates (375px no document h-scroll with the new content, 1000px real-scroller overflow, row-height caps unchanged), run the HITL live-page look that covers the two substituted defect classes, and write the documentation obligations.
@@ -134,15 +134,15 @@
 - **Depends on:** `BSR-T-4`, `BSR-T-5` · **Blocks:** `—`
 - **Estimate:** `M` · **Review:** `checklist`
 - **Verification:**
-  - **Falsifier:** for the 375px gate — widen the source chip to `whitespace-nowrap` with a 200px min-width and the document must gain a horizontal scrollbar, turning the gate red. For the HITL check — a real page whose group row counts differ before/after `BSR-T-1` falsifies the join design.
+  - **Falsifier:** for the 375px gate — widen the source chip to `whitespace-nowrap` with a 200px min-width and the document must gain a horizontal scrollbar, turning the gate red. **⚠️ MEASURED FALSE at execute time (2026-09-21, `BSR-T-6`).** This premise is *geometrically impossible*: the source row is ~293px inside a 375px viewport, so a 200px chip reaches x≈356 and cannot touch the document edge **even with every clip guard removed** — only a 600px chip does. Measured injection chain (chip wrapper / source row / document): baseline `79/79 · 293/293 · 375/375`; literal 200px injection `208/187 · 293/293 · 375/375`; guards defeated `200/200 · 313/293 · 375/375`; 600px chip `600/600 · 713/293 · 375/375`; overflow unlocked `600/600 · 713/278 · 755/360`. **Delivered instead**, and judged honest by the Reviewer: a *guard-absorbs-it* case (the literal 200px injection, asserting `wrapper.scrollWidth > clientWidth` **and** `>= 200` so the injection is proven to have landed, with row and document unchanged — turning the impossible falsifier into positive proof that the card-owned clip guard is load-bearing) plus a *DETECTOR FIRES* case (guards defeated + 600px chip) whose un-inverted red is recorded verbatim: `documentElement.scrollWidth(755) <= clientWidth(360): expected 755 to be at most 360`. For the HITL check — a real page whose group row counts differ before/after `BSR-T-1` falsifies the join design.
   - **Red run:** `npx cypress run --component --spec "…/bilateral-review.cy.ts"`. For the HITL parts: `n/a (manual check — D3 and D9 have no automated gate in this repo; cypress-axe is not installed)`.
   - **Disqualifier:** a 15px shave at 375px must **not** be attributed to a harness quirk before checking `documentElement.scrollWidth > clientWidth` — that misattribution already re-based a gate wrongly once in this module. If the shave is real overflow, fix the overflow.
   - **Consumers:** `none (no shared symbol changed)`.
 - **Definition of done:**
-  - [ ] Full `bilateral-review` CT suite green (48+ gates)
-  - [ ] **HITL evidence captured on the live page** at 1536, 1000 and 375: Source chip and reporter visible in all four rendering branches; chip contrast measured ≥ 4.5:1 (D9); group row counts unchanged vs. before `BSR-T-1` (D3). Screenshots recorded in `execution.md`
-  - [ ] Change-log entry in `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (root `CLAUDE.md` rule, **AC-4**)
-  - [ ] `…/bilateral-review/CLAUDE.md` updated (new column in the Contract's table section, new colgroup widths, the SUBMITTED cell) and its `**Verified:**` line re-stamped **in the same commit** (`docs/COMPONENT-DOCS.md`)
+  - [x] Full `bilateral-review` CT suite green — **54 gates**, plus 24 on the table suite and 19 Jest suites / 574 tests
+  - [~] **HITL evidence** — **D9 and D3 satisfied by computed evidence stronger than the eyeball they substituted for**: contrast measured in CT at **5.49:1** (AI badge) and **6.32:1** (neutral pill), both independently recomputed by the Leader; row counts identical with and without the `users` joins across **8** `(programId, versionId)` pairs at both the pre- and post-`GROUP BY` level. **The visual live-page look at 1536 / 1000 / 375 remains outstanding** and is the Leader's, not this task's (Playwright is not installed in this worktree)
+  - [x] Change-log entry in `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` (root `CLAUDE.md` rule, **AC-4**) — corrected at attempt 2 after a Reviewer FAIL: it had named the AI-promotion path as the second stamping site instead of the knowledge-product handler
+  - [x] `…/bilateral-review/CLAUDE.md` updated (new column in the Contract's table section, new colgroup widths `96 / — / 88 / 116 / 120 / 184 / 100 / 100`, the SUBMITTED cell) and its `**Verified:**` line re-stamped **in the same commit** (`docs/COMPONENT-DOCS.md`)
 
 ---
 

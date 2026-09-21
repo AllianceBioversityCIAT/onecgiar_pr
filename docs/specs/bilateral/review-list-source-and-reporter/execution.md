@@ -576,3 +576,114 @@ Per *Advisory Never Becomes A Task*, none of these mints a task or widens one.
 **Final verification result:** green on every gate — 294 Jest, 11/11 drawer CT, `tsc` at baseline, `npm run build`, D7 at 7.
 
 **`Not Done / Assumptions` (Implementer, attempt 3):** advisory (a) implemented as the corrected rather than literal version, with reasoning (accepted, *Decisions* 2); `npm run build` not run as no template was touched (correct — the brief said so). **No scope owed.**
+
+---
+
+## Runtime event — `BSR-T-6` Implementer killed by a provider session limit (2026-09-21, 15:0x −05)
+
+**Classification: runtime event, not a work FAIL.** Per `/akili-execute` Step 2's *Runtime-failure fallback* and its accounting rule, **a provider-limit death consumes no rework attempt.** `BSR-T-6` remains on attempt 1.
+
+**The event.** The Implementer (`sonnet`, T2) was terminated mid-edit: `HTTP 429, rate_limit — "You've hit your session limit · resets 4:40pm (America/Bogota)", model: claude-sonnet-5`. Its final transcript line shows it mid-way through a TypeScript fix (`AUTWindow` → `Window`) in the CT spec.
+
+**Ladder climbed — Implementer, entry rung 1 (tree probe), recovered at rung 4.**
+
+| Rung | Condition | What happened |
+|---|---|---|
+| **1 — probe the tree for partial edits** (mandatory first step for a provider-limit death) | — | **Done.** One modified file: `bilateral-review.cy.ts`, **+250 / −7**. Leader verified braces/parens/brackets balanced and the mid-edit `AUTWindow` fix already applied, so the file is not truncated. Neither documentation deliverable had been started. |
+| 2 — retry-after-N | N = 3 min | **Skipped as futile.** The limit resets at **16:40**; the probe ran at **15:02**, i.e. **98 minutes** away. A 3-minute retry cannot clear a session limit with that horizon. |
+| 3 — resume-by-message (worker context survives) | Condition does **not** hold | **Skipped.** Messaging the dead worker re-invokes the *same rate-limited model*, reproducing the identical 429. Per the ladder, *"a rung whose condition does not hold … is skipped."* |
+| **4 — fresh worker audits the partial diff and continues** | — | **Taken.** Re-dispatched with the partial diff as the declared starting state and an explicit instruction to **verify rather than trust** the inherited 250 lines, since nothing had been run since the death. |
+
+**Model rotation — the recovery lever.** The limit is on `sonnet`, the registry's T2 Implementer model. The continuation Implementer runs on **`fable`**, deliberately leaving `opus` free so the **Reviewer stays at its registry T3 tier**. Rotating the *Implementer* rather than the Reviewer keeps the auditor at full strength: had `opus` been spent on implementation, the re-review would have fallen to a below-tier model and produced a `degraded-pair` record. Author ≠ auditor holds (`fable` ≠ `opus`).
+
+**What the dead worker had completed** (inherited, pending verification by its successor): the 1000px real-`.overflow-x-auto`-scroller gate (`BSR-AC-13`); an enriched-fixture sanity check asserting a reporter on all three SUBMITTED cells and the AI badge on its assigned SOURCE cell; a **computed** D9 contrast block (*"computed, not eyeballed"*); and the 375px `BSR-AC-11` stress with an AI badge card and an `EXTERNAL`+`STAR` pill card, plus a recorded-and-reverted red probe.
+
+**Still outstanding at the hand-off:** D3's SQL row-count re-verification across multiple `(programId, versionId)` pairs, and **both** documentation deliverables — the `bilateral-result-summaries.en.md` change-log entry (**`AC-4`**, mandatory per the root `CLAUDE.md`) and the `bilateral-review/CLAUDE.md` update with its `**Verified:**` re-stamp.
+
+**No work was lost and nothing was discarded.** The `git stash` stack was not touched at any point (it is shared across worktrees and sessions).
+
+---
+
+### `BSR-T-6` — Page-level gates, HITL evidence, docs
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (attempt 2) |
+| Date | 2026-09-21 |
+| Implementer attempts | **2** (the provider-limit death consumed none — see the *Runtime event* section above) |
+| Implementer / Reviewer models | attempt 1: `sonnet` (died) → **`fable`** (continuation) · attempt 2: `fable`. Reviewer: `opus` (T3) throughout — **author ≠ auditor holds**, and the rotation was chosen precisely to keep the auditor at its registry tier |
+| Effort | `high` |
+| Skills assigned | `angular-developer`, `cognitive-doc-design` |
+
+**Requirements covered:** `BSR-AC-10`, `BSR-AC-11`, `BSR-AC-13`, defect classes **D3** and **D9**.
+
+#### Attempt 1 — Reviewer `FAIL` (1 issue, in the contract document)
+
+- **runtime events:** `provider-limit death ×1 → rung 4` (fresh worker audits the partial diff and continues). Full ladder in the *Runtime event* section above.
+- **The inherited work was not clean, and the successor was told to verify rather than trust it — which is what caught this.** The dead worker's 250 lines ran **51/53**, with **two of its own five new gates red**:
+  - **D9 contrast was red at `1.46:1`** — `rgb(43,40,56)` on `rgba(0,0,0,0)`. The testid `bilateral-review-source-chip-ai` sits on the `<app-ai-provenance-notice>` **`display: contents`** host, which paints nothing, so the ratio was computed against **transparent black**. Retargeted to the painted inner `[data-testid="ai-provenance-badge"]`, **and** the helper hardened to assert `background alpha === 255` before computing, with a message naming the trap — so a transparent wrapper can never yield a fake ratio again.
+  - The 375px RED PROBE was red (`expected 375 to be above 375`) — see the falsifier finding below.
+
+  **This is the third vacuous gate the `display: contents` host produced in this spec** (after `BSR-T-4`'s chip-fit gate measuring `offsetHeight` on the same host, always 0). Same root cause, three surfaces, each caught by a different mechanism. Recorded as a pattern, not an incident.
+
+- **`BSR-AC-10` — row-height caps unchanged, and nothing grew by a fraction of a pixel.** Enriched fixture (all three rows given a `reporter_name`; `rh1` = `AI`, `rh2` = `MANUAL`, `rh3` = `EXTERNAL`+`STAR`), measured at 1536:
+
+  | Row | Shape | Measured | Cap | Pre-spec |
+  |---|---|---|---|---|
+  | BR-101 | two-line + caption, AI badge 20.5px, reporter | **66.5** | 68 | 66.5 |
+  | BR-102 | one-line, no badge, MANUAL pill, reporter | **44.88** | 46 | 44.875 |
+  | BR-103 | one-line + caption, `Via API · STAR`, reporter | **49.5** | 50 | 49.5 |
+
+  Cap literals confirmed unchanged in the file. **`BSR-DD-3`'s slack arithmetic is thereby confirmed empirically**, not merely argued — the reporter line and the AI badge sit entirely inside it.
+
+- **`BSR-AC-11` / the falsifier finding — the task's own falsifier premise is geometrically impossible, and this was measured rather than faked.** A 200px chip at 375px reaches x≈356 and cannot touch the document edge **even with every guard removed**; only a 600px chip does. The full injection chain is recorded in `tasks.md` beside the (now-annotated) falsifier. Delivered instead as a **guard-absorbs-it** case — the literal 200px injection, asserting `wrapper.scrollWidth > clientWidth` **and** `>= 200` so the injection is proven to have landed while row and document stay unchanged — plus a **DETECTOR FIRES** case with the guards defeated and a 600px chip, whose un-inverted red reads `documentElement.scrollWidth(755) <= clientWidth(360)`. **The Reviewer judged this honest, not a gate redefined to pass**, on the grounds that the "guard absorbs it" case proves the injection landed (so it cannot silently no-op) and converts the impossible falsifier into positive proof that the card-owned `min-w-0 truncate max-w-full` span is load-bearing.
+
+- **`BSR-AC-13` — the 1000px real-scroller gate** iterates the group cards, measures `card.querySelector('.overflow-x-auto')` and its nested `table`, and skips collapsed cards **but counts them** (`expect(measured).to.be.greaterThan(0)`), so it cannot pass vacuously. The `overflow-hidden` `<section>` is only the iteration root, never the measured element — the tautology that produced a Reviewer FAIL earlier in this module is structurally excluded.
+
+- **D9 — converted from a manual pre-audit to a computed CT assertion.** `requirements.md` §8 had substituted a HITL eyeball because `cypress-axe` is not installed; contrast needs no axe. Read via `getComputedStyle`, painted on a 1×1 canvas, RGBA read back, WCAG relative-luminance ratio computed: **AI badge 5.49:1** (`rgb(29,78,216)` on `rgb(219,234,254)`), **neutral pill 6.32:1** (`rgb(93,88,114)` on `rgb(247,247,249)`). **Both recomputed independently by the Leader from the reported RGB values — exact matches**, both clearing 4.5:1. The bogus `1.46:1` also reproduces exactly from transparent black, confirming the diagnosis.
+
+- **D3 — converted from a live-page eyeball to SQL evidence across 8 `(programId, versionId)` pairs**, comparing the current query against the same query with both `users` joins and `reporter_name` removed, at **both** the post-`GROUP BY` and pre-`GROUP BY` level (the latter being the only level at which multiplication *can* be detected, since `GROUP BY r.id` is structurally invariant):
+
+  `SP06/34` 215/215 (pre 284/284) · `SP01/34` 146/146 (203/203) · `SP02/34` 141/141 (159/159) · `SP01/36` 133/133 (158/158) · `SP03/34` 127/127 (153/153) · `SP09/34` 82/82 (94/94) · `SP04/34` 81/81 (90/90) · `SP06/36` 58/58 (86/86).
+
+  Zero multiplication at either level. **The Reviewer judged this *superior* to the spec's substituted live row count.** `BSR-T-1` had sampled a single pair; this is population-level evidence.
+
+- **Reviewer verdict: `FAIL`** — the `AC-4` change-log entry named the second stamping path as *"the AI-draft promotion that lands through the same service"*. The two real sites are `bilateral.service.ts:4180` and **`knowledge-product.handler.ts:67`**; the AI promotion at `bilateral-ai.service.ts:952` writes `AI` and is untouched. **Violated `BSR-R-3`** and, more seriously, the root `CLAUDE.md` rule that makes this file the authoritative payload contract: a producer reading it would have concluded AI-promoted results are stamped `EXTERNAL` and would expect `Via API` instead of the AI badge. Leader-verified at source before dispatching the fix.
+
+#### Attempt 2 — Reviewer `PASS`
+
+- **runtime events:** none. Text-only, one clause, one file. All CT/Jest work from attempt 1 frozen and untouched.
+- Clause (b) rewritten to name both real sites, explain *why* the KP handler needs its own stamp (it builds its own header and is returned before the default save ever runs), and state explicitly that **the AI path keeps `AI` and the centre manual-create path keeps `MANUAL`** per `BSR-R-3` — with the consequence spelled out in producer terms: *"an AI-promoted result keeps its AI badge in the review list rather than reading `Via API`."*
+- **Reviewer verdict: `PASS`**, every claim re-derived at source: the early-return mechanism at `bilateral.service.ts:4134-4159` (the default `save` at `:4162` is never reached for a KP payload); the `UNKNOWN` fall-through via `result.entity.ts:515-522` (`varchar(20) NOT NULL default UNKNOWN`); `AI` at `bilateral-ai.service.ts:952` and `MANUAL` at `bilateral-center.service.ts:394`, both untouched; and — closing the loop — that the asserted AI-badge consequence **is the client's actual behaviour**, since `resolve-bilateral-source.ts:60` returns `{kind:'ai'}` for `AI` regardless of platform code. Register judged consistent with the row's neighbours, which already use the same "mapped in two places, not one" construction for this same pair of sites.
+
+#### `ADVISORY` findings (recorded, never gating)
+
+- **RELIABILITY — an imprecision in the change-log row, carried over verbatim from attempt 1 and explicitly scoped out of rework by the Reviewer.** *"Rows ingested before this change keep `UNKNOWN`"* is over-broad: migration `1784921547596` backfilled `EXTERNAL` onto rows with `source='API'`, so bilateral rows predating that migration already read `EXTERNAL`; only the window **between** the migration and this change reads `UNKNOWN` — exactly how `design.md` `BSR-OQ-2` scopes it. The imprecision **errs conservatively** (a consumer expects a weaker signal than it will find) and cannot cause mis-handling. **Not reworked**, per *Advisory Never Becomes A Task* and the Reviewer's own instruction. The exact replacement, should this row ever be edited again: *"Rows ingested between migration `1784921547596` and this change keep `UNKNOWN`."*
+- **READABILITY — the module `CLAUDE.md` is now 403 lines against `docs/COMPONENT-DOCS.md`'s 120-line cap** (358 before this task). Pre-existing overflow, disclosed by the Implementer; a trim is a separate ticket per that document's own §4.
+- **ACCURACY — `design.md` `BSR-DD-3`'s slack arithmetic was wrong and has been corrected by the Leader.** It computed the two date lines as `15 + 13.75 ≈ 28.75px → 3.1px of slack`, using a computed 1.25 line-height for the second line instead of the **pinned** `leading-[13px]`, which sets the line box to exactly 13px. Correct: `15 + 13 = 28px → 3.875px`. The error was **conservative** — real slack is larger than claimed, so the decision was safer than its own arithmetic — and no gate is affected. Corrected at DD-3 and swept through the Leader's own earlier supersession note, which had repeated the stale figures.
+
+#### Evidence re-run (non-author, Step 2.3 — never waived)
+
+| Field | Value |
+|---|---|
+| Mode | Leader-inline |
+| Page CT | `npx cypress run --component --spec "…/bilateral-review.cy.ts"` → **54/54, All specs passed** — **`VERIFIED`** |
+| Table CT | `…/bilateral-review-table.cy.ts` → **24/24** — **`VERIFIED`** (nothing broken) |
+| Jest | `npx jest --testPathPattern="bilateral-review"` → **19 suites / 574 tests passed** — **`VERIFIED`** |
+| D9 | Both WCAG ratios recomputed independently by the Leader from the reported RGB: **5.49:1** and **6.32:1**, exact matches — **`VERIFIED`** |
+| Structural | Contrast helper asserts `alpha === 255`; AI case targets the painted `ai-provenance-badge`; 1000px gate measures `.overflow-x-auto` — **`VERIFIED` by reading the file** |
+| D7 | **7**, unchanged |
+| Code untouched by attempt 2 | `grep "ResultCreationMethod.EXTERNAL"` → exactly the two sites — **`VERIFIED`** |
+
+**Decisions made:**
+
+1. **`tasks.md`'s `BSR-T-6` falsifier is annotated as measured-false**, with the full injection chain and the substitute recorded inline. An impossible falsifier left unmarked would mislead the next reader into thinking the gate was never properly built.
+2. **The tsc "zero non-`.cy.ts` errors" framing in the Leader's brief was wrong and the Implementer corrected it**: there are **185** pre-existing non-`.cy.ts` errors on this branch, **0** in any touched file. It reported the number rather than claiming zero. Recorded as a Leader brief defect.
+3. **`design.md` DD-3 arithmetic corrected** (advisory above).
+4. **The visual live-page pass remains outstanding** and is the Leader's, not this task's — Playwright is not installed in this worktree. D9 and D3, the two defect classes the DoD's HITL line exists to cover, are now carried by **computed** evidence that is stronger than the eyeball they substituted for.
+
+**Issues encountered:** one provider-limit death (recovered at ladder rung 4, no attempt consumed), two red gates inherited from the dead worker, one impossible falsifier premise, and one Reviewer FAIL on the contract document. All resolved.
+
+**Final verification result:** green on every gate — 54 page CT, 24 table CT, 19 Jest suites / 574 tests, D7 at 7, row-height caps unchanged, both contrast ratios above threshold, zero row multiplication across 8 program/phase pairs.
+
+**`Not Done / Assumptions`:** the falsifier-premise substitution (accepted, judged honest by the Reviewer); the tsc count correction (accepted, *Decisions* 2); the pre-existing `CLAUDE.md` length overflow (disclosed, separate ticket). **No scope owed.**
