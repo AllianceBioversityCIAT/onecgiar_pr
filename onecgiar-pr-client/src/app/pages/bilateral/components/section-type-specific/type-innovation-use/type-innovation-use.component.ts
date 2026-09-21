@@ -586,7 +586,18 @@ export class TypeInnovationUseComponent implements OnInit {
     );
   }
 
-  /** P2-3428 / P2-3331 — four bilateral Innovation Use MDS, including W3/bilateral investment. */
+  /**
+   * P2-3428 / P2-3331 — the bilateral Innovation Use MDS.
+   *
+   * P2-3785 AC1 (Nicoleta Trifa, #INC-163204 point 4a, 21-Sep-2026): **three** items now, not four —
+   * "How would you assess the current use level of the innovation?" was withdrawn from the standard.
+   * Dropping it from this list is what actually frees the section: `overallStatus` is computed from the
+   * published items alone (`bilateral-mds-tracker.service.ts`), and the rail's Submit reads that. Leaving
+   * it published with `optional: true` would have kept it on the aside's checklist without counting, but
+   * that flag exists for fields the reporter is still ASKED for; this one stops being asked altogether.
+   * The matching server-side gate was removed in the same change — a client-only relaxation would have
+   * turned a blocked section into a section that passes locally and is refused on Submit.
+   */
   updateMds(): void {
     const tbd = this.body.innov_use_to_be_determined;
     const tbdSet = tbd !== null && tbd !== undefined;
@@ -602,11 +613,6 @@ export class TypeInnovationUseComponent implements OnInit {
         key: 'use-measures',
         label: 'Other quantitative measures of innovation use',
         filled: this.hasCompleteMeasure()
-      },
-      {
-        key: 'use-level',
-        label: 'How would you assess the current use level of the innovation?',
-        filled: this.body.innovation_use_level_id != null
       },
       {
         key: 'use-investment',
