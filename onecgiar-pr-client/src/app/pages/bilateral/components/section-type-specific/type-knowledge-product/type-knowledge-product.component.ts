@@ -42,6 +42,14 @@ export class TypeKnowledgeProductComponent implements OnInit {
   private readonly customizedAlertsFeSE = inject(CustomizedAlertsFeService);
   readonly rolesSE = inject(RolesService);
 
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isEditableByCenterUser()` has answered this since P2-3520 and every other section reads it;
+   * the type-specific tabs never did, so a submitted result still took input here.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   /** Repository metadata, already mapped for display. Never edited, never saved. */
   body = new KnowledgeProductBodyMapped();
   fairData: FairDimension[] = [];

@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 import { AiReviewComponent } from './ai-review.component';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { DacScores } from '../../../../../../shared/services/api/ai-review.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { PrInputComponent } from '../../../../../../custom-fields/pr-input/pr-input.component';
 
 describe('AiReviewComponent', () => {
   let component: AiReviewComponent;
@@ -150,63 +152,62 @@ describe('AiReviewComponent', () => {
     });
   });
 
-  describe('onValidateAll', () => {
-    it('should expose pending changes only for cards with unsaved edits', () => {
-      component.aiReviewSE.dacScores.set([buildDacScore({ canSave: true }), buildDacScore({ field_name: 'gender' })]);
-
-      expect(component.hasPendingChanges).toBe(true);
-      expect(component.pendingDacScores).toHaveLength(1);
+  describe('Fields section — unsaved-proposal reminder', () => {
+    const buildField = (overrides: Partial<any> = {}) => ({
+      field_name: 'title',
+      field_name_label: 'Title',
+      original_text: 'Current title',
+      proposed_text: 'Proposed title',
+      canSave: false,
+      ...overrides
     });
 
-    it('should do nothing when there is nothing pending', async () => {
-      const saveSpy = jest.spyOn(component.aiReviewSE, 'PATCH_saveDacScore');
-      component.aiReviewSE.dacScores.set([buildDacScore()]);
-
-      await component.onValidateAll();
-
-      expect(saveSpy).not.toHaveBeenCalled();
-    });
-
-    it('should persist every pending card and skip the ones already saved', async () => {
-      const saveSpy = jest.spyOn(component.aiReviewSE, 'PATCH_saveDacScore').mockResolvedValue({} as any);
-      component.aiReviewSE.dacScores.set([
-        buildDacScore({ field_name: 'climate', impact_area_id: [10], canSave: true }),
-        buildDacScore({ field_name: 'gender', impact_area_id: [20], canSave: true }),
-        buildDacScore({ field_name: 'poverty', impact_area_id: [30], canSave: false })
+    it('should show the reminder only for a field that has an unsaved applied proposal (AIR-AC-3/AIR-AC-4)', () => {
+      component.aiReviewSE.showAiReview.set(true);
+      // Two fields side by side, differing only in `canSave` — proves the `@if` actually reacts to
+      // the flag (one renders the reminder, the other doesn't) rather than always/never rendering.
+      component.aiReviewSE.currnetFieldsList.set([
+        buildField({ field_name: 'title', canSave: true }),
+        buildField({ field_name: 'innovation_short_title', canSave: false })
       ]);
 
-      await component.onValidateAll();
+      fixture.detectChanges();
 
-      expect(saveSpy).toHaveBeenCalledTimes(2);
-      expect(component.hasPendingChanges).toBe(false);
-      expect(alertSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'success' }));
+      expect(fixture.nativeElement.querySelectorAll('.unsaved-proposal-reminder').length).toBe(1);
     });
 
-    it('should report the incomplete cards and leave them pending', async () => {
-      const saveSpy = jest.spyOn(component.aiReviewSE, 'PATCH_saveDacScore').mockResolvedValue({} as any);
-      const incomplete = buildDacScore({ field_name: 'gender', impact_area_id: [], canSave: true });
-      component.aiReviewSE.dacScores.set([buildDacScore({ impact_area_id: [10], canSave: true }), incomplete]);
+    it('should re-enable Save changes when the field is edited directly after a save (AIR-AC-5)', () => {
+      component.aiReviewSE.showAiReview.set(true);
+      component.aiReviewSE.currnetFieldsList.set([buildField({ canSave: false })]);
 
-      await component.onValidateAll();
+      fixture.detectChanges();
 
-      expect(saveSpy).toHaveBeenCalledTimes(1);
-      expect(incomplete.canSave).toBe(true);
-      expect(alertSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error', title: 'Component required' }));
+      expect(fixture.nativeElement.querySelector('.unsaved-proposal-reminder')).toBeNull();
+
+      const prInput = fixture.debugElement.query(By.directive(PrInputComponent)).componentInstance as PrInputComponent;
+      prInput.value = 'Edited directly';
+      fixture.detectChanges();
+
+      expect(component.aiReviewSE.currnetFieldsList()[0].canSave).toBe(true);
+      expect(fixture.nativeElement.querySelector('.unsaved-proposal-reminder')).not.toBeNull();
     });
+  });
 
-    it('should keep a failing card pending and report it', async () => {
-      jest.spyOn(console, 'error').mockImplementation(() => undefined);
-      const failing = buildDacScore({ field_name: 'gender', impact_area_id: [20], canSave: true });
-      jest
-        .spyOn(component.aiReviewSE, 'PATCH_saveDacScore')
-        .mockResolvedValueOnce({} as any)
-        .mockRejectedValueOnce(new Error('boom'));
-      component.aiReviewSE.dacScores.set([buildDacScore({ impact_area_id: [10], canSave: true }), failing]);
+  describe('Impact Areas section — bulk Validate control removed', () => {
+    it('should render the Impact Areas section and its per-card Save buttons, but never a bulk Validate button', () => {
+      // Open the dialog: app-pr-dialog only instantiates its projected content when visible.
+      component.aiReviewSE.showAiReview.set(true);
+      component.aiReviewSE.dacScores.set([buildDacScore({ canSave: true }), buildDacScore({ field_name: 'gender' })]);
 
-      await component.onValidateAll();
+      fixture.detectChanges();
 
-      expect(failing.canSave).toBe(true);
-      expect(alertSpy).toHaveBeenCalledWith(expect.objectContaining({ title: 'Some changes were not saved' }));
+      // Positive control: the section really rendered — without this, the negative assertion
+      // below would pass vacuously even if the dialog never opened.
+      expect(fixture.nativeElement.querySelector('.impact-areas-section')).not.toBeNull();
+      // Positive control: the per-card Save button (AIR-R-2) survives, one per dacScore.
+      expect(fixture.nativeElement.querySelectorAll('.save-button-custom').length).toBe(2);
+      // The actual assertion under test (AIR-R-1 / AIR-AC-1): no bulk Validate control.
+      expect(fixture.nativeElement.querySelector('.validate-all-button')).toBeNull();
     });
   });
 

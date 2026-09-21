@@ -155,9 +155,34 @@ export class InnoDevService {
     user: number,
     { innovatonUse: crtr }: InnovationUseDto,
   ) {
+    /**
+     * The first row this method had to refuse, reported ONCE after every block has written what it
+     * could. It used to `return` on the spot, which threw away every row queued behind the offender
+     * — including the blocks further down — while `summary.service.ts` answered 201 regardless, so
+     * the form kept showing staged rows the database never received. Found on prtest 21-Sep-2026:
+     * result id 11974 held ZERO rows in `result_ip_measure` with its section reporting complete,
+     * which then blocked submit-for-review through the Innovation Use MDS gate.
+     */
+    let rejection: { response: any; message: string } | null = null;
+
+    /**
+     * A row that was never stored and holds nothing to store is not an error to report — it is a row
+     * to ignore. The bilateral form stages a blank row the instant the reporter clicks "Add" (
+     * `type-innovation-use.component.ts` `addActor` / `addOrganization` / `addMeasure`) and its
+     * delete handlers only flip `is_active` without dropping the row from the array, so blank and
+     * deleted rows keep travelling in every payload for the rest of the session.
+     */
+    const isDiscardable = (row: any, storedId: unknown, ...values: unknown[]) =>
+      storedId == null &&
+      (row?.is_active === false ||
+        values.every((value) => `${value ?? ''}`.trim() === ''));
+
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       for (const el of actors) {
+        if (isDiscardable(el, el?.result_actors_id, el?.actor_type_id))
+          continue;
+
         let actorExists: ResultActor = null;
 
         if (el?.actor_type_id) {
@@ -197,11 +222,11 @@ export class InnoDevService {
 
         if (actorExists) {
           if (!el?.actor_type_id && el?.is_active !== false) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field actor type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
@@ -226,11 +251,11 @@ export class InnoDevService {
           );
         } else {
           if (!el?.actor_type_id) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field actor type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultActorRepository.save({
             actor_type_id: this.isNullData(el?.actor_type_id),
@@ -259,6 +284,8 @@ export class InnoDevService {
     if (crtr?.organization?.length) {
       const { organization } = crtr;
       for (const el of organization) {
+        if (isDiscardable(el, el?.id, el?.institution_types_id)) continue;
+
         let ite: ResultsByInstitutionType = null;
 
         if (el?.institution_types_id && el?.institution_types_id != 78) {
@@ -281,10 +308,9 @@ export class InnoDevService {
 
         if (ite) {
           if (!el?.institution_types_id && el?.is_active !== false) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field institution type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
           } else {
             await this._resultByIntitutionsTypeRepository.update(ite.id, {
@@ -299,11 +325,11 @@ export class InnoDevService {
           }
         } else {
           if (!el?.institution_types_id) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field institution type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultByIntitutionsTypeRepository.save({
             results_id: resultId,
@@ -323,6 +349,16 @@ export class InnoDevService {
     if (crtr?.measures?.length) {
       const { measures } = crtr;
       for (const el of measures) {
+        if (
+          isDiscardable(
+            el,
+            el?.result_ip_measure_id,
+            el?.unit_of_measure,
+            el?.quantity,
+          )
+        )
+          continue;
+
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
@@ -350,11 +386,11 @@ export class InnoDevService {
 
         if (ripm) {
           if (!el?.unit_of_measure && el?.is_active != false) {
-            return {
+            rejection ??= {
               response: { valid: false },
               message: 'The field Unit of Measure is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
@@ -368,11 +404,11 @@ export class InnoDevService {
           );
         } else {
           if (!el?.unit_of_measure) {
-            return {
+            rejection ??= {
               response: { valid: false },
-              message: 'The field Unit of Measure',
-              status: HttpStatus.BAD_REQUEST,
+              message: 'The field Unit of Measure is required',
             };
+            continue;
           }
           await this._resultIpMeasureRepository.save({
             result_id: resultId,
@@ -384,6 +420,13 @@ export class InnoDevService {
           });
         }
       }
+    }
+
+    // Everything savable is written by here. The caller turns this envelope into the HTTP status
+    // (`summary.service.ts`), so the reporter finally hears about the row the server refused
+    // instead of reading "saved".
+    if (rejection) {
+      return { ...rejection, status: HttpStatus.BAD_REQUEST };
     }
   }
 

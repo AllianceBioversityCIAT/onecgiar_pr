@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="build-date" content="{{BUILD_DATE}}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRMS Reporting Tool — User Guide</title>
+
+<!-- PLACEHOLDER CONTRACT — UG-T-11 (this file) to UG-T-12 (assemble.ts): see template/README.md
+     for the full contract (5 mustache placeholders, section-block shape, heading-count rule).
+     Per that doc's own rule, no closing comment sequence may appear anywhere in this comment,
+     so no example markup is reproduced here — read README.md instead. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style id="ug-design-tokens">
+  /*
+   * Token bridge between `tokens.json` (live app values) and `guide.css` (static, var()-only
+   * rules). See template/README.md for what `assemble.ts` must write into the TOKENS_CSS slot
+   * below (never write the literal placeholder text in a comment — see that doc's own rule on
+   * why). The `--ug-*` properties below are NOT part of `tokens.json` — they are
+   * additional neutrals (page background, ink, muted text, borders, shadow tint, dark-chrome
+   * gradient stops) that `colors.scss` does not expose as reusable custom properties.
+   * Sensible defaults are set here so the template renders correctly even before assemble.ts
+   * runs; assemble.ts MAY override any --ug-* value but is not required to for this spec.
+   */
+  :root {
+    /* --- Populated by assemble.ts from tokens.json (UG-T-12) --- */
+    {{TOKENS_CSS}}
+
+    /* --- Additional neutrals `guide.css` relies on (defaults; assemble.ts MAY override) --- */
+    --ug-color-page-bg: #ffffff;
+    --ug-color-surface-alt: #f6f6fb;
+    --ug-color-ink: var(--pr-color-secondary-400);
+    --ug-color-ink-muted: color-mix(in srgb, var(--pr-color-secondary-400) 72%, white);
+    --ug-color-border: #e1e1e9;
+    --ug-color-on-chrome: #ffffff;
+    --ug-color-on-chrome-muted: #c7c8dc;
+    --ug-color-shadow: rgba(16, 17, 28, 0.22);
+
+    /* Navy-carbon "chrome" gradient stops, derived from the real secondary token (never a
+       hand-copied hex) so the cover/section-header bands track --pr-color-secondary-400. */
+    --ug-color-chrome-start: color-mix(in srgb, var(--pr-color-secondary-400) 88%, black);
+    --ug-color-chrome-end: color-mix(in srgb, var(--pr-color-secondary-400) 55%, black);
+  }
+</style>
+
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+  <!-- ============================== COVER ============================== -->
+  <section class="ug-cover" id="cover">
+    <span class="ug-cover__index" aria-hidden="true">01→06</span>
+    <div class="ug-cover__body">
+      <p class="ug-cover__kicker">Performance and Results Management System (PRMS)</p>
+      <h1 class="ug-cover__title">Reporting Tool<br>User Guide</h1>
+      <p class="ug-cover__subtitle">
+        A practical, step-by-step guide to the six key areas of the Reporting Tool, covering the
+        user journey from signing in to submitting an Innovation Package.
+      </p>
+      <div class="ug-cover__meta">
+        <span class="ug-mono ug-cover__date">Version 1, 16 September 2026</span>
+        <span class="ug-cover__divider" aria-hidden="true">&middot;</span>
+        <span class="ug-cover__lang">U.S. English</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== INTRO =============================== -->
+  <section class="ug-section ug-section--intro" id="intro">
+    <header class="ug-section__header">
+      <span class="ug-section__eyebrow ug-mono">Introduction</span>
+      <h2>Before you start</h2>
+    </header>
+
+    <div class="ug-prose">
+      {{INTRO}}
+    </div>
+
+    <aside class="ug-legend" aria-label="How to read the screenshots in this guide">
+      <span class="ug-legend__marker" aria-hidden="true"></span>
+      <p class="ug-legend__text">
+        Throughout this guide, an <strong>orange ring or arrow</strong> like this one marks the
+        one action each screenshot is calling out — it is never part of the app's own interface.
+      </p>
+    </aside>
+  </section>
+
+  <!-- ================================ TOC ================================ -->
+  <nav class="ug-toc" id="toc" aria-label="Table of contents">
+    <header class="ug-section__header">
+      <span class="ug-section__eyebrow ug-mono">Contents</span>
+      <h2>What&rsquo;s inside</h2>
+    </header>
+
+    <ol class="ug-toc__list">
+      <li class="ug-toc__item">
+        <a href="#section-landing"><span class="ug-toc__num ug-mono">01</span><span class="ug-toc__label">Landing Page</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-overview"><span class="ug-toc__num ug-mono">02</span><span class="ug-toc__label">Overview Dashboard</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-reporting"><span class="ug-toc__num ug-mono">03</span><span class="ug-toc__label">Reporting Page</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-results-center"><span class="ug-toc__num ug-mono">04</span><span class="ug-toc__label">Results Center</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-notifications"><span class="ug-toc__num ug-mono">05</span><span class="ug-toc__label">Notifications</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-innovation-packages"><span class="ug-toc__num ug-mono">06</span><span class="ug-toc__label">Innovation Packages</span></a>
+      </li>
+      <li class="ug-toc__item ug-toc__item--glossary">
+        <a href="#glossary"><span class="ug-toc__num ug-mono">&mdash;</span><span class="ug-toc__label">Glossary</span></a>
+      </li>
+    </ol>
+  </nav>
+
+  <!-- ============================== SECTIONS ============================== -->
+  <main class="ug-sections" id="sections">
+    {{SECTIONS}}
+  </main>
+
+  <!-- ============================== GLOSSARY ============================== -->
+  <section class="ug-section ug-section--glossary" id="glossary">
+    <header class="ug-section__header">
+      <span class="ug-section__eyebrow ug-mono">Reference</span>
+      <h2>Glossary</h2>
+    </header>
+
+    <dl class="ug-glossary">
+      {{GLOSSARY}}
+    </dl>
+  </section>
+
+  <footer class="ug-footer" aria-hidden="true">Reporting Tool User Guide &middot; Version 1, 16 September 2026</footer>
+</body>
+</html>

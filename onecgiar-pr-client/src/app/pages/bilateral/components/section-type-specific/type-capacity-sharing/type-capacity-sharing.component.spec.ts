@@ -28,7 +28,7 @@ describe('TypeCapacitySharingComponent', () => {
     { capdev_term_id: 1, name: 'PhD' },
     { capdev_term_id: 2, name: 'Master' },
     { capdev_term_id: 3, name: 'Short-term' },
-    { capdev_term_id: 4, name: 'Long-term' },
+    { capdev_term_id: 4, name: 'Long-term' }
   ];
 
   /**
@@ -49,19 +49,22 @@ describe('TypeCapacitySharingComponent', () => {
     mdsTracker = { setSectionFields: jest.fn() };
     autoSave = {
       fieldStatus: signal<Record<string, string>>({}),
-      schedulePayload: jest.fn(),
+      schedulePayload: jest.fn()
     };
-    creation = { currentResultId: signal<number | null>(123) };
+    creation = {
+      // P2-3428 — the type tabs now read this gate to lock their fields once the result
+      // leaves Editing. Editable by default here; the read-only spec flips it.
+      isEditableByCenterUser: () => true, currentResultId: signal<number | null>(123) };
     expandableState = {
       getShowAllFields: jest.fn().mockReturnValue(false),
-      setShowAllFields: jest.fn(),
+      setShowAllFields: jest.fn()
     };
     institutionsSE = { institutionsList: [{ institutions_id: 1, institutions_name: 'Org A' }] };
     bilateralApi = {
       GET_capacityDevelopment: jest.fn().mockReturnValue(of({ response: {} })),
       GET_capdevsDeliveryMethod: jest.fn().mockReturnValue(of({ response: [{ capdev_delivery_method_id: 1, name: 'In person' }] })),
       GET_capdevsTerms: jest.fn().mockReturnValue(of({ response: [...TERMS_CATALOG] })),
-      PATCH_capacityDevelopment: jest.fn().mockReturnValue(of({})),
+      PATCH_capacityDevelopment: jest.fn().mockReturnValue(of({}))
     };
   };
 
@@ -74,8 +77,8 @@ describe('TypeCapacitySharingComponent', () => {
         { provide: BilateralMdsTrackerService, useValue: mdsTracker },
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralExpandableStateService, useValue: expandableState },
-        { provide: InstitutionsService, useValue: institutionsSE },
-      ],
+        { provide: InstitutionsService, useValue: institutionsSE }
+      ]
     });
 
   beforeEach(async () => {
@@ -135,7 +138,7 @@ describe('TypeCapacitySharingComponent', () => {
       ['1', true],
       [0, false],
       ['0', false],
-      [null, null],
+      [null, null]
     ])('normalizes the legacy attendance value %p to %p for the radio control', (storedValue, expectedValue) => {
       bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { is_attending_for_organization: storedValue } }));
       build();
@@ -149,7 +152,7 @@ describe('TypeCapacitySharingComponent', () => {
       [4, 4, null],
       [3, 3, null],
       [1, 4, 1],
-      [2, 4, 2],
+      [2, 4, 2]
     ])('capdev_term_id=%i -> capdevTermId1=%i, capdevTermId2=%p', (stored, expected1, expected2) => {
       bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { capdev_term_id: stored } }));
       build();
@@ -185,7 +188,7 @@ describe('TypeCapacitySharingComponent', () => {
     it('still publishes the three unfilled MDS items, so the section stays incomplete', () => {
       failLoad();
       build();
-      fixture.detectChanges();   // build() only creates the component; ngOnInit runs here
+      fixture.detectChanges(); // build() only creates the component; ngOnInit runs here
       const items = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
       expect(items).toHaveLength(3);
       expect(items.every((i: any) => i.filled === false)).toBe(true);
@@ -306,7 +309,7 @@ describe('TypeCapacitySharingComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'people-trained', label: 'Number of people trained', filled: false },
         { key: 'delivery-method', label: 'Delivery method', filled: false },
-        { key: 'length-of-training', label: 'Length of training', filled: false },
+        { key: 'length-of-training', label: 'Length of training', filled: false }
       ]);
     });
 
@@ -318,7 +321,7 @@ describe('TypeCapacitySharingComponent', () => {
         non_binary_using: undefined,
         capdev_delivery_method_id: 0,
         capdev_term_id: 3,
-        is_attending_for_organization: false,
+        is_attending_for_organization: false
       };
       // P2-3771: the checklist reads the cascade, not `body`, so a Short-term answer is staged the
       // same way the radio stages it.
@@ -327,7 +330,7 @@ describe('TypeCapacitySharingComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'people-trained', label: 'Number of people trained', filled: true },
         { key: 'delivery-method', label: 'Delivery method', filled: false },
-        { key: 'length-of-training', label: 'Length of training', filled: true },
+        { key: 'length-of-training', label: 'Length of training', filled: true }
       ]);
     });
 
@@ -361,7 +364,7 @@ describe('TypeCapacitySharingComponent', () => {
         non_binary_using: 1,
         capdev_delivery_method_id: 5,
         capdev_term_id: 1,
-        is_attending_for_organization: true,
+        is_attending_for_organization: true
       };
       // P2-3771: "fully answered" now means the long-term degree is resolved too — the parent bucket
       // on its own leaves the item unfilled, which is what this suite's sibling case proves.
@@ -371,7 +374,7 @@ describe('TypeCapacitySharingComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'people-trained', label: 'Number of people trained', filled: true },
         { key: 'delivery-method', label: 'Delivery method', filled: true },
-        { key: 'length-of-training', label: 'Length of training', filled: true },
+        { key: 'length-of-training', label: 'Length of training', filled: true }
       ]);
     });
   });
@@ -449,7 +452,7 @@ describe('TypeCapacitySharingComponent', () => {
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
         'typeSpecific',
         { female_using: 5 },
-        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' }),
+        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' })
       );
     });
 
@@ -457,11 +460,7 @@ describe('TypeCapacitySharingComponent', () => {
       build();
       component.body = { female_using: 5 };
       component.onSave();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        { female_using: 5 },
-        expect.objectContaining({ debounceMs: 0 }),
-      );
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith('typeSpecific', { female_using: 5 }, expect.objectContaining({ debounceMs: 0 }));
     });
 
     it('tracks the saving state from fieldStatus', () => {
@@ -473,9 +472,7 @@ describe('TypeCapacitySharingComponent', () => {
 
     // P2-3556 regression guards: the load gate must not change the happy path in any way.
     it('saves normally once the body has loaded', () => {
-      bilateralApi.GET_capacityDevelopment.mockReturnValue(
-        of({ response: { female_using: 9, institutions: [{ institutions_id: 7 }] } }),
-      );
+      bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { female_using: 9, institutions: [{ institutions_id: 7 }] } }));
       build();
       autoSave.schedulePayload.mockClear();
 
@@ -497,7 +494,7 @@ describe('TypeCapacitySharingComponent', () => {
      */
     it('still sends an empty institutions array once the user removes the last organization', () => {
       bilateralApi.GET_capacityDevelopment.mockReturnValue(
-        of({ response: { is_attending_for_organization: true, institutions: [{ institutions_id: 7 }] } }),
+        of({ response: { is_attending_for_organization: true, institutions: [{ institutions_id: 7 }] } })
       );
       build();
       autoSave.schedulePayload.mockClear();
@@ -536,7 +533,7 @@ describe('TypeCapacitySharingComponent', () => {
     const alerts = () =>
       fixture.debugElement.queryAll(By.css('app-alert-status')).map(d => ({
         status: read(d.componentInstance.status),
-        description: read(d.componentInstance.description),
+        description: read(d.componentInstance.description)
       }));
     const render = () => {
       build();
@@ -583,13 +580,12 @@ describe('TypeCapacitySharingComponent', () => {
       expect(alerts().map(a => a.status)).toEqual(['info']);
     });
 
-
     // Explicit-save model (2026-09-03): the footer's Save draft persists the section, so the form
     // renders no Save of its own — it only re-staged what every change had already staged.
     it('renders no in-section Save button', () => {
       render();
-      const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter(
-        (b: any) => ['Save', 'Saving...'].includes(b.textContent.trim())
+      const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((b: any) =>
+        ['Save', 'Saving...'].includes(b.textContent.trim())
       );
       expect(saveButtons).toHaveLength(0);
     });
@@ -628,8 +624,7 @@ describe('TypeCapacitySharingComponent', () => {
 
       const degreeGroup = () => radioHosts().find(d => d.componentInstance.options === component.capdevsSubTerms);
 
-      const optionLabelsOf = (group: any) =>
-        Array.from(group.nativeElement.querySelectorAll('label.name')).map((l: any) => l.textContent.trim());
+      const optionLabelsOf = (group: any) => Array.from(group.nativeElement.querySelectorAll('label.name')).map((l: any) => l.textContent.trim());
 
       const toggleLabel = () => fixture.nativeElement.querySelector('button.tsf-save-btn')?.textContent.trim();
 
@@ -780,9 +775,7 @@ describe('TypeCapacitySharingComponent', () => {
 
     it('is still gated on the long-term buckets', () => {
       const html = template();
-      expect(html).toMatch(
-        /@if \(capdevTermId1 === 4 \|\| capdevTermId1 === 1 \|\| capdevTermId1 === 2\) \{[\s\S]{0,400}label="Degree"/
-      );
+      expect(html).toMatch(/@if \(capdevTermId1 === 4 \|\| capdevTermId1 === 1 \|\| capdevTermId1 === 2\) \{[\s\S]{0,400}label="Degree"/);
     });
   });
   /**

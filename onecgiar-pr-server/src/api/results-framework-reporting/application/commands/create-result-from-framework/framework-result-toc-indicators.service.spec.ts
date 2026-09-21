@@ -96,6 +96,182 @@ describe('FrameworkResultTocIndicatorsService', () => {
     );
   });
 
+  /** RRC-AC-1 — the DTO's toc_indicator_target_id is persisted on the new column when creating a target. */
+  it('persists toc_indicator_target_id when the DTO supplies it (create branch)', async () => {
+    mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+      id: 81,
+      toc_results_id: 444,
+      related_node_id: 'REL-81',
+    });
+    mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+      null,
+    );
+    mockResultsTocResultIndicatorsRepository.save.mockResolvedValueOnce({
+      result_toc_result_indicator_id: 812,
+    });
+    mockResultsIndicatorsTargetsRepository.findOne.mockResolvedValueOnce(null);
+
+    await service.upsertTocIndicators(
+      707,
+      444,
+      {
+        indicator_id: 81,
+        number_target: '25',
+        target_date: '2025',
+        contributing_indicator: 3.5,
+        toc_indicator_target_id: 607878,
+      },
+      null,
+      10,
+    );
+
+    expect(mockResultsIndicatorsTargetsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result_toc_result_indicator_id: 812,
+        toc_indicator_target_id: 607878,
+      }),
+    );
+  });
+
+  /** RRC-AC-1 — omitting toc_indicator_target_id stores NULL, never an error (RRC-R-8 fallback). */
+  it('stores toc_indicator_target_id as null when the DTO does not supply it (create branch)', async () => {
+    mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+      id: 82,
+      toc_results_id: 445,
+      related_node_id: 'REL-82',
+    });
+    mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+      null,
+    );
+    mockResultsTocResultIndicatorsRepository.save.mockResolvedValueOnce({
+      result_toc_result_indicator_id: 813,
+    });
+    mockResultsIndicatorsTargetsRepository.findOne.mockResolvedValueOnce(null);
+
+    await service.upsertTocIndicators(
+      708,
+      445,
+      {
+        indicator_id: 82,
+        number_target: '25',
+        target_date: '2025',
+        contributing_indicator: 3.5,
+      },
+      null,
+      10,
+    );
+
+    expect(mockResultsIndicatorsTargetsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result_toc_result_indicator_id: 813,
+        toc_indicator_target_id: null,
+      }),
+    );
+  });
+
+  /** RRC-AC-1 — an invalid (non-numeric) toc_indicator_target_id is parsed defensively to null. */
+  it('stores toc_indicator_target_id as null when the DTO supplies an invalid value (create branch)', async () => {
+    mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+      id: 83,
+      toc_results_id: 446,
+      related_node_id: 'REL-83',
+    });
+    mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+      null,
+    );
+    mockResultsTocResultIndicatorsRepository.save.mockResolvedValueOnce({
+      result_toc_result_indicator_id: 814,
+    });
+    mockResultsIndicatorsTargetsRepository.findOne.mockResolvedValueOnce(null);
+
+    await service.upsertTocIndicators(
+      709,
+      446,
+      {
+        indicator_id: 83,
+        number_target: '25',
+        toc_indicator_target_id: 'not-a-number' as any,
+      },
+      null,
+      10,
+    );
+
+    expect(mockResultsIndicatorsTargetsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result_toc_result_indicator_id: 814,
+        toc_indicator_target_id: null,
+      }),
+    );
+  });
+
+  /** RRC-AC-1 — the update branch also persists toc_indicator_target_id when supplied. */
+  it('persists toc_indicator_target_id when the DTO supplies it (update branch)', async () => {
+    mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+      id: 90,
+      toc_results_id: 500,
+      related_node_id: 'REL-90',
+    });
+    mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce({
+      result_toc_result_indicator_id: 901,
+    });
+    mockResultsIndicatorsTargetsRepository.findOne.mockResolvedValueOnce({
+      indicators_targets: 55,
+    });
+
+    await service.upsertTocIndicators(
+      800,
+      500,
+      {
+        indicator_id: 90,
+        number_target: 10,
+        contributing_indicator: 1,
+        toc_indicator_target_id: 607879,
+      },
+      null,
+      11,
+    );
+
+    expect(mockResultsIndicatorsTargetsRepository.update).toHaveBeenCalledWith(
+      55,
+      expect.objectContaining({
+        contributing_indicator: 1,
+        toc_indicator_target_id: 607879,
+        last_updated_by: 11,
+        is_active: true,
+      }),
+    );
+  });
+
+  /** RRC-AC-1 — the update branch stores null when the DTO omits toc_indicator_target_id. */
+  it('stores toc_indicator_target_id as null when the DTO does not supply it (update branch)', async () => {
+    mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+      id: 91,
+      toc_results_id: 501,
+      related_node_id: 'REL-91',
+    });
+    mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce({
+      result_toc_result_indicator_id: 902,
+    });
+    mockResultsIndicatorsTargetsRepository.findOne.mockResolvedValueOnce({
+      indicators_targets: 56,
+    });
+
+    await service.upsertTocIndicators(
+      801,
+      501,
+      { indicator_id: 91, number_target: 10, contributing_indicator: 1 },
+      null,
+      11,
+    );
+
+    expect(mockResultsIndicatorsTargetsRepository.update).toHaveBeenCalledWith(
+      56,
+      expect.objectContaining({
+        toc_indicator_target_id: null,
+      }),
+    );
+  });
+
   it('should update an existing target record', async () => {
     mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
       id: 90,

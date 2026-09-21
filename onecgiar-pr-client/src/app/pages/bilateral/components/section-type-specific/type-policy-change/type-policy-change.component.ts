@@ -53,14 +53,14 @@ const NO_RECORD_YET_STATUS = 404;
 const STATUS_OPTIONS = [
   { id: 1, name: 'Confirmed' },
   { id: 2, name: 'Estimated' },
-  { id: 3, name: 'Unknown' },
+  { id: 3, name: 'Unknown' }
 ];
 
 @Component({
   selector: 'app-type-policy-change',
   imports: [FormsModule, CustomFieldsModule, PrTooltipDirectiveModule],
   templateUrl: './type-policy-change.component.html',
-  styleUrl: './type-policy-change.component.scss',
+  styleUrl: './type-policy-change.component.scss'
 })
 export class TypePolicyChangeComponent implements OnInit {
   private readonly bilateralApi = inject(BilateralApiService);
@@ -69,6 +69,15 @@ export class TypePolicyChangeComponent implements OnInit {
   private readonly autoSave = inject(BilateralAutoSaveService);
   private readonly expandableState = inject(BilateralExpandableStateService);
   readonly policyControlList = inject(PolicyControlListService);
+
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isEditableByCenterUser()` has answered this since P2-3520 and every other section reads it;
+   * the type-specific tabs never did, so a submitted result still took input here.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   readonly institutionsService = inject(InstitutionsService);
 
   body: any = {};
@@ -144,7 +153,7 @@ export class TypePolicyChangeComponent implements OnInit {
         // a 404 skipped `updateMds()` here and the section only got its checklist because the
         // questions GET happened to succeed and call it — if both failed, nothing was published.
         this.updateMds();
-      },
+      }
     });
     this.bilateralApi.GET_policyChangesQuestions(resultId).subscribe(({ response }) => {
       this.questions = response || {};
@@ -184,7 +193,7 @@ export class TypePolicyChangeComponent implements OnInit {
     this.autoSave.schedulePayload('typeSpecific', payload, {
       debounceMs,
       statusKey: 'type-specific',
-      executor: (resultId, body) => this.bilateralApi.PATCH_policyChanges(resultId, body),
+      executor: (resultId, body) => this.bilateralApi.PATCH_policyChanges(resultId, body)
     });
   }
 
@@ -200,8 +209,8 @@ export class TypePolicyChangeComponent implements OnInit {
       {
         key: 'policy-institutions',
         label: 'Whose policy is this? (Implementing organizations)',
-        filled: (this.body.institutions?.length ?? 0) > 0,
-      },
+        filled: (this.body.institutions?.length ?? 0) > 0
+      }
     ]);
   }
 }

@@ -1,6 +1,6 @@
 # report-result
 
-**Verified:** 2026-08-31 · branch performance-refactor · 9abc99972
+**Verified:** 2026-09-15 · branch qa-development-2026-mc · 7de6ad2fb
 
 ## Qué es
 Las piezas puras que comparten las tres superficies que crean un resultado contra un indicador del
@@ -13,12 +13,31 @@ hacen HTTP. Existen porque el body estaba triplicado y ya había divergido.
 - `OTHER_CENTERS_CODE` (`'__OTHER_CENTERS__'`) y `OTHER_SP_ID` (`-999`): los centinelas que abren el
   segundo desplegable. **Jamás viajan en el payload** — se filtran dentro del util.
 - `validateKpHandle(handle)` → `{ status, message }`. `KP_HANDLE_REGEX` +
-  `KP_HANDLE_EMPTY_MESSAGE` / `KP_HANDLE_UNSUPPORTED_MESSAGE`.
+  `KP_HANDLE_EMPTY_MESSAGE` / `KP_HANDLE_UNSUPPORTED_MESSAGE`. Desde `bugfix/kp-bare-handle-format`,
+  `KP_HANDLE_REGEX` acepta también el handle **pelado** (`{10568|20.500.11766|20.500.12348}/<dígitos>`,
+  sin `https://`) — el formato en el que CGSpace/MELSpace/WorldFish lo muestran por defecto.
+- `normalizeKpHandle(handle)` → reescribe un handle pelado ya validado a su URL canónica
+  (`10568` → `cgspace.cgiar.org/handle/...`; los otros dos → `hdl.handle.net/...`); cualquier otro
+  valor (ya-URL o inválido) vuelve sin cambios. **Todo llamador debe normalizar antes de llamar a
+  `GET_mqapValidation` o de persistir `handler`** — el servidor hace passthrough puro (cero
+  normalización propia; ver `docs/specs/bugfix/kp-bare-handle-format/proposal.md` → Bug Diagnosis).
 
 ## Dónde se usa
 - `../../pages/dashboard-lab/components/lab-report-form/lab-report-form.component.ts` — el aside.
-- Pendiente de migrar (siguen con su copia local, a propósito, hasta que el aside se verifique en
-  producción): `aow-hlo-create-modal.component.ts:332` y `guided-creation.component.ts:401`.
+- `../../../results/pages/result-creator/components/report-result-form/report-result-form.component.ts`
+  — Manual entry (`GET_mqapValidation`). Migrado a `validateKpHandle` + `normalizeKpHandle` en
+  `bugfix/kp-bare-handle-format`; antes tenía su propia copia duplicada del regex, que es lo que
+  causaba el bug reportado (handle pelado rechazado). Ver `execution.md` de ese spec.
+- Copia local del regex, **a propósito** (`KPH-DD-1`, `bugfix/kp-bare-handle-format/design.md`),
+  pero ya extendida para aceptar el handle pelado y normalizarlo antes de llamar a
+  `GET_mqapValidation` — solo importan la función pura `normalizeKpHandle`, no `validateKpHandle`:
+  `result-creator.component.ts` (`GET_mqapValidation`, ~línea 439) y
+  `aow-hlo-create-modal.component.ts` (`GET_mqapValidation`, ~línea 410). La de-duplicación hacia
+  `validateKpHandle` sigue pendiente y deliberadamente fuera de ese bugfix.
+- ⚠️ `guided-creation.component.ts` **no** tiene lógica propia de validación de handle — se verificó
+  al diagnosticar `bugfix/kp-bare-handle-format` (grep de `handle|regex|mqap` sin resultados). La
+  mención previa de este archivo aquí era una nota obsoleta sobre `buildCreateResultPayload()` (ver
+  "Pendiente / Coming soon" abajo), no sobre `validateKpHandle`.
 
 ## La matriz que este código protege
 Una sola bifurcación en todo el formulario: **Knowledge product vs todo lo demás**. Verificado sobre

@@ -244,16 +244,29 @@ export class InnovationPathwayStepThreeService {
         });
       }
 
-      if (ripewo?.length) {
-        for (const entity of ripewo) {
-          if (!entity.first_name || !entity.last_name) {
-            return {
-              response: { valid: false },
-              message: 'The expert workshop organized is required',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
+      /*
+       * P2-3747 — a blank row used to abort the whole save.
+       *
+       * The form hands us one row per facilitator, and it creates blank ones by itself: the
+       * section opens with an empty row when there are none, and `Add Lead/Co-Lead` adds another.
+       * Bailing out on the first row without a name meant every row AFTER it was never written,
+       * the rows the user had removed were never deactivated either (that pass sits below), and
+       * `updateMain` returned 200 all the same — so the reporter was told the section had been
+       * saved while the facilitator they had just typed was silently dropped.
+       *
+       * Reproduced on prtest #9409 (2026-09-21): blank row on top, "Maria / Facilitadora /
+       * Co-lead" underneath, Save → HTTP 200, and after a reload only the older row was left.
+       *
+       * A row with no name is a row the user did not fill, not an error: it is skipped, and
+       * emptying a saved row still means "remove it" — the deactivation pass below sees it is no
+       * longer among the ones worth keeping.
+       */
+      const namedExperts = (ripewo || []).filter(
+        (entity) => entity?.first_name?.trim() && entity?.last_name?.trim(),
+      );
 
+      if (namedExperts.length) {
+        for (const entity of namedExperts) {
           const expertWorkshopExist: ResultIpExpertWorkshopOrganized =
             await this._resultIpExpertWorkshopRepository.findOne({
               where: {
@@ -297,7 +310,7 @@ export class InnovationPathwayStepThreeService {
           });
 
         for (const ewe of expertWorkshopExist) {
-          const isExist = ripewo.find(
+          const isExist = namedExperts.find(
             (x) =>
               x.first_name === ewe.first_name && x.last_name === ewe.last_name,
           );

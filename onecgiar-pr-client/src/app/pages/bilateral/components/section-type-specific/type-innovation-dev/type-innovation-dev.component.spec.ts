@@ -51,6 +51,9 @@ describe('TypeInnovationDevComponent', () => {
     // `showScalingStudies` reads `reportingYear()`; without the key every test in this file fails
     // as "is not a function". Default 2025 so the pre-2026 behaviour is what the legacy tests assert.
     creation = {
+      // P2-3428 — the type tabs now read this gate to lock their fields once the result
+      // leaves Editing. Editable by default here; the read-only spec flips it.
+      isEditableByCenterUser: () => true,
       currentResultId: signal<number | null>(123),
       reportingYear: signal<number | null>(2025),
       // The Lead contact person doubles as the innovation developer since 2026-09-03.
@@ -138,7 +141,7 @@ describe('TypeInnovationDevComponent', () => {
       expect(component.body).toEqual({
         investment_programs: [],
         investment_bilateral: [],
-        investment_partners: [],
+        investment_partners: []
       });
     });
 
@@ -158,9 +161,7 @@ describe('TypeInnovationDevComponent', () => {
 
       it('does NOT prefill — and keeps the stored value — when the field already holds something', () => {
         creation.resultLeadContact.set('A. Rivera');
-        bilateralApi.GET_innovationDev.mockReturnValue(
-          of({ response: { innovation_developers: 'CIAT breeding team' } })
-        );
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
         build();
         expect(component.body.innovation_developers).toBe('CIAT breeding team');
       });
@@ -232,9 +233,7 @@ describe('TypeInnovationDevComponent', () => {
       });
 
       it('R-2 sc1: a typed value survives a later contact change', () => {
-        bilateralApi.GET_innovationDev.mockReturnValue(
-          of({ response: { innovation_developers: 'CIAT breeding team' } })
-        );
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
         build();
         expect(component.body.innovation_developers).toBe('CIAT breeding team');
 
@@ -578,9 +577,7 @@ describe('TypeInnovationDevComponent', () => {
 
       const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
       expect(payload.investment_programs).toEqual([{ id: 90, kind_cash: 1000, is_determined: null }]);
-      expect(payload.investment_bilateral).toEqual([
-        { id: 4321, project_id: 4321, kind_cash: null, is_determined: true }
-      ]);
+      expect(payload.investment_bilateral).toEqual([{ id: 4321, project_id: 4321, kind_cash: null, is_determined: true }]);
       expect(payload.investment_partners).toEqual([{ id: 77, kind_cash: 50, is_determined: null }]);
       expect(payload).not.toHaveProperty('initiative_expected_investment');
       expect(payload).not.toHaveProperty('bilateral_expected_investment');
@@ -803,13 +800,12 @@ describe('TypeInnovationDevComponent', () => {
         expect(alerts().map(a => a.status)).toEqual(['info']);
       });
 
-
       // Explicit-save model (2026-09-03): the footer's Save draft persists the section, so the form
       // renders no Save of its own — it only re-staged what every change had already staged.
       it('renders no in-section Save button', () => {
         render();
-        const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter(
-          (b: any) => ['Save', 'Saving...'].includes(b.textContent.trim())
+        const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((b: any) =>
+          ['Save', 'Saving...'].includes(b.textContent.trim())
         );
         expect(saveButtons).toHaveLength(0);
       });
@@ -849,13 +845,14 @@ describe('TypeInnovationDevComponent', () => {
      */
     it('shows the typology select plus the optional Innovation developers textarea before expanding', () => {
       render();
-      expect(labels()).toEqual([
-        'Which of the below typologies best fits the nature of the innovation?',
-        'Innovation developers'
-      ]);
+      expect(labels()).toEqual(['Which of the below typologies best fits the nature of the innovation?', 'Innovation developers']);
       const developerField = allFields().find(f => f.label === 'Innovation developers');
       expect(developerField.required).toBe(false);
-      expect(allFields().filter(f => f.label !== 'Innovation developers').every(f => f.required)).toBe(true);
+      expect(
+        allFields()
+          .filter(f => f.label !== 'Innovation developers')
+          .every(f => f.required)
+      ).toBe(true);
       // The readiness level is an `app-pr-range-level`, headed by its own field header.
       expect(fixture.debugElement.query(By.css('app-pr-range-level'))).toBeTruthy();
       const headers = fixture.debugElement.queryAll(By.css('app-pr-field-header')).map(d => read(d.componentInstance.label));
@@ -943,9 +940,7 @@ describe('TypeInnovationDevComponent', () => {
         const cgiarPrograms = headers.find(
           h => h.label === 'Estimation of total USD-value of investment by CGIAR Programs during the reporting period'
         );
-        const partners = headers.find(
-          h => h.label === 'Estimated total USD-value of (co-)investment by partners during the reporting period'
-        );
+        const partners = headers.find(h => h.label === 'Estimated total USD-value of (co-)investment by partners during the reporting period');
 
         expect(cgiarPrograms).toBeDefined();
         expect(partners).toBeDefined();
@@ -1092,7 +1087,6 @@ describe('TypeInnovationDevComponent', () => {
       expect(read(ladder.componentInstance.required)).toBe(true);
       expect(fixture.nativeElement.textContent).toContain('This field is required');
     });
-
 
     /**
      * The PO's epic note (Ángel Jarrín, 23-Aug-2026) is explicit: "Remove" never means delete the data.

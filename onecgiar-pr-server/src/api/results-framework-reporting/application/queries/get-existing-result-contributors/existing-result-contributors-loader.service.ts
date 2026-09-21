@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { ResultsTocResultRepository } from '../../../../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultsTocResultIndicatorsRepository } from '../../../../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultStatusData } from '../../../../../shared/constants/result-status.enum';
@@ -49,16 +49,76 @@ export class ExistingResultContributorsLoaderService {
     ResultStatusData.Approved.value,
   ];
 
+  // @akili-spec bugfix/reported-results-center-scoping — invalid/non-numeric
+  // values are treated as absent, same defensive posture as RRC-DD-4's write-side
+  // sibling (number_target/target_date), never a hard validation error here.
+  private parseTocIndicatorTargetId(
+    tocIndicatorTargetId?: string | number,
+  ): number | undefined {
+    if (tocIndicatorTargetId === undefined || tocIndicatorTargetId === null) {
+      return undefined;
+    }
+    // Express yields '' for a bare `?tocIndicatorTargetId=`, and Number('') is
+    // 0 — a blank string must be treated as absent, not as a live
+    // `toc_indicator_target_id = 0` filter (same defensive posture as the
+    // write-path's target_date handling).
+    if (
+      typeof tocIndicatorTargetId === 'string' &&
+      tocIndicatorTargetId.trim() === ''
+    ) {
+      return undefined;
+    }
+    const parsed = Number(tocIndicatorTargetId);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
   async loadContributions(
     parsedResultTocResultId: number,
     tocResultIndicatorId: string,
     // @akili-spec changes/indicator-reported-results
     scope: ExistingResultContributorsScope = 'reviewed',
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-DD-4)
+    tocIndicatorTargetId?: string | number,
   ): Promise<ExistingResultContributorRecord[]> {
     const statusIds =
       scope === 'all'
         ? ExistingResultContributorsLoaderService.ALL_SCOPE_STATUS_IDS
         : ExistingResultContributorsLoaderService.REVIEWED_SCOPE_STATUS_IDS;
+
+    const parsedTocIndicatorTargetId =
+      this.parseTocIndicatorTargetId(tocIndicatorTargetId);
+
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-DD-4)
+    // Only narrow by the exact combination-group anchor when the caller supplies
+    // one; a NULL-safe fallback (OR toc_indicator_target_id IS NULL) keeps a
+    // pre-fix row surfacing exactly as it does today (RRC-R-8/RRC-AC-6). When
+    // the caller supplies nothing at all, behavior is unchanged (coarse-only).
+    const buildWhere = (
+      targetIdCondition?: number | ReturnType<typeof IsNull>,
+    ) => ({
+      toc_result_id: parsedResultTocResultId,
+      is_active: true,
+      obj_results: {
+        is_active: true,
+        status_id: In(statusIds),
+      },
+      obj_results_toc_result_indicators: {
+        toc_results_indicator_id: tocResultIndicatorId,
+        is_active: true,
+        is_not_aplicable: false,
+        obj_result_indicator_targets: {
+          is_active: true,
+          ...(targetIdCondition !== undefined
+            ? { toc_indicator_target_id: targetIdCondition }
+            : {}),
+        },
+      },
+    });
+
+    const where =
+      parsedTocIndicatorTargetId !== undefined
+        ? [buildWhere(parsedTocIndicatorTargetId), buildWhere(IsNull())]
+        : buildWhere();
 
     const resultContributionExists =
       await this._resultsTocResultRepository.find({
@@ -72,22 +132,7 @@ export class ExistingResultContributorsLoaderService {
             obj_result_indicator_targets: true,
           },
         },
-        where: {
-          toc_result_id: parsedResultTocResultId,
-          is_active: true,
-          obj_results: {
-            is_active: true,
-            status_id: In(statusIds),
-          },
-          obj_results_toc_result_indicators: {
-            toc_results_indicator_id: tocResultIndicatorId,
-            is_active: true,
-            is_not_aplicable: false,
-            obj_result_indicator_targets: {
-              is_active: true,
-            },
-          },
-        },
+        where,
         select: {
           result_toc_result_id: true,
           result_id: true,

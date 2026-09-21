@@ -17,6 +17,16 @@
     font-weight: 600;
     color: var(--pr-color-secondary-400);
   }
+
+  // P2-3748: the progress ring sits on the same line as Submit, to its left — it is the reason the
+  // button looks the way it does, so it has to be read before it, not under it. `.submit_button`
+  // had no rule at all, so the two would have stacked.
+  .submit_button {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: none;
+  }
 }
 
 .title_container {

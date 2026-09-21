@@ -1,0 +1,88 @@
+<!-- P2-3748: sits beside Submit. The ring carries the progress, the panel carries the reason. -->
+@if (showRing()) {
+  <div class="relative" (mouseenter)="openPanel()" (mouseleave)="scheduleClose()">
+    <button
+      type="button"
+      class="-mx-[10px] -my-[5px] inline-flex items-center gap-[6px] rounded-[8px] border border-transparent px-[10px] py-[5px] text-[14px] font-medium transition-colors"
+      [class]="
+        isComplete()
+          ? 'text-[var(--pr-status-approved-fg)] hover:border-[var(--pr-status-approved-bg)] hover:bg-[var(--pr-status-approved-bg)]'
+          : 'text-[var(--pr-color-orange-700)] hover:border-[var(--pr-color-orange-200)] hover:bg-[var(--pr-color-orange-50)]'
+      "
+      [attr.aria-expanded]="panelOpen()"
+      aria-controls="ipsr-submit-progress-panel"
+      (click)="panelOpen() ? closePanel() : openPanel()"
+      data-testid="ipsr-submit-progress">
+      <!-- Same ring as the section indicator and the word counter (22x22 box, r=8, 3.5 stroke,
+           rotated so it fills clockwise from twelve o'clock). -->
+      <svg viewBox="0 0 22 22" width="22" height="22" class="block -rotate-90" aria-hidden="true">
+        <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="3.5" />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3.5"
+          stroke-linecap="round"
+          class="transition-[stroke-dashoffset] duration-500"
+          [attr.stroke-dasharray]="ringCircumference"
+          [attr.stroke-dashoffset]="ringOffset()" />
+      </svg>
+      {{ label() }}
+    </button>
+
+    @if (panelOpen()) {
+      <div
+        class="absolute right-0 top-[calc(100%+10px)] z-30 max-h-[340px] w-[320px] overflow-y-auto rounded-[12px] border border-[var(--pr-border)] bg-white px-[14px] py-[12px] text-left shadow-[var(--pr-shadow-2)]"
+        id="ipsr-submit-progress-panel"
+        role="dialog"
+        aria-label="Sections still to complete">
+        <div class="mb-[8px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-muted)]">
+          <span>{{ isComplete() ? 'All sections complete' : 'Complete to submit' }}</span>
+          <button type="button" class="flex text-[var(--pr-text-muted)]" (click)="closePanel()" aria-label="Close">
+            <i class="material-icons-round text-[16px]" aria-hidden="true">close</i>
+          </button>
+        </div>
+
+        <ul class="m-0 flex list-none flex-col gap-[2px] p-0">
+          @for (entry of entries(); track trackByEntry($index, entry)) {
+            <li
+              class="flex items-center justify-between gap-[8px] rounded-[6px] py-[4px] pr-[6px] text-[13px] leading-[1.45] hover:bg-[var(--pr-surface-app)]"
+              [class.pl-[22px]]="entry.nested"
+              [class.pl-[6px]]="!entry.nested"
+              [attr.data-complete]="entry.complete">
+              <span class="flex min-w-0 items-center gap-[6px]">
+                <i
+                  class="material-icons-round text-[15px]"
+                  [class]="entry.complete ? 'text-[var(--pr-status-approved-fg)]' : 'text-[var(--pr-color-orange-700)]'"
+                  aria-hidden="true">
+                  {{ entry.complete ? 'check_circle' : 'radio_button_unchecked' }}
+                </i>
+                <span class="min-w-0 truncate" [class.text-[var(--pr-text-muted)]]="entry.complete">{{ entry.label }}</span>
+              </span>
+
+              <!-- Only what is still missing gets a way in, and never the heading: its Go would
+                   land on the same screen as the step right below it. -->
+              @if (!entry.complete && !entry.group) {
+                <button
+                  type="button"
+                  class="shrink-0 rounded-[6px] border border-[var(--pr-border)] bg-white px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:border-[var(--pr-color-primary-200)] hover:bg-[var(--pr-color-primary-25)]"
+                  (click)="goTo(entry)"
+                  [attr.aria-label]="'Go to ' + entry.label">
+                  Go
+                </button>
+              }
+            </li>
+          }
+        </ul>
+
+        @if (!isComplete()) {
+          <p class="mb-0 mt-[10px] text-[12px] leading-[1.45] text-[var(--pr-text-muted)]">
+            Submit stays disabled until every section above is complete.
+          </p>
+        }
+      </div>
+    }
+  </div>
+}

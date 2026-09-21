@@ -3164,6 +3164,103 @@ describe('ResultsFrameworkReportingService', () => {
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
     });
 
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-AC-2)
+    it('should thread a numeric tocIndicatorTargetId query param through to the loader as a live filter', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 11,
+          result_id: 101,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Alpha',
+            result_code: 'RES-101',
+            result_type_id: 2,
+            version_id: 30,
+            status_id: 2,
+            obj_status: { status_name: 'Submitted' },
+          },
+          obj_results_toc_result_indicators: [
+            { toc_results_indicator_id: 'IND-55' },
+          ],
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 11 },
+      ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      await service.getExistingResultContributorsToIndicators(
+        user,
+        5,
+        'IND-55',
+        undefined,
+        '607878',
+      );
+
+      const calledWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where;
+      // NULL-safe two-tier match (RRC-DD-4): an array of two `where` clauses,
+      // one pinning the exact anchor, one falling back to a historical NULL row.
+      expect(Array.isArray(calledWhere)).toBe(true);
+      expect(calledWhere).toHaveLength(2);
+      const exactClauseTargets =
+        calledWhere[0].obj_results_toc_result_indicators
+          .obj_result_indicator_targets.toc_indicator_target_id;
+      expect(exactClauseTargets).toBe(607878);
+      const fallbackClauseTargets =
+        calledWhere[1].obj_results_toc_result_indicators
+          .obj_result_indicator_targets.toc_indicator_target_id;
+      expect(fallbackClauseTargets).toBeDefined();
+    });
+
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-8) —
+    // a blank `?tocIndicatorTargetId=` reaches the loader as an empty
+    // string; it MUST be treated as absent (coarse-only), never as a live
+    // `toc_indicator_target_id = 0` filter.
+    it('should treat an empty-string tocIndicatorTargetId query param as absent (coarse-only)', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 11,
+          result_id: 101,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Alpha',
+            result_code: 'RES-101',
+            result_type_id: 2,
+            version_id: 30,
+            status_id: 2,
+            obj_status: { status_name: 'Submitted' },
+          },
+          obj_results_toc_result_indicators: [
+            { toc_results_indicator_id: 'IND-55' },
+          ],
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 11 },
+      ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      await service.getExistingResultContributorsToIndicators(
+        user,
+        5,
+        'IND-55',
+        undefined,
+        '',
+      );
+
+      const calledWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where;
+      // Absent — a single (non-array) where clause, no toc_indicator_target_id key at all.
+      expect(Array.isArray(calledWhere)).toBe(false);
+      expect(
+        calledWhere.obj_results_toc_result_indicators
+          .obj_result_indicator_targets,
+      ).not.toHaveProperty('toc_indicator_target_id');
+    });
+
     it('should use general application roles as fallback when no specific role mapping found', async () => {
       mockResultsTocResultRepository.find.mockResolvedValueOnce([
         {

@@ -17,7 +17,7 @@ import {
   innovationLinkAnswerIsComplete,
   showsInnovationLinkQuestion
 } from '../../../../../../shared/services/global/qa-innovation-development-results.service';
-import { validateKpHandle } from '../../../../../result-framework-reporting/shared/report-result/kp-handle.validator';
+import { normalizeKpHandle, validateKpHandle } from '../../../../../result-framework-reporting/shared/report-result/kp-handle.validator';
 import { CgspaceItemDto } from '../../../../../result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 import {
   KpRepository,
@@ -511,24 +511,17 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       return;
     }
 
-    const regex =
-      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
+    const error = validateKpHandle(this.resultLevelSE.resultBody.handler);
 
-    const isValid = regex.test(this.resultLevelSE.resultBody.handler);
-
-    if (!isValid) {
-      this.mqapUrlError = {
-        status: true,
-        message: 'Please ensure that the handle is from the CGSpace, MELSpace or WorldFish repository and not other CGIAR repositories.'
-      };
+    if (error.status) {
+      this.mqapUrlError = error;
       this.validating = false;
       return;
     }
 
-    this.mqapUrlError = {
-      status: false,
-      message: ''
-    };
+    this.mqapUrlError = error;
+
+    this.resultLevelSE.resultBody.handler = normalizeKpHandle(this.resultLevelSE.resultBody.handler);
 
     this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe({
       next: resp => {

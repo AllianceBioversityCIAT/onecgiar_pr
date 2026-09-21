@@ -16,11 +16,21 @@
     </div>
 
     @switch (resultTypeId()) {
-      @case (1) { <app-type-policy-change /> }
-      @case (2) { <app-type-innovation-use /> }
-      @case (5) { <app-type-capacity-sharing /> }
-      @case (6) { <app-type-knowledge-product /> }
-      @case (7) { <app-type-innovation-dev /> }
+      @case (1) {
+        <app-type-policy-change />
+      }
+      @case (2) {
+        <app-type-innovation-use />
+      }
+      @case (5) {
+        <app-type-capacity-sharing />
+      }
+      @case (6) {
+        <app-type-knowledge-product />
+      }
+      @case (7) {
+        <app-type-innovation-dev />
+      }
     }
   }
 </div>

@@ -166,6 +166,16 @@ export class SummaryService {
         last_updated_date: new Date(),
       });
 
+      // `saveAnticipatedInnoUser` reports a refused sub-save by RETURNING a 4xx envelope instead of
+      // throwing, and this method used to drop that on the floor and answer 201 regardless — so a
+      // payload whose measures the server rejected reached the form as "saved", and the reporter
+      // only found out at submit-for-review, through a minimum-data-standards error about data the
+      // form was still showing. `ResponseInterceptor` reads `status`, so returning the envelope is
+      // what turns it into a real HTTP 400.
+      // Everything else in this payload is written ABOVE, on purpose: one invalid measure row must
+      // not cost the reporter the investment amounts typed in the same section.
+      if (Number(InnovationUse?.status) >= 300) return InnovationUse;
+
       return {
         response: InnovationUse,
         message: 'Results Innovations Use has been created successfully',

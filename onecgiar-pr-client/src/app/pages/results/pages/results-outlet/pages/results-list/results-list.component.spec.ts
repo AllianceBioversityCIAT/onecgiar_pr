@@ -1253,6 +1253,23 @@ describe('ResultsListComponent', () => {
         component.isEmerging({ phase_year: 2024, acronym: 'P24', planned_result: 0 } as any)
       ).toBe(false);
     });
+
+    // Every W3/bilateral result is unplanned by construction, so planned_result 0 there labels
+    // the whole population instead of a subset. The chip is W1/W2 only.
+    it('isEmerging returns false for a bilateral result that would otherwise qualify', () => {
+      const bilateral = { ...p25Base, planned_result: 0, source_name: 'W3/Bilaterals' };
+      expect(component.isEmerging(bilateral as any)).toBe(false);
+    });
+
+    it('isEmerging still returns true for the same row reported as W1/W2', () => {
+      const w1w2 = { ...p25Base, planned_result: 0, source_name: 'W1/W2' };
+      expect(component.isEmerging(w1w2 as any)).toBe(true);
+    });
+
+    it('isEmerging ignores a bare "Bilateral" source_name too', () => {
+      const bilateral = { ...p25Base, planned_result: 0, source_name: 'Bilateral' };
+      expect(component.isEmerging(bilateral as any)).toBe(false);
+    });
   });
 
   describe('is_replicated handling in table rows', () => {

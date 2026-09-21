@@ -31,6 +31,8 @@ export class GetExistingResultContributorsToIndicatorsHandler {
         parsedResultTocResultId,
         tocResultIndicatorId,
         scope,
+        // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-DD-4)
+        query.tocIndicatorTargetId,
       );
 
     const filteredContributors =

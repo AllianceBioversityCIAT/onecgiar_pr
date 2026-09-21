@@ -1,6 +1,6 @@
 # indicator-drawer
 
-**Verified:** 2026-09-04 · branch qa-development-2026 · fa3f06a90
+**Verified:** 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-04 · qa-development-2026 · fa3f06a90
 
 ## Qué es
 El **aside** de un indicador: entra deslizando desde la derecha, sin scrim, para que la lista siga
@@ -47,6 +47,9 @@ outputs  closed · widthChange
   `toc_results_indicator_id = indicatorRow.related_node_id` al crear
   (`framework-result-toc-indicators.service.ts:72,81`) y el loader filtra por esa misma columna.
   Con el id equivocado no casa nada.
+- `loadExisting` now passes the row's `toc_indicator_target_id` as the optional 4th arg of
+  `GET_ExistingResultsContributors` (`null` when absent = today's coarse `related_node_id`-only
+  behaviour) — spec `bugfix/reported-results-center-scoping` RRC-T-3 (RRC-R-3).
 - ⚠️ **La respuesta es `{ response: { contributors, … } }` — un OBJETO, nunca un array**
   (`get-existing-result-contributors.handler.ts:37-45,69-77`). Leer `response` directo dejaba
   `length` en `undefined`, así que la lista salía **vacía siempre** y el salto automático a la

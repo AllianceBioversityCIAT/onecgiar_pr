@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
@@ -68,7 +68,7 @@ const USE_LEVEL_EXPLANATION_MAX = 9;
   selector: 'app-type-innovation-use',
   imports: [FormsModule, CustomFieldsModule, EstimatesCgiarComponent],
   templateUrl: './type-innovation-use.component.html',
-  styleUrl: './type-innovation-use.component.scss',
+  styleUrl: './type-innovation-use.component.scss'
 })
 export class TypeInnovationUseComponent implements OnInit {
   private readonly bilateralApi = inject(BilateralApiService);
@@ -140,6 +140,16 @@ export class TypeInnovationUseComponent implements OnInit {
    * reaches the handler really is one (401 on an expired token, a 5xx, an Apache 403, a dropped
    * connection), and none of them may write.
    */
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isFormReadOnly` (bilateral-result-creator) was built for exactly this in P2-3520 and every
+   * other section reads it; type-specific never did, so on a Pending Review result the ten fields
+   * here still took input (measured on prtest #9479, 2026-09-21). The autosave was already locked,
+   * so nothing reached the database — the screen simply lied about what could be changed.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   readonly loaded = signal<boolean | null>(null);
 
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
@@ -239,6 +249,67 @@ export class TypeInnovationUseComponent implements OnInit {
     this.loadData();
   }
 
+  /**
+   * The three "Investment (USD)" tables list one row per entity the result is LINKED to, and those
+   * links are owned by other sections — contributing projects by `section-contributors`. Because the
+   * sections are siblings under `[hidden]` and all mounted once with the page
+   * (`bilateral-result-creator.component.html`), `loadData` above is a snapshot of the moment the
+   * page opened: a project added afterwards never appeared in this table, could therefore never be
+   * given an amount or "This is yet to be determined", and the reporter had no way to correct it
+   * short of a browser reload — while `updateMds` below, reading the same stale array, reported the
+   * field complete. Server-side it was not, and `submit-for-review` refused the result with an
+   * error naming data the form was showing as done (result code 9506, AfricaRice, 21-Sep-2026).
+   *
+   * Re-reads only on the transition INTO this section, so returning to it costs one GET and being
+   * here costs none.
+   */
+  private lastOpenSection: string | null = null;
+  private readonly refreshInvestmentTablesOnOpen = effect(() => {
+    const open = this.autoSave.openSection();
+    const previous = this.lastOpenSection;
+    this.lastOpenSection = open;
+    if (open !== SECTION_NAME || previous === SECTION_NAME) return;
+    // Before the first successful load there is nothing to reconcile against, and `loadData` is
+    // about to publish the same rows anyway.
+    if (this.loaded() !== true) return;
+    this.reconcileInvestmentTables();
+  });
+
+  /**
+   * Takes the row SET from the server (which entities are linked, and their names) while keeping
+   * whatever the reporter has typed but not yet saved. A row the server no longer sends is gone
+   * from the result and drops out; a row it sends that was not on screen appears with its stored
+   * values.
+   */
+  private reconcileInvestmentTables(): void {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    this.bilateralApi.GET_innovationUse(resultId).subscribe({
+      next: ({ response }) => {
+        if (!response) return;
+        this.body.investment_programs = this.mergeInvestmentRows(this.body.investment_programs, response.investment_programs);
+        this.body.investment_bilateral = this.mergeInvestmentRows(this.body.investment_bilateral, response.investment_bilateral);
+        this.body.investment_partners = this.mergeInvestmentRows(this.body.investment_partners, response.investment_partners);
+        this.updateMds();
+      },
+      // A failed refresh leaves the table exactly as it was: the reporter keeps editing what is on
+      // screen rather than watching their rows vanish on a dropped request.
+      error: () => undefined
+    });
+  }
+
+  private mergeInvestmentRows(staged: any[] | undefined, fresh: any[] | undefined): any[] {
+    const rows = Array.isArray(fresh) ? fresh : [];
+    const key = (row: any) => String(row?.project_id ?? row?.id ?? '');
+    const stagedByKey = new Map((staged ?? []).map((row: any) => [key(row), row]));
+    return rows.map((row: any) => {
+      const previous = stagedByKey.get(key(row));
+      // Only the two the person edits are carried over; the name and the budget-row id are the
+      // server's to state.
+      return previous ? { ...row, kind_cash: previous.kind_cash, is_determined: previous.is_determined } : row;
+    });
+  }
+
   toggleShowAll(): void {
     this.showAllFields.update(v => !v);
     const resultId = this.creationService.currentResultId();
@@ -273,7 +344,7 @@ export class TypeInnovationUseComponent implements OnInit {
         // publishing nothing leaves the section at "0/0 fields", which reads as "nothing required
         // here" instead of as incomplete. Three unfilled items keep it honestly amber.
         this.updateMds();
-      },
+      }
     });
   }
 
@@ -454,7 +525,7 @@ export class TypeInnovationUseComponent implements OnInit {
     this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
       debounceMs,
       statusKey: 'type-specific',
-      executor: (resultId, body) => this.bilateralApi.PATCH_innovationUse(resultId, body),
+      executor: (resultId, body) => this.bilateralApi.PATCH_innovationUse(resultId, body)
     });
   }
 
@@ -473,7 +544,7 @@ export class TypeInnovationUseComponent implements OnInit {
       innovatonUse: {
         actors: this.body.actors ?? [],
         organization: this.buildOrganizationsForSave(),
-        measures: this.body.measures ?? [],
+        measures: this.body.measures ?? []
       },
       // P2-3424: everything below now round-trips through the legacy summary endpoint — its DTO
       // (server `api/results/summary/dto/create-innovation-use.dto.ts`) declares these keys and
@@ -494,7 +565,7 @@ export class TypeInnovationUseComponent implements OnInit {
       has_innovation_link: this.body.has_innovation_link ?? null,
       // `pr-select` hands back the catalog's raw `id`, which arrives as a numeric STRING — normalize it so
       // the contract always carries numbers, the way the W1/W2 section stores them.
-      linked_results: this.body.linked_result_id == null ? [] : [Number(this.body.linked_result_id)],
+      linked_results: this.body.linked_result_id == null ? [] : [Number(this.body.linked_result_id)]
     };
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_use_id != null) {
@@ -511,7 +582,7 @@ export class TypeInnovationUseComponent implements OnInit {
         String(m.unit_of_measure ?? '').trim() !== '' &&
         m.quantity !== null &&
         m.quantity !== undefined &&
-        String(m.quantity).trim() !== '',
+        String(m.quantity).trim() !== ''
     );
   }
 
@@ -525,17 +596,17 @@ export class TypeInnovationUseComponent implements OnInit {
         key: 'use-actors',
         label: 'Actors',
         // AC4: when the use is still to be determined no actor is requested, so the field is satisfied.
-        filled: tbdSet && (tbd === true || hasActors),
+        filled: tbdSet && (tbd === true || hasActors)
       },
       {
         key: 'use-measures',
         label: 'Other quantitative measures of innovation use',
-        filled: this.hasCompleteMeasure(),
+        filled: this.hasCompleteMeasure()
       },
       {
         key: 'use-level',
         label: 'How would you assess the current use level of the innovation?',
-        filled: this.body.innovation_use_level_id != null,
+        filled: this.body.innovation_use_level_id != null
       },
       {
         key: 'use-investment',
@@ -543,12 +614,8 @@ export class TypeInnovationUseComponent implements OnInit {
         filled:
           Array.isArray(this.body.investment_bilateral) &&
           this.body.investment_bilateral.length > 0 &&
-          this.body.investment_bilateral.every(
-            (investment: any) =>
-              (Number(investment?.kind_cash) > 0) !==
-              (investment?.is_determined === true),
-          ),
-      },
+          this.body.investment_bilateral.every((investment: any) => Number(investment?.kind_cash) > 0 !== (investment?.is_determined === true))
+      }
     ]);
   }
 }
