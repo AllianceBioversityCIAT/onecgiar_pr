@@ -84,3 +84,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Source documents downloaded from SharePoint (never committed)
 .local-docs/
+
+# Obsidian vault config (local note-taking, never committed)
+.obsidian/

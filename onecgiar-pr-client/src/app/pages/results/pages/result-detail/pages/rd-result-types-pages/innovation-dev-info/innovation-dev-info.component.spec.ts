@@ -2125,8 +2125,8 @@ describe('InnovationDevInfoComponent', () => {
 
     describe('sectionLoading skeleton gating respects both section info and questions', () => {
       it('sectionLoading remains true while questions are in flight, and only becomes false once BOTH have resolved (P25)', fakeAsync(() => {
-        let resolveSection: ((val: any) => void) | undefined;
-        let resolveQuestions: ((val: any) => void) | undefined;
+        let resolveSection: (() => void) | undefined;
+        let resolveQuestions: (() => void) | undefined;
 
         mockApiService.resultsSE.GET_innovationDevP25 = () =>
           new Observable(subscriber => {
@@ -2158,8 +2158,8 @@ describe('InnovationDevInfoComponent', () => {
       }));
 
       it('sectionLoading remains true while section data is in flight when questions resolve first (P25)', fakeAsync(() => {
-        let resolveSection: ((val: any) => void) | undefined;
-        let resolveQuestions: ((val: any) => void) | undefined;
+        let resolveSection: (() => void) | undefined;
+        let resolveQuestions: (() => void) | undefined;
 
         mockApiService.resultsSE.GET_innovationDevP25 = () =>
           new Observable(subscriber => {
@@ -2191,8 +2191,8 @@ describe('InnovationDevInfoComponent', () => {
       }));
 
       it('sectionLoading remains true while questions are in flight in legacy path (getSectionInformation)', fakeAsync(() => {
-        let resolveSection: ((val: any) => void) | undefined;
-        let resolveQuestions: ((val: any) => void) | undefined;
+        let resolveSection: (() => void) | undefined;
+        let resolveQuestions: (() => void) | undefined;
 
         mockApiService.resultsSE.GET_innovationDev = () =>
           new Observable(subscriber => {
