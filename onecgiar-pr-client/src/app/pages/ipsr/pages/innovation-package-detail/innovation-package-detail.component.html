@@ -17,6 +17,13 @@
         (statusId == 1 || statusId == 3)
       ) {
         <div class="submit_button">
+          <!-- P2-3748: a disabled Submit used to be the whole message. The ring says how far the
+               package is, and hovering it names the tabs and steps still missing, each with a way
+               in. Only while the package is being edited — once submitted there is nothing to
+               complete. -->
+          @if (statusId == 1) {
+            <app-ipsr-submit-progress></app-ipsr-submit-progress>
+          }
           <app-pr-button
             [text]="statusId == 1 ? 'Submit' : 'Un-submission'"
             [verticalMargin]="0"
