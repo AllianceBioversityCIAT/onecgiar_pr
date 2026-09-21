@@ -137,7 +137,7 @@
   - [ ] Dimensions are read from the written PNG, never from the requested viewport.
 - **Skills:** `playwright-cli`
 
-### `BG-T-6` — Assert the guide's fonts and tokens against the app's own stylesheets
+### `BG-T-6` — Assert the guide's fonts and tokens against the app's own stylesheets  `[x]`
 
 - **Type:** `infra`
 - **Description:** Make the template resolve its font stack and color tokens from `onecgiar-pr-client/src/styles/fonts.scss` and `colors.scss` at build time, and assert the resolved values. `docs/ux-ui/design.md` §7 is **not** a source here — its Poppins entry is stale and its correction is an unapplied pending standardization (`P-9`).
@@ -279,12 +279,13 @@
 
 - **Type:** `docs`
 - **Description:** Run `build-guide` end to end: archive guard → assemble → verify-structure → pdf. Audit for leaked secrets across tooling output, the PDF and the staged diff. Present the rendered PDF to the operator for the HITL read that is the substitute gate for defect classes D8, D9 and D10.
-- **Implements:** `BG-R-1`, `BG-R-11`, `BG-R-13`, `BG-AC-1`, `BG-AC-11`, `BG-AC-13`
+- **Implements:** `BG-R-1`, `BG-R-11`, `BG-R-13`, `BG-AC-1`, `BG-AC-11`, `BG-AC-13`, and **`BG-R-9`/`BG-AC-9`'s rendered-output half, carried from `BG-T-6`**
 - **Files (expected):** `tooling/dist/w3-bilateral-reporting-user-guide.pdf`, `tooling/dist/capture-requests.log`
 - **Depends on:** `BG-T-6`, `BG-T-10`, `BG-T-11`, `BG-T-12` · **Blocks:** `—`
 - **Estimate:** `M` · **Review:** `checklist`
 - **Verification:**
   - **Falsifier:** delete one section file and re-run → `verify-structure` must fail naming the missing section and the unresolved TOC anchor. Separately, insert a fake token string into a content file → the secret audit must go red. Two different gates, two different deliberate breakages.
+  - ⚠️ **CARRIED FROM `BG-T-6` (execute-time amendment, 2026-09-21) — `BG-AC-9` is NOT fully discharged until this runs.** `BG-T-6` asserts that `template/guide.css`'s `:where(:root)` build-time defaults match `fonts.scss`/`colors.scss`. But `assemble.ts:407` hard-requires and always injects `tokens.json`, so in every **shipped** PDF those defaults are **inert by design** — the values that actually win the cascade come from live `getComputedStyle` and were never compared to the stylesheets. `BG-AC-9`'s subject is *the rendered guide* and defect class **D5** is therefore still ungated. **This task must assert `tokens.json`'s six keys against `readExpectedTokensFromStylesheets()`**, with **quote normalization** — Chromium serializes `'Manrope'` as `Manrope`, which is why a byte comparison was not viable in `BG-T-6`. Falsifier: substitute Poppins into `tokens.json` and observe red.
   - **Red run:** `n/a (no test gate)` — gate is `npm run build-guide` plus the secret audit.
   - **Disqualifier:** if the PDF renders but the Leader's own view shows a mislabelled or degenerate figure, the task is **not** done — D8 has no automated gate and presence checks pass on a broken render (`KZ-changes--user-guide-pdf-1`). Re-shoot the route rather than accepting the page.
   - **Consumers:** `none (no shared symbol changed)`.
@@ -318,6 +319,7 @@ Closed at **scenario and clause** granularity, not requirement ID.
 | `BG-R-8` | *no skeleton* clause | `BG-T-5` |
 | `BG-R-9` | fonts/colors from stylesheets | `BG-T-6` |
 | `BG-R-9` | *NOT from `design.md` §7* clause | `BG-T-6` (falsifier substitutes Poppins) |
+| `BG-R-9` | **rendered-output half** — the shipped PDF's *injected* tokens, not the template defaults | `BG-T-13` (carried from `BG-T-6`, 2026-09-21) |
 | `BG-R-10` | archive byte-identical | `BG-T-1`, re-checked `BG-T-13` |
 | `BG-R-11` | one-command regeneration | `BG-T-13` |
 | `BG-R-12` | statuses as painted | `BG-T-12` |

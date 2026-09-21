@@ -14,7 +14,38 @@
  * reserved for the cover title and TOC numerals; the orange token is reserved exclusively for
  * the click-target legend, never reused as a generic accent, so it stays visually distinct from
  * the app's own violet UI per UG-R-3 / design.md §6.3.
+ *
+ * // @akili-spec changes/w3-bilateral-user-guide
+ *
+ * BG-T-6 addendum (design.md §10 BG-DD-7, requirements.md BG-R-9/BG-AC-9): the `:where(:root)`
+ * block immediately below carries build-time fallback defaults for the 2 font tokens and 4 color
+ * tokens above, read LITERALLY off the app's own `onecgiar-pr-client/src/styles/fonts.scss` and
+ * `colors.scss` — never off `docs/ux-ui/design.md` §7, whose typography entry still names
+ * Poppins and is known stale (its correction is an UNAPPLIED, pending kaizen standardization:
+ * `docs/specs/kaizen/changes--user-guide-pdf.md` -> Pending Items P5, `Status: pending`). Do NOT
+ * "helpfully" re-point this block at `design.md` §7 — that is the exact failure this task
+ * exists to prevent. `src/tokens.ts`'s `assertTemplateTokensMatchStylesheets` (run via
+ * `npx ts-node src/tokens.ts`) re-parses both stylesheets at build time and fails loudly, naming
+ * expected vs found, if any value below drifts from them.
  */
+
+:where(:root) {
+  /*
+   * `:where()` has ZERO specificity on purpose: a live capture's real `:root` rule (the
+   * TOKENS_CSS mustache slot, injected by `assemble.ts` from `tokens.json` into `guide.html`'s
+   * inline `style#ug-design-tokens`) has ordinary `:root` specificity and so always wins the
+   * cascade over these, regardless of stylesheet/element source order. These 6 values are
+   * fallback defaults ONLY — never an override of a real live capture. NOTE for
+   * `src/tokens.ts`'s parser: keep this comment free of literal curly braces — its non-greedy
+   * rule-body regex stops at the first one it finds.
+   */
+  --font-manrope: 'Manrope', 'Poppins', sans-serif;
+  --font-jetbrains-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --pr-color-primary-300: #6b46e5;
+  --pr-color-primary-400: #5733c4;
+  --pr-color-secondary-400: #2b2838;
+  --pr-color-orange-500: #f97316;
+}
 
 *,
 *::before,

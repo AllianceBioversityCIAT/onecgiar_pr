@@ -354,3 +354,67 @@ An unasserted route now says so in the same line rather than staying silent.
 **Constitution impact** — none.
 
 **Final verification result** — `VERIFIED` (Leader re-run, including an independent cross-check of the PNG parse) + `STATUS: PASS` (independent `opus` Reviewer).
+
+### `BG-T-6` — Assert the guide's fonts and tokens against the app's own stylesheets
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 1) |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 |
+| Review depth | `checklist` · Reviewer `opus`, Implementer `sonnet` |
+| Review rounds | 1. Cumulative: **8** of 17 |
+| Requirements covered | `BG-R-9`, `BG-DD-7`, `P-9`, the negative clause *NOT from `docs/ux-ui/design.md` §7* — and **`BG-AC-9` only in part**, see the carry-forward below |
+| Authored LOC | ~190 (`tokens.ts` + `guide.css`). Cumulative: **~1,060** of 1,300–1,700. **No tripwire** |
+| runtime events | none |
+
+**The premise was proven, not assumed.** Independent reads by the Leader and the Reviewer confirm the divergence this task exists for:
+
+| Source | States |
+|---|---|
+| `onecgiar-pr-client/src/styles/fonts.scss:11-15` | `html, body { font-family: 'Manrope', 'Poppins', sans-serif; }` |
+| `docs/ux-ui/design.md:231` | "Typography \| **Poppins** (unchanged)" |
+| `docs/ux-ui/design.md:243` | "**Family:** Poppins (loaded from Google Fonts)." |
+
+The baseline doc is wrong in **two** places, its correction is the still-`pending` kaizen **P5**, and a guide that trusted it would have shipped in the wrong typeface. `P-9` is now corroborated by a second, independent observation six days after the first.
+
+**What was built.** `readExpectedTokensFromStylesheets()` parses `fonts.scss`/`colors.scss` off disk (repo root via `git rev-parse --show-toplevel`, the same convention as `archive-immutable.ts`); `readTemplateDefaultTokens()` parses a new `:where(:root)` block in `guide.css`; `assertTemplateTokensMatchStylesheets()` compares six keys and throws one error naming every mismatch. `npx ts-node src/tokens.ts` runs it.
+
+**Six values, verified by the Reviewer against the source:** body `'Manrope', 'Poppins', sans-serif` (`fonts.scss:11-15`), code `'JetBrains Mono', ui-monospace, monospace` (`:19-23`), and `#6b46e5` / `#5733c4` / `#2b2838` / `#f97316` (`colors.scss:20,21,43,143`). Each colour name is declared exactly once, so no first-match collision — `#5733c4` recurs at `:295` under a *different* name. It is the right stack: `guide.css:71` sets `body { font-family: var(--font-manrope) }` and `guide.html:16` loads Manrope and JetBrains Mono.
+
+**Falsifier — the required Poppins substitution, red then green:**
+```
+[tokens.ts assert] FAIL — ... never docs/ux-ui/design.md §7:
+  - --font-manrope: expected "'Manrope', 'Poppins', sans-serif" (from fonts.scss/colors.scss),
+                    found "'Poppins', sans-serif" (in template/guide.css)
+EXIT CODE: 1
+```
+then after revert, `OK`, exit 0. Poppins is the falsifier precisely because it is the **known-wrong value the baseline doc actually contains** — an assertion that cannot be reddened by it would not be evidence.
+
+**Leader evidence re-run — `VERIFIED`.** `tsc` exit 0; the Leader ran the assertion directly and saw `OK`; the Leader independently read `fonts.scss` and `design.md` and confirmed the divergence quoted above; tooling `git status` showed only `M src/tokens.ts` and `M template/guide.css`.
+
+**Reviewer verdict — `STATUS: PASS`.** The Leader had named one condition as **FAIL rather than advisory**: a regex parse that silently returns empty would compare nothing to nothing and pass green forever — the inert-fixture class. The Reviewer checked it explicitly: `extractRuleBody` / `extractFontFamily` / `extractCustomProperty` each **throw** on a miss, and no path feeds `''`/`undefined` into the comparison. A reformat or a renamed selector goes red with a named error. **Brittle in shape, but loud, not inert** — so not a FAIL. Also confirmed: `:where(:root)` is (0,0,0) against `guide.html:29-47`'s ordinary `:root` (0,1,0), so the defaults can never override captured values regardless of order; and `design.md` §7 is never read — it appears only as an imperative prohibition, stated twice (`tokens.ts:48-57`, `guide.css:20-29`), both citing kaizen P5.
+
+#### ⚠️ Carry-forward: `BG-AC-9` is **not** fully discharged by this task
+
+The Reviewer identified a real gap, and it is the most consequential finding of this task. `assemble.ts:407` hard-requires and always injects `tokens.json`, so **in every shipped PDF the `:where(:root)` defaults are inert by design**. `BG-AC-9`'s subject is *"the rendered guide HTML"*, and the values that actually win the cascade come from live `getComputedStyle` — which this task never compares to the stylesheets. Defect class **D5** therefore remains ungated in the deliverable.
+
+This is not a `BG-T-6` violation: the rendered HTML cannot exist in an environment-free run. But a forward pointer is not carried by having been filed. **`tasks.md` `BG-T-13` was amended at execute time** to own the residual — it must assert `tokens.json`'s six keys against `readExpectedTokensFromStylesheets()`, **with quote normalization**, because Chromium serializes `'Manrope'` as `Manrope` and a byte comparison is not viable. `BG-T-13`'s *Implements* line and the §4 coverage table were both updated to record the split, so the obligation lives where it will be executed rather than in a report nobody re-opens.
+
+**`ADVISORY` (recorded, never gating, never minted into a task):**
+- *Resilience* — `extractRuleBody` and `extractCustomProperty` take the **first** match in the file, not the cascade winner. A future `@media print { html, body { … } }` above line 11, or a dark-mode block redeclaring a `--pr-color-*`, would be read in preference to the effective rule. Requiring exactly one match and throwing on 2+ would close this **and** the brace footgun below.
+- *Reliability* — the `:where(:root)` comment block must avoid literal `{`/`}` because the rule-body regex is a non-greedy match to the first closing brace. The Implementer flagged this against itself and documented it inline at `guide.css:38-40`. The Reviewer judged it acceptable: a stray brace truncates the body and all six lookups then **throw with a named error**, so the footgun announces itself rather than certifying a partial read.
+- *Readability* — `tokens.ts`'s original header still opens "live design-token extraction (UG-T-5)" before the 30-line addendum; one line noting the file now has two independent paths would orient the next reader.
+
+**Decisions made**
+- **Execute-time spec edit:** `tasks.md` `BG-T-13` gained the carried `BG-AC-9` obligation, its *Implements* line was extended, and the §4 coverage table now records `BG-R-9` as split across `BG-T-6` (build-time defaults) and `BG-T-13` (rendered output). **Carried as a named conformance check in `BG-T-7`'s Reviewer brief.**
+- **`docs/ux-ui/design.md` §7 was NOT corrected here**, deliberately. Under the shared-file write discipline for spec branches, a baseline-document fix is recorded as pending and applied on the apply-capable branch (`staging`), never on a feature branch. Kaizen **P5** already carries it; this run adds a second independent confirmation and should raise its priority at archive time.
+- The Implementer's reading of "hard-code Poppins **in the template**" as `guide.css`'s `:where(:root)` default is accepted: `guide.css`'s rules all reference `var(--font-manrope)` and never a literal stack, and no live `tokens.json` exists in an environment-free run, so it was the only place a literal could be substituted.
+
+**Issues encountered** — none blocking.
+
+**Concurrency note** — ran in parallel with `BG-T-5` in the same folder, on disjoint files. Boundary held in both directions: `BG-T-5` touched only `capture.ts`/`frame-bounds.ts`, `BG-T-6` only `tokens.ts`/`guide.css`, and both commits staged explicit paths rather than the folder.
+
+**Constitution impact** — none.
+
+**Final verification result** — `VERIFIED` (Leader re-run, including an independent read of both `fonts.scss` and `design.md`) + `STATUS: PASS` (independent `opus` Reviewer).
