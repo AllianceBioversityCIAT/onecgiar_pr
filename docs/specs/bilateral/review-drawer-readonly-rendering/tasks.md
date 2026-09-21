@@ -104,8 +104,10 @@
   - **Command:** `CT_DEV_SERVER_PORT=<free port> npx cypress run --component --spec "src/app/pages/result-framework-reporting/pages/bilateral-review/**/*.cy.ts"` — the **whole module**, not just the new spec, per `project-client-verification-tsc-and-page-ct`.
   - **Cases:** (a) `PolicyChangeContentComponent` with `disabled = true` → zero `a.field` select
     triggers, and the read-only text div rendered; (b) `CapSharingContentComponent` with
-    `disabled = true` → zero `<input>` nodes, values painted as text; (c) the same two components
-    with `disabled = false` → operable controls **present**.
+    `disabled = true` → zero `<input>` nodes, values painted as text; (d) `InnoDevContentComponent`
+    with `disabled = true` → zero `<textarea>` nodes, text painted — added after the Reviewer
+    ADVISORY that `RDR-R-1` sc.1 names three control types while the suite covered two; (c) each of
+    the three with `disabled = false` → operable controls **present**.
   - **Falsifier:** case (c) is the falsifier for (a) and (b) — a selector that matches nothing in
     both states proves nothing. Additionally: revert `RDR-T-1`'s edit on `cap-sharing-content:11`
     and case (b) must go **red**. Run both mutations and record the outcome.

@@ -25,13 +25,15 @@
 // (tasks.md §4, checks 5 and 6).
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
 import { CapSharingContentComponent } from './components/cap-sharing-content/cap-sharing-content.component';
+import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
 import { PolicyControlListService } from '../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
+import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { BilateralResultDetail } from './result-review-drawer.interfaces';
 import { EventEmitter } from '@angular/core';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 /**
  * The `<a class="field">` trigger `pr-select` renders ONLY in its editable branch.
@@ -40,8 +42,14 @@ import { of } from 'rxjs';
  * editable falsifier counts 3 and the gate reports a defect that does not exist.
  */
 const SELECT_TRIGGER = 'app-pr-select a.field';
-/** `pr-input type="number"` renders `inputmode="decimal"` ONLY in its editable branch. */
+/**
+ * `pr-input` renders `inputmode="decimal"` ONLY in its editable branch — for `type="number"` AND
+ * for `type="currency"` (`pr-input.component.html:88-113`). Unambiguous here because cap-sharing
+ * has four number fields and no currency field; reuse it elsewhere only after checking that.
+ */
 const NUMBER_INPUT = 'input[inputmode="decimal"]';
+/** `pr-textarea` renders a real `<textarea>` ONLY in its editable branch. */
+const TEXTAREA = 'app-pr-textarea textarea';
 /** The text node `pr-*` paints in its read-only branch. */
 const READONLY_TEXT = '.text-secondary-400';
 
@@ -57,6 +65,17 @@ const POLICY_STAGES = [
 const policyDetail = (): BilateralResultDetail =>
   ({
     resultTypeResponse: [{ policy_type_id: 1, policy_stage_id: 7, institutions: [] }]
+  }) as unknown as BilateralResultDetail;
+
+const innoDevDetail = (): BilateralResultDetail =>
+  ({
+    resultTypeResponse: [
+      {
+        result_innovation_dev_id: 12,
+        innovation_nature_id: null,
+        innovation_developers: 'Dr Jane Doe, jane@example.org, CIMMYT'
+      }
+    ]
   }) as unknown as BilateralResultDetail;
 
 const capSharingDetail = (): BilateralResultDetail =>
@@ -130,6 +149,25 @@ const mountCapSharing = (disabled: boolean) =>
     })
     .then(lowerGlobalReadOnly);
 
+const mountInnoDev = (disabled: boolean) =>
+  cy
+    .mount(InnoDevContentComponent, {
+      componentProperties: { disabled, resultDetail: innoDevDetail() },
+      providers: [
+        {
+          provide: InnovationControlListService,
+          useValue: {
+            typeList: [],
+            characteristicsList: [],
+            readinessLevelsList: [],
+            useLevelsList: [],
+            readinessLevelsLoaded$: new Subject<void>()
+          }
+        }
+      ]
+    })
+    .then(lowerGlobalReadOnly);
+
 describe('RDR-T-2 — locked Center-reported fields render as read-only text', () => {
   describe('pr-select (policy-change-content)', () => {
     it('(a) locked: renders NO operable select trigger, and paints the stored labels as text', () => {
@@ -173,6 +211,22 @@ describe('RDR-T-2 — locked Center-reported fields render as read-only text', (
     it('(c) FALSIFIER — editable: the same selector DOES match, so (b) is not vacuous', () => {
       mountCapSharing(false);
       cy.get(NUMBER_INPUT).should('have.length', 4);
+    });
+  });
+
+  // `RDR-R-1` sc.1 names THREE control types. Without this block the only automated proof of the
+  // rendering mechanism would cover pr-select and pr-input, leaving pr-textarea resting on P-2's
+  // identical-switch-expression argument alone (Reviewer ADVISORY, RDR-T-2).
+  describe('pr-textarea (inno-dev-content)', () => {
+    it('(d) locked: renders NO operable textarea, and paints the stored text', () => {
+      mountInnoDev(true);
+      cy.get(TEXTAREA).should('have.length', 0);
+      cy.get(READONLY_TEXT).should('contain.text', 'Dr Jane Doe, jane@example.org, CIMMYT');
+    });
+
+    it('(c) FALSIFIER — editable: the same selector DOES match, so (d) is not vacuous', () => {
+      mountInnoDev(false);
+      cy.get(TEXTAREA).should('have.length', 1);
     });
   });
 });

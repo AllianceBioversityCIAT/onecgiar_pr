@@ -139,7 +139,7 @@ Every in-scope control SHALL carry the read-only signal; a missed one is a defec
 | # | Defect class | Gate | Automated? |
 |---|---|---|---|
 | D1 | A control is missed by the sweep and still renders editable | `RDR-T-1` static invariant test over the five real template files | Yes |
-| D2 | `[readOnly]` is added but the control still renders a form field (wrong input name, `editable` override, `isStatic`) | `RDR-T-2` Cypress CT mounting the real child component and asserting zero operable controls | Yes |
+| D2 | `[readOnly]` is added but the control still renders a form field (wrong input name, `editable` override, `isStatic`) | `RDR-T-2` Cypress CT mounting the real child components and asserting zero operable controls — covers all three control types: `pr-select` (policy-change), `pr-input` (cap-sharing), `pr-textarea` (inno-dev) | Yes |
 | D3 | The sweep over-reaches and locks a card 1 control or a button | `RDR-T-1` asserts card 1 and button bindings are untouched; `git diff` line count | Yes |
 | D4 | A read-only branch renders the wrong value (number formatting, async option list not yet loaded so a `pr-select` shows `Not provided`) | **No automated gate.** jsdom does not render these templates (both specs use `overrideComponent({ template: '' })`) and the CT uses static fixtures, not the live option catalogs. **Substitute: the HITL browser check in `tasks.md` §4, on a real SP-reviewer session.** |
 | D5 | Existing suites regress | Targeted Jest + module CT + `tsc --noEmit` + `ng lint` | Yes |

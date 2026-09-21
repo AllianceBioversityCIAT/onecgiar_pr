@@ -64,12 +64,13 @@ Two non-gating advisories recorded:
 
 ## `RDR-T-2` — Cypress CT proving the locked controls actually render as read-only
 
-**Status:** ✅ done · **Reviewer:** dispatched · **Rounds:** 1
+**Status:** ✅ done · **Reviewer:** PASS (sonnet, independent) · **Rounds:** 1
 
 ### What shipped
 
-`result-review-drawer.readonly-render.cy.ts` — 6 tests mounting the **real**
-`PolicyChangeContentComponent` and `CapSharingContentComponent` with their real templates.
+`result-review-drawer.readonly-render.cy.ts` — 8 tests mounting the **real**
+`PolicyChangeContentComponent`, `CapSharingContentComponent` and `InnoDevContentComponent` with
+their real templates, covering all three affected control types.
 
 | Case | Asserts |
 |---|---|
@@ -77,7 +78,8 @@ Two non-gating advisories recorded:
 | (b) locked, `pr-input` | 0 × `input[inputmode="decimal"]`; `25` and `40` painted as text |
 | (b2) locked, zero value | `0` painted, not swallowed into the absent-value fallback |
 | (b3) locked, null value | `Not applicable` painted, and still 0 operable inputs |
-| (c) ×2 FALSIFIER, editable | the same selectors DO match (2 triggers / 4 inputs) |
+| (d) locked, `pr-textarea` | 0 × `app-pr-textarea textarea`; the stored text painted |
+| (c) ×3 FALSIFIER, editable | the same selectors DO match (2 triggers / 4 inputs / 1 textarea) |
 
 ### The important finding — the gate was vacuous on its first run
 
@@ -102,11 +104,28 @@ Stripped `[readOnly]` from the cap-sharing "Women" input → cases **(b) and (b3
 `Too many elements found. Found '1', expected '0'` — the operable number input reappears.
 Restored → 6/6 green.
 
+### Reviewer verdict and the coverage gap it closed
+
+**PASS.** The Reviewer traced the tautology question through the real `pr-input` / `pr-select`
+templates and confirmed the falsifier argument holds for *both* mounted components, not only the
+site empirically mutated. Fixture shapes, selector scoping and flake-freedom all confirmed.
+
+One advisory was a **real gap and was closed rather than documented**: the suite covered
+`pr-select` and `pr-input` but not `pr-textarea`, while `RDR-R-1` sc.1 names all three control
+types and `requirements.md` §8's D2 claimed automated coverage without a carve-out. Added case (d)
+via `InnoDevContentComponent` (+ its editable falsifier). Its own falsifier was then executed —
+stripping `[readOnly]` from the inno-dev textarea turned case (d) red with
+`Found '1', expected '0'` — and reverted. Suite is now **8/8**.
+
+Second advisory applied: the `NUMBER_INPUT` comment claimed the selector matches only
+`type="number"`; it also matches `type="currency"`. Corrected in place (harmless here — cap-sharing
+has no currency field — but the comment was wrong).
+
 ### Whole-module CT run
 
 | Spec | Result |
 |---|---|
-| `result-review-drawer.readonly-render.cy.ts` (new) | ✅ 6/6 |
+| `result-review-drawer.readonly-render.cy.ts` (new) | ✅ 8/8 |
 | `bilateral-review-table.cy.ts` | ✅ 21/21 |
 | `bilateral-review.cy.ts` | ❌ 11 of 48 failing |
 | `result-review-drawer.approve-tooltip.cy.ts` | ❌ 1 of 3 failing |
@@ -132,12 +151,12 @@ four.
 | Metric | Budgeted | Actual | Verdict |
 |---|---|---|---|
 | Tasks | 2 | 2 | on budget |
-| LOC | ~145 | **~31 template + ~150 spec + ~175 CT = ~356** | **over** — see below |
+| LOC | ~145 | **~31 template + ~150 spec + ~215 CT = ~396** | **over** — see below |
 | Review rounds | 1 | 1 per task | on budget |
 
 **The LOC budget was exceeded, by the tests, not the change.** The implementation itself came in
 *under* estimate (31 lines against ~21 expected, the difference being Prettier reflow of the
-`[disabled]` lines). The two gates cost ~325 lines against ~125 budgeted, because both needed real
+`[disabled]` lines). The two gates cost ~365 lines against ~125 budgeted, because both needed real
 fixture data and documented rationale — and the CT needed the `lowerGlobalReadOnly` harness the
 budget did not anticipate. This is the known pattern from `feedback-pragmatic-akili-execution`
 (tests ≈ 60 % of LOC and are routinely undercounted); it is recorded here rather than silently
