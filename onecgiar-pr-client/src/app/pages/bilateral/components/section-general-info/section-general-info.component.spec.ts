@@ -812,4 +812,29 @@ describe('SectionGeneralInfoComponent', () => {
       });
     });
   });
+  /**
+   * P2-3766 — QA found the three mandatory fields rendering their header with an empty icon slot:
+   * no ⓘ, no guidance text anywhere on the page (prtest #9432, 2026-09-21). The story calls this
+   * guidance "existing behavior, must be preserved"; it was preserved in W1/W2 and never wired to
+   * the bilateral form. The text is the shared catalogue entry, not new copy, so both forms move
+   * together when it changes.
+   */
+  describe('P2-3766 · guidance tooltips on the mandatory fields', () => {
+    const html = readFileSync(join(__dirname, 'section-general-info.component.html'), 'utf8');
+
+    it('feeds Title and Description from the shared catalogue', () => {
+      expect(html).toContain(`[tooltip]="guidance('[general-info]-title')"`);
+      expect(html).toContain(`[tooltip]="guidance('[general-info]-description')"`);
+    });
+
+    it('opts the Lead contact person field into its ⓘ', () => {
+      expect(html).toMatch(/<app-lead-contact-person-field[^>]*\[guidanceAsTooltip\]="true"/s);
+    });
+
+    it('reads the same entries rd-general-information reads, and empty when absent', () => {
+      build();
+      expect(component.guidance('[general-info]-title')).toContain('non-specialist reader');
+      expect(component.guidance('[general-info]-does-not-exist')).toBe('');
+    });
+  });
 });

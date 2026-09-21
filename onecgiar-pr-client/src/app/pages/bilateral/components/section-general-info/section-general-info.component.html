@@ -14,6 +14,7 @@
     type="text"
     [maxWords]="30"
     [required]="true"
+    [tooltip]="guidance('[general-info]-title')"
     placeholder="Enter result title"
     [valueValid]="!isPlaceholderTitle(title())"
     [readOnly]="readOnly()"
@@ -27,6 +28,7 @@
     label="Description of Result"
     [maxWords]="300"
     [required]="true"
+    [tooltip]="guidance('[general-info]-description')"
     [rows]="4"
     placeholder="Describe the result"
     [readOnly]="readOnly()"
@@ -35,7 +37,9 @@
     (focusout)="onDescriptionBlur()">
   </app-pr-textarea>
 
-  <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" [readOnly]="readOnly()" />
+  <!-- P2-3766: `guidanceAsTooltip` is opt-in per caller (see the field's own template) and bilateral
+       never opted in, so its guidance had nowhere to show. -->
+  <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" [readOnly]="readOnly()" [guidanceAsTooltip]="true" />
 
   <!-- For innovations the Lead contact person doubles as the Innovation Developer: Section 5's
        "Innovation developers" field is PREFILLED from this one and stays editable (P2-3778 reversed,
