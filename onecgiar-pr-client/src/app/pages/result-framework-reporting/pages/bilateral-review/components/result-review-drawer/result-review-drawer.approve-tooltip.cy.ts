@@ -135,15 +135,28 @@ describe('Approve button — tooltip trigger doubles as a functional control (TI
     // site-specific harness was not worth the added flakiness. This test's job — the compound
     // click/pin coexistence — is covered fully below.
     const onApprove = cy.stub().as('onApprove');
+    // 🛑 The wrapper's padding is load-bearing, not cosmetic (2026-09-21).
+    // `fe32d7bd3` ("make the bubble reachable") gave EVERY tooltip element `pointer-events: auto`
+    // (`pr-tooltip.directive.ts:303`) so the pointer can reach links inside it. Mounted bare, this
+    // button sits at the very top-left of the CT viewport, so a `position="top"` bubble is clamped
+    // back over its own trigger and then — now that it accepts the pointer — eats the click that
+    // this test is trying to prove still lands. `onApprove` was never called and it read as a
+    // directive regression.
+    // Measured, not assumed: the identical mount with this padding fires `onApprove` exactly once,
+    // so the directive does NOT swallow clicks; only the clamped-at-the-edge geometry does. The
+    // padding also matches production, where the Approve button lives in the drawer footer with
+    // the whole panel above it and the bubble has somewhere to go.
     cy.mount(
-      `<button
-         type="button"
-         class="approve-button"
-         (click)="onApprove()"
-         [prTooltip]="tooltipText"
-         prTooltipPosition="top">
-         APPROVE
-       </button>`,
+      `<div style="padding: 300px 200px;">
+         <button
+           type="button"
+           class="approve-button"
+           (click)="onApprove()"
+           [prTooltip]="tooltipText"
+           prTooltipPosition="top">
+           APPROVE
+         </button>
+       </div>`,
       {
         imports: [PrTooltipDirectiveModule],
         componentProperties: { tooltipText: 'Please save your changes before approving', onApprove }

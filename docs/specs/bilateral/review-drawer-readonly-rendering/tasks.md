@@ -5,7 +5,7 @@
 - **Module / feature:** bilateral Review drawer — read-only rendering for Center-reported fields
 - **Linked spec:** `./requirements.md` + `./design.md`
 - **Depth:** Lite · **Approval Mode:** `pre-approved` (Phase 2 gate **auto-approved (pre-approved mode)**)
-- **Status:** `done` (implementation + both gates) · HITL §4 **pending**
+- **Status:** `done` — implementation, both gates, and HITL §4 all complete
 - **Execution limits** (per `feedback-pragmatic-akili-execution`): max **1** Reviewer round per task; a
   second FAIL escalates, never loops. Targeted `npx jest <path>` only — never the full client suite.
 - **Budget tripwire:** 2 tasks · ~145 LOC · 1 review round. Exceeding any of these stops execution.
@@ -129,7 +129,7 @@
   - Whole-module CT run green (no pre-existing spec regressed)
   - Commit follows the project convention
 
-## 4. HITL verification — ⏳ PENDING, not yet performed — the only gate for defect class `D4`
+## 4. HITL verification — ✅ PERFORMED 2026-09-21 (results in execution.md) — the only gate for defect class `D4`
 
 `requirements.md` §8 records `D4` (read-only branch paints the **wrong value** — number formatting,
 or a `pr-select` showing `Not provided` because its option catalog has not loaded) as having **no
@@ -150,7 +150,7 @@ Route: `/result-framework-reporting/entity-details/SP01/bilateral-review` → an
 | 4 | Card 4 — open one result of **each** type 1 / 2 / 5 / 7 | Selects and inputs painted as text |
 | 5 | **D4a** — a `pr-select` with a stored value (e.g. Policy type) | Shows the **stored label**, never `Not provided` |
 | 6 | **D4b** — a numeric field with a value (e.g. cap-sharing `Women`) | Shows the number, not blank and not `Not applicable` |
-| 7 | An empty optional field | Shows `Not applicable`; an empty required one shows `Not provided` |
+| 7 | An empty optional field | Shows `Not applicable`; an empty required one shows `Not provided` — ⚠️ NOT exercised live: no result in the SP01 dataset has an empty locked field. CT case (b3) only |
 | 8 | Title pencil, `Save Data Standards` | Absent (unchanged from today) |
 | 9 | Sign in as Platform Admin, same result | Everything in cards 2–4 editable again — `RDR-R-2` |
 
@@ -176,7 +176,7 @@ report it and re-specify rather than patching in place.
 | `RDR-NFR-2` no new token | `RDR-T-1` diff scope (no `.scss` touched) |
 | `RDR-NFR-3` lint + tsc | `RDR-T-1` commands |
 | `RDR-NFR-4` no suite regression | `RDR-T-1` Jest · `RDR-T-2` module CT |
-| `D4` wrong value painted | **HITL §4 only** — accepted automated gap |
+| `D4` wrong value painted | **HITL §4 only** — accepted automated gap; verified PASS 2026-09-21, incl. cold boot |
 
 **`skip-eligible` tasks: none.** Both tasks get a Reviewer. `RDR-T-1` looks mechanical but its
 exclusion list is the audit surface; `RDR-T-2` is where a tautological assertion would hide.

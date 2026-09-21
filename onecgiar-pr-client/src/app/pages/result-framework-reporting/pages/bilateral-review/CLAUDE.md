@@ -1,6 +1,6 @@
 # bilateral-review
 
-**Verified:** 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (**BRH-T-1 attempt 2** — consolidated 2-row pinned band, token-styled Filter popover replacing `app-pr-filter-select`/`-multiselect`, KPI ribbon wrap fixing the 375px document overflow, page CT re-based off the superseded gates; BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter; **BRH-T-3** — semantic result-type badges, per-row 3px status accent, hover-copy hardening, text selection); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
+**Verified:** 2026-09-21 (CT repair, see below) · 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (**BRH-T-1 attempt 2** — consolidated 2-row pinned band, token-styled Filter popover replacing `app-pr-filter-select`/`-multiselect`, KPI ribbon wrap fixing the 375px document overflow, page CT re-based off the superseded gates; BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter; **BRH-T-3** — semantic result-type badges, per-row 3px status accent, hover-copy hardening, text selection); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
 
 **What this owns:** the **Bilateral review** tab of the programme shell (`entity-details/:entityId/bilateral-review`) — one searchable, filterable, groupable list of W3/Bilateral results reported to this program, with a review drawer for approve/reject decisions.
 
@@ -194,6 +194,25 @@ and Category toggles (previously only Center was exercised).
 
 Every other `assertEffectiveWidth` call still asserts its own requested width; only the CT viewport
 HEIGHT was ever raised (375×3000) to clear the taller BRH cards.
+
+### CT repair 2026-09-21 — 12 red gates, zero app defects
+
+The suite had drifted 11/48 red (plus 1/3 in `result-review-drawer.approve-tooltip.cy.ts`) because
+three later commits changed behaviour the CT still asserted the old way. **Nothing in the app was
+wrong; the whole repair is test-only.** Verified by re-running at the pre-change tree: identical
+counts.
+
+| Root cause | Gates | Repair |
+|---|---|---|
+| `e89889bdf` `quick/bilateral-review-default-pending` made `'pending'` the default status **and** stopped counting it in `activeFilterCount()` | 9 | `mountPage({ queryParams: ALL_STATUSES })` for gates that measure over the whole fixture (`FIXTURE_ROWS` is 7 rows, only 3 pending); filter-activation clicks moved from the pending chip to `bilateral-review-chip-approved`, which still counts |
+| `52a497f4d` visual polish switched the Alignment title from `leading-[17px]` to `leading-snug` | 1 | One-line-no-badge row cap re-based 44 → 46. `13px × 1.375 = 17.875` vs `17` is exactly the +0.875px measured. R-11 is a 44px **minimum** touch target, which 44.875 still meets — these caps are the density guard on top of it |
+| `fe32d7bd3` gave every tooltip `pointer-events: auto` so the bubble is reachable | 1 | The approve-tooltip mount got a padded wrapper. Mounted bare the button sits at the CT viewport's top-left, so a `position="top"` bubble is clamped back over its own trigger and — now that it takes the pointer — eats the click. Probed: the identical mount with padding fires the handler exactly once, so the directive does **not** swallow clicks |
+
+⚠️ **`ALL_STATUSES` is opt-in, never the `mountPage` default** — gates that assert the *pending*
+default (the page's real cold-open state) must keep the un-seeded mount.
+
+⚠️ **A gate that mounts a tooltip'd control bare will lose its clicks at the viewport edge.** That
+is harness geometry, not a directive regression; give the trigger room before concluding otherwise.
 
 ## Where it is used
 

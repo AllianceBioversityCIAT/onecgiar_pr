@@ -226,13 +226,25 @@ const FIXTURE_ROWS_TALL: ResultToReview[] = Array.from({ length: 84 }, (_, i) =>
  *  `PhasesService.getNewPhases()`) keeps it. */
 const PHASE_CURRENT = { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, obj_portfolio: { id: 1 }, status: true, app_module_id: 1 } as any;
 
+/** `quick/bilateral-review-default-pending` (e89889bdf, 2026-09-14) made `'pending'` the page's own
+ *  default status filter. Any gate that measures over the WHOLE fixture has to opt back into the
+ *  full set, because `FIXTURE_ROWS` is 7 rows of which only 3 are pending. Seeded through the real
+ *  `?status=` contract (`parseStatusFilter` accepts `'all'`) so the URL path stays exercised. */
+const ALL_STATUSES = { status: 'all' } as const;
+
 /** Mounts the real page. Must run `TestBed.overrideComponent` BEFORE `cy.mount` compiles the
  *  component — same ordering `my-work-board.cy.ts` relies on (both statements are synchronous).
  *  `rows`/`centers` default to the AC-4 fixture; BRC-T-3 passes the 9-center fixture instead —
  *  same mount, different data, so the wiring under test (stubs, providers) stays identical. */
-function mountPage(fixture?: { rows: ResultToReview[]; centers: typeof FIXTURE_CENTERS }) {
+function mountPage(fixture?: { rows: ResultToReview[]; centers: typeof FIXTURE_CENTERS; queryParams?: Record<string, string> }) {
   const rows = fixture?.rows ?? FIXTURE_ROWS;
   const centers = fixture?.centers ?? FIXTURE_CENTERS;
+  // `quick/bilateral-review-default-pending` (e89889bdf, 2026-09-14) changed the page's own default
+  // from `status: 'all'` to `'pending'`. Tests that assert over the WHOLE fixture must now say so:
+  // FIXTURE_ROWS holds 7 rows of which only 3 are pending, so an un-seeded mount renders 3.
+  // Seeded through the real `?status=` query param (`parseStatusFilter` accepts `'all'`), not by
+  // poking the signal — the URL contract is the app's own supported path and stays under test.
+  const queryParams = fixture?.queryParams ?? {};
 
   TestBed.overrideComponent(BilateralReviewComponent, {
     remove: { imports: [ReportingProgramBandComponent, WhereToReportModalComponent, ResultReviewDrawerComponent] },
@@ -245,8 +257,8 @@ function mountPage(fixture?: { rows: ResultToReview[]; centers: typeof FIXTURE_C
         provide: ActivatedRoute,
         useValue: {
           paramMap: of(convertToParamMap({ entityId: 'SP02' })),
-          snapshot: { paramMap: convertToParamMap({ entityId: 'SP02' }), queryParamMap: convertToParamMap({}) },
-          queryParamMap: of(convertToParamMap({}))
+          snapshot: { paramMap: convertToParamMap({ entityId: 'SP02' }), queryParamMap: convertToParamMap(queryParams) },
+          queryParamMap: of(convertToParamMap(queryParams))
         }
       },
       { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
@@ -344,7 +356,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         // (`cy.viewport(840, 900)` → shaves ~15px off `documentElement.clientWidth`, unrelated to
         // any real regression). Pulled forward from T-4 per JB-10.
         cy.viewport(width, 2400);
-        mountPage();
+        mountPage({ queryParams: ALL_STATUSES });
         // Let the URL-hydrate effect's second CD pass settle (same reason the Jest spec runs a
         // second `detectChanges()`) before any geometry read.
         waitForLoad();
@@ -487,7 +499,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // first row action). "Centers chevron" is dropped — there is no defense left to defeat.
       it('AC-15: keyboard focus order is tabs → search → status control → KPI Pending → Clear filters → group toggler → first row action', () => {
         // Activate a filter first so "Clear filters" renders (BRP-R-5) and its position is provable.
-        cy.get('[data-testid="bilateral-review-chip-pending"]').click();
+        // Must be a filter `activeFilterCount()` still counts: since `quick/bilateral-review-default-pending`
+        // (e89889bdf) `'pending'` is the default and is NOT counted, so the pending chip activates
+        // nothing. `'approved'` counts and keeps two rows (r4/r5) in two groups, so the group
+        // toggler and the first row action this test orders against both survive the filter.
+        cy.get('[data-testid="bilateral-review-chip-approved"]').click();
 
         cy.document().should(doc => {
           const focusables = Array.from(doc.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(el => el.getClientRects().length > 0);
@@ -804,7 +820,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   describe('BRV-AC-3: below 900px the lock and the pin are inert', () => {
     beforeEach(() => {
       cy.viewport(840, 2400);
-      mountPage();
+      mountPage({ queryParams: ALL_STATUSES });
       waitForLoad();
       assertEffectiveWidth('840 (BRV-AC-3)', 840);
     });
@@ -1162,12 +1178,12 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
 
     beforeEach(() => {
       cy.viewport(1536, 900);
-      mountPage({ rows: ROW_HEIGHT_FIXTURE_ROWS, centers: FIXTURE_CENTERS });
+      mountPage({ rows: ROW_HEIGHT_FIXTURE_ROWS, centers: FIXTURE_CENTERS, queryParams: ALL_STATUSES });
       waitForLoad();
       assertEffectiveWidth('1536 (row-height fixture)', 1536);
     });
 
-    it('one-line-with-badge <= 50px, one-line-no-badge <= 44px, two-line-with-badge <= 68px (R-11 re-based, BRH-T-3 attempt 2 re-base)', () => {
+    it('one-line-with-badge <= 50px, one-line-no-badge <= 46px, two-line-with-badge <= 68px (R-11 re-based; no-badge re-based again for leading-snug)', () => {
       cy.get('[data-testid="bilateral-review-row-code"]')
         .should('have.length', 3)
         .then($codes => {
@@ -1190,7 +1206,18 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           measured.forEach(m => {
             // Two-line cap re-based 64 -> 68 (BRH-T-3 attempt 2): the caption became the type
             // badge pill, measured 66.5px at its tightest legible size — see the comment above.
-            const cap = m.isTwoLine ? 68 : m.hasCaption ? 50 : 44;
+            //
+            // One-line-no-badge re-based 44 -> 46 (2026-09-21). `52a497f4d`
+            // (`changes/bilateral-review-visual-polish`) switched the Alignment `toc_title` span
+            // from a fixed `leading-[17px]` to `leading-snug`. At `text-[13px]` that is
+            // 13 x 1.375 = 17.875px against the previous 17px, so every one-line row grew by
+            // exactly 0.875px and this shape measured 44.875. Deliberate typography, not a
+            // regression: R-11 is a 44px MINIMUM touch target, which 44.875 still satisfies —
+            // these caps are the density guard on top of it. Re-based measured + ~1.1px, the same
+            // convention the two caps above already use. If a future change pushes this past 46,
+            // measure before re-basing again: two consecutive re-bases in the same direction mean
+            // the density budget is actually being spent, not rounded.
+            const cap = m.isTwoLine ? 68 : m.hasCaption ? 50 : 46;
             const shape = `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? ', with badge' : ', no badge'}`;
             expect(m.rowHeight, `row "${m.code}" (${shape}): height(${m.rowHeight.toFixed(1)}) <= ${cap}px`).to.be.at.most(cap);
           });
@@ -1423,7 +1450,8 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       cy.viewport(1536, 900);
       mountPage({
         rows: [row({ id: 'gh3', project_id: 'p1', project_name: LONG_NAME, result_code: 'BR-203', lead_center: 'CIP', status_id: 6 })],
-        centers: FIXTURE_CENTERS
+        centers: FIXTURE_CENTERS,
+        queryParams: ALL_STATUSES
       });
       waitForLoad();
 
@@ -1605,7 +1633,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         waitForLoad();
         toolbarClearButtons().should('have.length', 0);
 
-        byTestId('bilateral-review-chip-pending').click();
+        // `quick/bilateral-review-default-pending` (e89889bdf) both made `'pending'` the default AND
+        // stopped counting it in `activeFilterCount()` — so clicking the pending chip no longer
+        // activates anything and Clear filters stays hidden. `'approved'` still counts, and the
+        // fixture has two approved rows (r4/r5, `status_id: 6`) so the page keeps rendering rows.
+        byTestId('bilateral-review-chip-approved').click();
         toolbarClearButtons().should('have.length', 1).and('contain.text', 'Clear filters');
       });
     });
@@ -1656,7 +1688,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   describe('Narrow 375px (BRP-T-4, AC-12)', () => {
     beforeEach(() => {
       cy.viewport(375, 3000);
-      mountPage();
+      mountPage({ queryParams: ALL_STATUSES });
       waitForLoad();
       // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, BRH-R-11) — this
       // briefly passed 360 with a long note calling the 15px shave an unavoidable `min-h-screen`

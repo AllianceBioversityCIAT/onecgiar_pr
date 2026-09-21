@@ -164,9 +164,44 @@ absorbed. No scope was added.
 
 ---
 
-## Remaining work
+## HITL verification (`tasks.md` §4) — performed 2026-09-21, ALL PASS
 
-**HITL verification (`tasks.md` §4) has NOT been performed.** Defect class `D4` — the read-only
-branch painting the *wrong value* against live CLARISA catalogs — has no automated gate and is
-unverified. It requires a Science Program reviewer session; as a Platform Admin the change is
-invisible by design (`RDR-R-2`).
+Run in the Orca embedded browser against this worktree's `ng serve`
+(`qa-development-2026.orca.localhost:61856`), SP01, as a Science Program reviewer:
+`RolesService.isAdmin` forced `false` via the signal-backed setter (`roles.service.ts:65`), which
+is reactive, so no reload was needed. Gates read live: `canEditInDrawer() === true`,
+`canEditDataStandards() === false` — the exact SP-reviewer state.
+
+**Bundle freshness** was settled non-circularly: a stale bundle renders card 2's Result Description
+as a disabled `<textarea>` (the pre-change behaviour); a fresh one renders text. Measured
+`textarea: 0`, so the served bundle carries the change.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Card 1 ToC stays operable | **PASS** — Yes/No renders two `.choice` nodes with `cursor: pointer`, ToC tree mounted, 2 operable select triggers, Save ToC present |
+| 2 | Card 2 Result Description is text | **PASS** — `textarea: 0`; screenshot shows plain text where the pre-change UI had a resizable box |
+| 3 | `🔒 Center-reported (Read-only)` badges | **PASS** — 3 present |
+| 4 | Types 1 / 2 / 5 / 7 | **PASS** — codes 8594, 8855, 8597, 8900: `0` operable controls across all three locked cards |
+| 5 | **D4a** `pr-select` shows the stored label | **PASS** — "Program, budget or investment", "Stage 2 - Policy enacted (…)"; never `Not provided` |
+| 6 | **D4b** numerics show the number | **PASS** — 22 / 18 / 1 / **0**; the zero renders as `0`, not swallowed into the absent-value fallback |
+| 7 | Empty optional → `Not applicable` | **NOT EXERCISED** — no result in this dataset has an empty locked field (`absent: []` on all four opened). Covered by `RDR-T-2` case (b3) with a synthetic `null` only |
+| 8 | Title pencil / Save Data Standards absent | **PASS** — both 0 |
+| 9 | Admin unchanged (`RDR-R-2`) | **PASS** — with `isAdmin` restored: `canEditDataStandards() === true`, textarea 1, 2 operable select triggers, pencil 1, Save Data Standards 1, badges 0 |
+
+**The D4a race did not materialise, including on a cold boot.** Opening the drawer at the earliest
+possible moment after mount (`openedAtMs: 0`) and sampling at 0.8s / 2s / 5s / 9s, the selects
+carried their catalog labels in *every* sample. The drawer's own `isLoadingInformation` gate covers
+the catalog fetch, so the failure mode `requirements.md` §8 recorded as the accepted risk is not
+reachable by this path. The risk stays recorded — it was real to consider — but it is now measured
+as not occurring.
+
+Screenshot: scratchpad `hitl/sp-reviewer-drawer.png`.
+
+### One honest UX observation, out of this spec's scope
+
+Cards 2–4 now mix two read-only idioms, exactly as `design.md` DD-2 accepted: `pr-input` /
+`pr-textarea` / `pr-select` render as text, while `pr-radio-button` (geographic focus) and
+`pr-range-level` render as greyed-but-still-radio-shaped controls. Measured in card 2: 7 radio
+inputs, all `disabled`. They are inert and visually muted, but they still *look* like controls a
+user could press. Unifying them means touching shared controls used by every other non-editable
+screen — a separate change, not a follow-up line here.
