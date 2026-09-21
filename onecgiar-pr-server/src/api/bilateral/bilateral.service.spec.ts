@@ -53,7 +53,10 @@ describe('BilateralService (unit)', () => {
       logicalDelete: jest.fn().mockResolvedValue(undefined),
     };
     const resultsCenterRepository = {} as any;
-    const clarisaProjectsRepository = { findOne: jest.fn() };
+    const clarisaProjectsRepository = {
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+    };
     const resultsByProjectsRepository = { save: jest.fn() };
     const resultByInitiativesRepository = {
       logicalDelete: jest.fn().mockResolvedValue(undefined),
@@ -63,7 +66,11 @@ describe('BilateralService (unit)', () => {
       save: jest.fn().mockResolvedValue({}),
       logicalDelete: jest.fn().mockResolvedValue(undefined),
     } as any;
-    const nonPooledProjectBudgetRepository = { save: jest.fn() };
+    const nonPooledProjectBudgetRepository = {
+      save: jest.fn(),
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn((row) => row),
+    };
     const resultsInnovationsUseRepository = {
       getLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
     };
@@ -197,6 +204,9 @@ describe('BilateralService (unit)', () => {
         resultsTocResultsIndicatorsRepository,
         resultsTocResultsRepository,
         resultByInitiativesRepository,
+        clarisaProjectsRepository,
+        resultsByProjectsRepository,
+        nonPooledProjectBudgetRepository,
         resultsKnowledgeProductsService,
         adUserService,
         roleByUserRepository,
@@ -536,6 +546,149 @@ describe('BilateralService (unit)', () => {
     await expect(
       service.handleNonPooledProject(1, 1, []),
     ).resolves.toBeUndefined();
+  });
+
+  describe('resolveContributingProjects — the preflight that runs before any write', () => {
+    const grantTitle = 'T-PJ-003772';
+
+    it('scopes every lookup to the reporting year and prefers external_code', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([
+        { id: 2149, isActive: null },
+      ]);
+
+      const resolved = await service.resolveContributingProjects(
+        [{ grant_title: grantTitle, usd_budget: 2500 }],
+        2026,
+      );
+
+      // external_code is tried first, and it resolves, so the title columns are never reached.
+      expect(stubs.clarisaProjectsRepository.find).toHaveBeenCalledTimes(1);
+      expect(stubs.clarisaProjectsRepository.find).toHaveBeenCalledWith({
+        where: { externalCode: grantTitle, phase: 2026 },
+      });
+      expect(resolved.get(grantTitle)).toEqual({ id: 2149, isActive: null });
+    });
+
+    it('falls back to short_name then full_name, still inside the phase', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ id: 77, isActive: null }]);
+
+      await service.resolveContributingProjects(
+        [{ grant_title: 'A long project title' }],
+        2026,
+      );
+
+      expect(
+        stubs.clarisaProjectsRepository.find.mock.calls.map((c) => c[0]),
+      ).toEqual([
+        { where: { externalCode: 'A long project title', phase: 2026 } },
+        { where: { shortName: 'A long project title', phase: 2026 } },
+        { where: { fullName: 'A long project title', phase: 2026 } },
+      ]);
+    });
+
+    // The regression this whole change exists for: the legacy generation of
+    // `clarisa_projects` stores "<code>-<title>" in both name columns at phase 2025. It used to
+    // win the match, and the result was bound to a project no catalogue can surface.
+    it('rejects a grant_title that only matches a row of another phase', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([]);
+
+      await expect(
+        service.resolveContributingProjects(
+          [
+            {
+              grant_title:
+                'T-PJ-003772-TAAT Clearinghouse: Re-invest to Accelerate Innovation Adoption',
+              usd_budget: 2500,
+            },
+          ],
+          2026,
+        ),
+      ).rejects.toThrow(/no project of the 2026 reporting phase/);
+    });
+
+    it('ignores a candidate that is explicitly inactive', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([
+        { id: 2149, isActive: false },
+      ]);
+
+      await expect(
+        service.resolveContributingProjects(
+          [{ grant_title: grantTitle }],
+          2026,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('breaks a multi-row tie on the lowest id so the binding is deterministic', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([
+        { id: 900, isActive: null },
+        { id: 12, isActive: null },
+        { id: 450, isActive: null },
+      ]);
+
+      const resolved = await service.resolveContributingProjects(
+        [{ grant_title: grantTitle }],
+        2026,
+      );
+
+      expect(resolved.get(grantTitle).id).toBe(12);
+    });
+
+    it('returns an empty map when the payload carries no projects', async () => {
+      const { service, stubs } = makeService();
+
+      await expect(
+        service.resolveContributingProjects(undefined, 2026),
+      ).resolves.toEqual(new Map());
+      expect(stubs.clarisaProjectsRepository.find).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleNonPooledProject — writes against the pre-resolved projects', () => {
+    const grantTitle = 'T-PJ-003772';
+
+    it('binds the result to the project the preflight resolved, without re-querying', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultsByProjectsRepository.save.mockResolvedValue({ id: 2520 });
+
+      await service.handleNonPooledProject(
+        11962,
+        1,
+        [{ grant_title: grantTitle, usd_budget: 2500 }],
+        ResultTypeEnum.INNOVATION_USE,
+        new Map([[grantTitle, { id: 2149 }]]),
+      );
+
+      expect(stubs.clarisaProjectsRepository.find).not.toHaveBeenCalled();
+      expect(stubs.resultsByProjectsRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ result_id: 11962, project_id: 2149 }),
+      );
+      expect(stubs.nonPooledProjectBudgetRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ result_project_id: 2520, kind_cash: 2500 }),
+      );
+    });
+
+    it('skips a grant_title the preflight did not resolve instead of writing a partial link', async () => {
+      const { service, stubs } = makeService();
+
+      await service.handleNonPooledProject(
+        1,
+        1,
+        [{ grant_title: 'never resolved' }],
+        ResultTypeEnum.INNOVATION_USE,
+        new Map(),
+      );
+
+      expect(stubs.resultsByProjectsRepository.save).not.toHaveBeenCalled();
+    });
   });
 
   it('handleLeadCenter should return early if leadCenter is invalid or empty', async () => {

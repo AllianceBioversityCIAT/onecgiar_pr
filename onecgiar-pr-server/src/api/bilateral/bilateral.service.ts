@@ -292,6 +292,23 @@ export class BilateralService {
           bilateralDto.contributing_programs,
         );
 
+        // 🛑 The active year and the contributing projects are resolved here, before the first
+        // write, for the same reason the two validations above are: `dataSource.transaction`
+        // below does NOT enrol these repositories — its manager parameter is unused, so every
+        // write inside runs on its own auto-committed connection and nothing can be rolled
+        // back. An unresolvable project thrown from inside would leave an orphan result behind
+        // (verified 2026-09-21: result 11984 survived a 400). It has to fail before anything
+        // is written.
+        const year = await this._yearRepository.findOne({
+          where: { active: true },
+        });
+        if (!year) throw new NotFoundException('Active year not found');
+
+        const resolvedProjects = await this.resolveContributingProjects(
+          bilateralDto.contributing_bilateral_projects,
+          year.year,
+        );
+
         // Captured inside the transaction, consumed AFTER it commits: the submitted-for-review
         // notification must never ride inside the transaction (a notification failure cannot be
         // allowed to roll an ingested result back, and rows written mid-transaction would
@@ -326,11 +343,6 @@ export class BilateralService {
                 error: version,
                 debug: true,
               });
-
-            const year = await this._yearRepository.findOne({
-              where: { active: true },
-            });
-            if (!year) throw new NotFoundException('Active year not found');
 
             if (
               bilateralDto.result_type_id ===
@@ -459,6 +471,7 @@ export class BilateralService {
               userId,
               bilateralDto.contributing_bilateral_projects,
               bilateralDto.result_type_id,
+              resolvedProjects,
             );
 
             await this.runResultTypeHandlers({
@@ -3725,11 +3738,59 @@ export class BilateralService {
     delete filtered.obj_result_by_project;
   }
 
+  /**
+   * Preflight: resolves every incoming `grant_title` to a project of the phase being reported,
+   * BEFORE the first write.
+   *
+   * 🛑 This used to be a `continue` deep inside `handleNonPooledProject`. The row was dropped,
+   * the result was still created, and the producer got a 200 — so a grant_title that resolved
+   * to nothing, or to a stale-phase row, was indistinguishable from success. Throwing from down
+   * there is not enough either: the enclosing `dataSource.transaction` never enrols these
+   * repositories (its manager parameter is unused), so a late throw leaves an orphan result —
+   * verified 2026-09-21, result 11984 survived its own 400. Resolution therefore happens here,
+   * with nothing written yet, the same posture as `runResultTypePreflight` and
+   * `validateTocMappingInitiatives`.
+   *
+   * Returns each project keyed by the exact `grant_title` the producer sent, so the writer does
+   * not re-query.
+   */
+  private async resolveContributingProjects(
+    bilateralProjects: any[] | undefined,
+    reportingYear: number,
+  ): Promise<Map<string, any>> {
+    const resolved = new Map<string, any>();
+
+    if (!Array.isArray(bilateralProjects)) return resolved;
+
+    for (const nonpp of bilateralProjects) {
+      const grantTitle = nonpp?.grant_title;
+      if (!grantTitle || resolved.has(grantTitle)) continue;
+
+      const project = await this.findProjectByGrantTitle(
+        grantTitle,
+        reportingYear,
+      );
+
+      if (!project) {
+        throw new BadRequestException(
+          `contributing_bilateral_projects: no project of the ${reportingYear} reporting phase ` +
+            `matches grant_title "${grantTitle}". Send the project's registry code ` +
+            `(its \`external_code\` / short name) rather than its full title.`,
+        );
+      }
+
+      resolved.set(grantTitle, project);
+    }
+
+    return resolved;
+  }
+
   private async handleNonPooledProject(
     resultId: number,
     userId: number,
     bilateralProjects: any[],
     resultTypeId: number,
+    resolvedProjects: Map<string, any>,
   ) {
     if (
       !bilateralProjects ||
@@ -3745,7 +3806,10 @@ export class BilateralService {
     for (const nonpp of bilateralProjects) {
       if (!nonpp?.grant_title) continue;
 
-      const project = await this.findProjectByGrantTitle(nonpp.grant_title);
+      // Already resolved before any write by `resolveContributingProjects`. A miss here would
+      // mean the two ran out of step — an invariant breach, not bad input — and skipping is the
+      // safe read of it, since the payload never reached this method unvalidated.
+      const project = resolvedProjects?.get(nonpp.grant_title);
       if (!project) continue;
 
       const isLead = this.determineIsLead(isSingleProject, nonpp);
@@ -3770,16 +3834,54 @@ export class BilateralService {
     ].includes(resultTypeId);
   }
 
-  private async findProjectByGrantTitle(grantTitle: string) {
-    const project = await this._clarisaProjectsRepository.findOne({
-      where: [{ shortName: grantTitle }, { fullName: grantTitle }],
-    });
+  /**
+   * Resolves an incoming `grant_title` to a project **of the phase being reported**.
+   *
+   * ⚠️ The phase scope is the whole point. `clarisa_projects` holds two generations of
+   * rows: the pre-registry ones, which migration `1786980549228` stamped `phase = 2025`
+   * wholesale, and the W3 Registry catalogue, which carries the current phase. The legacy
+   * rows store the code and the title **concatenated** — `T-PJ-003772-TAAT Clearinghouse: …`
+   * — in BOTH columns, so a producer sending that exact string matched the stale row. The
+   * ingest then persisted everything correctly against a project that
+   * `BilateralProjectsService` filters out of every catalogue by phase: a result bound to a
+   * project no screen can show, which reads to the producer as "nothing was saved".
+   *
+   * Resolution order is `external_code` → `short_name` → `full_name`, so the registry's own
+   * code is the canonical key and a concatenated legacy title can no longer win over it.
+   *
+   * 🛑 Deliberately does NOT require `hasProgramMapping` the way the read path does. That
+   * guard carries a deploy-order hazard (see `BilateralProjectsService.hasProgramMapping`):
+   * until both syncs re-run, registry-fed projects sit at `Pending`, and enforcing it here
+   * would reject every ingest rather than merely hide a picker entry. A producer also states
+   * its own science program in `toc_mapping`, so it does not depend on the mapping the
+   * wizard reads.
+   */
+  private async findProjectByGrantTitle(
+    grantTitle: string,
+    reportingYear: number,
+  ) {
+    const title = grantTitle.trim();
 
-    if (!project) {
-      this.logger.warn(`Project not found for grant_title: ${grantTitle}`);
+    for (const identifier of [
+      { externalCode: title },
+      { shortName: title },
+      { fullName: title },
+    ]) {
+      const matches = await this._clarisaProjectsRepository.find({
+        where: { ...identifier, phase: reportingYear },
+      });
+
+      const usable = matches.filter(
+        (candidate) => candidate.isActive !== false,
+      );
+      if (!usable.length) continue;
+
+      // These columns carry no uniqueness guarantee, so break any tie on the lowest id:
+      // a deterministic binding beats one that depends on row order.
+      return usable.reduce((a, b) => (Number(a.id) <= Number(b.id) ? a : b));
     }
 
-    return project;
+    return null;
   }
 
   private determineIsLead(isSingleProject: boolean, nonpp: any): boolean {
