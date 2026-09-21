@@ -42,17 +42,20 @@
   </app-pr-select>
 
   <!--
-    P2-3778 — "Innovation developers" is NOT rendered. The decision on the ticket (Juan David Delgado
-    relaying Nicoleta Trifa via Ángel Jarrín, 2026-09-03) is that the field is removed and "for
-    innovations this will be replaced by the lead contact person information", so the MDS zone of this
-    section holds exactly two fields: typology + readiness level. Section 1 already tells the reporter
-    so (`../../section-general-info/section-general-info.component.html:41-47`).
-    🛑 Removing the FIELD is not removing the DATA: `buildPayload()` still sends
-    `innovation_developers`, and the key-presence-gated prefill still seeds it from the Lead contact
-    person — the same value the server's ingest path stores
-    (`onecgiar-pr-server/src/api/bilateral/handlers/innovation-development.handler.ts:59-63`) — so the
-    review drawer, the exports and the PDF keep reading a populated column. See CLAUDE.md.
+    P2-3778 REVERSED (2026-09-21) — the field is back, prefilled and EDITABLE. The 3-Sep relay that
+    removed it misread Nicoleta Trifa's email: "I told you to automatically prefill with the Lead
+    contact information. If user wants to change, they can do so". Ángel Jarrín confirmed it on
+    2026-09-21. P2-3778's data-preservation reasoning still holds — `buildPayload()` sends the key and
+    the key-presence-gated prefill seeds it from the Lead contact person, so the review drawer, the
+    exports and the PDF keep reading a populated column; now the reporter can correct it too.
   -->
+  <app-pr-textarea
+    placeholder="Contact person name and email go here..."
+    [required]="false"
+    label="Innovation developers"
+    [(ngModel)]="body.innovation_developers"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-textarea>
 
   <app-pr-field-header
     label="How would you assess the current readiness of this innovation?"
@@ -129,9 +132,9 @@
       }
 
       <!-- P2-3780: this used to share the generic "Contact persons info goes here..." with the
-           "Innovation developers" textarea, so two different questions read the same. The developers
-           field is gone (P2-3778), and this one now names what belongs in it, in the format its own
-           tooltip asks for: Collaborator Name (email address). -->
+           "Innovation developers" textarea, so two different questions read the same. Both fields are
+           rendered (P2-3778 reversed, 2026-09-21) and each now names what belongs in it — this one in
+           the format its own tooltip asks for: Collaborator Name (email address). -->
       <app-pr-textarea
         placeholder="Collaborator names and emails go here..."
         [required]="false"
