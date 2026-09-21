@@ -89,6 +89,7 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
       5,
       'IND-55',
       'reviewed',
+      undefined,
     );
     expect(mockRoleResolverService.resolve).toHaveBeenCalledWith(user, [101]);
     expect(result).toEqual({
@@ -204,6 +205,7 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
         5,
         'IND-55',
         'all',
+        undefined,
       );
     });
 
@@ -218,6 +220,7 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
         5,
         'IND-55',
         'reviewed',
+        undefined,
       );
     });
 
@@ -237,6 +240,7 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
         5,
         'IND-55',
         'reviewed',
+        undefined,
       );
     });
 
@@ -256,6 +260,53 @@ describe('GetExistingResultContributorsToIndicatorsHandler', () => {
         5,
         'IND-55',
         'reviewed',
+        undefined,
+      );
+    });
+  });
+
+  // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-DD-4)
+  describe('tocIndicatorTargetId thread-through', () => {
+    const stubContributions = () => {
+      mockLoaderService.parseResultTocResultId.mockReturnValue(5);
+      mockLoaderService.validateTocResultIndicatorId.mockReturnValue('IND-55');
+      mockLoaderService.loadContributions.mockResolvedValue([]);
+      mockLoaderService.filterContributorsWithIndicator.mockResolvedValue(null);
+    };
+
+    it('forwards a caller-supplied tocIndicatorTargetId to loadContributions unchanged', async () => {
+      stubContributions();
+
+      await handler.execute(
+        new GetExistingResultContributorsToIndicatorsQuery(
+          user,
+          5,
+          'IND-55',
+          'reviewed',
+          222,
+        ),
+      );
+
+      expect(mockLoaderService.loadContributions).toHaveBeenCalledWith(
+        5,
+        'IND-55',
+        'reviewed',
+        222,
+      );
+    });
+
+    it('forwards undefined when the caller omits tocIndicatorTargetId (backward compatibility)', async () => {
+      stubContributions();
+
+      await handler.execute(
+        new GetExistingResultContributorsToIndicatorsQuery(user, 5, 'IND-55'),
+      );
+
+      expect(mockLoaderService.loadContributions).toHaveBeenCalledWith(
+        5,
+        'IND-55',
+        'reviewed',
+        undefined,
       );
     });
   });

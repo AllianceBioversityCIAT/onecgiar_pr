@@ -305,7 +305,7 @@ describe('ResultsFrameworkReportingController', () => {
 
       expect(
         reportingService.getExistingResultContributorsToIndicators,
-      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7', undefined);
+      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7', undefined, undefined);
     });
 
     // @akili-spec changes/indicator-reported-results (IRR-R-3)
@@ -323,7 +323,44 @@ describe('ResultsFrameworkReportingController', () => {
 
       expect(
         reportingService.getExistingResultContributorsToIndicators,
-      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7', 'all');
+      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7', 'all', undefined);
+    });
+
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-AC-2)
+    it('should forward the tocIndicatorTargetId query param to the reporting service', () => {
+      reportingService.getExistingResultContributorsToIndicators.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getExistingResultContributorsAndPartners(
+        { id: 1 } as any,
+        55,
+        'IND-7',
+        'all',
+        '607878',
+      );
+
+      expect(
+        reportingService.getExistingResultContributorsToIndicators,
+      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7', 'all', '607878');
+    });
+
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-8)
+    it('should forward undefined tocIndicatorTargetId when the query param is absent', () => {
+      reportingService.getExistingResultContributorsToIndicators.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getExistingResultContributorsAndPartners(
+        { id: 1 } as any,
+        55,
+        'IND-7',
+      );
+
+      const call =
+        reportingService.getExistingResultContributorsToIndicators.mock
+          .calls[0];
+      expect(call[4]).toBeUndefined();
     });
   });
 

@@ -4,6 +4,92 @@ import { ResultsTocResultRepository } from '../../../../results/results-toc-resu
 import { ResultsTocResultIndicatorsRepository } from '../../../../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ExistingResultContributorsLoaderService } from './existing-result-contributors-loader.service';
 
+// @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-AC-2, RRC-AC-6)
+// Minimal fake TypeORM `find` matcher: interprets the shape of `where` the loader
+// builds (plain object = AND, array = OR, nested objects = relation narrowing,
+// FindOperator-shaped values = In()/IsNull()) against a seeded row, so these tests
+// prove the query the loader constructs actually isolates combination-groups,
+// not just that a mock was called with some arguments.
+type FindOperatorLike = { _type: string; _value: unknown };
+
+const isFindOperator = (value: unknown): value is FindOperatorLike =>
+  !!value &&
+  typeof value === 'object' &&
+  '_type' in (value as Record<string, unknown>);
+
+function matchesCondition(actual: unknown, expected: unknown): boolean {
+  if (isFindOperator(expected)) {
+    if (expected._type === 'isNull') {
+      return actual === null || actual === undefined;
+    }
+    if (expected._type === 'in') {
+      return Array.from(expected._value as Iterable<unknown>).includes(actual);
+    }
+    return actual === expected._value;
+  }
+
+  if (Array.isArray(actual)) {
+    return actual.some((item) =>
+      matchesWhere(item, expected as Record<string, unknown>),
+    );
+  }
+
+  if (expected !== null && typeof expected === 'object') {
+    return matchesWhere(actual, expected as Record<string, unknown>);
+  }
+
+  return actual === expected;
+}
+
+function matchesWhere(row: any, where: any): boolean {
+  if (Array.isArray(where)) {
+    return where.some((clause) => matchesWhere(row, clause));
+  }
+  return Object.entries(where ?? {}).every(([key, expected]) =>
+    matchesCondition(row?.[key], expected),
+  );
+}
+
+const buildContributionRow = (overrides: {
+  resultTocResultId: number;
+  resultId: number;
+  tocResultId: number;
+  tocResultIndicatorId: string;
+  tocIndicatorTargetId: number | null;
+  statusId?: number;
+}) => ({
+  result_toc_result_id: overrides.resultTocResultId,
+  result_id: overrides.resultId,
+  toc_result_id: overrides.tocResultId,
+  is_active: true,
+  obj_results: {
+    is_active: true,
+    status_id: overrides.statusId ?? 2, // QualityAssessed — within default 'reviewed' scope
+    title: 'Result',
+    result_code: 'RES',
+    result_type_id: 1,
+    version_id: 1,
+    obj_status: { status_name: 'Quality Assessed' },
+    obj_result_type: { id: 1, name: 'Type' },
+  },
+  obj_results_toc_result_indicators: [
+    {
+      toc_results_indicator_id: overrides.tocResultIndicatorId,
+      is_active: true,
+      is_not_aplicable: false,
+      obj_result_indicator_targets: [
+        {
+          number_target: 1,
+          target_date: 2026,
+          contributing_indicator: 1,
+          is_active: true,
+          toc_indicator_target_id: overrides.tocIndicatorTargetId,
+        },
+      ],
+    },
+  ],
+});
+
 describe('ExistingResultContributorsLoaderService', () => {
   let service: ExistingResultContributorsLoaderService;
 
@@ -164,6 +250,138 @@ describe('ExistingResultContributorsLoaderService', () => {
         id: true,
         name: true,
       });
+    });
+  });
+
+  // @akili-spec bugfix/reported-results-center-scoping (RRC-R-3, RRC-DD-4, RRC-AC-2, RRC-AC-6)
+  describe('loadContributions — combination-group isolation (tocIndicatorTargetId)', () => {
+    const IITA_ALONE_TARGET_ID = 111;
+    const CIMMYT_IITA_TARGET_ID = 222;
+
+    it('excludes a sibling combination-group result when the caller supplies tocIndicatorTargetId (RRC-AC-2)', async () => {
+      // Both groups share the same toc_result_id/toc_results_indicator_id
+      // (the confirmed root cause) — only toc_indicator_target_id differs.
+      const rowLinkedToIitaAloneOnly = buildContributionRow({
+        resultTocResultId: 11,
+        resultId: 101,
+        tocResultId: 5,
+        tocResultIndicatorId: 'IND-55',
+        tocIndicatorTargetId: IITA_ALONE_TARGET_ID,
+      });
+
+      mockResultsTocResultRepository.find.mockImplementation((options: any) =>
+        Promise.resolve(
+          [rowLinkedToIitaAloneOnly].filter((row) =>
+            matchesWhere(row, options.where),
+          ),
+        ),
+      );
+
+      // Panel opened for the sibling group (CIMMYT, IITA) — the result was
+      // only ever linked to the IITA-alone group, so it must not surface here.
+      await expect(
+        service.loadContributions(
+          5,
+          'IND-55',
+          'reviewed',
+          CIMMYT_IITA_TARGET_ID,
+        ),
+      ).rejects.toMatchObject({
+        message:
+          'No result contribution record was found with the provided resultTocResultId.',
+        status: HttpStatus.NOT_FOUND,
+      });
+    });
+
+    it('preserves the existing coarse related_node_id-only fallback for a historical row with no anchor (RRC-AC-6)', async () => {
+      const historicalRowWithoutAnchor = buildContributionRow({
+        resultTocResultId: 12,
+        resultId: 102,
+        tocResultId: 5,
+        tocResultIndicatorId: 'IND-55',
+        tocIndicatorTargetId: null,
+      });
+
+      mockResultsTocResultRepository.find.mockImplementation((options: any) =>
+        Promise.resolve(
+          [historicalRowWithoutAnchor].filter((row) =>
+            matchesWhere(row, options.where),
+          ),
+        ),
+      );
+
+      const result = await service.loadContributions(
+        5,
+        'IND-55',
+        'reviewed',
+        CIMMYT_IITA_TARGET_ID,
+      );
+
+      expect(result).toEqual([historicalRowWithoutAnchor]);
+    });
+
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-R-8) — rework
+    // attempt 2, reviewer-mandated: Express yields '' for a bare
+    // `?tocIndicatorTargetId=`, and Number('') is 0. An empty string MUST
+    // behave as "absent" (coarse-only), never as a live
+    // `toc_indicator_target_id = 0` filter.
+    it('treats an empty-string tocIndicatorTargetId as absent, not as toc_indicator_target_id = 0', async () => {
+      const rowLinkedToIitaAlone = buildContributionRow({
+        resultTocResultId: 11,
+        resultId: 101,
+        tocResultId: 5,
+        tocResultIndicatorId: 'IND-55',
+        tocIndicatorTargetId: IITA_ALONE_TARGET_ID,
+      });
+
+      mockResultsTocResultRepository.find.mockImplementation((options: any) =>
+        Promise.resolve(
+          [rowLinkedToIitaAlone].filter((row) =>
+            matchesWhere(row, options.where),
+          ),
+        ),
+      );
+
+      const result = await service.loadContributions(
+        5,
+        'IND-55',
+        'reviewed',
+        '',
+      );
+
+      // Coarse-only behavior: the row is returned, not excluded as if 0 had
+      // been passed as a live anchor value.
+      expect(result).toEqual([rowLinkedToIitaAlone]);
+
+      const calledWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where;
+      expect(Array.isArray(calledWhere)).toBe(false);
+      expect(
+        calledWhere.obj_results_toc_result_indicators
+          .obj_result_indicator_targets,
+      ).not.toHaveProperty('toc_indicator_target_id');
+    });
+
+    it('returns every combination-group row unchanged when no tocIndicatorTargetId is supplied (backward compatibility)', async () => {
+      const rowLinkedToIitaAlone = buildContributionRow({
+        resultTocResultId: 11,
+        resultId: 101,
+        tocResultId: 5,
+        tocResultIndicatorId: 'IND-55',
+        tocIndicatorTargetId: IITA_ALONE_TARGET_ID,
+      });
+
+      mockResultsTocResultRepository.find.mockImplementation((options: any) =>
+        Promise.resolve(
+          [rowLinkedToIitaAlone].filter((row) =>
+            matchesWhere(row, options.where),
+          ),
+        ),
+      );
+
+      const result = await service.loadContributions(5, 'IND-55', 'reviewed');
+
+      expect(result).toEqual([rowLinkedToIitaAlone]);
     });
   });
 

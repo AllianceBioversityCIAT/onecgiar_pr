@@ -52,6 +52,12 @@ export interface ReportingIndicator {
    */
   centers?: Array<{ center_id?: number | null; center_acronym?: string | null }>;
   toc_result_id?: number;
+  /**
+   * RRC-R-10 — the combination-group this row represents (ToC `toc_result_indicator_target`). Rides
+   * through `manageIndicator` → drawer → `buildCreateResultPayload` inside `indicators` so the
+   * server can persist which group a result was reported against.
+   */
+  toc_indicator_target_id?: number | string | null;
   __hlo?: string;
   /** The ToC node this row was flattened from. Carries the node's P2-3296 AC2 roll-up. */
   __hloNode?: { progress?: TocAchievement | null };

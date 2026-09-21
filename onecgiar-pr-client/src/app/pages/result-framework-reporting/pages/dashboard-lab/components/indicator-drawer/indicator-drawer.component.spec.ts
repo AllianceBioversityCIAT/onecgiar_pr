@@ -43,7 +43,20 @@ describe('IndicatorDrawerComponent', () => {
     it('queries with related_node_id — the column the server actually persists', async () => {
       await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55', toc_result_indicator_id: 'SOMETHING-ELSE' });
 
-      expect(getExisting).toHaveBeenCalledWith('toc-1', 'IND-55', 'all');
+      expect(getExisting).toHaveBeenCalledWith('toc-1', 'IND-55', 'all', null);
+    });
+
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-T-3, RRC-R-3)
+    it('forwards toc_indicator_target_id as the 4th argument when the row carries one', async () => {
+      await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55', toc_indicator_target_id: 607878 });
+
+      expect(getExisting).toHaveBeenCalledWith('toc-1', 'IND-55', 'all', 607878);
+    });
+
+    it('sends null for the target id when the row has none (legacy coarse behaviour)', async () => {
+      await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55' });
+
+      expect(getExisting.mock.calls[0][3]).toBeNull();
     });
 
     it('reads response.contributors — the endpoint answers an object, never an array', async () => {
@@ -144,7 +157,7 @@ describe('IndicatorDrawerComponent', () => {
       await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55' });
 
       expect(getExisting).toHaveBeenCalledTimes(1);
-      expect(getExisting).toHaveBeenCalledWith('toc-1', 'IND-55', 'all');
+      expect(getExisting).toHaveBeenCalledWith('toc-1', 'IND-55', 'all', null);
     });
 
     it('treats 404 as an empty list and leaves loadError null (IRR-R-7)', async () => {

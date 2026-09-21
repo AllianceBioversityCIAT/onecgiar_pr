@@ -135,6 +135,7 @@ describe('BilateralResultCreatorComponent', () => {
 
     autoSaveService = {
       fieldStatus: signal({}),
+      openSection: signal<string | null>(null),
       hasPendingSaves: signal(false),
       globalSaveState: signal('idle'),
       setResultId: jest.fn(),
@@ -930,6 +931,26 @@ describe('BilateralResultCreatorComponent', () => {
       fixture.detectChanges();
 
       expect(submitButton().textContent).toContain('Submitting');
+    });
+
+    // QA feedback (2026-09-21): the button starts the AI check, not the submission. The note is the
+    // only thing on screen that says so, and its trigger must stay next to the button it explains.
+    describe('the note under Submit', () => {
+      const note = () => fixture.nativeElement.querySelector('[data-testid="bilateral-rail-submit-note"]');
+
+      it('sits under the Submit button with the tooltip trigger', () => {
+        expect(note()).toBeTruthy();
+        expect(note().textContent).toContain('The AI quality check runs first');
+        expect(submitButton().compareDocumentPosition(note()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      });
+
+      it('carries the reviewer wording: the QA check runs first and the data is still editable', () => {
+        expect(component.submitQualityCheckNote).toBe(
+          'Once you click this button, the system will first check the metadata for QA conformity. ' +
+            'You can still adjust the data to address any QA comments before the result is sent to the Program for review.'
+        );
+        expect(note().querySelector('[aria-label="What happens when you submit for review"]')).toBeTruthy();
+      });
     });
   });
 

@@ -55,6 +55,13 @@ export class ResultIndicatorTarget extends BaseEntity {
   })
   target_date: number | null;
 
+  @Column({
+    type: 'bigint',
+    name: 'toc_indicator_target_id',
+    nullable: true,
+  })
+  toc_indicator_target_id: number | null;
+
   @ManyToOne(
     () => ResultsTocResultIndicators,
     (cs) => cs.obj_result_indicator_targets,

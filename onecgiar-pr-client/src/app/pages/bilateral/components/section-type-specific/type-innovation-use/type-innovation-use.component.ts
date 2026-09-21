@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
@@ -237,6 +237,67 @@ export class TypeInnovationUseComponent implements OnInit {
     // P2-3424 AC4: idempotent — the first surface to ask fetches, the rest reuse the cached list.
     if (this.showInnovationLinkQuestion) this.qaInnovationsSE.load();
     this.loadData();
+  }
+
+  /**
+   * The three "Investment (USD)" tables list one row per entity the result is LINKED to, and those
+   * links are owned by other sections — contributing projects by `section-contributors`. Because the
+   * sections are siblings under `[hidden]` and all mounted once with the page
+   * (`bilateral-result-creator.component.html`), `loadData` above is a snapshot of the moment the
+   * page opened: a project added afterwards never appeared in this table, could therefore never be
+   * given an amount or "This is yet to be determined", and the reporter had no way to correct it
+   * short of a browser reload — while `updateMds` below, reading the same stale array, reported the
+   * field complete. Server-side it was not, and `submit-for-review` refused the result with an
+   * error naming data the form was showing as done (result code 9506, AfricaRice, 21-Sep-2026).
+   *
+   * Re-reads only on the transition INTO this section, so returning to it costs one GET and being
+   * here costs none.
+   */
+  private lastOpenSection: string | null = null;
+  private readonly refreshInvestmentTablesOnOpen = effect(() => {
+    const open = this.autoSave.openSection();
+    const previous = this.lastOpenSection;
+    this.lastOpenSection = open;
+    if (open !== SECTION_NAME || previous === SECTION_NAME) return;
+    // Before the first successful load there is nothing to reconcile against, and `loadData` is
+    // about to publish the same rows anyway.
+    if (this.loaded() !== true) return;
+    this.reconcileInvestmentTables();
+  });
+
+  /**
+   * Takes the row SET from the server (which entities are linked, and their names) while keeping
+   * whatever the reporter has typed but not yet saved. A row the server no longer sends is gone
+   * from the result and drops out; a row it sends that was not on screen appears with its stored
+   * values.
+   */
+  private reconcileInvestmentTables(): void {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    this.bilateralApi.GET_innovationUse(resultId).subscribe({
+      next: ({ response }) => {
+        if (!response) return;
+        this.body.investment_programs = this.mergeInvestmentRows(this.body.investment_programs, response.investment_programs);
+        this.body.investment_bilateral = this.mergeInvestmentRows(this.body.investment_bilateral, response.investment_bilateral);
+        this.body.investment_partners = this.mergeInvestmentRows(this.body.investment_partners, response.investment_partners);
+        this.updateMds();
+      },
+      // A failed refresh leaves the table exactly as it was: the reporter keeps editing what is on
+      // screen rather than watching their rows vanish on a dropped request.
+      error: () => undefined
+    });
+  }
+
+  private mergeInvestmentRows(staged: any[] | undefined, fresh: any[] | undefined): any[] {
+    const rows = Array.isArray(fresh) ? fresh : [];
+    const key = (row: any) => String(row?.project_id ?? row?.id ?? '');
+    const stagedByKey = new Map((staged ?? []).map((row: any) => [key(row), row]));
+    return rows.map((row: any) => {
+      const previous = stagedByKey.get(key(row));
+      // Only the two the person edits are carried over; the name and the budget-row id are the
+      // server's to state.
+      return previous ? { ...row, kind_cash: previous.kind_cash, is_determined: previous.is_determined } : row;
+    });
   }
 
   toggleShowAll(): void {

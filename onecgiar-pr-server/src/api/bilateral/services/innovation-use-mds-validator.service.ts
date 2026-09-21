@@ -27,6 +27,7 @@ export class InnovationUseMdsValidator {
       investments: dto.contributing_bilateral_projects?.map((project) => ({
         amount: project.usd_budget,
         isDetermined: project.is_determined,
+        label: project.grant_title,
       })),
     });
 
@@ -47,6 +48,7 @@ export class InnovationUseMdsValidator {
       investments: data?.investment_bilateral?.map((row) => ({
         amount: row.kind_cash,
         isDetermined: row.is_determined,
+        label: row.name,
       })),
     });
 
@@ -58,7 +60,9 @@ export class InnovationUseMdsValidator {
     actors: unknown;
     measures: unknown;
     innovationUseLevel: unknown;
-    investments: Array<{ amount: unknown; isDetermined: unknown }> | undefined;
+    investments:
+      | Array<{ amount: unknown; isDetermined: unknown; label?: unknown }>
+      | undefined;
   }): string[] {
     const errors: string[] = [];
     const actorsToBeDetermined = this.readStoredBoolean(
@@ -96,14 +100,22 @@ export class InnovationUseMdsValidator {
       errors.push(
         'Investment by CGIAR W3 or bilateral projects: add a contributing bilateral project.',
       );
-    } else if (
-      input.investments.some(
-        (investment) => !this.isCompleteInvestment(investment),
-      )
-    ) {
-      errors.push(
-        'Investment by CGIAR W3 or bilateral projects: every project needs a positive USD amount or "This is yet to be determined".',
-      );
+    } else {
+      // Named, not merely counted: a result contributed to by several projects used to get "every
+      // project needs..." with no way to tell WHICH one was short, and the reporter — looking at the
+      // one row they had filled — read the whole message as a false alarm (result code 9506,
+      // AfricaRice, 21-Sep-2026). The offending project is the only thing that makes this
+      // actionable.
+      const incomplete = input.investments
+        // Position captured BEFORE the filter: the fallback label counts rows of the investment
+        // table the reporter is looking at, not rows of this error list.
+        .map((investment, index) => ({ ...investment, position: index + 1 }))
+        .filter((investment) => !this.isCompleteInvestment(investment));
+      if (incomplete.length) {
+        errors.push(
+          `Investment by CGIAR W3 or bilateral projects: every project needs a positive USD amount or "This is yet to be determined" — still missing on ${this.describeInvestments(incomplete)}.`,
+        );
+      }
     }
 
     return errors;
@@ -133,6 +145,23 @@ export class InnovationUseMdsValidator {
     if (value === 1 || value === 0) return value === 1;
     if (value === '1' || value === '0') return value === '1';
     return null;
+  }
+
+  /**
+   * The projects the reporter has to go and fix, by the same name the investment table shows them
+   * under. A link whose CLARISA project could not be resolved carries no name at all
+   * (`result-investment.service.ts` maps `name` from the relation), so it is described by position
+   * rather than dropped — a nameless row is exactly the one worth pointing at.
+   */
+  private describeInvestments(
+    investments: Array<{ label?: unknown; position: number }>,
+  ): string {
+    return investments
+      .map((investment) => {
+        const label = `${investment.label ?? ''}`.trim();
+        return label.length ? `"${label}"` : `project #${investment.position}`;
+      })
+      .join(', ');
   }
 
   private isCompleteMeasure(measure: any): boolean {

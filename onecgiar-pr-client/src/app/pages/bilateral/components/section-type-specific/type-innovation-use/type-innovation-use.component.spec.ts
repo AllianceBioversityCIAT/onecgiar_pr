@@ -47,6 +47,10 @@ describe('TypeInnovationUseComponent', () => {
     autoSave = {
       fieldStatus: signal<Record<string, string>>({}),
       schedulePayload: jest.fn(),
+      // Which section the editor is showing. The component re-reads its investment tables on the
+      // transition INTO this one, because the sections are all mounted at once behind `[hidden]`
+      // and its own `ngOnInit` fetch never runs again.
+      openSection: signal<string | null>(null),
     };
     creation = { currentResultId: signal<number | null>(123), reportingYear: signal<number | null>(2026) };
     expandableState = {
@@ -96,6 +100,57 @@ describe('TypeInnovationUseComponent', () => {
 
   it('should create', () => {
     expect(build()).toBeTruthy();
+  });
+
+  /**
+   * The sections are siblings under `[hidden]`, all mounted once with the page, so this one's
+   * `ngOnInit` fetch is a snapshot of the moment the result opened. A project added afterwards in
+   * `section-contributors` never reached the investment table, could never be given an amount or
+   * "yet to be determined", and submit-for-review then refused the result over a row the form was
+   * showing as done (result code 9506, AfricaRice, 21-Sep-2026).
+   */
+  describe('investment tables refresh on entering the section', () => {
+    const openSection = (name: string | null) => {
+      autoSave.openSection.set(name);
+      fixture.detectChanges();
+    };
+
+    it('picks up a project linked after the section was first loaded, keeping unsaved edits', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({ response: { investment_bilateral: [{ project_id: 1954, name: 'Rice Scaling', kind_cash: null, is_determined: null }] } }),
+      );
+      build();
+      openSection('general-info');
+
+      // The reporter types an amount without saving, then a second project is linked elsewhere.
+      component.body.investment_bilateral[0].kind_cash = 5000;
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            investment_bilateral: [
+              { project_id: 1954, name: 'Rice Scaling', kind_cash: null, is_determined: null },
+              { project_id: 1410, name: 'Delta Agronomy', kind_cash: null, is_determined: null },
+            ],
+          },
+        }),
+      );
+      openSection('type-specific');
+
+      expect(component.body.investment_bilateral).toHaveLength(2);
+      expect(component.body.investment_bilateral[0].kind_cash).toBe(5000);
+      expect(component.body.investment_bilateral[1].name).toBe('Delta Agronomy');
+    });
+
+    it('does not re-fetch while the section simply stays open', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { investment_bilateral: [] } }));
+      build();
+      openSection('type-specific');
+      const afterEntering = bilateralApi.GET_innovationUse.mock.calls.length;
+
+      fixture.detectChanges();
+
+      expect(bilateralApi.GET_innovationUse).toHaveBeenCalledTimes(afterEntering);
+    });
   });
 
   describe('loadData', () => {
