@@ -516,6 +516,16 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** P25 reporting phases are the only scope for the emerging-result label. */
   isEmerging(result: CurrentResult): boolean {
+    // Emerging is a W1/W2-only label. `planned_result = 0` means "not planned against the ToC",
+    // which is what makes a W1/W2 result emerging — but every W3/bilateral result is unplanned
+    // by construction, so the same flag there labels the whole population rather than a subset.
+    // `fundingLabel` is reused on purpose: it reads the one binary the server hands over
+    // (`source_name`, from `IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals')`), so this label
+    // and the funding chip beside it cannot drift apart on what counts as bilateral.
+    if (this.fundingLabel(result) === 'Bilateral') {
+      return false;
+    }
+
     const planned = result?.planned_result;
     if (planned == null) {
       return false;

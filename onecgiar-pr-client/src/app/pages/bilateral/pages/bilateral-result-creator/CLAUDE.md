@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
+**Verified:** 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -16,8 +16,12 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
 - `resultId` (signal local) = espejo de `currentResultId()`, y es la puerta que monta las secciones
   (`.component.html:131`) y la que ata el autosave (`autoSaveService.setResultId`).
 - El coordinador de guardado y MDS tracker se proveen **por componente** (`providers:` del
-  `@Component`), así que cada visita arranca limpia. Los cambios se mantienen en memoria y sólo se
-  persisten con **Save draft** de la sección activa; navegar o destruir el editor nunca escribe.
+  `@Component`), así que cada visita arranca limpia. Los cambios se mantienen en memoria y se
+  persisten con **Save draft** de la sección activa **o** al navegar: Next/Back/riel
+  (`selectSection()`/`moveSection()`, BIL-T-2) hacen `flush()` de la sección saliente antes de
+  cambiar — un fallo deja al usuario en la misma sección con la misma alerta de error de Save draft.
+  Sólo destruir el editor **sin** pasar por Next/Back/riel (p. ej. cerrar la pestaña) sigue sin
+  escribir: esa ruta no la toca este flush.
 - **Dos marcos, uno por modo.** El wizard (`isCreating()`) conserva el header de banda y la columna
   centrada de 1100px (`.bilateral-creator`). El editor dibuja su propio marco a lo ancho: riel de
   secciones de 240px (`.bcr-rail`, checks + "N of M sections complete" + **Submit for review** —
@@ -57,6 +61,12 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   `goToQualitySection()` a la sección correspondiente. Las marcas por campo permanecen visibles
   aunque el assessment quede stale mientras el usuario corrige: la frescura se valida al enviar,
   no se usa para esconder la guía. El card del riel conserva borde neutro tanto actual como stale.
+- **La nota bajo Submit (feedback QA 2026-09-21).** El botón arranca el chequeo IA, no el envío, y
+  nada en pantalla lo decía. Bajo el botón va una línea apagada ("The AI quality check runs first") cuyo
+  `prTooltip` (`submitQualityCheckNote`, en el `.ts` porque la directiva toma un string) lleva las dos
+  frases del revisor. La directiva abre en hover **y** fija en clic/Enter, así que la línea no necesita
+  ser un botón propio. ⚠️ La nota es la única pieza que promete "podés seguir editando": si algún día
+  `submitResult()` enviara directo sin pasar por el diálogo, la nota queda mintiendo.
 
 - **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
   única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo

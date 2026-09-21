@@ -203,3 +203,205 @@ describe('ResultsService — findAllByRoleFiltered include_completeness (MWB-T-1
     );
   });
 });
+
+describe('ResultsService — getScienceProgramProgress plannedKpis & results breakdown (RFR-T-1)', () => {
+  const user = { id: 1 } as TokenDto;
+
+  function makeScienceProgramService(config: {
+    results: any[];
+    initiatives: any[];
+    indicatorContributionsMap?: Map<string, any>;
+    plannedKpisCountMap?: Map<string, number>;
+    activeYear?: number;
+  }) {
+    const service: any = Object.create(ResultsService.prototype);
+    service._logger = { warn: jest.fn(), error: jest.fn(), log: jest.fn() };
+    service._handlersError = { returnErrorRes: jest.fn((c: any) => c.error) };
+    service._versioningService = {
+      $_findActivePhase: jest.fn().mockResolvedValue({ id: 2 }),
+    };
+    service._clarisaInitiativesRepository = {
+      find: jest.fn().mockResolvedValue(config.initiatives),
+    };
+    service._roleByUserRepository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+    service._customResultRepository = {
+      AllResultsByRoleUserAndInitiativeFiltered: jest.fn().mockResolvedValue({
+        results: config.results,
+        total: config.results.length,
+      }),
+    };
+    service._yearRepository = {
+      findOne: jest.fn().mockResolvedValue({ year: config.activeYear ?? 2026 }),
+    };
+    service._tocResultsRepository = {
+      getIndicatorContributions: jest
+        .fn()
+        .mockImplementation((code: string, year: number) => {
+          return Promise.resolve(
+            config.indicatorContributionsMap?.get(`${code}_${year}`) ??
+              new Map(),
+          );
+        }),
+      getPlannedKpisCountMap: jest.fn().mockImplementation((_year: number) => {
+        return Promise.resolve(config.plannedKpisCountMap ?? new Map());
+      }),
+    };
+    service.computeProgressValue =
+      ResultsService.prototype['computeProgressValue'];
+    service.calculateInitiativeProgress =
+      ResultsService.prototype['calculateInitiativeProgress'];
+    service.buildScienceProgramBuckets =
+      ResultsService.prototype['buildScienceProgramBuckets'];
+
+    return service;
+  }
+
+  it('aggregates plannedKpis from ToC and tallies replicatedResults vs newResults with invariant replicatedResults + newResults === totalResults', async () => {
+    const initiatives = [
+      {
+        id: 10,
+        official_code: 'INIT-01',
+        name: 'Initiative 1',
+        short_name: 'I1',
+        portfolio_id: 3,
+        active: true,
+      },
+    ];
+
+    const indicatorContributions = new Map([
+      ['IND-1', { target_value_sum: 10, actual_achieved_value_sum: 5 }],
+      ['IND-2', { target_value_sum: 20, actual_achieved_value_sum: 20 }],
+      ['IND-3', { target_value_sum: 5, actual_achieved_value_sum: 0 }],
+    ]);
+
+    const indicatorMap = new Map([['INIT-01_2026', indicatorContributions]]);
+
+    const results = [
+      {
+        submitter_id: 10,
+        submitter: 'INIT-01',
+        submitter_name: 'Initiative 1',
+        version_id: 2,
+        phase_name: 'AR 2026',
+        phase_year: 2026,
+        status_id: 1,
+        status_name: 'Editing',
+        is_replicated: true,
+      },
+      {
+        submitter_id: 10,
+        submitter: 'INIT-01',
+        submitter_name: 'Initiative 1',
+        version_id: 2,
+        phase_name: 'AR 2026',
+        phase_year: 2026,
+        status_id: 1,
+        status_name: 'Editing',
+        is_replicated: 1,
+      },
+      {
+        submitter_id: 10,
+        submitter: 'INIT-01',
+        submitter_name: 'Initiative 1',
+        version_id: 2,
+        phase_name: 'AR 2026',
+        phase_year: 2026,
+        status_id: 2,
+        status_name: 'Submitted',
+        is_replicated: false,
+      },
+    ];
+
+    const service = makeScienceProgramService({
+      results,
+      initiatives,
+      indicatorContributionsMap: indicatorMap,
+      activeYear: 2026,
+    });
+
+    const res: any = await service.getScienceProgramProgress(user, 2);
+
+    expect(res.status).toBe(200);
+    const item = res.response.otherSciencePrograms[0];
+    expect(item).toBeDefined();
+    expect(item.initiativeCode).toBe('INIT-01');
+    expect(item.plannedKpis).toBe(3);
+    expect(item.replicatedResults).toBe(2);
+    expect(item.newResults).toBe(1);
+    expect(item.totalResults).toBe(3);
+    expect(item.replicatedResults + item.newResults).toBe(item.totalResults);
+
+    const version = item.versions[0];
+    expect(version).toBeDefined();
+    expect(version.plannedKpis).toBe(3);
+    expect(version.replicatedResults).toBe(2);
+    expect(version.newResults).toBe(1);
+    expect(version.totalResults).toBe(3);
+    expect(version.replicatedResults + version.newResults).toBe(
+      version.totalResults,
+    );
+  });
+
+  it('handles initiative with zero results: totalResults is null, replicatedResults is 0, newResults is 0, plannedKpis populated from ToC', async () => {
+    const initiatives = [
+      {
+        id: 20,
+        official_code: 'INIT-02',
+        name: 'Initiative 2',
+        portfolio_id: 3,
+        active: true,
+      },
+    ];
+
+    const indicatorContributions = new Map([
+      ['IND-1', { target_value_sum: 10, actual_achieved_value_sum: 10 }],
+    ]);
+
+    const indicatorMap = new Map([['INIT-02_2026', indicatorContributions]]);
+
+    const service = makeScienceProgramService({
+      results: [],
+      initiatives,
+      indicatorContributionsMap: indicatorMap,
+      activeYear: 2026,
+    });
+
+    const res: any = await service.getScienceProgramProgress(user, 2);
+
+    expect(res.status).toBe(200);
+    const item = res.response.otherSciencePrograms[0];
+    expect(item.plannedKpis).toBe(1);
+    expect(item.totalResults).toBeNull();
+    expect(item.replicatedResults).toBe(0);
+    expect(item.newResults).toBe(0);
+  });
+
+  it('prefers plannedKpis from getPlannedKpisCountMap (e.g. 415 full ToC universe) when available', async () => {
+    const initiatives = [
+      {
+        id: 10,
+        official_code: 'SP01',
+        name: 'Breeding for Tomorrow',
+        portfolio_id: 3,
+        active: true,
+      },
+    ];
+
+    const plannedKpisCountMap = new Map([['SP01', 415]]);
+
+    const service = makeScienceProgramService({
+      results: [],
+      initiatives,
+      plannedKpisCountMap,
+      activeYear: 2026,
+    });
+
+    const res: any = await service.getScienceProgramProgress(user, 2);
+
+    expect(res.status).toBe(200);
+    const item = res.response.otherSciencePrograms[0];
+    expect(item.plannedKpis).toBe(415);
+  });
+});

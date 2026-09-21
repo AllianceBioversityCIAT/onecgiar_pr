@@ -562,6 +562,20 @@ export class InnovationPathwayStepOneService {
         UpdateInnovationPathwayDto,
       );
 
+      /*
+       * P2-3747 — do not report success over a failed workshop save. This result was returned
+       * inside the payload and never looked at, so the client showed "Section saved successfully"
+       * even when the facilitators had not been written at all. If that step reports an error,
+       * it is the answer the reporter gets.
+       */
+      if (
+        saveWorkshop &&
+        'status' in saveWorkshop &&
+        Number(saveWorkshop.status) >= HttpStatus.BAD_REQUEST
+      ) {
+        return saveWorkshop;
+      }
+
       return {
         response: [
           specifyAspiredOutcomesAndImpact,

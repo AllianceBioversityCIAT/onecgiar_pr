@@ -5026,6 +5026,21 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-T-3, RRC-R-3)
+    it('appends &tocIndicatorTargetId only when given, and omits it for null/empty', done => {
+      service.GET_ExistingResultsContributors('rtr1', 'tri1', 'all', 607878).subscribe(() => done());
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=rtr1&tocResultIndicatorId=tri1&scope=all&tocIndicatorTargetId=607878`
+      );
+      req.flush(mockResponse);
+
+      service.GET_ExistingResultsContributors('rtr1', 'tri1', 'all', null).subscribe();
+      const req2 = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=rtr1&tocResultIndicatorId=tri1&scope=all`
+      );
+      req2.flush(mockResponse);
+    });
   });
 
   describe('GET_DashboardData', () => {

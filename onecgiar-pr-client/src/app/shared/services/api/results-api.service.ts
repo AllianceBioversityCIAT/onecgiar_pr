@@ -1581,9 +1581,18 @@ export class ResultsApiService {
   // @akili-spec changes/indicator-reported-results
   // `scope` is OPT-IN (IRR-R-3 / IRR-DD-2): the server defaults to today's reviewed-only population,
   // so the param is appended only when a caller asks for it and every existing URL stays byte-identical.
-  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string, scope?: 'reviewed' | 'all') {
+  // @akili-spec bugfix/reported-results-center-scoping (RRC-T-3, RRC-R-3)
+  // `tocIndicatorTargetId` is OPT-IN as well: omitted = today's coarse `related_node_id` filtering, so
+  // every existing URL stays byte-identical. Sent only when the row carries its combination-group id.
+  GET_ExistingResultsContributors(
+    resultTocResultId: string,
+    tocResultIndicatorId: string,
+    scope?: 'reviewed' | 'all',
+    tocIndicatorTargetId?: string | number | null
+  ) {
+    const targetParam = tocIndicatorTargetId != null && `${tocIndicatorTargetId}` !== '' ? `&tocIndicatorTargetId=${encodeURIComponent(`${tocIndicatorTargetId}`)}` : '';
     return this.http.get<any>(
-      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}${scope ? `&scope=${scope}` : ''}`
+      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}${scope ? `&scope=${scope}` : ''}${targetParam}`
     );
   }
   // /api/results-framework-reporting/dashboard

@@ -8,7 +8,14 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
 describe('BilateralService (unit)', () => {
   const makeService = (overrides: Partial<any> = {}) => {
-    const dataSource = {} as any;
+    const initiativeBudgetRepository = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn((row) => row),
+      save: jest.fn(async (row) => row),
+    };
+    const dataSource = {
+      getRepository: jest.fn(() => initiativeBudgetRepository),
+    } as any;
     const resultRepository = {
       findOne: jest.fn(),
       save: jest.fn(async (x) => x),
@@ -25,7 +32,16 @@ describe('BilateralService (unit)', () => {
     const resultCountryRepository = { updateCountries: jest.fn() };
     const clarisaSubnationalAreasRepository = {} as any;
     const resultCountrySubnationalRepository = {} as any;
-    const resultByInstitutionsRepository = {} as any;
+    const resultByInstitutionsRepository = {
+      updateInstitutions: jest.fn().mockResolvedValue(undefined),
+      getResultByInstitutionExists: jest.fn().mockResolvedValue(false),
+      save: jest.fn(async (rows) =>
+        (Array.isArray(rows) ? rows : [rows]).map((r, i) => ({
+          ...r,
+          id: 500 + i,
+        })),
+      ),
+    } as any;
     const resultInstitutionsBudgetRepository = {
       save: jest.fn().mockResolvedValue([]),
     } as any;
@@ -53,17 +69,25 @@ describe('BilateralService (unit)', () => {
       logicalDelete: jest.fn().mockResolvedValue(undefined),
     };
     const resultsCenterRepository = {} as any;
-    const clarisaProjectsRepository = { findOne: jest.fn() };
+    const clarisaProjectsRepository = {
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+    };
     const resultsByProjectsRepository = { save: jest.fn() };
     const resultByInitiativesRepository = {
       logicalDelete: jest.fn().mockResolvedValue(undefined),
+      findOne: jest.fn().mockResolvedValue({ id: 777 }),
     };
     const shareResultRequestRepository = {
       findOne: jest.fn().mockResolvedValue(null),
       save: jest.fn().mockResolvedValue({}),
       logicalDelete: jest.fn().mockResolvedValue(undefined),
     } as any;
-    const nonPooledProjectBudgetRepository = { save: jest.fn() };
+    const nonPooledProjectBudgetRepository = {
+      save: jest.fn(),
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn((row) => row),
+    };
     const resultsInnovationsUseRepository = {
       getLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
     };
@@ -197,6 +221,13 @@ describe('BilateralService (unit)', () => {
         resultsTocResultsIndicatorsRepository,
         resultsTocResultsRepository,
         resultByInitiativesRepository,
+        clarisaProjectsRepository,
+        resultsByProjectsRepository,
+        nonPooledProjectBudgetRepository,
+        resultInstitutionsBudgetRepository,
+        resultByIntitutionsRepository: resultByInstitutionsRepository,
+        clarisaInstitutionsRepository,
+        initiativeBudgetRepository,
         resultsKnowledgeProductsService,
         adUserService,
         roleByUserRepository,
@@ -536,6 +567,294 @@ describe('BilateralService (unit)', () => {
     await expect(
       service.handleNonPooledProject(1, 1, []),
     ).resolves.toBeUndefined();
+  });
+
+  describe('resolveContributingProjects — the preflight that runs before any write', () => {
+    const grantTitle = 'T-PJ-003772';
+
+    it('scopes every lookup to the reporting year and prefers external_code', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([
+        { id: 2149, isActive: null },
+      ]);
+
+      const resolved = await service.resolveContributingProjects(
+        [{ grant_title: grantTitle, usd_budget: 2500 }],
+        2026,
+      );
+
+      // external_code is tried first, and it resolves, so the title columns are never reached.
+      expect(stubs.clarisaProjectsRepository.find).toHaveBeenCalledTimes(1);
+      expect(stubs.clarisaProjectsRepository.find).toHaveBeenCalledWith({
+        where: { externalCode: grantTitle, phase: 2026 },
+      });
+      expect(resolved.get(grantTitle)).toEqual({ id: 2149, isActive: null });
+    });
+
+    it('falls back to short_name then full_name, still inside the phase', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ id: 77, isActive: null }]);
+
+      await service.resolveContributingProjects(
+        [{ grant_title: 'A long project title' }],
+        2026,
+      );
+
+      expect(
+        stubs.clarisaProjectsRepository.find.mock.calls.map((c) => c[0]),
+      ).toEqual([
+        { where: { externalCode: 'A long project title', phase: 2026 } },
+        { where: { shortName: 'A long project title', phase: 2026 } },
+        { where: { fullName: 'A long project title', phase: 2026 } },
+      ]);
+    });
+
+    // The regression this whole change exists for: the legacy generation of
+    // `clarisa_projects` stores "<code>-<title>" in both name columns at phase 2025. It used to
+    // win the match, and the result was bound to a project no catalogue can surface.
+    it('rejects a grant_title that only matches a row of another phase', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([]);
+
+      await expect(
+        service.resolveContributingProjects(
+          [
+            {
+              grant_title:
+                'T-PJ-003772-TAAT Clearinghouse: Re-invest to Accelerate Innovation Adoption',
+              usd_budget: 2500,
+            },
+          ],
+          2026,
+        ),
+      ).rejects.toThrow(/no project of the 2026 reporting phase/);
+    });
+
+    it('ignores a candidate that is explicitly inactive', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([
+        { id: 2149, isActive: false },
+      ]);
+
+      await expect(
+        service.resolveContributingProjects(
+          [{ grant_title: grantTitle }],
+          2026,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('breaks a multi-row tie on the lowest id so the binding is deterministic', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaProjectsRepository.find.mockResolvedValue([
+        { id: 900, isActive: null },
+        { id: 12, isActive: null },
+        { id: 450, isActive: null },
+      ]);
+
+      const resolved = await service.resolveContributingProjects(
+        [{ grant_title: grantTitle }],
+        2026,
+      );
+
+      expect(resolved.get(grantTitle).id).toBe(12);
+    });
+
+    it('returns an empty map when the payload carries no projects', async () => {
+      const { service, stubs } = makeService();
+
+      await expect(
+        service.resolveContributingProjects(undefined, 2026),
+      ).resolves.toEqual(new Map());
+      expect(stubs.clarisaProjectsRepository.find).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('investment amounts that used to be accepted and dropped', () => {
+    const innovationUse = ResultTypeEnum.INNOVATION_USE;
+
+    describe('contributing partners', () => {
+      const partnerPayload = (extra: any) => [
+        { institution_id: 42, name: 'Some Partner', ...extra },
+      ];
+
+      const withMatchedInstitution = () => {
+        const { service, stubs } = makeService();
+        stubs.clarisaInstitutionsRepository.findOne = jest
+          .fn()
+          .mockResolvedValue({ id: 42 });
+        return { service, stubs };
+      };
+
+      it('persists the usd_budget onto the partner budget row', async () => {
+        const { service, stubs } = withMatchedInstitution();
+
+        await service.handleInstitutions(
+          11962,
+          partnerPayload({ usd_budget: 7500 }),
+          1,
+          innovationUse,
+        );
+
+        expect(
+          stubs.resultInstitutionsBudgetRepository.save,
+        ).toHaveBeenCalledWith([
+          expect.objectContaining({ kind_cash: 7500, is_determined: null }),
+        ]);
+      });
+
+      it('nulls the amount when the partner says it is yet to be determined', async () => {
+        const { service, stubs } = withMatchedInstitution();
+
+        await service.handleInstitutions(
+          11962,
+          partnerPayload({ usd_budget: 7500, is_determined: true }),
+          1,
+          innovationUse,
+        );
+
+        expect(
+          stubs.resultInstitutionsBudgetRepository.save,
+        ).toHaveBeenCalledWith([
+          expect.objectContaining({ kind_cash: null, is_determined: true }),
+        ]);
+      });
+
+      it('still writes the row with a null amount when the payload states nothing', async () => {
+        const { service, stubs } = withMatchedInstitution();
+
+        await service.handleInstitutions(
+          11962,
+          partnerPayload({}),
+          1,
+          innovationUse,
+        );
+
+        expect(
+          stubs.resultInstitutionsBudgetRepository.save,
+        ).toHaveBeenCalledWith([
+          expect.objectContaining({ kind_cash: null, is_determined: null }),
+        ]);
+      });
+    });
+
+    describe('lead science program', () => {
+      it('writes result_initiative_budget from the amount on toc_mapping', async () => {
+        const { service, stubs } = makeService();
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { science_program_id: 'SP09', usd_budget: 12000 },
+          ResultTypeEnum.INNOVATION_USE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_initiative_id: 777,
+            kind_cash: 12000,
+            is_determined: null,
+          }),
+        );
+      });
+
+      it('updates the existing row rather than adding a second one', async () => {
+        const { service, stubs } = makeService();
+        stubs.initiativeBudgetRepository.findOne.mockResolvedValue({
+          result_initiative_budget_id: 3,
+          kind_cash: 1,
+        });
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { usd_budget: 12000 },
+          ResultTypeEnum.INNOVATION_USE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.create).not.toHaveBeenCalled();
+        expect(stubs.initiativeBudgetRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_initiative_budget_id: 3,
+            kind_cash: 12000,
+          }),
+        );
+      });
+
+      // Silence must stay silent: seeding an empty row for every ingested result would put a
+      // line in the form that nobody wrote.
+      it('writes nothing when the payload states no investment at all', async () => {
+        const { service, stubs } = makeService();
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { science_program_id: 'SP09' },
+          ResultTypeEnum.INNOVATION_USE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing for a type that carries no investment tables', async () => {
+        const { service, stubs } = makeService();
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { usd_budget: 12000 },
+          ResultTypeEnum.POLICY_CHANGE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.save).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('handleNonPooledProject — writes against the pre-resolved projects', () => {
+    const grantTitle = 'T-PJ-003772';
+
+    it('binds the result to the project the preflight resolved, without re-querying', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultsByProjectsRepository.save.mockResolvedValue({ id: 2520 });
+
+      await service.handleNonPooledProject(
+        11962,
+        1,
+        [{ grant_title: grantTitle, usd_budget: 2500 }],
+        ResultTypeEnum.INNOVATION_USE,
+        new Map([[grantTitle, { id: 2149 }]]),
+      );
+
+      expect(stubs.clarisaProjectsRepository.find).not.toHaveBeenCalled();
+      expect(stubs.resultsByProjectsRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ result_id: 11962, project_id: 2149 }),
+      );
+      expect(stubs.nonPooledProjectBudgetRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ result_project_id: 2520, kind_cash: 2500 }),
+      );
+    });
+
+    it('skips a grant_title the preflight did not resolve instead of writing a partial link', async () => {
+      const { service, stubs } = makeService();
+
+      await service.handleNonPooledProject(
+        1,
+        1,
+        [{ grant_title: 'never resolved' }],
+        ResultTypeEnum.INNOVATION_USE,
+        new Map(),
+      );
+
+      expect(stubs.resultsByProjectsRepository.save).not.toHaveBeenCalled();
+    });
   });
 
   it('handleLeadCenter should return early if leadCenter is invalid or empty', async () => {

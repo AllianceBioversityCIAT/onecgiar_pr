@@ -135,6 +135,7 @@ describe('BilateralResultCreatorComponent', () => {
 
     autoSaveService = {
       fieldStatus: signal({}),
+      openSection: signal<string | null>(null),
       hasPendingSaves: signal(false),
       globalSaveState: signal('idle'),
       setResultId: jest.fn(),
@@ -153,6 +154,7 @@ describe('BilateralResultCreatorComponent', () => {
       getEndpointKeys: jest.fn().mockReturnValue([]),
       hasPendingFor: jest.fn().mockReturnValue(false),
       hasErrorFor: jest.fn().mockReturnValue(false),
+      lastErrorMessageFor: jest.fn().mockReturnValue(undefined),
       reset: jest.fn(),
     };
 
@@ -930,6 +932,26 @@ describe('BilateralResultCreatorComponent', () => {
 
       expect(submitButton().textContent).toContain('Submitting');
     });
+
+    // QA feedback (2026-09-21): the button starts the AI check, not the submission. The note is the
+    // only thing on screen that says so, and its trigger must stay next to the button it explains.
+    describe('the note under Submit', () => {
+      const note = () => fixture.nativeElement.querySelector('[data-testid="bilateral-rail-submit-note"]');
+
+      it('sits under the Submit button with the tooltip trigger', () => {
+        expect(note()).toBeTruthy();
+        expect(note().textContent).toContain('The AI quality check runs first');
+        expect(submitButton().compareDocumentPosition(note()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      });
+
+      it('carries the reviewer wording: the QA check runs first and the data is still editable', () => {
+        expect(component.submitQualityCheckNote).toBe(
+          'Once you click this button, the system will first check the metadata for QA conformity. ' +
+            'You can still adjust the data to address any QA comments before the result is sent to the Program for review.'
+        );
+        expect(note().querySelector('[aria-label="What happens when you submit for review"]')).toBeTruthy();
+      });
+    });
   });
 
   describe('BRRA-T-1: Rail back link and identity card', () => {
@@ -1080,6 +1102,109 @@ describe('BilateralResultCreatorComponent', () => {
 
       const skeleton = q('[data-testid="bilateral-rail-identity-skeleton"]');
       expect(skeleton).not.toBeNull();
+    });
+  });
+
+  /**
+   * BIL-T-1 (bugfix/bilateral-section-autosave-on-navigate) — regression tests written BEFORE the
+   * fix (BIL-T-2). Cases 1-2 assert the corrected flush-then-navigate sequence from design.md §2.2
+   * and MUST fail against today's `window.confirm(...)` gate in `selectSection()`. Cases 3-4 are
+   * non-regression guards: they already pass today and must keep passing after the fix.
+   */
+  describe('BIL-T-1: flush-then-navigate on section switch (BIL-R-1..4, BIL-AC-1..4)', () => {
+    let confirmSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      confirmSpy.mockRestore();
+    });
+
+    // BIL-AC-1: a pending section flushes instead of popping a confirm dialog on Next/side-rail,
+    // and the switch to the target section only happens AFTER the flush settles — never before.
+    // The flush is held on a manually-resolved promise so the test can assert the mid-flight state
+    // (still on 'general-info') before letting it settle. Resolving flips `hasPendingFor` to false,
+    // which is what lets `waitForSectionSave`'s poll loop (component.ts:870-879) exit on its very
+    // first check instead of polling for real time — so this stays fast today (red: flush is never
+    // called) and reachable-green once BIL-T-2 lands.
+    it('flushes pending edits instead of showing a confirm dialog on Next', async () => {
+      autoSaveService.hasPendingFor.mockReturnValue(true);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+
+      let resolveFlush!: () => void;
+      const deferredFlush = new Promise<void>(resolve => {
+        resolveFlush = resolve;
+      });
+      autoSaveService.flush.mockImplementation(() =>
+        deferredFlush.then(() => {
+          autoSaveService.hasPendingFor.mockReturnValue(false);
+        }),
+      );
+
+      const selecting = component.selectSection('contributors');
+
+      // Flush is still pending — the section must not have switched yet (this is the assertion
+      // that a "set the section first, flush afterwards" implementation would fail).
+      expect(component.openSectionName()).toBe('general-info');
+
+      resolveFlush();
+      await selecting;
+
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(autoSaveService.flush).toHaveBeenCalledWith(['generalInfo']);
+      expect(component.openSectionName()).toBe('contributors');
+    });
+
+    // BIL-AC-2: a flush that settles with an error keeps the user on the section and surfaces the
+    // same failure messaging `triggerManualSave()`'s error branch already builds.
+    it('keeps the section open and surfaces the save-failure alert when the flush errors', async () => {
+      const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      autoSaveService.hasPendingFor.mockReturnValue(true);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      autoSaveService.lastErrorMessageFor.mockReturnValue('Title cannot be empty.');
+
+      await component.selectSection('contributors');
+
+      expect(component.openSectionName()).toBe('general-info');
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          description: expect.stringContaining('Title cannot be empty.'),
+        }),
+      );
+    });
+
+    // BIL-AC-3: a clean section (nothing pending) still switches immediately with no flush call —
+    // this is the fast path, unchanged by the fix. Passes today; kept as a non-regression guard.
+    it('switches sections immediately with no flush call when there is nothing pending', async () => {
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+
+      await component.selectSection('contributors');
+
+      expect(component.openSectionName()).toBe('contributors');
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+    });
+
+    // BIL-AC-4: a read-only session has nothing pending to flush (BilateralAutoSaveService already
+    // no-ops writes while read-only), so no flush call is attempted on Next/Back/side-rail.
+    // Passes today; kept as a non-regression guard.
+    it('does not flush on moveSection/selectSection while the editor is read-only', async () => {
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+
+      expect(component.isFormReadOnly()).toBe(true);
+
+      await component.selectSection('contributors');
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+
+      component.openSectionName.set('general-info');
+      await component.moveSection(1);
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
     });
   });
 });

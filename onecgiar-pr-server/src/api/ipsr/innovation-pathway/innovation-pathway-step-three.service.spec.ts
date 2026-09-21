@@ -173,16 +173,62 @@ describe('InnovationPathwayStepThreeService', () => {
       );
     });
 
-    it('validates expert workshop item names', async () => {
+    /*
+     * P2-3747 — a blank row is a row the user did not fill, not an error. It used to abort the
+     * whole save, so every named facilitator listed AFTER it was silently dropped while the
+     * client still showed "saved successfully" (reproduced on prtest #9409, 2026-09-21).
+     */
+    it('skips a blank row and still saves the named one below it', async () => {
       (mockEvidenceRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
+      (mockWorkshopRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
+      (mockWorkshopRepo.find as jest.Mock).mockResolvedValueOnce([]);
+
       const res = await service.saveWorkshop(11, user, {
         result_ip: { is_expert_workshop_organized: true },
         link_workshop_list: 'https://x',
         result_ip_expert_workshop_organized: [
           { first_name: '', last_name: '' },
+          {
+            first_name: 'Maria',
+            last_name: 'Facilitadora',
+            workshop_role: 'Co-lead',
+          },
         ],
       } as any);
-      expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+
+      expect(mockWorkshopRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          first_name: 'Maria',
+          last_name: 'Facilitadora',
+        }),
+      );
+      expect(mockWorkshopRepo.save).toHaveBeenCalledTimes(1);
+      expect(res).not.toHaveProperty('status');
+    });
+
+    it('treats a list of only blank rows as an empty list', async () => {
+      (mockEvidenceRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
+      (mockWorkshopRepo.find as jest.Mock).mockResolvedValueOnce([
+        {
+          result_ip_expert_workshop_organized_id: 9,
+          first_name: 'Old',
+          last_name: 'Guy',
+        },
+      ]);
+
+      await service.saveWorkshop(11, user, {
+        result_ip: { is_expert_workshop_organized: true },
+        link_workshop_list: 'https://x',
+        result_ip_expert_workshop_organized: [
+          { first_name: '  ', last_name: '' },
+        ],
+      } as any);
+
+      expect(mockWorkshopRepo.save).not.toHaveBeenCalled();
+      expect(mockWorkshopRepo.update).toHaveBeenCalledWith(
+        9,
+        expect.objectContaining({ is_active: false }),
+      );
     });
 
     it('creates evidence and upserts workshops, deactivates missing', async () => {

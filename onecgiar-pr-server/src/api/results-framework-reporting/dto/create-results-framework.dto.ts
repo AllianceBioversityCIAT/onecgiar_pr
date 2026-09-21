@@ -86,6 +86,12 @@ export class ResultsFrameworkTocIndicatorDto {
     description: 'Contribution value tied to this indicator target.',
   })
   contributing_indicator?: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Identifier of the exact combination-group target (toc_result_indicator_target.id) this indicator link was reported against.',
+  })
+  toc_indicator_target_id?: number | string;
 }
 
 export class ResultsFrameworkBilateralProjectDto {
