@@ -1218,8 +1218,9 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.statusBg(2)).toBe('var(--pr-status-in-qa-bg)');
     expect(component.statusFg(3)).toBe('var(--pr-status-submitted-fg)');
     expect(component.statusBg(3)).toBe('var(--pr-status-submitted-bg)');
-    expect(component.statusFg(5)).toBe('var(--pr-status-not-started-fg)');
-    expect(component.statusBg(5)).toBe('var(--pr-status-not-started-bg)');
+    // P2-3553 — Pending review moved off grey (which reads "inactive") onto the Submitted pair.
+    expect(component.statusFg(5)).toBe('var(--pr-status-submitted-fg)');
+    expect(component.statusBg(5)).toBe('var(--pr-status-submitted-bg)');
     expect(component.statusFg(6)).toBe('var(--pr-status-approved-fg)');
     expect(component.statusBg(6)).toBe('var(--pr-status-approved-bg)');
     expect(component.statusFg(7)).toBe('var(--pr-status-rejected-fg)');

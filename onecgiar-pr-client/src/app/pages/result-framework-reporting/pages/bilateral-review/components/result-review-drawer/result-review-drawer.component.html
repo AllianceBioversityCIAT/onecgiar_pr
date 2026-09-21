@@ -90,22 +90,23 @@
               </span>
             }
 
-            <!-- Review Status Badge -->
-            @let statusId = resultToReview()?.status_id ?? fields?.commonFields?.status_id;
-            @if (statusId == 5) {
-              <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
-                <span class="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                Pending review
-              </span>
-            } @else if (statusId == 6) {
-              <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <span class="material-icons-round text-[12px] text-emerald-600">check</span>
-                Approved
-              </span>
-            } @else if (statusId == 7) {
-              <span class="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200">
-                <span class="material-icons-round text-[12px] text-rose-600">close</span>
-                Rejected
+            <!-- Review Status Badge · P2-3553: one enum decides the colour and the wording.
+                 `currentColor` keeps the dot and the icon tied to the pair's foreground, so they can
+                 never drift apart from the text the way three separate palettes did. -->
+            @if (statusBadge(); as badge) {
+              <span
+                class="ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider"
+                [style.color]="badge.fg"
+                [style.background-color]="badge.bg"
+                data-testid="review-drawer-status-badge">
+                @if (badge.id === 5) {
+                  <span class="size-1.5 rounded-full bg-current animate-pulse"></span>
+                } @else if (badge.id === 6) {
+                  <span class="material-icons-round text-[12px]">check</span>
+                } @else {
+                  <span class="material-icons-round text-[12px]">close</span>
+                }
+                {{ badge.label }}
               </span>
             }
           </div>
