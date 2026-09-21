@@ -17,7 +17,25 @@ export function mapGeneralInformation(
     title: detail?.title ?? commonFields.result_title ?? null,
     description: detail?.description ?? commonFields.result_description ?? null,
     result_level: detail?.obj_result_level?.name ?? null,
-    lead_contact_person:
-      commonFields.lead_contact_person_data?.display_name ?? null,
+    // `lead_contact_person_data` is an AD enrichment `_loadBilateralBaseData` performs only when
+    // `lead_contact_person_id` is set, the `ad_users` row is found AND active, and its optional
+    // `AdUserRepository` injection resolved. Reading it alone meant any one of those failing
+    // produced `null` for a result that plainly shows the person on screen. `result
+    // .lead_contact_person` is a `text` column carrying the same display string the form wrote,
+    // so it is the fallback: same value, none of the preconditions.
+    lead_contact_person: firstNonEmptyString(
+      commonFields.lead_contact_person_data?.display_name,
+      commonFields.lead_contact_person,
+      detail?.lead_contact_person,
+    ),
   };
+}
+
+function firstNonEmptyString(...candidates: unknown[]): string | null {
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') continue;
+    const trimmed = candidate.trim();
+    if (trimmed) return trimmed;
+  }
+  return null;
 }
