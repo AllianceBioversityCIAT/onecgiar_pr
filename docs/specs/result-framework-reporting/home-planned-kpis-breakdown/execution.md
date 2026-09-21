@@ -72,15 +72,38 @@
   - *Summary:* The implementation successfully introduces tests across both the server (`results.service.spec.ts`) and client (`result-framework-reporting-card-item.component.spec.ts`) that correctly assert all required logic for planned KPIs and replicated/new results, fulfilling RFR-AC-1 through RFR-AC-6 and covering the specified defect classes. The test assertions accurately check the logic, including the invariant `replicatedResults + newResults === totalResults`, getters logic, null fallbacks, and the proper DOM collapse behaviors in compact view.
 - **Status:** Complete.
 
+### 2026-09-21 — Planned KPIs Universe Reconciliation (Home Cards vs Dashboard-Lab)
+- **Context:**
+  - In `dashboard-lab` (Reporting view), the indicator burndown tab reported `All 415` for SP01 (AoWs: 403, Intermediate Outcomes: 7, 2030 Outcomes: 5).
+  - The initial implementation of `plannedKpis` on the Home card reported `409 planned KPIs` because `calculateInitiativeProgress` used `_tocResultsRepository.getIndicatorContributions()`, which performs an inner join on `toc_result_indicator_target trit WHERE trit.target_date = 2026`. 6 indicators in SP01 did not have a target row for 2026.
+- **Action:**
+  - Added `getPlannedKpisCountMap(contextOrYear)` in `onecgiar-pr-server/src/api/results/results-toc-results/repositories/aow-bilateral.repository.ts`. Executes a single fast batch query across the active phase:
+    ```sql
+    SELECT tr.official_code, COUNT(DISTINCT tri.id) AS total_indicators
+    FROM toc_results tr
+    JOIN toc_results_indicators tri ON tri.toc_results_id = tr.id
+    WHERE tri.is_active = 1 AND tr.phase = ?
+    GROUP BY tr.official_code
+    ```
+  - Integrated `getPlannedKpisCountMap` into `ResultsService.getScienceProgramProgress()` in `results.service.ts` so that all initiatives in the phase receive the full planned ToC indicator universe in one query (~10ms) matching `dashboard-lab` (e.g. SP01 = 415), while preserving the fallback to `calculateInitiativeProgress`.
+  - Added unit test in `aow-bilateral.repository.spec.ts` for `getPlannedKpisCountMap`.
+  - Added unit test in `results.service.spec.ts` asserting preference for `plannedKpisCountMap` (415) over target-filtered count.
+- **Verification:**
+  - `npx jest --testPathPattern="results.service.spec.ts|aow-bilateral.repository.spec.ts" --silent --forceExit`: 4 passed, 4 total (95 tests).
+  - `npx eslint "src/api/results/results-toc-results/repositories/aow-bilateral.repository.ts" "src/api/results/results-toc-results/repositories/aow-bilateral.repository.spec.ts" "src/api/results/results.service.ts" "src/api/results/results.service.spec.ts" --quiet`: 0 errors, 0 warnings.
+  - Client tests: `npx jest --testPathPattern="result-framework-reporting-card-item" --silent --no-coverage`: 30 passed, 30 total.
+- **Status:** Complete.
+
 ---
 
 ## Final Verification & Acceptance Criteria Matrix
 
 | Criterion | Requirement | Verification Method | Status |
 |---|---|---|---|
-| `RFR-AC-1` | SP01 with 454 planned ToC KPIs and 208 replicated results displays `454 planned KPIs`, `208 results this phase`, and `208 replicated · 0 new`. | Tested in `results.service.spec.ts` & `result-framework-reporting-card-item.component.spec.ts` | **PASS** |
+| `RFR-AC-1` | SP01 displays planned ToC KPIs matching dashboard-lab universe (415) and replicated results breakdown (`208 replicated · 0 new`). | Tested in `results.service.spec.ts` & `result-framework-reporting-card-item.component.spec.ts` | **PASS** |
 | `RFR-AC-2` | Explanatory replication tooltip on hover/focus. | Tested in `result-framework-reporting-card-item.component.html` & `.spec.ts` | **PASS** |
 | `RFR-AC-3` | 100 replicated · 5 new breakdown maintains `100 + 5 === 105 totalResults`. | Tested in `results.service.spec.ts` & `result-framework-reporting-card-item.component.spec.ts` | **PASS** |
 | `RFR-AC-4` | Compact view collapses origin pills and status bar, keeping clean summary metrics. | Tested in `result-framework-reporting-card-item.component.spec.ts` | **PASS** |
 | `RFR-AC-5` | Program with no ToC data displays `— planned KPIs` or hides pill gracefully. | Tested in `result-framework-reporting-card-item.component.spec.ts` | **PASS** |
-| `RFR-AC-6` | `GET /api/results-framework-reporting/get/science-programs/progress` returns `plannedKpis`, `replicatedResults`, and `newResults` with zero extra queries. | Tested in `results.service.spec.ts` | **PASS** |
+| `RFR-AC-6` | `GET /api/results-framework-reporting/get/science-programs/progress` returns `plannedKpis`, `replicatedResults`, and `newResults` with single-batch fast query. | Tested in `results.service.spec.ts` & `aow-bilateral.repository.spec.ts` | **PASS** |
+

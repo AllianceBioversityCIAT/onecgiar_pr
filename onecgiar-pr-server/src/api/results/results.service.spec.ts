@@ -211,6 +211,7 @@ describe('ResultsService — getScienceProgramProgress plannedKpis & results bre
     results: any[];
     initiatives: any[];
     indicatorContributionsMap?: Map<string, any>;
+    plannedKpisCountMap?: Map<string, number>;
     activeYear?: number;
   }) {
     const service: any = Object.create(ResultsService.prototype);
@@ -243,6 +244,9 @@ describe('ResultsService — getScienceProgramProgress plannedKpis & results bre
               new Map(),
           );
         }),
+      getPlannedKpisCountMap: jest.fn().mockImplementation((_year: number) => {
+        return Promise.resolve(config.plannedKpisCountMap ?? new Map());
+      }),
     };
     service.computeProgressValue =
       ResultsService.prototype['computeProgressValue'];
@@ -372,5 +376,32 @@ describe('ResultsService — getScienceProgramProgress plannedKpis & results bre
     expect(item.totalResults).toBeNull();
     expect(item.replicatedResults).toBe(0);
     expect(item.newResults).toBe(0);
+  });
+
+  it('prefers plannedKpis from getPlannedKpisCountMap (e.g. 415 full ToC universe) when available', async () => {
+    const initiatives = [
+      {
+        id: 10,
+        official_code: 'SP01',
+        name: 'Breeding for Tomorrow',
+        portfolio_id: 3,
+        active: true,
+      },
+    ];
+
+    const plannedKpisCountMap = new Map([['SP01', 415]]);
+
+    const service = makeScienceProgramService({
+      results: [],
+      initiatives,
+      plannedKpisCountMap,
+      activeYear: 2026,
+    });
+
+    const res: any = await service.getScienceProgramProgress(user, 2);
+
+    expect(res.status).toBe(200);
+    const item = res.response.otherSciencePrograms[0];
+    expect(item.plannedKpis).toBe(415);
   });
 });

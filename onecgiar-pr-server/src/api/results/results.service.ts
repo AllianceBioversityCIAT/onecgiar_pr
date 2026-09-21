@@ -2008,16 +2008,35 @@ export class ResultsService {
       const progressMap = new Map<number, number>();
       const plannedKpisMap = new Map<number, number>();
 
+      let plannedKpisByCodeMap = new Map<string, number>();
+      try {
+        if (this._tocResultsRepository?.getPlannedKpisCountMap) {
+          plannedKpisByCodeMap =
+            await this._tocResultsRepository.getPlannedKpisCountMap(
+              activeYearValue,
+            );
+        }
+      } catch (error) {
+        this._logger.warn(
+          `Failed to get planned KPIs map for year ${activeYearValue}: ${error?.message}`,
+        );
+      }
+
       const progressPromises = initiativesSeed.map(async (initiative) => {
         if (!initiative.official_code) {
           return;
         }
 
-        const { progress, plannedKpis } =
+        const codeUpper = initiative.official_code.trim().toUpperCase();
+
+        const { progress, plannedKpis: calculatedPlannedKpis } =
           await this.calculateInitiativeProgress(
             initiative.official_code,
             activeYearValue,
           );
+
+        const plannedKpis =
+          plannedKpisByCodeMap.get(codeUpper) ?? calculatedPlannedKpis;
 
         progressMap.set(initiative.id, progress);
         plannedKpisMap.set(initiative.id, plannedKpis);
