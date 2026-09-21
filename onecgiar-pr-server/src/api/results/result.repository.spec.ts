@@ -1006,3 +1006,129 @@ describe('ResultRepository — replication carries the contact directory link (P
     expect(misaligned).toEqual([]);
   });
 });
+
+// BSR-T-1 (design.md §4.1, requirements.md BSR-R-1/BSR-R-2/BSR-AC-2): SQL-string spec for
+// getResultsByProgramAndCenters. This is a presence assertion over the generated SQL text — it
+// proves the alias/join/GROUP BY shape, never that MySQL actually returns those rows (that gap
+// is closed by BSR-T-6's HITL check, not by this spec).
+describe('ResultRepository — getResultsByProgramAndCenters source/reporter columns (BSR-T-1)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(({ error }: any) => ({
+      response: { error: true },
+      message: `${error}`,
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+    })),
+  } as any;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  const previouslySelectedAliases = [
+    'r.id,',
+    'MAX(cp.id) AS project_id',
+    'MAX(cp.short_name) AS project_name',
+    'r.result_code,',
+    'r.title AS result_title',
+    'rt.name AS result_category',
+    'AS indicator_category',
+    'rs.result_status_id,',
+    'rs.status_name,',
+    'MAX(twp.acronym) AS acronym',
+    'MAX(tr.result_title) AS toc_title',
+    'AS indicator,',
+    'r.external_submitted_date AS submission_date',
+    'ir.id AS initiative_role_id',
+    'ir.name AS initiative_role_name',
+    'AS lead_center',
+  ];
+
+  it('selects the three new columns, keeps every previously selected alias, and puts the two per-result columns in GROUP BY', async () => {
+    await repo.getResultsByProgramAndCenters('SP01');
+
+    const [sql] = queryMock.mock.calls[0];
+
+    // Scope the presence assertions to the outer SELECT list, not the whole SQL string — the
+    // GROUP BY clause repeats several of the same alias tokens (e.g. `r.creation_method,`) and a
+    // whole-string `toContain` is satisfied by that repeat even when the SELECT list itself has
+    // dropped the column (Reviewer finding, attempt 1).
+    //
+    // Marker choice: `'FROM result r'` occurs exactly once in this query (the CTE joins
+    // `results_center`/`clarisa_center`/`clarisa_institutions`, never `result`), so
+    // `indexOf('FROM result r')` is unambiguous. `'SELECT'` is NOT unique — it also opens the
+    // `lead_centers` CTE (`WITH lead_centers AS ( SELECT rc.result_id, ... )`) — so a bare
+    // `indexOf('SELECT')` would anchor the slice at the CTE's SELECT instead of the outer one.
+    // `lastIndexOf('SELECT', fromIndex)` finds the closest SELECT keyword *before* `FROM result r`,
+    // which is the outer query's SELECT, regardless of either keyword's surrounding whitespace.
+    const fromIndex = sql.indexOf('FROM result r');
+    expect(fromIndex).toBeGreaterThan(-1);
+    expect(sql.indexOf('FROM result r', fromIndex + 1)).toBe(-1); // marker is unique
+
+    const selectIndex = sql.lastIndexOf('SELECT', fromIndex);
+    expect(selectIndex).toBeGreaterThan(-1);
+
+    const selectClause = sql.slice(selectIndex, fromIndex);
+
+    // New aliases present (BSR-R-1) — scoped to the SELECT list.
+    expect(selectClause).toContain('r.creation_method,');
+    expect(selectClause).toContain('r.external_platform_code,');
+    expect(selectClause).toMatch(
+      /MAX\(COALESCE\(\s*NULLIF\(TRIM\(CONCAT\(us\.first_name, ' ', us\.last_name\)\), ''\),\s*NULLIF\(TRIM\(CONCAT\(uc\.first_name, ' ', uc\.last_name\)\), ''\)\s*\)\) AS reporter_name/,
+    );
+
+    // Every previously selected alias still present (BSR-AC-2 / falsifies a column drop) —
+    // scoped to the SELECT list so a drop cannot hide behind a GROUP BY repeat.
+    for (const alias of previouslySelectedAliases) {
+      expect(selectClause).toContain(alias);
+    }
+
+    // Both users joins are LEFT (BSR-R-2 — external_submitter first, created_by fallback).
+    expect(sql).toContain(
+      'LEFT JOIN users us\n        ON r.external_submitter = us.id',
+    );
+    expect(sql).toContain(
+      'LEFT JOIN users uc\n        ON r.created_by = uc.id',
+    );
+    expect(sql).not.toMatch(/(?<!LEFT )JOIN users/);
+
+    // The two new per-result columns are in the GROUP BY; reporter_name (aggregated) is not.
+    const groupByClause = sql.slice(sql.indexOf('GROUP BY'));
+    expect(groupByClause).toContain('r.creation_method');
+    expect(groupByClause).toContain('r.external_platform_code');
+    expect(groupByClause).not.toContain('reporter_name');
+  });
+
+  it('keeps the `?` placeholder count equal to the params array length across filter combinations', async () => {
+    await repo.getResultsByProgramAndCenters(
+      'SP01',
+      ['CT01', 'CT02'],
+      34,
+      '1,2,3',
+    );
+
+    const [sql, params] = queryMock.mock.calls[0];
+    const placeholderCount = (sql.match(/\?/g) || []).length;
+
+    expect(placeholderCount).toBe(params.length);
+    expect(params).toEqual(['SP01', 'CT01', 'CT02', 34, 1, 2, 3]);
+  });
+
+  it('keeps the `?` placeholder count equal to the params array length with no optional filters', async () => {
+    await repo.getResultsByProgramAndCenters('SP01');
+
+    const [sql, params] = queryMock.mock.calls[0];
+    const placeholderCount = (sql.match(/\?/g) || []).length;
+
+    expect(placeholderCount).toBe(params.length);
+    expect(params).toEqual(['SP01']);
+  });
+});

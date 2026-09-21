@@ -22,7 +22,7 @@
 
 ## 3. Task list
 
-### `BSR-T-1` — List payload: three additive fields
+### `BSR-T-1` — List payload: three additive fields `[x]`
 
 - **Type:** `server`
 - **Description:** Extend `getResultsByProgramAndCenters` to select `r.creation_method`, `r.external_platform_code` and a resolved `reporter_name` (two `LEFT JOIN users`: `external_submitter` first, `created_by` as fallback), add the two per-result columns to the `GROUP BY`, and add all three keys to the service's closed-allowlist mapper.
@@ -37,10 +37,10 @@
   - **Disqualifier:** if the `users` joins change the row count for a fixed `(programId, versionId)` — measured on TEST data, not asserted from the SQL text — the join design is wrong; re-specify rather than patch with `DISTINCT`. Also: a SQL-string spec is a **presence assertion** — it proves the alias is in the string, never that MySQL returns it. That gap is closed by `BSR-T-6`'s HITL check, not by this task.
   - **Consumers:** `bilateral-review.component.ts:1112` · `bilateral-review-count.service.ts:95` · `bilateral-results.service.ts` · `results-center-reporting-guide.component.ts:161` · `dashboard-lab.component.ts:2032`,`:2600` · `where-to-report-modal.component.ts:105` · `programme-results.component.ts` · `results-list.component.ts` · `notification-item.component.ts` + their spec files (31 files reference `ResultToReview`). All read named fields; none asserts an exact shape (`design.md` P-8). Server side: `result.spec.ts:1520-1560` is the only spec over this mapper.
 - **Definition of done:**
-  - [ ] `P-11` settled and recorded in `execution.md`
-  - [ ] Repo spec asserts: the three new aliases present · **every previously selected alias still present** · `?` count === params length · both `users` joins are `LEFT` · the two new per-result columns are in the `GROUP BY`
-  - [ ] Server Jest green; coverage thresholds held
-  - [ ] Lint clean · no secret logged
+  - [x] `P-11` settled and recorded in `execution.md` — 215/215 non-null `reporter_name` (100 %), row count 215 → 215 unchanged
+  - [x] Repo spec asserts: the three new aliases present · **every previously selected alias still present** · `?` count === params length · both `users` joins are `LEFT` · the two new per-result columns are in the `GROUP BY` — all SELECT-scoped after the attempt-1 FAIL, proven with four red mutations
+  - [x] Server Jest green; coverage thresholds held
+  - [x] Lint clean · no secret logged
 
 ### `BSR-T-2` — Stamp `creation_method = EXTERNAL` on API ingestion `[x]`
 
