@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
+import { FieldsManagerService } from '../../../../shared/services/fields-manager.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
@@ -95,10 +96,24 @@ const TAG_LEVELS = [
 })
 export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   @Output() resultTypeChanged = new EventEmitter<void>();
+  private readonly fieldsManagerSE = inject(FieldsManagerService);
   private readonly autoSaveService = inject(BilateralAutoSaveService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
   /** `protected`, not `private`: the template binds `creationService.*` into the change-type dialog (P2-3233). */
   protected readonly creationService = inject(BilateralCreationService);
+
+  /**
+   * P2-3766 — the ⓘ guidance the story calls "existing behavior, must be preserved".
+   *
+   * It was preserved in W1/W2 and never wired here: the three mandatory fields rendered their
+   * header with an empty icon slot (verified on prtest #9432, 2026-09-21 — `field_card_header`
+   * with three empty containers). The text is not new copy; it is the same catalogue entry
+   * `rd-general-information` reads, so the two forms cannot drift apart.
+   */
+  guidance(fieldRef: string): string {
+    return this.fieldsManagerSE.fields()[fieldRef]?.description ?? '';
+  }
+
   private readonly userSearchService = inject(UserSearchService);
   selectedSubScores = signal<Record<string, number[]>>({});
   private readonly http = inject(HttpClient);
