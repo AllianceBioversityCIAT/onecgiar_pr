@@ -24,6 +24,8 @@ export class IpsrContributorsComponent implements OnInit {
   centersSE = inject(CentersService);
   resultLevelSE = inject(ResultLevelService);
   contributingInitiativesList = [];
+  /** P2-3746 — raw catalog before the owner exclusion in `applyOwnerExclusion`. */
+  private allContributingInitiatives = [];
   fieldsManagerSE = inject(FieldsManagerService);
   innovationUseResultsSE = inject(InnovationUseResultsService);
   ipsrCompletenessStatusSE = inject(IpsrCompletenessStatusService);
@@ -56,8 +58,34 @@ export class IpsrContributorsComponent implements OnInit {
   GET_AllWithoutResults() {
     const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
     this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
-      this.contributingInitiativesList = filterOutAvisaInitiatives(response);
+      this.allContributingInitiatives = filterOutAvisaInitiatives(response);
+      this.applyOwnerExclusion();
     });
+  }
+
+  /**
+   * P2-3746 — the package's OWN Science Program must never be offered as a contributing one.
+   *
+   * The server drops it without saying so: `createTocMappingV2` runs
+   * `pendingIds.filter(id => id !== initSubmitter.initiative_id)`
+   * (`results-toc-results.service.ts:1596`) and `resultRequest` refuses to share a result with its
+   * own owner (`share-result-request.service.ts:183`). So picking it answered `201`, the toast said
+   * the section was saved, and the chip was gone on reload — the whole of P2-3746.
+   *
+   * Both sibling forms already exclude it and this one lost the filter in the P25 migration:
+   * `rd-contributors-and-partners.component.ts:728` (`sp.id !== ownerId`) and
+   * `ipsr-contributors-toc.component.ts:38`.
+   *
+   * 🛑 Re-filtering in a template getter would hand `app-pr-multi-select` a NEW array on every
+   * change-detection pass, which is one of the two NG0103 loop conditions for that control. The
+   * list is therefore recomputed only when one of its two inputs lands — the catalog here, and the
+   * owner in `getSectionInformation` — so the reference stays stable in between.
+   */
+  private applyOwnerExclusion() {
+    const ownerId = this.rdPartnersSE.partnersBody?.owner_initiative?.id ?? this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id;
+
+    this.contributingInitiativesList =
+      ownerId == null ? this.allContributingInitiatives : this.allContributingInitiatives.filter(init => init.id != ownerId);
   }
 
   toggleActiveContributor(item) {
@@ -220,6 +248,9 @@ export class IpsrContributorsComponent implements OnInit {
       ];
 
       this.contributorsBody.contributingInitiativeNew = [];
+
+      // P2-3746 — the owner only becomes known with this response; re-run the exclusion now.
+      this.applyOwnerExclusion();
     });
   }
 
