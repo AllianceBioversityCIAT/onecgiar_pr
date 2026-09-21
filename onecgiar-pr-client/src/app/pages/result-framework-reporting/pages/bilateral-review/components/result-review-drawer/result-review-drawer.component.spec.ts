@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick, flush } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { ResultReviewDrawerComponent } from './result-review-drawer.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -9,6 +11,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { BilateralResultsService } from '../../services/bilateral-results.service';
+import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
 
 
 // jsdom does not expose structuredClone; the component relies on it for snapshots.
@@ -2053,6 +2056,196 @@ describe('ResultReviewDrawerComponent', () => {
 
     it('does not throw when #review-card-toc does not exist', () => {
       expect(() => component.scrollToToc()).not.toThrow();
+    });
+  });
+
+  // ------------------------------------------------------------- BSR-T-5: drawer header Source
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-5, BSR-R-9, BSR-AC-12)
+  //
+  // WHY A STATIC TEMPLATE READ, NOT A RENDERED ASSERTION HERE
+  // ----------------------------------------------------------
+  // This whole spec file bootstraps with `overrideComponent({ set: { template: '' } })` (see the
+  // `beforeEach` above), so jsdom never renders `result-review-drawer.component.html` in THIS
+  // file — the same constraint `result-review-drawer.readonly-bindings.spec.ts` (RDR-T-1) hit and
+  // resolved the same way: read the real shipped `.html` off disk (a real-artifact lock, not a
+  // fragment authored in the test) to prove the TEMPLATE actually wires `headerSourceOf(...)` into
+  // the header, paired with a correctness assertion that `headerSourceOf('MANUAL')` really is the
+  // string `Manual entry`. Together they cover what "the header renders Manual entry" requires:
+  // the template feeds the chip the right expression, AND that expression produces the right text.
+  // The genuinely RENDERED proof (jsdom vs. a real DOM painting "Manual entry") lives in the
+  // sibling CT harness `result-review-drawer.header-source.cy.ts` — mounting the full
+  // `ResultReviewDrawerComponent` in Cypress CT was already judged impractical for this exact
+  // component (`result-review-drawer.approve-tooltip.cy.ts`'s documented mount decision: ~15
+  // further real services behind `ApiService`, a constructor `effect()` that fires three chained
+  // HTTP calls, and five further child-component dependency graphs).
+  //
+  // FALSIFIER: delete `[source]="headerSourceOf(fields?.commonFields)"` (or the
+  // `app-bilateral-review-source-chip` element around it) from the header block in
+  // `result-review-drawer.component.html` → the template-lock test below goes red, naming the
+  // missing binding. A test that only asserted `BilateralCommonFields.creation_method` compiles
+  // would NOT catch that mutation — this is why the lock reads the shipped template text instead.
+  describe('BSR-T-5: drawer header Source (headerSourceOf + template wiring)', () => {
+    const TEMPLATE_PATH = path.join(__dirname, 'result-review-drawer.component.html');
+
+    it('headerSourceOf derives "Manual entry" for a MANUAL result (BSR-AC-12)', () => {
+      const descriptor = component.headerSourceOf({ creation_method: 'MANUAL' } as any);
+      expect(descriptor).toEqual({
+        kind: 'pill',
+        label: BILATERAL_REVIEW_COPY.sourceChip.manualEntry,
+        accessibleName: BILATERAL_REVIEW_COPY.sourceChip.manualEntryAccessibleName
+      });
+      expect(descriptor).toMatchObject({ label: 'Manual entry' });
+    });
+
+    it('headerSourceOf derives the AI descriptor for an AI result — no second copy of the AI string here', () => {
+      const descriptor = component.headerSourceOf({ creation_method: 'AI' } as any);
+      expect(descriptor).toEqual({ kind: 'ai' });
+    });
+
+    it('headerSourceOf reads undefined/absent commonFields without throwing (placeholder branch)', () => {
+      expect(component.headerSourceOf(undefined)).toEqual({ kind: 'placeholder' });
+      expect(component.headerSourceOf(null)).toEqual({ kind: 'placeholder' });
+    });
+
+    it('headerSourceOf derives "Manual entry" for a MANUAL result even when submitter_name is null (BSR-AC-12 attaches no submitter_name precondition)', () => {
+      const descriptor = component.headerSourceOf({ creation_method: 'MANUAL', submitter_name: null } as any);
+      expect(descriptor).toEqual({
+        kind: 'pill',
+        label: BILATERAL_REVIEW_COPY.sourceChip.manualEntry,
+        accessibleName: BILATERAL_REVIEW_COPY.sourceChip.manualEntryAccessibleName
+      });
+    });
+
+    // ----------------------------------------------------------------- attempt-2 remediation
+    // Attempt 1's lock (`block.toContain('app-bilateral-review-source-chip')` over 800 chars
+    // after "Submitted by:") passed IDENTICALLY whether the Source markup sat inside or outside
+    // the `@if (fields?.commonFields?.submitter_name)` block — a string-presence check on markup
+    // that is satisfied either way, which is why it PASSed a template that violated BSR-R-9 (the
+    // Source line disappeared for every result whose `external_submitter` is unstamped, the exact
+    // MANUAL/AI class BSR-AC-12 names). This replacement proves PLACEMENT, not mere presence: it
+    // brace-matches from the submitter_name `@if`'s own opening `{` to find the `}` that closes
+    // THAT block, then asserts the Source chip's markup index is AFTER it — i.e. Source is a
+    // sibling of the `@if`, never nested inside it. `{{ }}` interpolations inside the block are
+    // balanced pairs (each contributes net 0 to depth), so a plain per-character brace counter
+    // still lands on the correct closing `}` without needing to special-case them.
+    //
+    // FALSIFIER (run manually for the task report, not re-asserted here — see the Implementer's
+    // verification section): re-nest the Source `<span>` back inside
+    // `@if (fields?.commonFields?.submitter_name) { ... }` → `chipIndex` falls BEFORE
+    // `submitterBlockCloseIndex` and this test goes red on the last `expect`, not on setup.
+    it('the real shipped template renders the Source chip OUTSIDE (after) the @if (fields?.commonFields?.submitter_name) block — an index-comparison lock, not a string-presence one', () => {
+      expect(fs.existsSync(TEMPLATE_PATH)).toBe(true);
+      const html = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+      expect(html.length).toBeGreaterThan(0);
+
+      const ifMarker = '@if (fields?.commonFields?.submitter_name) {';
+      const ifIndex = html.indexOf(ifMarker);
+      expect(ifIndex).toBeGreaterThan(-1);
+
+      // Constraint this brace counter relies on (attempt-3 rework, Reviewer advisory (b)): it only
+      // sees `{`/`}` characters, so it would mis-locate the closing brace if this block ever grew
+      // an `@else { ... }` (more braces to the SAME depth run) or an unbalanced `{`/`}` inside an
+      // attribute string (e.g. a literal `"{"` in a label) between `ifIndex` and the real close.
+      // Neither exists in the shipped block today; a future edit that adds either must re-verify
+      // this loop by eye, not trust the counter blindly.
+      let depth = 1;
+      let cursor = ifIndex + ifMarker.length;
+      for (; cursor < html.length && depth > 0; cursor++) {
+        if (html[cursor] === '{') depth++;
+        else if (html[cursor] === '}') depth--;
+      }
+      expect(depth).toBe(0); // sanity: the block's own `{`/`}` are balanced in the shipped file
+      const submitterBlockCloseIndex = cursor - 1; // index of the matching closing `}`
+
+      const chipIndex = html.indexOf('app-bilateral-review-source-chip');
+      expect(chipIndex).toBeGreaterThan(-1);
+      expect(html).toContain('[source]="headerSourceOf(fields?.commonFields)"');
+
+      expect(chipIndex).toBeGreaterThan(submitterBlockCloseIndex);
+
+      // [advisory-grade] attempt-3 rework, Reviewer advisory (a): the check above proves the chip
+      // is not nested INSIDE this specific submitter_name @if block, but says nothing about a
+      // hypothetical SIBLING `@if (…submitter_name) { <Source> }` reinserted between this block's
+      // close and the chip — that would still satisfy `chipIndex > submitterBlockCloseIndex` and
+      // pass. A naive "no `submitter_name` text at all in between" check is too strong: the real,
+      // reviewed-and-passed separator `@if (project_name || submitter_name) { <span>•</span> }`
+      // legitimately sits in that gap and mentions `submitter_name` without wrapping the chip. The
+      // real test for the loophole is narrower: find every `@if (...)` between the two markers
+      // whose CONDITION mentions `submitter_name`, brace-match each one the same way as above, and
+      // confirm its own close falls BEFORE `chipIndex` — i.e. it is a self-contained sibling (like
+      // the separator), never a block that WRAPS the chip. See this file's next test for the proof.
+      const gapText = html.slice(submitterBlockCloseIndex, chipIndex);
+      const conditionalRe = /@if \(([^)]*)\) \{/g;
+      let match: RegExpExecArray | null;
+      while ((match = conditionalRe.exec(gapText)) !== null) {
+        if (!match[1].includes('submitter_name')) continue;
+        const nestedIfIndex = submitterBlockCloseIndex + match.index;
+        const nestedIfMarkerEnd = nestedIfIndex + match[0].length;
+        let nestedDepth = 1;
+        let nestedCursor = nestedIfMarkerEnd;
+        for (; nestedCursor < html.length && nestedDepth > 0; nestedCursor++) {
+          if (html[nestedCursor] === '{') nestedDepth++;
+          else if (html[nestedCursor] === '}') nestedDepth--;
+        }
+        const nestedCloseIndex = nestedCursor - 1;
+        expect(nestedCloseIndex).toBeLessThan(chipIndex);
+      }
+    });
+
+    // Falsification proof for advisory (a) above — NOT a gate that runs against the shipped file;
+    // it reconstructs the exact loophole shape (a submitter_name @if reinserted so it WRAPS the
+    // chip, between the first block's close and the chip) against an in-memory string and shows
+    // the narrowed check catches it while leaving the real separator @if alone. Mirrors this
+    // file's other manually-verified FALSIFIER comments, made executable here since the shape is
+    // easy to construct without touching the real template.
+    it('[advisory-grade] falsifier: a submitter_name @if reinserted so it WRAPS the chip defeats the index-comparison lock alone, but is caught by the narrowed wrap-check', () => {
+      const realHtml = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+      const ifMarker = '@if (fields?.commonFields?.submitter_name) {';
+      const ifIndex = realHtml.indexOf(ifMarker);
+      let depth = 1;
+      let cursor = ifIndex + ifMarker.length;
+      for (; cursor < realHtml.length && depth > 0; cursor++) {
+        if (realHtml[cursor] === '{') depth++;
+        else if (realHtml[cursor] === '}') depth--;
+      }
+      const realCloseIndex = cursor - 1;
+      const realChipIndex = realHtml.indexOf('app-bilateral-review-source-chip');
+      const chipEnd = realHtml.indexOf('/>', realChipIndex) + '/>'.length;
+
+      // Re-wrap the chip in a second submitter_name-gated block — the loophole shape the Reviewer
+      // named. The plain index-comparison check (chipIndex > submitterBlockCloseIndex, computed
+      // off the FIRST block) still passes against this string, since the chip's start index is
+      // unchanged and still after the first block's close.
+      const openTag = ' @if (fields?.commonFields?.submitter_name) { ';
+      const closeTag = ' } ';
+      const poisonedHtml = realHtml.slice(0, realChipIndex) + openTag + realHtml.slice(realChipIndex, chipEnd) + closeTag + realHtml.slice(chipEnd);
+
+      expect(realChipIndex).toBeGreaterThan(realCloseIndex); // the plain lock alone would still PASS
+
+      // Re-run the narrowed check against the poisoned string: the reinserted @if's condition
+      // mentions submitter_name, and — because it now WRAPS the chip — its brace-matched close
+      // falls AFTER the chip, not before it. That is exactly what the new assertion rejects.
+      const gapText = poisonedHtml.slice(realCloseIndex, realChipIndex + openTag.length + (chipEnd - realChipIndex));
+      const conditionalRe = /@if \(([^)]*)\) \{/g;
+      let match: RegExpExecArray | null;
+      let foundWrappingBlock = false;
+      while ((match = conditionalRe.exec(gapText)) !== null) {
+        if (!match[1].includes('submitter_name')) continue;
+        const nestedIfIndex = realCloseIndex + match.index;
+        const nestedIfMarkerEnd = nestedIfIndex + match[0].length;
+        let nestedDepth = 1;
+        let nestedCursor = nestedIfMarkerEnd;
+        for (; nestedCursor < poisonedHtml.length && nestedDepth > 0; nestedCursor++) {
+          if (poisonedHtml[nestedCursor] === '{') nestedDepth++;
+          else if (poisonedHtml[nestedCursor] === '}') nestedDepth--;
+        }
+        const nestedCloseIndex = nestedCursor - 1;
+        const poisonedChipIndex = realChipIndex + openTag.length;
+        if (nestedCloseIndex > poisonedChipIndex) {
+          foundWrappingBlock = true;
+        }
+      }
+      expect(foundWrappingBlock).toBe(true); // the narrowed check DOES catch the re-nesting, as intended
     });
   });
 });

@@ -483,3 +483,96 @@ Also recorded in `design.md`:
 - **RISK — no gate can detect removal of the two SOURCE-cell wrap guards at 116px.** Recorded in DD-2 itself rather than only here, because that is where a future re-tuner will look.
 
 Per *Advisory Never Becomes A Task*, none of these mints a task or widens one. The two carried into T-6 land inside files and gates that task already owns, tagged advisory-grade and non-gating.
+
+---
+
+### `BSR-T-5` — Drawer header Source line
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (attempt 3 of 3 — the ceiling was reached but not breached) |
+| Date | 2026-09-21 |
+| Implementer attempts | **3** |
+| Implementer / Reviewer models | `sonnet` (T2) / `opus` (T3) — author ≠ auditor holds on all three attempts, each Reviewer a fresh context |
+| Effort | `medium` → `high` → `xhigh` (bumped one level per rework, as the dial requires) |
+| Skills assigned | `angular-developer`, `tdd` (attempts 1–2); `angular-developer` (attempt 3, comment-only) |
+| Wave | ran alone — the spec's declared T-4 ∥ T-5 parallelism was **not** taken; see `BSR-T-4` *Decisions* 1 |
+
+**Requirements covered:** `BSR-R-9`, `BSR-AC-12`.
+
+#### `P-5` settled — the second premise this spec verified against live data
+
+`design.md` P-5 claimed the detail payload already carries `creation_method` and `is_ai_generated`, but was **verified only in the SQL string** — which proves an alias is in the query text, never that the response carries a value. The task's Disqualifier made settling it a precondition. Probed against the live TEST database before the header was built: **both columns return values** (sample `id=11993`, `result_code=9525`, `creation_method='MANUAL'`, `is_ai_generated=0`). **Disqualifier not triggered; no server edit needed.** Distribution over active bilateral results: `EXTERNAL 1152 · AI 129 · MANUAL 129 · UNKNOWN 95`.
+
+**This probe also corrected a claim the Leader had been propagating.** `BSR-T-1`'s probe sampled **one** program (`SP06`/v34) and found `{EXTERNAL: 215}` with no platform codes, from which the Leader generalised "only the `Via API` branch is observable on TEST data" — and wrote that caveat into the `BSR-T-3` and `BSR-T-6` briefs. The full-population re-probe (Leader, independent) shows **six of the seven `BSR-R-4` rows occur in live data**, including the **trap row** (`UNKNOWN` + non-blank code → `Via API · <code>`) with **84 real instances**:
+
+| `creation_method` | rows | rows with a non-blank `external_platform_code` |
+|---|---|---|
+| `EXTERNAL` | 1152 | **0** |
+| `AI` | 129 | 0 |
+| `MANUAL` | 129 | 0 |
+| `UNKNOWN` | 95 | **84** — `W3RU`=54, `STAR`=24, `FETCHER`=6 |
+
+Only `BULK` (owned by `bilateral/bulk-uploader-handoff`) and `EXTERNAL`+code are absent today. The corrected caveat was carried into `BSR-T-6`'s brief. **The shape of the error is worth keeping: a single-program sample was generalised to a population claim.** It cost nothing here because the unit matrices never depended on it, but it would have under-scoped `BSR-T-6`'s HITL pass.
+
+**Incidental confirmation of P-3:** `EXTERNAL` rows never carry a code (0 of 1152) because they came from migration `1784921547596`'s backfill of rows predating the platform column, while `UNKNOWN` rows usually do (84 of 95) — post-migration ingestions that captured a code but were never stamped. That is exactly the gap `BSR-T-2` closed.
+
+#### Attempt 1 — Reviewer `FAIL` (2 issues)
+
+- **runtime events:** none.
+- Declared `creation_method?` / `is_ai_generated?` on `BilateralCommonFields`, added `headerSourceOf()` delegating to the shared `resolveBilateralSource`, rendered the Source beside *Submitted by*, reused `BilateralReviewSourceChipComponent` unchanged. `ResultToReview` correctly left untouched.
+- **Issue 1 — `BSR-R-9` violated: the Source was nested inside `@if (submitter_name)`.** The Reviewer traced that `submitter_name` is `CONCAT(first_name,' ',last_name)` off a `LEFT JOIN` on `external_submitter`, a column written **only** by the bilateral paths and patched forward recently **with no backfill** — so it is `NULL` for many results, and `BSR-R-2`'s very existence (a `created_by` fallback) is the spec conceding that. For those results the drawer showed **no Source at all**, and `MANUAL`/`AI` rows — the exact class `BSR-AC-12` names — are the least likely to carry an external submitter. `BSR-AC-12` attaches no `submitter_name` precondition.
+- **The gate could not detect it, which is the deeper defect.** The template lock was `block.toContain('app-bilateral-review-source-chip')` over an 800-character window — **satisfied identically by the conformant and the non-conformant placement.** A string-presence check on markup, which is why it PASSed a template that violates the requirement. The same inert-assertion class that cost `BSR-T-1` a round.
+- **Issue 2 — the `external_platform_code` side-finding comments were mis-scoped.** They claimed the gap was "inert for AI/MANUAL/BULK" and that `EXTERNAL` renders a no-code `Via API`; against the measured distribution the divergence is the `UNKNOWN`+code class rendering a **placeholder em-dash**, not `EXTERNAL`.
+- The Reviewer took the **literal reading of `BSR-R-9`** on the underlying behaviour — a scope limitation, not a conformance failure. That reading was upheld again at attempt 3 and is the basis of the §13 follow-up.
+
+#### Attempt 2 — Reviewer `FAIL` (1 issue, a comment)
+
+- **runtime events:** none.
+- **Both behavioral defects fixed and PASSED:** the Source lifted out into the metadata row as a true sibling, the `•` separator gated on `project_name || submitter_name` (verified correct in all four presence states), and the gate replaced with a **brace-matching index comparison** proving the chip sits after the submitter block's close. **Falsification proven:** re-nesting the markup produced `expect(chipIndex).toBeGreaterThan(submitterBlockCloseIndex)` → `Expected: > 10152, Received: 10034`, failing on the falsifying assertion itself. Restored byte-for-byte.
+- **Issue — the forward-looking sentence in both docblocks was factually inverted.** It claimed `BSR-T-2`'s stamp grows the affected `UNKNOWN` class. Stamping `EXTERNAL` **removes** rows from `UNKNOWN`; and since ingestion also captures a code, the class that actually grows is `EXTERNAL`+code — which both comments explicitly denied.
+- **The inverted framing originated in the Leader's brief.** The attempt-2 brief instructed: *"name the growing-share effect (`BSR-T-2` now stamps `EXTERNAL` while ingestion captures a code, so future rows join the affected class)"* — written inside a passage about the `UNKNOWN` divergence. The Implementer executed it faithfully. **Recorded as a Leader brief defect, not an Implementer failure.**
+
+#### Attempt 3 — Reviewer `PASS`
+
+- **runtime events:** none.
+- Comment-only, as scoped. Both docblocks rewritten with the corrected direction, verified by the Leader at source first (`bilateral.service.ts:4212` writes `external_platform_code: platform?.acronym ?? null`; `design.md` §3.3 independently states the code is captured at ingestion).
+- **The Implementer overrode the Reviewer's advisory suggestion — correctly.** Advisory (a) proposed asserting "the text between the block's close and `chipIndex` contains no `submitter_name`". The Implementer found this produces a **false failure** against the legitimate separator `@if`, ran the literal version, saw it go red against the *correct* template, and replaced it with a narrower check: scan each `@if` in that gap whose condition mentions `submitter_name`, brace-match it, and assert its close precedes `chipIndex` — a sibling, never a wrapper. **The Leader verified this independently and found it understated:** the gap mentions `submitter_name` **twice** legitimately — in the separator's condition *and* inside the comment reading *"NOT nested inside the submitter_name @if"*. **The Reviewer's literal gate would have been falsified by the very comment documenting the fix it protected.** An Implementer that had followed the advisory verbatim would have shipped a permanently-red gate.
+- **Reviewer verdict: `PASS`**, every load-bearing claim re-checked at source: the detail query really selects `creation_method` + `is_ai_generated` and **not** `external_platform_code`; `buildExternalIdentity` really writes the code as pre-existing P2-3166 behaviour, so "not a durable property of `EXTERNAL` rows" is right; the `UNKNOWN` arithmetic is right (54+24+6 = 84 of 95); the matrix-row citations are right (rows 6-7 for the `UNKNOWN` pair, rows 4-5 for the `EXTERNAL` pair); and `resolveBilateralSource` genuinely returns `{kind:'placeholder'}` for `UNKNOWN` + `undefined`, so the em-dash claim is **behavioural, not asserted**. Nothing frozen was broken. The narrowed advisory check was judged a **live** gate, not a self-satisfying green test.
+
+#### `ADVISORY` findings (recorded, never gating)
+
+- **ACCURACY (attempt 3) — the Leader's own correction was itself slightly oversized, and the Reviewer refined it.** "Every row `BSR-T-2` newly stamps `EXTERNAL` also carries the code" overstates the growing class: `buildExternalIdentity` yields `platform?.acronym ?? null` and `applyExternalIdentity` "only writes when there is something to write", so an ingestion whose API key resolves **no** CLARISA MIS stays `EXTERNAL` + null and diverges not at all. The exact statement is **"every row whose API key resolves a platform"**. Verified at source by the Leader and **applied** to the §13 follow-up, which now carries the per-resolved-platform magnitude rather than per-ingestion.
+- **CITATION DRIFT — caused by this spec, not inherited.** Both docblocks (and `design.md` P-5) cite `result.repository.ts:3406-3407`; the SELECT is now at **`:3419`**. Checked at the spec's `Verified at` commit: it was `:3407` at `da132347c` and shifted **+12** — by `BSR-T-1`'s own additions to that same query. `BilateralCommonFields` likewise moved from `:52-65` to `:64-104` via `BSR-T-4`/`BSR-T-5`. **P-5 has been updated** with both the settlement and the drift; the docblock citations are left as the Implementer wrote them (they match what the spec said at authoring time) and are noted here.
+- **RESILIENCE** — the new brace-matcher's comment documents its `@else`/unbalanced-brace constraint but not its **regex** constraint: the scan needs exact single spaces and a paren-free condition, so `@if(…){` or a condition containing a call (`submitter_name?.trim()`) would slip past silently.
+- **RELIABILITY** — the falsifier test re-implements the gate's matching logic instead of sharing a helper, so an edit to one copy is not caught by the other.
+- **RELIABILITY (attempt 2)** — no test mounts the **real drawer template** with `submitter_name: null`; the rendered case mounts only the chip fed the real derivation. The index lock is therefore the sole guard on `BSR-AC-12`'s no-precondition property. Accepted given the documented drawer-mount cost (`approve-tooltip.cy.ts` records that decision), and the lock is falsification-proven.
+
+Per *Advisory Never Becomes A Task*, none of these mints a task or widens one.
+
+#### Evidence re-run (non-author, Step 2.3 — never waived)
+
+| Field | Value |
+|---|---|
+| Mode | Leader-inline |
+| Command | `npx jest --testPathPattern="result-review-drawer" --silent --reporters=summary --no-coverage` |
+| Result | `9 suites / 294 tests passed` — **`VERIFIED`** (291 at attempt 1 → 293 at attempt 2 → 294 at attempt 3) |
+| Structural check | The Leader brace-matched the **shipped** template independently: submitter `@if` closes at **9837**, chip at **10728** → the chip is genuinely outside the block. **`VERIFIED`** |
+| Advisory-narrowing check | The Leader ran the Reviewer's *literal* advisory check against the shipped template and reproduced the false positive (two legitimate `submitter_name` mentions in the gap). **`VERIFIED`** |
+| D7 | `grep … \| wc -l` → **7**, unchanged across all three attempts |
+| `tsc --noEmit` | **1248**, exactly the baseline; zero errors reference the changed files |
+| `npm run build` | succeeded at attempt 2 (the last attempt that touched a template) |
+| Drawer CT | `11/11 passing`, unchanged |
+
+**Decisions made:**
+
+1. **The attempt-2 brief's inverted framing was the Leader's error**, corrected in attempt 3 after verifying the mechanism at source rather than restating the Reviewer's summary. Recorded so the attempt count reads honestly: **one of the three attempts was spent on a defect the Leader introduced.**
+2. **The Implementer's override of Reviewer advisory (a) was accepted** — the Reviewer's literal wording was wrong and the narrowed version implements its intent. Advisories are suggestions, not instructions; an Implementer that tests one and finds it false should say so, which is what happened.
+3. **The `external_platform_code` divergence is filed as a follow-up, not fixed here.** Both the attempt-1 and attempt-3 Reviewers independently took the literal reading of `BSR-R-9`. Recorded in `design.md` §13 with the measured two-class breakdown and the refined magnitude; **one server edit closes both classes.**
+4. **Execute-time spec edits:** `design.md` P-5 (settlement + citation drift) and §13 (the new follow-up). No approved requirement changed meaning.
+
+**Issues encountered:** two Reviewer FAILs — one a genuine `BSR-R-9` violation hidden by an inert gate, one a comment inversion traceable to the Leader's brief. Both resolved. No runtime events, no pivot, no HALT.
+
+**Final verification result:** green on every gate — 294 Jest, 11/11 drawer CT, `tsc` at baseline, `npm run build`, D7 at 7.
+
+**`Not Done / Assumptions` (Implementer, attempt 3):** advisory (a) implemented as the corrected rather than literal version, with reasoning (accepted, *Decisions* 2); `npm run build` not run as no template was touched (correct — the brief said so). **No scope owed.**

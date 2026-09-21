@@ -106,7 +106,7 @@
   - [x] Three row-height caps pass **unchanged** (46 / 50 / 68) — and confirmed **load-bearing**, not vacuous: the SUBMITTED cell is two-line by construction, so DD-3's vacuity warning is superseded
   - [x] `documentElement.scrollWidth <= clientWidth` at 375
 
-### `BSR-T-5` — Drawer header Source line
+### `BSR-T-5` — Drawer header Source line `[x]`
 
 - **Type:** `client`
 - **Description:** Declare `creation_method` (and `is_ai_generated`) on `BilateralCommonFields`, and render the Source beside the existing *Submitted by* in the drawer header using the same `resolveBilateralSource` function. The detail payload already carries the value (`design.md` P-5) — no server change.
@@ -120,9 +120,9 @@
   - **Disqualifier:** if the live detail response turns out not to carry `creation_method` despite `result.repository.ts:3406` (P-5 is `Low` impact but verified only in the SQL string), this task grows a server edit — report rather than patch the client with a guess.
   - **Consumers:** `BilateralCommonFields` is read by `result-review-drawer.component.ts` and the drawer's content sub-components. Additive optional fields; sweep with `grep -rn "commonFields" onecgiar-pr-client/src --include="*.ts"` before committing.
 - **Definition of done:**
-  - [ ] Header shows Source for a non-AI and an AI result; no duplicate AI string introduced
-  - [ ] Drawer Jest + the drawer's CT specs green
-  - [ ] `tsc --noEmit` clean
+  - [x] Header shows Source for a non-AI and an AI result; no duplicate AI string introduced (D7 held at 7). Rendered **independently of `submitter_name`** after an attempt-1 FAIL, with a falsification-proven index lock
+  - [x] Drawer Jest (9 suites / 294 tests) + the drawer's CT specs (11/11) green
+  - [x] `tsc --noEmit` at baseline (1248 repo-wide, zero referencing changed files)
 
 ### `BSR-T-6` — Page-level gates, HITL evidence, docs
 

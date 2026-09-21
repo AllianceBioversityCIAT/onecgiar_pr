@@ -74,6 +74,33 @@ export interface BilateralCommonFields {
   result_description: string | null;
   result_category: string;
   status_id?: string;
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-5, BSR-R-9, design.md P-5)
+  /** Additive — already returned by `getCommonFieldsBilateralResultById`
+   *  (`result.repository.ts:3406-3407`); declared here so the drawer header's Source line
+   *  (`BSR-T-5`) can read it typed. Same open-string treatment as `ResultToReview.creation_method`
+   *  (`BSR-T-1`/`BSR-T-4`) — `resolveBilateralSource` does the mapping, not this type. NOTE: the
+   *  detail query does not select `external_platform_code`, so the drawer's derivation is always
+   *  called with `platformCode: undefined`. Measured against the live TEST database (1505 active
+   *  bilateral results): `EXTERNAL` (1152 rows), `AI` (129) and `MANUAL` (129) never carry a
+   *  non-blank `external_platform_code` TODAY — but that is a fact about this pre-`BSR-T-2`,
+   *  migration-backfilled population, not a durable property of `EXTERNAL` rows: ingestion has
+   *  always written `external_platform_code` (`bilateral.service.ts:4212`). The measured gap is
+   *  `UNKNOWN`: 84 of its 95 rows DO carry a code (`W3RU`=54, `STAR`=24, `FETCHER`=6), and with
+   *  `platformCode: undefined` those fall to the matrix's placeholder row (`BSR-R-4` rows 6-7),
+   *  so the drawer renders an em-dash where the list renders `Via API · W3RU`. That class is
+   *  FIXED legacy, not growing — `BSR-T-2` stamping `EXTERNAL` on ingestion moves new rows OUT of
+   *  `UNKNOWN`, it cannot grow it. What DOES grow is `EXTERNAL`+code: every row `BSR-T-2` newly
+   *  stamps `EXTERNAL` also carries the code ingestion has always captured, rendering
+   *  `Via API` in the drawer vs `Via API · <code>` in the list (`BSR-R-4` rows 4-5). Closing both
+   *  classes needs a server edit to `getCommonFieldsBilateralResultById` to also select
+   *  `r.external_platform_code`, which is out of this task's scope (`BSR-R-9` only names
+   *  `creation_method`). */
+  creation_method?: string;
+  /** Additive — `CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated`
+   *  (`result.repository.ts:3406`). Declared per the task brief; NOT consumed by the Source
+   *  derivation — `BSR-R-4`'s matrix branches on `creation_method` alone (`resolveBilateralSource`
+   *  ignores this field entirely), so no display behaviour is invented around it here. */
+  is_ai_generated?: number;
 }
 
 export interface BilateralTocMetadata {
