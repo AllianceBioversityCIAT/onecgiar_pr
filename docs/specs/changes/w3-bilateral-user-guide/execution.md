@@ -78,3 +78,54 @@ Reviewer also identified **two residual states that exit 0 while the archive is 
 **Constitution impact** — none. The task adds dev-only tooling under `docs/specs/`, outside both packages; no module was created or reshaped, no public surface changed, and no child `CLAUDE.md` is warranted for a spec folder. CodeGraph re-index is not pending for it (not application source).
 
 **Final verification result** — `VERIFIED` (Leader re-run) + `STATUS: PASS` (independent `opus` Reviewer). Archive byte-identical: `git diff --quiet HEAD -- docs/specs/archive/2026-09-16-changes--user-guide-pdf` → exit 0, `git status --porcelain` on that path → empty.
+
+### `BG-T-2` — Install the tooling, pin the browser channel, verify the copy is verbatim
+
+| Field | Value |
+|---|---|
+| Status | **PASS** |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 (clean — no FAIL, no runtime event) |
+| Review depth | `checklist` · Reviewer `opus`, Implementer `sonnet`. Reviewer owed under **override (c)**: the verbatim-diff report is derived evidence a later gate (`BG-R-22`) consumes |
+| Requirements covered | `BG-R-22`, `BG-R-13` |
+| Authored LOC | **0** — `package-lock.json` is generated, `.env` is untracked. Cumulative authored: ~172 of 1,300–1,700. **No tripwire** |
+| runtime events | none |
+
+**Files changed:** `tooling/package-lock.json` (new, generated, committed — deliberately not copied from the archive); `tooling/.env` (created, **gitignored, untracked**, credential values empty); `tooling/node_modules/` (installed, gitignored). **No source file changed.**
+
+**Environment finding worth carrying forward.** The **bundled** Chromium downloaded successfully here — Chrome for Testing 153.0.8010.12 — and the system `chrome` channel also launched. This **contradicts the W1/W2 run six days earlier**, where `cdn.playwright.dev` was unreachable and `PLAYWRIGHT_CHANNEL=chrome` was mandatory. `PLAYWRIGHT_CHANNEL` is therefore left **empty** in `.env`, with `.env.example`'s escape hatch intact as a fallback. The operator's Playwright memory has been corrected from "CDN blocked" to "probe, never assume".
+
+**Proof of browser capability — a launch, not a version string.** The Implementer wrote a throwaway script that launches headless, opens a page, sets content, reads it back and closes, then deleted the script (`src/_launch-check.ts` confirmed absent by both the Leader and the Reviewer). Results: `LAUNCH_OK channel=bundled` and `LAUNCH_OK channel=chrome`. A version string would have been a presence-assertion, which proves a binary exists and not that it runs.
+
+**Falsifier (a) — compile gate, executed.** Baseline `npx tsc --noEmit` exit 0 → injected `const __deliberateTypeError: string = 42;` into `src/tokens.ts` → **exit 2, `TS2322: Type 'number' is not assignable to type 'string'`** → reverted → exit 0. This closes the compile-gate class in which a runner that erases type-only imports let 169 green tests sit on code that never compiled.
+
+**Falsifier (b) — the carried `BG-T-1` item: the guard, executed for the first time.** `ts-node` exists only from this task on, so every prior check of the guard was simulated with raw git. Three runs of `npx ts-node src/guards/archive-immutable.ts`:
+
+| # | Archive state | Result |
+|---|---|---|
+| 1 | clean | `[guard:archive] OK — 32 file(s) … clean and fully tracked.` exit **0** |
+| 2 | one byte touched, unstaged | `FAIL … modified/deleted tracked file(s): … src/tokens.ts` exit **1** |
+| 3 | same change **`git add`-ed** | **still exit 1**, same file named — the staged case the guard was fixed for |
+
+Archive then restored; `git diff --quiet HEAD -- <archive>` exit 0, `git status --porcelain` empty, guard green again.
+
+**Leader evidence re-run (non-author, mechanical) — `VERIFIED`.** Six checks, all matching: `tsc` exit 0; `.env` ignored; `diff -r --exclude=guards` on `src/` identical (the check that matters, given the inject-and-revert into `src/tokens.ts`); guard exit 0 on a clean archive; `_launch-check.ts` absent; tooling `git status` shows only `?? package-lock.json` with no `.env`.
+
+**Reviewer verdict — `STATUS: PASS`.** Verified the copy independently by line count per file against the archive (`auth` 223, `annotate` 537, `assemble` 449, `capture` 323, `verify-structure` 218, `pdf` 101, `tokens` 181, `template/guide.css` 409, `guide.html` 143, `README.md` 132, `.gitignore` 20, `.env.example` 20, `tsconfig.json` 19) and read `src/tokens.ts` in full on both sides — line-for-line identical, and a grep for `__deliberate|launch-check` over `tooling/src` returns zero, so the inject-and-revert left no residue. Lockfile audited without reading its body: same five devDependencies as `package.json`, no `dependencies` block, 24 `node_modules/*` entries (same count as the archive's lockfile), every `resolved` URL on `registry.npmjs.org`, and zero matches for `_auth`, `authToken`, `password`, `credentials`, `TEST_TOKEN` or `Bearer`. Confirmed conformance to **`design.md` §4 as amended in `BG-T-1`**.
+
+The Reviewer also corrected the Leader: the brief said "four devDependencies"; there are **five**. No impact on the audit — recorded because a miscount in a brief is how a wrong number travels.
+
+**`CLIENT_BASE_URL` judgment call — upheld, no correction.** The Implementer read "leave every value EMPTY" as "do not fill in credentials or the channel yourself" and kept `.env.example`'s own committed, non-secret default `http://localhost:4200`. The Reviewer judged this defensible: the task says create `.env` **from** `.env.example`, `BG-R-13` constrains tokens and credentials rather than a localhost origin, and the value matches `docs/infrastructure.md` §6. Blanking it would have diverged from the instruction as written.
+
+**`ADVISORY` (recorded, never gating, never minted into a task):**
+- *Readability* — `design.md` §4's tree did not list `package-lock.json`, though `BG-T-2`'s *Files (expected)* names it and it now exists. Documentation drift, not a conformance break.
+
+**Decisions made**
+- **Execute-time spec edit, `design.md` §4** (made now): added `package-lock.json` to the tree, annotated "generated by BG-T-2; committed (not copied)". Second §4 accuracy fix in two tasks; both came from Reviewer advisories. No requirement's meaning changes. **Carried as a named conformance check in `BG-T-3`'s Reviewer brief.**
+- `PLAYWRIGHT_CHANNEL` left empty rather than pinned to `chrome`, because pinning it would encode a constraint that no longer holds and would silently prevent the bundled browser from being used.
+
+**Issues encountered** — none.
+
+**Constitution impact** — none. Dev-only tooling under `docs/specs/`, outside both packages; no module created or reshaped.
+
+**Final verification result** — `VERIFIED` (Leader re-run) + `STATUS: PASS` (independent `opus` Reviewer). Archive byte-identical; `.env` untracked and ignored; no credential in any tracked artifact.

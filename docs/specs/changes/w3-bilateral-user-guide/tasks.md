@@ -59,7 +59,7 @@
   - [ ] Commit follows the convention; no secret in the diff (`.env` is not created by this task).
 - **Skills:** none from the Skill Map — standalone Node/TS tooling, outside both packages.
 
-### `BG-T-2` — Install the tooling, pin the browser channel, verify the copy is verbatim
+### `BG-T-2` — Install the tooling, pin the browser channel, verify the copy is verbatim  `[x]`
 
 - **Type:** `infra`
 - **Description:** `npm install` inside `tooling/`, confirm Playwright resolves a usable browser (system Chrome via `PLAYWRIGHT_CHANNEL=chrome` — the bundled Chromium CDN was unreachable during the W1/W2 run), create `.env` from `.env.example` (gitignored, never committed), and record a verbatim-diff report of the copy against its source.
