@@ -8,7 +8,14 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
 describe('BilateralService (unit)', () => {
   const makeService = (overrides: Partial<any> = {}) => {
-    const dataSource = {} as any;
+    const initiativeBudgetRepository = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn((row) => row),
+      save: jest.fn(async (row) => row),
+    };
+    const dataSource = {
+      getRepository: jest.fn(() => initiativeBudgetRepository),
+    } as any;
     const resultRepository = {
       findOne: jest.fn(),
       save: jest.fn(async (x) => x),
@@ -25,7 +32,16 @@ describe('BilateralService (unit)', () => {
     const resultCountryRepository = { updateCountries: jest.fn() };
     const clarisaSubnationalAreasRepository = {} as any;
     const resultCountrySubnationalRepository = {} as any;
-    const resultByInstitutionsRepository = {} as any;
+    const resultByInstitutionsRepository = {
+      updateInstitutions: jest.fn().mockResolvedValue(undefined),
+      getResultByInstitutionExists: jest.fn().mockResolvedValue(false),
+      save: jest.fn(async (rows) =>
+        (Array.isArray(rows) ? rows : [rows]).map((r, i) => ({
+          ...r,
+          id: 500 + i,
+        })),
+      ),
+    } as any;
     const resultInstitutionsBudgetRepository = {
       save: jest.fn().mockResolvedValue([]),
     } as any;
@@ -60,6 +76,7 @@ describe('BilateralService (unit)', () => {
     const resultsByProjectsRepository = { save: jest.fn() };
     const resultByInitiativesRepository = {
       logicalDelete: jest.fn().mockResolvedValue(undefined),
+      findOne: jest.fn().mockResolvedValue({ id: 777 }),
     };
     const shareResultRequestRepository = {
       findOne: jest.fn().mockResolvedValue(null),
@@ -207,6 +224,10 @@ describe('BilateralService (unit)', () => {
         clarisaProjectsRepository,
         resultsByProjectsRepository,
         nonPooledProjectBudgetRepository,
+        resultInstitutionsBudgetRepository,
+        resultByIntitutionsRepository: resultByInstitutionsRepository,
+        clarisaInstitutionsRepository,
+        initiativeBudgetRepository,
         resultsKnowledgeProductsService,
         adUserService,
         roleByUserRepository,
@@ -649,6 +670,151 @@ describe('BilateralService (unit)', () => {
         service.resolveContributingProjects(undefined, 2026),
       ).resolves.toEqual(new Map());
       expect(stubs.clarisaProjectsRepository.find).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('investment amounts that used to be accepted and dropped', () => {
+    const innovationUse = ResultTypeEnum.INNOVATION_USE;
+
+    describe('contributing partners', () => {
+      const partnerPayload = (extra: any) => [
+        { institution_id: 42, name: 'Some Partner', ...extra },
+      ];
+
+      const withMatchedInstitution = () => {
+        const { service, stubs } = makeService();
+        stubs.clarisaInstitutionsRepository.findOne = jest
+          .fn()
+          .mockResolvedValue({ id: 42 });
+        return { service, stubs };
+      };
+
+      it('persists the usd_budget onto the partner budget row', async () => {
+        const { service, stubs } = withMatchedInstitution();
+
+        await service.handleInstitutions(
+          11962,
+          partnerPayload({ usd_budget: 7500 }),
+          1,
+          innovationUse,
+        );
+
+        expect(
+          stubs.resultInstitutionsBudgetRepository.save,
+        ).toHaveBeenCalledWith([
+          expect.objectContaining({ kind_cash: 7500, is_determined: null }),
+        ]);
+      });
+
+      it('nulls the amount when the partner says it is yet to be determined', async () => {
+        const { service, stubs } = withMatchedInstitution();
+
+        await service.handleInstitutions(
+          11962,
+          partnerPayload({ usd_budget: 7500, is_determined: true }),
+          1,
+          innovationUse,
+        );
+
+        expect(
+          stubs.resultInstitutionsBudgetRepository.save,
+        ).toHaveBeenCalledWith([
+          expect.objectContaining({ kind_cash: null, is_determined: true }),
+        ]);
+      });
+
+      it('still writes the row with a null amount when the payload states nothing', async () => {
+        const { service, stubs } = withMatchedInstitution();
+
+        await service.handleInstitutions(
+          11962,
+          partnerPayload({}),
+          1,
+          innovationUse,
+        );
+
+        expect(
+          stubs.resultInstitutionsBudgetRepository.save,
+        ).toHaveBeenCalledWith([
+          expect.objectContaining({ kind_cash: null, is_determined: null }),
+        ]);
+      });
+    });
+
+    describe('lead science program', () => {
+      it('writes result_initiative_budget from the amount on toc_mapping', async () => {
+        const { service, stubs } = makeService();
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { science_program_id: 'SP09', usd_budget: 12000 },
+          ResultTypeEnum.INNOVATION_USE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_initiative_id: 777,
+            kind_cash: 12000,
+            is_determined: null,
+          }),
+        );
+      });
+
+      it('updates the existing row rather than adding a second one', async () => {
+        const { service, stubs } = makeService();
+        stubs.initiativeBudgetRepository.findOne.mockResolvedValue({
+          result_initiative_budget_id: 3,
+          kind_cash: 1,
+        });
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { usd_budget: 12000 },
+          ResultTypeEnum.INNOVATION_USE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.create).not.toHaveBeenCalled();
+        expect(stubs.initiativeBudgetRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_initiative_budget_id: 3,
+            kind_cash: 12000,
+          }),
+        );
+      });
+
+      // Silence must stay silent: seeding an empty row for every ingested result would put a
+      // line in the form that nobody wrote.
+      it('writes nothing when the payload states no investment at all', async () => {
+        const { service, stubs } = makeService();
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { science_program_id: 'SP09' },
+          ResultTypeEnum.INNOVATION_USE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing for a type that carries no investment tables', async () => {
+        const { service, stubs } = makeService();
+
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { usd_budget: 12000 },
+          ResultTypeEnum.POLICY_CHANGE,
+          1,
+        );
+
+        expect(stubs.initiativeBudgetRepository.save).not.toHaveBeenCalled();
+      });
     });
   });
 
