@@ -83,9 +83,11 @@ The Degree radio moves out of `@if (showAllFields())` and lands between *Length 
 
 Consequence for verification: the gate asserts the **rendered `field_card` class**, not the presence of the `label` input. Asserting the input would be a presence-assertion that proves nothing about the frame; asserting the class exercises `isBare` and therefore the effect. *(Resolves the proposal’s OQ-1; the ticket's "unlabelled" wording predates P2-3385 and is stale.)*
 
-`[required]` stays **false**, matching `cap-dev-info.component.html:55`. Flipping it would make the section uncompletable for long-term training that is neither PhD nor Master.
+~~`[required]` stays **false**, matching `cap-dev-info.component.html:55`. Flipping it would make the section uncompletable for long-term training that is neither PhD nor Master.~~ ⚠️ **SUPERSEDED by the Pivot of 2026-09-18** — `[required]="true"`, and the degree now gates the green check. The PO accepted that long-term training with no degree reads as incomplete; W1/W2 keeps the old rule, so the two screens knowingly diverge on optionality (`CSD-R-10`).
 
-### DD-3 — The MDS tracker is not touched *(`CSD-R-4`)*
+### DD-3 — The MDS tracker is not touched *(`CSD-R-4`)* — ⚠️ **SUPERSEDED 2026-09-18**
+
+> **Superseded by the Pivot recorded in `execution.md` (`CSD-T-6`).** The PO decided the Degree gates the green check. The reasoning below still holds for *why no fourth item may be registered* — that part is unchanged and load-bearing. What changed is only the `length-of-training` **predicate**: a bare `4` no longer counts as filled. The three-key contract survives.
 
 No `degree` item is registered. Per the component's own `CLAUDE.md`: *"Nothing outside the MDS may enter `setSectionFields` with `filled: false`"* — the tracker computes `complete` as `filledFields === totalFields`, so a fourth never-filled item leaves the section amber forever and **disables Submit** (`overallStatus() === 'complete'`). That is precisely what the attendance field did in P2-3382 and what the three separate gender counts did in P2-3348. `length-of-training` stays keyed on `capdev_term_id != null`, which `4` alone satisfies.
 

@@ -250,15 +250,15 @@ describe('PortfolioOverviewComponent', () => {
     it('switches between vertical bar, horizontal bar, and heatmap analysis modes', () => {
       build(OPEN_PHASE);
 
-      // Default is vertical
-      expect(component.analysisViewMode()).toBe('vertical');
-      expect(component.activeAnalysisOption()).toBe(component.programRankingVerticalOption());
-
-      // Switch to horizontal
-      component.setAnalysisViewMode('horizontal');
+      // Default is horizontal
       expect(component.analysisViewMode()).toBe('horizontal');
       expect(component.activeAnalysisOption()).toBe(component.programRankingOption());
       expect(component.activeAnalysisTable().caption).toContain('ranked by Science Program');
+
+      // Switch to vertical
+      component.setAnalysisViewMode('vertical');
+      expect(component.analysisViewMode()).toBe('vertical');
+      expect(component.activeAnalysisOption()).toBe(component.programRankingVerticalOption());
 
       // Switch to heatmap
       component.setAnalysisViewMode('heatmap');
@@ -623,8 +623,8 @@ describe('PortfolioOverviewComponent', () => {
       component.onStatusChartClick({ name: 'Editing' } as any);
       expect(component.selectedStatusFilter()).toBe('editing');
 
-      // Ranking chart click navigates to Results Center filtered by program
-      component.onRankingChartClick({ name: 'SP01 Plant Health' } as any);
+      // Ranking chart click navigates to Results Center filtered by program (axis shows full name)
+      component.onRankingChartClick({ name: 'Breeding for Tomorrow' } as any);
       expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { program: 'SP01' } });
 
       // Bilateral chart click navigates to bilateral results
@@ -632,7 +632,7 @@ describe('PortfolioOverviewComponent', () => {
       expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting/bilateral-results']);
 
       // Matrix chart click navigates to Results Center filtered by program
-      component.onMatrixChartClick({ name: 'SP06 Climate Action' } as any);
+      component.onMatrixChartClick({ name: 'Climate Action' } as any);
       expect(navigateSpy).toHaveBeenCalledWith(['/result/results-outlet/results-list'], { queryParams: { program: 'SP06' } });
 
       // Category origin chart click navigates to Results Center filtered by category

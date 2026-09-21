@@ -624,22 +624,46 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     return this.openSectionName() === section;
   }
 
-  selectSection(section: BilateralEditorSection): void {
+  /**
+   * BIL-T-2 (bugfix/bilateral-section-autosave-on-navigate): Next/Back/side-rail no longer show a
+   * blocking `window.confirm(...)` — they flush the outgoing section's pending edits first, the same
+   * way `triggerManualSave()` already does, and only switch sections once the flush settles without
+   * error. A failed flush keeps the user on the section with the same failure alert Save draft shows.
+   */
+  async selectSection(section: BilateralEditorSection): Promise<void> {
     const current = this.openSectionName();
     if (current === section) return;
     if (this.autoSaveService.hasPendingFor(current)) {
-      const shouldContinue = window.confirm('This section has unsaved changes. Keep them in this session and continue?');
-      if (!shouldContinue) return;
+      await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(current));
+      await this.waitForSectionSave(current);
+
+      if (this.autoSaveService.hasErrorFor(current)) {
+        const serverReason = this.autoSaveService.lastErrorMessageFor(current);
+        const missing = this.missingFieldsFor(current);
+        this.api.alertsFe.show({
+          id: 'bilateralManualSave',
+          title: 'Save failed',
+          description: [
+            serverReason ?? 'This section could not be saved. Please try again.',
+            missing.length ? `Still missing: ${missing.join(', ')}.` : ''
+          ]
+            .filter(Boolean)
+            .join(' '),
+          status: 'error',
+          closeIn: 8000
+        });
+        return;
+      }
     }
     this.pendingOpen.set(false);
     this.openSectionName.set(section);
   }
 
-  moveSection(direction: -1 | 1): void {
+  async moveSection(direction: -1 | 1): Promise<void> {
     const sections = this.sectionNavigation();
     const currentIndex = sections.findIndex(section => section.name === this.openSectionName());
     const target = sections[currentIndex + direction];
-    if (target) this.selectSection(target.name);
+    if (target) return this.selectSection(target.name);
   }
 
   isFirstSection(): boolean {

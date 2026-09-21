@@ -522,7 +522,7 @@ export class PortfolioOverviewService {
   /** The programme's display name, from whichever of the two name fields the payload carries. */
   private programmeName(code: string): string {
     const row = this.rows().find(item => text(item.submitter) === code);
-    return text(row?.submitter_short_name) || text(row?.submitter_name) || code;
+    return text(row?.submitter_name) || text(row?.submitter_short_name) || code;
   }
 
   private countBy(items: RawResult[], key: (row: RawResult) => string): Map<string, number> {

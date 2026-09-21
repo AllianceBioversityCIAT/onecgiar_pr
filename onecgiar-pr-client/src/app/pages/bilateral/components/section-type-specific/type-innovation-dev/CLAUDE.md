@@ -1,28 +1,20 @@
 # type-innovation-dev (bilateral)
 
-**Verified:** 2026-09-18 · QA batch `P2-3778` / `P2-3779` / `P2-3780` — Innovation developers unrendered, false REQUIRED markers cleared, collaborators placeholder; prior: 2026-09-18 spec `bugfix/innovation-developer-prefill-stale-lead-contact` `BIL-IDP-T-4` — prefill is re-evaluable, fed by General information's save; prior: 2026-09-16 spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` rework — key-presence prefill gate; prior: 2026-09-16 (field restored) · 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
+**Verified:** 2026-09-21 · branch `JuanGuzman-io/p2-3778-restore-innovation-developers` — **P2-3778 reversed**: Innovation developers rendered again, prefilled from the Lead contact person and editable (Nicoleta Trifa's email, confirmed by Ángel Jarrín); prior: 2026-09-18 · QA batch `P2-3778` / `P2-3779` / `P2-3780` — Innovation developers unrendered, false REQUIRED markers cleared, collaborators placeholder; prior: 2026-09-18 spec `bugfix/innovation-developer-prefill-stale-lead-contact` `BIL-IDP-T-4` — prefill is re-evaluable, fed by General information's save; prior: 2026-09-16 spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` rework — key-presence prefill gate; prior: 2026-09-16 (field restored) · 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
 Section 5 of the bilateral form: Innovation Development, rendered by
-`../section-type-specific.component.html` for that result type. Shows the **MDS** — exactly 2 fields,
-typology + readiness (P2-3778) — and hides the rest of the pooled-funding form behind **Complete full
-metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investment (USD)" tables
+`../section-type-specific.component.html` for that result type. Shows the **MDS** — typology +
+readiness, the only two that feed the green check — plus the optional **Innovation developers**
+textarea, and hides the rest of the pooled-funding form behind **Complete full metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investment (USD)" tables
 (P2-3390).
 
-## Innovation developers — removed, restored, removed again (the last state is the one to keep)
+## Innovation developers — removed, then restored (current: RENDERED, prefilled, editable)
 
-- 🛑 **NOT RENDERED (`P2-3778`, 2026-09-18).** The MDS zone is typology + readiness, nothing else. The
-  decision is 2026-09-03's (Nicoleta Trifa via Ángel Jarrín, re-stated on the ticket by Juan David
-  Delgado): removed, and "for innovations this will be replaced by the lead contact person information".
-  Section 1 already tells the reporter so (`../../section-general-info/…component.html:41-47`), so the
-  field's presence was a contradiction QA could see. Briefly restored 2026-09-16 (`BIL-QAI-R-15`/`DD-12`);
-  **do not restore it again without a written decision**.
-- ✅ **What deliberately stayed.** `buildPayload()` still sends `innovation_developers` (hiding a field
-  never deletes its data) and the prefill still seeds it from the Lead contact person — the substitution
-  the decision names, and the same one the server's ingest path performs
-  (`onecgiar-pr-server/src/api/bilateral/handlers/innovation-development.handler.ts:59-63`). Still read
-  by: the review drawer (`.../inno-dev-content.component.html:20`), W1/W2
-  (`.../innovation-dev-info.component.html:143`), the `s7_id_innovation_developers` export and the PDF.
+- ✅ **RENDERED AND EDITABLE (2026-09-21, reverses `P2-3778`).** MDS zone, between typology and readiness, `[required]="false"`, prefilled from the Lead contact person and freely overwritable. Authority: Nicoleta Trifa's email, quoted by Ángel Jarrín — *"I told you to automatically prefill with the Lead contact information. If user wants to change, they can do so"*. Its placeholder is its own (contact person name + email); sharing one with Innovation collaborators is the P2-3780 bug and must not come back.
+- 🛑 **Why it was removed, and why that was wrong (`P2-3778`, `32e80b6ec`, 2026-09-18).** The ticket acted on a *relay* of the 2026-09-03 decision — "the field is removed and … replaced by the lead contact person information" — which did not match the email above: she asked for a **prefill**, not a removal. The control was deleted and the spec was rewritten to assert its absence. Before deleting a user-facing control on a relayed decision, read the decision at its source.
+- ✅ **What P2-3778 got right, unchanged.** `buildPayload()` always sends `innovation_developers`, and the prefill mirrors what the server's ingest path stores when a payload carries none (`onecgiar-pr-server/…/bilateral/handlers/innovation-development.handler.ts:59-63`), so manually created results never show an empty column where AI-ingested ones carry the contact. Read by: the review drawer (`…/inno-dev-content.component.html:20`), W1/W2 (`…/innovation-dev-info.component.html:143`), the `s7_id_innovation_developers` export and the PDF.
+- ℹ️ **Section 1's note** (`../../section-general-info/…component.html`, `data-testid="lead-contact-developer-note"`) tells the reporter the lead contact is also the developer; with the field back that describes the **prefill**. Its source comment still said "removed" and was corrected on 2026-09-21.
 - ⚠️ **The prefill's gate is KEY PRESENCE, not truthiness** (`'innovation_developers' in this.body`).
   `InnovationDevExists` (`results-innovations-dev.repository.ts:274-312`) omits the key when no row
   exists and includes it — `null` or a string — once one does; truthiness re-filled a cleared value.
@@ -38,7 +30,8 @@ metadata** (P2-3391, QA-verified via P2-3327), which includes the three "Investm
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
   **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
 - Green check: `BilateralMdsTrackerService.setSectionFields('type-specific', …)`. **Two items only**:
-  `nature`, `readiness`. Innovation developers is untracked and no longer rendered (P2-3778).
+  `nature`, `readiness`. Innovation developers is rendered but **untracked** — optional, it never feeds
+  the green check, so leaving it empty still turns the section green.
 - Toggle: `BilateralExpandableStateService.get/setShowAllFields(resultId, 'type-specific')` — the
   open/closed state survives navigation between sections.
 - Catalogues: `InnovationControlListService` (`typeList`, `characteristicsList`, `readinessLevelsList`).
