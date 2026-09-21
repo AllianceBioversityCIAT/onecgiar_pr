@@ -119,7 +119,7 @@
   - [ ] `npx tsc --noEmit` clean.
 - **Skills:** `playwright-cli`
 
-### `BG-T-5` — Frame-bounds and skeleton guard
+### `BG-T-5` — Frame-bounds and skeleton guard  `[x]`
 
 - **Type:** `infra`
 - **Description:** Add `tooling/src/guards/frame-bounds.ts` and an optional per-route `bounds {minW,maxW,minH,maxH}`. After each capture, assert the PNG's real pixel dimensions fall inside its bounds and that the existing skeleton gate found nothing visible. Exit non-zero on violation.

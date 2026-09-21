@@ -66,8 +66,23 @@
  * `click` inserts a `waitFor` step rather than relying on a hidden implicit wait baked into
  * every action (`BG-DD-2`'s declarative, reviewable-timing rationale). A route whose `steps`
  * fail is a failed route — never a silently different screenshot (`design.md` §5, `BG-AC-14`).
- * `bounds` is also declared on `RouteConfig` by this task (type only) for `BG-T-5` to consume;
- * this file does not assert it.
+ * `bounds` is also declared on `RouteConfig` by `BG-T-4` (type only); `BG-T-5` below is what
+ * actually asserts it.
+ *
+ * BG-T-5 addition (`guards/frame-bounds.ts`, `design.md` §5 / `BG-DD-6`, `BG-R-8`, `BG-AC-8`):
+ * right after each route's screenshot is written, the per-route loop re-runs the EXISTING
+ * `countVisibleSkeletons()` primitive once more (not a new skeleton check — the same one
+ * `waitForNoVisibleSkeletons()` already uses to gate BEFORE the shot) and hands that count,
+ * plus the written PNG's path and the route's optional `bounds`, to `assertFrameBounds()`.
+ * That single call is the one place both BG-AC-8 conditions — dimensions in bounds, no visible
+ * skeleton — are asserted together, and it reads the PNG's real pixel size FROM THE FILE, never
+ * from `route.viewport` (see `guards/frame-bounds.ts`'s header for why trusting the requested
+ * viewport is exactly the bug this guard exists to catch: `fullPage: true` is a no-op on an
+ * inner-scroll container, so a request of `1280x1800` is what shipped a `1280x720` file in the
+ * W1/W2 run). A violation throws and fails the whole run — the identical propagation path
+ * every other per-route failure in this loop already uses (`readySelector` timeout, the
+ * callout/`steps` unique-selector guard, `waitForNoVisibleSkeletons()` itself) — so a bad frame
+ * is a hard failure, never a console warning that lets the run finish green.
  *
  * Attempt-2 rework (Reviewer FAIL on attempt 1, recorded in `execution.md`):
  * `overview`, `reporting-aows`, `results-list`, and `notifications-received`
@@ -103,6 +118,7 @@ import {
   PRE_ROUTE_LOOP_ROUTE_ID,
   type RouteIdRef,
 } from './guards/read-only';
+import { assertFrameBounds } from './guards/frame-bounds';
 
 interface RouteViewport {
   width: number;
@@ -537,6 +553,8 @@ async function main(): Promise<void> {
       // scroll is also what broke `notifications-received` (it fetches more items on scroll,
       // invalidating the exactly-one-match callout count above), so removing the scroll step
       // entirely, in favor of a viewport tall enough to make it unnecessary, fixes both.
+      const pngPath = path.join(RAW_DIR, `${route.id}.png`);
+      let skeletonCountAtCapture = 0;
       try {
         await annotateCallouts(
           page,
@@ -545,9 +563,14 @@ async function main(): Promise<void> {
           { fullPage },
         );
         await page.screenshot({
-          path: path.join(RAW_DIR, `${route.id}.png`),
+          path: pngPath,
           fullPage,
         });
+        // BG-T-5: re-run the EXISTING skeleton primitive (not a new check) right at the
+        // moment the file was written, closing the gap between waitForNoVisibleSkeletons()'s
+        // pre-shot pass above and the screenshot call. Same `!fullPage` clip semantics as
+        // that gate (see countVisibleSkeletons()'s own header for why the clip must match).
+        skeletonCountAtCapture = await countVisibleSkeletons(page, !fullPage);
       } catch (err) {
         throw new RouteCaptureError(
           route.id,
@@ -555,6 +578,17 @@ async function main(): Promise<void> {
         );
       } finally {
         await removeAnnotation(page);
+      }
+
+      // BG-T-5 (guards/frame-bounds.ts, BG-DD-6, BG-AC-8): the single post-capture checkpoint
+      // for BOTH "dimensions in bounds" and "no visible skeleton" — dimensions are read from
+      // the WRITTEN PNG on disk, never from `route.viewport` or any pre-flush value. A
+      // violation throws and is wrapped in RouteCaptureError so it fails the run through the
+      // exact same path as every other per-route failure above.
+      try {
+        await assertFrameBounds(route.id, pngPath, route.bounds, skeletonCountAtCapture);
+      } catch (err) {
+        throw new RouteCaptureError(route.id, err instanceof Error ? err.message : String(err));
       }
 
       const residual = await page.locator(`[${OVERLAY_ATTR}]`).count();

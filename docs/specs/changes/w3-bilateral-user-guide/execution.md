@@ -290,3 +290,67 @@ This task owned the sweep that settles `P-10`, and the sweep **contradicted the 
 **Constitution impact** — none.
 
 **Final verification result** — `VERIFIED` (Leader re-run) + `STATUS: PASS` (independent `opus` Reviewer).
+
+### `BG-T-5` — Frame-bounds and skeleton guard
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 1, plus a Leader-directed in-scope addendum) |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 |
+| Review depth | `checklist` (effort high) · Reviewer `opus`, Implementer `sonnet` |
+| Review rounds | 1. Cumulative: **7** of 17 |
+| Requirements covered | `BG-R-8`, `BG-AC-8`, `BG-DD-6`, defect class **D2**, and the negative clause *No capture may show a skeleton or loading state* |
+| Authored LOC | ~200 (`frame-bounds.ts` ~185 + wiring). Cumulative: **~870** of 1,300–1,700. **No tripwire** |
+| runtime events | none |
+
+**Why this task exists.** The W1/W2 run shipped a `1280×720` skeleton-filled frame and a `1280×186177` frame **past an exit-0 run and two review gates**; both were caught only when a human measured the file. D2 is one of the few defect classes in this spec that *can* be automated, so `requirements.md` §8 requires that it is.
+
+**What was built.** `readPngDimensions()` opens the written PNG, validates the signature and the `IHDR` chunk type, and parses width/height as big-endian uint32 at byte offsets 16–19 / 20–23 — no image-decoding dependency. `assertFrameBounds()` throws on any visible skeleton, then on a measured size outside the declared window. `bounds` is optional per route; `BG-T-7`/`BG-T-8`/`BG-T-9` author it from an observed clean capture.
+
+⚠️ **The load-bearing rule: dimensions are read from the file, never from the requested viewport.** The requested viewport is *exactly* the value that lied in the W1/W2 run — `fullPage: true` is a no-op on inner-scroll containers, so the request said one thing while the file said another. Verified: every `viewport`/`fullPage` mention in `frame-bounds.ts` is comment or message text; no code path reads either.
+
+**Falsifier — four inputs plus one extra, real measured numbers:**
+
+| # | Input | Result |
+|---|---|---|
+| baseline | observed clean capture | `800x600` — bounds then **derived from the observation**, not guessed |
+| 4 | clean capture within bounds | **PASS**, measured `800x600` |
+| 1 | bounds a real capture cannot satisfy | **REJECTED** — `800x600` outside `h:[601-900]` |
+| 2 | **the historical `1280×720`** | **REJECTED** — outside `h:[1600-2000]` |
+| 3 | absurdly tall frame | **REJECTED** — `1280x50000` outside `h:[600-2000]` |
+| extra | 3 visible skeleton nodes | **REJECTED** — a visible skeleton is a hard failure, not a warning |
+
+**Leader evidence re-run — `VERIFIED`, including an independent check of the parse itself.** `tsc` exit 0; zero `.route(` in either file so `BG-T-3` is not shadowed; no scratch residue. **The IHDR parse was verified rather than assumed**: the Leader ran the guard's own `readPngDimensions()` against a real PNG in the repository and compared it with an independent Python `struct.unpack('>II', d[16:24])` read — both returned `2196x232`. A wrong byte offset would have produced plausible-but-wrong numbers silently, and the entire guard rests on that one value.
+
+**Reviewer verdict — `STATUS: PASS`.** Confirmed the module imports no Playwright and reads no `route.viewport`; the asserted path is the same `pngPath` variable handed to `page.screenshot()` (`capture.ts:556` defined, `:568` written, `:589` asserted) with no cache in between. **Every error path fails closed**: missing file → ENOENT propagates; zero-byte or truncated below 24 bytes → explicit fail; non-PNG → signature check; wrong first chunk → `IHDR` check. No branch returns `{0,0}` or degrades.
+
+**Two Leader concerns the Reviewer resolved:**
+1. *Could `BG-T-3`'s `process.exit(1)` truncate a screenshot mid-write and leave this guard consuming a partial PNG?* **No** — that exit is process-terminal, so within the same run the guard is never reached and the run is already red by exit code. The residual is cross-run only and is recorded below.
+2. *Is the skeleton re-count a no-op?* **No, it is a genuine improvement.** Passing `waitForNoVisibleSkeletons()`'s result through would have been literally constant, because that function *throws* on failure — so reaching the call site already implies zero. That pass-through would have been the **inert-fixture class**: an assertion that cannot fail. Re-measuring after the screenshot closes the pre-shot→file-write race, uses the same unmodified detection primitive, matches the clip semantics (`!fullPage`), and runs before `removeAnnotation()` so the overlay cannot perturb the count.
+
+**Leader-directed addendum — in scope, and the reason matters.** `assertFrameBounds()` computed `measured` and the call site discarded it, so a route with no `bounds` left **no record of its real size anywhere**. The Reviewer raised this as hardening (an over-wide `bounds` would be invisible). The Leader requested it for a **different and spec-grounded** reason: `tasks.md` gives `BG-T-7`/`BG-T-8`/`BG-T-9` a DoD of "captures produced, **measured (dimensions recorded)**", and this guard is the only thing in the pipeline that reads the real file — without the record those DoDs are satisfiable only by measuring by hand, the exact manual step the guard replaces. Now logged unconditionally, before either assertion can throw:
+```
+[guard:frame-bounds] workspace-identity: measured 800x600 — bounds: w:[800-800] h:[600-600]
+[guard:frame-bounds] catalog-create-cta: measured 800x600 — bounds: none declared
+```
+An unasserted route now says so in the same line rather than staying silent.
+
+**`ADVISORY` (recorded, never gating, never minted into a task):**
+- *Reliability* — `let skeletonCountAtCapture = 0` is a "silently passes" default, currently unreachable only because the `catch` rethrows; a `-1` sentinel with an explicit assertion would remove the latent trap.
+- *Resilience* — the post-shot re-count can red a route for a skeleton that appeared **after** the pixels were taken (a polling widget re-entering loading). Fails in the safe direction; recorded so a future flake is diagnosed as this rather than as a bad frame.
+- *Reliability* — a PNG truncated **after** byte 24 keeps a valid `IHDR`, so the guard would report correct dimensions for an image with no pixel data. Cross-run only; outside `BG-AC-8`, which asserts dimensions and skeletons, not file integrity.
+- *Risk (disclosed deviation, not a gap)* — falsifier input 3 used `1280×50000` rather than the `1280×186177` `tasks.md` names. Property-equivalent (both far outside the window, same parse path) and disclosed in the output.
+- **Bounds-widening remains un-instrumented in code**, forbidden only in prose (`BG-T-5` Disqualifier, restated in the guard header). The new log line is the cheapest visibility available; nothing *prevents* a future task setting `h:[0-999999]`. Worth the operator's attention if hardening is ever proposed.
+
+**Decisions made**
+- Requested the measured-size log for the downstream-DoD reason, **not** for the advisory's hardening reason, and explicitly forbade the other three advisories in the same message — the distinction is where a spec silently widens.
+- Accepted the `1280×50000` substitution as property-equivalent.
+
+**Issues encountered** — none blocking.
+
+**Concurrency note** — `BG-T-6` ran in parallel in the same folder on different files (`src/tokens.ts`, `template/guide.css`). Boundary held: `git status` showed only `M capture.ts` and `?? src/guards/frame-bounds.ts` throughout, and this commit stages **explicit paths**, never the folder.
+
+**Constitution impact** — none.
+
+**Final verification result** — `VERIFIED` (Leader re-run, including an independent cross-check of the PNG parse) + `STATUS: PASS` (independent `opus` Reviewer).
