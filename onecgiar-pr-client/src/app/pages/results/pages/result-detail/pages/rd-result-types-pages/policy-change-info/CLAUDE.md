@@ -1,6 +1,6 @@
 # policy-change-info
 
-**Verified:** 2026-09-11 · branch performance-refactor · virgin-section guard fix (404 baseline) + `result_related_engagement` measured against prtest; prior: 2026-09-10 · qa-development-2026-ss · `UCA-T-11`
+**Verified:** 2026-09-11 · branch performance-refactor · virgin-section guard fix (404 baseline) + `result_related_engagement` measured against prtest; prior: 2026-09-10 · qa-development-2026-ss · `docs/specs/changes/unsaved-changes-alert/` `UCA-T-11`; prior: 2026-09-02 · branch performance-refactor · d659a442c
 
 > Rewritten in English on 2026-09-01 (repo rule: every `CLAUDE.md` under `onecgiar_pr/` is English).
 
