@@ -187,9 +187,41 @@ function mapTheoryOfChange(
     level: mapping.level ?? null,
     result: mapping.title,
     indicator,
-    contribution: formTocRow?.toc_progressive_narrative ?? null,
-    why_reported: null,
+    // The figure the user reports against the indicator's target, persisted as
+    // `result_indicators_targets.contributing_indicator`. Read from the SAME indicator
+    // `indicator` above names, so the two cannot describe different rows.
+    //
+    // 🛑 Emitted as a STRING. The AI declares `contribution?: string | null` and answers 422 on
+    // a number — measured twice on 2026-09-21 (result 11976), which is also why `contribution`
+    // is deliberately NOT in `NUMERIC_LABEL_ALLOWLIST`: nothing numeric may pass here, and
+    // listing it would only let a future regression through to the same rejection.
+    contribution: readContribution(formIndicator),
+    why_reported: formTocRow?.toc_progressive_narrative ?? null,
   };
+}
+
+/**
+ * The contribution figure lives per target, and an indicator can carry several (one per year).
+ * The first target that states one wins: a result states that figure once, and emitting an
+ * array would change a scalar field of the contract.
+ *
+ * Returned as a string because the contract types the field that way. MySQL hands the DECIMAL
+ * over as `"150.00"`, so it round-trips through `Number` first — the AI reads `"150"`, not the
+ * column's storage scale.
+ */
+function readContribution(formIndicator: any): string | null {
+  const targets: any[] = Array.isArray(formIndicator?.targets)
+    ? formIndicator.targets
+    : [];
+
+  for (const target of targets) {
+    const raw = target?.contributing_indicator;
+    if (raw === null || raw === undefined || raw === '') continue;
+    const value = Number(raw);
+    if (Number.isFinite(value)) return String(value);
+  }
+
+  return null;
 }
 
 export function mapContributorsAndPartners(
