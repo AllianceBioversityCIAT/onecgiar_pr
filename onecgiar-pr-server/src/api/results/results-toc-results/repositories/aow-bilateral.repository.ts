@@ -24,6 +24,8 @@ interface TocResultRow {
   /** P2-3296: Submitted + Approved, alongside the QA pair above. */
   preliminary_achieved_value_sum?: number | null;
   preliminary_progress_percentage?: string | null;
+  /** indicator-achieved-value-per-center / RFR-DD-2: union-of-status "Achieved" figure. */
+  achieved_value_sum?: number | null;
   number_target?: string | null;
   target_date?: number | null;
   target_value?: number | null;
@@ -69,6 +71,8 @@ export interface TocResultResponse {
     /** P2-3296: Submitted + Approved, alongside the QA pair above. */
     preliminary_achieved_value_sum?: number | null;
     preliminary_progress_percentage?: string | null;
+    /** indicator-achieved-value-per-center / RFR-DD-2: union-of-status "Achieved" figure. */
+    achieved_value_sum?: number | null;
     number_target?: string | null;
     target_date?: number | null;
     target_value?: number | null;
@@ -370,26 +374,71 @@ export class AoWBilateralRepository {
       context,
     });
 
-    const [rows, contributions] = await Promise.all([
+    const [rows, contributions, contributionsByCenter] = await Promise.all([
       this.dataSource.query(query, params) as Promise<TocResultRow[]>,
       this.getIndicatorContributions(program, context, contributionOptions),
+      this.getIndicatorContributionsByCenter(
+        program,
+        context,
+        contributionOptions,
+      ),
     ]);
 
-    const enhancedRows = rows.map((row) => ({
-      ...row,
-      actual_achieved_value_sum:
-        contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
-      progress_percentage:
-        contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
-      // P2-3296: the second bar. Defaults mirror the QA pair above — an indicator with no
-      // contributions at all reads 0 / '0%', not null, so the client never has to guard.
-      preliminary_achieved_value_sum:
-        contributions.get(row.indicator_id)?.preliminary_achieved_value_sum ??
-        0,
-      preliminary_progress_percentage:
-        contributions.get(row.indicator_id)?.preliminary_progress_percentage ??
-        '0%',
-    }));
+    const enhancedRows = rows.map((row) => {
+      const rowCenters = this.centreFieldsOf(row).centers;
+
+      // A target row held by one or more identified centres shows ONLY what those centres
+      // contributed — never the whole node's pooled total, which is what made every sibling
+      // row on a shared node look identical regardless of which centre actually reported.
+      // A target with no identified centre (rare — centers_concat empty) falls back to the
+      // pooled node figure, since there is no narrower number to show.
+      let actual: number;
+      let preliminary: number;
+      let achieved: number;
+
+      if (rowCenters.length > 0) {
+        const perRow = this.sumContributionsForCenters(
+          contributionsByCenter,
+          row.indicator_id,
+          rowCenters.map((centre) => centre.center_id),
+          row.toc_indicator_target_id,
+          // RRC-T-6: the cumulative window (2030 Outcomes) pins rows to the reporting year while
+          // its contributions span 2025-2030, and every year carries its own target id — an exact
+          // anchor match would drop other years' contributions, so it keeps centre intersection.
+          !contributionOptions?.isCumulative,
+        );
+        actual = perRow.actual_achieved_value_sum;
+        preliminary = perRow.preliminary_achieved_value_sum;
+        achieved = perRow.achieved_value_sum;
+      } else {
+        actual =
+          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0;
+        preliminary =
+          contributions.get(row.indicator_id)?.preliminary_achieved_value_sum ??
+          0;
+        achieved = contributions.get(row.indicator_id)?.achieved_value_sum ?? 0;
+      }
+
+      const targetValue = Number(row.target_value_sum) || 0;
+
+      return {
+        ...row,
+        actual_achieved_value_sum: actual,
+        progress_percentage: this.formatProgressPercentage(
+          this.calculateProgressPercentage(targetValue, actual),
+        ),
+        // P2-3296: the second bar. Defaults mirror the QA pair above — an indicator with no
+        // contributions at all reads 0 / '0%', not null, so the client never has to guard.
+        preliminary_achieved_value_sum: preliminary,
+        preliminary_progress_percentage: this.formatProgressPercentage(
+          this.calculateProgressPercentage(targetValue, preliminary),
+        ),
+        // indicator-achieved-value-per-center / RFR-DD-2: mapIndicatorContributionRow already
+        // computes this union-of-status figure — it was being dropped here before reaching
+        // groupTocRows, so the client never received it.
+        achieved_value_sum: achieved,
+      };
+    });
 
     return this.groupTocRows(enhancedRows);
   }
@@ -673,6 +722,7 @@ export class AoWBilateralRepository {
             row.preliminary_achieved_value_sum ?? 0,
           preliminary_progress_percentage:
             row.preliminary_progress_percentage ?? '0%',
+          achieved_value_sum: row.achieved_value_sum ?? 0,
           number_target: row.number_target,
           target_date: row.target_date,
           target_value: row.target_value,
@@ -786,16 +836,19 @@ export class AoWBilateralRepository {
     target_value_sum: unknown;
     actual_achieved_value_sum: unknown;
     preliminary_achieved_value_sum?: unknown;
+    achieved_value_sum?: unknown;
     work_package_acronym: unknown;
   }) {
     const targetValue = Number(row.target_value_sum) || 0;
     const actualValue = Number(row.actual_achieved_value_sum) || 0;
     const preliminaryValue = Number(row.preliminary_achieved_value_sum) || 0;
+    const achievedValue = Number(row.achieved_value_sum) || 0;
 
     return {
       target_value_sum: targetValue,
       actual_achieved_value_sum: actualValue,
       preliminary_achieved_value_sum: preliminaryValue,
+      achieved_value_sum: achievedValue,
       work_package_acronym:
         typeof row.work_package_acronym === 'string'
           ? row.work_package_acronym
@@ -846,7 +899,8 @@ export class AoWBilateralRepository {
         tgt.target_value_sum,
         tgt.work_package_acronym,
         COALESCE(act.actual_achieved_value_sum, 0) AS actual_achieved_value_sum,
-        COALESCE(act.preliminary_achieved_value_sum, 0) AS preliminary_achieved_value_sum
+        COALESCE(act.preliminary_achieved_value_sum, 0) AS preliminary_achieved_value_sum,
+        COALESCE(act.achieved_value_sum, 0) AS achieved_value_sum
       FROM (
         SELECT
           tri.id AS indicator_id,
@@ -871,12 +925,17 @@ export class AoWBilateralRepository {
       ) AS tgt
       LEFT JOIN (
         SELECT
+          tri.id AS indicator_id,
           tri.toc_result_indicator_id,
           -- P2-3296: both figures come out of one pass. Conditional aggregation rather than a
           -- second subquery, so the join, the date window and the level/type filters can never
           -- drift apart between the two bars — which is exactly how they would rot.
           COALESCE(SUM(CASE WHEN r.status_id IN (2, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS actual_achieved_value_sum,
-          COALESCE(SUM(CASE WHEN r.status_id IN (3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS preliminary_achieved_value_sum
+          COALESCE(SUM(CASE WHEN r.status_id IN (3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS preliminary_achieved_value_sum,
+          -- indicator-achieved-value-per-center / RFR-DD-2: the display "Achieved" figure —
+          -- the union of both bars' statuses — so submitted progress shows before QA concludes
+          -- without any double count (a result carries exactly one current status_id).
+          COALESCE(SUM(CASE WHEN r.status_id IN (2, 3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS achieved_value_sum
         FROM ${env.DB_NAME}.result r
         LEFT JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
           AND rtr.is_active = 1
@@ -910,8 +969,9 @@ export class AoWBilateralRepository {
           AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
           ${isCumulative ? '' : 'AND tr.phase = ?'}
         GROUP BY
+          tri.id,
           tri.toc_result_indicator_id
-      ) AS act ON act.toc_result_indicator_id = tgt.toc_result_indicator_id
+      ) AS act ON act.indicator_id = tgt.indicator_id
     `;
 
     try {
@@ -922,6 +982,7 @@ export class AoWBilateralRepository {
           target_value_sum: number;
           actual_achieved_value_sum: number;
           preliminary_achieved_value_sum: number;
+          achieved_value_sum: number;
           work_package_acronym: string | null;
           progress_percentage: string;
           preliminary_progress_percentage: string;
@@ -943,6 +1004,242 @@ export class AoWBilateralRepository {
         debug: true,
       });
     }
+  }
+
+  /**
+   * indicator-achieved-value-per-center follow-up: the pooled node total above is right for the
+   * HLO/AoW/Program rollups (one number per node, regardless of how many centres hold its
+   * targets), but WRONG for a per-target row on a node shared by several centres — every row
+   * showed the whole node's total, so a centre that reported nothing looked identical to the one
+   * that did.
+   *
+   * Returns, per indicator (node), the list of DISTINCT contributing results together with their
+   * status, their own contributed value, and the set of centres THAT RESULT is tagged with.
+   * `fetchAndGroupTocResults` sums a result in AT MOST ONCE per row — never once per matching
+   * centre. An entry anchored to a `toc_indicator_target_id` belongs only to the row with that
+   * exact id; an un-anchored (historical) entry is matched by intersecting that centre set with
+   * the row's own centres. A single knowledge product
+   * co-authored by five centres is one contribution, not five: grouping by centre directly (like
+   * `getIndicatorContributions` does for the pooled node total) would fan the result out once per
+   * centre and multiply it by however many of a shared target's centres it happens to hold.
+   *
+   * Deliberately a second query rather than adding centre to `getIndicatorContributions`'s own
+   * GROUP BY, for the same fan-out reason — that one query the rollups above depend on staying a
+   * single row per node.
+   */
+  async getIndicatorContributionsByCenter(
+    program: string,
+    contextOrYear?: ReportingTocContext | number,
+    options?: { isCumulative?: boolean; fromYear?: number; toYear?: number },
+  ) {
+    const context = await this.resolveContext(contextOrYear);
+    const isCumulative = !!options?.isCumulative;
+    const fromYear = options?.fromYear ?? 2025;
+    const toYear = options?.toYear ?? 2030;
+
+    const dateParams = isCumulative
+      ? [fromYear, toYear]
+      : [context.reportingYear];
+    const params: (string | number)[] = [
+      ...dateParams,
+      program,
+      ...(isCumulative ? [] : [context.phaseUuid]),
+    ];
+
+    const query = `
+      SELECT
+        base.indicator_id,
+        base.result_id,
+        base.status_id,
+        base.contributing_indicator,
+        base.toc_indicator_target_id,
+        -- results_center.center_id is a clarisa_center.code (e.g. "CENTER-02"), not the numeric
+        -- clarisa_institutions id that toc_result_indicator_target_center uses for a target's own
+        -- centres — resolve through clarisa_center so both sides key on the same institution id.
+        GROUP_CONCAT(DISTINCT cc.institutionId) AS center_ids
+      FROM (
+        -- Computed BEFORE the centre join below, on purpose: a result tagged with several
+        -- centres would otherwise fan this row out once per centre and the SUM would count
+        -- rit.contributing_indicator that many times over for the very same contribution.
+        SELECT
+          tri.id AS indicator_id,
+          r.id AS result_id,
+          r.status_id AS status_id,
+          -- reported-results-center-scoping / RRC-DD-3: the anchor this contribution was
+          -- reported against. When present it replaces centre-set intersection as the
+          -- isolation key in sumContributionsForCenters below (never combined with it).
+          rit.toc_indicator_target_id AS toc_indicator_target_id,
+          COALESCE(SUM(CAST(rit.contributing_indicator AS DECIMAL(15,2))), 0) AS contributing_indicator
+        FROM ${env.DB_NAME}.result r
+        LEFT JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
+          AND rtr.is_active = 1
+        LEFT JOIN ${env.DB_NAME}.results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+          AND rtri.is_active = 1
+          AND rtri.is_not_aplicable = 0
+        LEFT JOIN ${env.DB_NAME}.result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+          AND rit.is_active = 1
+          AND rit.contributing_indicator IS NOT NULL
+          AND ${isCumulative ? 'rit.target_date BETWEEN ? AND ?' : 'rit.target_date = ?'}
+        JOIN ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+          AND tri.is_active = 1
+          AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        WHERE
+          tr.official_code = ?
+          AND r.is_active = 1
+          AND r.status_id IN (2, 3, 6)
+          AND r.result_level_id IN (3, 4)
+          AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
+          ${isCumulative ? '' : 'AND tr.phase = ?'}
+        GROUP BY
+          tri.id,
+          r.id,
+          r.status_id,
+          rit.toc_indicator_target_id
+      ) AS base
+      -- Same lead-centre definition result.repository.ts's \`lead_center\` subquery uses
+      -- (is_leading_result = 1 OR is_primary = 1). Without it this joins EVERY results_center
+      -- row, including the ones the system auto-tags \`from_toc = 1\` for every centre the shared
+      -- ToC target names — which put a centre's own contribution on siblings it never reported
+      -- to, the exact "shared" symptom this whole fix exists to remove.
+      JOIN ${env.DB_NAME}.results_center rc ON rc.result_id = base.result_id
+        AND rc.is_active = 1
+        AND (rc.is_leading_result = 1 OR rc.is_primary = 1)
+      JOIN ${env.DB_NAME}.clarisa_center cc ON cc.code = rc.center_id
+      GROUP BY
+        base.indicator_id,
+        base.result_id,
+        base.status_id,
+        base.contributing_indicator,
+        base.toc_indicator_target_id
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, params);
+      const map = new Map<
+        number,
+        Array<{
+          status_id: number;
+          contributing_indicator: number;
+          centerIds: Set<number>;
+          tocIndicatorTargetId: number | null;
+        }>
+      >();
+
+      for (const row of rows) {
+        const centerIds = new Set(
+          String(row.center_ids ?? '')
+            .split(',')
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id)),
+        );
+        if (centerIds.size === 0) continue;
+
+        const entry = {
+          status_id: Number(row.status_id),
+          contributing_indicator: Number(row.contributing_indicator) || 0,
+          centerIds,
+          tocIndicatorTargetId:
+            row.toc_indicator_target_id !== null &&
+            row.toc_indicator_target_id !== undefined
+              ? Number(row.toc_indicator_target_id)
+              : null,
+        };
+        const existing = map.get(row.indicator_id);
+        if (existing) {
+          existing.push(entry);
+        } else {
+          map.set(row.indicator_id, [entry]);
+        }
+      }
+
+      return map;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * Sums the contributing results of one indicator (node) that belong to ONE target row, each
+   * result counted once, never once per matching centre (see `getIndicatorContributionsByCenter`).
+   * An entry carrying a `tocIndicatorTargetId` counts only for the row with that exact id (centres
+   * ignored — sibling combination-groups sharing a centre stay isolated); an entry without one
+   * (historical data) counts when it is tagged with AT LEAST ONE of `centerIds`.
+   * `useAnchor = false` (cumulative 2030 Outcomes view, RRC-T-6) ignores every anchor and uses
+   * the centre intersection for all entries.
+   */
+  private sumContributionsForCenters(
+    contributionsByCenter: Map<
+      number,
+      Array<{
+        status_id: number;
+        contributing_indicator: number;
+        centerIds: Set<number>;
+        tocIndicatorTargetId: number | null;
+      }>
+    >,
+    indicatorId: number,
+    centerIds: number[],
+    rowTocIndicatorTargetId?: number | string | null,
+    useAnchor = true,
+  ): {
+    actual_achieved_value_sum: number;
+    preliminary_achieved_value_sum: number;
+    achieved_value_sum: number;
+  } {
+    const entries = contributionsByCenter.get(indicatorId) ?? [];
+    let actual = 0;
+    let preliminary = 0;
+    let achieved = 0;
+
+    // The row anchor comes straight from the driver, where a BIGINT can arrive as a string
+    // (mysql2 bigNumberStrings); entry anchors are Number()-coerced. Normalise once so the
+    // equality below never depends on the driver's representation.
+    const rowAnchor =
+      rowTocIndicatorTargetId === null ||
+      rowTocIndicatorTargetId === undefined ||
+      String(rowTocIndicatorTargetId).trim() === ''
+        ? null
+        : Number(rowTocIndicatorTargetId);
+    const rowAnchorIsValid = rowAnchor !== null && Number.isFinite(rowAnchor);
+
+    for (const entry of entries) {
+      // reported-results-center-scoping / RRC-DD-3: an anchored entry counts ONLY for the exact
+      // combination-group it was reported against — centre overlap is ignored entirely, so a
+      // solo-IITA result never leaks into a sibling "CIMMYT, IITA" row. Un-anchored (historical)
+      // entries keep the centre-set intersection unchanged (RRC-R-8).
+      const holdsRow =
+        useAnchor &&
+        entry.tocIndicatorTargetId !== null &&
+        entry.tocIndicatorTargetId !== undefined
+          ? rowAnchorIsValid && entry.tocIndicatorTargetId === rowAnchor
+          : centerIds.some((id) => entry.centerIds.has(id));
+      if (!holdsRow) continue;
+
+      if (entry.status_id === 2 || entry.status_id === 6) {
+        actual += entry.contributing_indicator;
+      }
+      if (entry.status_id === 3 || entry.status_id === 6) {
+        preliminary += entry.contributing_indicator;
+      }
+      if (
+        entry.status_id === 2 ||
+        entry.status_id === 3 ||
+        entry.status_id === 6
+      ) {
+        achieved += entry.contributing_indicator;
+      }
+    }
+
+    return {
+      actual_achieved_value_sum: actual,
+      preliminary_achieved_value_sum: preliminary,
+      achieved_value_sum: achieved,
+    };
   }
 
   async findBilateralProjectById(tocResultId: number, phaseUuid: string) {

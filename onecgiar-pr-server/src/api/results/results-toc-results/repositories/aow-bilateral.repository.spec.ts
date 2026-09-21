@@ -42,11 +42,14 @@ describe('AoWBilateralRepository', () => {
 
   it('should execute the aggregate query for composite code with expected clauses', async () => {
     mockResolveContext();
-    dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    dataSourceQueryMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await repository.findByCompositeCode('SP01', 'SP01-AOW01', defaultContext);
 
-    expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
+    expect(dataSourceQueryMock).toHaveBeenCalledTimes(3);
     const [query, params] = dataSourceQueryMock.mock.calls[0];
 
     expect(params).toEqual([
@@ -86,7 +89,10 @@ describe('AoWBilateralRepository', () => {
 
   it('should include ToC nodes without work package under every area of work', async () => {
     mockResolveContext();
-    dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    dataSourceQueryMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await repository.findByCompositeCode('SP01', 'SP01-AOW02', defaultContext);
 
@@ -99,11 +105,14 @@ describe('AoWBilateralRepository', () => {
 
   it('should omit work package join when composite code is not provided', async () => {
     mockResolveContext();
-    dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    dataSourceQueryMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await repository.find2030Outcomes('SP01', defaultContext);
 
-    expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
+    expect(dataSourceQueryMock).toHaveBeenCalledTimes(3);
     const [query, params] = dataSourceQueryMock.mock.calls[0];
 
     expect(params).toEqual([2025, 'SP01', 'EOI', 'PHASE-1']);
@@ -293,11 +302,14 @@ describe('AoWBilateralRepository', () => {
     );
     // P2-3296 widened the row: the QA pair is unchanged, the preliminary pair is new and
     // reads 0 / '0%' when the fixture carries no preliminary column.
+    // indicator-achieved-value-per-center: achieved_value_sum is likewise additive and
+    // reads 0 when the fixture carries no achieved_value_sum column.
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
       progress_percentage: '75%',
       preliminary_achieved_value_sum: 0,
       preliminary_progress_percentage: '0%',
+      achieved_value_sum: 0,
       target_value_sum: 20,
       work_package_acronym: null,
     });
@@ -306,6 +318,7 @@ describe('AoWBilateralRepository', () => {
       progress_percentage: '40%',
       preliminary_achieved_value_sum: 0,
       preliminary_progress_percentage: '0%',
+      achieved_value_sum: 0,
       target_value_sum: 25,
       work_package_acronym: null,
     });
@@ -335,6 +348,7 @@ describe('AoWBilateralRepository', () => {
       progress_percentage: '1500%',
       preliminary_achieved_value_sum: 0,
       preliminary_progress_percentage: '0%',
+      achieved_value_sum: 0,
       target_value_sum: 0,
       work_package_acronym: null,
     });
@@ -418,6 +432,7 @@ describe('AoWBilateralRepository', () => {
 
     dataSourceQueryMock
       .mockResolvedValueOnce(mockRows)
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     const result = await repository.findByCompositeCode(
@@ -434,20 +449,26 @@ describe('AoWBilateralRepository', () => {
 
   it('should handle parallel execution in findByCompositeCode', async () => {
     mockResolveContext();
-    dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    dataSourceQueryMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await repository.findByCompositeCode('SP01', 'SP01-AOW01', defaultContext);
 
-    expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
+    expect(dataSourceQueryMock).toHaveBeenCalledTimes(3);
   });
 
   it('should handle parallel execution in find2030Outcomes', async () => {
     mockResolveContext();
-    dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    dataSourceQueryMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await repository.find2030Outcomes('SP01', defaultContext);
 
-    expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
+    expect(dataSourceQueryMock).toHaveBeenCalledTimes(3);
   });
 
   describe('resolveContext', () => {
@@ -753,7 +774,8 @@ describe('AoWBilateralRepository', () => {
       mockResolveContext();
       dataSourceQueryMock
         .mockResolvedValueOnce([rowFor()])
-        .mockResolvedValueOnce([contributionFor()]);
+        .mockResolvedValueOnce([contributionFor()])
+        .mockResolvedValueOnce([]);
 
       const result = await repository.findByCompositeCode(
         'SP01',
@@ -773,6 +795,7 @@ describe('AoWBilateralRepository', () => {
       mockResolveContext();
       dataSourceQueryMock
         .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
       const result = await repository.findByCompositeCode(
@@ -801,7 +824,8 @@ describe('AoWBilateralRepository', () => {
           rowFor({ target_value_sum: 10, toc_indicator_target_id: 563504 }),
           rowFor({ target_value_sum: 800, toc_indicator_target_id: 563526 }),
         ])
-        .mockResolvedValueOnce([contributionFor({ target_value_sum: 2480 })]);
+        .mockResolvedValueOnce([contributionFor({ target_value_sum: 2480 })])
+        .mockResolvedValueOnce([]);
 
       const result = await repository.findByCompositeCode(
         'SP01',
@@ -818,7 +842,8 @@ describe('AoWBilateralRepository', () => {
       mockResolveContext();
       dataSourceQueryMock
         .mockResolvedValueOnce([rowFor()])
-        .mockResolvedValueOnce([contributionFor()]);
+        .mockResolvedValueOnce([contributionFor()])
+        .mockResolvedValueOnce([]);
 
       const result = await repository.findByCompositeCode(
         'SP01',
@@ -850,7 +875,8 @@ describe('AoWBilateralRepository', () => {
             target_value_sum: 0,
             actual_achieved_value_sum: 500000,
           }),
-        ]);
+        ])
+        .mockResolvedValueOnce([]);
 
       const result = await repository.findByCompositeCode(
         'SP01',
@@ -875,7 +901,8 @@ describe('AoWBilateralRepository', () => {
             target_value_sum: 0,
             actual_achieved_value_sum: 5,
           }),
-        ]);
+        ])
+        .mockResolvedValueOnce([]);
 
       const result = await repository.findByCompositeCode(
         'SP01',
@@ -905,11 +932,13 @@ describe('AoWBilateralRepository', () => {
       expect(query).toContain(
         'SUM(CASE WHEN r.status_id IN (3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END)',
       );
-      // One subquery, not two — the filter lets the union through and CASE does the split.
+      // One subquery, not three — the filter lets the union through and CASE does the split.
+      // indicator-achieved-value-per-center added a third conditional aggregate
+      // (achieved_value_sum, RFR-DD-2) inside this same pass, so the count is now 3.
       expect(query).toContain('AND r.status_id IN (2, 3, 6)');
       expect(
         query.match(/COALESCE\(SUM\(CASE WHEN r\.status_id/g),
-      ).toHaveLength(2);
+      ).toHaveLength(3);
     });
 
     it('never lets Editing, PendingReview, Rejected or Draft into either bar', async () => {
@@ -958,6 +987,7 @@ describe('AoWBilateralRepository', () => {
         target_value_sum: 100,
         actual_achieved_value_sum: 40,
         preliminary_achieved_value_sum: 75,
+        achieved_value_sum: 0,
         work_package_acronym: 'AOW01',
         progress_percentage: '40%',
         preliminary_progress_percentage: '75%',
@@ -1011,6 +1041,624 @@ describe('AoWBilateralRepository', () => {
       expect(map.get(13)?.progress_percentage).toBe('25%');
       expect(map.get(13)?.preliminary_achieved_value_sum).toBe(0);
       expect(map.get(13)?.preliminary_progress_percentage).toBe('0%');
+    });
+  });
+
+  // ─── RFR-T-1 (bugfix/indicator-achieved-value-per-center) ─────────────────
+  // Bug Mode regression tests — MUST fail against today's code (requirements.md
+  // §8 RFR-AC-1..4, design.md §10 Testing Plan, proposal.md §3 confirmed root
+  // cause). `dataSource.query` is mocked in this suite (no real SQL engine), so
+  // per the Leader's decision:
+  //   - the join/group defect (RFR-AC-1) is gated by asserting the emitted SQL
+  //     text, complemented by a row-mapping case that guards the map never
+  //     collapses sibling nodes;
+  //   - the new `achieved_value_sum` aggregate (RFR-AC-2 / RFR-AC-3) is gated by
+  //     asserting the SQL carries a third union-of-statuses aggregate and that
+  //     the mapper surfaces the field without double-counting across a status
+  //     move from Submitted(3) to QualityAssessed(2);
+  //   - RFR-AC-4 pins today's single-node (non-shared) behaviour unchanged.
+  describe('RFR-AC — per-node scoping and achieved_value_sum (indicator-achieved-value-per-center)', () => {
+    it('scopes achieved/preliminary sums per ToC node, not per shared catalog indicator id', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.getIndicatorContributions('SP01', defaultContext);
+
+      const [query] = dataSourceQueryMock.mock.calls[0];
+
+      // The outer join must attach `act` by the node-level id, never the shared
+      // catalog id — RFR-DD-1. Fails today: the join key is still the catalog id.
+      expect(query).toContain('act.indicator_id = tgt.indicator_id');
+      expect(query).not.toContain(
+        'act.toc_result_indicator_id = tgt.toc_result_indicator_id',
+      );
+
+      // The act subquery's own GROUP BY must key on tri.id (node-level), not
+      // tri.toc_result_indicator_id (catalog-level) — that catalog key is
+      // exactly what pools sibling nodes' contributions together today.
+      // The non-greedy capture must stop at the subquery's real closing
+      // paren (`) AS act ON ...`), not at the `) AS act` substring that
+      // `actual_achieved_value_sum`'s own alias happens to contain.
+      const actSubqueryMatch = query.match(
+        /LEFT JOIN \(([\s\S]*?)\) AS act\s+ON\b/,
+      );
+      expect(actSubqueryMatch).not.toBeNull();
+      const actSubquery = actSubqueryMatch[1];
+      expect(actSubquery).toMatch(/GROUP BY\s+tri\.id\b/);
+      expect(actSubquery).not.toMatch(
+        /GROUP BY\s+tri\.toc_result_indicator_id\b/,
+      );
+    });
+
+    it('keeps each sibling node on its own row in the contributions map, never collapsed onto a shared catalog id', async () => {
+      mockResolveContext();
+      // Two ToC nodes (tri.id 21 and 22) sharing one catalog toc_result_indicator_id,
+      // each with a distinct target — id 21 is the Target-5 node carrying the one
+      // submitted result (contributing_indicator = 1), id 22 is the Target-1 sibling
+      // node with nothing reported against it.
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 21,
+          toc_result_indicator_id: 'shared-catalog-id',
+          target_value_sum: 5,
+          actual_achieved_value_sum: 0,
+          preliminary_achieved_value_sum: 1,
+          work_package_acronym: 'AOW05',
+        },
+        {
+          indicator_id: 22,
+          toc_result_indicator_id: 'shared-catalog-id',
+          target_value_sum: 1,
+          actual_achieved_value_sum: 0,
+          preliminary_achieved_value_sum: 0,
+          work_package_acronym: 'AOW05',
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      // RFR-AC-1: the Target-5 node keeps its own 1/5 = 20% preliminary progress.
+      expect(map.get(21)).toMatchObject({
+        preliminary_achieved_value_sum: 1,
+        preliminary_progress_percentage: '20%',
+      });
+      // RFR-AC-1: the Target-1 sibling stays at 0/0%, unaffected by node 21.
+      expect(map.get(22)).toMatchObject({
+        preliminary_achieved_value_sum: 0,
+        preliminary_progress_percentage: '0%',
+      });
+    });
+
+    it('adds a third achieved_value_sum aggregate over the union status set (2, 3, 6)', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.getIndicatorContributions('SP01', defaultContext);
+
+      const [query] = dataSourceQueryMock.mock.calls[0];
+
+      // RFR-DD-2 / design.md §5: a third conditional-aggregation column, over the
+      // same union status set already used to gate the outer WHERE (line ~908).
+      // Fails today: only the QA'd-basis and submitted-basis aggregates exist
+      // (2 occurrences, not 3).
+      expect(query).toContain(
+        'SUM(CASE WHEN r.status_id IN (2, 3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END)',
+      );
+      expect(
+        query.match(/COALESCE\(SUM\(CASE WHEN r\.status_id/g),
+      ).toHaveLength(3);
+    });
+
+    it("surfaces achieved_value_sum on the mapped row at status=3 (submitted, not yet QA'd)", async () => {
+      mockResolveContext();
+      // A result submitted (status 3) against this node: not yet QA'd, so
+      // actual_achieved_value_sum (QA'd-basis) is 0, but the new union-based
+      // achieved_value_sum must already read 1 — RFR-AC-2 / Nicoleta's rule.
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 31,
+          toc_result_indicator_id: 'node-31',
+          target_value_sum: 5,
+          actual_achieved_value_sum: 0,
+          preliminary_achieved_value_sum: 1,
+          achieved_value_sum: 1,
+          work_package_acronym: 'AOW05',
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      // Fails today: mapIndicatorContributionRow does not carry achieved_value_sum.
+      expect(map.get(31)?.achieved_value_sum).toBe(1);
+    });
+
+    it('keeps achieved_value_sum single-counted (=1, never 0 or 2) once the same contribution moves to status=2 (QualityAssessed)', async () => {
+      mockResolveContext();
+      // First call: the result is Submitted (status 3) — preliminary-basis counts
+      // it, QA'd-basis does not yet.
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 41,
+          toc_result_indicator_id: 'node-41',
+          target_value_sum: 5,
+          actual_achieved_value_sum: 0,
+          preliminary_achieved_value_sum: 1,
+          achieved_value_sum: 1,
+          work_package_acronym: 'AOW05',
+        },
+      ]);
+
+      const beforeQa = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+      expect(beforeQa.get(41)?.achieved_value_sum).toBe(1);
+      expect(beforeQa.get(41)?.actual_achieved_value_sum).toBe(0);
+
+      // Second call: the same single result has moved to QualityAssessed (status
+      // 2) — QA'd-basis now counts it, submitted-basis no longer does (its
+      // current status is not in (3, 6)), and the union-based achieved_value_sum
+      // stays at exactly 1 — no double count, RFR-AC-3.
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 41,
+          toc_result_indicator_id: 'node-41',
+          target_value_sum: 5,
+          actual_achieved_value_sum: 1,
+          preliminary_achieved_value_sum: 0,
+          achieved_value_sum: 1,
+          work_package_acronym: 'AOW05',
+        },
+      ]);
+
+      const afterQa = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+      expect(afterQa.get(41)?.achieved_value_sum).toBe(1);
+      expect(afterQa.get(41)?.actual_achieved_value_sum).toBe(1);
+    });
+
+    it('leaves a single-node (non-shared catalog id) indicator unchanged — RFR-AC-4 regression guard', async () => {
+      mockResolveContext();
+      // No sibling node shares this catalog id; an existing reported result at
+      // its pre-fix values — these MUST be unchanged before and after the fix.
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 51,
+          toc_result_indicator_id: 'unique-catalog-id-51',
+          target_value_sum: 4,
+          actual_achieved_value_sum: 2,
+          preliminary_achieved_value_sum: 3,
+          work_package_acronym: 'AOW09',
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(51)).toMatchObject({
+        actual_achieved_value_sum: 2,
+        progress_percentage: '50%',
+        preliminary_achieved_value_sum: 3,
+        preliminary_progress_percentage: '75%',
+      });
+    });
+  });
+
+  describe('RRC — exact toc_indicator_target_id match replaces centre-set intersection (reported-results-center-scoping)', () => {
+    const IITA = 501;
+    const CIMMYT = 502;
+    const IITA_ALONE_TARGET = 9001;
+    const CIMMYT_IITA_TARGET = 9002;
+
+    const sum = (
+      map: Map<number, any[]>,
+      indicatorId: number,
+      centerIds: number[],
+      rowTocIndicatorTargetId?: number | string | null,
+    ) =>
+      (repository as any).sumContributionsForCenters(
+        map,
+        indicatorId,
+        centerIds,
+        rowTocIndicatorTargetId,
+      );
+
+    it('carries the anchor through the base subquery and the outer query (RRC-DD-3)', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.getIndicatorContributionsByCenter(
+        'SP01',
+        defaultContext,
+      );
+
+      const [query] = dataSourceQueryMock.mock.calls[0];
+      const baseMatch = query.match(/FROM \(([\s\S]*?)\) AS base/);
+      expect(baseMatch).not.toBeNull();
+      const baseSubquery = baseMatch[1];
+      expect(baseSubquery).toContain(
+        'rit.toc_indicator_target_id AS toc_indicator_target_id',
+      );
+      expect(baseSubquery).toMatch(
+        /GROUP BY[\s\S]*rit\.toc_indicator_target_id/,
+      );
+      const outer = query.slice(query.indexOf(') AS base'));
+      expect(query).toMatch(
+        /base\.contributing_indicator,\s*base\.toc_indicator_target_id,/,
+      );
+      expect(outer).toMatch(/GROUP BY[\s\S]*base\.toc_indicator_target_id/);
+    });
+
+    it('maps the anchor onto each entry, null when the column is null (RRC-DD-3)', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 7,
+          result_id: 1,
+          status_id: 3,
+          contributing_indicator: '1.00',
+          toc_indicator_target_id: '9001',
+          center_ids: `${IITA}`,
+        },
+        {
+          indicator_id: 7,
+          result_id: 2,
+          status_id: 3,
+          contributing_indicator: '1.00',
+          toc_indicator_target_id: null,
+          center_ids: `${IITA}`,
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributionsByCenter(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(7)?.map((e: any) => e.tocIndicatorTargetId)).toEqual([
+        9001,
+        null,
+      ]);
+    });
+
+    it('isolates a solo-centre contribution from a multi-centre sibling row when the anchor is present (RRC-AC-2/AC-3)', () => {
+      const map = new Map<number, any[]>([
+        [
+          7,
+          [
+            {
+              status_id: 3,
+              contributing_indicator: 1,
+              centerIds: new Set([IITA]),
+              tocIndicatorTargetId: IITA_ALONE_TARGET,
+            },
+          ],
+        ],
+      ]);
+
+      // CIMMYT, IITA sibling: centres intersect (IITA) but the anchor differs -> 0.
+      const sibling = sum(map, 7, [CIMMYT, IITA], CIMMYT_IITA_TARGET);
+      expect(sibling.achieved_value_sum).toBe(0);
+      expect(sibling.preliminary_achieved_value_sum).toBe(0);
+      expect(sibling.actual_achieved_value_sum).toBe(0);
+
+      // IITA-alone row: exact anchor match -> counted once.
+      const own = sum(map, 7, [IITA], IITA_ALONE_TARGET);
+      expect(own.achieved_value_sum).toBe(1);
+      expect(own.preliminary_achieved_value_sum).toBe(1);
+    });
+
+    it('compares anchors by value, not driver representation: a string row anchor matches a numeric entry anchor', () => {
+      const map = new Map<number, any[]>([
+        [
+          7,
+          [
+            {
+              status_id: 3,
+              contributing_indicator: 1,
+              centerIds: new Set([IITA]),
+              tocIndicatorTargetId: CIMMYT_IITA_TARGET,
+            },
+          ],
+        ],
+      ]);
+
+      // mysql2 returns BIGINT as a string: '9002' must equal 9002.
+      expect(
+        sum(map, 7, [CIMMYT, IITA], String(CIMMYT_IITA_TARGET))
+          .achieved_value_sum,
+      ).toBe(1);
+      // Mirror: a different id as a string stays isolated even though the centres overlap.
+      expect(
+        sum(map, 7, [CIMMYT, IITA], String(IITA_ALONE_TARGET))
+          .achieved_value_sum,
+      ).toBe(0);
+      // Blank / non-numeric strings never match an anchored entry.
+      expect(sum(map, 7, [IITA], '').achieved_value_sum).toBe(0);
+      expect(sum(map, 7, [IITA], 'abc').achieved_value_sum).toBe(0);
+    });
+
+    describe('cumulative window (2030 Outcomes) keeps centre-intersection semantics (RRC-T-6)', () => {
+      it('ignores the entry anchor when useAnchor is false: a differently-anchored entry with overlapping centres still counts', () => {
+        const map = new Map<number, any[]>([
+          [
+            7,
+            [
+              {
+                status_id: 3,
+                contributing_indicator: 1,
+                centerIds: new Set([IITA]),
+                tocIndicatorTargetId: IITA_ALONE_TARGET,
+              },
+            ],
+          ],
+        ]);
+
+        const cumulative = (
+          centerIds: number[],
+          rowAnchor: number | string | null,
+        ) =>
+          (repository as any).sumContributionsForCenters(
+            map,
+            7,
+            centerIds,
+            rowAnchor,
+            false,
+          );
+
+        // Anchor 9001 vs row anchor 9002, centres overlap -> counted (pre-RRC-T-5 behaviour).
+        expect(
+          cumulative([CIMMYT, IITA], CIMMYT_IITA_TARGET)
+            .preliminary_achieved_value_sum,
+        ).toBe(1);
+        // Same for a string row anchor and for a row with no anchor at all.
+        expect(
+          cumulative([IITA], String(CIMMYT_IITA_TARGET))
+            .preliminary_achieved_value_sum,
+        ).toBe(1);
+        expect(cumulative([IITA], null).preliminary_achieved_value_sum).toBe(1);
+        // Pure intersection: no centre overlap -> NOT counted, whatever the anchors say.
+        expect(cumulative([CIMMYT], IITA_ALONE_TARGET).achieved_value_sum).toBe(
+          0,
+        );
+      });
+
+      it('still matches by anchor by default (useAnchor omitted = true)', () => {
+        const map = new Map<number, any[]>([
+          [
+            7,
+            [
+              {
+                status_id: 3,
+                contributing_indicator: 1,
+                centerIds: new Set([IITA]),
+                tocIndicatorTargetId: IITA_ALONE_TARGET,
+              },
+            ],
+          ],
+        ]);
+
+        expect(
+          sum(map, 7, [CIMMYT, IITA], CIMMYT_IITA_TARGET).achieved_value_sum,
+        ).toBe(0);
+      });
+
+      const tocRow = {
+        toc_result_id: 1,
+        category: 'EOI',
+        result_title: 'Result 1',
+        related_node_id: 'node1',
+        indicator_id: 10,
+        indicator_description: 'Indicator 1',
+        toc_result_indicator_id: 'IND1',
+        indicator_related_node_id: 'ind_node1',
+        unit_messurament: 'Number',
+        type_value: 'Count',
+        type_name: 'Counter',
+        location: 'Global',
+        target_value_sum: 1,
+        actual_achieved_value_sum: 0,
+        progress_percentage: '0%',
+        centers_concat: `${CIMMYT}::CIMMYT||${IITA}::IITA`,
+        toc_indicator_target_id: CIMMYT_IITA_TARGET,
+      };
+      // A contribution anchored to ANOTHER group's target (as a different year's id would be),
+      // with the centre overlap that pre-RRC-T-5 code matched on.
+      const otherAnchoredContribution = {
+        indicator_id: 10,
+        result_id: 1,
+        status_id: 3,
+        contributing_indicator: '1.00',
+        toc_indicator_target_id: IITA_ALONE_TARGET,
+        center_ids: `${IITA}`,
+      };
+
+      it('find2030Outcomes counts the anchored entry by centre intersection, while findByCompositeCode keeps exact matching (call-site flag)', async () => {
+        mockResolveContext();
+        const spy = jest.spyOn(repository as any, 'sumContributionsForCenters');
+
+        dataSourceQueryMock
+          .mockResolvedValueOnce([tocRow])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([otherAnchoredContribution]);
+        const cumulative = await repository.find2030Outcomes(
+          'SP01',
+          defaultContext,
+        );
+        expect(spy).toHaveBeenLastCalledWith(
+          expect.any(Map),
+          10,
+          [CIMMYT, IITA],
+          CIMMYT_IITA_TARGET,
+          false,
+        );
+        expect(cumulative[0].indicators[0].preliminary_achieved_value_sum).toBe(
+          1,
+        );
+        expect(cumulative[0].indicators[0].achieved_value_sum).toBe(1);
+
+        dataSourceQueryMock
+          .mockResolvedValueOnce([tocRow])
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([otherAnchoredContribution]);
+        const yearly = await repository.findByCompositeCode(
+          'SP01',
+          'SP01-AOW01',
+          defaultContext,
+        );
+        expect(spy).toHaveBeenLastCalledWith(
+          expect.any(Map),
+          10,
+          [CIMMYT, IITA],
+          CIMMYT_IITA_TARGET,
+          true,
+        );
+        expect(yearly[0].indicators[0].preliminary_achieved_value_sum).toBe(0);
+        expect(yearly[0].indicators[0].achieved_value_sum).toBe(0);
+      });
+    });
+
+    it('ignores centre overlap entirely for an anchored entry, even when the row has no anchor', () => {
+      const map = new Map<number, any[]>([
+        [
+          7,
+          [
+            {
+              status_id: 3,
+              contributing_indicator: 1,
+              centerIds: new Set([IITA]),
+              tocIndicatorTargetId: IITA_ALONE_TARGET,
+            },
+          ],
+        ],
+      ]);
+
+      expect(sum(map, 7, [IITA], null).achieved_value_sum).toBe(0);
+      expect(sum(map, 7, [IITA]).achieved_value_sum).toBe(0);
+    });
+
+    it('falls back to the existing centre-set intersection when the entry has no anchor (RRC-R-8, RRC-AC-6)', () => {
+      const map = new Map<number, any[]>([
+        [
+          8,
+          [
+            {
+              status_id: 3,
+              contributing_indicator: 1,
+              centerIds: new Set([IITA]),
+              tocIndicatorTargetId: null,
+            },
+          ],
+        ],
+      ]);
+
+      // Historical, un-anchored data keeps today's (imperfect) behaviour unchanged.
+      expect(
+        sum(map, 8, [CIMMYT, IITA], CIMMYT_IITA_TARGET)
+          .preliminary_achieved_value_sum,
+      ).toBe(1);
+      expect(
+        sum(map, 8, [IITA], IITA_ALONE_TARGET).preliminary_achieved_value_sum,
+      ).toBe(1);
+      // No centre overlap -> still not counted.
+      expect(
+        sum(map, 8, [CIMMYT], CIMMYT_IITA_TARGET)
+          .preliminary_achieved_value_sum,
+      ).toBe(0);
+    });
+
+    it('leaves a single-node / single-centre indicator unchanged (RRC-AC-5)', () => {
+      const SOLE = 601;
+      const map = new Map<number, any[]>([
+        [
+          9,
+          [
+            {
+              status_id: 2,
+              contributing_indicator: 4,
+              centerIds: new Set([SOLE]),
+              tocIndicatorTargetId: null,
+            },
+            {
+              status_id: 6,
+              contributing_indicator: 2,
+              centerIds: new Set([SOLE]),
+              tocIndicatorTargetId: null,
+            },
+          ],
+        ],
+      ]);
+
+      expect(sum(map, 9, [SOLE], null)).toEqual({
+        actual_achieved_value_sum: 6,
+        preliminary_achieved_value_sum: 2,
+        achieved_value_sum: 6,
+      });
+    });
+
+    it("passes the row's toc_indicator_target_id from fetchAndGroupTocResults (call site)", async () => {
+      mockResolveContext();
+      const spy = jest.spyOn(repository as any, 'sumContributionsForCenters');
+      dataSourceQueryMock
+        .mockResolvedValueOnce([
+          {
+            toc_result_id: 1,
+            category: 'OUTPUT',
+            result_title: 'Result 1',
+            related_node_id: 'node1',
+            indicator_id: 10,
+            indicator_description: 'Indicator 1',
+            toc_result_indicator_id: 'IND1',
+            indicator_related_node_id: 'ind_node1',
+            unit_messurament: 'Number',
+            type_value: 'Count',
+            type_name: 'Counter',
+            location: 'Global',
+            target_value_sum: 1,
+            actual_achieved_value_sum: 0,
+            progress_percentage: '0%',
+            centers_concat: `${CIMMYT}::CIMMYT||${IITA}::IITA`,
+            toc_indicator_target_id: CIMMYT_IITA_TARGET,
+          },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            indicator_id: 10,
+            result_id: 1,
+            status_id: 3,
+            contributing_indicator: '1.00',
+            toc_indicator_target_id: IITA_ALONE_TARGET,
+            center_ids: `${IITA}`,
+          },
+        ]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.any(Map),
+        10,
+        [CIMMYT, IITA],
+        CIMMYT_IITA_TARGET,
+        true,
+      );
+      // End to end: the sibling row reads 0 for a result reported against the other group.
+      expect(result[0].indicators[0].achieved_value_sum).toBe(0);
+      expect(result[0].indicators[0].preliminary_achieved_value_sum).toBe(0);
     });
   });
 
