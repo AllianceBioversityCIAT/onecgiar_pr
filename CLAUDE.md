@@ -2,7 +2,7 @@
 
 Monorepo root guide for **PRMS** (Planning, Reporting & Management System, OneCGIAR). Points at the constitutional baseline under `docs/` and at the package-level guides.
 
-> Slimmed 2026-09-02: model routing and the skill map moved to `.agents/model-routing.md` (load only when running an AKILI command). Nothing was deleted.
+> Slimmed 2026-09-02: model routing and the skill map were moved out of this file. De-duplicated 2026-09-21: both now live **only** in the root `AGENTS.md` (`## Model Routing`, `## Skill Map`); `.agents/model-routing.md` is a pointer. Nothing was deleted.
 
 ## Repository layout
 
@@ -33,7 +33,7 @@ Every AKILI command (`/akili-*`; the legacy `/sdd-*` map 1:1) loads these first.
 
 **Commands:** `/akili-constitution` refreshes the baseline · `/akili-propose` · `/akili-specify` (spec triplet) · `/akili-execute` · `/akili-test` · `/akili-validate` · `/akili-archive` · `/akili-audit` · `/akili-resume`.
 
-🛑 **Before running any AKILI command, read `.agents/model-routing.md`** — tier→model registry, the effort dial, and the Skill Map that tells the Implementer/Tester which skill to load. Never add `model:` to command frontmatter; bindings live in the agent wrappers.
+🛑 **Before running any AKILI command, read `AGENTS.md` → `## Model Routing` and `## Skill Map`** — tier→model registry, the effort dial, and the map that tells the Implementer/Tester which skill to load. That is the single registry; edit it there and nowhere else. `.agents/model-routing.md` only points at it. Never add `model:` to command frontmatter; bindings live in the agent wrappers.
 
 ## Domain-specific reference docs
 
@@ -48,7 +48,7 @@ Every AKILI command (`/akili-*`; the legacy `/sdd-*` map 1:1) loads these first.
 
 **Commits:** `<emoji> <type>(<scope>) [ticket]: <description>` — ✨ `feat` · ♻️ `refactor` · 🔧 `fix` · 🎨 `style`. Scope = component or service name.
 
-**Branches:** `master` (production-tracking) · `staging` (integration, merges to `master` via PR). Open PRs against `staging` or `master` per release cadence.
+**Branches:** `master` (production-tracking, **Default Branch** pin) · `staging` (**Integration Branch** pin — the single apply-capable branch: pending kaizen standardizations are applied there and carried to `master` on release cadence). Open PRs against `staging` or `master` per release cadence.
 
 **Test gates:** server Jest (branches 5% / functions 20% / lines 35% / statements 40%) · client Jest + Cypress (50/60/60/60) · `npm run migration:check:ci` blocks pending migrations · SonarCloud.
 
@@ -64,11 +64,18 @@ Every AKILI command (`/akili-*`; the legacy `/sdd-*` map 1:1) loads these first.
 
 **CodeGraph:** initialized (`.codegraph/`, index not committed). Prefer `codegraph_explore` / `_search` / `_callers` / `_impact` over broad grepping; run `codegraph sync` after large refactors.
 
-**Shared-file write discipline:** on a spec branch, lifecycle side-effect writes (kaizen standardizations, `/akili-archive` syncs, `/akili-audit` outputs) **never** edit `CLAUDE.md`, `AGENTS.md`, `.agents/`, packaged templates or `docs/trd/trd.md`. Record them as pending and apply on the default branch. Files an approved `tasks.md` names as the spec's own deliverable are exempt.
+**Shared-file write discipline:** on a spec branch, lifecycle side-effect writes (kaizen standardizations, `/akili-archive` syncs, `/akili-audit` outputs) **never** edit `CLAUDE.md`, `AGENTS.md`, `.agents/`, packaged templates or `docs/trd/trd.md`. Record them as pending and apply on the **apply-capable branch** (`staging`, per the `Integration Branch:` pin — not `master`, which records rather than applies). Files an approved `tasks.md` names as the spec's own deliverable are exempt.
 
 **Concurrency:** one AKILI session per checkout; extra sessions on `git worktree`. Never run a measurement command (build, benchmark, E2E, Lighthouse) while a delegated agent is active.
 
-**Default branch:** `master` (every AKILI branch test compares against this pin).
+**Branch pins** (canonical copies in `AGENTS.md`):
+
+```
+Default Branch: master
+Integration Branch: staging
+```
+
+Every AKILI branch test compares the checked-out branch against `Default Branch:`. `Integration Branch:` resolves the apply-capable branch for the `kaizen` skill's Branch Context.
 
 ## Module Guides
 
@@ -79,7 +86,7 @@ Root guides are the parent; child guides add or narrow, never duplicate.
 - `onecgiar-pr-client/CLAUDE.md` · `AGENTS.md` — client package guide (`auth` header, base URLs, API naming, commit format)
 - `onecgiar-pr-client/src/CLAUDE.md` · `AGENTS.md` — client source-tree navigation
 - `.agents/leader.md` · `implementer.md` · `reviewer.md` · `tester.md` — AKILI personas (source of truth; wrappers in `.claude/agents/`, `.opencode/agent/`, `.agents/agents/`)
-- `.agents/model-routing.md` — tier registry, effort dial, Skill Map
+- `AGENTS.md` → `## Model Routing` · `## Skill Map` — canonical tier registry, effort dial, skill map (`.agents/model-routing.md` is a pointer to them)
 
 ## When in doubt
 

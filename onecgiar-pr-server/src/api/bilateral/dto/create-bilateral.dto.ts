@@ -125,6 +125,23 @@ export class TocMappingDto {
   @IsOptional()
   @IsString()
   result_indicator_type_name?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Budget in USD allocated from the lead science program to this result. Persisted for Innovation Development and Innovation Use, the two types that carry investment tables.',
+    example: 150000,
+  })
+  @IsOptional()
+  @IsNumber()
+  usd_budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Indicates whether the budget amount is YET TO BE determined',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_determined?: boolean;
 }
 
 export class ContributingProgramDto {

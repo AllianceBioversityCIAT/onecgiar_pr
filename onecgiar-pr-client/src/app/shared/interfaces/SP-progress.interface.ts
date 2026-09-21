@@ -10,6 +10,9 @@ export interface SPProgress {
   entityTypeName: string;
   totalResults: number;
   progress: number;
+  plannedKpis?: number;
+  replicatedResults?: number;
+  newResults?: number;
   versions: Version[];
 }
 
@@ -18,6 +21,9 @@ export interface Version {
   phaseName: string;
   phaseYear: number;
   totalResults: number;
+  plannedKpis?: number;
+  replicatedResults?: number;
+  newResults?: number;
   statuses: Status[];
 }
 

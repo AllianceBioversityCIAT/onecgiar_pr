@@ -945,6 +945,40 @@ export class AoWBilateralRepository {
     }
   }
 
+  async getPlannedKpisCountMap(
+    contextOrYear?: ReportingTocContext | number,
+  ): Promise<Map<string, number>> {
+    try {
+      const context = await this.resolveContext(contextOrYear);
+      const query = `
+        SELECT 
+          tr.official_code,
+          COUNT(DISTINCT tri.id) AS total_indicators
+        FROM ${env.DB_TOC}.toc_results tr
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        WHERE tri.is_active = 1 AND tr.phase = ?
+        GROUP BY tr.official_code
+      `;
+      const rows = await this.dataSource.query(query, [context.phaseUuid]);
+      const map = new Map<string, number>();
+      for (const row of rows) {
+        if (row.official_code) {
+          map.set(
+            String(row.official_code).trim().toUpperCase(),
+            Number(row.total_indicators),
+          );
+        }
+      }
+      return map;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
   async findBilateralProjectById(tocResultId: number, phaseUuid: string) {
     const query = `
       SELECT
