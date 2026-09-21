@@ -215,4 +215,50 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       removeButtons.forEach(btn => expect(btn.disabled).toBe(true));
     });
   });
+
+  // ── BIL-T-1: the centers-catalogue-load-failure banner must actually render ───────────
+  //
+  // The main spec (`section-contributors.component.spec.ts`) stubs the template with
+  // `overrideTemplate('<div></div>')`, so it can only assert the `centersLoadFailed()` signal —
+  // never that the `@if (centersLoadFailed())` block in the real template actually renders the
+  // banner. This harness renders the real template, so it is the only place that can prove the
+  // template half of the falsifier: a typo in the binding or a mis-scoped block would leave every
+  // signal-only test green while the user still sees nothing.
+  describe('centers-catalogue load failure (BIL-T-1)', () => {
+    beforeEach(() => {
+      editable.set(true);
+      build();
+    });
+
+    it('renders the centers-load-error banner and Retry button when centersLoadFailed() is true', () => {
+      component.centersLoadFailed.set(true);
+      fixture.detectChanges();
+
+      const banner = fixture.nativeElement.querySelector('[data-testid="centers-load-error"]');
+      const retryButton = fixture.nativeElement.querySelector('[data-testid="centers-load-retry"]');
+      expect(banner).toBeTruthy();
+      expect(retryButton).toBeTruthy();
+    });
+
+    it('invokes retryLoadCenters() when the Retry button is clicked', () => {
+      component.centersLoadFailed.set(true);
+      fixture.detectChanges();
+
+      const retrySpy = jest.spyOn(component, 'retryLoadCenters').mockImplementation(() => {});
+      const retryButton = fixture.nativeElement.querySelector('[data-testid="centers-load-retry"]') as HTMLButtonElement;
+      retryButton.click();
+
+      expect(retrySpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders no centers-load-error banner when centersLoadFailed() is false', () => {
+      component.centersLoadFailed.set(false);
+      fixture.detectChanges();
+
+      const banner = fixture.nativeElement.querySelector('[data-testid="centers-load-error"]');
+      const retryButton = fixture.nativeElement.querySelector('[data-testid="centers-load-retry"]');
+      expect(banner).toBeNull();
+      expect(retryButton).toBeNull();
+    });
+  });
 });
