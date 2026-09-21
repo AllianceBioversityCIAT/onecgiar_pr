@@ -9,7 +9,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
   selector: 'app-cap-sharing-content',
   imports: [CustomFieldsModule, CommonModule, FormsModule],
   templateUrl: './cap-sharing-content.component.html',
-  styleUrl: '../../result-review-drawer.component.scss',
+  styleUrls: ['../../result-review-drawer.component.scss', './cap-sharing-content.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CapSharingContentComponent implements OnInit {
