@@ -310,7 +310,8 @@
                 placeholder="Enter text"
                 [required]="false"
                 [(ngModel)]="fields.commonFields.result_description"
-                [disabled]="!canEditDataStandards()">
+                [disabled]="!canEditDataStandards()"
+                [readOnly]="!canEditDataStandards()">
               </app-pr-textarea>
 
               <div class="pt-2 border-t border-slate-100">
@@ -522,7 +523,8 @@
                       [required]="false"
                       [(ngModel)]="evidenceLinkInput"
                       (keyup.enter)="addEvidenceLink()"
-                      [disabled]="!canEditDataStandards()">
+                      [disabled]="!canEditDataStandards()"
+                      [readOnly]="!canEditDataStandards()">
                     </app-pr-input>
                   </div>
                 }
