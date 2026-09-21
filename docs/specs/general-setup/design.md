@@ -1,6 +1,6 @@
 # Module Spec — `design.md` Template
 
-> This file is a **methodology template**, not a feature spec. Every module spec produced by `/sdd-specify` MUST start from this template and live at `docs/specs/<module>/design.md` (or `docs/specs/<module>/<feature>/design.md`).
+> This file is a **methodology template**, not a feature spec. Every module spec produced by `/akili-specify` MUST start from this template and live at `docs/specs/<module>/design.md` (or `docs/specs/<module>/<feature>/design.md`).
 >
 > The `design.md` answers **HOW**. The `requirements.md` answers **WHAT** and **WHY**. The `task.md` answers **WHO / WHEN / IN WHAT ORDER**.
 
@@ -11,7 +11,7 @@
 1. Copy this file to `docs/specs/<module>/design.md`. Replace placeholders.
 2. The design MUST be implementable from this document alone — no critical decisions deferred to "we'll figure it out in tasks".
 3. Every cross-cutting decision MUST cite the source of authority (`docs/prd.md`, `docs/trd/trd.md`, `bilateral-result-summaries.en.md`, etc.).
-4. Use the section headings below verbatim — `/sdd-validate` checks for them.
+4. Use the section headings below verbatim — `/akili-validate` checks for them.
 5. Numbering for ADRs / DDs: `<MOD>-DD-<n>` (e.g., `RES-DD-1`).
 
 ---
@@ -25,6 +25,28 @@ Two or three sentences:
 - The biggest constraint or trade-off the design accepts.
 
 Link the corresponding `requirements.md` and the relevant sections in the project-level docs.
+
+---
+
+## 1A. Premise Ledger
+
+Every factual claim this design rests on, with how it was checked. A premise the design *assumes* but nobody *verified* is the single most common cause of a spec that reviews clean and ships wrong — the ledger makes each one falsifiable before any task is written.
+
+One row per premise. Add a row for anything the design would have to be rewritten over if it turned out false.
+
+| # | Premise | Source of truth | How verified | Status | If false |
+|---|---|---|---|---|---|
+| `<MOD>-P-1` | `results.is_active` is never NULL for rows reachable by this endpoint | `onecgiar-pr-server/.../result.entity.ts` + live query | `SELECT COUNT(*) ... WHERE is_active IS NULL` → 0 rows on TEST | `verified` | Add a NULL guard to the predicate; `<MOD>-T-3` grows a branch |
+| `<MOD>-P-2` | Both endpoints apply the same role predicate | Side-by-side read of the two query builders | Quoted SQL from each, compared line by line | `verified` | The endpoints diverge — re-specify before `<MOD>-T-4` |
+| `<MOD>-P-3` | CLARISA returns at most one institution per code | CLARISA API docs | Not verified — assumed from docs | `assumed` | Mapper needs a collision strategy; raise as `<MOD>-OQ-n` |
+
+**Field contract:**
+
+- **Status** is one of `verified` (someone ran the check and saw the result), `assumed` (believed, not checked — must also appear in §13 Open Gaps), or `refuted` (checked and false — the design above must already account for it).
+- **How verified** names the *actual observation*, not the intention. "Read the entity" is a source; "`is_active` is `NOT NULL` at line 41" is a verification.
+- **If false** is mandatory on every row, including `verified` ones — it is what makes a later refutation cheap to act on.
+- **Absent values:** no cell is left blank. A premise with nothing to check is not a premise; delete the row.
+- An endpoint-pair or parity claim is never `verified` from one side — both sides' predicates must be quoted side by side.
 
 ---
 

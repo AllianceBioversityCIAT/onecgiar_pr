@@ -207,13 +207,16 @@ These documents are the **constitutional baseline** every AKILI command (`/akili
 
 **CodeGraph:** initialized (`.codegraph/`, index not committed). For existing-code analysis use `codegraph_explore` / `codegraph_search` / `codegraph_callers` / `codegraph_impact` before broad grepping; run `codegraph sync` after large refactors.
 
-**Shared-file write discipline:** on a spec branch, lifecycle side-effect writes (kaizen standardizations, `/akili-archive` guide/TRD syncs, `/akili-audit` outputs) **never** edit `CLAUDE.md`, `AGENTS.md`, `.agents/`, packaged templates, or `docs/trd/trd.md`. Record each as a pending item and apply it on the default branch. Files an approved `tasks.md` names as the spec's own deliverable are exempt.
+**Shared-file write discipline:** on a spec branch, lifecycle side-effect writes (kaizen standardizations, `/akili-archive` guide/TRD syncs, `/akili-audit` outputs) **never** edit `CLAUDE.md`, `AGENTS.md`, `.agents/`, packaged templates, or `docs/trd/trd.md`. Record each as a pending item and apply it on the **apply-capable branch** — the pinned integration branch when one exists, otherwise the default branch, never both. Files an approved `tasks.md` names as the spec's own deliverable are exempt.
 
 **Concurrency convention:** one AKILI session per checkout; additional sessions on `git worktree`. Never run a measurement command (build, benchmark, E2E, Lighthouse) while a delegated agent is active.
 
 Default Branch: master
+Integration Branch: staging
 
-(Every AKILI command's branch test compares the checked-out branch against this pin. `staging` is the integration branch; spec branches hang off it or `master` per release cadence.)
+`staging` is the team's single integration point: spec branches merge into it, and it reaches `master` on a release cadence. Every AKILI command's branch test compares the checked-out branch against the `Default Branch:` pin. The `Integration Branch:` pin resolves the **apply-capable branch** for the `kaizen` skill's Branch Context — pending standardizations are applied on `staging` (serially), and its merges to `master` carry them forward; `master` itself **records** pending items rather than applying them, the same non-writing behavior a spec branch has.
+
+> Personas already deployed under `.agents/` still phrase this as "apply on the default branch". They keep that wording until re-scaffolded; the next `/akili-audit` reports it as persona drift.
 
 ## Module Guides
 

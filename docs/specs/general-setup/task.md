@@ -1,6 +1,6 @@
 # Module Spec — `task.md` Template
 
-> This file is a **methodology template**, not a feature spec. Every module spec produced by `/sdd-specify` MUST start from this template and live at `docs/specs/<module>/task.md` (or `docs/specs/<module>/<feature>/task.md`).
+> This file is a **methodology template**, not a feature spec. Every module spec produced by `/akili-specify` MUST start from this template and live at `docs/specs/<module>/task.md` (or `docs/specs/<module>/<feature>/task.md`).
 >
 > The `task.md` answers **WHO does WHAT, in WHAT ORDER, and how do we know it's done**.
 
@@ -13,7 +13,7 @@
 3. Every task MUST cite the requirement(s) it satisfies (`<MOD>-R-n`) and/or the acceptance criterion (`<MOD>-AC-n`).
 4. Every task MUST have a definition of done. "Code merged" is not enough.
 5. Number tasks `<MOD>-T-<n>` (e.g., `RES-T-1`). Sub-tasks: `<MOD>-T-<n>.<m>`.
-6. `/sdd-execute` consumes this file; keep the format strict.
+6. `/akili-execute` consumes this file; keep the format strict.
 
 ---
 
@@ -42,7 +42,20 @@ Block execution until every box is ticked.
 
 ## 3. Task list
 
-Use the exact field set below per task so `/sdd-execute` can parse it.
+Use the exact field set below per task so `/akili-execute` can parse it.
+
+**No Verification field is ever left blank** — an absent value is written explicitly (`n/a (no test gate)` for `Red run`, `none (no shared symbol changed)` for `Consumers`), because a blank is indistinguishable from an unanswered question at review time.
+
+**`Review` picks the audit depth** the Leader dispatches after the Implementer reports:
+
+| Value | Use when |
+|---|---|
+| `skip-eligible` | Pure mechanical edit (rename, copy string, import path) with a green `Red run` and no shared consumer |
+| `checklist` | Standard scoped task — Reviewer audits the diff against `Implements:` and the DoD only |
+| `full` | Shared symbol, payload contract, migration, auth, or design-token change — full persona audit |
+| `lenses` | Correctness-critical — multiple independent review passes (see `judgment-day`) |
+
+Absent value: a task with no `Review:` line is treated as `checklist`.
 
 ### `<MOD>-T-1` — Short imperative title
 
@@ -53,6 +66,12 @@ Use the exact field set below per task so `/sdd-execute` can parse it.
 - **Depends on:** `—` or `<MOD>-T-0`
 - **Blocks:** `<MOD>-T-2`
 - **Estimate:** `S | M | L` (S ≤ 0.5d, M ≤ 1d, L ≤ 2d — split anything larger)
+- **Review:** `skip-eligible | checklist | full | lenses`
+- **Verification:**
+  - **Falsifier:** the concrete observation that would prove this task wrong. Name inputs and the expected outcome — not "tests pass".
+  - **Red run:** the command that fails *before* the change and passes after (`npx jest <path>`, `npx cypress run --component --spec <path>`). Write `n/a (no test gate)` when the gate is not a test.
+  - **Disqualifier:** the condition under which this task must be abandoned or re-specified rather than patched.
+  - **Consumers:** every call site of a shared symbol this task changes. Write `none (no shared symbol changed)` when nothing shared moves.
 - **Definition of done:**
   - [ ] Code merged via the project commit convention (`<emoji> <type>(<scope>) [ticket]: <description>` per root `CLAUDE.md`).
   - [ ] Lint + format clean.
@@ -71,7 +90,7 @@ Repeat the block.
 
 ## 4. Dependency graph
 
-A simple textual DAG so the order is unambiguous (and `/sdd-execute` can parallelize).
+A simple textual DAG so the order is unambiguous (and `/akili-execute` can parallelize).
 
 ```
 <MOD>-T-1
