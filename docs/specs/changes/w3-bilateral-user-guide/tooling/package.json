@@ -1,0 +1,22 @@
+{
+  "name": "w3-bilateral-user-guide-pdf-tooling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone, dev-only Playwright pipeline that captures annotated screenshots of the W3/Bilateral manual reporting path and assembles them into the end-user PDF guide. Not wired into onecgiar-pr-client or onecgiar-pr-server.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "capture": "ts-node src/capture.ts",
+    "assemble": "ts-node src/assemble.ts",
+    "verify-structure": "ts-node src/verify-structure.ts",
+    "pdf": "ts-node src/pdf.ts",
+    "build-guide": "npm run guard:archive && npm run assemble && npm run verify-structure && npm run pdf",
+    "guard:archive": "ts-node src/guards/archive-immutable.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^20.16.0",
+    "dotenv": "^17.4.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  }
+}

@@ -39,7 +39,7 @@
 
 ## 3. Task List
 
-### `BG-T-1` — Copy the W1/W2 tooling and guard the archive against mutation
+### `BG-T-1` — Copy the W1/W2 tooling and guard the archive against mutation  `[x]`
 
 - **Type:** `infra`
 - **Description:** Copy `src/`, `template/`, `.env.example`, `.gitignore`, `tsconfig.json`, `package.json` from `docs/specs/archive/2026-09-16-changes--user-guide-pdf/tooling/` into this spec's `tooling/`. Change only `package.json`'s `name`/`description`. Do **not** copy `dist/`, `node_modules/`, `content/`, or `routes.config.json` — those are authored fresh. Add `tooling/src/guards/archive-immutable.ts`, run as the first step of `build-guide`, asserting the archived folder is unchanged.
@@ -48,14 +48,14 @@
 - **Depends on:** `—` · **Blocks:** `BG-T-2`
 - **Estimate:** `S` · **Review:** `checklist`
 - **Verification:**
-  - **Falsifier:** touch one byte of any file under `docs/specs/archive/2026-09-16-changes--user-guide-pdf/` and run the guard — it must exit non-zero naming the file. If it still exits 0, the guard is not evidence. **Environment path that could make it pass for the wrong reason:** the guard shelling out to a `git diff` that silently succeeds outside a repo, or resolving a relative path that misses the archive entirely — so the guard asserts a non-zero *file count* under the path first and fails if the path resolves empty.
-  - **Red run:** `n/a (no test gate)` — the gate is `npx ts-node src/guards/archive-immutable.ts` plus `git diff --quiet -- docs/specs/archive/2026-09-16-changes--user-guide-pdf/`.
+  - **Falsifier:** touch one byte of any file under `docs/specs/archive/2026-09-16-changes--user-guide-pdf/` → `git diff --quiet -- <archive path>` must go non-zero, and restoring the byte must return it to zero. **Environment path that could make it pass for the wrong reason:** a `git diff` that silently succeeds outside a repo, or a relative path that misses the archive entirely — so the guard asserts a non-zero *file count* under the path first and fails if the path resolves empty. **Amended at execute time (2026-09-21):** the *executed* `ts-node` falsifier moved to `BG-T-2`'s Done criteria, because `ts-node` is not installed until `BG-T-2` — running it here was a dependency inversion in the original text. `BG-T-1` still owns the guard's **source** and the git-level falsifier, which needs no dependencies.
+  - **Red run:** `n/a (no test gate)` — the gate is `git diff --quiet -- docs/specs/archive/2026-09-16-changes--user-guide-pdf/` plus the empty-path assertion. The `npx ts-node src/guards/archive-immutable.ts` execution is `BG-T-2`'s.
   - **Disqualifier:** if the archived tooling cannot be copied without edits to run at all (e.g. a hard-coded path to the old spec folder), stop and re-specify — `BG-DD-1`'s "mechanical diff" premise (`BG-R-22`) would be false and the shared-tooling alternative needs reopening.
   - **Consumers:** `none (no shared symbol changed)` — the copy introduces no symbol anything outside this folder reads.
 - **Definition of done:**
   - [ ] Every file marked *copied verbatim* in `design.md` §4 diffs clean against its source except `package.json`'s two string fields.
   - [ ] `git diff -- docs/specs/archive/2026-09-16-changes--user-guide-pdf/` is empty.
-  - [ ] The falsifier above was **executed** and the guard was observed going red.
+  - [ ] The git-level falsifier above was **executed** and observed going red, then green again after restore.
   - [ ] Commit follows the convention; no secret in the diff (`.env` is not created by this task).
 - **Skills:** none from the Skill Map — standalone Node/TS tooling, outside both packages.
 
@@ -74,6 +74,7 @@
   - **Consumers:** `none (no shared symbol changed)`.
 - **Definition of done:**
   - [ ] `npx tsc --noEmit` clean; falsifier executed and observed red.
+  - [ ] **Carried from `BG-T-1` (execute-time amendment):** `npx ts-node src/guards/archive-immutable.ts` executed — green on a clean archive, red after a deliberate one-byte touch, and green again after restore. This is the first point in the run where `ts-node` exists.
   - [ ] `.env` exists, is **gitignored**, and `git check-ignore tooling/.env` confirms it.
   - [ ] No token value printed to the terminal, the log, or the commit — not even a substring (`.cursorrules`).
   - [ ] Verbatim-diff report attached to the execution entry.

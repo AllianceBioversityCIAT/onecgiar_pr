@@ -83,7 +83,7 @@ docs/specs/changes/w3-bilateral-user-guide/
 └── tooling/                       # copied from the archived W1/W2 spec
     ├── .env.example               # copied verbatim
     ├── .gitignore                 # copied verbatim (.env, dist/*.png, node_modules)
-    ├── package.json               # name + description changed only
+    ├── package.json               # name, description, build-guide 1st step, guard:archive
     ├── tsconfig.json              # copied verbatim
     ├── routes.config.json         # NEW — bilateral routes + steps
     ├── src/
@@ -95,6 +95,7 @@ docs/specs/changes/w3-bilateral-user-guide/
     │   ├── pdf.ts                 # copied verbatim
     │   ├── capture.ts             # MODIFIED — steps, read-only guard, dimension bounds
     │   └── guards/
+    │       ├── archive-immutable.ts # NEW — archive immutability (BG-DD-10)
     │       ├── read-only.ts       # NEW — request interception (BG-DD-3)
     │       └── frame-bounds.ts    # NEW — dimension assertions (BG-DD-6)
     ├── template/                  # copied; cover/title strings changed
