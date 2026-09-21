@@ -256,6 +256,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   });
 
   /** 0-based index of the open section in `sectionNavigation()`; drives the number pill and the footer counter. */
+  /**
+   * Published so the sections — which are all mounted at once behind `[hidden]` and therefore never
+   * re-run their own `ngOnInit` fetch on navigation — can tell when they are the one on screen and
+   * re-read whatever they derive from a sibling section's data.
+   */
+  private readonly publishOpenSection = effect(() => this.autoSaveService.openSection.set(this.openSectionName()));
+
   readonly currentSectionIndex = computed(() => this.sectionNavigation().findIndex(section => section.name === this.openSectionName()));
   readonly currentSectionLabel = computed(() => this.sectionNavigation()[this.currentSectionIndex()]?.label ?? '');
   readonly currentSectionComplete = computed(() => this.getSectionMdsStatus(this.openSectionName()) === 'complete');
