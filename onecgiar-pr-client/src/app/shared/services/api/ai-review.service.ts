@@ -255,10 +255,15 @@ export class AiReviewService {
     fieldToSave.was_ai_suggested = true;
     try {
       await this.POST_saveSession({ fields: [fieldToSave] });
-    } finally {
-      // `finally`, because a rejected save used to leave `canSave` false forever — a dead button
-      // the user could only recover from by reloading the result.
+      // On success `canSave` stays `false`: the button reflects the saved state honestly and only
+      // re-enables on a fresh "Apply proposal" or a direct edit (see the (ngModelChange) hook in
+      // the template). Mirrors the DAC score cards' `persistDacScore`, which does the same.
+    } catch (error) {
+      // A rejected save must not leave `canSave` false forever — that would be a dead button the
+      // user could only recover from by reloading the result. Re-enable so they can retry.
       field.canSave = true;
+      throw error;
+    } finally {
       this.savingProposalIndex.set(null);
     }
   }
