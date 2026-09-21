@@ -209,7 +209,7 @@ Append the Source chip beside the result-type badge in the Title cell; leave Rep
 ## Recommended Approach
 
 > **Superseded in places by `design.md` (2026-09-21, after judgment-day round 1) — kept as the approved-intent record.**
-> Changed: the SOURCE column is **116px**, not 104px (the delegated AI badge is ~88px and carries no `whitespace-nowrap`), Alignment goes to **192px**, not 200px, and `columnWidths()` is edited as a **conditional builder**, not a flat literal. Corrected citations: the ingestion header save is `bilateral.service.ts:4161-4181` and `BilateralCommonFields` is `result-review-drawer.interfaces.ts:52-65`. `design.md` is authoritative on all of these.
+> Changed: the SOURCE column is **116px**, not 104px (the delegated AI badge is ~88px and carries no `whitespace-nowrap`), Alignment goes to **192px**, not 200px *(superseded: re-tuned to **184px** at execute time on CT measurement — `design.md` DD-2 is authoritative)*, and `columnWidths()` is edited as a **conditional builder**, not a flat literal. Corrected citations: the ingestion header save is `bilateral.service.ts:4161-4181` and `BilateralCommonFields` is `result-review-drawer.interfaces.ts:52-65`. `design.md` is authoritative on all of these.
 
 **Option 2**, scoped as **UI + API**.
 

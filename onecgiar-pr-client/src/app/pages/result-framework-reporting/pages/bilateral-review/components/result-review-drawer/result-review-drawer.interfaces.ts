@@ -24,6 +24,18 @@ export interface ResultToReview {
    */
   initiative_role_id?: string | number;
   initiative_role_name?: string;
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-1, BSR-T-4, BSR-R-1, design.md §4.1)
+  /** Additive — already returned by `getResultsByProgramAndCenters` (`results.service.ts` mapper,
+   *  `BSR-T-1`); declared here so `BilateralReviewTableComponent`'s SOURCE column (`BSR-T-4`) can
+   *  read them typed. `'AI' | 'MANUAL' | 'BULK' | 'EXTERNAL' | 'UNKNOWN'` in practice, but the
+   *  derivation (`resolveBilateralSource`) treats it as an open string. */
+  creation_method?: string;
+  /** CLARISA `mis.acronym` captured at ingestion, or `null` when the result was not ingested via
+   *  an external platform (`BSR-R-1`, `design.md` §4.1). */
+  external_platform_code?: string | null;
+  /** Resolved display name of the submitter — `external_submitter`'s name, falling back to
+   *  `created_by`'s, `null` when neither resolves (`BSR-R-2`). */
+  reporter_name?: string | null;
 }
 
 export interface GroupedResult {

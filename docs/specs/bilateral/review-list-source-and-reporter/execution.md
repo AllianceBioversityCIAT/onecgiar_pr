@@ -331,3 +331,155 @@ Per *Advisory Never Becomes A Task*, none of these mints a task or widens one in
 **Final verification result:** green on every gate — Jest, lint, the amended D7 grep, the APF-untouched check, and `tsc` against its baseline.
 
 **`Not Done / Assumptions` (Implementer, verbatim summary):** two declared judgment calls — the descriptor-as-input contract (item 1 under *Decisions*, confirmed faithful by the Reviewer) and the use of component getter methods rather than template `@switch` narrowing under `strictTemplates` (accepted; recorded as a readability advisory). **Leader adjudication: no scope owed** — both are design-interpretation calls that the Reviewer examined and upheld, not omitted work.
+
+---
+
+## Budget tripwire — fired and escalated, 2026-09-21 (after `BSR-T-4`, before `BSR-T-5`)
+
+`design.md` §12A set the tripwire at **>~750 LOC or >8 tasks**, with the response pre-agreed
+("stop and escalate — do not absorb it silently"). The LOC arm tripped. Measured per commit,
+production code and tests only, **excluding** the spec documents:
+
+| Task | Insertions | Deletions |
+|---|---|---|
+| `BSR-T-2` (`2f62d98ff`) | 51 | 0 |
+| `BSR-T-1` (`9660f76a1`) | 207 | 5 |
+| `BSR-T-3` (`a06a40939`) | 356 | 0 |
+| `BSR-T-4` (working tree) | 479 | 44 |
+| **Cumulative** | **1093** | **49** |
+
+- vs. the **~680** estimate: **+61 %**
+- vs. the **~750** tripwire: **+46 %**
+- `BSR-T-5` (`S`) and `BSR-T-6` (`M`) still to run — projected **~1250–1350**
+- **Tasks: still 6** — that arm of the tripwire did **not** trip
+- **Review rounds: 4 used against 2 budgeted** (T-1 FAIL+PASS, T-2 PASS, T-3 PASS, T-4 PASS) — also over, reported alongside the LOC arm
+
+**Cause — not scope creep.** The spec's own §12A predicted tests at ~390 of the 680 and cited the
+recorded lesson that AKILI budgets undercount tests; they are running at roughly **65 %** of the
+diff. `BSR-T-4` is the clearest case: **120 lines of production code** against **177 lines of Jest
+and 172 of Cypress** — twelve pinned consumers to re-point plus three falsifier gates. Production
+code tracked close to estimate throughout; the **gates** are what overshot. No task was widened,
+no advisory became work, and no task was added (still 6).
+
+**Leader action at the tripwire.** `BSR-T-5` was **not** started. `BSR-T-4`'s review was carried to
+completion because the work was already written and parking it unreviewed would have produced the
+one state the methodology treats as intolerable — a finished change with no verdict recorded.
+Escalated to the user with the delta, the cause, and four options (continue · continue trimmed ·
+stop and park `[~]` · re-budget), with **continue** recommended on the grounds that the overshoot is
+concentrated in gates that had already caught a design contradiction and two vacuous assertions, and
+that `BSR-T-6` carries the **`AC-4`** change-log obligation the root `CLAUDE.md` makes mandatory.
+
+**User decision (Juan Carlos Cadavid, 2026-09-21): Option 1 — continue with `BSR-T-5` and
+`BSR-T-6`, accepting ~1300 LOC.** Standing instruction attached: close `BSR-T-4` once its Reviewer
+permits, then run T-5 and T-6; escalate again in a single HITL round only for a real blocker
+**other than** the LOC tripwire.
+
+**Budget status for the remainder of this run:** the LOC tripwire is **spent and consciously
+overridden** — it will not be re-raised for LOC alone. The **task-count** arm (>8) and the
+**review-round** count remain live signals and are still reported. §12A itself is left unedited:
+the estimate was the estimate, and overwriting it would erase the measurement this record exists to
+preserve. `/akili-archive`'s Kaizen step is the right place to re-baseline the test-share
+multiplier.
+
+---
+
+### `BSR-T-4` — SOURCE column, colgroup rebalance, SUBMITTED cell, narrow card
+
+| Field | Value |
+|---|---|
+| **Final status** | **PASS** (attempt 1) |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 |
+| Implementer / Reviewer models | `sonnet` (T2) / `opus` (T3) — author ≠ auditor holds |
+| Effort | `xhigh` |
+| Skills assigned | `angular-developer`, `tailwind-design-system` |
+| Wave | ran **alone** — see *Decisions* 1 for why the spec's declared T-4 ∥ T-5 parallelism was not taken |
+
+**Requirements covered:** `BSR-R-4`, `BSR-R-6`, `BSR-R-7`, `BSR-R-8`, `BSR-AC-7`, `BSR-AC-8`, `BSR-AC-9`, `BSR-AC-11`, `BSR-AC-13`, and the `requirements.md` §7 layout NFRs.
+
+#### The measurement that corrected the design
+
+**Baseline, re-measured before any edit** (the task required this rather than trusting a carried-over figure): Title **530.5px @1280**, **250.5px @1000** — matching `design.md`'s carried figure exactly.
+
+Then the finding that justified the whole requirement: **with Alignment at the design's 192px, Title measured 184.5px @1000 — narrower than Alignment.** `BSR-AC-9` (Title must be the widest column at 1000 and 1280) would have **failed**. DD-2's own text was self-contradictory: it projected Title at "~184px @1000 — still the widest at both" while specifying a 192px Alignment column. Invoking this DD's Disqualifier (*"the measurement wins"*), the Implementer re-tuned Alignment **220 → 184px** inside the task, as the Disqualifier authorises.
+
+**Final widths, measured by the Leader directly at the shipped configuration** (a temporary assertion inserted into Gate 9, read, then reverted and the suite re-confirmed green — no residue, verified by `grep`):
+
+```
+viewport=1000  allCols=[96, 192.5, 88, 116, 120, 184, 100, 100]
+viewport=1280  allCols=[96, 472.5, 88, 116, 120, 184, 100, 100]
+```
+
+Fixed sum **804**; container is `viewport − 3.5` at both widths. Title is the widest column at both, with **+8.5px** of margin over Alignment at 1000px.
+
+**A number was wrong and the Reviewer caught it.** The Implementer reported post-change Title as `192.5 @1000` and `464.5 @1280`. Those are **inconsistent with each other**: `464.5` implies a fixed sum of 812 (the *superseded* 192px configuration), while `192.5` implies 804 (the shipped 184px one). The Reviewer flagged the inconsistency and derived 472.5; the Leader then **re-measured rather than adopting either figure**, confirming **472.5**. The Implementer had evidently carried the 1280 reading over from its pre-re-tune run.
+
+#### Attempt 1 — PASS
+
+- **runtime events:** none.
+- **Files changed (7, +479 / −44):** `bilateral-review-table.component.ts` · `.component.html` · `.component.spec.ts` · `bilateral-review-table.cy.ts` · `bilateral-review.copy.ts` · `bilateral-review.cy.ts` · `result-review-drawer.interfaces.ts` (see *Decisions* 2).
+- **`columnWidths()` kept as the conditional builder P-7 demands** (Leader-verified verbatim at source):
+
+  ```ts
+  const widths: string[] = ['96px', ''];                    // code, title (remainder)
+  if (this.showCenterColumn()) widths.push('88px');          // lead center 110 → 88
+  widths.push('116px');                                      // SOURCE — outside the conditional
+  widths.push('120px', '184px', '100px', '100px');           // status, alignment 220 → 184, date, actions
+  ```
+
+  `columnCount()`: **8** project / **7** center-grouped. The flat-8-literal trap P-7 exists to prevent was avoided, and center-grouped mode is asserted as **its own case** rather than inferred.
+
+- **All twelve `design.md` §1B pinned consumers updated.** `bilateral-review-table.cy.ts:426-448` (Gate 7) left **unmodified** and still passing with 8 columns (it derives the count dynamically). `bilateral-review.cy.ts:1193-1194`'s `td:nth-child(2)` **verified** still addressing Title — confirmed independently by the Leader's measurement, which shows Title at index 1 and SOURCE at index 3, i.e. after Lead Center exactly as DD-2's Position rule requires.
+
+- **Row-height caps: 46 / 50 / 68, unchanged.** No cap was re-based.
+
+- **Three falsifiers — and the honest result of two of them.** This is the most valuable part of the task's evidence:
+  1. **SOURCE `<col>` → 300px:** red, on Gate 7 **and** Gate 9 — `Title width (288.5) should be >= column 3 width (300.0) at 1280px`. Reverted. (That 288.5 reading independently corroborates the 804 fixed sum: 288.5 + 988 = 1276.5.)
+  2. **8-character acronym:** the literal mutation (remove `truncate`) **did not falsify** at the shipped 88px — 8 characters simply do not overflow the content box. Red was reproduced only by widening the fixture value to `CIMMYT01LONGACRONYMSTRESSCASE` with `truncate` removed (`scrollWidth (229) should not exceed clientWidth (68)`). Both restored; the permanent gate keeps the 8-char value as a regression net that currently passes with margin.
+  3. **Chip fit:** removing **both** the TD's `whitespace-nowrap` and the wrapper's `truncate` **did not falsify** at 116px — the AI badge measures **79px**, inside the 96px content box. Red was reproduced by narrowing SOURCE to 68px (DD-2's rejected-104px scenario) with the guards removed (`AI badge offsetHeight: expected 37 to be at most 22`). **The Implementer also found and fixed a vacuous assertion of its own here** — its first version measured the chip's `display: contents` host, whose `offsetHeight` is always 0. The Reviewer confirmed the permanent gate now targets `[data-testid="ai-provenance-badge"]`, a real box.
+
+  **The Implementer disclosed all of this rather than reporting three clean reds.** Two named falsifiers not reproducing at shipped dimensions is a finding about the *design's* margin estimates, not a defect in the work, and it is what produced the DD-2 correction below.
+
+- **Implementer verification, all green:** `bilateral-review-table.cy.ts` → `24 passing, All specs passed!` · `bilateral-review.cy.ts` → `48 passing, All specs passed!` · `npx jest …/bilateral-review` → `17 suites / 562 tests passed` · `npm run build` → success, `bilateral-review-component` chunk present · `npx tsc --noEmit` → 1248 (baseline 1217).
+
+- **Reviewer verdict: `PASS`**, with one **Leader-side** spec-accuracy correction required (a document defect, explicitly not rework). Established independently:
+  1. **The row-height caps are NOT vacuous, and the Implementer's two statements do not contradict.** Read at `bilateral-review-table.component.html:189-197`: the `@else` arm **always** renders a second `leading-[13px]` line (the `aria-hidden` dash), so the SUBMITTED cell is **two-line by construction**. The cap fixture therefore *does* measure the two-line shape, and the caps hold unchanged because the 3.1px slack DD-3 computed is exactly what absorbs it. The gate is **load-bearing**: at the inherited 1.5 line-height the two lines are 34.5px and the no-badge row reaches ~47.5px, over the 46px cap. **`design.md` DD-3's ⚠️ vacuity warning is now false as written** and has been superseded in the document.
+  2. **The 2400→2700 viewport bump is legitimate, but its stated cause is wrong.** At 840px the page renders the **cards** branch (`narrow() < 900`), so the growth comes from the new card line, **not** the SUBMITTED `<td>` the code comment blames. The accommodation itself is sound and not a loosened gate: raising only the *height* restored `clientWidth` 825→840, which horizontal overflow could not do, and the describe's own `assertNoBodyHorizontalOverflow` still performs the `scrollWidth > clientWidth` check the `BSR-T-6` Disqualifier demands. So this is **not** the misattribution that previously re-based a gate wrongly in this module — but the comment misstates the mechanism.
+  3. `ResultToReview +3` is assigned to that file by `design.md` §2.1, touches only lines 24-36, and does **not** collide with `BSR-T-5`'s `BilateralCommonFields` at `:52-65`.
+  4. Placeholder markup matches the module convention; the cards branch received **both** new surfaces; the 375 gate passes with `scrollWidth <= clientWidth`; tokens are `--pr-*`-only with no new hex.
+  5. Both named conformance checks (the DD-2 amendment and the D7 amendment carried from `BSR-T-3`) were audited and **accepted** — the Reviewer was explicitly invited to reject either.
+
+#### Leader actions taken on the Reviewer's required correction
+
+The `192px` sweep run before this review **missed two sites**, both now fixed in `design.md`:
+
+| Site | Was | Now |
+|---|---|---|
+| DD-2 **Widths** line | `746 → 812` (`+66`); center-grouped `636 → 724` | `746 → 804` (`+58`); center-grouped `636 → 716` (`+80`) |
+| DD-2 amendment paragraph | Title `464.5px @1280` | Title **`472.5px @1280`**, plus the verbatim measured `allCols` arrays and the provenance of the correction |
+
+Also recorded in `design.md`:
+
+- **DD-2's "two guards, both required" is FALSIFIED at 116px.** The badge is 79px, not "≈88px", and renders on one line with both guards removed. Consequences written into the document: the 104px rejection's **AI-badge leg does not hold** (79px would have fitted an 84px box) and only the `Via API · STAR` ≈92px **pill leg** survives to justify 116px — it survives on its own; and the guards are **defence in depth**, kept deliberately against a longer future label, with the explicit note that **no gate can detect their removal** at 116px. Anyone re-tuning the column must re-derive guard necessity at the new width.
+- **DD-3's vacuity warning superseded** with the measured reality, the original text struck through and kept for the record.
+
+**Decisions made:**
+
+1. **The spec's declared `BSR-T-4` ∥ `BSR-T-5` parallelism was deliberately not taken.** `tasks.md` §4 permits it, but `/akili-execute`'s independence test is *disjoint files **and** no shared build output, dev server, port, or dependency tree* — and T-4 runs `npm run build` plus Cypress CT while T-5 runs `tsc --noEmit`, sharing one `node_modules`, one `dist/` and CT's ports. That contention surfaces as errors in the worker that did not cause them. **The Reviewer independently found a second, stronger reason:** both tasks own `result-review-drawer.interfaces.ts`, so they are not even file-disjoint. Serialising was correct on both counts; the spec's parallel claim is wrong and is recorded as such.
+2. **The `result-review-drawer.interfaces.ts` edit is accepted, and the gap was in the Leader's brief, not the Implementer's discipline.** `design.md` §2.1 assigns `ResultToReview +3` to that file, but no task's *Files (expected)* names it, and the Leader's brief did not list it. T-4 cannot compile `row.creation_method` without it. The Implementer **flagged it rather than doing it silently**, which is exactly the contract. Recorded as a brief defect on the Leader's side.
+3. **Execute-time spec edits made (all meaning-preserving, none a Pivot):** DD-2's Alignment width `192 → 184px` across `design.md` (5 sites), `tasks.md` (3) and `proposal.md` (1); DD-2's arithmetic sums and the 1280 figure; DD-2's guard-necessity qualification; DD-3's vacuity warning. No approved *requirement* changed meaning — `BSR-AC-9` is what forced the re-tune and is itself untouched.
+4. **Budget tripwire fired at this task and was escalated to the user, who chose to continue.** See the *Budget tripwire* section above.
+
+**Issues encountered:** the design's Alignment arithmetic was wrong (caught by measurement); two of three named falsifiers do not falsify at shipped dimensions (caught and disclosed by the Implementer); one reported width figure was stale (caught by the Reviewer, re-measured by the Leader). All resolved without a rework round.
+
+**Final verification result:** green on every gate — 24 CT + 48 CT, 17 Jest suites / 562 tests, `npm run build`, `tsc` against its baseline, three row-height caps unchanged, 375px no-horizontal-overflow.
+
+**`Not Done / Assumptions` (Implementer, 4 items):** all four adjudicated above — the `ResultToReview` edit (accepted, *Decisions* 2), the 184px re-tune (accepted, Disqualifier-authorised), the viewport bump (accepted; cause misstated in the code comment — see the advisory below), and the falsifier honesty note (accepted; it produced the DD-2 correction). **No scope owed.**
+
+#### `ADVISORY` findings (recorded, never gating — `/akili-execute` §2.4)
+
+- **RELIABILITY — the CT comment at the 9-center fixture misstates why the viewport had to grow.** It blames the SUBMITTED `<td>`; at 840px the cards branch is rendering, so the cause is the new card line. The accommodation is sound; only the explanation misleads. **Carried into `BSR-T-6`'s brief as an `[advisory-grade]`, explicitly non-gating comment fix**, since T-6 already owns that file — not as new scope.
+- **RELIABILITY — the 375px card gate's fixture carries no `creation_method`/`reporter_name`**, so the card's new line is measured in its narrowest form. **`BSR-T-6` should stress 375 with an AI row**, not only the row-height caps. Carried into the T-6 brief.
+- **RISK — no gate can detect removal of the two SOURCE-cell wrap guards at 116px.** Recorded in DD-2 itself rather than only here, because that is where a future re-tuner will look.
+
+Per *Advisory Never Becomes A Task*, none of these mints a task or widens one. The two carried into T-6 land inside files and gates that task already owns, tagged advisory-grade and non-gating.

@@ -909,10 +909,13 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // the disqualifier): this fixture's 9-row single group pushes the page past 900px tall,
       // which triggers a NATIVE vertical scrollbar and quietly shaves ~15px off
       // `documentElement.clientWidth` — an artifact of content height, unrelated to the wrap-clip
-      // regression this suite gates. 2400 keeps the vertical scrollbar out of it (BRH-T-1 attempt
-      // 2 harness-quirk fix — the BRH card architecture is taller still than the 1600 this module
-      // used before).
-      cy.viewport(840, 2400);
+      // regression this suite gates. 2400 kept the vertical scrollbar out of it before BSR-T-4;
+      // bumped to 2700 (BSR-T-4, execute-time fix) — the SUBMITTED cell now always stacks a
+      // second (reporter or placeholder) line under the date, growing every one of the 9 rows by
+      // ~13px, which re-triggered the exact same scrollbar this comment already names. Measured,
+      // not assumed: `documentElement.clientWidth` dropped to 825 at 2400 once this task's rows
+      // landed; 2700 restores the full 840.
+      cy.viewport(840, 2700);
       mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
       waitForLoad();
       assertEffectiveWidth('840 (nine-center fixture)', 840);
@@ -1373,29 +1376,34 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     // equivalent "6 columns in this mode" proof for a card is `columnCount()`'s OTHER remaining
     // consumer — every card's own `<colgroup>` (`colgroupTpl`) — so this asserts 6 `<col>` per card
     // instead.
-    it('BRV-AC-7: grouping by center in the GROUPED view hides the lead-center column — 6 headers and 6 <col> entries per card', () => {
+    // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-2) — bumped 6->7:
+    // the SOURCE column is present in EVERY table mode (pushed OUTSIDE `showCenterColumn()`), so
+    // center-grouped mode gains one column even though Lead Center itself stays hidden.
+    it('BRV-AC-7: grouping by center in the GROUPED view hides the lead-center column — 7 headers and 7 <col> entries per card (BSR-DD-2: was 6, +1 for the always-present SOURCE column)', () => {
       byTestId('bilateral-review-group-mode-center').click();
       cy.get('[data-testid="bilateral-review-group-card"]')
         .first()
         .find('thead th')
         .should($ths => {
           const texts = Array.from($ths).map(th => th.textContent?.trim());
-          expect(texts.length, `6 headers once grouped by center: ${JSON.stringify(texts)}`).to.eq(6);
+          expect(texts.length, `7 headers once grouped by center: ${JSON.stringify(texts)}`).to.eq(7);
           expect(texts, `no "Lead center" header rendered: ${JSON.stringify(texts)}`).to.not.include('Lead center');
+          expect(texts, `Source header still renders: ${JSON.stringify(texts)}`).to.include('Source');
         });
-      cy.get('[data-testid="bilateral-review-group-card"]').first().find('colgroup col').should('have.length', 6);
+      cy.get('[data-testid="bilateral-review-group-card"]').first().find('colgroup col').should('have.length', 7);
       cy.get('[data-testid="bilateral-review-group-toggle"]').first().should('not.have.attr', 'colspan');
     });
 
-    it('BRV-AC-7b: the SAME grouping, but the FLAT view, keeps the lead-center column — 7 headers, 7 cells on a real row', () => {
+    it('BRV-AC-7b: the SAME grouping, but the FLAT view, keeps the lead-center column — 8 headers, 8 cells on a real row (BSR-DD-2: was 7, +1 for SOURCE)', () => {
       byTestId('bilateral-review-group-mode-center').click();
       cy.contains('[role="tab"]', 'All results').click();
       cy.get('[data-testid="bilateral-review-flat-table"] thead th').should($ths => {
         const texts = Array.from($ths).map(th => th.textContent?.trim());
-        expect(texts.length, `7 headers in the flat view even with group=center: ${JSON.stringify(texts)}`).to.eq(7);
+        expect(texts.length, `8 headers in the flat view even with group=center: ${JSON.stringify(texts)}`).to.eq(8);
         expect(texts, `"Lead center" header still renders: ${JSON.stringify(texts)}`).to.include('Lead center');
+        expect(texts, `Source header still renders: ${JSON.stringify(texts)}`).to.include('Source');
       });
-      cy.get('[data-testid="bilateral-review-flat-table"] tbody tr').first().find('td').should('have.length', 7);
+      cy.get('[data-testid="bilateral-review-flat-table"] tbody tr').first().find('td').should('have.length', 8);
     });
   });
 

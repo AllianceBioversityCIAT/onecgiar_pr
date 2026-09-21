@@ -126,13 +126,20 @@ export const BILATERAL_REVIEW_COPY = {
     // `indicator` merged into one `alignment` header IN COLUMN POSITION (between `status` and
     // `date`) — key order is load-bearing for the header-order spec (project 7 keys / center 6
     // rendered, `showCenterColumn()` hides `center`'s rendered `<th>` but the key stays here).
+    // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, design.md §1B) — `source`
+    // MUST sit between `center` and `status`: key order is load-bearing for the header-order spec
+    // (`bilateral-review-table.component.spec.ts` project/center-grouped assertions read
+    // `Object.values(...)` in insertion order).
     headers: {
       code: 'Code',
       title: 'Title',
       center: 'Lead center',
+      source: 'Source',
       status: 'Status',
       alignment: 'Alignment',
-      date: 'Date',
+      // @akili-spec bilateral/review-list-source-and-reporter (BSR-DD-3) — DATE → SUBMITTED: the
+      // cell now stacks the submission date over the reporter's name.
+      date: 'Submitted',
       actions: 'Actions'
     },
     contributorBadge: 'Contributor',
@@ -145,6 +152,11 @@ export const BILATERAL_REVIEW_COPY = {
      *  reader user still needs to know WHICH value ("TOC result" vs "Indicator") is which. */
     tocLabel: 'TOC result',
     indicatorLabel: 'Indicator',
+    // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-6, BSR-R-7)
+    /** Field name for the SUBMITTED cell's / narrow card's reporter placeholder `sr-only` text —
+     *  same convention `alignmentSrOnlyText` uses (an `aria-hidden` dash plus one `sr-only` string
+     *  naming the absent field). */
+    reporterLabel: 'Reporter',
     // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-11, R-12)
     /** Group header right side, split so the pending figure can carry its own tone (BRP-R-11) —
      *  replaces the combined "N results · M pending" string. */
