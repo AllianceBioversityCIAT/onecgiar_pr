@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
+**Verified:** 2026-09-21 · qa-development-2026-ss · 118716bc7 (base HEAD; RRC-T-3 edit uncommitted at stamp time) · prior: 2026-09-09 · feat/P2-3336-io-without-aow (nota de la tarjeta Intermediate + `RES-R-3` retirado — ver "Intermediate Outcomes" abajo) · antes ese mismo día, en `performance-refactor` (a4b52dcd9): "Centros de un target compartido" — chips desde `centers[]`, tope de 3 + `+N more`, centro filtrado pineado · prior: 2026-09-04 · branch qa-development-2026-ss · merge of origin/performance-refactor 85fdfc8c3 into 9b9c032ba (RTA-T-1's sticky-pin grid was superseded by this branch's tabular redesign — see the RTA-T-1 note below)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -35,6 +35,10 @@ El árbol de contenido se organiza según el patrón arquitectónico Card-in-Car
   solo posee su **disclosure** (`overrides`), los títulos expandidos, y qué overlay está abierto
   (`openMenuKey`, `openInfoKey`).
 - Endpoint: ninguno. Las filas llegan ya construidas por `dashboard-lab.reportingGroups()`.
+- `ReportingIndicator` gained the optional `toc_indicator_target_id` (RRC-R-10, spec
+  `bugfix/reported-results-center-scoping` RRC-T-3): the row's combination-group id rides the row
+  spread into the create payload and the drawer's existing-contributors call. Presentation-inert
+  here — this component never reads it.
 
 ## Dónde se usa
 - `dashboard-lab.component.html:1286` — único consumidor, rama `showPlanned()` (pestaña Reporting),

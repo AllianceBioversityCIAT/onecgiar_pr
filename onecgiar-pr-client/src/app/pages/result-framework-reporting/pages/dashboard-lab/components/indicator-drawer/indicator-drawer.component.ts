@@ -476,7 +476,10 @@ export class IndicatorDrawerComponent {
     // @akili-spec changes/indicator-reported-results
     // `'all'` (IRR-R-3): ONE request per indicator open serves both the Report-tab preview and the
     // Reported results table (IRR-R-3.2), so the wider population is asked for here, once.
-    this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, indicatorId, 'all').subscribe({
+    // @akili-spec bugfix/reported-results-center-scoping (RRC-T-3, RRC-R-3) — the row's
+    // combination-group id narrows the list to that exact group; absent = today's coarse behaviour.
+    const tocIndicatorTargetId = ind?.toc_indicator_target_id ?? this.indicator()?.toc_indicator_target_id ?? null;
+    this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, indicatorId, 'all', tocIndicatorTargetId).subscribe({
       next: (res: { response?: { contributors?: any[] } }) => {
         const list = res?.response?.contributors ?? [];
         this.existing.set(list);

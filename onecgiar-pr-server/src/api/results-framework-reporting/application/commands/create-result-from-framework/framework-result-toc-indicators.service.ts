@@ -111,12 +111,16 @@ export class FrameworkResultTocIndicatorsService {
         defaultContributingIndicator ??
         null) as number | null;
 
+      const tocIndicatorTargetIdValue = ((indicator as any)
+        ?.toc_indicator_target_id ?? null) as string | number | null;
+
       await this._upsertIndicatorTargetRecord(
         indicatorRecord.result_toc_result_indicator_id,
         numberTargetValue,
         targetDateValue,
         contributingValue,
         userId,
+        tocIndicatorTargetIdValue,
       );
     }
   }
@@ -127,6 +131,7 @@ export class FrameworkResultTocIndicatorsService {
     targetDate: string | null,
     contributingIndicator: number | null,
     userId: number,
+    tocIndicatorTargetId?: string | number | null,
   ): Promise<void> {
     const hasNumberTarget =
       numberTarget !== undefined &&
@@ -189,6 +194,24 @@ export class FrameworkResultTocIndicatorsService {
         ? null
         : parsedTargetDate;
 
+    /**
+     * RRC-T-2 — same defensive posture as target_date above: an absent or invalid value is stored
+     * as NULL, never a hard error. `toc_indicator_target_id` is the exact combination-group anchor
+     * (`RRC-R-1`/`RRC-DD-1`); NULL here just means the write side hasn't captured it yet, which is
+     * the documented, tested fallback state for read paths (`RRC-R-8`).
+     */
+    const normalizedTocIndicatorTargetId =
+      tocIndicatorTargetId !== null &&
+      tocIndicatorTargetId !== undefined &&
+      `${tocIndicatorTargetId}`.trim() !== ''
+        ? Number(tocIndicatorTargetId)
+        : null;
+    const numericTocIndicatorTargetId =
+      normalizedTocIndicatorTargetId === null ||
+      !Number.isFinite(normalizedTocIndicatorTargetId)
+        ? null
+        : normalizedTocIndicatorTargetId;
+
     const existingTarget =
       await this._resultsIndicatorsTargetsRepository.findOne({
         where: {
@@ -204,6 +227,7 @@ export class FrameworkResultTocIndicatorsService {
         {
           contributing_indicator: normalizedContributing,
           target_date: numericTargetDate,
+          toc_indicator_target_id: numericTocIndicatorTargetId,
           last_updated_by: userId,
           is_active: true,
         },
@@ -216,6 +240,7 @@ export class FrameworkResultTocIndicatorsService {
       number_target: parsedNumberTarget,
       contributing_indicator: normalizedContributing,
       target_date: numericTargetDate,
+      toc_indicator_target_id: numericTocIndicatorTargetId,
       created_by: userId,
       last_updated_by: userId,
       is_active: true,
