@@ -46,6 +46,162 @@ export interface CgspaceItemDto {
   // @akili-spec changes/kp-multi-repository-browse — design §4.1 / KPM-R-5 (additive)
   /** Secondary repositories collapsed into this card by dedup; empty/absent when no match. */
   alsoIn?: { repository: KpRepository; handle: string; handleUrl: string; itemUrl: string }[];
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-1 / KPAM-DD-3 (additive)
+  /** Science Programs or Accelerators tagged on the item. */
+  programAccelerators?: string[];
+  // @akili-spec changes/kp-project-match — KPPJ-R-1 (additive)
+  /** Project identifiers tagged on the item from cg.identifier.project. */
+  projects?: string[];
+}
+
+/** @akili-spec changes/kp-project-match — KPPJ-DD-3 shared fuzzy normalization */
+function expandCompactIdentifiers(str: string): string {
+  return str
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .trim();
+}
+
+function normalizeMatchString(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function compactMatchString(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/** Repository metadata field bilateral project highlight reads (KPPJ). */
+export const REPOSITORY_PROJECT_METADATA_FIELD = 'cg.identifier.project';
+
+/** User-facing label for bilateral project card fields (code, title, summary, …). */
+export const BILATERAL_PROJECT_SOURCE_LABEL = 'Bilateral Mapping Tool';
+
+/** Hosts that expose a Discovery `f.project` facet for the strict bilateral tag filter. */
+export const REPOSITORY_PROJECT_FACET_HOSTS = 'MELSpace and WorldFish';
+
+/** Repository metadata field Science Program highlight reads (KPAM). */
+export const REPOSITORY_PROGRAM_METADATA_FIELD = 'cg.contributor.programAccelerator';
+
+export interface KpBrowseActiveFilterDescriptor {
+  key: string;
+  label: string;
+  detail: string;
+  tone: 'locked' | 'active' | 'inactive' | 'neutral';
+}
+
+/** Expands a CLARISA text field into phrases worth fuzzy-matching against repository tags. */
+function deriveMatchPhrases(value: string): string[] {
+  const expanded = expandCompactIdentifiers(value.trim());
+  if (!expanded) {
+    return [];
+  }
+
+  const phrases = new Set<string>([expanded]);
+  const words = normalizeMatchString(expanded).split(' ').filter(Boolean);
+  if (words.length >= 2) {
+    phrases.add(words.slice(0, 2).join(' '));
+  }
+  if (words.length >= 3) {
+    phrases.add(words.slice(0, 3).join(' '));
+  }
+
+  return [...phrases];
+}
+
+/** Bilateral-only — CLARISA project fields that may align with cg.identifier.project labels. */
+export function buildProjectMatchCandidates(options: {
+  projectCode?: string;
+  projectTitle?: string;
+  projectSummary?: string;
+  projectDescription?: string;
+  leadCenterAcronym?: string;
+}): string[] {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+
+  const push = (raw: string | undefined | null) => {
+    for (const phrase of deriveMatchPhrases(raw ?? '')) {
+      const key = phrase.toLowerCase();
+      if (phrase.length >= 3 && !seen.has(key)) {
+        seen.add(key);
+        candidates.push(phrase);
+      }
+    }
+  };
+
+  push(options.projectCode);
+  push(options.projectTitle);
+  push(options.projectSummary);
+  push(options.projectDescription);
+
+  const acronym = (options.leadCenterAcronym ?? '').trim();
+  const title = expandCompactIdentifiers((options.projectTitle ?? '').trim());
+  const summary = expandCompactIdentifiers((options.projectSummary ?? '').trim());
+  if (acronym && title) {
+    push(`${acronym} - ${title}`);
+  }
+  if (acronym && summary) {
+    push(`${acronym} - ${summary}`);
+  }
+
+  return candidates;
+}
+
+export function matchesProjectTags(tags: string[] | undefined, candidates: string[]): boolean {
+  if (!tags?.length || !candidates.length) {
+    return false;
+  }
+
+  return candidates.some(
+    candidate =>
+      matchesTaggedMetadata(tags, candidate, '') || matchesTaggedMetadata(tags, '', candidate)
+  );
+}
+
+function matchesTaggedMetadata(
+  tags: string[] | undefined,
+  rawCode: string,
+  rawName: string
+): boolean {
+  if (!tags || !Array.isArray(tags) || tags.length === 0) {
+    return false;
+  }
+
+  const code = expandCompactIdentifiers(rawCode.trim());
+  const name = expandCompactIdentifiers(rawName.trim());
+  if (!code && !name) {
+    return false;
+  }
+
+  const normCode = normalizeMatchString(code);
+  const compactCode = compactMatchString(code);
+  const normName = normalizeMatchString(name);
+  const compactName = compactMatchString(name);
+
+  return tags.some(tag => {
+    if (!tag || typeof tag !== 'string') return false;
+
+    const normTag = normalizeMatchString(tag);
+    const compactTag = compactMatchString(tag);
+    if (!normTag && !compactTag) return false;
+
+    if (compactCode) {
+      if (compactTag === compactCode || normTag === normCode) return true;
+      const tokens = normTag.split(' ');
+      if (tokens.includes(normCode) || tokens.includes(compactCode)) return true;
+      if (compactTag.startsWith(compactCode) || compactTag.includes(compactCode)) return true;
+    }
+
+    if (compactName && compactName.length >= 3) {
+      if (compactTag === compactName || normTag === normName) return true;
+      if (normTag.includes(normName) || compactTag.includes(compactName)) return true;
+      if (compactTag.length >= 3 && (normName.includes(normTag) || compactName.includes(compactTag))) {
+        return true;
+      }
+    }
+
+    return false;
+  });
 }
 
 // @akili-spec changes/kp-multi-repository-browse — design §4.1
@@ -223,6 +379,18 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly showBusyOverlay = input<boolean>(true);
   readonly phaseYear = input<number>(new Date().getFullYear());
   readonly isAdmin = input<boolean>(false);
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-2
+  readonly programCode = input<string>('');
+  readonly programName = input<string>('');
+  // @akili-spec changes/kp-project-match — KPPJ-R-3
+  readonly projectCode = input<string>('');
+  readonly projectTitle = input<string>('');
+  /** Bilateral-only CLARISA fields used to fuzzy-match cg.identifier.project. */
+  readonly projectSummary = input<string>('');
+  readonly projectDescription = input<string>('');
+  readonly leadCenterAcronym = input<string>('');
+  /** Bilateral/W3 only — shows the repository `f.project` facet filter chip. */
+  readonly enableProjectRepositoryFilter = input<boolean>(false);
 
   // Outputs
   readonly itemSelected = output<CgspaceItemDto>();
@@ -233,6 +401,10 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   readonly selectedType = signal<string | null>(null);
   readonly selectedCenter = signal<string | null>(null);
   readonly selectedYear = signal<number | string | null>(null);
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-7 / KPAM-DD-4
+  readonly onlyMatches = signal<boolean>(false);
+  // @akili-spec changes/kp-project-match — bilateral Solr project facet filter (opt-in: CLARISA labels rarely match repository facets)
+  readonly projectRepositoryFilterOn = signal<boolean>(false);
   readonly items = signal<CgspaceItemDto[]>([]);
   readonly total = signal<number>(0);
   readonly page = signal<number>(0);
@@ -341,6 +513,312 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     const base = `Showing ${this.items().length} of ${this.total()} items`;
     const answered = this.answeredSourcesText();
     return answered ? `${base} · ${answered}` : base;
+  });
+
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-3 / Gate D2
+  matchesProgram(item: CgspaceItemDto): boolean {
+    return matchesTaggedMetadata(
+      item?.programAccelerators,
+      this.programCode() ?? '',
+      this.programName() ?? ''
+    );
+  }
+
+  readonly projectMatchCandidates = computed(() =>
+    buildProjectMatchCandidates({
+      projectCode: this.projectCode(),
+      projectTitle: this.projectTitle(),
+      projectSummary: this.projectSummary(),
+      projectDescription: this.projectDescription(),
+      leadCenterAcronym: this.leadCenterAcronym()
+    })
+  );
+
+  // @akili-spec changes/kp-project-match — KPPJ-R-4
+  matchesProject(item: CgspaceItemDto): boolean {
+    return matchesProjectTags(item?.projects, this.projectMatchCandidates());
+  }
+
+  readonly hasProjectContext = computed(
+    () =>
+      this.projectMatchCandidates().length > 0 ||
+      !!(this.projectCode()?.trim() || this.projectTitle()?.trim())
+  );
+
+  readonly hasProgramContext = computed(
+    () => !!(this.programCode()?.trim() || this.programName()?.trim())
+  );
+
+  readonly projectMatchLabel = computed(
+    () => this.projectCode()?.trim() || this.projectTitle()?.trim() || ''
+  );
+
+  /** Exact Discovery facet label sent as `project=` when the bilateral filter is active. */
+  readonly projectRepositoryFilterValue = computed(() => {
+    const code = this.projectCode()?.trim() ?? '';
+    const title = this.projectTitle()?.trim() ?? '';
+    if (code && title) {
+      return `${code} - ${title}`;
+    }
+    return code || title;
+  });
+
+  readonly showProjectRepositoryFilterChip = computed(
+    () =>
+      this.enableProjectRepositoryFilter() &&
+      !!this.projectRepositoryFilterValue()
+  );
+
+  /** Bilateral manual-create drawer only — Programme Results browse leaves this false. */
+  readonly isBilateralBrowse = computed(() => this.enableProjectRepositoryFilter());
+
+  readonly repositoryProjectMetadataField = REPOSITORY_PROJECT_METADATA_FIELD;
+  readonly bilateralProjectSourceLabel = BILATERAL_PROJECT_SOURCE_LABEL;
+
+  readonly projectMatchMetadataExplanation = computed(
+    () =>
+      `Project highlight applies only when repository metadata includes ${REPOSITORY_PROJECT_METADATA_FIELD}. ` +
+      `Repository labels are often free text (for example "IRRI - USDA Fertilize Right Project") and may not include your ${BILATERAL_PROJECT_SOURCE_LABEL} project code or title.`
+  );
+
+  /** Info notice when results exist but none carry a matching project tag. */
+  readonly projectMatchZeroNoticeBody = computed(() => {
+    const queryText = (this.query() || '').trim();
+    const parts: string[] = [
+      'The items below still matched your search and filters — only the project tag highlight found no matches.'
+    ];
+
+    if (queryText) {
+      parts.push(
+        `Search text "${queryText}" matches title, author, or DOI in the selected repositories; it does not require a project tag.`
+      );
+    }
+
+    parts.push(this.projectMatchMetadataExplanation());
+
+    if (this.matchCount() > 0) {
+      const programLabel = this.programName()?.trim() || this.programCode()?.trim() || 'your Science Program';
+      parts.push(
+        `Badges such as "Matches ${programLabel}" refer to your Science Program highlight (${REPOSITORY_PROGRAM_METADATA_FIELD}), not project tags.`
+      );
+    }
+
+    return parts.join(' ');
+  });
+
+  readonly showProjectMatchZeroNotice = computed(
+    () =>
+      this.isBilateralBrowse() &&
+      this.hasProjectContext() &&
+      this.status() === 'results' &&
+      this.items().length > 0 &&
+      this.projectMatchCount() === 0
+  );
+
+  readonly activeFilterDescriptors = computed<KpBrowseActiveFilterDescriptor[]>(() => {
+    const filters: KpBrowseActiveFilterDescriptor[] = [];
+    const queryText = (this.query() || '').trim();
+
+    if (queryText) {
+      filters.push({ key: 'query', label: 'Search text', detail: queryText, tone: 'active' });
+    }
+
+    if (this.selectedType()) {
+      filters.push({
+        key: 'type',
+        label: 'Item type',
+        detail: String(this.selectedType()),
+        tone: 'active'
+      });
+    }
+
+    if (this.selectedCenter()) {
+      filters.push({
+        key: 'center',
+        label: 'Center',
+        detail: String(this.selectedCenter()),
+        tone: 'active'
+      });
+    }
+
+    if (this.isAdmin() && this.selectedYear() !== null && this.selectedYear() !== this.phaseYear()) {
+      filters.push({
+        key: 'year',
+        label: 'Year',
+        detail: String(this.selectedYear()),
+        tone: 'active'
+      });
+    } else {
+      filters.push({
+        key: 'reporting-year',
+        label: 'Reporting year',
+        detail: `${this.phaseYear()} (reporting cycle)`,
+        tone: 'locked'
+      });
+    }
+
+    if (!this.isBilateralBrowse()) {
+      return filters;
+    }
+
+    if (this.hasProjectContext()) {
+      const code = this.projectCode()?.trim() ?? '';
+      const title = this.projectTitle()?.trim() ?? '';
+      const contextDetail = [code, title].filter(Boolean).join(' · ');
+      const bmtProjectFields = [
+        this.projectCode()?.trim() && 'code',
+        this.projectTitle()?.trim() && 'title',
+        this.projectSummary()?.trim() && 'summary',
+        this.projectDescription()?.trim() && 'description',
+        this.leadCenterAcronym()?.trim() && 'lead center'
+      ]
+        .filter(Boolean)
+        .join(', ');
+      filters.push({
+        key: 'project-highlight',
+        label: 'Project highlight',
+        detail: `${contextDetail} — fuzzy match on ${REPOSITORY_PROJECT_METADATA_FIELD} using ${BILATERAL_PROJECT_SOURCE_LABEL} ${bmtProjectFields || 'fields'}; ranks tagged items first; does not hide other items`,
+        tone: 'neutral'
+      });
+    }
+
+    if (this.isProjectRepositoryFilterActive()) {
+      filters.push({
+        key: 'project-repository-tag',
+        label: 'Filter by project tag',
+        detail:
+          `ON — exact tag "${this.projectRepositoryFilterValue()}" on ${REPOSITORY_PROJECT_FACET_HOSTS}; ` +
+          'CGSpace uses highlight matching only',
+        tone: 'active'
+      });
+    } else {
+      filters.push({
+        key: 'project-repository-tag',
+        label: 'Filter by project tag',
+        detail: 'OFF — search is not limited to an exact project tag in the repository index',
+        tone: 'inactive'
+      });
+    }
+
+    if (this.hasProgramContext()) {
+      const programDetail = [this.programCode()?.trim(), this.programName()?.trim()].filter(Boolean).join(' · ');
+      filters.push({
+        key: 'program-highlight',
+        label: 'Science Program highlight',
+        detail: programDetail,
+        tone: 'neutral'
+      });
+    }
+
+    return filters;
+  });
+
+  readonly emptyStateHints = computed<string[]>(() => {
+    const hints: string[] = [];
+
+    if (this.failedSources().length) {
+      hints.push(
+        `${this.failedRepositoriesText()} did not respond. Results may be incomplete — use Try again on the repository chip or switch to Manual entry.`
+      );
+    }
+
+    if (this.isProjectRepositoryFilterActive()) {
+      hints.push(
+        'Filter by project tag is ON and requires an exact project label in the repository index. Turn it OFF to search more broadly.'
+      );
+    }
+
+    if (!this.isAdmin()) {
+      hints.push(`Reporting year ${this.phaseYear()} is always applied for bilateral results.`);
+    }
+
+    if (this.isBilateralBrowse() && this.hasProjectContext()) {
+      hints.push(this.projectMatchMetadataExplanation());
+      hints.push(
+        `Science Program highlights use ${REPOSITORY_PROGRAM_METADATA_FIELD} and often match more often than project tags.`
+      );
+    }
+
+    const queryText = (this.query() || '').trim();
+    if (queryText) {
+      hints.push(`Try different search terms than "${queryText}", or use Manual entry with a repository handle.`);
+    } else {
+      hints.push('Try search terms from the project title, or use Manual entry with a repository handle.');
+    }
+
+    return hints;
+  });
+
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-7
+  readonly matchCount = computed<number>(() => {
+    if (!this.hasProgramContext()) {
+      return 0;
+    }
+    return this.items().filter(item => this.matchesProgram(item)).length;
+  });
+
+  // @akili-spec changes/kp-project-match — KPPJ-R-6
+  readonly projectMatchCount = computed<number>(() => {
+    if (!this.hasProjectContext()) {
+      return 0;
+    }
+    return this.items().filter(item => this.matchesProject(item)).length;
+  });
+
+  readonly contextualMatchCount = computed<number>(() => {
+    const raw = this.items();
+    if (this.hasProjectContext() && this.hasProgramContext()) {
+      return raw.filter(item => this.matchesProject(item) || this.matchesProgram(item)).length;
+    }
+    if (this.hasProjectContext()) {
+      return this.projectMatchCount();
+    }
+    return this.matchCount();
+  });
+
+  matchesContextually(item: CgspaceItemDto): boolean {
+    if (this.hasProjectContext() && this.hasProgramContext()) {
+      return this.matchesProject(item) || this.matchesProgram(item);
+    }
+    if (this.hasProjectContext()) {
+      return this.matchesProject(item);
+    }
+    return this.matchesProgram(item);
+  }
+
+  // @akili-spec changes/kp-program-accelerator-match — KPAM-R-5 / KPAM-R-6 / KPAM-DD-1
+  // @akili-spec changes/kp-project-match — KPPJ-R-7 / KPPJ-R-8 / KPPJ-DD-4
+  readonly displayItems = computed<CgspaceItemDto[]>(() => {
+    const raw = this.items();
+    if (this.onlyMatches()) {
+      if (this.hasProjectContext() && this.hasProgramContext()) {
+        return raw.filter(item => this.matchesProject(item) || this.matchesProgram(item));
+      }
+      if (this.hasProjectContext()) {
+        return raw.filter(item => this.matchesProject(item));
+      }
+      return raw.filter(item => this.matchesProgram(item));
+    }
+
+    if (this.contextualMatchCount() === 0) {
+      return raw;
+    }
+
+    const projectMatches: CgspaceItemDto[] = [];
+    const spOnlyMatches: CgspaceItemDto[] = [];
+    const others: CgspaceItemDto[] = [];
+
+    for (const item of raw) {
+      if (this.hasProjectContext() && this.matchesProject(item)) {
+        projectMatches.push(item);
+      } else if (this.hasProgramContext() && this.matchesProgram(item)) {
+        spOnlyMatches.push(item);
+      } else {
+        others.push(item);
+      }
+    }
+
+    return [...projectMatches, ...spOnlyMatches, ...others];
   });
 
   /** Natural-language join ("A", "A and B", "A, B and C") for the error/empty copy (`KPM-R-7`, `KPM-R-11`). */
@@ -606,7 +1084,24 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
       params['year'] = this.selectedYear();
     }
 
+    if (this.isProjectRepositoryFilterActive()) {
+      params['project'] = this.projectRepositoryFilterValue();
+    }
+
     return params;
+  }
+
+  isProjectRepositoryFilterActive(): boolean {
+    return (
+      this.showProjectRepositoryFilterChip() &&
+      this.projectRepositoryFilterOn() &&
+      !!this.projectRepositoryFilterValue()
+    );
+  }
+
+  toggleProjectRepositoryFilter(): void {
+    this.projectRepositoryFilterOn.update(active => !active);
+    this.onFilterChange();
   }
 
   /**
@@ -617,6 +1112,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
     if (this.selectedType() !== null && this.selectedType() !== '') return true;
     if (this.selectedCenter() !== null && this.selectedCenter() !== '') return true;
     if (this.isAdmin() && this.selectedYear() !== this.phaseYear()) return true;
+    if (this.isProjectRepositoryFilterActive()) return true;
     return false;
   }
 

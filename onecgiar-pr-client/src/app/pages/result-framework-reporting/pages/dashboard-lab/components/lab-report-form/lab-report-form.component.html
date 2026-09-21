@@ -146,6 +146,8 @@
             [showBusyOverlay]="false"
             [phaseYear]="phaseYear()"
             [isAdmin]="isAdmin()"
+            [programCode]="programCode()"
+            [programName]="resolvedProgramName()"
             (itemSelected)="onCgspaceItemSelected($event)"
             (switchToManual)="kpEntryMode.set('manual')">
           </app-kp-cgspace-browse>

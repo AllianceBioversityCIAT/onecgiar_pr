@@ -29,6 +29,7 @@ describe('GlobalSearchPaletteService', () => {
   };
 
   beforeEach(() => {
+    localStorage.clear();
     jest.useFakeTimers();
     getAll = jest.fn().mockReturnValue(of({ response: { items: [item()] } }));
     homeMock = {
@@ -284,6 +285,44 @@ describe('GlobalSearchPaletteService', () => {
     service.reset();
     expect(service.query()).toBe('');
     expect(service.scope()).toBeNull();
+  });
+
+  describe('recent searches', () => {
+    it('records a term, most-recent first', () => {
+      service.recordSearch('maize');
+      service.recordSearch('cassava');
+      expect(service.recentQueries()).toEqual(['cassava', 'maize']);
+    });
+
+    it('dedupes case-insensitively, moving the repeat to the front instead of listing it twice', () => {
+      service.recordSearch('maize');
+      service.recordSearch('cassava');
+      service.recordSearch('MAIZE');
+      expect(service.recentQueries()).toEqual(['MAIZE', 'cassava']);
+    });
+
+    it('ignores a blank term', () => {
+      service.recordSearch('   ');
+      expect(service.recentQueries()).toEqual([]);
+    });
+
+    it('caps the list at 5 entries', () => {
+      ['a', 'b', 'c', 'd', 'e', 'f'].forEach((q) => service.recordSearch(q));
+      expect(service.recentQueries()).toEqual(['f', 'e', 'd', 'c', 'b']);
+    });
+
+    it('reset does NOT clear recent searches — they persist across opens', () => {
+      service.recordSearch('maize');
+      service.reset();
+      expect(service.recentQueries()).toEqual(['maize']);
+    });
+
+    it('persists to localStorage and a fresh service instance picks it up', () => {
+      service.recordSearch('maize');
+
+      const other = TestBed.runInInjectionContext(() => new GlobalSearchPaletteService());
+      expect(other.recentQueries()).toEqual(['maize']);
+    });
   });
 
   describe('toPaletteResultRow', () => {

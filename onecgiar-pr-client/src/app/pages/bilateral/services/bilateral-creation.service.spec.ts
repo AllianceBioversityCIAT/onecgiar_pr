@@ -5,13 +5,11 @@ import { of } from 'rxjs';
 import { BilateralCreationService, BILATERAL_STATUS } from './bilateral-creation.service';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
-import { environment } from '../../../../environments/environment';
 
 describe('BilateralCreationService', () => {
   let service: BilateralCreationService;
   let httpMock: HttpTestingController;
 
-  const submitUrl = (id: number) => `${environment.apiBaseUrl}api/bilateral/center/submit-for-review/${id}`;
   let mockBilateralApi: jest.Mocked<Pick<
     BilateralApiService,
     'GET_bilateralProjects' | 'GET_BilateralResultDetail' | 'POST_createBilateralHeader' | 'PATCH_BilateralReviewDecision'
@@ -154,48 +152,6 @@ describe('BilateralCreationService', () => {
     });
   });
 
-  describe('submitResult (P2-3152)', () => {
-    it("calls the centre's submit-for-review endpoint", () => {
-      service.submitResult(123).subscribe();
-
-      const req = httpMock.expectOne(submitUrl(123));
-      expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({});
-      req.flush({ response: { resultId: 123, status: 5 } });
-    });
-
-    it('moves the local status to Pending review so the header badge follows', () => {
-      service.resultStatusId.set(BILATERAL_STATUS.Editing);
-
-      service.submitResult(123).subscribe();
-      httpMock.expectOne(submitUrl(123)).flush({ response: { resultId: 123, status: 5 } });
-
-      expect(service.resultStatusId()).toBe(BILATERAL_STATUS.PendingReview);
-    });
-
-    it('leaves the status untouched when the submit fails', () => {
-      service.resultStatusId.set(BILATERAL_STATUS.Editing);
-
-      service.submitResult(123).subscribe({ error: () => undefined });
-      httpMock
-        .expectOne(submitUrl(123))
-        .flush({ message: 'nope' }, { status: 400, statusText: 'Bad Request' });
-
-      expect(service.resultStatusId()).toBe(BILATERAL_STATUS.Editing);
-    });
-
-    // 🛑 Test-candado: this used to hit the REVIEWER's approve endpoint, which 409s on an Editing
-    // result and would have self-approved the result had it ever succeeded. Never send the Center
-    // User's Submit down the review-decision path again.
-    it('never calls the reviewer review-decision endpoint', () => {
-      service.submitResult(123).subscribe();
-      httpMock.expectOne(submitUrl(123)).flush({});
-
-      expect(mockBilateralApi.PATCH_BilateralReviewDecision).not.toHaveBeenCalled();
-      httpMock.expectNone(`${environment.apiBaseUrl}api/results/bilateral/123/review-decision`);
-    });
-  });
-
   describe('isEditableByCenterUser (P2-3152 AC3)', () => {
     it('is editable while the status is unknown, Editing or Draft', () => {
       expect(service.isEditableByCenterUser()).toBe(true);
@@ -214,11 +170,13 @@ describe('BilateralCreationService', () => {
       }
     });
 
-    it('flips to read-only right after a successful submit', () => {
+    // The submit itself moved to BilateralQualityAssessmentUiService (BIL-QAI): this service no
+    // longer owns the PATCH, only the status signal the editor flips once that PATCH succeeds.
+    it('flips to read-only as soon as the status signal reaches Pending review', () => {
       service.resultStatusId.set(BILATERAL_STATUS.Editing);
+      expect(service.isEditableByCenterUser()).toBe(true);
 
-      service.submitResult(123).subscribe();
-      httpMock.expectOne(submitUrl(123)).flush({});
+      service.resultStatusId.set(BILATERAL_STATUS.PendingReview);
 
       expect(service.isEditableByCenterUser()).toBe(false);
     });
@@ -231,6 +189,34 @@ describe('BilateralCreationService', () => {
   });
 
   it('should identify persisted AI results from the detail payload', () => {
+    mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
+      subscribe: ({ next }: any) =>
+        next({
+          response: {
+            commonFields: { creation_method: 'AI' },
+            contributingProjects: [],
+            contributingCenters: [],
+          },
+        }),
+    } as any);
+
+    service.loadResult(8706);
+
+    expect(service.isAiGenerated()).toBe(true);
+  });
+
+  // APF-R-12 AND / APF-T-8: the provenance notice's dismiss/hide logic gates on `isAiGenerated()`,
+  // and `clearEditorState()` unconditionally sets it back to `false` — the same reset that
+  // `reloadAfterResultTypeChange()` (bilateral-result-creator.component.ts, P2-3233) runs before
+  // re-issuing `loadResult()` on an edit that changes the result type. A component-level test can't
+  // exercise that sequence because the component spec mocks `loadResult`/`clearEditorState` as
+  // no-ops; this test drives the real service through the exact clear-then-reload sequence instead.
+  it('banner-gating invariant: clearEditorState() followed by a reload carrying creation_method "AI" restores isAiGenerated() to true (edit-path regression for APF-R-12 AND)', () => {
+    service.isAiGenerated.set(true);
+
+    service.clearEditorState();
+    expect(service.isAiGenerated()).toBe(false); // documents the risky intermediate state
+
     mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
       subscribe: ({ next }: any) =>
         next({
@@ -603,6 +589,23 @@ describe('BilateralCreationService', () => {
       expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({
         result_level_id: 1,
         result_type_id: 2,
+      });
+    });
+
+    it('sends contributing_programs when secondary SPs are selected', () => {
+      service.resetWizard();
+      service.selectPrimarySp({ programId: 1, programCode: 'SP01', allocation: '60' });
+      service.selectedSecondarySps.set([
+        { programId: 2, programCode: 'SP02', allocation: '40' },
+      ]);
+
+      service.createResult(1, 2).subscribe();
+
+      expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({
+        result_level_id: 1,
+        result_type_id: 2,
+        program_code: 'SP01',
+        contributing_programs: [{ science_program_id: 'SP02' }],
       });
     });
 

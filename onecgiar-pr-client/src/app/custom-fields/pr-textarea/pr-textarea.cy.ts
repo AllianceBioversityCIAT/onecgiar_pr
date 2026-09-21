@@ -49,7 +49,7 @@ describe('PrTextareaComponent (CT)', () => {
     // so the dev-mode ExpressionChanged (NG0100) check no longer trips here.
     mountCF(TEMPLATE, { editable: true, componentProperties: { model: '', maxWords: 3, readOnly: false } });
     cy.get(TEXTAREA).type('one two three four five');
-    cy.get('app-pr-word-counter').should('exist').and('contain.text', 'Max 3 words');
+    cy.get('app-pr-word-counter').should('exist').and('contain.text', '/ 3');
     cy.get('.limitBreaker').should('have.class', 'invalid');
   });
 });

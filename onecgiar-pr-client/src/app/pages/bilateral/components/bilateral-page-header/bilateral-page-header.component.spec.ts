@@ -7,7 +7,10 @@ import { environment } from '../../../../../environments/environment';
 import { BilateralPageHeaderComponent } from './bilateral-page-header.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
+import { normalizeJob } from '../../bilateral-ai-job.model';
+import { rawJob } from '../../bilateral-ai-job.fixtures';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
+import { BilateralTourService } from '../../services/bilateral-tour.service';
 
 describe('BilateralPageHeaderComponent', () => {
   let component: BilateralPageHeaderComponent;
@@ -104,6 +107,79 @@ describe('BilateralPageHeaderComponent', () => {
     const nav = fixture.debugElement.query(By.css('nav[aria-label="Center sections"]'));
     expect(nav.nativeElement.classList.contains('overflow-x-auto')).toBe(true);
     expect(nav.nativeElement.classList.contains('no-scrollbar')).toBe(true);
+  });
+
+  it('shows the info button on tabbed pages and opens tab-specific explainer copy', () => {
+    ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    fixture.componentRef.setInput('activeTab', 'reporting');
+    fixture.detectChanges();
+
+    const infoButton = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]') as HTMLButtonElement;
+    expect(infoButton).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]')).toBeNull();
+
+    infoButton.click();
+    fixture.detectChanges();
+
+    const popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
+    expect(popover).toBeTruthy();
+    expect(popover.textContent).toContain('Reporting');
+    expect(popover.textContent).toContain('Browse bilateral projects mapped to Science Programs');
+    expect(popover.textContent).toContain('Africa Rice Center');
+  });
+
+  it('raises the sticky header above page toolbars while the info popover is open', () => {
+    ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.detectChanges();
+
+    const sticky = fixture.nativeElement.querySelector('[data-testid="bilateral-page-header-sticky"]') as HTMLElement;
+    expect(sticky.classList.contains('z-20')).toBe(true);
+    expect(sticky.classList.contains('z-40')).toBe(false);
+
+    const infoButton = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]') as HTMLButtonElement;
+    infoButton.click();
+    fixture.detectChanges();
+
+    expect(sticky.classList.contains('z-40')).toBe(true);
+    expect(sticky.classList.contains('z-20')).toBe(false);
+
+    component.closeInfo();
+    fixture.detectChanges();
+
+    expect(sticky.classList.contains('z-20')).toBe(true);
+    expect(sticky.classList.contains('z-40')).toBe(false);
+  });
+
+  it('updates the info popover when the active tab changes', () => {
+    ctx.setCenter('AfricaRice', 'Africa Rice Center');
+    fixture.componentRef.setInput('activeTab', 'overview');
+    fixture.detectChanges();
+
+    const infoButton = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]') as HTMLButtonElement;
+    infoButton.click();
+    fixture.detectChanges();
+
+    let popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
+    expect(popover.textContent).toContain('Overview');
+    expect(popover.textContent).toContain('dashboard of your center');
+
+    component.closeInfo();
+    fixture.componentRef.setInput('activeTab', 'drafts');
+    fixture.detectChanges();
+
+    infoButton.click();
+    fixture.detectChanges();
+
+    popover = fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-popover"]') as HTMLElement;
+    expect(popover.textContent).toContain('AI Draft Results');
+    expect(popover.textContent).toContain('AI-generated draft results');
+  });
+
+  it('hides the info button when activeTab is not set', () => {
+    ctx.setCenter('SMO', 'CGIAR System Organization');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="bilateral-header-info-button"]')).toBeNull();
   });
 
   it('does not display a dividing line between hero and tabs when activeTab is set', () => {
@@ -241,38 +317,39 @@ describe('BilateralPageHeaderComponent', () => {
       expect(backBtn).toBeNull();
     });
 
-    it('does NOT render back button in band mode with pageTitle', () => {
+    it('renders back button in band mode with pageTitle when activeTab is null and handles goBack()', () => {
       ctx.setCenter('SMO', 'CGIAR System Organization');
       fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
       fixture.detectChanges();
 
       const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      expect(backBtn).toBeNull();
-    });
-
-    it('renders back button in detail variant and handles goBack()', () => {
-      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
-      fixture.componentRef.setInput('variant', 'detail');
-      fixture.componentRef.setInput('pageTitle', 'A bilateral result');
-      fixture.detectChanges();
-
-      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
       expect(backBtn).not.toBeNull();
+      expect(backBtn.nativeElement.textContent).toContain('Back');
 
       const spy = jest.spyOn(component, 'goBack');
       backBtn.nativeElement.click();
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('respects backLabelOverride in detail variant', () => {
-      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
-      fixture.componentRef.setInput('variant', 'detail');
-      fixture.componentRef.setInput('pageTitle', 'A bilateral result');
-      fixture.componentRef.setInput('backLabelOverride', 'Back to Custom Destination');
+    it('respects backLabelOverride in band mode with pageTitle', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
+      fixture.componentRef.setInput('backLabelOverride', 'Back to Results list');
       fixture.detectChanges();
 
       const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
-      expect(backBtn.nativeElement.textContent).toContain('Back to Custom Destination');
+      expect(backBtn).not.toBeNull();
+      expect(backBtn.nativeElement.textContent).toContain('Back to Results list');
+    });
+
+    it('does NOT render back button in detail variant as navigation is anchored in rail (BRRA-R-3, Gate D4)', () => {
+      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      fixture.componentRef.setInput('variant', 'detail');
+      fixture.componentRef.setInput('pageTitle', 'A bilateral result');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn).toBeNull();
     });
   });
 
@@ -578,24 +655,34 @@ describe('BilateralPageHeaderComponent', () => {
       fixture.detectChanges();
     });
 
-    it('renders the title with the way back above it and no breadcrumb band', () => {
+    it('renders the title with no in-flow back button and no breadcrumb band (BRRA-R-3, Gate D4)', () => {
       expect(q('[data-testid="bilateral-detail-header"]')).not.toBeNull();
       expect(q('h1')?.textContent.trim()).toBe('Test JD');
       expect(q('nav[aria-label="Breadcrumb"]')).toBeNull();
       expect(q('.bg-\\[var\\(--pr-surface-band\\)\\]')).toBeNull();
-      const back = q('[data-testid="bilateral-header-back-btn"]');
-      expect(back).not.toBeNull();
-      expect(back.textContent).toContain(component.backLabel());
+      expect(q('[data-testid="bilateral-header-back-btn"]')).toBeNull();
     });
 
-    it('spends the one pill on the status and lists the funding tag as text', () => {
+    it('renders streamlined identity strip without duplicate code, type, or status (BRRA-R-4, Gate D4)', () => {
       const text = fixture.nativeElement.textContent;
-      expect(text).toContain('8976');
-      expect(text).toContain('Innovation use');
+      expect(text).not.toContain('8976');
+      expect(text).not.toContain('Innovation use');
+      expect(q('[data-testid="bilateral-status-badge"]')).toBeNull();
       expect(text).toContain('W3/Bilateral');
-      expect(q('[data-testid="bilateral-status-badge"]')?.textContent.trim()).toBe('Editing');
-      const pills = fixture.nativeElement.querySelectorAll('.rounded-full');
-      expect(pills.length).toBe(1);
+    });
+
+    it('renders secondary contextual metadata in detail identity strip (BRRA-R-4)', () => {
+      fixture.componentRef.setInput('resultLevelName', 'Output');
+      fixture.componentRef.setInput('centerName', 'AfricaRice');
+      fixture.componentRef.setInput('areaOfWork', 'Rice Breeding');
+      fixture.detectChanges();
+
+      const strip = q('[data-testid="bilateral-detail-identity-strip"]');
+      expect(strip).not.toBeNull();
+      expect(strip.textContent).toContain('Output');
+      expect(strip.textContent).toContain('W3/Bilateral');
+      expect(strip.textContent).toContain('AfricaRice');
+      expect(strip.textContent).toContain('Rice Breeding');
     });
 
     it('keeps the band for every other page', () => {
@@ -603,6 +690,35 @@ describe('BilateralPageHeaderComponent', () => {
       fixture.detectChanges();
       expect(q('[data-testid="bilateral-detail-header"]')).toBeNull();
       expect(q('nav[aria-label="Breadcrumb"]')).not.toBeNull();
+    });
+
+    // `APF-R-12` / `APF-DD-10` — the "Result detail (read-only)" provenance surface: a static
+    // badge in the secondary metadata strip.
+    describe('AI provenance badge (APF-R-12)', () => {
+      it('is absent by default', () => {
+        expect(q('[data-testid="ai-provenance-badge"]')).toBeNull();
+      });
+
+      it('renders in detail identity strip when the caller asks for it', () => {
+        fixture.componentRef.setInput('showAiProvenanceBadge', true);
+        fixture.detectChanges();
+        const badge = q('[data-testid="ai-provenance-badge"]');
+        expect(badge).not.toBeNull();
+        expect(badge.getAttribute('aria-label')).toBe(
+          'Generated with AI assistance from your sources. Review and edit before submitting.',
+        );
+        const pills = fixture.nativeElement.querySelectorAll('.rounded-full');
+        expect(pills.length).toBe(1);
+      });
+
+      it('shows the identity strip for the badge alone, even with no status/code/type known', () => {
+        fixture.componentRef.setInput('statusId', null);
+        fixture.componentRef.setInput('resultCode', null);
+        fixture.componentRef.setInput('showAiProvenanceBadge', true);
+        fixture.detectChanges();
+        expect(component.hasIdentityStrip()).toBe(true);
+        expect(q('[data-testid="ai-provenance-badge"]')).not.toBeNull();
+      });
     });
   });
 
@@ -646,6 +762,245 @@ describe('BilateralPageHeaderComponent', () => {
 
       eyebrowEl = fixture.nativeElement.querySelector('[data-testid="bilateral-eyebrow"]');
       expect(eyebrowEl.textContent.trim()).toBe('CGIAR Center · Reporting cycle 2027 · P26');
+    });
+  });
+
+  describe('"AI job running" chip (APF-R-10)', () => {
+    const chip = () => fixture.debugElement.query(By.css('[data-testid="bilateral-ai-job-chip"]'));
+
+    it('renders with the elapsed time in the accessible name when the service reports an alive job for the current center', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
+      (aiService as unknown as { activeJob: unknown }).activeJob = {
+        jobId: 'job-1',
+        centerAcronym: 'AfricaRice',
+        startedAt: Date.now() - (4 * 60_000 + 12_000),
+      };
+      fixture.detectChanges();
+
+      const el = chip();
+      expect(el).not.toBeNull();
+      expect(el.nativeElement.textContent).toContain('AI job running');
+      expect(el.nativeElement.textContent).toContain('04:12');
+      expect(el.nativeElement.getAttribute('aria-label')).toContain('4 minutes');
+      expect(el.nativeElement.getAttribute('aria-label')).toContain('12 seconds');
+    });
+
+    it('is absent when the tracked job belongs to a different center (CIMMYT)', () => {
+      ctx.setCenter('CIMMYT', 'International Maize and Wheat Improvement Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
+      (aiService as unknown as { activeJob: unknown }).activeJob = {
+        jobId: 'job-1',
+        centerAcronym: 'AfricaRice',
+        startedAt: Date.now(),
+      };
+      fixture.detectChanges();
+
+      expect(chip()).toBeNull();
+    });
+
+    it('is absent once the job reaches a terminal state', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.uploadState.set({ jobId: 'job-1', status: 'completed', uploadProgress: 100 });
+      (aiService as unknown as { activeJob: unknown }).activeJob = {
+        jobId: 'job-1',
+        centerAcronym: 'AfricaRice',
+        startedAt: Date.now(),
+      };
+      fixture.detectChanges();
+
+      expect(chip()).toBeNull();
+    });
+
+    it('is absent while idle (no tracked job)', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      fixture.detectChanges();
+
+      expect(chip()).toBeNull();
+    });
+
+    it('links to the upload step with the job id as a query param', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.uploadState.set({ jobId: 'job-9', status: 'pending', uploadProgress: 100 });
+      (aiService as unknown as { activeJob: unknown }).activeJob = {
+        jobId: 'job-9',
+        centerAcronym: 'AfricaRice',
+        startedAt: Date.now(),
+      };
+      fixture.detectChanges();
+
+      expect(chip().nativeElement.getAttribute('href')).toBe('/bilateral/AfricaRice/create?job=job-9');
+    });
+
+    it('uses the elapsed value from the queue-entry clock once a poll has landed, not the resume record', () => {
+      ctx.setCenter('AfricaRice', 'Africa Rice Center');
+      fixture.componentRef.setInput('activeTab', 'reporting');
+      aiService.uploadState.set({ jobId: 'job-1', status: 'still_running', uploadProgress: 100 });
+      // The resume record's startedAt is stale (would read as ~10 min) — the freshly-polled job's
+      // queueEntryDate (~90 s ago) must win.
+      (aiService as unknown as { activeJob: unknown }).activeJob = {
+        jobId: 'job-1',
+        centerAcronym: 'AfricaRice',
+        startedAt: Date.now() - 600_000,
+      };
+      aiService.currentJob.set(
+        normalizeJob(rawJob({ job_id: 'job-1', created_date: new Date(Date.now() - 90_500).toISOString(), retried_date: null })),
+      );
+      fixture.detectChanges();
+
+      expect(chip().nativeElement.textContent).toContain('01:30');
+    });
+
+    describe('tick gating (rework addendum, Reviewer-advisory)', () => {
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it('does not schedule the 1 s tick while there is no alive job for this center', () => {
+        jest.useFakeTimers();
+        const setIntervalSpy = jest.spyOn(globalThis, 'setInterval');
+
+        ctx.setCenter('AfricaRice', 'Africa Rice Center');
+        fixture.componentRef.setInput('activeTab', 'reporting');
+        fixture.detectChanges();
+
+        setIntervalSpy.mockClear();
+        jest.advanceTimersByTime(5000);
+
+        expect(setIntervalSpy).not.toHaveBeenCalled();
+        expect(chip()).toBeNull();
+      });
+
+      it('advances the chip elapsed label once a second while the job stays alive for this center', () => {
+        jest.useFakeTimers();
+
+        ctx.setCenter('AfricaRice', 'Africa Rice Center');
+        fixture.componentRef.setInput('activeTab', 'reporting');
+        aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
+        (aiService as unknown as { activeJob: unknown }).activeJob = {
+          jobId: 'job-1',
+          centerAcronym: 'AfricaRice',
+          startedAt: Date.now(),
+        };
+        fixture.detectChanges();
+
+        expect(chip().nativeElement.textContent).toContain('00:00');
+
+        jest.advanceTimersByTime(1000);
+        fixture.detectChanges();
+
+        expect(chip().nativeElement.textContent).toContain('00:01');
+      });
+    });
+  });
+
+  describe('Bilateral Guided Tour Trigger (BGT-T-2, BGT-R-1, BGT-AC-1)', () => {
+    let tourService: BilateralTourService;
+
+    beforeEach(() => {
+      tourService = TestBed.inject(BilateralTourService);
+    });
+
+    const getTourButton = (): HTMLButtonElement | null =>
+      fixture.nativeElement.querySelector('button[data-guide="bilateral-tour-trigger"]');
+
+    it.each(['overview', 'reporting', 'results', 'drafts'] as const)(
+      'renders the tour button with data-guide="bilateral-tour-trigger" on %s tab',
+      tab => {
+        ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+        fixture.componentRef.setInput('activeTab', tab);
+        fixture.detectChanges();
+
+        const btn = getTourButton();
+        expect(btn).toBeTruthy();
+        expect(btn?.getAttribute('data-guide')).toBe('bilateral-tour-trigger');
+        expect(btn?.getAttribute('aria-label')).toBe('Start guided tour');
+
+        const icon = btn?.querySelector('.material-icons-round');
+        expect(icon?.textContent?.trim()).toBe('explore');
+        expect(icon?.classList.contains('text-[var(--pr-color-primary-500)]')).toBe(true);
+
+        const label = btn?.querySelector('span.hidden.sm\\:inline');
+        expect(label?.textContent?.trim()).toBe('Tour');
+      }
+    );
+
+    it('does not render the tour button when activeTab is null', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', null);
+      fixture.detectChanges();
+
+      expect(getTourButton()).toBeNull();
+    });
+
+    it('does not render the tour button when showBulkCta is false (bulkUploaderUrl is empty)', () => {
+      (environment as Record<string, unknown>)['bulkUploaderUrl'] = '';
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      expect(getTourButton()).toBeNull();
+    });
+
+    it('dispatches startBilateralTour with centerAcronym, centerName, cycleYear, and activeTab when clicked', () => {
+      const startSpy = jest.spyOn(tourService, 'startBilateralTour').mockImplementation(() => {});
+
+      ctx.setCenter('CIP', 'International Potato Center');
+      fixture.componentRef.setInput('activeTab', 'results');
+      fixture.componentRef.setInput('centerName', 'International Potato Center');
+      fixture.detectChanges();
+
+      const btn = getTourButton();
+      expect(btn).toBeTruthy();
+
+      btn?.click();
+      fixture.detectChanges();
+
+      expect(startSpy).toHaveBeenCalledTimes(1);
+      expect(startSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          centerAcronym: 'CIP',
+          centerName: 'International Potato Center',
+          activeTab: 'results',
+        })
+      );
+    });
+
+    it('places the tour button immediately to the left of the bulk uploader button', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      const actionGroup = fixture.nativeElement.querySelector('.absolute.right-\\[16px\\].sm\\:right-\\[32px\\]');
+      expect(actionGroup).toBeTruthy();
+
+      const buttons = actionGroup.querySelectorAll('button');
+      expect(buttons.length).toBe(2);
+      expect(buttons[0].getAttribute('data-guide')).toBe('bilateral-tour-trigger');
+      expect(buttons[1].getAttribute('data-testid')).toBe('bilateral-bulk-uploader-cta');
+      expect(buttons[1].getAttribute('data-guide')).toBe('bilateral-bulk-uploader-cta');
+    });
+
+    it('renders data-guide="bilateral-identity" on the center identity block (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.detectChanges();
+
+      const identityEl = fixture.nativeElement.querySelector('[data-guide="bilateral-identity"]');
+      expect(identityEl).toBeTruthy();
+    });
+
+    it('renders data-guide="bilateral-tabs" on the nav element when activeTab is set (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      ctx.setCenter('CIAT', 'International Center for Tropical Agriculture');
+      fixture.componentRef.setInput('activeTab', 'overview');
+      fixture.detectChanges();
+
+      const navTabsEl = fixture.nativeElement.querySelector('nav[data-guide="bilateral-tabs"]');
+      expect(navTabsEl).toBeTruthy();
     });
   });
 });

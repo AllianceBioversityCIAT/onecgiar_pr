@@ -59,6 +59,31 @@ export class TypeCapacitySharingComponent implements OnInit {
 
   readonly attendanceOptions = ATTENDANCE_OPTIONS;
   readonly peopleTrainedDesc = PEOPLE_TRAINED_DESC;
+
+  /**
+   * The ONE predicate behind both the group card's tint and the checklist item: any of the four
+   * counts answers the requirement (`0 != null`, so a zero counts). Kept in one place on purpose —
+   * the card saying "filled" while the footer counts it as missing is the exact defect this whole
+   * round is about.
+   */
+  get peopleTrainedFilled(): boolean {
+    return [this.body.female_using, this.body.male_using, this.body.non_binary_using, this.body.has_unkown_using].some(
+      count => count != null
+    );
+  }
+  /**
+   * P2-3771 — Short-term answers on its own; Long-term does not until a degree is picked. QA asked
+   * for the sub-category to be mandatory (María Camila, 18-Sep-2026), and the checklist is where
+   * that bites: Submit is gated on `overallStatus() === 'complete'`. Reading the cascade rather than
+   * `body.capdev_term_id` is deliberate — `syncCapdevTermId()` stores the parent id 4 when no degree
+   * is chosen, which is indistinguishable from a resolved answer downstream.
+   */
+  get lengthOfTrainingFilled(): boolean {
+    if (this.capdevTermId1 == null) return false;
+    if (this.capdevTermId1 === 3) return true;
+    return this.capdevTermId2 != null;
+  }
+
   readonly lengthOfTrainingDesc = LENGTH_OF_TRAINING_DESC;
   readonly deliveryMethodDesc = DELIVERY_METHOD_DESC;
   readonly loadErrorNote = LOAD_ERROR_NOTE;
@@ -229,21 +254,14 @@ export class TypeCapacitySharingComponent implements OnInit {
     // fields the UI marks optional silently held the button disabled. "Unknown" was neither required
     // nor tracked, so there was no rule at all. One group item, satisfied by any single count, matches
     // both AC1 and the on-screen guidance. `0 != null` is true, so a zero counts as answered.
-    const peopleTrained = [
-      this.body.female_using,
-      this.body.male_using,
-      this.body.non_binary_using,
-      this.body.has_unkown_using,
-    ];
-
     this.mdsTracker.setSectionFields('type-specific', [
       {
         key: 'people-trained',
         label: 'Number of people trained',
-        filled: peopleTrained.some(count => count != null),
+        filled: this.peopleTrainedFilled,
       },
       { key: 'delivery-method', label: 'Delivery method', filled: !!this.body.capdev_delivery_method_id },
-      { key: 'length-of-training', label: 'Length of training', filled: this.body.capdev_term_id != null },
+      { key: 'length-of-training', label: 'Length of training', filled: this.lengthOfTrainingFilled },
     ]);
   }
 }

@@ -1,0 +1,228 @@
+{
+  "detail": {
+    "id": 4104,
+    "result_type_id": 2,
+    "title": "Adoption of drought-tolerant sorghum varieties in Mali",
+    "description": "Smallholder farmers in Mali adopting drought-tolerant sorghum varieties released in the previous phase.",
+    "is_lead_by_partner": false,
+    "no_applicable_partner": true,
+    "obj_result_type": { "id": 2, "name": "Innovation use" },
+    "obj_result_level": { "id": 2, "name": "Outcome" },
+    "obj_version": { "id": 55, "phase_year": 2026, "phase_name": "Reporting 2026" },
+    "obj_geographic_scope": { "id": 3, "name": "National" },
+    "leading_result": {
+      "lead_kind": "center",
+      "id": 9004,
+      "code": "ICRISAT",
+      "name": "International Crops Research Institute for the Semi-Arid Tropics",
+      "acronym": "ICRISAT"
+    },
+    "result_region_array": [],
+    "result_country_array": [
+      {
+        "result_country_id": 503,
+        "country_id": 61,
+        "is_active": true,
+        "country_object": { "id": 61, "name": "Mali", "iso_alpha_3": "MLI" },
+        "result_countries_subnational_array": []
+      }
+    ],
+    "result_center_array": [
+      {
+        "result_center_id": 704,
+        "center_id": "ICRISAT",
+        "is_leading_result": true,
+        "is_active": true,
+        "clarisa_center_object": {
+          "code": "ICRISAT",
+          "institutionId": 9004,
+          "clarisa_institution": {
+            "id": 9004,
+            "name": "International Crops Research Institute for the Semi-Arid Tropics",
+            "acronym": "ICRISAT"
+          }
+        }
+      }
+    ],
+    "result_by_institution_array": [],
+    "evidence_array": [
+      {
+        "id": 30041,
+        "link": "https://example.org/surveys/sorghum-adoption-survey.pdf",
+        "description": "Household adoption survey summary",
+        "gender_related": true,
+        "youth_related": false,
+        "nutrition_related": true,
+        "environmental_biodiversity_related": false,
+        "poverty_related": true,
+        "is_sharepoint": 0,
+        "evidenceSharepointArray": []
+      },
+      {
+        "id": 30042,
+        "link": "https://prms.internal/sharepoint/raw-survey-microdata",
+        "description": "Raw survey microdata with respondent identifiers",
+        "gender_related": false,
+        "youth_related": false,
+        "nutrition_related": false,
+        "environmental_biodiversity_related": false,
+        "poverty_related": false,
+        "is_sharepoint": 1,
+        "evidenceSharepointArray": [
+          {
+            "id": 903,
+            "document_id": "doc-jkl-321",
+            "file_name": "microdata.csv",
+            "folder_path": "/internal/innovation-use",
+            "is_public_file": 0
+          }
+        ]
+      }
+    ],
+    "obj_results_toc_result": [
+      {
+        "official_code": "SP04",
+        "name": "Diversification in East and Southern Africa",
+        "initiative_role": "Owner",
+        "toc_mappings": [
+          {
+            "toc_result_id": 20089,
+            "official_code": "SP04",
+            "name": "Diversification in East and Southern Africa",
+            "aow": "AOW3",
+            "planned_result": "Yes",
+            "level": "Intermediate Outcome",
+            "title": "Smallholder farmers use drought-tolerant sorghum varieties"
+          }
+        ]
+      }
+    ],
+    "bilateral_projects": [],
+    "innovation_use_summary": {
+      "innov_use_to_be_determined": false,
+      "innovation_use_level": {
+        "id": 3,
+        "level": 3,
+        "name": "Level 3 — Use documented at scale",
+        "definition": "Use of the innovation is documented at scale through independent evidence."
+      },
+      "initiative_budget": [
+        { "current_year": 1000, "next_year": 500, "kind_cash": 5000, "is_determined": true, "initiative": { "id": 304, "official_code": "SP04", "name": "Diversification in East and Southern Africa" } }
+      ],
+      "bilateral_project_budget": [
+        { "in_cash": 2000, "in_kind": 0, "kind_cash": 3000, "is_determined": true, "project": { "id": 7704, "short_name": "SorghumScale", "full_name": "Sorghum Scaling Fund" } }
+      ],
+      "partner_budget": [
+        { "kind_cash": 4000, "in_cash": 0, "in_kind": 0, "is_determined": true, "institutions_id": 8806, "institution": { "id": 8806, "name": "Mali National Agricultural Research Institute", "acronym": "IER", "institution_type_name": "National government" } }
+      ]
+    }
+  },
+  "formDetail": {
+    "commonFields": {
+      "id": 4104,
+      "result_title": "Adoption of drought-tolerant sorghum varieties in Mali",
+      "result_description": "Smallholder farmers in Mali adopting drought-tolerant sorghum varieties released in the previous phase.",
+      "lead_contact_person_id": 5504,
+      "lead_contact_person_data": { "id": 5504, "display_name": "Fatoumata Traoré", "mail": "f.traore@example.org" },
+      "no_applicable_partner": true,
+      "is_lead_by_partner": false
+    },
+    "tocMetadata": {
+      "planned_result": true,
+      "initiative_id": 304,
+      "official_code": "SP04",
+      "short_name": "Diversification in East and Southern Africa",
+      "result_toc_results": [
+        {
+          "result_toc_result_id": 88030,
+          "toc_result_id": 20089,
+          "planned_result": true,
+          "initiative_id": 304,
+          "toc_progressive_narrative": "Adoption survey evidences use of the sorghum varieties released under AOW3.",
+          "toc_level_id": 3
+        }
+      ]
+    },
+    "geographicScope": {},
+    "contributingCenters": [],
+    "contributingInstitutions": [],
+    "contributingProjects": [],
+    "contributingInitiatives": {
+      "contributing_and_primary_initiative": [],
+      "accepted_contributing_initiatives": [],
+      "pending_contributing_initiatives": []
+    },
+    "evidence": [{ "id": 30041, "link": "https://example.org/surveys/sorghum-adoption-survey.pdf", "is_sharepoint": 0 }],
+    "resultTypeResponse": [
+      {
+        "actors": [
+          {
+            "result_actors_id": 4501,
+            "women": 300,
+            "women_youth": 50,
+            "men": 280,
+            "men_youth": 40,
+            "how_many": null,
+            "has_women": true,
+            "has_women_youth": true,
+            "has_men": true,
+            "has_men_youth": true,
+            "sex_and_age_disaggregation": true,
+            "actor_type_id": 1,
+            "obj_actor_type": { "id": 1, "name": "Farmers/ (agro)pastoralist/ herders/ fishers" },
+            "section_id": 1,
+            "result_id": 4104
+          },
+          {
+            "result_actors_id": 4502,
+            "women": null,
+            "women_youth": null,
+            "men": null,
+            "men_youth": null,
+            "men_non_youth": 0,
+            "women_non_youth": 0,
+            "how_many": 0,
+            "has_women": null,
+            "has_women_youth": null,
+            "has_men": null,
+            "has_men_youth": null,
+            "sex_and_age_disaggregation": false,
+            "actor_type_id": 5,
+            "other_actor_type": "Cooperative extension agents",
+            "obj_actor_type": { "id": 5, "name": "Other" },
+            "section_id": 1,
+            "result_id": 4104
+          }
+        ],
+        "organizations": [],
+        "measures": [
+          {
+            "result_ip_measure_id": 701,
+            "unit_of_measure": "Hectares under drought-tolerant sorghum",
+            "quantity": 3400,
+            "addressing_demands": null,
+            "section_id": 1,
+            "result_id": 4104,
+            "result_ip_id": null
+          },
+          {
+            "result_ip_measure_id": 702,
+            "unit_of_measure": "Farmer field days conducted",
+            "quantity": 12,
+            "addressing_demands": null,
+            "section_id": 1,
+            "result_id": 4104,
+            "result_ip_id": null
+          }
+        ],
+        "investment_partners": [],
+        "investment_projects": []
+      }
+    ],
+    "impactAreaScores": []
+  },
+  "rawInnovationUseActors": [
+    { "result_actors_id": 4501, "how_many": null },
+    { "result_actors_id": 4502, "how_many": 9 }
+  ]
+}

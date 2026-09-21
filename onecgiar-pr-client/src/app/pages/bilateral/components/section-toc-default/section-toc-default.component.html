@@ -1,0 +1,159 @@
+<div class="toc-default-container bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden" data-testid="toc-default-container">
+  <div class="p-4 flex flex-col gap-4">
+    <!-- Header & Source Project (BIL-TOC-R-1, BIL-TOC-R-11) -->
+    <div class="flex flex-col gap-1.5" data-testid="toc-default-header">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-violet-50 border border-violet-200 text-[var(--pr-color-primary-400)] flex items-center justify-center shrink-0">
+          <ng-icon name="lucideWorkflow" class="text-[16px]" />
+        </div>
+        <h3 class="text-[15px] font-bold text-slate-900 tracking-tight m-0">Default Theory of Change (ToC) Linkage</h3>
+        <span class="px-2.5 py-0.5 text-[12px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full flex items-center gap-1.5">
+          <ng-icon name="lucideCircleCheck" class="text-[12px]" />
+          Inherited from lead project
+        </span>
+        <span class="text-[12px] font-semibold text-slate-600 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded">
+          Read-only
+        </span>
+      </div>
+      <p class="text-[13px] leading-relaxed text-slate-600 m-0">
+        This result is initially aligned with the lead project's Theory of Change linkage under the primary Science Program.
+        @if (projectDefault()?.project_name; as name) {
+          <span data-testid="toc-default-project-name"> Source Project: <strong class="text-slate-900 font-semibold">{{ name }}</strong></span>
+        } @else if (projectDefault()?.project_id; as pid) {
+          <span data-testid="toc-default-project-name"> Source Project: <strong class="text-slate-900 font-semibold">Project #{{ pid }}</strong></span>
+        }
+      </p>
+    </div>
+
+    <!-- Summary stats (BIL-TOC-R-1, BIL-TOC-R-12) — always derived from real data, never invented -->
+    @if (projectDefault()?.nodes && projectDefault()!.nodes.length > 0) {
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-testid="toc-default-stats">
+        @for (stat of stats(); track stat.label) {
+          <div class="p-3 rounded-lg bg-slate-50/80 border border-slate-200/80">
+            <div class="text-[12px] font-semibold text-slate-600 uppercase tracking-wide mb-1">{{ stat.label }}</div>
+            <div class="text-[18px] font-extrabold text-slate-900 leading-tight mb-0.5">{{ stat.value }}</div>
+            <div class="text-[12px] text-slate-600 leading-snug">{{ stat.hint }}</div>
+          </div>
+        }
+      </div>
+
+      <!-- Collapsible full breakdown toggle -->
+      <button
+        type="button"
+        class="self-start px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-primary-400)] bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-lg inline-flex items-center gap-2"
+        [attr.aria-expanded]="showBreakdown()"
+        aria-controls="toc-default-breakdown-panel"
+        data-testid="toc-default-breakdown-toggle"
+        (click)="toggleBreakdown()">
+        <span>{{ showBreakdown() ? 'Hide' : 'View' }} full indicator breakdown ({{ indicatorCount() }})</span>
+        <ng-icon [name]="showBreakdown() ? 'lucideChevronUp' : 'lucideChevronDown'" class="text-[12px]" />
+      </button>
+
+      <!-- Nodes List (BIL-TOC-R-1, BIL-TOC-R-12) -->
+      <div id="toc-default-breakdown-panel" [hidden]="!showBreakdown()" class="flex flex-col gap-3" data-testid="toc-default-nodes-list">
+        @for (node of projectDefault()!.nodes; track node.toc_result_id) {
+          <div class="p-4 rounded-lg border border-slate-200/80 bg-slate-50/60 flex flex-col gap-3" data-testid="toc-default-node-item">
+            <!-- Node Header: Level and Title -->
+            <div class="flex items-start gap-3">
+              @if (node.level_name) {
+                <span class="shrink-0 inline-flex items-center px-2.5 py-1 rounded text-[12px] font-semibold uppercase tracking-wide bg-violet-100/80 text-violet-900 border border-violet-200" data-testid="toc-default-node-level">
+                  {{ node.level_name }}
+                </span>
+              }
+              <h4 class="text-[15px] font-semibold text-slate-900 leading-snug flex-1 m-0" data-testid="toc-default-node-title">
+                {{ node.title || 'Untitled Node' }}
+              </h4>
+            </div>
+
+            <!-- Indicators List -->
+            @if (node.indicators && node.indicators.length > 0) {
+              <div class="flex flex-col gap-2.5 pl-4 border-l-2 border-violet-300/60" data-testid="toc-default-indicators-list">
+                @for (ind of node.indicators; track ind.id) {
+                  <div class="p-3 rounded-md bg-white border border-slate-200 flex flex-col gap-2" data-testid="toc-default-indicator-item">
+                    @if (ind.type) {
+                      <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded text-[12px] font-semibold bg-slate-100 text-slate-800 border border-slate-200" data-testid="toc-default-indicator-type">
+                          {{ ind.type }}
+                        </span>
+                      </div>
+                    }
+                    @if (ind.description) {
+                      <p class="text-slate-700 leading-relaxed text-[14px] m-0" data-testid="toc-default-indicator-desc">
+                        {{ ind.description }}
+                      </p>
+                    }
+                    @if (ind.targets && ind.targets.length > 0) {
+                      <div class="flex flex-wrap items-center gap-2 mt-0.5" data-testid="toc-default-targets-list">
+                        @for (tgt of ind.targets; track $index) {
+                          <div class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded bg-slate-50 border border-slate-200 text-[13px]" data-testid="toc-default-target-item">
+                            <span class="text-slate-600 font-medium">
+                              Target{{ tgt.year ? ' (' + tgt.year + ')' : '' }}{{ centerLabel(tgt.center_ids) ? ' — ' + centerLabel(tgt.center_ids) : '' }}:
+                            </span>
+                            <span class="font-bold text-slate-900 text-[14px]" data-testid="toc-default-target-value">
+                              {{ tgt.value !== null && tgt.value !== undefined ? tgt.value : 'N/A' }}
+                            </span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="p-4 rounded-lg bg-slate-50 border border-dashed border-slate-300 text-center text-[13px] text-slate-600" data-testid="toc-default-empty-nodes">
+        No default ToC nodes found for this project.
+      </div>
+    }
+  </div>
+
+  <hr class="border-0 border-t border-slate-100 my-0" />
+
+  <!-- Leave-as-is Question & Keep/Customize Toggle Group (BIL-TOC-R-2, BIL-TOC-R-3, BIL-TOC-R-10) -->
+  <div class="flex flex-col gap-2 p-4" data-testid="toc-leave-as-is-section">
+    <div class="flex items-center gap-3 flex-wrap">
+      <label id="toc-leave-as-is-label" class="text-[16px] font-semibold text-slate-900 leading-snug cursor-default">
+        Do you want to leave the ToC linkage as is or go further and select more details?
+      </label>
+
+      <div class="inline-flex items-center p-1 bg-slate-100 rounded-lg gap-1 border border-slate-200 shrink-0"
+           role="group"
+           aria-labelledby="toc-leave-as-is-label"
+           aria-label="Do you want to leave the ToC linkage as is or go further and select more details?"
+           data-testid="toc-default-toggle-group">
+        <!-- User-requested rewording (2026-09-18): "Yes/No" answered nothing on its own — a
+             reader had to re-read the question to know which option kept the default. The
+             button text now IS the answer. -->
+        <button
+          type="button"
+          hlmBtn
+          [variant]="isYesSelected() ? 'brand' : 'outline'"
+          class="h-[40px]! px-4! text-[14px]! font-semibold gap-1.5"
+          [disabled]="readOnly()"
+          [attr.disabled]="readOnly() ? '' : null"
+          [attr.aria-pressed]="isYesSelected()"
+          data-testid="toc-default-yes-btn"
+          (click)="onSelectMode('project_default')">
+          <ng-icon name="lucideCheck" class="text-[14px]" />
+          Keep default linkage
+        </button>
+        <button
+          type="button"
+          hlmBtn
+          [variant]="isNoSelected() ? 'brand' : 'outline'"
+          class="h-[40px]! px-4! text-[14px]! font-semibold gap-1.5"
+          [disabled]="readOnly()"
+          [attr.disabled]="readOnly() ? '' : null"
+          [attr.aria-pressed]="isNoSelected()"
+          data-testid="toc-default-no-btn"
+          (click)="onSelectMode('custom')">
+          <ng-icon name="lucideArrowLeftRight" class="text-[14px]" />
+          Customize linkage
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

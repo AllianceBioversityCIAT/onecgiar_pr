@@ -106,7 +106,7 @@
           <app-pr-multi-select
             data-testid="au-field-merge-targets"
             label="Which innovations did this one merge into?"
-            description="Only quality-assessed innovations that are not themselves discontinued can be selected."
+            description="Only active, non-discontinued innovations can be selected."
             placeholder="Search by innovation ID or title"
             [options]="mergeSplitCatalogue"
             optionLabel="label"
@@ -114,9 +114,11 @@
             [required]="false"
             [readOnly]="lockedByDiscontinuation"
             [isStatic]="annualUpdatingEditable"
+            [resultPickerStyle]="true"
             [ngModel]="selectedTargets('merge')"
             (ngModelChange)="onTargetsChange('merge', $event)"
-            (click)="ensureMergeSplitCatalogue()">
+            (click)="ensureMergeSplitCatalogue()"
+            (searchTextChange)="searchMergeSplitCatalogue($event)">
           </app-pr-multi-select>
         }
 
@@ -124,7 +126,7 @@
           <app-pr-multi-select
             data-testid="au-field-split-targets"
             label="Which innovations did this one split into?"
-            description="Only quality-assessed innovations that are not themselves discontinued can be selected."
+            description="Only active, non-discontinued innovations can be selected."
             placeholder="Search by innovation ID or title"
             [options]="mergeSplitCatalogue"
             optionLabel="label"
@@ -132,9 +134,11 @@
             [required]="false"
             [readOnly]="lockedByDiscontinuation"
             [isStatic]="annualUpdatingEditable"
+            [resultPickerStyle]="true"
             [ngModel]="selectedTargets('split')"
             (ngModelChange)="onTargetsChange('split', $event)"
-            (click)="ensureMergeSplitCatalogue()">
+            (click)="ensureMergeSplitCatalogue()"
+            (searchTextChange)="searchMergeSplitCatalogue($event)">
           </app-pr-multi-select>
         }
 

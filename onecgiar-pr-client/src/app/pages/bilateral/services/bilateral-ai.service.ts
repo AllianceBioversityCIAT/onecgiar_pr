@@ -1,5 +1,6 @@
 import { Injectable, signal, computed, inject, effect, OnDestroy } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map, shareReplay } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { PrToastService } from '../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
@@ -9,22 +10,39 @@ import { BilateralCreationService } from './bilateral-creation.service';
 import {
   BilateralAiCompletionNotice,
   BilateralAiDraft,
-  BilateralAiJob,
   BilateralAiUploadState,
 } from './bilateral-ai.interfaces';
+import {
+  BilateralAiExpectations,
+  BilateralAiMixClass,
+  NormalizedBilateralAiJob,
+  RawBilateralAiJob,
+  normalizeJob,
+} from '../bilateral-ai-job.model';
 import { ReportingApiResponse } from '../../../shared/interfaces/reporting-api.response';
 
-const POLL_INTERVAL = 5000;
+/** First 2 minutes: poll every 5 s — the user is staring at the screen (`APF-R-20`). */
+const POLL_INTERVAL_INITIAL = 5_000;
+/** From 2 minutes until the ceiling: poll every 15 s (`APF-R-20`). */
+const POLL_INTERVAL_MID = 15_000;
+/** In "still running", past the ceiling: poll every 30 s (`APF-R-20`). */
+const POLL_INTERVAL_CEILING = 30_000;
+const ADAPTIVE_SWITCH_MS = 120_000;
 /**
- * 30 minutes. The old 5-minute ceiling was shorter than a real text-mining run: the client gave up,
- * flagged the job as failed, and the server finished anyway with nobody told (2026-09-07).
+ * 30 minutes. The client no longer declares a failure at this mark (`APF-DD-6` — the old 5-minute,
+ * then 30-minute, ceiling produced a client-invented timeout message with no server truth behind
+ * it). Past
+ * this point the panel switches to "still running": polling slows to 30 s and the resume record is
+ * kept — the server (its own per-attempt timeout + stale-job sweeper) is now the only party that
+ * can declare the job over.
  */
-const MAX_POLL_DURATION = 1_800_000;
+const CEILING_MS = 1_800_000;
 /** The job being polled, so a reload (or a new tab) resumes it instead of losing the outcome. */
 const ACTIVE_JOB_STORAGE_KEY = 'prms.bilateral-ai.active-job';
 
 interface ActiveJobRecord {
   jobId: string;
+  /** Optional at runtime only — older stored records predate this field; tolerated on read. */
   centerAcronym: string;
   startedAt: number;
 }
@@ -39,7 +57,7 @@ export class BilateralAiService implements OnDestroy {
   private readonly creationService = inject(BilateralCreationService);
 
   currentJobId = signal<string | null>(null);
-  currentJob = signal<BilateralAiJob | null>(null);
+  currentJob = signal<NormalizedBilateralAiJob | null>(null);
   draftList = signal<BilateralAiDraft[]>([]);
   currentDraft = signal<BilateralAiDraft | null>(null);
   isDraftListLoaded = signal(false);
@@ -55,16 +73,26 @@ export class BilateralAiService implements OnDestroy {
   });
 
   /**
+   * `APF-DD-7`: which of the two outcome surfaces is live. Set by the host that renders
+   * `<app-ai-processing-panel>` (mount/destroy) — `announce()` reads it to decide whether the
+   * app-wide completion dialog should speak at all. Never both: the panel renders the terminal
+   * outcome inline while this is true; the dialog is the only surface while it is false.
+   */
+  readonly panelVisible = signal(false);
+
+  /**
    * The terminal outcome of the last AI job, for the app-wide `app-bilateral-ai-completion-dialog`.
    * Set once per job, from wherever the user is; cleared when they act on it. Replaces the toast
-   * (2026-09-04 → 2026-09-07) that nobody noticed and the forced redirect before it.
+   * (2026-09-04 → 2026-09-07) that nobody noticed and the forced redirect before it. Suppressed
+   * entirely while `panelVisible()` is true (`APF-R-8` A/B).
    */
   completionNotice = signal<BilateralAiCompletionNotice | null>(null);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
-  private pollingStart = 0;
+  private currentIntervalMs = POLL_INTERVAL_INITIAL;
   /** Centre captured when the job started — the context signals are stale by the time it ends. */
   private activeJob: ActiveJobRecord | null = null;
+  private readonly expectationsCache = new Map<BilateralAiMixClass, Observable<BilateralAiExpectations>>();
 
   draftCount = computed(() => this.draftList().length);
   draftCountDisplay = computed(() => {
@@ -100,18 +128,87 @@ export class BilateralAiService implements OnDestroy {
     this.uploadState.update(s => ({ ...s, status, errorMessage }));
   }
 
+  /** Whether the processing panel is currently the outcome surface (`APF-DD-7`). */
+  setPanelVisible(visible: boolean): void {
+    this.panelVisible.set(visible);
+  }
+
+  /**
+   * `APF-T-7`/`APF-R-10`: read-only snapshot of the in-memory active-job record, for the header
+   * chip's per-center gate and its elapsed-time fallback before the first poll response lands.
+   * `null` when this tab is not tracking a job. Kept separate from the private `activeJob` field
+   * so callers cannot mutate it.
+   */
+  getActiveJobSnapshot(): { centerAcronym: string; startedAt: number } | null {
+    return this.activeJob ? { centerAcronym: this.activeJob.centerAcronym, startedAt: this.activeJob.startedAt } : null;
+  }
+
   // ── Job lifecycle ───────────────────────────────────────────────────
 
   startJob(jobId: string): void {
     this.activeJob = { jobId, centerAcronym: this.ctx.centerAcronym(), startedAt: Date.now() };
     this.persistActiveJob();
     this.currentJobId.set(jobId);
+    this.currentJob.set(null);
     this.uploadState.set({
       jobId,
       status: 'pending',
       uploadProgress: 100,
     });
-    this.startPolling(jobId);
+    this.startPolling(jobId, this.activeJob.startedAt);
+  }
+
+  /**
+   * `APF-R-5`/`APF-R-9`: re-enqueues the same stored sources under the same job id — no re-upload,
+   * no new job. Disabled while the job is alive is a UI concern (the panel), not this method's.
+   */
+  retryJob(jobId: string): void {
+    this.bilateralApi.POST_bilateralAiJobRetry(jobId).subscribe({
+      next: () => {
+        this.activeJob = {
+          jobId,
+          centerAcronym: this.activeJob?.centerAcronym || this.ctx.centerAcronym(),
+          startedAt: Date.now(),
+        };
+        this.persistActiveJob();
+        this.currentJobId.set(jobId);
+        this.currentJob.set(null);
+        this.uploadState.set({ jobId, status: 'pending', uploadProgress: 100 });
+        this.startPolling(jobId, this.activeJob.startedAt);
+      },
+      error: (err: { status?: number } | null) => {
+        if (err?.status === 410) {
+          // The stored sources are gone (bucket expiry) — nothing left to retry against.
+          this.clearActiveJob();
+          this.currentJobId.set(null);
+          this.currentJob.set(null);
+          this.uploadState.set({
+            jobId: null,
+            status: 'idle',
+            uploadProgress: 0,
+            errorMessage: 'The uploaded sources are no longer available. Please upload them again.',
+          });
+        } else {
+          this.uploadState.update(s => ({ ...s, status: 'failed', errorMessage: 'Could not retry the job. Please try again.' }));
+        }
+      },
+    });
+  }
+
+  /**
+   * `APF-R-6` D / `APF-R-21`: the expected-duration range for a source mix, cached per mix for the
+   * session so the panel and any other caller share one HTTP call.
+   */
+  expectations(mix: BilateralAiMixClass): Observable<BilateralAiExpectations> {
+    let cached = this.expectationsCache.get(mix);
+    if (!cached) {
+      cached = this.bilateralApi.GET_bilateralAiJobExpectations(mix).pipe(
+        map(({ response }: { response: BilateralAiExpectations }) => response),
+        shareReplay(1),
+      );
+      this.expectationsCache.set(mix, cached);
+    }
+    return cached;
   }
 
   /** The user acknowledged the outcome and stays where they are. */
@@ -128,17 +225,14 @@ export class BilateralAiService implements OnDestroy {
   }
 
   /**
-   * Picks the polling back up after a reload. The record is dropped once the job is older than the
-   * polling ceiling — by then the server has long finished or failed and the Drafts list is the
-   * source of truth.
+   * Picks the polling back up after a reload. `APF-R-7` AND-IT-MUST: resumed **regardless of the
+   * record's age** — the record is dropped only by a terminal server state or a 404/410 on poll,
+   * never by client-side elapsed time. (Removed: the previous `MAX_POLL_DURATION`-age drop, which
+   * silently lost jobs older than 30 minutes on reload even while the server was still working.)
    */
   private resumeActiveJob(): void {
     const record = this.readActiveJob();
     if (!record) return;
-    if (Date.now() - record.startedAt > MAX_POLL_DURATION) {
-      this.clearActiveJob();
-      return;
-    }
     this.activeJob = record;
     this.currentJobId.set(record.jobId);
     this.uploadState.set({ jobId: record.jobId, status: 'pending', uploadProgress: 100 });
@@ -177,14 +271,17 @@ export class BilateralAiService implements OnDestroy {
   private announce(status: BilateralAiCompletionNotice['status'], resultCount: number, errorMessage?: string): void {
     const jobId = this.activeJob?.jobId ?? this.currentJobId() ?? '';
     const centerAcronym = this.activeJob?.centerAcronym || this.ctx.centerAcronym();
-    this.completionNotice.set({ jobId, centerAcronym, status, resultCount, errorMessage });
     this.clearActiveJob();
+    // APF-DD-7: the panel renders the terminal outcome inline — the dialog must stay silent so
+    // the two surfaces never both speak (APF-R-8 A/B).
+    if (this.panelVisible()) return;
+    this.completionNotice.set({ jobId, centerAcronym, status, resultCount, errorMessage });
   }
 
   private startPolling(jobId: string, startedAt: number = Date.now()): void {
     this.stopPolling();
-    this.pollingStart = startedAt;
-    this.pollingTimer = setInterval(() => this.pollJob(jobId), POLL_INTERVAL);
+    this.currentIntervalMs = POLL_INTERVAL_INITIAL;
+    this.pollingTimer = setInterval(() => this.pollJob(jobId), this.currentIntervalMs);
     void this.pollJob(jobId);
   }
 
@@ -195,24 +292,49 @@ export class BilateralAiService implements OnDestroy {
     }
   }
 
-  private async pollJob(jobId: string): Promise<void> {
-    if (Date.now() - this.pollingStart > MAX_POLL_DURATION) {
-      this.stopPolling();
-      const errorMessage = 'Processing timed out. Please try again.';
-      this.uploadState.update(s => ({ ...s, status: 'failed', errorMessage }));
-      this.announce('failed', 0, errorMessage);
-      return;
-    }
+  /**
+   * The reference instant every age-based client rule (interval bucket, "still running" ceiling)
+   * measures from: the normalized job's queue-entry clock once we have one, or the record's
+   * `startedAt` before the first poll response lands (Leader decision — there is no job yet to
+   * read a `queueEntryDate` off of).
+   */
+  private pollReferenceMs(job: NormalizedBilateralAiJob | null): number {
+    if (job) return job.queueEntryDate.getTime();
+    return this.activeJob?.startedAt ?? Date.now();
+  }
 
+  private isAtCeiling(job: NormalizedBilateralAiJob | null): boolean {
+    return Date.now() - this.pollReferenceMs(job) >= CEILING_MS;
+  }
+
+  private desiredIntervalMs(job: NormalizedBilateralAiJob | null): number {
+    const elapsed = Date.now() - this.pollReferenceMs(job);
+    if (elapsed >= CEILING_MS) return POLL_INTERVAL_CEILING;
+    if (elapsed >= ADAPTIVE_SWITCH_MS) return POLL_INTERVAL_MID;
+    return POLL_INTERVAL_INITIAL;
+  }
+
+  /** Recreates the interval timer only when the desired cadence actually changes. */
+  private adjustPollInterval(jobId: string, job: NormalizedBilateralAiJob | null): void {
+    if (!this.pollingTimer) return;
+    const desired = this.desiredIntervalMs(job);
+    if (desired === this.currentIntervalMs) return;
+    this.currentIntervalMs = desired;
+    clearInterval(this.pollingTimer);
+    this.pollingTimer = setInterval(() => this.pollJob(jobId), desired);
+  }
+
+  private async pollJob(jobId: string): Promise<void> {
     try {
-      const { response } = await this.bilateralApi.GET_bilateralAiJob(jobId).toPromise() as any;
-      const job = response as BilateralAiJob;
+      const { response } = (await this.bilateralApi.GET_bilateralAiJob(jobId).toPromise()) as { response: RawBilateralAiJob };
+      const job = normalizeJob(response);
       this.currentJob.set(job);
+      this.adjustPollInterval(jobId, job);
 
       if (job.status === 'PENDING') {
-        this.uploadState.update(s => ({ ...s, status: 'pending' }));
+        this.uploadState.update(s => ({ ...s, status: this.isAtCeiling(job) ? 'still_running' : 'pending' }));
       } else if (job.status === 'PROCESSING') {
-        this.uploadState.update(s => ({ ...s, status: 'processing' }));
+        this.uploadState.update(s => ({ ...s, status: this.isAtCeiling(job) ? 'still_running' : 'processing' }));
       } else if (job.status === 'COMPLETED') {
         this.stopPolling();
         // No navigation, ever. The service is root-provided and polling survives navigation, so
@@ -220,23 +342,54 @@ export class BilateralAiService implements OnDestroy {
         // the toast that replaced it went unnoticed (2026-09-07). The outcome is announced
         // through `completionNotice` — a dialog the user closes or follows to the Drafts list —
         // and the server mails the uploader a link as the durable half.
-        if (job.result_count === 0) {
+        if (job.resultCount === 0) {
           this.uploadState.update(s => ({ ...s, status: 'completed_no_candidates' }));
           this.announce('completed_no_candidates', 0);
         } else {
           this.uploadState.update(s => ({ ...s, status: 'completed' }));
           this.loadAllDrafts();
-          this.announce('completed', job.result_count);
+          this.announce('completed', job.resultCount);
         }
       } else if (job.status === 'FAILED') {
         this.stopPolling();
-        const errorMessage = job.error_message ?? 'AI processing failed. Please try again.';
+        const errorMessage = job.errorMessage ?? 'AI processing failed. Please try again.';
         this.uploadState.update(s => ({ ...s, status: 'failed', errorMessage }));
         this.announce('failed', 0, errorMessage);
       }
-    } catch {
-      // polling error — keep trying
+    } catch (err: unknown) {
+      this.handlePollError(err);
     }
+  }
+
+  /**
+   * `APF-R-7` AND-IT-MUST / `APF-DD-6`: the ceiling used to be the only thing that stopped an
+   * eternal poll; removing it means this branch on the HTTP status of a failed poll is now the
+   * terminating condition, and had to be written rather than inherited from "every error keeps
+   * polling" (today's — yesterday's — behaviour, kept as the `else` arm below).
+   */
+  private handlePollError(err: unknown): void {
+    const status = (err as { status?: number } | null | undefined)?.status;
+    if (status === 404 || status === 410) {
+      // The job row is gone server-side — nothing left to resume. `stopPolling` alone leaves
+      // `uploadState`/`currentJob` pointing at the last-known (now dead) job: the panel would keep
+      // rendering a live-looking stepper with a timer that ticks against a `queueEntryDate` no
+      // poll will ever refresh again. Reset to the upload form with an explanation, the same
+      // outcome `retryJob`'s own 410 branch produces (`APF-R-9` AND-IT-MUST).
+      this.stopPolling();
+      this.clearActiveJob();
+      this.currentJobId.set(null);
+      this.currentJob.set(null);
+      this.uploadState.set({
+        jobId: null,
+        status: 'idle',
+        uploadProgress: 0,
+        errorMessage: 'This job is no longer available. Please upload your sources again.',
+      });
+    } else if (status === 401) {
+      // The session is gone; retrying the request would only produce more 401s.
+      this.stopPolling();
+    }
+    // Network blip / 500 / 503 / anything else: keep polling on the current interval.
   }
 
   // ── Draft CRUD ──────────────────────────────────────────────────────

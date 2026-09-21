@@ -14,10 +14,11 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { SharePointUploadService } from '../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 import { BilateralEvidenceItem, BilateralEvidenceBody } from './section-evidence.model';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
+import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 
 @Component({
   selector: 'app-section-evidence',
-  imports: [CommonModule, FormsModule, HlmButton, PrDialogComponent, FormSkeletonComponent, CustomFieldsModule],
+  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, HlmButton, PrDialogComponent, FormSkeletonComponent, CustomFieldsModule],
   templateUrl: './section-evidence.component.html',
   styleUrl: './section-evidence.component.scss'
 })
@@ -543,7 +544,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     this.mdsTracker.setSectionFields('evidence', [
       {
         key: 'valid-link',
-        label: 'Evidence with valid link',
+        // El rótulo que el reportero ve en la tarjeta, palabra por palabra: la entrada del panel
+        // "Still missing" se ancla al campo por ese texto, y un nombre que no está en pantalla deja
+        // la fila sin su botón `Go`. El requisito completo lo explica la descripción de la tarjeta.
+        label: 'Evidence',
         filled: this.hasValidLink,
       },
     ]);

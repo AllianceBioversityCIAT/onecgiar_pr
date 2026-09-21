@@ -1,16 +1,42 @@
-<div class="column_title required">
-  {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'External partners' }}
-</div>
-<div [ngSwitch]="this.rolesSE.readOnly" class="mt-8">
-  <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
-  <div *ngSwitchCase="false">
-    <app-pr-checkbox
-      label="Select this option if the partner section is not applicable"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-      (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
-    </app-pr-checkbox>
+<!-- El encabezado del bloque de socios es un CAMPO como los demás, así que lleva la tarjeta
+     (propuesta 18) y no un `.column_title.required` con asterisco: el tag REQUIRED lo dice, y el
+     asterisco al lado sería la misma afirmación dos veces. La banda va verde con "no aplica", o con
+     socios elegidos Y el rol de cada uno (P2-3738): antes bastaba con elegir uno, y la tarjeta se
+     ponía verde mientras el contador seguía pidiendo los partner roles. -->
+<app-field-card
+  [label]="dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'External partners'"
+  [required]="true"
+  [hasValue]="partnersCardComplete"
+  tooltip="Select this option if the partner section is not applicable"
+  layout="inline">
+  <!-- El control va AL FRENTE de la banda (`layout="inline"`), como el Yes/No — y con su mismo
+       idioma: control segmentado sobre blanco, gris oscuro al elegirlo. Marcar "no aplica" no es
+       un acierto ni un fallo, así que no lleva ni verde ni rojo.
+       La frase larga va de `tooltip`, no de `description`: así se pliega detrás del ⓘ de la
+       cabecera como en todos los demás campos, en vez de quedarse abierta en un bloque gris
+       a todo el ancho — que era la forma de las fases anteriores (Yeck, 15-sep-2026). -->
+  <div>
+    @if (this.rolesSE.readOnly) {
+      <span class="fc-switch-readonly">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '—' }}</span>
+    } @else {
+      <button
+        type="button"
+        class="fc-switch"
+        role="switch"
+        [class.on]="!!this.rdPartnersSE.partnersBody.no_applicable_partner"
+        [attr.aria-checked]="!!this.rdPartnersSE.partnersBody.no_applicable_partner"
+        data-testid="partners-not-applicable"
+        (click)="toggleNotApplicable()">
+        <span class="fcs_box" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.2 8.4l3 3 6.6-6.8" />
+          </svg>
+        </span>
+        Not applicable
+      </button>
+    }
   </div>
-</div>
+</app-field-card>
 <app-alert-status
   *ngIf="dataControlSE.isKnowledgeProduct"
   [collapsible]="false"
@@ -76,7 +102,10 @@
 
     <div class="chips_container custom_scroll partners_selected">
       <div class="pr_chip_selected" *ngFor="let option of this.institutionsNoSentinel; let i = index">
-        <div appFeedbackValidation labelText="Institution type" [isComplete]="!!option?.delivery?.length"></div>
+        <div
+            appFeedbackValidation
+            [labelText]="'Partner role: ' + (option?.obj_institutions?.name || 'partner')"
+            [isComplete]="!!option?.delivery?.length"></div>
         <div class="partner_info">
           <div class="name">{{ option?.obj_institutions?.name }}</div>
           <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>
@@ -155,6 +184,7 @@
         [label]="hasReferencePartners() ? 'Other(s) External Partners' : 'External partners'"
         data-testid="toc-other-partners"
         [required]="false"
+        [complete]="otherPartnersRolesComplete"
         selectedOptionLabel="institutions_name"
         optionLabel="full_name"
         optionValue="institutions_id"
@@ -167,7 +197,10 @@
 
       <div class="chips_container custom_scroll partners_selected">
         <div class="pr_chip_selected" *ngFor="let option of this.rdPartnersSE.otherPartnersSelected; let i = index">
-          <div appFeedbackValidation labelText="Institution type" [isComplete]="!!option?.delivery?.length"></div>
+          <div
+            appFeedbackValidation
+            [labelText]="'Partner role: ' + (option?.obj_institutions?.name || 'partner')"
+            [isComplete]="!!option?.delivery?.length"></div>
           <div class="partner_info">
             <div class="name">{{ option?.obj_institutions?.name }}</div>
             <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>

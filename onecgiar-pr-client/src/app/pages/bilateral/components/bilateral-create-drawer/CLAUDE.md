@@ -25,6 +25,21 @@ de reporting.
 - ⚠️ **`restoreFocusTarget`** debe ser el elemento que abrió el drawer (p. ej. botón Create result
   del catálogo) para cumplir R-8 focus return.
 - El `aria-label` del panel usa copy centralizado; los tests importan la misma constante.
+- ⚠️ **Botón ✕ por debajo de 44px.** `bilateral-create-drawer.component.html:35` usa `size-8`
+  (2rem = 24px con la raíz de 12px de este repo) contra el requisito de 44px de hit target a ancho
+  móvil. Sigue así en producción. Hallazgo lateral de `bilateral/qa-ai-verdict-drawer` (`BIL-QAD-T-5`,
+  2026-09-18) — se registra aquí, no se corrige en esta spec ni se abre ticket nuevo; va al ticket
+  que lo destape.
 
 ## Pendiente
-- Extracción opcional a `shared/components/pr-drawer` si W1/W2 y bilateral convergen más adelante.
+- Extracción opcional a `shared/components/pr-drawer` si W1/W2 y bilateral convergen más adelante —
+  **4 consumidores** hoy: `bilateral-create-drawer` (este), `result-review-drawer`, `indicator-drawer`
+  y, desde 2026-09-18, `bilateral-quality-assessment-dialog` (spec `bilateral/qa-ai-verdict-drawer`,
+  `BIL-QAD-DD-2`) — el cuarto shell hand-rolled. Su nombre quedó `…-dialog` a propósito (`BIL-QAD-DD-5`);
+  renderiza un drawer.
+- Deuda que ese cuarto consumidor trae encima (auditada en `BIL-QAD-T-1`; son deuda, no defectos —
+  `DD-2` decidió copiar el patrón en vez de extraer, y `requirements.md` §8 de esa spec deja el i18n
+  cerrado a propósito): reusa valores crudos de este componente (`bg-[rgba(15,23,42,0.35)]`,
+  `shadow-[-18px_0_44px_…]`, `text-gray-400`) en vez de tokens `--pr-*`, y hardcodea tres strings de
+  a11y ("Close", "Resize panel", "Checking quality") donde ese drawer sí centraliza copy en
+  `internationalization/`.

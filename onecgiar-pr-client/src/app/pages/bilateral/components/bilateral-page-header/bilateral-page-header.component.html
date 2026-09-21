@@ -1,19 +1,10 @@
 @if (ctx.centerAcronym()) {
   @if (variant() === 'detail') {
-    <!-- Result-editor header, in flow (it scrolls with the form). Same shape as the W1/W2 result
-         detail header — way back · title · identity strip — so a bilateral result reads like any
-         other result. The band below stays for the tabbed pages and the wizard. -->
+    <!-- Result-editor header, in flow (it scrolls with the form).
+         Streamlined per BRRA-R-3 and BRRA-R-4:
+         Back button removed (anchored persistently in rail), identity strip streamlined
+         without duplicate code, type, or status. -->
     <header class="mb-[16px] flex w-full flex-col gap-[8px]" data-testid="bilateral-detail-header">
-      <button
-        type="button"
-        class="inline-flex h-[20px] w-fit cursor-pointer items-center gap-[5px] border-0 bg-transparent p-0 text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
-        [attr.aria-label]="backLabel()"
-        data-testid="bilateral-header-back-btn"
-        (click)="goBack()">
-        <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">chevron_left</i>
-        {{ backLabel() }}
-      </button>
-
       <!-- Clamped to two lines like the W1/W2 title: a long name must not push the form below the fold. -->
       <h1
         class="m-0 line-clamp-2 min-w-0 text-pretty text-[26px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
@@ -21,47 +12,64 @@
         {{ pageTitle() }}
       </h1>
 
-      @if (hasIdentityStrip()) {
-        <!-- Identity strip: plain text separated by rules, and ONE pill — the status. The funding
-             tag used to be the pill here; W1/W2 spends the pill on the state, which is the thing
-             that changes, and lists funding as text. -->
-        <div class="flex flex-wrap items-center gap-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]">
-          @if (resultCode() != null) {
-            <span class="font-mono text-[12px] font-medium text-[var(--pr-text)]">{{ resultCode() }}</span>
-          }
-          @if (resultTypeName(); as typeName) {
-            <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
-            <span>{{ typeName }}</span>
+      @if (hasDetailIdentityStrip()) {
+        <!-- Secondary contextual metadata strip (BRRA-R-4) -->
+        <div class="flex flex-wrap items-center gap-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]" data-testid="bilateral-detail-identity-strip">
+          @if (resultLevelName(); as levelName) {
+            <span data-testid="bilateral-header-level">{{ levelName }}</span>
           }
           @if (isW3Bilateral()) {
-            <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
-            <span>W3/Bilateral</span>
+            @if (resultLevelName()) {
+              <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+            }
+            <span data-testid="bilateral-header-funding">W3/Bilateral</span>
           }
-          @if (statusBadge(); as badge) {
-            <span
-              class="rounded-full px-[9px] py-[2px] text-[12px] font-medium"
-              [class]="badge.classes"
-              data-testid="bilateral-status-badge">
-              {{ badge.label }}
-            </span>
+          @if (resolvedCenterName(); as center) {
+            @if (resultLevelName() || isW3Bilateral()) {
+              <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+            }
+            <span data-testid="bilateral-header-center">{{ center }}</span>
+          }
+          @if (areaOfWork(); as aow) {
+            @if (resultLevelName() || isW3Bilateral() || resolvedCenterName()) {
+              <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+            }
+            <span data-testid="bilateral-header-aow">{{ aow }}</span>
+          }
+          @if (showAiProvenanceBadge()) {
+            <app-ai-provenance-notice variant="badge" />
           }
         </div>
       }
     </header>
   } @else {
-  <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
+  <div
+    class="sticky top-0 flex-none bg-[var(--pr-surface-band)]"
+    [class.z-20]="!infoOpen()"
+    [class.z-40]="infoOpen()"
+    data-testid="bilateral-page-header-sticky">
     <div
-      class="relative flex h-[64px] flex-col justify-center gap-[4px] sm:gap-[6px] px-[16px] sm:px-[32px]"
+      class="relative flex h-[64px] min-[640px]:h-[64px] max-[639px]:h-auto max-[639px]:py-[8px] flex-col justify-center gap-[4px] sm:gap-[6px] px-[16px] sm:px-[32px]"
       [class.border-b-band]="!activeTab()">
       @if (pageTitle(); as title) {
         <nav class="min-w-0" aria-label="Breadcrumb">
           <ol class="m-0 flex min-w-0 list-none items-center gap-[6px] p-0 text-[12px] leading-none">
-            <li class="shrink-0 font-medium text-[var(--pr-text-subtle)]">CGIAR Center</li>
+            <li class="shrink-0 font-medium text-[var(--pr-text-subtle)]">
+              <a
+                routerLink="/bilateral"
+                class="no-underline text-[var(--pr-text-subtle)] hover:text-[var(--pr-color-primary-400)] transition-colors">
+                CGIAR Center
+              </a>
+            </li>
             <li class="shrink-0 text-[var(--pr-text-subtle)]" aria-hidden="true">&gt;</li>
             <li
               class="min-w-0 truncate font-semibold text-[var(--pr-text-secondary)]"
               aria-current="page">
-              {{ centerBreadcrumbLabel() }}
+              <a
+                [routerLink]="['/bilateral', ctx.centerAcronym(), 'results']"
+                class="no-underline text-[var(--pr-text-secondary)] hover:text-[var(--pr-color-primary-400)] transition-colors">
+                {{ centerBreadcrumbLabel() }}
+              </a>
             </li>
           </ol>
         </nav>
@@ -108,20 +116,109 @@
           </span>
         </div>
 
-        <!-- Center acronym title and center name subtitle -->
-        <div class="min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]">
-          <div class="flex min-w-0 items-baseline gap-[8px]">
+        <!-- Center acronym title, info popover, and center name subtitle (ⓘ sits on the title row, SP band parity) -->
+        <div class="relative min-w-0 pr-[140px] sm:pr-[240px] min-[900px]:pr-[320px]" data-guide="bilateral-identity">
+          <div class="flex min-w-0 items-center gap-[8px]">
             <h1
               class="m-0 min-w-0 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]">
               {{ ctx.centerAcronym() }}
             </h1>
+
+            @if (activeTab()) {
+              <button
+                type="button"
+                class="flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] transition-all hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+                [attr.aria-label]="copy.infoButtonAriaLabel"
+                [attr.aria-expanded]="infoOpen()"
+                [attr.aria-controls]="'bilateral-header-info-popover'"
+                data-testid="bilateral-header-info-button"
+                (click)="toggleInfo($event)">
+                <ng-icon name="lucideInfo" class="text-[13px]" />
+              </button>
+            }
+
             @if (ctx.centerName()) {
               <p class="m-0 min-w-0 truncate text-[12px] sm:text-[13px] font-normal text-[var(--pr-text-secondary)]">
                 {{ ctx.centerName() }}
               </p>
             }
           </div>
+
+          @if (activeTab() && infoOpen()) {
+              <div
+                id="bilateral-header-info-popover"
+                role="dialog"
+                [attr.aria-label]="copy.popoverAriaLabel"
+                class="absolute left-0 top-[32px] z-50 w-[460px] max-w-[90vw] rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+                data-testid="bilateral-header-info-popover"
+                (click)="$event.stopPropagation()">
+                <div class="mb-[12px] flex items-center justify-between gap-[8px]">
+                  <div class="flex min-w-0 items-center gap-[8px]">
+                    <span class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]">
+                      <ng-icon name="lucideInfo" class="text-[14px]" />
+                    </span>
+                    <span class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)]">
+                      {{ headerTitle() }}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)]"
+                    aria-label="Close"
+                    (click)="closeInfo()">
+                    <ng-icon name="lucideX" class="text-[14px]" />
+                  </button>
+                </div>
+
+                <div class="mb-[14px] rounded-[10px] bg-[var(--pr-color-primary-25)] border border-[var(--pr-color-primary-100)] p-[12px]">
+                  <div class="mb-[4px] flex items-center gap-[6px]">
+                    <span class="inline-block rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-color-primary-700)]">
+                      {{ activeTabInfo().title }}
+                    </span>
+                    <span class="text-[11.5px] font-medium text-[var(--pr-text-subtle)]">{{ copy.activeViewLabel }}</span>
+                  </div>
+                  <p class="m-0 text-[12.5px] font-normal leading-[1.5] text-[var(--pr-text-secondary)]">
+                    {{ activeTabInfo().description }}
+                  </p>
+                </div>
+
+                <div>
+                  <span class="mb-[4px] block text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]">
+                    {{ copy.centerOverviewHeading }}
+                  </span>
+                  <div class="max-h-[140px] overflow-y-auto text-[13px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
+                    {{ centerOverviewDescription() }}
+                  </div>
+                </div>
+
+                <div class="mt-[14px] flex items-center justify-between border-t border-[var(--pr-border-divider)] pt-[10px] text-[12px] font-medium text-[var(--pr-text-secondary)]">
+                  <span>{{ centerMeta() }}</span>
+                  <span class="font-mono text-[11px] text-[var(--pr-text-subtle)]">{{ ctx.centerAcronym() }}</span>
+                </div>
+              </div>
+          }
         </div>
+
+        <!-- "AI job running" chip (< 640px): renders in the identity block so it stays visible without scrolling (Pivot Option A) -->
+        @if (aiJobChip(); as chip) {
+          <div class="flex min-[640px]:hidden items-center pt-[2px]">
+            <a
+              class="flex h-[24px] shrink-0 items-center gap-[6px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+              data-testid="bilateral-ai-job-chip"
+              [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
+              [queryParams]="{ job: chip.jobId }"
+              [attr.aria-label]="chip.ariaLabel">
+              <span
+                class="material-icons-round flex-none animate-pulse text-[14px] leading-none text-[var(--pr-color-primary-300)] motion-reduce:animate-none"
+                aria-hidden="true">
+                auto_awesome
+              </span>
+              <span>AI job running</span>
+              <span aria-hidden="true">·</span>
+              <span class="font-mono tabular-nums">{{ chip.elapsedLabel }}</span>
+            </a>
+          </div>
+        }
       }
 
       <!-- Action area right-aligned: the slot the [+ Report emerging result] CTA used to hold. It now
@@ -136,11 +233,21 @@
         <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[8px] sm:gap-[10px]">
           <button
             type="button"
+            class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] sm:px-[12px] text-[12px] sm:text-[13px] font-semibold text-[var(--pr-text-secondary)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] shadow-2xs"
+            (click)="startBilateralTour()"
+            data-guide="bilateral-tour-trigger"
+            aria-label="Start guided tour">
+            <span class="material-icons-round text-[16px] text-[var(--pr-color-primary-500)]">explore</span>
+            <span class="hidden sm:inline">Tour</span>
+          </button>
+          <button
+            type="button"
             class="flex h-[32px] sm:h-[36px] shrink-0 items-center gap-[6px] sm:gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[10px] sm:px-[14px] text-[12px] sm:text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed"
             [disabled]="isMinting()"
             [attr.aria-busy]="isMinting()"
             (click)="openBulkUploader()"
             data-testid="bilateral-bulk-uploader-cta"
+            data-guide="bilateral-bulk-uploader-cta"
             [attr.aria-label]="bulkCtaLabel()">
             @if (isMinting()) {
               <span class="material-icons-round text-[16px] sm:text-[18px] animate-spin">progress_activity</span>
@@ -152,11 +259,26 @@
           </button>
         </div>
       }
+
+      @if (!activeTab()) {
+        <div class="absolute right-[16px] sm:right-[32px] top-1/2 z-[22] flex -translate-y-1/2 items-center gap-[8px] sm:gap-[10px]">
+          <button
+            type="button"
+            class="flex h-[32px] sm:h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] sm:text-[13px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+            [attr.aria-label]="backLabel()"
+            data-testid="bilateral-header-back-btn"
+            (click)="goBack()">
+            <span class="material-icons-round text-[16px] leading-none">arrow_back</span>
+            <span>{{ backLabel() }}</span>
+          </button>
+        </div>
+      }
     </div>
 
     @if (activeTab()) {
       <nav
         class="flex h-[48px] items-stretch gap-[16px] sm:gap-[24px] border-b border-[var(--pr-border-band)] px-[16px] sm:px-[32px] overflow-x-auto no-scrollbar"
+        data-guide="bilateral-tabs"
         aria-label="Center sections">
         <!-- Tab 1: Overview -->
         <a
@@ -244,6 +366,27 @@
             </span>
           }
         </a>
+
+        <!-- "AI job running" chip (`APF-R-10`, `APF-DD-8`): sits at the nav's end slot.
+             `ml-auto` pushes it to the far right on desktop while Overview/Reporting/Results/AI Draft Results
+             stay left-anchored. -->
+        @if (aiJobChip(); as chip) {
+          <a
+            class="ml-auto hidden min-[640px]:flex h-[24px] shrink-0 items-center gap-[6px] self-center rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[8px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+            data-testid="bilateral-ai-job-chip"
+            [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']"
+            [queryParams]="{ job: chip.jobId }"
+            [attr.aria-label]="chip.ariaLabel">
+            <span
+              class="material-icons-round flex-none animate-pulse text-[14px] leading-none text-[var(--pr-color-primary-300)] motion-reduce:animate-none"
+              aria-hidden="true">
+              auto_awesome
+            </span>
+            <span>AI job running</span>
+            <span aria-hidden="true">·</span>
+            <span class="font-mono tabular-nums">{{ chip.elapsedLabel }}</span>
+          </a>
+        }
       </nav>
     }
   </div>

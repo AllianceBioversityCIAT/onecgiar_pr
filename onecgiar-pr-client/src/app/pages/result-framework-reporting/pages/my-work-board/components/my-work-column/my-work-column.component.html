@@ -36,6 +36,14 @@
         {{ column().rows.length }}
       </span>
       <span class="flex-1"></span>
+      @if (reorderable() && hasManualOrder()) {
+        <button
+          type="button"
+          class="cursor-pointer rounded-[6px] border-0 bg-transparent px-[6px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-surface-subtle-hover)] hover:text-[var(--pr-color-primary-600)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] motion-reduce:transition-none"
+          (click)="manualOrderReset.emit()">
+          {{ copy.resetOrderLabel }}
+        </button>
+      }
       @if (isEditing() && readyCount() > 0) {
         <span class="text-[11px] text-[var(--pr-text-subtle)]">{{ readyCount() }} ready to submit</span>
       }
@@ -51,9 +59,25 @@
       }
     </div>
 
-    <div class="flex flex-col gap-[10px] p-[12px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-x-hidden min-[900px]:overflow-y-auto custom_scroll" data-testid="my-work-column-list">
-      @for (row of column().rows; track row.code) {
-        <app-my-work-card [row]="row" [inEditingColumn]="isEditing()" (deleted)="deleted.emit($event)" />
+    <div
+      class="flex flex-col gap-[10px] p-[12px] min-[900px]:flex-1 min-[900px]:min-h-0 min-[900px]:overflow-x-hidden min-[900px]:overflow-y-auto custom_scroll"
+      [class.pr-my-work-editing-drop-list]="reorderable()"
+      data-testid="my-work-column-list"
+      cdkScrollable
+      [cdkDropListDisabled]="!reorderable()"
+      cdkDropList
+      cdkDropListOrientation="vertical"
+      [cdkDropListData]="dragList"
+      cdkDropListAutoScrollStep="16"
+      (cdkDropListDropped)="onDrop($event)">
+      @for (row of reorderable() ? dragList : column().rows; track row.code) {
+        <app-my-work-card
+          [row]="row"
+          [inEditingColumn]="isEditing()"
+          [reorderable]="reorderable()"
+          (deleted)="deleted.emit($event)"
+          (dragSessionStarted)="onDragSessionStarted()"
+          (dragSessionEnded)="onDragSessionEnded()" />
       } @empty {
         <p class="m-0 text-[12px] text-[var(--pr-text-subtle)]">{{ emptyMessage() }}</p>
       }

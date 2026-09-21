@@ -10,11 +10,11 @@ import { PrTableComponent } from '../../../../../../shared/components/pr-table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { BilateralResultsService } from '../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
 import {
-  BilateralResultsService,
-  REVIEW_RESULT_ID_QUERY_PARAM,
-  REVIEW_RESULT_QUERY_PARAM
-} from '../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
+  resolveBilateralResultOpenRoute,
+  usesBilateralReviewFlow as usesBilateralReviewFlowUtil
+} from '../../../../../../shared/routing/bilateral-result-open-route.util';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportingGuideService } from '../../../../../result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
@@ -250,7 +250,8 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   @ViewChild('table') table: PrTableComponent;
-  @ViewChild('filters') filters: ResultsListFiltersComponent;
+  // static: the side-column filter mode renders the child's template on the first pass.
+  @ViewChild('filters', { static: true }) filters: ResultsListFiltersComponent;
 
   // Action menu overlay state (replaces PrimeNG p-popover)
   menuOpen = signal(false);
@@ -447,7 +448,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
    * branching in navigateToResult() so the list can flag these rows at the code.
    */
   opensInFramework(result: CurrentResult): boolean {
-    return result?.source_name === 'W3/Bilaterals' && !this.isW3BilateralsAvisa(result) && result?.status_name !== 'Approved';
+    return this.usesBilateralReviewFlow(result);
   }
 
   /** True when this result comes from a W3/bilateral funding source. */
@@ -510,6 +511,19 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-color-orange-200)] bg-[var(--pr-color-orange-50)] text-[var(--pr-color-orange-700)]`;
   readonly fundingChipUnknown =
     `${ResultsListComponent.FUNDING_CHIP_BASE} border-[var(--pr-border)] bg-[var(--pr-surface-app)] text-[var(--pr-text-muted)]`;
+
+  readonly emergingChipClass = this.fundingChipUnknown;
+
+  /** P25 reporting phases are the only scope for the emerging-result label. */
+  isEmerging(result: CurrentResult): boolean {
+    const planned = result?.planned_result;
+    if (planned == null) {
+      return false;
+    }
+    const year = Number(result?.phase_year ?? result?.reported_year);
+    const portfolio = String(result?.acronym ?? result?.portfolio ?? result?.phase_name ?? '');
+    return planned === 0 && /\bP25\b/i.test(portfolio) && year >= 2025 && year <= 2030;
+  }
 
   fundingChipClass(result: CurrentResult): string {
     const label = this.fundingLabel(result);
@@ -758,13 +772,23 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  /**
-   * True when the result must be opened in the bilateral review drawer
-   * instead of the regular result detail page.
-   */
+  private toOpenRouteInput(result: CurrentResult) {
+    return {
+      sourceOrOrigin: result?.source_name,
+      statusId: result?.status_id,
+      statusName: result?.status_name,
+      leadCenter: result?.lead_center,
+      resultCode: result?.result_code,
+      versionId: result?.version_id,
+      submitterCode: result?.submitter ?? result?.initiative_official_code,
+      resultId: result?.id,
+      programmeCodeFallback: this.programCode(result)
+    };
+  }
+
+  /** True when the result must be opened in the bilateral review drawer. */
   private usesBilateralReviewFlow(result: CurrentResult): boolean {
-    if (this.isW3BilateralsAvisa(result) || result?.status_name === 'Approved') return false;
-    return result?.source_name === 'W3/Bilaterals';
+    return usesBilateralReviewFlowUtil(this.toOpenRouteInput(result));
   }
 
   /**
@@ -773,22 +797,20 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
    * detection run.
    */
   private getResultRoute(result: CurrentResult): ResultRoute {
-    const key = [result?.result_code, result?.version_id, result?.status_name, result?.source_name, result?.submitter].join('|');
+    const key = [
+      result?.result_code,
+      result?.version_id,
+      result?.status_name,
+      result?.status_id,
+      result?.source_name,
+      result?.submitter,
+      result?.lead_center
+    ].join('|');
     const cached = this.resultRouteCache.get(key);
     if (cached) return cached;
 
-    const route: ResultRoute = this.usesBilateralReviewFlow(result)
-      ? {
-          // Same fallback chain as programCode(): a raw `submitter` can be undefined and
-          // would build `/entity-details/undefined/bilateral-review`.
-          // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
-          commands: ['/result-framework-reporting', 'entity-details', this.programCode(result), 'bilateral-review'],
-          queryParams: { [REVIEW_RESULT_QUERY_PARAM]: result?.result_code, [REVIEW_RESULT_ID_QUERY_PARAM]: result?.id }
-        }
-      : {
-          commands: ['/result', 'result-detail', result?.result_code, 'general-information'],
-          queryParams: { phase: result?.version_id }
-        };
+    const { commands, queryParams } = resolveBilateralResultOpenRoute(this.toOpenRouteInput(result));
+    const route: ResultRoute = { commands, queryParams };
 
     this.resultRouteCache.set(key, route);
     return route;

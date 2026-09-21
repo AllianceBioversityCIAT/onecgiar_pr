@@ -26,6 +26,7 @@ export class BilateralReportingWaySelectorComponent {
   primaryReady = input(true);
   selectedWay = input<ReportingWay | null>(null);
   waySelected = output<ReportingWay>();
+  blockedClick = output<void>();
 
   options: ReportingWayOption[] = [
     {
@@ -54,6 +55,10 @@ export class BilateralReportingWaySelectorComponent {
   }
 
   selectWay(option: ReportingWayOption): void {
+    if (!this.primaryReady()) {
+      this.blockedClick.emit();
+      return;
+    }
     if (this.isOptionDisabled(option)) return;
     this.waySelected.emit(option.id);
   }

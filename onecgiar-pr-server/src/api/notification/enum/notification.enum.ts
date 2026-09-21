@@ -22,4 +22,9 @@ export enum NotificationTypeEnum {
   // BOTH entry paths (the centre form's Submit and the API ingest, which creates results already
   // in Pending Review).
   BILATERAL_RESULT_SUBMITTED = 'Bilateral Result Submitted',
+  // `APF-T-1`/`APF-R-4`. Tells the uploader a bilateral AI text-mining job reached a terminal
+  // state (COMPLETED with or without drafts, FAILED, or a late COMPLETED after TIMED_OUT). The
+  // row is written directly by `emitBilateralAiJobNotification` (design.md §6.4) — not through
+  // `emitResultNotification` — because a job notification has no result to hang the row on.
+  BILATERAL_AI_JOB_FINISHED = 'Bilateral AI Job Finished',
 }

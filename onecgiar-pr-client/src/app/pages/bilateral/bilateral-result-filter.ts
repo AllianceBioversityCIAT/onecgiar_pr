@@ -17,6 +17,7 @@ export function filterCenterResults(
   const projectIds = params.project.length ? new Set(params.project) : null;
   const programCodes = params.program.length ? new Set(params.program) : null;
   const typeIds = params.type.length ? new Set(params.type) : null;
+  const createdBy = params.createdBy ?? [];
   const tokens = normalizeBilateralSearchText(params.search).trim().split(/\s+/).filter(Boolean);
 
   return rows.filter(row => {
@@ -40,6 +41,13 @@ export function filterCenterResults(
     if (params.method === 'ai' && !isAiResult(row)) return false;
     if (params.method === 'manual' && isAiResult(row)) return false;
 
+    if (
+      createdBy.length &&
+      !createdBy.some(name => normalizeBilateralSearchText(name) === normalizeBilateralSearchText(row.created_by_name ?? ''))
+    ) {
+      return false;
+    }
+
     if (tokens.length) {
       const haystack = searchHaystack(row); // built once per row, not once per token
       if (!tokens.every(token => haystack.includes(token))) return false;
@@ -62,7 +70,7 @@ export function isAiResult(row: BilateralCenterResult): boolean {
  */
 function searchHaystack(row: BilateralCenterResult): string {
   return normalizeBilateralSearchText(
-    `${row.result_code} ${row.title} ${row.result_type} ${row.source === 'API' ? 'W3 bilateral' : 'W1 W2'}`,
+    `${row.result_code} ${row.title} ${row.result_type} ${row.created_by_name ?? ''} ${row.source === 'API' ? 'W3 bilateral' : 'W1 W2'}`,
   );
 }
 

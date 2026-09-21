@@ -29,6 +29,8 @@ function makeItem(
     uri: overrides.uri ?? 'https://example.org/uri',
     repository: overrides.repository,
     alsoIn: overrides.alsoIn,
+    programAccelerators: overrides.programAccelerators,
+    projects: overrides.projects,
   };
 }
 
@@ -362,5 +364,56 @@ describe('dedupe', () => {
     const { items } = dedupe([noRepo, cgspace], ALL_REPOSITORIES);
     expect(items).toHaveLength(1);
     expect(items[0].repository).toBe('cgspace');
+  });
+
+  it('unions and deduplicates programAccelerators across duplicate items (KPAM-T-4, design §6.2)', () => {
+    const cgspace = makeItem({
+      repository: 'cgspace',
+      doi: '10.7000/kp-match',
+      programAccelerators: ['Sustainable Farming', 'Climate Action'],
+    });
+    const melspace = makeItem({
+      repository: 'melspace',
+      doi: '10.7000/kp-match',
+      programAccelerators: ['Sustainable Farming', 'Breeding for Tomorrow'],
+    });
+
+    const { items, dedupedCount } = dedupe(
+      [cgspace, melspace],
+      ALL_REPOSITORIES,
+    );
+    expect(items).toHaveLength(1);
+    expect(dedupedCount).toBe(1);
+    expect(items[0].repository).toBe('cgspace');
+    expect(items[0].programAccelerators).toEqual([
+      'Sustainable Farming',
+      'Climate Action',
+      'Breeding for Tomorrow',
+    ]);
+  });
+
+  it('unions and deduplicates projects across duplicate items (KPPJ-R-2, KPPJ-AC-2)', () => {
+    const cgspace = makeItem({
+      repository: 'cgspace',
+      doi: '10.7000/kp-proj-match',
+      projects: ['A-AG10156 - AICCRA Project', 'Proj X'],
+    });
+    const melspace = makeItem({
+      repository: 'melspace',
+      doi: '10.7000/kp-proj-match',
+      projects: ['A-AG10156 - AICCRA Project', 'Proj Y'],
+    });
+
+    const { items, dedupedCount } = dedupe(
+      [cgspace, melspace],
+      ALL_REPOSITORIES,
+    );
+    expect(items).toHaveLength(1);
+    expect(dedupedCount).toBe(1);
+    expect(items[0].projects).toEqual([
+      'A-AG10156 - AICCRA Project',
+      'Proj X',
+      'Proj Y',
+    ]);
   });
 });

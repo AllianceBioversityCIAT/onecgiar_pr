@@ -1,4 +1,6 @@
+import { INestApplication, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import request from 'supertest';
 import { BilateralAiController } from './bilateral-ai.controller';
 import { BilateralAiService } from './services/bilateral-ai.service';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -44,6 +46,21 @@ describe('BilateralAiController', () => {
             getSignedUrl: jest.fn().mockResolvedValue({
               response: { url: 'https://signed.url' },
               message: 'Signed URL generated',
+              status: 200,
+            }),
+            retryJob: jest.fn().mockResolvedValue({
+              response: { jobId: 'job-123', jobStatus: 'PENDING' },
+              message: 'AI job re-queued for retry',
+              status: 202,
+            }),
+            getExpectations: jest.fn().mockResolvedValue({
+              response: {
+                mix: 'documents',
+                sampleSize: 6,
+                p25Minutes: 4,
+                p75Minutes: 9,
+              },
+              message: 'AI job expectations found',
               status: 200,
             }),
           },
@@ -125,6 +142,37 @@ describe('BilateralAiController', () => {
     });
   });
 
+  describe('retryJob', () => {
+    it('should delegate to service.retryJob with jobId and the decoded user', async () => {
+      const result = await controller.retryJob('job-123', user);
+
+      expect(service.retryJob).toHaveBeenCalledWith('job-123', user);
+      expect(result).toEqual({
+        response: { jobId: 'job-123', jobStatus: 'PENDING' },
+        message: 'AI job re-queued for retry',
+        status: 202,
+      });
+    });
+  });
+
+  describe('getExpectations', () => {
+    it('should delegate to service.getExpectations with the raw mix query param', async () => {
+      const result = await controller.getExpectations('documents');
+
+      expect(service.getExpectations).toHaveBeenCalledWith('documents');
+      expect(result).toEqual({
+        response: {
+          mix: 'documents',
+          sampleSize: 6,
+          p25Minutes: 4,
+          p75Minutes: 9,
+        },
+        message: 'AI job expectations found',
+        status: 200,
+      });
+    });
+  });
+
   describe('listDrafts', () => {
     it('should delegate to service.listDrafts with centerId and userId', async () => {
       const result = await controller.listDrafts(7, user);
@@ -188,5 +236,74 @@ describe('BilateralAiController', () => {
       expect(service.discardDraft).toHaveBeenCalledWith(4, user.id);
       expect(result).toEqual({ id: 1, discarded: true });
     });
+  });
+});
+
+describe('BilateralAiController — route ordering (supertest)', () => {
+  // `design.md` §4.1: `GET center/ai/expectations` is declared as its own top-level path under
+  // `center/ai/`, NOT `center/ai/jobs/expectations` — so it can never be shadowed by the
+  // `jobs/:jobId` parameter route. This boots a real Nest HTTP server around the controller (no
+  // ResponseInterceptor/exception filter — Nest's default HttpException handling is enough to
+  // observe the status code) so the proof is about actual route dispatch, not a direct method call.
+  let app: INestApplication;
+  let getJob: jest.Mock;
+  let getExpectations: jest.Mock;
+
+  beforeAll(async () => {
+    getJob = jest
+      .fn()
+      .mockRejectedValue(new NotFoundException('AI job not found.'));
+    getExpectations = jest.fn().mockResolvedValue({
+      response: {
+        mix: 'documents',
+        sampleSize: 0,
+        p25Minutes: null,
+        p75Minutes: null,
+      },
+      message: 'AI job expectations found',
+      status: 200,
+    });
+
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      controllers: [BilateralAiController],
+      providers: [
+        {
+          provide: BilateralAiService,
+          useValue: { getJob, getExpectations },
+        },
+      ],
+    }).compile();
+
+    app = moduleRef.createNestApplication();
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(() => {
+    getJob.mockClear();
+    getExpectations.mockClear();
+  });
+
+  it('GET /center/ai/expectations resolves to the expectations handler', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/center/ai/expectations')
+      .query({ mix: 'documents' });
+
+    expect(getExpectations).toHaveBeenCalledWith('documents');
+    expect(getJob).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+  });
+
+  it('GET /center/ai/jobs/expectations is NOT shadowed — it still 404s as a job id lookup', async () => {
+    const res = await request(app.getHttpServer()).get(
+      '/center/ai/jobs/expectations',
+    );
+
+    expect(getJob).toHaveBeenCalledWith('expectations', 0);
+    expect(getExpectations).not.toHaveBeenCalled();
+    expect(res.status).toBe(404);
   });
 });

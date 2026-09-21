@@ -25,8 +25,8 @@ service any more.
   when the palette is already open, so the shortcut can still toggle it closed from its own input.
 - Notifications, the user menu and **Support** are `cdkConnectedOverlay` popovers driven by local
   signals, all closed by the separate `document:keydown.escape` listener.
-- **Support is the single entry point for getting help** (P2-3683): `Start a support chat` and
-  `Give feedback`. It replaced the standalone bug button, and Tawk's floating bubble in the
+- **Support is the single entry point for getting help** (P2-3683): `Start a support chat`,
+  `Give feedback`, and `Contact us` (mailto:prmstechsupport@cgiar.org). It replaced the standalone bug button, and Tawk's floating bubble in the
   bottom-right corner went with it — `TawkComponent` now hides the launcher on `onLoad`,
   `onChatMinimized` and `onChatEnded`, and `SupportChatService.open()` is what brings the chat back.
 

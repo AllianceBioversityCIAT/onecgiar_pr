@@ -132,7 +132,7 @@ export const BILATERAL_REVIEW_COPY = {
       center: 'Lead center',
       status: 'Status',
       alignment: 'Alignment',
-      date: 'Submission date',
+      date: 'Date',
       actions: 'Actions'
     },
     contributorBadge: 'Contributor',

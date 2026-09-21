@@ -83,6 +83,14 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
 
   readonly creating = input(false);
+  // @akili-spec changes/kp-project-match — KPPJ-R-9
+  readonly projectCode = input<string>('');
+  readonly projectTitle = input<string>('');
+  readonly projectSummary = input<string>('');
+  readonly projectDescription = input<string>('');
+  readonly leadCenterAcronym = input<string>('');
+  readonly programCode = input<string>('');
+  readonly programName = input<string>('');
   readonly create = output<BilateralManualCreatePayload>();
 
   readonly resultLevelId = signal<number | null>(null);
@@ -223,14 +231,17 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
   }
 
   onCgspaceItemSelected(item: CgspaceItemDto): void {
-    const url = item.itemUrl || item.handleUrl || item.handle;
+    // Prefer hdl.handle.net link for create-header; itemUrl remains valid but needs server-side
+    // extractHandleIdentifier passthrough for DSpace `/items/<uuid>` URLs.
+    const url = item.handleUrl || item.itemUrl || item.handle;
     this.validatingKpHandle.set(true);
     this.kpEntryMode.set('browse');
     this.selectedKpRepository.set(item.repository ?? 'cgspace');
+    this.kpHandleError.set({ ...KP_HANDLE_NO_ERROR });
 
     const error = validateKpHandle(url);
-    this.kpHandleError.set(error);
     if (error.status) {
+      this.surfaceKpHandleError(error.message);
       this.validatingKpHandle.set(false);
       return;
     }
@@ -242,14 +253,14 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
         this.kpHandleSynced.set(true);
         this.title.set(syncedTitle);
         this.validatingKpHandle.set(false);
+        this.kpHandleError.set({ ...KP_HANDLE_NO_ERROR });
         this.queueTitleSearch(syncedTitle);
       },
       error: (err: any) => {
         this.validatingKpHandle.set(false);
-        this.kpHandleError.set({
-          status: true,
-          message: err?.error?.message || 'Could not retrieve metadata for this item'
-        });
+        this.surfaceKpHandleError(
+          err?.error?.message || 'Could not retrieve metadata for this item'
+        );
       }
     });
   }
@@ -261,7 +272,7 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
 
     const error = validateKpHandle(handle);
     if (error.status) {
-      this.kpHandleError.set(error);
+      this.surfaceKpHandleError(error.message);
       this.validatingKpHandle.set(false);
       return;
     }
@@ -273,15 +284,25 @@ export class BilateralManualCreateFormComponent implements OnInit, OnDestroy {
         this.kpHandleSynced.set(true);
         this.title.set(syncedTitle);
         this.validatingKpHandle.set(false);
+        this.kpHandleError.set({ ...KP_HANDLE_NO_ERROR });
         this.queueTitleSearch(syncedTitle);
       },
       error: (err: any) => {
         this.validatingKpHandle.set(false);
-        this.kpHandleError.set({
-          status: true,
-          message: err?.error?.message || 'Unable to retrieve metadata for this handle.'
-        });
+        this.surfaceKpHandleError(
+          err?.error?.message || 'Unable to retrieve metadata for this handle.'
+        );
       }
+    });
+  }
+
+  private surfaceKpHandleError(message: string): void {
+    this.kpHandleError.set({ status: true, message });
+    this.api.alertsFe?.show({
+      id: 'bilateralKpHandleError',
+      title: 'Error!',
+      description: message,
+      status: 'error'
     });
   }
 

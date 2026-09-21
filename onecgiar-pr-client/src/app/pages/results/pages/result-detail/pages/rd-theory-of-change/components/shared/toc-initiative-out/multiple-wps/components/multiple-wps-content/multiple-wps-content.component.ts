@@ -136,7 +136,7 @@ export class MultipleWPsContentComponent implements OnChanges {
 
     this.outputList = this.outputList.map(item => {
       const finded = this.selectedOptionsOutput.find(
-        option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+        option => option.tabId !== this.activeTab.uniqueId && option.toc_result_id === item.toc_result_id
       );
       item.disabledd = !!finded;
       return item;
@@ -155,9 +155,15 @@ export class MultipleWPsContentComponent implements OnChanges {
     this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.tabId !== selectedOption.tabId);
     this.selectedOptionsOutcome.push(selectedOption);
 
+    // MHL-DD-2: disable only an exact duplicate of the same ToC node (`toc_result_id`) already
+    // selected in a different tab. Do NOT disable siblings that merely share the same AoW
+    // (`work_package_id`) — that was an accidental "one HLO per AoW" ceiling with no product
+    // rationale (see docs/specs/changes/multi-hlo-result-linking/design.md `MHL-DD-2`), and the
+    // candidate list is already typology-filtered upstream (`MHL-R-2`), so the client must never
+    // re-disable an option for typology reasons either.
     this.outcomeList = this.outcomeList.map(item => {
       const finded = this.selectedOptionsOutcome.find(
-        option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+        option => option.tabId !== this.activeTab.uniqueId && option.toc_result_id === item.toc_result_id
       );
       item.disabledd = !!finded;
       return item;

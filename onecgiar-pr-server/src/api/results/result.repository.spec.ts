@@ -62,10 +62,18 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('rt.id IN (?)');
     expect(sql).toContain('ci.portfolio_id IN (?)');
     expect(sql).toContain('r.status_id IN (?,?)');
+    expect(sql).toContain('r.is_replicated');
     expect(sql).toContain('LIMIT 10');
     expect(sql).toContain('OFFSET 0');
 
     expect(params).toEqual([7, 'I1', 'I2', 1, 2, 10, 3, 5, 1, 2]);
+
+    expect(queryMock.mock.calls[0][0]).toContain('MAX(rtr.planned_result)');
+    expect(queryMock.mock.calls[0][0]).toContain(
+      'AND rtr.initiative_id = rbi.inititiative_id',
+    );
+    expect(queryMock.mock.calls[0][0]).toContain('END AS planned_result');
+    expect(queryMock.mock.calls[0][0]).not.toMatch(/JOIN\s+results_toc_result/);
 
     const [countSql, countParams] = queryMock.mock.calls[1];
     expect(countSql).toContain('SELECT COUNT(1) as total FROM (');
@@ -164,6 +172,77 @@ describe('ResultRepository (unit)', () => {
     });
   });
 
+  /**
+   * P2- global-search-palette: a numeric query like a result code (e.g. "20694") must match, and
+   * an exact/prefix hit must rank ahead of a mid-string LIKE hit — otherwise a 5-row LIMIT (the
+   * palette's page size) can push the exact result the user typed off the page.
+   */
+  describe('AllResultsByRoleUserAndInitiativeFiltered — title/code search relevance', () => {
+    it('matches on result_code as well as title, not title alone', async () => {
+      queryMock
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([{ total: 1 }]);
+
+      await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        { title: '20694' },
+        [10, 11],
+        { limit: 5, offset: 0 },
+      );
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain(
+        '(LOWER(r.title) LIKE LOWER(?) OR r.result_code LIKE ?)',
+      );
+      expect(params).toEqual(expect.arrayContaining(['%20694%', '%20694%']));
+    });
+
+    it('orders an exact code match and a title-prefix match ahead of a mid-string match', async () => {
+      queryMock
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([{ total: 1 }]);
+
+      await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        { title: 'maize' },
+        [10, 11],
+        { limit: 5, offset: 0 },
+      );
+
+      const [sql, params] = queryMock.mock.calls[0];
+      const normalized = sql.replace(/\s+/g, ' ');
+      expect(normalized).toContain(
+        'ORDER BY (r.result_code = ?) DESC, (LOWER(r.title) LIKE LOWER(?)) DESC, v.status DESC, r.id DESC',
+      );
+      expect(normalized.indexOf('ORDER BY')).toBeGreaterThan(
+        normalized.indexOf('WHERE'),
+      );
+      expect(normalized.indexOf('ORDER BY')).toBeLessThan(
+        normalized.indexOf('LIMIT'),
+      );
+      // Two ORDER BY placeholders (exact code, title-prefix) come AFTER the WHERE's two LIKE params.
+      expect(params).toEqual([1, '%maize%', '%maize%', 'maize', 'maize%']);
+    });
+
+    it('does not touch ordering or params for callers that pass no title (no regression)', async () => {
+      queryMock
+        .mockResolvedValueOnce([{ id: 1 }])
+        .mockResolvedValueOnce([{ total: 1 }]);
+
+      await repo.AllResultsByRoleUserAndInitiativeFiltered(
+        1,
+        { statusId: [1] },
+        [10, 11],
+        { limit: 5, offset: 0 },
+      );
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('ORDER BY v.status DESC, r.id DESC');
+      expect(sql).not.toContain('r.result_code = ?');
+      expect(params).toEqual([1, 1]);
+    });
+  });
+
   it('supports single filter values without pagination', async () => {
     const items = [{ id: 2 }];
     queryMock.mockResolvedValueOnce(items);
@@ -230,6 +309,18 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('LEFT JOIN version v');
     expect(sql).toContain('rt.name AS result_category');
     expect(params).toEqual([8731]);
+  });
+
+  it('returns created_by and created_by_name for the bilateral centre dashboard', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.created_by');
+    expect(sql).toContain('AS created_by_name');
+    expect(sql).toContain('FROM users u');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
   it('includes AI provenance fields in bilateral center results ordered newest first', async () => {

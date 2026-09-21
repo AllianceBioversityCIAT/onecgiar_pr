@@ -34,12 +34,12 @@ export class IpsrGeneralInformationComponent implements OnInit {
   /**
    * Feeds the incomplete-fields alert. Reported complete whenever the gate is closed, so results
    * from the 2025 cycle (and P22) are never flagged for a field that was optional back then.
-   * `lead_contact_person_data` is required alongside the name: the name alone means the typed text
-   * never resolved to an Active Directory match.
+   * RES-DD-1: An accepted non-empty contact name satisfies completeness without demanding Active
+   * Directory data ("use this name anyway").
    */
   get isLeadContactPersonComplete(): boolean {
     if (!this.isLeadContactPersonRequired) return true;
-    return !!this.ipsrGeneralInformationBody.lead_contact_person && !!this.ipsrGeneralInformationBody.lead_contact_person_data;
+    return !!this.ipsrGeneralInformationBody.lead_contact_person?.trim();
   }
 
   constructor(

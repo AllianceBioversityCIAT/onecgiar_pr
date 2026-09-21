@@ -89,5 +89,48 @@ describe('BilateralAiConsumer', () => {
         'Bilateral AI job err-job will be retried (attempt 0/3): AI service error',
       );
     });
+
+    // `design.md` §5 "Retry semantics": the consumer's nack/ack ceiling reads the same
+    // `BILATERAL_AI_MAX_ATTEMPTS` env `processJob`'s attempt-start reads — no hardcoded
+    // `maxRetries = 3` (`APF-DD-3` item 5).
+    describe('BILATERAL_AI_MAX_ATTEMPTS drives the nack/ack decision', () => {
+      const original = process.env.BILATERAL_AI_MAX_ATTEMPTS;
+
+      afterEach(() => {
+        if (original === undefined)
+          delete process.env.BILATERAL_AI_MAX_ATTEMPTS;
+        else process.env.BILATERAL_AI_MAX_ATTEMPTS = original;
+      });
+
+      it('acks (stops requeueing) once attempts reach a lowered ceiling of 2', async () => {
+        process.env.BILATERAL_AI_MAX_ATTEMPTS = '2';
+        const error = new Error('Processing failed');
+        bilateralAiService.processJob.mockRejectedValue(error);
+        bilateralAiService.getJobRaw.mockResolvedValue({ attempts: 2 } as any);
+        const context = makeContext();
+
+        await consumer.process({ jobId: 'capped-job' }, context);
+
+        expect(mockChannelRef.ack).toHaveBeenCalledWith(mockMessage);
+        expect(mockChannelRef.nack).not.toHaveBeenCalled();
+      });
+
+      it('still nacks (requeues) below a lowered ceiling of 2', async () => {
+        process.env.BILATERAL_AI_MAX_ATTEMPTS = '2';
+        const error = new Error('Processing failed');
+        bilateralAiService.processJob.mockRejectedValue(error);
+        bilateralAiService.getJobRaw.mockResolvedValue({ attempts: 1 } as any);
+        const context = makeContext();
+
+        await consumer.process({ jobId: 'still-retrying-job' }, context);
+
+        expect(mockChannelRef.nack).toHaveBeenCalledWith(
+          mockMessage,
+          false,
+          true,
+        );
+        expect(mockChannelRef.ack).not.toHaveBeenCalled();
+      });
+    });
   });
 });

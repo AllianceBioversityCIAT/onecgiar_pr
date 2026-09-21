@@ -20,6 +20,7 @@ import {
   throwServiceError,
   formatUnknownError,
 } from '../../../shared/utils/service-error.util';
+import { ResultDeletionAuditService } from '../../results/result-deletion-audit/result-deletion-audit.service';
 
 @Injectable()
 export class ContributorsPartnersService {
@@ -37,6 +38,7 @@ export class ContributorsPartnersService {
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
     private readonly _contributionConsistencyService: ContributionConsistencyService,
+    private readonly _resultDeletionAuditService: ResultDeletionAuditService,
   ) {}
 
   async getContributorsPartnersByResultId(resultId: number) {
@@ -236,9 +238,19 @@ export class ContributorsPartnersService {
       const result = await this._resultRepository.getResultById(resultId);
 
       if (!result?.id) {
-        throwServiceError('Result not found.', HttpStatus.NOT_FOUND, {
-          resultId,
-        });
+        // The client prints this message verbatim inside "There was an error saving the section"
+        // (`save-button.service.ts` → `extractHttpErrorMessage`), so it is the only text the
+        // reporter gets. When the result was deleted while the form was open, say so and name who
+        // deleted it; otherwise keep the original wording, which is still the honest answer for an
+        // id that never existed.
+        const deletionNote =
+          await this._resultDeletionAuditService.describeDeletion(resultId);
+
+        throwServiceError(
+          deletionNote ?? 'Result not found.',
+          HttpStatus.NOT_FOUND,
+          { resultId },
+        );
       }
 
       const resultTypeId = Number(result.result_type_id);

@@ -14,18 +14,20 @@
   never hardcoded, so a dropdown can only offer a value some row actually has. Category is then
   *narrowed* further (P2-3312, below); the other four are shown whole.
 - `ProgrammeResultsFilterService` owns **filter state only** — no HTTP, no idea where rows come from:
-  `searchText`, `selectedSections[]`, `selectedPhase`, `selectedStatus`, `selectedCreatedBy`,
+  `searchText`, `selectedSections[]`, `selectedPhases[]`, `selectedStatuses[]`, `selectedCreatedBy[]`,
   `activeChips()`, `hasActiveFilters()`, plus the pure predicates `matchesProgrammeResultFilters` /
-  `buildStatusCounts`. **Since `changes/my-work-board` (MWB-T-13) three dimensions are MULTI-value:**
-  `selectedCategories` / `selectedOrigins` / `selectedCenters`, all `string[]` — **OR inside a
-  dimension, AND across them**, `[]` meaning "no filter" (they replace the old single-value
-  `selectedCategory` / `selectedOrigin` / `selectedCenter`). `activeChips()` emits **one chip per
-  selected value** in selection order, so `clearChip()` removes exactly that value and leaves the
-  dimension's others alone. Their query params are comma-separated lists bridged by the service's own
-  `parseListParam` / `joinListParam` / `sameListParam` exports (`?category=a,b`; an empty selection
-  joins to `null`, which REMOVES the key under `merge`) — a legacy single-value deep link hydrates as
-  a one-element array, which is why the Overview's `RFD-*` links needed no change. **The My results
-  board (`pages/my-work-board/`) still keeps a board-local copy** (`my-work-board.service.ts` — same three signals and codec); binding the board to this service is `changes/my-work-board` `MWB-T-13` phase 2, deferred on 2026-09-05. Until then both copies must stay behaviourally identical (OR within / AND across, `a,b` URL lists).
+  `buildStatusCounts`. **Since `programme-results-multiselect-filters` (PRM-T-1) Phase / Status /
+  Created by joined Category / Funding source / Center as MULTI-value `string[]` dimensions — OR
+  inside a dimension, AND across them**, `[]` meaning "no filter". `activeChips()` emits **one chip
+  per selected value** in selection order, so `clearChip()` removes exactly that value and leaves the
+  dimension's others alone. Query params for all six multi dimensions are comma-separated lists
+  bridged by `parseListParam` / `joinListParam` / `sameListParam` (`?phase=A,B`, `?status=Editing,Submitted`,
+  `?createdBy=Ana,Ruiz`; empty selection joins to `null`, which REMOVES the key under `merge`) — a
+  legacy single-value deep link hydrates as a one-element array. **Phase special case (PRM-OQ-1):** on
+  the Results tab, an empty phase selection falls back to `[defaultPhase()]`, not all phases; external
+  Clear filters restores that default. **The My results board** (`pages/my-work-board/`) shares this
+  service for Created by and mirrors phase via `MyWorkBoardService.setPhase()` + `selectedPhases[]`
+  (PRM-T-3); category/origin/center remain board-local arrays on the component.
 - **Sorting belongs to `app-pr-table`.** The component only renders the glyph and colour
   (`sortArrow()` / `sortColor()`); `prSortableColumn` host-binds `aria-sort` — never set it yourself.
 - The component is the only place that joins them: `filteredRows()` (`:521`), `totalLabel()` (`:530`)

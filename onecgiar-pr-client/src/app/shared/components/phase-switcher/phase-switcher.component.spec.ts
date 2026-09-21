@@ -17,7 +17,8 @@ describe('PhaseSwitcherComponent', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            params: of({ id: 'testId' })
+            params: of({ id: 'testId' }),
+            snapshot: { queryParams: {} }
           }
         }
       ]
@@ -44,5 +45,17 @@ describe('PhaseSwitcherComponent', () => {
     component.api.dataControlSE.resultPhaseList = [{ id: 2, name: 'Phase 2' }];
     const result = component.getFilterPhases();
     expect(result).toEqual(component.api.dataControlSE.resultPhaseList);
+  });
+
+  it('should mark the phase matching the ?phase query param as selected, regardless of type', () => {
+    component.activatedRoute.snapshot.queryParams = { phase: '5' };
+    expect(component.isSelectedPhase({ id: 5, status: false })).toBe(true);
+    expect(component.isSelectedPhase({ id: 6, status: true })).toBe(false);
+  });
+
+  it('should fall back to the open phase as selected when there is no ?phase query param', () => {
+    component.activatedRoute.snapshot.queryParams = {};
+    expect(component.isSelectedPhase({ id: 5, status: true })).toBe(true);
+    expect(component.isSelectedPhase({ id: 6, status: false })).toBe(false);
   });
 });

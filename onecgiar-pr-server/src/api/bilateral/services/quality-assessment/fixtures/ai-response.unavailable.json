@@ -1,0 +1,46 @@
+{
+  "request_id": "d8b43dae-ac3c-4d9c-be1c-1d9c8d3c4d5e",
+  "criteria_version": "QA-2026-v1",
+  "status": "unavailable",
+  "degraded_reason": "The assessment model could not produce a verdict for this submission.",
+  "overall": {
+    "verdict": "amber",
+    "summary": "No usable verdict was produced for this run."
+  },
+  "sections": {
+    "general_information": {
+      "verdict": "grey",
+      "comments": "Not evaluated.",
+      "strengths": [],
+      "issues": []
+    },
+    "contributors_and_partners": {
+      "verdict": "grey",
+      "comments": "Not evaluated.",
+      "strengths": [],
+      "issues": []
+    },
+    "geographic_location": {
+      "verdict": "grey",
+      "comments": "Not evaluated.",
+      "strengths": [],
+      "issues": []
+    },
+    "evidence": {
+      "verdict": "grey",
+      "comments": "Not evaluated.",
+      "strengths": [],
+      "issues": []
+    },
+    "type_specific": {
+      "verdict": "grey",
+      "comments": "Not evaluated.",
+      "strengths": [],
+      "issues": []
+    }
+  },
+  "evidence": [
+    { "index": 0, "verdict": "grey", "reason": "Not evaluated" },
+    { "index": 1, "verdict": "grey", "reason": "Private repository file — not evaluated" }
+  ]
+}

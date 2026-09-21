@@ -351,6 +351,23 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     if (this.isCP2026()) this.rdPartnersSE.tocSelectionTouched.set(true);
   }
 
+  // MHL: with several HLO tabs allowed under one node, the same KPI must not be picked twice for the same
+  // ToC node. Disable (in place, same array reference) any indicator already chosen in ANOTHER tab.
+  indicatorOptions() {
+    const list = this.indicatorsList();
+    const tabs: any[] = this.allTabsCreated ?? [];
+    for (const indicator of list) {
+      indicator.disabledd = tabs.some(
+        tab =>
+          tab?.uniqueId !== this.activeTab?.uniqueId &&
+          tab?.toc_result_id === this.activeTab?.toc_result_id &&
+          tab?.indicators?.[0]?.related_node_id != null &&
+          tab.indicators[0].related_node_id === indicator.related_node_id
+      );
+    }
+    return list;
+  }
+
   hideIndicators() {
     this.showIndicators.set(false);
     this.fieldsManagerSE.hasSelectedIndicator.set(false);
@@ -435,7 +452,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.outputList.update(prev => {
       return prev.map(item => {
         const finded = this.selectedOptionsOutput.find(
-          option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+          option => option.tabId !== this.activeTab.uniqueId && option.toc_result_id === item.toc_result_id
         );
         item.disabledd = !!finded;
         return item;
@@ -458,7 +475,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.outcomeList.update(prev => {
       return prev.map(item => {
         const finded = this.selectedOptionsOutcome.find(
-          option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+          option => option.tabId !== this.activeTab.uniqueId && option.toc_result_id === item.toc_result_id
         );
         item.disabledd = !!finded;
         return item;

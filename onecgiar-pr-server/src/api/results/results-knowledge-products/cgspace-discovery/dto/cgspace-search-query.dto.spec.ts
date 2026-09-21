@@ -39,6 +39,17 @@ describe('CgspaceSearchQueryDto', () => {
     expect(dto.year).toBe('2026');
   });
 
+  it('should pass validation when project filter alone is provided (KPPJ bilateral)', async () => {
+    const dto = plainToInstance(CgspaceSearchQueryDto, {
+      project: 'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa',
+    });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+    expect(dto.project).toBe(
+      'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa',
+    );
+  });
+
   it('should pass validation when type or center filter alone is provided', async () => {
     const dtoType = plainToInstance(CgspaceSearchQueryDto, {
       type: 'Journal Article',

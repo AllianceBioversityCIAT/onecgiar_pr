@@ -1,5 +1,5 @@
 <app-pr-dialog
-    [(visible)]="this.api.dataControlSE.showMassivePhaseShiftModal"
+    [(visible)]="this.visible"
     [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
     styleClass="massive-phase-shift-dialog">
     <div id="change-phase">
@@ -39,7 +39,7 @@
             </div>
             <div class="buttons">
                 <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem' }" text="Cancel"
-                    colorType="secondary" (click)="this.api.dataControlSE.showMassivePhaseShiftModal = false">
+                    colorType="secondary" (click)="this.visible = false">
                 </app-pr-button>
                 <app-pr-button [ngClass]="{ globalDisabled: this.requesting }" [rotating]="this.requesting"
                     padding="medium" [style]="{ margin: '1rem 2rem' }" text="Confirm"

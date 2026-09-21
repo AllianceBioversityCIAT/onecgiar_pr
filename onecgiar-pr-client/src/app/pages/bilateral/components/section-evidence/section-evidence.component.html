@@ -4,6 +4,8 @@
      differences, on purpose: no per-evidence impact-area / result-type checkboxes (not MDS here —
      Juan, 2026-09-03) and no readiness-level rules. -->
 <div class="sev-fields" [class.sev-fields--busy]="isSaving()">
+  <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
+  <app-bilateral-field-quality-flag section="evidence" />
   <app-alert-status
     status="info"
     [collapsible]="false"
@@ -13,7 +15,18 @@
   @if (isLoading()) {
     <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="true" [extraRows]="3" />
   } @else {
-    <div class="evidences">
+    <!-- La sección ENTERA es un campo obligatorio del checklist (`valid-link`), pero hasta ahora no
+         había nada en pantalla que lo dijera: el pie contaba "1 field missing" sobre un estado vacío
+         sin un solo campo marcado, y el reportero leía un número que no podía resolver (JC,
+         16-sep-2026). La tarjeta le da la misma banda que a cualquier otro obligatorio — ámbar
+         mientras no haya una evidencia con enlace válido, verde en cuanto la haya. -->
+    <app-field-card
+      label="Evidence"
+      [required]="true"
+      [hasValue]="hasValidLink"
+      [readOnly]="readOnly()"
+      description="At least one evidence with a valid link is required to complete this section.">
+      <div class="evidences">
       @for (evidence of evidences; track $index) {
         <div class="evidence_card" data-testid="evidence-card">
           <div class="ev_card_top">
@@ -73,17 +86,18 @@
       }
     </div>
 
-    @if (!evidences.length) {
-      <app-no-data-text title="No evidence added"></app-no-data-text>
-    }
+      @if (!evidences.length) {
+        <app-no-data-text title="No evidence added"></app-no-data-text>
+      }
 
-    <br />
-    @if (canAddMore && !readOnly()) {
-      <app-add-button name="Add evidence" (clickEvent)="addNew()"></app-add-button>
-    }
-    @if (!canAddMore) {
-      <div class="sev-limit">Maximum of {{ maxItems }} evidence items reached.</div>
-    }
+      <br />
+      @if (canAddMore && !readOnly()) {
+        <app-add-button name="Add evidence" (clickEvent)="addNew()"></app-add-button>
+      }
+      @if (!canAddMore) {
+        <div class="sev-limit">Maximum of {{ maxItems }} evidence items reached.</div>
+      }
+    </app-field-card>
   }
 </div>
 

@@ -30,7 +30,6 @@ import {
   PrTableHeaderDirective,
   PrTableLoadingDirective
 } from '../../../../shared/components/pr-table';
-import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { ResultDeletionService, DeleteEligibility } from '../../services/result-deletion.service';
@@ -44,13 +43,18 @@ import {
 import { SpTabEmptyStateComponent } from '../dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 import { WhereToReportModalComponent } from '../dashboard-lab/components/where-to-report-modal/where-to-report-modal.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
+import { BilateralResultsService } from '../bilateral-review/services/bilateral-results.service';
 import {
-  BilateralResultsService,
-  REVIEW_RESULT_ID_QUERY_PARAM,
-  REVIEW_RESULT_QUERY_PARAM
-} from '../bilateral-review/services/bilateral-results.service';
+  isW3BilateralForUpdate,
+  resolveBilateralResultOpenRoute,
+  usesBilateralReviewFlow as usesBilateralReviewFlowUtil
+} from '../../../../shared/routing/bilateral-result-open-route.util';
 import { PrToastService } from '../../../../shared/components/pr-toast';
-import { ProgrammeResultRow, ProgrammeResultsService } from './services/programme-results.service';
+import {
+  formatProgrammeResultPhaseShort,
+  ProgrammeResultRow,
+  ProgrammeResultsService
+} from './services/programme-results.service';
 // @akili-spec changes/my-work-board (MWB-T-4, MWB-R-1)
 import { MyWorkCountService } from '../my-work-board/services/my-work-count.service';
 import {
@@ -70,6 +74,7 @@ import { PROGRAMME_RESULTS_FIXED_SECTION_LABELS, sectionLabel } from './services
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
+import { resultStatusBg, resultStatusFg } from '../../../../shared/constants/result-status-tokens';
 
 /**
  * Router commands + query params for one result. Same shape as
@@ -104,7 +109,7 @@ export interface PgrColumnDef {
 
 /**
  * Column catalog, in design order:
- * CODE · RESULT · CATEGORY · STATUS · (CREATED BY · CREATED · ORIGIN · CENTER) · UPDATED,
+ * CODE · RESULT · CATEGORY · STATUS · (PHASE · CREATED BY · CREATED · ORIGIN · CENTER) · UPDATED,
  * plus the sticky actions track appended by `grid()`.
  * No select-checkbox track — P2-3397 has no bulk action, so the empty column is omitted.
  */
@@ -118,6 +123,7 @@ export const PGR_COLUMNS: readonly PgrColumnDef[] = [
   // `EOI_2030` / `UNTAGGED` land after the alphabetically-sorted AoW codes (RAC-R-2.2).
   { key: 'aow', label: 'Area of Work', sortField: 'sectionSort', track: '132px', minPx: 132, optional: false },
   { key: 'status', label: 'Status', sortField: 'statusName', track: '150px', minPx: 150, optional: false },
+  { key: 'phase', label: 'Phase', sortField: 'phaseSort', track: '100px', minPx: 100, optional: true },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
   { key: 'origin', label: 'Funding source', sortField: 'origin', track: '140px', minPx: 140, optional: true },
@@ -151,18 +157,6 @@ export function writeStoredColumnWidths(widths: Record<string, number>): void {
     // Ignore storage quota / private browsing errors
   }
 }
-
-/**
- * `status_id` → the `--pr-status-*` fg/bg token PAIRS. Copied verbatim from
- * `result-detail/components/result-header/result-header.component.ts:17` so the Results tab paints
- * a status exactly like the result page does. UI-RULES rule 9: never recombine a pair, never
- * invent a sixth colour.
- */
-const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
-  1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
-  2: { fg: 'var(--pr-status-approved-fg)', bg: 'var(--pr-status-approved-bg)' },
-  3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
-};
 
 // @akili-spec changes/results-aow-column-filter (RAC-T-3)
 /** The three fixed, program-level bucket keys, in the design's display order. */
@@ -275,7 +269,6 @@ function formatDate(value: string): string {
     PrTableBodyDirective,
     PrTableLoadingDirective,
     PrSortableColumnDirective,
-    PrFilterSelectComponent,
     PrFilterMultiselectModule,
     ChangePhaseModalModule,
     PrTooltipDirectiveModule,
@@ -715,7 +708,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
   /** Full catalog, for the header/cell loops. */
   readonly allColumns = PGR_COLUMNS;
-  /** Only the four the Columns picker offers (Created by · Created · Funding source · Center). */
+  /** Only the optional columns the Columns picker offers (Phase · Created by · Created · Funding source · Center). */
   readonly optionalColumns = PGR_COLUMNS.filter(column => column.optional);
 
   /** Programme official code from the route (`entity-details/:entityId/results`). */
@@ -1021,7 +1014,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
    * treats that as "skip the request".
    */
   readonly currentPhaseVersionId = computed<number | null>(() => {
-    const phase = this.filter.selectedPhase();
+    const phase = this.filter.selectedPhases()[0];
     if (!phase) return null;
     const target = normalize(phase);
 
@@ -1105,33 +1098,34 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
         // REQ-1-S1/REQ-2: on the auto-derived path (no explicit `?phase=` param), do not commit
         // `defPhase` while the initial row load is still in flight — it was computed against an
-        // empty `phaseOptions()` and would lock a data-free phase into `selectedPhase`/the URL.
-        // Leave `selectedPhase()` at its current value until `loading()` settles. The
+        // empty `phaseOptions()` and would lock a data-free phase into `selectedPhases`/the URL.
+        // Leave `selectedPhases()` at its current value until `loading()` settles. The
         // explicit-URL-param path (REQ-1-S2) stays completely unguarded.
-        const phase = urlPhase !== null ? this.toFilterValue(urlPhase) : isLoading ? this.filter.selectedPhase() : defPhase;
-        const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
-        // @akili-spec changes/my-work-board (MWB-T-13) — the three multi dimensions travel as
-        // comma-separated lists. Splitting on `,` is the whole decode (the router has already
-        // percent-decoded each value), and a legacy SINGLE value from an Overview deep link
-        // (`?category=Knowledge product`, `RFD-*`) simply yields a one-element array.
+        const phases =
+          urlPhase !== null
+            ? parseListParam(urlPhase)
+            : isLoading
+              ? this.filter.selectedPhases()
+              : defPhase
+                ? [defPhase]
+                : [];
+        // @akili-spec result-framework-reporting/programme-results-multiselect-filters (PRM-T-2)
+        const statuses = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status));
+        // @akili-spec changes/my-work-board (MWB-T-13) — comma-separated lists; a legacy SINGLE
+        // value hydrates as a one-element array.
         const categories = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category));
         const origins = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin));
         const centers = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center));
-        const createdBy = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy);
+        const createdBy = parseListParam(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.createdBy));
         // @akili-spec changes/results-aow-column-filter (RAC-T-3) — multi-value, comma list.
-        // Raw values, not upper-cased: `?section=aow01` must still show `aow01` in its chip
-        // (RAC-R-4.1's "raw value in chip" rule) while `matchesProgrammeResultFilters` matches
-        // it case-insensitively.
         const sections = toSectionValues(params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.section));
 
-        if (phase !== this.filter.selectedPhase()) this.filter.selectedPhase.set(phase);
-        if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
-        // An unknown value is applied as-is: the predicates are pure and case-insensitive, so it
-        // simply matches nothing and stays visible as a chip the user can remove.
+        if (!sameListParam(phases, this.filter.selectedPhases())) this.filter.selectedPhases.set(phases);
+        if (!sameListParam(statuses, this.filter.selectedStatuses())) this.filter.selectedStatuses.set(statuses);
         if (!sameListParam(categories, this.filter.selectedCategories())) this.filter.selectedCategories.set(categories);
         if (!sameListParam(origins, this.filter.selectedOrigins())) this.filter.selectedOrigins.set(origins);
         if (!sameListParam(centers, this.filter.selectedCenters())) this.filter.selectedCenters.set(centers);
-        if (createdBy !== this.filter.selectedCreatedBy()) this.filter.selectedCreatedBy.set(createdBy);
+        if (!sameListParam(createdBy, this.filter.selectedCreatedBy())) this.filter.selectedCreatedBy.set(createdBy);
         if (!sameListParam(sections, this.filter.selectedSections())) this.filter.selectedSections.set(sections);
       });
     });
@@ -1143,15 +1137,12 @@ export class ProgrammeResultsComponent implements OnDestroy {
     // recomputes an identical `next` and skips `navigate` entirely — that is what breaks the
     // hydrate ↔ mirror cycle, not a `pending*` flag (RFD-DD-5).
     effect(() => {
-      const phase = this.filter.selectedPhase();
-      const status = this.filter.selectedStatus();
-      // @akili-spec changes/my-work-board (MWB-T-13) — `null` when nothing is selected: under
-      // `queryParamsHandling: 'merge'` that is what REMOVES the key, so an emptied multi-select
-      // leaves no `?category=` behind.
+      const phase = joinListParam(this.filter.selectedPhases());
+      const status = joinListParam(this.filter.selectedStatuses());
       const category = joinListParam(this.filter.selectedCategories());
       const origin = joinListParam(this.filter.selectedOrigins());
       const center = joinListParam(this.filter.selectedCenters());
-      const createdBy = this.filter.selectedCreatedBy();
+      const createdBy = joinListParam(this.filter.selectedCreatedBy());
       // @akili-spec changes/results-aow-column-filter (RAC-T-3) — comma list, `null` (not '')
       // when empty so the param drops from the URL entirely on Clear filters (RAC-R-3).
       const sections = this.filter.selectedSections();
@@ -1188,7 +1179,8 @@ export class ProgrammeResultsComponent implements OnDestroy {
   clearChip(chip: ProgrammeResultsFilterChip): void {
     if (chip?.dimension === 'search') this.searchDraft.set('');
     if (chip?.dimension === 'phase') {
-      this.filter.selectedPhase.set(this.defaultPhase());
+      this.filter.clearPhases(chip.value);
+      this.ensureDefaultPhaseSelection();
       return;
     }
     this.filter.clearChip(chip);
@@ -1197,42 +1189,30 @@ export class ProgrammeResultsComponent implements OnDestroy {
   clearAll(): void {
     this.searchDraft.set('');
     this.filter.clearAll();
-    this.filter.selectedPhase.set(this.defaultPhase());
+    this.ensureDefaultPhaseSelection();
   }
 
-  // ── Single-select filters ───────────────────────────────────────────────────────────────
-  /** `app-pr-filter-select`'s empty sentinel is `'all'`; the filter service's is `null`. */
-  private toFilterValue(value: unknown): string | null {
-    return !value || value === 'all' ? null : String(value);
+  // @akili-spec result-framework-reporting/programme-results-multiselect-filters (PRM-T-2)
+  /** Phase multiselect: empty selection falls back to `[defaultPhase()]`, never all phases. */
+  onPhasesChange(values: string[]): void {
+    const next = values?.length ? values : [];
+    if (!next.length) {
+      this.ensureDefaultPhaseSelection();
+      return;
+    }
+    this.filter.selectedPhases.set(next);
   }
 
-  selectValue(value: string | null): string {
-    return value ?? 'all';
-  }
-
-  onPhaseChange(value: unknown): void {
-    const nextVal = this.toFilterValue(value);
-    this.filter.selectedPhase.set(nextVal ?? this.defaultPhase());
-  }
-
-  onStatusChange(value: unknown): void {
-    this.filter.selectedStatus.set(this.toFilterValue(value));
-  }
-
-  // @akili-spec changes/my-work-board (MWB-T-13) — Category / Funding source / Center are
-  // multi-select now; the template writes `filter.selectedCategories.set($event)` straight from
-  // `app-pr-filter-multiselect`'s `(changed)` (an array), exactly like the Section control above
-  // it and like the My results board. No `toFilterValue` sentinel is involved: the multiselect's
-  // "nothing picked" is an empty array, not `'all'`.
-
-  // @akili-spec result-framework-reporting/programme-results-created-by-filter
-  onCreatedByChange(value: unknown): void {
-    this.filter.selectedCreatedBy.set(this.toFilterValue(value));
+  /** Restores the sticky default phase when the phase dimension would otherwise be empty. */
+  private ensureDefaultPhaseSelection(): void {
+    const def = this.defaultPhase();
+    this.filter.selectedPhases.set(def ? [def] : []);
   }
 
   // ── Status counters ─────────────────────────────────────────────────────────────────────
   isStatusActive(statusName: string): boolean {
-    return this.filter.selectedStatus() === statusName;
+    const needle = normalize(statusName);
+    return this.filter.selectedStatuses().some(status => normalize(status) === needle);
   }
 
   /** Clicking a counter applies that status (and clicking the active one clears it). */
@@ -1241,11 +1221,11 @@ export class ProgrammeResultsComponent implements OnDestroy {
   }
 
   statusFg(statusId: number | null): string {
-    return STATUS_TOKENS[String(statusId)]?.fg ?? 'var(--pr-status-not-started-fg)';
+    return resultStatusFg(statusId);
   }
 
   statusBg(statusId: number | null): string {
-    return STATUS_TOKENS[String(statusId)]?.bg ?? 'var(--pr-status-not-started-bg)';
+    return resultStatusBg(statusId);
   }
 
   // ── Columns picker ──────────────────────────────────────────────────────────────────────
@@ -1425,7 +1405,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
     if (!result) return false;
 
     const phase = this.dataControlSE.reportingCurrentPhase;
-    return this.usesBilateralReviewFlow(row)
+    return this.isW3BilateralForUpdate(row)
       ? this.api.canUpdateBilateral(result, phase)
       : this.api.shouldShowUpdate(result, phase);
   }
@@ -1474,38 +1454,40 @@ export class ProgrammeResultsComponent implements OnDestroy {
   }
 
   // ── Row activation ──────────────────────────────────────────────────────────────────────
-  /**
-   * AVISA (`SGP-02`) reports bilaterals through the normal Result Detail, not the review drawer.
-   * Same guard as `results-list.component.ts:358`.
-   */
-  private isW3BilateralsAvisa(row: ProgrammeResultRow): boolean {
-    if (row?.origin !== 'W3/Bilaterals') return false;
-    return row?.submitterCode === 'SGP-02' || row?.submitterCode === 'SGP02';
+  private toOpenRouteInput(row: ProgrammeResultRow) {
+    return {
+      sourceOrOrigin: row?.origin,
+      statusId: row?.statusId,
+      statusName: row?.statusName,
+      leadCenter: row?.center,
+      resultCode: row?.code,
+      versionId: row?.versionId,
+      submitterCode: row?.submitterCode,
+      resultId: row?.id,
+      programmeCodeFallback: this.programmeCode()
+    };
+  }
+
+  /** W3 bilateral carry-forward menu rules — broader than review-drawer open routing. */
+  isW3BilateralForUpdate(row: ProgrammeResultRow): boolean {
+    return isW3BilateralForUpdate(this.toOpenRouteInput(row));
   }
 
   /** True when the result opens in the bilateral review drawer instead of Result Detail. */
   usesBilateralReviewFlow(row: ProgrammeResultRow): boolean {
-    if (this.isW3BilateralsAvisa(row) || row?.statusName === 'Approved') return false;
-    return row?.origin === 'W3/Bilaterals';
+    return usesBilateralReviewFlowUtil(this.toOpenRouteInput(row));
   }
 
   /**
-   * Destination for one result. Same branching as `results-list.component.ts:634 getResultRoute()`
-   * — a W3/Bilaterals result that is neither AVISA nor Approved deep-links into the programme's
-   * `bilateral-review` drawer; everything else opens Result Detail with its `?phase=`.
+   * Destination for one result. Same branching as `results-list.component.ts getResultRoute()`
+   * — Editing W3 opens the center editor; in-review W3 deep-links into `bilateral-review`;
+   * everything else opens Result Detail with its `?phase=`.
    */
   // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
+  // @akili-spec bugfix/bilateral-w3-editing-route (BIL-T-2, BIL-R-1)
   resultRoute(row: ProgrammeResultRow): PgrResultRoute {
-    if (this.usesBilateralReviewFlow(row)) {
-      return {
-        commands: ['/result-framework-reporting', 'entity-details', row?.submitterCode || this.programmeCode(), 'bilateral-review'],
-        queryParams: { [REVIEW_RESULT_QUERY_PARAM]: row?.code, [REVIEW_RESULT_ID_QUERY_PARAM]: row?.id }
-      };
-    }
-    return {
-      commands: ['/result', 'result-detail', row?.code, 'general-information'],
-      queryParams: { phase: row?.versionId }
-    };
+    const { commands, queryParams } = resolveBilateralResultOpenRoute(this.toOpenRouteInput(row));
+    return { commands, queryParams };
   }
 
   /** Row click and the menu's "Open result" — one behaviour, per the design. */
@@ -1588,7 +1570,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
         const state = row?.sectionState;
         if (state === 'loading') return '';
         if (state === 'error' || state === 'version-mismatch') return '—';
-        const label = sectionLabel(row?.section);
+        const label = sectionLabel(row?.section, row?.plannedResult);
         const extra = (row?.aowCodes?.length ?? 0) > 1 ? ` +${(row?.aowCodes?.length ?? 0) - 1}` : '';
         return `${label}${extra}`;
       }
@@ -1597,7 +1579,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
       case 'status':
         return row?.statusName ?? '';
       case 'phase':
-        return row?.phaseName || (row?.phaseYear ? `Phase ${row.phaseYear}` : '');
+        return formatProgrammeResultPhaseShort(row);
       case 'createdBy':
         return row?.createdBy ?? '';
       case 'created':

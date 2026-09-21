@@ -35,19 +35,28 @@
       status="warning"
       description="Links to file storage platforms are not accepted. If you do not have a CGSpace or other public link available, use the “Upload file” option to upload your evidence to the PRMS repository."></app-alert-status>
     <ng-template #upload_file>
+      <!-- Lo que implica responder que sí es la GUÍA de esta pregunta, así que va tras el ⓘ de su
+           cabecera como en todos los campos. Antes era un `app-alert-status` suelto DEBAJO de los
+           radios: al ser colapsable se pintaba como un círculo gris huérfano, sin decir de qué
+           campo hablaba, y su texto se abría flotando encima del formulario (Yeck, 15-sep-2026:
+           "ese info está como roto o mal ubicado"). -->
       <app-pr-radio-button
         [options]="this.isPubilcFileOptions"
         optionLabel="name"
         optionValue="id"
         label="Can this evidence be shared publicly?"
+        [tooltip]="dynamicAlertStatusBasedOnVisibility()"
         [(ngModel)]="this.evidence.is_public_file">
       </app-pr-radio-button>
 
-      <app-alert-status [description]="dynamicAlertStatusBasedOnVisibility()" *ngIf="this.evidence.is_public_file !== null"> </app-alert-status>
-
-      <app-pr-field-header label="File to be uploaded to the repository" [required]="true" [useColon]="true"></app-pr-field-header>
-      <app-alert-status status="warning" description="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>">
-      </app-alert-status>
+      <!-- El campo del archivo, con la tarjeta del resto del formulario en vez de un
+           `app-pr-field-header` a pelo. La advertencia de "solo lectura" es su guía. -->
+      <app-field-card
+        label="File to be uploaded to the repository"
+        [required]="true"
+        [useColon]="true"
+        [hasValue]="!!this.evidence?.sp_file_name"
+        tooltip="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>">
 
       <div class="file-link-view" *ngIf="this.evidence?.sp_file_name; else uploadfilefield">
         <div class="file-name">
@@ -85,10 +94,14 @@
           (dragover)="onDragOver($event)"
           (dragleave)="onDragLeave($event)">
           <div class="content">
-            <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="" />
-            <div class="title">Select a file or drag and drop here</div>
-            <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 1GB</div>
+            <span class="dd_icon" aria-hidden="true">
+              <i class="material-icons-round">cloud_upload</i>
+            </span>
+            <div class="title">Drag a file here, or</div>
             <app-pr-button text="Select file" (click)="fileInput.click()"></app-pr-button>
+            <!-- 🛑 Sale de `ACCEPTED_FILE_TYPES`, igual que el `accept` de abajo: escrito a mano
+                 decía cinco formatos donde el sistema aceptaba nueve. -->
+            <div class="description">{{ acceptedFileTypesLabel }}</div>
           </div>
         </div>
         <input
@@ -96,14 +109,22 @@
           #fileInput
           type="file"
           (change)="onFileSelected($event)"
-          accept=".jpg, .png, .pdf, .doc, .pptx, .xlsx"
+          [attr.accept]="acceptedFileTypes"
           multiple="false" />
-        <div class="incorrect-file" *ngIf="this.incorrectFile">Incorrect format only files supported: .jpg, .png, .pdf, .doc, .pptx, .xlsx</div>
+        <div class="incorrect-file" *ngIf="this.incorrectFile">That file cannot be uploaded. Accepted: {{ acceptedFileTypesLabel }}</div>
       </ng-template>
+      </app-field-card>
     </ng-template>
 
-    <div class="checkboxes_container" *ngIf="!isSuppInfo">
-      <app-pr-field-header [label]="getEvidenceRelatedTitle()" [required]="false"></app-pr-field-header>
+    <!-- La pregunta de las casillas es un campo más, así que lleva la misma tarjeta que el resto
+         del formulario (propuesta 18) en vez del `app-pr-field-header` suelto, que era el patrón
+         anterior al rediseño: un título a pelo encima de una fila de casillas sueltas. -->
+    <app-field-card
+      class="checkboxes_container"
+      *ngIf="!isSuppInfo"
+      [label]="getEvidenceRelatedTitle()"
+      [required]="false"
+      [hasValue]="anyImpactAreaChecked()">
       <div class="checkboxes">
         <app-pr-checkbox label="Gender equality, youth and social inclusion" [(ngModel)]="this.evidence.gender_related"> </app-pr-checkbox>
         <app-pr-checkbox label="Climate adaptation and mitigation" [(ngModel)]="this.evidence.youth_related"> </app-pr-checkbox>
@@ -125,7 +146,7 @@
         <app-pr-checkbox label="Other Outcome" [(ngModel)]="this.evidence.other_outcome_related" *ngIf="this.resultTypeId === 4">
         </app-pr-checkbox>
       </div>
-    </div>
+    </app-field-card>
     <app-pr-textarea
       [label]="
         'Please provide details of where' +

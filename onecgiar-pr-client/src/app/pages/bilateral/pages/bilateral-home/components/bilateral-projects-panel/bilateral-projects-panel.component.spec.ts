@@ -1,13 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { BilateralProjectsPanelComponent } from './bilateral-projects-panel.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
 import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
+import { BilateralCenterResult } from '../../../../services/bilateral-center-result.interface';
+import { BilateralOverviewService } from '../../../../services/bilateral-overview.service';
 
 describe('BilateralProjectsPanelComponent', () => {
   let component: BilateralProjectsPanelComponent;
@@ -16,6 +18,7 @@ describe('BilateralProjectsPanelComponent', () => {
   let ctx: BilateralContextService;
   let manualCreateFlow: BilateralManualCreateFlowService;
   let activatedRouteStub: { snapshot: { queryParamMap: ParamMap } };
+  let mockRouter: { navigate: jest.Mock };
 
   const mockProjects: BilateralProject[] = [
     {
@@ -54,9 +57,50 @@ describe('BilateralProjectsPanelComponent', () => {
     }
   ];
 
+  const mockCenterResults: BilateralCenterResult[] = [
+    {
+      result_id: 2001,
+      result_code: 'R-2001',
+      title: 'Result 1 for B-A1080',
+      project_id: 101,
+      center_id: 1,
+      status_name: 'Editing',
+      result_type_id: 1,
+      result_type_name: 'Policy Change',
+      version_id: 36,
+    } as BilateralCenterResult,
+    {
+      result_id: 2002,
+      result_code: 'R-2002',
+      title: 'Result 2 for B-A1080',
+      project_id: 101,
+      center_id: 1,
+      status_name: 'Submitted',
+      result_type_id: 2,
+      result_type_name: 'Innovation Use',
+      version_id: 36,
+    } as BilateralCenterResult,
+    {
+      result_id: 2003,
+      result_code: 'R-2003',
+      title: 'Result for B-A1368',
+      project_id: 102,
+      center_id: 1,
+      status_name: 'Quality Assessed',
+      result_type_id: 1,
+      result_type_name: 'Policy Change',
+      version_id: 36,
+    } as BilateralCenterResult,
+  ];
+
   beforeEach(async () => {
+    mockRouter = {
+      navigate: jest.fn().mockResolvedValue(true)
+    };
+
     const mockApiService = {
-      GET_bilateralProjects: jest.fn().mockReturnValue(of({ response: mockProjects }))
+      GET_bilateralProjects: jest.fn().mockReturnValue(of({ response: mockProjects })),
+      GET_bilateralCenterResults: jest.fn().mockReturnValue(of({ response: mockCenterResults }))
     };
 
     activatedRouteStub = { snapshot: { queryParamMap: convertToParamMap({}) } };
@@ -66,6 +110,7 @@ describe('BilateralProjectsPanelComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: Router, useValue: mockRouter },
         { provide: BilateralApiService, useValue: mockApiService },
         { provide: ActivatedRoute, useValue: activatedRouteStub }
       ]
@@ -187,6 +232,37 @@ describe('BilateralProjectsPanelComponent', () => {
     component.openManualCreate(mockProjects[0], event);
     expect(event.preventDefault).toHaveBeenCalled();
     expect(manualCreateFlow.drawerOpen()).toBe(true);
+  });
+
+  /**
+   * `APF-T-7` rework, DI regression (Reviewer FAIL, issue 1): this panel unconditionally mounts
+   * `<app-bilateral-manual-create-drawer-host>`, which mounts `app-bilateral-sp-selector`, whose
+   * "Contributing Science Programs" disclosure (`APF-DD-11`) is `app-bilateral-accordion`. None of
+   * this test file's providers supply `BilateralAutoSaveService` — the same production DI shape as
+   * the real app (that service is only provided component-locally on `bilateral-result-creator`).
+   * Before the fix, picking a primary SP on a project with secondary SPs threw `NullInjectorError`
+   * the moment the accordion instantiated, taking the whole drawer down.
+   */
+  it('lets a primary SP pick with secondary SPs render the inline contributing section in the manual-create drawer without throwing', () => {
+    const event = { preventDefault: jest.fn() } as unknown as Event;
+    // B-A1368 (mockProjects[1]) carries 2 sciencePrograms — Breeding (primary pick) + Genebank
+    // (left over as a secondary chip), so `showSpSelectionInDrawer()` is true and no SP is
+    // auto-selected.
+    component.openManualCreate(mockProjects[1], event);
+    fixture.detectChanges();
+
+    expect(manualCreateFlow.drawerOpen()).toBe(true);
+    expect(manualCreateFlow.showSpSelectionInDrawer()).toBe(true);
+
+    const primaryOption = fixture.nativeElement.querySelector('.sps-option--list') as HTMLElement | null;
+    expect(primaryOption).toBeTruthy();
+
+    expect(() => {
+      primaryOption!.click();
+      fixture.detectChanges();
+    }).not.toThrow();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="sps-contributing-inline"]')).toBeTruthy();
   });
 
   it('should set error state if API fails', () => {
@@ -404,6 +480,241 @@ describe('BilateralProjectsPanelComponent', () => {
 
       const card = fixture.nativeElement.querySelector('[data-project-id="101"]');
       expect(card.classList.contains('bpp_card--highlight')).toBe(true);
+    });
+  });
+
+  describe('BGT-T-3: Guided tour instrumentation', () => {
+    it('renders data-guide="bilateral-tab-reporting" on the toolbar container (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      const reportingEl = fixture.nativeElement.querySelector('[data-guide="bilateral-tab-reporting"]');
+      expect(reportingEl).toBeTruthy();
+    });
+
+    it('renders data-guide="bilateral-reporting-kpis" on the KPI summary section', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      fixture.detectChanges();
+
+      const kpisEl = fixture.nativeElement.querySelector('[data-guide="bilateral-reporting-kpis"]');
+      expect(kpisEl).toBeTruthy();
+    });
+
+    it('renders data-guide="bilateral-project-card" and data-guide="bilateral-project-create-result" on the first project in grid view', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cardEl = fixture.nativeElement.querySelector('[data-guide="bilateral-project-card"]');
+      expect(cardEl).toBeTruthy();
+      expect(cardEl.getAttribute('data-project-id')).toBe('101');
+
+      const createBtnEl = fixture.nativeElement.querySelector('[data-guide="bilateral-project-create-result"]');
+      expect(createBtnEl).toBeTruthy();
+      expect(createBtnEl.textContent).toContain('Create result');
+    });
+
+    it('renders data-guide="bilateral-project-card" and data-guide="bilateral-project-create-result" on the first project in list view', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const rowEl = fixture.nativeElement.querySelector('tr[data-guide="bilateral-project-card"]');
+      expect(rowEl).toBeTruthy();
+      expect(rowEl.getAttribute('data-project-id')).toBe('101');
+
+      const createBtnEl = fixture.nativeElement.querySelector('button[data-guide="bilateral-project-create-result"]');
+      expect(createBtnEl).toBeTruthy();
+      expect(createBtnEl.textContent).toContain('Create result');
+    });
+  });
+
+  describe('Project cards reported results count & navigation to results tab', () => {
+    beforeEach(() => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+    });
+
+    it('should compute resultsCountByProject correctly from overviewService results', () => {
+      expect(component.getProjectResultsCount(mockProjects[0])).toBe(2);
+      expect(component.getProjectResultsCount(mockProjects[1])).toBe(1);
+      expect(component.getProjectResultsCount(mockProjects[2])).toBe(0);
+    });
+
+    it('should render results count badge on cards in grid view', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
+      expect(cards.length).toBe(3);
+
+      const firstBadge = cards[0].querySelector('.bpp_results_badge');
+      expect(firstBadge).toBeTruthy();
+      expect(firstBadge.textContent).toContain('2 results');
+      expect(firstBadge.classList.contains('bpp_results_badge--has-results')).toBe(true);
+
+      const thirdBadge = cards[2].querySelector('.bpp_results_badge');
+      expect(thirdBadge).toBeTruthy();
+      expect(thirdBadge.textContent).toContain('0 results');
+      expect(thirdBadge.classList.contains('bpp_results_badge--has-results')).toBe(false);
+    });
+
+    it('should render results footer link in card footer in grid view', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
+      const firstLink = cards[0].querySelector('.bpp_results_footer_link');
+      expect(firstLink).toBeTruthy();
+      expect(firstLink.textContent).toContain('View results (2)');
+    });
+
+    it('should render results column and badge in table view', () => {
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const rows = fixture.nativeElement.querySelectorAll('.bpp_table_row');
+      expect(rows.length).toBe(3);
+
+      const firstCell = rows[0].querySelector('.bpp_td_results');
+      expect(firstCell).toBeTruthy();
+      expect(firstCell.textContent).toContain('2');
+
+      const thirdCell = rows[2].querySelector('.bpp_td_results');
+      expect(thirdCell).toBeTruthy();
+      expect(thirdCell.textContent).toContain('0');
+    });
+
+    it('opens manual create drawer when card is clicked', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
+      expect(manualCreateFlow.drawerOpen()).toBe(false);
+      cards[0].click();
+
+      expect(manualCreateFlow.drawerOpen()).toBe(true);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('navigates to results tab when clicking results badge in card header', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const badge = fixture.nativeElement.querySelector('.bpp_card .bpp_results_badge') as HTMLElement;
+      badge.click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        {
+          queryParams: {
+            project: 101,
+            role: 'all',
+            source: 'all',
+            phase: 36
+          }
+        }
+      );
+    });
+
+    it('navigates to results tab when clicking results footer link', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector('.bpp_card .bpp_results_footer_link') as HTMLElement;
+      link.click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        {
+          queryParams: {
+            project: 101,
+            role: 'all',
+            source: 'all',
+            phase: 36
+          }
+        }
+      );
+    });
+
+    it('opens manual create drawer when row is clicked in table view', () => {
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const row = fixture.nativeElement.querySelector('.bpp_table_row') as HTMLElement;
+      expect(manualCreateFlow.drawerOpen()).toBe(false);
+      row.click();
+
+      expect(manualCreateFlow.drawerOpen()).toBe(true);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('navigates to results tab when clicking results badge in table view', () => {
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const badge = fixture.nativeElement.querySelector('.bpp_td_results .bpp_results_badge') as HTMLElement;
+      badge.click();
+
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        {
+          queryParams: {
+            project: 101,
+            role: 'all',
+            source: 'all',
+            phase: 36
+          }
+        }
+      );
+    });
+
+    it('opens manual create drawer when Create result button is clicked', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const createBtn = fixture.nativeElement.querySelector('[data-testid="bilateral-project-create-result"]') as HTMLElement;
+      mockRouter.navigate.mockClear();
+
+      createBtn.click();
+
+      expect(manualCreateFlow.drawerOpen()).toBe(true);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Refresh button & catalog refresh', () => {
+    beforeEach(() => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+    });
+
+    it('renders the refresh button in the docked toolbar', () => {
+      const refreshBtn = fixture.nativeElement.querySelector('[data-testid="bpp-refresh-button"]');
+      expect(refreshBtn).toBeTruthy();
+      expect(refreshBtn.textContent).toContain('Refresh');
+    });
+
+    it('calls overviewService.invalidate and refetches projects on refresh()', () => {
+      const overviewService = TestBed.inject(BilateralOverviewService);
+      const invalidateSpy = jest.spyOn(overviewService, 'invalidate');
+      const getProjectsSpy = jest.spyOn(bilateralApiService, 'GET_bilateralProjects');
+
+      component.refresh();
+
+      expect(invalidateSpy).toHaveBeenCalledWith('Bioversity', 36);
+      expect(getProjectsSpy).toHaveBeenCalledWith('Bioversity');
+    });
+
+    it('triggers refresh when refresh button is clicked in the DOM', () => {
+      const refreshSpy = jest.spyOn(component, 'refresh');
+      const refreshBtn = fixture.nativeElement.querySelector('[data-testid="bpp-refresh-button"]') as HTMLButtonElement;
+
+      refreshBtn.click();
+
+      expect(refreshSpy).toHaveBeenCalled();
     });
   });
 });

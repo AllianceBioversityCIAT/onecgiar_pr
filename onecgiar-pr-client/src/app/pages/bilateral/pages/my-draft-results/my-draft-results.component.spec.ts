@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { convertToParamMap, RouterModule } from '@angular/router';
@@ -53,6 +53,42 @@ describe('MyDraftResultsComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('AI provenance notice line (APF-R-12, APF-T-8)', () => {
+    const line = () => fixture.debugElement.query(By.css('[data-testid="mdr-ai-provenance-line"]'));
+
+    it('is absent while the centre has no drafts', () => {
+      bilateralAiService.draftList.set([]);
+      fixture.detectChanges();
+      expect(component.hasAnyDrafts()).toBe(false);
+      expect(line()).toBeNull();
+    });
+
+    it('renders below the filter toolbar once drafts are loaded', () => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+      expect(component.hasAnyDrafts()).toBe(true);
+      expect(line()).not.toBeNull();
+      expect(line().nativeElement.textContent).toContain(
+        'Generated with AI assistance from your sources. Review and edit before submitting.',
+      );
+      const toolbar = fixture.nativeElement.querySelector('.mdr-toolbar-docked');
+      expect(toolbar?.contains(line().nativeElement)).toBe(true);
+    });
+
+    it('stays present even when a project filter hides every draft on screen', () => {
+      // `hasAnyDrafts()` reads the unfiltered list — the notice is about the centre's drafts, not
+      // about what a filter currently shows.
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+      component.filter.setProjects(['does-not-exist']);
+      fixture.detectChanges();
+      expect(component.isFilteredEmpty()).toBe(true);
+      expect(line()).not.toBeNull();
+    });
   });
 
   describe('relative date calculation (BADR-R-11, BADR-AC-8, Defect Gate D3)', () => {
@@ -189,9 +225,34 @@ describe('MyDraftResultsComponent', () => {
     const textOf = (selector: string): string =>
       fixture.debugElement.query(By.css(selector))?.nativeElement.textContent.trim() ?? '';
 
-    it('shows the suggested title and the suggested indicator category', () => {
+    it('shows the suggested title with tooltip and the suggested indicator category', () => {
       expect(textOf('.mdr-card-title')).toBe('A draft title');
+      const titleEl = fixture.debugElement.query(By.css('.mdr-card-title'));
+      const tooltip = titleEl.injector.get(PrTooltipDirective);
+      expect(tooltip.text).toBe('A draft title');
       expect(textOf('.mdr-card-type')).toBe('Capacity Sharing');
+    });
+
+    it('renders colgroup with fixed column classes so Status and Actions stay separated', () => {
+      const colgroup = fixture.debugElement.query(By.css('.mdr-session-table colgroup'));
+      expect(colgroup).toBeTruthy();
+      const cols = colgroup.queryAll(By.css('col'));
+      expect(cols.length).toBe(5);
+      expect(cols[0].nativeElement.classList.contains('mdr-col-title')).toBe(true);
+      expect(cols[1].nativeElement.classList.contains('mdr-col-category')).toBe(true);
+      expect(cols[2].nativeElement.classList.contains('mdr-col-level')).toBe(true);
+      expect(cols[3].nativeElement.classList.contains('mdr-col-status')).toBe(true);
+      expect(cols[4].nativeElement.classList.contains('mdr-col-actions')).toBe(true);
+    });
+
+    it('keeps the status chip and Review control in separate table cells (responsive overlap fix)', () => {
+      const row = fixture.debugElement.query(By.css('.mdr-session-table tbody tr'));
+      const statusCell = row.query(By.css('.mdr-col-status'));
+      const actionsCell = row.query(By.css('.mdr-col-actions'));
+
+      expect(statusCell.query(By.css('.mdr-status'))).toBeTruthy();
+      expect(statusCell.query(By.css('.mdr-btn--review'))).toBeFalsy();
+      expect(actionsCell.query(By.css('.mdr-btn--review'))).toBeTruthy();
     });
 
     it('shows the suggested result type as Output or Outcome, from result.result_level_id', () => {
@@ -319,7 +380,7 @@ describe('MyDraftResultsComponent', () => {
       const discardBtn = actions.query(By.css('.mdr-btn--discard'));
       expect(discardBtn).toBeTruthy();
       expect(discardBtn.nativeElement.getAttribute('aria-label')).toBe('Delete draft');
-      expect(discardBtn.query(By.css('i'))?.nativeElement.textContent.trim()).toBe('delete_outline');
+      expect(discardBtn.query(By.css('i'))?.nativeElement.textContent.trim()).toBe('delete');
     });
   });
 
@@ -368,14 +429,14 @@ describe('MyDraftResultsComponent', () => {
     });
 
     it('shows every draft while no project is selected', () => {
-      expect(component.filter.selectedProjectId()).toBeNull();
+      expect(component.filter.selectedProjectIds()).toEqual([]);
       expect(component.filter.hasActiveFilters()).toBe(false);
       expect(component.drafts().map(draft => draft.id)).toEqual([1, 2, 3]);
       expect(renderedTitles()).toEqual(['Alpha draft', 'Beta draft', 'Gamma draft']);
     });
 
     it('keeps only the drafts of the selected project', () => {
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
 
       expect(component.drafts().map(draft => draft.id)).toEqual([1, 2]);
@@ -389,7 +450,7 @@ describe('MyDraftResultsComponent', () => {
         { ...alpha, job: { ...(alpha as any).job, project_id: '7' } } as unknown as BilateralAiDraft,
         gamma,
       ]);
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
 
       expect(component.drafts().map(draft => draft.id)).toEqual([1]);
@@ -397,16 +458,16 @@ describe('MyDraftResultsComponent', () => {
 
     it('counts the hidden drafts in the subtitle', () => {
       expect(component.subtitle()).toBe('3 drafts ready for review');
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
       expect(component.subtitle()).toBe('Showing 2 of 3 drafts');
     });
 
     it('shows a chip naming the active project and the count subtitle (BADR-R-4, BADR-AC-3)', () => {
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
 
-      expect(component.selectedProjectLabel()).toBe('PRJ-Seven');
+      expect(component.projectTriggerLabel()).toBe('PRJ-Seven');
       const chip = fixture.debugElement.query(By.css('.mdr-filter-chip'));
       expect(chip.nativeElement.textContent).toContain('PRJ-Seven');
 
@@ -415,14 +476,14 @@ describe('MyDraftResultsComponent', () => {
     });
 
     it('brings every draft back when the filter is cleared', () => {
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
       expect(component.drafts().length).toBe(2);
 
       component.clearFilters();
       fixture.detectChanges();
 
-      expect(component.filter.selectedProjectId()).toBeNull();
+      expect(component.filter.selectedProjectIds()).toEqual([]);
       expect(component.filter.hasActiveFilters()).toBe(false);
       expect(component.drafts().map(draft => draft.id)).toEqual([1, 2, 3]);
       expect(renderedTitles()).toEqual(['Alpha draft', 'Beta draft', 'Gamma draft']);
@@ -430,29 +491,30 @@ describe('MyDraftResultsComponent', () => {
     });
 
     it('clears the filter through the chip button', () => {
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
 
       fixture.debugElement.query(By.css('.mdr-filter-chip button')).nativeElement.click();
       fixture.detectChanges();
 
-      expect(component.filter.selectedProjectId()).toBeNull();
+      expect(component.filter.selectedProjectIds()).toEqual([]);
       expect(renderedTitles().length).toBe(3);
     });
 
-    it('treats the shared select sentinel and a re-pick of the active project as "no filter"', () => {
-      component.onProjectFilterChange('all');
-      expect(component.filter.selectedProjectId()).toBeNull();
-
-      component.onProjectFilterChange('7');
-      component.onProjectFilterChange('7');
-      expect(component.filter.selectedProjectId()).toBeNull();
+    it('supports multiselect project filtering (OR within dimension)', () => {
+      component.filter.setProjects(['7', '9']);
+      fixture.detectChanges();
+      expect(component.drafts().map(d => d.id)).toEqual([1, 2, 3]);
+      expect(component.projectTriggerLabel()).toBe('2 projects');
     });
 
-    it('maps a null selection back to the shared select sentinel', () => {
-      expect(component.selectValue(component.filter.selectedProjectId())).toBe('all');
-      component.onProjectFilterChange('9');
-      expect(component.selectValue(component.filter.selectedProjectId())).toBe('9');
+    it('toggles projects without closing the dropdown', () => {
+      component.toggleProjectDropdown();
+      fixture.detectChanges();
+      component.toggleProjectOption('7');
+      fixture.detectChanges();
+      expect(component.filter.selectedProjectIds()).toEqual(['7']);
+      expect(component.isProjectDropdownOpen()).toBe(true);
     });
 
     it('toggles project dropdown and resets search query on close', () => {
@@ -464,6 +526,12 @@ describe('MyDraftResultsComponent', () => {
       component.closeProjectDropdown();
       expect(component.isProjectDropdownOpen()).toBe(false);
       expect(component.projectSearchQuery()).toBe('');
+    });
+
+    it('shows project search input inside the dropdown whenever it is open', () => {
+      component.toggleProjectDropdown();
+      fixture.detectChanges();
+      expect(fixture.debugElement.query(By.css('[data-testid="mdr-project-search-input"]'))).not.toBeNull();
     });
 
     it('filters project options by search query (BADR-R-3)', () => {
@@ -480,13 +548,12 @@ describe('MyDraftResultsComponent', () => {
       expect(component.filteredProjectOptions().length).toBe(2);
     });
 
-    it('selects project and closes dropdown via selectProjectAndClose (BADR-R-2)', () => {
+    it('clears all projects via All Projects row', () => {
+      component.filter.setProjects(['7', '9']);
       component.toggleProjectDropdown();
-      expect(component.isProjectDropdownOpen()).toBe(true);
-
-      component.selectProjectAndClose('7');
-      expect(component.filter.selectedProjectId()).toBe('7');
-      expect(component.isProjectDropdownOpen()).toBe(false);
+      fixture.detectChanges();
+      component.clearProjectSelection();
+      expect(component.filter.selectedProjectIds()).toEqual([]);
     });
 
     it('formats project option with code and title when shortName and fullName are present (BADR-R-1, BADR-AC-1)', () => {
@@ -506,7 +573,7 @@ describe('MyDraftResultsComponent', () => {
 
     it('offers a way out when the filter hides everything', () => {
       bilateralAiService.draftList.set([gamma]);
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
 
       expect(component.hasAnyDrafts()).toBe(true);
@@ -516,7 +583,7 @@ describe('MyDraftResultsComponent', () => {
       const empty = fixture.debugElement.query(By.css('.mdr-empty--filtered'));
       expect(empty).not.toBeNull();
       // The "no drafts yet" CTA must NOT be the one on screen: it sends the user off to create a result.
-      expect(empty.nativeElement.textContent).toContain('Clear filter');
+      expect(empty.nativeElement.textContent).toContain('Clear all filters');
 
       empty.query(By.css('.mdr-empty-cta')).nativeElement.click();
       fixture.detectChanges();
@@ -539,10 +606,79 @@ describe('MyDraftResultsComponent', () => {
     it('ignores drafts whose payload carries no job when a project is selected', () => {
       const orphan = { ...alpha, id: 4, job: undefined } as unknown as BilateralAiDraft;
       bilateralAiService.draftList.set([alpha, orphan]);
-      component.onProjectFilterChange('7');
+      component.filter.setProjects(['7']);
       fixture.detectChanges();
 
       expect(component.drafts().map(draft => draft.id)).toEqual([1]);
+    });
+  });
+
+  describe('BADF — search and Created by filters', () => {
+    const draftWithUser = (id: number, projectId: number, title: string, userId: number, firstName: string): BilateralAiDraft =>
+      ({
+        ...draftStub,
+        id,
+        extracted_mds: { title, indicator: 'Innovation development' },
+        job: {
+          ...(draftStub as any).job,
+          project_id: projectId,
+          user_id: userId,
+          user: { id: userId, first_name: firstName, last_name: 'User' },
+        },
+      }) as unknown as BilateralAiDraft;
+
+    beforeEach(() => {
+      bilateralAiService.projectNameMap.set({ 7: 'PRJ-Seven', 9: 'PRJ-Nine' });
+      bilateralAiService.isDraftListLoaded.set(true);
+      (component as any).api.authSE = {
+        localStorageUser: { id: 100, user_name: 'Current User' },
+      };
+    });
+
+    it('debounces search and narrows drafts by title', fakeAsync(() => {
+      bilateralAiService.draftList.set([
+        draftWithUser(1, 7, 'Kenya profile', 100, 'Current'),
+        draftWithUser(2, 7, 'Other draft', 200, 'Carlos'),
+      ]);
+      fixture.detectChanges();
+
+      const input = fixture.debugElement.query(By.css('[data-testid="mdr-search-input"]')).nativeElement as HTMLInputElement;
+      input.value = 'kenya';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(component.drafts().length).toBe(2);
+
+      tick(300);
+      fixture.detectChanges();
+      expect(component.drafts().map(d => d.id)).toEqual([1]);
+    }));
+
+    it('filters by Created by multiselect', () => {
+      bilateralAiService.draftList.set([
+        draftWithUser(1, 7, 'Mine', 100, 'Current'),
+        draftWithUser(2, 7, 'Theirs', 200, 'Carlos'),
+      ]);
+      fixture.detectChanges();
+
+      component.onCreatedByFilterChange(['200']);
+      fixture.detectChanges();
+      expect(component.drafts().map(d => d.id)).toEqual([2]);
+      expect(component.createdBySelectOptions().some(o => o.label === 'Me')).toBe(true);
+    });
+
+    it('clears all filters from the chip row', () => {
+      bilateralAiService.draftList.set([draftWithUser(1, 7, 'Alpha', 100, 'Current')]);
+      fixture.detectChanges();
+
+      component.filter.setProjects(['7']);
+      component.filter.setSearchText('alpha');
+      fixture.detectChanges();
+
+      fixture.debugElement.query(By.css('[data-testid="mdr-clear-all-filters"]')).nativeElement.click();
+      fixture.detectChanges();
+
+      expect(component.filter.hasActiveFilters()).toBe(false);
+      expect(component.searchInput()).toBe('');
     });
   });
 
@@ -610,20 +746,26 @@ describe('MyDraftResultsComponent', () => {
       expect(table).toBeTruthy();
     });
 
-    it('ensures project filter has fluid small-screen constraints (BADR-R-16, BADR-AC-10)', () => {
+    it('ensures project filter lives in a fluid facets grid (BADR-R-16, BADR-AC-10)', () => {
+      const facets = fixture.nativeElement.querySelector('.mdr_filter_facets') as HTMLElement;
       const filter = fixture.nativeElement.querySelector('.mdr-filter') as HTMLElement;
+      expect(facets).toBeTruthy();
       expect(filter).toBeTruthy();
-      expect(filter.classList.contains('w-full')).toBe(true);
-      expect(filter.classList.contains('max-w-[320px]')).toBe(true);
+      expect(facets.contains(filter)).toBe(true);
+      expect(filter.classList.contains('min-w-0')).toBe(true);
     });
 
-    it('ensures dropdown template specifies mobile-friendly max-width to prevent overflow (Defect Gate D5)', () => {
+    it('sizes the project dropdown panel to the trigger width to prevent mobile overflow (Defect Gate D5)', () => {
+      const trigger = fixture.nativeElement.querySelector('.mdr-project-trigger') as HTMLElement;
+      jest.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ width: 280 } as DOMRect);
+
       component.toggleProjectDropdown();
       fixture.detectChanges();
 
+      expect(component.projectOverlayWidth()).toBe(280);
       const dropdown = document.querySelector('.mdr-project-dropdown') as HTMLElement;
       expect(dropdown).toBeTruthy();
-      expect(dropdown.className).toContain('max-w-[calc(100vw-32px)]');
+      expect(dropdown.classList.contains('w-full')).toBe(true);
       component.closeProjectDropdown();
     });
   });
@@ -699,6 +841,138 @@ describe('MyDraftResultsComponent', () => {
       expect(fixture.nativeElement.querySelector('.mdr-filter-chip')).toBeNull();
       const count = fixture.nativeElement.querySelector('[data-testid="mdr-filter-count"]');
       expect(count).toBeNull();
+    });
+  });
+
+  describe('Creator identification and guidance UX (quick/draft-results-creator-ux)', () => {
+    afterEach(() => {
+      localStorage.removeItem('user');
+    });
+
+    it('renders guidance banner above session list explaining review & creation steps', () => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const banner = fixture.nativeElement.querySelector('.mdr-guidance-banner');
+      expect(banner).toBeTruthy();
+      expect(banner.textContent).toContain('Candidate Results Ready for Review & Creation');
+      expect(banner.textContent).toContain('Next Steps');
+      expect(banner.textContent).toContain('Review');
+      expect(banner.textContent).toContain('Create Result');
+    });
+
+    it('identifies sessions created by the current user with "Created by you" badge and .mdr-session-card--me accent styling', () => {
+      const myDraft = {
+        ...draftStub,
+        id: 101,
+        job_id: 'user-session-1111',
+        job: { ...draftStub.job, job_id: 'user-session-1111', user_id: 42 },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([myDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(true);
+      expect(group.creatorName).toBe('Created by you');
+      expect(group.creatorTooltip).toContain('Dr. Maria Santos');
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      expect(card.classes['mdr-session-card--me']).toBe(true);
+
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.classes['mdr-creator-badge--me']).toBe(true);
+      expect(badge.nativeElement.textContent).toContain('Created by you');
+    });
+
+    it('identifies sessions created by another user with their full name badge when user object is available', () => {
+      const colleagueDraft = {
+        ...draftStub,
+        id: 102,
+        job_id: 'colleague-session-2222',
+        job: {
+          ...draftStub.job,
+          job_id: 'colleague-session-2222',
+          user_id: 99,
+          user: { id: 99, first_name: 'Carlos', last_name: 'Mendez', email: 'c.mendez@cgiar.org' },
+        },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([colleagueDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(false);
+      expect(group.creatorName).toBe('Carlos Mendez');
+      expect(group.creatorTooltip).toContain('Carlos Mendez');
+      expect(group.creatorTooltip).toContain('c.mendez@cgiar.org');
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      expect(card.classes['mdr-session-card--me']).toBeFalsy();
+
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.classes['mdr-creator-badge--other']).toBe(true);
+      expect(badge.nativeElement.textContent).toContain('Carlos Mendez');
+    });
+
+    it('displays "Center Colleague" instead of raw ID when colleague name is not yet available', () => {
+      const colleagueDraft = {
+        ...draftStub,
+        id: 102,
+        job_id: 'colleague-session-2222',
+        job: { ...draftStub.job, job_id: 'colleague-session-2222', user_id: 99 },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([colleagueDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.isCurrentUser).toBe(false);
+      expect(group.creatorName).toBe('Center Colleague');
+      expect(group.creatorTooltip).toBe('AI extraction session created by a Center team member');
+
+      const badge = fixture.debugElement.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeTruthy();
+      expect(badge.nativeElement.textContent).toContain('Center Colleague');
+      expect(badge.nativeElement.textContent).not.toContain('User #99');
+    });
+
+    it('handles missing user_id gracefully without creator badge', () => {
+      const legacyDraft = {
+        ...draftStub,
+        id: 103,
+        job_id: 'legacy-session-3333',
+        job: { ...draftStub.job, job_id: 'legacy-session-3333', user_id: null },
+      } as any;
+
+      component.api.authSE.localStorageUser = { id: 42, user_name: 'Dr. Maria Santos' } as any;
+      bilateralAiService.draftList.set([legacyDraft]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+
+      const group = component.sessionGroups()[0];
+      expect(group.creatorName).toBe('');
+      expect(group.isCurrentUser).toBe(false);
+
+      const card = fixture.debugElement.query(By.css('.mdr-session-card'));
+      const badge = card.query(By.css('.mdr-creator-badge'));
+      expect(badge).toBeNull();
+    });
+  });
+
+  describe('BGT-T-3: Guided tour instrumentation', () => {
+    it('renders data-guide="bilateral-tab-drafts" on the drafts container (BGT-T-3, BGT-R-2, Gate D1)', () => {
+      const draftsEl = fixture.nativeElement.querySelector('[data-guide="bilateral-tab-drafts"]');
+      expect(draftsEl).toBeTruthy();
     });
   });
 });

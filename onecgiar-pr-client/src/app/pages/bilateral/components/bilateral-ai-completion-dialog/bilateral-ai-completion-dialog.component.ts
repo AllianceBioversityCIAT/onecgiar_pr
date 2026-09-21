@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
+import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 
 /**
  * App-wide dialog that tells the user their AI-assisted job finished — wherever they are.
@@ -18,7 +19,7 @@ import { BilateralAiService } from '../../services/bilateral-ai.service';
  */
 @Component({
   selector: 'app-bilateral-ai-completion-dialog',
-  imports: [PrDialogComponent, HlmButton],
+  imports: [PrDialogComponent, HlmButton, AiProvenanceNoticeComponent],
   templateUrl: './bilateral-ai-completion-dialog.component.html',
   styleUrl: './bilateral-ai-completion-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -100,6 +101,14 @@ export class BilateralAiCompletionDialogComponent {
 
   /** Only a completed job with drafts has somewhere to go. */
   readonly canReview = computed(() => this.notice()?.status === 'completed');
+
+  /**
+   * `APF-R-12` / `APF-DD-10` — the provenance line shows on success only (design.md §6.2: "Adds
+   * the provenance line on success; unchanged otherwise"). Same condition as `canReview`: a
+   * `completed_no_candidates` job created no AI artefact to attribute, and `failed` created
+   * nothing at all.
+   */
+  readonly showProvenanceNotice = computed(() => this.canReview());
 
   close(): void {
     this.ai.dismissCompletionNotice();

@@ -1,5 +1,4 @@
 import {
-  MERGE_SPLIT_TARGET_STATUS_IDS,
   QA_LINKABLE_INNOVATION_STATUS_IDS,
   ResultRepository,
 } from './result.repository';
@@ -8,11 +7,17 @@ import {
  * P2-3292 Steps 3A / 3B — the catalogue of innovations a discontinued innovation may declare as
  * its continuation.
  *
+ * SIP-T-1 (expand-split-innovation-picker) broadened eligibility: the query no longer gates on
+ * `status_id` at all, so every non-discontinued, active Innovation Development result is a
+ * candidate regardless of status (Editing, Submitted, QualityAssessed, Approved — see SIP-AC-1 /
+ * SIP-AC-2 in docs/specs/results/expand-split-innovation-picker/requirements.md §8). The remaining
+ * filters are: (a) Innovation Development type, (b) not discontinued, (c) not the result itself,
+ * (d) full portfolio / no phase pin.
+ *
  * These assert on the SQL the repository builds, because that is where the whole requirement lives:
- * the story fixes four filters in writing and every one of them is a clause. A raw query has no
- * other seam, and each of these clauses is one word away from being wrong in a way nothing else
- * would catch — the sibling method offers discontinued innovations ON PURPOSE, so copying it would
- * look correct and break the requirement.
+ * a raw query has no other seam, and each of these clauses is one word away from being wrong in a
+ * way nothing else would catch — the sibling method offers discontinued innovations ON PURPOSE, so
+ * copying it would look correct and break the requirement.
  */
 describe('ResultRepository.getMergeSplitTargetInnovations (P2-3292 Step 3)', () => {
   function makeRepository() {
@@ -25,21 +30,38 @@ describe('ResultRepository.getMergeSplitTargetInnovations (P2-3292 Step 3)', () 
   const sqlOf = (repository: any) => repository.query.mock.calls[0][0];
   const paramsOf = (repository: any) => repository.query.mock.calls[0][1];
 
-  describe('the status set is NOT the one the sibling dropdown uses', () => {
-    it('excludes Discontinued, which the sibling includes on purpose', () => {
-      // The story says "Not discontinued" in writing. `QA_LINKABLE_INNOVATION_STATUS_IDS` carries
-      // status 4 deliberately for P2-3420/3421, so reusing it would silently offer closed
-      // innovations as the place another one continued.
-      expect(QA_LINKABLE_INNOVATION_STATUS_IDS).toContain(4);
-      expect(MERGE_SPLIT_TARGET_STATUS_IDS).not.toContain(4);
+  describe('the broadened eligibility rule (SIP-T-1)', () => {
+    it('has no status_id gate anywhere in the SQL (SIP-AC-1 / SIP-AC-2): Editing, Submitted, QualityAssessed and Approved are all eligible', async () => {
+      // Before SIP-T-1 this query filtered on a deleted status-allowlist constant, which meant
+      // Editing/Submitted innovations never appeared. There is no dedicated status clause left to
+      // exclude any status — proving that is exactly what proves every status is now eligible,
+      // since discontinued innovations are excluded by the separate `is_discontinued` flag, not by
+      // `status_id`.
+      const repository = makeRepository();
+
+      await repository.getMergeSplitTargetInnovations({});
+
+      expect(sqlOf(repository)).not.toMatch(/status_id IN/);
     });
 
-    it("offers both QA'd and Approved, so bilateral innovations are not invisible", () => {
-      expect(MERGE_SPLIT_TARGET_STATUS_IDS).toEqual([2, 6]);
+    it('still carries QA_LINKABLE_INNOVATION_STATUS_IDS with status 4 (Discontinued) for the unrelated sibling dropdown, to guard against reusing it here', () => {
+      // Regression guard for the sibling method (getQaEdInnovationDevelopmentResults), which
+      // legitimately includes Discontinued (P2-3420/3421). If this ever changed to exclude 4, or
+      // if getMergeSplitTargetInnovations ever imported it, that would be a sign of the two
+      // eligibility rules being accidentally merged.
+      expect(QA_LINKABLE_INNOVATION_STATUS_IDS).toContain(4);
+    });
+
+    it('requires r.is_active = TRUE in the outer WHERE (SIP-AC-3): inactive innovations never appear', async () => {
+      const repository = makeRepository();
+
+      await repository.getMergeSplitTargetInnovations({});
+
+      expect(sqlOf(repository)).toMatch(/WHERE r\.is_active = TRUE/);
     });
   });
 
-  describe('the four filters the story fixes', () => {
+  describe('the filters the story fixes', () => {
     it('asks only for Innovation Development results', async () => {
       const repository = makeRepository();
 
@@ -83,8 +105,9 @@ describe('ResultRepository.getMergeSplitTargetInnovations (P2-3292 Step 3)', () 
       const sql = sqlOf(repository);
       expect(sql).toContain('NOT EXISTS');
       expect(sql).toContain('newer.result_code = r.result_code');
-      // The de-duplication must apply the same status and discontinued filters, or it would
-      // collapse an eligible row against an ineligible newer one and hide it entirely.
+      // The de-duplication must apply the same discontinued and type filters as the outer WHERE
+      // (there is no status filter left, per SIP-T-1), or it would collapse an eligible row against
+      // an ineligible newer one and hide it entirely.
       expect(sql).toMatch(/newer\.is_discontinued IS NULL/);
     });
 

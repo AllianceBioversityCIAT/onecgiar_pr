@@ -889,7 +889,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly canReportEmerging = computed(() => {
     const sp = this.selected();
-    return !!sp && !isAvisaInitiative({ initiativeCode: sp.initiativeCode, initiativeId: sp.initiativeId });
+    return (
+      !!sp &&
+      !isAvisaInitiative({ initiativeCode: sp.initiativeCode, initiativeId: sp.initiativeId }) &&
+      this.entityAowService.canReportResults()
+    );
   });
 
   openReportModal(): void {
@@ -1841,6 +1845,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const key = this.currentAchievementKey();
     if (!key) return {};
     return this.tocAchievementByKey().get(key)?.byAow ?? {};
+  });
+
+  readonly isAchievementLoading = computed<boolean>(() => {
+    const key = this.currentAchievementKey();
+    if (!key) return false;
+    return this.loadingAchievementKeys().has(key) || !this.tocAchievementByKey().has(key);
   });
 
   /**
@@ -3615,7 +3625,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
               // P2-3296 AC3. Taken from the roll-up call, not recomputed from `rows`: the figure
               // describes the Area of Work, not the current filter. A percentage that moved as the
               // user narrowed the typology or the search box would not be progress.
-              achievement: this.achievementByAowCode()[aow.code] ?? null
+              achievement: this.achievementByAowCode()[aow.code] ?? null,
+              achievementLoading: this.isAchievementLoading()
             };
           })
       : [];

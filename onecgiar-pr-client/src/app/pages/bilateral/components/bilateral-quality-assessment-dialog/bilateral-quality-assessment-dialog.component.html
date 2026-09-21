@@ -1,0 +1,187 @@
+@if (visible()) {
+  <div
+    class="bqa-scrim fixed inset-0 z-[1200] bg-[rgba(15,23,42,0.35)] backdrop-blur-[1px]"
+    (click)="requestClose()"
+    aria-hidden="true"
+    data-testid="bqa-dialog-scrim"></div>
+
+  <aside
+    #panel
+    class="bqa-panel fixed inset-y-0 right-0 z-[1201] flex max-w-[100vw] flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
+    [class.bqa-panel--mobile]="isMobile()"
+    [style.width.px]="width()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="running() ? 'Checking quality' : title()"
+    tabindex="-1"
+    (keydown.escape)="requestClose()"
+    (keydown.tab)="onTabKey($event)"
+    (keydown.shift.tab)="onTabKey($event)"
+    data-testid="bqa-dialog-panel">
+    @if (!isMobile()) {
+      <div
+        class="absolute inset-y-0 -left-1 z-[2] w-2 cursor-col-resize"
+        (mousedown)="startResize($event)"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"></div>
+    }
+
+    <div class="pr-dialog-header bqa-dialog__header shrink-0" [attr.data-verdict]="running() ? 'grey' : verdict()">
+      <span class="pr-dialog-header-icon bqa-dialog__icon" [attr.data-verdict]="running() ? 'grey' : verdict()">
+        @if (running()) {
+          <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
+        } @else {
+          <i class="material-icons-round" aria-hidden="true">{{ unavailable() ? 'cloud_off' : verdict() === 'green' ? 'check_circle' : verdict() === 'red' ? 'error' : 'warning_amber' }}</i>
+        }
+      </span>
+      <span class="pr-dialog-header-title">{{ running() ? 'Checking quality' : title() }}</span>
+      @if (!running() && !submitting()) {
+        <button
+          type="button"
+          (click)="requestClose()"
+          aria-label="Close"
+          data-testid="bqa-dialog-close"
+          class="ml-auto inline-flex size-[32px] max-[639px]:size-[44px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+          <span class="material-icons-round text-[20px]">close</span>
+        </button>
+      }
+    </div>
+    <div class="pr-dialog-body bqa-dialog__body flex-1 px-[24px] py-[20px]">
+      @if (running()) {
+        <!-- The wait can run a minute. Rather than an empty spinner, it teaches the legend the user
+             is about to need — P2-3150 AC2 — so the verdict lands already understood. -->
+        <div class="bqa-dialog__running" role="status">
+          <div class="bqa-dialog__progress" aria-hidden="true"><span></span></div>
+          <p class="bqa-dialog__running-lead">Reading the result against the quality criteria. This usually takes under a minute.</p>
+        </div>
+        <section class="bqa-dialog__group" aria-label="What the colours mean">
+          <h3 class="mb-[10px] text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">What the colours mean</h3>
+          <ul class="bqa-dialog__legend">
+            @for (item of legend; track item.verdict) {
+              <li>
+                <span class="bqa-dialog__pill px-[12px] py-[4px] text-[12px]" [attr.data-verdict]="item.verdict">{{ item.label }}</span>
+                <span>{{ item.meaning }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+        <p class="bqa-dialog__tip" aria-live="polite"><i class="material-icons-round" aria-hidden="true">lightbulb</i>{{ tip() }}</p>
+      } @else if (assessment(); as assessment) {
+      @if (unavailable()) {
+        <p class="pr-dialog-text">{{ assessment.degraded_reason || 'The quality service could not complete this check. You may submit without it.' }}</p>
+      } @else {
+        @if (stale()) {
+          <p class="bqa-dialog__stale">This assessment predates your latest edits. It remains available as history, but you must run it again before submitting.</p>
+        }
+        <section class="bqa-dialog__overall rounded-[12px] py-[16px] px-[18px]" [attr.data-verdict]="verdict()">
+          <span class="bqa-dialog__eyebrow">Overall result</span>
+          <strong>{{ verdict() }}</strong>
+          @if (assessment.overall.score !== null) { <span class="bqa-dialog__score">{{ assessment.overall.score }}/100</span> }
+          <p>{{ assessment.overall.summary || 'Review the assessment before submitting.' }}</p>
+        </section>
+        @if (sectionEntries().length) {
+          <section class="bqa-dialog__group" aria-label="Assessment by section">
+            <h3 class="mb-[10px] text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">By section</h3>
+            <div class="bqa-dialog__sections grid grid-cols-1 gap-[12px]">
+              @for (section of sectionEntries(); track section.key) {
+                <article
+                  class="bqa-dialog__section rounded-[12px] py-[16px] px-[18px]"
+                  [attr.data-verdict]="section.verdict"
+                  [class.bqa-dialog__section--open]="expandedSection() === section.key">
+                  <div class="bqa-dialog__section-row">
+                    <strong>{{ section.label }}</strong>
+                    <span class="bqa-dialog__pill px-[12px] py-[4px] text-[12px]" [attr.data-verdict]="section.verdict">{{ section.verdict }}</span>
+                  </div>
+                  @if (section.comments) { <p>{{ section.comments }}</p> }
+                  <div class="bqa-dialog__actions">
+                  @if (section.canNavigate) {
+                    <!-- QA feedback 2026-09-18: by the time the reporter reaches the form they have
+                         forgotten what the AI flagged. The window closes and the editor opens on
+                         that section; the verdict stays on the rail, reopenable. -->
+                    <button
+                      type="button"
+                      class="bqa-dialog__goto"
+                      (click)="sectionSelected.emit(section.key)">
+                      Go to {{ section.label }}
+                      <i class="material-icons-round" aria-hidden="true">arrow_forward</i>
+                    </button>
+                  }
+                  @if (section.hasFeedback) {
+                    <button
+                      type="button"
+                      class="bqa-dialog__details-trigger"
+                      [attr.aria-expanded]="expandedSection() === section.key"
+                      [attr.aria-controls]="section.panelId"
+                      (click)="toggleSection(section.key, $event.currentTarget)">
+                      <i class="material-icons-round bqa-dialog__chevron" aria-hidden="true">expand_more</i>
+                      {{ expandedSection() === section.key ? 'Hide feedback' : 'See feedback' }}
+                    </button>
+                  }
+                  </div>
+                  @if (section.hasFeedback) {
+
+                    <!-- Inline, inside the card it belongs to. It used to render after the whole
+                         list, so opening the first section pushed its feedback five cards down and
+                         the user lost the thread between the verdict and its reason.
+                         Always in the DOM rather than behind an `@if`: the 0fr→1fr grid row is what
+                         gives it a height to animate, and there is nothing to animate from if the
+                         content only appears on the frame it opens. `inert` keeps the collapsed copy
+                         out of tab order and off the accessibility tree. -->
+                    <div class="bqa-dialog__feedback-wrap" [id]="section.panelId" [inert]="expandedSection() !== section.key">
+                      <div class="bqa-dialog__feedback">
+                        @if (section.issues.length) {
+                          <div class="bqa-dialog__feedback-block bqa-dialog__feedback-block--issues">
+                            <h5><i class="material-icons-round" aria-hidden="true">error_outline</i>What to address</h5>
+                            <ul>@for (issue of section.issues; track issue) { <li>{{ issue }}</li> }</ul>
+                          </div>
+                        }
+                        @if (section.strengths.length) {
+                          <div class="bqa-dialog__feedback-block bqa-dialog__feedback-block--strengths">
+                            <h5><i class="material-icons-round" aria-hidden="true">check_circle_outline</i>What is working well</h5>
+                            <ul>@for (strength of section.strengths; track strength) { <li>{{ strength }}</li> }</ul>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+        }
+        @if (evidence().length) {
+          <section class="bqa-dialog__group" aria-label="Evidence assessment">
+            <h3 class="mb-[10px] text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">Evidence</h3>
+            @for (item of evidence(); track item.index) {
+              <p class="bqa-dialog__evidence rounded-[12px] py-[12px] px-[16px]"><span [attr.data-verdict]="item.verdict">{{ item.verdict }}</span>{{ item.reason }}</p>
+            }
+          </section>
+        }
+      }
+      }
+    </div>
+    <!-- No exits while the check runs: the row is already claimed server-side, so there is nothing
+         a Cancel here could undo. -->
+    @if (!running()) {
+    <div class="pr-dialog-footer shrink-0">
+      <button hlmBtn variant="outline" type="button" [disabled]="submitting()" (click)="dismissed.emit()">Make adjustments</button>
+      @if (!stale()) {
+        <button
+          hlmBtn
+          type="button"
+          [disabled]="submitting()"
+          [attr.aria-busy]="submitting()"
+          (click)="decisionChosen.emit(unavailable() ? 'submitted_without_check' : 'submitted_anyway')">
+          @if (submitting()) {
+            <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
+            <span>Submitting…</span>
+          } @else {
+            <span>{{ primaryLabel() }}</span>
+          }
+        </button>
+      }
+    </div>
+    }
+  </aside>
+}

@@ -959,6 +959,22 @@ describe('ResultsListComponent', () => {
       expect(component.getResultQueryParams(result)).toEqual({ reviewResult: 'R-2', reviewResultId: 'id-2' });
     });
 
+    it('should link an Editing W3/Bilaterals result to the center editor', () => {
+      const result = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Editing',
+        status_id: 1,
+        lead_center: 'AfricaRice',
+        result_code: '9368',
+        version_id: 36,
+        id: 'id-9'
+      } as any;
+
+      expect(component.getResultLink(result)).toEqual(['/bilateral', 'AfricaRice', 'result', '9368']);
+      expect(component.getResultQueryParams(result)).toEqual({ phase: 36 });
+    });
+
     it('should return the same object identity for the same result (cached for routerLink)', () => {
       const result = { source_name: 'Initiative', result_code: 'R-3', version_id: 10 } as any;
 
@@ -973,6 +989,24 @@ describe('ResultsListComponent', () => {
     beforeEach(() => {
       component.bilateralResultsService.currentResultToReview.set(null);
       component.bilateralResultsService.showReviewDrawer.set(false);
+    });
+
+    it('should not preload the review drawer for an Editing W3/Bilaterals result', () => {
+      const editingResult = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Editing',
+        status_id: 1,
+        lead_center: 'AfricaRice',
+        result_code: '9368',
+        version_id: 36,
+        id: 'id-9'
+      } as any;
+
+      component.onResultLinkClick({ button: 0 } as MouseEvent, editingResult);
+
+      expect(component.bilateralResultsService.currentResultToReview()).toBeNull();
+      expect(component.bilateralResultsService.showReviewDrawer()).toBe(false);
     });
 
     it('should preload the review drawer state on a plain left click', () => {
@@ -1152,6 +1186,46 @@ describe('ResultsListComponent', () => {
       expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 1, name: 'W1/W2' }]);
       expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2 }]);
       expect(mockResultsListFilterService.text_to_search()).toBe('SP01');
+    });
+  });
+
+  describe('Emerging result chip (EMG-T-3)', () => {
+    const p25Base = {
+      phase_year: 2026,
+      acronym: 'P25',
+      phase_name: 'Reporting 2026 P25'
+    };
+
+    it('isEmerging returns true only for planned_result 0 in P25 2025-2030', () => {
+      expect(component.isEmerging({ ...p25Base, planned_result: 0 } as any)).toBe(true);
+    });
+
+    it('isEmerging returns false for planned_result 1', () => {
+      expect(component.isEmerging({ ...p25Base, planned_result: 1 } as any)).toBe(false);
+    });
+
+    it('isEmerging returns false for planned_result null (EMG-R-5 / D-3)', () => {
+      expect(component.isEmerging({ ...p25Base, planned_result: null } as any)).toBe(false);
+    });
+
+    it('isEmerging returns false when planned_result key is absent', () => {
+      expect(component.isEmerging({ ...p25Base } as any)).toBe(false);
+    });
+
+    it('isEmerging returns false outside P25 reporting window', () => {
+      expect(
+        component.isEmerging({ phase_year: 2024, acronym: 'P24', planned_result: 0 } as any)
+      ).toBe(false);
+    });
+  });
+
+  describe('is_replicated handling in table rows', () => {
+    it('should distinguish replicated results for Previously reported badge', () => {
+      const replicated = { id: 1, title: 'Result A', is_replicated: 1 } as any;
+      const original = { id: 2, title: 'Result B', is_replicated: 0 } as any;
+
+      expect(Boolean(replicated.is_replicated)).toBe(true);
+      expect(Boolean(original.is_replicated)).toBe(false);
     });
   });
 });

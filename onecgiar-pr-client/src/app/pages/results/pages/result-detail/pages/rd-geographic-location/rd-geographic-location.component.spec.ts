@@ -169,7 +169,7 @@ describe('RdGeographicLocationComponent', () => {
     /**
      * 🛑 A result with no geographic focus chosen reads back as `geo_scope_id: 0` — the server's own
      * "none" placeholder. Sending that 0 back is what the column cannot take: `clarisa_geographic_scope`
-     * holds 1, 2, 3, 5 and 50, so the write died on the foreign key with a 500 that never reached the
+     * never holds 0 (`GeoScopeEnum`: 1, 2, 3, 5, 50), so the write died on the foreign key with a 500 that never reached the
      * reporter. Measured 15-Sep-2026: 40 of 60 sampled 2026 results carry `geo_scope_id = 0`.
      */
     describe('main geographic scope, when none has been chosen', () => {

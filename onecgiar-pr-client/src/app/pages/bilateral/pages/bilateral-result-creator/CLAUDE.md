@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-10 · P2-3233 (AI-promoted draft type conversion resets editor state before reloading)
+**Verified:** 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -24,9 +24,13 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   movido aquí desde la card Actions del Overview el 2026-09-04, gateado por `canSubmitFromRail()`:
   `mdsTracker.overallStatus() === 'complete'` + no in-flight + no read-only; `submitResult()`
   re-chequea sus propios guards), columna con scroll propio
-  (`.bcr-scroll`: header `variant="detail"`, phase switcher, card con pastilla numérica) y footer
-  fijo al piso (`.bcr-editor-footer`: Back · **Next** primario · "Section X of Y" · estado ·
-  Save draft secundario). Misma geometría que `pages/results/.../result-detail`, reconstruida aquí.
+  (`.bcr-scroll`: header `variant="detail"`, phase switcher, card con pastilla numérica) y un pie
+  SIN franja (P2-3736, 16-sep-2026): `.bcr-editor-footer` mide 0 y flota sobre el piso de
+  `.bcr-content`; solo se pintan sus dos cápsulas (izq: Back · **Next** · "Section X of Y"; der:
+  estado · Save draft). `.bcr-scroll` reserva 88px abajo para que el último campo salga de detrás.
+  ⚠️ Con "Unsaved changes" la cápsula derecha mide ~400px: bajo 820px de COLUMNA
+  (`@container` sobre `.bcr-content`) la izquierda sube una fila y el scroll reserva 152px — medido,
+  a 1024px de ventana se cruzaban 65px. Misma geometría que `section-bottom-bar` de W1/W2.
 - El marco del editor se ancla al slot de la página (`:host.bcr-host--editor { position:absolute;
   inset:0 }`, clase ligada a `!isCreating()`), no con una cadena de `height:100%`: `main` es sólo
   `min-h-svh`, así que en un formulario largo la cadena resuelve a la altura del contenido y el
@@ -41,6 +45,19 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   `lastErrorMessageFor(section)` que `BilateralAutoSaveService` captura del body del error (p. ej.
   vaciar el título → el 400 de general-info explica que title/description no se pueden vaciar) más
   los faltantes; el "Please try again" pelado queda solo como fallback sin mensaje del server.
+- **Semáforo de calidad IA (P2-3698).** `BilateralQualityAssessmentUiService` (root) es el dueño del
+  estado: `assessing` → `deciding` → `submitting`. El riel pinta una card con el veredicto guardado
+  (`loadLatest` una vez por result id) y **Submit for review ya no envía directo**: llama
+  `qualityAssessment.run()`, y el PATCH de submit sale sólo desde la decisión del diálogo, con
+  `assessment_id` + `decision` — el servidor los exige, así que no hay ruta que se salte el chequeo.
+  ⚠️ `isSubmitting()` del componente es `isBusy()` (chequeo **y** envío): derivarlo de `isRunning()`
+  reabre el botón a mitad del PATCH. El diálogo se liga a `isDialogOpen()`, no a `state() === 'deciding'`,
+  o se cierra de golpe al pulsar la decisión.
+- **Feedback IA en el editor.** Desde el diálogo, una sección ámbar/roja navega con
+  `goToQualitySection()` a la sección correspondiente. Las marcas por campo permanecen visibles
+  aunque el assessment quede stale mientras el usuario corrige: la frescura se valida al enviar,
+  no se usa para esconder la guía. El card del riel conserva borde neutro tanto actual como stale.
+
 - **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
   única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo
   recibe por input, y un `effect` del constructor llama `autoSaveService.setReadOnly()` con él.

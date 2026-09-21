@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — AI processing panel, header chip and provenance notice</title>
+<!--
+  Self-contained mockup for docs/specs/bilateral/ai-processing-feedback (generated 2026-09-15, /akili-specify Phase 2).
+  Purpose: agree the PANEL STATES, the STEPPER shape, the HEADER CHIP and the PROVENANCE NOTICE before Judgment Day.
+  Tokens mirror onecgiar-pr-client/src/styles/colors.scss (light values). Copy is the design.md §6.3 default.
+  Not part of the build. Open directly in a browser (file://).
+-->
+<style>
+  :root{
+    --pr-color-primary-50:#f5f3ff; --pr-color-primary-300:#6b46e5; --pr-color-primary-400:#5733c4; --pr-color-primary-600:#3f2499;
+    --pr-surface-band:#f7f4fd; --pr-surface-card:#ffffff; --pr-surface-page:#fafafa;
+    --pr-border:#e3e3e8; --pr-border-divider:#eeeef1; --pr-border-band:#e4e0ef;
+    --pr-text-heading:#191524; --pr-text-secondary:#5d5872; --pr-text-muted:#6b6580; --pr-text-subtle:#9691a8;
+    --pr-status-submitted-fg:#1d4ed8; --pr-status-submitted-bg:#dbeafe;
+    --pr-status-approved-fg:#047857; --pr-status-approved-bg:#d1fae5;
+    --pr-danger:#b91c1c; --pr-danger-soft:#fee2e2; --pr-danger-bg:#fef2f2;
+    --pr-focus-ring:0 0 0 3px rgba(107,70,229,.28);
+  }
+  *{box-sizing:border-box} html{font-size:12px}
+  body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--pr-surface-page);color:var(--pr-text-heading)}
+  .shell{max-width:1100px;margin:0 auto;padding:24px}
+  h1{font-size:18px;margin:0 0 4px} .lead{color:var(--pr-text-secondary);margin:0 0 20px;font-size:13px}
+  h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--pr-text-subtle);margin:28px 0 10px}
+  /* header strip with chip */
+  .band{background:var(--pr-surface-band);border:1px solid var(--pr-border-band);border-radius:12px;overflow:hidden}
+  .tabs{display:flex;align-items:center;gap:22px;height:46px;padding:0 20px;border-top:1px solid var(--pr-border-band)}
+  .tab{font-size:13.5px;font-weight:500;color:var(--pr-text-secondary);display:flex;align-items:center;gap:6px}
+  .tab.active{color:var(--pr-text-heading);font-weight:600;box-shadow:inset 0 -2px 0 var(--pr-color-primary-300);height:46px}
+  .spacer{flex:1}
+  .chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;border:1px solid var(--pr-border);background:var(--pr-surface-card);font-size:11.5px;font-weight:600;color:var(--pr-text-heading);cursor:pointer}
+  .chip .ic{width:12px;height:12px;border-radius:3px;background:var(--pr-color-primary-300)}
+  .chip .t{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--pr-text-secondary)}
+  .badge{height:18px;min-width:18px;padding:0 5px;border-radius:9px;background:var(--pr-color-primary-600);color:#fff;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+  /* panel */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+  .panel{background:var(--pr-surface-card);border:1px solid var(--pr-border);border-radius:14px;padding:18px 20px}
+  .panel .state{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--pr-text-subtle);margin-bottom:10px}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .title{font-size:17px;font-weight:700;margin:0} .sub{margin:4px 0 0;font-size:12.5px;color:var(--pr-text-secondary)}
+  .elapsed{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;text-align:right}
+  .elapsed small{display:block;font-family:Poppins,system-ui;font-size:11px;font-weight:500;color:var(--pr-text-subtle)}
+  .pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600}
+  .pill.info{background:var(--pr-status-submitted-bg);color:var(--pr-status-submitted-fg)}
+  .pill.ok{background:var(--pr-status-approved-bg);color:var(--pr-status-approved-fg)}
+  .pill.bad{background:var(--pr-danger-soft);color:var(--pr-danger)}
+  .steps{list-style:none;padding:0;margin:16px 0 0;display:grid;grid-template-columns:repeat(6,1fr);gap:0}
+  .step{position:relative;text-align:center;font-size:11px;color:var(--pr-text-subtle);padding-top:26px}
+  .step::before{content:"";position:absolute;top:9px;left:50%;width:100%;height:2px;background:var(--pr-border);transform:translateX(0)}
+  .step:last-child::before{display:none}
+  .step .dot{position:absolute;top:0;left:50%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;border:2px solid var(--pr-border);background:var(--pr-surface-card);z-index:1}
+  .step.done .dot{background:var(--pr-color-primary-300);border-color:var(--pr-color-primary-300)}
+  .step.done::before{background:var(--pr-color-primary-300)}
+  .step.done{color:var(--pr-text-secondary)}
+  .step.active .dot{border-color:var(--pr-color-primary-300);box-shadow:var(--pr-focus-ring)}
+  .step.active{color:var(--pr-text-heading);font-weight:600}
+  .step.est::before{background-image:repeating-linear-gradient(90deg,var(--pr-border) 0 6px,transparent 6px 10px);background-color:transparent}
+  .step .est-cap{display:block;font-weight:400;color:var(--pr-text-subtle);font-size:10px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:14px;font-size:12px;color:var(--pr-text-secondary)}
+  .leave{margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--pr-color-primary-50);font-size:12px;color:var(--pr-text-secondary)}
+  .leave b{color:var(--pr-text-heading)}
+  .outcome{display:flex;gap:14px;align-items:flex-start;margin-top:12px}
+  .disc{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+  .disc.bad{background:var(--pr-danger-soft);color:var(--pr-danger)} .disc.info{background:var(--pr-status-submitted-bg);color:var(--pr-status-submitted-fg)} .disc.ok{background:var(--pr-status-approved-bg);color:var(--pr-status-approved-fg)}
+  .btns{display:flex;gap:8px;margin-top:12px}
+  .btn{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--pr-border);background:var(--pr-surface-card);font-weight:600;font-size:12.5px;cursor:pointer}
+  .btn.primary{background:var(--pr-color-primary-300);border-color:var(--pr-color-primary-300);color:#fff}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  /* provenance */
+  .banner{display:flex;gap:10px;align-items:flex-start;border-left:4px solid var(--pr-status-submitted-fg);background:var(--pr-status-submitted-bg);color:var(--pr-status-submitted-fg);padding:10px 12px;border-radius:0 10px 10px 0;font-size:12.5px}
+  .banner b{display:block;color:var(--pr-text-heading);font-size:12.5px}
+  .banner .x{margin-left:auto;color:var(--pr-text-subtle);cursor:pointer}
+  .line{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--pr-text-secondary)}
+  .line .ic,.banner .ic{width:14px;height:14px;border-radius:3px;background:var(--pr-status-submitted-fg);flex:none}
+  .note{font-size:11.5px;color:var(--pr-text-subtle);margin-top:8px}
+  @media (max-width:640px){ .steps{grid-template-columns:1fr;gap:10px} .step{text-align:left;padding:0 0 0 30px} .step::before{display:none} .step .dot{left:0;transform:none} .elapsed{text-align:left} }
+</style>
+</head>
+<body>
+<div class="shell">
+  <h1>AI-assisted creation — processing feedback</h1>
+  <p class="lead">Five panel states, the header chip and the provenance notice. Every word derives from job fields PRMS holds (<code>status · stage · attempts · retrying · queue_position · created_date · retried_date</code>) or from the history-based expectation endpoint <code>GET center/ai/expectations?mix=documents|audio</code>. Elapsed times run from <code>queue_entry_date = COALESCE(retried_date, created_date)</code>. The stepper shows <b>6 UI steps</b> over the <b>8 server <code>stage</code> values</b>. No percentages.</p>
+
+  <h2>Header · "AI job running" chip (any bilateral tab, same center)</h2>
+  <div class="band">
+    <div class="tabs">
+      <span class="tab">Overview</span><span class="tab active">Reporting</span><span class="tab">Results</span>
+      <span class="spacer"></span>
+      <button class="chip" aria-label="AI job running, 4 minutes 12 seconds — open the processing panel"><span class="ic"></span> AI job running <span class="t">04:12</span></button>
+      <span class="tab">AI Draft Results <span class="badge">9</span></span>
+    </div>
+  </div>
+  <p class="note">The chip sits <b>left of the AI Draft Results badge</b> in the tab row's end slot (<code>design.md</code> §6.2). Elapsed counts from <code>queue_entry_date = COALESCE(retried_date, created_date)</code> and updates each second; links to <code>/bilateral/AfricaRice/create?job=…</code>. Hidden for other centers and after a terminal state. No pulse under reduced motion.</p>
+
+  <h2>Panel states</h2>
+  <div class="grid">
+
+    <!-- 1 queued -->
+    <section class="panel" aria-live="polite">
+      <div class="state">1 · Queued (status PENDING)</div>
+      <div class="head">
+        <div><h3 class="title">Waiting for a free AI worker</h3><p class="sub">Queued · <b>2 jobs ahead of you</b>. Processing starts as soon as a worker is free.</p></div>
+        <div class="elapsed">01:48<small>elapsed</small></div>
+      </div>
+      <ol class="steps">
+        <li class="step active"><span class="dot"></span>Queued</li>
+        <li class="step"><span class="dot"></span>Uploading</li>
+        <li class="step est"><span class="dot"></span>Reading<span class="est-cap">estimated</span></li>
+        <li class="step est"><span class="dot"></span>Extracting<span class="est-cap">estimated</span></li>
+        <li class="step"><span class="dot"></span>Validating</li>
+        <li class="step"><span class="dot"></span>Creating drafts</li>
+      </ol>
+      <div class="meta"><span>1 document · 585 KB</span><span>Usually <b>3–7 min</b> once processing starts — mix class <code>documents</code></span></div>
+      <div class="leave"><b>You can leave this page.</b> We'll notify you here and by email when it finishes.</div>
+    </section>
+
+    <!-- 2 processing -->
+    <section class="panel" aria-live="polite">
+      <div class="state">2 · Processing (status PROCESSING · stage extracting)</div>
+      <div class="head">
+        <div><h3 class="title">Extracting results <span class="pill info">estimated</span></h3><p class="sub">Reading 1 document and transcribing 1 audio file, then extracting result candidates.</p></div>
+        <div class="elapsed">06:31<small>elapsed</small></div>
+      </div>
+      <ol class="steps">
+        <li class="step done"><span class="dot"></span>Queued</li>
+        <li class="step done"><span class="dot"></span>Uploading</li>
+        <li class="step done est"><span class="dot"></span>Reading · Transcribing<span class="est-cap">estimated</span></li>
+        <li class="step active est"><span class="dot"></span>Extracting<span class="est-cap">estimated</span></li>
+        <li class="step"><span class="dot"></span>Validating</li>
+        <li class="step"><span class="dot"></span>Creating drafts</li>
+      </ol>
+      <div class="meta"><span>1 document · 1 audio file</span><span>Usually <b>8–14 min</b> for jobs with audio — mix class <code>audio</code></span></div>
+      <div class="leave"><b>You can leave this page.</b> We'll notify you here and by email when it finishes.</div>
+    </section>
+
+    <!-- 3 retrying -->
+    <section class="panel" aria-live="polite">
+      <div class="state">3 · Retrying (status PROCESSING · retrying · attempts 2 of 3)</div>
+      <div class="head">
+        <div><h3 class="title">Retrying <span class="pill info">attempt 2 of 3</span></h3><p class="sub">The AI service did not answer in time. Your job is queued again automatically — nothing to do.</p></div>
+        <div class="elapsed">12:04<small>elapsed</small></div>
+      </div>
+      <ol class="steps">
+        <li class="step active"><span class="dot"></span>Queued</li>
+        <li class="step"><span class="dot"></span>Uploading</li>
+        <li class="step est"><span class="dot"></span>Reading<span class="est-cap">estimated</span></li>
+        <li class="step est"><span class="dot"></span>Extracting<span class="est-cap">estimated</span></li>
+        <li class="step"><span class="dot"></span>Validating</li>
+        <li class="step"><span class="dot"></span>Creating drafts</li>
+      </ol>
+      <div class="meta"><span>Last error: <em>the AI service returned an error (HTTP 503)</em></span></div>
+      <div class="leave"><b>You can leave this page.</b> We'll notify you here and by email when it finishes.</div>
+    </section>
+
+    <!-- 4 still running -->
+    <section class="panel" aria-live="polite">
+      <div class="state">4 · Still running (client ceiling reached, server alive)</div>
+      <div class="outcome">
+        <div class="disc info">●</div>
+        <div><h3 class="title">Still running</h3><p class="sub">Your job is taking longer than usual and is still being processed. We'll notify you here and by email when it finishes — you don't need to keep this page open.</p></div>
+      </div>
+      <div class="meta"><span class="elapsed" style="font-size:16px">31:20</span><span>Checking every 30 seconds</span></div>
+      <div class="btns"><button class="btn">Go to Draft Results</button></div>
+      <p class="note">Never shows "timed out": only the server can declare that (TIMED_OUT after <b>15 min per attempt</b> — the 10-min mining timeout plus 5 min margin; whole-job worst case 3 × 15 = 45 min).</p>
+    </section>
+
+    <!-- 5 failed -->
+    <section class="panel" aria-live="polite">
+      <div class="state">5 · Failed (status FAILED · error_code TIMED_OUT)</div>
+      <div class="outcome">
+        <div class="disc bad">!</div>
+        <div><h3 class="title">Processing did not finish</h3><p class="sub">The AI service did not complete your job within the time limit. Your files are still stored — you can try again without uploading them.</p></div>
+      </div>
+      <div class="meta"><span>Attempts 3 of 3</span><span>Job <code>a3f1…9c</code></span></div>
+      <div class="btns"><button class="btn primary">Try again</button><button class="btn">Upload different files</button></div>
+      <p class="note">Reached after every attempt timed out: <b>15 min per attempt</b>, 3 attempts, 45 min of wall clock. Shown inline when the user is on this step; as the global dialog when they are elsewhere — never both. "Try again" is disabled while the job is alive, and it restarts the queue-entry clock (<code>retried_date</code>).</p>
+    </section>
+
+    <!-- 6 completed -->
+    <section class="panel" aria-live="polite">
+      <div class="state">6 · Completed (status COMPLETED · 3 drafts)</div>
+      <div class="outcome">
+        <div class="disc ok">✓</div>
+        <div><h3 class="title">3 result drafts are ready</h3><p class="sub">Review them in AI Draft Results and promote the ones you want to report.</p></div>
+      </div>
+      <div class="line" style="margin-top:10px"><span class="ic"></span> Generated with AI assistance from your sources. Review and edit before submitting.</div>
+      <div class="btns"><button class="btn primary">Review drafts</button><button class="btn">Start another</button></div>
+    </section>
+  </div>
+
+  <h2>Provenance notice · banner variant (result editor, dismissible per session)</h2>
+  <div class="banner"><span class="ic"></span><div><b>Generated with AI assistance</b>This result was drafted by AI from the sources you uploaded on 12 Sep 2026. Review and edit every field before submitting for review.</div><span class="x">✕</span></div>
+  <p class="note">Badge variant (draft card, result detail): pill with the same info pair and the full sentence as <code>aria-label</code>. Line variant (drafts list header, completion dialog): as shown in state 6.</p>
+</div>
+</body>
+</html>

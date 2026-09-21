@@ -165,6 +165,84 @@ export class NotificationService {
     }
   }
 
+  /**
+   * `APF-T-3`/`design.md` §6.4 "Write path" — the in-app half of a terminal bilateral AI job
+   * notification. Written directly (unlike `emitResultNotification`, which requires a result to
+   * hang the row on and drops every recipient equal to the emitter — exactly the uploader this
+   * row is addressed to): `result_id` stays `NULL`, `target_user` is the job's owner, and `text`
+   * is the fully composed outcome line the caller built (`BilateralAiNotificationsService`).
+   * `notification_level` is `RESULT` — this is a targeted, per-user row like the rest of that
+   * level, not a broadcast `ANNOUNCEMENT` (`emitApplicationAnouncement`, `target_user: null`).
+   *
+   * Never throws: a notification failure must never fail the job it reports on (`APF-R-4`).
+   */
+  async emitBilateralAiJobNotification(
+    targetUserId: number,
+    text: string,
+  ): Promise<Notification | null> {
+    try {
+      const notificationLevelData =
+        await this._notificationLevelRepository.findOne({
+          where: { type: NotificationLevelEnum.RESULT },
+        });
+      const notificationTypeData =
+        await this._notificationTypeRepository.findOne({
+          where: { type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED },
+        });
+
+      if (!notificationLevelData || !notificationTypeData) {
+        this._logger.warn(
+          'Notification catalog data missing for BILATERAL_AI_JOB_FINISHED.',
+        );
+        return null;
+      }
+
+      return await this._notificationRepository.save({
+        target_user: targetUserId,
+        emitter_user: null,
+        result_id: null,
+        text,
+        read: false,
+        read_date: null,
+        notification_level: notificationLevelData.notifications_level_id,
+        notification_type: notificationTypeData.notifications_type_id,
+      });
+    } catch (error) {
+      this._logger.error(
+        'Error emitting bilateral AI job notification:',
+        error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * `design.md` §6.4 "Read path" — a bilateral AI job notification carries no result
+   * (`result_id NULL`), so the `innerJoin`-shaped queries in `getAllNotifications`,
+   * `getPopUpNotifications` and `getRecentResultActivity` (all filtered on `obj_result` /
+   * `obj_result_by_initiatives`) never return it — writing the row is not enough to satisfy
+   * `APF-R-4`'s "visible in the bell" acceptance. This is the LEFT-JOIN-shaped counterpart: no
+   * `obj_result` requirement at all, scoped only to the recipient (and, where the caller tracks
+   * one, a `read` state or a "since" timestamp).
+   */
+  private async findBilateralAiJobFinishedNotifications(
+    userId: number,
+    options: { read?: boolean; after?: Date } = {},
+  ): Promise<Notification[]> {
+    return this._notificationRepository.find({
+      select: this.getNotificattionSelect(),
+      relations: this.getNotificationRelations(),
+      where: {
+        target_user: userId,
+        ...(options.read !== undefined ? { read: options.read } : {}),
+        ...(options.after ? { created_date: MoreThan(options.after) } : {}),
+        obj_notification_type: {
+          type: NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED,
+        },
+      },
+    });
+  }
+
   async getRecentResultActivity(user: TokenDto, limit: number) {
     try {
       const level = await this._notificationLevelRepository.findOne({
@@ -200,6 +278,21 @@ export class NotificationService {
           level.notifications_level_id,
           limit,
         );
+      }
+
+      // `design.md` §6.4 read-path branch: a job notification has no result, so it cannot come
+      // back from either query above — merge it in from the dedicated per-recipient lookup, then
+      // re-sort/re-cap so the feed stays in recency order regardless of which query it came from.
+      const jobFinishedNotifications =
+        await this.findBilateralAiJobFinishedNotifications(user.id);
+      if (jobFinishedNotifications.length) {
+        notifications = [...notifications, ...jobFinishedNotifications]
+          .sort(
+            (a, b) =>
+              (b.created_date?.getTime() ?? 0) -
+              (a.created_date?.getTime() ?? 0),
+          )
+          .slice(0, limit);
       }
 
       const missingOwnerResultIds = notifications
@@ -502,6 +595,8 @@ export class NotificationService {
         notificationsViewed,
         notificationsPending,
         notificationAnnouncement,
+        jobFinishedViewed,
+        jobFinishedPending,
       ] = await Promise.all([
         await this._notificationRepository.find({
           select: this.getNotificattionSelect(),
@@ -553,11 +648,18 @@ export class NotificationService {
             created_date: MoreThan(oneWeekAgo),
           },
         }),
+
+        // `design.md` §6.4 read-path branch — a bilateral AI job notification has no result, so
+        // it can never satisfy the `obj_result` condition above; fetched separately and merged in.
+        this.findBilateralAiJobFinishedNotifications(user.id, { read: true }),
+        this.findBilateralAiJobFinishedNotifications(user.id, {
+          read: false,
+        }),
       ]);
 
       const notifications = {
-        notificationsViewed,
-        notificationsPending,
+        notificationsViewed: [...notificationsViewed, ...jobFinishedViewed],
+        notificationsPending: [...notificationsPending, ...jobFinishedPending],
         notificationAnnouncement,
       };
 
@@ -603,6 +705,16 @@ export class NotificationService {
         where: whereConditions,
       });
 
+      // `design.md` §6.4 read-path branch — same reasoning as `getAllNotifications`: a job
+      // notification has no result, so `whereConditions.obj_result` above can never match it.
+      const jobFinishedUpdates =
+        await this.findBilateralAiJobFinishedNotifications(user.id, {
+          read: false,
+          ...(userLastViewed.last_pop_up_viewed
+            ? { after: userLastViewed.last_pop_up_viewed }
+            : {}),
+        });
+
       const shareResultPendings =
         await this._shareResultRequestService.getReceivedResultRequestPopUp(
           user,
@@ -610,9 +722,10 @@ export class NotificationService {
 
       const isError = (shareResultPendings as any)?.response;
       const notifications = isError
-        ? notificationsUpdates
+        ? [...notificationsUpdates, ...jobFinishedUpdates]
         : [
             ...notificationsUpdates,
+            ...jobFinishedUpdates,
             ...(Array.isArray(shareResultPendings) ? shareResultPendings : []),
           ];
 
@@ -739,6 +852,13 @@ export class NotificationService {
           ? `The result ${identity} ${suffix}`
           : `The result ${suffix}`;
       }
+      case NotificationTypeEnum.BILATERAL_AI_JOB_FINISHED:
+        // No result to build an identity from (`result_id` is always `NULL` for this type,
+        // `design.md` §6.4) — `notification.text` is already the complete, standalone sentence
+        // `BilateralAiNotificationsService` composed (outcome + mix + duration + deep link).
+        return (
+          storedText?.trim() || 'Your AI-assisted processing job finished.'
+        );
       default:
         return `There is a new update on ${codeText}`;
     }

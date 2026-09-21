@@ -1,151 +1,248 @@
 <app-bilateral-page-header activeTab="results" />
 
-<!-- Docked Phase tabs & Filter bar -->
-<div class="brl_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] pt-[8px] pb-[10px]">
-  <!-- Phase tabs -->
-  @if (phases().length > 0) {
-    <div class="brl_phases_wrap">
-      <div class="brl_phases">
-        @for (phase of phases(); track phase.id) {
+<!-- Docked filter bar — flat toolbar row (Programme Results parity, no inner box border) -->
+<div
+  class="brl_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+  data-guide="bilateral-tab-results"
+  role="search"
+  aria-label="Results filters">
+  <div class="brl_filter_bar flex flex-wrap items-center justify-between gap-[12px]">
+    <div class="brl_filter_main flex flex-wrap items-center gap-[10px] flex-1 min-w-0">
+      <!-- Search: 240px × 34px (Programme Results parity) -->
+      <div class="relative h-[34px] w-[240px] max-sm:w-full">
+        <span class="pointer-events-none absolute left-[10px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+          <span class="material-icons-round text-[15px]" aria-hidden="true">search</span>
+        </span>
+        <input
+          type="text"
+          class="h-[34px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] pl-[32px] pr-[28px] text-[13px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)] focus-visible:bg-[var(--pr-surface-card)]"
+          placeholder="Search by code, title or type…"
+          aria-label="Search results"
+          [value]="searchQuery()"
+          (input)="onSearch($event)" />
+        @if (searchQuery()) {
           <button
-            class="brl_phase_tab"
-            [class.brl_phase_tab--active]="selectedPhase()?.id === phase.id"
-            (click)="selectPhase(phase)">
-            {{ phase.phase_year ?? phase.phase_name }}
-            @if (phase.status) {
-              <span class="brl_phase_open">Open</span>
-            }
+            type="button"
+            class="absolute right-[8px] top-1/2 -translate-y-1/2 flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-slate-400 hover:text-slate-700"
+            aria-label="Clear search"
+            (click)="clearSearch()">
+            <span class="material-icons-round text-[14px]">close</span>
           </button>
         }
       </div>
-    </div>
-  }
 
-  <!-- Filter chips bar -->
-  <div class="brl_filter_bar">
-    <span class="brl_filter_label">
-      <span class="material-icons-round text-[16px]">filter_alt</span>
-      Filters
-    </span>
+      <div class="h-[22px] w-[1px] bg-[var(--pr-border-divider)] mx-[2px] hidden sm:block" aria-hidden="true"></div>
 
-    <div class="brl_filter_groups">
+      <div class="relative brl-filter-container">
+        <button
+          type="button"
+          data-testid="bilateral-results-filter-button"
+          class="inline-flex h-[34px] cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[13px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)] shadow-2xs"
+          [class]="hasActiveFilters()
+            ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] font-semibold'
+            : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] font-medium hover:border-slate-400 hover:bg-slate-50'"
+          aria-label="Filter results"
+          [attr.aria-expanded]="filterPopoverOpen()"
+          (click)="toggleFilterPopover($event)">
+          <span
+            class="material-icons-round text-[18px]"
+            [class.text-[var(--pr-color-primary-600)]]="hasActiveFilters()"
+            [class.text-slate-500]="!hasActiveFilters()"
+            aria-hidden="true"
+            >filter_list</span
+          >
+          <span>Filter</span>
+          @if (activeFilterBadgeCount() > 0) {
+            <span
+              class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-600)] px-[5px] text-[10.5px] font-bold text-white tabular-nums">
+              {{ activeFilterBadgeCount() }}
+            </span>
+          }
+        </button>
 
-      <!-- Source group -->
-      <div class="brl_filter_group">
-        <span class="brl_filter_group_label">Source</span>
-        <div class="brl_chips">
-          <button
-            class="brl_chip brl_chip--w3"
-            [class.brl_chip--active]="showW3()"
-            (click)="toggleW3()"
-            [title]="showW3() ? 'Hide W3 Bilateral results' : 'Show W3 Bilateral results'">
-            <span class="brl_chip_dot brl_chip_dot--w3"></span>
-            W3 Bilateral
-            @if (showW3()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+        <div
+          class="absolute left-0 top-[40px] z-30 w-[min(420px,calc(100vw-32px))] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_12px_32px_rgba(25,21,36,0.12)] text-left"
+          [class.hidden]="!filterPopoverOpen()"
+          role="dialog"
+          aria-label="Result filters"
+          (click)="$event.stopPropagation()">
+          <div class="mb-[14px] flex items-center justify-between border-b border-[var(--pr-border-divider)] pb-[10px]">
+            <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)]">Filters</span>
+            <div class="flex items-center gap-[10px]">
+              @if (hasActiveFilters()) {
+                <button
+                  type="button"
+                  class="inline-flex cursor-pointer items-center gap-[3px] border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:underline"
+                  (click)="clearAllFilters()">
+                  <span class="material-icons-round text-[14px]" aria-hidden="true">filter_alt_off</span>
+                  Clear all
+                </button>
+              }
+              <button
+                type="button"
+                class="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close filters"
+                (click)="closeFilterPopover()">
+                <span class="material-icons-round text-[16px]">close</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-[14px]">
+            @if (phases().length > 0) {
+              <div class="brl_filter_group brl_filter_group--stacked">
+                <span class="brl_filter_group_label">Phase</span>
+                <div class="brl_chips">
+                  @for (phase of phases(); track phase.id) {
+                    <button
+                      type="button"
+                      class="brl_chip brl_chip--phase"
+                      [class.brl_chip--active]="isPhaseSelected(phase)"
+                      (click)="togglePhase(phase)"
+                      [title]="isPhaseSelected(phase) ? 'Hide ' + phaseChipLabel(phase) + ' results' : 'Add ' + phaseChipLabel(phase) + ' results'">
+                      {{ phaseChipLabel(phase) }}
+                      @if (isPhaseSelected(phase)) {
+                        <span class="material-icons-round brl_chip_icon">check</span>
+                      } @else {
+                        <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
             }
-          </button>
 
-          <button
-            class="brl_chip brl_chip--w1w2"
-            [class.brl_chip--active]="showW1W2()"
-            (click)="toggleW1W2()"
-            [title]="showW1W2() ? 'Hide W1/W2 results' : 'Add W1/W2 results'">
-            <span class="brl_chip_dot brl_chip_dot--w1w2"></span>
-            W1 / W2
-            @if (showW1W2()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
-            }
-          </button>
+            <div class="brl_filter_group brl_filter_group--stacked">
+              <span class="brl_filter_group_label">Source</span>
+              <div class="brl_chips">
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--w3"
+                  [class.brl_chip--active]="showW3()"
+                  (click)="toggleW3()"
+                  [title]="showW3() ? 'Hide W3 Bilateral results' : 'Show W3 Bilateral results'">
+                  <span class="brl_chip_dot brl_chip_dot--w3"></span>
+                  W3 Bilateral
+                  @if (showW3()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
+
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--w1w2"
+                  [class.brl_chip--active]="showW1W2()"
+                  (click)="toggleW1W2()"
+                  [title]="showW1W2() ? 'Hide W1/W2 results' : 'Add W1/W2 results'">
+                  <span class="brl_chip_dot brl_chip_dot--w1w2"></span>
+                  W1 / W2
+                  @if (showW1W2()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
+              </div>
+            </div>
+
+            <!-- PMF-T-1/PMF-DD-1 (pivot)/PMF-DD-4 — Project multiselect mirrors the Created by
+                 field: options from the center's own catalog, phase-scoped per selected year,
+                 existing comma `project` URL/chip contract, no new styles. -->
+            <div class="brl-filter-field" aria-label="Filter by project">
+              <label class="brl_filter_group_label">Project</label>
+              <app-pr-filter-multiselect
+                [options]="projectSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Project"
+                countLabel="projects"
+                [filter]="true"
+                [ngModel]="projectFilter()"
+                (changed)="onProjectFilterChange($event)"></app-pr-filter-multiselect>
+            </div>
+
+            <div class="brl-filter-field" aria-label="Filter by created by">
+              <label class="brl_filter_group_label">Created by</label>
+              <app-pr-filter-multiselect
+                [options]="createdBySelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Created by"
+                countLabel="creators"
+                [filter]="true"
+                [ngModel]="createdByFilter()"
+                (changed)="onCreatedByFilterChange($event)"></app-pr-filter-multiselect>
+            </div>
+
+            <div class="brl_filter_group brl_filter_group--stacked">
+              <span class="brl_filter_group_label">Center role</span>
+              <div class="brl_chips">
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--lead"
+                  [class.brl_chip--active]="showLead()"
+                  (click)="toggleLead()"
+                  [title]="showLead() ? 'Hide results where center is lead' : 'Show results where center is lead'">
+                  <span class="brl_chip_dot brl_chip_dot--lead"></span>
+                  Lead · {{ ctx.centerAcronym() }}
+                  @if (showLead()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
+
+                <button
+                  type="button"
+                  class="brl_chip brl_chip--contributing"
+                  [class.brl_chip--active]="showContributing()"
+                  (click)="toggleContributing()"
+                  [title]="showContributing() ? 'Hide results where center is contributing' : 'Add results where center is contributing'">
+                  <span class="brl_chip_dot brl_chip_dot--contributing"></span>
+                  Contributing
+                  @if (showContributing()) {
+                    <span class="material-icons-round brl_chip_icon">check</span>
+                  } @else {
+                    <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="brl_filter_divider"></div>
-
-      <!-- Role group -->
-      <div class="brl_filter_group">
-        <span class="brl_filter_group_label">Center role</span>
-        <div class="brl_chips">
-          <button
-            class="brl_chip brl_chip--lead"
-            [class.brl_chip--active]="showLead()"
-            (click)="toggleLead()"
-            [title]="showLead() ? 'Hide results where center is lead' : 'Show results where center is lead'">
-            <span class="brl_chip_dot brl_chip_dot--lead"></span>
-            Lead · {{ ctx.centerAcronym() }}
-            @if (showLead()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
-            }
-          </button>
-
-          <button
-            class="brl_chip brl_chip--contributing"
-            [class.brl_chip--active]="showContributing()"
-            (click)="toggleContributing()"
-            [title]="showContributing() ? 'Hide results where center is contributing' : 'Add results where center is contributing'">
-            <span class="brl_chip_dot brl_chip_dot--contributing"></span>
-            Contributing
-            @if (showContributing()) {
-              <span class="material-icons-round brl_chip_icon">check</span>
-            } @else {
-              <span class="material-icons-round brl_chip_icon brl_chip_icon--add">add</span>
-            }
-          </button>
-        </div>
-      </div>
-
-      <!-- Status chip group — COV-R-14: only when `?status=` carries at least one valid value -->
-      @if (statusChips().length) {
-        <div class="brl_filter_divider"></div>
-        <div class="brl_filter_group">
-          <span class="brl_filter_group_label">Status</span>
-          <div class="brl_chips">
-            @for (chip of statusChips(); track chip.key) {
-              <button
-                type="button"
-                class="brl_chip brl_chip--active"
-                (click)="removeStatusFilter(chip.key)"
-                [title]="'Remove ' + chip.label + ' filter'"
-                [attr.aria-label]="'Remove ' + chip.label + ' filter'">
-                {{ chip.label }}
-                <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
-              </button>
-            }
-          </div>
-        </div>
+      @if (hasActiveFilters()) {
+        @for (chip of activeChips(); track chip.dimension + '|' + chip.value) {
+          <span class="pr-chip brl-chip">
+            {{ chip.label }}
+            <button
+              type="button"
+              class="brl-chip-remove"
+              aria-label="Remove filter"
+              (click)="clearChip(chip)">
+              <span class="material-icons-round text-[14px]" aria-hidden="true">close</span>
+            </button>
+          </span>
+        }
       }
 
-      <!-- Project chip — COV-R-14: only when `?project=` carries at least one valid value -->
-      @if (projectChips().length) {
-        <div class="brl_filter_divider"></div>
-        <div class="brl_filter_group">
-          <span class="brl_filter_group_label">Project</span>
-          <div class="brl_chips">
-            @for (chip of projectChips(); track chip.id) {
-              <button
-                type="button"
-                class="brl_chip brl_chip--active"
-                (click)="removeProjectFilter(chip.id)"
-                [title]="'Remove ' + chip.label + ' filter'"
-                [attr.aria-label]="'Remove ' + chip.label + ' filter'">
-                {{ chip.label }}
-                <span class="material-icons-round brl_chip_icon" aria-hidden="true">close</span>
-              </button>
-            }
-          </div>
-        </div>
+      @if (hasClearableFilters()) {
+        <button
+          type="button"
+          data-testid="bilateral-results-clear-filters"
+          class="inline-flex h-[34px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          (click)="clearAllFilters()">
+          <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+          Clear filters
+        </button>
       }
-
     </div>
 
-    <!-- Columns picker + Export CSV — same pattern as the Results Center list -->
-    <div class="brl_filter_actions">
+    <!-- Columns picker + Export CSV -->
+    <div class="brl_filter_actions w-full sm:w-auto sm:ml-auto flex items-center justify-between sm:justify-end gap-[10px]">
       <div class="rc-cols-wrap">
         <button
           type="button"
@@ -192,37 +289,58 @@
   <div class="brl">
     <div class="brl_body">
 
-    <!-- Toolbar -->
-    <div class="brl_toolbar">
-      <div class="brl_toolbar_left">
-        @if (!loading() && !error()) {
-          <span class="brl_count">
-            Showing {{ totalCount() }} of {{ totalLoaded() }} result{{ totalLoaded() === 1 ? '' : 's' }}.
-          </span>
-        }
+    <!-- Result count (search + filters live in the docked bar above) -->
+    @if (!initializing() && !loading() && !error() && results().length > 0) {
+      <div class="brl_toolbar">
+        <span class="brl_count">
+          Showing {{ totalCount() }} of {{ totalLoaded() }} result{{ totalLoaded() === 1 ? '' : 's' }}.
+        </span>
       </div>
-      <div class="brl_search">
-        <span class="material-icons-round brl_search_icon">search</span>
-        <input
-          class="brl_search_input"
-          type="text"
-          placeholder="Search by code, title or type…"
-          [value]="searchQuery()"
-          (input)="onSearch($event)" />
-        @if (searchQuery()) {
-          <button class="brl_search_clear" (click)="clearSearch()" aria-label="Clear search">
-            <span class="material-icons-round text-[16px]">close</span>
-          </button>
-        }
-      </div>
-    </div>
+    }
 
     @if (error()) {
       <div class="brl_state brl_state--error">
         <span class="material-icons-round brl_state_icon">error_outline</span>
         <span>Could not load results. Please try refreshing the page.</span>
       </div>
-    } @else {
+    } @else if (isFirstLoad()) {
+      @let cols = visibleColumns();
+      <div class="table rc-table" data-testid="bilateral-results-skeleton" aria-live="polite" aria-busy="true">
+        <table class="pr-table">
+          <thead>
+            <tr>
+              @for (column of cols; track column.key) {
+                <th [style.width]="columnWidth(column)">
+                  <div class="align-center">
+                    {{ column.title }}
+                  </div>
+                </th>
+              }
+              <th class="rc-th-action" style="width: 56px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <tr class="rc-row rc-row--skeleton" style="height: 48px">
+                @for (column of cols; track column.key) {
+                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
+                    <div class="rc-cell-link">
+                      <span
+                        class="inline-block h-[14px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)] motion-reduce:animate-none"
+                        [style.width]="column.attr === 'result_code' ? '64px' : column.attr === 'source' ? '38px' : column.attr === 'status_id' || column.attr === 'is_leading_result' ? '68px' : '80%'"
+                        aria-hidden="true"></span>
+                    </div>
+                  </td>
+                }
+                <td class="rc-td rc-td--action" style="width: 56px">
+                  <span class="inline-block size-[24px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)] ml-auto motion-reduce:animate-none" aria-hidden="true"></span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (hasRows()) {
       @let cols = visibleColumns();
 
       <!-- Results table — same visual language as the Results Center list (app-pr-table, rc-* cells, status_tag chips) -->
@@ -233,25 +351,33 @@
           [sortOrder]="-1"
           [value]="filteredResults()"
           dataKey="result_code"
-          [loading]="initializing() || loading()"
+          [loading]="loading()"
           [paginator]="filteredResults().length > 0"
-          [rows]="25"
-          [rowsPerPageOptions]="[25, 50, 100]"
+          [showPaginatorAlways]="true"
+          [rows]="10"
+          [rowsPerPageOptions]="[10, 25, 50, 100]"
           [first]="searchQuery() && 0"
           styleClass="rc-pr-table">
           <ng-template prTableHeader>
             <tr>
               @for (column of cols; track column.key) {
-                <th [prSortableColumn]="column.attr" [style.width]="column.width">
+                <th #thEl [prSortableColumn]="column.attr" [style.width]="columnWidth(column)" class="rc-th rc-th--sortable">
                   <div class="align-center">
                     <pr-sort-icon [field]="column.attr"></pr-sort-icon>
                     {{ column.title }}
                   </div>
+                  <div
+                    class="brl-col-resizer"
+                    role="separator"
+                    aria-orientation="vertical"
+                    [attr.aria-label]="'Resize ' + column.title + ' column'"
+                    title="Drag to resize column. Double-click to reset."
+                    (mousedown)="onResizeStart($event, column, thEl)"
+                    (dblclick)="onResizeReset(column, $event)"
+                    (click)="$event.stopPropagation()"></div>
                 </th>
               }
-              @if (canManageW3()) {
-                <th class="rc-th-action" style="width: 90px"></th>
-              }
+              <th class="rc-th-action" style="width: 56px"></th>
             </tr>
           </ng-template>
 
@@ -263,7 +389,7 @@
               tabindex="0"
               (keydown.enter)="openResult(result)">
               @for (column of cols; track column.key) {
-                <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
                   @if (column.attr === 'source') {
                     <div class="rc-cell-link">
                       @if (result.source === 'API') {
@@ -312,89 +438,158 @@
                         </button>
                       }
                     </span>
+                  } @else if (column.attr === 'created_by_name') {
+                    <span class="rc-cell-link rc-plain" [attr.title]="result.created_by_name">{{ result.created_by_name || '-' }}</span>
                   } @else if (column.attr === 'created_date') {
                     <span class="rc-cell-link rc-date">{{ result.created_date | date: 'dd MMM yyyy' }}</span>
                   }
                 </td>
               }
 
-              @if (canManageW3()) {
-                <td class="rc-td rc-td--action" (click)="$event.stopPropagation()">
-                  @if (canEditResult(result)) {
-                    @if (confirmingDeleteId() === result.id) {
-                      <div class="brl_actions_confirm">
-                        <span class="brl_actions_confirm_text">Delete?</span>
-                        <button
-                          class="brl_action_btn brl_action_btn--danger"
-                          [disabled]="deletingId() === result.id"
-                          (click)="confirmDelete(result, $event)">
-                          @if (deletingId() === result.id) {
-                            <span class="material-icons-round animate-spin text-[16px]">sync</span>
-                          } @else {
-                            Yes
-                          }
-                        </button>
-                        <button class="brl_action_btn brl_action_btn--ghost" (click)="cancelDelete($event)">No</button>
-                      </div>
-                    } @else {
-                      <div class="brl_actions">
-                        <button class="brl_action_btn brl_action_btn--edit" title="Edit result" (click)="editResult(result, $event)">
-                          <span class="material-icons-round text-[16px]">edit</span>
-                        </button>
-                        @if (canUpdateResult(result)) {
-                          <!-- Same action the Results Center row menu offers (P2-3229): carry an approved
-                               result of a previous phase into the open one. -->
-                          <button
-                            class="brl_action_btn brl_action_btn--update"
-                            title="Update result"
-                            aria-label="Update result"
-                            data-testid="bilateral-update-result"
-                            (click)="updateResult(result, $event)">
-                            <span class="material-icons-round text-[16px]">content_copy</span>
-                          </button>
-                        }
-                        @if (canDeleteResult(result)) {
-                          <button class="brl_action_btn brl_action_btn--delete" title="Delete result" (click)="requestDelete(result, $event)">
-                            <span class="material-icons-round text-[16px]">delete</span>
-                          </button>
-                        }
-                      </div>
-                    }
-                  }
-                </td>
-              }
-            </tr>
-          </ng-template>
+              <td class="rc-td rc-td--action" (click)="$event.stopPropagation()">
+                <button
+                  #rowMenuTrigger="cdkOverlayOrigin"
+                  cdkOverlayOrigin
+                  type="button"
+                  class="flex size-[32px] items-center justify-center rounded-[8px] border transition-colors cursor-pointer ml-auto"
+                  [class.border-transparent]="!isMenuOpen(result)"
+                  [class.hover:border-[var(--pr-border)]]="!isMenuOpen(result)"
+                  [class.hover:bg-[#f3f2f7]]="!isMenuOpen(result)"
+                  [class.border-[var(--pr-color-secondary-300)]]="isMenuOpen(result)"
+                  [class.border-[1.5px]]="isMenuOpen(result)"
+                  [class.bg-[#f3f2f7]]="isMenuOpen(result)"
+                  aria-label="More actions"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="isMenuOpen(result)"
+                  (click)="toggleRowMenu(result, $event)">
+                  <span class="material-icons-round text-[18px] text-[var(--pr-text-secondary)]">more_horiz</span>
+                </button>
 
-          <ng-template prTableLoading>
-            <tr style="height: 200px">
-              <td [attr.colspan]="cols.length + 1" class="brl_state">
-                <span class="material-icons-round animate-spin brl_state_icon">sync</span>
-                <span>Loading results…</span>
+                <ng-template
+                  cdkConnectedOverlay
+                  [cdkConnectedOverlayOrigin]="rowMenuTrigger"
+                  [cdkConnectedOverlayOpen]="isMenuOpen(result)"
+                  [cdkConnectedOverlayPositions]="rowMenuPositions"
+                  [cdkConnectedOverlayHasBackdrop]="true"
+                  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                  (backdropClick)="closeRowMenu()"
+                  (detach)="onRowMenuDetach(result)">
+                  <div role="menu" class="pr-row-menu" (click)="$event.stopPropagation()">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                      (click)="openResultFromMenu(result)">
+                      Open result
+                    </button>
+
+                    @if (canUpdateResult(result)) {
+                      <button
+                        type="button"
+                        role="menuitem"
+                        data-testid="bilateral-update-result"
+                        class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                        (click)="updateResult(result)">
+                        Update result
+                      </button>
+                    }
+
+                    <a
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                      [href]="pdfHref(result)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      (click)="closeRowMenu()">
+                      Download PDF
+                    </a>
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)] cursor-pointer"
+                      (click)="copyLink(result)">
+                      Copy link
+                    </button>
+
+                    @if (canDeleteResult(result)) {
+                      <div class="my-[4px] h-[1px] bg-[var(--pr-border)]"></div>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        class="flex h-[36px] w-full items-center gap-[8px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-color-red-600)] transition-colors hover:bg-[var(--pr-color-red-50)] cursor-pointer"
+                        (click)="deleteResult(result)">
+                        <span class="material-icons-round text-[16px]" aria-hidden="true">delete</span>
+                        <span>Delete</span>
+                      </button>
+                    }
+                  </div>
+                </ng-template>
               </td>
             </tr>
           </ng-template>
 
+          <ng-template prTableLoading>
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <tr class="rc-row rc-row--skeleton" style="height: 48px">
+                @for (column of cols; track column.key) {
+                  <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
+                    <div class="rc-cell-link">
+                      <span
+                        class="inline-block h-[14px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)] motion-reduce:animate-none"
+                        [style.width]="column.attr === 'result_code' ? '64px' : column.attr === 'source' ? '38px' : column.attr === 'status_id' || column.attr === 'is_leading_result' ? '68px' : '80%'"
+                        aria-hidden="true"></span>
+                    </div>
+                  </td>
+                }
+                <td class="rc-td rc-td--action" style="width: 56px">
+                  <span class="inline-block size-[24px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)] ml-auto motion-reduce:animate-none" aria-hidden="true"></span>
+                </td>
+              </tr>
+            }
+          </ng-template>
+
           <ng-template prTableEmpty>
-            <tr style="height: 200px">
-              <td [attr.colspan]="cols.length + 1" class="brl_state">
+            <tr>
+              <td [attr.colspan]="cols.length + 1" class="p-0 border-0">
                 @if (results().length === 0) {
-                  <span class="material-icons-round brl_state_icon">inbox</span>
-                  <span>No results found for this center in this phase.</span>
+                  <app-sp-tab-empty-state
+                    testId="bilateral-results-empty"
+                    icon="table_chart"
+                    title="No results reported yet"
+                    [description]="'Results reported for ' + (ctx.centerName() || 'this center') + ' will show up here.'"
+                    primaryLabel="Go to Reporting"
+                    [primaryRouterLink]="['/bilateral', ctx.centerAcronym(), 'reporting']" />
                 } @else {
-                  <span class="material-icons-round brl_state_icon">filter_alt</span>
-                  <span>
-                    No results match the active filters
-                    @if (searchQuery()) {
-                      and search query <strong>"{{ searchQuery() }}"</strong>
-                    }.
-                  </span>
+                  <app-sp-tab-empty-state
+                    testId="bilateral-results-filtered-empty"
+                    icon="filter_alt"
+                    title="No results match these filters"
+                    [description]="searchQuery() ? 'No results match the active filters and search query &quot;' + searchQuery() + '&quot;.' : 'Try removing a filter or widening your search to see more results.'"
+                    secondaryLabel="Clear all filters"
+                    (secondaryAction)="clearAllFilters()" />
                 }
               </td>
             </tr>
           </ng-template>
         </app-pr-table>
       </div>
+    } @else if (isFilteredEmpty()) {
+      <app-sp-tab-empty-state
+        testId="bilateral-results-filtered-empty"
+        icon="filter_alt"
+        title="No results match these filters"
+        [description]="searchQuery() ? 'No results match the active filters and search query &quot;' + searchQuery() + '&quot;.' : 'Try removing a filter or widening your search to see more results.'"
+        secondaryLabel="Clear all filters"
+        (secondaryAction)="clearAllFilters()" />
+    } @else if (isNothingYet()) {
+      <app-sp-tab-empty-state
+        testId="bilateral-results-empty"
+        icon="table_chart"
+        title="No results reported yet"
+        [description]="'Results reported for ' + (ctx.centerName() || 'this center') + ' will show up here.'"
+        primaryLabel="Go to Reporting"
+        [primaryRouterLink]="['/bilateral', ctx.centerAcronym(), 'reporting']" />
     }
 
   </div>

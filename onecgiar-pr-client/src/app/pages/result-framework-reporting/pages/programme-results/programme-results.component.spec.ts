@@ -71,6 +71,7 @@ const RAW_ITEMS: Record<string, unknown>[] = [
     version_id: '11',
     phase_name: 'Reporting 2026',
     phase_year: 2026,
+    acronym: 'P26',
     submitter: 'SP01'
   },
   {
@@ -453,13 +454,13 @@ describe('ProgrammeResultsComponent', () => {
 
   // @akili-spec changes/my-work-board (MWB-T-13) — Category / Funding source / Center are now
   // multi-select, so the popover writes the signals directly (an array) instead of going through
-  // a single-select `on*Change` sentinel handler. Status stays single-select.
+  // a single-select `on*Change` sentinel handler. Status is multi-select like the other dimensions.
   it('filters by status, category and origin', () => {
-    component.onStatusChange('Submitted');
+    filterService().selectedStatuses.set(['Submitted']);
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002', '5003']);
 
-    component.onStatusChange('all'); // the select's empty sentinel clears the filter
-    expect(filterService().selectedStatus()).toBeNull();
+    filterService().selectedStatuses.set([]);
+    expect(filterService().selectedStatuses()).toEqual([]);
 
     filterService().selectedCategories.set(['Policy change']);
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
@@ -606,7 +607,7 @@ describe('ProgrammeResultsComponent', () => {
   it('shows one chip per active filter and clears just that one', fakeAsync(() => {
     component.onSearchInput('bean');
     tick(300);
-    component.onStatusChange('Submitted');
+    filterService().selectedStatuses.set(['Submitted']);
     fixture.detectChanges();
 
     const labels = filterService().activeChips().map(chip => chip.label);
@@ -631,7 +632,7 @@ describe('ProgrammeResultsComponent', () => {
   it('Clear all resets every dimension including the undebounced search box', fakeAsync(() => {
     component.onSearchInput('maize');
     tick(300);
-    component.onStatusChange('Editing');
+    filterService().selectedStatuses.set(['Editing']);
     filterService().selectedCategories.set(['Policy change']);
     filterService().selectedOrigins.set(['W1/W2']);
     filterService().selectedCenters.set(['IITA']);
@@ -641,10 +642,10 @@ describe('ProgrammeResultsComponent', () => {
 
     expect(component.searchDraft()).toBe('');
     expect(filterService().selectedCenters()).toEqual([]);
-    expect(filterService().selectedStatus()).toBeNull();
+    expect(filterService().selectedStatuses()).toEqual([]);
     expect(filterService().selectedCategories()).toEqual([]);
     expect(filterService().selectedOrigins()).toEqual([]);
-    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(filterService().selectedPhases()).toEqual(['Reporting 2026']);
     expect(component.filteredRows().length).toBe(3);
   }));
 
@@ -656,14 +657,14 @@ describe('ProgrammeResultsComponent', () => {
     ]);
 
     component.onStatusCountClick('Editing');
-    expect(filterService().selectedStatus()).toBe('Editing');
+    expect(filterService().selectedStatuses()).toEqual(['Editing']);
     expect(component.filteredRows().map(row => row.code)).toEqual(['5001']);
     // Counted over rows filtered by EVERYTHING EXCEPT status, so the pills do not collapse to 1.
     expect(component.statusCounts().map(count => count.count)).toEqual([2, 1]);
     expect(component.isStatusActive('Editing')).toBe(true);
 
     component.onStatusCountClick('Editing'); // same pill again clears
-    expect(filterService().selectedStatus()).toBeNull();
+    expect(filterService().selectedStatuses()).toEqual([]);
   });
 
   it('counters respect the other dimensions', () => {
@@ -697,7 +698,7 @@ describe('ProgrammeResultsComponent', () => {
     expect(filterService().state()).toEqual(
       // @akili-spec changes/my-work-board (MWB-T-13) — a single legacy value hydrates as a
       // one-element array, which is exactly what keeps the Overview deep links working.
-      expect.objectContaining({ selectedStatus: 'Submitted', selectedCategories: ['Policy change'], selectedCenters: ['IITA'] })
+      expect.objectContaining({ selectedStatuses: ['Submitted'], selectedCategories: ['Policy change'], selectedCenters: ['IITA'] })
     );
     expect(filterService().activeChips().map(chip => chip.label)).toEqual([
       'Phase: Reporting 2026',
@@ -722,7 +723,7 @@ describe('ProgrammeResultsComponent', () => {
   it('(c) no query params defaults to the active phase and mirrors it to the URL', () => {
     setup(RAW_ITEMS, {});
 
-    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(filterService().selectedPhases()).toEqual(['Reporting 2026']);
     expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2026']);
     expect(filterService().hasActiveFilters()).toBe(true);
   });
@@ -848,7 +849,7 @@ describe('ProgrammeResultsComponent', () => {
     pushQueryParams({ phase: 'Reporting 2026', status: 'Submitted' });
     fixture.detectChanges();
 
-    expect(filterService().selectedStatus()).toBe('Submitted');
+    expect(filterService().selectedStatuses()).toEqual(['Submitted']);
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
@@ -864,10 +865,10 @@ describe('ProgrammeResultsComponent', () => {
     setup(RAW_ITEMS, {});
     (router.navigate as jest.Mock).mockClear();
 
-    component.onPhaseChange('Reporting 2024');
+    component.onPhasesChange(['Reporting 2024']);
     fixture.detectChanges();
 
-    expect(filterService().selectedPhase()).toBe('Reporting 2024');
+    expect(filterService().selectedPhases()).toEqual(['Reporting 2024']);
     expect(component.filteredRows().map(r => r.code)).toEqual(['5004']);
     expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2024']);
     expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
@@ -884,7 +885,7 @@ describe('ProgrammeResultsComponent', () => {
     homeSE.overviewSelectedPhase.set('Reporting 2024');
     fixture.detectChanges();
 
-    expect(filterService().selectedPhase()).toBe('Reporting 2024');
+    expect(filterService().selectedPhases()).toEqual(['Reporting 2024']);
     expect(component.filteredRows().map(r => r.code)).toEqual(['5004']);
     expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2024']);
   });
@@ -939,12 +940,12 @@ describe('ProgrammeResultsComponent', () => {
     }
   ];
 
-  it('onCreatedByChange(Angel Jarrin) keeps only those rows, the chip, and increments the badge', () => {
+  it('onCreatedByMultiselectChange(Angel Jarrin) keeps only those rows, the chip, and increments the badge', () => {
     setup(CBF_ITEMS);
     const badgeBefore = component.activeFilterCount();
     expect(badgeBefore).toBe(filterService().activeChips().length);
 
-    component.onCreatedByChange('Angel Jarrin');
+    filterService().selectedCreatedBy.set(['Angel Jarrin']);
     fixture.detectChanges();
 
     expect(component.filteredRows().map(row => row.code)).toEqual(['6010', '6011']);
@@ -966,8 +967,8 @@ describe('ProgrammeResultsComponent', () => {
 
   it('Created by + Status intersects the table and keeps both chips', () => {
     setup(CBF_ITEMS);
-    component.onCreatedByChange('Angel Jarrin');
-    component.onStatusChange('Submitted');
+    filterService().selectedCreatedBy.set(['Angel Jarrin']);
+    filterService().selectedStatuses.set(['Submitted']);
     fixture.detectChanges();
 
     expect(component.filteredRows().map(row => row.code)).toEqual(['6011']);
@@ -982,7 +983,7 @@ describe('ProgrammeResultsComponent', () => {
   it('hydrates createdBy=Angel Jarrin onto the Created by signal and chip without navigating', () => {
     setup(CBF_ITEMS, { phase: 'Reporting 2026', createdBy: 'Angel Jarrin' });
 
-    expect(filterService().selectedCreatedBy()).toBe('Angel Jarrin');
+    expect(filterService().selectedCreatedBy()).toEqual(['Angel Jarrin']);
     expect(filterService().selectedCenters()).toEqual([]);
     expect(filterService().activeChips().map(chip => chip.label)).toEqual([
       'Phase: Reporting 2026',
@@ -995,7 +996,7 @@ describe('ProgrammeResultsComponent', () => {
   it('hydrates createdBy=Nobody as-is: chip + filtered-empty copy, no throw', () => {
     expect(() => setup(CBF_ITEMS, { createdBy: 'Nobody' })).not.toThrow();
 
-    expect(filterService().selectedCreatedBy()).toBe('Nobody');
+    expect(filterService().selectedCreatedBy()).toEqual(['Nobody']);
     expect(filterService().activeChips().map(chip => chip.label)).toEqual([
       'Phase: Reporting 2026',
       'Created by: Nobody'
@@ -1007,7 +1008,7 @@ describe('ProgrammeResultsComponent', () => {
   it('no createdBy param leaves Created by null and today\'s chips unchanged', () => {
     setup(CBF_ITEMS, {});
 
-    expect(filterService().selectedCreatedBy()).toBeNull();
+    expect(filterService().selectedCreatedBy()).toEqual([]);
     expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
   });
 
@@ -1018,16 +1019,16 @@ describe('ProgrammeResultsComponent', () => {
     pushQueryParams({ phase: 'Reporting 2026', createdBy: 'Angel Jarrin' });
     fixture.detectChanges();
 
-    expect(filterService().selectedCreatedBy()).toBe('Angel Jarrin');
+    expect(filterService().selectedCreatedBy()).toEqual(['Angel Jarrin']);
     expect(filterService().activeChips().map(chip => chip.label)).toContain('Created by: Angel Jarrin');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('onCreatedByChange mirrors createdBy with replaceUrl + merge and preserves sibling keys', () => {
+  it('onCreatedByMultiselectChange mirrors createdBy with replaceUrl + merge and preserves sibling keys', () => {
     setup(CBF_ITEMS, { phase: 'Reporting 2026', status: 'Submitted', center: 'CIAT' });
     (router.navigate as jest.Mock).mockClear();
 
-    component.onCreatedByChange('Angel Jarrin');
+    filterService().selectedCreatedBy.set(['Angel Jarrin']);
     fixture.detectChanges();
 
     expect(router.navigate).toHaveBeenCalledTimes(1);
@@ -1050,11 +1051,11 @@ describe('ProgrammeResultsComponent', () => {
     setup(CBF_ITEMS, { phase: 'Reporting 2026', status: 'Submitted', createdBy: 'Angel Jarrin' });
     (router.navigate as jest.Mock).mockClear();
 
-    component.onCreatedByChange('all');
+    filterService().selectedCreatedBy.set([]);
     fixture.detectChanges();
 
-    expect(filterService().selectedCreatedBy()).toBeNull();
-    expect(filterService().selectedStatus()).toBe('Submitted');
+    expect(filterService().selectedCreatedBy()).toEqual([]);
+    expect(filterService().selectedStatuses()).toEqual(['Submitted']);
     expect(router.navigate).toHaveBeenCalledTimes(1);
     const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
     expect(extras.queryParamsHandling).toBe('merge');
@@ -1078,10 +1079,10 @@ describe('ProgrammeResultsComponent', () => {
     component.clearAll();
     fixture.detectChanges();
 
-    expect(filterService().selectedCreatedBy()).toBeNull();
-    expect(filterService().selectedStatus()).toBeNull();
-    expect(filterService().selectedPhase()).toBe(component.defaultPhase());
-    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(filterService().selectedCreatedBy()).toEqual([]);
+    expect(filterService().selectedStatuses()).toEqual([]);
+    expect(filterService().selectedPhases()).toEqual([component.defaultPhase()]);
+    expect(filterService().selectedPhases()).toEqual(['Reporting 2026']);
     expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026']);
     expect(component.activeFilterCount()).toBe(filterService().activeChips().length);
     expect(router.navigate).toHaveBeenCalledTimes(1);
@@ -1146,10 +1147,10 @@ describe('ProgrammeResultsComponent', () => {
 
       // Load is still in flight: the auto-derived default must NOT have been committed as the
       // phantom global-fallback value ("Reporting 2026") — either it never navigated with it, or
-      // selectedPhase() is still at its untouched initial value (null).
+      // selectedPhases() is still at its untouched initial value (null).
       expect(component.data.loading()).toBe(true);
-      expect(filterService().selectedPhase()).not.toBe('Reporting 2026');
-      expect(filterService().selectedPhase()).toBeNull();
+      expect(filterService().selectedPhases()).not.toEqual(['Reporting 2026']);
+      expect(filterService().selectedPhases()).toEqual([]);
       expect(router.navigate).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ queryParams: expect.objectContaining({ phase: 'Reporting 2026' }) }));
 
       // Flush the deferred response on a LATER tick (never synchronously with detectChanges()).
@@ -1158,15 +1159,15 @@ describe('ProgrammeResultsComponent', () => {
 
       expect(component.data.loading()).toBe(false);
       expect(component.defaultPhase()).toBe('Reporting 2025 - P25');
-      expect(filterService().selectedPhase()).toBe(component.defaultPhase());
-      expect(filterService().selectedPhase()).toBe('Reporting 2025 - P25');
+      expect(filterService().selectedPhases()).toEqual([component.defaultPhase()]);
+      expect(filterService().selectedPhases()).toEqual(['Reporting 2025 - P25']);
     });
 
     it('applies an explicit ?phase= param immediately, before the deferred load ever resolves (REQ-1-S2)', () => {
       setupDeferred({ phase: 'Reporting 2025 - P25' });
 
       expect(component.data.loading()).toBe(true);
-      expect(filterService().selectedPhase()).toBe('Reporting 2025 - P25');
+      expect(filterService().selectedPhases()).toEqual(['Reporting 2025 - P25']);
     });
 
     it('leaves isNothingYet true and unchanged for a genuinely-empty programme, distinct from the filtered-empty case (REQ-1-S3)', () => {
@@ -1213,8 +1214,16 @@ describe('ProgrammeResultsComponent', () => {
   it('maps status ids to the fixed --pr-status-* token PAIRS, never a recombination', () => {
     expect(component.statusFg(1)).toBe('var(--pr-status-in-progress-fg)');
     expect(component.statusBg(1)).toBe('var(--pr-status-in-progress-bg)');
+    expect(component.statusFg(2)).toBe('var(--pr-status-in-qa-fg)');
+    expect(component.statusBg(2)).toBe('var(--pr-status-in-qa-bg)');
     expect(component.statusFg(3)).toBe('var(--pr-status-submitted-fg)');
     expect(component.statusBg(3)).toBe('var(--pr-status-submitted-bg)');
+    expect(component.statusFg(5)).toBe('var(--pr-status-not-started-fg)');
+    expect(component.statusBg(5)).toBe('var(--pr-status-not-started-bg)');
+    expect(component.statusFg(6)).toBe('var(--pr-status-approved-fg)');
+    expect(component.statusBg(6)).toBe('var(--pr-status-approved-bg)');
+    expect(component.statusFg(7)).toBe('var(--pr-status-rejected-fg)');
+    expect(component.statusBg(7)).toBe('var(--pr-status-rejected-bg)');
     expect(component.statusFg(99)).toBe('var(--pr-status-not-started-fg)');
     expect(component.statusBg(null)).toBe('var(--pr-status-not-started-bg)');
   });
@@ -1249,8 +1258,8 @@ describe('ProgrammeResultsComponent', () => {
   });
 
   // ── columns picker ────────────────────────────────────────────────────────────────────────
-  it('starts with all four optional columns off', () => {
-    expect(component.optionalColumns.map(column => column.key)).toEqual(['createdBy', 'created', 'origin', 'center']);
+  it('starts with all optional columns off', () => {
+    expect(component.optionalColumns.map(column => column.key)).toEqual(['phase', 'createdBy', 'created', 'origin', 'center']);
     for (const column of component.optionalColumns) expect(component.isColumnVisible(column.key)).toBe(false);
     expect(component.visibleColumns().map(column => column.key)).toEqual([
       'code',
@@ -1260,6 +1269,15 @@ describe('ProgrammeResultsComponent', () => {
       'status',
       'updated'
     ]);
+  });
+
+  it('renders the Phase column as `2026 · P26` when toggled on', () => {
+    component.toggleColumn('phase');
+    fixture.detectChanges();
+
+    expect(component.isColumnVisible('phase')).toBe(true);
+    expect(component.cellText(component.data.rows()[0], 'phase')).toBe('2026 · P26');
+    expect(text()).toContain('2026 · P26');
   });
 
   it('a column toggle moves the header, the cells, the grid and the min-width together', () => {
@@ -1367,6 +1385,13 @@ describe('ProgrammeResultsComponent', () => {
       expect(component.aowTitle(rowFor(9006))).toBe('AOW01, AOW02');
       expect(component.cellText(rowFor(8871), 'aow')).toBe('Intermediate outcomes');
       expect(component.cellText(rowFor(8702), 'aow')).toBe('Not tagged');
+    });
+
+    it('renders Emerging in the AoW cell when section is UNTAGGED and plannedResult is 0 (EMG-R-4)', () => {
+      setup(AOW_RAW_ITEMS, {}, AOW_SCOPE_BUCKETS);
+      const row = rowFor(8702);
+      row.plannedResult = 0;
+      expect(component.cellText(row, 'aow')).toBe('Emerging');
     });
 
     it('renders the code in the heading colour and +N in --pr-text-muted, textContent still "AOW01 +1" (design.md §6.3)', () => {
@@ -1570,26 +1595,18 @@ describe('ProgrammeResultsComponent', () => {
     });
   });
 
-  it('ships View indicator DISABLED and the other three live (P2-3395; P2-3396 closed 2026-08-24)', () => {
+  it('ships live options in row menu (P2-3395; P2-3396 closed 2026-08-24)', () => {
     component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
     fixture.detectChanges();
 
     const items = rowMenuItems();
     const labels = items.map(item => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
-    expect(labels).toEqual(['Open result', 'View indicator Coming soon', 'Download PDF', 'Copy link']);
-
-    // View indicator is the ONLY one left tagged — it still has no payload to open.
-    const viewIndicator = items[1] as HTMLButtonElement;
-    expect(viewIndicator.disabled).toBe(true);
-    expect(viewIndicator.getAttribute('aria-disabled')).toBe('true');
-    expect(viewIndicator.className).toContain('cursor-not-allowed');
-    expect(viewIndicator.getAttribute('title')).toBeTruthy();
-    expect(viewIndicator.textContent).toContain('Coming soon');
+    expect(labels).toEqual(['Open result', 'Download PDF', 'Copy link']);
 
     // The three live ones are not disabled and carry no tag.
     expect((items[0] as HTMLButtonElement).disabled).toBe(false);
-    expect((items[2] as HTMLAnchorElement).getAttribute('target')).toBe('_blank');
-    const copyLink = items[3] as HTMLButtonElement;
+    expect((items[1] as HTMLAnchorElement).getAttribute('target')).toBe('_blank');
+    const copyLink = items[2] as HTMLButtonElement;
     expect(copyLink.disabled).toBe(false);
     expect(copyLink.className).not.toContain('cursor-not-allowed');
     expect(copyLink.textContent).not.toContain('Coming soon');
@@ -1610,7 +1627,7 @@ describe('ProgrammeResultsComponent', () => {
       const api = TestBed.inject(ApiService) as any;
       api.shouldShowUpdate.mockReturnValue(true);
 
-      expect(openMenu()).toEqual(['Open result', 'Update result', 'View indicator Coming soon', 'Download PDF', 'Copy link']);
+      expect(openMenu()).toEqual(['Open result', 'Update result', 'Download PDF', 'Copy link']);
     });
 
     it('hides it when the row is not eligible, exactly as the old Results list does', () => {
@@ -1809,7 +1826,7 @@ describe('ProgrammeResultsComponent', () => {
     fixture.detectChanges();
 
     const items = rowMenuItems();
-    expect(items.length).toBe(4);
+    expect(items.length).toBe(3);
     for (const item of items) {
       expect(item.className).toContain('whitespace-nowrap');
     }
@@ -1847,7 +1864,13 @@ describe('ProgrammeResultsComponent', () => {
     const clipboard = TestBed.inject(Clipboard);
     const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
 
-    const row = { ...component.data.rows()[0], origin: 'W3/Bilaterals', statusName: 'Submitted', submitterCode: 'SP01' };
+    const row = {
+      ...component.data.rows()[0],
+      origin: 'W3/Bilaterals',
+      statusName: 'Submitted',
+      statusId: 3,
+      submitterCode: 'SP01'
+    };
     expect(component.usesBilateralReviewFlow(row)).toBe(true);
 
     component.copyLink(row);
@@ -1923,6 +1946,54 @@ describe('ProgrammeResultsComponent', () => {
     });
   });
 
+  it('opens an Editing W3/Bilaterals result in the center editor, not the review drawer', () => {
+    const row = {
+      ...component.data.rows()[2],
+      statusName: 'Editing',
+      statusId: 1,
+      center: 'AfricaRice',
+      code: '9368',
+      versionId: '36'
+    };
+
+    expect(component.usesBilateralReviewFlow(row)).toBe(false);
+    expect(component.resultRoute(row)).toEqual({
+      commands: ['/bilateral', 'AfricaRice', 'result', '9368'],
+      queryParams: { phase: '36' }
+    });
+
+    const bilateral = TestBed.inject(BilateralResultsService);
+    const drawerSpy = jest.spyOn(bilateral.showReviewDrawer, 'set');
+    component.openResult(row);
+    expect(bilateral.currentResultToReview.set).not.toHaveBeenCalled();
+    expect(drawerSpy).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'AfricaRice', 'result', '9368'], {
+      queryParams: { phase: '36' }
+    });
+  });
+
+  it('copies the center-editor url for an Editing W3/Bilaterals result', () => {
+    const clipboard = TestBed.inject(Clipboard);
+    const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+
+    const row = {
+      ...component.data.rows()[2],
+      origin: 'W3/Bilaterals',
+      statusName: 'Editing',
+      statusId: 1,
+      center: 'AfricaRice',
+      code: '9368',
+      versionId: '36'
+    };
+
+    component.copyLink(row);
+
+    const copied = copySpy.mock.calls[0][0];
+    expect(copied).toContain('/bilateral/AfricaRice/result/9368');
+    expect(copied).toContain('phase=36');
+    expect(copied).not.toContain('/bilateral-review');
+  });
+
   it('keeps an Approved or AVISA bilateral on Result Detail', () => {
     expect(component.usesBilateralReviewFlow({ ...component.data.rows()[2], statusName: 'Approved' })).toBe(false);
     expect(component.usesBilateralReviewFlow({ ...component.data.rows()[2], submitterCode: 'SGP-02' })).toBe(false);
@@ -1955,7 +2026,7 @@ describe('ProgrammeResultsComponent', () => {
     (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = revokeObjectURL;
     const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 
-    component.onStatusChange('Editing');
+    filterService().selectedStatuses.set(['Editing']);
     component.exportCsv();
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
@@ -1968,7 +2039,7 @@ describe('ProgrammeResultsComponent', () => {
   it('does not export when there is nothing to export', () => {
     const createObjectURL = jest.fn();
     (URL as unknown as { createObjectURL: unknown }).createObjectURL = createObjectURL;
-    component.onStatusChange('Nothing matches this');
+    filterService().selectedStatuses.set(['Nothing matches this']);
     component.exportCsv();
     expect(createObjectURL).not.toHaveBeenCalled();
   });
@@ -1990,7 +2061,7 @@ describe('ProgrammeResultsComponent', () => {
 
   // ── empty states ──────────────────────────────────────────────────────────────────────────
   it('offers "Clear all filters" when the filters emptied the list', () => {
-    component.onStatusChange('No such status');
+    filterService().selectedStatuses.set(['No such status']);
     fixture.detectChanges();
 
     expect(component.hasRows()).toBe(false);
@@ -2132,13 +2203,13 @@ describe('ProgrammeResultsComponent', () => {
       component.customWidths.set({});
       fixture.detectChanges();
 
-      let resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      let resetBtn = fixture.debugElement.query(By.css('[data-testid="pgr-reset-column-widths-btn"]'));
       expect(resetBtn).toBeNull();
 
       component.customWidths.set({ title: 600 });
       fixture.detectChanges();
 
-      resetBtn = fixture.debugElement.query(By.css('.pgr-pop button:has(span.material-icons-round)'));
+      resetBtn = fixture.debugElement.query(By.css('[data-testid="pgr-reset-column-widths-btn"]'));
       expect(resetBtn).toBeTruthy();
       expect(resetBtn.nativeElement.textContent).toContain('Reset column widths');
 

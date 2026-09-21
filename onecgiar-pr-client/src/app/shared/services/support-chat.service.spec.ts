@@ -68,4 +68,15 @@ describe('SupportChatService', () => {
     expect(() => service.open()).not.toThrow();
     expect(service.open()).toBe(false);
   });
+
+  it('reports isChatOngoing from the global API', () => {
+    setTawk({ isChatOngoing: () => true });
+    expect(service.isChatOngoing).toBe(true);
+
+    setTawk({ isChatOngoing: () => false });
+    expect(service.isChatOngoing).toBe(false);
+
+    setTawk({});
+    expect(service.isChatOngoing).toBe(false);
+  });
 });

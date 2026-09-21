@@ -58,6 +58,13 @@ import { BilateralCenterService } from './services/bilateral-center.service';
 import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { BilateralHandoffCode } from './entities/bilateral-handoff-code.entity';
+import { BilateralQualityAssessment } from './entities/bilateral-quality-assessment.entity';
+import { BilateralQualityAssessmentRepository } from './repositories/bilateral-quality-assessment.repository';
+import { BilateralQualityPayloadBuilder } from './services/quality-assessment/bilateral-quality-payload.builder';
+import { BilateralQualityAssessmentClient } from './services/quality-assessment/bilateral-quality-assessment.client';
+import { BilateralQualityAssessmentService } from './services/quality-assessment/bilateral-quality-assessment.service';
+import { INDICATOR_DESCRIPTION_RESOLVER } from './services/quality-assessment/indicator-description-resolver';
+import { TocIndicatorDescriptionResolver } from './services/quality-assessment/toc-indicator-description-resolver.service';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
@@ -70,6 +77,10 @@ import { BilateralAiConsumer } from '../bilateral-ai/bilateral-ai.consumer';
 import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.service';
 import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
 import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
+import { BilateralAiNotificationsService } from '../bilateral-ai/services/bilateral-ai-notifications.service';
+import { BilateralAiEvidenceTransferService } from '../bilateral-ai/services/bilateral-ai-evidence-transfer.service';
+import { SharePointModule } from '../../shared/services/share-point/share-point.module';
+import { BilateralAiSweeperCron } from '../bilateral-ai/bilateral-ai-sweeper.cron';
 import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
 import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
 import { AdUsersModule } from '../ad_users/ad_users.module';
@@ -82,6 +93,8 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
 import { SummaryModule } from '../results/summary/summary.module';
 import { InnovationUseMdsValidator } from './services/innovation-use-mds-validator.service';
 import { BilateralHandoffService } from './services/bilateral-handoff.service';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 
 @Module({
   imports: [
@@ -95,6 +108,7 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
       BilateralAiDraft,
       DraftEvidence,
       BilateralHandoffCode,
+      BilateralQualityAssessment,
     ]),
     ResultsModule,
     VersioningModule,
@@ -145,6 +159,11 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
     // SocketManagement, Versioning, forwardRef(ShareResultRequest) and bare entities — nothing
     // that imports back into this module.
     NotificationModule,
+    // `ADE-T-4`: `BilateralAiEvidenceTransferService` reuses `SharePointService` for the
+    // server-side upload and `EvidenceSharepointRepository` transitively via `saveSPData`.
+    // `EvidencesModule` (already imported above) exports `EvidencesRepository`/`EvidencesService`
+    // but not `SharePointService` itself (`design.md` §13 out-of-band note), hence this import.
+    SharePointModule,
   ],
   controllers: [
     BilateralWebhookController,
@@ -185,6 +204,18 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
     BilateralAiService,
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
+    // `APF-T-3`: the terminal-notification writer (in-app row + mail) shared by `processJob`'s
+    // COMPLETED/FAILED branches and the sweeper below, and the sweeper cron itself. No dedicated
+    // `bilateral-ai.module.ts` exists — this module is where every other `bilateral-ai/*`
+    // provider is already registered, so these two follow the same wiring rather than starting a
+    // module split this task was not asked to do.
+    BilateralAiNotificationsService,
+    // `ADE-T-4` (`docs/specs/bilateral/ai-draft-evidence-promotion`): the evidence transfer step
+    // `promoteDraft` calls once, after the `status_id` write. No dedicated `bilateral-ai.module.ts`
+    // exists (see the note on `BilateralAiNotificationsService` above) — registered here with
+    // every other `bilateral-ai/*` provider.
+    BilateralAiEvidenceTransferService,
+    BilateralAiSweeperCron,
     BilateralWebhookService,
     // @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-4) — RoleByUserRepository,
     // ClarisaCentersRepository, ClarisaInstitutionsRepository, UserRepository and
@@ -192,6 +223,39 @@ import { BilateralHandoffService } from './services/bilateral-handoff.service';
     // ClarisaInstitutionsModule, UserModule and VersioningModule (all imported above) — no new
     // module imports needed.
     BilateralHandoffService,
+    // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-2) — thin repository over
+    // `bilateral_quality_assessments`; T-6/T-7 inject it directly, same module, no export needed.
+    BilateralQualityAssessmentRepository,
+    // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-4) — definitions-only payload
+    // builder for the AI traffic light. Depends only on `BilateralService`, `ResultsService`
+    // (both already resolvable in this module) and the indicator-description resolver below —
+    // no new module imports, so no new cross-module cycle. T-6 injects it directly for the
+    // orchestrator; no export needed (mirrors the T-2 repository above).
+    BilateralQualityPayloadBuilder,
+    // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-5/T-5b) — the outbound AI HTTP
+    // client (`HttpService` from `HttpModule`, already imported above). Never registered by
+    // T-5/T-5b themselves (both tasks unit-test it via `new BilateralQualityAssessmentClient()`
+    // directly); `T-6` is its first consumer through Nest DI, so this is where it first needs
+    // a provider entry.
+    BilateralQualityAssessmentClient,
+    // @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6) — the orchestrator
+    // (`assess`/`getLatest`). Depends only on the repository, builder and client above plus
+    // `ResultsKnowledgeProductsRepository` (already a provider here for the KP handler and
+    // `BilateralCenterService`) — no new module imports. Injected into `BilateralCenterService`
+    // as a collaborator (`BIL-QAI-DD-5`); no export needed.
+    BilateralQualityAssessmentService,
+    // Concrete `IndicatorDescriptionResolver` (see
+    // `./services/quality-assessment/indicator-description-resolver.ts` for why no existing
+    // provider in this module's reach could fill the token instead): queries
+    // `${DB_TOC}.toc_results_indicators` directly through the already-injected `DataSource`,
+    // the same connection `BilateralService` itself already uses for raw queries.
+    TocIndicatorDescriptionResolver,
+    {
+      provide: INDICATOR_DESCRIPTION_RESOLVER,
+      useExisting: TocIndicatorDescriptionResolver,
+    },
+    HandlersError,
+    AoWBilateralRepository,
   ],
   // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
   // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second

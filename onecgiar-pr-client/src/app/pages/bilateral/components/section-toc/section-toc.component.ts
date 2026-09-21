@@ -1,4 +1,6 @@
 import { Component, inject, signal, computed, OnInit, effect, input } from '@angular/core';
+
+const PA_TOC_DEFER_STORAGE_PREFIX = 'prms.bilateralPaTocDefer:';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -7,6 +9,11 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { BilateralMdsTrackerService, MdsFieldItem } from '../../services/bilateral-mds-tracker.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
+import {
+  SectionTocDefaultComponent,
+  ProjectDefault,
+} from '../section-toc-default/section-toc-default.component';
+import { TocLinkageSwitchDialogService } from '../toc-linkage-switch-dialog/toc-linkage-switch-dialog.service';
 
 const RESULT_TYPE_TO_LABEL: Record<number, string> = {
   1: 'Policy Change', 2: 'Innovation Use', 4: 'Other Outcome',
@@ -25,7 +32,7 @@ const INDICATOR_TYPE_TO_RESULT_NAME: Record<string, string> = {
 
 @Component({
   selector: 'app-section-toc',
-  imports: [CommonModule, FormsModule, FormSkeletonComponent, CustomFieldsModule],
+  imports: [CommonModule, FormsModule, FormSkeletonComponent, CustomFieldsModule, SectionTocDefaultComponent],
   templateUrl: './section-toc.component.html',
   styleUrl: './section-toc.component.scss',
 })
@@ -34,10 +41,33 @@ export class SectionTocComponent implements OnInit {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSave = inject(BilateralAutoSaveService);
   readonly api = inject(ApiService);
+  private readonly tocLinkageSwitchDialog = inject(TocLinkageSwitchDialogService);
 
   resultLevelId = input<number | null>(null);
+  readOnly = input<boolean>(false);
+
+  linkageMode = signal<'project_default' | 'custom' | null>(null);
+  projectDefault = signal<ProjectDefault | null>(null);
+
+  readonly hasProjectDefault = computed(() => {
+    if (this.isPlanned() === false && !this.linkageMode()) {
+      return false;
+    }
+    const pd = this.projectDefault();
+    return !!pd && (pd.nodes?.length ?? 0) > 0;
+  });
+
+  readonly showDetailForm = computed(() => {
+    if (this.hasProjectDefault()) {
+      return this.linkageMode() === 'custom';
+    }
+    return this.isPlanned() === true;
+  });
 
   isPlanned = signal<boolean | null>(null);
+  /** When true, the reporter defers ToC mapping to the Program/Accelerator team (W3 bilateral only). */
+  paWillCompleteTocMapping = signal(false);
+  readonly showPlannedQuestion = computed(() => !this.paWillCompleteTocMapping());
   tocLevels = signal<any[]>([]);
   outputList = signal<any[]>([]);
   outcomeList = signal<any[]>([]);
@@ -59,8 +89,6 @@ export class SectionTocComponent implements OnInit {
   });
 
   readonly initiativeId = signal<number | null>(null);
-
-  readonly showWhyReported = computed(() => this.isPlanned() === false);
 
   readonly showLevelSelector = computed(() => {
     const levelId = this.resultLevelId();
@@ -126,7 +154,15 @@ export class SectionTocComponent implements OnInit {
     const resultId = this.selectedTocResultId();
     if (!resultId) return [];
     const result = this.activeList().find((r: any) => String(r.toc_result_id) === String(resultId));
-    return (result?.indicators ?? []).map((ind: any) => {
+    return (result?.indicators ?? [])
+      .filter((ind: any) => {
+        if (this.hasProjectDefault() && this.linkageMode() === 'custom') {
+          const matchInfo = this.getIndicatorMatchInfo(ind);
+          if (matchInfo.cssClass === 'bp-toc-match--other') return false;
+        }
+        return true;
+      })
+      .map((ind: any) => {
       const matchInfo = this.getIndicatorMatchInfo(ind);
       let badges = '';
       let select_badge = '';
@@ -180,6 +216,10 @@ export class SectionTocComponent implements OnInit {
     return !inds.some((i: any) => i.matchInfo.cssClass === 'bp-toc-match--match');
   });
 
+  private plannedSelectionLocked = false;
+  private tocStateRequestId = 0;
+  private loadedInitiativeId: number | null = null;
+
   constructor() {
     effect(() => {
       const iId = this.creationService.resultInitiativeId();
@@ -189,11 +229,19 @@ export class SectionTocComponent implements OnInit {
     });
 
     effect(() => {
+      const resultId = this.resultId();
+      if (!resultId) return;
+      this.plannedSelectionLocked = false;
+      this.loadedInitiativeId = null;
+      this.paWillCompleteTocMapping.set(this.readPaDeferStorage(resultId));
+    });
+
+    effect(() => {
       const iId = this.initiativeId();
-      if (!iId) return;
+      if (!iId || this.loadedInitiativeId === iId) return;
+      this.loadedInitiativeId = iId;
       this.loadTocLevels();
-      this.fetchLists();
-      this.loadTocState();
+      void this.loadTocState();
     });
 
     effect(() => {
@@ -202,17 +250,59 @@ export class SectionTocComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.initiativeId()) {
+    const iId = this.initiativeId();
+    if (iId && this.loadedInitiativeId !== iId) {
+      this.loadedInitiativeId = iId;
       this.loadTocLevels();
-      this.fetchLists();
-      this.loadTocState();
+      void this.loadTocState();
     }
   }
 
   private async loadTocState(): Promise<void> {
+    const requestId = ++this.tocStateRequestId;
     const state = await this.autoSave.loadTocState();
-    if (state.planned_result !== null) {
-      this.isPlanned.set(state.planned_result);
+    if (requestId !== this.tocStateRequestId) return;
+
+    this.projectDefault.set(state.project_default ?? null);
+
+    if (state.toc_linkage_mode) {
+      this.linkageMode.set(state.toc_linkage_mode);
+      this.isPlanned.set(true);
+      if (state.toc_linkage_mode === 'custom' && this.initiativeId()) {
+        this.fetchLists();
+      }
+    } else if (state.project_default && (state.project_default.nodes?.length ?? 0) > 0) {
+      if (state.planned_result === false) {
+        this.linkageMode.set(null);
+        this.isPlanned.set(false);
+        this.whyReported.set(state.toc_progressive_narrative ?? '');
+      } else if (
+        state.toc_result_id !== null ||
+        state.indicator_id !== null ||
+        state.planned_result === true
+      ) {
+        this.linkageMode.set('custom');
+        this.isPlanned.set(true);
+        if (this.initiativeId()) {
+          this.fetchLists();
+        }
+      } else {
+        this.linkageMode.set(null);
+      }
+    }
+
+    if (!this.plannedSelectionLocked && !this.linkageMode()) {
+      if (state.planned_result !== null) {
+        this.isPlanned.set(state.planned_result);
+        this.paWillCompleteTocMapping.set(false);
+        this.clearPaDeferStorage();
+        if (state.planned_result === true && this.initiativeId()) {
+          this.fetchLists();
+        }
+      } else if (this.readPaDeferStorage()) {
+        this.paWillCompleteTocMapping.set(true);
+        this.isPlanned.set(null);
+      }
     }
     if (state.toc_level_id !== null) {
       this.selectedLevelId.set(state.toc_level_id);
@@ -238,17 +328,122 @@ export class SectionTocComponent implements OnInit {
     }
   }
 
+  onModeChange(newMode: 'project_default' | 'custom'): void {
+    if (this.linkageMode() === newMode) return;
+
+    if (newMode === 'project_default') {
+      const hasCustomDetails =
+        this.selectedIndicatorId() != null ||
+        this.contributionValue() != null ||
+        !!this.narrative()?.trim() ||
+        this.selectedTocResultId() != null;
+
+      if (this.linkageMode() === 'custom' && hasCustomDetails) {
+        this.tocLinkageSwitchDialog.openSwitchToDefault().subscribe((result) => {
+          if (result === 'switch') {
+            this.applyProjectDefaultMode();
+          }
+        });
+        return;
+      }
+
+      this.applyProjectDefaultMode();
+      return;
+    }
+
+    if (newMode === 'custom') {
+      this.clearTocDebouncers();
+      this.linkageMode.set('custom');
+      this.isPlanned.set(true);
+      this.clearTocSelection();
+      if (this.resultLevelId() === 1) {
+        this.selectedLevelId.set(1);
+      }
+      if (this.initiativeId()) {
+        this.fetchLists();
+      }
+      return;
+    }
+  }
+
+  private applyProjectDefaultMode(): void {
+    this.clearTocDebouncers();
+    this.linkageMode.set('project_default');
+    this.isPlanned.set(true);
+    this.clearTocSelection();
+    this.autoSave.saveTocMapping({
+      toc_linkage_mode: 'project_default',
+      planned_result: true,
+    });
+  }
+
   private _tocSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private clearTocDebouncers(): void {
+    if (this._tocSaveTimer) {
+      clearTimeout(this._tocSaveTimer);
+      this._tocSaveTimer = null;
+    }
+    if (this._narrativeTimer) {
+      clearTimeout(this._narrativeTimer);
+      this._narrativeTimer = null;
+    }
+  }
+
+  private readPaDeferStorage(resultId = this.resultId()): boolean {
+    if (!resultId) return false;
+    try {
+      return sessionStorage.getItem(`${PA_TOC_DEFER_STORAGE_PREFIX}${resultId}`) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private persistPaDeferStorage(deferred: boolean): void {
+    const resultId = this.resultId();
+    if (!resultId) return;
+    try {
+      if (deferred) {
+        sessionStorage.setItem(`${PA_TOC_DEFER_STORAGE_PREFIX}${resultId}`, '1');
+      } else {
+        sessionStorage.removeItem(`${PA_TOC_DEFER_STORAGE_PREFIX}${resultId}`);
+      }
+    } catch {
+      // Private mode / quota — UI state still works for this session.
+    }
+  }
+
+  private clearPaDeferStorage(): void {
+    this.persistPaDeferStorage(false);
+  }
+
+  private clearTocSelection(): void {
+    this.selectedTocResultId.set(null);
+    this.selectedIndicatorId.set(null);
+    this.contributionValue.set(null);
+    this.narrative.set('');
+    this.whyReported.set('');
+    this.outputList.set([]);
+    this.outcomeList.set([]);
+    this.eoiList.set([]);
+    this.selectedLevelId.set(null);
+  }
 
   private saveTocDebounced(): void {
     if (this._tocSaveTimer) clearTimeout(this._tocSaveTimer);
     this._tocSaveTimer = setTimeout(() => {
       this.autoSave.saveTocMapping({
+        toc_linkage_mode: this.hasProjectDefault() ? (this.linkageMode() ?? undefined) : undefined,
         planned_result: this.isPlanned() ?? undefined,
         toc_level_id: this.selectedLevelId() ?? undefined,
         toc_result_id: this.selectedTocResultId() ?? undefined,
         indicator_id: this.selectedIndicatorId() ?? undefined,
         contributing_indicator: this.contributionValue() ?? undefined,
+        // whyReported is hidden in the bilateral UI (no textarea renders it) but is still sent here
+        // on purpose: the unplanned save path (_handleUnplannedSpecialCase,
+        // results-toc-results.service.ts:2674) deactivates the active results_toc_result row and
+        // INSERTS a new one with `toc_progressive_narrative: … ?? null` (:2697-2699). Omitting the
+        // key here would null every previously stored justification on the next autosave.
         toc_progressive_narrative:
           (this.isPlanned() === false ? this.whyReported() : this.narrative()) || undefined,
       });
@@ -282,20 +477,15 @@ export class SectionTocComponent implements OnInit {
   }
 
   onPlannedChange(planned: boolean): void {
+    this.clearTocDebouncers();
+    this.plannedSelectionLocked = true;
+    this.paWillCompleteTocMapping.set(false);
+    this.clearPaDeferStorage();
     this.isPlanned.set(planned);
-    this.selectedTocResultId.set(null);
-    this.selectedIndicatorId.set(null);
-    this.contributionValue.set(null);
-    this.narrative.set('');
-    this.whyReported.set('');
-    this.outputList.set([]);
-    this.outcomeList.set([]);
-    this.eoiList.set([]);
+    this.clearTocSelection();
 
     if (this.resultLevelId() === 1 && planned) {
       this.selectedLevelId.set(1);
-    } else {
-      this.selectedLevelId.set(null);
     }
 
     const programCode = this.creationService.selectedPrimarySp()?.programCode;
@@ -305,6 +495,19 @@ export class SectionTocComponent implements OnInit {
     });
     if (planned && this.initiativeId()) {
       this.fetchLists();
+    }
+  }
+
+  onPaWillCompleteChange(deferred: boolean): void {
+    this.clearTocDebouncers();
+    this.plannedSelectionLocked = true;
+    this.paWillCompleteTocMapping.set(deferred);
+    this.persistPaDeferStorage(deferred);
+
+    if (deferred) {
+      this.isPlanned.set(null);
+      this.clearTocSelection();
+      return;
     }
   }
 
@@ -375,14 +578,6 @@ export class SectionTocComponent implements OnInit {
     this._narrativeTimer = setTimeout(() => this.saveTocDebounced(), 1500);
   }
 
-  private _whyReportedTimer: ReturnType<typeof setTimeout> | null = null;
-
-  onWhyReportedInput(value: string): void {
-    this.whyReported.set(value);
-    if (this._whyReportedTimer) clearTimeout(this._whyReportedTimer);
-    this._whyReportedTimer = setTimeout(() => this.saveTocDebounced(), 1500);
-  }
-
   getDisplayLabel(item: any): string {
     if (item.extraInformation) return item.extraInformation;
     if (item.wp_short_name && item.title) return `${item.wp_short_name} - ${item.title}`;
@@ -406,19 +601,10 @@ export class SectionTocComponent implements OnInit {
       {
         key: 'toc-planned',
         label: 'Mapped to planned ToC indicator',
-        filled: planned !== null,
+        filled: this.paWillCompleteTocMapping() || planned !== null,
         optional: true,
       },
     ];
-
-    if (planned === false) {
-      items.push({
-        key: 'toc-why-reported',
-        label: 'Why is this result being reported',
-        filled: !!this.whyReported()?.trim(),
-        optional: true,
-      });
-    }
 
     if (planned === true) {
       if (this.showLevelSelector()) {

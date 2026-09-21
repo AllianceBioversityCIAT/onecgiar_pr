@@ -6,6 +6,7 @@ import {
   effect,
   HostListener,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   untracked,
@@ -14,7 +15,13 @@ import {
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, filter, take, map, distinctUntilChanged } from 'rxjs';
+import { combineLatest, filter, take, map, distinctUntilChanged, forkJoin, switchMap } from 'rxjs';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { FormsModule } from '@angular/forms';
+import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { PrToastService } from '../../../../shared/components/pr-toast';
+import { ResultDeletionService } from '../../../result-framework-reporting/services/result-deletion.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
@@ -34,6 +41,7 @@ import {
   PrTableEmptyDirective,
   PrTableLoadingDirective,
 } from '../../../../shared/components/pr-table';
+import { SpTabEmptyStateComponent } from '../../../result-framework-reporting/pages/dashboard-lab/components/sp-tab-empty-state/sp-tab-empty-state.component';
 // @akili-spec bilateral/center-overview-tab (COV-T-2, COV-DD-11) — `BilateralCenterResult` moved
 // to a shared interface file so both the Results tab and the Overview's pure modules can import
 // the row shape without page-to-page coupling; re-exported below for existing imports.
@@ -54,6 +62,7 @@ import {
   BILATERAL_PROJECT_QUERY_PARAM,
   BILATERAL_ROLE_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
+  BILATERAL_CREATED_BY_QUERY_PARAM,
   BILATERAL_SOURCE_QUERY_PARAM,
   BILATERAL_STATUS_QUERY_PARAM,
   BILATERAL_TYPE_QUERY_PARAM,
@@ -82,9 +91,18 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
   BILATERAL_SOURCE_QUERY_PARAM,
   BILATERAL_METHOD_QUERY_PARAM,
   BILATERAL_SEARCH_QUERY_PARAM,
+  BILATERAL_CREATED_BY_QUERY_PARAM,
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'createdBy' | 'search';
+
+interface BilateralFilterChip {
+  dimension: BilateralFilterChipDimension;
+  value: string;
+  label: string;
+}
+
 const STATUS_KEY_LABELS: Record<StatusKey, string> = {
   editing: 'Editing',
   qa: 'In QA',
@@ -101,27 +119,48 @@ export interface BilateralColumnDef {
   title: string;
   attr: string;
   width: string;
+  /** Minimum width (px) when the user resizes a column. */
+  minPx: number;
   /** Default visibility when no localStorage preference exists. */
   defaultOn: boolean;
 }
 
 // Versioned so older preferences cannot leave a newly required column hidden.
-// v3 — P2-3152 AC6 added Project name and Description.
-const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v3';
+// v4 — Created by column added to the centre dashboard list.
+const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v4';
+export const BILATERAL_COLUMN_WIDTHS_STORAGE_KEY = 'pr.bilateralResults.columnWidths.v1';
 
 /** Full column set (order = picker + table order). Kept to the fields BilateralCenterResult actually has. */
 export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
-  { key: 'source', title: 'Source', attr: 'source', width: '100px', defaultOn: true },
-  { key: 'code', title: 'Code', attr: 'result_code', width: '100px', defaultOn: true },
-  { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true },
+  { key: 'code', title: 'Code', attr: 'result_code', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'source', title: 'Source', attr: 'source', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'title', title: 'Title', attr: 'title', width: '280px', minPx: 160, defaultOn: true },
   // P2-3152 AC6 — Project name and Description are required on the centre dashboard.
-  { key: 'project', title: 'Project name', attr: 'project_name', width: '200px', defaultOn: true },
-  { key: 'description', title: 'Description', attr: 'description', width: '260px', defaultOn: true },
-  { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', defaultOn: true },
-  { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', defaultOn: true },
-  { key: 'status', title: 'Status', attr: 'status_id', width: '120px', defaultOn: true },
-  { key: 'created', title: 'Created', attr: 'created_date', width: '110px', defaultOn: true },
+  { key: 'project', title: 'Project name', attr: 'project_name', width: '200px', minPx: 120, defaultOn: true },
+  { key: 'description', title: 'Description', attr: 'description', width: '260px', minPx: 140, defaultOn: true },
+  { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', minPx: 120, defaultOn: true },
+  { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', minPx: 100, defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'status_id', width: '120px', minPx: 100, defaultOn: true },
+  { key: 'createdBy', title: 'Created by', attr: 'created_by_name', width: '160px', minPx: 120, defaultOn: true },
+  { key: 'created', title: 'Created', attr: 'created_date', width: '110px', minPx: 90, defaultOn: true },
 ];
+
+export function readStoredBilateralColumnWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(BILATERAL_COLUMN_WIDTHS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredBilateralColumnWidths(widths: Record<string, number>): void {
+  try {
+    localStorage.setItem(BILATERAL_COLUMN_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+  } catch {
+    // private mode — widths still work for the session
+  }
+}
 
 function readStoredColumnVisibility(): Record<string, boolean> {
   try {
@@ -150,11 +189,54 @@ function phaseVersionId(phase: Phases): number {
   return Number(phase.id);
 }
 
+function parsePhaseIdsFromUrl(raw: string | null): number[] {
+  if (!raw) return [];
+  const ids = raw
+    .split(',')
+    .map(token => {
+      const n = Number(token.trim());
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })
+    .filter((n): n is number => n !== null);
+  return [...new Set(ids)];
+}
+
+/**
+ * `PMF-R-1` — the row may carry `project_id` as a number OR a numeric string (the APIs deliver ids
+ * as strings, the same trap `phaseVersionId` normalizes); anything null, non-numeric or not a
+ * positive integer is not a project option and is ignored.
+ */
+function normalizeProjectId(raw: number | string | null | undefined): number | null {
+  if (raw === null || raw === undefined) return null;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/** `PMF-R-1` — one selectable Project option, built from the center's own catalog for a phase year. */
+interface ProjectFilterOption {
+  value: number;
+  label: string;
+}
+
+/**
+ * `PMF-R-1` (pivot) — the catalog's option label: trimmed `shortName` and `fullName` joined with
+ * a space, the table column's `A-AG10156 Accelerating Impacts…` format; an entry with no usable
+ * name falls back to `Project <id>`.
+ */
+function catalogProjectLabel(project: { shortName?: unknown; fullName?: unknown }, id: number): string {
+  const shortName = typeof project.shortName === 'string' ? project.shortName.trim() : '';
+  const fullName = typeof project.fullName === 'string' ? project.fullName.trim() : '';
+  return `${shortName} ${fullName}`.trim() || `Project ${id}`;
+}
+
 @Component({
   selector: 'app-bilateral-results-list',
   standalone: true,
   imports: [
     DatePipe,
+    OverlayModule,
+    FormsModule,
+    PrFilterMultiselectModule,
     BilateralPageHeaderComponent,
     PrDialogComponent,
     PrTableComponent,
@@ -165,6 +247,7 @@ function phaseVersionId(phase: Phases): number {
     PrTableEmptyDirective,
     PrTableLoadingDirective,
     ChangePhaseModalModule,
+    SpTabEmptyStateComponent,
   ],
   templateUrl: './bilateral-results-list.component.html',
   styleUrl: './bilateral-results-list.component.scss',
@@ -173,7 +256,7 @@ function phaseVersionId(phase: Phases): number {
     class: 'pr-viewport-page',
   },
 })
-export class BilateralResultsListComponent implements OnInit {
+export class BilateralResultsListComponent implements OnInit, OnDestroy {
   private readonly bilateralApiService = inject(BilateralApiService);
   private readonly phasesService = inject(PhasesService);
   private readonly router = inject(Router);
@@ -183,8 +266,13 @@ export class BilateralResultsListComponent implements OnInit {
   private readonly resultsApiService = inject(ResultsApiService);
   readonly api = inject(ApiService);
   readonly ctx = inject(BilateralContextService);
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
+  private readonly deletionSE = inject(ResultDeletionService);
 
   readonly phases = signal<Phases[]>([]);
+  /** Reporting phases included in the current Results view — at least one must stay selected. */
+  readonly selectedPhaseIds = signal<number[]>([]);
   readonly results = signal<BilateralCenterResult[]>([]);
   readonly loading = signal(false);
   readonly initializing = signal(true);
@@ -205,26 +293,65 @@ export class BilateralResultsListComponent implements OnInit {
   readonly programFilter = signal<string[]>([]);
   readonly typeFilter = signal<number[]>([]);
   readonly methodFilter = signal<BilateralMethod | null>(null);
+  readonly createdByFilter = signal<string[]>([]);
 
-  /**
-   * `COV-DD-2`: the phase shared by all four center tabs lives on `BilateralContextService`
-   * (`null` = Open). `null` also means the URL carried no `?phase=` at all — a match is looked up
-   * by id, falling back to the Open phase (today's `status` flag) or the first phase loaded.
-   */
-  readonly selectedPhase = computed<Phases | null>(() => {
+  /** Default phase selection — the Open reporting phase, else the first loaded phase. */
+  readonly defaultPhaseIds = computed(() => {
     const phases = this.phases();
-    if (!phases.length) return null;
-    const versionId = this.ctx.selectedVersionId();
-    if (versionId !== null) {
-      const match = phases.find(p => phaseVersionId(p) === versionId);
-      if (match) return match;
-    }
-    return phases.find(p => p.status) ?? phases[0] ?? null;
+    if (!phases.length) return [];
+    const open = phases.find(p => p.status) ?? phases[0];
+    return open ? [phaseVersionId(open)] : [];
   });
 
-  // Actions
-  readonly confirmingDeleteId = signal<number | null>(null);
-  readonly deletingId = signal<number | null>(null);
+  readonly selectedPhases = computed(() => {
+    const ids = new Set(this.selectedPhaseIds());
+    return this.phases().filter(phase => ids.has(phaseVersionId(phase)));
+  });
+
+  /**
+   * `PMF-R-1` (pivot) — the reporting years of the selected phases: the phase scope the center
+   * project catalog is fetched for. A year outside the selection can never produce an option.
+   */
+  readonly selectedPhaseYears = computed(() => {
+    const years = new Set<number>();
+    for (const phase of this.selectedPhases()) {
+      const year = Number(phase.phase_year);
+      if (Number.isSafeInteger(year) && year > 0) years.add(year);
+    }
+    return [...years].sort((a, b) => a - b);
+  });
+
+  // ── Project catalog (`PMF-R-1` pivot / `PMF-DD-1`) ─────────────────────────────────
+  /** Page-lifetime catalog cache keyed by phase year — one entry per year that loaded. */
+  private readonly projectCatalogByYear = signal<ReadonlyMap<number, ProjectFilterOption[]>>(new Map());
+  /** Years already requested this page lifetime, succeeded OR failed — a failed year is never
+   *  retried, so a failing catalog cannot loop requests (`PMF-NFR-1`). */
+  private readonly projectCatalogYearsRequested = new Set<number>();
+  /** The center the cached years belong to — switching centers resets the cache so two
+   *  centers' catalogs can never mix into one option list (foreign-center exclusion). */
+  private projectCatalogCenter: string | null = null;
+
+  /**
+   * `COV-DD-2`: the primary phase shared by the other center tabs lives on `BilateralContextService`
+   * (`null` = Open). On this tab it tracks the preferred id among `selectedPhaseIds` (Open when
+   * selected, otherwise the first selected id).
+   */
+  readonly selectedPhase = computed<Phases | null>(() => {
+    const versionId = this.ctx.selectedVersionId();
+    if (versionId !== null) {
+      const match = this.phases().find(p => phaseVersionId(p) === versionId);
+      if (match) return match;
+    }
+    return this.selectedPhases()[0] ?? null;
+  });
+
+  // Row menu
+  readonly openMenuKey = signal<string | null>(null);
+
+  readonly rowMenuPositions: ConnectedPosition[] = [
+    { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', overlayX: 'end', originY: 'top', overlayY: 'bottom', offsetY: -4 },
+  ];
 
   /**
    * P2-3157 AC3 — result code deep-linked from an approval/rejection notification (`?result=`).
@@ -248,7 +375,12 @@ export class BilateralResultsListComponent implements OnInit {
     ...readStoredColumnVisibility(),
   });
 
+  /** User-resized column widths (px), keyed by BILATERAL_COLUMNS.key — persisted. */
+  readonly customWidths = signal<Record<string, number>>(readStoredBilateralColumnWidths());
+  readonly isResizing = signal(false);
+
   readonly columnsOpen = signal(false);
+  readonly filterPopoverOpen = signal(false);
 
   /** Table columns currently visible (order preserved, filtered). */
   readonly visibleColumns = computed(() => {
@@ -301,14 +433,74 @@ export class BilateralResultsListComponent implements OnInit {
       source,
       method: this.methodFilter(),
       search: this.searchQuery(),
+      createdBy: this.createdByFilter(),
       multi: false,
     };
+  });
+
+  /** Distinct creator display names from loaded rows — powers the Created by multiselect. */
+  readonly createdByOptions = computed(() => {
+    const names = new Set<string>();
+    for (const row of this.results()) {
+      const name = row.created_by_name?.trim();
+      if (name) names.add(name);
+    }
+    return [...names]
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      .map(value => ({ value, label: value }));
+  });
+
+  /** Keeps URL-selected creators tickable even when no loaded row currently carries them. */
+  readonly createdBySelectOptions = computed(() => {
+    const options = this.createdByOptions();
+    const selected = this.createdByFilter();
+    const missing = selected.filter(value => !options.some(option => option.value === value));
+    return missing.length
+      ? [...options, ...missing.map(value => ({ value, label: value }))]
+      : options;
+  });
+
+  /** `PMF-R-1`/`PMF-DD-1` (pivot) — the union of the center's OWN catalog projects for the
+   *  selected phase years, deduplicated by project id across phases — never the loaded rows:
+   *  rows where the centre only contributes display other Centers' projects, and catalog
+   *  projects with zero loaded rows would never become options at all. Labels come from the
+   *  catalog (`shortName fullName`, `Project <id>` fallback) and sort case-insensitively. */
+  readonly projectOptions = computed(() => {
+    const byId = new Map<number, ProjectFilterOption>();
+    const cache = this.projectCatalogByYear();
+    for (const year of this.selectedPhaseYears()) {
+      for (const option of cache.get(year) ?? []) {
+        if (!byId.has(option.value)) byId.set(option.value, option);
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  });
+
+  /** `PMF-R-2`/`PMF-DD-3` — appends URL-selected ids the catalog union does not carry, so a
+   *  deep-linked project stays ticked, labelled `Project <id>`, and removable instead of
+   *  silently discarded. */
+  readonly projectSelectOptions = computed(() => {
+    const options = this.projectOptions();
+    const known = new Set(options.map(option => option.value));
+    const missing = this.projectFilter()
+      .filter(id => !known.has(id))
+      .map(id => ({ value: id, label: `Project ${id}` }));
+    return missing.length ? [...options, ...missing] : options;
   });
 
   readonly filteredResults = computed(() => filterCenterResults(this.results(), this.currentContractParams()));
 
   readonly totalCount = computed(() => this.filteredResults().length);
   readonly totalLoaded = computed(() => this.results().length);
+
+  readonly hasRows = computed(() => this.filteredResults().length > 0);
+  readonly isFilteredEmpty = computed(
+    () => !this.initializing() && !this.loading() && !this.error() && this.results().length > 0 && !this.filteredResults().length
+  );
+  readonly isNothingYet = computed(
+    () => !this.initializing() && !this.loading() && !this.error() && this.results().length === 0
+  );
+  readonly isFirstLoad = computed(() => this.initializing() || (this.loading() && !this.hasRows()));
 
   /** `COV-R-14` — one removable chip per active status key, only when `status` is present. */
   readonly statusChips = computed(() =>
@@ -325,6 +517,77 @@ export class BilateralResultsListComponent implements OnInit {
     });
   });
 
+  readonly hasNonDefaultPhaseFilter = computed(() => {
+    const selected = [...this.selectedPhaseIds()].sort((a, b) => a - b);
+    const defaults = [...this.defaultPhaseIds()].sort((a, b) => a - b);
+    return selected.join(',') !== defaults.join(',');
+  });
+
+  /** One labelled chip per active filter value — Programme Results toolbar parity (`Phase: …`). */
+  readonly activeChips = computed<BilateralFilterChip[]>(() => {
+    const chips: BilateralFilterChip[] = [];
+    const showW3 = this.showW3();
+    const showW1W2 = this.showW1W2();
+    const showLead = this.showLead();
+    const showContributing = this.showContributing();
+
+    for (const phase of this.selectedPhases()) {
+      chips.push({
+        dimension: 'phase',
+        value: String(phaseVersionId(phase)),
+        label: `Phase: ${this.phaseFilterLabel(phase)}`,
+      });
+    }
+
+    if (showW3 && showW1W2) {
+      chips.push(
+        { dimension: 'source', value: 'w3', label: 'Source: W3 Bilateral' },
+        { dimension: 'source', value: 'w1w2', label: 'Source: W1/W2' },
+      );
+    } else if (showW1W2 && !showW3) {
+      chips.push({ dimension: 'source', value: 'w1w2', label: 'Source: W1/W2' });
+    }
+
+    if (showLead && showContributing) {
+      chips.push(
+        { dimension: 'role', value: 'lead', label: `Center role: Lead · ${this.ctx.centerAcronym()}` },
+        { dimension: 'role', value: 'contributing', label: 'Center role: Contributing' },
+      );
+    } else if (showContributing && !showLead) {
+      chips.push({ dimension: 'role', value: 'contributing', label: 'Center role: Contributing' });
+    }
+
+    for (const chip of this.statusChips()) {
+      chips.push({ dimension: 'status', value: chip.key, label: `Status: ${chip.label}` });
+    }
+
+    for (const chip of this.projectChips()) {
+      chips.push({ dimension: 'project', value: String(chip.id), label: `Project: ${chip.label}` });
+    }
+
+    for (const name of this.createdByFilter()) {
+      if (name) chips.push({ dimension: 'createdBy', value: name, label: `Created by: ${name}` });
+    }
+
+    const search = this.searchQuery().trim();
+    if (search) chips.push({ dimension: 'search', value: search, label: `Search: ${search}` });
+
+    return chips;
+  });
+
+  readonly hasActiveFilters = computed(() => this.activeChips().length > 0);
+
+  /** True when the Filter button should use the active (primary-tinted) styling. */
+  readonly filterButtonActive = computed(() => this.hasActiveFilters());
+
+  /** Badge count on the Filter button — one per active chip. */
+  readonly activeFilterBadgeCount = computed(() => this.activeChips().length);
+
+  /** Clear filters is hidden while only the default phase chip(s) remain. */
+  readonly hasClearableFilters = computed(
+    () => this.activeChips().some(chip => chip.dimension !== 'phase') || this.hasNonDefaultPhaseFilter(),
+  );
+
   constructor() {
     // Use centerId when resolved; fall back to centerAcronym so admin users browsing
     // centers that aren't in their roles can still trigger the load.
@@ -339,10 +602,55 @@ export class BilateralResultsListComponent implements OnInit {
 
     combineLatest([
       centerIdentifier$,
-      toObservable(this.selectedPhase).pipe(filter((p): p is Phases => !!p)),
+      toObservable(this.selectedPhaseIds).pipe(
+        filter(ids => ids.length > 0),
+        distinctUntilChanged((a, b) => a.length === b.length && a.every((id, index) => id === b[index])),
+      ),
+    ])
+      .pipe(
+        takeUntilDestroyed(),
+        switchMap(([centerId, phaseIds]) => {
+          this.loading.set(true);
+          this.error.set(false);
+
+          if (phaseIds.length === 1) {
+            return this.bilateralApiService.GET_bilateralCenterResults(centerId, phaseIds[0]).pipe(
+              map(({ response }) => response ?? []),
+            );
+          }
+
+          return forkJoin(
+            phaseIds.map(id => this.bilateralApiService.GET_bilateralCenterResults(centerId, id)),
+          ).pipe(map(responses => responses.flatMap(({ response }) => response ?? [])));
+        }),
+      )
+      .subscribe({
+        next: rows => {
+          this.results.set(rows);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
+      });
+
+    // @akili-spec changes/project-multiselect-filter (PMF-T-1 wave 2, PMF-DD-1 pivot) — the
+    // Project multiselect's options come from the CENTER'S OWN catalog: one request per
+    // selected phase year per page lifetime, and only for years not already requested. A
+    // failed year is recorded and never retried; the union of the loaded years feeds
+    // `projectOptions` and degrades to the other years (or empty) on failure — no
+    // project-specific loading or error surface, and the results pipeline above is never
+    // touched by any of it.
+    combineLatest([
+      centerIdentifier$,
+      toObservable(this.selectedPhaseYears).pipe(
+        filter(years => years.length > 0),
+        distinctUntilChanged((a, b) => a.join(',') === b.join(',')),
+      ),
     ])
       .pipe(takeUntilDestroyed())
-      .subscribe(([, phase]) => this.loadResults(phaseVersionId(phase)));
+      .subscribe(([centerId, years]) => this.loadProjectCatalog(centerId, years));
 
     // Reset the table to its default sort + page 0 whenever the filtered set changes
     // (filter chips, search, new data) — mirrors the Results Center pattern.
@@ -369,15 +677,67 @@ export class BilateralResultsListComponent implements OnInit {
 
     if (reportingPhases.length) {
       this.phases.set(reportingPhases);
+      this.ensureDefaultPhaseSelection();
       this.initializing.set(false);
     } else {
       this.phasesService.getPhasesObservable()
         .pipe(take(1), takeUntilDestroyed(this.destroyRef))
         .subscribe(loaded => {
           this.phases.set(p25Only(loaded));
+          this.ensureDefaultPhaseSelection();
           this.initializing.set(false);
         });
     }
+  }
+
+  phaseChipLabel(phase: Phases): string {
+    const year = phase.phase_year ?? phase.phase_name;
+    const portfolio = phase.obj_portfolio?.acronym;
+    const base = portfolio ? `${year} · ${portfolio}` : String(year ?? '');
+    return phase.status ? `${base} · Open` : base;
+  }
+
+  /** Toolbar chip label — matches Programme Results (`Reporting 2026 - P25`). */
+  phaseFilterLabel(phase: Phases): string {
+    const name = phase.phase_name ?? (phase.phase_year ? `Reporting ${phase.phase_year}` : 'Phase');
+    const acronym = phase.obj_portfolio?.acronym;
+    return acronym ? `${name} - ${acronym}` : name;
+  }
+
+  isPhaseSelected(phase: Phases): boolean {
+    return this.selectedPhaseIds().includes(phaseVersionId(phase));
+  }
+
+  private ensureDefaultPhaseSelection(): void {
+    if (this.selectedPhaseIds().length) return;
+
+    const phases = this.phases();
+    if (!phases.length) return;
+
+    const fromCtx = this.ctx.selectedVersionId();
+    if (fromCtx !== null && phases.some(phase => phaseVersionId(phase) === fromCtx)) {
+      this.selectedPhaseIds.set([fromCtx]);
+      return;
+    }
+
+    const defaults = this.defaultPhaseIds();
+    if (defaults.length) {
+      this.selectedPhaseIds.set(defaults);
+      this.syncPrimaryPhase();
+    }
+  }
+
+  private syncPrimaryPhase(): void {
+    const ids = this.selectedPhaseIds();
+    if (!ids.length) {
+      this.ctx.selectedVersionId.set(null);
+      return;
+    }
+
+    const open = this.phases().find(phase => phase.status);
+    const openId = open ? phaseVersionId(open) : null;
+    const primary = openId !== null && ids.includes(openId) ? openId : ids[0];
+    this.ctx.selectedVersionId.set(primary);
   }
 
   /**
@@ -423,9 +783,17 @@ export class BilateralResultsListComponent implements OnInit {
     this.programFilter.set(params.program);
     this.typeFilter.set(params.type);
     this.methodFilter.set(params.method);
+    this.createdByFilter.set(params.createdBy);
 
-    if (params.phase !== null && params.phase !== this.ctx.selectedVersionId()) {
+    const urlPhaseIds = parsePhaseIdsFromUrl(map.get(BILATERAL_PHASE_QUERY_PARAM));
+    if (urlPhaseIds.length) {
+      this.selectedPhaseIds.set(urlPhaseIds);
+      this.syncPrimaryPhase();
+    } else if (params.phase !== null) {
+      this.selectedPhaseIds.set([params.phase]);
       this.ctx.selectedVersionId.set(params.phase);
+    } else {
+      this.ensureDefaultPhaseSelection();
     }
 
     if (stripped.length) {
@@ -457,6 +825,10 @@ export class BilateralResultsListComponent implements OnInit {
    */
   private syncUrlParams(): void {
     const serialized = serializeBilateralQueryParams(this.currentContractParams(), { explicitDefaults: true });
+    const phaseIds = this.selectedPhaseIds();
+    if (phaseIds.length) serialized[BILATERAL_PHASE_QUERY_PARAM] = phaseIds.join(',');
+    else delete serialized[BILATERAL_PHASE_QUERY_PARAM];
+
     const current = this.activatedRoute.snapshot.queryParamMap;
     const next: Params = {};
     let changed = false;
@@ -487,9 +859,141 @@ export class BilateralResultsListComponent implements OnInit {
     this.syncUrlParams();
   }
 
-  @HostListener('document:click')
-  onDocumentClick(): void {
+  /** Removes one creator from the Created by multiselect and writes the URL. */
+  removeCreatedByFilter(name: string): void {
+    this.createdByFilter.update(values => values.filter(existing => existing !== name));
+    this.syncUrlParams();
+  }
+
+  onCreatedByFilterChange(values: string[]): void {
+    this.createdByFilter.set(values ?? []);
+    this.syncUrlParams();
+  }
+
+  /** `PMF-R-1` — the multiselect's emitted array normalized to unique positive ids, then routed
+   *  through the existing project signal, predicate, chips and URL synchronization (`PMF-DD-2`:
+   *  no second state path, no HTTP call). Invalid emitted ids are ignored. */
+  onProjectFilterChange(values: number[]): void {
+    const ids = [...new Set((values ?? []).map(normalizeProjectId).filter((id): id is number => id !== null))];
+    this.projectFilter.set(ids);
+    this.syncUrlParams();
+  }
+
+  /**
+   * `PMF-R-1` (pivot) — requests the center catalog for every selected phase year not already
+   *  requested this page lifetime (`PMF-NFR-1`: at most one request per year, so repeated
+   *  popover opens, selections or phase toggles cannot refetch a loaded year, and a failing
+   *  year cannot loop). Options are derived per year, cached, and unioned by the
+   *  `projectOptions` computed; loading and failure stay implicit — the control simply shows
+   *  what the cache holds, never a project-specific loading or error state.
+   */
+  private loadProjectCatalog(centerId: string, years: number[]): void {
+    if (this.projectCatalogCenter !== centerId) {
+      this.projectCatalogByYear.set(new Map());
+      this.projectCatalogYearsRequested.clear();
+      this.projectCatalogCenter = centerId;
+    }
+
+    for (const year of years) {
+      if (this.projectCatalogYearsRequested.has(year)) continue;
+      this.projectCatalogYearsRequested.add(year);
+
+      this.bilateralApiService.GET_bilateralProjects(centerId, year).subscribe({
+        next: ({ response }) => {
+          const projects: unknown[] = response?.projects ?? [];
+          const options: ProjectFilterOption[] = [];
+          const seen = new Set<number>();
+          for (const project of projects) {
+            const id = normalizeProjectId((project as { id?: number | string })?.id);
+            if (id === null || seen.has(id)) continue;
+            seen.add(id);
+            options.push({ value: id, label: catalogProjectLabel(project as { shortName?: unknown; fullName?: unknown }, id) });
+          }
+          this.projectCatalogByYear.update(cache => new Map(cache).set(year, options));
+        },
+        error: () => {
+          // Recorded above, never retried: the year stays absent from the cache and the
+          // union degrades to what the other selected years provide (or empty).
+        },
+      });
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event?: MouseEvent): void {
+    if (this.openMenuKey()) this.openMenuKey.set(null);
     if (this.columnsOpen()) this.columnsOpen.set(false);
+
+    const target = event?.target as HTMLElement | null;
+    if (target?.closest?.('.brl-filter-container')) return;
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.openMenuKey()) this.openMenuKey.set(null);
+    if (this.filterPopoverOpen()) this.filterPopoverOpen.set(false);
+  }
+
+  toggleFilterPopover(event: Event): void {
+    event.stopPropagation();
+    this.closeRowMenu();
+    this.columnsOpen.set(false);
+    this.filterPopoverOpen.update(open => !open);
+  }
+
+  closeFilterPopover(): void {
+    this.filterPopoverOpen.set(false);
+  }
+
+  clearAllFilters(): void {
+    this.selectedPhaseIds.set(this.defaultPhaseIds());
+    this.syncPrimaryPhase();
+    this.showW3.set(true);
+    this.showW1W2.set(false);
+    this.showLead.set(true);
+    this.showContributing.set(false);
+    this.statusFilter.set([]);
+    this.projectFilter.set([]);
+    this.programFilter.set([]);
+    this.typeFilter.set([]);
+    this.methodFilter.set(null);
+    this.createdByFilter.set([]);
+    this.searchQuery.set('');
+    this.syncUrlParams();
+  }
+
+  clearChip(chip: BilateralFilterChip): void {
+    switch (chip.dimension) {
+      case 'phase': {
+        const id = Number(chip.value);
+        const next = this.selectedPhaseIds().filter(existing => existing !== id);
+        this.selectedPhaseIds.set(next.length ? next : this.defaultPhaseIds());
+        this.syncPrimaryPhase();
+        break;
+      }
+      case 'source':
+        if (chip.value === 'w3') this.toggleW3();
+        else if (chip.value === 'w1w2') this.toggleW1W2();
+        return;
+      case 'role':
+        if (chip.value === 'lead') this.toggleLead();
+        else if (chip.value === 'contributing') this.toggleContributing();
+        return;
+      case 'status':
+        this.removeStatusFilter(chip.value as StatusKey);
+        return;
+      case 'project':
+        this.removeProjectFilter(Number(chip.value));
+        return;
+      case 'createdBy':
+        this.removeCreatedByFilter(chip.value);
+        return;
+      case 'search':
+        this.clearSearch();
+        return;
+    }
+    this.syncUrlParams();
   }
 
   isColumnVisible(key: string): boolean {
@@ -516,7 +1020,76 @@ export class BilateralResultsListComponent implements OnInit {
 
   toggleColumnsPanel(event?: Event): void {
     event?.stopPropagation();
+    this.closeRowMenu();
+    this.filterPopoverOpen.set(false);
     this.columnsOpen.update(v => !v);
+  }
+
+  /** Resolved width for a column — custom resize wins over the catalog default. */
+  columnWidth(column: BilateralColumnDef): string {
+    const custom = this.customWidths()[column.key];
+    return custom ? `${custom}px` : column.width;
+  }
+
+  // ── Column resizing (Programme Results parity) ───────────────────────────────
+  private activeResize: {
+    columnKey: string;
+    startX: number;
+    startWidth: number;
+    minPx: number;
+  } | null = null;
+
+  private readonly onWindowMouseMove = (event: MouseEvent): void => {
+    if (!this.activeResize) return;
+    const deltaX = event.clientX - this.activeResize.startX;
+    const newWidth = Math.max(this.activeResize.minPx, Math.round(this.activeResize.startWidth + deltaX));
+    this.customWidths.update(prev => ({ ...prev, [this.activeResize!.columnKey]: newWidth }));
+  };
+
+  private readonly onWindowMouseUp = (): void => {
+    if (!this.activeResize) return;
+    this.activeResize = null;
+    this.isResizing.set(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+    writeStoredBilateralColumnWidths(this.customWidths());
+  };
+
+  onResizeStart(event: MouseEvent, column: BilateralColumnDef, thElement: HTMLElement): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeResize = {
+      columnKey: column.key,
+      startX: event.clientX,
+      startWidth: thElement.getBoundingClientRect().width,
+      minPx: column.minPx,
+    };
+    this.isResizing.set(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', this.onWindowMouseMove);
+    window.addEventListener('mouseup', this.onWindowMouseUp);
+  }
+
+  onResizeReset(column: BilateralColumnDef, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.customWidths.update(prev => {
+      const next = { ...prev };
+      delete next[column.key];
+      writeStoredBilateralColumnWidths(next);
+      return next;
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (!this.activeResize) return;
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
   }
 
   /** Immediate client-side CSV of the currently filtered rows and visible columns. */
@@ -558,15 +1131,26 @@ export class BilateralResultsListComponent implements OnInit {
         return result.status_name;
       case 'created_date':
         return result.created_date;
+      case 'created_by_name':
+        return result.created_by_name ?? '';
       default:
         return '';
     }
   }
 
-  /** `COV-DD-2`/`COV-R-5` A — writes both the shared phase signal and `?phase=`. */
-  selectPhase(phase: Phases): void {
-    this.ctx.selectedVersionId.set(phaseVersionId(phase));
-    this.searchQuery.set('');
+  /** Toggles a reporting phase in the Results filter — at least one phase must remain selected. */
+  togglePhase(phase: Phases): void {
+    const id = phaseVersionId(phase);
+    const current = this.selectedPhaseIds();
+
+    if (current.includes(id)) {
+      if (current.length === 1) return;
+      this.selectedPhaseIds.set(current.filter(existing => existing !== id));
+    } else {
+      this.selectedPhaseIds.set([...current, id].sort((a, b) => a - b));
+    }
+
+    this.syncPrimaryPhase();
     this.syncUrlParams();
   }
 
@@ -612,9 +1196,73 @@ export class BilateralResultsListComponent implements OnInit {
       result.creation_method?.toUpperCase() === 'AI';
   }
 
-  editResult(result: BilateralCenterResult, event: Event): void {
+  // ── Row menu ────────────────────────────────────────────────────────────
+  rowKey(result: BilateralCenterResult): string {
+    return `${result?.result_code ?? ''}|${result?.version_id ?? ''}`;
+  }
+
+  isMenuOpen(result: BilateralCenterResult): boolean {
+    return this.openMenuKey() === this.rowKey(result);
+  }
+
+  toggleRowMenu(result: BilateralCenterResult, event: Event): void {
     event.stopPropagation();
+    this.columnsOpen.set(false);
+    this.filterPopoverOpen.set(false);
+    const key = this.rowKey(result);
+    this.openMenuKey.update(open => (open === key ? null : key));
+  }
+
+  closeRowMenu(): void {
+    this.openMenuKey.set(null);
+  }
+
+  onRowMenuDetach(result: BilateralCenterResult): void {
+    if (this.isMenuOpen(result)) this.closeRowMenu();
+  }
+
+  openResultFromMenu(result: BilateralCenterResult): void {
+    this.closeRowMenu();
     this.openResult(result);
+  }
+
+  editResult(result: BilateralCenterResult, event?: Event): void {
+    event?.stopPropagation();
+    this.closeRowMenu();
+    this.openResult(result);
+  }
+
+  pdfHref(result: BilateralCenterResult): string {
+    return `/reports/result-details/${result?.result_code}?phase=${result?.version_id}`;
+  }
+
+  resultLink(result: BilateralCenterResult): string {
+    const path = this.router.serializeUrl(
+      this.router.createUrlTree(
+        ['/bilateral', this.ctx.centerAcronym(), 'result', result.result_code],
+        { queryParams: { phase: result.version_id } },
+      ),
+    );
+    return `${window.location.origin}${path}`;
+  }
+
+  copyLink(result: BilateralCenterResult): void {
+    this.clipboard.copy(this.resultLink(result));
+    this.toastSE.add({
+      key: 'globalUserNotification',
+      severity: 'success',
+      summary: 'Result link copied',
+    });
+    this.closeRowMenu();
+  }
+
+  deleteResult(result: BilateralCenterResult): void {
+    this.closeRowMenu();
+    this.deletionSE.deleteWithConfirmation(result, {
+      onSuccess: () => {
+        this.results.update(list => list.filter(r => r.id !== result.id));
+      },
+    });
   }
 
   /**
@@ -631,8 +1279,9 @@ export class BilateralResultsListComponent implements OnInit {
     return this.api.canUpdateBilateral(this.asCurrentResult(result), this.api.dataControlSE.reportingCurrentPhase);
   }
 
-  updateResult(result: BilateralCenterResult, event: Event): void {
-    event.stopPropagation();
+  updateResult(result: BilateralCenterResult, event?: Event): void {
+    event?.stopPropagation();
+    this.closeRowMenu();
     this.api.dataControlSE.currentResult = this.asCurrentResult(result);
     this.api.dataControlSE.chagePhaseModal = true;
   }
@@ -659,50 +1308,6 @@ export class BilateralResultsListComponent implements OnInit {
     if (!phase?.phase_name) return null;
     const acronym = phase.obj_portfolio?.acronym;
     return acronym ? `${phase.phase_name} - ${acronym}` : phase.phase_name;
-  }
-
-  requestDelete(result: BilateralCenterResult, event: Event): void {
-    event.stopPropagation();
-    this.confirmingDeleteId.set(result.id);
-  }
-
-  cancelDelete(event: Event): void {
-    event.stopPropagation();
-    this.confirmingDeleteId.set(null);
-  }
-
-  confirmDelete(result: BilateralCenterResult, event: Event): void {
-    event.stopPropagation();
-    this.deletingId.set(result.id);
-    this.resultsApiService.PATCH_DeleteResult(result.id).subscribe({
-      next: () => {
-        this.results.update(list => list.filter(r => r.id !== result.id));
-        this.confirmingDeleteId.set(null);
-        this.deletingId.set(null);
-      },
-      error: () => {
-        this.deletingId.set(null);
-      },
-    });
-  }
-
-  loadResults(versionId: number): void {
-    const centerId = this.ctx.centerId() || this.ctx.centerAcronym() || '';
-    if (!centerId) return;
-
-    this.loading.set(true);
-    this.error.set(false);
-
-    this.bilateralApiService.GET_bilateralCenterResults(centerId, versionId).subscribe({
-      next: ({ response }) => {
-        this.results.set(response ?? []);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set(true);
-        this.loading.set(false);
-      },
-    });
   }
 
   /**

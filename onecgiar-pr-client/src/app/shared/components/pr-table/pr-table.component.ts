@@ -58,6 +58,9 @@ export class PrTableComponent {
 
   @Input({ transform: booleanAttribute }) paginator = false;
 
+  /** When true, the paginator stays visible even if all rows fit on one page. */
+  @Input({ transform: booleanAttribute }) showPaginatorAlways = false;
+
   /** Rows per page. */
   @Input() set rows(r: number) {
     this._rows.set(Number(r) || 0);
@@ -149,6 +152,11 @@ export class PrTableComponent {
     const end = Math.min(start + size - 1, total);
     return `${start} – ${end} of ${total}`;
   });
+
+  showPaginator(): boolean {
+    if (!this.paginator || this.effectiveRows() <= 0 || this.totalRecords() <= 0) return false;
+    return this.showPaginatorAlways || this.totalRecords() > this.effectiveRows();
+  }
 
   /** Called by prSortableColumn on header click. */
   sort(field: string): void {

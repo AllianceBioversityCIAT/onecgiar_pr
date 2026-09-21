@@ -3,6 +3,7 @@ import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BilateralSpSelectorComponent } from './bilateral-sp-selector.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
+import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { signal } from '@angular/core';
 
 describe('BilateralSpSelectorComponent', () => {
@@ -17,11 +18,19 @@ describe('BilateralSpSelectorComponent', () => {
       selectedSecondarySps: signal([]),
       selectPrimarySp: jest.fn(),
       toggleSecondarySp: jest.fn(),
+      // Read by the nested `app-bilateral-accordion` (the "coming soon" disclosure, `APF-R-11`)
+      // when it is opened — not otherwise exercised by this component.
+      isLoadingResult: jest.fn().mockReturnValue(false),
     };
 
     await TestBed.configureTestingModule({
       imports: [BilateralSpSelectorComponent],
-      providers: [{ provide: BilateralCreationService, useValue: creationService }],
+      providers: [
+        { provide: BilateralCreationService, useValue: creationService },
+        // `app-bilateral-accordion` injects this unconditionally on construction; it has no
+        // `providedIn: 'root'`, so it must be supplied here once the "coming soon" block renders.
+        { provide: BilateralAutoSaveService, useValue: { flush: jest.fn().mockResolvedValue(undefined) } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BilateralSpSelectorComponent);
@@ -50,7 +59,7 @@ describe('BilateralSpSelectorComponent', () => {
     expect(component.availableSps().length).toBe(2);
   });
 
-  it('renders primary SP options inline when primaryLayout is list', () => {
+  it('renders primary SP options inline with radio indicators when primaryLayout is list', () => {
     creationService.selectedProject.set({
       sciencePrograms: [
         { programId: 100, programCode: 'SP06', allocation: '45.00', spName: 'Climate Action', spShortName: 'CA' },
@@ -65,6 +74,37 @@ describe('BilateralSpSelectorComponent', () => {
     expect(el.querySelectorAll('.sps-option--list').length).toBe(2);
     expect(el.textContent).toContain('Climate Action');
     expect(el.textContent).toContain('Breeding');
+    // Radio indicator is present
+    expect(el.querySelector('.sps-indicator--radio')).not.toBeNull();
+  });
+
+  it('renders contributing SP options inline with checkbox indicators in list mode (0 clicks to view)', () => {
+    creationService.selectedProject.set({
+      sciencePrograms: [
+        { programId: 100, programCode: 'SP06', allocation: '45.00', spName: 'Climate Action', spShortName: 'CA' },
+        { programId: 200, programCode: 'SP12', allocation: '25.00', spName: 'Breeding', spShortName: 'BfT' }
+      ]
+    } as any);
+    creationService.selectedPrimarySp.set({ programId: 100, programCode: 'SP06', allocation: '45.00' });
+    fixture.componentRef.setInput('primaryLayout', 'list');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const inlineContributing = el.querySelector('[data-testid="sps-contributing-inline"]');
+    expect(inlineContributing).not.toBeNull();
+    expect(el.querySelector('.bp-accordion-header')).toBeNull();
+
+    const contributingCard = el.querySelector('.sps-option--contributing') as HTMLElement;
+    expect(contributingCard).not.toBeNull();
+    expect(contributingCard.textContent).toContain('Breeding');
+    expect(contributingCard.querySelector('.sps-indicator--checkbox')).not.toBeNull();
+
+    contributingCard.click();
+    expect(creationService.toggleSecondarySp).toHaveBeenCalledWith({
+      programId: 200,
+      programCode: 'SP12',
+      allocation: '25.00'
+    });
   });
 
   it('should call selectPrimarySp on primary selection', () => {
@@ -239,21 +279,163 @@ describe('BilateralSpSelectorComponent', () => {
    *
    * `toggleSecondary` is deliberately left in place: it is the wiring to re-enable, not dead code.
    */
-  describe('contributing Science Programs are not recordable yet (audit 26-Aug)', () => {
-    it('renders every secondary chip disabled', () => {
+  describe('contributing Science Programs selection', () => {
+    it('renders secondary chips as enabled and clickable buttons', () => {
       const template = readFileSync(join(__dirname, 'bilateral-sp-selector.component.html'), 'utf8');
       const chipBlock = template.slice(template.indexOf('sps-chip-grid'));
 
-      expect(chipBlock).toContain('sps-chip--disabled');
-      expect(chipBlock).toContain('disabled');
-      expect(chipBlock).not.toContain('(click)="toggleSecondary(');
+      expect(chipBlock).not.toContain('sps-chip--disabled');
+      expect(chipBlock).not.toContain('disabled');
+      expect(chipBlock).toContain('(click)="toggleSecondary(');
     });
 
-    it('tags the block as Coming soon and drops the promise of editing it later', () => {
+    it('uses Contributing Science Programs label without Coming soon', () => {
       const template = readFileSync(join(__dirname, 'bilateral-sp-selector.component.html'), 'utf8');
 
-      expect(template).toContain('Coming soon');
-      expect(template).not.toContain('add or change them later in the form');
+      expect(template).not.toContain('Coming soon');
+      expect(template).toContain('copy.spGate.contributingSpsTitle');
+    });
+  });
+
+  describe('"Contributing Science Programs" disclosure (APF-R-11, APF-DD-11)', () => {
+    const withSecondarySps = () => {
+      creationService.selectedProject.set({
+        sciencePrograms: [
+          { programId: 1, programCode: 'SP01', spName: 'Climate Action', spShortName: 'CA', allocation: '60.00' },
+          { programId: 2, programCode: 'SP02', spName: 'Breeding for Tomorrow', spShortName: 'BfT', allocation: '40.00' },
+        ],
+      } as any);
+      creationService.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '60.00' });
+      fixture.detectChanges();
+    };
+
+    it('renders the block collapsed behind a one-line disclosure by default', () => {
+      withSecondarySps();
+
+      expect(fixture.nativeElement.querySelector('.bp-accordion-header')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.bp-accordion-body')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Contributing Science Programs');
+    });
+
+    it('expands on click to reveal the secondary chips', () => {
+      withSecondarySps();
+
+      const header = fixture.nativeElement.querySelector('.bp-accordion-header');
+      header.click();
+      fixture.detectChanges();
+
+      const body = fixture.nativeElement.querySelector('.bp-accordion-body');
+      expect(body).not.toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.sps-chip').length).toBe(1);
+      // The chip grid renders `spShortName`, not the full `spName` (see the component's own note).
+      expect(fixture.nativeElement.textContent).toContain('BfT');
+      expect(fixture.nativeElement.textContent).toContain('SP02');
+    });
+
+    it('leaves primary SP selection and the primary field untouched, collapsed or expanded', () => {
+      withSecondarySps();
+      expect(component.selectedPrimaryLabel()).toContain('SP01');
+      expect(fixture.nativeElement.querySelector('.sps-field')).not.toBeNull();
+
+      fixture.nativeElement.querySelector('.bp-accordion-header').click();
+      fixture.detectChanges();
+
+      expect(component.selectedPrimaryLabel()).toContain('SP01');
+      expect(fixture.nativeElement.querySelector('.sps-field')).not.toBeNull();
+    });
+
+    it('toggles secondary SP selection when chip is clicked', () => {
+      withSecondarySps();
+
+      const header = fixture.nativeElement.querySelector('.bp-accordion-header');
+      header.click();
+      fixture.detectChanges();
+
+      const chip = fixture.nativeElement.querySelector('.sps-chip') as HTMLElement;
+      expect(chip).toBeTruthy();
+      chip.click();
+      fixture.detectChanges();
+
+      expect(creationService.toggleSecondarySp).toHaveBeenCalledWith({
+        programId: 2,
+        programCode: 'SP02',
+        allocation: '40.00',
+      });
+    });
+  });
+
+  /**
+   * `APF-T-7` rework (Reviewer FAIL issue 1): this suite's top-level `beforeEach` provides a
+   * `BilateralAutoSaveService` mock, which would hide a real `NullInjectorError` regression —
+   * that service is `@Injectable()` with no `providedIn: 'root'`, and its only provider in the app
+   * is component-local on `bilateral-result-creator.component.ts`. `app-bilateral-sp-selector` is
+   * also mounted from `bilateral-manual-create-drawer-host` (with `primaryLayout="list"`), outside
+   * that provider's scope. This suite reconfigures `TestBed` WITHOUT the provider — the production
+   * DI shape for that host — to prove the accordion's now-optional injection actually works, not
+   * just that a mock was supplied.
+   */
+  describe('DI regression: no BilateralAutoSaveService provider (production shape of the drawer host)', () => {
+    let noAutoSaveFixture: ComponentFixture<BilateralSpSelectorComponent>;
+    let noAutoSaveCreationService: any;
+
+    beforeEach(async () => {
+      noAutoSaveCreationService = {
+        selectedProject: signal(null),
+        selectedPrimarySp: signal(null),
+        selectedSecondarySps: signal([]),
+        selectPrimarySp: jest.fn(),
+        toggleSecondarySp: jest.fn(),
+        isLoadingResult: jest.fn().mockReturnValue(false),
+      };
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [BilateralSpSelectorComponent],
+        providers: [{ provide: BilateralCreationService, useValue: noAutoSaveCreationService }],
+        // No BilateralAutoSaveService provider — deliberate.
+      }).compileComponents();
+
+      noAutoSaveFixture = TestBed.createComponent(BilateralSpSelectorComponent);
+    });
+
+    it('renders the accordion without throwing when a primary SP leaves secondaries behind in dropdown mode', () => {
+      noAutoSaveFixture.componentRef.setInput('primaryLayout', 'dropdown');
+      noAutoSaveCreationService.selectedProject.set({
+        sciencePrograms: [
+          { programId: 1, programCode: 'SP01', spName: 'Climate Action', spShortName: 'CA', allocation: '60.00' },
+          { programId: 2, programCode: 'SP02', spName: 'Breeding for Tomorrow', spShortName: 'BfT', allocation: '40.00' },
+        ],
+      } as any);
+      noAutoSaveCreationService.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '60.00' });
+
+      expect(() => noAutoSaveFixture.detectChanges()).not.toThrow();
+
+      const header = noAutoSaveFixture.nativeElement.querySelector('.bp-accordion-header');
+      expect(header).not.toBeNull();
+
+      // Toggling (which flushes autosave when present) must also stay null-safe.
+      expect(() => {
+        header.click();
+        noAutoSaveFixture.detectChanges();
+      }).not.toThrow();
+      expect(noAutoSaveFixture.nativeElement.querySelector('.bp-accordion-body')).not.toBeNull();
+    });
+
+    it('renders the inline contributing section without throwing in list mode', () => {
+      noAutoSaveFixture.componentRef.setInput('primaryLayout', 'list');
+      noAutoSaveCreationService.selectedProject.set({
+        sciencePrograms: [
+          { programId: 1, programCode: 'SP01', spName: 'Climate Action', spShortName: 'CA', allocation: '60.00' },
+          { programId: 2, programCode: 'SP02', spName: 'Breeding for Tomorrow', spShortName: 'BfT', allocation: '40.00' },
+        ],
+      } as any);
+      noAutoSaveCreationService.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '60.00' });
+
+      expect(() => noAutoSaveFixture.detectChanges()).not.toThrow();
+
+      const inlineSection = noAutoSaveFixture.nativeElement.querySelector('[data-testid="sps-contributing-inline"]');
+      expect(inlineSection).not.toBeNull();
+      expect(noAutoSaveFixture.nativeElement.querySelector('.bp-accordion-header')).toBeNull();
     });
   });
 });

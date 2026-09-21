@@ -41,6 +41,8 @@ export interface RepositoryAdapterFacets {
   type: string;
   /** `f.<center>` facet name (affiliation / center). Undefined -> Center filter unconstrained (`KPM-OQ-3`). */
   center?: string;
+  /** `f.<project>` facet name (cg.identifier.project). Undefined -> project filter skipped on that host. */
+  project?: string;
 }
 
 export interface RepositoryAdapter {
@@ -79,6 +81,8 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
     facets: {
       type: 'itemtype',
       center: 'affiliation',
+      // CGSpace Discovery exposes no `project` facet (2026-09 live `/discover/facets` audit).
+      // Sending `f.project=` returns HTTP 400 — strict bilateral tag filter applies to MEL/WorldFish only.
     },
     yearFilterField: 'dateIssued',
   },
@@ -99,6 +103,7 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
     facets: {
       type: 'itemtype',
       center: 'institute',
+      project: 'project',
     },
     yearFilterField: 'dateIssued',
   },
@@ -119,6 +124,7 @@ export const KP_REPOSITORIES: Record<KpRepository, RepositoryAdapter> = {
     facets: {
       type: 'itemtype',
       center: 'institute',
+      project: 'project',
     },
     yearFilterField: 'dateIssued',
   },
@@ -183,6 +189,7 @@ export interface TranslatableSearchParams {
   type?: string;
   year?: string;
   center?: string;
+  project?: string;
 }
 
 /**
@@ -197,6 +204,7 @@ export interface TranslatableSearchParams {
  *   leaving that repository unconstrained by the Center filter (`KPM-OQ-3`);
  * - `f.<yearFilterField>=[Y TO Y],equals` — when the adapter declares no year filter field the
  *   param is omitted and the service post-filters the mapped `year` instead (`KPM-DD-7`).
+ * - `f.<facets.project>=<project>,equals` — skipped when the adapter declares no project facet.
  *
  * Pure: no env reads, no logging, no host/base-URL knowledge.
  */
@@ -228,6 +236,10 @@ export function translateParams(
   if (dto.year && adapter.yearFilterField) {
     params[`f.${adapter.yearFilterField}`] =
       `[${dto.year} TO ${dto.year}],equals`;
+  }
+
+  if (dto.project && adapter.facets.project) {
+    params[`f.${adapter.facets.project}`] = `${dto.project},equals`;
   }
 
   return params;

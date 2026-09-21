@@ -83,4 +83,56 @@ describe('InnovationUseMdsValidator', () => {
 
     await expect(validator.assertPersistedMds(12)).resolves.toBeUndefined();
   });
+
+  /**
+   * 🛑 The fixtures above answer with a real `false`, which is a shape the database NEVER returns:
+   * `innov_use_to_be_determined` is a `tinyint` column, so `getInnovationUse` answers `1` / `0`.
+   * That is why the whole persisted suite stayed green while every real submit was rejected
+   * (Cristian Gamboa, prtest, 18-Sep-2026). These three cases use the stored shape.
+   */
+  const persistedWith = (storedAnswer: unknown, actors: unknown[]) => ({
+    getInnovationUse: jest.fn().mockResolvedValue({
+      response: {
+        ...completePersisted,
+        innov_use_to_be_determined: storedAnswer,
+        actors,
+      },
+    }),
+  });
+
+  it('accepts a persisted "yes" stored as the tinyint 1', async () => {
+    const validator = new InnovationUseMdsValidator(
+      persistedWith(1, []) as any,
+    );
+
+    await expect(validator.assertPersistedMds(12)).resolves.toBeUndefined();
+  });
+
+  it('accepts a persisted "no" stored as the tinyint 0 when actors exist', async () => {
+    const validator = new InnovationUseMdsValidator(
+      persistedWith(0, [{ id: 1 }]) as any,
+    );
+
+    await expect(validator.assertPersistedMds(12)).resolves.toBeUndefined();
+  });
+
+  it('still rejects a persisted "no" stored as 0 with no actors', async () => {
+    const validator = new InnovationUseMdsValidator(
+      persistedWith(0, []) as any,
+    );
+
+    await expect(validator.assertPersistedMds(12)).rejects.toThrow(
+      'add at least one actor',
+    );
+  });
+
+  it('still rejects a draft where the question was never answered', async () => {
+    const validator = new InnovationUseMdsValidator(
+      persistedWith(null, [{ id: 1 }]) as any,
+    );
+
+    await expect(validator.assertPersistedMds(12)).rejects.toThrow(
+      'state whether innovation use is yet to be determined',
+    );
+  });
 });

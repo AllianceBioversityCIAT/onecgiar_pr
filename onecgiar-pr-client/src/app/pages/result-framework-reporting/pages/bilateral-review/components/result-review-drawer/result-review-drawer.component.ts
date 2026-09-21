@@ -188,7 +188,18 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
    * whether to offer the extra-scope question (`fields.geographicScope.geo_scope_id && ...`), and
    * no valid CLARISA scope id is 0.
    */
-  isGeoScopeCompleted = computed<boolean>(() => !!this.resultDetail()?.geographicScope?.geo_scope_id);
+  isGeoScopeCompleted = computed<boolean>(() => {
+    const geo = this.resultDetail()?.geographicScope;
+
+    // 🛑 A result whose payload carries NO geographicScope block renders no scope field at all —
+    // the section is behind `@if (fields?.geographicScope)` in the template, and the loader itself
+    // stores `null` when the server sends none (`:363`). Refusing the save in that case would be a
+    // dead end: the tooltip would ask for a field the screen does not offer, and an admin could no
+    // longer fix a title. Only demand an answer where the question is actually on screen.
+    if (!geo) return true;
+
+    return !!geo.geo_scope_id;
+  });
 
   // @akili-spec changes/sp-bilateral-review-tab (BRT-T-2, BRT-R-14) — membership check moved to the
   // shared BilateralReviewAccessService so the row action label (bilateral-review page) and this

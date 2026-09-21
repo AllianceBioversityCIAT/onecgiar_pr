@@ -2,9 +2,6 @@ import { Component, HostListener, computed, effect, inject, signal } from '@angu
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
-import { CommonModule } from '@angular/common';
-import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
-import { A11yModule } from '@angular/cdk/a11y';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideLayoutDashboard,
@@ -19,8 +16,6 @@ import {
   lucideCheck,
   lucideChevronDown,
   lucideRocket,
-  lucideBell,
-  lucideType,
   lucideClipboardCheck,
   lucideWrench,
   lucideTicket,
@@ -38,7 +33,8 @@ import {
   lucideScale,
   lucideGitBranch,
   lucideUsers,
-  lucideHouse
+  lucideHouse,
+  lucideAward
 } from '@ng-icons/lucide';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan/sidebar';
 import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
@@ -46,14 +42,10 @@ import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { APP_VERSION } from '../../constants/app-version.constants';
-import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
-import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
-import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
-import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
 
@@ -84,7 +76,7 @@ interface IconFlyout {
 @Component({
   selector: 'app-reporting-nav-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgIcon, OverlayModule, A11yModule, SpMarkerComponent, ...HlmSidebarImports],
+  imports: [RouterModule, NgIcon, SpMarkerComponent, ...HlmSidebarImports],
   templateUrl: './reporting-nav-sidebar.component.html',
   styleUrls: ['./reporting-nav-sidebar.component.scss'],
   providers: [
@@ -101,8 +93,6 @@ interface IconFlyout {
       lucideCheck,
       lucideChevronDown,
       lucideRocket,
-      lucideBell,
-      lucideType,
       lucideClipboardCheck,
       lucideWrench,
       lucideTicket,
@@ -120,7 +110,8 @@ interface IconFlyout {
       lucideScale,
       lucideGitBranch,
       lucideUsers,
-      lucideHouse
+      lucideHouse,
+      lucideAward
     })
   ]
 })
@@ -130,16 +121,15 @@ export class ReportingNavSidebarComponent {
   public readonly homeSE = inject(ResultFrameworkReportingHomeService);
   public readonly router = inject(Router);
   public readonly api = inject(ApiService);
-  public readonly fontScaleSE = inject(FontScaleService);
-  public readonly resultsNotificationsSE = inject(ResultsNotificationsService);
   public readonly sidebarSE = inject(HlmSidebarService);
-  private readonly reportingGuideSE = inject(ReportingGuideService);
 
   readonly isProduction = environment.production;
   readonly appVersion = APP_VERSION;
-  readonly fontScaleOptions = FONT_SCALE_OPTIONS;
-  /** P2-3145 — CLARISA public glossary (sidebar EXTRAS + footer). */
-  readonly clarisaGlossaryUrl = CLARISA_GLOSSARY_URL;
+  readonly aiUseInPrmsUrl =
+    (environment.footerUrls as any)?.aiUseInPrms ??
+    'https://cgiar-prms.notion.site/PRMS-AWS-Bedrock-Data-Privacy-Security-3dff2712247880468648c96cc02df681';
+  readonly termsAndConditionsUrl = environment.footerUrls.termsAndCondition;
+  readonly licenseUrl = environment.footerUrls.license;
 
   /** Icon-rail mode (Spartan `collapsible="icon"` + service state). */
   readonly isCollapsed = computed(() => this.sidebarSE.state() === 'collapsed' && !this.sidebarSE.isMobile());
@@ -498,11 +488,6 @@ export class ReportingNavSidebarComponent {
     return sp != null ? { sp } : {};
   }
 
-  // --- Footer chrome. The user/account menu is NOT here: it lives in the topbar
-  // (PROGRAM-SHELL-SPEC.md §2), so only the text-size popover remains. ---
-  readonly fontMenuOpen = signal(false);
-  readonly fontMenuPositions: ConnectedPosition[] = [{ originX: 'start', overlayX: 'start', originY: 'top', overlayY: 'bottom' }];
-
   iconFor(section: PrRoute): string {
     return this.sectionIcons[section.path ?? ''] ?? 'lucideCircleDot';
   }
@@ -661,31 +646,8 @@ export class ReportingNavSidebarComponent {
     return ['/bilateral', center?.center_acronym || String(center?.center_id ?? ''), 'home'];
   }
 
-  notificationBadgeCount(): number {
-    return this.resultsNotificationsSE?.updatesPopUpData?.length ?? 0;
-  }
-
-  goToNotifications(): void {
-    this.router.navigate(['result/results-outlet/results-notifications/requests']);
-  }
-
-  selectFontScale(value: FontScale): void {
-    this.fontScaleSE.set(value);
-  }
-
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    this.fontMenuOpen.set(false);
     this.closeIconFlyout();
-  }
-
-  /** @akili-spec changes/platform-onboarding-tour (POT-T-3) */
-  startPlatformSidebarTour(): void {
-    const groups = this.programGroups();
-    this.reportingGuideSE.startSidebarTour({
-      hasMyPrograms: (groups.find(g => g.key === 'mine')?.items.length ?? 0) > 0,
-      hasOtherPrograms: (groups.find(g => g.key === 'other')?.items.length ?? 0) > 0,
-      hasCenters: this.getMyCenters().length > 0
-    });
   }
 }

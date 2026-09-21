@@ -1,11 +1,22 @@
-import { Component, inject, OnInit, OnDestroy, signal, effect, computed } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HlmButton } from '@spartan/button';
-import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
+import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
@@ -18,12 +29,20 @@ import { BilateralPageHeaderComponent } from '../../components/bilateral-page-he
 import { parseBilateralQueryParams } from '../../bilateral-query-params';
 import { DraftResultCardComponent } from '../bilateral-ai-draft-detail/components/draft-result-card/draft-result-card.component';
 import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/components/draft-evidence-list/draft-evidence-list.component';
+import { AiProvenanceNoticeComponent } from '../../components/ai-provenance-notice/ai-provenance-notice.component';
 import {
   DraftProjectFilterOption,
   formatDraftProjectOption,
+  MyDraftResultsFilterChip,
+  MyDraftResultsFilterDimension,
   MyDraftResultsFilterService,
   normalizeProjectId,
 } from './services/my-draft-results-filter.service';
+import {
+  buildCreatedByFilterOptions,
+  MyDraftResultsFilterContext,
+} from './utils/draft-filter-helpers';
+import { ApiService } from '../../../../shared/services/api/api.service';
 
 /**
  * P2-3169 AC2 — the `result` relation the drafts endpoint returns next to every draft.
@@ -88,6 +107,10 @@ export interface DraftSessionGroup {
   projectDisplay: { code: string; title: string; full: string };
   programCode: string;
   programTooltip: string;
+  userId?: number | null;
+  isCurrentUser: boolean;
+  creatorName: string;
+  creatorTooltip: string;
   drafts: BilateralAiDraft[];
 }
 
@@ -101,11 +124,13 @@ export interface DraftSessionGroup {
     HlmButton,
     PrDialogComponent,
     PrFilterSelectComponent,
+    PrFilterMultiselectModule,
     CustomFieldsModule,
     BilateralPageHeaderComponent,
     DraftResultCardComponent,
     DraftEvidenceListComponent,
     PrTooltipDirectiveModule,
+    AiProvenanceNoticeComponent,
   ],
   // P2-3319 — the filter is per-visit: provided here so it resets on leaving the tab or switching
   // centre, never in root (project ids are meaningless across centres).
@@ -117,6 +142,7 @@ export interface DraftSessionGroup {
   },
 })
 export class MyDraftResultsComponent implements OnInit, OnDestroy {
+  readonly api = inject(ApiService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly ctx = inject(BilateralContextService);
   readonly filter = inject(MyDraftResultsFilterService);
@@ -144,9 +170,48 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   discardTarget = signal<BilateralAiDraft | null>(null);
   selectedDraft = signal<BilateralAiDraft | null>(null);
 
+  readonly resolvedUserNames = signal<Record<number, string>>({});
+  private readonly userLookupRequested = new Set<number>();
+
+  /** Bound to the search input; debounced into `filter.searchText` (~300ms). */
+  readonly searchInput = signal('');
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly SEARCH_DEBOUNCE_MS = 300;
+
   constructor() {
     effect(() => {
       document.body.style.overflow = this.selectedDraft() ? 'hidden' : '';
+    });
+
+    effect(() => {
+      const drafts = this.allDrafts();
+      const currentUserId = this.api.authSE?.localStorageUser?.id;
+      for (const draft of drafts) {
+        const uid = draft.job?.user_id;
+        const jobUser = draft.job?.user;
+        const hasDirectName = Boolean(jobUser?.first_name || jobUser?.last_name);
+        if (
+          uid != null &&
+          Number(uid) !== Number(currentUserId) &&
+          !hasDirectName &&
+          !this.resolvedUserNames()[uid] &&
+          !this.userLookupRequested.has(uid)
+        ) {
+          this.userLookupRequested.add(uid);
+          this.api.resultsSE.GET_userById(uid).subscribe({
+            next: (res: any) => {
+              const user = res?.response;
+              if (user) {
+                const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+                if (name) {
+                  this.resolvedUserNames.update(map => ({ ...map, [uid]: name }));
+                }
+              }
+            },
+            error: () => {},
+          });
+        }
+      }
     });
   }
 
@@ -157,7 +222,7 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     // pre-selects this tab's existing project filter. Read-only: never written back to the URL.
     const { params } = parseBilateralQueryParams(this.activatedRoute.snapshot.queryParamMap);
     if (params.project.length) {
-      this.filter.selectProject(String(params.project[0]));
+      this.filter.setProjects(params.project.map(id => String(id)));
     }
   }
 
@@ -168,8 +233,17 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
    */
   readonly allDrafts = computed<BilateralAiDraft[]>(() => this.bilateralAiService.draftList());
 
+  readonly filterContext = computed<MyDraftResultsFilterContext>(() => ({
+    projectNameMap: this.bilateralAiService.projectNameMap(),
+    resolvedUserNames: this.resolvedUserNames(),
+    currentUserId: this.api.authSE?.localStorageUser?.id,
+    currentUserName: this.api.authSE?.localStorageUser?.user_name,
+  }));
+
   /** What the list actually renders. */
-  readonly drafts = computed<BilateralAiDraft[]>(() => this.filter.filterDrafts(this.allDrafts()));
+  readonly drafts = computed<BilateralAiDraft[]>(() =>
+    this.filter.filterDrafts(this.allDrafts(), this.filterContext())
+  );
 
   readonly hasAnyDrafts = computed<boolean>(() => this.allDrafts().length > 0);
   readonly hasDrafts = computed<boolean>(() => this.drafts().length > 0);
@@ -187,6 +261,8 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     if (!list.length) return [];
 
     const groupMap = new Map<string, DraftSessionGroup>();
+    const currentUserId = this.api.authSE?.localStorageUser?.id;
+    const currentUserName = this.api.authSE?.localStorageUser?.user_name;
 
     for (const draft of list) {
       const sessionId = draft.job_id ?? draft.job?.job_id ?? `draft-${draft.id}`;
@@ -202,6 +278,36 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
         const programCode = draft.job?.program_code ?? '';
         const programTooltip = this.getProgramTooltip(draft);
 
+        const jobUserId = draft.job?.user_id;
+        const isCurrentUser = Boolean(
+          currentUserId != null && jobUserId != null && Number(currentUserId) === Number(jobUserId)
+        );
+
+        const jobUser = draft.job?.user;
+        const jobUserName =
+          [jobUser?.first_name, jobUser?.last_name].filter(Boolean).join(' ').trim() ||
+          (jobUserId != null ? this.resolvedUserNames()[jobUserId] : '');
+
+        let creatorName = '';
+        let creatorTooltip = '';
+        if (isCurrentUser) {
+          creatorName = 'Created by you';
+          creatorTooltip = currentUserName
+            ? `AI extraction session created by you (${currentUserName})`
+            : (jobUserName ? `AI extraction session created by you (${jobUserName})` : 'AI extraction session created by you');
+        } else if (jobUserName) {
+          creatorName = jobUserName;
+          creatorTooltip = jobUser?.email
+            ? `AI extraction session created by ${jobUserName} (${jobUser.email})`
+            : `AI extraction session created by ${jobUserName}`;
+        } else if (jobUser?.email) {
+          creatorName = jobUser.email;
+          creatorTooltip = `AI extraction session created by ${jobUser.email}`;
+        } else if (jobUserId != null) {
+          creatorName = 'Center Colleague';
+          creatorTooltip = 'AI extraction session created by a Center team member';
+        }
+
         group = {
           sessionId,
           sessionShortHash: short,
@@ -211,6 +317,10 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
           projectDisplay,
           programCode,
           programTooltip,
+          userId: jobUserId,
+          isCurrentUser,
+          creatorName,
+          creatorTooltip,
           drafts: [],
         };
         groupMap.set(sessionId, group);
@@ -224,6 +334,10 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
 
   readonly isProjectDropdownOpen = signal<boolean>(false);
   readonly projectSearchQuery = signal<string>('');
+  /** Matches trigger width so the panel aligns on mobile (full-width trigger → full-width panel). */
+  readonly projectOverlayWidth = signal<number | undefined>(undefined);
+  private readonly projectSearchInput = viewChild<ElementRef<HTMLInputElement>>('projectSearchInput');
+  private readonly projectOrigin = viewChild<CdkOverlayOrigin>('projectOrigin');
 
   readonly projectDropdownPositions: ConnectedPosition[] = [
     {
@@ -262,6 +376,23 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
   });
 
+  readonly createdBySelectOptions = computed(() => {
+    const options = buildCreatedByFilterOptions(this.allDrafts(), this.filterContext());
+    const selected = this.filter.selectedCreatedBy();
+    const missing = selected.filter(value => !options.some(option => option.value === value));
+    return missing.length
+      ? [...options, ...missing.map(value => ({ value, label: value }))]
+      : options;
+  });
+
+  readonly filterChips = computed<MyDraftResultsFilterChip[]>(() =>
+    this.filter.filterChipGroups(
+      this.filterContext(),
+      id => this.projectLabelFor(id),
+      this.allDrafts()
+    )
+  );
+
   readonly filteredProjectOptions = computed<DraftProjectFilterOption[]>(() => {
     const query = this.projectSearchQuery().trim().toLowerCase();
     const options = this.projectFilterOptions();
@@ -275,10 +406,20 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   });
 
   toggleProjectDropdown(): void {
-    this.isProjectDropdownOpen.update(open => !open);
-    if (!this.isProjectDropdownOpen()) {
+    const willOpen = !this.isProjectDropdownOpen();
+    this.isProjectDropdownOpen.set(willOpen);
+    if (!willOpen) {
       this.projectSearchQuery.set('');
+      this.projectOverlayWidth.set(undefined);
+      return;
     }
+    const trigger = this.projectOrigin()?.elementRef.nativeElement;
+    const width = trigger ? Math.ceil(trigger.getBoundingClientRect().width) : undefined;
+    this.projectOverlayWidth.set(width && width > 0 ? width : undefined);
+  }
+
+  focusProjectSearchInput(): void {
+    queueMicrotask(() => this.projectSearchInput()?.nativeElement?.focus());
   }
 
   closeProjectDropdown(): void {
@@ -286,17 +427,34 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     this.projectSearchQuery.set('');
   }
 
-  selectProjectAndClose(projectId: string | null): void {
-    this.filter.selectProject(projectId);
-    this.closeProjectDropdown();
+  clearProjectSearch(): void {
+    this.projectSearchQuery.set('');
+    queueMicrotask(() => this.projectSearchInput()?.nativeElement?.focus());
   }
 
-  /** Label of the active project, for the chip. `''` when no project is selected. */
-  readonly selectedProjectLabel = computed<string>(() => {
-    const selected = normalizeProjectId(this.filter.selectedProjectId());
-    if (!selected) return '';
-    return this.projectFilterOptions().find(option => option.value === selected)?.label ?? selected;
+  projectLabelFor(projectId: string): string {
+    return this.projectFilterOptions().find(option => option.value === projectId)?.label ?? projectId;
+  }
+
+  /** Trigger label: All Projects (empty), one name, or "N projects". */
+  readonly projectTriggerLabel = computed<string>(() => {
+    const selected = this.filter.selectedProjectIds();
+    if (!selected.length) return '';
+    if (selected.length === 1) return this.projectLabelFor(selected[0]);
+    return `${selected.length} projects`;
   });
+
+  isProjectSelected(projectId: string): boolean {
+    return this.filter.isProjectSelected(projectId);
+  }
+
+  toggleProjectOption(projectId: string): void {
+    this.filter.toggleProject(projectId);
+  }
+
+  clearProjectSelection(): void {
+    this.filter.clearProject();
+  }
 
   /** The count line under the title — says how much of the list the filter is hiding. */
   readonly subtitle = computed<string>(() => {
@@ -308,17 +466,40 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     return `${total} draft${total !== 1 ? 's' : ''} ready for review`;
   });
 
-  /** `app-pr-filter-select`'s empty sentinel is `'all'`; the filter service's is `null`. */
-  selectValue(value: string | null): string {
-    return value ?? 'all';
-  }
-
-  onProjectFilterChange(value: unknown): void {
-    this.filter.selectProject(value);
-  }
-
   clearFilters(): void {
+    this.searchInput.set('');
     this.filter.clearAll();
+  }
+
+  onSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.searchInput.set(value);
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = setTimeout(() => {
+      this.filter.setSearchText(value);
+      this.searchDebounceTimer = null;
+    }, MyDraftResultsComponent.SEARCH_DEBOUNCE_MS);
+  }
+
+  clearSearch(): void {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+    this.searchInput.set('');
+    this.filter.setSearchText('');
+  }
+
+  onCreatedByFilterChange(values: string[] | null): void {
+    this.filter.setCreatedBy(values ?? []);
+  }
+
+  clearFilterChip(dimension: MyDraftResultsFilterDimension, value: string): void {
+    if (dimension === 'search') {
+      this.clearSearch();
+      return;
+    }
+    this.filter.clearChip(dimension, value);
   }
 
   getDraftTitle(draft: BilateralAiDraft): string {
@@ -477,5 +658,6 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     document.body.style.overflow = '';
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
   }
 }

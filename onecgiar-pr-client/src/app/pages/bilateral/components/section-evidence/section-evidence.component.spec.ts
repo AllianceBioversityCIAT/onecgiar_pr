@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { of, throwError, Subject } from 'rxjs';
@@ -202,7 +205,7 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences[0].id).toBe(2);
       expect(component.isLoading()).toBe(false);
       expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('evidence', [
-        { key: 'valid-link', label: 'Evidence with valid link', filled: true }
+        { key: 'valid-link', label: 'Evidence', filled: true }
       ]);
     });
 
@@ -212,7 +215,7 @@ describe('SectionEvidenceComponent', () => {
       fixture.detectChanges();
       expect(component.evidences).toEqual([]);
       expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('evidence', [
-        { key: 'valid-link', label: 'Evidence with valid link', filled: false }
+        { key: 'valid-link', label: 'Evidence', filled: false }
       ]);
     });
 
@@ -661,5 +664,23 @@ describe('SectionEvidenceComponent', () => {
       expect(component.isFileEvidence({ is_sharepoint: true })).toBe(true);
       expect(component.isFileEvidence({})).toBe(false);
     });
+  });
+
+  /**
+   * The whole section is one mandatory checklist item (`valid-link`), and nothing on screen said so:
+   * the footer counted "1 field missing" over an empty state with no field to mark, so the reporter
+   * read a number they could not act on (JC, 16-Sep-2026). The card gives it the same band every
+   * other mandatory field has, and its label matches the checklist entry word for word so the
+   * panel's `Go` can find it.
+   */
+  describe('the section is one marked field', () => {
+    it('wraps the evidence block in a required card driven by hasValidLink', () => {
+      const html = readFileSync(join(__dirname, 'section-evidence.component.html'), 'utf8');
+      expect(html).toContain('label="Evidence"');
+      expect(html).toContain('[hasValue]="hasValidLink"');
+    });
+
+    // Que el ítem del checklist se llame igual que la tarjeta ya lo fijan los dos tests de
+    // `loadEvidences` de arriba, que comparan el array completo.
   });
 });

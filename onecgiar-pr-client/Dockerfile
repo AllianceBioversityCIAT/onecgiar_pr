@@ -43,6 +43,8 @@ CMD ["npm", "run", "test:coverage"]
 #################### PRODUCTION STAGE ####################
 FROM nginx:alpine
 
+RUN rm -f /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+
 # Clean default Nginx html
 RUN rm -rf /usr/share/nginx/html/*
 

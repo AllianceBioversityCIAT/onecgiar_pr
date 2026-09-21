@@ -13,6 +13,7 @@ import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-trac
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
+import { RolesService } from '../../../../../shared/services/global/roles.service';
 
 const MDS_NOTE =
   'The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. ' +
@@ -144,6 +145,118 @@ describe('TypeInnovationDevComponent', () => {
     it('marks the section as loaded once the body is in hand', () => {
       build();
       expect(component.loaded()).toBe(true);
+    });
+
+    // BIL-QAI-R-15 / DD-12 — prefill on first load only, never a save-time substitution.
+    describe('innovation_developers prefill (BIL-QAI-R-15)', () => {
+      it('prefills from the lead contact person when the stored value is empty', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('does NOT prefill — and keeps the stored value — when the field already holds something', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(
+          of({ response: { innovation_developers: 'CIAT breeding team' } })
+        );
+        build();
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+      });
+
+      it('leaves the field empty when there is no lead contact person to prefill from', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: {} }));
+        build();
+        expect(component.body.innovation_developers).toBeUndefined();
+      });
+
+      // BIL-QAI-T-12 rework — the defect the Reviewer traced: a `null` is what the server sends once
+      // a row EXISTS and the user cleared it (`InnovationDevExists` includes the key as `null` rather
+      // than omitting it — repository.ts:274-312). Truthiness cannot tell that apart from "never
+      // asked" and re-filled it; key presence can.
+      it('does NOT prefill a stored null — the column exists, the user cleared it', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        expect(component.body.innovation_developers).toBeFalsy();
+        expect(component.body.innovation_developers).not.toBe('A. Rivera');
+      });
+
+      // The other half of the defect: a wrongly re-filled value doesn't just render — it rides along
+      // on the NEXT save of any field, because `body.innovation_developers` was mutated in place.
+      it('keeps a reloaded null out of the payload even after an unrelated field changes', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.innovation_nature_id = 12;
+        component.onFieldChange();
+
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBeNull();
+      });
+    });
+
+    /**
+     * `BIL-IDP-T-1` (`docs/specs/bugfix/innovation-developer-prefill-stale-lead-contact`) — regression
+     * test, red before the fix. The block above only ever set `resultLeadContact` BEFORE `build()`,
+     * i.e. before the section's GET resolves — so it never exercised the reported failure: a reporter
+     * who sets the Lead contact person AFTER Type-specific has already loaded once. `build()` runs the
+     * first change detection (see the P2-3558 note above `build`), so by the time it returns the GET
+     * has already resolved; setting the signal and calling `fixture.detectChanges()` again is what
+     * simulates "later in the same session", not "before load".
+     */
+    describe('BIL-IDP-T-1 — in-session Lead contact changes (bugfix/innovation-developer-prefill-stale-lead-contact)', () => {
+      it('R-1 sc1: prefills from a Lead contact person entered AFTER Type-specific has already loaded (the reported failure)', () => {
+        // Eligible: the GET body carries no `innovation_developers` key at all, and the contact is
+        // still empty at the moment Type-specific loads.
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+        expect(component.body.innovation_developers).toBeUndefined();
+
+        // The reporter sets the Lead contact person only now — after the section already loaded once.
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('R-1 sc2: still prefills on load when the contact is already set before the GET resolves (unchanged path)', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_nature_id: 12 } }));
+        build();
+
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('R-2 sc1: a typed value survives a later contact change', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(
+          of({ response: { innovation_developers: 'CIAT breeding team' } })
+        );
+        build();
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBe('CIAT breeding team');
+      });
+
+      // Distinct from the case above: `null` is what `InnovationDevExists` returns once a row exists
+      // and the reporter cleared it (`T-12`). It is falsy, same as `''`/`undefined`, so a truthiness
+      // gate cannot tell it apart from "never asked" — only the key-presence guard can (`DD-3`).
+      it('R-2 sc2: a stored null (the T-12 shape) is not re-filled by a later contact change', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: null } }));
+        build();
+        expect(component.body.innovation_developers).toBeNull();
+
+        creation.resultLeadContact.set('A. Rivera');
+        fixture.detectChanges();
+
+        expect(component.body.innovation_developers).toBeNull();
+      });
     });
 
     /**
@@ -278,28 +391,12 @@ describe('TypeInnovationDevComponent', () => {
       expect(fields.find((f: any) => f.key === key).filled).toBe(false);
     });
 
-    // Nicoleta Trifa via Ángel Jarrín, 2026-09-03: the Innovation Developer is the Lead contact person.
-    it('sends the lead contact person as the innovation developer', () => {
-      creation.resultLeadContact.set('Jane Smith');
+    // BIL-QAI-R-15 — the field is the user's own now; `updateMds()` never reads it.
+    it('does not touch innovation_developers at all', () => {
       build();
-      component.body = { innovation_nature_id: 12, innovation_developers: 'old free text' };
-      component.onFieldChange();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        expect.objectContaining({ innovation_developers: 'Jane Smith' }),
-        expect.anything()
-      );
-    });
-
-    it('keeps the stored developer when the result has no lead contact yet', () => {
-      build();
-      component.body = { innovation_developers: 'stored' };
-      component.onFieldChange();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        expect.objectContaining({ innovation_developers: 'stored' }),
-        expect.anything()
-      );
+      component.body = { innovation_nature_id: 12, innovation_readiness_level_id: 17, innovation_developers: 'CIAT breeding team' };
+      component.updateMds();
+      expect(trackedKeys()).toEqual(['nature', 'readiness']);
     });
 
     // P2-3340 still holds even though the short title moved to full metadata: it is reported only
@@ -568,6 +665,45 @@ describe('TypeInnovationDevComponent', () => {
       expect(payload.innovation_developers).toBe('D');
     });
 
+    // BIL-QAI-R-15 / DD-12 — the disqualifier: a test on markup alone cannot tell the overwrite is
+    // gone, since the overwrite lived in the save path. These inspect the scheduled payload itself.
+    describe('innovation_developers save contract (BIL-QAI-R-15)', () => {
+      it('a cleared field persists as null, never the lead contact person', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
+        creation.resultLeadContact.set('A. Rivera');
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.innovation_developers = '';
+        component.onFieldChange();
+
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBeNull();
+      });
+
+      it('trims the value before sending it', () => {
+        build();
+        component.body.innovation_developers = '  CIAT breeding team  ';
+        component.onSave();
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBe('CIAT breeding team');
+      });
+
+      // The falsifying input the work order names: change the lead contact AFTER load, then save —
+      // if the payload picked it up, this is exactly the "check that can never fail" behaviour BIL-QAI-T-12 removes.
+      it('changing the lead contact person after load never changes the saved payload', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
+        build();
+        creation.resultLeadContact.set('A different person entirely');
+        autoSave.schedulePayload.mockClear();
+
+        component.onFieldChange();
+
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBe('CIAT breeding team');
+      });
+    });
+
     it('onSave queues an immediate save', () => {
       build();
       component.body = {};
@@ -703,8 +839,15 @@ describe('TypeInnovationDevComponent', () => {
       expect(toggleButton().textContent.trim()).toBe('Hide full metadata');
     });
 
-    // No "Innovation Developer" field since 2026-09-03: the Lead contact person (Section 1) is the developer.
-    it('shows the two MDS fields without expanding anything, and marks them required', () => {
+    /**
+     * P2-3778 — the MDS zone of this section holds exactly TWO fields: typology + readiness level.
+     * "Innovation developers" is removed (decision on the ticket, 2026-09-03: Juan David Delgado
+     * relaying Nicoleta Trifa via Ángel Jarrín — "innov developer field will be removed and for
+     * innovations this will be replaced by the lead contact person information"). Section 1 already
+     * tells the reporter so (`section-general-info.component.html:41-47`), which is what made the
+     * field's continued presence a contradiction QA could see on screen.
+     */
+    it('shows only the typology select before expanding — no Innovation developers textarea', () => {
       render();
       expect(labels()).toEqual(['Which of the below typologies best fits the nature of the innovation?']);
       expect(allFields().every(f => f.required)).toBe(true);
@@ -712,6 +855,120 @@ describe('TypeInnovationDevComponent', () => {
       expect(fixture.debugElement.query(By.css('app-pr-range-level'))).toBeTruthy();
       const headers = fixture.debugElement.queryAll(By.css('app-pr-field-header')).map(d => read(d.componentInstance.label));
       expect(headers).toContain('How would you assess the current readiness of this innovation?');
+    });
+
+    /**
+     * P2-3778 — removing the FIELD is not removing the DATA. Three things are pinned together on
+     * purpose: the textarea is gone from both states of the form, the column is still seeded from the
+     * Lead contact person (the replacement the decision names), and whatever the server holds still
+     * travels back in the payload instead of being blanked by the next save.
+     */
+    describe('Innovation developers removal (P2-3778)', () => {
+      const developerTextarea = () =>
+        fixture.debugElement.queryAll(By.css('app-pr-textarea')).find(d => read(d.componentInstance.label) === 'Innovation developers');
+
+      it('renders no Innovation developers textarea while the section is collapsed', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        render();
+        expect(developerTextarea()).toBeUndefined();
+        expect(labels()).not.toContain('Innovation developers');
+      });
+
+      it('renders no Innovation developers textarea inside the full metadata either', () => {
+        render();
+        toggleButton().click();
+        fixture.detectChanges();
+        expect(developerTextarea()).toBeUndefined();
+        expect(labels()).not.toContain('Innovation developers');
+      });
+
+      // The replacement the decision names: the Lead contact person still reaches the column, so the
+      // review drawer and the exports keep reading a populated field.
+      it('still seeds innovation_developers from the Lead contact person', () => {
+        creation.resultLeadContact.set('A. Rivera');
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: {} }));
+        render();
+        expect(component.body.innovation_developers).toBe('A. Rivera');
+      });
+
+      it('still sends the stored innovation_developers back — hiding the field deletes nothing', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { innovation_developers: 'CIAT breeding team' } }));
+        render();
+        component.onSave();
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect(payload.innovation_developers).toBe('CIAT breeding team');
+      });
+    });
+
+    /**
+     * P2-3779 — three full metadata fields announced themselves as REQUIRED while the section saves,
+     * and reaches "Section complete", with all three empty. They are optional (P2-3391 AC8) and none
+     * of them is in `updateMds()`, so the marker was the only thing lying.
+     */
+    describe('optional fields must not be styled as required (P2-3779)', () => {
+      const expandAsVariety = () => {
+        render();
+        // The variety question is gated on the typology whose innovations are varieties or breeds.
+        component.body.innovation_nature_id = 12;
+        toggleButton().click();
+        fixture.detectChanges();
+      };
+
+      it('does not mark "Are you profiling a new or improved variety or breed?" as required', () => {
+        expandAsVariety();
+        const variety = fixture.debugElement
+          .queryAll(By.css('app-pr-yes-or-not'))
+          .map(d => ({ label: read(d.componentInstance.label), required: read(d.componentInstance.required) }))
+          .find(f => f.label === 'Are you profiling a new or improved variety or breed?');
+        expect(variety).toBeDefined();
+        expect(variety.required).toBe(false);
+      });
+
+      it('does not mark either investment (USD) table as required', () => {
+        expandAsVariety();
+        const headers = fixture.debugElement
+          .queryAll(By.css('app-pr-field-header'))
+          .map(d => ({ label: read(d.componentInstance.label), required: read(d.componentInstance.required) }));
+
+        const cgiarPrograms = headers.find(
+          h => h.label === 'Estimation of total USD-value of investment by CGIAR Programs during the reporting period'
+        );
+        const partners = headers.find(
+          h => h.label === 'Estimated total USD-value of (co-)investment by partners during the reporting period'
+        );
+
+        expect(cgiarPrograms).toBeDefined();
+        expect(partners).toBeDefined();
+        expect(cgiarPrograms.required).toBe(false);
+        expect(partners.required).toBe(false);
+      });
+    });
+
+    /**
+     * P2-3780 — "Innovation developers" and "Innovation collaborators" shared the placeholder
+     * "Contact persons info goes here...", so two different questions read the same. The developers
+     * field is gone (P2-3778); the collaborators one now names what belongs in it.
+     */
+    it('gives Innovation collaborators a placeholder of its own (P2-3780)', () => {
+      render();
+      toggleButton().click();
+      fixture.detectChanges();
+
+      const collaborators = fixture.debugElement
+        .queryAll(By.css('app-pr-textarea'))
+        .find(d => read(d.componentInstance.label) === 'Innovation collaborators');
+      expect(collaborators).toBeDefined();
+
+      const placeholder = read(collaborators.componentInstance.placeholder);
+      expect(placeholder.toLowerCase()).toContain('collaborator');
+      expect(placeholder).not.toBe('Contact persons info goes here...');
+
+      // And no field anywhere in the section keeps the generic one.
+      const placeholders = [
+        ...fixture.debugElement.queryAll(By.css('app-pr-textarea')),
+        ...fixture.debugElement.queryAll(By.css('app-pr-input'))
+      ].map(d => read(d.componentInstance.placeholder));
+      expect(placeholders).not.toContain('Contact persons info goes here...');
     });
 
     it('reveals the full metadata fields on click and hides them again, in the pooled-funding order', () => {
@@ -806,6 +1063,25 @@ describe('TypeInnovationDevComponent', () => {
       const scaling = allFields().find(f => typeof f.label === 'string' && f.label.startsWith('Have any studies been conducted'));
       expect(scaling).toBeDefined();
     });
+
+    /**
+     * The readiness ladder is one of the three MDS items this section counts
+     * (`updateMds` → key `readiness`), so an empty one is part of the footer's "N fields missing".
+     * Without `[required]` the ladder shows NOTHING while empty, and the reporter reads a count
+     * naming a field that looks no different from a finished one — the same complaint that reached
+     * us for the geographic scope. `innovation-use-form` (W1/W2) already passes it.
+     */
+    it('asks the readiness ladder to show its pending marker', () => {
+      // `RolesService.readOnly` starts TRUE and is only lowered once roles resolve; the ladder
+      // suppresses its marker while the dots are inert, so a test that leaves it up measures the
+      // read-only form, not the one the reporter fills in.
+      TestBed.inject(RolesService).readOnly = false;
+      render();
+      const ladder = fixture.debugElement.query(By.css('app-pr-range-level'));
+      expect(read(ladder.componentInstance.required)).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('This field is required');
+    });
+
 
     /**
      * The PO's epic note (Ángel Jarrín, 23-Aug-2026) is explicit: "Remove" never means delete the data.

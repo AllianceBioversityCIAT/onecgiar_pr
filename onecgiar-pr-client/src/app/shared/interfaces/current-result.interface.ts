@@ -44,6 +44,8 @@ export interface CurrentResult {
   reported_year?: number;
   is_discontinued?: any;
   is_replicated?: number;
+  /** Owner initiative's active ToC state: 0 emerging, 1 planned, null unknown. */
+  planned_result?: number | null;
   inQA?: number;
   submitter?: string | number;
   type?: string | number;

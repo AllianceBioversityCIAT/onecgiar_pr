@@ -6,6 +6,7 @@ import { TypeInnovationUseComponent } from './type-innovation-use/type-innovatio
 import { TypeCapacitySharingComponent } from './type-capacity-sharing/type-capacity-sharing.component';
 import { TypeKnowledgeProductComponent } from './type-knowledge-product/type-knowledge-product.component';
 import { TypeInnovationDevComponent } from './type-innovation-dev/type-innovation-dev.component';
+import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 
 const TYPE_LABELS: Record<number, string> = {
   1: 'Policy Change',
@@ -21,7 +22,7 @@ const NO_TYPE_SPECIFIC = new Set([4, 8, 9]);
 
 @Component({
   selector: 'app-section-type-specific',
-  imports: [
+  imports: [BilateralFieldQualityFlagComponent,
     CommonModule,
     TypePolicyChangeComponent,
     TypeInnovationUseComponent,

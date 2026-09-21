@@ -86,6 +86,8 @@ export interface ProgrammeResultRow {
    * rank (loading/error/mismatch). Optional for the same reason as `aowCodes`.
    */
   sectionSort?: string;
+  /** Owner initiative's active ToC state: 0 emerging, 1 planned, null unknown. */
+  plannedResult?: number | null;
 
   // --- raw fields the "Open result" route needs -------------------------------------
   // Mirrors results-list.component.ts:634 `getResultRoute()`, whose branch reads exactly
@@ -97,6 +99,10 @@ export interface ProgrammeResultRow {
   phaseName: string;
   /** `phase_year` — for phase filtering and display. */
   phaseYear: number | null;
+  /** `acronym` — portfolio short code (`P25`), used by the optional Phase column. */
+  phaseAcronym: string;
+  /** Sort rank for the Phase column: `YYYY_PNN`, parsed from year + acronym / phase name. */
+  phaseSort: string;
   /** `submitter` — the programme official code (e.g. `SP01`) in the review-drawer route. */
   submitterCode: string;
 
@@ -244,6 +250,32 @@ function optionsOf(rows: ProgrammeResultRow[], pick: (row: ProgrammeResultRow) =
   return [...unique].sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Compact phase label for the optional Phase column — same shape as the Results Center list
+ * (`results-list.component.ts` `phaseShort`): `2026 · P25`.
+ */
+export function formatProgrammeResultPhaseShort(
+  row: Pick<ProgrammeResultRow, 'phaseYear' | 'phaseAcronym' | 'phaseName'>
+): string {
+  const year = row.phaseYear;
+  const portfolio = row.phaseAcronym;
+  if (year && portfolio) return `${year} · ${portfolio}`;
+  const name = String(row.phaseName ?? '').trim();
+  if (!name) return '';
+  const yearMatch = name.match(/(20\d{2})/);
+  const portMatch = name.match(/\b(P\d{2})\b/i);
+  if (yearMatch && portMatch) return `${yearMatch[1]} · ${portMatch[1].toUpperCase()}`;
+  if (yearMatch) return yearMatch[1];
+  return name;
+}
+
+/** `2026_P25` — year first, then portfolio code, for stable table sorting. */
+function phaseSortRank(year: number | null, acronym: string, phaseName: string): string {
+  const y = year ?? 0;
+  const port = acronym || phaseName.match(/\b(P\d{2})\b/i)?.[1]?.toUpperCase() || '';
+  return `${String(y).padStart(4, '0')}_${port}`;
+}
+
 /** Maps one raw payload item to the row the table renders. Exported for the spec and reused by
  *  `MyWorkBoardService`/`MyWorkCountService` (T-3) — one mapping of the payload, `MWB-DD-4`. */
 export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultRow {
@@ -253,6 +285,7 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
   // payload when the caller asked for `include_completeness=true`; preserve an explicit `null`
   // rather than let `??`/optional-chaining collapse it to "absent" like `undefined` would.
   const hasCompleteness = !!raw && Object.prototype.hasOwnProperty.call(raw, 'completeness');
+  const hasPlannedResult = !!raw && Object.prototype.hasOwnProperty.call(raw, 'planned_result');
 
   return {
     id: num(raw?.['id']),
@@ -272,9 +305,12 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     versionId: text(raw?.['version_id']),
     phaseName: text(raw?.['phase_name']),
     phaseYear: num(raw?.['phase_year']),
+    phaseAcronym: text(raw?.['acronym']),
+    phaseSort: phaseSortRank(num(raw?.['phase_year']), text(raw?.['acronym']), text(raw?.['phase_name'])),
     submitterCode: text(raw?.['submitter']),
     raw: raw ?? {},
-    ...(hasCompleteness ? { completeness: raw['completeness'] } : {})
+    ...(hasCompleteness ? { completeness: raw['completeness'] } : {}),
+    ...(hasPlannedResult ? { plannedResult: num(raw['planned_result']) } : {})
   };
 }
 

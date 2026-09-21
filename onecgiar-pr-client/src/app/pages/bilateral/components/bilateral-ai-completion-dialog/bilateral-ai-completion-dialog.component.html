@@ -30,6 +30,12 @@
       }
     </div>
 
+    @if (showProvenanceNotice()) {
+      <div class="pr-dialog-body" data-testid="ai-completion-provenance">
+        <app-ai-provenance-notice variant="line" />
+      </div>
+    }
+
     <div pr-dialog-footer class="pr-dialog-footer">
       <button hlmBtn variant="outline" type="button" data-testid="ai-completion-close" (click)="close()">
         {{ canReview() ? 'Continue working' : 'Close' }}

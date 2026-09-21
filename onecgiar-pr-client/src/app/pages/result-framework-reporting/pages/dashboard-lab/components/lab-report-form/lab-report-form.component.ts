@@ -33,6 +33,22 @@ import {
   KpRepository,
   kpRepositoryLabel
 } from '../../../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-repositories.constants';
+import { ResultFrameworkReportingHomeService } from '../../../result-framework-reporting-home/services/result-framework-reporting-home.service';
+
+// @akili-spec changes/kp-program-accelerator-match (KPAM-T-3, KPAM-R-2)
+export const SCIENCE_PROGRAM_NAMES: Record<string, string> = {
+  SP01: 'Breeding for Tomorrow',
+  SP02: 'Sustainable Farming',
+  SP03: 'Climate Action',
+  SP04: 'Multifunctional Landscapes',
+  SP05: 'Sustainable Animal & Aquatic Foods',
+  SP06: 'Better Diets and Nutrition',
+  SP07: 'Policy Innovations',
+  SP08: 'Food Frontiers and Security',
+  SP09: 'Scaling for Impact',
+  'SGP-02': 'Accelerating Varietal Improvement in Seed Systems in Africa',
+  SGP02: 'Accelerating Varietal Improvement in Seed Systems in Africa'
+};
 
 /** Which entry mode the knowledge-product block is on. */
 export type KpEntryMode = 'browse' | 'manual';
@@ -78,6 +94,7 @@ export class LabReportFormComponent {
   private readonly router = inject(Router);
   private readonly centersSE = inject(CentersService);
   private readonly wordCounterSE = inject(WordCounterService);
+  private readonly homeSE = inject(ResultFrameworkReportingHomeService, { optional: true });
 
   // @akili-spec changes/report-result-form-ux (RFUX-T-3, RFUX-R-3)
   readonly titleInput = viewChild<ElementRef<HTMLTextAreaElement>>('titleInput');
@@ -212,6 +229,56 @@ export class LabReportFormComponent {
   readonly initiativeId = input.required<number>();
   /** Program code, for the bilateral-projects lookup. */
   readonly programCode = input<string>('');
+  // @akili-spec changes/kp-program-accelerator-match (KPAM-T-3, KPAM-R-2, Defect Gate D6)
+  readonly programName = input<string>('');
+
+  readonly resolvedProgramName = computed<string>(() => {
+    const explicit = this.programName()?.trim();
+    if (explicit) return explicit;
+
+    const code = (this.programCode() || '').trim().toUpperCase();
+    const id = this.initiativeId();
+
+    const mySPs = this.homeSE?.mySPsList?.() ?? [];
+    const otherSPs = this.homeSE?.otherSPsList?.() ?? [];
+    const allSPs = [...mySPs, ...otherSPs];
+    const matchHome = allSPs.find(
+      sp =>
+        (code && (sp.initiativeCode?.toUpperCase() === code || sp.portfolioAcronym?.toUpperCase() === code)) ||
+        (id && sp.initiativeId === id)
+    );
+    if (matchHome?.initiativeName?.trim()) {
+      return matchHome.initiativeName.trim();
+    }
+    if (matchHome?.initiativeShortName?.trim()) {
+      return matchHome.initiativeShortName.trim();
+    }
+
+    const myInits: any[] = this.api.dataControlSE?.myInitiativesList ?? [];
+    const matchInit = myInits.find(
+      init =>
+        (code && (init.official_code?.toUpperCase() === code || init.initiative_code?.toUpperCase() === code)) ||
+        (id && (init.initiative_id === id || init.id === id))
+    );
+    if (matchInit?.name?.trim()) {
+      return matchInit.name.trim();
+    }
+    if (matchInit?.short_name?.trim()) {
+      return matchInit.short_name.trim();
+    }
+
+    if (code && SCIENCE_PROGRAM_NAMES[code]) {
+      return SCIENCE_PROGRAM_NAMES[code];
+    }
+
+    const node = this.tocNode();
+    const nodeCode = (node?.official_code || '').trim().toUpperCase();
+    if (nodeCode && SCIENCE_PROGRAM_NAMES[nodeCode]) {
+      return SCIENCE_PROGRAM_NAMES[nodeCode];
+    }
+
+    return this.programCode()?.trim() || '';
+  });
   /**
    * Explicit emerging entry. Unlike `emergingCategory`, this arms the form without preselecting a
    * result type so the user can choose Output/Outcome and then a category.

@@ -33,7 +33,7 @@ export class CgspaceSearchQueryDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @ValidateIf(
     (o: CgspaceSearchQueryDto) =>
-      (!o.type && !o.center && !o.year) ||
+      (!o.type && !o.center && !o.year && !o.project) ||
       (o.query !== undefined && o.query !== null && o.query !== ''),
   )
   @IsNotEmpty({ message: 'query is required when no filters are set' })
@@ -93,6 +93,18 @@ export class CgspaceSearchQueryDto {
   @IsString()
   @MaxLength(100)
   center?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'W3/bilateral project filter — exact Discovery facet label (`f.project`, cg.identifier.project index)',
+    maxLength: 200,
+    example: 'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  project?: string;
 
   @ApiPropertyOptional({
     description:

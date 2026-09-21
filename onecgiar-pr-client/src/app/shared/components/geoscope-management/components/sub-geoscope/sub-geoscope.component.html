@@ -10,7 +10,18 @@
   </div>
 
   <div class="b-ct">
-    <div class="dhs mt" *ngIf="!subNationList?.length">
+    <!--
+      P2-3647: only state that the country HAS no sub-national levels once the catalogue actually
+      came back. While it is in flight, or after it failed, the same emptiness means something else
+      entirely — and saying the wrong one of the three is the defect QA reported.
+    -->
+    <div class="dhs mt" *ngIf="subNationalStatus === 'loading'">
+      <i>Loading sub-national levels…</i>
+    </div>
+    <div class="dhs mt" *ngIf="subNationalStatus === 'failed'">
+      <i>The sub-national levels for this country could not be loaded. Your selection is kept — reload the page to try again.</i>
+    </div>
+    <div class="dhs mt" *ngIf="subNationalStatus === 'loaded' && !subNationList?.length">
       <i>This country does not have any sub-national level avaliable.</i>
     </div>
     <div style="width: 40%" *ngIf="subNationList?.length && !this.readOnly">
@@ -27,7 +38,13 @@
       </app-pr-multi-select>
     </div>
 
-    <div class="medal_selector selected_container" *ngIf="subNationList?.length">
+    <!--
+      P2-3647: the chips used to hang off the CATALOGUE, not off the selection, so every time the
+      list was empty the levels the user had already picked vanished from the screen even though
+      they were still in the model and would still have been saved. Show them whenever there is
+      something selected.
+    -->
+    <div class="medal_selector selected_container" *ngIf="subNationList?.length || obj_country?.sub_national?.length">
       <div class="centers chips_container">
         <div class="center pr_chip_selected" *ngFor="let sub of this.obj_country.sub_national; let i = index">
           <div class="name" [innerHtml]="sub?.formatedName"></div>

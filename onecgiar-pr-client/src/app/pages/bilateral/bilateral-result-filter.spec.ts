@@ -33,6 +33,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    created_by_name: 'Angel Jarrin',
   },
   {
     id: 2,
@@ -51,6 +52,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'AI',
     is_ai_generated: 1,
     is_leading_result: 0,
+    created_by_name: 'Santiago Sanchez',
   },
   {
     id: 3,
@@ -306,6 +308,14 @@ describe('filterCenterResults', () => {
   it('combines multiple dimensions with AND semantics', () => {
     const result = filterCenterResults(rows, withParams({ project: [118], role: 'lead' }));
     expect(ids(result)).toEqual([1]);
+  });
+
+  it('filters by createdBy display name with OR semantics inside the multiselect', () => {
+    const one = filterCenterResults(rows, withParams({ createdBy: ['Angel Jarrin'] }));
+    expect(ids(one)).toEqual([1]);
+
+    const both = filterCenterResults(rows, withParams({ createdBy: ['Angel Jarrin', 'Santiago Sanchez'] }));
+    expect(ids(both)).toEqual([1, 2]);
   });
 
   it('applyResultsTabDefaults(parse(emptyMap)) reproduces the Results tab no-param default (W3 + Lead)', () => {

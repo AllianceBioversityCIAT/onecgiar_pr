@@ -190,6 +190,10 @@ export function dedupe(
     }
 
     const alsoIn: CgspaceAlsoInDto[] = [...(items[survivorIdx].alsoIn ?? [])];
+    const programAcceleratorsSet = new Set<string>(
+      items[survivorIdx].programAccelerators ?? [],
+    );
+    const projectsSet = new Set<string>(items[survivorIdx].projects ?? []);
     for (const idx of groupIndices) {
       if (idx === survivorIdx) {
         continue;
@@ -201,10 +205,25 @@ export function dedupe(
         handleUrl: dropped.handleUrl,
         itemUrl: dropped.itemUrl,
       });
+      for (const pa of dropped.programAccelerators ?? []) {
+        if (pa) {
+          programAcceleratorsSet.add(pa);
+        }
+      }
+      for (const project of dropped.projects ?? []) {
+        if (project) {
+          projectsSet.add(project);
+        }
+      }
       dedupedCount++;
     }
 
-    outItems.push({ ...items[survivorIdx], alsoIn });
+    outItems.push({
+      ...items[survivorIdx],
+      alsoIn,
+      programAccelerators: Array.from(programAcceleratorsSet),
+      projects: Array.from(projectsSet),
+    });
   }
 
   return { items: outItems, dedupedCount };

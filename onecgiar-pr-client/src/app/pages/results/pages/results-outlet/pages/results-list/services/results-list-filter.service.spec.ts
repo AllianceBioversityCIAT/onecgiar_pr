@@ -10,6 +10,33 @@ describe('ResultsListFilterService', () => {
     service = TestBed.inject(ResultsListFilterService);
   });
 
+  describe('filterLayout', () => {
+    afterEach(() => localStorage.removeItem('rc-filter-layout'));
+
+    it('should start as a menu when nothing was chosen before', () => {
+      expect(service.filterLayout()).toBe('menu');
+    });
+
+    it('should remember the side column for the next visit', () => {
+      service.setFilterLayout('sidebar');
+
+      expect(service.filterLayout()).toBe('sidebar');
+      expect(localStorage.getItem('rc-filter-layout')).toBe('sidebar');
+      expect(new ResultsListFilterService().filterLayout()).toBe('sidebar');
+    });
+
+    it('should still switch when the browser blocks storage', () => {
+      const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+
+      service.setFilterLayout('sidebar');
+
+      expect(service.filterLayout()).toBe('sidebar');
+      setItem.mockRestore();
+    });
+  });
+
   describe('updateMyInitiatives()', () => {
     it('should update initiatives', () => {
       const initiatives = [{ name: 'Initiative 1', initiative_id: 1 }, { name: 'Initiative 2', initiative_id: 2 }];

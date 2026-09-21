@@ -59,6 +59,20 @@ export class CgspaceItemDto {
     type: () => [CgspaceAlsoInDto],
   })
   alsoIn?: CgspaceAlsoInDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Science Programs or Accelerators tagged on the item from cg.contributor.programAccelerator',
+    type: [String],
+  })
+  programAccelerators?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Project identifiers tagged on the item from cg.identifier.project',
+    type: [String],
+  })
+  projects?: string[];
 }
 
 export type SourceStatus = 'ok' | 'timeout' | 'error' | 'unconfigured';

@@ -1,5 +1,7 @@
 <!-- Toolbar: Docked directly beneath tabs as flex-none bar -->
-<div class="bpp_toolbar bpp_toolbar_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]">
+<div
+  class="bpp_toolbar bpp_toolbar_docked flex-none border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[16px] sm:px-[32px] py-[10px]"
+  data-guide="bilateral-tab-reporting">
   <div class="bpp_toolbar_left">
     <div class="bpp_search_box">
       <span class="material-icons-round bpp_search_icon" aria-hidden="true">search</span>
@@ -38,8 +40,21 @@
     </div>
   </div>
 
-  <!-- View Switcher -->
+  <!-- View Switcher & Actions -->
   <div class="bpp_toolbar_right">
+    <button
+      type="button"
+      class="bpp_refresh_btn"
+      data-testid="bpp-refresh-button"
+      [class.bpp_refresh_btn--loading]="isRefreshing()"
+      [disabled]="isRefreshing()"
+      (click)="refresh()"
+      aria-label="Refresh projects catalog and result counts"
+      title="Refresh projects and result counts">
+      <span class="material-icons-round text-[16px]" [class.animate-spin]="isRefreshing()" aria-hidden="true">refresh</span>
+      <span class="bpp_refresh_text">Refresh</span>
+    </button>
+    <div class="bpp_toolbar_divider" aria-hidden="true"></div>
     <span class="bpp_view_label">View:</span>
     <div class="bpp_view_toggle" role="group" aria-label="View layout toggle">
       <button 
@@ -107,7 +122,10 @@
     } @else {
 
       <!-- KPI Summary Quick Filter Cards -->
-      <section class="bpp_kpi_section" aria-label="Project Statistics and Filters">
+      <section
+        class="bpp_kpi_section"
+        aria-label="Project Statistics and Filters"
+        data-guide="bilateral-reporting-kpis">
         <div class="bpp_kpi_header">
           <span class="bpp_kpi_section_title">Reporting Overview & Quick Filters</span>
           <span class="bpp_kpi_hint">Click any card to filter projects below</span>
@@ -218,13 +236,26 @@
               <article
                 class="bpp_card"
                 [class.bpp_card--highlight]="isHighlighted(project)"
-                [attr.data-project-id]="project.id">
+                [attr.data-project-id]="project.id"
+                [attr.data-guide]="$first ? 'bilateral-project-card' : null"
+                (click)="openManualCreate(project, $event)">
                 <div class="bpp_card_content">
                   <!-- Card Header -->
                   <div class="bpp_card_head">
                     <span class="bpp_code_pill">{{ project.shortName }}</span>
-                    <div class="bpp_status_dot">
-                      <span></span> Active
+                    <div class="bpp_card_head_right">
+                      <button
+                        type="button"
+                        class="bpp_results_badge"
+                        [class.bpp_results_badge--has-results]="getProjectResultsCount(project) > 0"
+                        (click)="navigateToProjectResults(project, $event)"
+                        [attr.aria-label]="getProjectResultsCount(project) + ' results for ' + project.shortName + ' — view in Results'">
+                        <i class="pi pi-file"></i>
+                        <span>{{ getProjectResultsCount(project) }} result{{ getProjectResultsCount(project) === 1 ? '' : 's' }}</span>
+                      </button>
+                      <div class="bpp_status_dot">
+                        <span></span> Active
+                      </div>
                     </div>
                   </div>
 
@@ -265,8 +296,18 @@
                 <div class="bpp_card_footer">
                   <button
                     type="button"
+                    class="bpp_results_footer_link"
+                    (click)="navigateToProjectResults(project, $event)"
+                    [attr.aria-label]="'View ' + getProjectResultsCount(project) + ' results for ' + project.shortName + ' in Results tab'">
+                    <span>View results ({{ getProjectResultsCount(project) }})</span>
+                    <i class="pi pi-arrow-right"></i>
+                  </button>
+
+                  <button
+                    type="button"
                     class="bpp_cta_btn"
                     data-testid="bilateral-project-create-result"
+                    [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
                     (click)="openManualCreate(project, $event)">
                     <i class="pi pi-plus"></i>
                     Create result
@@ -286,6 +327,7 @@
                   <th scope="col" class="bpp_col_code">Code</th>
                   <th scope="col" class="bpp_col_title">Project Title</th>
                   <th scope="col" class="bpp_col_sp">Science Programs & Allocations</th>
+                  <th scope="col" class="bpp_col_results">Reported Results</th>
                   <th scope="col" class="bpp_col_action">Action</th>
                 </tr>
               </thead>
@@ -294,7 +336,9 @@
                   <tr
                     class="bpp_table_row"
                     [class.bpp_card--highlight]="isHighlighted(project)"
-                    [attr.data-project-id]="project.id">
+                    [attr.data-project-id]="project.id"
+                    [attr.data-guide]="$first ? 'bilateral-project-card' : null"
+                    (click)="openManualCreate(project, $event)">
                     <td class="bpp_td_code">
                       <span class="bpp_code_pill">{{ project.shortName }}</span>
                     </td>
@@ -320,11 +364,23 @@
                         }
                       </div>
                     </td>
+                    <td class="bpp_td_results">
+                      <button
+                        type="button"
+                        class="bpp_results_badge"
+                        [class.bpp_results_badge--has-results]="getProjectResultsCount(project) > 0"
+                        (click)="navigateToProjectResults(project, $event)"
+                        [attr.aria-label]="getProjectResultsCount(project) + ' results for ' + project.shortName + ' — view in Results'">
+                        <i class="pi pi-file"></i>
+                        <span>{{ getProjectResultsCount(project) }}</span>
+                      </button>
+                    </td>
                     <td class="bpp_td_action">
                       <button
                         type="button"
                         class="bpp_cta_btn bpp_cta_btn--table"
                         data-testid="bilateral-project-create-result"
+                        [attr.data-guide]="$first ? 'bilateral-project-create-result' : null"
                         (click)="openManualCreate(project, $event)">
                         <i class="pi pi-plus"></i>
                         <span>Create result</span>

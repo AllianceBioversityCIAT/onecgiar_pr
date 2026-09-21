@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { HlmSidebarService } from '@spartan/sidebar';
 
@@ -690,6 +690,32 @@ describe('ResultDetailComponent', () => {
       const collapseOrder = mockSidebarService.collapseForCompactEntry.mock.invocationCallOrder[0];
       const hintOrder = mockReportingGuideService.startResultSidebarHint.mock.invocationCallOrder[0];
       expect(collapseOrder).toBeLessThan(hintOrder);
+    });
+  });
+
+  describe('section change scroll', () => {
+    const navigate = (id: number, url: string) =>
+      (TestBed.inject(Router).events as Subject<any>).next(new NavigationEnd(id, url, url));
+
+    it('opens every section at the top of the form column', () => {
+      const scroller = component.formScroll.nativeElement;
+      navigate(1, '/result/result-detail/1234/general-information?phase=5');
+      scroller.scrollTop = 600;
+
+      navigate(2, '/result/result-detail/1234/theory-of-change?phase=5');
+
+      expect(scroller.scrollTop).toBe(0);
+    });
+
+    it('keeps the position when only the phase changes', () => {
+      const scroller = component.formScroll.nativeElement;
+      navigate(1, '/result/result-detail/1234/general-information?phase=5');
+      scroller.scrollTop = 600;
+      const spy = jest.spyOn(scroller, 'scrollTop', 'set');
+
+      navigate(2, '/result/result-detail/1234/general-information?phase=6');
+
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 });

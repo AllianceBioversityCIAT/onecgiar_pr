@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   Logger,
 } from '@nestjs/common';
@@ -46,12 +47,29 @@ import { ResultsKnowledgeProductsRepository } from '../../results/results-knowle
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
+import { BilateralQualityAssessmentService } from './quality-assessment/bilateral-quality-assessment.service';
+import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
+import { BilateralQualityAssessment } from '../entities/bilateral-quality-assessment.entity';
+import { hasOutstandingFlags } from './quality-assessment/bilateral-quality-rules';
+import { SubmitForReviewDto } from '../dto/submit-for-review.dto';
 import { ChangeCenterResultTypeDto } from '../dto/change-center-result-type.dto';
 import { UpdateBilateralPrimaryAssignmentDto } from '../dto/update-bilateral-primary-assignment.dto';
 import { ResultsByProjects } from '../../results/results_by_projects/entities/results_by_projects.entity';
 import { ResultsByInititiative } from '../../results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsTocResult } from '../../results/results-toc-results/entities/results-toc-result.entity';
 import { ShareResultRequest } from '../../results/share-result-request/entities/share-result-request.entity';
+import {
+  AoWBilateralRepository,
+  ProjectTocLinkageNode,
+} from '../../results/results-toc-results/repositories/aow-bilateral.repository';
+
+// Canonical level names, matching result.repository.ts (~L3940) and toc-level.service.ts —
+// never "Work package Output/Outcome" (stale wording fixed 2026-09-18).
+const TOC_CATEGORY_LEVEL_MAP: Record<string, { id: number; name: string }> = {
+  OUTPUT: { id: 1, name: 'High Level Output' },
+  OUTCOME: { id: 2, name: 'Intermediate Outcome' },
+  EOI: { id: 3, name: 'End of Initiative Outcome' },
+};
 
 @Injectable()
 export class BilateralCenterService {
@@ -79,11 +97,21 @@ export class BilateralCenterService {
     private readonly resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly shareResultRequestRepository: ShareResultRequestRepository,
     private readonly innovationUseMdsValidator: InnovationUseMdsValidator,
+    private readonly qualityAssessmentService: BilateralQualityAssessmentService,
+    private readonly qualityAssessmentRepository: BilateralQualityAssessmentRepository,
+    private readonly aowBilateralRepository: AoWBilateralRepository,
   ) {}
 
-  async getProjects(centerId: number) {
-    const projects =
-      await this.bilateralProjectsService.getProjectsByCenter(centerId);
+  /**
+   * `changes/project-multiselect-filter` (`PMF-DD-5`): the optional `year` rides along to
+   * the catalog service untouched — that service owns the active-year fallback and the
+   * positive-integer parsing.
+   */
+  async getProjects(centerId: number, year?: number | string) {
+    const projects = await this.bilateralProjectsService.getProjectsByCenter(
+      centerId,
+      year,
+    );
     return { response: projects };
   }
 
@@ -99,7 +127,9 @@ export class BilateralCenterService {
   ) {
     const parsedResultId = Number(resultId);
     if (!Number.isInteger(parsedResultId) || parsedResultId <= 0) {
-      throw new BadRequestException('The resultId parameter must be a valid positive number.');
+      throw new BadRequestException(
+        'The resultId parameter must be a valid positive number.',
+      );
     }
 
     const result = await this.resultRepository.findOne({
@@ -140,8 +170,7 @@ export class BilateralCenterService {
 
     const primaryProgram = project.sciencePrograms.find(
       (program) =>
-        Number(program.programId) ===
-        Number(dto.primary_science_program_id),
+        Number(program.programId) === Number(dto.primary_science_program_id),
     );
     if (!primaryProgram) {
       throw new BadRequestException(
@@ -169,7 +198,9 @@ export class BilateralCenterService {
     const primaryChanged = await this.resultRepository.manager.transaction(
       async (manager) => {
         const projectRepository = manager.getRepository(ResultsByProjects);
-        const initiativeRepository = manager.getRepository(ResultsByInititiative);
+        const initiativeRepository = manager.getRepository(
+          ResultsByInititiative,
+        );
         const tocRepository = manager.getRepository(ResultsTocResult);
         const requestRepository = manager.getRepository(ShareResultRequest);
 
@@ -219,7 +250,9 @@ export class BilateralCenterService {
             is_active: true,
           },
         });
-        const currentPrimaryId = Number(activePrimaryRows[0]?.initiative_id ?? 0);
+        const currentPrimaryId = Number(
+          activePrimaryRows[0]?.initiative_id ?? 0,
+        );
         const nextPrimaryId = Number(primaryInitiative.id);
         const changed = currentPrimaryId !== nextPrimaryId;
 
@@ -247,7 +280,9 @@ export class BilateralCenterService {
               shared_inititiative_id: nextPrimaryId,
               is_active: true,
               is_map_to_toc: false,
-              request_status_id: In(BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES),
+              request_status_id: In(
+                BilateralCenterService.CONTRIBUTION_REQUEST_STATUSES,
+              ),
             },
             { is_active: false },
           );
@@ -343,8 +378,7 @@ export class BilateralCenterService {
 
     // @akili-spec bilateral/manual-create-drawer (BIL-MCD-T-1)
     const clientTitle = dto.title?.trim();
-    const initialTitle =
-      clientTitle || `Bilateral Draft ${Date.now()}`;
+    const initialTitle = clientTitle || `Bilateral Draft ${Date.now()}`;
 
     const result = await this.resultRepository.save({
       created_by: user.id,
@@ -383,6 +417,20 @@ export class BilateralCenterService {
           created_by: user.id,
         });
       }
+    }
+
+    if (dto.contributing_programs && dto.contributing_programs.length > 0) {
+      const contribSyncResult = {
+        savedPrograms: [] as string[],
+        failedPrograms: [] as string[],
+        deactivatedPrograms: [] as number[],
+      };
+      await this.syncContributingPrograms(
+        result.id,
+        dto.contributing_programs,
+        user,
+        contribSyncResult,
+      );
     }
 
     // The lead centre is resolved server-side rather than trusted from the payload.
@@ -587,7 +635,8 @@ export class BilateralCenterService {
         result_level_id: dto.result_level_id,
         result_type_id: dto.result_type_id,
       },
-      message: 'Result type changed successfully. Complete the new type-specific fields before submitting for review.',
+      message:
+        'Result type changed successfully. Complete the new type-specific fields before submitting for review.',
     };
   }
 
@@ -598,18 +647,49 @@ export class BilateralCenterService {
     userId: number,
   ): Promise<void> {
     const updates: Array<[string, unknown[]]> = [
-      ['UPDATE results_policy_changes SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
-      ['UPDATE results_innovations_use_measures m INNER JOIN results_innovations_use u ON u.result_innovation_use_id = m.result_innovation_use_id SET m.is_active = 0, m.last_updated_by = ? WHERE u.results_id = ?', [userId, resultId]],
-      ['UPDATE results_innovations_use SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
-      ['UPDATE results_innovations_dev SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
-      ['UPDATE results_capacity_developments SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
-      ['UPDATE result_actors SET is_active = 0, last_updated_by = ? WHERE result_id = ?', [userId, resultId]],
-      ['UPDATE results_knowledge_product SET is_active = 0, last_updated_by = ? WHERE results_id = ?', [userId, resultId]],
-      ['UPDATE non_pooled_projetct_budget budget INNER JOIN results_by_projects project ON project.id = budget.result_project_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE project.result_id = ?', [userId, resultId]],
-      ['UPDATE result_initiative_budget budget INNER JOIN results_by_inititiative initiative ON initiative.id = budget.result_initiative_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE initiative.result_id = ?', [userId, resultId]],
-      ['UPDATE result_institutions_budget budget INNER JOIN results_by_institution institution ON institution.id = budget.result_institution_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE institution.result_id = ?', [userId, resultId]],
+      [
+        'UPDATE results_policy_changes SET is_active = 0, last_updated_by = ? WHERE result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_innovations_use_measures m INNER JOIN results_innovations_use u ON u.result_innovation_use_id = m.result_innovation_use_id SET m.is_active = 0, m.last_updated_by = ? WHERE u.results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_innovations_use SET is_active = 0, last_updated_by = ? WHERE results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_innovations_dev SET is_active = 0, last_updated_by = ? WHERE results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_capacity_developments SET is_active = 0, last_updated_by = ? WHERE result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE result_actors SET is_active = 0, last_updated_by = ? WHERE result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE results_knowledge_product SET is_active = 0, last_updated_by = ? WHERE results_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE non_pooled_projetct_budget budget INNER JOIN results_by_projects project ON project.id = budget.result_project_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE project.result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE result_initiative_budget budget INNER JOIN results_by_inititiative initiative ON initiative.id = budget.result_initiative_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE initiative.result_id = ?',
+        [userId, resultId],
+      ],
+      [
+        'UPDATE result_institutions_budget budget INNER JOIN results_by_institution institution ON institution.id = budget.result_institution_id SET budget.is_active = 0, budget.last_updated_by = ? WHERE institution.result_id = ?',
+        [userId, resultId],
+      ],
     ];
-    for (const [sql, parameters] of updates) await manager.query(sql, parameters);
+    for (const [sql, parameters] of updates)
+      await manager.query(sql, parameters);
   }
 
   async getResultInitiativeId(resultId: number) {
@@ -626,6 +706,168 @@ export class BilateralCenterService {
     };
   }
 
+  private async resolveResultVersionInfo(resultId: number) {
+    const result = await this.resultRepository.findOne({
+      select: {
+        id: true,
+        result_type_id: true,
+        version_id: true,
+        obj_version: {
+          id: true,
+          phase_year: true,
+          toc_pahse_id: true,
+        },
+      },
+      where: { id: resultId, is_active: true },
+      relations: { obj_version: true },
+    });
+
+    let reportingYear = Number(result?.obj_version?.phase_year);
+    let phaseUuid = result?.obj_version?.toc_pahse_id
+      ? String(result.obj_version.toc_pahse_id).trim()
+      : null;
+
+    if (!phaseUuid && result?.version_id) {
+      try {
+        const versionRows = await this.resultRepository.query(
+          `SELECT toc_pahse_id, phase_year FROM ${process.env.DB_NAME ?? 'clarisa_rm'}.version WHERE id = ? LIMIT 1`,
+          [result.version_id],
+        );
+        if (versionRows?.[0]?.toc_pahse_id) {
+          phaseUuid = String(versionRows[0].toc_pahse_id).trim();
+        }
+        if (!Number.isFinite(reportingYear) && versionRows?.[0]?.phase_year) {
+          reportingYear = Number(versionRows[0].phase_year);
+        }
+      } catch {
+        // ignore error resolving fallback phase
+      }
+    }
+
+    if (!phaseUuid || !Number.isFinite(reportingYear)) {
+      try {
+        const activePhase = await this.versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
+        if (activePhase) {
+          if (!phaseUuid && activePhase.toc_pahse_id) {
+            phaseUuid = String(activePhase.toc_pahse_id).trim();
+          }
+          if (!Number.isFinite(reportingYear) && activePhase.phase_year) {
+            reportingYear = Number(activePhase.phase_year);
+          }
+        }
+      } catch {
+        // ignore error resolving active phase
+      }
+    }
+
+    return {
+      result,
+      phaseUuid,
+      reportingYear: Number.isFinite(reportingYear) ? reportingYear : null,
+    };
+  }
+
+  private async getProjectDefaultNodes(
+    resultId: number,
+    ownerOfficialCode: string | undefined,
+    phaseUuid: string | null,
+    reportingYear: number | null,
+  ): Promise<{
+    leadProjectId: number | null;
+    nodes: ProjectTocLinkageNode[];
+  }> {
+    const leadProjectId =
+      await this.aowBilateralRepository.findLeadProjectId(resultId);
+
+    if (
+      !leadProjectId ||
+      !ownerOfficialCode ||
+      !phaseUuid ||
+      reportingYear == null
+    ) {
+      return { leadProjectId: leadProjectId ?? null, nodes: [] };
+    }
+
+    const linkageRows = await this.aowBilateralRepository.findProjectTocLinkage(
+      leadProjectId,
+      ownerOfficialCode,
+      phaseUuid,
+      reportingYear,
+    );
+
+    if (!linkageRows || linkageRows.length === 0) {
+      return { leadProjectId, nodes: [] };
+    }
+
+    const nodesMap = new Map<number, ProjectTocLinkageNode>();
+    for (const row of linkageRows) {
+      let node = nodesMap.get(row.toc_result_id);
+      if (!node) {
+        const cat = (row.category || '').toUpperCase().trim();
+        const levelMapping = TOC_CATEGORY_LEVEL_MAP[cat];
+        node = {
+          toc_result_id: row.toc_result_id,
+          category: row.category,
+          result_title: row.result_title,
+          title: row.result_title,
+          toc_level_id: levelMapping?.id ?? null,
+          level_name: levelMapping?.name ?? null,
+          related_node_id: row.related_node_id,
+          indicators: [],
+        };
+        nodesMap.set(row.toc_result_id, node);
+      }
+
+      if (row.indicator_id != null) {
+        let indicator = node.indicators.find(
+          (ind) => ind.id === row.indicator_id,
+        );
+        if (!indicator) {
+          indicator = {
+            id: row.indicator_id,
+            description: row.indicator_description,
+            type: row.indicator_type,
+            targets: [],
+          };
+          node.indicators.push(indicator);
+        }
+        if (row.target_value !== null && row.target_value !== undefined) {
+          // One indicator/year can carry several target rows (toc_result_indicator_target's
+          // number_target), each optionally broken down by CGIAR center via
+          // toc_result_indicator_target_center. The join fans out one row per center, so dedupe
+          // on toc_indicator_target_id and collect center ids instead of pushing every fanned-out
+          // row as its own unlabeled target (post-implementation audit, 2026-09-18).
+          let target =
+            row.toc_indicator_target_id != null
+              ? indicator.targets.find(
+                  (t) =>
+                    t.toc_indicator_target_id === row.toc_indicator_target_id,
+                )
+              : undefined;
+          if (!target) {
+            target = {
+              year: reportingYear,
+              value: row.target_value,
+              toc_indicator_target_id: row.toc_indicator_target_id ?? null,
+              center_ids: [],
+            };
+            indicator.targets.push(target);
+          }
+          if (
+            row.center_id != null &&
+            !target.center_ids.includes(row.center_id)
+          ) {
+            target.center_ids.push(row.center_id);
+          }
+        }
+      }
+    }
+
+    return { leadProjectId, nodes: Array.from(nodesMap.values()) };
+  }
+
   async getTocState(resultId: number) {
     try {
       const owner =
@@ -640,12 +882,65 @@ export class BilateralCenterService {
             toc_level_id: null,
             toc_result_id: null,
             indicator_id: null,
+            contributing_indicator: null,
             toc_progressive_narrative: null,
+            toc_linkage_mode: null,
+            project_default: null,
           },
         };
       }
 
-      const activeRecord = await this.resultsTocResultRepository.findOne({
+      const { phaseUuid, reportingYear } =
+        await this.resolveResultVersionInfo(resultId);
+
+      // Step 2: Build project_default from lead project and findProjectTocLinkage
+      let projectDefault: {
+        project_id: number;
+        project_name: string | null;
+        nodes: ProjectTocLinkageNode[];
+      } | null = null;
+      let defaultNodeIds = new Set<number>();
+
+      try {
+        const { leadProjectId, nodes } = await this.getProjectDefaultNodes(
+          resultId,
+          owner.official_code,
+          phaseUuid,
+          reportingYear,
+        );
+
+        if (leadProjectId && nodes.length > 0) {
+          defaultNodeIds = new Set(nodes.map((n) => n.toc_result_id));
+
+          let projectName: string | null = null;
+          try {
+            const projectRows = await this.resultRepository.query(
+              `SELECT COALESCE(NULLIF(TRIM(full_name), ''), short_name) AS project_name
+               FROM clarisa_projects
+               WHERE id = ? LIMIT 1`,
+              [leadProjectId],
+            );
+            projectName = projectRows?.[0]?.project_name ?? null;
+          } catch {
+            // ignore error resolving project name
+          }
+
+          projectDefault = {
+            project_id: leadProjectId,
+            project_name: projectName,
+            nodes,
+          };
+        }
+      } catch (_linkageError) {
+        this.logger.warn(
+          `Failed to read project ToC linkage for result ${resultId}`,
+        );
+        projectDefault = null;
+        defaultNodeIds = new Set<number>();
+      }
+
+      // Step 3: Read ALL active results_toc_result rows for the result and owner initiative
+      const activeRecords = await this.resultsTocResultRepository.find({
         where: {
           result_id: resultId,
           initiative_ids: owner.id,
@@ -653,41 +948,38 @@ export class BilateralCenterService {
         },
       });
 
-      if (!activeRecord) {
-        return {
-          response: {
-            planned_result: null,
-            toc_level_id: null,
-            toc_result_id: null,
-            indicator_id: null,
-            toc_progressive_narrative: null,
-          },
-        };
-      }
-
+      // Step 4: Check for active indicators and retrieve indicator_id / contributing_indicator
+      let hasActiveIndicators = false;
       let indicatorId: string | null = null;
       let contributingIndicator: number | null = null;
-      if (activeRecord.result_toc_result_id) {
+
+      const activeRecordIds = activeRecords
+        .map((r) => r.result_toc_result_id)
+        .filter(Boolean);
+
+      if (activeRecordIds.length > 0) {
         const indicatorQuery = `
           SELECT 
             rtri.toc_results_indicator_id as id,
             rtri.result_toc_result_indicator_id as rtri_id
           FROM results_toc_result_indicators rtri
-          WHERE rtri.results_toc_results_id = ?
-            and rtri.is_active = 1
-          LIMIT 1
+          WHERE rtri.results_toc_results_id IN (?)
+            AND rtri.is_active = 1
         `;
         const indicatorResult: { id: string; rtri_id: number }[] =
           await this.resultsTocResultRepository.query(indicatorQuery, [
-            activeRecord.result_toc_result_id,
+            activeRecordIds,
           ]);
+
         if (indicatorResult?.length) {
+          hasActiveIndicators = true;
           indicatorId = indicatorResult[0].id;
+
           const targetQuery = `
             SELECT rit.contributing_indicator
             FROM result_indicators_targets rit
             WHERE rit.result_toc_result_indicator_id = ?
-              and rit.is_active = 1
+              AND rit.is_active = 1
             LIMIT 1
           `;
           const targetResult: { contributing_indicator: number }[] =
@@ -700,25 +992,57 @@ export class BilateralCenterService {
         }
       }
 
+      // Step 5: Derive toc_linkage_mode per BIL-TOC-DD-1
+      let tocLinkageMode: 'project_default' | 'custom' | null = null;
+
+      if (activeRecords.length === 0) {
+        tocLinkageMode = null;
+      } else {
+        const hasUnplanned = activeRecords.some(
+          (r) => r.planned_result === false,
+        );
+        const hasNodeOutsideDefault = activeRecords.some(
+          (r) =>
+            r.toc_result_id == null ||
+            !defaultNodeIds.has(Number(r.toc_result_id)),
+        );
+
+        if (hasUnplanned || hasNodeOutsideDefault || hasActiveIndicators) {
+          tocLinkageMode = 'custom';
+        } else {
+          tocLinkageMode = 'project_default';
+        }
+      }
+
+      const firstActive = activeRecords[0] ?? null;
+
       return {
         response: {
-          planned_result: activeRecord.planned_result,
-          toc_level_id: activeRecord.toc_level_id ?? null,
-          toc_result_id: activeRecord.toc_result_id ?? null,
+          planned_result: firstActive?.planned_result ?? null,
+          toc_level_id: firstActive?.toc_level_id ?? null,
+          toc_result_id: firstActive?.toc_result_id ?? null,
           indicator_id: indicatorId,
           contributing_indicator: contributingIndicator,
           toc_progressive_narrative:
-            activeRecord.toc_progressive_narrative ?? null,
+            firstActive?.toc_progressive_narrative ?? null,
+          toc_linkage_mode: tocLinkageMode,
+          project_default: projectDefault,
         },
       };
     } catch (error) {
+      this.logger.warn(
+        `Failed to get TOC state for result ${resultId}: ${error instanceof Error ? error.message : error}`,
+      );
       return {
         response: {
           planned_result: null,
           toc_level_id: null,
           toc_result_id: null,
           indicator_id: null,
+          contributing_indicator: null,
           toc_progressive_narrative: null,
+          toc_linkage_mode: null,
+          project_default: null,
         },
         message:
           error instanceof Error ? error.message : 'Failed to load TOC state',
@@ -797,6 +1121,169 @@ export class BilateralCenterService {
         };
       }
 
+      const mode =
+        dto.toc_linkage_mode ?? dto.result_toc_result?.toc_linkage_mode;
+
+      if (mode === 'project_default') {
+        const { phaseUuid, reportingYear } =
+          await this.resolveResultVersionInfo(resultId);
+
+        const { leadProjectId, nodes } = await this.getProjectDefaultNodes(
+          resultId,
+          ownerInitiative.official_code,
+          phaseUuid,
+          reportingYear,
+        );
+
+        if (!leadProjectId || nodes.length === 0) {
+          throw new BadRequestException(
+            'No default ToC linkage found for this result',
+          );
+        }
+
+        const defaultNodeIds = new Set(
+          nodes.map((n) => Number(n.toc_result_id)),
+        );
+
+        // Read all existing active records for this result and owner initiative
+        const existingActiveRecords =
+          await this.resultsTocResultRepository.find({
+            where: {
+              result_id: resultId,
+              initiative_ids: ownerInitiative.id,
+              is_active: true,
+            },
+          });
+
+        // Softly deactivate existing active rows not in the re-derived default node set
+        const recordsToDeactivate = existingActiveRecords.filter(
+          (r) =>
+            r.toc_result_id == null ||
+            !defaultNodeIds.has(Number(r.toc_result_id)),
+        );
+
+        for (const record of recordsToDeactivate) {
+          await this.resultsTocResultRepository.update(
+            { result_toc_result_id: record.result_toc_result_id },
+            { is_active: false, last_updated_by: user.id },
+          );
+        }
+
+        // Softly deactivate any active indicator rows in results_toc_result_indicators for this result
+        const allActiveRecordIds = existingActiveRecords
+          .map((r) => r.result_toc_result_id)
+          .filter(Boolean);
+
+        if (allActiveRecordIds.length > 0) {
+          await this.resultsTocResultRepository.query(
+            `UPDATE results_toc_result_indicators
+             SET is_active = 0, last_updated_by = ?
+             WHERE results_toc_results_id IN (?) AND is_active = 1`,
+            [user.id, allActiveRecordIds],
+          );
+        }
+
+        // Materialize one active row per default node (no indicator rows)
+        for (const node of nodes) {
+          const numericNodeId = Number(node.toc_result_id);
+          const existing = existingActiveRecords.find(
+            (r) => Number(r.toc_result_id) === numericNodeId,
+          );
+
+          if (existing) {
+            await this.resultsTocResultRepository.update(
+              { result_toc_result_id: existing.result_toc_result_id },
+              {
+                is_active: true,
+                planned_result: true,
+                toc_level_id: node.toc_level_id ?? undefined,
+                last_updated_by: user.id,
+              },
+            );
+          } else {
+            const existingInactive =
+              await this.resultsTocResultRepository.findOne({
+                where: {
+                  result_id: resultId,
+                  initiative_ids: ownerInitiative.id,
+                  toc_result_id: numericNodeId,
+                  is_active: false,
+                },
+              });
+
+            if (existingInactive) {
+              await this.resultsTocResultRepository.update(
+                { result_toc_result_id: existingInactive.result_toc_result_id },
+                {
+                  is_active: true,
+                  planned_result: true,
+                  toc_level_id: node.toc_level_id ?? undefined,
+                  last_updated_by: user.id,
+                },
+              );
+            } else {
+              const newRow = this.resultsTocResultRepository.create({
+                result_id: resultId,
+                initiative_ids: ownerInitiative.id,
+                toc_result_id: numericNodeId,
+                planned_result: true,
+                toc_level_id: node.toc_level_id ?? undefined,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+              await this.resultsTocResultRepository.save(newRow);
+            }
+          }
+        }
+
+        return {
+          response: { result_id: resultId },
+          message: 'Default ToC linkage saved successfully',
+          status: 200,
+        };
+      }
+
+      // Mode is 'custom' or legacy/undefined (NO write)
+      const candidateItems = dto.result_toc_result?.result_toc_results ?? [];
+      const candidateIds = [
+        ...new Set([
+          ...candidateItems
+            .map((item) => Number(item?.toc_result_id))
+            .filter((id) => Number.isFinite(id) && id > 0),
+          ...[Number((dto.result_toc_result as any)?.toc_result_id)].filter(
+            (id) => Number.isFinite(id) && id > 0,
+          ),
+        ]),
+      ];
+
+      if (candidateIds.length > 0) {
+        const resultEntity = await this.resultRepository.findOne({
+          select: { id: true, result_type_id: true },
+          where: { id: resultId, is_active: true },
+        });
+
+        if (resultEntity?.result_type_id) {
+          const verdicts =
+            await this.resultsTocResultsService.getTocResultTypologyVerdicts(
+              candidateIds,
+              resultEntity.result_type_id,
+            );
+
+          const hasMismatch = candidateIds.some(
+            (id) => verdicts.get(id) === false,
+          );
+          if (hasMismatch) {
+            this.logger.warn(
+              `Typology mismatch rejected for result ${resultId}: candidate IDs ${candidateIds.join(', ')}`,
+            );
+            throw new BadRequestException(
+              'Selected ToC node is incompatible with the result type',
+            );
+          }
+        }
+      }
+
       const resultTocResult = {
         ...dto.result_toc_result,
         initiative_id: ownerInitiative.id,
@@ -808,6 +1295,9 @@ export class BilateralCenterService {
         user,
       );
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       return {
         response: {},
         message:
@@ -1469,7 +1959,146 @@ export class BilateralCenterService {
    * row, and `_updateTocMapping` dereferences it on approval. Letting a result through without one
    * would produce an invisible notification and a 500 on approve.
    */
-  async submitForReview(user: TokenDto, resultId: number) {
+  async submitForReview(
+    user: TokenDto,
+    resultId: number,
+    dto: SubmitForReviewDto,
+  ) {
+    const result = await this.assertSubmittable(user, resultId);
+    const parsedResultId = result.id;
+    const assessment = await this.assertAssessmentDecision(parsedResultId, dto);
+
+    await this.resultRepository.manager.transaction(async (manager) => {
+      // The decision and status transition are one atomic event. `NOW()` is
+      // deliberate: MySQL owns the timestamp, avoiding a local JS Date.
+      await manager.query(
+        `UPDATE bilateral_quality_assessments
+           SET decision = ?, had_outstanding_flags = ?, decided_at = NOW()
+         WHERE id = ? AND result_id = ? AND decision IS NULL`,
+        [
+          dto.decision,
+          hasOutstandingFlags(assessment) ? 1 : 0,
+          Number(assessment.id),
+          parsedResultId,
+        ],
+      );
+      await manager.update(
+        Result,
+        { id: parsedResultId },
+        {
+          status_id: ResultStatusData.PendingReview.value,
+          last_updated_by: user.id,
+          // The reviewer's "Submission date" column reads `external_submitted_date`
+          // (`result.repository.ts:2844`). Only the interoperability path used to write it, so
+          // results submitted from the centre form reached the review queue with an empty date.
+          external_submitted_date: new Date().toISOString(),
+          // Same gap for "Submitted by": the drawer renders `submitter_name`, which the query builds
+          // from `LEFT JOIN users u ON r.external_submitter = u.id` (`result.repository.ts:3019-3020`),
+          // so an unstamped column left the reviewer without knowing who sent the result.
+          // The column is a FK to `users.id` (`result.entity.ts:525-535`, `@ManyToOne(() => User)`):
+          // "external" describes where the RESULT came from, not that the user must be external, so a
+          // platform user id is the value it was built for.
+          external_submitter: user.id,
+        },
+      );
+
+      // The action enum has no dedicated SUBMIT value and the column enum is narrow, so the
+      // transition is recorded as UPDATE — the same value the review-update flows already write.
+      const reviewHistory = manager.create(ResultReviewHistory, {
+        result_id: parsedResultId,
+        action: ReviewActionEnum.UPDATE,
+        comment: 'Submitted for review by the reporting center',
+        created_by: user.id,
+      });
+      await manager.save(ResultReviewHistory, reviewHistory);
+    });
+
+    // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
+    // Post-commit and non-blocking (the emitter never throws) — the submit already succeeded.
+    await this.bilateralService.emitBilateralSubmittedNotification(
+      parsedResultId,
+      user.id,
+    );
+
+    return {
+      response: {
+        resultId: parsedResultId,
+        status: ResultStatusData.PendingReview.value,
+      },
+      message: 'Result submitted for review successfully',
+    };
+  }
+
+  /**
+   * Prevents the legacy empty PATCH from bypassing the traffic-light flow.
+   * A row must belong to this result, be terminal and current, and receive
+   * the decision that its terminal state permits.
+   */
+  private async assertAssessmentDecision(
+    resultId: number,
+    dto: SubmitForReviewDto,
+  ): Promise<BilateralQualityAssessment> {
+    if (!dto || !Number.isInteger(Number(dto.assessment_id))) {
+      throw new BadRequestException(
+        'Run the quality assessment before submitting this result for review.',
+      );
+    }
+
+    const assessment = await this.qualityAssessmentRepository.findOne({
+      where: { id: Number(dto.assessment_id), result_id: resultId },
+    });
+    if (!assessment) {
+      throw new BadRequestException(
+        'The selected quality assessment does not belong to this result.',
+      );
+    }
+    if (assessment.decision || assessment.status === 'running') {
+      throw new BadRequestException(
+        'The selected quality assessment can no longer be used for submission.',
+      );
+    }
+
+    const latest = await this.qualityAssessmentService.getLatest(resultId);
+    if (
+      'latest' in latest ||
+      latest.id !== Number(assessment.id) ||
+      !latest.is_current
+    ) {
+      throw new BadRequestException(
+        'The quality assessment is stale. Run it again after changing the result.',
+      );
+    }
+
+    const allowedDecision =
+      assessment.status === 'unavailable'
+        ? 'submitted_without_check'
+        : assessment.status === 'completed' ||
+            assessment.status === 'skipped_kp_rule'
+          ? 'submitted_anyway'
+          : null;
+    if (dto.decision !== allowedDecision) {
+      throw new BadRequestException(
+        'This submission decision does not match the quality assessment status.',
+      );
+    }
+    return assessment;
+  }
+
+  /**
+   * The four pre-submit guards `submitForReview` has always run, extracted so the AI quality
+   * assessment (`assess`, below) can share them verbatim rather than duplicating them
+   * (`BIL-QAI-DD-5`, `docs/specs/bilateral/qa-ai-traffic-light/design.md` §5 "Orchestrator"
+   * step 1): the result must be an active bilateral result in Editing or Draft, the caller
+   * must hold the Center User role on its lead centre, it must have a Science Program
+   * assigned, and — for Innovation Use — its MDS tracker must already be complete. Returns
+   * the validated `Result` row so callers avoid a second lookup.
+   *
+   * @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+   */
+  private async assertSubmittable(
+    user: TokenDto,
+    resultId: number,
+  ): Promise<Result> {
     const parsedResultId = Number(resultId);
     if (
       !parsedResultId ||
@@ -1520,51 +2149,60 @@ export class BilateralCenterService {
       await this.innovationUseMdsValidator.assertPersistedMds(parsedResultId);
     }
 
-    await this.resultRepository.manager.transaction(async (manager) => {
-      await manager.update(
-        Result,
-        { id: parsedResultId },
-        {
-          status_id: ResultStatusData.PendingReview.value,
-          last_updated_by: user.id,
-          // The reviewer's "Submission date" column reads `external_submitted_date`
-          // (`result.repository.ts:2844`). Only the interoperability path used to write it, so
-          // results submitted from the centre form reached the review queue with an empty date.
-          external_submitted_date: new Date().toISOString(),
-          // Same gap for "Submitted by": the drawer renders `submitter_name`, which the query builds
-          // from `LEFT JOIN users u ON r.external_submitter = u.id` (`result.repository.ts:3019-3020`),
-          // so an unstamped column left the reviewer without knowing who sent the result.
-          // The column is a FK to `users.id` (`result.entity.ts:525-535`, `@ManyToOne(() => User)`):
-          // "external" describes where the RESULT came from, not that the user must be external, so a
-          // platform user id is the value it was built for.
-          external_submitter: user.id,
-        },
-      );
+    return result;
+  }
 
-      // The action enum has no dedicated SUBMIT value and the column enum is narrow, so the
-      // transition is recorded as UPDATE — the same value the review-update flows already write.
-      const reviewHistory = manager.create(ResultReviewHistory, {
-        result_id: parsedResultId,
-        action: ReviewActionEnum.UPDATE,
-        comment: 'Submitted for review by the reporting center',
-        created_by: user.id,
-      });
-      await manager.save(ResultReviewHistory, reviewHistory);
-    });
-
-    // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
-    // Post-commit and non-blocking (the emitter never throws) — the submit already succeeded.
-    await this.bilateralService.emitBilateralSubmittedNotification(
-      parsedResultId,
-      user.id,
+  /**
+   * `POST /api/bilateral/center/quality-assessment/:resultId` — runs (or reuses) the AI
+   * quality assessment ahead of submit, gated by the exact same preconditions as
+   * `submitForReview` (`assertSubmittable` above), and never changes `status_id`, writes
+   * review history, or fires the submitted notification (`BIL-QAI-R-1`).
+   *
+   * @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+   */
+  async assess(user: TokenDto, resultId: number) {
+    const result = await this.assertSubmittable(user, resultId);
+    const { dto, httpStatus } = await this.qualityAssessmentService.assess(
+      user,
+      result,
     );
 
     return {
-      response: {
-        resultId: parsedResultId,
-        status: ResultStatusData.PendingReview.value,
-      },
-      message: 'Result submitted for review successfully',
+      response: dto,
+      message:
+        httpStatus === 202
+          ? 'A quality assessment is already running for this result'
+          : 'Quality assessment completed',
+      status: httpStatus,
+    };
+  }
+
+  /**
+   * `GET /api/bilateral/center/quality-assessment/:resultId/latest` — read-only, gated by
+   * centre permission only (design.md §4.2): a reviewer reopening a result mid-run or after a
+   * closed tab needs this regardless of the result's current `status_id`.
+   *
+   * @akili-spec bilateral/qa-ai-traffic-light (BIL-QAI-T-6)
+   */
+  async getLatest(user: TokenDto, resultId: number) {
+    const parsedResultId = Number(resultId);
+    if (
+      !parsedResultId ||
+      !Number.isFinite(parsedResultId) ||
+      parsedResultId <= 0
+    ) {
+      throw new BadRequestException(
+        'The resultId parameter must be a valid positive number.',
+      );
+    }
+
+    await this.assertCenterPermission(user, parsedResultId);
+    const dto = await this.qualityAssessmentService.getLatest(parsedResultId);
+
+    return {
+      response: dto,
+      message: 'Latest quality assessment retrieved successfully',
+      status: 200,
     };
   }
 

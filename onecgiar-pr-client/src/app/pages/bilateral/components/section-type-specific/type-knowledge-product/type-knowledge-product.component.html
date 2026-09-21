@@ -214,6 +214,10 @@
     <div class="kp-fair-group">
       @for (indicator of fairData; track indicator.key) {
         <div class="kp-fair-item">
+          <!-- Barrido 18-sep-2026: the arc tween is off on purpose. ng-circle-progress writes the
+               arc's `attr.d` after Angular has checked the view, so every open of this section threw
+               three NG0100 errors into the console. The drawn arc is identical with and without it —
+               the four paths were compared live on prtest — so all that is lost is the 300ms fill. -->
           <circle-progress
             [percent]="indicator.value.score * 100"
             [subtitle]="indicator.key"
@@ -224,8 +228,7 @@
             [outerStrokeColor]="calculateBorderColor(indicator.value.score)"
             innerStrokeColor="var(--pr-color-accents-1)"
             [space]="$any(-7)"
-            [animation]="true"
-            [animationDuration]="300">
+            [animation]="false">
           </circle-progress>
           <div class="kp-fair-texts">
             @for (subIndicator of indicator.value.indicators ?? []; track subIndicator.name) {

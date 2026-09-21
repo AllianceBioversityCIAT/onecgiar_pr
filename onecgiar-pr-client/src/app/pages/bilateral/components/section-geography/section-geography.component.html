@@ -3,6 +3,8 @@
      multi-selects showing their own selected list, no per-block cards. UI only — every handler,
      value and MDS rule is the one the section already had. -->
 <div class="sg-fields" data-section="geography">
+  <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
+  <app-bilateral-field-quality-flag section="geographic_location" />
   <app-alert-status
     status="info"
     [collapsible]="false"
@@ -19,7 +21,7 @@
       optionLabel="name"
       optionValue="id"
       [required]="true"
-      [ngModel]="geographicLocationBody().geo_scope_id"
+      [ngModel]="scopeSelection()"
       (ngModelChange)="onScopeChange($event)">
     </app-pr-radio-button>
     @if (focusDescription(geographicLocationBody().geo_scope_id); as text) {
@@ -29,7 +31,7 @@
     }
 
     @if (geographicLocationBody().geo_scope_id && geographicLocationBody().geo_scope_id !== 1 && geographicLocationBody().geo_scope_id !== 50) {
-      @if (geographicLocationBody().geo_scope_id !== 2) {
+      @if (showsMainRegionsYesNo) {
         <app-pr-yes-or-not
           [readOnly]="readOnly()"
           label="Are there any regions that you wish to specify for this result?"
@@ -115,8 +117,13 @@
     }
   </div>
 
-  <!-- Potential impact in other geographic areas (extra scope) -->
-  @if (geographicLocationBody().geo_scope_id && geographicLocationBody().geo_scope_id !== 1 && geographicLocationBody().geo_scope_id !== 50) {
+  <!-- Potential impact in other geographic areas (extra scope) — innovations only, like W1/W2 -->
+  @if (
+    showExtraGeoScopeQuestion() &&
+    geographicLocationBody().geo_scope_id &&
+    geographicLocationBody().geo_scope_id !== 1 &&
+    geographicLocationBody().geo_scope_id !== 50
+  ) {
     <div class="sg-block sg-block--extra">
       <!-- P2-3504 · Innovation results ask the business-approved geographic-impact question;
            other typologies keep the legacy wording. Both come from `isInnovationResult()`. -->
@@ -141,7 +148,7 @@
           optionLabel="name"
           optionValue="id"
           [required]="true"
-          [ngModel]="extraGeographicLocationBody().geo_scope_id"
+          [ngModel]="extraScopeSelection()"
           (ngModelChange)="onExtraScopeChange($event)">
         </app-pr-radio-button>
 

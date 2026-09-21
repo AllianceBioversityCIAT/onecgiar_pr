@@ -68,7 +68,12 @@
   min-height: 0;
   overflow-y: auto;
   // 32/40 — el padding exacto que el mockup le da a la columna de contenido.
-  padding: 32px 40px;
+  // Abajo 88px, no 32 (Cami, 16-sep-2026): la barra inferior flota SOBRE este scroll con altura
+  // cero, y sus dos cápsulas ocupan 70px desde el piso (14 de `bottom` + 56 de cápsula). Con 32px
+  // el final del formulario nunca salía de detrás de ellas: el último campo —"Partner types", los
+  // Yes/No— quedaba tapado aun con el scroll al tope. 70 + 18 de aire = el último campo termina
+  // por encima de la línea de la barra. Si la cápsula cambia de alto, esto cambia con ella.
+  padding: 32px 40px 88px;
 
   // El contenedor blanco. Dos correcciones contra el mockup, ambas de alcance local porque
   // `.section_container` es una clase GLOBAL que usan otras pantallas:

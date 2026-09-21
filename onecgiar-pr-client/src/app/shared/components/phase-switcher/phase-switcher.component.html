@@ -1,13 +1,32 @@
-<div class="title_component">Phases:</div>
 <div class="local_container">
-    <div class="phase_switcher">
-        <a [href]="getRouteWithQueryParams(phase?.id)" class="select_phase_button {{phase.status?'open':'close'}}"
-            [ngClass]="{'selected': this.activatedRoute.snapshot.queryParams['phase'] === phase?.id}"
-            (click)="goToresultUrl(phase?.id)"
-            *ngFor="let phase of getFilterPhases()">{{phase.phase_name}} <div class="tag">
-                <div class="text">{{phase.status?'Open':'Closed'}}</div>
-                <i class="material-icons-round">{{phase.status?'edit':'lock'}}</i>
+    <div class="reporting_cycles_bar">
+        <div class="left_group">
+            <span class="title_component">Reporting cycles</span>
+            <div class="segmented_control">
+                <a [href]="getRouteWithQueryParams(phase?.id)" class="cycle_pill {{phase.status?'open':'close'}}"
+                    [ngClass]="{'selected': isSelectedPhase(phase)}"
+                    [attr.aria-current]="isSelectedPhase(phase) ? 'true' : null"
+                    (click)="goToresultUrl(phase?.id)"
+                    *ngFor="let phase of getFilterPhases()">
+                    <span class="pulse_dot" *ngIf="phase.status">
+                        <span class="ping"></span>
+                        <span class="dot"></span>
+                    </span>
+                    <i class="material-icons-round" *ngIf="!phase.status">lock</i>
+                    <span class="cycle_name">{{phase.status ? phase.phase_name : getActivePhaseYear(phase)}}</span>
+                    <span class="cycle_status" *ngIf="phase.status">
+                        <i class="material-icons-round">edit</i>
+                        <span>Open</span>
+                    </span>
+                </a>
             </div>
-        </a>
+        </div>
+        <div class="right_group" *ngIf="getActivePhase() as activePhase">
+            <div class="active_cycle_tag">
+                <span class="dot"></span>
+                Current Active Cycle
+            </div>
+            <div class="cycle_year">Cycle {{getActivePhaseYear(activePhase)}}</div>
+        </div>
     </div>
 </div>

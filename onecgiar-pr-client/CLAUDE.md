@@ -114,20 +114,119 @@ npm run watch       # ng build --watch --configuration development
 ### Tests
 
 ```bash
-npm run test                # Jest unit tests
+npm run test                # Jest unit tests (what CI runs — do not add local-only flags here)
+npm run test:local          # same suite, workers sized to free memory (see below)
 npm run test:watch          # Jest watch mode
 npm run test:coverage       # Jest with coverage
 npm run test:coverage:html  # Coverage with text-summary, cobertura, lcov reporters
 npm run lint                # ng lint
 npm run lint:fix            # ng lint --fix
+npm run ram                 # memory traffic light + what is holding it (see below)
 npm run cypress:open        # Cypress GUI (E2E)
 npm run cypress:run         # Cypress headless (E2E)
 npm run cypress:component   # Cypress GUI (component testing)
-npm run test:ct             # Cypress component tests, headless
+npm run test:ct             # Cypress component tests, headless, batched + memory-guarded
+npm run test:ct:unbatched   # one Cypress process for every spec — escape hatch, see below
 ```
 
 > Cypress is **local-only** — there is no Cypress GitHub Actions workflow. It exists for local
 > and AI-agent self-verification (see §9 Component tests).
+
+### 🛑 Memory: why `test:ct` is batched and guarded
+
+A component-test run costs a few GB **on top of** whatever the machine already holds, because the
+Angular/webpack dev-server behind component testing keeps the compiled module graph of every spec
+it has served alive for the life of the process. On a 16 GB Mac with a couple of `ng serve`
+already resident that does not produce a red suite — it produces a **frozen laptop**.
+
+Two things protect against it, both in `scripts/`:
+
+- **`scripts/run-ct-batched.js`** — restarts Cypress every `CT_BATCH_SIZE` specs (default 8, or 4
+  when memory is tight) so the module graph is handed back to the OS between batches. It also
+  stops mid-run rather than take the machine down if memory turns red.
+- **`scripts/ram-guard.js`** — measures available RAM and swap first and **refuses to start** when
+  the machine is already out of memory, naming what is holding it. `npm run ram` runs it on its
+  own; `npm run cypress:run` gates on it too.
+
+```bash
+npm run ram                         # green / amber / red + the dev-servers and browsers open
+CT_BATCH_SIZE=2 npm run test:ct     # lower peak, more startup cost
+CT_HEAP_MB=1536 npm run test:ct     # tighter heap cap for both Electron and the dev-server
+RAM_GUARD=off npm run test:ct       # run anyway on a red machine (it will hurt)
+```
+
+**The usual cause of a red machine is not the test run — it is idle dev-servers.** Each warm
+`ng serve` is ~600 MB, and parallel agent sessions accumulate them across worktrees. `npm run ram`
+lists them, plus any headless browser a crashed Playwright/Cypress run left behind (with the `kill`
+command ready to paste). It **never lists a real browser window** — only headless ones, and it
+never kills anything on its own.
+
+**Unit tests too — but through `test:local`, never `test`.** Each Jest worker is a full Node
+process with the Angular compiler loaded (~400-600 MB). The configured `"maxWorkers": "50%"` is 5
+of them on a 10-core Mac. `npm run test:local` (`scripts/run-jest-local.js`) runs the same suite
+with the worker count sized to *free memory* instead of core count — 1 when red, 2 when amber,
+2-6 when green — and `JEST_WORKERS=n` forces it.
+
+> 🛑 **`maxWorkers` must never be pinned in `package.json`**: that file travels to the build agent,
+> where more workers is exactly what you want. The limit belongs to the local invocation. This is
+> also why `npm test` is left untouched — it is the command CI runs.
+
+🛑 **The guard is a silent no-op off a local macOS session** (`process.platform !== 'darwin'` or
+`CI` set) and fails open if the measurement itself throws. A guard that can turn a build agent red
+is worse than the freeze it prevents — see the root guide's rule on never breaking the pipeline.
+
+> 🥇 **What the guard measures, and the two readings that look right and are wrong** (15-sep-2026).
+> The verdict comes from `kern.memorystatus_vm_pressure_level` — the signal macOS itself acts on
+> (1 normal / 2 warning / 4 critical). Swap and raw page counts are printed, never gated on:
+> - **Swap used is cumulative since boot** and does not fall when the pressure ends. Gating on it
+>   pins the guard at red forever after one bad afternoon. Measured that day: swap **95%** while
+>   the kernel reported **normal**.
+> - **`free + inactive + speculative` understates badly** because it ignores the compressor —
+>   4.3 GB sat compressed in the same reading. That formula said **23% available** where macOS
+>   said **46%**.
+>
+> A light that cannot turn green is not a measurement, it is a constant — and this one had already
+> made another session shut down a dev-server that was not in the way.
+
+### 🛑 "Cannot find module 'cypress-real-events/support'" — the suite dies before the first assert
+
+`cypress/support/component.ts` imports `cypress-real-events`, so if that package is missing from
+`node_modules` **every** component-test run fails with one synthetic failure per spec and zero
+tests executed — it looks like the specs are broken when nothing has run at all. It is declared in
+`package.json`; a checkout can simply be missing it:
+
+```bash
+npm install cypress-real-events@1.15.0 --no-save --no-package-lock   # restores it, touches nothing
+```
+
+🛑 **Never `npm ci` to fix this.** Other sessions' worktrees symlink this very `node_modules` to
+avoid duplicating 1.5 GB, so a reinstall here pulls the floor out from under several working trees
+at once — and from anyone mid-capture against a running `ng serve`.
+
+### Run only the specs your change can actually break
+
+```bash
+npm run test:changed       # Jest: every spec reachable from a changed file
+npm run test:ct:changed    # Cypress CT: the same, via scripts/ct-affected.js
+npm run affected           # which CT specs would run, and WHY each one was picked
+```
+
+🥇 **This is a dependency-graph question, not a filename question.** Jest's `--changedSince` walks
+its own module graph; `scripts/ct-affected.js` walks the imports of each `*.cy.ts` the same way,
+including the `.html` / `.scss` that Angular reaches through `templateUrl` rather than an import.
+Measured: editing `pr-input.component.ts` pulls in Jest specs under `bilateral`,
+`programme-results` and `user-management` — none of which share a folder or a name with it. The
+naive "run the spec next to the file" reports green while the thing it missed is broken.
+
+Scale on this repo: **574 Jest specs → 119** for one branch's changes (-79 %). For CT, one changed
+file selects **2 of 63** — unless it lives in `custom-fields/`, where `cypress/support/ct-utils.ts`
+imports the whole `CustomFieldsModule`, so every field reaches every other and the answer is 52.
+That number is correct, not a bug: those specs really do recompile the whole module.
+
+⚠️ The baseline is the branch the work forked from (`origin/performance-refactor`), **not `HEAD`** —
+otherwise a spec broken three commits ago silently stops running. Override with `CHANGED_SINCE=…`.
+
+Measured timings and the ideas not yet tried: [`docs/test-runtime-notes.md`](./docs/test-runtime-notes.md).
 
 ### Coverage thresholds (enforced in `package.json`)
 
@@ -519,6 +618,7 @@ npm run test:ct            # runs all src/**/*.cy.ts headless — expect "All sp
 | **Coverage** | Client thresholds: 50/60/60/60. Don't lower them. |
 | **Browser verification** | Inject `token` **and** `user` in localStorage, and confirm the served bundle is not stale — see §9 "Verifying in a REAL browser". Both traps look like broken features. |
 | **Commit** | `<emoji> <type>(<scope>) [ticket]: <description>`. |
+| **Asunto del commit: sin apostrofes ni `$` ni comillas** | 🛑 El job de Jenkins lee `git log -1 --pretty=format:%H %an %ad %s` y **interpola el asunto en un `sh` sin entrecomillar**. Un apostrofo deja una comilla sin cerrar y el build muere con `Syntax error: Unterminated quoted string` → `Error retrieving commit information` → **FAILURE**, con los tests en verde. Medido el 15-sep-2026: build **#2286**, HEAD `00c5fcff3` (*the client s enum does not*); los tres anteriores, sin apostrofo, SUCCESS. Escribe *the client enum* o *the enum of the client*. ⚠️ La causa de fondo es del Jenkinsfile (falta entrecomillar esa variable) y es infra: no se toca sin Yeck. |
 
 ### Commit examples
 

@@ -1,4 +1,6 @@
 <div class="sc-fields" data-section="contributors">
+  <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
+  <app-bilateral-field-quality-flag section="contributors_and_partners" />
   <app-alert-status
     status="info"
     [collapsible]="false"
@@ -25,6 +27,14 @@
 
     <div class="sc-block sc-block--programs">
       <!--
+        P2-3520: `isStatic` is what forces `pr-multi-select` to draw its trigger even when the form
+        is read-only (pr-multi-select.component.html:16), and the option checkboxes inside it only
+        obey `option.disabled` - so with a hard `true` the four partner pickers stayed openable and
+        tickable once the result left Editing. Nothing was ever saved, but the screen lied. Tying it
+        to `!readOnly()` hands the control back to the shared component's own read-only path; in
+        editable mode the bound value is still `true`, so nothing changes there.
+      -->
+      <!--
         Always rendered, and offering every P25 program (Nicoleta Trifa via Ángel Jarrín,
         2026-09-03): it used to depend on the project's mapping and vanished for a project mapped
         100% to one program. Persisted through `contributing_programs[]` on the contributors PATCH
@@ -41,7 +51,7 @@
           optionValue="programId"
           placeholder="Add another program…"
           [required]="false"
-          [isStatic]="true">
+          [isStatic]="!readOnly()">
         </app-pr-multi-select>
       }
       @if (creationService.selectedSecondarySps().length) {
@@ -80,7 +90,7 @@
       optionValue="institutionId"
       placeholder="Centers which collaborate with this result"
       [required]="false"
-      [isStatic]="true">
+      [isStatic]="!readOnly()">
     </app-pr-multi-select>
     @if (selectedCenterInstitutionIds().length) {
       <div class="sc-selected-chips">
@@ -108,7 +118,7 @@
       optionValue="id"
       placeholder="The drop-down list includes all bilateral projects"
       [required]="false"
-      [isStatic]="true">
+      [isStatic]="!readOnly()">
     </app-pr-multi-select>
     @if (selectedProjectIds().length) {
       <div class="sc-selected-chips">
@@ -152,10 +162,13 @@
       </div>
     }
 
+    <!-- P2-3520: same `isStatic` trap as the four pickers above — pr-checkbox only honours
+         `readOnly` when `isStatic` is false (pr-checkbox.component.html:6), so a submitted
+         result kept this box clickable. -->
     <app-pr-checkbox
       [readOnly]="readOnly()"
       label="This result has no external partners"
-      [isStatic]="true"
+      [isStatic]="!readOnly()"
       [required]="false"
       [ngModel]="noExternalPartners()"
       (ngModelChange)="noExternalPartners.set($event)"
@@ -174,7 +187,7 @@
         selectedOptionLabel="institutions_name"
         placeholder="Select the partners that contributed to this result"
         [required]="true"
-        [isStatic]="true">
+        [isStatic]="!readOnly()">
       </app-pr-multi-select>
 
       @if (selectedPartnerInstitutionIds().length) {

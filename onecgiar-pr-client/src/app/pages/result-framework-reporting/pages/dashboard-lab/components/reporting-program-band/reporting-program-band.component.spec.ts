@@ -231,6 +231,27 @@ describe('ReportingProgramBandComponent', () => {
       expect(root().querySelector('#pr-band-info-popover')).toBeNull();
     });
 
+    it('raises the sticky band above Overview phase/filter chrome while the info popover is open', async () => {
+      await build({ showToolbar: false, collapsible: true });
+      const sticky = root().querySelector('[data-testid="reporting-program-band-sticky"]') as HTMLElement;
+
+      expect(sticky.classList.contains('z-20')).toBe(true);
+      expect(sticky.classList.contains('z-40')).toBe(false);
+
+      component.toggleInfo(new MouseEvent('click'));
+      fixture.detectChanges();
+
+      expect(sticky.classList.contains('z-40')).toBe(true);
+      expect(sticky.classList.contains('z-20')).toBe(false);
+      expect(root().querySelector('[data-testid="reporting-program-band-info-popover"]')).toBeTruthy();
+
+      component.closeInfo();
+      fixture.detectChanges();
+
+      expect(sticky.classList.contains('z-40')).toBe(false);
+      expect(sticky.classList.contains('z-20')).toBe(true);
+    });
+
     it('ignores scroll events that do not cross the threshold', async () => {
       await build({ showToolbar: true, collapsible: true });
       const spy = jest.spyOn(component.bandCollapsed, 'set');
