@@ -129,3 +129,106 @@ The Reviewer also corrected the Leader: the brief said "four devDependencies"; t
 **Constitution impact** — none. Dev-only tooling under `docs/specs/`, outside both packages; no module created or reshaped.
 
 **Final verification result** — `VERIFIED` (Leader re-run) + `STATUS: PASS` (independent `opus` Reviewer). Archive byte-identical; `.env` untracked and ignored; no credential in any tracked artifact.
+
+### `BG-T-3` — Read-only enforcement: default-deny request guard
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 2) |
+| Date | 2026-09-21 |
+| Implementer attempts | **2** — attempt 1 consumed by a converged lens FAIL |
+| Review depth | `lenses` (effort `xhigh`, safety surface). Attempt 1: **two** lens Reviewers in parallel (risk+resilience, reliability+coverage). Attempt 2: one conformance Reviewer. All `opus`; Implementer `sonnet` |
+| Review rounds | 3 (2 + 1). Cumulative for the run: **5** of 17 budgeted |
+| Requirements covered | `BG-R-7`, `BG-AC-7`, `BG-DD-3`, and `BG-R-7`'s negative clauses (*MUST NOT submit* / *MUST NOT trigger a billable AI assessment* / *MUST NOT issue any non-idempotent request*) |
+| Authored LOC | ~282 (`read-only.ts` ~260 + 22 insertions in `capture.ts`). Cumulative: **~454** of 1,300–1,700. **No tripwire** |
+| runtime events | none |
+
+**Files changed:** `tooling/src/guards/read-only.ts` (new) · `tooling/src/capture.ts` (install site + per-route `routeIdRef`, 22 insertions).
+
+**What was built.** Default-deny **by HTTP method**, not by an origin allowlist — `design.md` §3.3's three rules: GET/HEAD allowed anywhere; other methods allowed only to six inert host-suffix families (`fonts.googleapis.com`, `fonts.gstatic.com`, `hotjar.com`, `clarity.ms`, `google-analytics.com`, `tawk.to`, dot-anchored); anything else aborts the request, logs a DENY and exits non-zero. Installed on the `BrowserContext` **before `injectAuth()`** — which performs its own `goto` + `reload` and mounts the whole app shell — with a `WeakSet` runtime assertion rather than a comment.
+
+---
+
+#### Attempt 1 — FAIL (both lenses, converged)
+
+Both lens Reviewers independently found the same defect: **logging was a hard precondition for enforcement.**
+
+`logDecision()` did `writeChain = writeChain.then(() => fs.appendFile(...))` with no rejection handling, and was awaited *before* `route.abort()` and `fail()`. A `.then(onFulfilled)` on a rejected promise propagates the rejection **without invoking the callback**, so one rejected append (ENOSPC / EACCES / `dist/` removed mid-run) left `writeChain` permanently rejected — every later handler threw before reaching abort+fail. The reliability lens traced the consequence into Playwright itself: `RouteHandler._handleImpl` re-throws (`playwright-core/lib/coreBundle.js:60152-60162`), short-circuiting `_onRoute` before its fallback `_innerContinue` (`:62390-62397`), so the request is left **unresolved** and the run dies as an opaque selector/navigation timeout — no DENY line, no method/origin/path/route id. The guard stopped enforcing by message and started hanging, and **a hung run reports as "still running", not as "blocked a write".**
+
+Violated `design.md` §3.3 *"Fail-closed, not fail-open"* and `BG-R-7` scenario 1 (*"AND IT MUST abort the entire run, not skip the request"*) and scenario 2 (*"THEN the run exits non-zero naming the method, origin, path and route id"*).
+
+**Leader reproduced the poisoning before accepting the finding** (not taken at face value):
+
+```
+write 1 ok
+write 2 THREW: ENOSPC
+write 3 THREW: ENOSPC   <- never attempted its own write
+write 4 THREW: ENOSPC
+```
+
+Second issue, reliability lens: **no durable artifact evidenced the guard executing.** `ensureLogFile()` truncates per run, so the falsifier's DENY line was already destroyed and unrecoverable; `tasks.md` requires both falsifier directions "executed **and recorded**".
+
+**A Leader hypothesis the Reviewers rejected, correctly.** The Leader handed both lenses an observation — the on-disk log held 15 lines, all header, zero decisions — asking whether `BG-AC-7` ("the log shows zero non-GET requests") was therefore trivially satisfiable and blind. It was passed explicitly as evidence, not as a conclusion. The reliability lens refuted it: rule-1 ALLOWs are logged too, so a real run yields hundreds of positive lines and *"zero DENY among N ALLOW"* **is** a positive signal; a header-only file proves no traffic was observed, not that the artifact is blind. `BG-AC-7` is gateable on this log once a run exists. **The Leader's hypothesis was wrong and is recorded as wrong.**
+
+#### Attempt 2 — PASS
+
+Fix, exactly the remediation both lenses converged on:
+1. **De-poisoned the stored chain** — `writeChain = writeChain.then(write).catch(err => console.error(...))` at `:178`. The `.catch` terminates what is *stored back*, so the chain always settles fulfilled and the next `.then` always runs its append. `await writeChain` at the call site unchanged, preserving flush-before-exit.
+2. **Logging made non-fatal on all three rule paths**, each `logDecision` in its own `try/catch`.
+3. **Terminal action guaranteed** — `try { await route.abort('accessdenied') } finally { fail(...) }`, so `process.exit(1)` fires even if the abort itself throws (closed page, request already handled).
+
+**Durable falsifier evidence — the log truncates, so this is the record.**
+
+*(i) It blocks:*
+```
+[guard:read-only] FAIL — disallowed request — method=POST origin=https://example.invalid
+  path=/api/bilateral/save-draft route=falsifier-i-save-draft-route.
+  Rule 3 (default-deny) fired: ...
+EXIT=1
+```
+```
+2026-09-21T22:26:30.678Z	ALLOW	rule=1	method=GET	origin=http://127.0.0.1:60695	path=/	route=falsifier-i-save-draft-route
+2026-09-21T22:26:30.704Z	DENY	rule=3	method=POST	origin=https://example.invalid	path=/api/bilateral/save-draft	route=falsifier-i-save-draft-route
+```
+
+*(ii) It does not over-block* — the direction that proves the guard is not simply a broken pipeline:
+```
+[verify-allows] run completed WITHOUT the process being killed by the guard
+[verify-allows] log has 6 decision line(s): 6 ALLOW, 0 DENY
+  ALLOW rule=1 method=GET  origin=http://127.0.0.1:60728 path=/               route=falsifier-ii-normal-run
+  ALLOW rule=1 method=GET  origin=http://127.0.0.1:60728 path=/other-get-path route=falsifier-ii-normal-run
+  ALLOW rule=2 method=POST origin=https://static.hotjar.com path=/c/hotjar-0.js route=falsifier-ii-normal-run
+EXIT=0
+```
+
+*(iii) Regression test for the exact defect* — not requested, added by the Implementer: `dist/` deleted mid-run to force the append to reject. The allowed request completed without the handler throwing, and **with the deny request's own log write also failing**, `route.abort()` + `fail()` still fired → `EXIT=1` with the full detail line.
+
+*(iv) Install-order assertion* — install call removed, assertion left in place: `[read-only-guard] assertReadOnlyGuardInstalled: guard is NOT installed on this browser context. …`, `EXIT=1`. `capture.ts` restored immediately.
+
+**Leader evidence re-run (non-author) — `VERIFIED`.** `tsc` exit 0; `.catch` confirmed on the stored chain at `:178`; `try/finally` with `fail()` in the `finally`; `capture.ts` diff still 22 insertions; tooling `git status` only the two expected files; no `_*.ts` residue. The Leader also re-derived both semantics in isolation — after the fix all four writes settle and the handler continues, and modelling the deny path with **both** the log write and the abort rejecting, `fail()` still ran.
+
+**Reviewer verdict (round 2) — `STATUS: PASS`.** Both issues closed at the primitive, not papered over. Path-by-path: rules 1 and 2 log inside `try/catch` then continue; rule 3 logs in `try/catch`, then `try { abort } finally { fail }` where `fail()` is synchronous so the pending abort exception cannot outrun the exit. A dropped DENY line cannot coexist with exit 0, because any rule-3 hit exits non-zero regardless of the log, and `fail()`'s stderr independently names method, origin, path and route id — exactly what `BG-R-7` scenario 2 demands. Truncation ruled **correct, not a defect**: `BG-AC-7` is scoped to one run, the DoD wants the WebSocket gap in the log header (per run), and an accumulating log would make "zero denials" ambiguous across runs. Allowlist boundary matching verified (`===` / `.${suffix}`) — no prefix bug, no widening; unparsable URLs fail closed into rule 3; only `URL#origin` and `URL#pathname` reach the log, never `rawUrl`, headers, bodies, cookies or query values.
+
+**Scope containment verified.** A grep over `tooling/src` for `OPTIONS|contexts\(\)|serviceWorkers|LIFO|unlink|preflight` returns only one unrelated comment — **none of the five recorded advisories landed in the rework.**
+
+**`ADVISORY` (recorded, never gating, never minted into a task):**
+- *Reliability* — `OPTIONS` has no row in §3.3's table, yet the client's custom `auth` header makes cross-origin API GETs non-simple, so each is preceded by a preflight. Chromium normally does not surface preflights to `page.route()`, so this is likely inert, but it is **the single most plausible first-live-run false positive**. If it fires, that is a §3.3 Pivot Protocol amendment — never an allowlist widening, which the `fail()` message itself tells the reader.
+- *Reliability* — the `WeakSet` identity is sound and `context.route` covers later pages, popups and cross-origin iframes, but a future `browser.newPage()` would create a second, **unguarded** context no assertion site checks. Asserting over `browser.contexts()` would close it.
+- *Reliability* — Playwright route handlers are LIFO with auto-continue on unhandled; a handler registered later by `BG-T-4`/`BG-T-5` would outrank this guard unless it calls `route.fallback()`.
+- *Coverage* — `page.request`/`context.request` (APIRequestContext) bypasses `route()` entirely, and Playwright's default `serviceWorkers: 'allow'` exempts SW-originated requests. Neither is exposed today — verified: no `provideServiceWorker`/`ServiceWorkerModule`/ngsw anywhere in `onecgiar-pr-client/src`. `browser.newContext({ serviceWorkers: 'block' })` would close the second structurally.
+- *Risk* — `process.exit(1)` from the detached handler skips `capture.ts`'s `finally { await browser.close() }`, orphaning Chrome, and can truncate an in-flight `page.screenshot()` into a partial PNG that **`BG-T-5`'s bounds guard would later consume**. Deleting the current route's PNG or writing a `DENIED` sentinel before exiting would close it.
+- *Resilience* — the deny path awaits the whole serialized chain before aborting, so an append that **never settles** (as opposed to rejecting) would delay `fail()`. Outside the defect class and outside local-`dist/` failure modes.
+
+**Independently verified by the risk lens, worth keeping:** the WebSocket gap claim holds — zero matches for `PusherService|pusher|WebSocket|webSocketUrl` under `onecgiar-pr-client/src/app/pages/bilateral/`. Elastic's embedded Basic credentials ride in headers and cannot surface in this log.
+
+**Decisions made**
+- Accepted the converged lens FAIL as in-scope after reproducing the promise-poisoning myself, rather than on the Reviewers' word.
+- Kept `ensureLogFile()`'s truncation. Per-run semantics is correct; an accumulating log makes `BG-AC-7` ambiguous across runs.
+- **Excluded all five advisories from the rework brief** and told the Implementer to escalate rather than implement if it judged any to be a real spec violation. It judged none to be. Per *Advisory Never Becomes A Task* they are recorded here and die here; the `BG-T-5` partial-PNG interaction is the one worth the operator's attention if a follow-up is ever proposed.
+- Direction (i) of the falsifier was driven against a synthetic origin rather than a real *Save draft* button, because `steps` arrives only in `BG-T-4` and a live environment is `BG-OQ-1`. The Reviewer confirmed live-traffic confirmation is contracted downstream — `tasks.md` re-asserts `BG-R-7` in `BG-T-8`, `BG-T-9` and `BG-T-11` — so it is deferred by design, not skipped.
+
+**Issues encountered** — the attempt-1 defect above. Root cause was a genuine JavaScript-semantics trap (`.then` on a rejected promise), invisible on any happy path: the guard worked perfectly whenever the disk did.
+
+**Constitution impact** — none.
+
+**Final verification result** — `VERIFIED` (Leader re-run, including independent re-derivation of both promise semantics) + `STATUS: PASS` (round-2 `opus` Reviewer, after two `opus` lens FAILs).

@@ -80,7 +80,7 @@
   - [ ] Verbatim-diff report attached to the execution entry.
 - **Skills:** none from the Skill Map.
 
-### `BG-T-3` — Read-only enforcement: default-deny request guard
+### `BG-T-3` — Read-only enforcement: default-deny request guard  `[x]`
 
 - **Type:** `infra`
 - **Description:** Add `tooling/src/guards/read-only.ts` implementing `design.md` §3.3: allow `GET`/`HEAD` anywhere; allow other methods only to an inert allowlist (font CDNs, `hotjar`, `clarity`, `google-analytics`, `tawk`); **abort the request and fail the whole run** on any other method to any other origin. Install the handler on the browser context **before `injectAuth()`** — which itself does `goto` + `reload` — not merely before the route loop. Write every decision to `dist/capture-requests.log`.

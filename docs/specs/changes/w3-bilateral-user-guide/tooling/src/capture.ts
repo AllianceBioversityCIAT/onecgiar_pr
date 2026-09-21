@@ -33,6 +33,13 @@
  * just `clickTarget` — is checked for `count() === 1` before annotating, and a route with 2+ or 0
  * matches for ANY entry fails loudly naming the route id, that entry's label, and its selector.
  *
+ * BG-T-3 addition (`guards/read-only.ts`): a default-deny request guard is installed on the
+ * browser context BEFORE `injectAuth()` is called below — not merely before the per-route
+ * loop — because `injectAuth()`'s own goto+reload mounts the whole app shell, the broadest
+ * page load of the run. `assertReadOnlyGuardInstalled()` makes that ordering a runtime check
+ * rather than a comment: it throws if the guard was not installed on this exact context
+ * first. See `guards/read-only.ts`'s header for the full policy (`design.md` §3.3).
+ *
  * Attempt-2 rework (Reviewer FAIL on attempt 1, recorded in `execution.md`):
  * `overview`, `reporting-aows`, `results-list`, and `notifications-received`
  * all lay out their real content inside an inner-scrolling container, not
@@ -61,6 +68,12 @@ import * as path from 'path';
 import { injectAuth } from './auth';
 import { extractTokens, writeTokensJson } from './tokens';
 import { annotateCallouts, removeAnnotation, OVERLAY_ATTR, type CalloutSpec } from './annotate';
+import {
+  installReadOnlyGuard,
+  assertReadOnlyGuardInstalled,
+  PRE_ROUTE_LOOP_ROUTE_ID,
+  type RouteIdRef,
+} from './guards/read-only';
 
 interface RouteViewport {
   width: number;
@@ -215,6 +228,13 @@ async function main(): Promise<void> {
   try {
     const page = await browser.newPage(); // per-route viewport is set inside the loop below
 
+    // BG-T-3: install the read-only guard on the CONTEXT before injectAuth() — its own
+    // goto+reload is the broadest page load of the run and must not be unguarded. The
+    // assertion below is what makes that ordering checkable, not merely commented.
+    const routeIdRef: RouteIdRef = { current: PRE_ROUTE_LOOP_ROUTE_ID };
+    await installReadOnlyGuard(page.context(), routeIdRef);
+    assertReadOnlyGuardInstalled(page.context());
+
     await injectAuth(page, baseUrl, token);
 
     console.log('[capture] extracting live design tokens…');
@@ -225,6 +245,8 @@ async function main(): Promise<void> {
     const orange = tokens['--pr-color-orange-500'];
 
     for (const route of routes) {
+      routeIdRef.current = route.id; // BG-T-3: guard log/abort messages name the active route
+
       const viewport = route.viewport ?? DEFAULT_VIEWPORT;
       const fullPage = route.fullPage ?? DEFAULT_FULL_PAGE;
 
