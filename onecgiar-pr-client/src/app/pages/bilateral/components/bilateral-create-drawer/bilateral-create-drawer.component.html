@@ -48,14 +48,55 @@
           @if (projectTitle()) {
             <p class="bcd-context__title" [attr.title]="projectTitle()">{{ projectTitle() }}</p>
           }
-          @if (projectSubtitle()) {
-            <p
-              class="bcd-context__subtitle"
-              data-testid="bilateral-create-drawer-project-subtitle"
-              [attr.title]="projectSubtitle()">
-              {{ projectSubtitle() }}
-            </p>
-          }
+          <!-- P2-3756 (AC2/AC3): read-only Project Summary / Project Description. Each block is
+               rendered only when CLARISA actually filled that field — 2026 projects usually carry
+               only a description — and an explicit empty state replaces both when neither exists,
+               so "no data" never looks like "the field is missing". -->
+          <div class="mt-[8px] flex flex-col gap-[8px]" data-testid="bilateral-create-drawer-project-details">
+            @if (hasProjectDetails()) {
+              @if (projectSummary()) {
+                <div data-testid="bilateral-create-drawer-project-summary">
+                  <p class="m-0 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--pr-text-subtle)]">
+                    {{ copy.drawer.projectSummaryLabel }}
+                  </p>
+                  <p
+                    class="m-0 mt-[2px] text-[12px] font-normal leading-[1.45] text-[var(--pr-text-secondary)] [overflow-wrap:anywhere]"
+                    [class.line-clamp-2]="projectDetailsClamped()">
+                    {{ projectSummary() }}
+                  </p>
+                </div>
+              }
+              @if (projectDescription()) {
+                <div data-testid="bilateral-create-drawer-project-description">
+                  <p class="m-0 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--pr-text-subtle)]">
+                    {{ copy.drawer.projectDescriptionLabel }}
+                  </p>
+                  <p
+                    class="m-0 mt-[2px] text-[12px] font-normal leading-[1.45] text-[var(--pr-text-secondary)] [overflow-wrap:anywhere]"
+                    [class.line-clamp-2]="projectDetailsClamped()">
+                    {{ projectDescription() }}
+                  </p>
+                </div>
+              }
+              @if (canToggleProjectDetails()) {
+                <button
+                  type="button"
+                  class="w-fit cursor-pointer appearance-none border-0 bg-transparent p-0 text-[11px] font-semibold text-[var(--pr-color-primary-300)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+                  data-testid="bilateral-create-drawer-project-details-toggle"
+                  [attr.aria-expanded]="projectDetailsExpanded()"
+                  [attr.aria-label]="copy.drawer.projectDetailsToggleAriaLabel"
+                  (click)="toggleProjectDetails()">
+                  {{ projectDetailsExpanded() ? copy.drawer.projectDetailsCollapse : copy.drawer.projectDetailsExpand }}
+                </button>
+              }
+            } @else {
+              <p
+                class="m-0 text-[12px] font-normal italic leading-[1.45] text-[var(--pr-text-subtle)]"
+                data-testid="bilateral-create-drawer-project-details-empty">
+                {{ copy.drawer.projectDetailsEmpty }}
+              </p>
+            }
+          </div>
         </div>
       </div>
     }
