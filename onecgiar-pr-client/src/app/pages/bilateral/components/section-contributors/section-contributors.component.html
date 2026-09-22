@@ -95,9 +95,9 @@
     @if (selectedCenterInstitutionIds().length) {
       <div class="sc-selected-chips">
         @for (id of selectedCenterInstitutionIds(); track id) {
-          <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
+          <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id) || lockedCenterInstitutionIds().has(id)">
             {{ getCenterDisplayName(id) }}
-            @if (!isLeadCenter(id)) {
+            @if (!isLeadCenter(id) && !lockedCenterInstitutionIds().has(id)) {
               <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removeCenter(id)">×</button>
             }
           </span>
