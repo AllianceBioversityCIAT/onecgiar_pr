@@ -195,6 +195,13 @@ export class BilateralCenterService {
       );
     }
 
+    // P2-3760 — the form sends this only when the reporter touched it. `undefined` means
+    // "leave the stored value alone", which is what keeps an older client working here.
+    const contribution =
+      dto.contribution_percentage === undefined
+        ? undefined
+        : Number(dto.contribution_percentage).toFixed(2);
+
     const primaryChanged = await this.resultRepository.manager.transaction(
       async (manager) => {
         const projectRepository = manager.getRepository(ResultsByProjects);
@@ -217,6 +224,9 @@ export class BilateralCenterService {
               is_lead: true,
               is_active: true,
               last_updated_by: user.id,
+              ...(contribution === undefined
+                ? {}
+                : { contribution_percentage: contribution }),
             });
           } else if (association.is_lead) {
             // The former lead is not implicitly converted into a contributor.
@@ -234,12 +244,24 @@ export class BilateralCenterService {
             is_lead: true,
             is_active: true,
             created_by: user.id,
+            ...(contribution === undefined
+              ? {}
+              : { contribution_percentage: contribution }),
           });
         } else if (!existingTargetProject.is_active) {
           await projectRepository.update(existingTargetProject.id, {
             is_lead: true,
             is_active: true,
             last_updated_by: user.id,
+            ...(contribution === undefined
+              ? {}
+              : { contribution_percentage: contribution }),
+          });
+        } else if (contribution !== undefined) {
+          // Already the active lead row: the reporter only changed the percentage.
+          await projectRepository.update(existingTargetProject.id, {
+            last_updated_by: user.id,
+            contribution_percentage: contribution,
           });
         }
 

@@ -131,6 +131,30 @@
             </dd>
           </div>
         }
+        <!-- P2-3760: the Contribution % the story asks for (P2-3352 § 6). Editable only while the
+             result is in Editing, which is exactly what canEditAssignment() already gates. -->
+        <div class="bp-meta-field bp-meta-field--contribution">
+          <dt class="bp-meta-field-label">Contribution</dt>
+          @if (canEditAssignment()) {
+            <dd class="bp-meta-field-value bp-contribution-wrap">
+              <app-pr-input
+                class="bp-contribution-input"
+                type="number"
+                numberMode="decimal"
+                variant="xs"
+                [maxDecimals]="2"
+                [required]="false"
+                [editable]="true"
+                [showFieldHeader]="false"
+                [ngModel]="contributionValue()"
+                (ngModelChange)="onContributionInput($event)">
+              </app-pr-input>
+              <span class="bp-contribution-suffix" aria-hidden="true">%</span>
+            </dd>
+          } @else {
+            <dd class="bp-meta-field-value">{{ contributionValue() }}%</dd>
+          }
+        </div>
       </dl>
 
       @if (canEditAssignment() && (hasAssignmentChange() || requiresPrimarySelection())) {
@@ -142,7 +166,7 @@
             <p class="bp-assignment-error">{{ error }}</p>
           }
           <button type="button" class="bp-assignment-save" [disabled]="isSavingAssignment() || requiresPrimarySelection()" (click)="saveAssignment()">
-            {{ isSavingAssignment() ? 'Saving...' : 'Save project and program' }}
+            {{ isSavingAssignment() ? 'Saving...' : saveButtonLabel() }}
           </button>
         </div>
       }

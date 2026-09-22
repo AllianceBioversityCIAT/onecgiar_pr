@@ -45,6 +45,8 @@ describe('SectionZeroDashboardComponent', () => {
       projects: signal([]) as any,
       isLoadingProjects: signal(false) as any,
       resultContributingProjectIds: signal([]) as any,
+      // P2-3760 — Contribution % stored on the lead project row; null = never answered.
+      resultContributionPercentage: signal(null) as any,
       getProjects: jest.fn(),
       selectProject: jest.fn(),
       setLeadProject: jest.fn(),
@@ -187,6 +189,102 @@ describe('SectionZeroDashboardComponent', () => {
         expect(leadCenter?.querySelector('.bp-meta-field-label')?.textContent?.trim()).toBe('Lead Center');
         expect(leadCenter?.querySelector('.bp-meta-field-value')?.textContent?.trim()).toBe('C01');
         expect(leadCenter?.querySelector('.bp-meta-field-value')?.getAttribute('title')).toBe('Center One');
+      });
+    });
+
+    // P2-3760 — the Contribution % field (P2-3352 § 6) was missing from the form entirely.
+    // Every assert reads the RENDERED DOM: the client runs zoneless, so asserting a class
+    // property passes with the defect still on screen.
+    describe('P2-3760 — Contribution percentage', () => {
+      const contributionField = () =>
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '.bp-meta-field--contribution',
+        );
+
+      it('renders the field labelled "Contribution" with its % unit', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        const field = contributionField();
+        expect(field).not.toBeNull();
+        expect(field?.querySelector('.bp-meta-field-label')?.textContent?.trim()).toBe(
+          'Contribution',
+        );
+        expect(field?.textContent).toContain('%');
+      });
+
+      it('defaults to 100 when nothing was ever stored', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        expect(component.contributionValue()).toBe(100);
+      });
+
+      it('shows the stored percentage instead of the default once one exists', () => {
+        (creationService.resultContributionPercentage as any).set(42.5);
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        expect(component.contributionValue()).toBe(42.5);
+      });
+
+      it('is read-only text, with no input, once the result left Editing', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+        fixture.componentRef.setInput('readOnly', true);
+        fixture.detectChanges();
+
+        const field = contributionField();
+        expect(field?.querySelector('app-pr-input')).toBeNull();
+        expect(field?.querySelector('.bp-meta-field-value')?.textContent?.trim()).toBe('100%');
+      });
+
+      it('clamps what the reporter types into 0-100', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        component.onContributionInput('250');
+        expect(component.contributionValue()).toBe(100);
+
+        component.onContributionInput('-8');
+        expect(component.contributionValue()).toBe(0);
+
+        component.onContributionInput('33.333');
+        expect(component.contributionValue()).toBe(33.33);
+      });
+
+      it('treats an emptied box as "keep the stored value", not as zero', () => {
+        (creationService.resultContributionPercentage as any).set(60);
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        component.onContributionInput('');
+
+        expect(component.contributionValue()).toBe(60);
+        expect(component.hasContributionChange()).toBe(false);
+      });
+
+      it('offers the save button when ONLY the percentage changed, and names what it saves', () => {
+        openEditableResultOn(project(12, 'OLDPROJ'));
+        component.onContributionInput('80');
+        fixture.detectChanges();
+
+        expect(component.hasAssignmentChange()).toBe(true);
+        expect(component.saveButtonLabel()).toBe('Save contribution');
+        expect(
+          (fixture.nativeElement as HTMLElement).querySelector('.bp-assignment-save')
+            ?.textContent?.trim(),
+        ).toBe('Save contribution');
+      });
+
+      it('sends contribution_percentage only when it actually changed', () => {
+        const api = TestBed.inject(BilateralApiService) as any;
+        openEditableResultOn(project(12, 'OLDPROJ'));
+
+        component.saveAssignment();
+        expect(api.PATCH_primaryAssignment.mock.calls[0][1]).not.toHaveProperty(
+          'contribution_percentage',
+        );
+
+        component.onContributionInput('80');
+        component.saveAssignment();
+        expect(api.PATCH_primaryAssignment.mock.calls[1][1]).toMatchObject({
+          contribution_percentage: 80,
+        });
       });
     });
 
