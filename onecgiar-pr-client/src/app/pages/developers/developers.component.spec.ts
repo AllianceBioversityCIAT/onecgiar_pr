@@ -76,7 +76,7 @@ describe('DevelopersComponent', () => {
     expect(component.productionEndpoints.length).toBe(3);
     expect(component.productionEndpoints[0].url).toBe('https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/docs');
     expect(component.productionEndpoints[1].url).toBe('https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/ingest');
-    expect(component.productionEndpoints[2].url).toBe('https://b1a4fsvgni.execute-api.us-east-1.amazonaws.com/ingest');
+    expect(component.productionEndpoints[2].url).toBe('https://bla4fsvgni.execute-api.us-east-1.amazonaws.com/ingest');
 
     expect(compiled.textContent).toContain('Use single result ingest for one to ten results, and bulk ingest for more.');
   });
@@ -85,10 +85,10 @@ describe('DevelopersComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Official documentation');
     expect(compiled.textContent).toContain('Open the official documentation');
-    expect(compiled.textContent).toContain('Try the endpoints in Swagger');
+    expect(compiled.textContent).toContain('Try the endpoints in the test Swagger');
 
     expect(compiled.textContent).toContain('Result decision webhooks');
-    expect(compiled.textContent).toContain('Set up webhooks');
+    expect(compiled.textContent).toContain('Set up webhooks in the test Swagger');
 
     expect(compiled.textContent).toContain('What you still do in PRMS');
     expect(compiled.textContent).toContain('Confidential evidence');
@@ -103,6 +103,21 @@ describe('DevelopersComponent', () => {
     const cta = Array.from(compiled.querySelectorAll('a')).find(a => a.textContent?.includes('Open the official documentation'));
     expect(cta?.getAttribute('href')).toBe(component.officialDocsUrl);
     expect(cta?.getAttribute('target')).toBe('_blank');
+  });
+
+  it('keeps the production bulk ingest host as the one that actually resolves', () => {
+    // b1a4fsvgni (digit one) has no DNS record; bla4fsvgni (letter l) answers 401 Missing x-api-key.
+    // The two are indistinguishable by eye, so this locks the working one in.
+    expect(component.productionEndpoints[2].url).toContain('bla4fsvgni');
+    expect(component.productionEndpoints[2].url).not.toContain('b1a4fsvgni');
+  });
+
+  it('opens the test Swagger from both doc links, with no dead #/Webhooks anchor', () => {
+    // Deliberately not environment-aware: the page lists every environment at once.
+    expect(component.swaggerDocsUrl).toContain('v2f4lv8av4');
+    expect(component.webhooksDocUrl).toContain('v2f4lv8av4');
+    // The OpenAPI document declares no tags, so swagger-ui renders no Webhooks section to jump to.
+    expect(component.webhooksDocUrl).not.toContain('#');
   });
 
   it('renders the footer with contact support link', () => {

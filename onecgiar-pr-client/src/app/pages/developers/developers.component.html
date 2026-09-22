@@ -175,15 +175,16 @@
 
           <div class="mt-5 border-t border-gray-100 pt-4">
             <p class="text-[13px] leading-relaxed text-gray-500">
-              The Swagger reference lists the request and response shapes and lets you fire a call at the test environment from the browser. Where the two
-              disagree, the official documentation wins.
+              The Swagger reference lists the request and response shapes and lets you fire a call from the browser. Where the two disagree, the official
+              documentation wins. The link below opens the <strong class="font-semibold text-gray-700">test</strong> environment — the production Swagger is
+              listed in Environments.
             </p>
             <a
               [href]="swaggerDocsUrl"
               target="_blank"
               rel="noopener noreferrer"
               class="mt-2 inline-flex cursor-pointer items-center gap-1 text-[13px] font-medium text-[#6b46e5] no-underline hover:underline">
-              <span>Try the endpoints in Swagger</span>
+              <span>Try the endpoints in the test Swagger</span>
               <ng-icon name="lucideExternalLink" class="text-[12px]" />
             </a>
           </div>
@@ -195,13 +196,18 @@
           <p class="mt-2 text-[13px] leading-relaxed text-gray-600">
             Register an HTTPS callback with your API key and PRMS will notify you when a Science Program approves or rejects one of your results, with the reviewer's justification. Register it before your results go under review: decisions taken with no destination registered are not sent again.
           </p>
+          <p class="mt-2 text-[12px] text-gray-500">
+            <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px] text-gray-800">POST /webhook</code> registers the destination and
+            <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px] text-gray-800">GET /webhook</code> reads it back. The button opens the test
+            Swagger.
+          </p>
           <div class="mt-4">
             <a
               [href]="webhooksDocUrl"
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-200 bg-white px-4 py-2 text-[13px] font-medium text-gray-700 no-underline transition-colors hover:border-gray-300 hover:bg-gray-50">
-              <span>Set up webhooks</span>
+              <span>Set up webhooks in the test Swagger</span>
               <ng-icon name="lucideExternalLink" class="text-[13px]" />
             </a>
           </div>
