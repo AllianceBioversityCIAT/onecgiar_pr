@@ -213,7 +213,7 @@
   - [ ] `ng build --configuration development` exit 0 (the template compile gate).
   - [ ] Copy is reviewed by the owner at HITL.
 
-### BIL-RTE-T-7 — Lock geography Yes/No in the drawer
+### [x] BIL-RTE-T-7 — Lock geography Yes/No in the drawer
 
 - **Type:** client
 - **Description:** `geoscope-management` honors a read-only input for its two Yes/No questions. The drawer passes `!canEditDataStandards()`. A non-admin clicking them changes nothing, and the unsaved-data-standards state stays false.
@@ -232,9 +232,10 @@
   - **Red run:** `npx cypress run --component --spec "<drawer readonly cy spec>"`. The non-admin case fails before the change.
   - **Disqualifier:** the component is shared and the new input changes its default for other screens → the default must be "editable as today"; if that isn't possible, stop.
   - **Consumers:** every template using `geoscope-management` (grep `app-geoscope-management`); default unchanged.
+- **Status:** [x] PASS 2026-09-22 (2 attempts, see `execution.md`)
 - **Definition of done:**
-  - [ ] Three CT cases green; module CT suite green.
-  - [ ] Lint clean.
+  - [x] Three CT cases green; module CT suite green.
+  - [x] Lint clean.
 
 ### BIL-RTE-T-8 — Center editor: no autosave racing the submit; pin R-7 for the Center
 

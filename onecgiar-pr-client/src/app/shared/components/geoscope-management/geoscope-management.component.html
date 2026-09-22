@@ -16,7 +16,7 @@
   *ngIf="this.internalModule.name === 'reporting' && this.body?.geo_scope_id && !!this.body.geo_scope_id && !this.includesScope([4, 5, 50])">
   <app-pr-yes-or-not
     *ngIf="this.body.geo_scope_id != 3"
-    [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
+    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
     [label]="
       this.body.geo_scope_id != 2
         ? 'Are there any regions that you wish to specify for this ' +
@@ -56,7 +56,7 @@
     "
     [(ngModel)]="this.body.has_countries"
     [required]="true"
-    [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
+    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
     [hideOptions]="this.body.geo_scope_id != 1 && this.body.geo_scope_id != 2">
   </app-pr-yes-or-not>
 </ng-container>

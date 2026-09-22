@@ -99,6 +99,52 @@
 - Do not expect a 409 from `assertTocWrite` for an identity-less call.
 - T-3 owner decision pending on the T-4 advisory: should the ToC rule also check each payload item's `initiative_id`?
 
+### BIL-RTE-T-7 — Lock geography Yes/No in the drawer — **PASS**
+
+**Attempt 1** (2026-09-22, effort medium, skill `angular-developer`)
+- Root cause: the drawer already passes `[readOnly]="!canEditDataStandards()"` into both `app-geoscope-management` sites (`result-review-drawer.component.html:341,370`, unchanged). The component bound its two `app-pr-yes-or-not` fields to `isKnowledgeProduct` only, and the drawer sets the global `RolesService.readOnly` to false for any program member, so both choices were clickable for a non-admin.
+- Files: `geoscope-management.component.html` (both Yes/No now bind `this.readOnly || this.api.dataControlSE.isKnowledgeProduct`, matching the sibling controls). New CT `result-review-drawer.geography-lock.cy.ts` (6 tests; mounts `GeoscopeManagementComponent`, and its `before()` pins the drawer's two call sites by reading the HTML).
+- Implementer verification: red before the fix, 4/6 failing ("Found '4', expected '0'"). Green: 6 passing; drawer-folder CT 17/17; Jest `geoscope-management|result-review-drawer|section-geography|rd-geographic-location` 14 suites / 434 tests; `ng lint --quiet` clean.
+- Consumers: innovation-package-creator:90, step-n1:20 and rd-geographic-location:16/:51 bind no `[readOnly]`, so the default `false` is unchanged. `section-geography` does not use the component.
+- Not Done / Assumptions (verbatim): "The task's falsifier text says 'Mount the drawer' — I mounted GeoscopeManagementComponent directly instead, per the same documented precedent (approve-tooltip.cy.ts's MOUNT DECISION) that mounting ResultReviewDrawerComponent in CT is impractical (~15-service DI graph, chained HTTP effects). The chip/Approve-enabled claims (R-1.a's 'must NOT show the chip', 'Approve stays enabled', R-6.b) are therefore verified by code-path reasoning documented in the spec file (cited line numbers), not by a rendered assertion on the drawer's chip/button."
+  - Leader adjudication: this changes how the test mounts, not what the task delivers. The Reviewer was asked to rule on it.
+  - Environment note: the Implementer restored `cypress-real-events` with `--no-save --no-package-lock` into the shared symlinked node_modules. `package-lock.json` is untouched.
+- Reviewer: **FAIL** (verbatim)
+
+> 1. **Discovered Issue:** Nothing proves R-1.b's "the change is accepted and 'Save data standards' is offered". The admin click is proven to change `body.has_regions`. Nothing shows that the change marks the drawer as unsaved (which is what enables the Save button at html:647), or that the button is gated by `canEditDataStandards()`. The template substring checks match other blocks. The same untested step (a geography change marks the snapshot dirty) also underlies the recorded "Approve stays enabled" reasoning. If `geographicScope` ever left the normalizer, both claims would break silently. The Not Done note records the chip/Approve gap but presents the Save clause as asserted.
+>    - **Violated Rule:** `docs/specs/bilateral/review-toc-only-editing/tasks.md` §BIL-RTE-T-7 Falsifier ("As an admin → the value changes and 'Save data standards' appears") and `requirements.md` R-1.b; `.agents/reviewer.md` §3 ("A presence-assertion is not a behavioral proof").
+>    - **Remediation Suggestion:** Add cases to the drawer's own Jest spec, `result-review-drawer.component.spec.ts`, next to the `canApprove` block at :374. The spec already builds the drawer, so this is cheap.
+>      - (a) Set `resultDetail` and call `captureDataStandardSnapshot()`. Then set `resultDetail().geographicScope.has_regions = true`, the exact change the admin's click makes. Expect `hasDataStandardUnsavedChanges()` true and `canApprove()` false.
+>      - (b) Render as admin with that change and assert the "Save data standards" button is present and enabled. Also assert it is absent when `canEditDataStandards()` is false.
+>      - Alternatively, narrow the `before()` regex to the Save block (html:635-655) and record R-1.b as an explicit gap in `execution.md` next to the chip/Approve gap. That is the weaker option.
+>
+> Reviewer accepted: the component-level mount precedent (both existing drawer CT specs mount children), the verified code-path claims (`fields.geographicScope` is the snapshot object, and the chip sits inside `@if (canEditDataStandards())` at html:635-641), the disqualifier (`@Input() readOnly = false`, ts:19) and the consumers.
+>
+> ADVISORY (recorded, not gating):
+> - READABILITY: the CT file carries about 55 lines of header prose. Move it to `execution.md` and leave a 3-4 line pointer.
+> - RISK (pre-existing, outside the diff): the second `app-geoscope-management` (html:361-373) gets an object literal as `[body]`. An admin's extra-scope Yes/No edits write into that literal and may never reach the snapshot or save payload. It is now locked for non-admins, so nothing regresses. Note it in the P2-3794 comment for the R-1.b admin path.
+
+**Attempt 2** (2026-09-22, effort high)
+- Changes: in `result-review-drawer.component.spec.ts`, a new describe block "Save data standards — R-1.b behavioral proof".
+  - (a) Snapshot, then `geographicScope.has_regions = true`. Asserts `hasDataStandardUnsavedChanges()` is true and `canApprove()` is false.
+  - (b) Takes the real Save block from the drawer HTML, brace-matched from the `<!-- Admin Save Changes for Data Standards -->` marker, and renders it against the real class. Asserts the button is present and enabled after the change, and that the whole block is absent when `canEditDataStandards()` is false.
+  - The CT header prose is trimmed to a 4-line pointer to this entry. The component fix is unchanged.
+- Falsifier: `geographicScope: geo` was removed from `normalizeDataStandardForComparison`. The file was backed up to the scratchpad, not stashed. Result: (a) red (unsaved false) and (b) red (button disabled). After the revert the file is byte-identical and the tests are green.
+- Implementer verification:
+  - Drawer-folder CT: 3 + 6 + 8 passing, exit 0.
+  - Jest `geoscope-management|result-review-drawer`: 11 suites / 332 tests.
+  - `ng lint --quiet`: clean.
+- Reviewer: **PASS**. "The attempt-1 issue is closed. The new Jest cases prove that the admin's geography change marks the data standards as unsaved, blocks Approve, and enables the real 'Save data standards' button. They also prove the whole Save block disappears when `canEditDataStandards()` is false."
+  - The Reviewer confirmed (b) is not circular: only the markup is swapped, and the gating and `[disabled]` binding are the real code.
+  - It also confirmed the extraction fails loudly: the marker, the `@if`, depth 0, the text and the binding are all asserted.
+- ADVISORY (recorded, not gating):
+  - RELIABILITY: (b)'s admin half should assert `disabled === true` before the change, so it doesn't rely on the manual falsifier run.
+  - READABILITY: the two whole-file `include` checks in the CT `before()` are now redundant with the Jest extraction.
+  - RISK (from attempt 1, pre-existing): the drawer's second `app-geoscope-management` gets an object-literal `[body]`, so an admin's extra-scope edits may not reach the save. Put it in the P2-3794 comment.
+- Recorded gap: "must NOT show the chip" and the non-admin "Approve stays enabled" rest on code-path reasoning, since the chip sits inside `@if (canEditDataStandards())` (html:635-641) and the value can't change. There is no rendered drawer mount. T-9 HITL checks it in prtest.
+- Requirements covered: BIL-RTE-R-1.a, R-1.b, R-1 (inspect ≠ unsaved), R-6.b (client).
+- Budget: 2 review rounds against a budget of 1 for T-7. Recorded; tripwire not treated as tripped (same cause as T-4: a second evidence round, no scope growth).
+
 ## Constitution Impact: BIL-RTE-T-1
 
 - New injectable `BilateralAccessService` at `onecgiar-pr-server/src/api/results/bilateral-access/`. `ResultsModule` provides and exports it, which adds to that module's public surface.

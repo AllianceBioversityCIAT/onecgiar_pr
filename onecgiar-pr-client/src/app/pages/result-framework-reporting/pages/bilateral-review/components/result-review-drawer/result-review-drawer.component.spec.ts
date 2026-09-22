@@ -401,6 +401,131 @@ describe('ResultReviewDrawerComponent', () => {
     });
   });
 
+  // --------------------------------------- BIL-RTE-T-7 attempt 2 (Reviewer FAIL remediation)
+  //
+  // Attempt 1 proved the admin click mutates `body.has_regions` (CT, GeoscopeManagementComponent)
+  // and pinned the drawer's two `app-geoscope-management` call sites by reading the real HTML off
+  // disk. Neither proved the SAVE side of R-1.b: that the exact mutation the admin's click performs
+  // (`has_regions` flipped on `resultDetail().geographicScope`, the SAME object `[body]` binds to)
+  // actually marks `hasDataStandardUnsavedChanges()` dirty and enables the rendered "Save data
+  // standards" button — and the Reviewer flagged that gap. Full reasoning and attempt history:
+  // `docs/specs/bilateral/review-toc-only-editing/execution.md` §BIL-RTE-T-7.
+  describe('Save data standards — R-1.b behavioral proof (BIL-RTE-T-7 attempt 2)', () => {
+    // (a) LOGIC: the admin's geography mutation dirties the snapshot and blocks Approve. This is
+    // the same mechanism `getApproveButtonTooltip`'s "unsaved data-standard changes" test above
+    // exercises with `evidence`; here the mutated field is `geographicScope.has_regions` — the
+    // EXACT field `GeoscopeManagementComponent`'s `app-pr-yes-or-not` two-way-binds via
+    // `[(ngModel)]="this.body.has_regions"` when the admin clicks "Yes" (see the CT spec's test
+    // (b), same folder). FALSIFIER for this test is run manually below (not re-asserted here): if
+    // `geographicScope` is ever dropped from `normalizeDataStandardForComparison`
+    // (`result-review-drawer.component.ts:420,433`), this exact test goes red — verified by a
+    // temporary local edit + revert, see the Implementer's verification report.
+    it('(a) the admin geography mutation dirties the snapshot and blocks Approve', () => {
+      component.isToCCompleted.set(true);
+      component.resultDetail.set(buildDetail({ geographicScope: { geo_scope_id: 1, has_regions: undefined, regions: [], countries: [] } }));
+      (component as any).captureDataStandardSnapshot();
+      expect(component.hasDataStandardUnsavedChanges()).toBe(false);
+
+      // The exact mutation `pr-yes-or-not.onclickYes()` performs through the two-way binding —
+      // `this.body.has_regions = true` on the SAME object reference `resultDetail().geographicScope`.
+      component.resultDetail().geographicScope.has_regions = true;
+
+      expect(component.hasDataStandardUnsavedChanges()).toBe(true);
+      expect(component.canApprove()).toBe(false);
+    });
+
+    // (b) RENDERED: mounts the REAL "Save data standards" block — extracted from the shipped
+    // template at test time (never hand-typed, so this cannot silently drift from what ships) —
+    // in place of the file-wide `template: ''` override every other test in this file uses. That
+    // override exists because the FULL drawer template pulls in ~5 child-component dependency
+    // graphs behind ApiService (documented in `result-review-drawer.approve-tooltip.cy.ts`'s mount
+    // decision); this one `@if` block has no such dependency — it is `div`/`span`/`button`/`i`
+    // only — so it renders cleanly in jsdom without that cost.
+    describe('rendered proof', () => {
+      const TEMPLATE_PATH = path.join(__dirname, 'result-review-drawer.component.html');
+
+      /** Reads the exact shipped block, brace-matched from the marker comment to its own close —
+       * same technique `BSR-T-5: drawer header Source` above uses, not a substring/regex lock. */
+      const extractSaveButtonBlock = (): string => {
+        const html = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+        const marker = '<!-- Admin Save Changes for Data Standards -->';
+        const markerIndex = html.indexOf(marker);
+        expect(markerIndex).toBeGreaterThan(-1);
+        const ifMarker = '@if (canEditDataStandards()) {';
+        const ifIndex = html.indexOf(ifMarker, markerIndex);
+        expect(ifIndex).toBeGreaterThan(-1);
+        let depth = 1;
+        let cursor = ifIndex + ifMarker.length;
+        for (; cursor < html.length && depth > 0; cursor++) {
+          if (html[cursor] === '{') depth++;
+          else if (html[cursor] === '}') depth--;
+        }
+        expect(depth).toBe(0);
+        return html.slice(markerIndex, cursor);
+      };
+
+      let saveFixture: ComponentFixture<ResultReviewDrawerComponent>;
+      let saveComponent: ResultReviewDrawerComponent;
+
+      beforeEach(async () => {
+        const block = extractSaveButtonBlock();
+        expect(block).toContain('Save data standards');
+        expect(block).toContain('[disabled]="!hasDataStandardUnsavedChanges() || isSaving() || !isGeoScopeCompleted()"');
+
+        TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+          imports: [ResultReviewDrawerComponent],
+          providers: [
+            { provide: ApiService, useValue: apiMock },
+            { provide: RolesService, useValue: rolesMock },
+            { provide: CentersService, useValue: centersMock },
+            { provide: InstitutionsService, useValue: institutionsMock },
+            { provide: Router, useValue: routerMock }
+          ]
+        })
+          .overrideComponent(ResultReviewDrawerComponent, {
+            set: { template: block, imports: [], styles: [], changeDetection: ChangeDetectionStrategy.Default }
+          })
+          .compileComponents();
+
+        saveFixture = TestBed.createComponent(ResultReviewDrawerComponent);
+        saveComponent = saveFixture.componentInstance;
+      });
+
+      it('(b) as admin, after the mutation, "Save data standards" is present and its button is enabled', () => {
+        apiMock.rolesSE.isAdmin = true;
+        saveComponent.resultDetail.set(
+          buildDetail({ geographicScope: { geo_scope_id: 1, has_regions: undefined, regions: [], countries: [] } })
+        );
+        (saveComponent as any).captureDataStandardSnapshot();
+        saveComponent.resultDetail().geographicScope.has_regions = true; // the admin's click
+        saveFixture.detectChanges();
+
+        const host: HTMLElement = saveFixture.nativeElement;
+        expect(host.textContent).toContain('Save data standards');
+        const button = host.querySelector('button');
+        expect(button).toBeTruthy();
+        expect((button as HTMLButtonElement).disabled).toBe(false);
+      });
+
+      it('(b) FALSIFIER — the whole block is absent when canEditDataStandards() is false (non-admin)', () => {
+        apiMock.rolesSE.isAdmin = false;
+        apiMock.dataControlSE.myInitiativesList = [{ official_code: 'SP01' }];
+        TestBed.inject(BilateralResultsService).entityId.set('SP01');
+        saveComponent.resultToReview.set({ id: '1', status_id: 5 } as any);
+        saveComponent.resultDetail.set(
+          buildDetail({ geographicScope: { geo_scope_id: 1, has_regions: undefined, regions: [], countries: [] } })
+        );
+        (saveComponent as any).captureDataStandardSnapshot();
+        saveFixture.detectChanges();
+
+        const host: HTMLElement = saveFixture.nativeElement;
+        expect(host.textContent).not.toContain('Save data standards');
+        expect(host.querySelector('button')).toBeNull();
+      });
+    });
+  });
+
   // -------------------------------------------------------------- getTocMetadata
 
   describe('getTocMetadata', () => {
