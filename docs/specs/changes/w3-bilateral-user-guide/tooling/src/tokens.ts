@@ -394,6 +394,76 @@ export function assertTemplateTokensMatchStylesheets(
   }
 }
 
+/* =================================================================================================
+ * BG-T-13 — asserts the SHIPPED `tokens.json` against the app's own stylesheets.
+ *
+ * `BG-T-6`'s `assertTemplateTokensMatchStylesheets` above only ever compared `template/guide.css`'s
+ * `:where(:root)` FALLBACK defaults to `fonts.scss`/`colors.scss`. But `assemble.ts` always
+ * injects `tokens.json` into a real, ordinary-specificity `:root` rule, which wins the cascade
+ * over those `:where()` (zero-specificity) defaults in EVERY shipped PDF — so `BG-R-9`/`BG-AC-9`
+ * was never actually gated on the values a real build renders with. This closes that gap.
+ * ================================================================================================= */
+
+/**
+ * Normalizes a comma-separated font-family stack by stripping any single/double quotes around
+ * each entry and rejoining with a canonical `", "` separator. `fonts.scss` declares
+ * `font-family: 'Manrope', 'Poppins', sans-serif;` (quoted), but a real Chromium page's
+ * `getComputedStyle` — what `extractTokens` above reads, and what `tokens.json` therefore holds —
+ * serializes `'Manrope'` as unquoted `Manrope` (no characters that require quoting) while still
+ * quoting `"JetBrains Mono"` (contains a space). A byte-for-byte comparison would falsely fail on
+ * quoting style alone even when the actual font stack is identical — this is also why `BG-T-6`
+ * could not use a byte comparison for this half of the check.
+ */
+export function normalizeFontStack(stack: string): string {
+  return stack
+    .split(',')
+    .map((entry) => entry.trim().replace(/^['"]|['"]$/g, ''))
+    .join(', ');
+}
+
+/**
+ * The `BG-T-13` gate: compares `tokens.json`'s six keys — the values every shipped PDF actually
+ * renders with — against `readExpectedTokensFromStylesheets()`, with quote normalization applied
+ * to the two font keys only (the four color keys are plain hex and compare exactly). Throws ONE
+ * error naming every mismatch, expected vs found, rather than stopping at the first. Never falls
+ * back to `docs/ux-ui/design.md` §7 (see file header). Falsifier: substitute Poppins into
+ * `tokens.json`'s `--font-manrope` and observe this throw.
+ */
+export function assertShippedTokensMatchStylesheets(
+  tokens: Record<string, string>,
+  repoRoot: string = resolveRepoRoot()
+): void {
+  const expected = readExpectedTokensFromStylesheets(repoRoot);
+  const mismatches: string[] = [];
+
+  for (const key of Object.keys(expected) as (keyof StaticTokens)[]) {
+    const isFont = key === '--font-manrope' || key === '--font-jetbrains-mono';
+    const foundRaw = tokens[key];
+
+    if (typeof foundRaw !== 'string' || foundRaw.trim().length === 0) {
+      mismatches.push(`  - ${key}: missing or empty in tokens.json`);
+      continue;
+    }
+
+    const expectedValue = isFont ? normalizeFontStack(expected[key]) : expected[key].trim();
+    const foundValue = isFont ? normalizeFontStack(foundRaw) : foundRaw.trim();
+
+    if (expectedValue !== foundValue) {
+      mismatches.push(
+        `  - ${key}: expected "${expected[key]}" (fonts.scss/colors.scss, normalized "${expectedValue}"), ` +
+          `found "${foundRaw}" (tokens.json, normalized "${foundValue}")`
+      );
+    }
+  }
+
+  if (mismatches.length > 0) {
+    throw new Error(
+      "[tokens.ts assert] FAIL — tokens.json (the values every SHIPPED PDF actually renders with) " +
+        `does not match the app's own stylesheets (fonts.scss / colors.scss):\n${mismatches.join('\n')}`
+    );
+  }
+}
+
 /**
  * CLI entry point — `npx ts-node src/tokens.ts` (`tasks.md` `BG-T-6`'s "gate is `npx ts-node
  * src/tokens.ts` in assert mode"). Running this file directly performs ONLY the build-time

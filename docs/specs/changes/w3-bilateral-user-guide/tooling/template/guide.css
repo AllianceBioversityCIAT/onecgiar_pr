@@ -284,11 +284,33 @@ a {
   border-bottom: none;
 }
 
+/* LOAD-BEARING VERTICAL PADDING (BG-T-13 HITL) — the TOC must fit on ONE printed page.
+ *
+ * The W1/W2 guide had 6 TOC rows and fit at 16px. This guide has 17 (16 sections + the
+ * glossary), and at 16px the list overflowed onto a second page carrying only entries 16, 17
+ * and Glossary above ~80% whitespace. `verify-structure` counts the entries and passes green
+ * on that render — pagination is not something it can see, so this constraint lives here.
+ *
+ * Measured against the `@page` box above (Letter, 0.65in top + 0.75in bottom margin =
+ * 921.6px of content height at 96dpi), with the TOC's own header taking 77.6px:
+ *
+ *   list height = 18px + 28px (this list's own padding) + 16 rows x (2p + 24px line + 1px
+ *                 border) + 1 borderless glossary row (2p + 24px)
+ *               = 470px + 34p
+ *
+ * The list may use 921.6 - 77.6 = 844px, so p <= 11.0. At 16px it computed to 1014px (170px
+ * over, the observed overflow); at 10px it computes to 810px, fitting with ~34px to spare
+ * while leaving each row 45px tall — still comfortably readable, not cramped. 11px would fit
+ * with zero slack, which is not a margin worth shipping.
+ *
+ * Raising this value, or adding an 18th TOC row, re-breaks the one-page fit. Re-derive from
+ * the formula above rather than nudging it.
+ */
 .ug-toc__item a {
   display: flex;
   align-items: baseline;
   gap: 18px;
-  padding: 16px 20px;
+  padding: 10px 20px;
   text-decoration: none;
   color: var(--ug-color-ink);
 }

@@ -110,7 +110,7 @@ import { chromium, type Page } from '@playwright/test';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { injectAuth } from './auth';
-import { extractTokens, writeTokensJson } from './tokens';
+import { extractTokens, writeTokensJson, type TokensJson } from './tokens';
 import { annotateCallouts, removeAnnotation, OVERLAY_ATTR, type CalloutSpec } from './annotate';
 import {
   installReadOnlyGuard,
@@ -222,6 +222,23 @@ interface RouteConfig {
 
 const READY_SELECTOR_TIMEOUT_MS = 25_000;
 const RAW_DIR = path.resolve(__dirname, '..', 'raw');
+
+/**
+ * Bounded per-route retry (`BG-T-13`, carried from `BG-T-8`). A route intermittently failed on
+ * its FIRST attempt and succeeded on an immediate retry — observed twice: once as a `steps`
+ * click reading `count()=0` on `drawer-method`, once as `catalog`'s `readySelector` itself
+ * timing out with **no `steps` at all**. The second occurrence is what fixes the diagnosis:
+ * general production-latency variance on the initial page GET, not step timing — so no
+ * `waitFor` in `routes.config.json` can protect a route (like `catalog`) that has no `steps` to
+ * begin with. This pipeline runs all 17 routes in one process, so a single first-attempt flake
+ * would otherwise kill the whole run rather than one route.
+ *
+ * `MAX_ATTEMPTS = 2` means "retry once, then fail" — deliberately NOT a wider
+ * `READY_SELECTOR_TIMEOUT_MS`, which would hide the signal (how often the flake actually fires)
+ * instead of bounding it. A route that fails twice in a row is a real failure, not a flake, and
+ * still aborts the whole run exactly as before.
+ */
+const MAX_ROUTE_ATTEMPTS = 2;
 
 const DEFAULT_VIEWPORT: RouteViewport = { width: 1280, height: 720 };
 const DEFAULT_FULL_PAGE = true;
@@ -447,6 +464,149 @@ export async function runSteps(page: Page, routeId: string, steps: Step[]): Prom
   }
 }
 
+/**
+ * One route's full capture body — `goto` through the post-capture frame-bounds/residual-overlay
+ * checks. Extracted out of `main()`'s loop (`BG-T-13`) so it can be retried as a unit: on a
+ * first-attempt failure the route is re-navigated and re-captured from scratch (`goto` again,
+ * `steps` again if any) rather than resumed mid-way, since this pipeline is read-only and a
+ * fresh `goto` is always safe to repeat.
+ */
+async function captureRoute(
+  page: Page,
+  route: RouteConfig,
+  baseUrl: string,
+  tokens: TokensJson,
+  orange: string,
+): Promise<void> {
+  const viewport = route.viewport ?? DEFAULT_VIEWPORT;
+  const fullPage = route.fullPage ?? DEFAULT_FULL_PAGE;
+
+  await page.setViewportSize(viewport);
+
+  console.log(`[capture] ${route.id}: navigating… (viewport ${viewport.width}x${viewport.height}, fullPage=${fullPage})`);
+  await page.goto(new URL(route.url, baseUrl).toString());
+
+  // BG-T-4: declarative pre-capture steps run AFTER goto and BEFORE readySelector is
+  // awaited — design.md §3.2 is explicit that the readiness gate must describe the state
+  // the steps produced, not the landing page. A failed step fails the whole route (the
+  // RouteCaptureError it throws propagates out of this loop exactly like every other
+  // per-route failure below).
+  if (route.steps !== undefined) {
+    // BG-R-14's fail-loud contract, per Reviewer note: a malformed `"steps"` value (e.g.
+    // `{}` from a JSON authoring mistake) must fail the run naming the route, NOT be
+    // silently treated as "no steps" — the previous `route.steps && route.steps.length > 0`
+    // check did exactly that, because `{}.length` is `undefined`, so `undefined > 0` is
+    // `false` and the whole pre-capture-interaction stage was skipped without a word.
+    if (!Array.isArray(route.steps) || route.steps.length === 0) {
+      throw new RouteCaptureError(
+        route.id,
+        `route.steps is present but is not a non-empty array (got ${JSON.stringify(route.steps)}) — ` +
+          'a malformed "steps" value must fail loudly, not be silently treated as "no steps". ' +
+          'Omit "steps" entirely for a route with no pre-capture interactions.',
+      );
+    }
+    console.log(`[capture] ${route.id}: running ${route.steps.length} pre-capture step(s)…`);
+    await runSteps(page, route.id, route.steps);
+  }
+
+  try {
+    await page.waitForSelector(route.readySelector, { timeout: READY_SELECTOR_TIMEOUT_MS });
+  } catch {
+    throw new RouteCaptureError(
+      route.id,
+      `readySelector "${route.readySelector}" did not appear within ${READY_SELECTOR_TIMEOUT_MS}ms ` +
+        '(route may have landed on login/error/empty state instead of real data)',
+    );
+  }
+  // `readySelector` proves real data has started rendering, but sibling
+  // widgets on the same page (skeleton-loader cards, lazy async panels)
+  // can still be mid-render at that exact instant. This short settle is
+  // purely a capture-quality delay, NOT the readiness gate — the actual
+  // gate is `waitForNoVisibleSkeletons` right below, which asserts and
+  // fails loudly rather than just hoping 1.5s was enough.
+  await page.waitForTimeout(1500);
+
+  await waitForNoVisibleSkeletons(page, route, !fullPage);
+  console.log(`[capture] ${route.id}: ready`);
+
+  // UG-T-17 (UG-DD-7 / UG-R-21): a route with no `annotations[]` gets a single synthesized
+  // primary entry with an EMPTY label, so `annotateCallouts` draws a ring only — identical
+  // to this pipeline's pre-UG-T-17 output — never a fabricated fallback label.
+  const specs: CalloutSpec[] =
+    route.annotations && route.annotations.length > 0
+      ? route.annotations
+      : [{ selector: route.clickTarget, role: 'primary', label: '' }];
+
+  const callouts: Array<{ locator: ReturnType<Page['locator']>; spec: CalloutSpec }> = [];
+  for (const spec of specs) {
+    const locator = page.locator(spec.selector);
+    const count = await locator.count();
+    if (count !== 1) {
+      throw new RouteCaptureError(
+        route.id,
+        `callout "${spec.label || '(unlabeled)'}" selector "${spec.selector}" resolved to ` +
+          `${count} element(s) (expected exactly 1)`,
+      );
+    }
+    callouts.push({ locator, spec });
+  }
+
+  // No scrolling: each route's `viewport` (routes.config.json, UG-T-3) is chosen so every
+  // callout target and the meaningful top of the page both fall inside the frame that will
+  // actually be captured, verified per-route against the live app before this config was
+  // written (see the file header). Scrolling was previously required to pull below-the-fold,
+  // visibility-gated widgets into view for a `fullPage: true` capture — but a full-page
+  // scroll is also what broke `notifications-received` (it fetches more items on scroll,
+  // invalidating the exactly-one-match callout count above), so removing the scroll step
+  // entirely, in favor of a viewport tall enough to make it unnecessary, fixes both.
+  const pngPath = path.join(RAW_DIR, `${route.id}.png`);
+  let skeletonCountAtCapture = 0;
+  try {
+    await annotateCallouts(
+      page,
+      callouts,
+      { ring: orange, chipBg: tokens['--pr-color-secondary-400'] },
+      { fullPage },
+    );
+    await page.screenshot({
+      path: pngPath,
+      fullPage,
+    });
+    // BG-T-5: re-run the EXISTING skeleton primitive (not a new check) right at the
+    // moment the file was written, closing the gap between waitForNoVisibleSkeletons()'s
+    // pre-shot pass above and the screenshot call. Same `!fullPage` clip semantics as
+    // that gate (see countVisibleSkeletons()'s own header for why the clip must match).
+    skeletonCountAtCapture = await countVisibleSkeletons(page, !fullPage);
+  } catch (err) {
+    throw new RouteCaptureError(
+      route.id,
+      `annotate/screenshot failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  } finally {
+    await removeAnnotation(page);
+  }
+
+  // BG-T-5 (guards/frame-bounds.ts, BG-DD-6, BG-AC-8): the single post-capture checkpoint
+  // for BOTH "dimensions in bounds" and "no visible skeleton" — dimensions are read from
+  // the WRITTEN PNG on disk, never from `route.viewport` or any pre-flush value. A
+  // violation throws and is wrapped in RouteCaptureError so it fails the run through the
+  // exact same path as every other per-route failure above.
+  try {
+    await assertFrameBounds(route.id, pngPath, route.bounds, skeletonCountAtCapture);
+  } catch (err) {
+    throw new RouteCaptureError(route.id, err instanceof Error ? err.message : String(err));
+  }
+
+  const residual = await page.locator(`[${OVERLAY_ATTR}]`).count();
+  if (residual !== 0) {
+    throw new RouteCaptureError(
+      route.id,
+      `${residual} residual [${OVERLAY_ATTR}] node(s) remained after removeAnnotation()`,
+    );
+  }
+  console.log(`[capture] ${route.id}: screenshot saved`);
+}
+
 async function main(): Promise<void> {
   const baseUrl = process.env.CLIENT_BASE_URL;
   const token = process.env.TEST_TOKEN;
@@ -483,137 +643,43 @@ async function main(): Promise<void> {
 
     const orange = tokens['--pr-color-orange-500'];
 
+    // BG-T-13: names of the routes that needed at least one retry, so the run's own log states
+    // how often the carried production-latency flake fired — never just "0 or not zero", the
+    // actual route ids, printed in the summary line after the loop below.
+    const routesThatNeededRetry: string[] = [];
+
     for (const route of routes) {
       routeIdRef.current = route.id; // BG-T-3: guard log/abort messages name the active route
 
-      const viewport = route.viewport ?? DEFAULT_VIEWPORT;
-      const fullPage = route.fullPage ?? DEFAULT_FULL_PAGE;
-
-      await page.setViewportSize(viewport);
-
-      console.log(`[capture] ${route.id}: navigating… (viewport ${viewport.width}x${viewport.height}, fullPage=${fullPage})`);
-      await page.goto(new URL(route.url, baseUrl).toString());
-
-      // BG-T-4: declarative pre-capture steps run AFTER goto and BEFORE readySelector is
-      // awaited — design.md §3.2 is explicit that the readiness gate must describe the state
-      // the steps produced, not the landing page. A failed step fails the whole route (the
-      // RouteCaptureError it throws propagates out of this loop exactly like every other
-      // per-route failure below).
-      if (route.steps !== undefined) {
-        // BG-R-14's fail-loud contract, per Reviewer note: a malformed `"steps"` value (e.g.
-        // `{}` from a JSON authoring mistake) must fail the run naming the route, NOT be
-        // silently treated as "no steps" — the previous `route.steps && route.steps.length > 0`
-        // check did exactly that, because `{}.length` is `undefined`, so `undefined > 0` is
-        // `false` and the whole pre-capture-interaction stage was skipped without a word.
-        if (!Array.isArray(route.steps) || route.steps.length === 0) {
-          throw new RouteCaptureError(
-            route.id,
-            `route.steps is present but is not a non-empty array (got ${JSON.stringify(route.steps)}) — ` +
-              'a malformed "steps" value must fail loudly, not be silently treated as "no steps". ' +
-              'Omit "steps" entirely for a route with no pre-capture interactions.',
+      let attempt = 1;
+      // Retry once, then fail (BG-T-13, carried from BG-T-8) — MAX_ROUTE_ATTEMPTS = 2, so this
+      // loop runs at most twice per route. Every failure is logged with the attempt number
+      // before either retrying or, on the final attempt, rethrowing to fail the whole run
+      // exactly as every other per-route failure in this pipeline already does.
+      for (;;) {
+        try {
+          await captureRoute(page, route, baseUrl, tokens, orange);
+          if (attempt > 1) {
+            routesThatNeededRetry.push(route.id);
+          }
+          break;
+        } catch (err) {
+          if (attempt >= MAX_ROUTE_ATTEMPTS) {
+            throw err;
+          }
+          console.warn(
+            `[capture] ${route.id}: attempt ${attempt}/${MAX_ROUTE_ATTEMPTS} failed ` +
+              `(${err instanceof Error ? err.message : String(err)}) — retrying once…`,
           );
+          attempt += 1;
         }
-        console.log(`[capture] ${route.id}: running ${route.steps.length} pre-capture step(s)…`);
-        await runSteps(page, route.id, route.steps);
       }
-
-      try {
-        await page.waitForSelector(route.readySelector, { timeout: READY_SELECTOR_TIMEOUT_MS });
-      } catch {
-        throw new RouteCaptureError(
-          route.id,
-          `readySelector "${route.readySelector}" did not appear within ${READY_SELECTOR_TIMEOUT_MS}ms ` +
-            '(route may have landed on login/error/empty state instead of real data)',
-        );
-      }
-      // `readySelector` proves real data has started rendering, but sibling
-      // widgets on the same page (skeleton-loader cards, lazy async panels)
-      // can still be mid-render at that exact instant. This short settle is
-      // purely a capture-quality delay, NOT the readiness gate — the actual
-      // gate is `waitForNoVisibleSkeletons` right below, which asserts and
-      // fails loudly rather than just hoping 1.5s was enough.
-      await page.waitForTimeout(1500);
-
-      await waitForNoVisibleSkeletons(page, route, !fullPage);
-      console.log(`[capture] ${route.id}: ready`);
-
-      // UG-T-17 (UG-DD-7 / UG-R-21): a route with no `annotations[]` gets a single synthesized
-      // primary entry with an EMPTY label, so `annotateCallouts` draws a ring only — identical
-      // to this pipeline's pre-UG-T-17 output — never a fabricated fallback label.
-      const specs: CalloutSpec[] =
-        route.annotations && route.annotations.length > 0
-          ? route.annotations
-          : [{ selector: route.clickTarget, role: 'primary', label: '' }];
-
-      const callouts: Array<{ locator: ReturnType<Page['locator']>; spec: CalloutSpec }> = [];
-      for (const spec of specs) {
-        const locator = page.locator(spec.selector);
-        const count = await locator.count();
-        if (count !== 1) {
-          throw new RouteCaptureError(
-            route.id,
-            `callout "${spec.label || '(unlabeled)'}" selector "${spec.selector}" resolved to ` +
-              `${count} element(s) (expected exactly 1)`,
-          );
-        }
-        callouts.push({ locator, spec });
-      }
-
-      // No scrolling: each route's `viewport` (routes.config.json, UG-T-3) is chosen so every
-      // callout target and the meaningful top of the page both fall inside the frame that will
-      // actually be captured, verified per-route against the live app before this config was
-      // written (see the file header). Scrolling was previously required to pull below-the-fold,
-      // visibility-gated widgets into view for a `fullPage: true` capture — but a full-page
-      // scroll is also what broke `notifications-received` (it fetches more items on scroll,
-      // invalidating the exactly-one-match callout count above), so removing the scroll step
-      // entirely, in favor of a viewport tall enough to make it unnecessary, fixes both.
-      const pngPath = path.join(RAW_DIR, `${route.id}.png`);
-      let skeletonCountAtCapture = 0;
-      try {
-        await annotateCallouts(
-          page,
-          callouts,
-          { ring: orange, chipBg: tokens['--pr-color-secondary-400'] },
-          { fullPage },
-        );
-        await page.screenshot({
-          path: pngPath,
-          fullPage,
-        });
-        // BG-T-5: re-run the EXISTING skeleton primitive (not a new check) right at the
-        // moment the file was written, closing the gap between waitForNoVisibleSkeletons()'s
-        // pre-shot pass above and the screenshot call. Same `!fullPage` clip semantics as
-        // that gate (see countVisibleSkeletons()'s own header for why the clip must match).
-        skeletonCountAtCapture = await countVisibleSkeletons(page, !fullPage);
-      } catch (err) {
-        throw new RouteCaptureError(
-          route.id,
-          `annotate/screenshot failed: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      } finally {
-        await removeAnnotation(page);
-      }
-
-      // BG-T-5 (guards/frame-bounds.ts, BG-DD-6, BG-AC-8): the single post-capture checkpoint
-      // for BOTH "dimensions in bounds" and "no visible skeleton" — dimensions are read from
-      // the WRITTEN PNG on disk, never from `route.viewport` or any pre-flush value. A
-      // violation throws and is wrapped in RouteCaptureError so it fails the run through the
-      // exact same path as every other per-route failure above.
-      try {
-        await assertFrameBounds(route.id, pngPath, route.bounds, skeletonCountAtCapture);
-      } catch (err) {
-        throw new RouteCaptureError(route.id, err instanceof Error ? err.message : String(err));
-      }
-
-      const residual = await page.locator(`[${OVERLAY_ATTR}]`).count();
-      if (residual !== 0) {
-        throw new RouteCaptureError(
-          route.id,
-          `${residual} residual [${OVERLAY_ATTR}] node(s) remained after removeAnnotation()`,
-        );
-      }
-      console.log(`[capture] ${route.id}: screenshot saved`);
     }
+
+    console.log(
+      `[capture] ${routesThatNeededRetry.length} of ${routes.length} route(s) needed a retry` +
+        (routesThatNeededRetry.length > 0 ? `: ${routesThatNeededRetry.join(', ')}` : '.'),
+    );
   } finally {
     await browser.close();
   }

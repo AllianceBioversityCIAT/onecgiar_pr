@@ -43,6 +43,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import type { TokensJson } from './tokens';
+import { assertShippedTokensMatchStylesheets } from './tokens';
 
 const TOOLING_ROOT = path.resolve(__dirname, '..');
 const TEMPLATE_FILE = path.join(TOOLING_ROOT, 'template', 'guide.html');
@@ -80,76 +81,274 @@ interface GlossaryEntry {
   source?: string;
 }
 
-/** Static per-section copy that is NOT derived from a file (title/eyebrow/alt/caption). */
+/**
+ * One figure inside a section: which route's capture to embed (`routeCaptionKey`, matched
+ * against `routes.config.json`'s `captionKey`), plus that FIGURE's own `alt`/`caption` — never
+ * shared across figures in the same section, because two different screenshots need two
+ * different descriptions (`BG-R-12`'s non-empty, accurate `alt` requirement).
+ */
+interface FigureMeta {
+  routeCaptionKey: string;
+  alt: string;
+  caption: string;
+}
+
+/**
+ * Static per-section copy that is NOT derived from a file (title/eyebrow/figures).
+ *
+ * `figures` is `FigureMeta[]` — ZERO OR MORE, not the W1/W2-era "exactly one capture per
+ * section" (`routeCaptionKey: string`). That 1:1 pairing held for W1/W2 (6 sections, 6
+ * captures) and is false for this guide (16 sections, 17 captures): the introduction and the
+ * glossary are rendered outside `SECTIONS` entirely (see `main()`'s `{{INTRO}}`/`{{GLOSSARY}}`
+ * handling below), "Finding your project" and "The manual form" each carry TWO figures, and
+ * "The editor at a glance" carries none (`BG-T-13`, carried from `BG-T-10`).
+ */
 interface SectionMeta {
   sectionId: string;
-  routeCaptionKey: string;
   contentFile: string;
   eyebrow: string;
   title: string;
-  alt: string;
-  caption: string;
+  figures: FigureMeta[];
 }
 
 // ============================================================================
 // Section order/metadata — LOAD-BEARING: this exact order is what UG-T-13
 // asserts against `template/README.md`'s heading-count contract.
+//
+// Derived (BG-T-13) from `design.md` §8.1's capture plan, `routes.config.json`'s `captionKey`s,
+// and the actual `content/sections/*.md` files — never guessed and never taken from a summary.
+// Section numbering (02…17) follows `proposal.md` §4's approved structure: row 1 (Introduction)
+// and row 18 (Glossary) are rendered outside this array by `main()`, so the array below covers
+// rows 2–17 only.
+//
+// ⚠️ Sections 8 and 9 CROSS on purpose: guide section 8 ("Overview", `08-overview.md`) pairs
+// with capture `09-editor-overview`, and section 9 ("General information", `09-general-
+// information.md`) pairs with capture `08-editor-general-info`. The captures are numbered by
+// CAPTURE ORDER (General information is the editor's landing section and needs no rail click,
+// so it was shot first; Overview needs one rail click and was shot second) while the guide
+// follows the RAIL's own display order (Overview heads the rail, General information is below
+// it) — confirmed against both files' own prose (`08-overview.md`: "Clicking Overview in the
+// section rail — it is not where the editor opens..."; `09-general-information.md`: "This is
+// where the editor actually opens — General information, not Overview..."). Getting this
+// backwards reproduces `P-11`, a Judgment Day finding, and mislabels a figure with the wrong
+// section (defect class D8, which has no automated gate).
 // ============================================================================
 
 const SECTIONS: SectionMeta[] = [
   {
-    sectionId: 'section-landing',
-    routeCaptionKey: '01-landing',
-    contentFile: '01-landing.md',
-    eyebrow: '01 · Landing Page',
-    title: 'Landing Page',
-    alt: 'Screenshot of the Landing Page with the Report button on the first My CGIAR Centers card highlighted',
-    caption: 'Click Report on the first My CGIAR Centers card to begin reporting.'
+    sectionId: 'section-workspace',
+    contentFile: '02-workspace.md',
+    eyebrow: '02 · The Bilateral Workspace',
+    title: 'The Bilateral Workspace',
+    figures: [
+      {
+        routeCaptionKey: '01-workspace-identity',
+        alt: 'Screenshot of the Bilateral Center workspace with the Center identity band and the four tabs highlighted',
+        caption: 'The Center identity band sits above the Overview, Reporting, Results, and AI Draft Results tabs.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-finding-your-project',
+    contentFile: '03-finding-your-project.md',
+    eyebrow: '03 · Finding Your Project',
+    title: 'Finding Your Project',
+    figures: [
+      {
+        routeCaptionKey: '02-catalog',
+        alt: 'Screenshot of the project catalog with the KPI filter cards and a project card highlighted',
+        caption: 'Filter the catalog with the KPI cards, then locate the project you want to report against.'
+      },
+      {
+        routeCaptionKey: '03-catalog-create-cta',
+        alt: 'Screenshot of a project card with the Create result control highlighted',
+        caption: 'Click Create result on the project card to start reporting a new bilateral result for it.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-starting-a-result',
+    contentFile: '04-starting-a-result.md',
+    eyebrow: '04 · Starting a Result',
+    title: 'Starting a Result',
+    figures: [
+      {
+        routeCaptionKey: '04-drawer-sp',
+        alt: 'Screenshot of the Set up bilateral result drawer at step 1, choosing the Primary Science Program',
+        caption: 'Step 1 of the setup drawer — choose the Primary Science Program this result is reported against.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-choosing-how-to-report',
+    contentFile: '05-choosing-how-to-report.md',
+    eyebrow: '05 · Choosing How to Report',
+    title: 'Choosing How to Report',
+    figures: [
+      {
+        routeCaptionKey: '05-drawer-method',
+        alt: 'Screenshot of the setup drawer step 2, choosing between AI-Assisted and Complete the Form Manually',
+        caption: 'Step 2 of the setup drawer — this guide follows the Complete the Form Manually path from here.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-manual-form',
+    contentFile: '06-manual-form.md',
+    eyebrow: '06 · The Manual Form',
+    title: 'The Manual Form',
+    figures: [
+      {
+        routeCaptionKey: '06-manual-form',
+        alt: 'Screenshot of the manual form with the Select Result Level and Result Type fields',
+        caption: 'Choosing a Result Level reveals the Result Type dropdown, scoped to that level.'
+      },
+      {
+        routeCaptionKey: '07-manual-form-title',
+        alt: 'Screenshot of the manual form Result title field with its word gauge',
+        caption: 'The Result title field and its word gauge, which tracks the 30-word limit as you type.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-editor-at-a-glance',
+    contentFile: '07-editor-at-a-glance.md',
+    eyebrow: '07 · The Editor at a Glance',
+    title: 'The Editor at a Glance',
+    // No figure: this section narrates the rail/footer shell in general terms; every part of
+    // it (rail, "N of M sections complete", footer) is shown concretely in the sections that
+    // follow, so no screenshot of its own is needed (`BG-T-13`, carried from `BG-T-10`).
+    figures: []
   },
   {
     sectionId: 'section-overview',
-    routeCaptionKey: '02-overview',
-    contentFile: '02-overview.md',
-    eyebrow: '02 · Overview Dashboard',
-    title: 'Overview Dashboard',
-    alt: 'Screenshot of the Overview Dashboard with the Continue reporting button highlighted',
-    caption: 'Click Continue reporting to move from the Overview into the Reporting tab.'
+    contentFile: '08-overview.md',
+    eyebrow: '08 · Overview',
+    title: 'Overview',
+    figures: [
+      {
+        routeCaptionKey: '09-editor-overview',
+        alt: "Screenshot of the editor's Overview section, showing the linked project summary and its two editable fields",
+        caption: 'Overview — a read-only summary of the linked project; Project and Program are the two fields you can still change here.'
+      }
+    ]
   },
   {
-    sectionId: 'section-reporting',
-    routeCaptionKey: '03-reporting',
-    contentFile: '03-reporting.md',
-    eyebrow: '03 · Reporting Page',
-    title: 'Reporting Page',
-    alt: 'Screenshot of the Reporting Page with the Where to report link highlighted',
-    caption: 'Click Where to report for guidance on which Area of Work a result belongs to.'
+    sectionId: 'section-general-information',
+    contentFile: '09-general-information.md',
+    eyebrow: '09 · General Information',
+    title: 'General Information',
+    figures: [
+      {
+        routeCaptionKey: '08-editor-general-info',
+        alt: "Screenshot of the editor's General information section, the section it opens on by default",
+        caption: 'General information — the section the editor opens on, carrying Title of Result, Description of Result, and the lead contact.'
+      }
+    ]
   },
   {
-    sectionId: 'section-results-center',
-    routeCaptionKey: '04-results-center',
-    contentFile: '04-results-center.md',
-    eyebrow: '04 · Results Center',
-    title: 'Results Center',
-    alt: 'Screenshot of the Results Center with the Update result button highlighted',
-    caption: 'Click Update result after filtering to the result you need to change.'
+    sectionId: 'section-contributors-partners',
+    contentFile: '10-contributors-and-partners.md',
+    eyebrow: '10 · Contributors & Partners',
+    title: 'Contributors & Partners',
+    figures: [
+      {
+        routeCaptionKey: '10-editor-contributors',
+        alt: 'Screenshot of the Contributors & partners section with its read-only and optional picker fields',
+        caption: 'Contributors & partners — Primary Science Program and Lead Center are read-only; the pickers below are optional.'
+      }
+    ]
   },
   {
-    sectionId: 'section-notifications',
-    routeCaptionKey: '05-notifications',
-    contentFile: '05-notifications.md',
-    eyebrow: '05 · Notifications',
-    title: 'Notifications',
-    alt: 'Screenshot of the Notifications page with the first pending request card highlighted',
-    caption: 'Open the first pending request and choose Accept contribution or Decline contribution.'
+    sectionId: 'section-geographic-location',
+    contentFile: '11-geographic-location.md',
+    eyebrow: '11 · Geographic Location',
+    title: 'Geographic Location',
+    figures: [
+      {
+        routeCaptionKey: '11-editor-geography',
+        alt: 'Screenshot of the Geographic location section with its geographic-focus choice',
+        caption: 'Geographic location — the geographic-focus choice determines which further fields appear.'
+      }
+    ]
   },
   {
-    sectionId: 'section-innovation-packages',
-    routeCaptionKey: '06-innovation-packages',
-    contentFile: '06-innovation-packages.md',
-    eyebrow: '06 · Innovation Packages',
-    title: 'Innovation Packages',
-    alt: "Screenshot of the Innovation Packages page with the first package's title link highlighted",
-    caption: "Click a package's title in the table to open its full assessment."
+    sectionId: 'section-evidence',
+    contentFile: '12-evidence.md',
+    eyebrow: '12 · Evidence',
+    title: 'Evidence',
+    figures: [
+      {
+        routeCaptionKey: '12-editor-evidence',
+        alt: 'Screenshot of the Evidence section with the Add evidence control',
+        caption: 'Evidence — at least one entry with a valid link is required before the section is complete.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-type-specific-details',
+    contentFile: '13-type-specific-details.md',
+    eyebrow: '13 · Type-Specific Details',
+    title: 'Type-Specific Details',
+    figures: [
+      {
+        routeCaptionKey: '13-editor-type-specific',
+        alt: "Screenshot of the Type-specific details section for the result's own type",
+        caption: "Type-specific details — the fields shown change with the result's own type; absent for Other Outcome and Other Output."
+      }
+    ]
+  },
+  {
+    sectionId: 'section-saving-your-work',
+    contentFile: '14-saving-your-work.md',
+    eyebrow: '14 · Saving Your Work',
+    title: 'Saving Your Work',
+    figures: [
+      {
+        routeCaptionKey: '14-editor-footer-save',
+        alt: 'Screenshot of the editor footer with the Save draft button and position indicator',
+        caption: "The footer's Save draft button and its own save state, alongside the Section X of Y position indicator."
+      }
+    ]
+  },
+  {
+    sectionId: 'section-quality-check-submit',
+    contentFile: '15-ai-quality-check-and-submit.md',
+    eyebrow: '15 · The AI Quality Check and Submit for Review',
+    title: 'The AI Quality Check and Submit for Review',
+    figures: [
+      {
+        routeCaptionKey: '15-rail-submit',
+        alt: "Screenshot of the section rail's Submit for review button and its submit note",
+        caption: 'Submit for review starts the AI quality check first — it does not submit the result directly.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-ai-assisted-drafts',
+    contentFile: '16-ai-assisted-path-and-drafts.md',
+    eyebrow: '16 · The AI-Assisted Path and AI Draft Results',
+    title: 'The AI-Assisted Path and AI Draft Results',
+    figures: [
+      {
+        routeCaptionKey: '16-drafts',
+        alt: 'Screenshot of the AI Draft Results tab listing drafts awaiting review',
+        caption: 'The AI Draft Results (My Drafts) tab lists AI-generated drafts awaiting your review.'
+      }
+    ]
+  },
+  {
+    sectionId: 'section-result-statuses',
+    contentFile: '17-result-statuses.md',
+    eyebrow: '17 · Result Statuses',
+    title: 'Result Statuses',
+    figures: [
+      {
+        routeCaptionKey: '17-results-status',
+        alt: 'Screenshot of the Results tab with the status column highlighted',
+        caption: "The Results tab lets you filter results and track each one's review status."
+      }
+    ]
   }
 ];
 
@@ -280,22 +479,23 @@ function buildDateLocal(): string {
 // Sections
 // ============================================================================
 
-async function renderSections(routes: RouteConfig[]): Promise<string> {
-  const routesByCaptionKey = new Map(routes.map((route) => [route.captionKey, route]));
-
-  const blocks = await Promise.all(
-    SECTIONS.map(async (meta) => {
-      const route = routesByCaptionKey.get(meta.routeCaptionKey);
+/**
+ * Renders zero or more `<figure>` blocks for one section (`BG-T-13` — widened from the
+ * W1/W2-era "exactly one capture per section"). Each figure resolves its OWN route by
+ * `routeCaptionKey` and carries its OWN `alt`/`caption`, so two figures in the same section
+ * (e.g. "Finding your project") describe two different screenshots correctly instead of
+ * repeating one caption across both.
+ */
+async function renderFigures(sectionId: string, figures: FigureMeta[], routesByCaptionKey: Map<string, RouteConfig>): Promise<string> {
+  const rendered = await Promise.all(
+    figures.map(async (figure) => {
+      const route = routesByCaptionKey.get(figure.routeCaptionKey);
       if (!route) {
         throw new Error(
-          `[assemble] No entry in routes.config.json has captionKey "${meta.routeCaptionKey}" ` +
-            `(needed for section "${meta.sectionId}").`
+          `[assemble] No entry in routes.config.json has captionKey "${figure.routeCaptionKey}" ` +
+            `(needed for section "${sectionId}").`
         );
       }
-
-      const contentPath = path.join(SECTIONS_DIR, meta.contentFile);
-      const raw = await fs.readFile(contentPath, 'utf-8');
-      const prose = renderMarkdown(raw);
 
       // Fail here, naming the route, rather than emitting an <img> whose src 404s: a missing
       // capture otherwise surfaces only as a blank box in the final PDF (verify-structure.ts
@@ -305,12 +505,37 @@ async function renderSections(routes: RouteConfig[]): Promise<string> {
         await fs.access(capturePath);
       } catch {
         throw new Error(
-          `[assemble] Missing screenshot for route id "${route.id}" (section "${meta.sectionId}"): ` +
+          `[assemble] Missing screenshot for route id "${route.id}" (section "${sectionId}"): ` +
             `expected ${capturePath}. Re-run "npm run capture" to regenerate it.`
         );
       }
 
       const imgSrc = path.posix.join('..', 'raw', `${route.id}.png`);
+
+      return [
+        `  <figure class="ug-figure">`,
+        `    <img src="${imgSrc}" alt="${escapeAttr(figure.alt)}">`,
+        `    <figcaption class="ug-caption">`,
+        `      <span>${escapeHtml(figure.caption)}</span>`,
+        `      <code class="ug-mono ug-route">${escapeHtml(route.url)}</code>`,
+        `    </figcaption>`,
+        `  </figure>`
+      ].join('\n');
+    })
+  );
+
+  return rendered.join('\n\n');
+}
+
+async function renderSections(routes: RouteConfig[]): Promise<string> {
+  const routesByCaptionKey = new Map(routes.map((route) => [route.captionKey, route]));
+
+  const blocks = await Promise.all(
+    SECTIONS.map(async (meta) => {
+      const contentPath = path.join(SECTIONS_DIR, meta.contentFile);
+      const raw = await fs.readFile(contentPath, 'utf-8');
+      const prose = renderMarkdown(raw);
+      const figuresHtml = await renderFigures(meta.sectionId, meta.figures, routesByCaptionKey);
 
       return [
         `<section class="ug-section" id="${meta.sectionId}">`,
@@ -322,14 +547,7 @@ async function renderSections(routes: RouteConfig[]): Promise<string> {
         `  <div class="ug-prose">`,
         `    ${prose}`,
         `  </div>`,
-        ``,
-        `  <figure class="ug-figure">`,
-        `    <img src="${imgSrc}" alt="${escapeAttr(meta.alt)}">`,
-        `    <figcaption class="ug-caption">`,
-        `      <span>${escapeHtml(meta.caption)}</span>`,
-        `      <code class="ug-mono ug-route">${escapeHtml(route.url)}</code>`,
-        `    </figcaption>`,
-        `  </figure>`,
+        ...(figuresHtml.length > 0 ? ['', figuresHtml] : []),
         `</section>`
       ].join('\n');
     })
@@ -412,6 +630,16 @@ async function main(): Promise<void> {
 
   const rawTokens = JSON.parse(tokensRaw) as Record<string, string>;
   assertTokensShape(rawTokens);
+
+  // BG-T-13 (carried from BG-T-6): `template/guide.css`'s `:where(:root)` defaults are inert in
+  // every SHIPPED pdf, because this function always injects `tokens.json` into a real `:root`
+  // rule that wins the cascade over them. BG-T-6 only ever compared guide.css's defaults to
+  // fonts.scss/colors.scss — never the values a real build actually renders with. This asserts
+  // the live tokens.json against the same stylesheets, with quote normalization (Chromium
+  // serializes `'Manrope'` as `Manrope`, which is why a byte comparison was not viable in
+  // BG-T-6 either — see `tokens.ts`'s `normalizeFontStack`).
+  assertShippedTokensMatchStylesheets(rawTokens);
+
   const tokens = rawTokens as unknown as TokensJson;
 
   const routes = JSON.parse(routesRaw) as RouteConfig[];

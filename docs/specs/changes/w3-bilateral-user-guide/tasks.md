@@ -281,8 +281,7 @@
   - [ ] `BG-R-30` (W1/W2 cross-reference) deliberately **not** exercised, per `BG-OQ-6`.
 - **Skills:** `cognitive-doc-design`
 
-### `BG-T-13` — Assemble, verify structure, render the PDF, secret audit, HITL
-
+### `BG-T-13` — Assemble, verify structure, render the PDF, secret audit, HITL  `[x]`
 - **Type:** `docs`
 - **Description:** Run `build-guide` end to end: archive guard → assemble → verify-structure → pdf. Audit for leaked secrets across tooling output, the PDF and the staged diff. Present the rendered PDF to the operator for the HITL read that is the substitute gate for defect classes D8, D9 and D10.
 - **Implements:** `BG-R-1`, `BG-R-11`, `BG-R-13`, `BG-AC-1`, `BG-AC-11`, `BG-AC-13`, and **`BG-R-9`/`BG-AC-9`'s rendered-output half, carried from `BG-T-6`**

@@ -1078,3 +1078,64 @@ The Reviewer found that **`verify-structure.ts:39-48` also still asserts the W1/
 `npm run assemble` now clears the glossary and stops at exactly that stale array, which is the evidence `BG-T-13` needs.
 
 **Final verification** — `VERIFIED` (Leader re-run: status chain to the server, CLARISA API live with all five terms, both falsifiers, both precision fixes re-read at source) + `STATUS: PASS` (`opus` Reviewer, chain re-derived independently).
+
+---
+
+## `BG-T-13` — Assemble, verify structure, render the PDF, secret audit, HITL  `[x]`
+
+**Review:** `checklist` · **Attempts consumed:** 1 · **Runtime events:** 1 (provider-limit death, Implementer, `sonnet`)
+
+### Runtime event — not a FAIL
+
+The first Implementer was killed mid-edit by a session rate limit (HTTP 429). Per the runtime-failure ladder this is a **runtime event**: it consumed no attempt. Entry rung 1 (tree probe) found substantial landed work — 8 files, 666 insertions, `tsc` clean, a rendered PDF. Rung 3 (resume-by-message) was **skipped**: the worker's context did not survive, so the climb went to **rung 4** — a fresh worker (`opus`, deliberately a different model; repeating the model that just hit a session limit is how the second attempt dies like the first) audited the partial diff and continued from it.
+
+**The four carried obligations were all already discharged by the dead worker.** One probe of mine returned a false negative worth recording: grepping for `routeCaptionKeys` returned 0 and looked like the fan-out was not done. It was done — better than specified. Instead of widening `SectionMeta` to an array of keys, it introduced a `figures[]` level per section, each figure carrying its own `routeCaptionKey` **plus its own `alt`/`caption`**. Same zero-or-more capability, with per-figure captions the array shape could not express. The grep missed it on naming, not substance.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `npm run build-guide` (Leader re-run, from deleted `dist/`) | **exit 0** — `guard:archive` 32 files clean · `assemble` · `verify-structure` OK · `pdf`, both fonts available |
+| `npx tsc --noEmit` | clean |
+| Falsifier — Poppins into `tokens.json` | red: `expected "'Manrope', 'Poppins', sans-serif" … found "Poppins, sans-serif"`, exit 1 |
+| Falsifier — remove a section entry | red: 8 errors naming `section-geographic-location`, `found 18` h2, exit 1 |
+| Falsifier — TOC numeral (Leader's own mutation, `04`→`77`) | red: *`TOC entry 3 ("Starting a Result") prints the numeral "77" but #section-starting-a-result's own eyebrow reads "04 · Starting a Result"`*, **exit 1** |
+| Falsifier — fake JWT into a content file | red: `LEAK content/sections/12-evidence.md -> JWT shape` |
+| Reviewer (`fable`, author ≠ auditor) | **`STATUS: PASS`** |
+
+**`BG-AC-13` — the secret audit, command recorded** (the Reviewer correctly noted it was unrecorded and therefore unreviewable). Needles were built **in-memory from `.env`** and never echoed; the scan covered the **values** (full token, payload segment, signature segment), not the key names, across all 6,707 git-visible files, `dist/guide-assembled.html`, the PDF's `pdftotext` text layer, and both `git diff` and `git diff --cached`. **0 hits.** Grepping the `.pdf` binary alone would have proved nothing — content streams are Flate-compressed — which is why the extracted text layer is the authoritative surface. A first over-broad pass false-positived on two repo files carrying the token's *header* segment; that segment decodes to `{"alg":"HS256","typ":"JWT"}`, which every HS256 token shares and which carries no secret material. It was dropped from the needle set.
+
+**`BG-AC-7` — evidenced by the capture runs, not by this task.** `capture.ts` did not run here and `build-guide` does not invoke it, so `dist/capture-requests.log` does not exist in this run. The production-safety evidence belongs to `BG-T-7`…`BG-T-12`, whose final tally is recorded above: **2580 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`, 0 `createBilateralHeader`, 0 `bilateralQualityAssessment`**. A fresh production capture run purely to regenerate a log whose tally is already held would be gratuitous production traffic and was refused.
+
+**The bounded retry is inspection-verified, not run-verified.** `MAX_ROUTE_ATTEMPTS = 2` (`capture.ts:241`) with the rethrow at `:659-676`; `READY_SELECTOR_TIMEOUT_MS = 25_000` (`:223`) is **byte-identical to the archived baseline** — the retry was the fix, not an inflated timeout. The carried clause "record how many routes needed a retry" has no run to report: this path has never executed.
+
+**Falsifier phrasing.** `tasks.md:293` says "delete one section file", which dies at `assemble` with ENOENT and never reaches `verify-structure`. The carried phrasing at `:303` ("remove one section's entry") is the one that exercises the gate, and is what was driven.
+
+### HITL pass — the D8/D9 gate, run by the Leader on all 38 rendered pages
+
+Presence checks pass on a broken render, so the PDF was **viewed**, not counted. Prose accuracy held at every point that had previously cost a round: §3's "Reset Filters" appears only in the empty state; §7 states the editor opens on **General information**, not Overview (`openSectionName = signal('general-info')`); §6's seven result types (3 Outcome + 4 Output) and 30-word gauge; §11's five radio options with the extra geographic-focus question scoped to some types only; §17's four reporter-facing badges **plus** the three non-manual Results-tab values. Glossary: 22 terms, each with a `Source` line and access date. Figures: ring/chip/caption/route coherent, none degenerate (stddev 0.21–0.30, 3,791–10,254 unique colours), no route-line/footer collision (p24 is tight — 55pt of horizontal separation — but does not overlap). The intro's "orange ring **or arrow**" is substantiated: `annotate.ts:226` draws a connector with an arrowhead.
+
+**One defect found, invisible to every automated gate:** the table of contents overflowed onto a second page, leaving entries 16, 17 and Glossary alone above ~80% blank space. `verify-structure` counted 17 entries and passed green — `verify-structure` reads the DOM, not the pagination.
+
+Measured in print-emulated Chromium rather than estimated: the `@page` content box is **921.6px**, the TOC header takes 77.6px, and the list derives to `470 + 34p`, which at `p=16` predicts **1014px** — the measured value exactly. Solving `844 ≥ 470 + 34p` gives `p ≤ 11.0`; `11px` fits with zero slack, so `10px` was taken (810px, **34px of slack**, rows at 45px). `template/guide.css:287` `16px` → `10px`.
+
+**Result: 38 → 37 pages, TOC on one page, section 02 immediately after.** No other pagination moved: 34/34 page-text pairs identical under the one-page shift, and `pdfimages -list` reports **53 images before and after** with per-page dimensions matching — no figure separated from its caption.
+
+### A fourth stale mirror, closed
+
+BG-T-13 existed to fix **two** stale mirrors of the section list. The TOC's anchors and labels were a **third** (gated during this task, on the Implementer's own initiative — correctly, since `BG-T-13`'s Falsifier names "the unresolved TOC anchor" explicitly and the Leader's brief had under-scoped it). The TOC **numeral** was a **fourth**, and nothing gated it: the Leader verified at source that changing `02`→`99` with `href` and label untouched ships **green**.
+
+It is now asserted **derived, not tabulated** — each TOC numeral is checked against the eyebrow of the section its own `href` resolves to (`SECTIONS[].eyebrow`), so adding or renumbering a section updates the expectation automatically. A second hard-coded table is precisely what this task spent its budget removing. An unnumbered target (`#glossary`, eyebrow `Reference`) must carry no digits, which gates the em-dash row too.
+
+**No existing assertion was relaxed.** Every assertion in the archived `verify-structure.ts` survives verbatim; only the TOC blocks were added and the two constants moved 6→16 and 9→19. The 19 is **derivable** from the template (3 static `h2` + 16 generated), not a literal fitted to the render.
+
+### Correction to this log
+
+`execution.md:683` states "`dist/` is gitignored regardless". That is **imprecise and was load-bearing** for the reasoning that let a synthetic search string in a captured URL path go unremarked. `tooling/.gitignore:11` ignores `dist/*.html` only; the final PDF is **deliberately committed** (the archived W1/W2 spec tracks its own `dist/reporting-tool-user-guide.pdf`), and `dist/capture-requests.log` was never ignored either. No exposure resulted — the string was an authored placeholder and the log no longer exists — but the premise was wrong and is corrected here. `.env` **is** correctly ignored (`tooling/.gitignore:5`), verified with `git check-ignore -v`.
+
+### Open, for the operator
+
+- **The one-page TOC fit has no automated gate.** `verify-structure` reads the DOM, not pagination. It holds for 17 rows at current label lengths; an 18th row, or a label long enough to wrap at the 672px print width, re-breaks it. Both `guide.css` and `template/README.md` carry the formula with instructions to re-derive rather than nudge the value.
+- **`template/README.md` was extended** with the two new contract sentences (numeral-vs-eyebrow, one-page TOC). `verify-structure` announces "structure matches `template/README.md`'s contract", so a gate enforcing an unstated rule would make that line false. Clean 2-hunk revert if the operator prefers the README frozen.
+
+**Final verification** — `VERIFIED` (Leader re-run: `build-guide` exit 0 from a deleted `dist/`, the numeral falsifier driven by the Leader's own mutation with its own exit code, TOC and section-02 pages viewed in the render) + `STATUS: PASS` (`fable` Reviewer, obligations re-derived independently at source).

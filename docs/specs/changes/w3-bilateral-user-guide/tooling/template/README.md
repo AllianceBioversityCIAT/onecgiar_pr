@@ -48,27 +48,49 @@ DoD.
 ### `{{SECTIONS}}`
 
 - **Location:** `<main class="ug-sections" id="sections">`.
-- **Replace with:** the 6 rendered section blocks, concatenated in this exact order. `UG-T-13`
-  asserts 6 `<h2>` inside `#sections`, in this order, at structural-gate time:
+- **Replace with:** the 16 rendered section blocks, concatenated in this exact order (`BG-T-13`
+  — this guide has 16 body sections and 17 captures, not the W1/W2-era 1:1 pairing of 6 and 6).
+  `UG-T-13` asserts 16 `<h2>` inside `#sections`, in this order, at structural-gate time:
 
-  1. `<section class="ug-section" id="section-landing">` — Landing Page
-  2. `<section class="ug-section" id="section-overview">` — Overview Dashboard
-  3. `<section class="ug-section" id="section-reporting">` — Reporting Page
-  4. `<section class="ug-section" id="section-results-center">` — Results Center
-  5. `<section class="ug-section" id="section-notifications">` — Notifications
-  6. `<section class="ug-section" id="section-innovation-packages">` — Innovation Packages
+  1. `<section class="ug-section" id="section-workspace">` — The Bilateral Workspace
+  2. `<section class="ug-section" id="section-finding-your-project">` — Finding Your Project
+  3. `<section class="ug-section" id="section-starting-a-result">` — Starting a Result
+  4. `<section class="ug-section" id="section-choosing-how-to-report">` — Choosing How to Report
+  5. `<section class="ug-section" id="section-manual-form">` — The Manual Form
+  6. `<section class="ug-section" id="section-editor-at-a-glance">` — The Editor at a Glance
+  7. `<section class="ug-section" id="section-overview">` — Overview
+  8. `<section class="ug-section" id="section-general-information">` — General Information
+  9. `<section class="ug-section" id="section-contributors-partners">` — Contributors & Partners
+  10. `<section class="ug-section" id="section-geographic-location">` — Geographic Location
+  11. `<section class="ug-section" id="section-evidence">` — Evidence
+  12. `<section class="ug-section" id="section-type-specific-details">` — Type-Specific Details
+  13. `<section class="ug-section" id="section-saving-your-work">` — Saving Your Work
+  14. `<section class="ug-section" id="section-quality-check-submit">` — The AI Quality Check and Submit for Review
+  15. `<section class="ug-section" id="section-ai-assisted-drafts">` — The AI-Assisted Path and AI Draft Results
+  16. `<section class="ug-section" id="section-result-statuses">` — Result Statuses
 
   These `id`s MUST match the TOC `href`s in `guide.html`'s `<nav id="toc">` verbatim — the TOC
-  is already wired to them.
+  is already wired to them. Each TOC row's `<span class="ug-toc__num">` MUST also match the
+  numeral its target section prints in its own `.ug-section__eyebrow` (`02 · …` → `02`); a row
+  pointing at an unnumbered block (the glossary, whose eyebrow reads "Reference") MUST carry no
+  digits at all. `verify-structure` derives both expectations from the sections themselves — it
+  holds no numeral table of its own.
+
+  The TOC also MUST fit on one printed page. It is 17 rows today, and `guide.css`'s
+  `.ug-toc__item a` vertical padding is sized against the `@page` content box with exactly that
+  margin — adding an 18th row means re-deriving it (the formula is in that rule's comment).
 
   Each `<section>` MUST contain, in this order:
   1. `<header class="ug-section__header">` with a `<span class="ug-section__eyebrow">` (e.g.
-     "01 · Landing Page") and one `<h2>` — the section's own visible title.
+     "02 · The Bilateral Workspace") and one `<h2>` — the section's own visible title.
   2. Prose (`<div class="ug-prose">...</div>`) — the section's narrative.
-  3. One annotated screenshot: `<figure class="ug-figure">` containing an `<img>` (with a
-     required, non-empty `alt`, per `UG-R-12`) and a `<figcaption class="ug-caption">`.
-     Optionally include the route path as `<code class="ug-mono ug-route">/the/path</code>`
-     inside the figcaption — `.ug-mono` is already styled for it.
+  3. **Zero or more** annotated screenshots (`BG-T-13`): each is a `<figure class="ug-figure">`
+     containing an `<img>` (with a required, non-empty `alt`, per `UG-R-12`) and a
+     `<figcaption class="ug-caption">`. A section may carry two figures ("Finding Your Project",
+     "The Manual Form") or none ("The Editor at a Glance") — `assemble.ts`'s `SectionMeta.figures`
+     is `FigureMeta[]`, not the W1/W2-era one-capture-per-section pairing. Optionally include the
+     route path as `<code class="ug-mono ug-route">/the/path</code>` inside each figcaption —
+     `.ug-mono` is already styled for it.
 
 ### `{{GLOSSARY}}`
 
@@ -81,10 +103,10 @@ DoD.
 
 ## Heading-count contract (for `UG-T-13`)
 
-The fully assembled document has **9 `<h2>` elements total**: intro (1), TOC (1), the 6
-`#sections` headings (6), glossary (1). `UG-T-13`'s structural gate counts **exactly 6 `<h2>`
+The fully assembled document has **19 `<h2>` elements total**: intro (1), TOC (1), the 16
+`#sections` headings (16), glossary (1). `UG-T-13`'s structural gate counts **exactly 16 `<h2>`
 inside `#sections`** — the other 3 (intro/TOC/glossary) are outside that container and must not
-be counted toward the 6.
+be counted toward the 16.
 
 ## `routes.config.json` — `annotations[]` (`UG-T-17`, `UG-DD-7`, `UG-R-21`)
 

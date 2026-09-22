@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="build-date" content="{{BUILD_DATE}}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PRMS Reporting Tool — User Guide</title>
+<title>PRMS W3/Bilateral Reporting — User Guide</title>
 
 <!-- PLACEHOLDER CONTRACT — UG-T-11 (this file) to UG-T-12 (assemble.ts): see template/README.md
      for the full contract (5 mustache placeholders, section-block shape, heading-count rule).
@@ -53,16 +53,17 @@
 
   <!-- ============================== COVER ============================== -->
   <section class="ug-cover" id="cover">
-    <span class="ug-cover__index" aria-hidden="true">01→06</span>
+    <span class="ug-cover__index" aria-hidden="true">02→17</span>
     <div class="ug-cover__body">
       <p class="ug-cover__kicker">Performance and Results Management System (PRMS)</p>
-      <h1 class="ug-cover__title">Reporting Tool<br>User Guide</h1>
+      <h1 class="ug-cover__title">W3/Bilateral Reporting<br>User Guide</h1>
       <p class="ug-cover__subtitle">
-        A practical, step-by-step guide to the six key areas of the Reporting Tool, covering the
-        user journey from signing in to submitting an Innovation Package.
+        A practical, step-by-step guide to reporting a W3/Bilateral result manually in the
+        Reporting Tool, covering the journey from finding your project to the AI quality check
+        and Submit for review.
       </p>
       <div class="ug-cover__meta">
-        <span class="ug-mono ug-cover__date">Version 1, 16 September 2026</span>
+        <span class="ug-mono ug-cover__date">Version 1, 21 September 2026</span>
         <span class="ug-cover__divider" aria-hidden="true">&middot;</span>
         <span class="ug-cover__lang">U.S. English</span>
       </div>
@@ -98,22 +99,52 @@
 
     <ol class="ug-toc__list">
       <li class="ug-toc__item">
-        <a href="#section-landing"><span class="ug-toc__num ug-mono">01</span><span class="ug-toc__label">Landing Page</span></a>
+        <a href="#section-workspace"><span class="ug-toc__num ug-mono">02</span><span class="ug-toc__label">The Bilateral Workspace</span></a>
       </li>
       <li class="ug-toc__item">
-        <a href="#section-overview"><span class="ug-toc__num ug-mono">02</span><span class="ug-toc__label">Overview Dashboard</span></a>
+        <a href="#section-finding-your-project"><span class="ug-toc__num ug-mono">03</span><span class="ug-toc__label">Finding Your Project</span></a>
       </li>
       <li class="ug-toc__item">
-        <a href="#section-reporting"><span class="ug-toc__num ug-mono">03</span><span class="ug-toc__label">Reporting Page</span></a>
+        <a href="#section-starting-a-result"><span class="ug-toc__num ug-mono">04</span><span class="ug-toc__label">Starting a Result</span></a>
       </li>
       <li class="ug-toc__item">
-        <a href="#section-results-center"><span class="ug-toc__num ug-mono">04</span><span class="ug-toc__label">Results Center</span></a>
+        <a href="#section-choosing-how-to-report"><span class="ug-toc__num ug-mono">05</span><span class="ug-toc__label">Choosing How to Report</span></a>
       </li>
       <li class="ug-toc__item">
-        <a href="#section-notifications"><span class="ug-toc__num ug-mono">05</span><span class="ug-toc__label">Notifications</span></a>
+        <a href="#section-manual-form"><span class="ug-toc__num ug-mono">06</span><span class="ug-toc__label">The Manual Form</span></a>
       </li>
       <li class="ug-toc__item">
-        <a href="#section-innovation-packages"><span class="ug-toc__num ug-mono">06</span><span class="ug-toc__label">Innovation Packages</span></a>
+        <a href="#section-editor-at-a-glance"><span class="ug-toc__num ug-mono">07</span><span class="ug-toc__label">The Editor at a Glance</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-overview"><span class="ug-toc__num ug-mono">08</span><span class="ug-toc__label">Overview</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-general-information"><span class="ug-toc__num ug-mono">09</span><span class="ug-toc__label">General Information</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-contributors-partners"><span class="ug-toc__num ug-mono">10</span><span class="ug-toc__label">Contributors &amp; Partners</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-geographic-location"><span class="ug-toc__num ug-mono">11</span><span class="ug-toc__label">Geographic Location</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-evidence"><span class="ug-toc__num ug-mono">12</span><span class="ug-toc__label">Evidence</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-type-specific-details"><span class="ug-toc__num ug-mono">13</span><span class="ug-toc__label">Type-Specific Details</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-saving-your-work"><span class="ug-toc__num ug-mono">14</span><span class="ug-toc__label">Saving Your Work</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-quality-check-submit"><span class="ug-toc__num ug-mono">15</span><span class="ug-toc__label">The AI Quality Check and Submit for Review</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-ai-assisted-drafts"><span class="ug-toc__num ug-mono">16</span><span class="ug-toc__label">The AI-Assisted Path and AI Draft Results</span></a>
+      </li>
+      <li class="ug-toc__item">
+        <a href="#section-result-statuses"><span class="ug-toc__num ug-mono">17</span><span class="ug-toc__label">Result Statuses</span></a>
       </li>
       <li class="ug-toc__item ug-toc__item--glossary">
         <a href="#glossary"><span class="ug-toc__num ug-mono">&mdash;</span><span class="ug-toc__label">Glossary</span></a>
@@ -138,6 +169,6 @@
     </dl>
   </section>
 
-  <footer class="ug-footer" aria-hidden="true">Reporting Tool User Guide &middot; Version 1, 16 September 2026</footer>
+  <footer class="ug-footer" aria-hidden="true">W3/Bilateral Reporting User Guide &middot; Version 1, 21 September 2026</footer>
 </body>
 </html>

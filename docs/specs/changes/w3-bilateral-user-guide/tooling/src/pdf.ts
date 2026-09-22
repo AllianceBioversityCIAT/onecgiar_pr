@@ -5,7 +5,15 @@
  *
  * Loads `dist/guide-assembled.html` (produced by `assemble.ts`, gated by
  * `verify-structure.ts`) in Playwright Chromium and prints it to
- * `dist/reporting-tool-user-guide.pdf` via `page.pdf()`.
+ * `dist/w3-bilateral-reporting-user-guide.pdf` via `page.pdf()`.
+ *
+ * BG-T-13 note: the archived W1/W2 copy of this file writes to
+ * `dist/reporting-tool-user-guide.pdf`. `OUTPUT_PDF` below is the one line changed from that
+ * copy — `design.md` §3.2's pipeline diagram and `tasks.md` `BG-T-13`'s own `Files (expected)`
+ * both name `w3-bilateral-reporting-user-guide.pdf` as this spec's deliverable filename, and
+ * shipping the W1/W2 name here would silently collide with (or be mistaken for) the archived
+ * guide's own output. `BG-R-22`'s "SHOULD stay byte-identical" is a SHOULD, and a one-line
+ * output-path constant remains a trivially mechanical diff for a future promotion.
  *
  * Font-loading guard: waits for `document.fonts.ready`, then explicitly
  * checks `document.fonts.check()` for Manrope and JetBrains Mono and FAILS
@@ -27,7 +35,7 @@ import * as path from 'path';
 
 const TOOLING_ROOT = path.resolve(__dirname, '..');
 const ASSEMBLED_HTML = path.join(TOOLING_ROOT, 'dist', 'guide-assembled.html');
-const OUTPUT_PDF = path.join(TOOLING_ROOT, 'dist', 'reporting-tool-user-guide.pdf');
+const OUTPUT_PDF = path.join(TOOLING_ROOT, 'dist', 'w3-bilateral-reporting-user-guide.pdf');
 
 /** `document.fonts.check()` accepts a CSS font shorthand: "<size> <family>". */
 const REQUIRED_FONT_CHECKS: ReadonlyArray<{ label: string; cssFont: string }> = [
