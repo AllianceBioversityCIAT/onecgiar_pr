@@ -9,6 +9,9 @@ import {
   ScienceProgramMapping,
 } from '../../services/bilateral-creation.interfaces';
 
+/** P2-3352 § 6: "Default value: 100". Applied on screen when nothing was ever stored. */
+const DEFAULT_CONTRIBUTION_PERCENTAGE = 100;
+
 @Component({
   selector: 'app-section-zero-dashboard',
   imports: [
@@ -31,6 +34,12 @@ export class SectionZeroDashboardComponent {
   readonly isSavingAssignment = signal(false);
   readonly assignmentError = signal<string | null>(null);
   readonly noAlternativeMessage = signal<string | null>(null);
+
+  /**
+   * P2-3760 — Contribution %. `null` means the reporter has not touched it this session, so the
+   * displayed value falls back to the stored one and, failing that, to the 100 the story specifies.
+   */
+  readonly pendingContribution = signal<number | null>(null);
 
   readonly canEditAssignment = computed(
     () => !this.readOnly() && this.creationService.currentResultId() != null,
@@ -74,8 +83,40 @@ export class SectionZeroDashboardComponent {
       (this.pendingProject() != null &&
         Number(this.pendingProject()?.id) !== Number(currentProject?.id)) ||
       (this.pendingPrimary() != null &&
-        Number(this.pendingPrimary()?.programId) !== Number(currentPrimary?.programId))
+        Number(this.pendingPrimary()?.programId) !==
+          Number(currentPrimary?.programId)) ||
+      this.hasContributionChange()
     );
+  });
+
+  /** The value on screen: what the reporter typed, else what is stored, else the 100 default. */
+  readonly contributionValue = computed(
+    () =>
+      this.pendingContribution() ??
+      this.creationService.resultContributionPercentage() ??
+      DEFAULT_CONTRIBUTION_PERCENTAGE,
+  );
+
+  readonly hasContributionChange = computed(() => {
+    const pending = this.pendingContribution();
+    if (pending === null) return false;
+    const stored =
+      this.creationService.resultContributionPercentage() ??
+      DEFAULT_CONTRIBUTION_PERCENTAGE;
+    return pending !== stored;
+  });
+
+  /** The button saves whatever actually changed, so it must not promise more than it does. */
+  readonly saveButtonLabel = computed(() => {
+    const currentProject = this.creationService.selectedProject();
+    const currentPrimary = this.creationService.selectedPrimarySp();
+    const assignmentChanged =
+      (this.pendingProject() != null &&
+        Number(this.pendingProject()?.id) !== Number(currentProject?.id)) ||
+      (this.pendingPrimary() != null &&
+        Number(this.pendingPrimary()?.programId) !==
+          Number(currentPrimary?.programId));
+    return assignmentChanged ? 'Save project and program' : 'Save contribution';
   });
 
   onProjectCandidate(project: BilateralProject): void {
@@ -93,6 +134,21 @@ export class SectionZeroDashboardComponent {
     if (Number(project.id) !== Number(this.creationService.selectedProject()?.id)) {
       this.pendingPrimary.set(null);
     }
+  }
+
+  onContributionInput(rawValue: string | number | null | undefined): void {
+    this.assignmentError.set(null);
+    const trimmed = String(rawValue ?? '').trim();
+    if (trimmed === '') {
+      // An emptied box means "back to the stored value", not "zero".
+      this.pendingContribution.set(null);
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (Number.isNaN(parsed)) return;
+    // The server rejects anything outside 0-100; clamp here so the reporter sees it immediately.
+    const clamped = Math.min(100, Math.max(0, Math.round(parsed * 100) / 100));
+    this.pendingContribution.set(clamped);
   }
 
   togglePrimaryOptions(): void {
@@ -123,8 +179,10 @@ export class SectionZeroDashboardComponent {
     const project = this.assignmentProject();
     const primary = this.assignmentPrimary();
     if (!resultId || !project || !primary || this.requiresPrimarySelection()) {
+      // The endpoint requires both identities even when only the percentage moved, so the
+      // message has to name what is actually missing instead of blaming a project change.
       this.assignmentError.set(
-        'Select a Primary Science Program before saving the project change.',
+        'Select a Primary Science Program before saving this section.',
       );
       return;
     }
@@ -135,12 +193,23 @@ export class SectionZeroDashboardComponent {
       .PATCH_primaryAssignment(resultId, {
         project_id: Number(project.id),
         primary_science_program_id: Number(primary.programId),
+        ...(this.hasContributionChange()
+          ? { contribution_percentage: this.contributionValue() }
+          : {}),
       })
       .subscribe({
         next: () => {
           this.creationService.applyPrimaryAssignment(project, primary);
+          if (this.hasContributionChange()) {
+            // Reflect it at once: `loadResult` below re-reads it from the server anyway, but the
+            // field must not blink back to the old number while that request is in flight.
+            this.creationService.resultContributionPercentage.set(
+              this.contributionValue(),
+            );
+          }
           this.pendingProject.set(null);
           this.pendingPrimary.set(null);
+          this.pendingContribution.set(null);
           this.isSavingAssignment.set(false);
           // Reconcile contributors and ToC from their canonical detail response.
           this.creationService.loadResult(resultId);
