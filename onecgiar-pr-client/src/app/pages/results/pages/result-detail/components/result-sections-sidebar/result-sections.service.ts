@@ -217,10 +217,19 @@ export class ResultSectionsService {
    * Hidden rather than greyed, to match the save bar. `readOnly` is signal-backed
    * (`roles.service.ts:22`, `:53-59`), so the async role resolution repaints this getter by itself;
    * it also defaults to `true`, which fails to the safe side while permissions are unknown.
+   *
+   * ⚠️ P2-2385: this used to carry `result_type_id != 6`, which hid the button for Knowledge
+   * Products because their title and description are auto-synced from CGSpace and must not be
+   * overridden by an AI proposal. The exclusion is gone: a KP reporter still owns the Impact Area
+   * (DAC) tags by hand, so the button is offered for EVERY result type and what a Knowledge Product
+   * may be shown is narrowed one layer down, in `AiReviewService.onAIReviewClick()` — impact areas
+   * only, no title / description proposal is requested or persisted. Deliberately not an allow-list
+   * of types: every type is allowed today, and a list would silently hide the button for the next
+   * type someone adds.
    */
   get showAiReview(): boolean {
     const r = this.dataControlSE.currentResult;
-    return !!(r && r.result_type_id != 6 && r.status_id == 1) && !this.rolesSE.readOnly;
+    return !!(r && r.status_id == 1) && !this.rolesSE.readOnly;
   }
 
   /** Second line of defence for `runAiReview()`, so the TS guard holds even if the button renders. */
