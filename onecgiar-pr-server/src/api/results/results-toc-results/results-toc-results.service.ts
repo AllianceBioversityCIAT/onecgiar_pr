@@ -2246,11 +2246,25 @@ export class ResultsTocResultsService {
       }
 
       const initSubmitter = await this._resultByInitiativesRepository.findOne({
-        where: { result_id: resultId, initiative_role_id: 1 },
+        where: { result_id: resultId, initiative_role_id: 1, is_active: true },
       });
 
-      const primaryInitiativeId = this._normalizeInitiativeId(
+      // savingInitiativeId: the program actually performing this save. It
+      // reads the payload's own initiative_id first (a contributor SP
+      // saving its own ToC), falling back to the owner when the payload is
+      // silent about which program it is.
+      const savingInitiativeId = this._normalizeInitiativeId(
         (resultTocResult as any)?.initiative_id,
+        initSubmitter?.initiative_id,
+        result?.initiative_id,
+      );
+
+      // ownerInitiativeId: the result's actual owner (role_id = 1), NEVER
+      // taken from the payload. DD-4's "primary" means this — a contributor
+      // save must not be able to claim it just by naming itself in the
+      // payload (Reviewer FAIL on attempt 1: that let a contributor save
+      // wipe the owner's legacy null-initiative rows).
+      const ownerInitiativeId = this._normalizeInitiativeId(
         initSubmitter?.initiative_id,
         result?.initiative_id,
       );
@@ -2260,7 +2274,7 @@ export class ResultsTocResultsService {
         const activeRecord = await this._resultsTocResultRepository.findOne({
           where: {
             result_id: resultId,
-            initiative_ids: primaryInitiativeId,
+            initiative_ids: savingInitiativeId,
             is_active: true,
           },
         });
@@ -2273,7 +2287,7 @@ export class ResultsTocResultsService {
       if (resultTocResult?.result_toc_results?.length) {
         for (const t of resultTocResult.result_toc_results) {
           if (t && !(t as any).initiative_id) {
-            (t as any).initiative_id = primaryInitiativeId;
+            (t as any).initiative_id = savingInitiativeId;
           }
           if (t && !t.result_toc_result_id) {
             const activeRecord = await this._resultsTocResultRepository.findOne(
@@ -2292,15 +2306,33 @@ export class ResultsTocResultsService {
         }
       }
 
+      // BIL-RTE-DD-4: a ToC save only ever touches rows of the program(s)
+      // in scope for this save — the saving program, every initiative_id
+      // named in the payload items, and (only when the owner IS the
+      // program saving, or is named in the payload items) legacy rows left
+      // with a null initiative_ids column. Every other program's rows must
+      // survive untouched (R-9), including the owner's own rows when a
+      // contributor is the one saving.
+      const scopeInitiativeIds = this._buildTocScopeInitiativeIds(
+        savingInitiativeId,
+        ownerInitiativeId,
+        resultTocResult,
+      );
+
       const incomingIds = this._extractIncomingIds(resultTocResult);
-      await this._deactivateMissingRecords(resultId, incomingIds, user);
+      await this._deactivateMissingRecords(
+        resultId,
+        incomingIds,
+        user,
+        scopeInitiativeIds,
+      );
 
       if (resultTocResult?.planned_result === true) {
         await this._handlePlannedResult(
           resultId,
           result,
           resultTocResult,
-          primaryInitiativeId,
+          savingInitiativeId,
           user,
         );
       } else if (resultTocResult?.planned_result === false) {
@@ -2308,8 +2340,9 @@ export class ResultsTocResultsService {
           resultId,
           result,
           resultTocResult,
-          primaryInitiativeId,
+          savingInitiativeId,
           user,
+          scopeInitiativeIds,
         );
       }
 
@@ -2348,10 +2381,52 @@ export class ResultsTocResultsService {
     return new Set<number>(incomingIdsPrimary);
   }
 
+  /**
+   * BIL-RTE-DD-4 scope set: the program saving, plus every initiative_id
+   * named in the payload items. `null` (legacy rows with no initiative_ids)
+   * is added only when the OWNER is the program in scope — i.e. the owner
+   * is the one saving, or the owner is explicitly named among the payload
+   * items — never merely because *some* program resolved as the saver.
+   * Otherwise a contributor's save (savingInitiativeId = the contributor)
+   * would sweep in the owner's legacy null rows too, breaking R-9
+   * (design.md §5.2 step 1 and §12 DD-4: "a toc-metadata save of a
+   * contributor SP would then touch the owner").
+   */
+  private _buildTocScopeInitiativeIds(
+    savingInitiativeId: number | null,
+    ownerInitiativeId: number | null,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+  ): Set<number | null> {
+    const scopeInitiativeIds = new Set<number | null>();
+
+    if (savingInitiativeId != null) {
+      scopeInitiativeIds.add(savingInitiativeId);
+    }
+
+    for (const t of resultTocResult?.result_toc_results ?? []) {
+      const itemInitiativeId = this._normalizeInitiativeId(
+        (t as any)?.initiative_id,
+      );
+      if (itemInitiativeId != null) {
+        scopeInitiativeIds.add(itemInitiativeId);
+      }
+    }
+
+    if (
+      ownerInitiativeId != null &&
+      scopeInitiativeIds.has(ownerInitiativeId)
+    ) {
+      scopeInitiativeIds.add(null);
+    }
+
+    return scopeInitiativeIds;
+  }
+
   private async _deactivateMissingRecords(
     resultId: number,
     keepIds: Set<number>,
     user: TokenDto,
+    scopeInitiativeIds: Set<number | null>,
   ): Promise<void> {
     const existingAll = await this._resultsTocResultRepository.find({
       where: { result_id: resultId },
@@ -2359,7 +2434,11 @@ export class ResultsTocResultsService {
 
     await Promise.all(
       existingAll.map(async (row) => {
-        if (row.is_active && !keepIds.has(Number(row.result_toc_result_id))) {
+        if (
+          row.is_active &&
+          !keepIds.has(Number(row.result_toc_result_id)) &&
+          scopeInitiativeIds.has(row.initiative_ids ?? null)
+        ) {
           await this._resultsTocResultRepository.update(
             row.result_toc_result_id,
             {
@@ -2531,8 +2610,9 @@ export class ResultsTocResultsService {
     resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
     primaryInitiativeId: number | null,
     user: TokenDto,
+    scopeInitiativeIds: Set<number | null>,
   ): Promise<void> {
-    await this._deactivateAllActiveRecords(resultId, user);
+    await this._deactivateAllActiveRecords(resultId, user, scopeInitiativeIds);
 
     if (resultTocResult?.result_toc_results?.length) {
       await this._processUnplannedTocResults(
@@ -2554,12 +2634,16 @@ export class ResultsTocResultsService {
   private async _deactivateAllActiveRecords(
     resultId: number,
     user: TokenDto,
+    scopeInitiativeIds: Set<number | null>,
   ): Promise<void> {
     const allActiveRecords = await this._resultsTocResultRepository.find({
       where: { result_id: resultId, is_active: true },
     });
 
     for (const record of allActiveRecords ?? []) {
+      if (!scopeInitiativeIds.has(record.initiative_ids ?? null)) {
+        continue;
+      }
       await this._resultsTocResultRepository.update(
         record.result_toc_result_id,
         {

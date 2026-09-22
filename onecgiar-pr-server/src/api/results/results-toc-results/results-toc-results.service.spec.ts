@@ -982,4 +982,239 @@ describe('ResultsTocResultsService', () => {
       expect(verdicts).toBe(mockVerdicts);
     });
   });
+
+  describe('updateTocResultPartial — BIL-RTE-DD-4 scoping (R-9)', () => {
+    function deactivatedIds() {
+      return resultsTocResultRepository.update.mock.calls
+        .filter(([, changes]) => (changes as any)?.is_active === false)
+        .map(([id]) => id);
+    }
+
+    it('R-9.a: SP Y row survives SP X Yes save (red before DD-4 scoping)', async () => {
+      resultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 10350,
+          result_id: 1,
+          initiative_ids: 50,
+          is_active: true,
+        },
+        {
+          result_toc_result_id: 20450,
+          result_id: 1,
+          initiative_ids: 99,
+          is_active: true,
+        },
+      ] as any);
+
+      const payload: any = {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+            toc_level_id: 1,
+          },
+        ],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 1 } as TokenDto);
+
+      expect(deactivatedIds()).not.toContain(20450);
+    });
+
+    it('R-9.a: SP Y row survives SP X No save (red before DD-4 scoping)', async () => {
+      resultsTocResultRepository.find
+        .mockResolvedValueOnce([
+          {
+            result_toc_result_id: 10350,
+            result_id: 1,
+            initiative_ids: 50,
+            is_active: true,
+          },
+          {
+            result_toc_result_id: 20450,
+            result_id: 1,
+            initiative_ids: 99,
+            is_active: true,
+          },
+        ] as any)
+        .mockResolvedValueOnce([
+          {
+            result_toc_result_id: 10350,
+            result_id: 1,
+            initiative_ids: 50,
+            is_active: true,
+          },
+          {
+            result_toc_result_id: 20450,
+            result_id: 1,
+            initiative_ids: 99,
+            is_active: true,
+          },
+        ] as any);
+
+      const payload: any = {
+        planned_result: false,
+        initiative_id: 50,
+        toc_progressive_narrative: 'Reported outside 2026 TOC indicators',
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 1 } as TokenDto);
+
+      expect(deactivatedIds()).not.toContain(20450);
+    });
+
+    it('cleans a legacy null-initiative row for the owner on an owner save', async () => {
+      // Explicit initSubmitter so this proves the OWNER case, not merely
+      // "some program resolved" — the owner (50) is the one saving here.
+      resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+        initiative_id: 50,
+      } as any);
+
+      resultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 30550,
+          result_id: 1,
+          initiative_ids: null,
+          is_active: true,
+        },
+      ] as any);
+
+      const payload: any = {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+          },
+        ],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 7 } as TokenDto);
+
+      expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+        30550,
+        expect.objectContaining({ is_active: false, last_updated_by: 7 }),
+      );
+    });
+
+    it("does NOT clean the owner's legacy null-initiative row on a contributor Yes save (red on attempt 1)", async () => {
+      // Owner (initSubmitter) is 50. The payload's SP is 99 — a
+      // contributor. Attempt 1 added `null` to scope whenever ANY program
+      // resolved as "primary" (here, 99, since it read initiative_id off
+      // the payload first) — which let a contributor's save deactivate the
+      // owner's legacy null-initiative rows. That must not happen.
+      resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+        initiative_id: 50,
+      } as any);
+
+      resultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 30551,
+          result_id: 1,
+          initiative_ids: null,
+          is_active: true,
+        },
+      ] as any);
+
+      const payload: any = {
+        planned_result: true,
+        initiative_id: 99,
+        result_toc_results: [
+          {
+            result_toc_result_id: 40199,
+            toc_result_id: 7000,
+          },
+        ],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 3 } as TokenDto);
+
+      expect(deactivatedIds()).not.toContain(30551);
+    });
+
+    it("does NOT clean the owner's legacy null-initiative row on a contributor No save (red on attempt 1)", async () => {
+      resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+        initiative_id: 50,
+      } as any);
+
+      resultsTocResultRepository.find
+        .mockResolvedValueOnce([
+          {
+            result_toc_result_id: 30551,
+            result_id: 1,
+            initiative_ids: null,
+            is_active: true,
+          },
+        ] as any)
+        .mockResolvedValueOnce([
+          {
+            result_toc_result_id: 30551,
+            result_id: 1,
+            initiative_ids: null,
+            is_active: true,
+          },
+        ] as any);
+
+      const payload: any = {
+        planned_result: false,
+        initiative_id: 99,
+        toc_progressive_narrative: 'Contributor reports outside indicators',
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 3 } as TokenDto);
+
+      expect(deactivatedIds()).not.toContain(30551);
+    });
+
+    it('scopes to the new (active) primary, not a stale inactive initSubmitter row', async () => {
+      const OLD_PRIMARY = 40;
+      const NEW_PRIMARY = 60;
+
+      resultByInitiativesRepository.findOne.mockImplementationOnce(
+        async (options: any) => {
+          // Only the fixed query (filtering is_active: true) may see the
+          // new, active primary. A query without that filter would pick up
+          // the stale, inactive row instead.
+          if (options?.where?.is_active === true) {
+            return { initiative_id: NEW_PRIMARY } as any;
+          }
+          return { initiative_id: OLD_PRIMARY } as any;
+        },
+      );
+
+      resultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 71001,
+          result_id: 1,
+          initiative_ids: NEW_PRIMARY,
+          is_active: true,
+        },
+        {
+          result_toc_result_id: 71002,
+          result_id: 1,
+          initiative_ids: OLD_PRIMARY,
+          is_active: true,
+        },
+      ] as any);
+
+      const payload: any = {
+        planned_result: true,
+        // No top-level initiative_id: forces the fallback to initSubmitter.
+        result_toc_results: [],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 9 } as TokenDto);
+
+      expect(resultByInitiativesRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ is_active: true }),
+        }),
+      );
+      expect(deactivatedIds()).toContain(71001);
+      expect(deactivatedIds()).not.toContain(71002);
+    });
+  });
 });
