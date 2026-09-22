@@ -144,7 +144,11 @@ export class BilateralProjectsService {
    * today's behavior instead of 5xxing. Query parameters arrive as strings, hence the
    * `number | string` signature — same convention as `centerId`.
    */
-  async getProjectsByCenter(centerId: number | string, year?: number | string) {
+  async getProjectsByCenter(
+    centerId: number | string,
+    year?: number | string,
+    versionId?: number | string,
+  ) {
     let center = null;
     const centerIdNum = Number(centerId);
     if (!isNaN(centerIdNum)) {
@@ -291,12 +295,22 @@ export class BilateralProjectsService {
     ];
     const spByCode = await this.resolveScienceProgramNames(programCodes);
 
+    const w1w2ContributorCountByProjectId = await this.getW1w2ContributorCounts(
+      reportableProjects.map((p) => p.id),
+      versionId,
+    );
+
     const mapped = reportableProjects.map((project) => ({
       id: project.id,
       shortName: project.shortName,
       fullName: project.fullName,
       summary: project.summary,
       description: project.description,
+      // `BIL-POM-OQ-1` correction (2026-09-22): count of W1/W2 (`source='Result'`) results that
+      // tag this project as a contributor, independent of the single-lead `project_id` used
+      // elsewhere in the bilateral queries. See `getW1w2ContributorCounts` for the exact rule.
+      w1w2ContributorCount:
+        w1w2ContributorCountByProjectId.get(project.id) ?? 0,
       leadCenter: project.obj_organization
         ? {
             id: project.obj_organization.id,
@@ -371,4 +385,69 @@ export class BilateralProjectsService {
   /** `clarisa_project_mappings.status` values that mean "approved" (see `hasProgramMapping`). */
   private static readonly APPROVED_MAPPING_STATUSES: ReadonlySet<string> =
     new Set(['Confirmed']);
+
+  /**
+   * `BIL-POM-OQ-1` correction (2026-09-22): the original `bilateral/project-overview-metrics`
+   * spec deferred a "# of W1/W2 results tagged as a contributor" metric, concluding no
+   * data-model link existed — that investigation only checked `results_by_inititiative`
+   * (Science Programs only). It missed that `results_by_projects` already supports exactly
+   * this: `ApplyFrameworkResultAssociationsService.processBilateralProjects`
+   * (`results-framework-reporting/application/commands/create-result-from-framework/`)
+   * calls `ResultsByProjectsService.linkBilateralProjectToResult` for a W1/W2 (framework)
+   * result's `bilateral_project` payload field, writing a `results_by_projects` row with
+   * `is_lead` left at its default (never `true` — W1/W2 results have no "lead bilateral
+   * project" concept). That is why the existing per-result `project_id` subquery elsewhere in
+   * this codebase (`ResultRepository.getResultsByBilateralCenter`, `LIMIT 1 ORDER BY is_lead
+   * DESC`) never surfaces these rows: it deliberately keeps only the LEAD project per result,
+   * for a different consumer (`COV-R-16` "Projects covered"). This is a genuinely separate
+   * count — one bilateral project can be the "contributing" link for many W1/W2 results, and
+   * each of those results counts toward every project it lists, not just one.
+   *
+   * Scoped to `versionId` (a PRMS phase/`version_id`, NOT the CLARISA project `year` this
+   * method's caller is also scoped by — two different axes) per the confirmed spec correction:
+   * only the currently selected phase counts, mirroring how `replicatedCountByProject`/
+   * `newForReviewCountByProject` are scoped on the client. Counts regardless of `status_id` —
+   * confirmed: matches the ticket's original ask with no status condition.
+   *
+   * Returns an all-zero map when `versionId` is absent/invalid or there are no project ids —
+   * an unscoped (all-phase) count would mix phases and mislead exactly like the pre-fix
+   * `project_id` subquery did, so "no phase" means "no count", not "count everything".
+   */
+  private async getW1w2ContributorCounts(
+    projectIds: number[],
+    versionId?: number | string,
+  ): Promise<Map<number, number>> {
+    const counts = new Map<number, number>();
+    const versionIdNum = Number(versionId);
+    if (
+      !projectIds.length ||
+      versionId === undefined ||
+      versionId === null ||
+      !Number.isFinite(versionIdNum) ||
+      versionIdNum <= 0
+    ) {
+      return counts;
+    }
+
+    const rows: { project_id: number; cnt: string }[] =
+      await this.projectRepo.manager.query(
+        `
+          SELECT rbp.project_id AS project_id, COUNT(DISTINCT rbp.result_id) AS cnt
+          FROM results_by_projects rbp
+          INNER JOIN result r ON r.id = rbp.result_id
+          WHERE rbp.project_id IN (?)
+            AND rbp.is_active = 1
+            AND r.is_active = 1
+            AND r.source = 'Result'
+            AND r.version_id = ?
+          GROUP BY rbp.project_id
+        `,
+        [projectIds, versionIdNum],
+      );
+
+    for (const row of rows) {
+      counts.set(Number(row.project_id), Number(row.cnt));
+    }
+    return counts;
+  }
 }

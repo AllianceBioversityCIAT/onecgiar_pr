@@ -14,7 +14,9 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { Phases } from '../../../../../../shared/interfaces/phasesList.interface';
 // @akili-spec bilateral/center-overview-tab (COV-T-7, COV-R-15, COV-DD-9) — reads the shared
 // query-param contract; this tab only READS (`program`, `project`, `multi`), it never writes back.
-import { parseBilateralQueryParams } from '../../../../bilateral-query-params';
+// @akili-spec bilateral/project-overview-metrics (BIL-POM-T-3) — `STATUS_KEY_TO_ID.pending` is the
+// single source of truth for the "Pending" `status_id`, same import the aggregate uses.
+import { parseBilateralQueryParams, STATUS_KEY_TO_ID } from '../../../../bilateral-query-params';
 
 /** `COV-R-15`/`COV-DD-9` — how long the `?project=` highlight ring stays on the card. */
 const PROJECT_HIGHLIGHT_DURATION_MS = 2000;
@@ -95,6 +97,41 @@ export class BilateralProjectsPanelComponent {
       if (pId !== null && Number.isSafeInteger(pId) && pId > 0) {
         countMap.set(pId, (countMap.get(pId) ?? 0) + 1);
       }
+    }
+    return countMap;
+  });
+
+  /**
+   * `BIL-POM-T-3` — count of results per project with `is_replicated === 1` (raw MySQL tinyint on
+   * the wire — see `BilateralCenterResult.is_replicated` docstring — normalized via `Number(...)
+   * === 1`, never a strict boolean comparison).
+   */
+  readonly replicatedCountByProject = computed<Map<number, number>>(() => {
+    const rows = this.results();
+    const countMap = new Map<number, number>();
+    for (const row of rows) {
+      const pId = row.project_id != null ? Number(row.project_id) : null;
+      if (pId === null || !Number.isSafeInteger(pId) || pId <= 0) continue;
+      if (Number(row.is_replicated) !== 1) continue;
+      countMap.set(pId, (countMap.get(pId) ?? 0) + 1);
+    }
+    return countMap;
+  });
+
+  /**
+   * `BIL-POM-T-3` — count of results per project that are "new for review": NOT replicated
+   * (`BIL-POM-AC-3` mutual exclusivity with `replicatedCountByProject`) AND pending review
+   * (`status_id === STATUS_KEY_TO_ID.pending`).
+   */
+  readonly newForReviewCountByProject = computed<Map<number, number>>(() => {
+    const rows = this.results();
+    const countMap = new Map<number, number>();
+    for (const row of rows) {
+      const pId = row.project_id != null ? Number(row.project_id) : null;
+      if (pId === null || !Number.isSafeInteger(pId) || pId <= 0) continue;
+      if (Number(row.is_replicated) === 1) continue;
+      if (Number(row.status_id) !== STATUS_KEY_TO_ID.pending) continue;
+      countMap.set(pId, (countMap.get(pId) ?? 0) + 1);
     }
     return countMap;
   });
@@ -224,26 +261,61 @@ export class BilateralProjectsPanelComponent {
       }
     });
 
+    // `BIL-POM-OQ-1` correction (2026-09-22) — ONE effect, tracked on both `centerId` and
+    // `versionId`, that branches internally rather than splitting into two effects. Two
+    // separate effects (one center-tracked, one phase-tracked) raced on the very first
+    // resolution — when both signals already have a value on the first flush, effect
+    // registration order does not guarantee the phase effect's "already loaded?" check
+    // observes the center effect's write before firing too, producing a redundant fetch (and,
+    // in one measured case, a third one from a second CD pass). Tracking "did centerId itself
+    // change" via a plain closure variable (not a signal — it must NOT retrigger the effect on
+    // its own) makes the two paths mutually exclusive by construction: a genuine center change
+    // always resets filters and does a full load; a phase-only change (center unchanged) only
+    // refreshes `w1w2ContributorCount` in place, never touching search/filter/loading state.
+    let lastCenterId: string | null = null;
     effect(() => {
       const centerId = this.ctx.centerId() || this.ctx.centerAcronym();
-      if (!centerId) return;
+      const versionId = this.effectiveVersionId();
+      if (!centerId) {
+        lastCenterId = null;
+        return;
+      }
+      const isNewCenter = centerId !== lastCenterId;
+      lastCenterId = centerId;
+
       untracked(() => {
-        this.searchQuery.set('');
-        this.selectedProgramFilter.set('ALL');
-        this.selectedMultiProgramOnly.set(false);
-        this.loading.set(true);
-        this.error.set(false);
-        this.bilateralApiService.GET_bilateralProjects(centerId).subscribe({
+        if (isNewCenter) {
+          this.searchQuery.set('');
+          this.selectedProgramFilter.set('ALL');
+          this.selectedMultiProgramOnly.set(false);
+          this.loading.set(true);
+          this.error.set(false);
+        }
+
+        this.bilateralApiService.GET_bilateralProjects(centerId, undefined, versionId ?? undefined).subscribe({
           next: ({ response }) => {
-            this.projects.set(response?.projects ?? response ?? []);
-            this.loading.set(false);
-            // `COV-R-15` — read the deep-link params only after the catalog it targets exists,
-            // and only once per load (not on every subsequent projects signal write).
-            this.applyDeepLinkParams();
+            const fetched: BilateralProject[] = response?.projects ?? response ?? [];
+            if (isNewCenter) {
+              this.projects.set(fetched);
+              this.loading.set(false);
+              // `COV-R-15` — read the deep-link params only after the catalog it targets exists,
+              // and only once per load (not on every subsequent projects signal write).
+              this.applyDeepLinkParams();
+            } else {
+              // Phase-only refresh: merge just the counts a phase switch can change, keep
+              // everything else (including any in-progress search/filter) untouched.
+              const countByProjectId = new Map(fetched.map(p => [Number(p.id), p.w1w2ContributorCount ?? 0]));
+              this.projects.update(list =>
+                list.map(p => ({ ...p, w1w2ContributorCount: countByProjectId.get(Number(p.id)) ?? p.w1w2ContributorCount ?? 0 }))
+              );
+            }
           },
           error: () => {
-            this.error.set(true);
-            this.loading.set(false);
+            if (isNewCenter) {
+              this.error.set(true);
+              this.loading.set(false);
+            }
+            // Phase-only refresh failure: non-fatal — the catalog is already loaded.
           }
         });
       });
@@ -252,6 +324,24 @@ export class BilateralProjectsPanelComponent {
 
   getProjectResultsCount(project: BilateralProject): number {
     return this.resultsCountByProject().get(Number(project.id)) ?? 0;
+  }
+
+  /** `BIL-POM-T-3` */
+  getProjectReplicatedCount(project: BilateralProject): number {
+    return this.replicatedCountByProject().get(Number(project.id)) ?? 0;
+  }
+
+  /** `BIL-POM-T-3` */
+  getProjectNewForReviewCount(project: BilateralProject): number {
+    return this.newForReviewCountByProject().get(Number(project.id)) ?? 0;
+  }
+
+  /**
+   * `BIL-POM-OQ-1` correction — count of W1/W2 results tagged to this project as a contributor.
+   * Server-computed (per-project, not derived from `results()`), unlike the three counts above.
+   */
+  getProjectW1w2ContributorCount(project: BilateralProject): number {
+    return project.w1w2ContributorCount ?? 0;
   }
 
   navigateToProjectResults(project: BilateralProject, event?: Event): void {
@@ -315,7 +405,7 @@ export class BilateralProjectsPanelComponent {
     }
 
     if (centerKey) {
-      this.bilateralApiService.GET_bilateralProjects(centerKey).subscribe({
+      this.bilateralApiService.GET_bilateralProjects(centerKey, undefined, versionId ?? undefined).subscribe({
         next: ({ response }) => {
           this.projects.set(response?.projects ?? response ?? []);
           this.refreshing.set(false);

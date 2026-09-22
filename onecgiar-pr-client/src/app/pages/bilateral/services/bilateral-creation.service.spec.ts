@@ -486,6 +486,7 @@ describe('BilateralCreationService', () => {
         description: 'description',
         leadCenter: { id: 88, name: 'Center', acronym: 'CTR' },
         sciencePrograms: [],
+        w1w2ContributorCount: 0,
       });
       expect(service.resultLeadCenterId()).toBe(88);
       expect(service.resultContributingProjectIds()).toEqual([5, 6]);

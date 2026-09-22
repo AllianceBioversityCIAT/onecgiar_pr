@@ -33,6 +33,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    is_replicated: false,
     created_by_name: 'Angel Jarrin',
   },
   {
@@ -52,6 +53,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'AI',
     is_ai_generated: 1,
     is_leading_result: 0,
+    is_replicated: false,
     created_by_name: 'Santiago Sanchez',
   },
   {
@@ -71,6 +73,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    is_replicated: false,
   },
   {
     id: 4,
@@ -89,6 +92,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    is_replicated: false,
   },
   {
     id: 5,
@@ -107,6 +111,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 0,
+    is_replicated: false,
   },
   {
     id: 6,
@@ -125,6 +130,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'AI',
     is_ai_generated: 1,
     is_leading_result: 1,
+    is_replicated: false,
   },
   {
     id: 7,
@@ -143,6 +149,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 0,
+    is_replicated: false,
   },
   {
     id: 8,
@@ -161,6 +168,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    is_replicated: false,
   },
   {
     id: 9,
@@ -179,6 +187,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 0,
+    is_replicated: false,
   },
   {
     id: 10,
@@ -197,6 +206,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    is_replicated: false,
   },
   {
     id: 11,
@@ -215,6 +225,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 0,
+    is_replicated: false,
   },
   {
     id: 12,
@@ -233,6 +244,7 @@ const rows: BilateralCenterResult[] = [
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    is_replicated: false,
   },
 ];
 

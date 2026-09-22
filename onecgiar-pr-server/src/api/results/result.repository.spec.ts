@@ -410,6 +410,19 @@ describe('ResultRepository (unit)', () => {
     ).toBe(2);
   });
 
+  // BIL-POM-T-1: the Project Overview metrics need to know whether a result is a replicated
+  // (duplicated-into-phase) row, so the bilateral centre dashboard must select it alongside the
+  // other bare r.* columns. No new join/param — is_replicated already lives on `result`.
+  it('returns r.is_replicated for the bilateral centre dashboard', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.is_replicated');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
   // (initiative_role_id=1) results in the requested version, with the meter's status/type
   // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/

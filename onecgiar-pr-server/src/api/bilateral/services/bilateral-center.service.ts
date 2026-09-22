@@ -107,10 +107,15 @@ export class BilateralCenterService {
    * the catalog service untouched — that service owns the active-year fallback and the
    * positive-integer parsing.
    */
-  async getProjects(centerId: number, year?: number | string) {
+  async getProjects(
+    centerId: number,
+    year?: number | string,
+    versionId?: number | string,
+  ) {
     const projects = await this.bilateralProjectsService.getProjectsByCenter(
       centerId,
       year,
+      versionId,
     );
     return { response: projects };
   }

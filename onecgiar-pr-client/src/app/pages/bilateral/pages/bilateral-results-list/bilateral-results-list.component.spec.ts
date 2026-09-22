@@ -79,6 +79,7 @@ describe('BilateralResultsListComponent', () => {
     version_id: 36,
     source: 'API',
     is_leading_result: 1,
+    is_replicated: false,
     description: 'Profiles co-developed with the county governments of Kenya.',
     project_name: 'Accelerating Impacts of CGIAR Climate Research for Africa',
     created_by_name: 'Angel Jarrin',

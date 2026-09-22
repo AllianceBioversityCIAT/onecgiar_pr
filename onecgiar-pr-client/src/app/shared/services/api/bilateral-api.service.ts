@@ -19,10 +19,13 @@ export class BilateralApiService {
    * pre-existing one (no `year` param) and the endpoint answers for the active year —
    * every existing single-arg caller keeps that behavior.
    */
-  GET_bilateralProjects(centerId: string | number, year?: number) {
+  GET_bilateralProjects(centerId: string | number, year?: number, versionId?: number) {
     let params = new HttpParams().set('centerId', String(centerId));
     if (year !== undefined && year !== null) {
       params = params.set('year', String(year));
+    }
+    if (versionId !== undefined && versionId !== null) {
+      params = params.set('versionId', String(versionId));
     }
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/projects`, { params });
   }
