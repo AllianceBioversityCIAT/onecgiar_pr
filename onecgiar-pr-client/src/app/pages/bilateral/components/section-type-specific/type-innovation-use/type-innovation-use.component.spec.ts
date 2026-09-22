@@ -443,6 +443,108 @@ describe('TypeInnovationUseComponent', () => {
   });
 
   /**
+   * P2-3428 — the 2030 Use Projection, mirroring W1/W2 (P2-3295) but optional: it lives in full metadata
+   * and is never published to the MDS tracker. Stored server-side under `section_id = 2`.
+   */
+  describe('2030 Use Projection (P2-3428)', () => {
+    const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+    it('shows the W1/W2 title, guidance note, question and tooltip from the shared copy', () => {
+      const t = html();
+      expect(t).toContain('[label]="projection2030Copy.title"');
+      expect(t).toContain('[description]="projection2030Copy.guidance"');
+      expect(t).toContain('[label]="projection2030Copy.question"');
+      expect(t).toContain('[tooltip]="projection2030Copy.tooltip"');
+      const copy = build().projection2030Copy;
+      expect(copy.title).toBe('2030 Use Projection');
+      expect(copy.question).toBe('What is the projected innovation use by end of 2030?');
+      expect(copy.guidance).toContain('href="https://docs.google.com/document/d/1mkt4bS51CyGmHKfkvuonAiJhkl4n-mLE/"');
+      expect(copy.guidance).toContain("United Nations definition of 'youth'");
+    });
+
+    it('offers Actors, Organizations and Other quantitative measures with the W1/W2 buttons, none required', () => {
+      const t = html();
+      const block = t.slice(t.indexOf('[label]="projection2030Copy.title"'), t.indexOf('P2-3424 — optional, not MDS'));
+      expect(block).toContain('name="Add actor"');
+      expect(block).toContain('name="Add organization"');
+      expect(block).toContain('name="Add other"');
+      expect(block).not.toContain('[required]="true"');
+      expect(block).toContain('context: { $implicit: actor, required: false }');
+      expect(t).toContain('@if (showProjection2030Lists) {');
+    });
+
+    it('hides the three lists while the 2030 use is yet to be determined', () => {
+      build();
+      component.body = { innov_use_2030_to_be_determined: true };
+      expect(component.showProjection2030Lists).toBe(false);
+      component.body = { innov_use_2030_to_be_determined: null };
+      expect(component.showProjection2030Lists).toBe(true);
+    });
+
+    it('adds rows to the projection, not to current use', () => {
+      build();
+      component.body = { actors: [], organization: [], measures: [] };
+      component.addProjection2030Actor();
+      component.addProjection2030Organization();
+      component.addProjection2030Measure();
+      expect(component.body.actors).toEqual([]);
+      expect(component.body.organization).toEqual([]);
+      expect(component.body.measures).toEqual([]);
+      expect(component.body.innovation_use_2030.actors).toEqual([
+        { actor_type_id: null, sex_and_age_disaggregation: false, is_active: true }
+      ]);
+      expect(component.body.innovation_use_2030.organization).toHaveLength(1);
+      expect(component.body.innovation_use_2030.measures).toHaveLength(1);
+    });
+
+    it('sends the projection lists, with sub-types flattened, next to the current ones', () => {
+      build();
+      component.body = {
+        innovation_use_2030: {
+          actors: [{ actor_type_id: 1, women: 20 }],
+          organization: [{ institution_types_id: 3, institution_sub_type_id: 31 }],
+          measures: [{ unit_of_measure: 'hectares', quantity: 900 }]
+        }
+      };
+      const payload: any = (component as any).buildPayload();
+      expect(payload.innovation_use_2030).toEqual({
+        actors: [{ actor_type_id: 1, women: 20 }],
+        organization: [{ institution_types_id: 31 }],
+        measures: [{ unit_of_measure: 'hectares', quantity: 900 }]
+      });
+    });
+
+    it('reloads the projection with its sub-types split back out and its flags as booleans', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            innovation_use_2030: {
+              actors: [{ actor_type_id: 1, sex_and_age_disaggregation: 0 }],
+              organization: [{ institution_types_id: 31, parent_institution_type_id: 3 }],
+              measures: []
+            }
+          }
+        })
+      );
+      build();
+      expect(component.body.innovation_use_2030.actors[0].sex_and_age_disaggregation).toBe(false);
+      expect(component.body.innovation_use_2030.organization[0]).toMatchObject({ institution_types_id: 3, institution_sub_type_id: 31 });
+    });
+
+    it('never moves the green check: the projection is not an MDS item', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: false,
+        innovation_use_2030: { actors: [{ actor_type_id: 1 }], organization: [], measures: [{ unit_of_measure: 'ha', quantity: 5 }] }
+      };
+      component.updateMds();
+      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(fields.find((f: any) => f.key === 'use-actors').filled).toBe(false);
+      expect(fields.find((f: any) => f.key === 'use-measures').filled).toBe(false);
+    });
+  });
+
+  /**
    * P2-3785 (4b) — gender and youth set up as for pooled. The W1/W2 form (and every server reader:
    * `innovation-use.handler.ts`, the quality-assessment mapper, the outbound summary) reads
    * `sex_and_age_disaggregation = true` as "the breakdown does NOT apply". The bilateral Yes/No saved

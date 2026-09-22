@@ -42,6 +42,13 @@ export class InnovationUseDto {
   public investment_programs?: InvestmentRowDto[];
   public investment_bilateral?: InvestmentRowDto[];
   public investment_partners?: InvestmentRowDto[];
+
+  /**
+   * P2-3428 — the 2030 Use Projection of the W3/bilateral form: same three lists as `innovatonUse`,
+   * stored in the same tables under `section_id = 2`, the key the W1/W2 v2 endpoint already uses.
+   * Optional, and only acted on when the key is sent: the legacy W1/W2 form never sends it.
+   */
+  public innovation_use_2030?: innovatonUseInterface;
 }
 
 interface otherMeasuresInterface {
