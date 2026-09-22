@@ -1,0 +1,168 @@
+[
+  {
+    "term": "W3/Bilateral",
+    "definition": "Results funded bilaterally or through Window 3, reported through the Reporting Tool's own bilateral module rather than the W1/W2 Initiative flow. The module's query contract tags every result with a `source` of `w3` (bilateral) or `w1w2`.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-query-params.ts SOURCE_VALUES"
+  },
+  {
+    "term": "Science Program",
+    "definition": "The Reporting Tool's on-screen label for a Program (see Program) — the two terms refer to the same entity.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-15",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — reused from the archived W1/W2 guide's glossary"
+  },
+  {
+    "term": "Primary Science Program",
+    "definition": "The one Science Program a bilateral result is principally reported against. Chosen in the setup drawer's first step from the Science Programs mapped to the result's project (a single-Program project skips the choice and its one Program is primary); shown read-only, alongside the Lead Center, in the editor's Contributors & partners section, and changeable afterward only from the Overview section's Project and Program fields.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — this guide's own sections 4, 8, 10; bilateral-query-params.ts role values"
+  },
+  {
+    "term": "Contributing Science Program",
+    "definition": "A Science Program or Accelerator that also contributes to a bilateral result without being its primary one. Offered as an optional checklist in the setup drawer, scoped to the Programs already mapped to the project; the editor's Contributors & partners section offers a separate, broader picker listing every Science Program other than the primary one, not only the ones mapped to the project.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — this guide's own sections 4 and 10"
+  },
+  {
+    "term": "Outcome",
+    "definition": "Long-term changes resulting from the research. One of the two result levels a bilateral result can be reported at; choosing it in the manual form scopes the Result Type dropdown to Policy Change, Innovation Use, and Other Outcome.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — result-types-by-level.ts RESULT_LEVEL_LABELS, id 3; this guide's own section 6"
+  },
+  {
+    "term": "Output",
+    "definition": "Products, services or capacities delivered. The other result level a bilateral result can be reported at; choosing it in the manual form scopes the Result Type dropdown to Capacity Sharing for Development, Knowledge Product, Innovation Development, and Other Output.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — result-types-by-level.ts RESULT_LEVEL_LABELS, id 4; this guide's own section 6"
+  },
+  {
+    "term": "Result type (W3/Bilateral)",
+    "definition": "The bilateral manual form offers seven result types: three under Outcome — Policy Change (id 1), Innovation Use (id 2), Other Outcome (id 4) — and four under Output — Capacity Sharing for Development (id 5), Knowledge Product (id 6), Innovation Development (id 7), Other Output (id 8). The ids run from 1 to 8, but id 3 is not assigned to any bilateral result type, which is why the count is seven rather than one type per id.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — result-types-by-level.ts RESULT_TYPES_BY_LEVEL"
+  },
+  {
+    "term": "Policy change",
+    "definition": "Policies, strategies, legal instruments, programs, budgets, or investments at different scales (local to global) that have been modified in design or implementation, with evidence that the change was informed by CGIAR research.",
+    "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
+    "accessedOn": "2026-09-21"
+  },
+  {
+    "term": "Innovation use",
+    "definition": "A metric used to assess the extent to which an innovation is already being used, by which type of users and under which conditions, with a scale ranging from no use (lowest level - 0) to common use (highest level - 9). An innovation that is only used by the project, design or intervention team or its direct partners will score low in innovation use. Innovations that are commonly used by anticipated end-users will score high in innovation use. Users that are directly incentivized by a project or intervention to use an innovation are considered project team or direct partners which will score as low innovation use. (Scaling Readiness/ IPSR-term: www.scalingreadiness.org).",
+    "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
+    "accessedOn": "2026-09-21"
+  },
+  {
+    "term": "Other Outcome",
+    "definition": "The bilateral form's catch-all Outcome type (id 4) for results that are not a Policy Change or an Innovation Use. Unlike every other result type, it has no Type-specific details section on the editor rail — that section is absent entirely for a result of this type.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — result-types-by-level.ts id 4; this guide's own section 13"
+  },
+  {
+    "term": "Capacity sharing for development",
+    "definition": "Activities that develop the know-how and capacity to design, test, validate and use innovations. Examples: training-of-trainers programs at the farmer level; providing guidance on RBM and MEL; training programs with public and private sector partners; educating PhD and MSc students; ongoing institutional support to national partners, particularly NARES; and strengthening government policy analysis.",
+    "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
+    "accessedOn": "2026-09-21"
+  },
+  {
+    "term": "Knowledge product",
+    "definition": "Knowledge products are intellectual assets generated from research and development activities such as articles, briefs, reports, extension and training content, databases, software, and multimedia elements that contribute to behavioral changes in particular actors.",
+    "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
+    "accessedOn": "2026-09-21"
+  },
+  {
+    "term": "Innovation development",
+    "definition": "The process of developing innovations from an idea to a proven product, technology, service or arrangement that is validated for its ability to contribute to positive impacts when used at scale. The process often includes basic research, innovation design, and improving innovations based on testing under (semi-)controlled and uncontrolled conditions. Progress in innovation development is measured in an evidence-based way along the 0-9 levels of innovation readiness. (Scaling Readiness/ IPSR-term: www.scalingreadiness.org).",
+    "sourceUrl": "https://clarisa.cgiar.org/landing-page/glossary",
+    "accessedOn": "2026-09-21"
+  },
+  {
+    "term": "Other Output",
+    "definition": "The bilateral form's catch-all Output type (id 8) for results that are not Capacity Sharing for Development, a Knowledge Product, or Innovation Development. Like Other Outcome, it has no Type-specific details section on the editor rail.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — result-types-by-level.ts id 8; this guide's own section 13"
+  },
+  {
+    "term": "MDS (Minimum Data Standard)",
+    "definition": "The per-section completeness tracker that drives the editor's rail checks, its \"N of M sections complete\" progress bar, and the footer's \"N fields missing\"/\"N fields to fix\" state. Overview is not tracked by it, which is why it never gets a completion ring in the rail.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-result-creator.component.ts MDS-tracker comments; this guide's own sections 7 and 14"
+  },
+  {
+    "term": "Knowledge Product handle",
+    "definition": "The repository identifier for a Knowledge Product result — either picked from Browse repositories or pasted as a link/handle under Manual entry and validated with Sync. For a browsed item, the manual form stores whichever of the item's hdl.handle.net link, its own item URL, or its bare handle is set, preferring the hdl.handle.net link and falling back in that order; for a manually entered one, it stores exactly the link or handle you typed and synced.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-manual-create-form.component.ts (kpHandle, handleUrl); this guide's own section 6"
+  },
+  {
+    "term": "AI draft",
+    "definition": "A candidate bilateral result the AI-Assisted path extracts from uploaded documents or prior data, held in the AI Draft Results (My Drafts) list until you either promote it — creating a real, editable bilateral result pre-filled with the extracted fields — or discard it, which permanently deletes it.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — my-draft-results.component.ts, bilateral-ai-draft-detail.component.ts/.html; this guide's own section 16"
+  },
+  {
+    "term": "Editing",
+    "definition": "The status a bilateral result is created in and stays in while its reporter is still working on it. The editor's identity-strip badge shows it for status_id 1; Submit for review is what moves a result out of it.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-page-header.component.ts STATUS_BADGES; this guide's own section 17"
+  },
+  {
+    "term": "Pending review",
+    "definition": "The status a manually-created result moves to the moment Submit for review succeeds — out of its reporter's hands and into the Science Program's review queue. The editor's identity-strip badge shows it for status_id 5.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-page-header.component.ts STATUS_BADGES; this guide's own sections 15 and 17"
+  },
+  {
+    "term": "Approved",
+    "definition": "The status a Pending review result reaches once the Science Program's review accepts it. The editor's identity-strip badge shows it for status_id 6.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-page-header.component.ts STATUS_BADGES; this guide's own section 17"
+  },
+  {
+    "term": "Rejected",
+    "definition": "The status a Pending review result reaches if the Science Program's review does not accept it, along with a justification the reporter can read back from the Results tab. The editor's identity-strip badge shows it for status_id 7.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-page-header.component.ts STATUS_BADGES; bilateral-results-list.component.ts openJustification/REJECTED_STATUS_ID; this guide's own section 17"
+  },
+  {
+    "term": "Result status (Results tab)",
+    "definition": "Beyond the editor's four reporter-facing values (Editing, Pending review, Approved, Rejected), the Results tab's Status filter and column carry three further values for results that reach the system another way, not through this guide's manual path: In QA, Submitted, and Discontinued.",
+    "sourceUrl": null,
+    "accessedOn": "2026-09-21",
+    "flag": "not found on CLARISA",
+    "source": "PRMS (not on CLARISA) — bilateral-results-list.component.ts STATUS_KEY_LABELS, bilateral-query-params.ts STATUS_KEY_TO_ID; this guide's own section 17"
+  }
+]

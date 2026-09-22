@@ -1020,3 +1020,61 @@ Round 1 shipped per-section sentences explaining the guide's **own construction*
 The **8/9 pairing** (`P-11`): §8 = Overview and says it is *not* where the editor opens; §9 = General information and says it is. The three **ring-only naming obligations** in running prose: section rail (§8), "Section N of M" position indicator (§14), submit note (§15). `BG-R-3`'s types-4/8 clause (§13). §14's save behaviour and §15's submit flow, both traced to the component rather than the module `CLAUDE.md` (a secondary source). U.S. English; no asserted field values, partner names or completion states.
 
 **Final verification** — `VERIFIED` (Leader re-run: all four round-3 fixes and all §11 branches re-read at source, including the `hasValue` comment that refuted the Leader's own premise) + `STATUS: PASS` (bounded round-4 `opus` Reviewer).
+
+---
+
+### `BG-T-12` — Content: guide sections 16–18 and the glossary
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 1; two Leader-directed precision fixes applied after the PASS) |
+| Date | 2026-09-21 |
+| Review rounds | 1. Cumulative: **26** (budget 17, operator-approved overrun) |
+| Requirements covered | `BG-R-5`, `BG-R-12` + its negative clause, `BG-AC-5`, `BG-AC-12`, `BG-R-15`, `BG-OQ-4`, `BG-OQ-6` |
+
+**Delivered:** `16-ai-assisted-path-and-drafts.md`, `17-result-statuses.md`, and `content/glossary.json` (22 entries — 5 CLARISA-sourced, 17 PRMS-specific). **No `18-*.md`:** `assemble.ts` renders the glossary through its own `{{GLOSSARY}}` placeholder inside the template's `<section id="glossary">`, so a section markdown file is neither possible nor needed. Confirmed against the archived precedent and the code.
+
+**Guide content is now complete: 17 files, 3,921 words, 22 glossary terms.**
+
+#### The status question, answered from the server — and better than either option the Leader framed
+
+Three vocabularies exist: `STATUS_KEY_TO_ID` has **seven**; the header's `STATUS_BADGES` paints **four**; the Results tab's `STATUS_KEY_LABELS` has **seven** in its own words (`In QA`, `Submitted`, `Discontinued`). The Leader framed this as "four or seven?" and deliberately did not pre-decide.
+
+**The question was malformed, and the answer is in the server.** `bilateral-center.service.ts:393` creates manual results at `Editing`; `:2125-2134` gates submit on `[Editing, Draft]`; `:1989/:2026` write only `PendingReview`; `results.service.ts:4059-4069` requires `PendingReview` and writes only `Approved`/`Rejected`. **No bilateral write path sets `QualityAssessed(2)`, `Submitted(3)` or `Discontinued(4)`.** And `STATUS_BADGES` returns `?? null` for anything unlisted — so the header shows *no badge at all*, not a differently-styled one.
+
+So the four are not a partial view of seven: they are the **complete** set for a reporter's own manually created result. The other three appear in the Results tab because that tab is **Center-wide** and includes results that arrived via the ingestion API. §17 teaches the four as the reporter's vocabulary and separately, accurately notes what the tab can show — using the UI's `In QA`, never the DB literal. **`BG-R-12` holds exactly as written; no requirement amendment was needed.** The Reviewer re-derived the whole chain independently rather than accepting it.
+
+#### CLARISA was not dead — the same SPA pattern, twice
+
+The Implementer concluded the source was unreachable: `clarisa.cgiar.org/landing-page/glossary` returns **404**, twice. It does — and it is the **same SPA deep-link behaviour already diagnosed on `reporting.cgiar.org` in `BG-T-7`**, where every deep route 404s while serving the shell and the client router takes over. `api.clarisa.cgiar.org/api/glossary` returns **200 with 81 terms**.
+
+Had that stood, the glossary would have shipped a per-entry caveat saying the source could not be re-fetched — **a confident, sourced-looking, false statement inside a user-facing document**, which is the exact defect class this guide spent six rounds guarding against.
+
+On re-fetch, all five definitions were **verbatim matches**, and the Implementer found something a naive fetch would have gotten wrong: **CLARISA carries two entries for some terms**, a P22 (2022-2024) and a P25 (2025-2030) version differing in wording — *Innovation use*'s P22 text lacks the numeric scale; *Innovation development*'s P22 omits a trailing clause. It kept **P25**, the current portfolio. `accessedOn` is now `2026-09-21`; the false caveats are gone.
+
+*(A Leader note for the record: the Leader's own first API query used the field `name` instead of `term` and returned five "not found" — nearly reporting the source dead a second time, with better tools and the same error.)*
+
+#### Both falsifiers at zero
+
+- `grep -i "eight"` in the glossary → **0**. Seven result types; ids run to 8 with **no id 3** (globally id 3 is `CAPACITY_CHANGE`, not a bilateral type). "Eight" was a **severe Judgment Day finding**. The Implementer noted the grep is a blunt substring match — it tripped on a correct sentence saying "not eight", which was rewritten.
+- `grep "Quality Assessed"` across `content/` → **0**. The only QA strings are the UI's own `In QA` and §15's "QA conformity".
+
+#### Two Leader-directed precision fixes after the PASS
+
+1. **§16 understated promotion.** It said both actions "ask you to confirm". The Create Result dialog's button is `[disabled]="!centerValidationConfirmed()"`, gated on a checkbox reading *"I confirm that my Center has reviewed and validated this AI-generated draft and its source evidence."* §16 now names it verbatim and contrasts it with Discard's plain confirm. **This is not a formality** — a reporter expecting a yes/no and meeting an attestation about their Center's validation will stop to ask whether they are authorised to tick it, at the exact point the guide should be unblocking them.
+2. **The glossary's "Knowledge Product handle" was true only on the happy path.** It claimed a synced handle "resolves to an `hdl.handle.net` link, which is what the manual form stores"; the code is `item.handleUrl || item.itemUrl || item.handle` (`:233`). Reworded to the real precedence. A glossary entry carries more weight per word than body text — a reader treats it as a definition.
+
+No further review round was run for these two: the task had already PASSed, both were advisories the Leader chose to act on, and the Leader verified each at source. Recorded rather than silently skipped.
+
+#### Recorded, deliberately not written into the guide
+- **A real product inconsistency.** The Implementer verified that the **Review detail screen**'s Create Result dialog has **no** confirmation checkbox, while the card-level dialog does. It did not assert anything about it, because §16 describes only the list/tab surface this guide's capture shows. Good restraint; worth the operator's attention as a product question.
+- **Status `Draft` (id 8)** is written by the platform versioning endpoint and is itself editable and submittable, so a "Draft" row can appear in the Results tab beyond §17's three extras. §17 stays **true as written** — it scopes its claim to the manual path, and the tab's *filter* vocabulary is exactly seven. Adding a fourth extra state would complicate the section for a case this guide's reader never creates. **For the HITL read, not the document.**
+- `BG-R-30`'s W1/W2 cross-reference deliberately **absent**, per `BG-OQ-6`.
+
+#### ⚠️ Handed to `BG-T-13` — a second stale table the Leader had missed
+
+The Reviewer found that **`verify-structure.ts:39-48` also still asserts the W1/W2 section ids**, with `EXPECTED_TOTAL_H2 = 9`. The Leader had assigned only `assemble.ts`'s `SECTIONS`. Fixing one and not the other either breaks the build or — worse — **leaves the verifier passing green over the wrong section set**, a gate confirming a structure the document does not have. Both are now written into `BG-T-13`'s task body.
+
+`npm run assemble` now clears the glossary and stops at exactly that stale array, which is the evidence `BG-T-13` needs.
+
+**Final verification** — `VERIFIED` (Leader re-run: status chain to the server, CLARISA API live with all five terms, both falsifiers, both precision fixes re-read at source) + `STATUS: PASS` (`opus` Reviewer, chain re-derived independently).
