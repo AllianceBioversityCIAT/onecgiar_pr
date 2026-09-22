@@ -114,15 +114,41 @@ export function heatmapOption(model: HeatmapModel, ramp: string[]): EChartsOptio
   } as EChartsOption;
 }
 
-/** Visually-hidden `<table>` pairing for a `HeatmapModel` — caption + column/row headers. */
+/**
+ * Visually-hidden `<table>` pairing for a `HeatmapModel` — caption + column/row headers, plus the
+ * P2-3744 activation grid that makes the card reachable without a mouse.
+ *
+ * `actions` is index-aligned with `rows`, so index 0 of each row (the row-header cell) is always
+ * `null` and column `c` of the model lands at index `c + 1`. A cell with no `link` gets `null`: no
+ * control is rendered for a destination that does not exist (`emitLink(null)` is a no-op anyway).
+ *
+ * **Why the synthetic event carries BOTH shapes.** These cards let the user switch view mode, and
+ * `ProgramOverviewComponent.onW12HeatmapClick` picks the resolver from that mode: heatmap view
+ * reads `event.data` (`cellLinkFromClick`, `[c, r, value]`), the two bar views read
+ * `seriesIndex`/`dataIndex` (`barLinkFromClick`). The same action object therefore has to satisfy
+ * both — one table model is built per model, not per view mode.
+ */
 export function heatmapTable(model: HeatmapModel): VizChartTableModel {
   const { rows, cols, cells } = model;
-  const valueAt = (r: number, c: number): number => cells.find(cell => cell.r === r && cell.c === c)?.value ?? 0;
+  const cellAt = (r: number, c: number) => cells.find(cell => cell.r === r && cell.c === c);
+  const valueAt = (r: number, c: number): number => cellAt(r, c)?.value ?? 0;
 
   return {
     caption: model.caption,
     headers: ['', ...cols],
-    rows: rows.map((rowName, r) => [rowName, ...cols.map((_, c) => valueAt(r, c))])
+    rows: rows.map((rowName, r) => [rowName, ...cols.map((_, c) => valueAt(r, c))]),
+    actions: rows.map((rowName, r) => [
+      null,
+      ...cols.map((colName, c) => {
+        const cell = cellAt(r, c);
+        if (!cell?.link) return null;
+        const value = cell.value ?? 0;
+        return {
+          label: `${rowName}, ${colName}: ${value} ${value === 1 ? 'result' : 'results'}. Open in Results.`,
+          event: { data: [c, r, value], seriesIndex: c, dataIndex: r }
+        };
+      })
+    ])
   };
 }
 
@@ -538,7 +564,15 @@ export function radarTable(caption: string, bars: SingleBarRow[]): VizChartTable
   return {
     caption,
     headers: ['Indicator category', 'Results'],
-    rows: bars.map(bar => [bar.name, bar.count])
+    rows: bars.map(bar => [bar.name, bar.count]),
+    // P2-3744 — index-aligned with `rows`: index 0 is the row-header cell (never a control), index
+    // 1 is the count. `dataIndex` is what `radarLinkFromClick` reads, so the keyboard path resolves
+    // through the very resolver `onBilateralCategoriesClick` already uses for the mouse.
+    actions: bars.map((bar, i) =>
+      bar.link
+        ? [null, { label: `${bar.name}: ${bar.count} ${bar.count === 1 ? 'result' : 'results'}. Open in Results.`, event: { dataIndex: i } }]
+        : [null, null]
+    )
   };
 }
 
