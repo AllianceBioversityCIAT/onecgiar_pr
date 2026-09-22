@@ -571,9 +571,9 @@ describe('ShellTopbarComponent', () => {
       expect(to).toBeGreaterThan(from);
       const cluster = right.slice(from, to);
 
-      // Two rules: Help | bell | user.
-      expect((cluster.match(/pr-topbar-sep/g) || []).length).toBe(2);
-      expect(cluster.indexOf('pr-topbar-actions')).toBeGreaterThan(cluster.indexOf('pr-topbar-sep'));
+      // No divider lines between Help, Release notes, the bell and the user menu (quick/topbar-remove-sep).
+      expect((cluster.match(/pr-topbar-sep/g) || []).length).toBe(0);
+      expect(cluster.indexOf('pr-topbar-actions')).toBeGreaterThan(cluster.indexOf('aria-label="Help"'));
       expect(cluster.indexOf('class="pr-topbar-user"')).toBeGreaterThan(cluster.indexOf('pr-topbar-actions'));
     });
 
@@ -594,5 +594,16 @@ describe('ShellTopbarComponent', () => {
       // The role badge is no longer pinned beside the name, where it ate the name's width.
       expect(panel).toContain('pr-topbar-account__role');
     });
+  });
+
+  // ------------------------------------------------------------- TRN-T-1
+  it('places Release notes before the notifications bell in DOM order (TRN-AC-1)', () => {
+    const right = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+    const releaseNotesIndex = right.indexOf('aria-label="Release notes"');
+    const notificationsIndex = right.indexOf('aria-label="Notifications"');
+
+    expect(releaseNotesIndex).toBeGreaterThan(-1);
+    expect(notificationsIndex).toBeGreaterThan(-1);
+    expect(releaseNotesIndex).toBeLessThan(notificationsIndex);
   });
 });

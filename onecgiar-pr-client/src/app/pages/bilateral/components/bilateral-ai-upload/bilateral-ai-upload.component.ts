@@ -578,8 +578,17 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
 
     const project = this.creationService.selectedProject();
     const sp = this.creationService.selectedPrimarySp();
+
     if (!project?.id || !sp?.programCode || !project?.leadCenter?.id) {
-      this.showToast('error', 'Error', 'Project and Science Program required.');
+      // The lead centre is not something the user picks — it rides along with the project — so a
+      // message naming only the project and the Science Program sent people looking at two fields
+      // that were already filled in. Name whatever is actually missing.
+      const missing = [
+        project?.id ? null : 'Project',
+        sp?.programCode ? null : 'Science Program',
+        project?.leadCenter?.id ? null : 'lead center for this project',
+      ].filter((label): label is string => label !== null);
+      this.showToast('error', 'Error', `Missing: ${missing.join(', ')}.`);
       return;
     }
 

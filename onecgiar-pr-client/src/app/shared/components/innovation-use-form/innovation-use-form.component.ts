@@ -1,4 +1,5 @@
 import { Component, Input, OnInit, OnChanges, computed, ChangeDetectorRef } from '@angular/core';
+import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../internationalization/innovation-use-2030-projection.copy';
 import { ApiService } from '../../services/api/api.service';
 import { TerminologyService } from '../../../internationalization/terminology.service';
 import { FieldsManagerService } from '../../services/fields-manager.service';
@@ -430,7 +431,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   /** Verbatim from P2-3295 §2 — QA reads the question back word for word, do not paraphrase. */
 
-  readonly innovationUse2030ProjectionQuestion = 'What is the projected innovation use by end of 2030?';
+  readonly innovationUse2030ProjectionQuestion = INNOVATION_USE_2030_PROJECTION_COPY.question;
 
   addActor2030() {
     const body = this.body as any;

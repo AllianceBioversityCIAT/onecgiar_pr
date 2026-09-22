@@ -116,8 +116,22 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
   `LOAD_ERROR_NOTE`).
 - A quantitative measure only counts for the MDS with **both unit AND quantity** (AC6).
 
+- **P2-3785 (4b) — actors use the POOLED meaning of `sex_and_age_disaggregation`**: ticked (`true`) =
+  the breakdown does NOT apply, only "How many". The old "Sex and age disaggregated data available?"
+  Yes/No saved "Yes" as that same `true`, the opposite of every other reader. Rows saved before the fix
+  still carry the inverted answer (no backfill yet); unticking keeps their Women/Men so they are not wiped.
+  "Age disaggregation not available" persists through the legacy writer only when the key travels.
+- **P2-3428 — 2030 Use Projection** (full metadata, optional, not MDS): `body.innovation_use_2030`
+  `{ actors, organization, measures }`, stored under `section_id = 2` — the same key the W1/W2 v2
+  endpoint uses — through the legacy summary endpoint (`SummaryService.saveInnovationUse` →
+  `InnoDevService.saveAnticipatedInnoUser(…, 2)`). "This is yet to be determined" retires the section-2
+  rows server-side. Copy (title, guidance note link, question, tooltip) comes from
+  `internationalization/innovation-use-2030-projection.copy.ts`, shared with W1/W2. The annual-review
+  part of P2-3295 is deliberately absent: bilateral results are never rolled over.
+  ⚠️ Current-use lookups by type/unit now skip section-2 rows, and the legacy GET splits them out; before
+  this, a section-2 row would have shown up (and been re-saved) as current use.
+
 ## Pending / Coming soon
-- **2030 Use Projection**: only "This is yet to be determined" was built; fields redefined by **P2-3295**.
 - **Read-only mode (AC17)**: not implemented and not verified in this section.
 - **P25/W1-W2 validation functions** are intentionally out of scope; the bilateral UI and server submit
   gate implement P2-3428 independently.

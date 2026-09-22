@@ -36,6 +36,7 @@ import { ResultsInnovationsUseRepository } from './repositories/results-innovati
 import { ResultsInnovationsUse } from './entities/results-innovations-use.entity';
 import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 import { ResultInvestmentService } from '../result_budget/result-investment.service';
+import { ResultCoreInnovUseSectionEnum } from '../../results-framework-reporting/result_innov_section/enum/result_innov_section.enum';
 
 @Injectable()
 export class SummaryService {
@@ -86,6 +87,25 @@ export class SummaryService {
         user.id,
         innovationUseDto,
       );
+
+      // P2-3428 — the 2030 Use Projection (W3/bilateral full metadata). Acted on only when the key
+      // travels, so the legacy W1/W2 callers of this endpoint see no change at all.
+      let projection2030: any = null;
+      if (innovationUseDto && 'innovation_use_2030' in innovationUseDto) {
+        if (innovationUseDto.innov_use_2030_to_be_determined === true) {
+          await this._innoDevService.deactivateInnovationUse2030(
+            resultExist.id,
+            user.id,
+          );
+        } else if (innovationUseDto.innovation_use_2030) {
+          projection2030 = await this._innoDevService.saveAnticipatedInnoUser(
+            resultExist.id,
+            user.id,
+            { innovatonUse: innovationUseDto.innovation_use_2030 } as any,
+            ResultCoreInnovUseSectionEnum.FUTURE,
+          );
+        }
+      }
 
       const { innov_use_to_be_determined, innovation_use_level_id } =
         innovationUseDto;
@@ -175,6 +195,7 @@ export class SummaryService {
       // Everything else in this payload is written ABOVE, on purpose: one invalid measure row must
       // not cost the reporter the investment amounts typed in the same section.
       if (Number(InnovationUse?.status) >= 300) return InnovationUse;
+      if (Number(projection2030?.status) >= 300) return projection2030;
 
       return {
         response: InnovationUse,
@@ -352,14 +373,19 @@ export class SummaryService {
    */
   async getInnovationUse(resultId: number) {
     try {
-      const actorsData = await this._resultActorRepository.find({
+      const allActors = await this._resultActorRepository.find({
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
-      actorsData.map((el) => {
+      allActors.map((el) => {
         el['men_non_youth'] = el.men - el.men_youth;
         el['women_non_youth'] = el.women - el.women_youth;
       });
+      // P2-3428 — the 2030 projection rows live in the same tables under `section_id = 2`. They are
+      // split out so they never show up (or get re-saved) as current use.
+      const isFuture = (row: { section_id?: number | string | null }) =>
+        Number(row?.section_id) === ResultCoreInnovUseSectionEnum.FUTURE;
+      const actorsData = allActors.filter((el) => !isFuture(el));
       const innUseExists = await this._resultsInnovationsUseRepository.findOne({
         where: { results_id: resultId, is_active: true },
       });
@@ -379,6 +405,27 @@ export class SummaryService {
         await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(
           resultId,
         );
+      const allMeasures = await this._resultIpMeasureRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+      const allOrganizations = (
+        await this._resultByIntitutionsTypeRepository.find({
+          where: {
+            results_id: resultId,
+            institution_roles_id: 5,
+            is_active: true,
+          },
+          relations: {
+            obj_institution_types: { obj_parent: { obj_parent: true } },
+          },
+        })
+      ).map((el) => ({
+        ...el,
+        parent_institution_type_id: el.obj_institution_types?.obj_parent
+          ?.obj_parent?.code
+          ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+          : el.obj_institution_types?.obj_parent?.code || null,
+      }));
 
       const innovatonUse = {
         innov_use_to_be_determined:
@@ -401,27 +448,14 @@ export class SummaryService {
         investment_partners:
           await this._resultInvestmentService.getInvestmentPartners(resultId),
         actors: actorsData,
-        measures: await this._resultIpMeasureRepository.find({
-          where: { result_id: resultId, is_active: true },
-        }),
-        organization: (
-          await this._resultByIntitutionsTypeRepository.find({
-            where: {
-              results_id: resultId,
-              institution_roles_id: 5,
-              is_active: true,
-            },
-            relations: {
-              obj_institution_types: { obj_parent: { obj_parent: true } },
-            },
-          })
-        ).map((el) => ({
-          ...el,
-          parent_institution_type_id: el.obj_institution_types?.obj_parent
-            ?.obj_parent?.code
-            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
-            : el.obj_institution_types?.obj_parent?.code || null,
-        })),
+        measures: allMeasures.filter((el) => !isFuture(el)),
+        organization: allOrganizations.filter((el) => !isFuture(el)),
+        // P2-3428 — the 2030 Use Projection, same three lists, `section_id = 2`. Purely additive.
+        innovation_use_2030: {
+          actors: allActors.filter(isFuture),
+          organization: allOrganizations.filter(isFuture),
+          measures: allMeasures.filter(isFuture),
+        },
       };
 
       return {
