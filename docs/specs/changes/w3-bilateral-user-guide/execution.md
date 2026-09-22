@@ -767,3 +767,79 @@ All three are left visible in reading order with inline markers, and `drawer-met
 **Carried forward into `BG-T-13`'s task body** (not merely filed): a live production-latency flake. A route failed on its **first** attempt and passed on retry — and it recurred on `catalog`, which has **no `steps` at all**, so it is initial-GET latency, not step timing. No `waitFor` can protect a route with no steps. `BG-T-13` runs all seventeen routes in one process, so it needs a **bounded per-route retry** in `capture.ts`'s loop — and must not paper over it by raising `READY_SELECTOR_TIMEOUT_MS`, which hides the signal instead of bounding it.
 
 **Final verification** — `VERIFIED` (Leader re-run, including viewing both `drawer-sp.png` and `drawer-method.png`) + `STATUS: PASS` (round-2 `opus` Reviewer).
+
+---
+
+### `BG-T-9` — Route config: the editor *(captures 8–15)*
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 2) |
+| Date | 2026-09-21 |
+| Implementer attempts | 2 — attempt 1 consumed by a Reviewer FAIL |
+| Review depth | `full` (carries `P-11`) · Reviewer `opus`, Implementer `sonnet` |
+| Review rounds | 2. Cumulative for the run: **19** of 17 budgeted — **over budget, tripwire at 20** |
+| Requirements covered | `BG-R-3`, `BG-AC-3`, `BG-R-6`, `BG-R-7`, `BG-R-8`, `BG-DD-5`, `P-1`, `P-11` |
+| Authored LOC | ~195 (config 192 + 1 behavioural line in `capture.ts`). Cumulative **~1,405** of 1,300–1,700 |
+
+**Eight captures.** `editor-general-info` 1280×1200 · `editor-overview` 1280×1080 · `editor-contributors` 1280×1870 · `editor-geography` 1280×710 · `editor-evidence` 1280×860 · `editor-type-specific` 1280×1610 · `editor-footer-save` 1280×950 · `rail-submit` 1280×780. All bounds observation-derived. **All 17 routes measured by the Leader: zero out of bounds.**
+
+**Result chosen:** `31002`, type **5 Capacity Sharing for Development**, status **Editing**, `phase=8`. Type read **on-screen** from `[data-testid="bilateral-rail-type"]`, cross-checked against `result-types-by-level.ts`, and corroborated by real Capacity-Sharing fields rendering in capture 13 — `hasTypeSpecificSection` requires `typeId ∉ {4,8}`, so this was verified rather than assumed.
+
+**`P-11` honoured, and made falsifiable.** Capture 8 is `editor-general-info` with **no step** — the editor lands there — and capture 9 is `editor-overview` **with** a rail click. The caption gate asserts the rendered `[data-testid="bilateral-section-heading"]` text against the configured caption:
+```
+=== SWAPPED (expect RED) ===
+[FAIL] editor-general-info: expected "Overview" NOT found in "2General informationcheck_circle"
+[FAIL] editor-overview:     expected "General information" NOT found in "1Overview"
+=== CORRECT (expect GREEN) === all six PASS
+```
+The Reviewer confirmed the gate is **not** trivially satisfiable: the six headings share no pairwise substring, and the observed decoration is an index digit plus a Material ligature — so substring matching distinguishes all 15 pairs, not only the 8/9 pair it was demonstrated on.
+
+**`BG-R-7` — zero writes, conclusively.** Routes 8–15 contain only `waitFor` and `click`: **zero `fill`, zero `press`**, and no step touches `bilateral-footer-save` (it appears only as the never-actuated `clickTarget`). Guard: **2580 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`**, 0 `createBilateralHeader`, 0 `bilateralQualityAssessment`. `P-1` holds: nothing staged, so `selectSection()` never reaches `flush()`.
+
+#### The round-1 FAIL — the Pivot-3 exception overflowed its scope
+
+`editor-overview` anchored its **callout** on `.bcr-section-body:not([hidden])`, a class selector. Pivot 3 widened **interaction steps** to ARIA `role` + accessible name and explicitly left **callout anchors** at `data-*` only. This is the first time an operator-approved exception was applied beyond its stated scope, and only an independent line-by-line read of the config caught it. Re-anchored on `[data-testid="bilateral-section-heading"]`; the class selector is now absent from the whole file. The `role=button[name=/Overview/]` **step** was correctly left alone.
+
+#### Ring-only census corrected: **three → six**, each now with evidence
+
+The standing census in this log said three. The artifact carries six. Corrected here, with condition (a) graded by the Reviewer rather than by the author:
+
+| Callout | Condition (a) evidence | Grade |
+|---|---|---|
+| `bilateral-identity`, `bilateral-tabs` (`workspace-identity`) | measured at 1280 and 1760; at 1760 the sidebar expands to labelled navigation, so the apparent gutter is live content | evidenced |
+| `bilateral-project-card` (`catalog`) | ~8px inter-card gutter; `above` collides with the KPI ring, `below` with the next row's title | evidenced |
+| `bilateral-sections-rail` | **tested, not argued.** Labelled at every requestable placement; all converged on one rendered position covering "Description of Result". Measured at 1280×1200: rail `top 56, bottom 1200, left 64, right 304` (height 1144 ≈ full frame), section body `top 317, bottom 1071, left 369, right 1215`. Candidates: `above` −16, `below` 1272, `left` −374 all off-frame; `right` 742 in-frame but inside the section-body rect | **evidenced** |
+| `bilateral-footer-position` | **observed.** Shipped labelled in round 1; the connector visibly crossed the "Section complete" badge. The Implementer viewed the PNG, saw it, changed it | **evidenced by observation — the strongest form in this spec** |
+| `bilateral-rail-submit-note` | submit block `top 640–705, left 84–283`; adjacent "Description of Result" textarea `top 608–713, left 371–1213`, vertically overlapping | **partially evidenced** — `left`/`right` excluded numerically, `above`/`below` by reasoning. Non-gating: ring-only is the conservative outcome and cannot produce a D3/D10 defect |
+
+#### ⚠️ A MUST that was already being violated with the gate green
+
+A capture **showed a visible skeleton and passed the D2 guard**. Root cause, verified independently by the Leader: `SKELETON_SELECTOR` was `.pr-skeleton, [data-testid$="-skeleton"]`, while `app-form-skeleton` renders `.fsk-*` classes and carries neither marker. **Zero overlap.**
+
+The sweep found it was far wider than one section. **Five** `app-form-skeleton` usages were all invisible — `section-evidence:16`, `section-general-info:90`, `bilateral-accordion:28`, `section-toc:36`, and the worst, `bilateral-result-creator:290`: the **whole-editor** loading placeholder, a `<div class="bcr-editor-card bcr-section-body" aria-busy="true">` with no `data-testid` at all.
+
+Fixed by matching the **component element** `app-form-skeleton` rather than its `.fsk-*` classes — the tag is Angular's stable contract and survives a CSS rename. Falsified deterministically with `page.route()` delaying the real GET:
+```
+OLD selector count: 0  -> guard would PASS   (the bug, reproduced)
+NEW selector count: 1  -> guard would FAIL   (correct, RED)
+after load:         0  -> guard PASSES       (correct, GREEN)
+```
+plus a delay beyond `SKELETON_GATE_TIMEOUT_MS`: `GATE TIMEOUT reached with 1 visible skeleton(s) still present -> RouteCaptureError`.
+
+**"Nothing reddened afterwards" is reassuring for a structural reason, not because two runs were clean.** The Reviewer established that the worst case could never have been captured: the heading sits inside `@if (resultId())` and the placeholder is its `@else if` twin, so `readySelector` already excluded it. The four section-level placeholders remain reachable, which is why **the injected-delay RED is the load-bearing evidence** and the green runs are not. The Reviewer also confirmed no false-red surface: all five usages sit inside `@if (isLoading…)` blocks, so a mounted-but-idle instance cannot exist, and instances under `[hidden]` ancestors are suppressed by the guard's zero-rect check.
+
+**This blind spot had been present since `BG-T-1` copied the pipeline.** It survived Judgment Day and four independent audits. It surfaced only because the Implementer ran the pipeline five times and **opened the PNGs**.
+
+#### Caption race closed; a different race remains, and is constrained rather than papered over
+
+Routes 9–13 ended on a click with no trailing `waitFor`, so the screenshot raced Angular's section swap — a capture could show the **previous** section under the new caption (`BG-R-3`, class **D8**). Raised by the Reviewer as advisory; the Leader escalated it to in-scope because the consequence is a mislabelled figure, not a cosmetic one. Fixed with a trailing `waitFor` on the expected heading text after every rail click in 9–13, and in 14 — the Implementer extended it there and **disclosed the extension** rather than applying it silently.
+
+A **separate, slower async-data race** survives: across identical read-only runs, *Contributors*, *Geographic location* and once *Type-specific* rendered with different field data — sometimes complete, sometimes a transient "field(s) missing" state. Headings were stable every time, so no caption gate sees it. **Deliberately not bounded here**: instead `BG-T-10` and `BG-T-11` are forbidden from asserting any specific field value, partner name or completion state as guaranteed by a capture. Describing what a control *does* is stable; describing what one screenshot *contained* is not.
+
+#### `ADVISORY` (recorded, never gating, never minted into a task)
+- *Risk — residual convention gap.* `bilateral-results-list.component.html:532-546` (`<ng-template prTableLoading>`) renders `tr.rc-row--skeleton` with none of the three markers. Unreachable today — `prTableLoading` needs `hasRows() && loading()`, i.e. a filter/sort/page interaction no route performs — but it **goes live the moment a results-list route gains an interaction step**. Carried into `BG-T-13`'s task body rather than left here.
+- *Resilience* — `form-skeleton.component.scss` sets no `:host { display: block }`, so the matched host is an inline box. Chrome returns a non-zero rect today; a one-line `:host` rule would make that structural rather than empirical. Outside this spec's boundary (product code).
+- *Reliability* — §8.1's row-14 anchor `bilateral-footer-pending-list` renders only when a section has missing fields **and** the dropdown is open. Substituted `bilateral-footer-position` rather than force a false state; the Reviewer judged this the right call, since `BG-R-6` asks for *at least one* labelled callout and `bilateral-footer-save` supplies it.
+
+**Final verification** — `VERIFIED` (Leader re-run: all 17 routes measured, selector line and five usages reproduced at their cited lines, `capture.ts` diff limited to the constant and its comment) + `STATUS: PASS` (round-2 `opus` Reviewer).

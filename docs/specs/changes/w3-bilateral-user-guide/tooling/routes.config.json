@@ -260,5 +260,197 @@
       }
     ],
     "bounds": { "minW": 1280, "maxW": 1280, "minH": 1800, "maxH": 1800 }
+  },
+  {
+    "id": "editor-general-info",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-section-heading\"]",
+    "clickTarget": "[data-testid=\"bilateral-section-heading\"]",
+    "captionKey": "08-editor-general-info",
+    "viewport": { "width": 1280, "height": 1200 },
+    "fullPage": false,
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-section-heading\"]",
+        "label": "You land here — General information, not Overview, is the editor's default section",
+        "role": "primary",
+        "placement": "right"
+      },
+      {
+        "selector": "[data-testid=\"bilateral-sections-rail\"]",
+        "label": "",
+        "role": "feature",
+        "placement": "right"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 1200, "maxH": 1200 }
+  },
+  {
+    "id": "editor-overview",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-section-heading\"]",
+    "clickTarget": "[data-testid=\"bilateral-section-heading\"]",
+    "captionKey": "09-editor-overview",
+    "viewport": { "width": 1280, "height": 1080 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "role=button[name=/Overview/]" },
+      { "type": "click", "selector": "role=button[name=/Overview/]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-section-heading\"]:has-text(\"Overview\")" }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-section-heading\"]",
+        "label": "Overview — a read-only summary of the linked W3/Bilateral project; nothing here is editable",
+        "role": "primary",
+        "placement": "right"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 1080, "maxH": 1080 }
+  },
+  {
+    "id": "editor-contributors",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-section-heading\"]",
+    "clickTarget": "[data-testid=\"bilateral-section-heading\"]",
+    "captionKey": "10-editor-contributors",
+    "viewport": { "width": 1280, "height": 1870 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "role=button[name=/Contributors & partners/]" },
+      { "type": "click", "selector": "role=button[name=/Contributors & partners/]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-section-heading\"]:has-text(\"Contributors & partners\")" }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-section-heading\"]",
+        "label": "Contributors & partners — Science Programs, CGIAR centers and external partners",
+        "role": "primary",
+        "placement": "right"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 1870, "maxH": 1870 }
+  },
+  {
+    "id": "editor-geography",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-section-heading\"]",
+    "clickTarget": "[data-testid=\"bilateral-section-heading\"]",
+    "captionKey": "11-editor-geography",
+    "viewport": { "width": 1280, "height": 710 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "role=button[name=/Geographic location/]" },
+      { "type": "click", "selector": "role=button[name=/Geographic location/]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-section-heading\"]:has-text(\"Geographic location\")" }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-section-heading\"]",
+        "label": "Geographic location — where this result's benefit is focused",
+        "role": "primary",
+        "placement": "right"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 710, "maxH": 710 }
+  },
+  {
+    "id": "editor-evidence",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-section-heading\"]",
+    "clickTarget": "[data-testid=\"bilateral-section-heading\"]",
+    "captionKey": "12-editor-evidence",
+    "viewport": { "width": 1280, "height": 860 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "role=button[name=/Evidence/]" },
+      { "type": "click", "selector": "role=button[name=/Evidence/]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-section-heading\"]:has-text(\"Evidence\")" }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-section-heading\"]",
+        "label": "Evidence — at least one valid, linked source is required to complete this section",
+        "role": "primary",
+        "placement": "right"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 860, "maxH": 860 }
+  },
+  {
+    "id": "editor-type-specific",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-section-heading\"]",
+    "clickTarget": "[data-testid=\"bilateral-section-heading\"]",
+    "captionKey": "13-editor-type-specific",
+    "viewport": { "width": 1280, "height": 1610 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "role=button[name=/Type-specific details/]" },
+      { "type": "click", "selector": "role=button[name=/Type-specific details/]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-section-heading\"]:has-text(\"Type-specific details\")" }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-section-heading\"]",
+        "label": "Type-specific details — the fields for this result's type; absent for Other Outcome (4) and Other Output (8)",
+        "role": "primary",
+        "placement": "right"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 1610, "maxH": 1610 }
+  },
+  {
+    "id": "editor-footer-save",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-section-heading\"]",
+    "clickTarget": "[data-testid=\"bilateral-footer-save\"]",
+    "captionKey": "14-editor-footer-save",
+    "viewport": { "width": 1280, "height": 950 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "role=button[name=/Contributors & partners/]" },
+      { "type": "click", "selector": "role=button[name=/Contributors & partners/]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-section-heading\"]:has-text(\"Contributors & partners\")" }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-footer-save\"]",
+        "label": "Save draft — a manual save alongside the section's autosave",
+        "role": "primary",
+        "placement": "above"
+      },
+      {
+        "selector": "[data-testid=\"bilateral-footer-position\"]",
+        "label": "",
+        "role": "feature",
+        "placement": "above"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 950, "maxH": 950 }
+  },
+  {
+    "id": "rail-submit",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/result/31002?phase=8",
+    "readySelector": "[data-testid=\"bilateral-rail-submit\"]",
+    "clickTarget": "[data-testid=\"bilateral-rail-submit\"]",
+    "captionKey": "15-rail-submit",
+    "viewport": { "width": 1280, "height": 780 },
+    "fullPage": false,
+    "annotations": [
+      {
+        "selector": "[data-testid=\"bilateral-rail-submit\"]",
+        "label": "Submit for review — starts the AI quality check first, never submits directly",
+        "role": "primary",
+        "placement": "right"
+      },
+      {
+        "selector": "[data-testid=\"bilateral-rail-submit-note\"]",
+        "label": "",
+        "role": "feature",
+        "placement": "right"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 780, "maxH": 780 }
   }
 ]

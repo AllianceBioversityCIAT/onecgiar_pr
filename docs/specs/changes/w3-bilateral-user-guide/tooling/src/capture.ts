@@ -227,19 +227,33 @@ const DEFAULT_VIEWPORT: RouteViewport = { width: 1280, height: 720 };
 const DEFAULT_FULL_PAGE = true;
 
 /**
- * Matches this app's two real loading-placeholder conventions (confirmed by reading the
- * live component source, not guessed): the shared `.pr-skeleton` class (`pr-viz-chart`,
- * `skeleton-notification-item`) and the `data-testid="…-skeleton"` naming convention used
- * by ad hoc per-component skeleton blocks (e.g. `program-overview`'s `aow-rows-skeleton`).
- * This app does NOT use PrimeNG's `p-skeleton` or a literal `"skeleton"` substring in most
- * of its own loading markup (most of it is bare Tailwind `animate-pulse`, which is too
- * generic/noisy to gate on safely) — this selector targets the two conventions that are
- * actually load-bearing for the defects found in attempt 1 (the `overview` AoW rows and the
- * `pr-viz-chart` "undefined" axis both render via one of these two, per
+ * Matches this app's real loading-placeholder conventions (confirmed by reading the live
+ * component source, not guessed): the shared `.pr-skeleton` class (`pr-viz-chart`,
+ * `skeleton-notification-item`), the `data-testid="…-skeleton"` naming convention used by ad
+ * hoc per-component skeleton blocks (e.g. `program-overview`'s `aow-rows-skeleton`), and — added
+ * by `BG-T-9` round 2, per the Reviewer/Leader — the `app-form-skeleton` component element
+ * itself. `app-form-skeleton` (`onecgiar-pr-client/src/app/pages/bilateral/components/
+ * form-skeleton/form-skeleton.component.ts`) renders its OWN bespoke class set (`.fsk-row`,
+ * `.fsk-label`, `.fsk-bar`, `.fsk-pill`, `.fsk-extra`, `.fsk-link`) with zero overlap with either
+ * existing convention, so every one of its five usages in the bilateral tree — `section-evidence`
+ * (`section-evidence.component.html:16`), `section-general-info` (`:90`), `bilateral-accordion`
+ * (`:28`), `section-toc` (`:36`), and `bilateral-result-creator`'s own whole-editor
+ * `isLoadingResult()` placeholder (`bilateral-result-creator.component.html:290`, wrapped by an
+ * `aria-busy="true"` div with no `data-testid` at all) — was invisible to this guard until now.
+ * Matching the ELEMENT (`app-form-skeleton`) rather than enumerating its `.fsk-*` classes is
+ * deliberate: a future rename of those classes would silently reopen this exact gap, where the
+ * component tag is Angular's own stable public contract for the component.
+ * This app does NOT use PrimeNG's `p-skeleton` or a literal `"skeleton"` substring in most of its
+ * other loading markup (most of it is bare Tailwind `animate-pulse`, which is too generic/noisy
+ * to gate on safely) — this selector targets the conventions that are actually load-bearing for
+ * defects found in attempt 1 (the `overview` AoW rows and the `pr-viz-chart` "undefined" axis
+ * both render via one of the first two, per
  * `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/dashboard-lab/components/program-overview/program-overview.component.html`
- * and `src/app/shared/components/pr-viz-chart/pr-viz-chart.component.html`).
+ * and `src/app/shared/components/pr-viz-chart/pr-viz-chart.component.html`) and for `BG-T-9`'s
+ * live `editor-evidence` skeleton-visible capture (caught only by a human viewing the PNG,
+ * because this guard did not, until this fix).
  */
-const SKELETON_SELECTOR = '.pr-skeleton, [data-testid$="-skeleton"]';
+const SKELETON_SELECTOR = '.pr-skeleton, [data-testid$="-skeleton"], app-form-skeleton';
 const SKELETON_GATE_TIMEOUT_MS = 10_000;
 const SKELETON_GATE_POLL_MS = 200;
 
