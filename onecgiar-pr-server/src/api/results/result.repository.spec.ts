@@ -4,6 +4,10 @@ import {
   QA_LINKABLE_INNOVATION_STATUS_IDS,
   ResultRepository,
 } from './result.repository';
+import {
+  insertLists,
+  misalignedColumns,
+} from '../../shared/extendsGlobalDTO/replication-insert-lists.spec-helper';
 
 describe('ResultRepository (unit)', () => {
   let repo: ResultRepository;
@@ -946,45 +950,6 @@ describe('ResultRepository — replication carries the contact directory link (P
     new_result_id: 2000,
   } as any;
 
-  /** Column list and SELECT list of the INSERT, each collapsed to one entry per written column. */
-  const insertLists = (insertQuery: string) => {
-    const match =
-      /insert into `result` \(\s*([\s\S]*?)\s*\) select\s*([\s\S]*?)\s*from `result` r2/.exec(
-        insertQuery,
-      );
-    if (!match)
-      throw new Error(
-        'replication INSERT no longer matches the expected shape',
-      );
-
-    const columns = match[1]
-      .split(/[\n,]/)
-      .map((entry) => entry.trim().replace(/^,/, '').trim())
-      .filter(Boolean);
-
-    // `${...}` expressions span several lines; join them until their delimiters balance out.
-    const values: string[] = [];
-    let buffer = '';
-    for (const line of match[2]
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)) {
-      buffer = buffer ? `${buffer} ${line}` : line;
-      const balanced =
-        (buffer.match(/\(/g) ?? []).length ===
-          (buffer.match(/\)/g) ?? []).length &&
-        (buffer.match(/\{/g) ?? []).length ===
-          (buffer.match(/\}/g) ?? []).length;
-      if (balanced) {
-        values.push(buffer.replace(/,$/, '').trim());
-        buffer = '';
-      }
-    }
-    if (buffer) values.push(buffer.trim());
-
-    return { columns, values };
-  };
-
   it('copies lead_contact_person_id alongside the name in findQuery', () => {
     const { findQuery } = repo.createQueries(config);
 
@@ -995,6 +960,8 @@ describe('ResultRepository — replication carries the contact directory link (P
   it('writes lead_contact_person_id into its own column in insertQuery', () => {
     const { columns, values } = insertLists(
       repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
     );
     const index = columns.indexOf('lead_contact_person_id');
 
@@ -1005,18 +972,91 @@ describe('ResultRepository — replication carries the contact directory link (P
   it('keeps every INSERT column aligned with the value written into it', () => {
     const { columns, values } = insertLists(
       repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
     );
 
     expect(values).toHaveLength(columns.length);
-    const misaligned = columns.filter((column, i) => {
-      const value = values[i] ?? '';
-      const alias = value.includes(' as ')
-        ? value.slice(value.lastIndexOf(' as ') + 4).trim()
-        : value.replace('r2.', '').trim();
-      return alias !== column;
-    });
+    expect(misalignedColumns(columns, values, 'r2')).toEqual([]);
+  });
+});
 
-    expect(misaligned).toEqual([]);
+/**
+ * P2-3228 — phase replication must carry "led by partner". `docs/specs/bugfix/
+ * p2-3228-lead-center-replication/requirements.md` VER-R-3, scenario VER-S-3.1. Until the fix,
+ * `is_lead_by_partner` is absent from both `insertQuery` and `findQuery`, so a replicated
+ * result's new version loses which partner leads it.
+ *
+ * The BUT clause of VER-S-3.1 says this change must NOT alter the columns the earlier P2-3663 fix
+ * already carries (`source`, `creation_method`, `external_*`), nor `status_id` — checked here by
+ * asserting those columns are still present, aligned and (for `status_id`) still the literal `1`.
+ */
+describe('ResultRepository — replication carries is_lead_by_partner (P2-3228)', () => {
+  const repo = new ResultRepository(
+    {
+      createEntityManager: jest.fn(() => ({}) as any),
+    } as unknown as DataSource,
+    { returnErrorRepository: jest.fn() } as any,
+  );
+  const config = {
+    phase: 5,
+    user: { id: 77 } as any,
+    old_result_id: 1000,
+    new_result_id: 2000,
+  } as any;
+
+  it('copies is_lead_by_partner in findQuery', () => {
+    const { findQuery } = repo.createQueries(config);
+
+    expect(findQuery).toContain('r2.is_lead_by_partner');
+  });
+
+  it('writes is_lead_by_partner into its own column in insertQuery, verbatim from the source row', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
+    );
+    const index = columns.indexOf('is_lead_by_partner');
+
+    expect(index).toBeGreaterThan(-1);
+    expect(values[index]).toBe('r2.is_lead_by_partner');
+  });
+
+  it('does not alter status_id or the P2-3663 provenance columns (source, creation_method, external_*)', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
+    );
+
+    const statusIndex = columns.indexOf('status_id');
+    expect(statusIndex).toBeGreaterThan(-1);
+    expect(values[statusIndex]).toBe('1 as status_id');
+
+    for (const column of [
+      'source',
+      'creation_method',
+      'external_submitter',
+      'external_platform_id',
+      'external_platform_code',
+      'external_reference',
+    ]) {
+      const index = columns.indexOf(column);
+      expect(index).toBeGreaterThan(-1);
+      expect(values[index]).toBe(`r2.${column}`);
+    }
+  });
+
+  it('keeps every INSERT column aligned with the value written into it', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
+    );
+
+    expect(values).toHaveLength(columns.length);
+    expect(misalignedColumns(columns, values, 'r2')).toEqual([]);
   });
 });
 

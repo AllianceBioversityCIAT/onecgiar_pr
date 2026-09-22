@@ -49,7 +49,16 @@
           [class.rotate-180]="supportMenuOpen()" />
       </button>
 
-      <span class="pr-topbar-sep" aria-hidden="true"></span>
+      <!-- Release notes ("What's new") — moved here from the sidebar EXTRAS group so it sits
+           right beside the notifications bell in the toolbar, next to Support. -->
+      <a
+        class="pr-topbar-icon-btn"
+        [class.pr-topbar-icon-btn--active]="isInWhatsNewRoute()"
+        routerLink="/whats-new"
+        aria-label="Release notes"
+        title="Release notes">
+        <ng-icon name="lucideRocket" class="text-[20px]" />
+      </a>
 
       <div class="pr-topbar-actions">
         <button
@@ -72,19 +81,6 @@
           }
         </button>
       </div>
-
-      <span class="pr-topbar-sep" aria-hidden="true"></span>
-
-      <!-- Release notes ("What's new") — moved here from the sidebar EXTRAS group so it sits
-           right beside the notifications bell in the toolbar, next to Support. -->
-      <a
-        class="pr-topbar-icon-btn"
-        [class.pr-topbar-icon-btn--active]="isInWhatsNewRoute()"
-        routerLink="/whats-new"
-        aria-label="Release notes"
-        title="Release notes">
-        <ng-icon name="lucideRocket" class="text-[20px]" />
-      </a>
 
       <button
         type="button"
