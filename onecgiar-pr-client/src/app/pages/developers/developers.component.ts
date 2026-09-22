@@ -65,6 +65,10 @@ export class DevelopersComponent {
     }
   ];
 
+  // The authority on payload shape lives in Notion (public, no account needed); the Swagger
+  // reference below is the try-it-out surface, not the contract.
+  readonly officialDocsUrl =
+    'https://cgiar-prms.notion.site/PRMS-Normalizer-Technical-Field-Documentation-287f271224788055a0d9c2bc23b1a06b';
   readonly swaggerDocsUrl = 'https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/docs/';
   readonly webhooksDocUrl = 'https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/docs/#/Webhooks';
 

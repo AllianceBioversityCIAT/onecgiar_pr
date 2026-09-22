@@ -43,7 +43,7 @@ describe('DevelopersComponent', () => {
     expect(steps.length).toBe(5);
 
     expect(steps[0].textContent).toContain('Request your test API key');
-    expect(steps[1].textContent).toContain('Read the field documentation');
+    expect(steps[1].textContent).toContain('Read the official documentation');
     expect(steps[2].textContent).toContain('Send a result to the test environment');
     expect(steps[2].textContent).toContain('external_reference');
     expect(steps[3].textContent).toContain('Register a webhook');
@@ -81,10 +81,11 @@ describe('DevelopersComponent', () => {
     expect(compiled.textContent).toContain('Use single result ingest for one to ten results, and bulk ingest for more.');
   });
 
-  it('renders the right column cards: Field documentation, Result decision webhooks, and What you still do in PRMS', () => {
+  it('renders the right column cards: Official documentation, Result decision webhooks, and What you still do in PRMS', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Field documentation');
-    expect(compiled.textContent).toContain('Open the field documentation');
+    expect(compiled.textContent).toContain('Official documentation');
+    expect(compiled.textContent).toContain('Open the official documentation');
+    expect(compiled.textContent).toContain('Try the endpoints in Swagger');
 
     expect(compiled.textContent).toContain('Result decision webhooks');
     expect(compiled.textContent).toContain('Set up webhooks');
@@ -93,6 +94,15 @@ describe('DevelopersComponent', () => {
     expect(compiled.textContent).toContain('Confidential evidence');
     expect(compiled.textContent).toContain('Fields beyond the minimum data standards');
     expect(compiled.textContent).toContain('keep_editing');
+  });
+
+  it('points the official documentation CTA at the public Notion field documentation', () => {
+    expect(component.officialDocsUrl).toContain('cgiar-prms.notion.site');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const cta = Array.from(compiled.querySelectorAll('a')).find(a => a.textContent?.includes('Open the official documentation'));
+    expect(cta?.getAttribute('href')).toBe(component.officialDocsUrl);
+    expect(cta?.getAttribute('target')).toBe('_blank');
   });
 
   it('renders the footer with contact support link', () => {
