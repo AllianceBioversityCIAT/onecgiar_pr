@@ -1,6 +1,6 @@
 # result-sections-sidebar
 
-**Verified:** 2026-09-03 · branch qa-development-2026 · 6963df5af
+**Verified:** 2026-09-22 · branch yzuniga/p2-2385-ai-review-kp · P2-2385 (AI review opens to Knowledge Products); prior: 2026-09-03 · branch qa-development-2026 · 6963df5af
 
 ## Qué es
 Segundo riel (240px, blanco) del detalle de resultado: identidad (Result code #, type, status
@@ -44,6 +44,16 @@ del header para que no desaparezcan al scrollear el formulario.
   no `@UseGuards` and `api/ai/*` only passes `JwtMiddleware` (`app.module.ts:139-153`) — a valid
   token is all the server asks for. It never checks role, membership or phase. Delete this gate and
   nothing stops the write.
+- ⚠️ **P2-2385 — `showAiReview` no longer filters by result type.** It used to carry
+  `result_type_id != 6`, which hid the button for Knowledge Products because their title and
+  description are auto-synced from CGSpace. A KP reporter still owns the Impact Area (DAC) tags, so
+  the button is now offered for EVERY type and the narrowing moved one layer down, into
+  `AiReviewService.onAIReviewClick()`: for a KP it skips `GET /api/ai/result-context/{id}`, leaves
+  `currnetFieldsList` empty and never `POST`s a proposal, so the dialog offers impact areas only.
+  🛑 The restriction is in the SERVICE on purpose — hiding the cards in the template would still
+  have generated and persisted a title/description proposal for the KP. Do not re-add a type
+  allow-list here: every type is allowed today and a list would silently hide the button for the
+  next one added.
 - 🛑 **Do NOT add a `phase_year` gate to the AI review.** The backend is phase-agnostic:
   `src/api/ai/**` has zero phase/version/portfolio branches and keys everything on `result_id` (the
   per-phase row) or `session_id`; its only phase-aware dependency,

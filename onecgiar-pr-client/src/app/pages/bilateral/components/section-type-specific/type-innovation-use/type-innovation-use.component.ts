@@ -1,5 +1,6 @@
 import { Component, effect, inject, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgTemplateOutlet } from '@angular/common';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
@@ -12,6 +13,8 @@ import {
 } from '../../../../../shared/services/global/qa-innovation-development-results.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
 import { EstimatesCgiarComponent } from '../../../../../shared/components/innovation-use-form/components/estimates/estimates.component';
+import { BILATERAL_INNOVATION_USE_ACTORS_COPY } from '../../../../../internationalization/bilateral-innovation-use-actors.copy';
+import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../../../internationalization/innovation-use-2030-projection.copy';
 
 const SECTION_NAME = 'type-specific';
 
@@ -66,7 +69,7 @@ const USE_LEVEL_EXPLANATION_MAX = 9;
 
 @Component({
   selector: 'app-type-innovation-use',
-  imports: [FormsModule, CustomFieldsModule, EstimatesCgiarComponent],
+  imports: [FormsModule, NgTemplateOutlet, CustomFieldsModule, EstimatesCgiarComponent],
   templateUrl: './type-innovation-use.component.html',
   styleUrl: './type-innovation-use.component.scss'
 })
@@ -90,6 +93,14 @@ export class TypeInnovationUseComponent implements OnInit {
   readonly graduateStudentsInstitutionTypeId = GRADUATE_STUDENTS_INSTITUTION_TYPE_ID;
   readonly mdsInfoNote = MDS_INFO_NOTE;
   readonly loadErrorNote = LOAD_ERROR_NOTE;
+  readonly copy = BILATERAL_INNOVATION_USE_ACTORS_COPY;
+  /** P2-3428 — same copy as the W1/W2 "2030 Use Projection" (title, guidance note, question, tooltip). */
+  readonly projection2030Copy = INNOVATION_USE_2030_PROJECTION_COPY;
+  /** P2-3785 (4b) — the two sex groups, each with its Youth / Non-youth split, as in pooled reporting. */
+  readonly genderGroups = [
+    { key: 'women', label: 'Women', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.womenYouthWarning },
+    { key: 'men', label: 'Men', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.menYouthWarning }
+  ] as const;
 
   /**
    * P2-3556 — three-state load flag: `null` while the GET is still in flight, `true` once the
@@ -165,6 +176,28 @@ export class TypeInnovationUseComponent implements OnInit {
 
   get visibleMeasures(): any[] {
     return (this.body.measures ?? []).filter((m: any) => m.is_active !== false);
+  }
+
+  /**
+   * P2-3428 — the 2030 Use Projection lists (`innovation_use_2030`, stored server-side under
+   * `section_id = 2`). Optional full metadata: nothing here is published to the MDS tracker.
+   */
+  get projection2030(): { actors: any[]; organization: any[]; measures: any[] } {
+    if (!this.body.innovation_use_2030) this.body.innovation_use_2030 = { actors: [], organization: [], measures: [] };
+    const p = this.body.innovation_use_2030;
+    p.actors ??= [];
+    p.organization ??= [];
+    p.measures ??= [];
+    return p;
+  }
+
+  /** The projection lists show only while the 2030 use is not "yet to be determined" — as in W1/W2. */
+  get showProjection2030Lists(): boolean {
+    return this.body.innov_use_2030_to_be_determined !== true;
+  }
+
+  activeRows(rows: any[] | null | undefined): any[] {
+    return (rows ?? []).filter((r: any) => r.is_active !== false);
   }
 
   /** Numeric use level (0..9) behind the selected `innovation_use_level_id`; -1 when nothing is picked. */
@@ -355,7 +388,7 @@ export class TypeInnovationUseComponent implements OnInit {
    * flattens it back into a single code before every save.
    */
   private hydrateOrganizations(): void {
-    (this.body.organization ?? []).forEach((org: any) => {
+    [...(this.body.organization ?? []), ...(this.body.innovation_use_2030?.organization ?? [])].forEach((org: any) => {
       if (org.parent_institution_type_id) {
         org.institution_sub_type_id = org.institution_types_id;
         org.institution_types_id = org.parent_institution_type_id;
@@ -400,6 +433,13 @@ export class TypeInnovationUseComponent implements OnInit {
     this.normalizeStoredBoolean('innov_use_to_be_determined');
     this.normalizeStoredBoolean('has_scaling_studies');
     this.normalizeStoredBoolean('innov_use_2030_to_be_determined');
+    // P2-3785 (4b) — the actor flags now bind checkboxes, which need a real boolean too.
+    [...(this.body.actors ?? []), ...(this.body.innovation_use_2030?.actors ?? [])].forEach((actor: any) => {
+      for (const key of ['sex_and_age_disaggregation', 'age_disaggregation_not_available', 'youth_split_applied_by_system']) {
+        const value = actor?.[key];
+        if (value !== null && value !== undefined && typeof value !== 'boolean') actor[key] = Boolean(value);
+      }
+    });
   }
 
   /** Rewrites `1`/`0` as `true`/`false`. An unanswered field (`null`/absent) is left untouched. */
@@ -431,18 +471,119 @@ export class TypeInnovationUseComponent implements OnInit {
     this.onFieldChange();
   }
 
+  /**
+   * P2-3785 (4b) — ticking "Sex and age disaggregation does not apply" switches both breakdowns off, so
+   * the figures and the age-only fallback are cleared, as the pooled `cleanActor()` does.
+   * Unticking only drops the single "How many" and keeps whatever Women/Men the row holds: rows saved
+   * under the old Yes/No carry their breakdown behind a `true`, and unticking is how that breakdown
+   * comes back into view — clearing it there would delete what the reporter had entered.
+   */
   onDisaggregationChange(actor: any): void {
-    actor.women = null;
-    actor.women_youth = null;
-    actor.men = null;
-    actor.men_youth = null;
-    actor.how_many = null;
+    if (actor?.sex_and_age_disaggregation) {
+      actor.women = null;
+      actor.women_youth = null;
+      actor.men = null;
+      actor.men_youth = null;
+      actor.how_many = null;
+      actor.age_disaggregation_not_available = null;
+      actor.youth_split_applied_by_system = null;
+    } else {
+      this.syncTotal(actor);
+    }
     this.onFieldChange();
+  }
+
+  /** Non-youth is never stored: it is the group total minus its youth (server `summary.service.ts` derives it the same way). */
+  nonYouth(actor: any, group: 'women' | 'men'): number | null {
+    const total = this.toCount(actor?.[group]);
+    if (total === null) return null;
+    return Math.max(total - (this.toCount(actor?.[`${group}_youth`]) ?? 0), 0);
+  }
+
+  /** The Total the reporter can read — Women + Men, as the pooled form computes it. */
+  actorTotal(actor: any): number | null {
+    const women = this.toCount(actor?.women);
+    const men = this.toCount(actor?.men);
+    if (women === null && men === null) return null;
+    return (women ?? 0) + (men ?? 0);
+  }
+
+  youthExceeds(actor: any, group: 'women' | 'men'): boolean {
+    const total = this.toCount(actor?.[group]);
+    const youth = this.toCount(actor?.[`${group}_youth`]);
+    return total !== null && youth !== null && youth > total;
+  }
+
+  /** Women or Men changed: keep the system 50/50 split in step and the stored total in sync. */
+  onGenderChange(actor: any): void {
+    if (actor?.age_disaggregation_not_available) this.applyYouthSplit(actor);
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  /** Youth cannot be greater than the total of its group — same rule the pooled form enforces. */
+  onYouthChange(actor: any, group: 'women' | 'men'): void {
+    if (this.youthExceeds(actor, group)) actor[`${group}_youth`] = this.toCount(actor[group]);
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  /**
+   * "Age disaggregation not available": the youth figures are split 50/50 by the system and stamped
+   * `youth_split_applied_by_system`; unticking clears them, so an estimate never passes for a reported figure.
+   */
+  onAgeFallbackChange(actor: any): void {
+    if (actor?.age_disaggregation_not_available) {
+      this.applyYouthSplit(actor);
+    } else {
+      actor.women_youth = null;
+      actor.men_youth = null;
+      actor.youth_split_applied_by_system = null;
+    }
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  private applyYouthSplit(actor: any): void {
+    const half = (value: any) => {
+      const n = this.toCount(value);
+      return n !== null && n > 0 ? Math.round(n / 2) : 0;
+    };
+    actor.women_youth = half(actor.women);
+    actor.men_youth = half(actor.men);
+    actor.youth_split_applied_by_system = true;
+  }
+
+  /** `how_many` carries the Total while the breakdown applies, as in pooled (`calculateTotalField`). */
+  private syncTotal(actor: any): void {
+    if (!actor?.sex_and_age_disaggregation) actor.how_many = this.actorTotal(actor);
+  }
+
+  private toCount(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
   addOrganization(): void {
     if (!this.body.organization) this.body.organization = [];
     this.body.organization.push({ institution_types_id: null, is_active: true });
+    this.onFieldChange();
+  }
+
+  /** P2-3428 — the projection's "Add actor" / "Add organization" / "Add other" (W1/W2 labels). */
+  addProjection2030Actor(): void {
+    this.projection2030.actors.push({ actor_type_id: null, sex_and_age_disaggregation: false, is_active: true });
+    this.onFieldChange();
+  }
+
+  addProjection2030Organization(): void {
+    this.projection2030.organization.push({ institution_types_id: null, is_active: true });
+    this.onFieldChange();
+  }
+
+  addProjection2030Measure(): void {
+    this.projection2030.measures.push({ is_active: true });
     this.onFieldChange();
   }
 
@@ -530,8 +671,8 @@ export class TypeInnovationUseComponent implements OnInit {
   }
 
   /** Flattens a sub-type back into `institution_types_id`, without mutating `body` (which the UI's cascade still needs). */
-  private buildOrganizationsForSave(): any[] {
-    return (this.body.organization ?? []).map((org: any) => {
+  private buildOrganizationsForSave(organizations: any[] = this.body.organization): any[] {
+    return (organizations ?? []).map((org: any) => {
       const { institution_sub_type_id, ...rest } = org;
       return institution_sub_type_id ? { ...rest, institution_types_id: institution_sub_type_id } : rest;
     });
@@ -561,6 +702,13 @@ export class TypeInnovationUseComponent implements OnInit {
       has_scaling_studies: this.body.has_scaling_studies ?? null,
       scaling_studies_urls: this.body.scaling_studies_urls ?? [],
       innov_use_2030_to_be_determined: this.body.innov_use_2030_to_be_determined ?? null,
+      // P2-3428 — the 2030 Use Projection lists. Sent whole every time, like `innovatonUse`; the server
+      // writes them under `section_id = 2`, and retires them when the use is "yet to be determined".
+      innovation_use_2030: {
+        actors: this.body.innovation_use_2030?.actors ?? [],
+        organization: this.buildOrganizationsForSave(this.body.innovation_use_2030?.organization),
+        measures: this.body.innovation_use_2030?.measures ?? []
+      },
       readiness_level_explanation: this.body.readiness_level_explanation ?? null,
       has_innovation_link: this.body.has_innovation_link ?? null,
       // `pr-select` hands back the catalog's raw `id`, which arrives as a numeric STRING — normalize it so
