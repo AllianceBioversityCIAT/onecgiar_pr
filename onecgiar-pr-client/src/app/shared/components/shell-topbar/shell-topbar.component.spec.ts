@@ -595,4 +595,15 @@ describe('ShellTopbarComponent', () => {
       expect(panel).toContain('pr-topbar-account__role');
     });
   });
+
+  // ------------------------------------------------------------- TRN-T-1
+  it('places Release notes before the notifications bell in DOM order (TRN-AC-1)', () => {
+    const right = readFileSync(join(__dirname, 'shell-topbar.component.html'), 'utf8');
+    const releaseNotesIndex = right.indexOf('aria-label="Release notes"');
+    const notificationsIndex = right.indexOf('aria-label="Notifications"');
+
+    expect(releaseNotesIndex).toBeGreaterThan(-1);
+    expect(notificationsIndex).toBeGreaterThan(-1);
+    expect(releaseNotesIndex).toBeLessThan(notificationsIndex);
+  });
 });

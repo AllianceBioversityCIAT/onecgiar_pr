@@ -1,6 +1,6 @@
 # shell-topbar
 
-**Verified:** 2026-09-21 · branch qa-development-2026-mc · Release notes moved from sidebar EXTRAS
+**Verified:** 2026-09-22 · branch qa-development-2026-mc · TRN-T-1: swapped bell/Release-notes DOM order to match documented order
 
 The app shell header: centered Search · **Support menu** · **Release notes** · notifications popover ·
 user menu. Rendered by `app.component.html:38`, and hidden entirely when `dataControlSE.show_qa_full_screen`
