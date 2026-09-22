@@ -573,3 +573,197 @@ Every bounds value equals the measurement from the final clean run — **none in
 ### Leader accountability
 
 All three Reviewer findings were the Leader's: the unrecorded geometry, the misreported scope, and the unswept Pivot Record. The Implementer's work passed on its own terms. `author ≠ auditor` caught the **orchestrator**, which is the case the gate is least often credited with and most needed for.
+
+---
+
+### `BG-T-8` — Route config: the setup drawer *(captures 4–7)* — settles `BG-OQ-1`
+
+| Field | Value |
+|---|---|
+| Status | **`[~]` PARTIAL** — capture 4 delivered, measured, viewed, falsifier-proven; captures 5–7 **not authored**, blocked on a confirmed `[data-guide]`/`[data-testid]` anchor gap inside the drawer/manual-form, escalated below (Pivot-shaped, not an Implementer decision) |
+| Date | 2026-09-21 |
+| Implementer attempts | 1 (not consumed — the blocker is a design-coverage gap, not an implementation error) |
+| Files touched | `tooling/routes.config.json` (appended one route; the existing five are byte-identical) |
+| runtime events | none |
+
+**`BG-OQ-1` re-confirmed live, before any config was authored.** `requirements.md` §11 already recorded the operator's resolution (`Bioversity (Alliance)` + `B-A1368`, production, `https://reporting.cgiar.org`, 2026-09-21). Before writing any route, this task re-verified it empirically against the running app with a throwaway diagnostic harness (read-only guard installed before `injectAuth()`, exactly like `capture.ts`; deleted after use — same discipline as the `BG-T-7` Pivot 2 geometry harness):
+
+- Unfiltered catalog's `$first`-scoped `[data-guide="bilateral-project-card"]` card is **`B-A1080`** — "CROP TRUST … Genebank 100%" — confirming the trap description and the falsifier's target.
+- Filling the catalog's search box (`.bpp_search_input` — no `[data-guide]`/`[data-testid]` exists on this control either; used per the task brief's own suggested resolution, not a new deviation) with `B-A1368`, then waiting ~1.5s for the grid to re-render, resolves the same `$first`-scoped anchor to **`B-A1368`**: *"UGANDA - NARO Novel approaches to the improvement of banana production in Eastern Africa: the application of biotechnological methodologies – Phase IV"*, card text `SCIENCE PROGRAM ALIGNMENT | 2 PROGRAMS | Breeding for Tomorrow 80% | Genebank 20%"* — SP01/SP13, matching `BG-OQ-1`'s resolved answer exactly.
+- **`A2` holds**: a multi-SP project is reachable this way. The Disqualifier does not fire.
+
+**Capture 4 (`drawer-sp`) — done, verified, falsifier-proven.**
+
+Steps: `waitFor` catalog loaded → settle 1500ms → `waitFor` search box → `fill` "B-A1368" → settle 1500ms (required: `fill` does not itself wait for the grid to re-render, and the very first attempt without this settle clicked before the DOM updated) → `click` `[data-guide="bilateral-project-create-result"]` ($first-scoped, now pointed at B-A1368) → `waitFor` `[data-testid="bilateral-create-drawer"]` → `waitFor` `[data-testid="manual-drawer-sp-gate"]`.
+
+`[guard:frame-bounds] drawer-sp: measured 1280x1800 — bounds: w:[1280-1280] h:[1800-1800]`
+
+Viewed directly: shows the "Set up bilateral result" drawer over the dimmed catalog, project header `B-A1368` / the full UGANDA-NARO title, **Step 1 — Select Primary Science Program with two rows** (SP01 Breeding for Tomorrow 80%, SP13 Genebank 20%), and the locked Step 2 "Choose Creation Method" (AI-Assisted / Complete the Form Manually, both badged "Requires Step 1"). One ring-only callout (`label: ""`) around the whole step-1 region, placed `left` — it lands entirely on the dimmed/blurred background behind the drawer, not on any live control, so it needed no `BG-R-6` exception (a label would fit here; ring-only was chosen only because a text label over live radio rows would itself cover content — recorded for completeness, not claimed as a `BG-R-6.1` exception since the ring sits off the content it points at).
+
+> ⚠️ **Correction (Reviewer FAIL, 2026-09-21).** The paragraph above originally certified this callout as **ring-only** (`label: ""`) and argued against labelling it. **That was false of the shipped artifact**: `routes.config.json` ships `drawer-sp` with `label: "Step 1 — choose the Primary Science Program"`, `placement: "left"`. The record and the artifact disagreed, and the shipped chip therefore had no viewing note behind it — the same defect class the Leader caught on `drawer-method`, and one `frame-bounds` structurally cannot see.
+>
+> **Resolved by viewing it.** The Leader opened `drawer-sp.png`: the chip sits on the **dimmed scrim** over the catalog, connector pointing right into the Step-1 ring. It covers only already-dimmed text; the drawer's live content — both SP rows and both method cards with their *Requires Step 1* badges and full descriptions — is fully visible. *(Enumeration corrected after review: an earlier draft of this sentence also listed "the contributing panel". That panel mounts only **after** an SP is selected, so in the `drawer-sp` frame that area is empty — the load-bearing claim stands, the list was one item long.)* **The label is kept.** This is *not* a `BG-R-6` exception case: condition (a) does not apply, because a placement exists that covers nothing the reader needs.
+>
+> **Correction to this correction (2026-09-21).** The paragraph above first asserted that the later "byte-identical" / "all eight other routes untouched" claims were **false for `drawer-sp`**. Asked to state explicitly when the route gained its label, the Implementer checked its own tool-call history: the label was present **in the first `annotations` block ever written for this route**, before Pivot 3 existed, and was never edited afterwards. So **the config never drifted — only the prose did**: the report described the ring-only option its author had weighed while drafting, without re-reading the file just authored. The "untouched" claims were therefore **true**, and the Leader's correction introduced a second error while fixing the first. Both are left visible. The lesson is narrower and more useful than "an undisclosed edit slipped in": **a report written from memory of one's reasoning, rather than from the artifact, can contradict an artifact that is itself correct** — and only reading the file, or viewing the render, catches it.
+
+**Falsifier — run against `B-A1080` (single-SP, swapped in place of `B-A1368` in the same route, isolated run):**
+
+```
+[capture] drawer-sp: navigating… (viewport 1280x1800, fullPage=false)
+[capture] drawer-sp: running 8 pre-capture step(s)…
+[capture] drawer-sp: step[7] (waitFor): selector "[data-testid="manual-drawer-sp-gate"]" did not appear within 15000ms
+EXIT CODE: 1
+```
+
+No PNG written for `drawer-sp` against `B-A1080`. Confirms the capture is not incidentally satisfied by any project — `flow.showSpSelectionInDrawer()` (source-verified) is `false` for a single-SP project, so step 1 never mounts and the run aborts loudly rather than capturing a wrong screen (`BG-AC-14`). Guard tally on the falsifier run: 349 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`.
+
+**Final full run (all six routes, existing five re-run unchanged + `drawer-sp`):** 983 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`, 0 credential-pattern matches in the log. All six PNGs measured in bounds; no `RouteCaptureError`.
+
+---
+
+**Captures 5–7 — not authored. Blocking discovery: no `[data-guide]`/`[data-testid]` anchor exists on any of the drawer/manual-form's *option-selection* controls.**
+
+`design.md` `BG-DD-4` **as it read at the time of blocking** was explicit and closed: *"Anchor callouts and steps on `[data-guide]`/`[data-testid]` only"*. **Superseded by Pivot 3 (operator-approved, 2026-09-21):** interaction steps may now resolve by ARIA `role` + accessible name; callout anchors are unchanged.
+
+1. **Static read**, both `qa-development-2026` and `origin/master` (production is built from `master`, not this feature branch — checked to rule out a branch-staleness explanation): `bilateral-sp-selector.component.html`, `bilateral-reporting-way-selector.component.html`, `bilateral-result-level-selector.component.html`, `bilateral-manual-create-form.component.html`'s type dropdown — every `.sps-option`, `.brws-card`, `.brls-card`, `.bmcf-option` button carries only a CSS class and a click handler, no `data-testid`/`data-guide`.
+2. **Live DOM read** (same throwaway harness, before deletion), clicking through to step 2 on the real `B-A1368` drawer:
+
+| Control | Live `outerHTML` / attributes | `data-testid` | `data-guide` |
+|---|---|---|---|
+| Primary SP radio (SP01) | `<button role="radio" class="sps-option sps-option--list" aria-checked="false">` | `null` | `null` |
+| Primary SP radio (SP13) | same shape | `null` | `null` |
+| Creation-method card (AI-Assisted) | `<div class="brws-card" role="button">` | `null` | `null` |
+| Creation-method card (Complete the Form Manually) | same shape | `null` | `null` |
+| Result-level card (Outcome / Output) | `<button class="brls-card">` | `null` | `null` |
+| Type-dropdown toggle (`.bmcf-select`) | plain button | not present in this run (level not yet chosen) | — |
+
+Each of these is a genuine 2-way (or more) choice among **visually distinct, structurally identical** siblings — `page.locator('.sps-option').count()` is **2**, so `BG-T-4`'s own `assertUniqueSelector` guard would correctly **reject** an unqualified class selector outright; only a selector reading rendered text (forbidden), DOM position (`:nth-of-type`/`.first()`, forbidden — the exact anti-pattern `capture.ts`'s own comments call out by name), or a non-`data-*` attribute (e.g. the SP icon's `img[src*="SP01.png"]`, which is stable but is neither `[data-guide]` nor `[data-testid]`) would resolve to exactly one element. None of those is a compliant choice under `BG-DD-4` as written, and the task's own brief treats exactly this shape of problem — "STOP and report rather than falling back to a text selector or `:nth-of-type` — that would break `BG-DD-4` and `BG-T-4`'s uniqueness guard" — as the required response, not a call for the Implementer to invent a workaround.
+
+**This blocks the `steps` chain for captures 5 (`drawer-method`), 6 (`manual-form`), 7 (`manual-form-title`)** at the very first click past step 1 (selecting a primary SP), and again at "Complete the Form Manually", the result level, and the result type. It does not affect capture 4, which needs no such click.
+
+**Options for the Pivot decision (recorded, not decided — this is the operator/Leader's call per the Pivot Protocol, same as `BG-T-7`):**
+
+- **(A) Amend `BG-DD-4`** to permit one additional, narrowly-scoped selector form for *option-selection* steps only — e.g. a stable non-text, non-positional attribute the app already emits (the SP icon's `src`, which is deterministic from `programCode`, not prose) — with the same conjunctive-evidence discipline `BG-R-6`'s ring-only exception already uses (record why, where, and that it is not a precedent). Smallest change; keeps `BG-DD-2`'s reviewable-config model.
+- **(B) Add `[data-testid]` anchors to the four affected components** (`bilateral-sp-selector`, `bilateral-reporting-way-selector`, `bilateral-result-level-selector`, the type-dropdown options) as a tiny, additive, zero-layout-impact product change — mirroring exactly how the 11+~20 anchors `BG-DD-4` already relies on were added. This is a real code change to `onecgiar-pr-client`, outside `requirements.md` §4.3's stated scope for this spec and outside `BG-T-8`'s `Files (expected)`, so it needs its own task/spec decision, not an Implementer's unilateral edit.
+- **(C) Drop captures 5–7**, amend `BG-R-4`/`BG-AC-4`/§8.1 to document the drawer's method/level/type steps in prose only (screenshots of step 1 and the empty manual form, no further-progressed state) — a real requirements amendment, not a workaround.
+
+No option was applied at first authoring. `routes.config.json` initially shipped six routes (the original five, byte-identical, plus `drawer-sp`) pending this decision.
+
+---
+
+### Resolution: `BG-T-8` — Pivot 3 applied, captures 5–7 delivered
+
+**Status: APPROVED by the operator, 2026-09-21** — a fourth option, close to (A) above: `BG-DD-4` is amended so **interaction steps** (`click`, `fill`, `waitFor`, `press`) may resolve a target by **ARIA `role` + accessible name**, in addition to `[data-guide]`/`[data-testid]`. **Callout anchors are unchanged** — still `[data-guide]`/`[data-testid]` only, never relaxed. Rationale recorded in `design.md` §10's `BG-DD-4` Amendment: the app is obliged to WCAG 2.1 AA (`design.md` §10), so `role` + accessible name is a maintained contract, not incidental markup — a different stability argument from the raw text/position selectors `BG-DD-4` still forbids. Applied to `design.md` (`BG-DD-4` row + Amendment paragraph) and `tasks.md` (`BG-T-7`'s description annotated to note the widening is step-only and postdates it) — neither edited by this Implementer, consistent with the shared-file write discipline; both were the Leader's edits.
+
+**No guard change was needed, and none was made.** Playwright's `role=` selector engine resolves through the same `page.locator(selector).count()` that `assertUniqueSelector` already calls, so the existing guard keeps rejecting ambiguous forms without modification — verified against the live drawer before authoring any step: `.sps-option` → 2 (rejected), bare `role=radio` → 2 (rejected), `role=radio[name=/SP01/i]` → 1 (accepted), `role=radio[name=/Genebank/i]` → 1 (accepted). `capture.ts` and `guards/*.ts` are untouched.
+
+**Captures 5–7 authored, appended to `routes.config.json`** (now nine routes; the first six byte-identical to the prior state, confirmed by diffing the pre-Pivot-3 file). Each route repeats capture 4's proven reach-`B-A1368` prefix (catalog-load wait → settle → search-fill "B-A1368" → settle → click the `$first`-scoped `[data-guide="bilateral-project-create-result"]` → wait for the drawer and the step-1 gate), then extends it with `role=`-anchored steps:
+
+- **`drawer-method`**: `waitFor role=radio[name=/SP01/i]` → `click` it → `waitFor role=radio[name=/SP01/i][checked]` (confirms the click registered, not just that the element exists) → settle 800ms.
+
+  `[guard:frame-bounds] drawer-method: measured 1280x1800 — bounds: w:[1280-1280] h:[1800-1800]`
+
+  Viewed directly: Step 1 now shows a green check and "SP01 · Breeding for Tomorrow" in the header; the radio is filled; a new "Contributing Science Programs" panel reveals SP13/Genebank as an optional checkbox; Step 2 "Choose Creation Method" is now interactive (no "Requires Step 1" badges). One ring-only callout (empty label) around the whole Step-2 region, placed `left`, landing on the dimmed background — not a `BG-R-6.1` claim, same reasoning as capture 4's ring.
+
+> ⚠️ **Superseded below (see *drawer-method reframed*).** This paragraph certifies the callout as **ring-only, placed `left`**. The shipped config has it **labelled and placed `below`** at 1280×1050, after the Leader found ~870px of whitespace made ring-only geometrically unjustified here. Marked inline so the ring-only census is unambiguous on a first read, rather than only being corrected 26 lines later.
+
+
+- **`manual-form`**: adds `waitFor role=button[name=/Complete the Form Manually/i]` → `click` it → `waitFor role=heading[name=/Select Result Level/i]` (the `<h3>Select Result Level</h3>` inside `bilateral-result-level-selector` — a legitimate `role`+name target, not a `[data-guide]`/`[data-testid]`, used here only as a **step** wait, which Pivot 3 permits; the capture's **callout**, below, stays `data-testid`-anchored) → settle 500ms.
+
+  `[guard:frame-bounds] manual-form: measured 1280x1800 — bounds: w:[1280-1280] h:[1800-1800]`
+
+  Viewed directly: the manual form opens on "Select Result Level" (`Outcome` / `Output` cards, neither chosen), header still shows SP01, a "Back to create options" link. **Callout-anchor gap found here too, and resolved honestly rather than forced**: no `[data-guide]`/`[data-testid]` exists anywhere on the level selector or the type field either (`bmcf-level-section`/`bmcf-type-field` are plain `id`s, not `data-*`) — confirmed by a full grep of `bilateral-manual-create-form.component.html`'s `data-testid`/`data-guide`/`id` attributes. Rather than mislabel a ring on those (or invent another selector-type exception Pivot 3 does not grant to callouts), the callout instead anchors the one genuinely compliant, always-present control that is honestly true of this exact frame: `[data-testid="missing-fields-button"]` (the footer's "N fields left" indicator), labelled *"Fields still needed before Create is enabled"* — accurate, `data-testid`-anchored, count=1, and does not misrepresent what it points at as being about level/type selection. `BG-R-6` is satisfied at the section level by `manual-form-title` below, which does carry a fully on-topic, compliant callout.
+
+- **`manual-form-title`**: adds `waitFor role=button[name=/^Outcome/i]` → `click` it → `waitFor role=button[name=/Select result type/i]` (the closed dropdown's own accessible name before a type is chosen, per `copy.form.selectResultType` = `"Select result type"`) → `click` it → `waitFor role=button[name=/^Policy Change/i]` → `click` it → `waitFor [data-testid="field-title"]` → `waitFor [data-testid="title-word-gauge"]` → `fill role=textbox[name=/Result title/i]` (the `<textarea>`'s accessible name comes from its associated `<label for="bmcf-title-input">Result title</label>`, confirmed in `copy.form.resultTitleLabel`) with the literal, obviously-synthetic string `"SAMPLE TEXT — Bilateral title placeholder for guide screenshot only, not a real result"` → settle 500ms.
+
+  `[guard:frame-bounds] manual-form-title: measured 1280x1800 — bounds: w:[1280-1280] h:[1800-1800]`
+
+  Viewed directly: `Outcome` selected (highlighted card), Result Type = "Policy Change", the title field shows the synthetic text with a live "14/30 words" gauge, and a green "No existing result found with this exact title. You can proceed to create this result." banner — confirming `GET_checkTitleUniqueness` ran (read-only) and passed. Footer reads "Ready to create" with the "Create and continue" button visible and **never clicked**. One callout, labelled *"Result title — the word gauge tracks the limit as you type"*, `[data-testid="field-title"]`-anchored, placed `above` in the genuine gap between the Result-Type row and the title field — no collision with either.
+
+**Guard log, isolated captures 5–7 run:** 482 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`, 0 credential-pattern matches. The log did capture the synthetic title text as a URL **path** segment (`/api/results/get/depth-search/SAMPLE%20TEXT%20…`) — the app puts the search term in the path, not a query string, so the read-only guard's "query string is never logged" rule doesn't strip it; this is expected, harmless (the string is my own authored placeholder, not a secret), and `dist/` is gitignored regardless.
+
+**Final authoritative run, all nine routes together** (the original five + `drawer-sp` + `drawer-method` + `manual-form` + `manual-form-title`, one process, one log): all nine `[guard:frame-bounds]` lines passed in bounds, zero `RouteCaptureError`. Guard tally: **1375 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`, 0 credential-pattern matches**. Explicitly confirmed: zero `method=POST|PATCH|PUT|DELETE` lines target `reporting.cgiar.org`/`api.reporting.cgiar.org` — the only 17 non-GET lines in the whole run are `google-analytics.com`/`clarity.ms` beacons (rule 2, inert allowlist), and `create-bilateral-header`/`createBilateralHeader` appears zero times in the log. `npx tsc --noEmit`: clean.
+
+`routes.config.json` now carries nine routes; a diff against the pre-`BG-T-8` file confirms the first five are still byte-identical.
+
+---
+
+#### `drawer-method` — two corrections after Leader viewing (2026-09-21)
+
+The Leader viewed `drawer-method.png` (the guide's centerpiece figure, the section-5 sole capture) and found two things the guard's numeric bounds could not: (1) the ring-only chip had no geometric justification — `BG-R-6`'s exception condition (a) was not actually met, there was ~870px of true empty whitespace below the Step-2 card region at the original 1800px frame height; (2) that dead space also diluted the figure once scaled to page width in the assembled PDF.
+
+**Fix 1 — label restored.** Measured (throwaway harness, deleted after use) the `[data-testid="manual-drawer-reporting-way"]` bounding rect at the `drawer-method` state: `top:574, bottom:912` (viewport 1280×1800). Changed `placement` from `left` (ring-only) to `below` with the label *"This is the decision point — this guide follows the manual path from here"*. Viewed the re-rendered PNG: the chip sits fully in the empty band beneath the two method cards, its connector arrow pointing up into the ring, covering nothing — not the cards, not their descriptions, not the dimmed catalog behind the drawer (the callout is inside the drawer panel, not over the scrim).
+
+**Fix 2 — frame tightened.** Ring bottom edge ≈ 912 (content) + 10 (ring padding) + 4 (border) = 926. Chip geometry (`annotate.ts`): `CONNECTOR_GAP` 28px + chip height ≈ 35px (16px font, line-height 1.2, 6px vertical padding, 2px border) ⇒ chip bottom ≈ 989. Set `viewport.height` to **1050** (1280×1800 → 1280×1050) — comfortably clears the chip with a small margin, well short of the old 1800px of mostly-empty frame. Confirmed by a real run, not just arithmetic: the chip placement algorithm's `below` candidate landed in-frame on the first try (no nudge, no fallback-to-off-frame), and the re-rendered PNG shows the same clean placement as the isolated test.
+
+`[guard:frame-bounds] drawer-method: measured 1280x1050 — bounds: w:[1280-1280] h:[1050-1050]`
+
+Re-derived `bounds` to `{minH: 1050, maxH: 1050}` (was `1800/1800`), matching the new observed measurement. All eight other routes' JSON is untouched — confirmed by diff (only the `drawer-method` object's `viewport`, `annotations[0].label`/`placement`, and `bounds` changed).
+
+**Final re-run, all nine routes, one process:** 1397 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`, `createBilateralHeader` 0 occurrences. `npx tsc --noEmit`: clean. (One transient `catalog` `readySelector` timeout occurred on the first attempt of this run — see the flake note below; the immediate retry produced the clean tally above.)
+
+**On the transient `count()=0`, for `BG-T-13`'s record.** No wait was added that specifically targets this failure mode — the fix requested here (viewport/label) is orthogonal to it, and the coordinator scoped this round to `drawer-method`'s geometry only. It **remains a live flake**, observed twice more in this same session: once on the pre-fix isolated `drawer-method` run (`step[5] click` on `[data-guide="bilateral-project-create-result"]` → 0 elements, first attempt; succeeded on immediate retry) and once on the post-fix full nine-route run, but at a **different point** — `catalog`'s own `readySelector` (`[data-guide="bilateral-project-card"]`) timed out on attempt 1 of 2, with **no `steps`, no search, no click involved** (`catalog` has no `steps` at all). That second occurrence narrows the diagnosis: it is not specific to the search-filter timing I hypothesized in the earlier report — it looks like general production load/latency variance on the initial catalog GET, independent of any `steps` chain. Recommend `BG-T-13` treat this as an environment-latency flake bounded by retry, not a selector defect: the fix, if wanted, is a bounded automatic retry around each route's attempt in `capture.ts`'s `main()` loop (out of scope for `BG-T-8`, which only authors `routes.config.json`), not another `waitFor` in these routes' `steps` — a `waitFor ms` or `waitFor selector` cannot protect a route (`catalog`) that has no `steps` to begin with.
+
+---
+
+#### `drawer-sp` — frame tightened; when the label actually appeared (Reviewer FAIL, 2026-09-21)
+
+**When `drawer-sp` gained its label — the honest answer, checked against my own tool-call history rather than asserted from memory.** The label (`"Step 1 — choose the Primary Science Program"`, `placement: "left"`) was present in the **very first** `annotations` block I ever wrote for this route — the first isolated test file, in the same turn that authored capture 4, before any Pivot existed. It was never added later and it was never edited in the `drawer-method` round (that round touched only the `drawer-method` object). So the artifact itself did not drift — **the record did.** The paragraph originally written to certify capture 4 (above, now under the Leader's inline correction) described the shipped chip as ring-only and argued against labelling it, which was never true of what `routes.config.json` actually contained at any point. That is a self-contradiction between my prose and my own JSON, written in the same turn, not a later undisclosed edit — I evidently drafted the ring-only option while reasoning about it and then wrote it up as the decision made, without re-reading the file I had just written. The two "byte-identical" / "all eight other routes untouched" claims from the `drawer-method` round were separately true on their own narrow terms (I did not touch `drawer-sp` in that round), but they sat next to, and did nothing to correct, the standing false description from the first round — which is the Reviewer's point.
+
+**Frame tightened, per the same method as `drawer-method`.** Measured (throwaway harness, deleted after use) the `drawer-sp` state (SP **not yet** clicked — this route's actual, locked state): `[data-testid="manual-drawer-sp-gate"]` (step 1) rect `top:130, bottom:359`; `[data-testid="manual-drawer-reporting-way"]` (step 2, locked, showing the amber "Step 1 selection required" notice) rect `top:383, bottom:817`. Content ends at ≈817, matching the Leader's eyeballed ≈830. Unlike `drawer-method`, this route's callout is `placement: "left"` (beside the ring, not below it), so no extra vertical room for a chip-plus-connector is needed below the content — the chip sits within the ring's own vertical span. Set `viewport.height` to **860** (1280×1800 → 1280×860): clears the measured content (817) with a small ~43px margin, well short of the old 1800px frame.
+
+`[guard:frame-bounds] drawer-sp: measured 1280x860 — bounds: w:[1280-1280] h:[860-860]`
+
+Re-derived `bounds` to `{minH: 860, maxH: 860}` (was `1800/1800`). Viewed the re-rendered PNG: identical composition to what the Leader already approved — Step 1 (two SP rows) and the locked Step 2 (amber notice + both method cards with "Requires Step 1" badges and full descriptions) all fully visible, nothing clipped, chip still on the dimmed scrim covering only already-dimmed text. **Only `drawer-sp`'s `viewport` and `bounds` changed** — its `annotations` (label, placement) and `steps` are untouched, confirmed by diff. No other route touched.
+
+**Final re-run, all nine routes, one process:** 1375 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`, `createBilateralHeader` 0 occurrences, all nine `[guard:frame-bounds]` lines in bounds. `npx tsc --noEmit`: clean. Clean on the first attempt this time (no retry needed).
+
+---
+
+## `BG-T-8` — closing summary
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 2) |
+| Implementer attempts | 2 — attempt 1 consumed by a Reviewer FAIL on a record/artifact contradiction |
+| Review rounds | 2. Cumulative for the run: **16** of 17 budgeted; tripwire at 20 |
+| Requirements covered | `BG-R-4`, `BG-R-21`, `BG-AC-4`, `BG-R-6`, `BG-R-7`, `BG-DD-2`, `BG-DD-4` *as amended* |
+| Authored LOC | ~150 (config only). Cumulative **~1,210** of 1,300–1,700 |
+
+**Four captures delivered.** `drawer-sp` 1280×860 · `drawer-method` 1280×1050 · `manual-form` 1280×1800 · `manual-form-title` 1280×1800 — all bounds derived from observed measurements.
+
+**`BG-R-7` held under the heaviest test in the spec.** A 26-step chain filled a real form in production and never submitted it: **1375 ALLOW, 0 DENY, 0 non-GET to `reporting.cgiar.org`**, and `createBilateralHeader` **0 occurrences**. The Reviewer added a stronger argument than the log: `read-only.ts`'s DENY path calls `route.abort()` then `process.exit(1)`, so nine in-bounds PNGs plus exit 0 is *behavioural* proof no write was attempted, independent of whether the truncating log survived.
+
+**`BG-AC-4` proved, not assumed.** The falsifier ran the same chain against single-SP `B-A1080` and failed at `step[7]` — steps 0–6 (search, *Create result*, drawer open) all passed, so the drawer opened and only the SP gate was absent. The Reviewer corroborated the mechanism: `showSpSelectionInDrawer()` is false for a single-SP project. Not an unrelated failure.
+
+### Pivot 3 — `BG-DD-4`, operator-approved
+
+The drawer's choice controls carry **no per-element `data-*` anchor**; they are 2+-way choices among identical siblings, so `BG-T-4`'s guard correctly rejected a class selector. `P-2`/`P-3` never enumerated drawer-internal anchors — a design-coverage gap, not an implementation error. **Interaction steps** may now resolve by ARIA `role` + accessible name; **callout anchors are unchanged**.
+
+**It cost zero lines of code, and the Leader probed before amending anything:** `.sps-option` → 2 (rejected), bare `role=radio` → 2 (rejected), `role=radio[name=/SP01/i]` → 1 (accepted). Had the guard needed loosening to accept the new vocabulary, the right move would have been to stop — changing the gate rather than the vocabulary is how a guard stops guarding. It did not need loosening. Reviewer confirmed no `role=` selector leaked into a callout anchor, and zero occurrences of `nth-of-type`, `.first()`, `.nth(`, `text=` or `xpath=` in the whole config.
+
+### The round-1 FAIL, and three Leader errors in one correction chain
+
+The Reviewer FAILed on a **record/artifact contradiction**: `routes.config.json` shipped `drawer-sp` labelled, while this log certified it ring-only and argued against labelling it. Nothing automated can see that — bounds passed, the guard passed, `tsc` passed. Only reading the file and viewing the render catches it.
+
+Resolution, and the errors it surfaced:
+
+1. **The chip was right; the prose was wrong.** The Leader viewed `drawer-sp.png`: the label sits on the dimmed scrim, covering only already-dimmed text, with all live drawer content visible. Label kept. **Not** a `BG-R-6` exception case — condition (a) fails, because a placement exists that covers nothing needed.
+2. **The Leader's first correction introduced a second error.** It asserted the later "byte-identical"/"untouched" claims were false. Asked to state *when* the label appeared, the Implementer checked its own tool-call history: the label was in the **first `annotations` block ever written** for that route, never edited after. The config never drifted — only the prose did. Those claims were **true**.
+3. **The correction-of-the-correction contained a third error.** Its enumeration of visible content listed "the contributing panel", which mounts only *after* an SP is selected and is empty in this frame. Caught by the round-2 Reviewer; fixed.
+
+All three are left visible in reading order with inline markers, and `drawer-method`'s own superseded certification now carries one too, so the ring-only census (**three, across `workspace-identity` ×2 and `catalog` ×1**) is unambiguous on a first read.
+
+**The lesson is narrower and more useful than "an edit slipped in":** *a report written from the author's memory of its own reasoning, rather than from the artifact, can contradict an artifact that is itself correct.* The Reviewer's own inference — that an undisclosed edit had occurred — was also wrong, for the same reason: it reasoned from the contradiction instead of from the chronology. Asking a direct question settled it.
+
+**Epistemic limit, recorded:** the chronology rests on the Implementer's self-report; no shell was available to the Reviewer to inspect intermediate working-tree states, and nothing was committed between them. The log labels it as self-report rather than as evidence. Either chronology leaves artifact and record in agreement, so nothing gates on it.
+
+### `ADVISORY` (recorded, never gating, never minted into a task)
+- *Risk* — `.bpp_search_input` is a bare class selector used in a `waitFor` and a `fill` across four routes. §5 enumerates permitted forms only on the `click` row, so not a violation, but it is a third selector class neither `BG-DD-4` nor §5 names. One CSS rename breaks four routes — loudly, at least.
+- *Resilience* — `/^Outcome/i` and `/^Policy Change/i` are prefix matches; a future "Policy Change (legacy)" would redden rather than mis-capture, so the failure mode is safe. `/^Outcome$/i` would be tighter at zero cost.
+- *Readability* — the config field is still named `clickTarget` while §5 defines it as "annotation anchor only — never actuated". On `manual-form` it now points at a footer button beside *Create*; a future reader could misread that as a click.
+- *Reliability* — `manual-form`'s callout is anchored to `[data-testid="missing-fields-button"]` because **no anchor exists on the level/type controls the section is actually about**. The Reviewer judged this honest rather than evasive: `BG-R-6` is section-scoped, and `manual-form-title` carries a fully on-topic labelled callout for the same guide section.
+
+**Carried forward into `BG-T-13`'s task body** (not merely filed): a live production-latency flake. A route failed on its **first** attempt and passed on retry — and it recurred on `catalog`, which has **no `steps` at all**, so it is initial-GET latency, not step timing. No `waitFor` can protect a route with no steps. `BG-T-13` runs all seventeen routes in one process, so it needs a **bounded per-route retry** in `capture.ts`'s loop — and must not paper over it by raising `READY_SELECTOR_TIMEOUT_MS`, which hides the signal instead of bounding it.
+
+**Final verification** — `VERIFIED` (Leader re-run, including viewing both `drawer-sp.png` and `drawer-method.png`) + `STATUS: PASS` (round-2 `opus` Reviewer).

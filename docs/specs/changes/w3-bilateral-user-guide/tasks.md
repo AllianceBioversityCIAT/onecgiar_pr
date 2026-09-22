@@ -158,7 +158,7 @@
 ### `BG-T-7` — Route config: workspace, catalog, drafts, results *(captures 1–3, 16–17)*  `[x]`
 
 - **Type:** `docs`
-- **Description:** Author the URL-reachable half of `routes.config.json`: `workspace-identity`, `catalog`, `catalog-create-cta`, `drafts`, `results-status` — the last deep-linked `?source=w3&method=manual`. Anchors are `[data-guide]` only. No `steps` needed for these five.
+- **Description:** Author the URL-reachable half of `routes.config.json`: `workspace-identity`, `catalog`, `catalog-create-cta`, `drafts`, `results-status` — the last deep-linked `?source=w3&method=manual`. Anchors are `[data-guide]` only. No `steps` needed for these five. *(Correct as scoped: `BG-T-7`'s five routes use no interaction steps. Pivot 3 later widened **step** selectors only — ARIA `role` + accessible name — for `BG-T-8` onward; callout anchors are unchanged.)*
 - **Implements:** `BG-R-6`, `BG-AC-6`, `BG-DD-4`
 - **Files (expected):** `tooling/routes.config.json`
 - **Depends on:** `BG-T-4`, `BG-T-5` · **Blocks:** `BG-T-8`
@@ -174,7 +174,7 @@
   - [ ] `dist/capture-requests.log` shows zero denied requests.
 - **Skills:** `playwright-cli`
 
-### `BG-T-8` — Route config: the setup drawer *(captures 4–7)* — settles `BG-OQ-1`
+### `BG-T-8` — Route config: the setup drawer *(captures 4–7)* — settles `BG-OQ-1`  `[x]`
 
 - **Type:** `docs`
 - **Description:** **First step: settle `BG-OQ-1`** — confirm the Center, a multi-Science-Program project, and the environment, and record the answer in `execution.md` before authoring any config. Then author the four drawer captures, each with its `steps` chain: click *Create result* → select the primary SP → choose *Complete the Form Manually* → choose a result type (which is what reveals the title field, `P-7`), using `fill` to put literal text in the title so the word gauge is meaningful.
@@ -286,6 +286,7 @@
 - **Estimate:** `M` · **Review:** `checklist`
 - **Verification:**
   - **Falsifier:** delete one section file and re-run → `verify-structure` must fail naming the missing section and the unresolved TOC anchor. Separately, insert a fake token string into a content file → the secret audit must go red. Two different gates, two different deliberate breakages.
+  - ⚠️ **CARRIED FROM `BG-T-8` (2026-09-21) — a live production-latency flake this task must survive.** During `BG-T-8` a route intermittently failed on its **first** attempt and succeeded on an immediate retry. The first occurrence looked like search-filter timing, but it recurred on **`catalog`** — a route with **no `steps` at all**, failing its `readySelector` — so the diagnosis is general production latency on the initial page GET, not step timing. **No `waitFor` in `routes.config.json` can protect a route that has no steps.** This task runs **all seventeen routes in one process**, so a single first-attempt failure kills the whole run rather than one route. Before the authoritative run, add a **bounded per-route retry** in `capture.ts`'s `main()` loop (retry once, then fail), and record how many routes needed a retry. Do **not** paper over it by widening `READY_SELECTOR_TIMEOUT_MS` alone — that hides the signal instead of bounding it.
   - ⚠️ **CARRIED FROM `BG-T-6` (execute-time amendment, 2026-09-21) — `BG-AC-9` is NOT fully discharged until this runs.** `BG-T-6` asserts that `template/guide.css`'s `:where(:root)` build-time defaults match `fonts.scss`/`colors.scss`. But `assemble.ts:407` hard-requires and always injects `tokens.json`, so in every **shipped** PDF those defaults are **inert by design** — the values that actually win the cascade come from live `getComputedStyle` and were never compared to the stylesheets. `BG-AC-9`'s subject is *the rendered guide* and defect class **D5** is therefore still ungated. **This task must assert `tokens.json`'s six keys against `readExpectedTokensFromStylesheets()`**, with **quote normalization** — Chromium serializes `'Manrope'` as `Manrope`, which is why a byte comparison was not viable in `BG-T-6`. Falsifier: substitute Poppins into `tokens.json` and observe red.
   - **Red run:** `n/a (no test gate)` — gate is `npm run build-guide` plus the secret audit.
   - **Disqualifier:** if the PDF renders but the Leader's own view shows a mislabelled or degenerate figure, the task is **not** done — D8 has no automated gate and presence checks pass on a broken render (`KZ-changes--user-guide-pdf-1`). Re-shoot the route rather than accepting the page.

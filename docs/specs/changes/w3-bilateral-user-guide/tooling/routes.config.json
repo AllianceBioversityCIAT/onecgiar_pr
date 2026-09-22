@@ -118,5 +118,147 @@
       }
     ],
     "bounds": { "minW": 1760, "maxW": 1760, "minH": 560, "maxH": 560 }
+  },
+  {
+    "id": "drawer-sp",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/home",
+    "readySelector": "[data-testid=\"manual-drawer-sp-gate\"]",
+    "clickTarget": "[data-testid=\"manual-drawer-sp-gate\"]",
+    "captionKey": "04-drawer-sp",
+    "viewport": { "width": 1280, "height": 860 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "[data-guide=\"bilateral-project-card\"]" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "waitFor", "selector": ".bpp_search_input" },
+      { "type": "fill", "selector": ".bpp_search_input", "value": "B-A1368" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "click", "selector": "[data-guide=\"bilateral-project-create-result\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-create-drawer\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"manual-drawer-sp-gate\"]" }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"manual-drawer-sp-gate\"]",
+        "label": "Step 1 — choose the Primary Science Program",
+        "role": "primary",
+        "placement": "left"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 860, "maxH": 860 }
+  },
+  {
+    "id": "drawer-method",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/home",
+    "readySelector": "[data-testid=\"manual-drawer-reporting-way\"]",
+    "clickTarget": "[data-testid=\"manual-drawer-reporting-way\"]",
+    "captionKey": "05-drawer-method",
+    "viewport": { "width": 1280, "height": 1050 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "[data-guide=\"bilateral-project-card\"]" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "waitFor", "selector": ".bpp_search_input" },
+      { "type": "fill", "selector": ".bpp_search_input", "value": "B-A1368" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "click", "selector": "[data-guide=\"bilateral-project-create-result\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-create-drawer\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"manual-drawer-sp-gate\"]" },
+      { "type": "waitFor", "selector": "role=radio[name=/SP01/i]" },
+      { "type": "click", "selector": "role=radio[name=/SP01/i]" },
+      { "type": "waitFor", "selector": "role=radio[name=/SP01/i][checked]" },
+      { "type": "waitFor", "ms": 800 }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"manual-drawer-reporting-way\"]",
+        "label": "This is the decision point — this guide follows the manual path from here",
+        "role": "primary",
+        "placement": "below"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 1050, "maxH": 1050 }
+  },
+  {
+    "id": "manual-form",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/home",
+    "readySelector": "role=heading[name=/Select Result Level/i]",
+    "clickTarget": "[data-testid=\"missing-fields-button\"]",
+    "captionKey": "06-manual-form",
+    "viewport": { "width": 1280, "height": 1800 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "[data-guide=\"bilateral-project-card\"]" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "waitFor", "selector": ".bpp_search_input" },
+      { "type": "fill", "selector": ".bpp_search_input", "value": "B-A1368" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "click", "selector": "[data-guide=\"bilateral-project-create-result\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-create-drawer\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"manual-drawer-sp-gate\"]" },
+      { "type": "waitFor", "selector": "role=radio[name=/SP01/i]" },
+      { "type": "click", "selector": "role=radio[name=/SP01/i]" },
+      { "type": "waitFor", "selector": "role=radio[name=/SP01/i][checked]" },
+      { "type": "waitFor", "ms": 800 },
+      { "type": "waitFor", "selector": "role=button[name=/Complete the Form Manually/i]" },
+      { "type": "click", "selector": "role=button[name=/Complete the Form Manually/i]" },
+      { "type": "waitFor", "selector": "role=heading[name=/Select Result Level/i]" },
+      { "type": "waitFor", "ms": 500 }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"missing-fields-button\"]",
+        "label": "Fields still needed before Create is enabled",
+        "role": "primary",
+        "placement": "above"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 1800, "maxH": 1800 }
+  },
+  {
+    "id": "manual-form-title",
+    "url": "/bilateral/Bioversity%20%28Alliance%29/home",
+    "readySelector": "[data-testid=\"field-title\"]",
+    "clickTarget": "[data-testid=\"field-title\"]",
+    "captionKey": "07-manual-form-title",
+    "viewport": { "width": 1280, "height": 1800 },
+    "fullPage": false,
+    "steps": [
+      { "type": "waitFor", "selector": "[data-guide=\"bilateral-project-card\"]" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "waitFor", "selector": ".bpp_search_input" },
+      { "type": "fill", "selector": ".bpp_search_input", "value": "B-A1368" },
+      { "type": "waitFor", "ms": 1500 },
+      { "type": "click", "selector": "[data-guide=\"bilateral-project-create-result\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"bilateral-create-drawer\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"manual-drawer-sp-gate\"]" },
+      { "type": "waitFor", "selector": "role=radio[name=/SP01/i]" },
+      { "type": "click", "selector": "role=radio[name=/SP01/i]" },
+      { "type": "waitFor", "selector": "role=radio[name=/SP01/i][checked]" },
+      { "type": "waitFor", "ms": 800 },
+      { "type": "waitFor", "selector": "role=button[name=/Complete the Form Manually/i]" },
+      { "type": "click", "selector": "role=button[name=/Complete the Form Manually/i]" },
+      { "type": "waitFor", "selector": "role=heading[name=/Select Result Level/i]" },
+      { "type": "waitFor", "ms": 500 },
+      { "type": "waitFor", "selector": "role=button[name=/^Outcome/i]" },
+      { "type": "click", "selector": "role=button[name=/^Outcome/i]" },
+      { "type": "waitFor", "selector": "role=button[name=/Select result type/i]" },
+      { "type": "click", "selector": "role=button[name=/Select result type/i]" },
+      { "type": "waitFor", "selector": "role=button[name=/^Policy Change/i]" },
+      { "type": "click", "selector": "role=button[name=/^Policy Change/i]" },
+      { "type": "waitFor", "selector": "[data-testid=\"field-title\"]" },
+      { "type": "waitFor", "selector": "[data-testid=\"title-word-gauge\"]" },
+      { "type": "fill", "selector": "role=textbox[name=/Result title/i]", "value": "SAMPLE TEXT — Bilateral title placeholder for guide screenshot only, not a real result" },
+      { "type": "waitFor", "ms": 500 }
+    ],
+    "annotations": [
+      {
+        "selector": "[data-testid=\"field-title\"]",
+        "label": "Result title — the word gauge tracks the limit as you type",
+        "role": "primary",
+        "placement": "above"
+      }
+    ],
+    "bounds": { "minW": 1280, "maxW": 1280, "minH": 1800, "maxH": 1800 }
   }
 ]
