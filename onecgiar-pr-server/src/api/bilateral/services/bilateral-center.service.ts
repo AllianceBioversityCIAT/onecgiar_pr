@@ -1410,6 +1410,16 @@ export class BilateralCenterService {
         );
       }
 
+      // BCT-T-3 — derive owner Centers of the just-synced contributing projects, only when this
+      // save actually touched them (a save that never sent the key must not pay the lookup, and
+      // must not re-add anything a caller intentionally left alone).
+      if (dto.contributing_bilateral_projects !== undefined) {
+        await this.bilateralService.ensureDerivedContributingCenters(
+          resultId,
+          user.id,
+        );
+      }
+
       const failedCount =
         result.failedCenters.length +
         result.failedProjects.length +
@@ -2036,11 +2046,10 @@ export class BilateralCenterService {
     });
 
     // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
-    // Post-commit and non-blocking (the emitter never throws) — the submit already succeeded.
-    await this.bilateralService.emitBilateralSubmittedNotification(
-      parsedResultId,
-      user.id,
-    );
+    // BCT-T-5: goes through the shared orchestrator (submitted notification, then contributor
+    // tagging) instead of calling the submitted emitter directly. Post-commit and non-blocking
+    // (`announcePendingReview` never throws) — the submit already succeeded.
+    await this.bilateralService.announcePendingReview(parsedResultId, user.id);
 
     return {
       response: {

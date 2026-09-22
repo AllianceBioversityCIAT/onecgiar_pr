@@ -8,10 +8,17 @@ import {
   NotificationTypeEnum,
 } from '../enum/notification.enum';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
-import { Result } from '../../results/entities/result.entity';
+import { Result, SourceEnum } from '../../results/entities/result.entity';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
-import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../../bilateral/constants/w3-center-alias.constants';
+import { ResultsCenter } from '../../results/results-centers/entities/results-center.entity';
+import { ResultsByProjects } from '../../results/results_by_projects/entities/results_by_projects.entity';
+import { ResultStatusData } from '../../../shared/constants/result-status.enum';
+import {
+  buildCenterIndex,
+  resolveProjectOwnerCenter,
+  CenterIndex,
+} from '../../bilateral/utils/project-owner-center.util';
 
 /** One centre to notify, plus why it is being notified. */
 interface TaggedTarget {
@@ -49,6 +56,10 @@ export class ResultTaggedNotificationService {
     private readonly centerRepo: Repository<ClarisaCenter>,
     @InjectRepository(ClarisaProject)
     private readonly projectRepo: Repository<ClarisaProject>,
+    @InjectRepository(ResultsCenter)
+    private readonly resultsCenterRepo: Repository<ResultsCenter>,
+    @InjectRepository(ResultsByProjects)
+    private readonly resultsByProjectsRepo: Repository<ResultsByProjects>,
   ) {}
 
   /**
@@ -99,10 +110,12 @@ export class ResultTaggedNotificationService {
     if (!ids.length) return;
 
     const projects = await this.projectRepo.find({ where: { id: In(ids) } });
+    const centerIndex = await this.loadCenterIndex();
     const targets: TaggedTarget[] = [];
 
     for (const project of projects) {
-      const centerCode = await this.resolveProjectCenterCode(project);
+      const centerCode =
+        resolveProjectOwnerCenter(project, centerIndex)?.code ?? null;
       if (!centerCode) {
         this.logger.warn(
           `No owning centre resolved for bilateral project ${project.id} — skipping its tagged-project notification`,
@@ -120,29 +133,112 @@ export class ResultTaggedNotificationService {
   }
 
   /**
-   * `clarisa_projects.organization_code` → `clarisa_center.institutionId` → `code`.
+   * BCT-T-4 (forward pointer from BCT-T-1) — notifies the Center Users of every owning Center of
+   * a bilateral result's contributing bilateral projects and hand-tagged contributing Centers,
+   * once the result reaches Pending Review (BCT-R-7..R-11). Projects are targeted first so a
+   * Center that is both a derived contributing Center and a project owner gets the project text,
+   * never both (BCT-R-9, DD-5) — `emitFor`'s existing per-user dedup enforces that from ordering
+   * alone.
    *
-   * The inverse of what `BilateralProjectsService.getProjectsByCenter` does, including the same
-   * fallback: CLARISA's own W3 institution-acronym matching leaves some rows with
-   * `organization_code = NULL`, and those carry the acronym instead. See
-   * `w3-center-alias.constants.ts` for why that only bites the Alliance-descended institutions.
+   * Never throws (BCT-NFR-1): a failure here must not affect the submit or ingest that already
+   * committed the status change.
    */
-  private async resolveProjectCenterCode(
-    project: ClarisaProject,
-  ): Promise<string | null> {
-    if (project.organizationCode != null) {
-      const center = await this.centerRepo.findOne({
-        where: { institutionId: Number(project.organizationCode) },
+  // @akili-spec notifications/bilateral-contributor-tagging
+  async notifyBilateralContributorsOnSubmission(
+    resultId: number,
+    emitterUserId: number,
+  ): Promise<void> {
+    try {
+      const result = await this.resultRepo.findOne({
+        where: { id: resultId },
+        select: ['id', 'status_id', 'source'],
       });
-      if (center?.code) return center.code;
-    }
+      if (
+        !result ||
+        Number(result.status_id) !== ResultStatusData.PendingReview.value ||
+        result.source !== SourceEnum.Bilateral
+      ) {
+        return;
+      }
 
-    const acronym = project.sourceCenterAcronym;
-    if (acronym && W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE[acronym]) {
-      return W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE[acronym];
-    }
+      const centerRows = await this.resultsCenterRepo.find({
+        where: { result_id: resultId, is_active: true },
+        relations: { clarisa_center_object: { clarisa_institution: true } },
+      });
+      const leadingRow = centerRows.find((row) => row.is_leading_result);
 
-    return null;
+      const reportingCenterLabel =
+        leadingRow?.clarisa_center_object?.clarisa_institution?.acronym ||
+        leadingRow?.clarisa_center_object?.code ||
+        null;
+      if (!reportingCenterLabel) {
+        this.logger.warn(
+          `No reporting Center resolved for bilateral result ${resultId} — using the degraded lead-in`,
+        );
+      }
+      const leadIn = `reported by ${reportingCenterLabel || 'a CGIAR Center'}`;
+
+      const targets: TaggedTarget[] = [];
+
+      // Project targets first (BCT-R-7, DD-5): active, non-lead bilateral projects, resolved to
+      // their owning Center via the shared BCT-DD-1 resolver.
+      const projectRows = await this.resultsByProjectsRepo.find({
+        where: { result_id: resultId, is_active: true },
+        relations: { obj_clarisa_project: true },
+      });
+      const centerIndex = await this.loadCenterIndex();
+
+      for (const projectRow of projectRows.filter((row) => !row.is_lead)) {
+        const project = projectRow.obj_clarisa_project;
+        const centerCode = project
+          ? (resolveProjectOwnerCenter(project, centerIndex)?.code ?? null)
+          : null;
+        if (!centerCode) {
+          this.logger.warn(
+            `No owning centre resolved for bilateral project ${projectRow.project_id} on result ${resultId} — skipping its tagged-project notification`,
+          );
+          continue;
+        }
+        targets.push({
+          centerCode,
+          label: `${
+            project.shortName ?? project.fullName ?? `project ${project.id}`
+          } of your center`,
+          type: NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
+        });
+      }
+
+      // Center targets (BCT-R-8): active, non-leading contributing Centers, tagged by hand or
+      // derived — same label rule as `notifyTaggedCenters`.
+      for (const centerRow of centerRows.filter(
+        (row) => !row.is_leading_result,
+      )) {
+        targets.push({
+          centerCode: centerRow.center_id,
+          label:
+            centerRow.clarisa_center_object?.clarisa_institution?.name ??
+            centerRow.center_id,
+          type: NotificationTypeEnum.RESULT_CENTER_TAGGED,
+        });
+      }
+
+      await this.emitFor(resultId, emitterUserId, targets, leadIn);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to emit bilateral tagging notifications for result ${resultId}: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+      );
+    }
+  }
+
+  /**
+   * Loads the small `clarisa_center` table (~15 rows) once and builds the in-memory index the
+   * BCT-DD-1 resolver reads from. Never call this inside a per-project loop (BCT-NFR-5).
+   */
+  private async loadCenterIndex(): Promise<CenterIndex> {
+    const centers = await this.centerRepo.find();
+    return buildCenterIndex(centers);
   }
 
   /**
@@ -153,11 +249,18 @@ export class ResultTaggedNotificationService {
    * the lead and the owner of a tagged project hears once. The de-duplication is done on the
    * recipient rather than on the centre because that is the unit that actually matters for the
    * bell, and because it also covers the case of a second tag arriving in a later request.
+   *
+   * BCT-R-12 / design §5.4 — `leadIn` is an optional last parameter. When it is absent, the text
+   * is exactly what it always was: `created by ${programCode ?? 'a Science Program'}`, with
+   * `programCode` computed only in that branch. When a caller passes one (bilateral submissions,
+   * BCT-R-7/R-8), it replaces that whole clause verbatim — the suffix template past it is
+   * unchanged either way.
    */
   private async emitFor(
     resultId: number,
     emitterUserId: number,
     targets: TaggedTarget[],
+    leadIn?: string,
   ): Promise<void> {
     if (!targets.length) return;
 
@@ -172,7 +275,9 @@ export class ResultTaggedNotificationService {
       return;
     }
 
-    const programCode = this.resolveOwnerProgramCode(result);
+    const resolvedLeadIn =
+      leadIn ??
+      `created by ${this.resolveOwnerProgramCode(result) ?? 'a Science Program'}`;
     const alreadyNotified = await this.getAlreadyNotifiedUserIds(resultId);
 
     for (const target of targets) {
@@ -183,7 +288,7 @@ export class ResultTaggedNotificationService {
       if (!userIds.length) continue;
 
       // AC3, minus the identity the readers prepend themselves.
-      const suffix = `created by ${programCode ?? 'a Science Program'} has tagged the ${target.label}. Click to see the result.`;
+      const suffix = `${resolvedLeadIn} has tagged the ${target.label}. Click to see the result.`;
 
       await this._notificationService.emitResultNotification(
         NotificationLevelEnum.RESULT,

@@ -61,6 +61,17 @@ describe('BilateralCenterService', () => {
             emitBilateralSubmittedNotification: jest
               .fn()
               .mockResolvedValue(undefined),
+            // BCT-T-5: `submitForReview` now calls the orchestrator instead of the submitted
+            // emitter directly. Its own behaviour (submitted → tagging, independent try/catch) is
+            // unit-tested against the real `BilateralService` in `bilateral.service.spec.ts`;
+            // here it is a no-op stub.
+            announcePendingReview: jest.fn().mockResolvedValue(undefined),
+            // BCT-T-3: `saveContributors` calls this after the sync* block, only when the DTO
+            // touched `contributing_bilateral_projects`. Its own behaviour is unit-tested against
+            // the real `BilateralService` in `bilateral.service.spec.ts`; here it is a no-op stub.
+            ensureDerivedContributingCenters: jest
+              .fn()
+              .mockResolvedValue(undefined),
           },
         },
         {
@@ -1029,6 +1040,105 @@ describe('BilateralCenterService', () => {
       expect(result.message).toBe('Contributors saved successfully');
     });
 
+    // BCT-T-3 (design §5.2) — the derivation is only worth its lookup cost when this save
+    // actually touched the projects list; the guard is `dto.contributing_bilateral_projects
+    // !== undefined`, independent of whether centers were also sent.
+    describe('ensureDerivedContributingCenters call site', () => {
+      beforeEach(() => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          source: SourceEnum.Bilateral,
+        } as any);
+        (bilateralService as any).ensureDerivedContributingCenters = jest
+          .fn()
+          .mockResolvedValue(undefined);
+      });
+
+      it('is called when contributing_bilateral_projects is in the DTO', async () => {
+        const resultsByProjectsService = module.get<ResultsByProjectsService>(
+          ResultsByProjectsService,
+        );
+        jest
+          .spyOn(resultsByProjectsService, 'syncBilateralProjects')
+          .mockResolvedValue({
+            status: 200,
+            message: 'ok',
+            response: { set_active: [], deactivated: [] },
+          } as any);
+
+        await service.saveContributors(
+          10,
+          { contributing_bilateral_projects: [] },
+          user,
+        );
+
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).toHaveBeenCalledWith(10, 42);
+      });
+
+      it('is NOT called when the save never mentions contributing_bilateral_projects', async () => {
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).not.toHaveBeenCalled();
+      });
+
+      // Reviewer FAIL (lens: resilience/test), attempt 1: moving the derivation call above
+      // `syncContributingCenters` would let that sync undo the very reactivation derivation just
+      // performed (R-3's "direct PATCH omitting → still active" scenario), and no test caught it.
+      // `syncContributingCenters` is a real, unmocked private method here (spied, not replaced),
+      // so this exercises the actual call order `saveContributors` produces, not a stand-in.
+      it('runs derivation strictly after syncContributingCenters when both keys are sent', async () => {
+        const syncSpy = jest.spyOn(service as any, 'syncContributingCenters');
+
+        await service.saveContributors(
+          10,
+          { contributing_center: [], contributing_bilateral_projects: [] },
+          user,
+        );
+
+        expect(syncSpy).toHaveBeenCalled();
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).toHaveBeenCalled();
+        const syncOrder = syncSpy.mock.invocationCallOrder[0];
+        const derivedOrder = (
+          bilateralService.ensureDerivedContributingCenters as jest.Mock
+        ).mock.invocationCallOrder[0];
+        expect(derivedOrder).toBeGreaterThan(syncOrder);
+      });
+    });
+
+    // BCT-T-5 falsifier — the Contributors save must never itself trigger a Pending Review
+    // announcement; only `submitForReview` does. A save on an Editing/Draft result (BCT-R-10)
+    // must produce no tagging notification either.
+    it('never calls announcePendingReview from saveContributors', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+      } as any);
+      const resultsByProjectsService = module.get<ResultsByProjectsService>(
+        ResultsByProjectsService,
+      );
+      jest
+        .spyOn(resultsByProjectsService, 'syncBilateralProjects')
+        .mockResolvedValue({
+          status: 200,
+          message: 'ok',
+          response: { set_active: [], deactivated: [] },
+        } as any);
+
+      await service.saveContributors(
+        10,
+        { contributing_center: [], contributing_bilateral_projects: [] },
+        user,
+      );
+
+      expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+    });
+
     // P2-3443 — the External partners block. Everything here mirrors what pool funding writes in
     // `ResultsByInstitutionsService.savePartnersInstitutionsByResultV2`, on purpose: same table,
     // same role ids, same two flags on `result`. Diverging would hide bilateral partners from the
@@ -1607,16 +1717,29 @@ describe('BilateralCenterService', () => {
     });
 
     // 2026-09-05 — the primary SP's members are told the result is waiting for them, post-commit.
-    it('announces the arrival to the primary Science Program after the transaction', async () => {
+    // BCT-T-5: this now goes through the shared orchestrator, not the submitted emitter directly.
+    it('announces Pending Review (submitted + tagging) to the orchestrator after the transaction', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const bilateral = module.get<BilateralService>(BilateralService) as any;
 
       await service.submitForReview(user, 77, decisionDto);
 
-      expect(bilateral.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
-        77,
-        user.id,
-      );
+      expect(bilateral.announcePendingReview).toHaveBeenCalledWith(77, user.id);
+      // Falsifier: `submitForReview` must no longer emit the submitted notification directly —
+      // that call now lives inside `announcePendingReview` (proved on the real service in
+      // `bilateral.service.spec.ts`).
+      expect(
+        bilateral.emitBilateralSubmittedNotification,
+      ).not.toHaveBeenCalled();
+      // The title's "after the transaction" claim, actually asserted: the transaction call is
+      // always registered on the mock before `announcePendingReview` can be, because the second
+      // line only runs once the `await` on the first resolves.
+      const transactionOrder = (
+        resultRepository.manager.transaction as jest.Mock
+      ).mock.invocationCallOrder[0];
+      const announceOrder = (bilateral.announcePendingReview as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(announceOrder).toBeGreaterThan(transactionOrder);
     });
 
     it('stamps the submission date the review queue shows', async () => {
