@@ -237,7 +237,7 @@
   - [ ] Section count and order match `design.md` §4 / `proposal.md` §4.
 - **Skills:** `cognitive-doc-design`
 
-### `BG-T-11` — Content: guide sections 8–15 — settles `BG-OQ-2`
+### `BG-T-11` — Content: guide sections 8–15 — settles `BG-OQ-2`  `[x]`
 
 - **Type:** `docs`
 - **Description:** Author the six editor-section narratives, *Saving your work* (Save draft, "N fields missing", what each error means), and *The AI quality check and Submit for review*. **`BG-OQ-2` is resolved to option (a):** use a result that already carries an assessment, whose verdict card is painted by a `GET`. Fall back to prose (option c) if no such result exists. Option (b) is struck — the dialog is derived from the run state, so opening it *is* the billable call.

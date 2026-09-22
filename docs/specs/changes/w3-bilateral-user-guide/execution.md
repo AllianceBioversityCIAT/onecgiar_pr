@@ -961,3 +961,62 @@ Recorded here because `BG-T-10`'s falsifier requires it in the execution entry, 
 **Closing decision recorded rather than taken silently:** the final one-clause `Reset Filters` qualifier was proposed verbatim by the round-2 Reviewer and verified at source by the Leader, so the task closed without a third review round. That reasoning is written here instead of the gate being quietly skipped.
 
 **Final verification** — `VERIFIED` (Leader re-run: U.S. English sweep clean, no asserted counts, three naming obligations in running prose, all corrected sentences re-read at source) + `STATUS: PASS` (round-2 `opus` Reviewer).
+
+---
+
+### `BG-T-11` — Content: guide sections 8–15. Settles `BG-OQ-2`
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 4) |
+| Date | 2026-09-21 |
+| Implementer attempts | 4 — **three Reviewer FAILs**, escalated to the operator after the second per the standing limit; the operator authorised each further round |
+| Review rounds | 4 (the last bounded to §11 + one clause of §10). Cumulative: **25** (budget 17, operator-approved overrun) |
+| Requirements covered | `BG-R-2`, `BG-R-3` + its "absent for types 4 and 8" clause, `BG-R-15`, `BG-AC-2`, `BG-R-6` exception condition (b) ×3, `BG-R-1`, `BG-DD-8` |
+| `BG-OQ-2` | **Option (c)** — prose only, no verdict-card figure |
+
+**Delivered:** `08-overview` · `09-general-information` · `10-contributors-and-partners` · `11-geographic-location` · `12-evidence` · `13-type-specific-details` · `14-saving-your-work` · `15-ai-quality-check-and-submit`. Guide total with `BG-T-10`: **15 files**.
+
+**`BG-OQ-2` settled as option (c).** Option (b) was struck earlier as unsafe — `isDialogOpen` is *derived from* `isRunning()`, so the dialog cannot be open unless the billable `POST_bilateralQualityAssessment` is already running. No already-assessed result was reachable within this prose-only task's scope, so §15 is written from source and, per `BG-DD-8`, reads correctly **with no figure**: verified by re-reading it with every figure reference removed.
+
+#### Seven content defects across four rounds — and who caused them
+
+| # | Defect | Origin |
+|---|---|---|
+| 1 | §8 "Nothing on this screen is editable" — Overview has an editable **Project**, **Primary Science Program** and a **Save project and program** button | draft |
+| 2 | §12 "as many as the result needs" — `maxItems = 6`, Add evidence hidden at the cap | draft |
+| 3 | §11 extra-scope pickers called optional — both bind `[required]="true"`; four options, not five | draft |
+| 4 | §10 invented gating condition on **Contributing science programs** | **Leader** |
+| 5 | §8 bridge "shows both read-only" — the project is never displayed in Contributors | **Leader** |
+| 6 | §11 false contrast "unlike the main focus … no separate yes/no" — the main focus behaves identically for Regional, Country and Sub-national | **Leader** |
+| 7 | §11 ¶1 "the section can then ask whether you want to specify particular regions" — that yes/no is **unreachable for every selectable option** | draft, **survived three reviews** |
+
+**Three of seven were the Leader's**, introduced while fixing the others.
+
+#### Two defect shapes that per-sentence checking cannot catch
+
+**The compound defect (#1 + §10).** §8 said Overview was not editable; §10 correctly said the Primary Science Program *"cannot be changed from here"*. **§10's sentence was sourced and true.** Together they told a reporter the change was impossible **anywhere**, when Overview is the only place it is possible. Each sentence passed its own citation check; the defect lived in the **pair**. Resolved with an explicit bridge in §8 naming Overview as the only such place and pointing forward to §10.
+
+**The narrowing-focus defect (#7).** §11 ¶1 was wrong from the original draft and survived three review rounds because each round audited *the sentences the Leader named*. A directed review covers what it is pointed at and leaves everything else untouched. It surfaced only when round 3's brief asked for an **end-to-end read of all fifteen sections in order**, as a reporter would meet them. **This is the lesson `BG-T-13`'s HITL inherits: its read must be of the whole document, not of the parts under suspicion.**
+
+#### A missing required step, found by self-verification rather than review
+
+Round 4 told the Implementer *"verify every clause yourself; do not take my summary as source"* — and it found something no reviewer had: **Sub-national renders a per-country sub-national picker** (`app-sub-geoscope`, gated `geo_scope_id === 5 && countries.length`) with its own validation, *"Select at least one sub-national location for each country."* The guide had **omitted it entirely**. Not a false statement — an **absence**, which is harder to detect and would have left a Sub-national reporter stuck at a validation error the guide never mentioned.
+
+#### The Leader's premises were wrong four times; three were caught before damage
+
+Rounds 2, 3 and 4 each carried a Leader claim that did not survive checking:
+- The **§10 gating condition**: escalated from a Reviewer advisory that was *syntactically* true (the `@if` gates exist) but semantically empty — `availableSecondarySpOptions()` draws the **full P25 catalogue**, so the gate is true in practice. The component carries a dated comment: *"Always rendered, and offering every P25 program (2026-09-03): it used to depend on the project's mapping and vanished for a project mapped 100% to one program."* **The instruction would have restored, in prose, behaviour the product deliberately removed.**
+- The **§11 contrast**: asserted a difference against main-focus behaviour that does not exist.
+- The **Regional yes/no state**: the final brief claimed the question "renders unanswered". False — `onScopeChange` sets `has_countries: false`, and the control's own comment says *"`hasValue` es `value != null` a propósito: este control es un booleano y `false` es una respuesta."* The guide survived **only because it never claimed the question was blank**, and the Reviewer explicitly warned against "fixing" it toward the Leader's wrong premise.
+
+**Process correction, applied from round 4 on:** an advisory escalated to required is verified by the Leader at source first, exactly like a FAIL finding. They had been treated as lower-risk *because a reviewer classed them as minor* — which is the wrong reason.
+
+#### Authoring methodology removed from the guide
+
+Round 1 shipped per-section sentences explaining the guide's **own construction** — client-side timing quirks across "otherwise-identical page loads", and why a given callout carries a ring rather than a label (240px rail, badge collision, adjacent Description content). All cut. Two reasons: it reads to a reporter as a warning that the **product** is broken, and the obligations are narrower than that — `BG-R-6` condition (b) asks only that the element be **named**; `BG-T-9`'s constraint is satisfied by describing the control. The reasoning lives here, where it belongs. `intro.md`'s one-time explanation of the ring/chip convention stays: that is reader-facing orientation.
+
+#### Verified correct and unchanged
+The **8/9 pairing** (`P-11`): §8 = Overview and says it is *not* where the editor opens; §9 = General information and says it is. The three **ring-only naming obligations** in running prose: section rail (§8), "Section N of M" position indicator (§14), submit note (§15). `BG-R-3`'s types-4/8 clause (§13). §14's save behaviour and §15's submit flow, both traced to the component rather than the module `CLAUDE.md` (a secondary source). U.S. English; no asserted field values, partner names or completion states.
+
+**Final verification** — `VERIFIED` (Leader re-run: all four round-3 fixes and all §11 branches re-read at source, including the `hasValue` comment that refuted the Leader's own premise) + `STATUS: PASS` (bounded round-4 `opus` Reviewer).
