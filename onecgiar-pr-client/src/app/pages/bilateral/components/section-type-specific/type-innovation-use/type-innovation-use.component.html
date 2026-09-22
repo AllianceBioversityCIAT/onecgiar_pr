@@ -177,10 +177,16 @@
       <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
     </div>
 
+    <!-- P2-3785 AC1 — the use level is NO LONGER part of the bilateral MDS (Nicoleta Trifa, #INC-163204
+       point 4a, 21-Sep-2026), reversing what P2-3428 established. It stays here rather than moving under
+       the full-metadata toggle because three questions below branch on it (the scaling-studies ceiling,
+       the use-level explanation and the evidence prompt), and hiding the answer while keeping its
+       consequences visible reads as a bug. Optional now means optional on both sides: the marker is gone
+       here, the item is gone from `updateMds()`, and the server's submit gate no longer asks for it. -->
     <app-pr-field-header
       label="How would you assess the current use level of the innovation?"
       description="Use the slider to select the appropriate use level."
-      [required]="true">
+      [required]="false">
     </app-pr-field-header>
 
     <div class="tsf-readiness">
@@ -190,19 +196,24 @@
         optionLabel="name"
         optionValue="id"
         [options]="innovationControlListSE.useLevelsList"
-        [required]="true"
+        [required]="false"
         [(ngModel)]="body.innovation_use_level_id"
         (ngModelChange)="onUseLevelChange()">
       </app-pr-range-level>
     </div>
 
-    <!-- P2-3428 — only the W3/bilateral-project investment is MDS. Program and partner investment stay
-       optional under Full Metadata below. -->
+    <!-- P2-3785 AC3 — the three investment tables are shown together (#INC-163204 point 4c): one for the
+       Program the result is submitted under, one for the bilateral project, one for the external partners.
+       They used to be split, with Programs and Partners hidden under the full-metadata toggle, so a
+       reporter who never opened it could not see two of the three amounts they were asked for.
+       🛑 Only the W3/bilateral table stays MANDATORY (`requiredSections`) — that is the MDS rule P2-3428
+       enforces server-side; Programs and Partners are visible but optional, per the PO decision of
+       9-Sep-2026 that keeps investment out of the green check. -->
     <div class="flex flex-col gap-2">
       <span class="tsf-label">Investment (USD)</span>
       <app-estimates-cgiar
         [body]="body"
-        [sections]="['bilateral']"
+        [sections]="['programs', 'bilateral', 'partners']"
         [requiredSections]="['bilateral']"
         [disabled]="loaded() !== true"
         (changed)="onFieldChange()">
@@ -415,15 +426,9 @@
           </div>
         }
 
-        <!-- Optional full metadata: CGIAR Programs and partners only. The bilateral-project table is the
-           visible MDS above the toggle. -->
-        <div class="flex flex-col gap-2">
-          <span class="tsf-label">Investment (USD)</span>
-          <!-- Disabled while the section could not be loaded: `queueTypeSave` writes nothing in that state
-             (see the `loaded` doc), so an editable table would silently discard what the person types. -->
-          <app-estimates-cgiar [body]="body" [sections]="['programs', 'partners']" [disabled]="loaded() !== true" (changed)="onFieldChange()">
-          </app-estimates-cgiar>
-        </div>
+        <!-- P2-3785 AC3 — the Programs and Partners investment tables used to live here, below the toggle.
+           They now sit next to the bilateral one above it, where the reporter can see all three at once,
+           so repeating them here would render the same two tables twice against the same `body`. -->
       </div>
     }
   </div>

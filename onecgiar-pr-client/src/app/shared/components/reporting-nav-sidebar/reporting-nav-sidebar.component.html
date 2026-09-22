@@ -415,6 +415,18 @@
           <li hlmSidebarMenuItem>
             <a
               hlmSidebarMenuButton
+              routerLink="/developers"
+              routerLinkActive
+              #rlaDevelopers="routerLinkActive"
+              [isActive]="rlaDevelopers.isActive"
+              tooltip="Developers">
+              <ng-icon name="lucideCode" />
+              <span>Developers</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
               [href]="termsAndConditionsUrl"
               target="_blank"
               rel="noopener noreferrer"

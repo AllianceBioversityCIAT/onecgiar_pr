@@ -11,6 +11,7 @@ import { AiReviewService } from '../../../../../../shared/services/api/ai-review
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { SubmissionModalService } from '../submission-modal/submission-modal.service';
 import { UnsubmitModalService } from '../unsubmit-modal/unsubmit-modal.service';
+import { resultStatusBg, resultStatusFg } from '../../../../../../shared/constants/result-status-tokens';
 
 export type RdSection = PrRoute & { validation?: number };
 
@@ -32,12 +33,6 @@ export const UNSUBMIT_CLARIFICATION_TOOLTIP = 'Use this only if you need to make
 export const ROLE_CANNOT_SUBMIT_NOTICE =
   'Only a Lead, Co-Lead or Coordinator can submit a result for review. Ask one of them to submit this result.';
 
-/** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
-const STATUS_TOKENS: Record<string, { fg: string; bg: string }> = {
-  1: { fg: 'var(--pr-status-in-progress-fg)', bg: 'var(--pr-status-in-progress-bg)' },
-  2: { fg: 'var(--pr-status-approved-fg)', bg: 'var(--pr-status-approved-bg)' },
-  3: { fg: 'var(--pr-status-submitted-fg)', bg: 'var(--pr-status-submitted-bg)' }
-};
 
 /**
  * Sections of the open result, their completion progress, and the result-level actions
@@ -130,14 +125,19 @@ export class ResultSectionsService {
     return this.dataControlSE.currentResult?.status_name ?? '';
   });
 
+  // P2-3553 · Colour resolves through the shared enum, never through a private map. The map that
+  // used to live here had THREE entries and two of them were wrong: `2` (Quality Assessed) carried
+  // the APPROVED green, and `6` (Approved) was absent altogether, so an approved bilateral result
+  // fell through to the grey "not started" fallback. The Results Center table three clicks away had
+  // both of them right, which is exactly how QA found it.
   readonly statusFg = computed(() => {
     this.dataControlSE.currentResultSignal();
-    return STATUS_TOKENS[String(this.dataControlSE.currentResult?.status_id)]?.fg ?? 'var(--pr-status-not-started-fg)';
+    return resultStatusFg(this.dataControlSE.currentResult?.status_id);
   });
 
   readonly statusBg = computed(() => {
     this.dataControlSE.currentResultSignal();
-    return STATUS_TOKENS[String(this.dataControlSE.currentResult?.status_id)]?.bg ?? 'var(--pr-status-not-started-bg)';
+    return resultStatusBg(this.dataControlSE.currentResult?.status_id);
   });
 
   /** Router link for a section (needs the open result's code). */

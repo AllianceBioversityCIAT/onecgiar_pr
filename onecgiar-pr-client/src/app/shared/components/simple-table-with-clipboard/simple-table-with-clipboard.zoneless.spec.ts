@@ -20,9 +20,25 @@ describe('SimpleTableWithClipboardComponent (zoneless change detection)', () => 
   const boxEl = () => fixture.nativeElement.querySelector('.box') as HTMLElement;
   const copyButtonEl = () => fixture.nativeElement.querySelector('.copy_to_clipboard_button') as HTMLElement;
 
-  const wait = async (ms: number) => {
-    await new Promise(resolve => setTimeout(resolve, ms));
-    await fixture.whenStable();
+  /**
+   * 🛑 Poll, never a fixed sleep. `copyTable` clears the flag through two NESTED 200 ms
+   * `setTimeout`s (`simple-table-with-clipboard.component.ts:41-55`), so the old `wait(600)` left
+   * only 200 ms of slack: enough on this Mac, not on a CI agent running 597 suites. Jenkins build
+   * #2354 (21-Sep) went red on exactly this assertion while the same test passed three times in a
+   * row locally, and a red build blocks prtest for the whole team.
+   *
+   * The guard keeps its teeth: if the repaint never happens the condition never holds, the deadline
+   * runs out and the assertions below fail — which is the regression this test exists for.
+   */
+  const waitForRepaint = async (condition: () => boolean, timeoutMs = 5000) => {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 25));
+      await fixture.whenStable();
+
+      if (condition()) return;
+    }
   };
 
   beforeEach(async () => {
@@ -54,7 +70,7 @@ describe('SimpleTableWithClipboardComponent (zoneless change detection)', () => 
     // Set from the click handler, so it repaints even without the fix.
     expect(boxEl().classList).toContain('flatFormat');
 
-    await wait(600);
+    await waitForRepaint(() => !boxEl().classList.contains('flatFormat'));
 
     expect(component.flatFormat).toBe(false);
     // Fails without the fix: the flag flipped inside the nested timer but nothing repainted, so the

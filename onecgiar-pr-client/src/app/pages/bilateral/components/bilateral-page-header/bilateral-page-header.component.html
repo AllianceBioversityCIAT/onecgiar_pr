@@ -99,7 +99,8 @@
             @if (statusBadge(); as badge) {
               <span
                 class="flex items-center rounded-full px-[9px] py-[3px] text-[12px] font-medium leading-none"
-                [class]="badge.classes"
+                [style.color]="badge.fg"
+                [style.background-color]="badge.bg"
                 data-testid="bilateral-status-badge">
                 {{ badge.label }}
               </span>

@@ -877,11 +877,11 @@ describe('SectionTocComponent', () => {
   });
 });
 
-// P2-3142: the ToC question wording is shared with the classic result detail
-// (rd-contributors-and-partners.component.ts -> tocQuestionLabel). It is rendered from the real
-// template here (no overrideTemplate) so a silent divergence between both modules fails the suite.
-describe('SectionTocComponent template — ToC question wording (P2-3142)', () => {
-  const TOC_QUESTION_LABEL = 'Can this result be mapped to a ToC KPI?';
+// quick/toc-question-w3-bilateral: W3 bilateral uses its own wording, intentionally diverging from
+// the classic result detail's tocQuestionLabel (rd-contributors-and-partners.component.ts). It is
+// rendered from the real template here (no overrideTemplate) to catch accidental drift from the copy below.
+describe('SectionTocComponent template — ToC question wording (quick/toc-question-w3-bilateral)', () => {
+  const TOC_QUESTION_LABEL = "Is this result linked to any of the Program's ToC indicators?";
 
   let fixture: ComponentFixture<SectionTocComponent>;
 

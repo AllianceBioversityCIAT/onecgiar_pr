@@ -767,9 +767,13 @@ describe('ReportingNavSidebarComponent', () => {
       return html.slice(start, end);
     };
 
-    it('renders exactly three About entries: AI use, Terms and conditions, License', () => {
+    it('renders the About entries: AI use, Developers, Terms and conditions, License', () => {
       const extras = readExtrasMarkup();
-      expect(extras.split('<li hlmSidebarMenuItem>').length - 1).toBe(3);
+      expect(extras.split('<li hlmSidebarMenuItem>').length - 1).toBe(4);
+      expect(extras).toContain('routerLink="/developers"');
+      expect(extras).toContain('tooltip="Developers"');
+      expect(extras).toContain('<span>Developers</span>');
+      expect(extras).toContain('name="lucideCode"');
       // Release notes moved to the shell topbar, next to the notifications bell —
       // it no longer lives in the sidebar EXTRAS group.
       expect(extras).not.toContain('routerLink="/whats-new"');

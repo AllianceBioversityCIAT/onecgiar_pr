@@ -109,9 +109,11 @@ See `AGENTS.md` §Ingestion Flow for the **flow**. Rules that apply here:
     - `afterCreate?(context)` — second call; persist type-specific blocks after the result row is in place.
   - `NoopBilateralHandler` is registered for `OTHER_OUTPUT` — accept but do nothing extra. Mirror this pattern when adding a new "no extra processing" result type.
 - **`KnowledgeProductBilateralHandler`** is the only handler that **does NOT** take title/description from the payload — it uses the `handle` to call `ResultsKnowledgeProductsService` and fetches authoritative metadata from CGSpace. Don't generalise this pattern unless the new type genuinely has a third-party master.
-- **Innovation Use bilateral MDS (P2-3428):** validate Actors, quantitative measures, use level and
-  W3/bilateral-project investment before external create; centre drafts remain editable but
-  `submit-for-review` repeats the persisted-data gate. Program and partner investment are optional.
+- **Innovation Use bilateral MDS (P2-3428, narrowed by P2-3785):** validate Actors, quantitative
+  measures and W3/bilateral-project investment before external create; centre drafts remain editable
+  but `submit-for-review` repeats the persisted-data gate. Program and partner investment are
+  optional. ⚠️ **The use LEVEL is no longer part of this gate** — withdrawn from the standard on
+  21-Sep-2026 (Nicoleta Trifa, ticket `#INC-163204` point 4a). A payload without it is accepted.
 
 ---
 

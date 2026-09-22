@@ -275,6 +275,61 @@ describe('SectionContributorsComponent', () => {
       expect(component.availableCenters()).toEqual([]);
     });
 
+    // ── BIL-T-1: the centers-catalogue failure must be VISIBLE, never silent ──────────────────
+    // Before this fix, `loadCenters()`'s `.catch(() => {})` swallowed a `getData()` rejection with
+    // no signal: `centersReady` is only ever set from `mapCenters()` (via the `loadedCenters`
+    // subscription, which never fires on failure), so `hydrateWhenReady` stayed permanently
+    // blocked and `loadExternalPartnersState()` never ran — `partnersHydrated` stuck `false`
+    // forever with zero visible error. Mirrors the `partnersLoadFailed` regression tests above.
+    describe('when the centers catalogue cannot be read', () => {
+      const buildWithFailedCenters = async () => {
+        centersService.getData = jest.fn().mockRejectedValue(new Error('boom'));
+        build();
+        fixture.detectChanges();
+        // flush the rejected `getData()` promise's `.catch()` handler
+        await new Promise(resolve => setTimeout(resolve, 0));
+      };
+
+      it('reproduces the original bug: no error signal and the hydration chain stays stuck', async () => {
+        await buildWithFailedCenters();
+
+        expect(component.centersLoadFailed()).toBe(true);
+        // The hydration chain never advances: `loadExternalPartnersState()` never fires, so the
+        // partner block stays unhydrated and the detail GET is never even issued.
+        expect(component.partnersHydrated()).toBe(false);
+        expect(bilateralApi.GET_BilateralResultDetail).not.toHaveBeenCalled();
+      });
+
+      it('retries on demand and clears the error once the read succeeds, letting hydration proceed', async () => {
+        await buildWithFailedCenters();
+        expect(component.centersLoadFailed()).toBe(true);
+
+        centersService.getData = jest.fn().mockImplementation(() => {
+          centersService.centersList = [center(9)];
+          centersService.loadedCenters.emit(true);
+          return Promise.resolve([center(9)]);
+        });
+
+        component.retryLoadCenters();
+        fixture.detectChanges();
+
+        expect(component.centersLoadFailed()).toBe(false);
+        expect(component.availableCenters().length).toBe(1);
+        // With `centersReady` finally true, `hydrateWhenReady` runs and the normal chain resumes.
+        expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalled();
+      });
+
+      it('re-raises the error when the retry fails again', async () => {
+        await buildWithFailedCenters();
+
+        component.retryLoadCenters();
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(component.centersLoadFailed()).toBe(true);
+        expect(component.partnersHydrated()).toBe(false);
+      });
+    });
+
     it('maps the projects response', () => {
       api.resultsSE.GET_ClarisaProjects.mockReturnValue(
         of({ response: [{ id: '11', shortName: 'P11', fullName: 'Project 11' }] })

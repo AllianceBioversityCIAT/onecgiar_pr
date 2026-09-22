@@ -186,6 +186,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    */
   readonly partnersLoadFailed = signal(false);
 
+  /**
+   * BIL-T-1 — `loadCenters()` used to swallow a `CentersService.getData()` rejection with
+   * `.catch(() => {})`: no signal, no flag. `centersReady` is only ever set from `mapCenters()`
+   * (via the `loadedCenters` subscription), which never fires on failure, so `hydrateWhenReady`
+   * stayed permanently blocked with zero visible error — same failure shape as `partnersLoadFailed`
+   * above, one call site earlier in the hydration chain. Shown with a Retry, mirroring that pattern.
+   */
+  readonly centersLoadFailed = signal(false);
+
   /** AC5/AC7: the field is satisfied by EITHER at least one partner OR the explicit "none" declaration. */
   readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
 
@@ -326,9 +335,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       return;
     }
     this.centersSubscription = this.centersService.loadedCenters.subscribe(() => {
+      this.centersLoadFailed.set(false);
       this.mapCenters();
     });
-    this.centersService.getData()?.catch(() => {});
+    this.centersService.getData()?.catch(() => {
+      this.centersLoadFailed.set(true);
+    });
   }
 
   private mapCenters(): void {
@@ -343,6 +355,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       }))
     );
     this.centersReady.set(true);
+  }
+
+  /** Manual second chance for a failed centers-catalogue read — mirrors `retryLoadExternalPartners()`. */
+  retryLoadCenters(): void {
+    this.centersLoadFailed.set(false);
+    this.loadCenters();
   }
 
   /** One-shot UI hydrate after centers/projects/result data are available. No network. */

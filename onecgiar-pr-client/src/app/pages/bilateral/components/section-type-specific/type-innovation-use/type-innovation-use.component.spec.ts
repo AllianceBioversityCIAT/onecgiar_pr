@@ -304,11 +304,11 @@ describe('TypeInnovationUseComponent', () => {
 
       // Same reason as the sibling section (P2-3355): publishing no checklist at all leaves the section
       // at "0/0 fields", which reads as "nothing required here" instead of as incomplete.
-      it('still publishes the four unfilled MDS items, so the section stays honestly incomplete', () => {
+      it('still publishes the three unfilled MDS items, so the section stays honestly incomplete', () => {
         failLoad();
         build();
         const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(fields.map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level', 'use-investment']);
+        expect(fields.map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-investment']);
         expect(fields.every((f: any) => f.filled === false)).toBe(true);
       });
     });
@@ -541,10 +541,6 @@ describe('TypeInnovationUseComponent', () => {
       key: 'use-measures',
       label: 'Other quantitative measures of innovation use'
     };
-    const LEVEL = {
-      key: 'use-level',
-      label: 'How would you assess the current use level of the innovation?'
-    };
     const INVESTMENT = {
       key: 'use-investment',
       label: 'Investment by CGIAR W3 or bilateral projects'
@@ -559,7 +555,6 @@ describe('TypeInnovationUseComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { ...ACTORS, filled: false },
         { ...MEASURES, filled: false },
-        { ...LEVEL, filled: false },
         { ...INVESTMENT, filled: false }
       ]);
     });
@@ -568,7 +563,7 @@ describe('TypeInnovationUseComponent', () => {
       build();
       component.body = { innov_use_to_be_determined: true };
       component.updateMds();
-      expect(lastFields().map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level', 'use-investment']);
+      expect(lastFields().map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-investment']);
     });
 
     it('AC4 — counts Actors as satisfied when the use is to be determined, with no actor added', () => {
@@ -628,42 +623,63 @@ describe('TypeInnovationUseComponent', () => {
       expect(lastFields()).toContainEqual({ ...MEASURES, filled: false });
     });
 
-    it('AC7 — counts the use level once set', () => {
+    /**
+     * P2-3785 AC1 — the use level is no longer a standard (Nicoleta Trifa, #INC-163204 point 4a),
+     * reversing P2-3428's AC7. Asserted with the level ANSWERED, not blank: publishing it would be
+     * invisible on a blank section (everything is unfilled there) and would only show up as a
+     * section that refuses to reach 100% once the reporter fills the three real items.
+     */
+    it('P2-3785 AC1 — never publishes the use level, even once the reporter picks one', () => {
       build();
       component.body = { innovation_use_level_id: '6' };
       component.updateMds();
-      expect(lastFields()).toContainEqual({ ...LEVEL, filled: true });
+      expect(lastFields().map((f: any) => f.key)).not.toContain('use-level');
     });
 
     /**
-     * The use ladder is an MDS item this section counts (`use-level`), so an empty one is part of
-     * the footer's "N fields missing". `pr-range-level` only paints its pending marker when the
-     * caller asks for it — without this the reporter reads a count naming a field that looks no
-     * different from a finished one, which is the complaint that reached us for the geographic
-     * scope. `innovation-use-form` (the W1/W2 form for the same question) already passes it.
+     * P2-3785 AC1 reverses this: the ladder used to carry its pending marker BECAUSE it was an MDS
+     * item the footer counted. It is not one any more, so a marker would name a field that can never
+     * hold Submit back — the very "count that names a finished-looking field" this assertion was
+     * written to prevent, only inverted. The ladder stays on screen; only the demand is gone.
      * Asserted as text because this spec `overrideTemplate`s, same approach as the tests above.
      */
-    it('asks the use ladder to show its pending marker', () => {
+    it('P2-3785 AC1 — the use ladder no longer asks for its pending marker', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
       // Asserted on the two attributes, not on their indentation: P2-3428 wrapped the fields in a
-      // `contents` div for the read-only gate and every line below shifted by two spaces. The
-      // contract is that the ladder is required, not how the file is formatted.
-      const ladder = /\[options\]="innovationControlListSE\.useLevelsList"\s*\n\s*\[required\]="true"/;
+      // `contents` div for the read-only gate and every line below shifted by two spaces.
+      const ladder = /\[options\]="innovationControlListSE\.useLevelsList"\s*\n\s*\[required\]="false"/;
       expect(html).toMatch(ladder);
+      // And it is still rendered — "not required" must not become "not shown".
+      expect(html).toContain('innovationControlListSE.useLevelsList');
     });
 
-    it('P2-3428 — renders bilateral investment as MDS and optional Program/Partner tables as full metadata', () => {
+    /**
+     * P2-3785 AC3 (Nicoleta Trifa, #INC-163204 point 4c): the three destinations of the USD estimation
+     * — Program, bilateral project, external partners — are rendered TOGETHER, above the full-metadata
+     * toggle. They used to be split, with Programs and Partners behind the toggle, so a reporter who
+     * never opened it saw one of the three amounts they were asked for and reported the other two as
+     * missing from the form.
+     *
+     * The two assertions that matter are the pair: all three tables render, and only the bilateral one
+     * is REQUIRED. Dropping the second would quietly turn optional investment into a submit blocker —
+     * investment is deliberately outside the green check (PO decision, 9-Sep-2026).
+     */
+    it('P2-3785 AC3 — renders the three investment tables together, with only the bilateral one required', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
-      expect(html).toContain('[sections]="[\'bilateral\']"');
+      expect(html).toContain("[sections]=\"['programs', 'bilateral', 'partners']\"");
       expect(html).toContain('[requiredSections]="[\'bilateral\']"');
-      expect(html).toContain("[sections]=\"['programs', 'partners']\"");
+      // Exactly one investment block: the Programs/Partners copy under the toggle is gone, and two
+      // `app-estimates-cgiar` bound to the same `body` would render every row twice.
+      expect(html.match(/<app-estimates-cgiar/g)?.length).toBe(1);
+      expect(html).not.toContain("[sections]=\"['programs', 'partners']\"");
+      // Above the toggle, where the MDS note sits — not inside the full-metadata block.
+      expect(html.indexOf("[sections]=\"['programs', 'bilateral', 'partners']\"")).toBeLessThan(html.indexOf('mdsInfoNote'));
       // The old placeholder and its tag are gone for good.
       expect(html).not.toContain('body.investment_bilateral_usd');
       expect(html).not.toContain('use-investment-coming-soon');
       expect(html).not.toContain('Not available yet');
-      expect(html.indexOf('[sections]="[\'bilateral\']"')).toBeLessThan(html.indexOf('mdsInfoNote'));
     });
 
     it('P2-3390 — sends the three investment arrays in the payload', () => {
@@ -1132,7 +1148,9 @@ describe('TypeInnovationUseComponent', () => {
       component.updateMds();
       const keys = mdsTracker.setSectionFields.mock.calls.at(-1)[1].map((f: any) => f.key);
       expect(keys).not.toContain('innovation-link');
-      expect(keys).toHaveLength(4);
+      // Three since P2-3785 AC1 dropped the use level. Named rather than counted: a bare length passes
+      // just as happily when the wrong item is the one missing.
+      expect(keys).toEqual(['use-actors', 'use-measures', 'use-investment']);
     });
 
     it('hydrates the single selection out of the stored linked_results list', () => {

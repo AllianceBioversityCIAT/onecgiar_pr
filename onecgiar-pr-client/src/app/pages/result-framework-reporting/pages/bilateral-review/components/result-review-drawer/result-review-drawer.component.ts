@@ -37,6 +37,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
+import { resultStatusLabel, resultStatusToken } from '../../../../../../shared/constants/result-status-tokens';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -235,6 +236,20 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   // @akili-spec changes/sp-bilateral-review-tab (BRT-T-2, BRT-R-14) — membership check moved to the
   // shared BilateralReviewAccessService so the row action label (bilateral-review page) and this
   // drawer read the same rule; the pending-status guard stays local to the drawer.
+  /**
+   * P2-3553 · The header badge. Its three hard-coded Tailwind palettes (amber / emerald / rose) were
+   * a fourth private copy of the status colours, and the amber one contradicted the Results Center
+   * outright. Colour and wording now come from the shared enum; only the ICON stays local, because
+   * it carries meaning the colour cannot (a pulsing dot reads "waiting on you", a tick reads "done").
+   */
+  readonly statusBadge = computed(() => {
+    const id = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
+    if (id == null) return null;
+    const label = resultStatusLabel(Number(id));
+    if (!label || ![5, 6, 7].includes(Number(id))) return null;
+    return { id: Number(id), label, ...resultStatusToken(Number(id)) };
+  });
+
   canEditInDrawer = computed(() => {
     if (this.api.rolesSE?.isAdmin) return true;
 
