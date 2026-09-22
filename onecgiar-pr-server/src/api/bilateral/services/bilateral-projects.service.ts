@@ -238,6 +238,11 @@ export class BilateralProjectsService {
     }
     const projects = [...projectsById.values()];
 
+    // These rows were matched *because* their `source_center_acronym` maps to this very centre,
+    // so this centre is their lead centre — see the `leadCenter` mapping below for why that has
+    // to be said explicitly here.
+    const fallbackProjectIds = new Set(fallbackProjects.map((p) => p.id));
+
     this.logger.log(`Found ${projects.length} projects`);
 
     const activeProjects = projects.filter((p) => p.isActive !== false);
@@ -297,13 +302,35 @@ export class BilateralProjectsService {
       fullName: project.fullName,
       summary: project.summary,
       description: project.description,
+      /**
+       * The fallback query above looks for exactly the rows that have no organisation
+       * (`organizationCode: IsNull()`), so reading `obj_organization` alone reported every
+       * Alliance-descended project as having no lead centre — 146 of the 1211 projects in the
+       * 2026 phase, i.e. the entire catalogue of CIAT (Alliance) and Bioversity (Alliance).
+       * The AI-assisted flow refuses to submit without `leadCenter.id`, so it was dead for
+       * those centres while showing "Project and Science Program required", neither of which
+       * was missing.
+       *
+       * No extra lookup is needed: a fallback row is here because its `source_center_acronym`
+       * maps to this centre's code, so the centre being queried IS its lead centre, and
+       * `center.institutionId` is the same id `obj_organization.id` would carry — it is what
+       * `BilateralAiService` resolves the centre with (`where: { institutionId }`). The name
+       * and acronym come from the columns the W3 sync preserved, as
+       * `resolveProjectLeadCenter` already does for result creation.
+       */
       leadCenter: project.obj_organization
         ? {
             id: project.obj_organization.id,
             name: project.obj_organization.name,
             acronym: project.obj_organization.acronym,
           }
-        : null,
+        : fallbackProjectIds.has(project.id)
+          ? {
+              id: center.institutionId,
+              name: project.sourceCenterName,
+              acronym: project.sourceCenterAcronym,
+            }
+          : null,
       // Only approved, addressable mappings with a positive allocation are offered as Science
       // Programs: the wizard and Section 0 select the primary SP from this list.
       sciencePrograms: this.reportableMappings(project).map((mapping) => {
