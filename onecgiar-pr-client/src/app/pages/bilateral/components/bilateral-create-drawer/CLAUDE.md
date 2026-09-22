@@ -1,6 +1,6 @@
 # bilateral-create-drawer
 
-**Verified:** 2026-09-14 · `bilateral/manual-create-drawer` (BIL-MCD-T-2, T-7)
+**Verified:** 2026-09-22 · `bilateral/manual-create-drawer` (BIL-MCD-T-2, T-7) · P2-3756
 
 ## Qué es
 Shell del drawer lateral derecho para crear un resultado W3/Bilateral manualmente. Copia el
@@ -8,11 +8,15 @@ patrón de `indicator-drawer` (scrim, resize, Escape, overflow lock) sin acoplar
 de reporting.
 
 ## Contrato
-- **Inputs:** `projectCode`, `projectTitle`, `programCode`, `programName`, `restoreFocusTarget`.
+- **Inputs:** `projectCode`, `projectTitle`, `projectSummary`, `projectDescription`, `programCode`,
+  `programName`, `restoreFocusTarget`.
 - **Output:** `closed` — scrim, botón ✕ o Escape.
 - **Proyección:** `<ng-content>` en `.bcd-body` — el host (`bilateral-manual-create-drawer-host`)
   inyecta back bar + pasos (SP gate, reporting way, form, AI).
 - **Responsive:** `<640px` → ancho 100vw, sin resize drag; desktop → 760px default, drag 520–900px.
+- **Project Summary / Description (P2-3756):** un bloque etiquetado por campo, cada uno solo si
+  tiene texto; si no hay ninguno, un vacío explícito. Se recortan a 2 líneas con toggle
+  `Read more/less` cuando la suma pasa de 160 caracteres.
 - **Copy:** `BILATERAL_MANUAL_CREATE_COPY.drawer` en
   `src/app/internationalization/bilateral-manual-create.copy.ts`.
 
@@ -25,6 +29,10 @@ de reporting.
 - ⚠️ **`restoreFocusTarget`** debe ser el elemento que abrió el drawer (p. ej. botón Create result
   del catálogo) para cumplir R-8 focus return.
 - El `aria-label` del panel usa copy centralizado; los tests importan la misma constante.
+- ⚠️ **`projectSummary` / `projectDescription` llegan ya normalizados** desde
+  `BilateralManualCreateFlowService` (trim, `''` = ausente, dedupe contra el título y entre sí).
+  CLARISA los llena por separado: en 2026 casi todos traen `summary: null` y algunos
+  `description: ''` — no volver a leer `project.summary` crudo aquí ni en el catálogo.
 - ⚠️ **Botón ✕ por debajo de 44px.** `bilateral-create-drawer.component.html:35` usa `size-8`
   (2rem = 24px con la raíz de 12px de este repo) contra el requisito de 44px de hit target a ancho
   móvil. Sigue así en producción. Hallazgo lateral de `bilateral/qa-ai-verdict-drawer` (`BIL-QAD-T-5`,
