@@ -129,6 +129,45 @@ describe('BilateralProjectsService', () => {
     expect(result.projects.map((p) => p.id)).toEqual([42]);
   });
 
+  // The AI-assisted flow refuses to submit without `leadCenter.id`, and every Alliance-descended
+  // project reaches the catalogue through the fallback query above — which selects rows that have
+  // no `obj_organization` by definition. Reading that relation alone reported the whole catalogue
+  // of CIAT (Alliance) and Bioversity (Alliance) as having no lead centre.
+  it('resolves the lead center of a fallback project from the center being queried', async () => {
+    centerRepo.findOne.mockResolvedValueOnce({
+      code: 'CENTER-03',
+      institutionId: 46,
+    });
+    projectRepo.find
+      .mockResolvedValueOnce([]) // primary organizationCode query
+      .mockResolvedValueOnce([
+        {
+          id: 42,
+          isActive: true,
+          phase: CURRENT_YEAR,
+          obj_organization: null,
+          sourceCenterAcronym: 'CIAT',
+          sourceCenterName: 'Alliance of Bioversity International and CIAT',
+          obj_project_mappings: [
+            {
+              programId: 1,
+              programCode: 'SP01',
+              allocation: '100.00',
+              status: 'Confirmed',
+            },
+          ],
+        },
+      ]); // fallback source_center_acronym query
+
+    const result = await service.getProjectsByCenter(46);
+
+    expect(result.projects[0].leadCenter).toEqual({
+      id: 46,
+      name: 'Alliance of Bioversity International and CIAT',
+      acronym: 'CIAT',
+    });
+  });
+
   it('dedupes when a project appears in both the primary and fallback result sets', async () => {
     centerRepo.findOne.mockResolvedValueOnce({
       code: 'CENTER-03',

@@ -409,11 +409,25 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.visibleActors).toEqual([]);
     });
 
-    it('clears every count field when the disaggregation toggle flips', () => {
+    it('clears every count field when "does not apply" is ticked', () => {
       build();
-      const actor = { women: 1, women_youth: 2, men: 3, men_youth: 4, how_many: 5 };
+      const actor = { sex_and_age_disaggregation: true, women: 1, women_youth: 2, men: 3, men_youth: 4, how_many: 5 };
       component.onDisaggregationChange(actor);
       expect(actor).toMatchObject({ women: null, women_youth: null, men: null, men_youth: null, how_many: null });
+    });
+
+    it('also clears the age-only fallback when "does not apply" is ticked, as the pooled cleanActor does', () => {
+      build();
+      const actor = { sex_and_age_disaggregation: true, women: 4, age_disaggregation_not_available: true, youth_split_applied_by_system: true };
+      component.onDisaggregationChange(actor);
+      expect(actor).toMatchObject({ age_disaggregation_not_available: null, youth_split_applied_by_system: null });
+    });
+
+    it('keeps the stored breakdown when "does not apply" is unticked (rows saved under the old Yes/No)', () => {
+      build();
+      const actor: any = { sex_and_age_disaggregation: false, women: 40, women_youth: 10, men: 60, men_youth: 15, how_many: null };
+      component.onDisaggregationChange(actor);
+      expect(actor).toMatchObject({ women: 40, women_youth: 10, men: 60, men_youth: 15, how_many: 100 });
     });
 
     it('triggers autosave on add and delete', () => {
@@ -425,6 +439,206 @@ describe('TypeInnovationUseComponent', () => {
       autoSave.schedulePayload.mockClear();
       component.deleteActor(component.body.actors[0]);
       expect(autoSave.schedulePayload).toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * P2-3428 — the 2030 Use Projection, mirroring W1/W2 (P2-3295) but optional: it lives in full metadata
+   * and is never published to the MDS tracker. Stored server-side under `section_id = 2`.
+   */
+  describe('2030 Use Projection (P2-3428)', () => {
+    const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+    it('shows the W1/W2 title, guidance note, question and tooltip from the shared copy', () => {
+      const t = html();
+      expect(t).toContain('[label]="projection2030Copy.title"');
+      expect(t).toContain('[description]="projection2030Copy.guidance"');
+      expect(t).toContain('[label]="projection2030Copy.question"');
+      expect(t).toContain('[tooltip]="projection2030Copy.tooltip"');
+      const copy = build().projection2030Copy;
+      expect(copy.title).toBe('2030 Use Projection');
+      expect(copy.question).toBe('What is the projected innovation use by end of 2030?');
+      expect(copy.guidance).toContain('href="https://docs.google.com/document/d/1mkt4bS51CyGmHKfkvuonAiJhkl4n-mLE/"');
+      expect(copy.guidance).toContain("United Nations definition of 'youth'");
+    });
+
+    it('offers Actors, Organizations and Other quantitative measures with the W1/W2 buttons, none required', () => {
+      const t = html();
+      const block = t.slice(t.indexOf('[label]="projection2030Copy.title"'), t.indexOf('P2-3424 — optional, not MDS'));
+      expect(block).toContain('name="Add actor"');
+      expect(block).toContain('name="Add organization"');
+      expect(block).toContain('name="Add other"');
+      expect(block).not.toContain('[required]="true"');
+      expect(block).toContain('context: { $implicit: actor, required: false }');
+      expect(t).toContain('@if (showProjection2030Lists) {');
+    });
+
+    it('hides the three lists while the 2030 use is yet to be determined', () => {
+      build();
+      component.body = { innov_use_2030_to_be_determined: true };
+      expect(component.showProjection2030Lists).toBe(false);
+      component.body = { innov_use_2030_to_be_determined: null };
+      expect(component.showProjection2030Lists).toBe(true);
+    });
+
+    it('adds rows to the projection, not to current use', () => {
+      build();
+      component.body = { actors: [], organization: [], measures: [] };
+      component.addProjection2030Actor();
+      component.addProjection2030Organization();
+      component.addProjection2030Measure();
+      expect(component.body.actors).toEqual([]);
+      expect(component.body.organization).toEqual([]);
+      expect(component.body.measures).toEqual([]);
+      expect(component.body.innovation_use_2030.actors).toEqual([
+        { actor_type_id: null, sex_and_age_disaggregation: false, is_active: true }
+      ]);
+      expect(component.body.innovation_use_2030.organization).toHaveLength(1);
+      expect(component.body.innovation_use_2030.measures).toHaveLength(1);
+    });
+
+    it('sends the projection lists, with sub-types flattened, next to the current ones', () => {
+      build();
+      component.body = {
+        innovation_use_2030: {
+          actors: [{ actor_type_id: 1, women: 20 }],
+          organization: [{ institution_types_id: 3, institution_sub_type_id: 31 }],
+          measures: [{ unit_of_measure: 'hectares', quantity: 900 }]
+        }
+      };
+      const payload: any = (component as any).buildPayload();
+      expect(payload.innovation_use_2030).toEqual({
+        actors: [{ actor_type_id: 1, women: 20 }],
+        organization: [{ institution_types_id: 31 }],
+        measures: [{ unit_of_measure: 'hectares', quantity: 900 }]
+      });
+    });
+
+    it('reloads the projection with its sub-types split back out and its flags as booleans', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            innovation_use_2030: {
+              actors: [{ actor_type_id: 1, sex_and_age_disaggregation: 0 }],
+              organization: [{ institution_types_id: 31, parent_institution_type_id: 3 }],
+              measures: []
+            }
+          }
+        })
+      );
+      build();
+      expect(component.body.innovation_use_2030.actors[0].sex_and_age_disaggregation).toBe(false);
+      expect(component.body.innovation_use_2030.organization[0]).toMatchObject({ institution_types_id: 3, institution_sub_type_id: 31 });
+    });
+
+    it('never moves the green check: the projection is not an MDS item', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: false,
+        innovation_use_2030: { actors: [{ actor_type_id: 1 }], organization: [], measures: [{ unit_of_measure: 'ha', quantity: 5 }] }
+      };
+      component.updateMds();
+      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(fields.find((f: any) => f.key === 'use-actors').filled).toBe(false);
+      expect(fields.find((f: any) => f.key === 'use-measures').filled).toBe(false);
+    });
+  });
+
+  /**
+   * P2-3785 (4b) — gender and youth set up as for pooled. The W1/W2 form (and every server reader:
+   * `innovation-use.handler.ts`, the quality-assessment mapper, the outbound summary) reads
+   * `sex_and_age_disaggregation = true` as "the breakdown does NOT apply". The bilateral Yes/No saved
+   * "Yes, available" as that same `true`, so a reported breakdown was stored as its absence.
+   */
+  describe('gender and youth as in pooled (P2-3785 4b)', () => {
+    const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+    it('asks the pooled question with the pooled meaning: ticked hides the breakdown', () => {
+      const t = html();
+      expect(t).not.toContain('Sex and age disaggregated data available?');
+      expect(t).toContain('label="Sex and age disaggregation does not apply"');
+      expect(t).toContain('@if (!actor.sex_and_age_disaggregation) {');
+      expect(t).toContain('label="Age disaggregation not available"');
+      expect(t).toContain('label="Non-youth"');
+      expect(t).toContain('label="Total"');
+    });
+
+    it('derives Non-youth and the Total the reporter can read', () => {
+      build();
+      const actor = { women: 40, women_youth: 10, men: 60, men_youth: 15 };
+      expect(component.nonYouth(actor, 'women')).toBe(30);
+      expect(component.nonYouth(actor, 'men')).toBe(45);
+      expect(component.actorTotal(actor)).toBe(100);
+    });
+
+    it('shows nothing instead of a fake zero while no figure was entered', () => {
+      build();
+      expect(component.nonYouth({}, 'women')).toBeNull();
+      expect(component.actorTotal({})).toBeNull();
+      expect(component.actorTotal({ women: '7' })).toBe(7);
+    });
+
+    it('keeps how_many equal to Women + Men while the breakdown applies', () => {
+      build();
+      const actor: any = { sex_and_age_disaggregation: false, women: 40, men: 60 };
+      component.onGenderChange(actor);
+      expect(actor.how_many).toBe(100);
+    });
+
+    it('never overwrites how_many when disaggregation does not apply', () => {
+      build();
+      const actor: any = { sex_and_age_disaggregation: true, how_many: 12 };
+      component.onGenderChange(actor);
+      expect(actor.how_many).toBe(12);
+    });
+
+    it('does not let Youth exceed the total of its group', () => {
+      build();
+      const actor: any = { women: 10, women_youth: 25 };
+      expect(component.youthExceeds(actor, 'women')).toBe(true);
+      component.onYouthChange(actor, 'women');
+      expect(actor.women_youth).toBe(10);
+      expect(component.youthExceeds(actor, 'women')).toBe(false);
+    });
+
+    it('splits youth 50/50 and stamps it when age disaggregation is not available, and undoes it on untick', () => {
+      build();
+      const actor: any = { women: 9, men: 4, age_disaggregation_not_available: true };
+      component.onAgeFallbackChange(actor);
+      expect(actor).toMatchObject({ women_youth: 5, men_youth: 2, youth_split_applied_by_system: true, how_many: 13 });
+
+      actor.men = 10;
+      component.onGenderChange(actor);
+      expect(actor.men_youth).toBe(5);
+
+      actor.age_disaggregation_not_available = false;
+      component.onAgeFallbackChange(actor);
+      expect(actor).toMatchObject({ women_youth: null, men_youth: null, youth_split_applied_by_system: null });
+    });
+
+    it('reloads the stored tinyint flags as booleans so the checkboxes paint them', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            actors: [
+              { actor_type_id: 1, sex_and_age_disaggregation: 1, age_disaggregation_not_available: 0, youth_split_applied_by_system: null }
+            ]
+          }
+        })
+      );
+      build();
+      expect(component.body.actors[0]).toMatchObject({
+        sex_and_age_disaggregation: true,
+        age_disaggregation_not_available: false,
+        youth_split_applied_by_system: null
+      });
+    });
+
+    it('sends the fallback flags with the actor, so the server can persist them', () => {
+      build();
+      component.body = { actors: [{ actor_type_id: 1, women: 2, age_disaggregation_not_available: true }] };
+      const payload: any = (component as any).buildPayload();
+      expect(payload.innovatonUse.actors[0].age_disaggregation_not_available).toBe(true);
     });
   });
 
