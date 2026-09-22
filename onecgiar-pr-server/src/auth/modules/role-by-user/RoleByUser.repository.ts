@@ -257,6 +257,100 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     }
   }
 
+  /**
+   * BIL-RTE-T-1 (`docs/specs/bilateral/review-toc-only-editing/design.md` §5.1, DD-3) — "does this
+   * user hold any ACTIVE role on this one initiative". Deliberately NOT `validationRolePermissions`:
+   * that helper breaks (P-10) when a user has more than one role in the same initiative, because its
+   * subquery has no `LIMIT`. Any active role counts here, read-only roles included (D-2) — this is a
+   * membership check, not a privilege check. A single `EXISTS` query always returns exactly one row,
+   * so it can never throw on multiple matching `role_by_user` rows.
+   *
+   * Also requires `clarisa_initiatives.active > 0` (rework, attempt 2 — Reviewer FAIL #1) — the same
+   * "active initiative" condition `resultByInitiatives.repository.ts:367-371`
+   * (`getContributorInitiativeAndPrimaryByResult`) already applies via `ci.active > 0` on its own
+   * join. A role on a retired initiative should not read as membership here either.
+   */
+  async hasActiveRoleOnInitiative(
+    userId: number,
+    initiativeId: number,
+  ): Promise<boolean> {
+    const queryData = `
+    SELECT
+      EXISTS (
+        SELECT 1
+        FROM role_by_user rbu
+        INNER JOIN clarisa_initiatives ci
+          ON ci.id = rbu.initiative_id
+          AND ci.active > 0
+        WHERE rbu.\`user\` = ?
+          AND rbu.initiative_id = ?
+          AND rbu.active > 0
+      ) AS has_role;
+    `;
+    try {
+      const result: Array<{ has_role: number | string }> = await this.query(
+        queryData,
+        [userId, initiativeId],
+      );
+      return !!Number(result?.[0]?.has_role ?? 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * BIL-RTE-T-1 (design §5.1) — "does this user hold any ACTIVE role on ANY initiative actively
+   * linked to result R". Feeds the Decision rule (review-decision: admin, or any linked Science
+   * Program member may approve/reject). A single `EXISTS` query joining `results_by_inititiative`,
+   * so it can never throw on multiple matching rows.
+   *
+   * Also requires `clarisa_initiatives.active > 0` (rework, attempt 2 — Reviewer FAIL #1): attempt 1
+   * joined only `role_by_user` to `results_by_inititiative`, so a member of a retired/deactivated
+   * initiative whose `rbi` row was still active would pass the Decision rule while the ToC rule (which
+   * goes through `getContributorInitiativeAndPrimaryByResult`, `ci.active > 0`) would refuse the very
+   * same user on the very same initiative. Both decisions now share one meaning of "an SP actively
+   * linked to the result": `role_by_user.active`, `results_by_inititiative.is_active` AND
+   * `clarisa_initiatives.active`, all true.
+   */
+  async hasActiveRoleOnAnyInitiativeLinkedToResult(
+    userId: number,
+    resultId: number,
+  ): Promise<boolean> {
+    const queryData = `
+    SELECT
+      EXISTS (
+        SELECT 1
+        FROM role_by_user rbu
+        INNER JOIN results_by_inititiative rbi
+          ON rbi.inititiative_id = rbu.initiative_id
+        INNER JOIN clarisa_initiatives ci
+          ON ci.id = rbi.inititiative_id
+          AND ci.active > 0
+        WHERE rbu.\`user\` = ?
+          AND rbu.active > 0
+          AND rbi.result_id = ?
+          AND rbi.is_active > 0
+      ) AS has_role;
+    `;
+    try {
+      const result: Array<{ has_role: number | string }> = await this.query(
+        queryData,
+        [userId, resultId],
+      );
+      return !!Number(result?.[0]?.has_role ?? 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async $_isValidRole(
     userId: number,
     type: RoleTypeEnum = RoleTypeEnum.APPLICATION,

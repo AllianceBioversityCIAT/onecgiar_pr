@@ -112,6 +112,7 @@ import { ReportingFullMetadataExportService } from './services/reporting-full-me
 import { ReportingMetadataExportQueueModule } from '../../shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.module';
 import { ReportingMetadataExportConsumer } from './reporting-metadata-export.consumer';
 import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
+import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 
 @Module({
   controllers: [ResultsController, ReportingMetadataExportConsumer],
@@ -222,12 +223,20 @@ import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
     AoWBilateralRepository,
     ResultReviewHistoryRepository,
     ShareResultRequestRepository,
+    // BIL-RTE-T-1 (docs/specs/bilateral/review-toc-only-editing/design.md §5.1, DD-1): the
+    // bilateral review access helper. It depends only on RoleByUserRepository and
+    // ResultByInitiativesRepository, both already providers reachable from this module, so no
+    // new module import was needed to build it. Exported below so BilateralModule — which
+    // already imports ResultsModule — can inject it directly, with no new import on either
+    // side and therefore no circular dependency (the task's disqualifier).
+    BilateralAccessService,
   ],
   exports: [
     ResultRepository,
     JwtMiddleware,
     ResultsService,
     ResultQuestionsService,
+    BilateralAccessService,
   ],
 })
 export class ResultsModule implements NestModule {

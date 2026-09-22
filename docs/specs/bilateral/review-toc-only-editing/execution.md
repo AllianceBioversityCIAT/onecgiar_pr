@@ -50,7 +50,7 @@
 - Final verification: `npx jest --testPathPattern="results-toc-results.service.spec"` 23/23 · eslint clean.
 - Budget: 2 review rounds (the budget is 1 outside T-1…T-3). +1 over, cause: the design's "primary" was ambiguous against the code's variable name. Noted, not tripped (the overrun is small and the task is closed).
 
-### BIL-RTE-T-1 — Access helper and membership reads (in progress)
+### BIL-RTE-T-1 — Access helper and membership reads — **PASS**
 
 **Attempt 1** (2026-09-22, effort xhigh, skills `nestjs-expert`, `tdd`)
 - Files: `RoleByUser.repository.ts` + spec (new methods `hasActiveRoleOnInitiative`, `hasActiveRoleOnAnyInitiativeLinkedToResult`, each a single `EXISTS`), new `src/api/results/bilateral-access/bilateral-access.service.ts` + spec (`assertCenterWrite`, `assertTocWrite`, `assertDecision`), `results.module.ts` (provider + export; `BilateralModule` already imports `ResultsModule`, so there's no new edge and no `forwardRef`).
@@ -74,3 +74,33 @@
 > - SCOPE: `package-lock.json` is modified in the tree but is not part of T-1. Do not commit it with this task.
 
 **Forward pointer → T-2 / T-3:** each call to the helper must pass a static endpoint label (e.g. `'general-info'`, `'title'`, `'toc-metadata'`, `'review-decision'`).
+
+**Attempt 2** (2026-09-22, effort max)
+- Changes:
+  - Both membership reads now `INNER JOIN clarisa_initiatives ci … AND ci.active > 0`.
+  - All three decisions take `endpoint: string`. The signatures are `assertCenterWrite(result, endpoint, user)`, `assertTocWrite(result, initiativeId, endpoint, user)` and `assertDecision(result, endpoint, user)`. The log line is `result=… endpoint=… rule=… user=…`.
+  - A fail-closed guard (`!user?.id` → 403) runs before any repository call. This came from an advisory and was kept to one line plus two tests, as the Leader allowed.
+- Implementer verification: `bilateral-access.service.spec|RoleByUser.repository.spec` 2 suites / 64 tests passed · eslint clean (5 files) · `tsc --noEmit` clean.
+- Reviewer: **PASS**. "Both attempt-1 FAILs are fixed: all three activity conditions are enforced in both membership reads, and the helper logs the endpoint. The matrix still matches design §5.1 in every cell, admin is still checked first, the fail-closed guard throws before any repository call, and the wiring has no cycle and no forwardRef."
+- ADVISORY (recorded, not gating):
+  - RISK: a call with no user id gets 403 even at status 1/8, where a non-admin normally gets 409. T-3's specs must not expect 409 for such a call.
+  - RISK: `endpoint` is interpolated into the log. Callers must pass string literals, never request data.
+  - RELIABILITY: the SQL is proven only by substring assertions. **T-9 HITL item:** a Center user, a user with two roles on one SP, and a retired initiative, all tried in prtest.
+  - PERF: the ToC path runs 3 queries (admin, role, link), and the spec does not count the admin read.
+  - RISK: `isUserAdmin` reads row [0] only (pre-existing, DD-3). Mention it in the P2-3794 comment.
+  - READABILITY: the 403 text "under Science Program review" is misleading for membership denials.
+  - SCOPE: `package-lock.json` is not part of T-1. Excluded from the commit.
+- Requirements covered: BIL-RTE-R-2 / R-5 / R-6 (rules), R-3 (admin first), NFR Security/Observability, DD-1, DD-3.
+- Final verification: 64/64 · eslint clean · tsc clean.
+- Budget: 2 review rounds (within the budget of 2 for T-1).
+
+**Forward pointers → T-2 / T-3 (carry into their briefs):**
+- Pass string-literal endpoint labels.
+- Do not expect a 409 from `assertTocWrite` for an identity-less call.
+- T-3 owner decision pending on the T-4 advisory: should the ToC rule also check each payload item's `initiative_id`?
+
+## Constitution Impact: BIL-RTE-T-1
+
+- New injectable `BilateralAccessService` at `onecgiar-pr-server/src/api/results/bilateral-access/`. `ResultsModule` provides and exports it, which adds to that module's public surface.
+- No new child `CLAUDE.md`/`AGENTS.md` is needed. `onecgiar-pr-server/src/CLAUDE.md` / `AGENTS.md` could list it under `api/results`, and T-9 already adds "every new bilateral write calls the helper" to the drawer `AGENTS.md`.
+- CodeGraph re-index pending (`codegraph sync`).

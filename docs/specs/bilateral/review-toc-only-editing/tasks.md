@@ -46,7 +46,7 @@
 - **Definition of done:**
   - [ ] Three observations recorded, with date and environment.
 
-### BIL-RTE-T-1 — Access helper and membership reads
+### [x] BIL-RTE-T-1 — Access helper and membership reads
 
 - **Type:** server
 - **Description:**
@@ -64,10 +64,11 @@
   - **Red run:** `cd onecgiar-pr-server && npx jest --testPathPattern="<helper-spec>" --silent --reporters=summary --forceExit` (new file: red = the file does not compile before the helper exists)
   - **Disqualifier:** the helper cannot be injected into `BilateralModule` without a circular import → stop and re-design placement (DD-1). Don't use `forwardRef` patches.
   - **Consumers:** none (new symbols)
+- **Status:** [x] PASS 2026-09-22 (2 attempts, see `execution.md`)
 - **Definition of done:**
-  - [ ] All matrix cells asserted, including the 403 body carrying no token or user data.
-  - [ ] eslint clean (`npx eslint "<changed files>" --quiet`).
-  - [ ] No secret in logs.
+  - [x] All matrix cells asserted, including the 403 body carrying no token or user data.
+  - [x] eslint clean (`npx eslint "<changed files>" --quiet`).
+  - [x] No secret in logs.
 
 ### BIL-RTE-T-2 — Enforce the Center-write rule at bilateral entry points
 
