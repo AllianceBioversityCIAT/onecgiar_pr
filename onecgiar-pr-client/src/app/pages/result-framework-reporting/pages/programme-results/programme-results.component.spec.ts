@@ -2175,6 +2175,33 @@ describe('ProgrammeResultsComponent', () => {
       expect(readStoredColumnWidths()['title']).toBe(450);
     });
 
+    it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
+      const titleCol = component.visibleColumns().find(c => c.key === 'title')!;
+      const fakeTh = document.createElement('th');
+      Object.defineProperty(fakeTh, 'getBoundingClientRect', { value: () => ({ width: 300 }) });
+
+      const sortSpy = jest.spyOn(table(), 'sort');
+
+      component.onResizeStart(
+        { clientX: 300, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent,
+        titleCol,
+        fakeTh
+      );
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 250 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      // Stands in for the native click the browser synthesizes on <th> right after this drag's
+      // mouseup — this is the click that would otherwise reach PrSortableColumnDirective/sort().
+      const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(phantomClick);
+      expect(phantomClick.defaultPrevented).toBe(true);
+      expect(sortSpy).not.toHaveBeenCalled();
+
+      const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(laterUnrelatedClick);
+      expect(laterUnrelatedClick.defaultPrevented).toBe(false);
+    });
+
     it('resets an individual column width on double-click', () => {
       component.customWidths.set({ code: 150, title: 500 });
       const dblClickEvent = new MouseEvent('dblclick');

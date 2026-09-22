@@ -361,11 +361,23 @@ export class PortfolioOverviewComponent {
       this.columnWidths.update(w => ({ ...w, [this.resizingColumn!.label]: newWidth }));
     };
 
+    // Dragging this resizer and releasing the mouse over the header (not back over the thin
+    // resizer strip) makes the browser synthesize a `click` afterward, which would otherwise
+    // reach `sortBy(column)` via the header button's own (click) binding and sort the column
+    // as an unintended side effect of a resize. Swallow that one phantom click.
+    // Parity fix with `results-list.component.ts` (`bugfix/results-center-title-resize-triggers-sort`).
+    const resizeClickGuard = (clickEvent: MouseEvent) => {
+      clickEvent.preventDefault();
+      clickEvent.stopPropagation();
+    };
+    document.addEventListener('click', resizeClickGuard, { capture: true, once: true });
+
     const onMouseUp = () => {
       this.resizingColumn = null;
       this.isResizing.set(false);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      setTimeout(() => document.removeEventListener('click', resizeClickGuard, true), 0);
     };
 
     window.addEventListener('mousemove', onMouseMove);
