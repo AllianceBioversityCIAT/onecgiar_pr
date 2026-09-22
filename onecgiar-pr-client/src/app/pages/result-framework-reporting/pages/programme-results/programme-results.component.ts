@@ -1270,6 +1270,17 @@ export class ProgrammeResultsComponent implements OnDestroy {
     this.customWidths.update(prev => ({ ...prev, [this.activeResize!.columnKey]: newWidth }));
   };
 
+  /**
+   * Dragging `.rc-col-resizer` and releasing the mouse over the `<th>` (not back over the thin
+   * resizer strip) makes the browser synthesize a `click` on `<th>` after mouseup — reaching
+   * `PrSortableColumnDirective`'s click listener and sorting the column as an unintended side
+   * effect of a resize. This guard swallows that one phantom click. `{ once: true }` self-removes
+   * on the common case; `onWindowMouseUp`'s `setTimeout(0)` is a fallback for the rare case where
+   * no click follows (so a later, unrelated click is never swallowed).
+   * Parity fix with `results-list.component.ts` (`bugfix/results-center-title-resize-triggers-sort`).
+   */
+  private resizeClickGuard: ((event: MouseEvent) => void) | null = null;
+
   private readonly onWindowMouseUp = (): void => {
     if (!this.activeResize) return;
     this.activeResize = null;
@@ -1279,6 +1290,12 @@ export class ProgrammeResultsComponent implements OnDestroy {
     window.removeEventListener('mousemove', this.onWindowMouseMove);
     window.removeEventListener('mouseup', this.onWindowMouseUp);
     writeStoredColumnWidths(this.customWidths());
+
+    if (this.resizeClickGuard) {
+      const guard = this.resizeClickGuard;
+      this.resizeClickGuard = null;
+      setTimeout(() => document.removeEventListener('click', guard, true), 0);
+    }
   };
 
   onResizeStart(event: MouseEvent, column: PgrColumnDef, thElement: HTMLElement): void {
@@ -1296,6 +1313,12 @@ export class ProgrammeResultsComponent implements OnDestroy {
     document.body.style.userSelect = 'none';
     window.addEventListener('mousemove', this.onWindowMouseMove);
     window.addEventListener('mouseup', this.onWindowMouseUp);
+
+    this.resizeClickGuard = (clickEvent: MouseEvent) => {
+      clickEvent.preventDefault();
+      clickEvent.stopPropagation();
+    };
+    document.addEventListener('click', this.resizeClickGuard, { capture: true, once: true });
   }
 
   onResizeReset(column: PgrColumnDef, event: MouseEvent): void {
@@ -1320,6 +1343,10 @@ export class ProgrammeResultsComponent implements OnDestroy {
       window.removeEventListener('mouseup', this.onWindowMouseUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+    }
+    if (this.resizeClickGuard) {
+      document.removeEventListener('click', this.resizeClickGuard, true);
+      this.resizeClickGuard = null;
     }
   }
 
