@@ -7,7 +7,7 @@
 | Linked spec | `requirements.md` (VER-R-1..4) + `design.md` |
 | Depth | Lite · Bug Mode |
 | Branch | `JuanGuzman-io/fix-p2-3228-result` — re-check it before committing (memory `feedback_recheck_branch_before_commit`) |
-| Status | in-progress (VER-T-1 done) |
+| Status | done (VER-T-1 shipped; VER-T-2 descoped) |
 | Budget | 2 tasks · ~195 LOC · 1 review round (design §13) |
 
 ## 2. Pre-flight
@@ -55,10 +55,10 @@
 - **What this cannot prove:** that MySQL executes the SQL and stores the value → Rollout R-1.
 - **Done:** red captured and then green; three repositories carry the columns in both queries; the helper is used by all four blocks; commit `🔧 fix(results-centers) P2-3228: carry lead flags through phase replication`.
 
-### VER-T-2 — Idempotent repair script for already-replicated results
+### ~~VER-T-2~~ (descoped 2026-09-22: damaged rows exist only on prtest; no repair needed) — Idempotent repair script for already-replicated results
 
 - **Type:** db (script delivered, **not executed** by the agent)
-- **Description:** Write `repair-lead-flags.sql` in this spec folder, per design §5: a dry-run `SELECT` with counts first, then three guarded `UPDATE`s (`results_center`, `results_by_institution`, `result.is_lead_by_partner`). The source is the immediately previous active version of the same `result_code` by `phase_year` → `version.id`.
+- **Description:** Write `repair-lead-flags.sql` in this spec folder, per design §5: a dry-run `SELECT` with counts first, then three guarded `UPDATE`s (`results_center`, `results_by_institution`, `result.is_lead_by_partner`). Targets are limited to active results whose version has `phase_year = 2026` (VER-OQ-1, resolved 2026-09-22). The source is the immediately previous active version of the same `result_code` by `phase_year` → `version.id`.
 - **Implements:** VER-R-4
 - **Files:** `docs/specs/bugfix/p2-3228-lead-center-replication/repair-lead-flags.sql`
 - **Depends on:** VER-T-1 · **Estimate:** S · **Review:** full (data write)
@@ -96,7 +96,7 @@
 | # | Step | Owner |
 |---|---|---|
 | R-1 | After merge to the prtest branch (deploy is automatic; allow for its delay), roll a 2025 result with a lead Centre into 2026: `results_center.is_leading_result = 1` on the copy, and the Results Center grid shows the Centre | QA (Cristian) / Juan David |
-| R-2 | Run `repair-lead-flags.sql`: dry-run → review → `UPDATE` → dry-run again = 0. Confirm 9073's 2026 row shows the Centre | Juan David |
+| ~~R-2~~ | Descoped (prtest-only data). ~~Run `repair-lead-flags.sql`: dry-run → review → `UPDATE` → dry-run again = 0. Confirm 9073's 2026 row shows the Centre | Juan David |
 
 ## 7. Follow-ups (not in this spec)
 

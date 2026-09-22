@@ -78,7 +78,7 @@ The replicated `result` MUST carry `is_lead_by_partner` with the source's value.
 - THEN the new version has `is_lead_by_partner = 1`
 - BUT it must NOT alter the columns the earlier P2-3228 fix already carries (`source`, `creation_method`, `external_*`), nor `status_id`
 
-### VER-R-4 — Already-replicated results are repaired (SHOULD)
+### VER-R-4 — Already-replicated results are repaired (SHOULD) — **descoped 2026-09-22**: affected rows exist only on prtest (testing), no repair needed
 
 A delivered SQL script SHOULD restore the lead flags on existing versions, taking them from the immediately previous version with the same `result_code`.
 
@@ -113,7 +113,7 @@ A delivered SQL script SHOULD restore the lead flags on existing versions, takin
 
 | ID | Question | Status |
 |---|---|---|
-| VER-OQ-1 | Repair scope: every replicated phase, or only the current one | Proposed: every phase (safe, since it fills only empty leads). Confirm |
+| VER-OQ-1 | Repair scope: every replicated phase, or only the current one | **Resolved 2026-09-22 (user): only target versions in the 2026 phase** (`version.phase_year = 2026`, never a phase id — ids differ by environment). The source stays the previous active version |
 | VER-OQ-2 | 9073 has two 2026 versions (11545 deactivated, 12026 active). Manual re-rollover, or a duplicate from the flow? | Not blocking; out of this fix. Check the `result` rows |
 | VER-OQ-3 | Cristian's 2026 detail screenshot shows a Lead center that is not in the DB | Not blocking; likely picked but not saved. Reload to confirm |
 

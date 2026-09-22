@@ -89,3 +89,73 @@ Cause: the helper is ~80 lines, not ~45, because it now includes `misalignedColu
 
 - Budget tripwire: **accepted**. Commit VER-T-1 as-is and continue to VER-T-2.
 - VER-OQ-1 (repair scope): **only the 2026 phase**. The design assumed all phases. VER-T-2 limits the repair's target versions to the 2026 reporting phase. The source is still the previous active version, whatever its phase.
+
+### VER-T-2 — Idempotent repair script for already-replicated results
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-22 |
+| Requirements | VER-R-4 (S-4.1) · scope amended by VER-OQ-1 → `phase_year = 2026` targets only |
+| Skills | `systematic-debugging` (task default) · effort high → xhigh on rework |
+| Review mode | parallel lens reviewers ×2 (data-write surface): (A) spec + reliability, (B) spec + resilience/risk |
+
+**Attempt 1**
+
+- File: `repair-lead-flags.sql` (new, 346 lines, ~157 executable SQL lines). Uses a temp-table pipeline shared by the dry-run and the UPDATEs, a VER-P-5 check, STEP 1B audit tables, and a rollback block.
+- Implementer verification: paren/statement balance check 10/10, 24 statements. Not executed: no DB in reach, by design. Hand-traces: 9073 → target 12026 / CENTER-02, source 11541, 11545 excluded; a lead reassigned to another Centre → 0 rows.
+- Implementer Not Done / Assumptions (verbatim summary): SQL LOC is over the ~70 budget line. "Active" means `result.is_active > 0` only. `CREATE TABLE IF NOT EXISTS` audit tables would keep stale rows on a re-run. D4 (it runs on real MySQL) belongs to Rollout R-1/R-2.
+- Reviewer A (spec + reliability): **FAIL**
+  1. The lead guard checks one table at a time. A 2026 version switched from a Centre lead to a partner lead (the client clears centre leads on save: `rd-partners.component.ts:262-269`) still gets the source Centre set as lead, so it ends up with two leads. The same happens in reverse for institutions. Violates VER-S-4.1 BUT. Remediation: require no active lead in `results_center` AND in `results_by_institution` in all three repair sets; skip when `tgt_r.is_lead_by_partner` is non-NULL and differs from the source; optionally re-check the other table inside each UPDATE; add a Case C hand-trace.
+  2. `is_lead_by_partner` is copied only when the source is `1`. A Centre-led source (`0`) leaves the target NULL, and `validation_partners_*` reads NULL as not answered. Violates design §5 step 3 and VER-R-3. Remediation: `src IS NOT NULL AND tgt IS NULL`.
+  3. The tie-break is `MAX(result.id)`, not `version.id`, and the comment mislabels it. The disqualifier checks only the target's year and can never fire as the spec wrote it. Violates tasks.md VER-T-2 and design §1A VER-P-5. Remediation: resolve `MAX(version.id)` within the source `phase_year`; add `source_candidates`; route `source_candidates > 1` into the disqualifier output.
+  - ADVISORY: duplicate same-center target rows are all set to lead; STEP 1B `CREATE TABLE … AS SELECT` fails with error 1786 under GTID enforcement before MySQL 8.0.21; `COMMIT;` is live.
+- Reviewer B (spec + resilience/risk): **FAIL**
+  1. The STEP 2 UPDATEs re-check only the row itself, not "the version has no active lead". A lead set in the UI between the dry-run review and STEP 2 gets a second lead. Violates the tasks.md clause "`NOT EXISTS` … in every `UPDATE`". Remediation: a self-join LEFT JOIN guard inside each UPDATE (no 1093), and rebuild STEP 0 right before STEP 2.
+  2. The live `COMMIT;` means a whole-file run writes with no review, and the VER-P-5 check only reports: flagged codes are still repaired. Violates the tasks.md Disqualifier and R-2. Remediation: exclude flagged codes from `source_pairs` in SQL; make `ROLLBACK;` the default and leave `-- COMMIT;` for the operator.
+  3. The rollback record is unreliable. STEP 1B is only "recommended"; `CREATE TABLE IF NOT EXISTS` keeps a stale first attempt; the rollback UPDATEs are unguarded. Violates tasks.md §8 and design §11. Remediation: make 1B mandatory; use plain `CREATE TABLE` or a run-id column; guard the rollback on the value the script set; wrap it in a transaction.
+  - ADVISORY: GTID error 1786; the audit tables need an explicit commented DROP block; any DDL after START TRANSACTION implicitly commits (add a warning); locking under REPEATABLE READ (run at a quiet time, or use READ COMMITTED for STEP 0); block numbering 0a/0b/0c.
+- Leader adjudication: all six findings are in scope for VER-T-2, since each maps to an explicit S-4.1 clause, a VER-P-5 clause, a Disqualifier clause or a §8 clause. Rework follows at effort xhigh.
+
+**Attempt 2** (effort xhigh; rework via the same Implementer with both FAIL reports copied verbatim)
+
+- File: `repair-lead-flags.sql` was fully rewritten (342 lines, ~151 executable). It adds:
+  - a unified eligibility gate (STEP 0c)
+  - a window-function tie-break on `phase_year DESC, version.id DESC`, with `source_candidates`
+  - disqualified rows deleted in SQL
+  - a live three-way guard in every UPDATE
+  - `ROLLBACK;` as the live default, with `COMMIT;` commented out
+  - mandatory audit tables (`CREATE TABLE … LIKE` + `INSERT`)
+  - a guarded rollback in its own transaction
+  - the cheap advisories: a DROP block, a DDL warning, 0a/0b/0c numbering, and `ROW_NUMBER` dedup
+- Implementer verification: 18/18 parens, 30 statements, no orphaned temp references. Not executed. Hand-traces A (9073), B, C and the reverse case are written into the file's closing comment.
+- All six attempt-1 findings are verified fixed by both reviewers. Column default: `is_lead_by_partner` is `tinyint NULL`, no default (`1726237747587-addingLeadPartnerOrCenter.ts:16`, `result.entity.ts:494`). MySQL 8 is confirmed (`docs/infrastructure.md:96`, `WITH RECURSIVE` in live code). There is no 1137 risk.
+- Reviewer A (spec + reliability): **FAIL**
+  1. Inside the STEP 2 transaction, each UPDATE's live re-check sees the writes of the UPDATEs before it. UPDATE 1 or 2 creates the lead row, then UPDATE 3 sees it (`el_c`/`el_i`) and skips `is_lead_by_partner`. UPDATE 2 is blocked by UPDATE 1 when a source has both kinds of lead. The final "must be 0" re-run hides the miss. Violates VER-S-4.1 THEN and the tasks.md rule "the dry-run and the UPDATE share the exact same predicates". Remediation: exclude this run's own target ids from `el_c`/`el_i`, or reorder, and trace 9073 through STEP 2.
+  2. The `tgt_r.is_lead_by_partner IS NULL` gate also blocks the centre and institution repairs. Any Contributors save writes `0`, not NULL: reads use `!!` (`results_by_institutions.service.ts:209/634`, `contributors-partners.service.ts:127`), and the save writes the value back (`:288/:415`). A 2026 "Next" auto-save (P2-3659) therefore makes a still-lead-less version ineligible, and 9073/12026 itself is at risk. Violates VER-S-4.1 GIVEN/THEN and design §5 steps 2–3. Remediation: centre and institution repairs require `tgt mode IS NULL OR COALESCE(tgt,0) = COALESCE(src,0)`; keep `IS NULL` only for the flag repair.
+  3. The audit is taken from the first STEP 0 build, but STEP 2 runs on a fresh rebuild. The audit then misses rows that were written and lists rows that were skipped, and the rollback could revert a lead a user set. Violates tasks.md §8 and design §11. Remediation: run the fresh STEP 0 → STEP 1 → 1B → STEP 2 with no pause between them.
+  - ADVISORY:
+    - Evaluation order when a source has two lead centres.
+    - The script also sets flags whose prior value is `0`, not only NULL. This deviates from design §11 and tasks §8 "only sets flags that were NULL", and is recoverable through `target_prior_value`.
+    - Verify CTAS under GTID on prtest before the run.
+    - Budget tripwire (2 rounds).
+- Reviewer B (spec + resilience/risk): **FAIL**
+  1. The same self-blocking live guard as A1, with the same remediation (exclude this run's own `tmp_*_repair` ids from `el_c`/`el_i`).
+  2. The rollback record comes from a different candidate set than STEP 2 writes, the same finding as A3. Remediation: put `CREATE TABLE … LIKE` before `START TRANSACTION`, after the fresh STEP 0, and move the audit `INSERT`s inside the transaction, each just before its UPDATE with the same predicate, so the audit commits or rolls back with the repair.
+  - ADVISORY:
+    - `@target_phase_year` is NULL after a reconnect, so every step silently matches 0 rows. Echo it or fail loudly.
+    - "Keep them" for leftover audit tables should become "DROP unless the COMMIT is confirmed".
+    - Add "run ROLLBACK or COMMIT, never both".
+    - Confirm `@@version` / `@@enforce_gtid_consistency` before R-2.
+
+**Budget tripwire, fired again:** 2 review rounds (the budget is 1, and the tripwire is 2), and ~151 executable SQL lines against ~70. Attempt 3 is the last one before HALT. The Leader escalated to the user before opening it.
+
+**Descoped by the user (2026-09-22), not HALTed.** The user decided no repair is needed. The damaged rows exist only on prtest, the testing environment, where the rollover was a test, so there is no production data to fix. VER-T-2 and VER-R-4 are dropped from this spec, along with Rollout R-2. The unreviewed `repair-lead-flags.sql` (attempt 2) was deleted rather than committed, so a script that failed review twice does not sit in the repo. Its findings stay recorded above in case a repair is ever needed.
+
+## Summary
+
+| Task | Result |
+|---|---|
+| VER-T-1 | PASS on attempt 1. Commit `1b3f29661` |
+| VER-T-2 | Descoped by the user after two FAIL rounds. No file shipped |
+
+What remains is Rollout R-1 (HITL): after the merge to the prtest branch, roll a 2025 result with a lead Centre into 2026 and confirm that the copy has `is_leading_result = 1` and that the grid shows the Centre.

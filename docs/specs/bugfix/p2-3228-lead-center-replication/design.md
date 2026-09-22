@@ -43,7 +43,7 @@ No endpoint or payload change. `POST /api/bilateral/version` and the reporting t
 
 Values are copied verbatim, so `NULL` stays `NULL` and `0` stays `0` (VER-S-1.2). Nothing is derived or promoted.
 
-**Repair script** (`repair-lead-flags.sql` in this spec folder, VER-R-4). For each active result whose immediately previous active version (same `result_code`, previous by `phase_year` → `version.id`) had a lead:
+**Repair script** (`repair-lead-flags.sql` in this spec folder, VER-R-4). For each active result **in the 2026 phase** (`version.phase_year = 2026`, VER-OQ-1) whose immediately previous active version (same `result_code`, previous by `phase_year` → `version.id`) had a lead:
 1. **Dry-run `SELECT`** listing the target rows (result code, new id, source id, centre/institution) and the counts.
 2. `UPDATE results_center` sets `is_leading_result = 1` on the new version's active row with the same `center_id`, **only when the new version has no active lead centre**.
 3. The same for `results_by_institution`, matched by `institutions_id` + `institution_roles_id`, only when the new version has no active lead institution. `result.is_lead_by_partner` is copied only when the new value is `NULL`.
@@ -107,4 +107,4 @@ Exceeding 3 tasks, ~250 LOC, or 2 review rounds → stop and escalate.
 ## 14. Open Gaps
 
 - VER-P-5 is `assumed`; the repair's dry-run is where it gets checked.
-- VER-OQ-1 (repair scope): the design assumes **all phases**, since the guards make that safe. Confirm.
+- ~~VER-OQ-1 (repair scope)~~ resolved 2026-09-22: target versions are limited to `phase_year = 2026` (user decision at the VER-T-1 gate).
