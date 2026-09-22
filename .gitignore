@@ -84,3 +84,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Source documents downloaded from SharePoint (never committed)
 .local-docs/
+
+# Local HITL scratch (may hold credentials) — never commit
+.tmp-hitl/

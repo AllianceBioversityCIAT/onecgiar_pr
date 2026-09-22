@@ -132,6 +132,7 @@ Every claim below is cited as run, at commit `96b891ca3`.
 - **`BG-R-4`** The guide MUST include pipeline-produced captures of the setup drawer's Primary Science Program step, its *Choose Creation Method* step, and the manual form.
 - **`BG-R-5`** The guide MUST include a section contrasting *AI-Assisted* with *Complete the Form Manually*, stating what each does and when to prefer it, and pointing at My Drafts / AI Draft Results.
 - **`BG-R-6`** Every section that describes a screen MUST carry at least one capture with labelled callouts on the elements the narrative names; each callout's anchor MUST resolve to **exactly one** element at capture time, and the run MUST fail loudly otherwise.
+  - **Exception (Pivot, `BG-T-7`, 2026-09-21 — operator-approved).** A callout MAY ship **ring-only, without a label**, when **all three** hold: (a) no `placement` exists that avoids covering content the reader needs, (b) the narrative names the element in prose, and (c) the geometric evidence is recorded in `execution.md`. Rationale: this spec's own §7 NFR already states that *"callout labels MUST NOT be the sole carrier of meaning — narrative text states each step"*, so a ring plus a naming sentence carries the meaning the label would have. A chip that hides the control it points at is worse than no chip. **This exception is narrow**: it is not a licence to drop labels for convenience, and each use must carry its own evidence.
 - **`BG-R-7`** The capture run MUST be read-only: it MUST NOT submit a result, MUST NOT trigger a billable AI assessment, and MUST NOT issue any non-idempotent request to the PRMS API. This MUST be enforced by the tooling, not by operator discipline.
 - **`BG-R-8`** No capture may show a skeleton or loading state, and every capture MUST fall within declared dimension bounds — no degenerate frame (the 1280×720 and 1280×186177 failures of the W1/W2 run MUST NOT recur).
 - **`BG-R-9`** The guide's typography and color MUST be derived from the application's own stylesheets (`fonts.scss`, `colors.scss`), NOT from `docs/ux-ui/design.md` §7, whose typography entry is known stale and whose correction is pending (§4.1 claim 12).
@@ -239,6 +240,7 @@ The guide SHALL contain one pipeline-produced capture per editor section, each c
 | `BG-AC-4` | A project aligned to two or more Science Programs | The drawer captures run | Three captures exist: Primary Science Program step, *Choose Creation Method* step, manual form. |
 | `BG-AC-5` | The assembled guide | The AI-Assisted section is read | It states what each creation method does, when to prefer each, and where AI drafts appear. |
 | `BG-AC-6` | A route config whose anchor matches 0 or 2+ elements | `npm run capture` runs | The run exits non-zero naming the offending selector, and writes no capture for that route. |
+| `BG-AC-6.1` | A callout for which no placement avoids covering needed content | The capture is authored | It ships ring-only, the narrative names the element, and the geometry is recorded — per `BG-R-6`'s exception. |
 | `BG-AC-7` | A full capture run | It completes | The interception log shows **zero** non-GET requests to the PRMS API; no `result-review-history` row and no assessment record was created. A run that issues one aborts. |
 | `BG-AC-8` | Any produced capture | Dimensions and content are checked | Width and height fall within declared bounds and no visible skeleton is present; otherwise the run exits non-zero. |
 | `BG-AC-9` | The rendered guide HTML | Fonts and tokens are resolved | The body font stack and token values match `fonts.scss`/`colors.scss` as read at build time — **not** `design.md` §7's Poppins entry. |
@@ -299,7 +301,7 @@ All six carried from `proposal.md` (`OQ-BG1`–`OQ-BG6`). **Five are resolved he
 | `BG-R-3` | MUST | All six editor sections captured | `BG-AC-3` | D3, D8 |
 | `BG-R-4` | MUST | Drawer + manual form captured | `BG-AC-4` | D3, D8 |
 | `BG-R-5` | MUST | AI-Assisted contrast section | `BG-AC-5` | D9 |
-| `BG-R-6` | MUST | Labelled callouts, unique anchors | `BG-AC-6` | D3, D10 |
+| `BG-R-6` | MUST | Labelled callouts, unique anchors (ring-only permitted under the `BG-T-7` exception) | `BG-AC-6`, `BG-AC-6.1` | D3, D10 |
 | `BG-R-7` | MUST | Read-only capture, enforced | `BG-AC-7` | D1 |
 | `BG-R-8` | MUST | No skeletons, no degenerate frames | `BG-AC-8` | D2 |
 | `BG-R-9` | MUST | Fonts/colors from stylesheets, not `design.md` §7 | `BG-AC-9` | D5 |

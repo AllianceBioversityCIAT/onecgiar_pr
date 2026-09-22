@@ -58,12 +58,14 @@ pdf.ts        guide.html → dist/w3-bilateral-reporting-user-guide.pdf
 | Rule | Applies to | Action |
 |---|---|---|
 | 1 | `GET` and `HEAD`, any origin | allow |
-| 2 | Any other method, origin on the **inert allowlist** (font CDNs, analytics — `hotjar`, `clarity`, `google-analytics`, `tawk`) | allow; blocking these breaks rendering and they cannot write PRMS data |
+| 2 | Any other method, origin on the **inert allowlist** (font CDNs, analytics — `hotjar.com`, **`hotjar.io`**, `clarity.ms`, `google-analytics.com`, `tawk.to`) | allow; blocking these breaks rendering and they cannot write PRMS data |
 | 3 | **Any other method, any other origin** | **abort the request and fail the whole run**, recording method, origin, path and route id |
+
+**Amendment (Pivot, `BG-T-7`, 2026-09-21 — operator-approved).** `hotjar.io` was added to rule 2 after the guard fired on production: `DENY rule=3 method=POST origin=https://metrics.hotjar.io`. The original list named `hotjar.com`, but Hotjar's live beacon in this deployment uses a different **TLD**, not a subdomain, so dot-anchored suffix matching correctly did not match it and the run aborted. This is a **correction of a factual gap, not a weakening**: `metrics.hotjar.io` is not a PRMS origin and cannot write PRMS data, so `BG-R-7` is untouched, and the change is consistent with rule 2's own stated intent. The gap was invisible before a real run because the Hotjar SDK resolves that host at runtime and it appears nowhere in `environment.ts` — which is why premise `P-13` is **not** refuted by it. Routed through the Pivot Protocol rather than fixed in place, per `BG-T-3`'s Disqualifier: widening the allowlist to make a run pass is the forbidden move; amending the design with the reasoning recorded is the permitted one.
 
 Rule 3 is the default. A new backend, a re-pointed environment, or an origin nobody enumerated lands in rule 3 and stops the run rather than slipping through — which is the property an origin-matching guard could not give.
 
-Two facts make this safe rather than merely strict: the client names its verbs explicitly (`HTTP_METHOD_descriptiveName`, `onecgiar-pr-client/CLAUDE.md`) and every bilateral **read** is a `GET_*`, with writes as `POST_createBilateralHeader`, `PATCH_generalInfo`, `PATCH_tocMapping`, `POST_evidences` and peers (§11 `P-5`); and the bilateral title-uniqueness check is `GET_checkTitleUniqueness`, unlike the sibling W1/W2 module's direct-Elasticsearch `POST` (§11 `P-13`).
+Two facts make this safe rather than merely strict: the client names its verbs explicitly (`HTTP_METHOD_descriptiveName`, `onecgiar-pr-client/CLAUDE.md`) and every bilateral **read** is a `GET_*`, with writes as `POST_createBilateralHeader`, `PATCH_generalInfo`, `PATCH_tocMapping`, `POST_evidences` and peers (§11 `P-5`); and the bilateral title-uniqueness check is `GET_checkTitleUniqueness`, unlike the sibling W1/W2 module's direct-Elasticsearch `POST` (§11 `P-13`). **Note (post-`BG-T-7`):** those two facts bound the *PRMS* risk, and they held. They said nothing about third-party beacons, which is where the real gap turned out to be — see the Amendment above.
 
 **Install order matters (`J-8`).** The handler is installed on the context **before `injectAuth()`**, not merely before the per-route loop: `injectAuth()` itself performs a `goto` plus a `reload` to let `RolesService` pick the session up, and that bootstrap navigation mounts the whole app shell. Installing after it would leave the broadest page load of the run unguarded.
 
@@ -121,7 +123,7 @@ The only schema is the route config, extended additively:
 | `id`, `url`, `readySelector`, `captionKey` | string | existing | unchanged semantics |
 | `clickTarget` | string | existing | annotation anchor only — never actuated (§11 `P-4`) |
 | `viewport`, `fullPage` | object / bool | existing | per-route framing |
-| `annotations` | `CalloutSpec[]` | existing | 2–5 labelled callouts |
+| `annotations` | `CalloutSpec[]` | existing | 2–5 callouts, labelled by default; an **empty `label` ships ring-only**, permitted under `BG-R-6`'s `BG-T-7` exception when no placement avoids covering content |
 | **`steps`** | `Step[]` | **new, optional** | pre-capture interactions |
 | **`bounds`** | `{minW,maxW,minH,maxH}` | **new, optional** | frame sanity (`BG-DD-6`) |
 

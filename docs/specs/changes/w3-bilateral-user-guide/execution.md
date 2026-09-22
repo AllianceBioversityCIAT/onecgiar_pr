@@ -8,7 +8,7 @@
 | Worktree | `/Users/jcadavid/Development/worktrees/onecgiar_pr/w3-bilateral-user-guide` |
 | Branch | `feat/w3-bilateral-user-guide` (base `qa-development-2026` @ `96b891ca3`) |
 | Approval Mode | pre-approved — routine continue gates auto-pass and are logged; HALT / Pivot / budget tripwire / `FATAL_FAIL` / `REVIEW_WAIVED` always stop for the operator |
-| Run 1 scope | **`BG-T-1`…`BG-T-6`** only. `BG-T-7`…`BG-T-13` are deferred: they need a client origin and a reporter JWT, the open half of `BG-OQ-1`, which the operator chose not to supply yet |
+| Run 1 scope *(state at the time)* | **`BG-T-1`…`BG-T-6`** only. `BG-T-7`…`BG-T-13` were deferred: they need a client origin and a reporter JWT, the open half of `BG-OQ-1`, which the operator chose not to supply yet |
 | Models | Leader `opus` (T1) · Implementer `sonnet` (T2, via `.claude/agents/akili-implementer.md`) · Reviewer `opus` (T3, via `.claude/agents/akili-reviewer.md`) — `author ≠ auditor` enforced by wrapper config, not by convention |
 | Operator limits | At most **one** Reviewer round per task; a second FAIL escalates rather than loops. Targeted commands only — never a whole-package test run |
 | Budget (from `design.md` §12) | 13 tasks · 1,300–1,700 LOC · 17 review rounds. Tripwire at **>1,700 LOC or >20 rounds** |
@@ -423,7 +423,7 @@ This is not a `BG-T-6` violation: the rendered HTML cannot exist in an environme
 
 | Field | Value |
 |---|---|
-| Status | **`[~]` BLOCKED — Pivot Protocol triggered.** 1 of 5 routes verified clean; 4 unverified |
+| Status | **PASS** — blocked on two Pivots, both operator-approved and applied; all 5 routes re-run clean. See *Resolution* below |
 | Date | 2026-09-21 |
 | Implementer attempts | 1 (not consumed — a Pivot stops the loop rather than spending attempts on a spec that needs amending) |
 | Requirements touched | `BG-R-6`, `BG-AC-6`, `BG-R-7`, `BG-R-8`, `BG-DD-4` |
@@ -445,7 +445,7 @@ This is not a `BG-T-6` violation: the rendered HTML cannot exist in an environme
 DENY  rule=3  method=POST  origin=https://metrics.hotjar.io  path=/  route=catalog
 ```
 
-**Blocker.** `design.md` §3.3's inert allowlist names six host-suffix families, including `hotjar.com`. Hotjar's actual telemetry beacon in this deployment posts to **`metrics.hotjar.io`** — a different **TLD**, not a subdomain — so dot-anchored suffix matching correctly does *not* match it, rule 3 fires, and the run aborts. It fires on the **second** navigation to `/home` (route `catalog` reuses `workspace-identity`'s URL), not the first.
+**Blocker** *(state at the time of blocking; §3.3 has since been amended — see Resolution)*. `design.md` §3.3's inert allowlist named six host-suffix families, including `hotjar.com`. Hotjar's actual telemetry beacon in this deployment posts to **`metrics.hotjar.io`** — a different **TLD**, not a subdomain — so dot-anchored suffix matching correctly does *not* match it, rule 3 fires, and the run aborts. It fires on the **second** navigation to `/home` (route `catalog` reuses `workspace-identity`'s URL), not the first.
 
 **Why this is a Pivot and not a fix.** `tasks.md` `BG-T-3`'s Disqualifier pre-committed this exact route: *"if any legitimate page load in the planned route set issues a non-GET to a non-allowlisted origin, **STOP and escalate** — do NOT widen the allowlist to make a run pass."* The Implementer obeyed it: it stopped, reported, and touched neither `guards/read-only.ts` nor the allowlist. That is the behaviour the clause exists to produce.
 
@@ -457,7 +457,7 @@ DENY  rule=3  method=POST  origin=https://metrics.hotjar.io  path=/  route=catal
 
 **Options.** (A) Amend §3.3 to add `hotjar.io` to the inert allowlist — smallest change, consistent with rule 2's intent, and re-derives nothing else. (B) Block analytics wholesale and accept whatever rendering degradation follows. (C) Leave the guard as-is and abandon multi-route runs. **Recommendation: (A)**, recorded as a §3.3 amendment with the reasoning above, because the guard's purpose is to stop writes to PRMS and this origin cannot be one.
 
-**Status: awaiting explicit operator approval.** `Approval Mode: pre-approved` covers routine progress and explicitly does **not** cover a Pivot.
+**Status: APPROVED by the operator, 2026-09-21** — option (A), add `hotjar.io` to the rule-2 inert allowlist. `Approval Mode: pre-approved` covers routine progress and explicitly does **not** cover a Pivot, which is why this stopped for a decision. Applied to `design.md` §3.3 (rule-2 row plus an `Amendment` paragraph recording the reasoning) and to `guards/read-only.ts` (one entry, nothing else).
 
 ---
 
@@ -481,8 +481,8 @@ DENY  rule=3  method=POST  origin=https://metrics.hotjar.io  path=/  route=catal
 | `workspace-identity` | 1280×1800 | w[1280] h[1800] | **IN** — fresh (18:29:55) |
 | `catalog` | 1280×1800 | w[1280] h[1800] | IN, but from the pre-correction config |
 | `catalog-create-cta` | 1280×1800 | w[1280] h[1800] | IN, but from the pre-correction config |
-| `drafts` | 1280×1400 | w[1280] h[**700**] | **OUT OF BOUNDS — stale** |
-| `results-status` | 1280×1200 | w[**1760**] h[560] | **OUT OF BOUNDS — stale** |
+| `drafts` | 1280×1400 | w[1280] h[**700**] | **OUT OF BOUNDS — stale** ← superseded, see Resolution |
+| `results-status` | 1280×1200 | w[**1760**] h[560] | **OUT OF BOUNDS — stale** ← superseded, see Resolution |
 
 The config was corrected *after* those captures (`drafts` height 1400→700; `results-status` viewport widened 1280→1760 after the status badge column was found to fall off-screen at 1280 against ~1630–1750px of table content). **`BG-T-5`'s frame-bounds guard would reject both on re-run — the guard is working.** Four routes must be re-captured; none of their bounds may be treated as observation-backed.
 
@@ -496,5 +496,80 @@ Assessment: **no PRMS write occurred** — the read-only guard was installed and
 
 **Decisions made**
 - Marked `[~]` and stopped rather than spending a rework attempt: the blocker is a spec gap, not an implementation error.
-- **Did not** widen the allowlist, **did not** amend §3.3 — a Pivot requires explicit operator approval before the spec is changed, and `pre-approved` mode does not cover it.
+- **Did not** widen the allowlist and **did not** amend §3.3 *at the moment of blocking* — a Pivot requires explicit operator approval before the spec is changed. **Superseded 2026-09-21:** the operator approved option (A) and both the design and the guard were amended; see the Pivot 1 status line above and the Resolution section below.
 - Recorded the callout-overlap defect and the four stale captures as re-work owed to `BG-T-7`, not as new scope.
+
+---
+
+## Resolution: `BG-T-7` — both Pivots applied, task re-run clean
+
+Written after a Reviewer `FAIL` whose **three findings were all Leader-owned**, not Implementer-owned. Recorded plainly because the audit trail is worth more than the Leader's record.
+
+### Pivot 1 — `design.md` §3.3 allowlist · **APPROVED (operator, 2026-09-21), option (A)**
+
+`hotjar.io` added to rule 2, **and nothing else**. Applied to `design.md` §3.3 (rule-2 row + an `Amendment` paragraph carrying the reasoning) and to `guards/read-only.ts`. Reviewer independently verified the scope: exactly seven families, and boundary matching is `hostname === suffix || endsWith('.' + suffix)` — dot-anchored, so `evil-hotjar.io` and `hotjar.io.attacker.net` are both correctly **rejected**. `BG-R-7` is untouched: its subject is writes to PRMS, and this origin is not PRMS.
+
+### Pivot 2 — `BG-R-6` ring-only exception · **APPROVED (operator, 2026-09-21)**
+
+#### Condition (c): the geometric evidence — *this is what the Reviewer found missing, and it was the Leader's omission*
+
+The Leader wrote an exception requiring the geometry be recorded in `execution.md`, then recorded it nowhere: it lived only in a transient brief. Conditions (a)/(b)/(c) are **conjunctive**, so until this section existed `BG-R-6` was genuinely unmet. Measured with a throwaway harness on a **fresh load** (deleted after use):
+
+| Viewport | Element | Rect | Available margin |
+|---|---|---|---|
+| 1280 | identity band | w 1152 | ~32–64px per side |
+| 1280 | tab bar | w 1216 | ~32px per side |
+| **1760** | identity band | `{x:292, y:81, w:1436, h:44}` | right **32px** |
+| **1760** | tab bar | `{x:260, y:133, w:1500, h:48}` | right **0px** (`260+1500=1760`) |
+
+Vertical gaps between the band, the tab bar and the search row are **6–12px**.
+
+**The 1760px hypothesis, and why it died.** The Leader hypothesised that if these were fixed-max-width containers, a 1760px frame would open ~270–300px of empty gutter for a chip. It is not empty: at that width the **left sidebar changes shape on fresh load**, expanding from a ~64px icon rail to the full labelled navigation panel (`MY SCIENCE PROGRAMS`, `SP01 Breeding for Tomorr…`, `PLATFORM`, …), ~260–290px wide. The rendered test put the chip **directly on `SP01 Breeding for Tomorr…`**, and the second chip cascaded to `below` and reproduced the original defect over the search field and quick-filter pills.
+
+⚠️ **The Implementer caught an error in its own earlier method and disclosed it.** Its first sweep resized an already-loaded page from 1280→2000, which never revealed the breakpoint, because the sidebar only recomputes on **initial render**. Without that correction the left margin would have been recorded as empty and the hypothesis wrongly accepted. This is why the measurement was redone with a fresh `goto`.
+
+**Conclusion for (a):** every placement covers live content — right margin too narrow at both widths, left occupied by navigation, above/below occupied by the adjacent row. Not a placement to tune; a geometric fact.
+
+#### Condition (b): narrative naming — the forward obligation
+
+Written **into `BG-T-10` itself**, not merely reported, because a forward pointer is not carried by having been filed. `BG-T-10` must name in prose: the Center identity band, the four tabs (Overview · Reporting · Results · AI Draft Results), **and the project card** (see the correction below). Without those sentences the exception is unsatisfied and `BG-R-6` is unmet.
+
+#### Correction: **three** ring-only callouts ship, across **two** routes — not two in one
+
+The Leader reported the Pivot to the operator as affecting one capture. That was wrong, and the data was in the Implementer's own report, which the Leader had read:
+
+| Route | Anchor | Label |
+|---|---|---|
+| `workspace-identity` | `[data-guide="bilateral-identity"]` | ring-only |
+| `workspace-identity` | `[data-guide="bilateral-tabs"]` | ring-only |
+| **`catalog`** | `[data-guide="bilateral-project-card"]` | **ring-only — undeclared at approval time** |
+
+Geometry for the third, as measured by the Implementer: the anchor targets the **first** catalog card (`$first`-scoped, per `P-12`); `left`/`right` spill into the neighbouring card across an ~8px gutter, `above` collides with the KPI ring, `below` lands on the next row's title and status badge. It meets condition (a) on the same terms as the other two.
+
+**Disposition:** the operator approved a **rule with conjunctive conditions**, not a one-off waiver for a single capture — `BG-R-6`'s exception says in terms that *"each use must carry its own evidence"*. This third use now carries it: (a) above, (b) added to `BG-T-10`'s obligation, (c) this section. The Leader's misreport of the **scope** is recorded here rather than quietly corrected, and was reported back to the operator.
+
+### Final capture state — all five re-run clean, bounds from observation
+
+| Capture | Measured | Bounds | In bounds | Labelled callouts |
+|---|---|---|---|---|
+| `workspace-identity` | 1280×1800 | w[1280] h[1800] | ✅ | 0/2 — exception |
+| `catalog` | 1280×1800 | w[1280] h[1800] | ✅ | 1/2 — exception |
+| `catalog-create-cta` | 1280×1800 | w[1280] h[1800] | ✅ | 2/2 |
+| `drafts` | 1280×700 | w[1280] h[700] | ✅ | 2/2 |
+| `results-status` | 1760×560 | w[1760] h[560] | ✅ | 2/2 |
+
+Every bounds value equals the measurement from the final clean run — **none inherited from the out-of-brief fork's artifacts**, which were all discarded. The Reviewer verified this independently.
+
+**Callout-overlap defect: resolved.** The Leader's original finding (chips covering the search field, the quick-filter pills and the reporting-cycle band) is fixed — `catalog-create-cta`'s two callouts moved to `above` into genuine whitespace, and the three anchors with no clean placement ship ring-only under the exception. The Leader viewed `workspace-identity.png`: rings on the band and tab bar, real data (53 projects), nothing covered, no skeletons.
+
+**Guard on production:** **851 ALLOW, 0 DENY**, and **0** non-GET to `reporting.cgiar.org`. The guard blocked, escalated, was amended with the reasoning recorded, and now passes the inert beacon while still aborting on any PRMS write. That full cycle is what separates a corrected allowlist from a widened one.
+
+**Governance:** the out-of-brief fork from the previous attempt produced only the discarded artifacts. The re-run used **no subagents or forks** — prohibited explicitly in the brief after the incident.
+
+### `ADVISORY` (recorded, never gating, never minted into a task)
+- *Reliability* — `drafts` and `results-status` `readySelector`s admit empty-state alternates (`.mdr-empty`, `bilateral-results-empty`). The gate would pass on an empty screen while the chip asserts "AI-generated draft results awaiting your review" — a **D8** path with no automated gate. Asserting the populated variant would close it.
+- *Readability* — `catalog`'s label *"Filter projects by Science Program"* anchors `bilateral-reporting-kpis`, whose rendered title is *"Reporting Overview & Quick Filters"*. Accurate but not self-evidently so.
+
+### Leader accountability
+
+All three Reviewer findings were the Leader's: the unrecorded geometry, the misreported scope, and the unswept Pivot Record. The Implementer's work passed on its own terms. `author ≠ auditor` caught the **orchestrator**, which is the case the gate is least often credited with and most needed for.

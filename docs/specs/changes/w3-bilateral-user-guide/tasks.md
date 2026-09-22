@@ -155,7 +155,7 @@
   - [ ] The asserted stack matches `fonts.scss` as read at build time; the value is recorded in the execution entry.
 - **Skills:** `tailwind-design-system`
 
-### `BG-T-7` — Route config: workspace, catalog, drafts, results *(captures 1–3, 16–17)*  `[~]` **BLOCKED — Pivot**
+### `BG-T-7` — Route config: workspace, catalog, drafts, results *(captures 1–3, 16–17)*  `[x]`
 
 - **Type:** `docs`
 - **Description:** Author the URL-reachable half of `routes.config.json`: `workspace-identity`, `catalog`, `catalog-create-cta`, `drafts`, `results-status` — the last deep-linked `?source=w3&method=manual`. Anchors are `[data-guide]` only. No `steps` needed for these five.
@@ -221,6 +221,7 @@
 - **Type:** `docs`
 - **Description:** Author `content/intro.md` and sections 1–7 (introduction, Center workspace, finding your project, the setup drawer, choosing how to report, the manual form, the editor at a glance). Reuse the in-app tour's approved wording where it describes the same element.
 - **Implements:** `BG-R-2`, `BG-R-15`, `BG-R-20`, `BG-AC-15`, `BG-DD-9`, and the negative clause *not traceable to a UI label read from a screenshot, nor to the tour's wording alone*
+- ⚠️ **CARRIED FROM `BG-T-7` (Pivot, 2026-09-21).** `workspace-identity` ships **ring-only** — both its callouts are unlabelled, because the DOM geometry admits no chip placement that avoids covering live content (proved at 1280px and again at 1760px, where the sidebar expands to labelled navigation on fresh load). `BG-R-6`'s operator-approved exception requires condition (b): **the narrative MUST name, in prose, the Center identity band and the four tabs (Overview · Reporting · Results · AI Draft Results) in section 2, and the project card in section 3** — the three elements that ship ring-only. Without that sentence the exception is not satisfied and `BG-R-6` is unmet.
 - **Files (expected):** `tooling/content/intro.md`, `tooling/content/sections/01-…07-*.md`
 - **Depends on:** `BG-T-7` · **Blocks:** `BG-T-13`
 - **Estimate:** `L` · **Review:** `checklist`
@@ -311,7 +312,7 @@ Closed at **scenario and clause** granularity, not requirement ID.
 | `BG-R-3` | *"absent for types 4 and 8"* clause | `BG-T-11` |
 | `BG-R-4` | drawer + manual form captures | `BG-T-8` |
 | `BG-R-5` | AI-Assisted contrast | `BG-T-12` |
-| `BG-R-6` | labelled callouts | `BG-T-7`, `BG-T-8`, `BG-T-9` |
+| `BG-R-6` | labelled callouts (**ring-only permitted under the `BG-T-7` Pivot exception, with narrative naming + recorded geometry**) | `BG-T-7`, `BG-T-8`, `BG-T-9`; the naming half for `workspace-identity` **and `catalog`** is `BG-T-10` |
 | `BG-R-6` | *exactly one* anchor match, fail loud | `BG-T-4` |
 | `BG-R-7` | read-only, tooling-enforced | `BG-T-3` |
 | `BG-R-7` | *MUST NOT submit* / *MUST NOT trigger billable AI* / *MUST NOT issue non-idempotent* | `BG-T-3`; re-asserted in `BG-T-8`, `BG-T-9`, `BG-T-11` |

@@ -86,12 +86,23 @@ const LOG_PATH = path.resolve(__dirname, '..', '..', 'dist', 'capture-requests.l
  * them breaks rendering) plus the analytics/support-chat vendors named in the design table.
  * Matched by exact hostname or hostname suffix (`foo.hotjar.com` matches `hotjar.com`), so a
  * vendor's various subdomains (e.g. `static.hotjar.com`, `script.hotjar.com`) all match
- * without enumerating each one — but nothing outside these six families ever matches.
+ * without enumerating each one — but nothing outside these seven families ever matches.
+ *
+ * `hotjar.io` (Pivot, `BG-T-7`, 2026-09-21 — operator-approved, `design.md` §3.3 Amendment):
+ * added after the guard correctly fired on production — `DENY rule=3 method=POST
+ * origin=https://metrics.hotjar.io`. This deployment's live Hotjar beacon posts to a
+ * different TLD (`.io`), not a subdomain of `hotjar.com`, so dot-anchored suffix matching
+ * did not match it and rule 3 fired as designed. `metrics.hotjar.io` is not a PRMS origin
+ * and cannot write PRMS data, so this is a correction of a factual gap in the vendor's
+ * domain, not a weakening of the policy. Do not extend this entry pattern to any other
+ * origin without going through the Pivot Protocol again — a second blocked origin is a new
+ * Pivot, not a precedent to apply unilaterally.
  */
 const INERT_ALLOWLIST_HOST_SUFFIXES: readonly string[] = [
   'fonts.googleapis.com',
   'fonts.gstatic.com',
   'hotjar.com',
+  'hotjar.io',
   'clarity.ms',
   'google-analytics.com',
   'tawk.to',

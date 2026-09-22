@@ -10,13 +10,13 @@
     "annotations": [
       {
         "selector": "[data-guide=\"bilateral-identity\"]",
-        "label": "Your CGIAR Center workspace",
+        "label": "",
         "role": "primary",
-        "placement": "right"
+        "placement": "above"
       },
       {
         "selector": "[data-guide=\"bilateral-tabs\"]",
-        "label": "Switch between Overview, Reporting, Results and AI Draft Results",
+        "label": "",
         "role": "feature",
         "placement": "below"
       }
@@ -40,7 +40,7 @@
       },
       {
         "selector": "[data-guide=\"bilateral-project-card\"]",
-        "label": "Each card is one project you can report results against",
+        "label": "",
         "role": "feature",
         "placement": "right"
       }
@@ -60,13 +60,13 @@
         "selector": "[data-guide=\"bilateral-project-create-result\"]",
         "label": "Start reporting a result for this project",
         "role": "primary",
-        "placement": "left"
+        "placement": "above"
       },
       {
         "selector": "[data-guide=\"bilateral-project-card\"]",
         "label": "The project the new result will belong to",
         "role": "feature",
-        "placement": "right"
+        "placement": "above"
       }
     ],
     "bounds": { "minW": 1280, "maxW": 1280, "minH": 1800, "maxH": 1800 }
