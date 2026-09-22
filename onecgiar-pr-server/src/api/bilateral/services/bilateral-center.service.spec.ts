@@ -331,6 +331,7 @@ describe('BilateralCenterService', () => {
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
       undefined,
+      undefined,
     );
   });
 
@@ -341,6 +342,18 @@ describe('BilateralCenterService', () => {
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
       2025,
+      undefined,
+    );
+  });
+
+  // bilateral/project-overview-metrics (BIL-POM-OQ-1 correction): the optional `versionId`
+  // rides along too, so the catalog service can scope w1w2ContributorCount to this phase.
+  it('should forward the optional versionId to the catalog service', async () => {
+    await service.getProjects(10, 2025, 36);
+    expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
+      10,
+      2025,
+      36,
     );
   });
 

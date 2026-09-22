@@ -30,7 +30,8 @@ describe('BilateralProjectsPanelComponent', () => {
       leadCenter: { id: 1, name: 'Bioversity International', acronym: 'Bioversity' },
       sciencePrograms: [
         { programId: 1, programCode: 'GENE', spName: 'Genebank', spShortName: 'Genebank', allocation: '100' }
-      ]
+      ],
+      w1w2ContributorCount: 5
     },
     {
       id: 102,
@@ -42,7 +43,8 @@ describe('BilateralProjectsPanelComponent', () => {
       sciencePrograms: [
         { programId: 2, programCode: 'SP01', spName: 'Breeding for Tomorrow', spShortName: 'Breeding', allocation: '80' },
         { programId: 1, programCode: 'GENE', spName: 'Genebank', spShortName: 'Genebank', allocation: '20' }
-      ]
+      ],
+      w1w2ContributorCount: 0
     },
     {
       id: 103,
@@ -53,7 +55,8 @@ describe('BilateralProjectsPanelComponent', () => {
       leadCenter: { id: 1, name: 'Bioversity International', acronym: 'Bioversity' },
       sciencePrograms: [
         { programId: 3, programCode: 'SP04', spName: 'Multifunctional Landscapes', spShortName: 'Landscapes', allocation: '100' }
-      ]
+      ],
+      w1w2ContributorCount: 0
     }
   ];
 
@@ -143,7 +146,7 @@ describe('BilateralProjectsPanelComponent', () => {
     ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
     fixture.detectChanges();
 
-    expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledWith('Bioversity');
+    expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledWith('Bioversity', undefined, undefined);
     expect(component.projects().length).toBe(3);
 
     const kpis = component.kpiSummary();
@@ -542,22 +545,30 @@ describe('BilateralProjectsPanelComponent', () => {
       expect(component.getProjectResultsCount(mockProjects[2])).toBe(0);
     });
 
-    it('should render results count badge on cards in grid view', () => {
+    it('renders the W1/W2 contributor count as a non-clickable pill with a hover tooltip (BIL-POM-OQ-1 correction)', () => {
       component.setViewMode('grid');
       fixture.detectChanges();
 
       const cards = fixture.nativeElement.querySelectorAll('.bpp_card');
       expect(cards.length).toBe(3);
 
-      const firstBadge = cards[0].querySelector('.bpp_results_badge');
-      expect(firstBadge).toBeTruthy();
-      expect(firstBadge.textContent).toContain('2 results');
-      expect(firstBadge.classList.contains('bpp_results_badge--has-results')).toBe(true);
+      const findContributorPill = (card: Element) =>
+        Array.from(card.querySelectorAll('[data-testid="bpp-metrics-grid"] > *')).find((el: any) =>
+          el.getAttribute('aria-label')?.includes('mapped to')
+        ) as HTMLElement;
 
-      const thirdBadge = cards[2].querySelector('.bpp_results_badge');
-      expect(thirdBadge).toBeTruthy();
-      expect(thirdBadge.textContent).toContain('0 results');
-      expect(thirdBadge.classList.contains('bpp_results_badge--has-results')).toBe(false);
+      // mockProjects[0] (id 101) carries w1w2ContributorCount: 5.
+      const firstPill = findContributorPill(cards[0]);
+      expect(firstPill).toBeTruthy();
+      expect(firstPill.tagName).toBe('SPAN'); // not a <button> — no navigation target makes sense for this metric
+      expect(firstPill.textContent?.replace(/\s+/g, ' ').trim()).toBe('5 results');
+      expect(firstPill.getAttribute('aria-label')).toContain('5 W1/W2 results mapped to');
+      expect(firstPill.getAttribute('title')).toContain('W1/W2 results mapped to this project: 5');
+
+      // mockProjects[2] (id 103) carries w1w2ContributorCount: 0.
+      const thirdPill = findContributorPill(cards[2]);
+      expect(thirdPill).toBeTruthy();
+      expect(thirdPill.textContent?.replace(/\s+/g, ' ').trim()).toBe('0 results');
     });
 
     it('should render results footer link in card footer in grid view', () => {
@@ -598,24 +609,19 @@ describe('BilateralProjectsPanelComponent', () => {
       expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
 
-    it('navigates to results tab when clicking results badge in card header', () => {
+    it('the W1/W2 contributor count pill is not clickable — no navigation target makes sense for it', () => {
       component.setViewMode('grid');
       fixture.detectChanges();
 
-      const badge = fixture.nativeElement.querySelector('.bpp_card .bpp_results_badge') as HTMLElement;
-      badge.click();
+      const firstCard = fixture.nativeElement.querySelectorAll('.bpp_card')[0];
+      const pill = Array.from(firstCard.querySelectorAll('[data-testid="bpp-metrics-grid"] > *')).find((el: any) =>
+        el.getAttribute('aria-label')?.includes('mapped to')
+      ) as HTMLElement;
 
-      expect(mockRouter.navigate).toHaveBeenCalledWith(
-        ['/bilateral', 'Bioversity', 'results'],
-        {
-          queryParams: {
-            project: 101,
-            role: 'all',
-            source: 'all',
-            phase: 36
-          }
-        }
-      );
+      expect(pill.tagName).not.toBe('BUTTON');
+      mockRouter.navigate.mockClear();
+      pill.click();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
 
     it('navigates to results tab when clicking results footer link', () => {
@@ -684,6 +690,317 @@ describe('BilateralProjectsPanelComponent', () => {
     });
   });
 
+  // @akili-spec bilateral/project-overview-metrics (BIL-POM-T-3)
+  describe('BIL-POM-T-3: replicated / new-for-review counts per project', () => {
+    // `is_replicated` / `status_id` intentionally use the raw MySQL tinyint shape (`0`/`1`), NOT
+    // `true`/`false` — `getResultsByBilateralCenter` bypasses TypeORM's boolean transform, so a
+    // fixture using real booleans would let a strict `=== true` bug pass by coincidence.
+    const mockCenterResultsWithReplication: BilateralCenterResult[] = [
+      // Project A (101): 3 replicated rows
+      {
+        result_id: 3001,
+        result_code: 'R-3001',
+        title: 'Replicated result 1 for B-A1080',
+        project_id: 101,
+        center_id: 1,
+        status_id: 6,
+        status_name: 'Approved',
+        result_type_id: 1,
+        result_type_name: 'Policy Change',
+        version_id: 36,
+        is_replicated: 1,
+      } as unknown as BilateralCenterResult,
+      {
+        result_id: 3002,
+        result_code: 'R-3002',
+        title: 'Replicated result 2 for B-A1080',
+        project_id: 101,
+        center_id: 1,
+        status_id: 6,
+        status_name: 'Approved',
+        result_type_id: 1,
+        result_type_name: 'Policy Change',
+        version_id: 36,
+        is_replicated: 1,
+      } as unknown as BilateralCenterResult,
+      {
+        result_id: 3003,
+        result_code: 'R-3003',
+        title: 'Replicated result 3 for B-A1080',
+        project_id: 101,
+        center_id: 1,
+        status_id: 6,
+        status_name: 'Approved',
+        result_type_id: 1,
+        result_type_name: 'Policy Change',
+        version_id: 36,
+        is_replicated: 1,
+      } as unknown as BilateralCenterResult,
+      // Project A (101): 2 not-replicated + pending → new-for-review
+      {
+        result_id: 3004,
+        result_code: 'R-3004',
+        title: 'New for review result 1 for B-A1080',
+        project_id: 101,
+        center_id: 1,
+        status_id: 5,
+        status_name: 'Pending',
+        result_type_id: 1,
+        result_type_name: 'Policy Change',
+        version_id: 36,
+        is_replicated: 0,
+      } as unknown as BilateralCenterResult,
+      {
+        result_id: 3005,
+        result_code: 'R-3005',
+        title: 'New for review result 2 for B-A1080',
+        project_id: 101,
+        center_id: 1,
+        status_id: 5,
+        status_name: 'Pending',
+        result_type_id: 1,
+        result_type_name: 'Policy Change',
+        version_id: 36,
+        is_replicated: 0,
+      } as unknown as BilateralCenterResult,
+      // `BIL-POM-AC-3` mutual-exclusivity case: replicated AND pending — counts ONLY as replicated.
+      // A strict `=== true` bug (rather than `Number(...) === 1`) would silently pass unless this
+      // row uses the raw `1`/`0` shape.
+      {
+        result_id: 3006,
+        result_code: 'R-3006',
+        title: 'Re-submitted after replication for B-A1080',
+        project_id: 101,
+        center_id: 1,
+        status_id: 5,
+        status_name: 'Pending',
+        result_type_id: 1,
+        result_type_name: 'Policy Change',
+        version_id: 36,
+        is_replicated: 1,
+      } as unknown as BilateralCenterResult,
+    ];
+
+    beforeEach(() => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(of({ response: mockCenterResultsWithReplication }));
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+    });
+
+    it('computes replicated/new-for-review counts per project, not a shared/global count', () => {
+      // Project A: 3 replicated rows + 2 not-replicated/pending rows + 1 mutual-exclusivity row
+      // (replicated AND pending — counts only toward replicated, BIL-POM-AC-3).
+      expect(component.getProjectReplicatedCount(mockProjects[0])).toBe(4);
+      expect(component.getProjectNewForReviewCount(mockProjects[0])).toBe(2);
+
+      // Project B (102) has none of either.
+      expect(component.getProjectReplicatedCount(mockProjects[1])).toBe(0);
+      expect(component.getProjectNewForReviewCount(mockProjects[1])).toBe(0);
+    });
+
+    it('counts a row that is both replicated and pending ONLY toward replicated (BIL-POM-AC-3)', () => {
+      // R-3006 is `is_replicated: 1, status_id: 5` — must not double-count into new-for-review.
+      const replicated = component.getProjectReplicatedCount(mockProjects[0]);
+      const newForReview = component.getProjectNewForReviewCount(mockProjects[0]);
+      expect(replicated).toBe(4);
+      expect(newForReview).toBe(2);
+      expect(replicated + newForReview).toBe(6); // total rows for project 101, none double-counted
+    });
+
+    it('renders the replicated and new-for-review counts in the card metrics grid and navigates on click', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const firstCard = fixture.nativeElement.querySelectorAll('.bpp_card')[0];
+      const metricButtons = firstCard.querySelectorAll('[data-testid="bpp-metrics-grid"] button');
+      // replicated button + new-for-review button — the W1/W2 contributor count is a
+      // non-clickable <span>, not a <button> (BIL-POM-OQ-1 correction), so it's excluded here.
+      expect(metricButtons.length).toBe(2);
+
+      const replicatedBtn = Array.from(metricButtons).find((b: any) => b.getAttribute('aria-label')?.includes('replicated innovations')) as HTMLElement;
+      expect(replicatedBtn).toBeTruthy();
+      expect(replicatedBtn.textContent?.replace(/\s+/g, ' ').trim()).toBe('4 replicated');
+      expect(replicatedBtn.getAttribute('aria-label')).toContain('4 replicated innovations for B-A1080');
+
+      const newForReviewBtn = Array.from(metricButtons).find((b: any) => b.getAttribute('aria-label')?.includes('new for review innovations')) as HTMLElement;
+      expect(newForReviewBtn).toBeTruthy();
+      expect(newForReviewBtn.textContent?.replace(/\s+/g, ' ').trim()).toBe('2 new');
+      expect(newForReviewBtn.getAttribute('aria-label')).toContain('2 new for review innovations for B-A1080');
+
+      mockRouter.navigate.mockClear();
+      replicatedBtn.click();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        { queryParams: { project: 101, role: 'all', source: 'all', phase: 36 } }
+      );
+
+      mockRouter.navigate.mockClear();
+      newForReviewBtn.click();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        { queryParams: { project: 101, role: 'all', source: 'all', phase: 36 } }
+      );
+    });
+
+    it('renders the replicated and new-for-review badges in list view and navigates on click', () => {
+      component.setViewMode('list');
+      fixture.detectChanges();
+
+      const firstRow = fixture.nativeElement.querySelectorAll('.bpp_table_row')[0];
+      const cell = firstRow.querySelector('.bpp_td_results');
+      const badges = cell.querySelectorAll('.bpp_results_badge');
+      expect(badges.length).toBe(3);
+
+      const replicatedBadge = Array.from(badges).find((b: any) => b.getAttribute('aria-label')?.includes('replicated')) as HTMLElement;
+      expect(replicatedBadge).toBeTruthy();
+
+      mockRouter.navigate.mockClear();
+      replicatedBadge.click();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bilateral', 'Bioversity', 'results'],
+        { queryParams: { project: 101, role: 'all', source: 'all', phase: 36 } }
+      );
+    });
+
+    it('renders the replicated and new-for-review counts as "0" in the metrics grid for a project with neither (Falsifier: B shows 0 and 0)', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const secondCard = fixture.nativeElement.querySelectorAll('.bpp_card')[1];
+      const metricButtons = secondCard.querySelectorAll('[data-testid="bpp-metrics-grid"] button');
+      // Replicated + new-for-review — both always render, even at 0 (the W1/W2 contributor
+      // count is a separate non-clickable <span>, not counted here).
+      expect(metricButtons.length).toBe(2);
+
+      const replicatedBtn = Array.from(metricButtons).find((b: any) => b.getAttribute('aria-label')?.includes('replicated innovations')) as HTMLElement;
+      expect(replicatedBtn).toBeTruthy();
+      expect(replicatedBtn.textContent?.replace(/\s+/g, ' ').trim()).toBe('0 replicated');
+
+      const newForReviewBtn = Array.from(metricButtons).find((b: any) => b.getAttribute('aria-label')?.includes('new for review innovations')) as HTMLElement;
+      expect(newForReviewBtn).toBeTruthy();
+      expect(newForReviewBtn.textContent?.replace(/\s+/g, ' ').trim()).toBe('0 new');
+    });
+
+    it('applies the active/dim pill style conditionally (>0 vs 0)', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const firstCard = fixture.nativeElement.querySelectorAll('.bpp_card')[0];
+      const firstButtons = firstCard.querySelectorAll('[data-testid="bpp-metrics-grid"] button');
+      const activeReplicatedBtn = Array.from(firstButtons).find((b: any) => b.getAttribute('aria-label')?.includes('replicated innovations')) as HTMLElement;
+      expect(activeReplicatedBtn.classList.contains('text-[var(--pr-color-secondary-400)]')).toBe(true);
+
+      const secondCard = fixture.nativeElement.querySelectorAll('.bpp_card')[1];
+      const secondButtons = secondCard.querySelectorAll('[data-testid="bpp-metrics-grid"] button');
+      const dimReplicatedBtn = Array.from(secondButtons).find((b: any) => b.getAttribute('aria-label')?.includes('replicated innovations')) as HTMLElement;
+      expect(dimReplicatedBtn.classList.contains('text-[var(--pr-color-accents-4)]')).toBe(true);
+
+      // "New for review" uses the same neutral pill scheme as the other two — only its icon is
+      // recolored (emerald), matching the amber/emerald icon convention from the home card
+      // (result-framework-reporting-card-item.component.html).
+      const activeNewBtn = Array.from(firstButtons).find((b: any) => b.getAttribute('aria-label')?.includes('new for review innovations')) as HTMLElement;
+      expect(activeNewBtn.classList.contains('text-[var(--pr-color-secondary-400)]')).toBe(true);
+    });
+
+    it('colors the replicated icon amber and the new-for-review icon emerald (home-card icon convention)', () => {
+      component.setViewMode('grid');
+      fixture.detectChanges();
+
+      const firstCard = fixture.nativeElement.querySelectorAll('.bpp_card')[0];
+      const buttons = firstCard.querySelectorAll('[data-testid="bpp-metrics-grid"] button');
+
+      const replicatedIcon = (Array.from(buttons).find((b: any) => b.getAttribute('aria-label')?.includes('replicated innovations')) as HTMLElement).querySelector('i');
+      expect(replicatedIcon?.classList.contains('text-amber-600')).toBe(true);
+
+      const newForReviewIcon = (Array.from(buttons).find((b: any) => b.getAttribute('aria-label')?.includes('new for review innovations')) as HTMLElement).querySelector('i');
+      expect(newForReviewIcon?.classList.contains('text-emerald-600')).toBe(true);
+    });
+  });
+
+  describe('W1/W2 contributor count phase-switch refresh (BIL-POM-OQ-1 correction)', () => {
+    it('passes versionId to GET_bilateralProjects on the initial center-resolution fetch', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledWith('Bioversity', undefined, 36);
+    });
+
+    it('re-fetches on a phase switch alone and updates w1w2ContributorCount WITHOUT resetting search/filter state', () => {
+      // Argument-driven (not `mockReturnValueOnce`-ordering-driven): `BilateralOverviewService`
+      // also calls `GET_bilateralProjects` (with only a `centerId` arg, cached per center) on the
+      // very same signals this panel reacts to — asserting on call ORDER/COUNT against a mock
+      // shared with another consumer is brittle. Branch on the actual `versionId` argument instead.
+      (bilateralApiService.GET_bilateralProjects as jest.Mock).mockImplementation(
+        (_centerId: string, _year: unknown, versionId?: number) =>
+          versionId === 40
+            ? of({
+                response: [
+                  { ...mockProjects[0], w1w2ContributorCount: 9 },
+                  { ...mockProjects[1], w1w2ContributorCount: 0 },
+                  { ...mockProjects[2], w1w2ContributorCount: 0 }
+                ]
+              })
+            : of({ response: mockProjects })
+      );
+
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+
+      // Simulate an in-progress search/filter — must survive the phase switch below.
+      component.searchQuery.set('genebank');
+      component.setProgramFilter('Genebank');
+      fixture.detectChanges();
+
+      ctx.selectedVersionId.set(40);
+      fixture.detectChanges();
+
+      // The phase-only path fetched again with the NEW versionId, not the reset-triggering path.
+      expect(bilateralApiService.GET_bilateralProjects).toHaveBeenCalledWith('Bioversity', undefined, 40);
+      // `getProjectW1w2ContributorCount` reads straight off whatever project object it's handed —
+      // must read the LIVE signal state here, not the static `mockProjects` fixture (which never
+      // mutates), or this assertion would pass/fail independent of the merge logic under test.
+      const updatedProjectA = component.projects().find(p => p.id === mockProjects[0].id)!;
+      expect(component.getProjectW1w2ContributorCount(updatedProjectA)).toBe(9);
+
+      // Filters must be untouched — only a center change resets them.
+      expect(component.searchQuery()).toBe('genebank');
+      expect(component.selectedProgramFilter()).toBe('Genebank');
+    });
+
+    it('fetches with its own 3-arg signature exactly once on the initial resolution, even with centerId and versionId both set before the first change detection', () => {
+      // `BilateralOverviewService.loadProjects(centerId)` also shares this mock but always calls
+      // with a single argument — filter this panel's own 3-arg calls out from that noise instead
+      // of asserting a raw total call count (see the previous test's comment for why).
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+
+      const ownCalls = (bilateralApiService.GET_bilateralProjects as jest.Mock).mock.calls.filter(
+        call => call.length === 3 && call[2] === 36
+      );
+      expect(ownCalls.length).toBe(1);
+    });
+
+    it('resets search/filter state and does a full load on a genuine center change', () => {
+      ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
+      ctx.selectedVersionId.set(36);
+      fixture.detectChanges();
+
+      component.searchQuery.set('genebank');
+      component.setProgramFilter('Genebank');
+      fixture.detectChanges();
+
+      ctx.setCenter('OtherCenter', 'Other Center Full Name', 'OtherCenter');
+      fixture.detectChanges();
+
+      expect(component.searchQuery()).toBe('');
+      expect(component.selectedProgramFilter()).toBe('ALL');
+    });
+  });
+
   describe('Refresh button & catalog refresh', () => {
     beforeEach(() => {
       ctx.setCenter('Bioversity', 'Bioversity International', 'Bioversity');
@@ -705,7 +1022,7 @@ describe('BilateralProjectsPanelComponent', () => {
       component.refresh();
 
       expect(invalidateSpy).toHaveBeenCalledWith('Bioversity', 36);
-      expect(getProjectsSpy).toHaveBeenCalledWith('Bioversity');
+      expect(getProjectsSpy).toHaveBeenCalledWith('Bioversity', undefined, 36);
     });
 
     it('triggers refresh when refresh button is clicked in the DOM', () => {

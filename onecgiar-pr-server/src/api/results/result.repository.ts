@@ -4139,6 +4139,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           LIMIT 1
         ) AS submitter,
         r.creation_method,
+        r.is_replicated,
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rc.is_leading_result
       FROM result r
