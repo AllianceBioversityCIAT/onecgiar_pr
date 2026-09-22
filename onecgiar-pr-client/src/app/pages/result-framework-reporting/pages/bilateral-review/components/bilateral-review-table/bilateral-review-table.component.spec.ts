@@ -460,9 +460,9 @@ describe('BilateralReviewTableComponent', () => {
       render([GROUP_A]);
       const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
       expect(headerTexts).not.toContain('Indicator category');
-      // 7 in project mode (default groupMode): code, title, center, status, alignment, date, actions
-      // — down from 8 now that TOC result + Indicator merge into one Alignment column (BRV-R-3).
-      expect(headerTexts.length).toBe(7);
+      // 8 in project mode (default groupMode): code, title, center, source, status, alignment,
+      // date, actions — bumped from 7 by the new SOURCE column (BSR-DD-2).
+      expect(headerTexts.length).toBe(8);
 
       const titleCell = byTestId('bilateral-review-row-action')[0].closest('tr')!.querySelectorAll('td')[1];
       expect(titleCell.textContent).toContain(GROUP_A.results[0].indicator_category);
@@ -559,7 +559,7 @@ describe('BilateralReviewTableComponent', () => {
       expect(cell.querySelector('.sr-only')?.textContent).toContain(BILATERAL_REVIEW_COPY.table.notSpecified);
     });
 
-    it('the alignment body cell keeps min-w-[220px]; the title header/cell carry NO min-w (BRH-T-3 attempt 2: table-fixed + colgroup govern width instead — a min-w here would reopen the horizontal-overflow defect)', () => {
+    it('the alignment body cell keeps min-w-[184px] (BSR-DD-2: narrowed from 220px alongside the colgroup, re-tuned at execute time from the carried-over 192px figure); the title header/cell carry NO min-w (BRH-T-3 attempt 2: table-fixed + colgroup govern width instead — a min-w here would reopen the horizontal-overflow defect)', () => {
       render([GROUP_A]);
       const headerCells = Array.from(root().querySelectorAll('thead th'));
       const titleHeader = headerCells[1] as HTMLElement;
@@ -567,22 +567,134 @@ describe('BilateralReviewTableComponent', () => {
 
       expect(titleHeader.className).not.toContain('min-w-[280px]');
       expect(titleCell.className).not.toContain('min-w-[280px]');
-      expect(byTestId('bilateral-review-row-alignment')[0].className).toContain('min-w-[220px]');
+      expect(byTestId('bilateral-review-row-alignment')[0].className).toContain('min-w-[184px]');
+    });
+  });
+
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-4, BSR-R-6, BSR-R-7,
+  // BSR-R-8, BSR-AC-7, BSR-AC-11, design.md §1B, §6.2, BSR-DD-2)
+  describe('SOURCE column — position, header text, chip derivation, placeholder (BSR-R-4, BSR-R-8)', () => {
+    it('SOURCE sits immediately after Lead Center, before Status — Title stays td:nth-child(2) (BSR-DD-2 Position rule)', () => {
+      render([GROUP_A]);
+      const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      const centerIdx = headerTexts.indexOf(BILATERAL_REVIEW_COPY.table.headers.center);
+      const sourceIdx = headerTexts.indexOf(BILATERAL_REVIEW_COPY.table.headers.source);
+      const statusIdx = headerTexts.indexOf(BILATERAL_REVIEW_COPY.table.headers.status);
+      expect(sourceIdx).toBe(centerIdx + 1);
+      expect(statusIdx).toBe(sourceIdx + 1);
+      // Title unaffected — SOURCE lands after Lead Center, so `td:nth-child(2)` still addresses
+      // Title (verified, not assumed — the module CLAUDE.md flags this as a "verify, don't assume").
+      const titleCell = root().querySelectorAll('tbody tr')[0].querySelectorAll('td')[1];
+      expect(titleCell.querySelector('p')?.textContent).toBe(GROUP_A.results[0].result_title);
+    });
+
+    it('is present outside showCenterColumn() — center-grouped mode still renders the SOURCE header', () => {
+      const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: null, center: null, results: GROUP_A.results };
+      render([centerGroup], { groupMode: 'center' });
+      const headerTexts = Array.from(root().querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      expect(headerTexts).toContain(BILATERAL_REVIEW_COPY.table.headers.source);
+      expect(headerTexts).not.toContain(BILATERAL_REVIEW_COPY.table.headers.center);
+    });
+
+    it('renders the AI badge for creation_method "AI"', () => {
+      const group = projectGroup('P15 - AI Project', [row({ id: 'src-ai', project_id: 'p15', project_name: 'P15 - AI Project', creation_method: 'AI' })]);
+      render([group]);
+      expect(byTestId('bilateral-review-source-chip-ai').length).toBe(1);
+    });
+
+    it('renders the "Via API · STAR" pill for creation_method EXTERNAL + platform code STAR', () => {
+      const group = projectGroup('P16 - External Project', [row({ id: 'src-ext', project_id: 'p16', project_name: 'P16 - External Project', creation_method: 'EXTERNAL', external_platform_code: 'STAR' })]);
+      render([group]);
+      const pill = byTestId('bilateral-review-source-chip-pill')[0];
+      expect(pill.textContent?.trim()).toBe('Via API · STAR');
+    });
+
+    it('renders "Manual entry" for creation_method MANUAL', () => {
+      const group = projectGroup('P17 - Manual Project', [row({ id: 'src-man', project_id: 'p17', project_name: 'P17 - Manual Project', creation_method: 'MANUAL' })]);
+      render([group]);
+      expect(byTestId('bilateral-review-source-chip-pill')[0].textContent?.trim()).toBe('Manual entry');
+    });
+
+    it('an unmapped creation_method with no platform code renders the placeholder pair (BSR-R-7)', () => {
+      const group = projectGroup('P18 - Unknown Project', [row({ id: 'src-unk', project_id: 'p18', project_name: 'P18 - Unknown Project', creation_method: 'UNKNOWN', external_platform_code: null })]);
+      render([group]);
+      const placeholder = byTestId('bilateral-review-source-chip-placeholder')[0];
+      expect(placeholder.getAttribute('aria-hidden')).toBe('true');
+      expect(placeholder.textContent).toBe('—');
+    });
+
+    it('the SOURCE td carries whitespace-nowrap and the chip is wrapped in a cell-owned block-truncate span (BSR-DD-2 two guards)', () => {
+      const group = projectGroup('P19 - Guard Project', [row({ id: 'src-guard', project_id: 'p19', project_name: 'P19 - Guard Project', creation_method: 'AI' })]);
+      render([group]);
+      const sourceCell = byTestId('bilateral-review-row-source')[0];
+      expect(sourceCell.className).toContain('whitespace-nowrap');
+      const wrapper = sourceCell.querySelector('span');
+      expect(wrapper?.className).toContain('block');
+      expect(wrapper?.className).toContain('truncate');
+      expect(wrapper?.className).toContain('max-w-full');
+    });
+
+    it('narrow cards also render the SOURCE chip and the reporter (BSR-R-8, BSR-AC-11)', () => {
+      const group = projectGroup('P21 - Narrow Source Project', [
+        row({ id: 'src-narrow', project_id: 'p21', project_name: 'P21 - Narrow Source Project', creation_method: 'MANUAL', reporter_name: 'Ana Perez' })
+      ]);
+      render([group], { narrow: true });
+      const sourceRow = byTestId('bilateral-review-card-source-row')[0];
+      expect(sourceRow.querySelector('[data-testid="bilateral-review-source-chip-pill"]')?.textContent?.trim()).toBe('Manual entry');
+      expect(byTestId('bilateral-review-card-reporter')[0].textContent?.trim()).toBe('Ana Perez');
+    });
+
+    it('narrow cards render the reporter placeholder when reporter_name is absent', () => {
+      const group = projectGroup('P22 - Narrow No Reporter', [row({ id: 'src-narrow-2', project_id: 'p22', project_name: 'P22 - Narrow No Reporter', reporter_name: null })]);
+      render([group], { narrow: true });
+      const placeholder = byTestId('bilateral-review-card-reporter')[0];
+      expect(placeholder.getAttribute('aria-hidden')).toBe('true');
     });
   });
 
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-8, R-14 (f))
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-3) — SUBMITTED cell,
+  // date + reporter (design.md §1B: td[5]->td[6], and the exact-text assertion re-pointed at the
+  // date's own inner node since the reporter line otherwise breaks it independently of the index
+  // shift).
   describe('Date format — d MMM y, right-aligned (BRP-R-8, R-14 (f))', () => {
     it('renders "23 Feb 2026" from "2026-02-23"', () => {
       const group = projectGroup('P11 - Date Project', [row({ id: 'd1', project_id: 'p11', project_name: 'P11 - Date Project', submission_date: '2026-02-23' })]);
       render([group]);
 
       const rowEl = root().querySelectorAll('tbody tr')[0];
-      // Column order (project mode, 7 columns): code(0) title(1) center(2) status(3)
-      // alignment(4) date(5) actions(6) — was index 6 before the Alignment merge dropped one column.
-      const dateCell = rowEl.querySelectorAll('td')[5];
-      expect(dateCell.textContent?.trim()).toBe('23 Feb 2026');
+      // Column order (project mode, 8 columns): code(0) title(1) center(2) source(3) status(4)
+      // alignment(5) date(6) actions(7) — date moved from index 5 to 6 when SOURCE was inserted
+      // after Lead Center (BSR-DD-2).
+      const dateCell = rowEl.querySelectorAll('td')[6];
       expect(dateCell.className).toContain('text-right');
+      // Exact text lives on the date's OWN inner node (`bilateral-review-row-submitted-date`) —
+      // asserting the whole cell's textContent would also pick up the reporter line (BSR-DD-3).
+      const dateNode = dateCell.querySelector('[data-testid="bilateral-review-row-submitted-date"]');
+      expect(dateNode?.textContent?.trim()).toBe('23 Feb 2026');
+    });
+
+    it('a missing reporter_name renders the placeholder pair and leaves the date unaffected (BSR-AC-7)', () => {
+      const group = projectGroup('P11b - No Reporter Project', [row({ id: 'd2', project_id: 'p11b', project_name: 'P11b - No Reporter Project', submission_date: '2026-02-23', reporter_name: null })]);
+      render([group]);
+
+      const rowEl = root().querySelectorAll('tbody tr')[0];
+      const dateCell = rowEl.querySelectorAll('td')[6];
+      expect(dateCell.querySelector('[data-testid="bilateral-review-row-submitted-date"]')?.textContent?.trim()).toBe('23 Feb 2026');
+      const placeholder = dateCell.querySelector('[data-testid="bilateral-review-row-submitted-reporter"]');
+      expect(placeholder?.getAttribute('aria-hidden')).toBe('true');
+      expect(placeholder?.textContent).toBe('—');
+      expect(dateCell.querySelector('.sr-only')?.textContent).toContain(BILATERAL_REVIEW_COPY.table.reporterLabel);
+    });
+
+    it('a long reporter_name truncates with the full value in title and does not grow the row (BSR-AC-8)', () => {
+      const longName = 'A Very Long Reporter Full Name That Would Never Fit In A Narrow Column';
+      const group = projectGroup('P11c - Long Reporter Project', [row({ id: 'd3', project_id: 'p11c', project_name: 'P11c - Long Reporter Project', reporter_name: longName })]);
+      render([group]);
+
+      const reporterNode = byTestId('bilateral-review-row-submitted-reporter')[0];
+      expect(reporterNode.className).toContain('truncate');
+      expect(reporterNode.getAttribute('title')).toBe(longName);
     });
   });
 
@@ -870,16 +982,16 @@ describe('BilateralReviewTableComponent', () => {
   // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-4, AC-7, AC-7b,
   // judgment-day L-8) — `columnCount()` must drive EVERY `colspan` site, not just one.
   describe('columnCount() drives every colspan site (BRV-R-4, judgment-day L-8)', () => {
-    it('columnCount is 7 in project mode and 6 in center mode', () => {
+    it('columnCount is 8 in project mode and 7 in center mode (BSR-DD-2: bumped from 7/6 by the SOURCE column)', () => {
       render([GROUP_A], { groupMode: 'project' });
-      expect(component.columnCount()).toBe(7);
+      expect(component.columnCount()).toBe(8);
 
       const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: BILATERAL_REVIEW_COPY.table.projectsCaption(1), center: null, results: GROUP_A.results };
       render([centerGroup], { groupMode: 'center' });
-      expect(component.columnCount()).toBe(6);
+      expect(component.columnCount()).toBe(7);
     });
 
-    it('flat view loading row: colspan equals the flat header count (7 in project mode, FAIL input guard: was hard-coded 8)', () => {
+    it('flat view loading row: colspan equals the flat header count (8 in project mode, BSR-DD-2 — was 7 before the SOURCE column; FAIL input guard: was hard-coded 8 pre-BRV)', () => {
       fixture.componentRef.setInput('view', 'flat');
       fixture.componentRef.setInput('flatRows', []);
       fixture.componentRef.setInput('loading', true);
@@ -888,7 +1000,7 @@ describe('BilateralReviewTableComponent', () => {
 
       const loadingCells = root().querySelectorAll('tbody tr td[colspan]');
       expect(loadingCells.length).toBeGreaterThan(0);
-      loadingCells.forEach(td => expect((td as HTMLTableCellElement).colSpan).toBe(7));
+      loadingCells.forEach(td => expect((td as HTMLTableCellElement).colSpan).toBe(8));
     });
   });
 
@@ -1287,7 +1399,7 @@ describe('BilateralReviewTableComponent', () => {
 
     // ── HITL fix (attempt 2): uniform column widths across every card (BRH-R-1) ──────────────────
     describe('Uniform column widths — table-fixed + shared colgroup (BRH-R-1, HITL live-page finding)', () => {
-      it('every nested grouped table (project mode) carries table-fixed and a 7-<col> colgroup as its FIRST child', () => {
+      it('every nested grouped table (project mode) carries table-fixed and an 8-<col> colgroup as its FIRST child (BSR-DD-2: bumped from 7 by the SOURCE column)', () => {
         render([GROUP_A, GROUP_B], { expandAllNonce: 1, allExpanded: true });
         const tables = Array.from(root().querySelectorAll('table'));
         expect(tables.length).toBeGreaterThan(0);
@@ -1295,20 +1407,20 @@ describe('BilateralReviewTableComponent', () => {
           expect(table.className).toContain('table-fixed');
           const colgroup = table.firstElementChild;
           expect(colgroup?.tagName.toLowerCase()).toBe('colgroup');
-          expect(colgroup?.querySelectorAll('col').length).toBe(7);
+          expect(colgroup?.querySelectorAll('col').length).toBe(8);
         });
       });
 
-      it('center mode (grouped view) uses a 6-<col> colgroup — no Lead Center column', () => {
+      it('center mode (grouped view) uses a 7-<col> colgroup — no Lead Center column (BSR-DD-2: bumped from 6 by the SOURCE column, which stays present outside the showCenterColumn() branch)', () => {
         const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: null, center: null, results: GROUP_A.results };
         render([centerGroup], { groupMode: 'center', expandAllNonce: 1, allExpanded: true });
         const table = root().querySelector('table') as HTMLTableElement;
         const colgroup = table.firstElementChild;
         expect(colgroup?.tagName.toLowerCase()).toBe('colgroup');
-        expect(colgroup?.querySelectorAll('col').length).toBe(6);
+        expect(colgroup?.querySelectorAll('col').length).toBe(7);
       });
 
-      it('the flat table uses the SAME column-width definition (7 <col> in project mode)', () => {
+      it('the flat table uses the SAME column-width definition (8 <col> in project mode, BSR-DD-2)', () => {
         fixture.componentRef.setInput('view', 'flat');
         fixture.componentRef.setInput('flatRows', GROUP_A.results);
         fixture.detectChanges();
@@ -1317,16 +1429,39 @@ describe('BilateralReviewTableComponent', () => {
         expect(table.className).toContain('table-fixed');
         const colgroup = table.firstElementChild;
         expect(colgroup?.tagName.toLowerCase()).toBe('colgroup');
-        expect(colgroup?.querySelectorAll('col').length).toBe(7);
+        expect(colgroup?.querySelectorAll('col').length).toBe(8);
       });
 
       it('the title <col> is the ONLY one with no explicit width — every other column has a fixed px width', () => {
         render([GROUP_A], { expandAllNonce: 1, allExpanded: true });
         const cols = Array.from(root().querySelectorAll('table')[0].querySelectorAll('col')) as HTMLElement[];
-        expect(cols.length).toBe(7);
+        expect(cols.length).toBe(8);
         expect(cols[1].style.width).toBe(''); // title = remainder, no explicit width
         const widthed = cols.filter((_, i) => i !== 1);
         widthed.forEach(col => expect(col.style.width).toMatch(/^\d+px$/));
+      });
+
+      // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-2, P-7)
+      it('center-grouped mode: the SOURCE <col> is present and index-aligned (P-7 — a flat-literal widths array would shift every width one column left here)', () => {
+        const centerGroup: BilateralReviewGroup = { key: 'CIP', label: 'CIP', caption: null, center: null, results: GROUP_A.results };
+        render([centerGroup], { groupMode: 'center', expandAllNonce: 1, allExpanded: true });
+        const cols = Array.from(root().querySelectorAll('table')[0].querySelectorAll('col')) as HTMLElement[];
+        // Center mode order: code(0) title(1, unset) source(2)=116px status(3)=120px
+        // alignment(4)=184px date(5)=100px actions(6)=100px — no lead-center entry.
+        expect(cols.length).toBe(7);
+        expect(cols[1].style.width).toBe('');
+        expect(cols[2].style.width).toBe('116px');
+        expect(cols[3].style.width).toBe('120px');
+        expect(cols[4].style.width).toBe('184px');
+        expect(cols[5].style.width).toBe('100px');
+        expect(cols[6].style.width).toBe('100px');
+      });
+
+      it('project mode: column widths are 96/-/88/116/120/184/100/100px, in that order (BSR-DD-2, Alignment re-tuned at execute time)', () => {
+        render([GROUP_A], { expandAllNonce: 1, allExpanded: true });
+        const cols = Array.from(root().querySelectorAll('table')[0].querySelectorAll('col')) as HTMLElement[];
+        const widths = cols.map(c => c.style.width);
+        expect(widths).toEqual(['96px', '', '88px', '116px', '120px', '184px', '100px', '100px']);
       });
     });
   });

@@ -1,5 +1,6 @@
-import { Component, inject, OnInit, computed, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgTemplateOutlet } from '@angular/common';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
@@ -12,6 +13,8 @@ import {
 } from '../../../../../shared/services/global/qa-innovation-development-results.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
 import { EstimatesCgiarComponent } from '../../../../../shared/components/innovation-use-form/components/estimates/estimates.component';
+import { BILATERAL_INNOVATION_USE_ACTORS_COPY } from '../../../../../internationalization/bilateral-innovation-use-actors.copy';
+import { INNOVATION_USE_2030_PROJECTION_COPY } from '../../../../../internationalization/innovation-use-2030-projection.copy';
 
 const SECTION_NAME = 'type-specific';
 
@@ -66,9 +69,9 @@ const USE_LEVEL_EXPLANATION_MAX = 9;
 
 @Component({
   selector: 'app-type-innovation-use',
-  imports: [FormsModule, CustomFieldsModule, EstimatesCgiarComponent],
+  imports: [FormsModule, NgTemplateOutlet, CustomFieldsModule, EstimatesCgiarComponent],
   templateUrl: './type-innovation-use.component.html',
-  styleUrl: './type-innovation-use.component.scss',
+  styleUrl: './type-innovation-use.component.scss'
 })
 export class TypeInnovationUseComponent implements OnInit {
   private readonly bilateralApi = inject(BilateralApiService);
@@ -90,6 +93,14 @@ export class TypeInnovationUseComponent implements OnInit {
   readonly graduateStudentsInstitutionTypeId = GRADUATE_STUDENTS_INSTITUTION_TYPE_ID;
   readonly mdsInfoNote = MDS_INFO_NOTE;
   readonly loadErrorNote = LOAD_ERROR_NOTE;
+  readonly copy = BILATERAL_INNOVATION_USE_ACTORS_COPY;
+  /** P2-3428 — same copy as the W1/W2 "2030 Use Projection" (title, guidance note, question, tooltip). */
+  readonly projection2030Copy = INNOVATION_USE_2030_PROJECTION_COPY;
+  /** P2-3785 (4b) — the two sex groups, each with its Youth / Non-youth split, as in pooled reporting. */
+  readonly genderGroups = [
+    { key: 'women', label: 'Women', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.womenYouthWarning },
+    { key: 'men', label: 'Men', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.menYouthWarning }
+  ] as const;
 
   /**
    * P2-3556 — three-state load flag: `null` while the GET is still in flight, `true` once the
@@ -140,6 +151,16 @@ export class TypeInnovationUseComponent implements OnInit {
    * reaches the handler really is one (401 on an expired token, a 5xx, an Apache 403, a dropped
    * connection), and none of them may write.
    */
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isFormReadOnly` (bilateral-result-creator) was built for exactly this in P2-3520 and every
+   * other section reads it; type-specific never did, so on a Pending Review result the ten fields
+   * here still took input (measured on prtest #9479, 2026-09-21). The autosave was already locked,
+   * so nothing reached the database — the screen simply lied about what could be changed.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   readonly loaded = signal<boolean | null>(null);
 
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
@@ -155,6 +176,28 @@ export class TypeInnovationUseComponent implements OnInit {
 
   get visibleMeasures(): any[] {
     return (this.body.measures ?? []).filter((m: any) => m.is_active !== false);
+  }
+
+  /**
+   * P2-3428 — the 2030 Use Projection lists (`innovation_use_2030`, stored server-side under
+   * `section_id = 2`). Optional full metadata: nothing here is published to the MDS tracker.
+   */
+  get projection2030(): { actors: any[]; organization: any[]; measures: any[] } {
+    if (!this.body.innovation_use_2030) this.body.innovation_use_2030 = { actors: [], organization: [], measures: [] };
+    const p = this.body.innovation_use_2030;
+    p.actors ??= [];
+    p.organization ??= [];
+    p.measures ??= [];
+    return p;
+  }
+
+  /** The projection lists show only while the 2030 use is not "yet to be determined" — as in W1/W2. */
+  get showProjection2030Lists(): boolean {
+    return this.body.innov_use_2030_to_be_determined !== true;
+  }
+
+  activeRows(rows: any[] | null | undefined): any[] {
+    return (rows ?? []).filter((r: any) => r.is_active !== false);
   }
 
   /** Numeric use level (0..9) behind the selected `innovation_use_level_id`; -1 when nothing is picked. */
@@ -239,6 +282,67 @@ export class TypeInnovationUseComponent implements OnInit {
     this.loadData();
   }
 
+  /**
+   * The three "Investment (USD)" tables list one row per entity the result is LINKED to, and those
+   * links are owned by other sections — contributing projects by `section-contributors`. Because the
+   * sections are siblings under `[hidden]` and all mounted once with the page
+   * (`bilateral-result-creator.component.html`), `loadData` above is a snapshot of the moment the
+   * page opened: a project added afterwards never appeared in this table, could therefore never be
+   * given an amount or "This is yet to be determined", and the reporter had no way to correct it
+   * short of a browser reload — while `updateMds` below, reading the same stale array, reported the
+   * field complete. Server-side it was not, and `submit-for-review` refused the result with an
+   * error naming data the form was showing as done (result code 9506, AfricaRice, 21-Sep-2026).
+   *
+   * Re-reads only on the transition INTO this section, so returning to it costs one GET and being
+   * here costs none.
+   */
+  private lastOpenSection: string | null = null;
+  private readonly refreshInvestmentTablesOnOpen = effect(() => {
+    const open = this.autoSave.openSection();
+    const previous = this.lastOpenSection;
+    this.lastOpenSection = open;
+    if (open !== SECTION_NAME || previous === SECTION_NAME) return;
+    // Before the first successful load there is nothing to reconcile against, and `loadData` is
+    // about to publish the same rows anyway.
+    if (this.loaded() !== true) return;
+    this.reconcileInvestmentTables();
+  });
+
+  /**
+   * Takes the row SET from the server (which entities are linked, and their names) while keeping
+   * whatever the reporter has typed but not yet saved. A row the server no longer sends is gone
+   * from the result and drops out; a row it sends that was not on screen appears with its stored
+   * values.
+   */
+  private reconcileInvestmentTables(): void {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    this.bilateralApi.GET_innovationUse(resultId).subscribe({
+      next: ({ response }) => {
+        if (!response) return;
+        this.body.investment_programs = this.mergeInvestmentRows(this.body.investment_programs, response.investment_programs);
+        this.body.investment_bilateral = this.mergeInvestmentRows(this.body.investment_bilateral, response.investment_bilateral);
+        this.body.investment_partners = this.mergeInvestmentRows(this.body.investment_partners, response.investment_partners);
+        this.updateMds();
+      },
+      // A failed refresh leaves the table exactly as it was: the reporter keeps editing what is on
+      // screen rather than watching their rows vanish on a dropped request.
+      error: () => undefined
+    });
+  }
+
+  private mergeInvestmentRows(staged: any[] | undefined, fresh: any[] | undefined): any[] {
+    const rows = Array.isArray(fresh) ? fresh : [];
+    const key = (row: any) => String(row?.project_id ?? row?.id ?? '');
+    const stagedByKey = new Map((staged ?? []).map((row: any) => [key(row), row]));
+    return rows.map((row: any) => {
+      const previous = stagedByKey.get(key(row));
+      // Only the two the person edits are carried over; the name and the budget-row id are the
+      // server's to state.
+      return previous ? { ...row, kind_cash: previous.kind_cash, is_determined: previous.is_determined } : row;
+    });
+  }
+
   toggleShowAll(): void {
     this.showAllFields.update(v => !v);
     const resultId = this.creationService.currentResultId();
@@ -273,7 +377,7 @@ export class TypeInnovationUseComponent implements OnInit {
         // publishing nothing leaves the section at "0/0 fields", which reads as "nothing required
         // here" instead of as incomplete. Three unfilled items keep it honestly amber.
         this.updateMds();
-      },
+      }
     });
   }
 
@@ -284,7 +388,7 @@ export class TypeInnovationUseComponent implements OnInit {
    * flattens it back into a single code before every save.
    */
   private hydrateOrganizations(): void {
-    (this.body.organization ?? []).forEach((org: any) => {
+    [...(this.body.organization ?? []), ...(this.body.innovation_use_2030?.organization ?? [])].forEach((org: any) => {
       if (org.parent_institution_type_id) {
         org.institution_sub_type_id = org.institution_types_id;
         org.institution_types_id = org.parent_institution_type_id;
@@ -329,6 +433,13 @@ export class TypeInnovationUseComponent implements OnInit {
     this.normalizeStoredBoolean('innov_use_to_be_determined');
     this.normalizeStoredBoolean('has_scaling_studies');
     this.normalizeStoredBoolean('innov_use_2030_to_be_determined');
+    // P2-3785 (4b) — the actor flags now bind checkboxes, which need a real boolean too.
+    [...(this.body.actors ?? []), ...(this.body.innovation_use_2030?.actors ?? [])].forEach((actor: any) => {
+      for (const key of ['sex_and_age_disaggregation', 'age_disaggregation_not_available', 'youth_split_applied_by_system']) {
+        const value = actor?.[key];
+        if (value !== null && value !== undefined && typeof value !== 'boolean') actor[key] = Boolean(value);
+      }
+    });
   }
 
   /** Rewrites `1`/`0` as `true`/`false`. An unanswered field (`null`/absent) is left untouched. */
@@ -360,18 +471,119 @@ export class TypeInnovationUseComponent implements OnInit {
     this.onFieldChange();
   }
 
+  /**
+   * P2-3785 (4b) — ticking "Sex and age disaggregation does not apply" switches both breakdowns off, so
+   * the figures and the age-only fallback are cleared, as the pooled `cleanActor()` does.
+   * Unticking only drops the single "How many" and keeps whatever Women/Men the row holds: rows saved
+   * under the old Yes/No carry their breakdown behind a `true`, and unticking is how that breakdown
+   * comes back into view — clearing it there would delete what the reporter had entered.
+   */
   onDisaggregationChange(actor: any): void {
-    actor.women = null;
-    actor.women_youth = null;
-    actor.men = null;
-    actor.men_youth = null;
-    actor.how_many = null;
+    if (actor?.sex_and_age_disaggregation) {
+      actor.women = null;
+      actor.women_youth = null;
+      actor.men = null;
+      actor.men_youth = null;
+      actor.how_many = null;
+      actor.age_disaggregation_not_available = null;
+      actor.youth_split_applied_by_system = null;
+    } else {
+      this.syncTotal(actor);
+    }
     this.onFieldChange();
+  }
+
+  /** Non-youth is never stored: it is the group total minus its youth (server `summary.service.ts` derives it the same way). */
+  nonYouth(actor: any, group: 'women' | 'men'): number | null {
+    const total = this.toCount(actor?.[group]);
+    if (total === null) return null;
+    return Math.max(total - (this.toCount(actor?.[`${group}_youth`]) ?? 0), 0);
+  }
+
+  /** The Total the reporter can read — Women + Men, as the pooled form computes it. */
+  actorTotal(actor: any): number | null {
+    const women = this.toCount(actor?.women);
+    const men = this.toCount(actor?.men);
+    if (women === null && men === null) return null;
+    return (women ?? 0) + (men ?? 0);
+  }
+
+  youthExceeds(actor: any, group: 'women' | 'men'): boolean {
+    const total = this.toCount(actor?.[group]);
+    const youth = this.toCount(actor?.[`${group}_youth`]);
+    return total !== null && youth !== null && youth > total;
+  }
+
+  /** Women or Men changed: keep the system 50/50 split in step and the stored total in sync. */
+  onGenderChange(actor: any): void {
+    if (actor?.age_disaggregation_not_available) this.applyYouthSplit(actor);
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  /** Youth cannot be greater than the total of its group — same rule the pooled form enforces. */
+  onYouthChange(actor: any, group: 'women' | 'men'): void {
+    if (this.youthExceeds(actor, group)) actor[`${group}_youth`] = this.toCount(actor[group]);
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  /**
+   * "Age disaggregation not available": the youth figures are split 50/50 by the system and stamped
+   * `youth_split_applied_by_system`; unticking clears them, so an estimate never passes for a reported figure.
+   */
+  onAgeFallbackChange(actor: any): void {
+    if (actor?.age_disaggregation_not_available) {
+      this.applyYouthSplit(actor);
+    } else {
+      actor.women_youth = null;
+      actor.men_youth = null;
+      actor.youth_split_applied_by_system = null;
+    }
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  private applyYouthSplit(actor: any): void {
+    const half = (value: any) => {
+      const n = this.toCount(value);
+      return n !== null && n > 0 ? Math.round(n / 2) : 0;
+    };
+    actor.women_youth = half(actor.women);
+    actor.men_youth = half(actor.men);
+    actor.youth_split_applied_by_system = true;
+  }
+
+  /** `how_many` carries the Total while the breakdown applies, as in pooled (`calculateTotalField`). */
+  private syncTotal(actor: any): void {
+    if (!actor?.sex_and_age_disaggregation) actor.how_many = this.actorTotal(actor);
+  }
+
+  private toCount(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
   addOrganization(): void {
     if (!this.body.organization) this.body.organization = [];
     this.body.organization.push({ institution_types_id: null, is_active: true });
+    this.onFieldChange();
+  }
+
+  /** P2-3428 — the projection's "Add actor" / "Add organization" / "Add other" (W1/W2 labels). */
+  addProjection2030Actor(): void {
+    this.projection2030.actors.push({ actor_type_id: null, sex_and_age_disaggregation: false, is_active: true });
+    this.onFieldChange();
+  }
+
+  addProjection2030Organization(): void {
+    this.projection2030.organization.push({ institution_types_id: null, is_active: true });
+    this.onFieldChange();
+  }
+
+  addProjection2030Measure(): void {
+    this.projection2030.measures.push({ is_active: true });
     this.onFieldChange();
   }
 
@@ -454,13 +666,13 @@ export class TypeInnovationUseComponent implements OnInit {
     this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
       debounceMs,
       statusKey: 'type-specific',
-      executor: (resultId, body) => this.bilateralApi.PATCH_innovationUse(resultId, body),
+      executor: (resultId, body) => this.bilateralApi.PATCH_innovationUse(resultId, body)
     });
   }
 
   /** Flattens a sub-type back into `institution_types_id`, without mutating `body` (which the UI's cascade still needs). */
-  private buildOrganizationsForSave(): any[] {
-    return (this.body.organization ?? []).map((org: any) => {
+  private buildOrganizationsForSave(organizations: any[] = this.body.organization): any[] {
+    return (organizations ?? []).map((org: any) => {
       const { institution_sub_type_id, ...rest } = org;
       return institution_sub_type_id ? { ...rest, institution_types_id: institution_sub_type_id } : rest;
     });
@@ -473,7 +685,7 @@ export class TypeInnovationUseComponent implements OnInit {
       innovatonUse: {
         actors: this.body.actors ?? [],
         organization: this.buildOrganizationsForSave(),
-        measures: this.body.measures ?? [],
+        measures: this.body.measures ?? []
       },
       // P2-3424: everything below now round-trips through the legacy summary endpoint — its DTO
       // (server `api/results/summary/dto/create-innovation-use.dto.ts`) declares these keys and
@@ -490,11 +702,18 @@ export class TypeInnovationUseComponent implements OnInit {
       has_scaling_studies: this.body.has_scaling_studies ?? null,
       scaling_studies_urls: this.body.scaling_studies_urls ?? [],
       innov_use_2030_to_be_determined: this.body.innov_use_2030_to_be_determined ?? null,
+      // P2-3428 — the 2030 Use Projection lists. Sent whole every time, like `innovatonUse`; the server
+      // writes them under `section_id = 2`, and retires them when the use is "yet to be determined".
+      innovation_use_2030: {
+        actors: this.body.innovation_use_2030?.actors ?? [],
+        organization: this.buildOrganizationsForSave(this.body.innovation_use_2030?.organization),
+        measures: this.body.innovation_use_2030?.measures ?? []
+      },
       readiness_level_explanation: this.body.readiness_level_explanation ?? null,
       has_innovation_link: this.body.has_innovation_link ?? null,
       // `pr-select` hands back the catalog's raw `id`, which arrives as a numeric STRING — normalize it so
       // the contract always carries numbers, the way the W1/W2 section stores them.
-      linked_results: this.body.linked_result_id == null ? [] : [Number(this.body.linked_result_id)],
+      linked_results: this.body.linked_result_id == null ? [] : [Number(this.body.linked_result_id)]
     };
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_use_id != null) {
@@ -511,11 +730,22 @@ export class TypeInnovationUseComponent implements OnInit {
         String(m.unit_of_measure ?? '').trim() !== '' &&
         m.quantity !== null &&
         m.quantity !== undefined &&
-        String(m.quantity).trim() !== '',
+        String(m.quantity).trim() !== ''
     );
   }
 
-  /** P2-3428 / P2-3331 — four bilateral Innovation Use MDS, including W3/bilateral investment. */
+  /**
+   * P2-3428 / P2-3331 — the bilateral Innovation Use MDS.
+   *
+   * P2-3785 AC1 (Nicoleta Trifa, #INC-163204 point 4a, 21-Sep-2026): **three** items now, not four —
+   * "How would you assess the current use level of the innovation?" was withdrawn from the standard.
+   * Dropping it from this list is what actually frees the section: `overallStatus` is computed from the
+   * published items alone (`bilateral-mds-tracker.service.ts`), and the rail's Submit reads that. Leaving
+   * it published with `optional: true` would have kept it on the aside's checklist without counting, but
+   * that flag exists for fields the reporter is still ASKED for; this one stops being asked altogether.
+   * The matching server-side gate was removed in the same change — a client-only relaxation would have
+   * turned a blocked section into a section that passes locally and is refused on Submit.
+   */
   updateMds(): void {
     const tbd = this.body.innov_use_to_be_determined;
     const tbdSet = tbd !== null && tbd !== undefined;
@@ -525,17 +755,12 @@ export class TypeInnovationUseComponent implements OnInit {
         key: 'use-actors',
         label: 'Actors',
         // AC4: when the use is still to be determined no actor is requested, so the field is satisfied.
-        filled: tbdSet && (tbd === true || hasActors),
+        filled: tbdSet && (tbd === true || hasActors)
       },
       {
         key: 'use-measures',
         label: 'Other quantitative measures of innovation use',
-        filled: this.hasCompleteMeasure(),
-      },
-      {
-        key: 'use-level',
-        label: 'How would you assess the current use level of the innovation?',
-        filled: this.body.innovation_use_level_id != null,
+        filled: this.hasCompleteMeasure()
       },
       {
         key: 'use-investment',
@@ -543,12 +768,8 @@ export class TypeInnovationUseComponent implements OnInit {
         filled:
           Array.isArray(this.body.investment_bilateral) &&
           this.body.investment_bilateral.length > 0 &&
-          this.body.investment_bilateral.every(
-            (investment: any) =>
-              (Number(investment?.kind_cash) > 0) !==
-              (investment?.is_determined === true),
-          ),
-      },
+          this.body.investment_bilateral.every((investment: any) => Number(investment?.kind_cash) > 0 !== (investment?.is_determined === true))
+      }
     ]);
   }
 }

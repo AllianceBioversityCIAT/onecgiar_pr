@@ -27,6 +27,7 @@ import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { CENTER_ALIAS_TO_CLARISA_CENTER_CODE } from './constants/w3-center-alias.constants';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
+import { ResultCreationMethod } from '../../shared/constants/result-creation-method.enum';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { AdUserService } from '../ad_users/ad_users.service';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
@@ -4176,6 +4177,7 @@ export class BilateralService {
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
+      creation_method: ResultCreationMethod.EXTERNAL,
       status_id: resolveInitialStatusId(bilateralDto),
       ...(leadContact ?? {}),
     });

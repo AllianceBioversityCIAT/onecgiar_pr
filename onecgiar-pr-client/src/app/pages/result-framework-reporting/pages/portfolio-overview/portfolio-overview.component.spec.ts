@@ -649,6 +649,31 @@ describe('PortfolioOverviewComponent', () => {
     });
   });
 
+  describe('Column resize does not trigger a sort (parity with bugfix/results-center-title-resize-triggers-sort)', () => {
+    it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
+      build(OPEN_PHASE);
+      const column = component.columns()[0]; // 'programme'
+      const sortKeyBefore = component.sortKey();
+      const sortAscBefore = component.sortAsc();
+
+      component.onResizeStart({ clientX: 300, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, column);
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 250 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      // Stands in for the native click the browser synthesizes on <th> right after this drag's
+      // mouseup — this is the click that would otherwise reach the header button's sortBy(column).
+      const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(phantomClick);
+      expect(phantomClick.defaultPrevented).toBe(true);
+      expect(component.sortKey()).toBe(sortKeyBefore);
+      expect(component.sortAsc()).toBe(sortAscBefore);
+
+      const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(laterUnrelatedClick);
+      expect(laterUnrelatedClick.defaultPrevented).toBe(false);
+    });
+  });
+
   it('refuses to load without a session instead of asking the server for user "undefined"', () => {
     TestBed.resetTestingModule();
     const spy = jest.fn();

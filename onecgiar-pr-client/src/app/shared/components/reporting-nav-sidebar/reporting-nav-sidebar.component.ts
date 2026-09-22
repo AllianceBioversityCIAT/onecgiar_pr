@@ -15,7 +15,6 @@ import {
   lucideCircleDot,
   lucideCheck,
   lucideChevronDown,
-  lucideRocket,
   lucideClipboardCheck,
   lucideWrench,
   lucideTicket,
@@ -34,7 +33,8 @@ import {
   lucideGitBranch,
   lucideUsers,
   lucideHouse,
-  lucideAward
+  lucideAward,
+  lucideCode
 } from '@ng-icons/lucide';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan/sidebar';
 import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
@@ -92,7 +92,6 @@ interface IconFlyout {
       lucideCircleDot,
       lucideCheck,
       lucideChevronDown,
-      lucideRocket,
       lucideClipboardCheck,
       lucideWrench,
       lucideTicket,
@@ -111,7 +110,8 @@ interface IconFlyout {
       lucideGitBranch,
       lucideUsers,
       lucideHouse,
-      lucideAward
+      lucideAward,
+      lucideCode
     })
   ]
 })

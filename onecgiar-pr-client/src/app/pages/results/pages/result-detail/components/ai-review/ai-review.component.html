@@ -39,11 +39,30 @@
         <div class="current-version">
           <p class="version-label">Result version</p>
           @if ($index === 1) {
-            <app-pr-textarea [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-textarea>
+            <app-pr-textarea
+              [readOnly]="false"
+              [(ngModel)]="field.original_text"
+              (ngModelChange)="field.canSave = true"
+              placeholder="">
+            </app-pr-textarea>
           } @else {
-            <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-input>
+            <app-pr-input
+              type="text"
+              [readOnly]="false"
+              [(ngModel)]="field.original_text"
+              (ngModelChange)="field.canSave = true"
+              placeholder="">
+            </app-pr-input>
           }
         </div>
+
+        @if (field.canSave) {
+          <app-alert-status
+            status="warning"
+            class="unsaved-proposal-reminder"
+            description="This change hasn't been saved yet — it will be lost if you close this window.">
+          </app-alert-status>
+        }
 
         <app-pr-button
           [ngClass]="{ globalDisabled: !field.canSave }"
@@ -128,17 +147,6 @@
           </app-pr-button>
           </div>
         }
-      </div>
-
-      <div class="validate-all-section">
-        <app-pr-button
-          [ngClass]="{ globalDisabled: !hasPendingChanges || isValidatingAll }"
-          text="Validate"
-          icon="task_alt"
-          [showBackground]="true"
-          class="validate-all-button"
-          (click)="onValidateAll()">
-        </app-pr-button>
       </div>
     </div>
   </div>

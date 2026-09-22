@@ -582,6 +582,14 @@ describe('ReportResultFormComponent', () => {
       expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalled();
     });
 
+    it('should accept a bare CGSpace handle, normalize it, and call GET_mqapValidation with the normalized URL (KPH-T-2 regression)', () => {
+      mockResultLevelService.resultBody.handler = '10568/183891';
+      component.GET_mqapValidation();
+      expect(component.mqapUrlError.status).toBe(false);
+      expect(mockResultLevelService.resultBody.handler).toBe('https://cgspace.cgiar.org/handle/10568/183891');
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith('https://cgspace.cgiar.org/handle/10568/183891');
+    });
+
     it('should update result_name and show success on validation success', () => {
       mockResultLevelService.resultBody.handler = 'https://cgspace.cgiar.org/items/12345678-1234-1234-1234-123456789012';
       component.GET_mqapValidation();

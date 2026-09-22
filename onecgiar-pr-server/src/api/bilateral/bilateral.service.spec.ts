@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { BilateralService } from './bilateral.service';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultCreationMethod } from '../../shared/constants/result-creation-method.enum';
 
 describe('BilateralService (unit)', () => {
   const makeService = (overrides: Partial<any> = {}) => {
@@ -1377,6 +1378,38 @@ describe('BilateralService (unit)', () => {
       expect(saved.lead_contact_person).toBeUndefined();
       expect(saved.lead_contact_person_id).toBeUndefined();
       expect(stubs.adUserService.resolveOrCreateContact).not.toHaveBeenCalled();
+    });
+  });
+
+  // BSR-T-2 / BSR-AC-3: the base header save is the only creation path that has no explicit
+  // `creation_method`, so a CreateBilateralDto ingested through it falls through to the DB's
+  // `UNKNOWN` default unless it is stamped `EXTERNAL` here.
+  describe('creation_method stamp on the base header save (BSR-T-2)', () => {
+    const dto = {
+      title: 'T',
+      description: 'D',
+      result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+      result_level_id: 4,
+    } as any;
+
+    it('stamps creation_method EXTERNAL on a DTO ingested through the base header save', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 1,
+      }));
+      stubs.resultRepository.findOne.mockResolvedValue({ id: 1 });
+
+      await (service as any).initializeResultHeader({
+        bilateralDto: dto,
+        userId: 1,
+        submittedUserId: 2,
+        version: { id: 36 },
+        year: { year: 2026 },
+      });
+
+      const saved = stubs.resultRepository.save.mock.calls[0][0];
+      expect(saved.creation_method).toBe(ResultCreationMethod.EXTERNAL);
     });
   });
 

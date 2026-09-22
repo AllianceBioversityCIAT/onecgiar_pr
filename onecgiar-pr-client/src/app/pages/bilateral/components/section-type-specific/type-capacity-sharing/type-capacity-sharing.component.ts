@@ -32,14 +32,14 @@ const LOAD_ERROR_NOTE =
 
 const ATTENDANCE_OPTIONS = [
   { id: true, name: 'Yes' },
-  { id: false, name: 'No' },
+  { id: false, name: 'No' }
 ];
 
 @Component({
   selector: 'app-type-capacity-sharing',
   imports: [FormsModule, CustomFieldsModule],
   templateUrl: './type-capacity-sharing.component.html',
-  styleUrl: './type-capacity-sharing.component.scss',
+  styleUrl: './type-capacity-sharing.component.scss'
 })
 export class TypeCapacitySharingComponent implements OnInit {
   private readonly bilateralApi = inject(BilateralApiService);
@@ -48,6 +48,14 @@ export class TypeCapacitySharingComponent implements OnInit {
   private readonly autoSave = inject(BilateralAutoSaveService);
   private readonly expandableState = inject(BilateralExpandableStateService);
   readonly institutionsSE = inject(InstitutionsService);
+
+  /**
+   * P2-3428 / AC17 — the result left Editing, so its fields are read-only.
+   *
+   * `isEditableByCenterUser()` has answered this since P2-3520 and every other section reads it;
+   * the type-specific tabs never did, so a submitted result still took input here.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
 
   body: any = {};
   deliveryMethods: any[] = [];
@@ -67,9 +75,7 @@ export class TypeCapacitySharingComponent implements OnInit {
    * round is about.
    */
   get peopleTrainedFilled(): boolean {
-    return [this.body.female_using, this.body.male_using, this.body.non_binary_using, this.body.has_unkown_using].some(
-      count => count != null
-    );
+    return [this.body.female_using, this.body.male_using, this.body.non_binary_using, this.body.has_unkown_using].some(count => count != null);
   }
   /**
    * P2-3771 — Short-term answers on its own; Long-term does not until a degree is picked. QA asked
@@ -148,9 +154,7 @@ export class TypeCapacitySharingComponent implements OnInit {
         // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
         // options use booleans, so normalize them before binding to the control.
         if ('is_attending_for_organization' in this.body) {
-          this.body.is_attending_for_organization = this.normalizeAttendanceValue(
-            this.body.is_attending_for_organization,
-          );
+          this.body.is_attending_for_organization = this.normalizeAttendanceValue(this.body.is_attending_for_organization);
         }
         this.hydrateTermCascade();
         this.loaded.set(true);
@@ -162,7 +166,7 @@ export class TypeCapacitySharingComponent implements OnInit {
         // See the `loaded` doc for what the server does with an empty capacity-sharing payload.
         this.loaded.set(false);
         this.updateMds();
-      },
+      }
     });
     this.bilateralApi.GET_capdevsDeliveryMethod().subscribe(({ response }) => {
       this.deliveryMethods = response || [];
@@ -235,11 +239,15 @@ export class TypeCapacitySharingComponent implements OnInit {
     // nothing at all rather than zeroing the counts and deleting the organizations it never read.
     if (this.loaded() !== true) return;
 
-    this.autoSave.schedulePayload('typeSpecific', { ...this.body }, {
-      debounceMs,
-      statusKey: 'type-specific',
-      executor: (resultId, body) => this.bilateralApi.PATCH_capacityDevelopment(resultId, body),
-    });
+    this.autoSave.schedulePayload(
+      'typeSpecific',
+      { ...this.body },
+      {
+        debounceMs,
+        statusKey: 'type-specific',
+        executor: (resultId, body) => this.bilateralApi.PATCH_capacityDevelopment(resultId, body)
+      }
+    );
   }
 
   updateMds(): void {
@@ -258,10 +266,10 @@ export class TypeCapacitySharingComponent implements OnInit {
       {
         key: 'people-trained',
         label: 'Number of people trained',
-        filled: this.peopleTrainedFilled,
+        filled: this.peopleTrainedFilled
       },
       { key: 'delivery-method', label: 'Delivery method', filled: !!this.body.capdev_delivery_method_id },
-      { key: 'length-of-training', label: 'Length of training', filled: this.lengthOfTrainingFilled },
+      { key: 'length-of-training', label: 'Length of training', filled: this.lengthOfTrainingFilled }
     ]);
   }
 }

@@ -17,6 +17,93 @@ describe('AiReviewService', () => {
     expect(service).toBeTruthy();
   });
 
+  // P2-2385: the AI Review button is now offered for Knowledge Products too, but a KP's title and
+  // description are auto-synced from CGSpace, so the dialog may only offer Impact Area
+  // recommendations for one. The restriction lives here and not in the template: a proposal that is
+  // merely hidden would still have been generated and persisted for the KP.
+  describe('onAIReviewClick — Impact Areas only for Knowledge Products (P2-2385)', () => {
+    const jsonContent = {
+      impact_area_scores: { social_inclusion: 'Approved' },
+      new_title: 'An AI title',
+      new_description: 'An AI description'
+    };
+
+    const dacScoresFromServer = [{ field_name: 'gender', tag_id: 1, impact_area_id: [] }];
+
+    const runWith = async (resultTypeId: number) => {
+      service.dataControlSE.currentResultSignal.set({ id: 55, result_type_id: resultTypeId } as any);
+      service.aiReviewButtonState = 'idle';
+      await service.onAIReviewClick();
+    };
+
+    beforeEach(() => {
+      // `POST_prmsQa`'s body reads `authSE.localStorageUser.email`, and the getter JSON.parses
+      // whatever is in localStorage — `null.email` would throw before any assertion ran.
+      localStorage.setItem('user', JSON.stringify({ email: 'reporter@cgiar.org' }));
+
+      jest.spyOn(service, 'POST_createSession').mockResolvedValue({});
+      jest.spyOn(service, 'GET_aiContext').mockResolvedValue({});
+      jest.spyOn(service, 'GET_resultContext').mockImplementation(async () => {
+        service.currnetFieldsList.set([
+          { field_name: 'title', original_text: 'Synced from CGSpace' },
+          { field_name: 'description', original_text: 'Synced from CGSpace' }
+        ]);
+        return {};
+      });
+      jest.spyOn(service, 'getDacScores').mockResolvedValue(dacScoresFromServer as any);
+      jest.spyOn(service, 'POST_prmsQa').mockResolvedValue({ json_content: jsonContent } as any);
+      jest.spyOn(service, 'POST_createProposal').mockResolvedValue({});
+      // The dialog opens 600 ms after the data lands; nothing here asserts on the animation.
+      jest.spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void) => fn()) as any);
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('user');
+      jest.restoreAllMocks();
+    });
+
+    it('asks for no text field and persists no proposal for a knowledge product', async () => {
+      await runWith(6);
+
+      expect(service.GET_resultContext).not.toHaveBeenCalled();
+      expect(service.POST_createProposal).not.toHaveBeenCalled();
+      expect(service.currnetFieldsList()).toEqual([]);
+    });
+
+    it('still builds the impact areas for a knowledge product', async () => {
+      await runWith(6);
+
+      expect(service.dacScores()).toHaveLength(1);
+      expect(service.dacScores()[0].field_name).toBe('gender');
+      expect(service.dacScores()[0].ai_recommendation).toBe('Approved');
+      expect(service.showAiReview()).toBe(true);
+    });
+
+    // The negative control: without it, an implementation that simply never calls the text-field
+    // pipeline would pass the two cases above and silently break every other result type.
+    it('keeps the title and description pipeline for any other result type', async () => {
+      await runWith(1);
+
+      expect(service.GET_resultContext).toHaveBeenCalledTimes(1);
+      expect(service.POST_createProposal).toHaveBeenCalledTimes(1);
+      expect(service.currnetFieldsList()).toHaveLength(2);
+      expect(service.currnetFieldsList()[0].proposed_text).toBe('An AI title');
+      expect(service.currnetFieldsList()[1].proposed_text).toBe('An AI description');
+    });
+
+    // `currnetFieldsList` is a signal on a root service, shared by every result opened in the
+    // session. If the KP branch only skipped the request, the previous result's cards would still
+    // be sitting in the dialog.
+    it('clears the cards left by a previously reviewed result before opening on a knowledge product', async () => {
+      await runWith(1);
+      expect(service.currnetFieldsList()).toHaveLength(2);
+
+      await runWith(6);
+
+      expect(service.currnetFieldsList()).toEqual([]);
+    });
+  });
+
   describe('onApplyProposal (the AI dialog "Save changes" button)', () => {
     let field: any;
     let resolveSave: (value?: unknown) => void;
@@ -60,6 +147,15 @@ describe('AiReviewService', () => {
 
       resolveSave({});
       await applied;
+    });
+
+    it('should keep Save changes disabled after a successful save (AIR-AC-4)', async () => {
+      const applied = service.onApplyProposal(field, 0);
+
+      resolveSave({});
+      await applied;
+
+      expect(field.canSave).toBe(false);
     });
 
     it('should release the button when the save fails', async () => {

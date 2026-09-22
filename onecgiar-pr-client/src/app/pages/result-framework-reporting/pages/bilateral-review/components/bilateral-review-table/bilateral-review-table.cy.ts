@@ -518,4 +518,176 @@ describe('BilateralReviewTableComponent — real layout (BRH-T-2 RECORDED GAP cl
         });
     });
   });
+
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-2, BSR-R-4, BSR-AC-9,
+  // BSR-AC-13) — the SOURCE column's own falsifiers, named in the task brief: (1) Title stops
+  // being the widest column once SOURCE eats its budget — proven by a live mutation, not asserted
+  // in this file (a permanent 300px SOURCE column would defeat the design it is testing); this
+  // gate is the ONE that must go red under that mutation. (2) an 8-char lead-centre acronym must
+  // not wrap its `th` at 1000px (BSR-DD-2's reversion-challenge risk — Lead Center narrowed
+  // 110->88px). (3) the AI badge and the "Via API · STAR" pill each render on ONE line — proven
+  // red by a live mutation removing the SOURCE `<td>`'s `whitespace-nowrap`, same discipline.
+  describe('Gate 9: SOURCE column — width/acronym/chip-fit falsifiers, center-grouped case (BSR-T-4, BSR-DD-2)', () => {
+    const SOURCE_GROUPS: BilateralReviewGroup[] = [
+      {
+        key: 'S1',
+        label: 'S1',
+        caption: null,
+        center: null,
+        results: [
+          row({
+            id: 's1',
+            project_id: 's1',
+            project_name: 'S1',
+            result_code: 'BR-501',
+            result_title: 'Source fixture result',
+            lead_center: 'CIMMYT01', // 8-char acronym — BSR-DD-2 reversion-challenge falsifier.
+            status_id: 5,
+            creation_method: 'AI'
+          })
+        ]
+      },
+      {
+        key: 'S2',
+        label: 'S2',
+        caption: null,
+        center: null,
+        results: [
+          row({
+            id: 's2',
+            project_id: 's2',
+            project_name: 'S2',
+            result_code: 'BR-502',
+            result_title: 'Another source fixture',
+            lead_center: 'CIAT',
+            status_id: 5,
+            creation_method: 'EXTERNAL',
+            external_platform_code: 'STAR'
+          })
+        ]
+      }
+    ];
+
+    [1280, 1000].forEach(width => {
+      it(`at ${width}px: Title stays the widest column over a SOURCE-bearing fixture, the 8-char lead-center acronym never wraps its header, and the AI badge / "Via API · STAR" pill each render on one line`, () => {
+        cy.viewport(width, 900);
+        cy.mount(BilateralReviewTableComponent, {
+          componentProperties: { groups: SOURCE_GROUPS, view: 'grouped', groupMode: 'project', canReview: true, loading: false, expandAllNonce: 1, allExpanded: true }
+        });
+        assertEffectiveWidth(`${width} (SOURCE column fixture)`, width);
+
+        // Falsifier 1 target: Title (col 1) must stay the widest header. Proven red by a live
+        // mutation of `columnWidths()`'s SOURCE entry to 300px (see execution.md for the run) —
+        // this assertion is what goes red under that mutation, so it is not repeated as a
+        // separate committed gate.
+        cy.get('[data-testid="bilateral-review-group-card"] table thead tr')
+          .should('have.length', 2)
+          .then($headerRows => {
+            const widths0 = Array.from($headerRows[0].querySelectorAll('th')).map(th => (th as HTMLElement).getBoundingClientRect().width);
+            const titleWidth = widths0[1];
+            widths0.forEach((w, col) => {
+              if (col === 1) return;
+              expect(titleWidth, `Title width (${titleWidth.toFixed(1)}) should be >= column ${col} width (${w.toFixed(1)}) at ${width}px`).to.be.at.least(w);
+            });
+          });
+
+        // Falsifier 2a: no header cell wraps to two lines — a wrapped `th` would be a taller
+        // outlier among its siblings, same technique Gate 7 uses. Headers carry their own
+        // `!whitespace-nowrap` regardless of column width, so this is a standing regression net,
+        // not the acronym-specific risk (that is 2b, directly below).
+        cy.get('[data-testid="bilateral-review-group-card"] thead th').then($ths => {
+          const heights = Array.from($ths).map(th => (th as HTMLElement).offsetHeight);
+          const uniqueHeights = [...new Set(heights)];
+          expect(
+            uniqueHeights.length,
+            `every header cell should share ONE height — a wrapped header would be a taller outlier; heights seen = ${uniqueHeights.join(', ')}`
+          ).to.equal(1);
+        });
+
+        // Falsifier 2b (the actual DD-2 reversion-challenge risk): the 8-char acronym
+        // "CIMMYT01" in the narrowed 88px Lead Center column must not overflow its `<td>` — the
+        // inner span's `truncate` class (`overflow: hidden` + ellipsis) is what prevents it.
+        // `scrollWidth` reflects the full laid-out content width regardless of `overflow`'s
+        // visibility, so it correctly detects overflow even though `truncate` visually hides it.
+        // Proven red by a live mutation removing `truncate` AND widening the acronym far past the
+        // 8-char case (a real 8-char value at this column's proportional 12.5px font does not
+        // reach the 68px content box on its own — the mutation proof needed a longer string to
+        // actually overflow; see execution.md for the run and the measured numbers).
+        cy.contains('[data-testid="bilateral-review-row-center"] span', 'CIMMYT01').then($span => {
+          const span = $span[0] as HTMLElement;
+          const td = span.closest('td') as HTMLElement;
+          expect(span.scrollWidth, `Lead Center span scrollWidth (${span.scrollWidth}) should not exceed clientWidth (${span.clientWidth}) at ${width}px`).to.be.at.most(span.clientWidth + 1);
+          expect(td.scrollWidth, `Lead Center td scrollWidth (${td.scrollWidth}) should not exceed clientWidth (${td.clientWidth}) at ${width}px`).to.be.at.most(td.clientWidth);
+        });
+
+        // Falsifier 3 (chip fit): the AI badge and the "Via API · STAR" pill each render on one
+        // line and are not ellipsized below their full label. `[data-testid="bilateral-review-
+        // source-chip-ai"]` sits on `AiProvenanceNoticeComponent`'s OWN host, which is `:host {
+        // display: contents }` — it generates no box of its own, so `offsetHeight` on it always
+        // reports 0 regardless of what renders inside; the real badge box is the inner
+        // `[data-testid="ai-provenance-badge"]`. Proven red by a live mutation removing BOTH the
+        // SOURCE `<td>`'s `whitespace-nowrap` and the cell-owned wrapping `<span>`'s `truncate`
+        // (removing only one leaves `white-space: nowrap` inherited from the other) — but ONLY
+        // once the column is also narrowed toward the rejected 104px figure (`BSR-DD-2`'s own
+        // "did not fit" case): at the shipped 116px width the badge measures 79px against a 96px
+        // content box, comfortably inside it even with no guard at all, so that combination alone
+        // does not falsify. See execution.md for the exact numbers and both mutation runs.
+        cy.get('[data-testid="bilateral-review-source-chip-ai"] [data-testid="ai-provenance-badge"]').then($el => {
+          const el = $el[0] as HTMLElement;
+          const td = el.closest('td') as HTMLElement;
+          expect(el.offsetHeight, 'AI badge offsetHeight (single line)').to.be.at.most(22);
+          expect(el.scrollWidth, `AI badge scrollWidth (${el.scrollWidth}) should not exceed the SOURCE cell's clientWidth (${td.clientWidth}) at ${width}px`).to.be.at.most(td.clientWidth);
+        });
+        cy.get('[data-testid="bilateral-review-source-chip-pill"]').should($el => {
+          const el = $el[0] as HTMLElement;
+          expect(el.textContent?.trim(), 'pill renders its full label').to.equal('Via API · STAR');
+          // Measured single-line pill box: 16px leading + 2x1px padding-y + 2x1px border = 20px.
+          // A wrapped second line would push this well past 21.
+          expect(el.offsetHeight, 'pill offsetHeight (single line)').to.be.at.most(21);
+          expect(el.scrollWidth, `pill scrollWidth (${el.scrollWidth}) should not exceed clientWidth (${el.clientWidth}) — else it is ellipsized below its full label`).to.be.at.most(
+            el.clientWidth + 1
+          );
+        });
+      });
+    });
+
+    // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, P-7, BSR-DD-2) — named
+    // explicitly in the task brief: "a flat-literal widths array passes project mode and fails
+    // only here". `showCenterColumn()` false hides Lead Center; SOURCE stays (pushed outside the
+    // conditional) — 7 columns, not 6.
+    it('center-grouped mode: 7 <col> over 7 <th> per card, left edges aligned across cards (P-7)', () => {
+      cy.viewport(1280, 900);
+      cy.mount(BilateralReviewTableComponent, {
+        componentProperties: {
+          groups: SOURCE_GROUPS.map(g => ({ ...g, key: g.label })),
+          view: 'grouped',
+          groupMode: 'center',
+          canReview: true,
+          loading: false,
+          expandAllNonce: 1,
+          allExpanded: true
+        }
+      });
+      assertEffectiveWidth('1280 (center-grouped SOURCE fixture)', 1280);
+
+      cy.get('[data-testid="bilateral-review-group-card"]').should('have.length', 2);
+      cy.get('[data-testid="bilateral-review-group-card"] table thead tr')
+        .should('have.length', 2)
+        .then($headerRows => {
+          Array.from($headerRows).forEach(tr => {
+            expect(tr.querySelectorAll('th').length, '7 <th> per card in center-grouped mode (BSR-DD-2)').to.equal(7);
+            expect(tr.closest('table')!.querySelectorAll('colgroup col').length, '7 <col> per card in center-grouped mode (BSR-DD-2)').to.equal(7);
+          });
+
+          const perCardLefts: number[][] = Array.from($headerRows).map(tr => Array.from(tr.querySelectorAll('th')).map(th => (th as HTMLElement).getBoundingClientRect().left));
+          const columnCount = perCardLefts[0].length;
+          for (let col = 0; col < columnCount; col++) {
+            const lefts = perCardLefts.map(cardLefts => cardLefts[col]);
+            const max = Math.max(...lefts);
+            const min = Math.min(...lefts);
+            expect(max - min, `column ${col} th.left spread across cards: max ${max.toFixed(1)} - min ${min.toFixed(1)}`).to.be.at.most(1);
+          }
+        });
+    });
+  });
 });

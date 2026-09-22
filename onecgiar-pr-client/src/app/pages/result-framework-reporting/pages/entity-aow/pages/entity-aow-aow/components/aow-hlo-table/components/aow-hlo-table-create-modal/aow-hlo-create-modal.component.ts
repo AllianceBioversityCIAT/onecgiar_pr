@@ -14,6 +14,7 @@ import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/
 import { BrnTabsImports } from '@spartan-ng/brain/tabs';
 import { KpCgspaceBrowseComponent, CgspaceItemDto } from './components/kp-cgspace-browse/kp-cgspace-browse.component';
 import { KpRepository, kpRepositoryLabel } from './components/kp-cgspace-browse/kp-repositories.constants';
+import { normalizeKpHandle } from '../../../../../../../../shared/report-result/kp-handle.validator';
 import {
   INNOVATION_LINK_QUESTION,
   QaInnovationDevelopmentResultsService,
@@ -409,7 +410,7 @@ export class AowHloCreateModalComponent implements OnInit {
     }
 
     const regex =
-      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
+      /^(?:https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)|(?:10568|20\.500\.11766|20\.500\.12348)\/\d+)$/;
 
     const isValid = regex.test(this.createResultBody().handler);
 
@@ -425,6 +426,11 @@ export class AowHloCreateModalComponent implements OnInit {
     this.mqapUrlError.set({
       status: false,
       message: ''
+    });
+
+    this.createResultBody.set({
+      ...this.createResultBody(),
+      handler: normalizeKpHandle(this.createResultBody().handler)
     });
 
     this.api.resultsSE.GET_mqapValidation(this.createResultBody().handler).subscribe({

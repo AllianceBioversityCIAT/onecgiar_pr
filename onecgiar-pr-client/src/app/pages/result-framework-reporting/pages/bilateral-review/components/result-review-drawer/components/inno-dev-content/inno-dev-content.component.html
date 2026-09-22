@@ -9,7 +9,8 @@
     [extraInformation]="true"
     [required]="false"
     [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_nature_id"
-    [disabled]="disabled">
+    [disabled]="disabled"
+    [readOnly]="disabled">
   </app-pr-select>
 
   <br />
@@ -20,7 +21,8 @@
     label="Innovation Developer"
     description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person."
     [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_developers"
-    [disabled]="disabled">
+    [disabled]="disabled"
+    [readOnly]="disabled">
   </app-pr-textarea>
 
   <br />

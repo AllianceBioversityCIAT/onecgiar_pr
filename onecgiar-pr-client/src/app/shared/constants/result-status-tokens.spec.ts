@@ -1,7 +1,9 @@
 import {
+  RESULT_STATUS_LABELS,
   RESULT_STATUS_TOKENS,
   resultStatusBg,
   resultStatusFg,
+  resultStatusLabel,
   resultStatusToken
 } from './result-status-tokens';
 
@@ -21,9 +23,15 @@ describe('result-status-tokens', () => {
     expect(resultStatusBg(3)).toBe('var(--pr-status-submitted-bg)');
   });
 
-  it('maps Pending review to the not-started pair', () => {
-    expect(resultStatusFg(5)).toBe('var(--pr-status-not-started-fg)');
-    expect(resultStatusBg(5)).toBe('var(--pr-status-not-started-bg)');
+  // P2-3553 — grey meant "inactive / disabled" on a result that is mid-flight. Pending review sits
+  // on the same rung as Submitted, so it shares that pair. The lock below is the point of the test:
+  // it must NOT be the grey one, and it must NOT be Editing's amber (those two would be
+  // indistinguishable in the Results Center, where both statuses share a column).
+  it('maps Pending review to the submitted pair, never to grey or to Editing amber', () => {
+    expect(resultStatusFg(5)).toBe('var(--pr-status-submitted-fg)');
+    expect(resultStatusBg(5)).toBe('var(--pr-status-submitted-bg)');
+    expect(resultStatusBg(5)).not.toBe('var(--pr-status-not-started-bg)');
+    expect(resultStatusBg(5)).not.toBe(resultStatusBg(1));
   });
 
   it('maps Approved and Rejected to their dedicated pairs', () => {
@@ -43,5 +51,24 @@ describe('result-status-tokens', () => {
 
   it('covers every declared status id', () => {
     expect(Object.keys(RESULT_STATUS_TOKENS).map(Number).sort()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  it('names every status it colours', () => {
+    expect(Object.keys(RESULT_STATUS_LABELS).map(Number).sort()).toEqual(
+      Object.keys(RESULT_STATUS_TOKENS).map(Number).sort()
+    );
+    expect(resultStatusLabel(2)).toBe('Quality Assessed');
+    expect(resultStatusLabel(5)).toBe('Pending review');
+    expect(resultStatusLabel(99)).toBe('');
+    expect(resultStatusLabel(null)).toBe('');
+  });
+
+  // The bug this file now guards (Cami, 21-Sep-2026): the result-detail rail carried a private map
+  // that painted Quality Assessed with the APPROVED green and had no entry for Approved at all.
+  // Two different statuses cannot answer with the same pair, or a reporter reads one as the other.
+  it('gives Quality Assessed and Approved pairs that cannot be confused', () => {
+    expect(resultStatusToken(2)).not.toEqual(resultStatusToken(6));
+    expect(resultStatusFg(2)).not.toBe('var(--pr-status-approved-fg)');
+    expect(resultStatusToken(6)).not.toEqual(resultStatusToken(99));
   });
 });

@@ -561,6 +561,22 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       );
       expect(mockApiService.resultsSE.GET_mqapValidation).not.toHaveBeenCalled();
     });
+
+    it('should accept a bare CGSpace handle (KPH-R-4) and normalize it before calling GET_mqapValidation', () => {
+      mockEntityAowService.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of knowledge products', result_type_id: 6 }]
+      });
+      fixture.detectChanges();
+
+      component.createResultBody.update(b => ({ ...b, handler: '10568/183891' }));
+      component.handleSource.set('manual');
+
+      component.GET_mqapValidation();
+
+      expect(component.mqapUrlError().status).toBe(false);
+      expect(component.createResultBody().handler).toBe('https://cgspace.cgiar.org/handle/10568/183891');
+      expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith('https://cgspace.cgiar.org/handle/10568/183891');
+    });
   });
 
   describe('POST_createResult Body Equality & No Discovery Leaks (AC-5, KPB-DD-2)', () => {

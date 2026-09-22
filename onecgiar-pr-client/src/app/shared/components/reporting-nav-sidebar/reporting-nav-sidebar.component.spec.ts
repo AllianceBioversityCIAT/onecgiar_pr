@@ -767,11 +767,16 @@ describe('ReportingNavSidebarComponent', () => {
       return html.slice(start, end);
     };
 
-    it('renders exactly four About entries: AI use, Release notes, Terms and conditions, License', () => {
+    it('renders the About entries: AI use, Developers, Terms and conditions, License', () => {
       const extras = readExtrasMarkup();
       expect(extras.split('<li hlmSidebarMenuItem>').length - 1).toBe(4);
-      expect(extras).toContain('routerLink="/whats-new"');
-      expect(extras).toContain('<span>Release notes</span>');
+      expect(extras).toContain('routerLink="/developers"');
+      expect(extras).toContain('tooltip="Developers"');
+      expect(extras).toContain('<span>Developers</span>');
+      expect(extras).toContain('name="lucideCode"');
+      // Release notes moved to the shell topbar, next to the notifications bell —
+      // it no longer lives in the sidebar EXTRAS group.
+      expect(extras).not.toContain('routerLink="/whats-new"');
     });
 
     it('exposes aiUseInPrmsUrl, termsAndConditionsUrl, and licenseUrl from environment', async () => {
@@ -788,13 +793,19 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.licenseUrl).toBe(environment.footerUrls.license);
     });
 
-    it('keeps Glossary, Tour, Notifications and Text size out of the whole sidebar', () => {
+    it('keeps Glossary, Tour, Notifications, Text size and Release notes out of the whole sidebar', () => {
       const html = readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
-      for (const gone of ['<span>Glossary</span>', '<span>Tour</span>', '<span>Notifications</span>', '<span>Text size</span>']) {
+      for (const gone of [
+        '<span>Glossary</span>',
+        '<span>Tour</span>',
+        '<span>Notifications</span>',
+        '<span>Text size</span>',
+        'routerLink="/whats-new"'
+      ]) {
         expect(html).not.toContain(gone);
       }
       // Control: the same instrument still finds the entry that is meant to be there.
-      expect(html).toContain('<span>Release notes</span>');
+      expect(html).toContain('<span>AI use in PRMS</span>');
     });
 
     it('drops the component members those entries needed', async () => {

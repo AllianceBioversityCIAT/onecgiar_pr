@@ -47,11 +47,15 @@ describe('TypeInnovationUseComponent', () => {
     autoSave = {
       fieldStatus: signal<Record<string, string>>({}),
       schedulePayload: jest.fn(),
+      // Which section the editor is showing. The component re-reads its investment tables on the
+      // transition INTO this one, because the sections are all mounted at once behind `[hidden]`
+      // and its own `ngOnInit` fetch never runs again.
+      openSection: signal<string | null>(null)
     };
     creation = { currentResultId: signal<number | null>(123), reportingYear: signal<number | null>(2026) };
     expandableState = {
       getShowAllFields: jest.fn().mockReturnValue(false),
-      setShowAllFields: jest.fn(),
+      setShowAllFields: jest.fn()
     };
     // Mirrors `GET /v2/clarisa/innovation-use-levels`: `id` is what the form stores, `level` is the number
     // the scaling-studies and explanation gates read.
@@ -60,8 +64,8 @@ describe('TypeInnovationUseComponent', () => {
         { id: '1', level: 0, name: 'No use' },
         { id: '4', level: 3, name: 'Level 3' },
         { id: '6', level: 5, name: 'Level 5' },
-        { id: '7', level: 6, name: 'Level 6' },
-      ],
+        { id: '7', level: 6, name: 'Level 6' }
+      ]
     };
     qaInnovationsSE = { options: signal([]), load: jest.fn() };
     bilateralApi = {
@@ -70,12 +74,12 @@ describe('TypeInnovationUseComponent', () => {
         of({
           response: [
             { code: 10, name: 'Government', childrens: [{ code: 11, name: 'Ministry' }] },
-            { code: 20, name: 'Private sector', childrens: [] },
-          ],
-        }),
+            { code: 20, name: 'Private sector', childrens: [] }
+          ]
+        })
       ),
       GET_innovationUse: jest.fn().mockReturnValue(of({ response: {} })),
-      PATCH_innovationUse: jest.fn().mockReturnValue(of({})),
+      PATCH_innovationUse: jest.fn().mockReturnValue(of({}))
     };
 
     await TestBed.configureTestingModule({
@@ -87,8 +91,8 @@ describe('TypeInnovationUseComponent', () => {
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralExpandableStateService, useValue: expandableState },
         { provide: InnovationControlListService, useValue: innovationControlListSE },
-        { provide: QaInnovationDevelopmentResultsService, useValue: qaInnovationsSE },
-      ],
+        { provide: QaInnovationDevelopmentResultsService, useValue: qaInnovationsSE }
+      ]
     })
       .overrideTemplate(TypeInnovationUseComponent, '<div></div>')
       .compileComponents();
@@ -98,11 +102,60 @@ describe('TypeInnovationUseComponent', () => {
     expect(build()).toBeTruthy();
   });
 
+  /**
+   * The sections are siblings under `[hidden]`, all mounted once with the page, so this one's
+   * `ngOnInit` fetch is a snapshot of the moment the result opened. A project added afterwards in
+   * `section-contributors` never reached the investment table, could never be given an amount or
+   * "yet to be determined", and submit-for-review then refused the result over a row the form was
+   * showing as done (result code 9506, AfricaRice, 21-Sep-2026).
+   */
+  describe('investment tables refresh on entering the section', () => {
+    const openSection = (name: string | null) => {
+      autoSave.openSection.set(name);
+      fixture.detectChanges();
+    };
+
+    it('picks up a project linked after the section was first loaded, keeping unsaved edits', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({ response: { investment_bilateral: [{ project_id: 1954, name: 'Rice Scaling', kind_cash: null, is_determined: null }] } })
+      );
+      build();
+      openSection('general-info');
+
+      // The reporter types an amount without saving, then a second project is linked elsewhere.
+      component.body.investment_bilateral[0].kind_cash = 5000;
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            investment_bilateral: [
+              { project_id: 1954, name: 'Rice Scaling', kind_cash: null, is_determined: null },
+              { project_id: 1410, name: 'Delta Agronomy', kind_cash: null, is_determined: null }
+            ]
+          }
+        })
+      );
+      openSection('type-specific');
+
+      expect(component.body.investment_bilateral).toHaveLength(2);
+      expect(component.body.investment_bilateral[0].kind_cash).toBe(5000);
+      expect(component.body.investment_bilateral[1].name).toBe('Delta Agronomy');
+    });
+
+    it('does not re-fetch while the section simply stays open', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { investment_bilateral: [] } }));
+      build();
+      openSection('type-specific');
+      const afterEntering = bilateralApi.GET_innovationUse.mock.calls.length;
+
+      fixture.detectChanges();
+
+      expect(bilateralApi.GET_innovationUse).toHaveBeenCalledTimes(afterEntering);
+    });
+  });
+
   describe('loadData', () => {
     it('loads the body and the actor types catalog', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { innov_use_to_be_determined: false, innovation_use_level_id: 5 } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innov_use_to_be_determined: false, innovation_use_level_id: 5 } }));
       build();
       fixture.detectChanges();
       expect(component.body.innov_use_to_be_determined).toBe(false);
@@ -143,7 +196,7 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.body).toEqual({
         investment_programs: [],
         investment_bilateral: [],
-        investment_partners: [],
+        investment_partners: []
       });
       expect(component.actorsTypeList).toEqual([]);
       expect(component.institutionsTypeTreeList).toEqual([]);
@@ -154,13 +207,13 @@ describe('TypeInnovationUseComponent', () => {
       fixture.detectChanges();
       expect(component.institutionsTypeTreeList).toEqual([
         { code: 10, name: 'Government', childrens: [{ code: 11, name: 'Ministry' }] },
-        { code: 20, name: 'Private sector', childrens: [] },
+        { code: 20, name: 'Private sector', childrens: [] }
       ]);
     });
 
     it('splits a hydrated parent_institution_type_id back into a parent/sub-type pair', () => {
       bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { organization: [{ institution_types_id: 11, parent_institution_type_id: 10 }] } }),
+        of({ response: { organization: [{ institution_types_id: 11, parent_institution_type_id: 10 }] } })
       );
       build();
       fixture.detectChanges();
@@ -232,7 +285,7 @@ describe('TypeInnovationUseComponent', () => {
         ['addStudyLink', (c: any) => c.addStudyLink()],
         ['deleteStudyLink', (c: any) => c.deleteStudyLink(0)],
         ['onInnovationLinkChange', (c: any) => c.onInnovationLinkChange()],
-        ['onUseLevelChange', (c: any) => c.onUseLevelChange()],
+        ['onUseLevelChange', (c: any) => c.onUseLevelChange()]
       ])('sends nothing from %s either', (_name, act) => {
         failLoad();
         build();
@@ -240,7 +293,7 @@ describe('TypeInnovationUseComponent', () => {
           actors: [{ actor_type_id: 1, is_active: true }],
           organization: [{ institution_types_id: 10, is_active: true }],
           measures: [{ unit_of_measure: 'ha', quantity: 3, is_active: true }],
-          scaling_studies_urls: ['https://example.org'],
+          scaling_studies_urls: ['https://example.org']
         };
         autoSave.schedulePayload.mockClear();
 
@@ -251,11 +304,11 @@ describe('TypeInnovationUseComponent', () => {
 
       // Same reason as the sibling section (P2-3355): publishing no checklist at all leaves the section
       // at "0/0 fields", which reads as "nothing required here" instead of as incomplete.
-      it('still publishes the four unfilled MDS items, so the section stays honestly incomplete', () => {
+      it('still publishes the three unfilled MDS items, so the section stays honestly incomplete', () => {
         failLoad();
         build();
         const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
-        expect(fields.map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level', 'use-investment']);
+        expect(fields.map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-investment']);
         expect(fields.every((f: any) => f.filled === false)).toBe(true);
       });
     });
@@ -327,7 +380,7 @@ describe('TypeInnovationUseComponent', () => {
     it('excludes soft-deleted actors', () => {
       build();
       component.body = {
-        actors: [{ actor_type_id: 1, is_active: true }, { actor_type_id: 2, is_active: false }, { actor_type_id: 3 }],
+        actors: [{ actor_type_id: 1, is_active: true }, { actor_type_id: 2, is_active: false }, { actor_type_id: 3 }]
       };
       expect(component.visibleActors).toEqual([{ actor_type_id: 1, is_active: true }, { actor_type_id: 3 }]);
     });
@@ -356,11 +409,25 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.visibleActors).toEqual([]);
     });
 
-    it('clears every count field when the disaggregation toggle flips', () => {
+    it('clears every count field when "does not apply" is ticked', () => {
       build();
-      const actor = { women: 1, women_youth: 2, men: 3, men_youth: 4, how_many: 5 };
+      const actor = { sex_and_age_disaggregation: true, women: 1, women_youth: 2, men: 3, men_youth: 4, how_many: 5 };
       component.onDisaggregationChange(actor);
       expect(actor).toMatchObject({ women: null, women_youth: null, men: null, men_youth: null, how_many: null });
+    });
+
+    it('also clears the age-only fallback when "does not apply" is ticked, as the pooled cleanActor does', () => {
+      build();
+      const actor = { sex_and_age_disaggregation: true, women: 4, age_disaggregation_not_available: true, youth_split_applied_by_system: true };
+      component.onDisaggregationChange(actor);
+      expect(actor).toMatchObject({ age_disaggregation_not_available: null, youth_split_applied_by_system: null });
+    });
+
+    it('keeps the stored breakdown when "does not apply" is unticked (rows saved under the old Yes/No)', () => {
+      build();
+      const actor: any = { sex_and_age_disaggregation: false, women: 40, women_youth: 10, men: 60, men_youth: 15, how_many: null };
+      component.onDisaggregationChange(actor);
+      expect(actor).toMatchObject({ women: 40, women_youth: 10, men: 60, men_youth: 15, how_many: 100 });
     });
 
     it('triggers autosave on add and delete', () => {
@@ -375,17 +442,225 @@ describe('TypeInnovationUseComponent', () => {
     });
   });
 
+  /**
+   * P2-3428 — the 2030 Use Projection, mirroring W1/W2 (P2-3295) but optional: it lives in full metadata
+   * and is never published to the MDS tracker. Stored server-side under `section_id = 2`.
+   */
+  describe('2030 Use Projection (P2-3428)', () => {
+    const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+    it('shows the W1/W2 title, guidance note, question and tooltip from the shared copy', () => {
+      const t = html();
+      expect(t).toContain('[label]="projection2030Copy.title"');
+      expect(t).toContain('[description]="projection2030Copy.guidance"');
+      expect(t).toContain('[label]="projection2030Copy.question"');
+      expect(t).toContain('[tooltip]="projection2030Copy.tooltip"');
+      const copy = build().projection2030Copy;
+      expect(copy.title).toBe('2030 Use Projection');
+      expect(copy.question).toBe('What is the projected innovation use by end of 2030?');
+      expect(copy.guidance).toContain('href="https://docs.google.com/document/d/1mkt4bS51CyGmHKfkvuonAiJhkl4n-mLE/"');
+      expect(copy.guidance).toContain("United Nations definition of 'youth'");
+    });
+
+    it('offers Actors, Organizations and Other quantitative measures with the W1/W2 buttons, none required', () => {
+      const t = html();
+      const block = t.slice(t.indexOf('[label]="projection2030Copy.title"'), t.indexOf('P2-3424 — optional, not MDS'));
+      expect(block).toContain('name="Add actor"');
+      expect(block).toContain('name="Add organization"');
+      expect(block).toContain('name="Add other"');
+      expect(block).not.toContain('[required]="true"');
+      expect(block).toContain('context: { $implicit: actor, required: false }');
+      expect(t).toContain('@if (showProjection2030Lists) {');
+    });
+
+    it('hides the three lists while the 2030 use is yet to be determined', () => {
+      build();
+      component.body = { innov_use_2030_to_be_determined: true };
+      expect(component.showProjection2030Lists).toBe(false);
+      component.body = { innov_use_2030_to_be_determined: null };
+      expect(component.showProjection2030Lists).toBe(true);
+    });
+
+    it('adds rows to the projection, not to current use', () => {
+      build();
+      component.body = { actors: [], organization: [], measures: [] };
+      component.addProjection2030Actor();
+      component.addProjection2030Organization();
+      component.addProjection2030Measure();
+      expect(component.body.actors).toEqual([]);
+      expect(component.body.organization).toEqual([]);
+      expect(component.body.measures).toEqual([]);
+      expect(component.body.innovation_use_2030.actors).toEqual([
+        { actor_type_id: null, sex_and_age_disaggregation: false, is_active: true }
+      ]);
+      expect(component.body.innovation_use_2030.organization).toHaveLength(1);
+      expect(component.body.innovation_use_2030.measures).toHaveLength(1);
+    });
+
+    it('sends the projection lists, with sub-types flattened, next to the current ones', () => {
+      build();
+      component.body = {
+        innovation_use_2030: {
+          actors: [{ actor_type_id: 1, women: 20 }],
+          organization: [{ institution_types_id: 3, institution_sub_type_id: 31 }],
+          measures: [{ unit_of_measure: 'hectares', quantity: 900 }]
+        }
+      };
+      const payload: any = (component as any).buildPayload();
+      expect(payload.innovation_use_2030).toEqual({
+        actors: [{ actor_type_id: 1, women: 20 }],
+        organization: [{ institution_types_id: 31 }],
+        measures: [{ unit_of_measure: 'hectares', quantity: 900 }]
+      });
+    });
+
+    it('reloads the projection with its sub-types split back out and its flags as booleans', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            innovation_use_2030: {
+              actors: [{ actor_type_id: 1, sex_and_age_disaggregation: 0 }],
+              organization: [{ institution_types_id: 31, parent_institution_type_id: 3 }],
+              measures: []
+            }
+          }
+        })
+      );
+      build();
+      expect(component.body.innovation_use_2030.actors[0].sex_and_age_disaggregation).toBe(false);
+      expect(component.body.innovation_use_2030.organization[0]).toMatchObject({ institution_types_id: 3, institution_sub_type_id: 31 });
+    });
+
+    it('never moves the green check: the projection is not an MDS item', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: false,
+        innovation_use_2030: { actors: [{ actor_type_id: 1 }], organization: [], measures: [{ unit_of_measure: 'ha', quantity: 5 }] }
+      };
+      component.updateMds();
+      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(fields.find((f: any) => f.key === 'use-actors').filled).toBe(false);
+      expect(fields.find((f: any) => f.key === 'use-measures').filled).toBe(false);
+    });
+  });
+
+  /**
+   * P2-3785 (4b) — gender and youth set up as for pooled. The W1/W2 form (and every server reader:
+   * `innovation-use.handler.ts`, the quality-assessment mapper, the outbound summary) reads
+   * `sex_and_age_disaggregation = true` as "the breakdown does NOT apply". The bilateral Yes/No saved
+   * "Yes, available" as that same `true`, so a reported breakdown was stored as its absence.
+   */
+  describe('gender and youth as in pooled (P2-3785 4b)', () => {
+    const html = () => readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+
+    it('asks the pooled question with the pooled meaning: ticked hides the breakdown', () => {
+      const t = html();
+      expect(t).not.toContain('Sex and age disaggregated data available?');
+      expect(t).toContain('label="Sex and age disaggregation does not apply"');
+      expect(t).toContain('@if (!actor.sex_and_age_disaggregation) {');
+      expect(t).toContain('label="Age disaggregation not available"');
+      expect(t).toContain('label="Non-youth"');
+      expect(t).toContain('label="Total"');
+    });
+
+    it('derives Non-youth and the Total the reporter can read', () => {
+      build();
+      const actor = { women: 40, women_youth: 10, men: 60, men_youth: 15 };
+      expect(component.nonYouth(actor, 'women')).toBe(30);
+      expect(component.nonYouth(actor, 'men')).toBe(45);
+      expect(component.actorTotal(actor)).toBe(100);
+    });
+
+    it('shows nothing instead of a fake zero while no figure was entered', () => {
+      build();
+      expect(component.nonYouth({}, 'women')).toBeNull();
+      expect(component.actorTotal({})).toBeNull();
+      expect(component.actorTotal({ women: '7' })).toBe(7);
+    });
+
+    it('keeps how_many equal to Women + Men while the breakdown applies', () => {
+      build();
+      const actor: any = { sex_and_age_disaggregation: false, women: 40, men: 60 };
+      component.onGenderChange(actor);
+      expect(actor.how_many).toBe(100);
+    });
+
+    it('never overwrites how_many when disaggregation does not apply', () => {
+      build();
+      const actor: any = { sex_and_age_disaggregation: true, how_many: 12 };
+      component.onGenderChange(actor);
+      expect(actor.how_many).toBe(12);
+    });
+
+    it('does not let Youth exceed the total of its group', () => {
+      build();
+      const actor: any = { women: 10, women_youth: 25 };
+      expect(component.youthExceeds(actor, 'women')).toBe(true);
+      component.onYouthChange(actor, 'women');
+      expect(actor.women_youth).toBe(10);
+      expect(component.youthExceeds(actor, 'women')).toBe(false);
+    });
+
+    it('splits youth 50/50 and stamps it when age disaggregation is not available, and undoes it on untick', () => {
+      build();
+      const actor: any = { women: 9, men: 4, age_disaggregation_not_available: true };
+      component.onAgeFallbackChange(actor);
+      expect(actor).toMatchObject({ women_youth: 5, men_youth: 2, youth_split_applied_by_system: true, how_many: 13 });
+
+      actor.men = 10;
+      component.onGenderChange(actor);
+      expect(actor.men_youth).toBe(5);
+
+      actor.age_disaggregation_not_available = false;
+      component.onAgeFallbackChange(actor);
+      expect(actor).toMatchObject({ women_youth: null, men_youth: null, youth_split_applied_by_system: null });
+    });
+
+    it('reloads the stored tinyint flags as booleans so the checkboxes paint them', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            actors: [
+              { actor_type_id: 1, sex_and_age_disaggregation: 1, age_disaggregation_not_available: 0, youth_split_applied_by_system: null }
+            ]
+          }
+        })
+      );
+      build();
+      expect(component.body.actors[0]).toMatchObject({
+        sex_and_age_disaggregation: true,
+        age_disaggregation_not_available: false,
+        youth_split_applied_by_system: null
+      });
+    });
+
+    it('sends the fallback flags with the actor, so the server can persist them', () => {
+      build();
+      component.body = { actors: [{ actor_type_id: 1, women: 2, age_disaggregation_not_available: true }] };
+      const payload: any = (component as any).buildPayload();
+      expect(payload.innovatonUse.actors[0].age_disaggregation_not_available).toBe(true);
+    });
+  });
+
   describe('visibleOrganizations / visibleMeasures', () => {
     it('exclude soft-deleted rows and tolerate an absent array', () => {
       build();
       component.body = {
-        organization: [{ institution_types_id: 1, is_active: true }, { institution_types_id: 2, is_active: false }],
+        organization: [
+          { institution_types_id: 1, is_active: true },
+          { institution_types_id: 2, is_active: false }
+        ]
       };
       expect(component.visibleOrganizations).toEqual([{ institution_types_id: 1, is_active: true }]);
       component.body = {};
       expect(component.visibleOrganizations).toEqual([]);
 
-      component.body = { measures: [{ unit_of_measure: 'ha', is_active: true }, { unit_of_measure: 'kg', is_active: false }] };
+      component.body = {
+        measures: [
+          { unit_of_measure: 'ha', is_active: true },
+          { unit_of_measure: 'kg', is_active: false }
+        ]
+      };
       expect(component.visibleMeasures).toEqual([{ unit_of_measure: 'ha', is_active: true }]);
       component.body = {};
       expect(component.visibleMeasures).toEqual([]);
@@ -474,19 +749,15 @@ describe('TypeInnovationUseComponent', () => {
   describe('updateMds — P2-3428 / P2-3331 AC1: the MDS fields published to the tracker', () => {
     const ACTORS = {
       key: 'use-actors',
-      label: 'Actors',
+      label: 'Actors'
     };
     const MEASURES = {
       key: 'use-measures',
-      label: 'Other quantitative measures of innovation use',
-    };
-    const LEVEL = {
-      key: 'use-level',
-      label: 'How would you assess the current use level of the innovation?',
+      label: 'Other quantitative measures of innovation use'
     };
     const INVESTMENT = {
       key: 'use-investment',
-      label: 'Investment by CGIAR W3 or bilateral projects',
+      label: 'Investment by CGIAR W3 or bilateral projects'
     };
 
     const lastFields = () => mdsTracker.setSectionFields.mock.calls.at(-1)[1];
@@ -498,8 +769,7 @@ describe('TypeInnovationUseComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { ...ACTORS, filled: false },
         { ...MEASURES, filled: false },
-        { ...LEVEL, filled: false },
-        { ...INVESTMENT, filled: false },
+        { ...INVESTMENT, filled: false }
       ]);
     });
 
@@ -507,7 +777,7 @@ describe('TypeInnovationUseComponent', () => {
       build();
       component.body = { innov_use_to_be_determined: true };
       component.updateMds();
-      expect(lastFields().map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-level', 'use-investment']);
+      expect(lastFields().map((f: any) => f.key)).toEqual(['use-actors', 'use-measures', 'use-investment']);
     });
 
     it('AC4 — counts Actors as satisfied when the use is to be determined, with no actor added', () => {
@@ -567,39 +837,63 @@ describe('TypeInnovationUseComponent', () => {
       expect(lastFields()).toContainEqual({ ...MEASURES, filled: false });
     });
 
-    it('AC7 — counts the use level once set', () => {
+    /**
+     * P2-3785 AC1 — the use level is no longer a standard (Nicoleta Trifa, #INC-163204 point 4a),
+     * reversing P2-3428's AC7. Asserted with the level ANSWERED, not blank: publishing it would be
+     * invisible on a blank section (everything is unfilled there) and would only show up as a
+     * section that refuses to reach 100% once the reporter fills the three real items.
+     */
+    it('P2-3785 AC1 — never publishes the use level, even once the reporter picks one', () => {
       build();
       component.body = { innovation_use_level_id: '6' };
       component.updateMds();
-      expect(lastFields()).toContainEqual({ ...LEVEL, filled: true });
+      expect(lastFields().map((f: any) => f.key)).not.toContain('use-level');
     });
 
     /**
-     * The use ladder is an MDS item this section counts (`use-level`), so an empty one is part of
-     * the footer's "N fields missing". `pr-range-level` only paints its pending marker when the
-     * caller asks for it — without this the reporter reads a count naming a field that looks no
-     * different from a finished one, which is the complaint that reached us for the geographic
-     * scope. `innovation-use-form` (the W1/W2 form for the same question) already passes it.
+     * P2-3785 AC1 reverses this: the ladder used to carry its pending marker BECAUSE it was an MDS
+     * item the footer counted. It is not one any more, so a marker would name a field that can never
+     * hold Submit back — the very "count that names a finished-looking field" this assertion was
+     * written to prevent, only inverted. The ladder stays on screen; only the demand is gone.
      * Asserted as text because this spec `overrideTemplate`s, same approach as the tests above.
      */
-    it('asks the use ladder to show its pending marker', () => {
+    it('P2-3785 AC1 — the use ladder no longer asks for its pending marker', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
-      expect(html).toContain(`[options]="innovationControlListSE.useLevelsList"
-      [required]="true"`);
+      // Asserted on the two attributes, not on their indentation: P2-3428 wrapped the fields in a
+      // `contents` div for the read-only gate and every line below shifted by two spaces.
+      const ladder = /\[options\]="innovationControlListSE\.useLevelsList"\s*\n\s*\[required\]="false"/;
+      expect(html).toMatch(ladder);
+      // And it is still rendered — "not required" must not become "not shown".
+      expect(html).toContain('innovationControlListSE.useLevelsList');
     });
 
-    it('P2-3428 — renders bilateral investment as MDS and optional Program/Partner tables as full metadata', () => {
+    /**
+     * P2-3785 AC3 (Nicoleta Trifa, #INC-163204 point 4c): the three destinations of the USD estimation
+     * — Program, bilateral project, external partners — are rendered TOGETHER, above the full-metadata
+     * toggle. They used to be split, with Programs and Partners behind the toggle, so a reporter who
+     * never opened it saw one of the three amounts they were asked for and reported the other two as
+     * missing from the form.
+     *
+     * The two assertions that matter are the pair: all three tables render, and only the bilateral one
+     * is REQUIRED. Dropping the second would quietly turn optional investment into a submit blocker —
+     * investment is deliberately outside the green check (PO decision, 9-Sep-2026).
+     */
+    it('P2-3785 AC3 — renders the three investment tables together, with only the bilateral one required', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
 
-      expect(html).toContain("[sections]=\"['bilateral']\"");
-      expect(html).toContain("[requiredSections]=\"['bilateral']\"");
-      expect(html).toContain("[sections]=\"['programs', 'partners']\"");
+      expect(html).toContain("[sections]=\"['programs', 'bilateral', 'partners']\"");
+      expect(html).toContain('[requiredSections]="[\'bilateral\']"');
+      // Exactly one investment block: the Programs/Partners copy under the toggle is gone, and two
+      // `app-estimates-cgiar` bound to the same `body` would render every row twice.
+      expect(html.match(/<app-estimates-cgiar/g)?.length).toBe(1);
+      expect(html).not.toContain("[sections]=\"['programs', 'partners']\"");
+      // Above the toggle, where the MDS note sits — not inside the full-metadata block.
+      expect(html.indexOf("[sections]=\"['programs', 'bilateral', 'partners']\"")).toBeLessThan(html.indexOf('mdsInfoNote'));
       // The old placeholder and its tag are gone for good.
       expect(html).not.toContain('body.investment_bilateral_usd');
       expect(html).not.toContain('use-investment-coming-soon');
       expect(html).not.toContain('Not available yet');
-      expect(html.indexOf("[sections]=\"['bilateral']\"")).toBeLessThan(html.indexOf('mdsInfoNote'));
     });
 
     it('P2-3390 — sends the three investment arrays in the payload', () => {
@@ -607,15 +901,13 @@ describe('TypeInnovationUseComponent', () => {
       component.body = {
         investment_programs: [{ id: 90, kind_cash: 100, is_determined: null }],
         investment_bilateral: [{ id: 4321, project_id: 4321, kind_cash: null, is_determined: true }],
-        investment_partners: [{ id: 77, kind_cash: 250, is_determined: null }],
+        investment_partners: [{ id: 77, kind_cash: 250, is_determined: null }]
       };
       component.onSave();
 
       const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
       expect(payload.investment_programs).toEqual([{ id: 90, kind_cash: 100, is_determined: null }]);
-      expect(payload.investment_bilateral).toEqual([
-        { id: 4321, project_id: 4321, kind_cash: null, is_determined: true },
-      ]);
+      expect(payload.investment_bilateral).toEqual([{ id: 4321, project_id: 4321, kind_cash: null, is_determined: true }]);
       expect(payload.investment_partners).toEqual([{ id: 77, kind_cash: 250, is_determined: null }]);
       // 🛑 The legacy nested keys must never be sent from here: their writer resolves the
       // `non_pooled_project` catalogue and drops every bilateral row in silence.
@@ -668,7 +960,7 @@ describe('TypeInnovationUseComponent', () => {
         actors: [{ actor_type_id: 1, is_active: true }],
         measures: [{ unit_of_measure: 'ha', quantity: 3, is_active: true }],
         innovation_use_level_id: '6',
-        investment_bilateral: [{ kind_cash: 500, is_determined: null }],
+        investment_bilateral: [{ kind_cash: 500, is_determined: null }]
       };
       component.updateMds();
       expect(lastFields().every((f: any) => f.filled)).toBe(true);
@@ -687,7 +979,7 @@ describe('TypeInnovationUseComponent', () => {
         readiness_level_explanation: 'Because the evidence says so.',
         innov_use_2030_to_be_determined: true,
         has_innovation_link: true,
-        linked_result_id: 42,
+        linked_result_id: 42
       };
       component.updateMds();
       expect(lastFields()).toEqual(before);
@@ -702,7 +994,7 @@ describe('TypeInnovationUseComponent', () => {
         innovation_use_level_id: 5,
         actors: [{ actor_type_id: 1 }],
         organization: [{ institution_types_id: 2 }],
-        measures: [{ unit_of_measure: 'ha' }],
+        measures: [{ unit_of_measure: 'ha' }]
       };
       component.onFieldChange();
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
@@ -713,10 +1005,10 @@ describe('TypeInnovationUseComponent', () => {
           innovatonUse: {
             actors: [{ actor_type_id: 1 }],
             organization: [{ institution_types_id: 2 }],
-            measures: [{ unit_of_measure: 'ha' }],
-          },
+            measures: [{ unit_of_measure: 'ha' }]
+          }
         }),
-        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' }),
+        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' })
       );
     });
 
@@ -754,9 +1046,7 @@ describe('TypeInnovationUseComponent', () => {
 
     // P2-3556 regression guards: the load gate must not touch the two things that legitimately save.
     it('saves normally once the body has loaded', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { innovation_use_level_id: 4, readiness_level_explanation: 'stored' } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innovation_use_level_id: 4, readiness_level_explanation: 'stored' } }));
       build();
       autoSave.schedulePayload.mockClear();
 
@@ -773,7 +1063,7 @@ describe('TypeInnovationUseComponent', () => {
       const organization = { result_by_institution_type_id: 4, institution_types_id: 10, is_active: true };
       const measure = { result_ip_measure_id: 6, unit_of_measure: 'ha', quantity: 3, is_active: true };
       bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { actors: [actor], organization: [organization], measures: [measure], scaling_studies_urls: ['https://a'] } }),
+        of({ response: { actors: [actor], organization: [organization], measures: [measure], scaling_studies_urls: ['https://a'] } })
       );
       build();
 
@@ -798,11 +1088,7 @@ describe('TypeInnovationUseComponent', () => {
       build();
       component.body = {};
       component.onSave();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        expect.anything(),
-        expect.objectContaining({ debounceMs: 0 }),
-      );
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith('typeSpecific', expect.anything(), expect.objectContaining({ debounceMs: 0 }));
     });
 
     it('tracks the saving state from fieldStatus', () => {
@@ -818,7 +1104,7 @@ describe('TypeInnovationUseComponent', () => {
       build();
       expect(component.mdsInfoNote).toBe(
         'The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. ' +
-          'If you need to complete the full metadata for this section, click the button on the right.',
+          'If you need to complete the full metadata for this section, click the button on the right.'
       );
     });
   });
@@ -846,7 +1132,7 @@ describe('TypeInnovationUseComponent', () => {
       expect(payload).toMatchObject({
         readiness_level_explanation: 'kept',
         has_scaling_studies: true,
-        scaling_studies_urls: ['https://a.b'],
+        scaling_studies_urls: ['https://a.b']
       });
     });
 
@@ -911,7 +1197,7 @@ describe('TypeInnovationUseComponent', () => {
         component.body = {
           innovation_use_level_id: '7',
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://example.org/a', 'https://example.org/b'],
+          scaling_studies_urls: ['https://example.org/a', 'https://example.org/b']
         };
         component.onUseLevelChange();
         expect(component.body.has_scaling_studies).toBeNull();
@@ -924,7 +1210,7 @@ describe('TypeInnovationUseComponent', () => {
         component.body = {
           innovation_use_level_id: '6',
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://example.org/a'],
+          scaling_studies_urls: ['https://example.org/a']
         };
         component.onUseLevelChange();
         expect(component.body.has_scaling_studies).toBe(true);
@@ -945,7 +1231,7 @@ describe('TypeInnovationUseComponent', () => {
         component.body = {
           innovation_use_level_id: '7',
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://example.org/a'],
+          scaling_studies_urls: ['https://example.org/a']
         };
         component.onUseLevelChange();
         const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
@@ -993,7 +1279,15 @@ describe('TypeInnovationUseComponent', () => {
      */
     const options = [
       { id: 1, result_code: 1001, title: 'QA-ed innovation', status_id: 2, phase_year: 2025, acronym: 'SP01', display: '1001 - QA-ed innovation' },
-      { id: 2, result_code: 1002, title: 'Approved bilateral innovation', status_id: 6, phase_year: 2025, acronym: null, display: '1002 - Approved bilateral innovation' }
+      {
+        id: 2,
+        result_code: 1002,
+        title: 'Approved bilateral innovation',
+        status_id: 6,
+        phase_year: 2025,
+        acronym: null,
+        display: '1002 - Approved bilateral innovation'
+      }
     ];
 
     it('offers the shared QA catalogue verbatim, Approved results included', () => {
@@ -1068,13 +1362,13 @@ describe('TypeInnovationUseComponent', () => {
       component.updateMds();
       const keys = mdsTracker.setSectionFields.mock.calls.at(-1)[1].map((f: any) => f.key);
       expect(keys).not.toContain('innovation-link');
-      expect(keys).toHaveLength(4);
+      // Three since P2-3785 AC1 dropped the use level. Named rather than counted: a bare length passes
+      // just as happily when the wrong item is the one missing.
+      expect(keys).toEqual(['use-actors', 'use-measures', 'use-investment']);
     });
 
     it('hydrates the single selection out of the stored linked_results list', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { has_innovation_link: 1, linked_results: [{ id: 77 }] } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { has_innovation_link: 1, linked_results: [{ id: 77 }] } }));
       build();
       fixture.detectChanges();
       expect(component.body.linked_result_id).toBe(77);
@@ -1110,9 +1404,9 @@ describe('TypeInnovationUseComponent', () => {
         of({
           response: {
             innov_use_to_be_determined: 0,
-            actors: [{ actor_type_id: 1, women: 2, men: 3 }],
-          },
-        }),
+            actors: [{ actor_type_id: 1, women: 2, men: 3 }]
+          }
+        })
       );
       build();
       fixture.detectChanges();
@@ -1144,7 +1438,7 @@ describe('TypeInnovationUseComponent', () => {
   describe('P2-3424 — reload of the fields the endpoint now persists', () => {
     it('normalizes the stored tinyint answers into the booleans the radios bind', () => {
       bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { has_scaling_studies: 1, innov_use_2030_to_be_determined: 0, has_innovation_link: 0 } }),
+        of({ response: { has_scaling_studies: 1, innov_use_2030_to_be_determined: 0, has_innovation_link: 0 } })
       );
       build();
       fixture.detectChanges();
@@ -1154,9 +1448,7 @@ describe('TypeInnovationUseComponent', () => {
     });
 
     it('leaves an unanswered question unanswered instead of turning it into a No', () => {
-      bilateralApi.GET_innovationUse.mockReturnValue(
-        of({ response: { has_scaling_studies: null, innov_use_2030_to_be_determined: null } }),
-      );
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { has_scaling_studies: null, innov_use_2030_to_be_determined: null } }));
       build();
       fixture.detectChanges();
       expect(component.body.has_scaling_studies).toBeNull();
@@ -1169,9 +1461,9 @@ describe('TypeInnovationUseComponent', () => {
           response: {
             has_scaling_studies: 1,
             scaling_studies_urls: ['https://example.org/study'],
-            readiness_level_explanation: 'Because the evidence says so.',
-          },
-        }),
+            readiness_level_explanation: 'Because the evidence says so.'
+          }
+        })
       );
       build();
       fixture.detectChanges();
@@ -1183,7 +1475,7 @@ describe('TypeInnovationUseComponent', () => {
       expect(payload).toMatchObject({
         has_scaling_studies: true,
         scaling_studies_urls: ['https://example.org/study', ''],
-        readiness_level_explanation: 'Because the evidence says so.',
+        readiness_level_explanation: 'Because the evidence says so.'
       });
     });
 

@@ -99,7 +99,8 @@
             @if (statusBadge(); as badge) {
               <span
                 class="flex items-center rounded-full px-[9px] py-[3px] text-[12px] font-medium leading-none"
-                [class]="badge.classes"
+                [style.color]="badge.fg"
+                [style.background-color]="badge.bg"
                 data-testid="bilateral-status-badge">
                 {{ badge.label }}
               </span>
@@ -123,7 +124,7 @@
           data-guide="bilateral-identity">
           <div class="flex min-w-0 items-center gap-[8px]">
             <h1
-              class="m-0 min-w-0 flex-1 truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]"
+              class="m-0 min-w-0 shrink truncate text-[18px] sm:text-[21px] font-bold leading-[1.25] tracking-[-0.015em] text-[var(--pr-text-heading)]"
               [title]="ctx.centerAcronym() ?? ''">
               {{ ctx.centerAcronym() }}
             </h1>

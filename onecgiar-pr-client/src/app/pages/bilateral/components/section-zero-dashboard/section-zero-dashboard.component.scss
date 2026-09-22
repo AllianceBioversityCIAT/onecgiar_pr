@@ -443,3 +443,21 @@
     }
   }
 }
+
+/* P2-3760 — Contribution %: the input and its unit read as one control, not two fields. */
+.bp-contribution-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bp-contribution-input {
+  display: block;
+  max-width: 96px;
+}
+
+.bp-contribution-suffix {
+  color: var(--pr-color-secondary-400);
+  font-size: 12px;
+  font-weight: 600;
+}

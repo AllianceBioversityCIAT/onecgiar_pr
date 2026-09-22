@@ -3660,6 +3660,9 @@ export class ResultsService {
         lead_center: row.lead_center,
         initiative_role_id: row.initiative_role_id,
         initiative_role_name: row.initiative_role_name,
+        creation_method: row.creation_method,
+        external_platform_code: row.external_platform_code,
+        reporter_name: row.reporter_name,
       }));
 
       const groupedByProject = mappedResults.reduce(

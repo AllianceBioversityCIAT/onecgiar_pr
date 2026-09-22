@@ -1,0 +1,245 @@
+<div class="developers-page min-h-full bg-[#f8f9fa] px-8 py-8 lg:px-12 lg:py-10">
+  <div class="mx-auto max-w-[1440px]">
+    <!-- Page Header -->
+    <header class="mb-8">
+      <h1 class="text-[28px] font-bold tracking-tight text-gray-900">Developers</h1>
+      <p class="mt-1 text-[14px] leading-relaxed text-gray-500">
+        Send W3 results to PRMS directly from your own platform, in a standard format, individually or in bulk, instead of reporting them by hand.
+      </p>
+    </header>
+
+    <!-- Main Content Layout: Two Columns -->
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+      <!-- Left Column (Primary Guides & Endpoints) -->
+      <div class="flex flex-col gap-6 lg:col-span-8">
+        <!-- Card: How to integrate -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-none">
+          <div class="mb-6">
+            <h2 class="text-[16px] font-semibold text-gray-900">How to integrate</h2>
+            <p class="mt-1 text-[13px] text-gray-500">Five steps from nothing to results landing in PRMS.</p>
+          </div>
+
+          <ol class="space-y-6">
+            <!-- Step 1 -->
+            <li class="flex items-start gap-4">
+              <span class="w-4 shrink-0 pt-0.5 text-center text-[13px] font-medium text-gray-400">1</span>
+              <div>
+                <h3 class="text-[14px] font-semibold text-gray-900">Request your test API key</h3>
+                <p class="mt-0.5 text-[13px] leading-relaxed text-gray-500">
+                  Ask for a key for the test environment first. Your key identifies your platform on every call.
+                </p>
+              </div>
+            </li>
+
+            <!-- Step 2 -->
+            <li class="flex items-start gap-4">
+              <span class="w-4 shrink-0 pt-0.5 text-center text-[13px] font-medium text-gray-400">2</span>
+              <div>
+                <h3 class="text-[14px] font-semibold text-gray-900">Read the official documentation</h3>
+                <p class="mt-0.5 text-[13px] leading-relaxed text-gray-500">
+                  Check which fields your result type needs and which values PRMS matches against the CLARISA catalogues.
+                </p>
+              </div>
+            </li>
+
+            <!-- Step 3 -->
+            <li class="flex items-start gap-4">
+              <span class="w-4 shrink-0 pt-0.5 text-center text-[13px] font-medium text-gray-400">3</span>
+              <div>
+                <h3 class="text-[14px] font-semibold text-gray-900">Send a result to the test environment</h3>
+                <p class="mt-0.5 text-[13px] leading-relaxed text-gray-500">
+                  Post one result to single result ingest and confirm the response. Add your own
+                  <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px] text-gray-800">external_reference</code>
+                  so you can match the response to your record.
+                </p>
+              </div>
+            </li>
+
+            <!-- Step 4 -->
+            <li class="flex items-start gap-4">
+              <span class="w-4 shrink-0 pt-0.5 text-center text-[13px] font-medium text-gray-400">4</span>
+              <div>
+                <h3 class="text-[14px] font-semibold text-gray-900">Register a webhook</h3>
+                <p class="mt-0.5 text-[13px] leading-relaxed text-gray-500">
+                  Point PRMS at an HTTPS endpoint of yours to find out when a Science Program approves or rejects a result. Optional, but decisions taken before you register are not sent again.
+                </p>
+              </div>
+            </li>
+
+            <!-- Step 5 -->
+            <li class="flex items-start gap-4">
+              <span class="w-4 shrink-0 pt-0.5 text-center text-[13px] font-medium text-gray-400">5</span>
+              <div>
+                <h3 class="text-[14px] font-semibold text-gray-900">Request your production key and switch</h3>
+                <p class="mt-0.5 text-[13px] leading-relaxed text-gray-500">
+                  Same payload, different key and different URLs. Never reuse the test key in production.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <!-- Card: Get an API key -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-none">
+          <h2 class="text-[16px] font-semibold text-gray-900">Get an API key</h2>
+          <p class="mt-2 text-[13px] leading-relaxed text-gray-600">
+            Every call needs a CLARISA API key in the
+            <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px] text-gray-800">x-api-key</code>
+            header. There is no anonymous access. Keys are issued by the PRMS team, one per platform and per environment: never reuse a key across tools or between test and production, because the key is what identifies your platform to PRMS.
+          </p>
+
+          <div class="mt-4">
+            <button
+              type="button"
+              (click)="requestApiKey()"
+              class="inline-flex cursor-pointer items-center justify-center rounded-md bg-[#6b46e5] px-4 py-2 text-[13px] font-medium text-white shadow-none transition-colors hover:bg-[#5733c4]">
+              Request an API key
+            </button>
+            <p class="mt-2 text-[12px] text-gray-500">Tell us which platform it is for and which environment you need.</p>
+          </div>
+        </section>
+
+        <!-- Card: Environments -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-none">
+          <div class="mb-5">
+            <h2 class="text-[16px] font-semibold text-gray-900">Environments</h2>
+            <p class="mt-1 text-[13px] text-gray-500">Test your integration against the test environment before you send anything to production.</p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+            <!-- TEST Environment Column -->
+            <div class="flex flex-col space-y-4">
+              <h3 class="text-[11px] font-bold uppercase tracking-wider text-gray-400">TEST</h3>
+
+              @for (endpoint of testEndpoints; track endpoint.label) {
+                <div>
+                  <div class="text-[13px] font-medium text-gray-700">{{ endpoint.label }}</div>
+                  <a
+                    [href]="endpoint.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mt-0.5 inline-flex items-center gap-1 break-all font-mono text-[13px] text-[#6b46e5] hover:underline">
+                    <span>{{ endpoint.url }}</span>
+                    <ng-icon name="lucideExternalLink" class="shrink-0 text-[12px]" />
+                  </a>
+                </div>
+              }
+            </div>
+
+            <!-- PRODUCTION Environment Column -->
+            <div class="flex flex-col space-y-4">
+              <h3 class="text-[11px] font-bold uppercase tracking-wider text-gray-400">PRODUCTION</h3>
+
+              @for (endpoint of productionEndpoints; track endpoint.label) {
+                <div>
+                  <div class="text-[13px] font-medium text-gray-700">{{ endpoint.label }}</div>
+                  <a
+                    [href]="endpoint.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mt-0.5 inline-flex items-center gap-1 break-all font-mono text-[13px] text-[#6b46e5] hover:underline">
+                    <span>{{ endpoint.url }}</span>
+                    <ng-icon name="lucideExternalLink" class="shrink-0 text-[12px]" />
+                  </a>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="mt-6 border-t border-gray-100 pt-4">
+            <p class="text-[13px] text-gray-500">Use single result ingest for one to ten results, and bulk ingest for more.</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right Column (Reference & Guidelines) -->
+      <div class="flex flex-col gap-6 lg:col-span-4">
+        <!-- Card: Official documentation -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-none">
+          <h2 class="text-[16px] font-semibold text-gray-900">Official documentation</h2>
+          <p class="mt-2 text-[13px] leading-relaxed text-gray-600">
+            <strong class="font-semibold text-gray-800">PRMS Normalizer — Technical Field Documentation</strong> is the authority on what a valid payload
+            looks like: the seven result types, the minimum data standards for each, the CLARISA catalogues the values are matched against, and the breaking
+            changes log. It is public — no PRMS or Notion account needed.
+          </p>
+          <div class="mt-4">
+            <a
+              [href]="officialDocsUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md bg-[#6b46e5] px-4 py-2 text-[13px] font-medium text-white no-underline shadow-none transition-colors hover:bg-[#5733c4]">
+              <span>Open the official documentation</span>
+              <ng-icon name="lucideExternalLink" class="text-[13px]" />
+            </a>
+          </div>
+
+          <div class="mt-5 border-t border-gray-100 pt-4">
+            <p class="text-[13px] leading-relaxed text-gray-500">
+              The Swagger reference lists the request and response shapes and lets you fire a call from the browser. Where the two disagree, the official
+              documentation wins. The button below opens the <strong class="font-semibold text-gray-700">test</strong> environment — the production Swagger is
+              listed in Environments.
+            </p>
+            <a
+              [href]="swaggerDocsUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-3 inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-200 bg-white px-4 py-2 text-[13px] font-medium text-gray-700 no-underline transition-colors hover:border-gray-300 hover:bg-gray-50">
+              <span>Try the endpoints in the test Swagger</span>
+              <ng-icon name="lucideExternalLink" class="text-[13px]" />
+            </a>
+          </div>
+        </section>
+
+        <!-- Card: Result decision webhooks -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-none">
+          <h2 class="text-[16px] font-semibold text-gray-900">Result decision webhooks</h2>
+          <p class="mt-2 text-[13px] leading-relaxed text-gray-600">
+            Register an HTTPS callback with your API key and PRMS will notify you when a Science Program approves or rejects one of your results, with the reviewer's justification. Register it before your results go under review: decisions taken with no destination registered are not sent again.
+          </p>
+          <p class="mt-2 text-[12px] text-gray-500">
+            <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px] text-gray-800">POST /webhook</code> registers the destination and
+            <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px] text-gray-800">GET /webhook</code> reads it back. The button opens the test
+            Swagger.
+          </p>
+          <div class="mt-4">
+            <a
+              [href]="webhooksDocUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-200 bg-white px-4 py-2 text-[13px] font-medium text-gray-700 no-underline transition-colors hover:border-gray-300 hover:bg-gray-50">
+              <span>Set up webhooks in the test Swagger</span>
+              <ng-icon name="lucideExternalLink" class="text-[13px]" />
+            </a>
+          </div>
+        </section>
+
+        <!-- Card: What you still do in PRMS -->
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-none">
+          <h2 class="text-[16px] font-semibold text-gray-900">What you still do in PRMS</h2>
+          <p class="mt-2 text-[13px] text-gray-600">Two things the API cannot carry:</p>
+          <ul class="mt-3 list-disc space-y-2.5 pl-5 text-[13px] leading-relaxed text-gray-600">
+            <li>
+              <strong class="font-semibold text-gray-800">Confidential evidence.</strong> The API accepts public links only. Evidence that cannot be public is uploaded in the reporting tool.
+            </li>
+            <li>
+              <strong class="font-semibold text-gray-800">Fields beyond the minimum data standards.</strong> Send
+              <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-[12px] text-gray-800">keep_editing</code>
+              as true and the result arrives as Editing, so the reporting user completes it and submits it from PRMS.
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <!-- Footer Support Line -->
+    <footer class="mt-10 text-[13px] text-gray-500">
+      Questions about the API?
+      <a
+        href="mailto:PRMSTechSupport@cgiar.org?subject=PRMS%20API%20Inquiry"
+        (click)="contactSupport($event)"
+        class="cursor-pointer font-medium text-[#6b46e5] hover:underline">
+        Contact the PRMS technical team.
+      </a>
+    </footer>
+  </div>
+</div>

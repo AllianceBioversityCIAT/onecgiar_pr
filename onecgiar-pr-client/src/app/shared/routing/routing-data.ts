@@ -111,6 +111,15 @@ export const routingApp: PrRoute[] = [
     loadComponent: () => import('../../pages/rfr-explanation/rfr-explanation.component').then(m => m.RfrExplanationComponent)
   },
   {
+    // Developers integration portal for external platform teams (W3 result ingest via API).
+    prName: 'Developers',
+    underConstruction: false,
+    prHide: true,
+    canActivate: [CheckLoginGuard],
+    path: 'developers',
+    loadComponent: () => import('../../pages/developers/developers.component').then(m => m.DevelopersComponent)
+  },
+  {
     // Hidden from the PLATFORM list on purpose (2026-09-07). The sidebar builds a Platform row's
     // target as `/<path>`, i.e. a bare `/bilateral` — and this module has had no empty-path route
     // since `9de783e26` moved it to `/bilateral/:acronym/...`: its `**` child redirects to `/`,

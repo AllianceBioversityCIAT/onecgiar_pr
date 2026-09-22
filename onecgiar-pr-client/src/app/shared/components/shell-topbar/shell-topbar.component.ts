@@ -13,6 +13,7 @@ import {
   lucideMail,
   lucideMegaphone,
   lucideMessageCircle,
+  lucideRocket,
   lucideRotateCcw,
   lucideSearch,
   lucideSparkles
@@ -63,7 +64,8 @@ import { ResultFrameworkReportingHomeService } from '../../../pages/result-frame
       lucideChevronDown,
       lucideBookOpen,
       lucideSparkles,
-      lucideRotateCcw
+      lucideRotateCcw,
+      lucideRocket
     })
   ],
   templateUrl: './shell-topbar.component.html',
@@ -270,6 +272,10 @@ export class ShellTopbarComponent {
 
   isInNotificationsRoute(): boolean {
     return this.router.url.includes('results-notifications');
+  }
+
+  isInWhatsNewRoute(): boolean {
+    return this.router.url.includes('/whats-new');
   }
 
   /**

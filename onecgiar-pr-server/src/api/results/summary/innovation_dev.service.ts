@@ -7,7 +7,7 @@ import {
   SubOption,
 } from './dto/create-innovation-dev.dto';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
-import { IsNull } from 'typeorm';
+import { IsNull, Raw } from 'typeorm';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
 import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
@@ -24,6 +24,10 @@ import { Evidence } from '../evidences/entities/evidence.entity';
 import { EvidencesRepository } from '../evidences/evidences.repository';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
+import { ResultCoreInnovUseSectionEnum } from '../../results-framework-reporting/result_innov_section/enum/result_innov_section.enum';
+
+/** P2-3428 — the 2030 projection rows share the actor/organization/measure tables, keyed by section. */
+const INNOVATION_USE_SECTION_FUTURE = ResultCoreInnovUseSectionEnum.FUTURE;
 
 @Injectable()
 export class InnoDevService {
@@ -150,14 +154,57 @@ export class InnoDevService {
     }
   }
 
+  /**
+   * `section` (P2-3428) is optional: omitted, the rows are the result's CURRENT use, exactly as before,
+   * except that every lookup by type/unit now skips the 2030-projection rows (`section_id = 2`), so a
+   * current-use save can never overwrite one. Passed as `2`, the same rows are read and written
+   * inside the 2030 projection only — the storage the W1/W2 v2 endpoint already uses for it
+   * (`results-framework-reporting/innovation-use`, `ResultCoreInnovUseSectionEnum.FUTURE`).
+   */
   async saveAnticipatedInnoUser(
     resultId: number,
     user: number,
     { innovatonUse: crtr }: InnovationUseDto,
+    section?: number,
   ) {
+    const isFuture = section === INNOVATION_USE_SECTION_FUTURE;
+    const sectionWhere = isFuture
+      ? INNOVATION_USE_SECTION_FUTURE
+      : Raw(
+          (alias) =>
+            `(${alias} IS NULL OR ${alias} <> ${INNOVATION_USE_SECTION_FUTURE})`,
+        );
+    const sectionStamp = isFuture
+      ? { section_id: INNOVATION_USE_SECTION_FUTURE }
+      : {};
+    /**
+     * The first row this method had to refuse, reported ONCE after every block has written what it
+     * could. It used to `return` on the spot, which threw away every row queued behind the offender
+     * — including the blocks further down — while `summary.service.ts` answered 201 regardless, so
+     * the form kept showing staged rows the database never received. Found on prtest 21-Sep-2026:
+     * result id 11974 held ZERO rows in `result_ip_measure` with its section reporting complete,
+     * which then blocked submit-for-review through the Innovation Use MDS gate.
+     */
+    let rejection: { response: any; message: string } | null = null;
+
+    /**
+     * A row that was never stored and holds nothing to store is not an error to report — it is a row
+     * to ignore. The bilateral form stages a blank row the instant the reporter clicks "Add" (
+     * `type-innovation-use.component.ts` `addActor` / `addOrganization` / `addMeasure`) and its
+     * delete handlers only flip `is_active` without dropping the row from the array, so blank and
+     * deleted rows keep travelling in every payload for the rest of the session.
+     */
+    const isDiscardable = (row: any, storedId: unknown, ...values: unknown[]) =>
+      storedId == null &&
+      (row?.is_active === false ||
+        values.every((value) => `${value ?? ''}`.trim() === ''));
+
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       for (const el of actors) {
+        if (isDiscardable(el, el?.result_actors_id, el?.actor_type_id))
+          continue;
+
         let actorExists: ResultActor = null;
 
         if (el?.actor_type_id) {
@@ -167,6 +214,7 @@ export class InnoDevService {
             result_id: resultId,
             result_actors_id: el.result_actors_id ?? IsNull(),
             is_active: true,
+            section_id: sectionWhere,
           };
 
           if (!el?.result_actors_id) {
@@ -197,11 +245,11 @@ export class InnoDevService {
 
         if (actorExists) {
           if (!el?.actor_type_id && el?.is_active !== false) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field actor type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
@@ -222,15 +270,16 @@ export class InnoDevService {
                 el?.sex_and_age_disaggregation === true ? true : false,
               how_many: el?.how_many,
               addressing_demands: this.isNullData(el?.addressing_demands),
+              ...this.ageFallbackFields(el),
             },
           );
         } else {
           if (!el?.actor_type_id) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field actor type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultActorRepository.save({
             actor_type_id: this.isNullData(el?.actor_type_id),
@@ -251,6 +300,8 @@ export class InnoDevService {
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
             addressing_demands: this.isNullData(el?.addressing_demands),
+            ...this.ageFallbackFields(el),
+            ...sectionStamp,
           });
         }
       }
@@ -259,6 +310,8 @@ export class InnoDevService {
     if (crtr?.organization?.length) {
       const { organization } = crtr;
       for (const el of organization) {
+        if (isDiscardable(el, el?.id, el?.institution_types_id)) continue;
+
         let ite: ResultsByInstitutionType = null;
 
         if (el?.institution_types_id && el?.institution_types_id != 78) {
@@ -267,6 +320,9 @@ export class InnoDevService {
               resultId,
               el.institution_types_id,
               5,
+              isFuture
+                ? { only: INNOVATION_USE_SECTION_FUTURE }
+                : { exclude: INNOVATION_USE_SECTION_FUTURE },
             );
         }
 
@@ -281,10 +337,9 @@ export class InnoDevService {
 
         if (ite) {
           if (!el?.institution_types_id && el?.is_active !== false) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field institution type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
           } else {
             await this._resultByIntitutionsTypeRepository.update(ite.id, {
@@ -299,11 +354,11 @@ export class InnoDevService {
           }
         } else {
           if (!el?.institution_types_id) {
-            return {
+            rejection ??= {
               response: { status: 'Error' },
               message: 'The field institution type is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultByIntitutionsTypeRepository.save({
             results_id: resultId,
@@ -315,6 +370,7 @@ export class InnoDevService {
             institution_roles_id: 5,
             how_many: el?.how_many,
             addressing_demands: this.isNullData(el?.addressing_demands),
+            ...sectionStamp,
           });
         }
       }
@@ -323,6 +379,16 @@ export class InnoDevService {
     if (crtr?.measures?.length) {
       const { measures } = crtr;
       for (const el of measures) {
+        if (
+          isDiscardable(
+            el,
+            el?.result_ip_measure_id,
+            el?.unit_of_measure,
+            el?.quantity,
+          )
+        )
+          continue;
+
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
@@ -336,6 +402,7 @@ export class InnoDevService {
               unit_of_measure: el.unit_of_measure,
               result_id: resultId,
               quantity: el?.quantity,
+              section_id: sectionWhere,
             },
           });
         } else if (!ripm) {
@@ -344,17 +411,18 @@ export class InnoDevService {
               unit_of_measure: IsNull(),
               result_id: resultId,
               quantity: el?.quantity,
+              section_id: sectionWhere,
             },
           });
         }
 
         if (ripm) {
           if (!el?.unit_of_measure && el?.is_active != false) {
-            return {
+            rejection ??= {
               response: { valid: false },
               message: 'The field Unit of Measure is required',
-              status: HttpStatus.BAD_REQUEST,
             };
+            continue;
           }
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
@@ -368,11 +436,11 @@ export class InnoDevService {
           );
         } else {
           if (!el?.unit_of_measure) {
-            return {
+            rejection ??= {
               response: { valid: false },
-              message: 'The field Unit of Measure',
-              status: HttpStatus.BAD_REQUEST,
+              message: 'The field Unit of Measure is required',
             };
+            continue;
           }
           await this._resultIpMeasureRepository.save({
             result_id: resultId,
@@ -381,14 +449,79 @@ export class InnoDevService {
             created_by: user,
             last_updated_by: user,
             addressing_demands: this.isNullData(el?.addressing_demands),
+            ...sectionStamp,
           });
         }
       }
+    }
+
+    // Everything savable is written by here. The caller turns this envelope into the HTTP status
+    // (`summary.service.ts`), so the reporter finally hears about the row the server refused
+    // instead of reading "saved".
+    if (rejection) {
+      return { ...rejection, status: HttpStatus.BAD_REQUEST };
     }
   }
 
   isNullData(data: any) {
     return data == undefined ? null : data;
+  }
+
+  /**
+   * P2-3428 — "This is yet to be determined" answered for the 2030 projection: its rows stop counting,
+   * as the v2 writer does for `ResultCoreInnovUseSectionEnum.FUTURE`. Soft delete only (`is_active`),
+   * and only the 2030 section; the current-use rows are never touched here.
+   */
+  async deactivateInnovationUse2030(resultId: number, user: number) {
+    const done = { is_active: false, last_updated_by: user };
+    await this._resultActorRepository.update(
+      {
+        result_id: resultId,
+        section_id: INNOVATION_USE_SECTION_FUTURE,
+        is_active: true,
+      },
+      done,
+    );
+    await this._resultByIntitutionsTypeRepository.update(
+      {
+        results_id: resultId,
+        institution_roles_id: 5,
+        section_id: INNOVATION_USE_SECTION_FUTURE,
+        is_active: true,
+      },
+      done,
+    );
+    await this._resultIpMeasureRepository.update(
+      {
+        result_id: resultId,
+        section_id: INNOVATION_USE_SECTION_FUTURE,
+        is_active: true,
+      },
+      done,
+    );
+  }
+
+  /**
+   * P2-3785 (4b) — the W3/bilateral actors form now offers the pooled "Age disaggregation not
+   * available" fallback, and this legacy writer is the one it saves through. Written only when the
+   * key travels: the older W1/W2 callers of this endpoint never send it, and an absent key must not
+   * null a value another route stored.
+   */
+  private ageFallbackFields(el: any) {
+    const fields: Record<string, boolean | null> = {};
+    if (el && 'age_disaggregation_not_available' in el) {
+      fields.age_disaggregation_not_available =
+        el.age_disaggregation_not_available == null
+          ? null
+          : !!el.age_disaggregation_not_available;
+    }
+    if (el && 'youth_split_applied_by_system' in el) {
+      fields.youth_split_applied_by_system =
+        el.youth_split_applied_by_system == null
+          ? null
+          : !!el.youth_split_applied_by_system;
+    }
+    return fields;
   }
 
   async saveInitiativeInvestment(

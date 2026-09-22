@@ -1,6 +1,6 @@
 # bilateral-review
 
-**Verified:** 2026-09-09 · branch qa-development-2026 · spec `changes/bilateral-review-hierarchy-ux` (**BRH-T-1 attempt 2** — consolidated 2-row pinned band, token-styled Filter popover replacing `app-pr-filter-select`/`-multiselect`, KPI ribbon wrap fixing the 375px document overflow, page CT re-based off the superseded gates; BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter; **BRH-T-3** — semantic result-type badges, per-row 3px status accent, hover-copy hardening, text selection); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
+**Verified:** 2026-09-21 · branch qa-development-2026 · spec `bilateral/review-list-source-and-reporter` (**BSR-T-1..T-6** — SOURCE column + two-line SUBMITTED cell, colgroup re-tuned to 184px Alignment, D9 contrast measured in CT, see Contract); previously 2026-09-21 (CT repair, see below) · 2026-09-09 · spec `changes/bilateral-review-hierarchy-ux` (**BRH-T-1 attempt 2** — consolidated 2-row pinned band, token-styled Filter popover replacing `app-pr-filter-select`/`-multiselect`, KPI ribbon wrap fixing the 375px document overflow, page CT re-based off the superseded gates; BRH-T-2 — container card architecture replacing `app-pr-group-table`, monospace project-code badge, contributing-center chips, smart progressive disclosure, in-card quick filter; **BRH-T-3** — semantic result-type badges, per-row 3px status accent, hover-copy hardening, text selection); parents `changes/bilateral-review-viewport-and-table-polish` (BRV-T-1..T-3 — viewport lock, pinned toolbar + filter band, Alignment column, status token pairs, group accent, action emphasis), `changes/bilateral-review-ux-polish` (BRP-T-1..T-4 — filter band + Clear filters + stat bar, table density/placeholders/group-by-center, narrow cards, CT gates), `changes/bilateral-review-center-strip-and-phase` (BRC-T-1..T-3 — phase-scoped list + badge, Cycle selector, center chip strip) and `changes/sp-bilateral-review-tab` (BRT-T-1..T-8 — relocated from the legacy `bilateral-results` page into one toolbar/table shell).
 
 **What this owns:** the **Bilateral review** tab of the programme shell (`entity-details/:entityId/bilateral-review`) — one searchable, filterable, groupable list of W3/Bilateral results reported to this program, with a review drawer for approve/reject decisions.
 
@@ -106,9 +106,10 @@
   `^[A-Z0-9-]+(?=-)` prefix regex) into a monospace badge from the title, renders contributing
   centers as discrete chip badges (`data-testid="bilateral-review-center-chip"`, BRH-R-3 — capped
   at 3 + a `+N` overflow chip on the narrow header, full list on wide), and a rotating chevron in a
-  white button box. 7 columns in flat view and in project-grouped view; **6** only when
+  white button box. **8** columns in flat view and in project-grouped view; **7** only when
   `groupMode() === 'center' && view() === 'grouped'` (`showCenterColumn()`; flat view keeps the
-  center column even with `?group=center`, AC-7b). `columnCount()` (7/6) drives the ONE remaining
+  center column even with `?group=center`, AC-7b) — was 7/6 before the always-present SOURCE
+  column (`BSR-DD-2`). `columnCount()` (8/7) drives the ONE remaining
   `colspan` site, the flat-view loading row; the grouped branch has none since BRH-T-2 (card `<div>`
   skeleton, `headerRowTpl` `<thead>`, no group-header `td`). TOC + Indicator merged
   into one **Alignment** column (`data-testid="bilateral-review-row-alignment"`): each line renders
@@ -148,6 +149,28 @@
 - **Cards** (BRP-T-3, `narrow` fed by the page's `isNarrow`): below 900px, `ul[role=list]` of
   `li[data-testid="bilateral-review-card"]`, no `<table>`, no `overflow-x`/`overflow-y` (R-15).
   Grouped bar carries the group accent (above); flat: `sortedFlatRows` order.
+- **SOURCE column + SUBMITTED cell** (spec `bilateral/review-list-source-and-reporter`, BSR-T-3/T-4,
+  `BSR-DD-1..4`): the list payload now carries `creation_method`, `external_platform_code` and
+  `reporter_name` (display name only, never email/id). **SOURCE** (`bilateral-review-row-source`,
+  116px, pushed OUTSIDE the `showCenterColumn()` conditional so it exists in both grouped modes)
+  sits immediately after Lead Center so Title stays `td:nth-child(2)` for the row-height gate.
+  The label is derived CLIENT-side by `resolveBilateralSource({ method, platformCode })`
+  (`bilateral-review-source-chip/`, `BSR-R-4` matrix): `AI` → the delegated
+  `<app-ai-provenance-notice variant="badge">` (APF-R-12 — never a second copy of the AI sentence;
+  testid `bilateral-review-source-chip-ai` is on its `display: contents` HOST, the painted surface
+  is the inner `ai-provenance-badge`); `MANUAL`/`BULK`/`EXTERNAL`/`UNKNOWN`+code → the neutral pill
+  `bilateral-review-source-chip-pill` (`Manual entry`, `Via API · STAR`); `UNKNOWN` without a code →
+  the module placeholder pair (aria-hidden dash + `sr-only`). Two clip guards, cell-owned:
+  `whitespace-nowrap` on the `<td>` plus `<span class="block truncate max-w-full">` around the chip
+  (the APF badge has no nowrap of its own and its host cannot clip) — defence in depth at 116px, not
+  load-bearing (measured badge 79px; a red needs SOURCE at 68px). **SUBMITTED** (was DATE,
+  `bilateral-review-row-submitted`): two right-aligned lines, date `text-[12px] leading-[15px]` over
+  the reporter `text-[11px] leading-[13px] truncate` + `title`; absent reporter → an `aria-hidden`
+  dash at the SAME leading, so the cell is two-line BY CONSTRUCTION and the 46/50/68 row caps hold
+  unchanged on `15 + 13.75 = 28.75px` inside a 31.875px content box (`BSR-DD-3`). ⚠️ Both leadings
+  are load-bearing: at preflight's 1.5 the pair is 34.5px and the no-badge row lands ~47.5px, over
+  its cap. Cards mirror both as `bilateral-review-card-source-row` (chip in a `min-w-0 truncate
+  max-w-full` span + `bilateral-review-card-reporter`), adding ~13px per card.
 - Cycle pills: re-picking the shown phase is a no-op via `setPhase()`'s own guard ALONE — the
   `writeValue(selectedVersionId())` re-sync and the `cycleSelect` viewChild are gone with the CVA
   child (BRH-T-1 attempt 2); a pill's pressed look is derived from `selectedVersionId()` every
@@ -195,6 +218,34 @@ and Category toggles (previously only Center was exercised).
 Every other `assertEffectiveWidth` call still asserts its own requested width; only the CT viewport
 HEIGHT was ever raised (375×3000) to clear the taller BRH cards.
 
+### CT repair 2026-09-21 — 12 red gates, zero app defects
+
+The suite had drifted 11/48 red (plus 1/3 in `result-review-drawer.approve-tooltip.cy.ts`) because
+three later commits changed behaviour the CT still asserted the old way. **Nothing in the app was
+wrong; the whole repair is test-only.** Verified by re-running at the pre-change tree: identical
+counts.
+
+| Root cause | Gates | Repair |
+|---|---|---|
+| `e89889bdf` `quick/bilateral-review-default-pending` made `'pending'` the default status **and** stopped counting it in `activeFilterCount()` | 9 | `mountPage({ queryParams: ALL_STATUSES })` for gates that measure over the whole fixture (`FIXTURE_ROWS` is 7 rows, only 3 pending); filter-activation clicks moved from the pending chip to `bilateral-review-chip-approved`, which still counts |
+| `52a497f4d` visual polish switched the Alignment title from `leading-[17px]` to `leading-snug` | 1 | One-line-no-badge row cap re-based 44 → 46. `13px × 1.375 = 17.875` vs `17` is exactly the +0.875px measured. R-11 is a 44px **minimum** touch target, which 44.875 still meets — these caps are the density guard on top of it |
+| `fe32d7bd3` gave every tooltip `pointer-events: auto` so the bubble is reachable | 1 | The approve-tooltip mount got a padded wrapper. Mounted bare the button sits at the CT viewport's top-left, so a `position="top"` bubble is clamped back over its own trigger and — now that it takes the pointer — eats the click. Probed: the identical mount with padding fires the handler exactly once, so the directive does **not** swallow clicks |
+
+### BSR-T-6 additions (2026-09-21) — 54 gates
+
+Six page-level gates on top of the 48: the REAL `.overflow-x-auto` scroller at 1000px on the real
+page (BSR-AC-13, skip-but-count collapsed cards); the row-height fixture enriched with a
+`reporter_name` on all three rows and `creation_method: 'AI'` on the two-line row, caps **46 / 50 /
+68 unchanged** plus an anti-vacuity check that the enrichment reached the DOM; the D9 contrast
+measurement (AI badge 5.49:1, pill 6.32:1 at execute time); and the 375px Source/reporter stress
+(BSR-AC-11) as a gate + the "guard absorbs it" / "DETECTOR FIRES" pair (see Gotchas).
+
+⚠️ **`ALL_STATUSES` is opt-in, never the `mountPage` default** — gates that assert the *pending*
+default (the page's real cold-open state) must keep the un-seeded mount.
+
+⚠️ **A gate that mounts a tooltip'd control bare will lose its clicks at the viewport edge.** That
+is harness geometry, not a directive regression; give the trigger room before concluding otherwise.
+
 ## Where it is used
 
 - `shared/routing/routing-data.ts:625-636` — the route entry, fifth tab, sibling of
@@ -231,15 +282,26 @@ HEIGHT was ever raised (375×3000) to clear the taller BRH cards.
   `visible` axis computes to `auto` once the other axis isn't `visible`) — same coupling makes
   `.pr-table-wrap` compute `overflow-y: auto` too. A CT probe defeating the clip must override BOTH
   axes on `.custom_scroll`. Below 900px `#workArea` has no overflow rule at all.
-- Narrow CT fixtures (cards, 9+ items) need **tall** viewports (1600, or 2400 for the 9-center
-  fixture) — a native vertical scrollbar otherwise shaves ~15px off `documentElement.clientWidth`.
+- Narrow CT fixtures (cards, 9+ items) need **tall** viewports (1600, or 2700 for the 9-center
+  fixture — 2400 until BSR-T-4's card Source/reporter line grew each of the 9 CARDS by ~13px; at
+  840px it is the cards branch, there is no SUBMITTED `<td>` to blame) — a native vertical scrollbar otherwise shaves ~15px off `documentElement.clientWidth`.
   ⚠️ **But don't reach for that explanation first at 375px.** A 15px shave there was blamed on an
   unavoidable `min-h-screen` harness quirk and the gate re-based to 360; it was actually the metric
   ribbon overflowing HORIZONTALLY — that scrollbar ate 15px of viewport HEIGHT, and `min-height:
   100vh` then forced the vertical one. Fixing the overflow restored a clean 375. Rule of thumb: if
   `documentElement.scrollWidth > clientWidth`, the shave is a symptom, not the harness.
-- `cypress-axe` is **not installed**. Accessibility is checked structurally — not a substitute for
-  a contrast check. Contrast (pills, accents, captions) is HITL-only, pre-audited ≥ 4.5.
+- `cypress-axe` is **not installed**. Accessibility is checked structurally. Contrast of the legacy
+  pills/accents/captions is HITL-only, pre-audited ≥ 4.5 — but the **Source chip's contrast IS
+  measured in CT** (BSR-T-6, D9): read `getComputedStyle` color/background, paint each on a 1×1
+  canvas and read back RGBA (format-agnostic — survives a token redefined as `oklch()`), compute
+  the WCAG ratio, assert ≥ 4.5. ⚠️ Measure the PAINTED element and assert its background alpha is
+  255 first: the AI chip's testid is on a `display: contents` host that reports `rgba(0, 0, 0, 0)`,
+  and the ratio against transparent black is a meaningless 1.46:1 that looks like a real number.
+- ⚠️ **A 375px "widen the chip" falsifier cannot overflow the document on its own.** The card-owned
+  `min-w-0 truncate` wrapper clips the chip and the reporter shrinks (a 200px nowrap chip: wrapper
+  208/187, row 293/293, document 375/375); even with every guard AND the `<section overflow-hidden>`
+  defeated, 200px reaches x = 356 < 375. The DETECTOR case in `bilateral-review.cy.ts` defeats the
+  guards and uses a 600px chip (document 755 > 360) — same convention as the 1024 table pair.
 - The CT harness runs at effective root zoom `1` — `cy.viewport(w, h)` lands
   `documentElement.clientWidth` on `w` directly here; every CT geometry assertion still measures
   rather than assumes.
@@ -302,10 +364,12 @@ HEIGHT was ever raised (375×3000) to clear the taller BRH cards.
   auto`, so a card's OWN content decided its own column widths — on the live page, Lead
   Center/Status/Alignment/Submission Date/Actions drifted left-right between cards, and one
   card's headers even wrapped. `columnWidths()` (component) returns one px-width array — **`96px`
-  code / `''` title / `110px` center [project mode only] / `120px` status / `220px` alignment /
-  `100px` date / `100px` actions** (attempt-3 re-balance; measured via CT: Title = 530.5px @1280,
-  250.5px @1000 — the WIDEST column at both, satisfying BRV-R-3's "Title is the merged column's
-  primary beneficiary") — rendered by `colgroupTpl` as the FIRST child of every `<table>`: the
+  code / `''` title / `88px` center [project mode only] / `116px` SOURCE / `120px` status / `184px`
+  alignment / `100px` date / `100px` actions** (`BSR-DD-2` as amended — fixed sum 804 project /
+  716 center-grouped; it is **184, not 192**: at 192 Title measured 184.5px @1000, narrower than
+  Alignment, failing BSR-AC-9. Measured via CT at the shipped widths: `allCols=[96, 472.5, 88, 116,
+  120, 184, 100, 100]` @1280 and `[96, 192.5, …]` @1000 — Title the WIDEST at both, +8.5px over
+  Alignment at 1000; the pre-BSR baseline was 530.5/250.5 with 110/220) — rendered by `colgroupTpl` as the FIRST child of every `<table>`: the
   nested grouped table in both modes AND the flat table. Title is the ONLY column with no entry,
   so `table-fixed` hands it 100% of the remainder; its `min-w-[280px]` (`th`/`td`) was DROPPED for
   the same reason. Other columns' pre-existing `min-w-*` classes were left alone (smaller than

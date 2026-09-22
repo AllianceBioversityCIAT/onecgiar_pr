@@ -714,6 +714,149 @@ describe('SummaryService', () => {
     });
   });
 
+  /**
+   * P2-3428 — the W3/bilateral 2030 Use Projection rides on this legacy endpoint. Its rows share the
+   * actor/organization/measure tables under `section_id = 2` (the key the v2 endpoint already uses).
+   */
+  describe('2030 Use Projection (P2-3428)', () => {
+    it('splits the section-2 rows out of current use on read', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([
+        {
+          result_actors_id: 1,
+          section_id: null,
+          women: 4,
+          women_youth: 1,
+          men: 2,
+          men_youth: 0,
+        },
+        {
+          result_actors_id: 2,
+          section_id: 1,
+          women: 1,
+          women_youth: 0,
+          men: 1,
+          men_youth: 0,
+        },
+        {
+          result_actors_id: 3,
+          section_id: 2,
+          women: 9,
+          women_youth: 3,
+          men: 5,
+          men_youth: 1,
+        },
+      ]);
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([
+        { result_ip_measure_id: 7, section_id: null },
+        { result_ip_measure_id: 8, section_id: '2' },
+      ]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([
+        { id: 20, section_id: 2 },
+        { id: 21, section_id: null },
+      ]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      const response: any = (await service.getInnovationUse(15)).response;
+
+      expect(response.actors.map((a) => a.result_actors_id)).toEqual([1, 2]);
+      expect(response.measures.map((m) => m.result_ip_measure_id)).toEqual([7]);
+      expect(response.organization.map((o) => o.id)).toEqual([21]);
+      expect(
+        response.innovation_use_2030.actors.map((a) => a.result_actors_id),
+      ).toEqual([3]);
+      expect(response.innovation_use_2030.actors[0].women_non_youth).toBe(6);
+      expect(
+        response.innovation_use_2030.measures.map(
+          (m) => m.result_ip_measure_id,
+        ),
+      ).toEqual([8]);
+      expect(
+        response.innovation_use_2030.organization.map((o) => o.id),
+      ).toEqual([20]);
+    });
+
+    it('saves the projection lists into section 2 when the key travels', async () => {
+      const projection = {
+        actors: [{ actor_type_id: 1 }],
+        organization: [],
+        measures: [],
+      };
+      const dto = {
+        innov_use_2030_to_be_determined: false,
+        innovation_use_2030: projection,
+      } as any;
+      mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+      mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValue({});
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      await service.saveInnovationUse(dto, 5, user);
+
+      expect(mockInnoDevService.saveAnticipatedInnoUser).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(
+        mockInnoDevService.saveAnticipatedInnoUser,
+      ).toHaveBeenLastCalledWith(5, user.id, { innovatonUse: projection }, 2);
+    });
+
+    it('retires the projection rows when "This is yet to be determined" is answered', async () => {
+      const dto = {
+        innov_use_2030_to_be_determined: true,
+        innovation_use_2030: { actors: [] },
+      } as any;
+      mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+      mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValue({});
+      mockInnoDevService.deactivateInnovationUse2030 = jest
+        .fn()
+        .mockResolvedValue(undefined);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      await service.saveInnovationUse(dto, 5, user);
+
+      expect(
+        mockInnoDevService.deactivateInnovationUse2030,
+      ).toHaveBeenCalledWith(5, user.id);
+      expect(mockInnoDevService.saveAnticipatedInnoUser).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('touches nothing of the projection for a caller that never sends the key (legacy W1/W2)', async () => {
+      const dto = { innov_use_2030_to_be_determined: true } as any;
+      mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+      mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValue({});
+      mockInnoDevService.deactivateInnovationUse2030 = jest.fn();
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      await service.saveInnovationUse(dto, 5, user);
+
+      expect(
+        mockInnoDevService.deactivateInnovationUse2030,
+      ).not.toHaveBeenCalled();
+      expect(mockInnoDevService.saveAnticipatedInnoUser).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('reports a refused projection row as the HTTP answer', async () => {
+      const dto = {
+        innovation_use_2030: { measures: [{ quantity: 3 }] },
+      } as any;
+      mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+      mockInnoDevService.saveAnticipatedInnoUser
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'The field Unit of Measure is required',
+        });
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      const res: any = await service.saveInnovationUse(dto, 5, user);
+
+      expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+    });
+  });
+
   describe('getInnovationUse investment tables (P2-3390)', () => {
     it('returns the three flat arrays from the leaf service', async () => {
       mockResultActorRepository.find.mockResolvedValueOnce([]);

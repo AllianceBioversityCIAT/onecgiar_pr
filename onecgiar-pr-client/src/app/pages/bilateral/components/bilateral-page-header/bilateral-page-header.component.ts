@@ -12,6 +12,7 @@ import { environment } from '../../../../../environments/environment';
 import { BILATERAL_HEADER_INFO_COPY } from '../../../../internationalization/bilateral-header-info.copy';
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
+import { resultStatusLabel, resultStatusToken } from '../../../../shared/constants/result-status-tokens';
 
 @Component({
   selector: 'app-bilateral-page-header',
@@ -197,16 +198,19 @@ export class BilateralPageHeaderComponent {
    */
   readonly showAiProvenanceBadge = input(false);
 
-  private static readonly STATUS_BADGES: Record<number, { label: string; classes: string }> = {
-    1: { label: 'Editing', classes: 'bg-[#F3F4F6] text-[#6B7280]' },
-    5: { label: 'Pending review', classes: 'bg-[#FEF3C7] text-[#B45309]' },
-    6: { label: 'Approved', classes: 'bg-[#D1FAE5] text-[#047857]' },
-    7: { label: 'Rejected', classes: 'bg-[#FEE2E2] text-[#B91C1C]' },
-  };
+  /**
+   * P2-3553 · Label and colour both come from `result-status-tokens`. The private map that used to
+   * sit here carried four raw hex pairs and disagreed with the Results Center on two of them: it
+   * painted `Editing` grey where the table paints it amber, and `Pending review` amber where the
+   * table had it grey. One enum now decides, so a status cannot mean two things one click apart.
+   */
+  /** Which statuses this header shows at all — unchanged from P2-3352. Colour is not WHETHER. */
+  private static readonly BADGED_STATUSES: readonly number[] = [1, 5, 6, 7];
 
   readonly statusBadge = computed(() => {
     const id = this.statusId();
-    return id == null ? null : (BilateralPageHeaderComponent.STATUS_BADGES[Number(id)] ?? null);
+    if (id == null || !BilateralPageHeaderComponent.BADGED_STATUSES.includes(Number(id))) return null;
+    return { label: resultStatusLabel(id), ...resultStatusToken(id) };
   });
 
   /**

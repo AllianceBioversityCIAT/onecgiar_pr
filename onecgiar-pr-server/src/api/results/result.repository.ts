@@ -3254,7 +3254,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         WHERE rc.is_active = 1
           AND (rc.is_leading_result = 1 OR rc.is_primary = 1)
       )
-      SELECT 
+      SELECT
         r.id,
         MAX(cp.id) AS project_id,
         MAX(cp.short_name) AS project_name,
@@ -3276,10 +3276,16 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.external_submitted_date AS submission_date,
         ir.id AS initiative_role_id,
         ir.name AS initiative_role_name,
-        CASE 
+        CASE
           WHEN MAX(lc.center_name) IS NOT NULL THEN MAX(lc.center_name)
           ELSE 'Not specified'
-        END AS lead_center
+        END AS lead_center,
+        r.creation_method,
+        r.external_platform_code,
+        MAX(COALESCE(
+          NULLIF(TRIM(CONCAT(us.first_name, ' ', us.last_name)), ''),
+          NULLIF(TRIM(CONCAT(uc.first_name, ' ', uc.last_name)), '')
+        )) AS reporter_name
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
@@ -3322,6 +3328,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         )
       ${joinType} JOIN lead_centers lc
         ON r.id = lc.result_id
+      LEFT JOIN users us
+        ON r.external_submitter = us.id
+      LEFT JOIN users uc
+        ON r.created_by = uc.id
       WHERE
         r.source = 'API'
         AND ci.official_code = ?
@@ -3362,7 +3372,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
 
     finalQuery += `
-      GROUP BY 
+      GROUP BY
         r.id,
         r.result_code,
         r.title,
@@ -3370,7 +3380,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rs.status_name,
         r.external_submitted_date,
         ir.id,
-        ir.name
+        ir.name,
+        r.creation_method,
+        r.external_platform_code
     `;
 
     try {

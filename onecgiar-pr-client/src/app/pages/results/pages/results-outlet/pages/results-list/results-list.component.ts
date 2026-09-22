@@ -40,12 +40,32 @@ export interface RcColumnDef {
   title: string;
   attr: string;
   width: string;
+  /** Minimum width (px) when the user resizes a column. */
+  minPx: number;
   /** Default visibility when no localStorage preference exists. */
   defaultOn: boolean;
   class?: string;
 }
 
 const RC_COLUMN_STORAGE_KEY = 'pr.resultsCenter.visibleColumns';
+export const RC_COLUMN_WIDTHS_STORAGE_KEY = 'pr.resultsCenter.columnWidths.v1';
+
+export function readStoredRcColumnWidths(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(RC_COLUMN_WIDTHS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredRcColumnWidths(widths: Record<string, number>): void {
+  try {
+    localStorage.setItem(RC_COLUMN_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+  } catch {
+    // private mode — widths still work for the session
+  }
+}
 
 /** Copy for the hero ⓘ popover — mirrors SP band `activeTabInfo` + overview pattern. */
 export const RC_INFO_ACTIVE_VIEW = {
@@ -61,17 +81,17 @@ export const RC_INFO_OVERVIEW =
 
 /** Full CURRENT column set (order = picker + table order). */
 export const RC_COLUMNS: readonly RcColumnDef[] = [
-  { key: 'code', title: 'Code', attr: 'result_code', width: '88px', defaultOn: true },
-  { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true, class: 'notCenter' },
-  { key: 'program', title: 'Program', attr: 'submitter', width: '88px', defaultOn: true },
-  { key: 'center', title: 'Center', attr: 'lead_center', width: '110px', defaultOn: true },
-  { key: 'phase', title: 'Phase', attr: 'phase_name', width: '100px', defaultOn: true },
-  { key: 'category', title: 'Indicator category', attr: 'result_type', width: '140px', defaultOn: true },
-  { key: 'funding', title: 'Funding', attr: 'source_name', width: '100px', defaultOn: true },
-  { key: 'status', title: 'Status', attr: 'full_status_name_html', width: '110px', defaultOn: true },
-  { key: 'createdBy', title: 'Created by', attr: 'full_name', width: '130px', defaultOn: false },
-  { key: 'created', title: 'Created', attr: 'created_date', width: '100px', defaultOn: true },
-  { key: 'updated', title: 'Updated', attr: 'last_updated_date', width: '100px', defaultOn: false }
+  { key: 'code', title: 'Code', attr: 'result_code', width: '88px', minPx: 72, defaultOn: true },
+  { key: 'title', title: 'Title', attr: 'title', width: '280px', minPx: 160, defaultOn: true, class: 'notCenter' },
+  { key: 'program', title: 'Program', attr: 'submitter', width: '88px', minPx: 72, defaultOn: true },
+  { key: 'center', title: 'Center', attr: 'lead_center', width: '110px', minPx: 90, defaultOn: true },
+  { key: 'phase', title: 'Phase', attr: 'phase_name', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'category', title: 'Indicator category', attr: 'result_type', width: '140px', minPx: 100, defaultOn: true },
+  { key: 'funding', title: 'Funding', attr: 'source_name', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'full_status_name_html', width: '110px', minPx: 90, defaultOn: true },
+  { key: 'createdBy', title: 'Created by', attr: 'full_name', width: '130px', minPx: 100, defaultOn: false },
+  { key: 'created', title: 'Created', attr: 'created_date', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'updated', title: 'Updated', attr: 'last_updated_date', width: '100px', minPx: 80, defaultOn: false }
 ];
 
 function readStoredColumnVisibility(): Record<string, boolean> {
@@ -145,6 +165,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   columnsOpen = signal(false);
+  readonly customWidths = signal<Record<string, number>>(readStoredRcColumnWidths());
   infoOpen = signal(false);
   reportingGuideOpen = signal(false);
   readonly rcInfoActiveView = RC_INFO_ACTIVE_VIEW;
@@ -158,6 +179,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
       title: c.title,
       attr: c.attr,
       width: c.width,
+      minPx: c.minPx,
       class: c.class,
       center: false
     }));
@@ -849,6 +871,84 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.bilateralResultsService.showReviewDrawer.set(true);
   }
 
+  /** Resolved width for a column — custom resize wins over the catalog default. */
+  columnWidth(column: { key: string; width: string }): string {
+    const custom = this.customWidths()[column.key];
+    return custom ? `${custom}px` : column.width;
+  }
+
+  private activeResize: {
+    columnKey: string;
+    startX: number;
+    startWidth: number;
+    minPx: number;
+  } | null = null;
+
+  /**
+   * Dragging `.rc-col-resizer` and releasing the mouse over the `<th>` (not back over the thin
+   * resizer strip) makes the browser synthesize a `click` on `<th>` after mouseup — reaching both
+   * `PrSortableColumnDirective`'s click listener and `(click)="validateOrder(...)"` and sorting the
+   * column as an unintended side effect of a resize. This guard swallows that one phantom click.
+   * `{ once: true }` self-removes on the common case; `onWindowMouseUp`'s `setTimeout(0)` is a
+   * fallback for the rare case where no click follows (so a later, unrelated click is never swallowed).
+   */
+  private resizeClickGuard: ((event: MouseEvent) => void) | null = null;
+
+  private readonly onWindowMouseMove = (event: MouseEvent): void => {
+    if (!this.activeResize) return;
+    const deltaX = event.clientX - this.activeResize.startX;
+    const newWidth = Math.max(this.activeResize.minPx, Math.round(this.activeResize.startWidth + deltaX));
+    this.customWidths.update(prev => ({ ...prev, [this.activeResize!.columnKey]: newWidth }));
+  };
+
+  private readonly onWindowMouseUp = (): void => {
+    if (!this.activeResize) return;
+    this.activeResize = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+    writeStoredRcColumnWidths(this.customWidths());
+
+    if (this.resizeClickGuard) {
+      const guard = this.resizeClickGuard;
+      this.resizeClickGuard = null;
+      setTimeout(() => document.removeEventListener('click', guard, true), 0);
+    }
+  };
+
+  onResizeStart(event: MouseEvent, column: { key: string; minPx: number }, thElement: HTMLElement): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeResize = {
+      columnKey: column.key,
+      startX: event.clientX,
+      startWidth: thElement.getBoundingClientRect().width,
+      minPx: column.minPx
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', this.onWindowMouseMove);
+    window.addEventListener('mouseup', this.onWindowMouseUp);
+
+    this.resizeClickGuard = (clickEvent: MouseEvent) => {
+      clickEvent.preventDefault();
+      clickEvent.stopPropagation();
+    };
+    document.addEventListener('click', this.resizeClickGuard, { capture: true, once: true });
+  }
+
+  onResizeReset(column: { key: string }, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.customWidths.update(prev => {
+      const next = { ...prev };
+      delete next[column.key];
+      writeStoredRcColumnWidths(next);
+      return next;
+    });
+  }
+
   navigateToResult(result: CurrentResult) {
     const { commands, queryParams } = this.getResultRoute(result);
 
@@ -865,6 +965,16 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.activeResize) {
+      window.removeEventListener('mousemove', this.onWindowMouseMove);
+      window.removeEventListener('mouseup', this.onWindowMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+    if (this.resizeClickGuard) {
+      document.removeEventListener('click', this.resizeClickGuard, true);
+      this.resizeClickGuard = null;
+    }
     this.workAreaScrollCleanup?.();
     this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
   }

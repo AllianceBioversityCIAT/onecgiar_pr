@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ResultsListComponent } from './results-list.component';
+import { RC_COLUMNS, RC_COLUMN_WIDTHS_STORAGE_KEY, ResultsListComponent } from './results-list.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultsListFilterPipe } from './pipes/results-list-filter.pipe';
 import { ResultsToUpdateModalComponent } from './components/results-to-update-modal/results-to-update-modal.component';
@@ -520,6 +520,61 @@ describe('ResultsListComponent', () => {
       expect(component.items[1].label).toBe('Update result');
       expect(component.items[2].label).toBe('Review result');
       expect(component.itemsWithDelete[3].label).toBe('Delete');
+    });
+  });
+
+  describe('Column resize', () => {
+    const titleColumn = RC_COLUMNS.find(c => c.key === 'title')!;
+
+    beforeEach(() => {
+      localStorage.removeItem(RC_COLUMN_WIDTHS_STORAGE_KEY);
+      mockApiService.dataControlSE.resultsListSignal = signal([
+        { result_code: '1001', title: 'Sample', results: [{ id: 1, result_code: '1001', title: 'Sample' }] }
+      ] as any);
+      fixture.detectChanges();
+    });
+
+    it('resolves columnWidth from defaults and custom widths', () => {
+      expect(component.columnWidth(titleColumn)).toBe('280px');
+      component.customWidths.set({ title: 360 });
+      expect(component.columnWidth(titleColumn)).toBe('360px');
+    });
+
+    it('persists resized column widths on mouseup', () => {
+      const th = document.createElement('th');
+      th.getBoundingClientRect = jest.fn(() => ({ width: 280 }) as DOMRect);
+
+      component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      expect(component.customWidths().title).toBe(330);
+      expect(JSON.parse(localStorage.getItem(RC_COLUMN_WIDTHS_STORAGE_KEY) || '{}').title).toBe(330);
+    });
+
+    it('resets a column width on double-click handler', () => {
+      component.customWidths.set({ title: 400 });
+      component.onResizeReset(titleColumn, { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent);
+      expect(component.customWidths().title).toBeUndefined();
+    });
+
+    it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
+      const th = document.createElement('th');
+      th.getBoundingClientRect = jest.fn(() => ({ width: 280 }) as DOMRect);
+
+      component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      // Stands in for the native click the browser synthesizes on <th> right after this drag's
+      // mouseup — this is the click that would otherwise reach PrSortableColumnDirective/validateOrder.
+      const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(phantomClick);
+      expect(phantomClick.defaultPrevented).toBe(true);
+
+      const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(laterUnrelatedClick);
+      expect(laterUnrelatedClick.defaultPrevented).toBe(false);
     });
   });
 

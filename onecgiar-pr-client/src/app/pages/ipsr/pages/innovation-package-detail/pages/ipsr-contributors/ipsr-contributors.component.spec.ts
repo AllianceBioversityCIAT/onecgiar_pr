@@ -201,7 +201,9 @@ describe('IpsrContributorsComponent', () => {
 
   describe('GET_AllWithoutResults', () => {
     it('should fetch contributing initiatives list', () => {
-      const mockInitiatives = [{ id: 1, name: 'Init 1' }];
+      // id 1 is the fixture's own programme (mockRdPartnersSE.result_toc_result.initiative_id), and
+      // P2-3746 now keeps the owner out of the dropdown — so this fetch assertion uses a different id.
+      const mockInitiatives = [{ id: 99, name: 'Init 1' }];
       jest.spyOn(mockApiService.resultsSE, 'GET_AllWithoutResults').mockReturnValue(of({ response: mockInitiatives }));
 
       component.GET_AllWithoutResults();
@@ -1000,6 +1002,79 @@ describe('IpsrContributorsComponent', () => {
       // full mapped CLARISA catalog, not a subset filtered by (empty) Contributing Centers.
       expect(realRdPartnersSE.possibleLeadCenters.length).toBeGreaterThan(0);
       expect(realRdPartnersSE.possibleLeadCenters.map(c => c.code).sort()).toEqual(mockCentersSE.centersList.map(c => c.code).sort());
+    });
+  });
+  /**
+   * P2-3746 — the package's own Science Program must never reach the dropdown.
+   *
+   * The server drops it silently (`results-toc-results.service.ts:1596` filters the owner out of
+   * `pendingIds`; `share-result-request.service.ts:183` refuses to share a result with its owner),
+   * so offering it means a `201`, a success toast and an empty field on reload. Reproduced on
+   * result 9409 / SP01: the PATCH carried `pending=[50, 51]` and only 51 came back.
+   */
+  describe('P2-3746 — owner Science Program is not offered as a contributing one', () => {
+    const CATALOG = [
+      { id: 50, official_code: 'SP01', full_name: 'SP01 - Breeding for Tomorrow' },
+      { id: 51, official_code: 'SP02', full_name: 'SP02 - Sustainable Farming' },
+      { id: 52, official_code: 'SP03', full_name: 'SP03 - Sustainable Animal and Aquatic Foods' }
+    ];
+
+    const sectionResponse = (owner: any) => ({
+      ...mockResponse,
+      owner_initiative: owner,
+      contributing_initiatives: { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] }
+    });
+
+    beforeEach(() => {
+      mockApiService.resultsSE.GET_AllWithoutResults = () => of({ response: CATALOG });
+    });
+
+    it('drops the owner when the catalog lands AFTER the section (owner already known)', () => {
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = () => of({ response: sectionResponse({ id: 50, official_code: 'SP01' }) });
+
+      component.getSectionInformation();
+      component.GET_AllWithoutResults();
+
+      expect(component.contributingInitiativesList.map(i => i.id)).toEqual([51, 52]);
+    });
+
+    it('drops the owner when the catalog lands BEFORE the section (the real load order)', () => {
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = () => of({ response: sectionResponse({ id: 50, official_code: 'SP01' }) });
+
+      // ngOnInit fires getSectionInformation first, but the catalog request usually answers first;
+      // without the second pass in getSectionInformation the owner would stay selectable.
+      component.GET_AllWithoutResults();
+      expect(component.contributingInitiativesList.map(i => i.id)).toEqual([50, 51, 52]);
+
+      component.getSectionInformation();
+      expect(component.contributingInitiativesList.map(i => i.id)).toEqual([51, 52]);
+    });
+
+    it('falls back to result_toc_result.initiative_id when the payload carries no owner_initiative', () => {
+      const legacy = sectionResponse(undefined);
+      legacy.result_toc_result = { ...mockResponse.result_toc_result, initiative_id: 52 } as any;
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = () => of({ response: legacy });
+
+      component.GET_AllWithoutResults();
+      component.getSectionInformation();
+
+      expect(component.contributingInitiativesList.map(i => i.id)).toEqual([50, 51]);
+    });
+
+    it('hides nothing while the owner is still unknown (negative control)', () => {
+      component.GET_AllWithoutResults();
+
+      expect(component.contributingInitiativesList.map(i => i.id)).toEqual([50, 51, 52]);
+    });
+
+    it('keeps the array reference stable between loads — a new array each pass is an NG0103 condition', () => {
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = () => of({ response: sectionResponse({ id: 50, official_code: 'SP01' }) });
+
+      component.GET_AllWithoutResults();
+      component.getSectionInformation();
+      const first = component.contributingInitiativesList;
+
+      expect(component.contributingInitiativesList).toBe(first);
     });
   });
 });

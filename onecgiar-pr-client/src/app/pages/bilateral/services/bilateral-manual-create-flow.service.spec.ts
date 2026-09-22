@@ -74,14 +74,64 @@ describe('BilateralManualCreateFlowService', () => {
     expect(service.drawerProjectTitle()).toBe('Project');
   });
 
-  it('derives drawer project subtitle from summary or description', () => {
+  // P2-3756: CLARISA fills these two fields independently, so the drawer renders whichever ones
+  // actually have content. Each case below is one shape seen in `clarisa_projects`.
+  it('keeps summary and description apart when the project carries both', () => {
     service.beginFromProject({
       ...singleSpProject,
       summary: 'Climate adaptation training across partner countries',
       description: 'Longer description text',
     });
 
-    expect(service.drawerProjectSubtitle()).toBe('Climate adaptation training across partner countries');
+    expect(service.drawerProjectSummary()).toBe('Climate adaptation training across partner countries');
+    expect(service.drawerProjectDescription()).toBe('Longer description text');
+  });
+
+  it('treats a null summary and an empty-string description as absent (2026 projects)', () => {
+    service.beginFromProject({
+      ...singleSpProject,
+      summary: null,
+      description: '   ',
+    });
+
+    expect(service.drawerProjectSummary()).toBe('');
+    expect(service.drawerProjectDescription()).toBe('');
+  });
+
+  it('keeps the description when only it is filled', () => {
+    service.beginFromProject({
+      ...singleSpProject,
+      summary: null,
+      description: 'Technical and Scientific Support for Groundwater Management in Laos',
+    });
+
+    expect(service.drawerProjectSummary()).toBe('');
+    expect(service.drawerProjectDescription()).toBe(
+      'Technical and Scientific Support for Groundwater Management in Laos'
+    );
+  });
+
+  it('drops the description when it only repeats the summary', () => {
+    service.beginFromProject({
+      ...singleSpProject,
+      summary: 'Fertilize Right Vietnam',
+      description: 'fertilize right vietnam',
+    });
+
+    expect(service.drawerProjectSummary()).toBe('Fertilize Right Vietnam');
+    expect(service.drawerProjectDescription()).toBe('');
+  });
+
+  it('drops text that only repeats the project title already shown above it', () => {
+    service.beginFromProject({
+      ...singleSpProject,
+      fullName: 'Project',
+      summary: 'project',
+      description: 'Project',
+    });
+
+    expect(service.drawerProjectSummary()).toBe('');
+    expect(service.drawerProjectDescription()).toBe('');
   });
 
   it('forwards CLARISA summary, description, and lead center for KP project match', () => {

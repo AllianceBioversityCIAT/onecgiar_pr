@@ -1,5 +1,12 @@
 <div class="tsf-fields">
-  <!--
+  <!-- P2-3428 / AC17 — read-only once the result leaves Editing. `inert`, not a per-control flag:
+       it takes the whole subtree out of reach for the pointer AND the keyboard, which a disabled
+       attribute on some inputs would not. `contents` keeps it out of the layout, so the field
+       spacing is byte-for-byte what it was. The toggle below stays OUTSIDE both wrappers: AC17
+       asks for the fields to be locked while the toggle keeps working, because seeing the
+       optional metadata of a submitted result is part of reviewing it (P2-3520). -->
+  <div class="contents" [inert]="readOnly()">
+    <!--
     P2-3556 — the fetch failed, so every field below is blank for a reason that has nothing to do
     with what is stored. Autosave is off while `loaded()` is not true (see `queueTypeSave`) and this
     says so, through the same `app-alert-status` the section already uses for its MDS note — no new
@@ -10,148 +17,126 @@
     down this template, and an error next to it would only be read after the person had already
     scrolled past every blank field.
   -->
-  @if (loaded() === false) {
-    <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
-  }
+    @if (loaded() === false) {
+      <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
+    }
 
-  <app-pr-radio-button
-    label="Innovation Use to be Determined"
-    [options]="[
-      { value: true, label: 'Yes' },
-      { value: false, label: 'No' }
-    ]"
-    optionLabel="label"
-    optionValue="value"
-    [required]="true"
-    [(ngModel)]="body.innov_use_to_be_determined"
-    (ngModelChange)="onFieldChange()">
-  </app-pr-radio-button>
+    <app-pr-radio-button
+      label="Innovation Use to be Determined"
+      [options]="[
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' }
+      ]"
+      optionLabel="label"
+      optionValue="value"
+      [required]="true"
+      [(ngModel)]="body.innov_use_to_be_determined"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-radio-button>
 
-  <!-- P2-3428 AC4 / P2-3331 AC1: the "to be determined" gate. When the use is still to be determined no
+    <!-- P2-3428 AC4 / P2-3331 AC1: the "to be determined" gate. When the use is still to be determined no
        actor is requested and its absence must not hold the section back. Same rule as the W1/W2 form. -->
-  @if (body.innov_use_to_be_determined === false) {
-    <div>
-      <app-pr-field-header label="Actors" description="Describe the actors involved in innovation use" [required]="true"></app-pr-field-header>
+    @if (body.innov_use_to_be_determined === false) {
+      <div>
+        <app-pr-field-header label="Actors" description="Describe the actors involved in innovation use" [required]="true"></app-pr-field-header>
 
-      @for (actor of visibleActors; track $index) {
-        <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
-          <div class="flex items-start gap-2">
-            <div class="min-w-0 flex-1">
-              <app-pr-select
-                label="Actor type"
-                [options]="actorsTypeList"
-                optionLabel="name"
-                optionValue="actor_type_id"
-                placeholder="Select actor type"
-                [required]="true"
-                [(ngModel)]="actor.actor_type_id"
-                (ngModelChange)="onFieldChange()">
-              </app-pr-select>
-            </div>
-            <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteActor(actor)" aria-label="Remove actor">
-              <i class="material-icons-round">delete</i>
-            </button>
+        @for (actor of visibleActors; track $index) {
+          <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+            <ng-container *ngTemplateOutlet="actorCard; context: { $implicit: actor, required: true }"></ng-container>
           </div>
+        }
 
-          @if (actor.actor_type_id === otherActorTypeId) {
-            <app-pr-input label="Other actor type" [required]="true" [(ngModel)]="actor.other_actor_type" (ngModelChange)="onFieldChange()"></app-pr-input>
-          }
+        @if (!visibleActors.length) {
+          <app-no-data-text title="No actors added"></app-no-data-text>
+        }
 
-          <app-pr-yes-or-not
-            label="Sex and age disaggregated data available?"
-            [(ngModel)]="actor.sex_and_age_disaggregation"
-            (ngModelChange)="onDisaggregationChange(actor)">
-          </app-pr-yes-or-not>
-
-          @if (actor.sex_and_age_disaggregation) {
-            <div class="grid grid-cols-2 gap-3">
-              <app-pr-input label="Women" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.women" (ngModelChange)="onFieldChange()"></app-pr-input>
-              <app-pr-input label="Women (youth)" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.women_youth" (ngModelChange)="onFieldChange()"></app-pr-input>
-              <app-pr-input label="Men" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.men" (ngModelChange)="onFieldChange()"></app-pr-input>
-              <app-pr-input label="Men (youth)" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.men_youth" (ngModelChange)="onFieldChange()"></app-pr-input>
-            </div>
-          } @else {
-            <app-pr-input label="How many" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.how_many" (ngModelChange)="onFieldChange()"></app-pr-input>
-          }
-
-          <app-pr-textarea
-            label="Addressing demands"
-            [required]="false"
-            placeholder="Describe how this actor addresses the innovation's demand..."
-            [(ngModel)]="actor.addressing_demands"
-            (ngModelChange)="onFieldChange()">
-          </app-pr-textarea>
-        </div>
-      }
-
-      @if (!visibleActors.length) {
-        <app-no-data-text title="No actors added"></app-no-data-text>
-      }
-
-      <app-add-button name="Add another actor" (clickEvent)="addActor()"></app-add-button>
-    </div>
-  }
-
-  <!-- P2-3428 MDS field 2 / AC12: this block used to live inside the full-metadata toggle as an optional
-       field. It is MDS now, so it sits above the toggle and must NOT be repeated inside it. -->
-  <div>
-    <app-pr-field-header
-      label="Other quantitative measures of innovation use"
-      description="E.g. # of hectares."
-      [required]="true">
-    </app-pr-field-header>
-
-    @for (measure of visibleMeasures; track $index) {
-      <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
-        <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-          <app-pr-input label="Unit of measure" placeholder="e.g. # of projects" [required]="true" [(ngModel)]="measure.unit_of_measure" (ngModelChange)="onFieldChange()"></app-pr-input>
-          <app-pr-input label="Quantity" type="number" placeholder="0" [required]="true" [(ngModel)]="measure.quantity" (ngModelChange)="onFieldChange()"></app-pr-input>
-        </div>
-        <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteMeasure(measure)" aria-label="Remove measure">
-          <i class="material-icons-round">delete</i>
-        </button>
+        <app-add-button name="Add another actor" (clickEvent)="addActor()"></app-add-button>
       </div>
     }
 
-    @if (!visibleMeasures.length) {
-      <app-no-data-text title="Other quantitative measures not added"></app-no-data-text>
-    }
+    <!-- P2-3428 MDS field 2 / AC12: this block used to live inside the full-metadata toggle as an optional
+       field. It is MDS now, so it sits above the toggle and must NOT be repeated inside it. -->
+    <div>
+      <app-pr-field-header label="Other quantitative measures of innovation use" description="E.g. # of hectares." [required]="true">
+      </app-pr-field-header>
 
-    <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
+      @for (measure of visibleMeasures; track $index) {
+        <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
+          <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+            <app-pr-input
+              label="Unit of measure"
+              placeholder="e.g. # of projects"
+              [required]="true"
+              [(ngModel)]="measure.unit_of_measure"
+              (ngModelChange)="onFieldChange()"></app-pr-input>
+            <app-pr-input
+              label="Quantity"
+              type="number"
+              placeholder="0"
+              [required]="true"
+              [(ngModel)]="measure.quantity"
+              (ngModelChange)="onFieldChange()"></app-pr-input>
+          </div>
+          <button
+            type="button"
+            class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+            (click)="deleteMeasure(measure)"
+            aria-label="Remove measure">
+            <i class="material-icons-round">delete</i>
+          </button>
+        </div>
+      }
+
+      @if (!visibleMeasures.length) {
+        <app-no-data-text title="Other quantitative measures not added"></app-no-data-text>
+      }
+
+      <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
+    </div>
+
+    <!-- P2-3785 AC1 — the use level is NO LONGER part of the bilateral MDS (Nicoleta Trifa, #INC-163204
+       point 4a, 21-Sep-2026), reversing what P2-3428 established. It stays here rather than moving under
+       the full-metadata toggle because three questions below branch on it (the scaling-studies ceiling,
+       the use-level explanation and the evidence prompt), and hiding the answer while keeping its
+       consequences visible reads as a bug. Optional now means optional on both sides: the marker is gone
+       here, the item is gone from `updateMds()`, and the server's submit gate no longer asks for it. -->
+    <app-pr-field-header
+      label="How would you assess the current use level of the innovation?"
+      description="Use the slider to select the appropriate use level."
+      [required]="false">
+    </app-pr-field-header>
+
+    <div class="tsf-readiness">
+      <app-pr-range-level
+        itemTitle="name"
+        itemDescription="definition"
+        optionLabel="name"
+        optionValue="id"
+        [options]="innovationControlListSE.useLevelsList"
+        [required]="false"
+        [(ngModel)]="body.innovation_use_level_id"
+        (ngModelChange)="onUseLevelChange()">
+      </app-pr-range-level>
+    </div>
+
+    <!-- P2-3785 AC3 — the three investment tables are shown together (#INC-163204 point 4c): one for the
+       Program the result is submitted under, one for the bilateral project, one for the external partners.
+       They used to be split, with Programs and Partners hidden under the full-metadata toggle, so a
+       reporter who never opened it could not see two of the three amounts they were asked for.
+       🛑 Only the W3/bilateral table stays MANDATORY (`requiredSections`) — that is the MDS rule P2-3428
+       enforces server-side; Programs and Partners are visible but optional, per the PO decision of
+       9-Sep-2026 that keeps investment out of the green check. -->
+    <div class="flex flex-col gap-2">
+      <span class="tsf-label">Investment (USD)</span>
+      <app-estimates-cgiar
+        [body]="body"
+        [sections]="['programs', 'bilateral', 'partners']"
+        [requiredSections]="['bilateral']"
+        [disabled]="loaded() !== true"
+        (changed)="onFieldChange()">
+      </app-estimates-cgiar>
+    </div>
   </div>
-
-  <app-pr-field-header
-    label="How would you assess the current use level of the innovation?"
-    description="Use the slider to select the appropriate use level."
-    [required]="true">
-  </app-pr-field-header>
-
-  <div class="tsf-readiness">
-    <app-pr-range-level
-      itemTitle="name"
-      itemDescription="definition"
-      optionLabel="name"
-      optionValue="id"
-      [options]="innovationControlListSE.useLevelsList"
-      [required]="true"
-      [(ngModel)]="body.innovation_use_level_id"
-      (ngModelChange)="onUseLevelChange()">
-    </app-pr-range-level>
-  </div>
-
-  <!-- P2-3428 — only the W3/bilateral-project investment is MDS. Program and partner investment stay
-       optional under Full Metadata below. -->
-  <div class="flex flex-col gap-2">
-    <span class="tsf-label">Investment (USD)</span>
-    <app-estimates-cgiar
-      [body]="body"
-      [sections]="['bilateral']"
-      [requiredSections]="['bilateral']"
-      [disabled]="loaded() !== true"
-      (changed)="onFieldChange()">
-    </app-estimates-cgiar>
-  </div>
-
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
     <app-alert-status class="flex-1" status="info" [collapsible]="false" [description]="mdsInfoNote"></app-alert-status>
     <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
@@ -159,201 +144,403 @@
     </button>
   </div>
 
-  <!-- Everything below the toggle is optional full metadata and counts for nothing in the MDS tracker. -->
-  @if (showAllFields()) {
-    <div class="flex flex-col gap-[18px]">
-      <div>
-        <app-pr-field-header
-          label="Organizations"
-          description="Types of organizations involved in innovation use, with counts."
-          [required]="false">
-        </app-pr-field-header>
+  <div class="contents" [inert]="readOnly()">
+    <!-- Everything below the toggle is optional full metadata and counts for nothing in the MDS tracker. -->
+    @if (showAllFields()) {
+      <div class="flex flex-col gap-[18px]">
+        <div>
+          <app-pr-field-header label="Organizations" description="Types of organizations involved in innovation use, with counts." [required]="false">
+          </app-pr-field-header>
 
-        @for (organization of visibleOrganizations; track $index) {
-          <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
-            <div class="flex items-start gap-2">
-              <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-                <app-pr-select
-                  label="Institution type"
-                  [options]="institutionsTypeTreeList"
-                  optionLabel="name"
-                  optionValue="code"
-                  placeholder="Select institution type"
-                  [required]="false"
-                  [(ngModel)]="organization.institution_types_id"
-                  (ngModelChange)="onOrganizationTypeChange(organization)">
-                </app-pr-select>
-
-                @if (organization.institution_types_id && getInstitutionsTypeTreeChildren(organization.institution_types_id).length) {
-                  <app-pr-select
-                    label="Institution sub-type"
-                    [options]="getInstitutionsTypeTreeChildren(organization.institution_types_id)"
-                    optionLabel="name"
-                    optionValue="code"
-                    placeholder="Select sub-type"
-                    [required]="false"
-                    [(ngModel)]="organization.institution_sub_type_id"
-                    (ngModelChange)="onFieldChange()">
-                  </app-pr-select>
-                }
-              </div>
-              <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteOrganization(organization)" aria-label="Remove organization">
-                <i class="material-icons-round">delete</i>
-              </button>
+          @for (organization of visibleOrganizations; track $index) {
+            <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+              <ng-container *ngTemplateOutlet="organizationCard; context: { $implicit: organization }"></ng-container>
             </div>
+          }
 
-            @if (organization.institution_types_id === otherInstitutionTypeId) {
-              <app-pr-input label="Other institution" [required]="false" [(ngModel)]="organization.other_institution" (ngModelChange)="onFieldChange()"></app-pr-input>
-            }
+          @if (!visibleOrganizations.length) {
+            <app-no-data-text title="No organizations added"></app-no-data-text>
+          }
 
-            @if (organization.institution_types_id === graduateStudentsInstitutionTypeId) {
-              <app-pr-input label="Graduate students" [required]="false" [(ngModel)]="organization.graduate_students" (ngModelChange)="onFieldChange()"></app-pr-input>
-            }
+          <app-add-button name="Add another organization" (clickEvent)="addOrganization()"></app-add-button>
+        </div>
 
-            <app-pr-input label="How many" type="number" placeholder="0" [required]="false" [(ngModel)]="organization.how_many" (ngModelChange)="onFieldChange()"></app-pr-input>
-
-            <app-pr-textarea
-              label="Addressing demands"
+        <!-- P2-3428 AC13 / P2-3294: hidden from use level 6 upwards. -->
+        @if (showScalingStudies) {
+          <div class="flex flex-col gap-3">
+            <app-pr-radio-button
+              label="Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, etc.).?"
+              [options]="[
+                { value: true, label: 'Yes' },
+                { value: false, label: 'No' }
+              ]"
+              optionLabel="label"
+              optionValue="value"
               [required]="false"
-              placeholder="Describe how this organization addresses the innovation's demand..."
-              [(ngModel)]="organization.addressing_demands"
+              [(ngModel)]="body.has_scaling_studies"
               (ngModelChange)="onFieldChange()">
-            </app-pr-textarea>
+            </app-pr-radio-button>
+
+            @if (body.has_scaling_studies === true) {
+              <div>
+                <app-pr-field-header label="Provide URL to those studies" [required]="false"></app-pr-field-header>
+
+                @for (study of body.scaling_studies_urls; track $index) {
+                  <div class="mb-3 flex items-start gap-2">
+                    <div class="min-w-0 flex-1">
+                      <app-pr-input
+                        type="link"
+                        placeholder="Add link"
+                        [required]="false"
+                        [(ngModel)]="body.scaling_studies_urls[$index]"
+                        (ngModelChange)="onFieldChange()">
+                      </app-pr-input>
+                    </div>
+                    <button
+                      type="button"
+                      class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+                      (click)="deleteStudyLink($index)"
+                      aria-label="Remove study link">
+                      <i class="material-icons-round">delete</i>
+                    </button>
+                  </div>
+                }
+
+                @if (!body.scaling_studies_urls?.length) {
+                  <app-no-data-text title="No study link added"></app-no-data-text>
+                }
+
+                <app-add-button name="Add another study link" (clickEvent)="addStudyLink()"></app-add-button>
+              </div>
+            }
           </div>
         }
 
-        @if (!visibleOrganizations.length) {
-          <app-no-data-text title="No organizations added"></app-no-data-text>
+        @if (showUseLevelExplanation) {
+          <app-pr-textarea
+            label="Provide a brief explanation of how the provided evidence/documentation justifies the chosen innovation use level"
+            [required]="false"
+            [maxWords]="50"
+            placeholder="Provide a brief explanation here..."
+            [(ngModel)]="body.readiness_level_explanation"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-textarea>
         }
 
-        <app-add-button name="Add another organization" (clickEvent)="addOrganization()"></app-add-button>
-      </div>
-
-      <!-- P2-3428 AC13 / P2-3294: hidden from use level 6 upwards. -->
-      @if (showScalingStudies) {
+        <!-- P2-3428 — 2030 Use Projection, mirroring the W1/W2 block P2-3295 delivered (title, guidance note,
+           question with its tooltip, then Actors / Organizations / Other quantitative measures), with the
+           same copy source (`innovation-use-2030-projection.copy.ts`). Optional here: it lives in full
+           metadata, so nothing carries a REQUIRED marker and nothing is published to the MDS tracker.
+           The annual-review part of P2-3295 is left out on purpose: it only applies to a result rolled
+           over from a previous phase, and W3/bilateral results are never rolled over. -->
         <div class="flex flex-col gap-3">
           <app-pr-radio-button
-            label="Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, etc.).?"
-            [options]="[
-              { value: true, label: 'Yes' },
-              { value: false, label: 'No' }
-            ]"
+            [label]="projection2030Copy.title"
+            [options]="[{ value: true, label: 'This is yet to be determined' }]"
             optionLabel="label"
             optionValue="value"
             [required]="false"
-            [(ngModel)]="body.has_scaling_studies"
+            [(ngModel)]="body.innov_use_2030_to_be_determined"
             (ngModelChange)="onFieldChange()">
           </app-pr-radio-button>
+          <app-alert-status status="info" [collapsible]="false" [description]="projection2030Copy.guidance"></app-alert-status>
 
-          @if (body.has_scaling_studies === true) {
+          <app-pr-field-header
+            [label]="projection2030Copy.question"
+            [required]="false"
+            [tooltip]="projection2030Copy.tooltip"></app-pr-field-header>
+
+          @if (showProjection2030Lists) {
             <div>
-              <app-pr-field-header label="Provide URL to those studies" [required]="false"></app-pr-field-header>
+              <app-pr-field-header label="Actors" [required]="false"></app-pr-field-header>
+              @for (actor of activeRows(projection2030.actors); track $index) {
+                <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+                  <ng-container *ngTemplateOutlet="actorCard; context: { $implicit: actor, required: false }"></ng-container>
+                </div>
+              }
+              @if (!activeRows(projection2030.actors).length) {
+                <app-no-data-text title="No actors provided"></app-no-data-text>
+              }
+              <app-add-button name="Add actor" (clickEvent)="addProjection2030Actor()"></app-add-button>
+            </div>
 
-              @for (study of body.scaling_studies_urls; track $index) {
-                <div class="mb-3 flex items-start gap-2">
-                  <div class="min-w-0 flex-1">
+            <div>
+              <app-pr-field-header label="Organizations" [required]="false"></app-pr-field-header>
+              @for (organization of activeRows(projection2030.organization); track $index) {
+                <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+                  <ng-container *ngTemplateOutlet="organizationCard; context: { $implicit: organization }"></ng-container>
+                </div>
+              }
+              @if (!activeRows(projection2030.organization).length) {
+                <app-no-data-text title="No organizations provided"></app-no-data-text>
+              }
+              <app-add-button name="Add organization" (clickEvent)="addProjection2030Organization()"></app-add-button>
+            </div>
+
+            <div>
+              <app-pr-field-header label="Other quantitative measures of innovation use" description="E.g. # of hectares." [required]="false">
+              </app-pr-field-header>
+              @for (measure of activeRows(projection2030.measures); track $index) {
+                <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
+                  <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
                     <app-pr-input
-                      type="link"
-                      placeholder="Add link"
+                      label="Unit of measure"
+                      placeholder="e.g. # of projects"
                       [required]="false"
-                      [(ngModel)]="body.scaling_studies_urls[$index]"
-                      (ngModelChange)="onFieldChange()">
-                    </app-pr-input>
+                      [(ngModel)]="measure.unit_of_measure"
+                      (ngModelChange)="onFieldChange()"></app-pr-input>
+                    <app-pr-input
+                      label="Quantity"
+                      type="number"
+                      placeholder="0"
+                      [required]="false"
+                      [(ngModel)]="measure.quantity"
+                      (ngModelChange)="onFieldChange()"></app-pr-input>
                   </div>
-                  <button type="button" class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteStudyLink($index)" aria-label="Remove study link">
+                  <button
+                    type="button"
+                    class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+                    (click)="deleteMeasure(measure)"
+                    aria-label="Remove measure">
                     <i class="material-icons-round">delete</i>
                   </button>
                 </div>
               }
-
-              @if (!body.scaling_studies_urls?.length) {
-                <app-no-data-text title="No study link added"></app-no-data-text>
+              @if (!activeRows(projection2030.measures).length) {
+                <app-no-data-text title="No other quantitative measures provided"></app-no-data-text>
               }
-
-              <app-add-button name="Add another study link" (clickEvent)="addStudyLink()"></app-add-button>
+              <app-add-button name="Add other" (clickEvent)="addProjection2030Measure()"></app-add-button>
             </div>
           }
         </div>
-      }
 
-      @if (showUseLevelExplanation) {
-        <app-pr-textarea
-          label="Provide a brief explanation of how the provided evidence/documentation justifies the chosen innovation use level"
-          [required]="false"
-          [maxWords]="50"
-          placeholder="Provide a brief explanation here..."
-          [(ngModel)]="body.readiness_level_explanation"
-          (ngModelChange)="onFieldChange()">
-        </app-pr-textarea>
-      }
+        <!-- P2-3424 — optional, not MDS, does not move the green check. 2026 phase onwards only. -->
+        @if (showInnovationLinkQuestion) {
+          <div class="flex flex-col gap-3">
+            <app-pr-radio-button
+              label="Are you reporting the use of an innovation that has already been reported and quality assessed?"
+              [options]="[
+                { value: true, label: 'Yes' },
+                { value: false, label: 'No' }
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              [required]="false"
+              [(ngModel)]="body.has_innovation_link"
+              (ngModelChange)="onInnovationLinkChange()">
+            </app-pr-radio-button>
 
-      <!-- 2030 Use Projection. Only the "yet to be determined" answer is built: the projection's own fields
-           are being redefined by P2-3295 (still Open), and P2-3428 says to coordinate with the PO rather
-           than guess them. Reported on the ticket. -->
-      <app-pr-radio-button
-        label="Targeted innovation use by the end of 2030"
-        [options]="[{ value: true, label: 'This is yet to be determined' }]"
-        optionLabel="label"
-        optionValue="value"
-        [required]="false"
-        [(ngModel)]="body.innov_use_2030_to_be_determined"
-        (ngModelChange)="onFieldChange()">
-      </app-pr-radio-button>
-
-      <!-- P2-3424 — optional, not MDS, does not move the green check. 2026 phase onwards only. -->
-      @if (showInnovationLinkQuestion) {
-        <div class="flex flex-col gap-3">
-          <app-pr-radio-button
-            label="Are you reporting the use of an innovation that has already been reported and quality assessed?"
-            [options]="[
-              { value: true, label: 'Yes' },
-              { value: false, label: 'No' }
-            ]"
-            optionLabel="label"
-            optionValue="value"
-            [required]="false"
-            [(ngModel)]="body.has_innovation_link"
-            (ngModelChange)="onInnovationLinkChange()">
-          </app-pr-radio-button>
-
-          @if (body.has_innovation_link === true) {
-            <!--
+            @if (body.has_innovation_link === true) {
+              <!--
               P2-3424 AC4: `optionLabel="display"` is load-bearing — app-pr-select type-aheads on
               optionLabel and nothing else, so binding "title" made the Innovation ID unsearchable
               while the AC asks for search by BOTH id and title. Same bindings as the W1/W2 twin
               (innovation-use-info.component.html:30-38) so the two routes stay identical.
             -->
-            <app-pr-select
-              label="Please select an Innovation Development result"
-              placeholder="Search by Innovation ID or title"
-              [options]="qaInnovationDevelopmentResults"
-              optionLabel="display"
-              optionValue="id"
-              [showClear]="true"
-              [required]="false"
-              [(ngModel)]="body.linked_result_id"
-              (ngModelChange)="onFieldChange()">
-            </app-pr-select>
+              <app-pr-select
+                label="Please select an Innovation Development result"
+                placeholder="Search by Innovation ID or title"
+                [options]="qaInnovationDevelopmentResults"
+                optionLabel="display"
+                optionValue="id"
+                [showClear]="true"
+                [required]="false"
+                [(ngModel)]="body.linked_result_id"
+                (ngModelChange)="onFieldChange()">
+              </app-pr-select>
+            }
+          </div>
+        }
+
+        <!-- P2-3785 AC3 — the Programs and Partners investment tables used to live here, below the toggle.
+           They now sit next to the bilateral one above it, where the reporter can see all three at once,
+           so repeating them here would render the same two tables twice against the same `body`. -->
+      </div>
+    }
+  </div>
+
+  <!-- No in-section Save: every change is staged and the footer's Save draft persists the section
+     (explicit-save model, 2026-09-03). The old button only re-staged what was already staged. -->
+  <!-- One actor card and one organization card, shared by current use and the 2030 Use Projection
+       (P2-3428) so the two lists cannot drift. `required` is true only for the MDS actors above; the
+       projection lives in full metadata and shows no REQUIRED marker. -->
+  <ng-template #actorCard let-actor let-required="required">
+    <div class="flex items-start gap-2">
+      <div class="min-w-0 flex-1">
+        <app-pr-select
+          label="Actor type"
+          [options]="actorsTypeList"
+          optionLabel="name"
+          optionValue="actor_type_id"
+          placeholder="Select actor type"
+          [required]="required"
+          [(ngModel)]="actor.actor_type_id"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-select>
+      </div>
+      <button
+        type="button"
+        class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+        (click)="deleteActor(actor)"
+        aria-label="Remove actor">
+        <i class="material-icons-round">delete</i>
+      </button>
+    </div>
+
+    @if (actor.actor_type_id === otherActorTypeId) {
+      <app-pr-input
+        label="Other actor type"
+        [required]="required"
+        [(ngModel)]="actor.other_actor_type"
+        (ngModelChange)="onFieldChange()"></app-pr-input>
+    }
+
+    <!-- P2-3785 (4b) — set up as in pooled reporting (W1/W2 `innovation-use-form`): the SAME
+         checkbox, which is also what every reader of `sex_and_age_disaggregation` expects —
+         ticked (`true`) means the breakdown does NOT apply and only "How many" is reported.
+         The Yes/No it replaces saved "Yes, available" as that same `true`, the opposite. -->
+    <app-pr-checkbox
+      label="Sex and age disaggregation does not apply"
+      [required]="false"
+      [(ngModel)]="actor.sex_and_age_disaggregation"
+      (ngModelChange)="onDisaggregationChange(actor)">
+    </app-pr-checkbox>
+
+    @if (!actor.sex_and_age_disaggregation) {
+      <app-pr-checkbox
+        label="Age disaggregation not available"
+        [required]="false"
+        [(ngModel)]="actor.age_disaggregation_not_available"
+        (ngModelChange)="onAgeFallbackChange(actor)">
+      </app-pr-checkbox>
+      @if (actor.youth_split_applied_by_system) {
+        <p class="text-xs text-[#5C6BC0]">{{ copy.youthSplitNote }}</p>
+      }
+
+      @for (group of genderGroups; track group.key) {
+        <div class="flex flex-col gap-1">
+          @if (youthExceeds(actor, group.key)) {
+            <p class="text-xs text-[var(--pr-color-red-300)]">{{ group.youthWarning }}</p>
           }
+          <div class="grid grid-cols-3 gap-3">
+            <app-pr-input
+              [label]="group.label"
+              type="number"
+              placeholder="0"
+              [required]="false"
+              [(ngModel)]="actor[group.key]"
+              (ngModelChange)="onGenderChange(actor)"></app-pr-input>
+            <app-pr-input
+              label="Youth"
+              type="number"
+              placeholder="0"
+              [required]="false"
+              [readOnly]="!!actor.youth_split_applied_by_system"
+              [(ngModel)]="actor[group.key + '_youth']"
+              (ngModelChange)="onYouthChange(actor, group.key)"></app-pr-input>
+            <app-pr-input
+              label="Non-youth"
+              type="number"
+              placeholder="0"
+              [required]="false"
+              [readOnly]="true"
+              [ngModel]="nonYouth(actor, group.key)"></app-pr-input>
+          </div>
         </div>
       }
 
-      <!-- Optional full metadata: CGIAR Programs and partners only. The bilateral-project table is the
-           visible MDS above the toggle. -->
-      <div class="flex flex-col gap-2">
-        <span class="tsf-label">Investment (USD)</span>
-        <!-- Disabled while the section could not be loaded: `queueTypeSave` writes nothing in that state
-             (see the `loaded` doc), so an editable table would silently discard what the person types. -->
-        <app-estimates-cgiar
-          [body]="body"
-          [sections]="['programs', 'partners']"
-          [disabled]="loaded() !== true"
-          (changed)="onFieldChange()">
-        </app-estimates-cgiar>
-      </div>
-    </div>
-  }
-</div>
+      <app-pr-input
+        label="Total"
+        type="number"
+        placeholder="0"
+        [required]="false"
+        [readOnly]="true"
+        [ngModel]="actorTotal(actor)"></app-pr-input>
+    } @else {
+      <app-pr-input
+        label="How many"
+        type="number"
+        placeholder="0"
+        [required]="false"
+        [(ngModel)]="actor.how_many"
+        (ngModelChange)="onFieldChange()"></app-pr-input>
+    }
 
-<!-- No in-section Save: every change is staged and the footer's Save draft persists the section
-     (explicit-save model, 2026-09-03). The old button only re-staged what was already staged. -->
+    <app-pr-textarea
+      label="Addressing demands"
+      [required]="false"
+      placeholder="Describe how this actor addresses the innovation's demand..."
+      [(ngModel)]="actor.addressing_demands"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-textarea>
+  </ng-template>
+
+  <ng-template #organizationCard let-organization>
+    <div class="flex items-start gap-2">
+      <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+        <app-pr-select
+          label="Institution type"
+          [options]="institutionsTypeTreeList"
+          optionLabel="name"
+          optionValue="code"
+          placeholder="Select institution type"
+          [required]="false"
+          [(ngModel)]="organization.institution_types_id"
+          (ngModelChange)="onOrganizationTypeChange(organization)">
+        </app-pr-select>
+
+        @if (organization.institution_types_id && getInstitutionsTypeTreeChildren(organization.institution_types_id).length) {
+          <app-pr-select
+            label="Institution sub-type"
+            [options]="getInstitutionsTypeTreeChildren(organization.institution_types_id)"
+            optionLabel="name"
+            optionValue="code"
+            placeholder="Select sub-type"
+            [required]="false"
+            [(ngModel)]="organization.institution_sub_type_id"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-select>
+        }
+      </div>
+      <button
+        type="button"
+        class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+        (click)="deleteOrganization(organization)"
+        aria-label="Remove organization">
+        <i class="material-icons-round">delete</i>
+      </button>
+    </div>
+
+    @if (organization.institution_types_id === otherInstitutionTypeId) {
+      <app-pr-input
+        label="Other institution"
+        [required]="false"
+        [(ngModel)]="organization.other_institution"
+        (ngModelChange)="onFieldChange()"></app-pr-input>
+    }
+
+    @if (organization.institution_types_id === graduateStudentsInstitutionTypeId) {
+      <app-pr-input
+        label="Graduate students"
+        [required]="false"
+        [(ngModel)]="organization.graduate_students"
+        (ngModelChange)="onFieldChange()"></app-pr-input>
+    }
+
+    <app-pr-input
+      label="How many"
+      type="number"
+      placeholder="0"
+      [required]="false"
+      [(ngModel)]="organization.how_many"
+      (ngModelChange)="onFieldChange()"></app-pr-input>
+
+    <app-pr-textarea
+      label="Addressing demands"
+      [required]="false"
+      placeholder="Describe how this organization addresses the innovation's demand..."
+      [(ngModel)]="organization.addressing_demands"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-textarea>
+  </ng-template>
+</div>

@@ -19,7 +19,7 @@
 <!-- Shared row template — grouped (prTableExpandedRow) and flat (<table>) both render this.
      BRP-R-8: Indicator category dropped as its own header — its value moves under the title as a
      caption. BRV-R-3/R-4: TOC result + Indicator merged into one "Alignment" column; the lead
-     center column is conditionally rendered (`showCenterColumn()`) — column count is 7 or 6,
+     center column is conditionally rendered (`showCenterColumn()`) — column count is 8 or 7,
      `columnCount()` drives every `colspan` site below. Every `<td>` `!py-[6px]`. -->
 <ng-template #rowTpl let-row>
   <!-- `group` enables hover-reveal (`group-hover:opacity-100`) on the row-scoped copy buttons
@@ -118,6 +118,18 @@
         }}</span>
       </td>
     }
+    <!-- @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-4, BSR-R-8, BSR-DD-2)
+         SOURCE — always rendered (outside `showCenterColumn()`, BSR-DD-2's "always pushed" rule).
+         `whitespace-nowrap` on the `<td>` PLUS a cell-owned `<span class="block truncate
+         max-w-full">` — two guards, both required (BSR-DD-2): the AI badge has no `whitespace-nowrap`
+         of its own and its host is `display: contents`, so only a wrapper OUTSIDE that host can
+         clip it. The chip component is given the already-resolved descriptor (`sourceOf(row)`),
+         never the raw pair (BSR-T-3 Reviewer-confirmed contract). -->
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] whitespace-nowrap" data-testid="bilateral-review-row-source">
+      <span class="block truncate max-w-full">
+        <app-bilateral-review-source-chip [source]="sourceOf(row)" />
+      </span>
+    </td>
     <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] whitespace-nowrap min-w-[128px]">
       <span
         class="inline-flex items-center whitespace-nowrap rounded-full px-[10px] py-[2px] text-[11.5px] font-semibold"
@@ -130,7 +142,13 @@
          each rendered only when its own value is not a placeholder; both placeholders collapse to
          ONE dash + one `sr-only` naming both originals. Truncation on the inner spans, never the
          `td` (L-6 disqualifier). -->
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] min-w-[220px]" data-testid="bilateral-review-row-alignment">
+    <!-- BSR-DD-2's "loose end": min-w-[220px] -> min-w-[184px], matching the colgroup's re-tuned
+         184px Alignment width (execute-time re-tune — see `columnWidths()`'s comment: 192px, the
+         design's carried-over figure, measured Title NARROWER than Alignment at 1000px). Chromium
+         ignores `min-w` under `table-fixed` (today's 128/110 min-w against 120/100 `<col>` already
+         proves it), but leaving a stale class beside the narrower `<col>` is a contradiction a
+         future reader would have to re-derive. -->
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] min-w-[184px]" data-testid="bilateral-review-row-alignment">
       <div class="flex items-start justify-between gap-[4px]">
         <div class="min-w-0 flex-1">
           @if (alignmentBothPlaceholder(row)) {
@@ -161,8 +179,21 @@
         }
       </div>
     </td>
-    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-right text-[12px] tabular-nums text-slate-600 min-w-[95px]">
-      {{ row.submission_date | date: 'd MMM y' }}
+    <!-- @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-6, BSR-R-7, BSR-DD-3)
+         SUBMITTED — two stacked right-aligned lines. BOTH leadings are load-bearing (BSR-DD-3's
+         arithmetic): 15px/13px, not the inherited preflight 1.5 line-height, or the row exceeds
+         the 46px one-line cap. Reporter truncates with the full name in `title`; absent reporter
+         renders the module's placeholder pair (aria-hidden dash + one sr-only string). -->
+    <td class="!border-b !border-[var(--pr-border-divider)] !px-[10px] !py-[6px] text-right min-w-[95px]" data-testid="bilateral-review-row-submitted">
+      <span class="block leading-[15px] text-[12px] tabular-nums text-slate-600" data-testid="bilateral-review-row-submitted-date">{{ row.submission_date | date: 'd MMM y' }}</span>
+      @if (row.reporter_name) {
+        <span class="block truncate leading-[13px] text-[11px] text-[var(--pr-text-secondary)]" [title]="row.reporter_name" data-testid="bilateral-review-row-submitted-reporter">{{
+          row.reporter_name
+        }}</span>
+      } @else {
+        <span aria-hidden="true" class="block leading-[13px] text-[11px] text-[var(--pr-text-subtle)]" [title]="reporterSrOnlyText()" data-testid="bilateral-review-row-submitted-reporter">&mdash;</span>
+        <span class="sr-only">{{ reporterSrOnlyText() }}</span>
+      }
     </td>
     <td class="!border-b !border-l !border-[var(--pr-border-divider)] sticky right-0 z-10 bg-[var(--pr-surface-card)] group-hover:bg-[var(--pr-surface-app)] transition-colors !px-[10px] !py-[6px] text-center min-w-[110px]">
       <button
@@ -203,6 +234,12 @@
         {{ copy.headers.center }}
       </th>
     }
+    <!-- @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-2) — always
+         rendered, outside the `showCenterColumn()` @if (SOURCE is present in EVERY table mode). -->
+    <th
+      class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-left !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
+      {{ copy.headers.source }}
+    </th>
     <th
       class="!border-b !border-[var(--pr-border-divider)] !bg-[var(--pr-surface-card)] !px-[10px] !py-[8px] text-left !text-[11px] font-semibold uppercase tracking-wider !leading-none !align-middle !rounded-none !text-slate-600 !whitespace-nowrap">
       {{ copy.headers.status }}
@@ -322,6 +359,21 @@
             {{ isCopied('alignment:' + row.result_code) ? 'check' : 'content_copy' }}
           </span>
         </button>
+      }
+    </div>
+    <!-- @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-8, BSR-AC-11)
+         Line 3.5: Source chip + reporter (narrow parity — BSR-R-8 requires both surfaces in BOTH
+         rendering branches). Same cell-owned clipping guard as the wide `<td>` (BSR-DD-2): the AI
+         badge has no `whitespace-nowrap` of its own and its host is `display: contents`. -->
+    <div class="flex items-center justify-between gap-[8px]" data-testid="bilateral-review-card-source-row">
+      <span class="min-w-0 truncate max-w-full">
+        <app-bilateral-review-source-chip [source]="sourceOf(row)" />
+      </span>
+      @if (row.reporter_name) {
+        <span class="min-w-0 truncate text-[11px] text-[var(--pr-text-secondary)]" [title]="row.reporter_name" data-testid="bilateral-review-card-reporter">{{ row.reporter_name }}</span>
+      } @else {
+        <span aria-hidden="true" class="text-[11px] text-[var(--pr-text-subtle)]" [title]="reporterSrOnlyText()" data-testid="bilateral-review-card-reporter">&mdash;</span>
+        <span class="sr-only">{{ reporterSrOnlyText() }}</span>
       }
     </div>
     <!-- Line 4: date left, action right — action button carries a 44px touch target. -->

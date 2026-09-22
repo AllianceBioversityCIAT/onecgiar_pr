@@ -63,6 +63,9 @@ describe('TypeKnowledgeProductComponent', () => {
     alerts = { show: jest.fn() };
     roles = { isAdmin: false };
     creation = {
+      // P2-3428 — the type tabs now read this gate to lock their fields once the result
+      // leaves Editing. Editable by default here; the read-only spec flips it.
+      isEditableByCenterUser: () => true,
       currentResultId: signal<number | null>(123),
       reportingYear: signal<number | null>(2026),
       resultInitiativeId: signal<number | null>(51),
@@ -206,17 +209,13 @@ describe('TypeKnowledgeProductComponent', () => {
     it('should track only the first question until it is answered Yes', () => {
       build();
 
-      expect(lastTrackedFields()).toEqual([
-        { key: 'is-melia-product', label: 'Is this knowledge product a MELIA Product?', filled: false }
-      ]);
+      expect(lastTrackedFields()).toEqual([{ key: 'is-melia-product', label: 'Is this knowledge product a MELIA Product?', filled: false }]);
     });
 
     it('should count a No as answered', () => {
       build({ is_melia: false });
 
-      expect(lastTrackedFields()).toEqual([
-        { key: 'is-melia-product', label: 'Is this knowledge product a MELIA Product?', filled: true }
-      ]);
+      expect(lastTrackedFields()).toEqual([{ key: 'is-melia-product', label: 'Is this knowledge product a MELIA Product?', filled: true }]);
     });
 
     it('should add the planned question when the product is a MELIA product', () => {

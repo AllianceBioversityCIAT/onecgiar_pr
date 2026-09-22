@@ -178,14 +178,41 @@ describe('ResultSectionsService', () => {
       expect(service.statusBg()).toBe('var(--pr-status-in-progress-bg)');
     });
 
-    it('uses the approved pair for a quality assessed result', () => {
+    it('uses the in-qa pair for a quality assessed result', () => {
       dataControl.currentResult.status_id = 2;
       dataControl.currentResult.status_name = 'Quality Assessed';
       build();
 
+      // P2-3553 — this expectation used to demand the APPROVED green, which is how the defect
+      // survived: the rail said "quality assessed" in the colour the platform uses for "approved",
+      // while the Results Center table one click away said cyan. The rail no longer owns a palette.
       expect(service.statusLabel()).toBe('Quality Assessed');
+      expect(service.statusFg()).toBe('var(--pr-status-in-qa-fg)');
+      expect(service.statusBg()).toBe('var(--pr-status-in-qa-bg)');
+    });
+
+    // The other half of the same defect: the rail's private map had no entry for `6` at all, so an
+    // APPROVED bilateral result fell through to the grey "unknown status" fallback — the platform
+    // telling a reporter nothing about a result it had actually approved. This asserts it is not
+    // the fallback, so a future map that "forgets" a status cannot pass by looking neutral.
+    it('uses the approved pair for an approved result, never the unknown-status fallback', () => {
+      dataControl.currentResult.status_id = 6;
+      dataControl.currentResult.status_name = 'Approved';
+      build();
+
       expect(service.statusFg()).toBe('var(--pr-status-approved-fg)');
       expect(service.statusBg()).toBe('var(--pr-status-approved-bg)');
+      expect(service.statusBg()).not.toBe('var(--pr-status-not-started-bg)');
+    });
+
+    // Pending review is what a bilateral result wears while its Science Program looks at it.
+    it('uses the submitted pair for a pending review result', () => {
+      dataControl.currentResult.status_id = 5;
+      dataControl.currentResult.status_name = 'Pending Review';
+      build();
+
+      expect(service.statusFg()).toBe('var(--pr-status-submitted-fg)');
+      expect(service.statusBg()).toBe('var(--pr-status-submitted-bg)');
     });
 
     it('falls back to the neutral pair on an unknown status', () => {
@@ -231,8 +258,30 @@ describe('ResultSectionsService', () => {
       expect(service.aiReviewDisabled).toBe(false);
     });
 
-    it('hides AI review for knowledge products (type 6)', () => {
+    // P2-2385: the type-6 exclusion is gone. A Knowledge Product reporter cannot edit the title or
+    // the description (both auto-synced from CGSpace) but DOES own the Impact Area tags, so the
+    // button is offered and the restriction moved into `AiReviewService.onAIReviewClick()`.
+    it('shows AI review for knowledge products (type 6)', () => {
       dataControl.currentResult.result_type_id = 6;
+      build();
+
+      expect(service.showAiReview).toBe(true);
+      expect(service.aiReviewDisabled).toBe(false);
+    });
+
+    // The gates that DID survive for a Knowledge Product. Without these two the change above could
+    // be over-applied — e.g. by returning a constant `true` — and nothing would have caught it.
+    it('still hides AI review for a read-only viewer of a knowledge product', () => {
+      dataControl.currentResult.result_type_id = 6;
+      roles.readOnly = true;
+      build();
+
+      expect(service.showAiReview).toBe(false);
+    });
+
+    it('still hides AI review for a knowledge product that left Editing', () => {
+      dataControl.currentResult.result_type_id = 6;
+      dataControl.currentResult.status_id = 3;
       build();
 
       expect(service.showAiReview).toBe(false);

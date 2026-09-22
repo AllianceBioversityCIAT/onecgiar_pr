@@ -28,8 +28,8 @@ describe('TypePolicyChangeComponent', () => {
     question_text: 'Is this policy related to a CGIAR initiative?',
     optionsWithAnswers: [
       { result_question_id: 1, question_text: 'Yes', answer_boolean: null },
-      { result_question_id: 2, question_text: 'No', answer_boolean: true },
-    ],
+      { result_question_id: 2, question_text: 'No', answer_boolean: true }
+    ]
   };
 
   /**
@@ -50,22 +50,25 @@ describe('TypePolicyChangeComponent', () => {
     mdsTracker = { setSectionFields: jest.fn() };
     autoSave = {
       fieldStatus: signal<Record<string, string>>({}),
-      schedulePayload: jest.fn(),
+      schedulePayload: jest.fn()
     };
-    creation = { currentResultId: signal<number | null>(123) };
+    creation = {
+      // P2-3428 — the type tabs now read this gate to lock their fields once the result
+      // leaves Editing. Editable by default here; the read-only spec flips it.
+      isEditableByCenterUser: () => true, currentResultId: signal<number | null>(123) };
     expandableState = {
       getShowAllFields: jest.fn().mockReturnValue(false),
-      setShowAllFields: jest.fn(),
+      setShowAllFields: jest.fn()
     };
     policyControlList = {
       policyTypesList: [{ id: 1, name: 'Policy or strategy' }],
-      policyStages: [{ id: 2, full_name: 'Design' }],
+      policyStages: [{ id: 2, full_name: 'Design' }]
     };
     institutionsService = { institutionsList: [{ institutions_id: 1, institutions_name: 'Org A' }] };
     bilateralApi = {
       GET_policyChanges: jest.fn().mockReturnValue(of({ response: {} })),
       GET_policyChangesQuestions: jest.fn().mockReturnValue(of({ response: { ...QUESTIONS_RESPONSE } })),
-      PATCH_policyChanges: jest.fn().mockReturnValue(of({})),
+      PATCH_policyChanges: jest.fn().mockReturnValue(of({}))
     };
   };
 
@@ -79,8 +82,8 @@ describe('TypePolicyChangeComponent', () => {
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralExpandableStateService, useValue: expandableState },
         { provide: PolicyControlListService, useValue: policyControlList },
-        { provide: InstitutionsService, useValue: institutionsService },
-      ],
+        { provide: InstitutionsService, useValue: institutionsService }
+      ]
     });
 
   beforeEach(async () => {
@@ -105,9 +108,9 @@ describe('TypePolicyChangeComponent', () => {
         of({
           response: {
             question_text: 'Q',
-            optionsWithAnswers: [{ result_question_id: 1, question_text: 'Yes', answer_boolean: null }],
-          },
-        }),
+            optionsWithAnswers: [{ result_question_id: 1, question_text: 'Yes', answer_boolean: null }]
+          }
+        })
       );
       build();
       fixture.detectChanges();
@@ -174,9 +177,7 @@ describe('TypePolicyChangeComponent', () => {
      */
     describe('when the GET fails (P2-3556)', () => {
       const failLoad = (status = 500) =>
-        bilateralApi.GET_policyChanges.mockReturnValue(
-          throwError(() => new HttpErrorResponse({ status, statusText: 'Internal Server Error' })),
-        );
+        bilateralApi.GET_policyChanges.mockReturnValue(throwError(() => new HttpErrorResponse({ status, statusText: 'Internal Server Error' })));
 
       it('leaves the section not loaded, with an empty body', () => {
         failLoad();
@@ -281,7 +282,7 @@ describe('TypePolicyChangeComponent', () => {
       component.onRelatedToChange(1);
       expect(component.questions.optionsWithAnswers).toEqual([
         { result_question_id: 1, question_text: 'Yes', answer_boolean: true },
-        { result_question_id: 2, question_text: 'No', answer_boolean: null },
+        { result_question_id: 2, question_text: 'No', answer_boolean: null }
       ]);
     });
 
@@ -324,8 +325,8 @@ describe('TypePolicyChangeComponent', () => {
         {
           key: 'policy-institutions',
           label: 'Whose policy is this? (Implementing organizations)',
-          filled: false,
-        },
+          filled: false
+        }
       ]);
     });
 
@@ -356,8 +357,8 @@ describe('TypePolicyChangeComponent', () => {
         {
           key: 'policy-institutions',
           label: 'Whose policy is this? (Implementing organizations)',
-          filled: true,
-        },
+          filled: true
+        }
       ]);
     });
   });
@@ -372,7 +373,7 @@ describe('TypePolicyChangeComponent', () => {
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
         'typeSpecific',
         { policy_type_id: 1, question_text: 'Q' },
-        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' }),
+        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' })
       );
     });
 
@@ -381,11 +382,7 @@ describe('TypePolicyChangeComponent', () => {
       component.body = { policy_type_id: 1 };
       component.questions = {};
       component.onSave();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        { policy_type_id: 1 },
-        expect.objectContaining({ debounceMs: 0 }),
-      );
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith('typeSpecific', { policy_type_id: 1 }, expect.objectContaining({ debounceMs: 0 }));
     });
 
     it('tracks the saving state from fieldStatus', () => {
@@ -397,9 +394,7 @@ describe('TypePolicyChangeComponent', () => {
 
     // P2-3556 regression guards: the load gate must not change the happy path in any way.
     it('saves normally once the body has loaded', () => {
-      bilateralApi.GET_policyChanges.mockReturnValue(
-        of({ response: { policy_type_id: 1, institutions: [{ institutions_id: 7 }] } }),
-      );
+      bilateralApi.GET_policyChanges.mockReturnValue(of({ response: { policy_type_id: 1, institutions: [{ institutions_id: 7 }] } }));
       build();
       autoSave.schedulePayload.mockClear();
 
@@ -457,7 +452,7 @@ describe('TypePolicyChangeComponent', () => {
     const alerts = () =>
       fixture.debugElement.queryAll(By.css('app-alert-status')).map(d => ({
         status: read(d.componentInstance.status),
-        description: read(d.componentInstance.description),
+        description: read(d.componentInstance.description)
       }));
     const render = () => {
       build();
@@ -510,13 +505,12 @@ describe('TypePolicyChangeComponent', () => {
       expect(alerts().map(a => a.status)).toEqual(['info']);
     });
 
-
     // Explicit-save model (2026-09-03): the footer's Save draft persists the section, so the form
     // renders no Save of its own — it only re-staged what every change had already staged.
     it('renders no in-section Save button', () => {
       render();
-      const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter(
-        (b: any) => ['Save', 'Saving...'].includes(b.textContent.trim())
+      const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((b: any) =>
+        ['Save', 'Saving...'].includes(b.textContent.trim())
       );
       expect(saveButtons).toHaveLength(0);
     });

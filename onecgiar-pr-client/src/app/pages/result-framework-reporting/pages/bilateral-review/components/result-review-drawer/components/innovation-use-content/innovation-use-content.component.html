@@ -11,6 +11,7 @@
         <div>
           <app-pr-select
             [disabled]="disabled"
+            [readOnly]="disabled"
             [options]="actorsTypeList"
             [indexReference]="i"
             label="Actor type"
@@ -25,6 +26,7 @@
           <div style="margin-top: 13px"></div>
           <app-pr-input
             [disabled]="disabled"
+            [readOnly]="disabled"
             *ngIf="actorItem.actor_type_id == 5"
             label="Other actor type"
             description="Specify the other actor type in the text box below"
@@ -47,6 +49,7 @@
           <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
             <app-pr-input
               [disabled]="disabled"
+              [readOnly]="disabled"
               placeholder="Write some..."
               label="Women"
               type="number"
@@ -55,6 +58,7 @@
             </app-pr-input>
             <app-pr-input
               [disabled]="disabled"
+              [readOnly]="disabled"
               placeholder="Write some..."
               label="Youth"
               type="number"
@@ -75,6 +79,7 @@
           <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
             <app-pr-input
               [disabled]="disabled"
+              [readOnly]="disabled"
               placeholder="Write some..."
               label="Men"
               type="number"
@@ -83,6 +88,7 @@
             </app-pr-input>
             <app-pr-input
               [disabled]="disabled"
+              [readOnly]="disabled"
               placeholder="Write some..."
               label="Youth"
               type="number"
@@ -119,6 +125,7 @@
               type="number"
               [required]="!!actorItem?.result_actors_id"
               [disabled]="disabled"
+              [readOnly]="disabled"
               [(ngModel)]="actorItem.how_many">
             </app-pr-input>
           </div>
@@ -147,6 +154,7 @@
         <div class="right_content">
           <app-pr-input
             [disabled]="disabled"
+            [readOnly]="disabled"
             placeholder="e.g. # of projects"
             label="Unit of measure"
             type="text"
@@ -156,6 +164,7 @@
           </app-pr-input>
           <app-pr-input
             [disabled]="disabled"
+            [readOnly]="disabled"
             placeholder="Write some..."
             label="Quantity"
             type="number"
@@ -195,6 +204,7 @@
             type="currency"
             [(ngModel)]="item.kind_cash"
             [disabled]="disabled"
+            [readOnly]="disabled"
             [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
             [required]="false"
             (ngModelChange)="onInputChange(item)">
@@ -239,6 +249,7 @@
             type="currency"
             [(ngModel)]="item.kind_cash"
             [disabled]="disabled"
+            [readOnly]="disabled"
             [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
             [required]="false"
             (ngModelChange)="onInputChange(item)">

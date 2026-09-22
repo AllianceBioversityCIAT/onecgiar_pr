@@ -44,31 +44,44 @@ export class BilateralManualCreateFlowService {
     () => this.creationService.selectedProject()?.fullName || this.creationService.selectedProject()?.shortName || ''
   );
 
-  readonly drawerProjectSummary = computed(() => this.creationService.selectedProject()?.summary ?? '');
-
-  readonly drawerProjectDescription = computed(
-    () => this.creationService.selectedProject()?.description ?? ''
-  );
-
-  /** Card subtitle for the drawer context header — summary first, then description. */
-  readonly drawerProjectSubtitle = computed(() => {
-    const project = this.creationService.selectedProject();
-    if (!project) {
-      return '';
-    }
-
-    const subtitle = (project.summary?.trim() || project.description?.trim()) ?? '';
-    if (!subtitle) {
-      return '';
-    }
-
-    const title = (project.fullName?.trim() || project.shortName?.trim()) ?? '';
-    if (title && subtitle.toLowerCase() === title.toLowerCase()) {
-      return '';
-    }
-
-    return subtitle;
+  /**
+   * P2-3756: CLARISA fills `summary` and `description` independently — 2026 projects mostly arrive
+   * with `summary: null` and the text in `description`, and either field can come back as `''`
+   * rather than null (see `clarisa_projects`). Both are normalised and de-duplicated here, not in
+   * the template, so the drawer can render one labelled block per field that actually has content:
+   * a 2026 project shows a single block instead of an empty "Project Summary" box.
+   */
+  readonly drawerProjectSummary = computed(() => {
+    const summary = BilateralManualCreateFlowService.clean(this.creationService.selectedProject()?.summary);
+    return this.echoesProjectTitle(summary) ? '' : summary;
   });
+
+  readonly drawerProjectDescription = computed(() => {
+    const description = BilateralManualCreateFlowService.clean(
+      this.creationService.selectedProject()?.description
+    );
+    if (!description || this.echoesProjectTitle(description)) {
+      return '';
+    }
+
+    // Some projects repeat the same text in both fields; the summary block already shows it.
+    const summary = this.drawerProjectSummary();
+    return summary && description.toLowerCase() === summary.toLowerCase() ? '' : description;
+  });
+
+  /** Empty string for null, undefined and whitespace-only values alike. */
+  private static clean(value: string | null | undefined): string {
+    return value?.trim() ?? '';
+  }
+
+  /** The drawer already shows the project title above these fields — don't repeat it. */
+  private echoesProjectTitle(text: string): boolean {
+    if (!text) {
+      return false;
+    }
+    const title = this.drawerProjectTitle().trim();
+    return !!title && text.toLowerCase() === title.toLowerCase();
+  }
 
   readonly drawerLeadCenterAcronym = computed(
     () => this.creationService.selectedProject()?.leadCenter?.acronym ?? ''

@@ -1565,6 +1565,67 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
   });
 
+  // BSR-T-1 falsifier (design.md §4.1, requirements.md BSR-AC-1): the mapper is a closed
+  // allowlist (design.md P-1) — a raw row's field survives to the client only if it is
+  // named in the mapper's object literal. This test asserts the three new keys
+  // (creation_method, external_platform_code, reporter_name) AND every one of the 15
+  // pre-existing keys in the same assertion, so dropping any single key from the mapper's
+  // object literal turns this test red.
+  it('getResultsByProgramAndCenters mapper preserves all 15 pre-existing keys and adds the 3 new source/reporter keys (BSR-AC-1)', async () => {
+    const submissionDate = new Date('2026-02-23T00:00:00.000Z');
+    const rawRow = {
+      id: 501,
+      project_id: 20,
+      project_name: 'Project 20',
+      result_code: 2001,
+      result_title: 'Result 2001',
+      result_category: 'Category X',
+      result_status_id: 5,
+      status_name: 'Pending Review',
+      acronym: 'P20',
+      toc_title: 'TOC Title X',
+      indicator: 'Indicator X',
+      submission_date: submissionDate,
+      lead_center: 'CIMMYT',
+      initiative_role_id: 3,
+      initiative_role_name: 'Contributor',
+      creation_method: 'EXTERNAL',
+      external_platform_code: 'STAR',
+      reporter_name: 'Ana Pérez',
+    };
+
+    (
+      mockResultRepository.getResultsByProgramAndCenters as jest.Mock
+    ).mockResolvedValueOnce([rawRow]);
+
+    const res = await resultService.getResultsByProgramAndCenters('SP01');
+    expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+    expect(Array.isArray(res.response)).toBe(true);
+    const mapped = (res.response as any[])[0].results[0];
+
+    // The 15 pre-existing keys (verified at source, results.service.ts mapper).
+    expect(mapped.id).toBe(501);
+    expect(mapped.project_id).toBe(20);
+    expect(mapped.project_name).toBe('Project 20');
+    expect(mapped.result_code).toBe(2001);
+    expect(mapped.result_title).toBe('Result 2001');
+    expect(mapped.indicator_category).toBe('Category X');
+    expect(mapped.status_id).toBe(5);
+    expect(mapped.status_name).toBe('Pending Review');
+    expect(mapped.acronym).toBe('P20');
+    expect(mapped.toc_title).toBe('TOC Title X');
+    expect(mapped.indicator).toBe('Indicator X');
+    expect(mapped.submission_date).toBe(submissionDate);
+    expect(mapped.lead_center).toBe('CIMMYT');
+    expect(mapped.initiative_role_id).toBe(3);
+    expect(mapped.initiative_role_name).toBe('Contributor');
+
+    // The 3 new keys (BSR-R-1, BSR-AC-1).
+    expect(mapped.creation_method).toBe('EXTERNAL');
+    expect(mapped.external_platform_code).toBe('STAR');
+    expect(mapped.reporter_name).toBe('Ana Pérez');
+  });
+
   it('getBilateralResultById returns result successfully', async () => {
     const mockResult = {
       id: 100,

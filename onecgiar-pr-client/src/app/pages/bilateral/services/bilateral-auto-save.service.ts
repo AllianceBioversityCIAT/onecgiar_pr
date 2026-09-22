@@ -104,6 +104,19 @@ export class BilateralAutoSaveService {
   /** Evidence has its own multipart persistence; it listens only when its section is explicitly saved. */
   readonly manualSave$ = new Subject<BilateralEditorSection>();
 
+  /**
+   * Which section the editor is currently showing, published by the creator.
+   *
+   * The sections are NOT mounted on navigation: they are siblings under `[hidden]`
+   * (`bilateral-result-creator.component.html`), all constructed once when the result loads, so a
+   * section's `ngOnInit` fetch is a snapshot of the moment the PAGE opened and nothing re-runs it.
+   * Anything a section derives from data another section owns therefore goes stale the first time
+   * the reporter edits that other section, with no event to notice it by. This signal is that
+   * event: it lives here because this service already owns the section vocabulary and every
+   * section already injects it.
+   */
+  readonly openSection = signal<BilateralEditorSection | null>(null);
+
   fieldStatus = signal<Record<string, FieldStatus>>({});
   hasPendingSaves = signal(false);
 

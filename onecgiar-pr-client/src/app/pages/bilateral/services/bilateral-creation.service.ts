@@ -39,6 +39,11 @@ export class BilateralCreationService {
    * ⚠️ Never holds a `result_code`: see `loadResult`.
    */
   currentResultId = signal<number | null>(null);
+  /**
+   * P2-3760 — Contribution % stored on the lead `results_by_projects` row.
+   * `null` is the "never answered" state; the form renders it as the 100 default the story asks for.
+   */
+  resultContributionPercentage = signal<number | null>(null);
   isLoadingProjects = signal(false);
   isLoadingResult = signal(false);
   /**
@@ -73,6 +78,13 @@ export class BilateralCreationService {
   resultLevelId = signal<number | null>(null);
   resultTypeId = signal<number | null>(null);
   resultLeadCenterId = signal<number | null>(null);
+  /**
+   * CLARISA code of the result's LEAD centre (`CENTER-12`), as opposed to `resultLeadCenterId`,
+   * which holds the institution id. The code is what decides who may write: the server gates every
+   * centre-scoped PATCH on `validationCenterPermissions(user, leadCenter.code)`
+   * (`bilateral-center.service.ts:2232`), and `role_by_user.center_id` stores that same code.
+   */
+  resultLeadCenterCode = signal<string | null>(null);
   resultContributingCenterIds = signal<number[]>([]);
   resultProjectId = signal<number | null>(null);
   resultContributingProjectIds = signal<number[]>([]);
@@ -115,10 +127,14 @@ export class BilateralCreationService {
     this.resultLevelId.set(null);
     this.resultTypeId.set(null);
     this.resultLeadCenterId.set(null);
+    this.resultLeadCenterCode.set(null);
     this.resultContributingCenterIds.set([]);
     this.resultProjectId.set(null);
     this.resultContributingProjectIds.set([]);
     this.resultContributingProjects.set([]);
+    // P2-3760 — this service is a root singleton, so a percentage left over from the previously
+    // opened result would show on the next one and get saved onto it. Reset with the rest.
+    this.resultContributionPercentage.set(null);
     this.selectedSecondarySps.set([]);
   }
 
@@ -262,6 +278,13 @@ export class BilateralCreationService {
             if (proj.obj_organization?.id) {
               this.resultLeadCenterId.set(proj.obj_organization.id);
             }
+            // Stored as MySQL decimal, so it arrives as a string ("100.00") or null.
+            const storedContribution = leadProject.contribution_percentage;
+            this.resultContributionPercentage.set(
+              storedContribution === null || storedContribution === undefined
+                ? null
+                : Number(storedContribution),
+            );
           }
           const pIds = response.contributingProjects
             .filter((p: any) => p.project_id != null)
@@ -277,6 +300,13 @@ export class BilateralCreationService {
             }));
           this.resultContributingProjects.set(pProjects);
         }
+
+        // The lead row is the one the server reads to answer "may this user write here"; keep its
+        // CLARISA code so the editor can ask the same question before drawing the controls.
+        const leadCenterRow = (response?.contributingCenters ?? []).find(
+          (c: any) => Number(c?.is_leading_result) === 1
+        );
+        this.resultLeadCenterCode.set(leadCenterRow?.code ? String(leadCenterRow.code) : null);
 
         const contributingCenterIds = (response?.contributingCenters ?? [])
           .filter((c: any) => c.is_leading_result === 0 || c.is_leading_result === false)

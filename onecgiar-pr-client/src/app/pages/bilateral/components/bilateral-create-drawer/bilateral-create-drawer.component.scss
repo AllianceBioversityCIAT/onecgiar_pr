@@ -40,23 +40,6 @@
     color: var(--pr-text-heading);
   }
 
-  &__subtitle {
-    margin: 4px 0 0;
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.4;
-    color: var(--pr-text-subtle);
-    overflow-wrap: anywhere;
-
-    @media (min-width: 640px) {
-      -webkit-line-clamp: 3;
-    }
-  }
-
   &__sp {
     display: flex;
     align-items: center;

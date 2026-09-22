@@ -5,6 +5,8 @@ import { HlmButton } from '@spartan/button';
 import { ResultToReview } from '../result-review-drawer/result-review-drawer.interfaces';
 import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
 import { BilateralReviewGroupMode } from '../../bilateral-review.query-params';
+import { BilateralReviewSourceChipComponent } from '../bilateral-review-source-chip/bilateral-review-source-chip.component';
+import { BilateralSourceDescriptor, resolveBilateralSource } from '../bilateral-review-source-chip/resolve-bilateral-source';
 
 /** Loose-equality status helpers — the wire may send `status_id` as a string (legacy gotcha 5). */
 function isPending(row: ResultToReview): boolean {
@@ -54,7 +56,7 @@ export interface ParsedProjectHeader {
   standalone: true,
   templateUrl: './bilateral-review-table.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, NgTemplateOutlet, HlmButton]
+  imports: [DatePipe, NgTemplateOutlet, HlmButton, BilateralReviewSourceChipComponent]
 })
 export class BilateralReviewTableComponent {
   readonly groups = input<BilateralReviewGroup[]>([]);
@@ -91,10 +93,12 @@ export class BilateralReviewTableComponent {
    *  column would be a no-op. Flat view keeps it even in `groupMode='center'` (AC-7b). */
   readonly showCenterColumn = computed<boolean>(() => !(this.groupMode() === 'center' && this.view() === 'grouped'));
 
-  /** Rendered column count (7 with the center column, 6 without) — drives every `colspan` site
-   *  (group header `td`, grouped loading row, flat loading row) so none of them can drift from
-   *  R-3's merged Alignment column arithmetic (judgment-day L-8: was hard-coded `8` at 3 sites). */
-  readonly columnCount = computed<number>(() => (this.showCenterColumn() ? 7 : 6));
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-2)
+  /** Rendered column count (8 with the center column, 7 without — bumped from 7/6 by the new
+   *  SOURCE column, `BSR-DD-2`) — drives every `colspan` site (group header `td`, grouped loading
+   *  row, flat loading row) so none of them can drift from R-3's merged Alignment column
+   *  arithmetic (judgment-day L-8: was hard-coded `8` at 3 sites). */
+  readonly columnCount = computed<number>(() => (this.showCenterColumn() ? 8 : 7));
 
   // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3 attempt 2/3, HITL fix, BRH-R-1)
   /** Explicit per-column pixel widths driving the ONE shared `<colgroup>` (`colgroupTpl`) that
@@ -117,11 +121,33 @@ export class BilateralReviewTableComponent {
    *  line (template), so the code column no longer needs to fit code+chip+button on ONE line —
    *  96px comfortably fits either line alone. New non-title sum = 96+110+120+220+100+100 = 746px,
    *  so Title = 254px at 1000px (widest column; Alignment's 220px is now second) and 534px at
-   *  1280px — verified by Gate 7's "Title width >= every other column" assertion. */
+   *  1280px — verified by Gate 7's "Title width >= every other column" assertion.
+   *
+   *  @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-2) — one new 116px
+   *  SOURCE column, funded by narrowing lead center (110 -> 88, only inside the
+   *  `showCenterColumn()` branch — it does not exist at all in center-grouped mode) and Alignment.
+   *  SOURCE itself is pushed OUTSIDE the `showCenterColumn()` conditional — it is the one column
+   *  present in EVERY mode, project and center-grouped alike (design.md's "Live path" branch
+   *  set). Getting this backwards (inside the conditional, or as a flat literal) is exactly the
+   *  P-7 defect: 8 `<col>` over 7 `<th>` in center-grouped mode, shifting every width one column
+   *  left.
+   *
+   *  Alignment re-tuned 220 -> 184, NOT design.md's carried-over 192 (execute-time re-tune, per
+   *  this task's own Disqualifier — "if the measured Title width contradicts the design's
+   *  arithmetic, the measurement wins and the widths are re-tuned inside this task"). Re-measured
+   *  baseline (CT, before this task): Title = 530.5px @1280 / 250.5px @1000 — matches design.md's
+   *  carried-over figure exactly. At 192px, project-mode Title at 1000px measures 184.5px —
+   *  NARROWER than the 192px Alignment column, inverting BSR-AC-9/the layout hard NFR. At 184px,
+   *  Title measures 192.5px @1000, back above Alignment with an 8.5px margin (Gate 9 in
+   *  `bilateral-review-table.cy.ts` asserts this, over a SOURCE-bearing fixture, at both 1000 and
+   *  1280). New non-title sums: project mode 96+88+116+120+184+100+100 = 804px (was 746, +58);
+   *  center-grouped 96+116+120+184+100+100 = 716px (was 636, +80 — no lead-center subtraction
+   *  there since it never had one). */
   readonly columnWidths = computed<string[]>(() => {
     const widths: string[] = ['96px', '']; // code, title (title = remainder, no width)
-    if (this.showCenterColumn()) widths.push('110px'); // lead center
-    widths.push('120px', '220px', '100px', '100px'); // status, alignment, date, actions
+    if (this.showCenterColumn()) widths.push('88px'); // lead center (110 -> 88, BSR-DD-2)
+    widths.push('116px'); // source (BSR-DD-2, NEW) — always pushed, outside the conditional
+    widths.push('120px', '184px', '100px', '100px'); // status, alignment (220 -> 184, re-tuned), date, actions
     return widths;
   });
 
@@ -462,6 +488,24 @@ export class BilateralReviewTableComponent {
    *  reader user loses nothing the two separate columns used to carry (AC-5). */
   alignmentSrOnlyText(row: ResultToReview): string {
     return `${this.copy.tocLabel}: ${this.placeholderText(row.toc_title)} · ${this.copy.indicatorLabel}: ${this.placeholderText(row.indicator)}`;
+  }
+
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-4, BSR-DD-1, design.md §6.2)
+  /** Derives the SOURCE cell's descriptor at the call site — the contract `BSR-T-3`'s Reviewer
+   *  confirmed: `resolveBilateralSource` is called HERE (per row), and the already-resolved
+   *  descriptor is what `BilateralReviewSourceChipComponent` takes as its input, never the raw
+   *  `{ method, platformCode }` pair. Pure function of two fields already on the row — no new
+   *  request, no new service (`BSR-DD-1`). */
+  sourceOf(row: ResultToReview): BilateralSourceDescriptor {
+    return resolveBilateralSource({ method: row.creation_method, platformCode: row.external_platform_code });
+  }
+
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-R-6, BSR-R-7)
+  /** `sr-only` text for an absent reporter name — the SAME placeholder convention
+   *  `alignmentSrOnlyText` uses (an `aria-hidden` dash plus one `sr-only` string naming the
+   *  field), reused by both the SUBMITTED cell (wide table) and the narrow card. */
+  reporterSrOnlyText(): string {
+    return `${this.copy.reporterLabel}: ${this.copy.notSpecified}`;
   }
 
   // @akili-spec changes/bilateral-review-ux-polish (BRP-T-3, R-13, design.md §6.2 "Cards")

@@ -211,16 +211,27 @@
         <tr>
           @for (column of cols; track column.key) {
             <th
+              #thEl
+              class="rc-th rc-th--sortable"
               (click)="validateOrder(column.attr)"
               (keydown.enter)="validateOrder(column.attr)"
               tabindex="0"
               [prSortableColumn]="column.attr"
               [id]="column.attr"
-              [style.width]="column.width">
+              [style.width]="columnWidth(column)">
               <div class="align-center">
                 <pr-sort-icon [field]="column.attr"></pr-sort-icon>
                 {{ column.title }}
               </div>
+              <div
+                class="rc-col-resizer"
+                role="separator"
+                aria-orientation="vertical"
+                [attr.aria-label]="'Resize ' + column.title + ' column'"
+                title="Drag to resize column. Double-click to reset."
+                (mousedown)="onResizeStart($event, column, thEl)"
+                (dblclick)="onResizeReset(column, $event)"
+                (click)="$event.stopPropagation()"></div>
             </th>
           }
 
@@ -235,9 +246,9 @@
           @for (column of cols; track column.key) {
             <td
               [class]="'rc-td rc-td--' + column.attr"
-              [style.width]="column.width"
-              [style.max-width]="column.width"
-              [style.min-width]="column.width">
+              [style.width]="columnWidth(column)"
+              [style.max-width]="columnWidth(column)"
+              [style.min-width]="columnWidth(column)">
               @for (subResult of result['results']; track subResult.id) {
                 @if (column.attr === 'result_code') {
                   <a

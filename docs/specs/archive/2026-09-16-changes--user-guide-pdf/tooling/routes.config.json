@@ -1,0 +1,208 @@
+[
+  {
+    "id": "home",
+    "url": "/result-framework-reporting/home",
+    "readySelector": "app-result-framework-reporting-center-card-item",
+    "clickTarget": "app-result-framework-reporting-center-card-item:nth-of-type(1) a:has-text(\"Report\")",
+    "captionKey": "01-landing",
+    "annotations": [
+      {
+        "selector": "app-result-framework-reporting-center-card-item:nth-of-type(1) a:has-text(\"Report\")",
+        "label": "Open Center reporting",
+        "role": "primary",
+        "placement": "right"
+      },
+      {
+        "selector": "app-result-framework-reporting-card-item:has-text(\"Breeding for Tomorrow\") h3",
+        "label": "Open a Program",
+        "role": "feature",
+        "placement": "above"
+      },
+      {
+        "selector": "section[aria-label=\"Welcome\"] span:has-text(\"Reporting 2026\")",
+        "label": "Current reporting phase",
+        "role": "feature",
+        "placement": "right"
+      },
+      {
+        "selector": "app-result-framework-reporting-insights:visible h2:has-text(\"Reporting overview\")",
+        "label": "Portfolio progress",
+        "role": "feature",
+        "placement": "left"
+      }
+    ]
+  },
+  {
+    "id": "overview",
+    "url": "/result-framework-reporting/entity-details/SP01/overview",
+    "readySelector": "[data-testid=\"aow-rows\"]",
+    "clickTarget": "text=Continue reporting",
+    "captionKey": "02-overview",
+    "viewport": {
+      "width": 1280,
+      "height": 1800
+    },
+    "fullPage": false,
+    "annotations": [
+      {
+        "selector": "text=Continue reporting",
+        "label": "Continue reporting",
+        "role": "primary",
+        "placement": "right"
+      },
+      {
+        "selector": "[data-testid=\"overview-kpi-total\"]",
+        "label": "Results this cycle",
+        "role": "feature",
+        "placement": "left"
+      },
+      {
+        "selector": "h2:has-text(\"Progress by area of work\")",
+        "label": "KPIs left per AoW",
+        "role": "feature",
+        "placement": "right"
+      }
+    ]
+  },
+  {
+    "id": "reporting-aows",
+    "url": "/result-framework-reporting/entity-details/SP01?tocView=aows",
+    "readySelector": ".pr-reporting-row",
+    "clickTarget": "text=Where to report",
+    "captionKey": "03-reporting",
+    "viewport": {
+      "width": 1280,
+      "height": 1000
+    },
+    "fullPage": false,
+    "annotations": [
+      {
+        "selector": "text=Where to report",
+        "label": "Where to report",
+        "role": "primary",
+        "placement": "below"
+      },
+      {
+        "selector": "[data-testid=\"quick-typology-filters\"]",
+        "label": "Filter by result type",
+        "role": "feature",
+        "placement": "below"
+      },
+      {
+        "selector": "text=/^By AOW$/i >> nth=0",
+        "label": "Open one Area of Work",
+        "role": "feature",
+        "placement": "left"
+      },
+      {
+        "selector": "button[aria-label=\"Expand all\"]",
+        "label": "Expand every AoW",
+        "role": "feature",
+        "placement": "above"
+      },
+      {
+        "selector": "input[placeholder*=Search i]",
+        "label": "Search AoWs and KPIs",
+        "role": "feature",
+        "placement": "below"
+      }
+    ]
+  },
+  {
+    "id": "results-list",
+    "url": "/result/results-outlet/results-list",
+    "readySelector": "table.pr-table tbody tr td:nth-child(2)",
+    "clickTarget": "text=Update result",
+    "captionKey": "04-results-center",
+    "viewport": {
+      "width": 1280,
+      "height": 1000
+    },
+    "fullPage": false,
+    "annotations": [
+      {
+        "selector": "text=Update result",
+        "label": "Update result",
+        "role": "primary",
+        "placement": "below"
+      },
+      {
+        "selector": "input[placeholder*=Search i]",
+        "label": "Find a result",
+        "role": "feature",
+        "placement": "below"
+      },
+      {
+        "selector": "text=/^Filter$/i",
+        "label": "Filter by phase or status",
+        "role": "feature",
+        "placement": "below"
+      },
+      {
+        "selector": "text=/CSV/i",
+        "label": "Export the table",
+        "role": "feature",
+        "placement": "left"
+      }
+    ]
+  },
+  {
+    "id": "notifications-received",
+    "url": "/result/results-outlet/results-notifications/requests/received",
+    "readySelector": "app-notification-item",
+    "clickTarget": "app-notification-item:nth-of-type(1)",
+    "captionKey": "05-notifications",
+    "viewport": {
+      "width": 1280,
+      "height": 1800
+    },
+    "fullPage": false,
+    "annotations": [
+      {
+        "selector": "app-notification-item:nth-of-type(1)",
+        "label": "A pending request",
+        "role": "primary",
+        "placement": "above"
+      },
+      {
+        "selector": ".tabs >> nth=0",
+        "label": "Requests or Updates",
+        "role": "feature",
+        "placement": "right"
+      },
+      {
+        "selector": "app-notification-item:nth-of-type(1) .notification_content_actions_buttons",
+        "label": "Accept or decline",
+        "role": "feature",
+        "placement": "below"
+      }
+    ]
+  },
+  {
+    "id": "ipsr-innovation-list",
+    "url": "/ipsr/list/innovation-list",
+    "readySelector": "table.pr-table tbody tr td:nth-child(2)",
+    "clickTarget": "table.pr-table tbody tr:first-child a.notCenter",
+    "captionKey": "06-innovation-packages",
+    "annotations": [
+      {
+        "selector": "table.pr-table tbody tr:first-child a.notCenter",
+        "label": "Open a package",
+        "role": "primary",
+        "placement": "right"
+      },
+      {
+        "selector": "[role=\"search\"][aria-label=\"Innovation Packages filters\"]",
+        "label": "Filter the list",
+        "role": "feature",
+        "placement": "below"
+      },
+      {
+        "selector": "text=/^Download$/i",
+        "label": "Export the table",
+        "role": "feature",
+        "placement": "left"
+      }
+    ]
+  }
+]

@@ -226,13 +226,25 @@ const FIXTURE_ROWS_TALL: ResultToReview[] = Array.from({ length: 84 }, (_, i) =>
  *  `PhasesService.getNewPhases()`) keeps it. */
 const PHASE_CURRENT = { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, obj_portfolio: { id: 1 }, status: true, app_module_id: 1 } as any;
 
+/** `quick/bilateral-review-default-pending` (e89889bdf, 2026-09-14) made `'pending'` the page's own
+ *  default status filter. Any gate that measures over the WHOLE fixture has to opt back into the
+ *  full set, because `FIXTURE_ROWS` is 7 rows of which only 3 are pending. Seeded through the real
+ *  `?status=` contract (`parseStatusFilter` accepts `'all'`) so the URL path stays exercised. */
+const ALL_STATUSES = { status: 'all' } as const;
+
 /** Mounts the real page. Must run `TestBed.overrideComponent` BEFORE `cy.mount` compiles the
  *  component — same ordering `my-work-board.cy.ts` relies on (both statements are synchronous).
  *  `rows`/`centers` default to the AC-4 fixture; BRC-T-3 passes the 9-center fixture instead —
  *  same mount, different data, so the wiring under test (stubs, providers) stays identical. */
-function mountPage(fixture?: { rows: ResultToReview[]; centers: typeof FIXTURE_CENTERS }) {
+function mountPage(fixture?: { rows: ResultToReview[]; centers: typeof FIXTURE_CENTERS; queryParams?: Record<string, string> }) {
   const rows = fixture?.rows ?? FIXTURE_ROWS;
   const centers = fixture?.centers ?? FIXTURE_CENTERS;
+  // `quick/bilateral-review-default-pending` (e89889bdf, 2026-09-14) changed the page's own default
+  // from `status: 'all'` to `'pending'`. Tests that assert over the WHOLE fixture must now say so:
+  // FIXTURE_ROWS holds 7 rows of which only 3 are pending, so an un-seeded mount renders 3.
+  // Seeded through the real `?status=` query param (`parseStatusFilter` accepts `'all'`), not by
+  // poking the signal — the URL contract is the app's own supported path and stays under test.
+  const queryParams = fixture?.queryParams ?? {};
 
   TestBed.overrideComponent(BilateralReviewComponent, {
     remove: { imports: [ReportingProgramBandComponent, WhereToReportModalComponent, ResultReviewDrawerComponent] },
@@ -245,8 +257,8 @@ function mountPage(fixture?: { rows: ResultToReview[]; centers: typeof FIXTURE_C
         provide: ActivatedRoute,
         useValue: {
           paramMap: of(convertToParamMap({ entityId: 'SP02' })),
-          snapshot: { paramMap: convertToParamMap({ entityId: 'SP02' }), queryParamMap: convertToParamMap({}) },
-          queryParamMap: of(convertToParamMap({}))
+          snapshot: { paramMap: convertToParamMap({ entityId: 'SP02' }), queryParamMap: convertToParamMap(queryParams) },
+          queryParamMap: of(convertToParamMap(queryParams))
         }
       },
       { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
@@ -344,7 +356,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         // (`cy.viewport(840, 900)` → shaves ~15px off `documentElement.clientWidth`, unrelated to
         // any real regression). Pulled forward from T-4 per JB-10.
         cy.viewport(width, 2400);
-        mountPage();
+        mountPage({ queryParams: ALL_STATUSES });
         // Let the URL-hydrate effect's second CD pass settle (same reason the Jest spec runs a
         // second `detectChanges()`) before any geometry read.
         waitForLoad();
@@ -487,7 +499,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // first row action). "Centers chevron" is dropped — there is no defense left to defeat.
       it('AC-15: keyboard focus order is tabs → search → status control → KPI Pending → Clear filters → group toggler → first row action', () => {
         // Activate a filter first so "Clear filters" renders (BRP-R-5) and its position is provable.
-        cy.get('[data-testid="bilateral-review-chip-pending"]').click();
+        // Must be a filter `activeFilterCount()` still counts: since `quick/bilateral-review-default-pending`
+        // (e89889bdf) `'pending'` is the default and is NOT counted, so the pending chip activates
+        // nothing. `'approved'` counts and keeps two rows (r4/r5) in two groups, so the group
+        // toggler and the first row action this test orders against both survive the filter.
+        cy.get('[data-testid="bilateral-review-chip-approved"]').click();
 
         cy.document().should(doc => {
           const focusables = Array.from(doc.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(el => el.getClientRects().length > 0);
@@ -804,7 +820,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   describe('BRV-AC-3: below 900px the lock and the pin are inert', () => {
     beforeEach(() => {
       cy.viewport(840, 2400);
-      mountPage();
+      mountPage({ queryParams: ALL_STATUSES });
       waitForLoad();
       assertEffectiveWidth('840 (BRV-AC-3)', 840);
     });
@@ -880,6 +896,46 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     });
   });
 
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-6, BSR-AC-13) — the page-level
+  // counterpart of `bilateral-review-table.cy.ts`'s Gate 7 1000px case: same claim (the REAL
+  // `.overflow-x-auto` scroller inside a group card — never the `overflow-hidden` `<section>`,
+  // which can only ever pass that comparison as a tautology — shows no table overflow once DD-2's
+  // re-tuned colgroup widths [96, 192.5, 88, 116, 120, 184, 100, 100] are shipped), proved here
+  // through the REAL page (real toolbar/filter/KPI chrome, the real `BilateralReviewComponent`)
+  // instead of the isolated table harness. Skip-but-count collapsed cards (a collapsed card mounts
+  // no nested `<table>`/`.overflow-x-auto` at all) so the gate cannot pass vacuously over zero
+  // measured scrollers.
+  describe('Real scroller overflow at 1000px (BSR-AC-13, real page)', () => {
+    beforeEach(() => {
+      cy.viewport(1000, 900);
+      mountPage();
+      waitForLoad();
+      assertEffectiveWidth('1000 (real scroller, BSR-AC-13)', 1000);
+    });
+
+    it("every expanded group card's REAL .overflow-x-auto scroller — not the overflow-hidden section — shows no table overflow at 1000px", () => {
+      cy.get('[data-testid="bilateral-review-group-card"]').should('have.length.greaterThan', 0);
+      cy.get('[data-testid="bilateral-review-group-card"]').then($cards => {
+        let measured = 0;
+        Array.from($cards).forEach(card => {
+          // Skip-but-count: a collapsed card renders no nested table/scroller at all.
+          const scroller = card.querySelector('.overflow-x-auto') as HTMLElement | null;
+          if (!scroller) return;
+          const table = scroller.querySelector('table') as HTMLElement | null;
+          if (!table) return;
+          measured += 1;
+          expect(scroller.scrollWidth, `scroller scrollWidth(${scroller.scrollWidth}) <= clientWidth(${scroller.clientWidth}) at 1000px`).to.be.at.most(scroller.clientWidth);
+          expect(table.scrollWidth, `table scrollWidth(${table.scrollWidth}) <= scroller clientWidth(${scroller.clientWidth}) at 1000px`).to.be.at.most(scroller.clientWidth);
+        });
+        // Anti-vacuity: the AC-4 fixture's two project groups default-expand (`allExpanded`), so
+        // this must never be zero — a future default-collapse change would otherwise let this gate
+        // pass having measured nothing.
+        expect(measured, 'at least one real .overflow-x-auto scroller was actually measured').to.be.greaterThan(0);
+      });
+      assertNoBodyHorizontalOverflow('1000 (real scroller, BSR-AC-13)');
+    });
+  });
+
   // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2) — REWRITTEN: the center
   // chip strip (`bilateral-review-center-strip`, its chevron and its per-chip `aria-pressed`
   // toggle) is fully gone — T-1 folded center filtering into the Filter popover's owned checkbox
@@ -893,10 +949,17 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       // the disqualifier): this fixture's 9-row single group pushes the page past 900px tall,
       // which triggers a NATIVE vertical scrollbar and quietly shaves ~15px off
       // `documentElement.clientWidth` — an artifact of content height, unrelated to the wrap-clip
-      // regression this suite gates. 2400 keeps the vertical scrollbar out of it (BRH-T-1 attempt
-      // 2 harness-quirk fix — the BRH card architecture is taller still than the 1600 this module
-      // used before).
-      cy.viewport(840, 2400);
+      // regression this suite gates. 2400 kept the vertical scrollbar out of it before BSR-T-4;
+      // bumped to 2700 (BSR-T-4, execute-time fix). ⚠️ Corrected at BSR-T-6 (carried BSR-T-4
+      // advisory, non-gating): this viewport is 840 wide, which is BELOW the 900px `narrow()`
+      // threshold — every one of these 9 rows renders through the CARDS branch, not the wide
+      // `<table>`, so there is no SUBMITTED `<td>` here to blame. The real cause is the new
+      // `bilateral-review-card-source-row` line (BSR-T-4, the Source chip + reporter/placeholder
+      // pair) BSR-T-4 added to every card, which grows each of the 9 cards by ~13px and
+      // re-triggers the same vertical-scrollbar shave this comment already names. Measured, not
+      // assumed: `documentElement.clientWidth` dropped to 825 at 2400 once this task's rows
+      // landed; 2700 restores the full 840.
+      cy.viewport(840, 2700);
       mountPage({ rows: NINE_CENTERS_FIXTURE_ROWS, centers: NINE_CENTERS_FIXTURE_CENTERS });
       waitForLoad();
       assertEffectiveWidth('840 (nine-center fixture)', 840);
@@ -1124,6 +1187,19 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   // closeable by badge-only class changes) sits on top of the arithmetic. The 64px cap for THIS
   // ONE shape is re-based to 68px (measured 66.5 + 1.5px buffer, same convention the 50/44 caps
   // already use above their own measurements) rather than fighting a browser rendering floor.
+  //
+  // BSR-T-6 fixture enrichment (`design.md` DD-3, corrected at execute time). This fixture used to
+  // carry neither `reporter_name` nor `creation_method` on any of its three rows, so the SUBMITTED
+  // cell was measured only in its single-line, no-reporter shape and the SOURCE cell only in its
+  // placeholder form. `BSR-T-4`'s Reviewer established the SUBMITTED cell is two-line BY
+  // CONSTRUCTION regardless — the `@else` arm renders an `aria-hidden` dash at the SAME pinned
+  // `leading-[13px]` when `reporter_name` is absent — so this enrichment does not close an open
+  // hole in the caps below (DD-3's original "vacuous" framing is superseded). It IS still worth
+  // doing as anti-regression documentation: `rh1` now carries `creation_method: 'AI'` (the tallest
+  // SOURCE content, ≤22px — shorter than the SUBMITTED cell's own 28.75px of two date lines, so it
+  // cannot drive a row height at this column width) plus a `reporter_name`; `rh2`/`rh3` carry a
+  // `reporter_name` each so all three caps are proven against a REAL reporter line, not only the
+  // placeholder dash.
   describe('Row height gate (BRP-T-4, R-8/AC-8; re-based BRV-T-2, R-11)', () => {
     const ROW_HEIGHT_FIXTURE_ROWS: ResultToReview[] = [
       row({
@@ -1135,7 +1211,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           'A deliberately long result title that will not fit on one line at the table title column width and must wrap onto a second line under the line-clamp-2 rule',
         indicator_category: 'Capacity sharing for development',
         lead_center: 'CIP',
-        status_id: 5
+        status_id: 5,
+        // BSR-T-6: the tallest SOURCE content (the delegated AI badge) on the SAME row as the
+        // tallest Title shape — the worst-case combination for this fixture.
+        creation_method: 'AI',
+        reporter_name: 'Ana Pérez Rodríguez'
       }),
       row({
         id: 'rh2',
@@ -1145,7 +1225,9 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         result_title: 'Short title',
         indicator_category: '',
         lead_center: 'CIP',
-        status_id: 6
+        status_id: 6,
+        creation_method: 'MANUAL',
+        reporter_name: 'Carlos Méndez'
       }),
       // BRV-T-2 addition (R-11's third case): one-line title, WITH a caption.
       row({
@@ -1156,18 +1238,21 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         result_title: 'Another short title',
         indicator_category: 'Policy',
         lead_center: 'CIP',
-        status_id: 5
+        status_id: 5,
+        creation_method: 'EXTERNAL',
+        external_platform_code: 'STAR',
+        reporter_name: 'Beatriz Salinas'
       })
     ];
 
     beforeEach(() => {
       cy.viewport(1536, 900);
-      mountPage({ rows: ROW_HEIGHT_FIXTURE_ROWS, centers: FIXTURE_CENTERS });
+      mountPage({ rows: ROW_HEIGHT_FIXTURE_ROWS, centers: FIXTURE_CENTERS, queryParams: ALL_STATUSES });
       waitForLoad();
       assertEffectiveWidth('1536 (row-height fixture)', 1536);
     });
 
-    it('one-line-with-badge <= 50px, one-line-no-badge <= 44px, two-line-with-badge <= 68px (R-11 re-based, BRH-T-3 attempt 2 re-base)', () => {
+    it('one-line-with-badge <= 50px, one-line-no-badge <= 46px, two-line-with-badge <= 68px (R-11 re-based; no-badge re-based again for leading-snug)', () => {
       cy.get('[data-testid="bilateral-review-row-code"]')
         .should('have.length', 3)
         .then($codes => {
@@ -1190,10 +1275,137 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           measured.forEach(m => {
             // Two-line cap re-based 64 -> 68 (BRH-T-3 attempt 2): the caption became the type
             // badge pill, measured 66.5px at its tightest legible size — see the comment above.
-            const cap = m.isTwoLine ? 68 : m.hasCaption ? 50 : 44;
+            //
+            // One-line-no-badge re-based 44 -> 46 (2026-09-21). `52a497f4d`
+            // (`changes/bilateral-review-visual-polish`) switched the Alignment `toc_title` span
+            // from a fixed `leading-[17px]` to `leading-snug`. At `text-[13px]` that is
+            // 13 x 1.375 = 17.875px against the previous 17px, so every one-line row grew by
+            // exactly 0.875px and this shape measured 44.875. Deliberate typography, not a
+            // regression: R-11 is a 44px MINIMUM touch target, which 44.875 still satisfies —
+            // these caps are the density guard on top of it. Re-based measured + ~1.1px, the same
+            // convention the two caps above already use. If a future change pushes this past 46,
+            // measure before re-basing again: two consecutive re-bases in the same direction mean
+            // the density budget is actually being spent, not rounded.
+            const cap = m.isTwoLine ? 68 : m.hasCaption ? 50 : 46;
             const shape = `${m.isTwoLine ? 'two' : 'one'}-line${m.hasCaption ? ', with badge' : ', no badge'}`;
             expect(m.rowHeight, `row "${m.code}" (${shape}): height(${m.rowHeight.toFixed(1)}) <= ${cap}px`).to.be.at.most(cap);
           });
+        });
+    });
+
+    // BSR-T-6 anti-vacuity: proves the fixture enrichment above actually reached the DOM, so the
+    // caps asserted above are measured against real SUBMITTED-reporter and SOURCE-AI content, not
+    // silently ignored `row()` partials.
+    it('the enriched fixture actually renders a reporter on all three SUBMITTED cells and the AI badge on the SOURCE cell it was assigned to', () => {
+      cy.get('[data-testid="bilateral-review-row-submitted-reporter"]').should('have.length', 3);
+      cy.get('[data-testid="bilateral-review-row-submitted-reporter"]').each($reporter => {
+        expect($reporter.text().trim(), 'SUBMITTED reporter line is non-empty (not the em-dash placeholder)').to.not.equal('');
+        expect($reporter.text().trim()).to.not.equal('—');
+      });
+      cy.get('[data-testid="bilateral-review-row-source"]').should('have.length', 3);
+      // rh1 = AI, rh2 = MANUAL (pill "Manual entry"), rh3 = EXTERNAL+STAR (pill "Via API · STAR").
+      cy.get('[data-testid="bilateral-review-source-chip-ai"]').should('have.length', 1);
+      cy.get('[data-testid="bilateral-review-source-chip-pill"]').should('have.length', 2);
+      cy.get('[data-testid="bilateral-review-source-chip-pill"]').should($pills => {
+        const texts = Array.from($pills).map(p => p.textContent?.trim());
+        expect(texts.some(t => t?.includes('STAR')), `one pill shows the STAR platform code: ${JSON.stringify(texts)}`).to.be.true;
+      });
+    });
+  });
+
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-6, D9, requirements.md §7
+  // Accessibility "Chip contrast >= 4.5:1") — `cypress-axe` is not installed in this repo (module
+  // CLAUDE.md), and `requirements.md` §8 D9 substitutes a HITL pre-audit for that reason. But
+  // `cypress-axe` is not NEEDED to measure contrast: this reads the chip's own COMPUTED foreground
+  // and background colors and computes the WCAG relative-luminance ratio directly, which is
+  // strictly stronger than a manual eyeball and satisfies the same DoD line. Colors are painted
+  // onto a 1x1 canvas and read back as RGBA — this repo's tokens resolve to plain hex today
+  // (`--pr-status-submitted-fg`/`-bg` -> `--pr-color-blue-700`/`-100`, `colors.scss`), but the
+  // canvas round-trip is format-agnostic (rgb()/oklch()/anything `fillStyle` accepts), so this
+  // stays correct if a token is ever redefined in a different color space.
+  describe('Source chip contrast (D9 — computed, not eyeballed)', () => {
+    const CONTRAST_FIXTURE_ROWS: ResultToReview[] = [
+      row({ id: 'c1', project_id: 'p1', project_name: 'P1 - Alpha Project', result_code: 'BR-201', result_title: 'AI contrast row', lead_center: 'CIP', status_id: 5, creation_method: 'AI' }),
+      row({
+        id: 'c2',
+        project_id: 'p1',
+        project_name: 'P1 - Alpha Project',
+        result_code: 'BR-202',
+        result_title: 'Pill contrast row',
+        lead_center: 'CIP',
+        status_id: 5,
+        creation_method: 'EXTERNAL',
+        external_platform_code: 'STAR'
+      })
+    ];
+
+    /** Relative luminance / WCAG contrast ratio (https://www.w3.org/TR/WCAG21/#dfn-relative-luminance). */
+    function relativeLuminance([r, g, b]: [number, number, number]): number {
+      const [rs, gs, bs] = [r, g, b].map(c => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+    }
+
+    function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
+      const [l1, l2] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+      return (l1 + 0.05) / (l2 + 0.05);
+    }
+
+    /** Paint an arbitrary computed CSS color onto a 1x1 canvas and read back its RGB — the
+     *  recorded technique for a token that may resolve to `oklch()`: format-agnostic, since the
+     *  canvas 2D context itself normalizes whatever `fillStyle` accepts. */
+    function computedColorToRgba(win: Window, colorString: string): [number, number, number, number] {
+      const canvas = win.document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+      ctx.fillStyle = colorString;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+      return [r, g, b, a];
+    }
+
+    /** Foreground-on-background ratio of ONE element's OWN paint. Asserts the background alpha is
+     *  fully opaque first: a `display: contents` host or any wrapper reports `rgba(0, 0, 0, 0)`,
+     *  and a ratio computed against transparent black is a number that measures nothing (the
+     *  inherited BSR-T-6 draft did exactly that — 1.46:1 against the `<app-ai-provenance-notice>`
+     *  host — so this guard is what keeps the gate honest, not decoration). */
+    function ownContrast(el: HTMLElement, label: string): number {
+      const win = el.ownerDocument.defaultView as Window;
+      const style = win.getComputedStyle(el);
+      const [fr, fg, fb] = computedColorToRgba(win, style.color);
+      const [br, bg, bb, ba] = computedColorToRgba(win, style.backgroundColor);
+      expect(ba, `${label}: the measured element paints its OWN opaque background (alpha ${ba}/255, computed ${style.backgroundColor}) — not a transparent wrapper`).to.equal(255);
+      const ratio = contrastRatio([fr, fg, fb], [br, bg, bb]);
+      expect(ratio, `${label} contrast ${ratio.toFixed(2)}:1 (color ${style.color} on background ${style.backgroundColor}) >= 4.5:1 (D9)`).to.be.at.least(4.5);
+      return ratio;
+    }
+
+    beforeEach(() => {
+      cy.viewport(1536, 900);
+      mountPage({ rows: CONTRAST_FIXTURE_ROWS, centers: FIXTURE_CENTERS, queryParams: ALL_STATUSES });
+      waitForLoad();
+    });
+
+    it('the AI badge (info pair) and the neutral pill both measure >= 4.5:1 foreground-on-background', () => {
+      // The AI chip's testid sits on the `<app-ai-provenance-notice>` HOST, which is
+      // `:host { display: contents }` and paints nothing — the info pair lives on its inner
+      // `ai-provenance-badge` span (`bg-[var(--pr-status-submitted-bg)]` /
+      // `text-[var(--pr-status-submitted-fg)]`). Measure THAT surface.
+      cy.get('[data-testid="bilateral-review-source-chip-ai"] [data-testid="ai-provenance-badge"]')
+        .first()
+        .should($badge => {
+          ownContrast($badge[0] as HTMLElement, 'AI badge (info pair)');
+        });
+
+      // The neutral pill IS the painted span (`bg-[var(--pr-surface-app)]` /
+      // `text-[var(--pr-text-secondary)]`), so its own testid is the surface.
+      cy.get('[data-testid="bilateral-review-source-chip-pill"]')
+        .first()
+        .should($pill => {
+          ownContrast($pill[0] as HTMLElement, 'Neutral pill');
         });
     });
   });
@@ -1346,29 +1558,34 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
     // equivalent "6 columns in this mode" proof for a card is `columnCount()`'s OTHER remaining
     // consumer — every card's own `<colgroup>` (`colgroupTpl`) — so this asserts 6 `<col>` per card
     // instead.
-    it('BRV-AC-7: grouping by center in the GROUPED view hides the lead-center column — 6 headers and 6 <col> entries per card', () => {
+    // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-4, BSR-DD-2) — bumped 6->7:
+    // the SOURCE column is present in EVERY table mode (pushed OUTSIDE `showCenterColumn()`), so
+    // center-grouped mode gains one column even though Lead Center itself stays hidden.
+    it('BRV-AC-7: grouping by center in the GROUPED view hides the lead-center column — 7 headers and 7 <col> entries per card (BSR-DD-2: was 6, +1 for the always-present SOURCE column)', () => {
       byTestId('bilateral-review-group-mode-center').click();
       cy.get('[data-testid="bilateral-review-group-card"]')
         .first()
         .find('thead th')
         .should($ths => {
           const texts = Array.from($ths).map(th => th.textContent?.trim());
-          expect(texts.length, `6 headers once grouped by center: ${JSON.stringify(texts)}`).to.eq(6);
+          expect(texts.length, `7 headers once grouped by center: ${JSON.stringify(texts)}`).to.eq(7);
           expect(texts, `no "Lead center" header rendered: ${JSON.stringify(texts)}`).to.not.include('Lead center');
+          expect(texts, `Source header still renders: ${JSON.stringify(texts)}`).to.include('Source');
         });
-      cy.get('[data-testid="bilateral-review-group-card"]').first().find('colgroup col').should('have.length', 6);
+      cy.get('[data-testid="bilateral-review-group-card"]').first().find('colgroup col').should('have.length', 7);
       cy.get('[data-testid="bilateral-review-group-toggle"]').first().should('not.have.attr', 'colspan');
     });
 
-    it('BRV-AC-7b: the SAME grouping, but the FLAT view, keeps the lead-center column — 7 headers, 7 cells on a real row', () => {
+    it('BRV-AC-7b: the SAME grouping, but the FLAT view, keeps the lead-center column — 8 headers, 8 cells on a real row (BSR-DD-2: was 7, +1 for SOURCE)', () => {
       byTestId('bilateral-review-group-mode-center').click();
       cy.contains('[role="tab"]', 'All results').click();
       cy.get('[data-testid="bilateral-review-flat-table"] thead th').should($ths => {
         const texts = Array.from($ths).map(th => th.textContent?.trim());
-        expect(texts.length, `7 headers in the flat view even with group=center: ${JSON.stringify(texts)}`).to.eq(7);
+        expect(texts.length, `8 headers in the flat view even with group=center: ${JSON.stringify(texts)}`).to.eq(8);
         expect(texts, `"Lead center" header still renders: ${JSON.stringify(texts)}`).to.include('Lead center');
+        expect(texts, `Source header still renders: ${JSON.stringify(texts)}`).to.include('Source');
       });
-      cy.get('[data-testid="bilateral-review-flat-table"] tbody tr').first().find('td').should('have.length', 7);
+      cy.get('[data-testid="bilateral-review-flat-table"] tbody tr').first().find('td').should('have.length', 8);
     });
   });
 
@@ -1423,7 +1640,8 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
       cy.viewport(1536, 900);
       mountPage({
         rows: [row({ id: 'gh3', project_id: 'p1', project_name: LONG_NAME, result_code: 'BR-203', lead_center: 'CIP', status_id: 6 })],
-        centers: FIXTURE_CENTERS
+        centers: FIXTURE_CENTERS,
+        queryParams: ALL_STATUSES
       });
       waitForLoad();
 
@@ -1605,7 +1823,11 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
         waitForLoad();
         toolbarClearButtons().should('have.length', 0);
 
-        byTestId('bilateral-review-chip-pending').click();
+        // `quick/bilateral-review-default-pending` (e89889bdf) both made `'pending'` the default AND
+        // stopped counting it in `activeFilterCount()` — so clicking the pending chip no longer
+        // activates anything and Clear filters stays hidden. `'approved'` still counts, and the
+        // fixture has two approved rows (r4/r5, `status_id: 6`) so the page keeps rendering rows.
+        byTestId('bilateral-review-chip-approved').click();
         toolbarClearButtons().should('have.length', 1).and('contain.text', 'Clear filters');
       });
     });
@@ -1656,7 +1878,7 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
   describe('Narrow 375px (BRP-T-4, AC-12)', () => {
     beforeEach(() => {
       cy.viewport(375, 3000);
-      mountPage();
+      mountPage({ queryParams: ALL_STATUSES });
       waitForLoad();
       // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-1 attempt 2, BRH-R-11) — this
       // briefly passed 360 with a long note calling the 15px shave an unavoidable `min-h-screen`
@@ -1685,6 +1907,124 @@ describe('BilateralReviewComponent — Cypress CT (BRT-T-7)', () => {
           // a pixel-exact equality, since the toolbar carries its own horizontal padding.
           expect(searchWidth, `search width(${searchWidth.toFixed(1)}) >= 90% of toolbar width(${toolbarWidth.toFixed(1)})`).to.be.at.least(toolbarWidth * 0.9);
         });
+      });
+    });
+  });
+
+  // @akili-spec bilateral/review-list-source-and-reporter (BSR-T-6, BSR-AC-11, carried BSR-T-4
+  // advisory) — the describe above mounts the plain `FIXTURE_ROWS`, which carries neither
+  // `creation_method` nor `reporter_name` on any row, so the card's Source-chip/reporter line
+  // (`bilateral-review-card-source-row`, BSR-T-4) was only ever measured in its narrowest,
+  // placeholder form at 375px. Stress it with the same two shapes DD-2's chip-fit falsifier
+  // already covers at the table level (`bilateral-review-table.cy.ts` Gate 7): an `AI` row (the
+  // delegated APF badge, the widest SOURCE content with no `whitespace-nowrap` of its own) and an
+  // `('EXTERNAL','STAR')` row (the longest neutral-pill label) — both real shapes, not synthetic
+  // edge cases (design.md §13: 84 of 1505 live rows are the `UNKNOWN`+code shape, and every
+  // resolved-platform ingestion is now `EXTERNAL`+code).
+  const NARROW_375_AI_STRESS_ROWS: ResultToReview[] = FIXTURE_ROWS.map((r, i) => {
+    if (i === 0) return { ...r, creation_method: 'AI', reporter_name: 'Ana Pérez Rodríguez' };
+    if (i === 1) return { ...r, creation_method: 'EXTERNAL', external_platform_code: 'STAR', reporter_name: 'Carlos Méndez' };
+    return r;
+  });
+
+  describe('Narrow 375px — Source chip / reporter stress (BSR-T-6, BSR-AC-11)', () => {
+    beforeEach(() => {
+      cy.viewport(375, 3000);
+      mountPage({ rows: NARROW_375_AI_STRESS_ROWS, centers: FIXTURE_CENTERS, queryParams: ALL_STATUSES });
+      waitForLoad();
+      assertEffectiveWidth('375 narrow (Source/reporter stress)', 375);
+    });
+
+    afterEach(() => {
+      cy.document().then(doc => {
+        doc.querySelectorAll('[data-testid="ct-fail-input-style-375-chip"]').forEach(el => el.remove());
+      });
+    });
+
+    it('BSR-AC-11: an AI badge card and an EXTERNAL+STAR pill card render their Source chip and reporter with zero document horizontal overflow', () => {
+      cy.get('[data-testid="bilateral-review-card"]').should('have.length', NARROW_375_AI_STRESS_ROWS.length);
+
+      cy.get('[data-testid="bilateral-review-card"]')
+        .eq(0)
+        .within(() => {
+          cy.get('[data-testid="bilateral-review-source-chip-ai"]').should('exist');
+          cy.get('[data-testid="bilateral-review-card-reporter"]').should('contain.text', 'Ana Pérez Rodríguez');
+        });
+
+      cy.get('[data-testid="bilateral-review-card"]')
+        .eq(1)
+        .within(() => {
+          cy.get('[data-testid="bilateral-review-source-chip-pill"]').should('contain.text', 'STAR');
+          cy.get('[data-testid="bilateral-review-card-reporter"]').should('contain.text', 'Carlos Méndez');
+        });
+
+      assertNoBodyHorizontalOverflow('375 Source/reporter stress');
+    });
+
+    // Falsifier pair (task verification, MEASURED at execute time, 2026-09-21). The task's literal
+    // falsifier — "widen the chip to `whitespace-nowrap` with a 200px min-width, in the harness
+    // only, and the document gains horizontal overflow" — does NOT go red on this DOM, and the
+    // reason is a real guard, not a test defect: the card owns a `<span class="min-w-0 truncate
+    // max-w-full">` around the chip (BSR-T-4's narrow mirror of BSR-DD-2's cell-owned clip), and
+    // the reporter span is `min-w-0 truncate` too. Measured with a one-off geometry probe at 375px:
+    // chip wrapper scrollWidth 208 vs clientWidth 187 (the injection DID widen the chip and the
+    // wrapper clipped it), source-row 293/293 unchanged, `documentElement` 375/375 unchanged. Even
+    // with the wrapper guard, the reporter's shrink AND the group `<section overflow-hidden>` all
+    // defeated, a 200px chip reaches x = 356 < 375 — geometrically incapable of overflowing the
+    // document at this viewport. So, exactly as this suite's 1024px pair above does for the table,
+    // the falsifier is recorded as two cases: the guard absorbing the literal injection (GREEN,
+    // proving the guard is load-bearing), and a DETECTOR-FIRES case that defeats the guards the way
+    // a real regression would (deleting the wrapper class + a chip wider than the card) and reads
+    // the document overflow the gate exists to catch.
+    it('BSR-AC-11 guard absorbs it: the literal 200px nowrap chip is clipped by the card-owned truncate wrapper — chip wrapper overflows, the source row and the document do not', () => {
+      cy.document().then(doc => {
+        const style = doc.createElement('style');
+        style.setAttribute('data-testid', 'ct-fail-input-style-375-chip');
+        style.textContent =
+          '[data-testid="bilateral-review-source-chip-pill"], [data-testid="ai-provenance-badge"] { white-space: nowrap !important; min-width: 200px !important; }';
+        doc.head.appendChild(style);
+      });
+      cy.get('[data-testid="bilateral-review-card"]')
+        .eq(0)
+        .find('[data-testid="bilateral-review-card-source-row"]')
+        .should($row => {
+          const row = $row[0] as HTMLElement;
+          const wrapper = row.firstElementChild as HTMLElement;
+          expect(wrapper.scrollWidth, `injection took effect: chip wrapper scrollWidth(${wrapper.scrollWidth}) > clientWidth(${wrapper.clientWidth})`).to.be.greaterThan(wrapper.clientWidth);
+          expect(wrapper.scrollWidth, 'the forced chip genuinely dominates the wrapper (>= 200px)').to.be.at.least(200);
+          expect(row.scrollWidth, `guard holds: source row scrollWidth(${row.scrollWidth}) <= clientWidth(${row.clientWidth})`).to.be.at.most(row.clientWidth);
+        });
+      assertNoBodyHorizontalOverflow('375 Source/reporter stress — literal 200px falsifier absorbed by the card-owned guard');
+    });
+
+    // RED PROBE, recorded then inverted (same convention as the Chrome-height and 1024 DETECTOR
+    // cases): with the card-owned wrapper guard, the reporter's shrink and the `<section
+    // overflow-hidden>` clip all defeated — the shape of a regression that deletes the guard
+    // classes — a chip wider than the card pushes the document past the viewport, and the
+    // uninverted `assertNoBodyHorizontalOverflow('…')` gate fails with:
+    //   AssertionError: Timed out retrying after 10000ms: 375 Source/reporter stress — DETECTOR: documentElement.scrollWidth(755) <= clientWidth(360): expected 755 to be at most 360
+    // (recorded verbatim at execute time; the 360 is the ~15px vertical-scrollbar shave that the
+    // horizontal overflow itself triggers — the Gotcha in the module CLAUDE.md, symptom not cause).
+    it('DETECTOR FIRES (RED PROBE, recorded then inverted): with the card-owned guard and the section clip defeated, an over-wide Source chip reaches the document and the no-overflow gate reports it', () => {
+      cy.document().then(doc => {
+        const style = doc.createElement('style');
+        style.setAttribute('data-testid', 'ct-fail-input-style-375-chip');
+        style.textContent =
+          '[data-testid="bilateral-review-source-chip-pill"], [data-testid="ai-provenance-badge"] { white-space: nowrap !important; min-width: 600px !important; } ' +
+          '[data-testid="bilateral-review-card-source-row"] > span:first-child { min-width: 0 !important; flex-shrink: 0 !important; overflow: visible !important; max-width: none !important; } ' +
+          '[data-testid="bilateral-review-card-reporter"] { flex-shrink: 0 !important; min-width: max-content !important; } ' +
+          '[data-testid="bilateral-review-group-card"], [data-testid="bilateral-review-card"], .custom_scroll { overflow: visible !important; }';
+        doc.head.appendChild(style);
+      });
+      cy.document().should(doc => {
+        const de = doc.documentElement;
+        expect(
+          de.scrollWidth,
+          `DETECTOR: documentElement.scrollWidth(${de.scrollWidth}) > clientWidth(${de.clientWidth}) once the guards are defeated and the Source chip is forced past the card`
+        ).to.be.greaterThan(de.clientWidth);
+        // Anti-vacuity: the overflow must come from the injected chip (600px + card offset), not
+        // from the ~15px scrollbar shave alone.
+        expect(de.scrollWidth, 'the forced chip genuinely dominates the document width').to.be.at.least(600);
       });
     });
   });

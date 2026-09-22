@@ -1225,6 +1225,28 @@ describe('BilateralResultsListComponent', () => {
       resizer.click();
       expect(sortSpy).not.toHaveBeenCalled();
     });
+
+    it('swallows the phantom click the browser fires after a resize drag ends over the header, without swallowing a later unrelated click', () => {
+      const th = document.createElement('th');
+      th.getBoundingClientRect = jest.fn(() => ({ width: 280 } as DOMRect));
+
+      const sortSpy = jest.spyOn(component.table!, 'sort');
+
+      component.onResizeStart({ clientX: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent, titleColumn, th);
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
+      window.dispatchEvent(new MouseEvent('mouseup'));
+
+      // Stands in for the native click the browser synthesizes on <th> right after this drag's
+      // mouseup — this is the click that would otherwise reach PrSortableColumnDirective/sort().
+      const phantomClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(phantomClick);
+      expect(phantomClick.defaultPrevented).toBe(true);
+      expect(sortSpy).not.toHaveBeenCalled();
+
+      const laterUnrelatedClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.dispatchEvent(laterUnrelatedClick);
+      expect(laterUnrelatedClick.defaultPrevented).toBe(false);
+    });
   });
 
   describe('BGT-T-3: Guided tour instrumentation', () => {

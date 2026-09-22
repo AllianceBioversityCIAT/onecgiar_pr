@@ -48,7 +48,12 @@ export class BilateralApiService {
 
   PATCH_primaryAssignment(
     resultId: number | string,
-    body: { project_id: number; primary_science_program_id: number },
+    body: {
+      project_id: number;
+      primary_science_program_id: number;
+      /** P2-3760 — omitted when the reporter did not touch the Contribution field. */
+      contribution_percentage?: number;
+    },
   ) {
     return this.http.patch<any>(
       `${environment.apiBaseUrl}api/bilateral/center/primary-assignment/${resultId}`,

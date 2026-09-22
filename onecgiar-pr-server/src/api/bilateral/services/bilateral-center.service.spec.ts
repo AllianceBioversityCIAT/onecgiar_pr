@@ -502,11 +502,15 @@ describe('BilateralCenterService', () => {
       const clarisaRepo = module.get<ClarisaInitiativesRepository>(
         ClarisaInitiativesRepository,
       );
-      (clarisaRepo.findOne as jest.Mock).mockImplementation(({ where }: any) => {
-        if (where.official_code === 'SP01') return Promise.resolve({ id: 10, official_code: 'SP01' });
-        if (where.official_code === 'SP02') return Promise.resolve({ id: 20, official_code: 'SP02' });
-        return Promise.resolve(null);
-      });
+      (clarisaRepo.findOne as jest.Mock).mockImplementation(
+        ({ where }: any) => {
+          if (where.official_code === 'SP01')
+            return Promise.resolve({ id: 10, official_code: 'SP01' });
+          if (where.official_code === 'SP02')
+            return Promise.resolve({ id: 20, official_code: 'SP02' });
+          return Promise.resolve(null);
+        },
+      );
 
       const shareRepo = module.get<ShareResultRequestRepository>(
         ShareResultRequestRepository,
@@ -1391,7 +1395,7 @@ describe('BilateralCenterService', () => {
         }),
       );
 
-      return { initiativeRepository };
+      return { initiativeRepository, projectRepository };
     };
 
     it('stores the internal CLARISA initiative id, not the W3 project-mapping id', async () => {
@@ -1425,6 +1429,91 @@ describe('BilateralCenterService', () => {
       expect(response.response).toEqual(
         expect.objectContaining({ primaryScienceProgramId: 701 }),
       );
+    });
+
+    // P2-3760 — the Contribution % the bilateral form now asks for (P2-3352 § 6).
+    describe('contribution percentage', () => {
+      const withCatalogue = () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          editingResult,
+        );
+        (
+          bilateralProjectsService.getProjectsByCenter as jest.Mock
+        ).mockResolvedValue({
+          projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+        });
+        (
+          module.get<ClarisaInitiativesRepository>(
+            ClarisaInitiativesRepository,
+          ) as any
+        ).findOne.mockResolvedValue({
+          id: 404,
+          official_code: 'SP04',
+          active: true,
+        });
+      };
+
+      it('persists it on the newly created lead row, with two decimals', async () => {
+        withCatalogue();
+        const { projectRepository } = configureTransaction();
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+          contribution_percentage: 42.5,
+        });
+
+        expect(projectRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            project_id: 20,
+            contribution_percentage: '42.50',
+          }),
+        );
+      });
+
+      // An older client does not send the key. If the write went through anyway it would blank a
+      // stored percentage on every project change — the compatibility trap this guards.
+      it('does not touch the stored value when the client omits it', async () => {
+        withCatalogue();
+        const { projectRepository } = configureTransaction();
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        const savedRow = projectRepository.save.mock.calls[0][0];
+        expect(savedRow).not.toHaveProperty('contribution_percentage');
+        for (const call of projectRepository.update.mock.calls) {
+          expect(call[1]).not.toHaveProperty('contribution_percentage');
+        }
+      });
+
+      it('updates the percentage alone when the lead row is already the selected project', async () => {
+        withCatalogue();
+        const { projectRepository } = configureTransaction();
+        projectRepository.find.mockResolvedValue([
+          { id: 9, project_id: 20, is_lead: true, is_active: true },
+        ]);
+        projectRepository.findOne.mockResolvedValue({
+          id: 9,
+          project_id: 20,
+          is_lead: true,
+          is_active: true,
+        });
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+          contribution_percentage: 75,
+        });
+
+        expect(projectRepository.save).not.toHaveBeenCalled();
+        expect(projectRepository.update).toHaveBeenCalledWith(
+          9,
+          expect.objectContaining({ contribution_percentage: '75.00' }),
+        );
+      });
     });
 
     it('fails before opening a transaction when the mapped program is absent from CLARISA', async () => {

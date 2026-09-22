@@ -107,6 +107,8 @@ describe('BilateralResultCreatorComponent', () => {
       resultDacSubScores: signal({}) as any,
       resultInitiativeId: signal(null) as any,
       resultLeadCenterId: signal(null) as any,
+      // CLARISA code of the lead centre — what decides whether this user may edit at all.
+      resultLeadCenterCode: signal(null) as any,
       resultContributingCenterIds: signal([]) as any,
       resultProjectId: signal(null) as any,
       resultContributingProjectIds: signal([]) as any,
@@ -135,6 +137,7 @@ describe('BilateralResultCreatorComponent', () => {
 
     autoSaveService = {
       fieldStatus: signal({}),
+      openSection: signal<string | null>(null),
       hasPendingSaves: signal(false),
       globalSaveState: signal('idle'),
       setResultId: jest.fn(),
@@ -157,8 +160,39 @@ describe('BilateralResultCreatorComponent', () => {
       reset: jest.fn(),
     };
 
+    /**
+     * `readOnly` and `isAdmin` are signal-backed getter/setter pairs on the real service
+     * (`roles.service.ts:22-67`) — plain booleans here would make the effect that reads them
+     * non-reactive, and a test could then pass or fail for a reason production does not have.
+     * `readOnly` starts TRUE: that is the state every non-admin arrives in.
+     */
+    const isAdminSignal = signal(false);
+    const readOnlySignal = signal(true);
+    const rolesVersionSignal = signal(0);
     rolesService = {
       getMyCenters: jest.fn().mockReturnValue([]),
+      // `roles` is a plain property on the real service; this counter is what makes anything
+      // derived from it react when the payload finally lands.
+      get rolesVersion() {
+        return rolesVersionSignal();
+      },
+      /** Test helper: the roles GET resolving. */
+      publishRoles(centers: unknown[]) {
+        this.getMyCenters.mockReturnValue(centers);
+        rolesVersionSignal.update((v: number) => v + 1);
+      },
+      get isAdmin() {
+        return isAdminSignal();
+      },
+      set isAdmin(value: boolean) {
+        isAdminSignal.set(value);
+      },
+      get readOnly() {
+        return readOnlySignal();
+      },
+      set readOnly(value: boolean) {
+        readOnlySignal.set(value);
+      },
     };
 
     centersService = {
@@ -1204,6 +1238,113 @@ describe('BilateralResultCreatorComponent', () => {
       component.openSectionName.set('general-info');
       await component.moveSection(1);
       expect(autoSaveService.flush).not.toHaveBeenCalled();
+    });
+  });
+  /**
+   * The GLOBAL read-only flag (`RolesService.readOnly`) is what every custom-field reads before it
+   * draws its control (`pr-multi-select.component.html:16`, and the same line in pr-input,
+   * pr-select, pr-textarea…). It starts TRUE for anyone who is not an application admin and W1/W2
+   * only lowers it for a member of the result's INITIATIVE — a path bilateral never walks. The
+   * measured consequence on prtest result 9553: a Center User of ILRI saw 6 `app-pr-input` hosts
+   * and 0 `<input>`, on a form the server would have accepted every write for.
+   *
+   * W3 ownership is the LEAD CENTRE, the same question `validationCenterPermissions` asks
+   * (`role_by_user.role = 9` on `leadCenter.code`).
+   */
+  describe('global read-only flag for a Center User (W3 ownership)', () => {
+    const ILRI = { center_id: 'CENTER-12', center_acronym: 'ILRI', role_id: 9 };
+    const OTHER_CENTER = { center_id: 'CENTER-03', center_acronym: 'CIAT', role_id: 9 };
+
+    function enterEditor(id = 42): void {
+      component.isCreating.set(false);
+      component.resultId.set(id);
+      fixture.detectChanges();
+    }
+
+    it('unlocks the form for the Center User of the lead centre while the result is in Editing', () => {
+      rolesService.getMyCenters.mockReturnValue([ILRI]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+      TestBed.flushEffects();
+
+      expect(component.isCenterUserOfLeadCenter()).toBe(true);
+      expect(rolesService.readOnly).toBe(false);
+    });
+
+    // Control negative: the instrument must be able to report the opposite, and it must report it
+    // for exactly the case the server would refuse with a 403.
+    it('keeps the form locked for a Center User of a DIFFERENT centre', () => {
+      rolesService.getMyCenters.mockReturnValue([OTHER_CENTER]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+      TestBed.flushEffects();
+
+      expect(component.isCenterUserOfLeadCenter()).toBe(false);
+      expect(rolesService.readOnly).toBe(true);
+    });
+
+    it('keeps the form locked once the result leaves Editing, even for the lead centre user', () => {
+      rolesService.getMyCenters.mockReturnValue([ILRI]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      creationService.isEditableByCenterUser.set(false);
+      enterEditor();
+      TestBed.flushEffects();
+
+      expect(rolesService.readOnly).toBe(true);
+    });
+
+    it('leaves an application admin editable regardless of centre membership', () => {
+      rolesService.isAdmin = true;
+      rolesService.getMyCenters.mockReturnValue([]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      enterEditor();
+      TestBed.flushEffects();
+
+      expect(rolesService.readOnly).toBe(false);
+    });
+
+    // The flag is global and survives navigation: leaving it lowered would hand the next W1/W2
+    // screen an edit permission granted for a bilateral centre.
+    it('restores the application default on destroy', () => {
+      rolesService.getMyCenters.mockReturnValue([ILRI]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+      TestBed.flushEffects();
+      expect(rolesService.readOnly).toBe(false);
+
+      component.ngOnDestroy();
+
+      expect(rolesService.readOnly).toBe(true);
+    });
+
+    // The roles GET can resolve AFTER the result detail on a cold start. Without a reactive read the
+    // computed caches the empty list it saw first and the Center User stays locked for the visit.
+    it('unlocks when the roles payload arrives AFTER the result', () => {
+      rolesService.getMyCenters.mockReturnValue([]);
+      creationService.resultLeadCenterCode.set('CENTER-12');
+      creationService.isEditableByCenterUser.set(true);
+      enterEditor();
+      TestBed.flushEffects();
+      expect(rolesService.readOnly).toBe(true);
+
+      rolesService.publishRoles([ILRI]);
+      TestBed.flushEffects();
+
+      expect(rolesService.readOnly).toBe(false);
+    });
+
+    // While the wizard runs there is no loaded result, so the route centre is the only thing that
+    // says which centre this user is reporting for.
+    it('falls back to the route centre acronym while no result is loaded', () => {
+      rolesService.getMyCenters.mockReturnValue([ILRI]);
+      creationService.resultLeadCenterCode.set(null);
+      TestBed.inject(BilateralContextService).setCenter('ILRI', 'International Livestock Research Institute');
+      fixture.detectChanges();
+
+      expect(component.isCenterUserOfLeadCenter()).toBe(true);
     });
   });
 });
