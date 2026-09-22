@@ -19,7 +19,7 @@
 | Branch contains `performance-refactor` | ✅ after fast-forward |
 | Env files in worktree | ✅ copied |
 | Migrations | none planned |
-| BIL-RTE-T-0 (HITL) | ⏳ pending with the owner — blocks T-2 and T-5 |
+| BIL-RTE-T-0 (HITL) | Check 2 observed (prtest, 2026-09-22, owner): `clarisa_portfolios` = 1 (null acronym, 2016) · 2 P22 2022 · 3 P25 2025 · 4 (null acronym, null start). The owner adds that P25 runs to 2030. **P-7 verified**: DD-6 (`start_date ≥ 2025`) stands, and portfolio 4 with a null start counts as false. Checks 1 and 3: `not observed` (owner decision, 2026-09-22). Check 3 only sized the R-9 impact for the ticket comment. Check 1 only decides whether the ticket may call P-2 a live regression, and T-2 keeps the fix either way. P-2 stays `assumed`, and the ticket describes it as a hardening, not a regression. T-2 and T-5 are unblocked. |
 | BIL-RTE-OQ-1 | default (any linked SP may decide) assumed until the owner answers |
 
 ## Task Execution History
@@ -144,6 +144,100 @@
 - Recorded gap: "must NOT show the chip" and the non-admin "Approve stays enabled" rest on code-path reasoning, since the chip sits inside `@if (canEditDataStandards())` (html:635-641) and the value can't change. There is no rendered drawer mount. T-9 HITL checks it in prtest.
 - Requirements covered: BIL-RTE-R-1.a, R-1.b, R-1 (inspect ≠ unsaved), R-6.b (client).
 - Budget: 2 review rounds against a budget of 1 for T-7. Recorded; tripwire not treated as tripped (same cause as T-4: a second evidence round, no scope growth).
+
+### BIL-RTE-T-3 — Enforce the ToC and Decision rules — **PASS**
+
+**Owner decision (2026-09-22):** the item-initiative question (from the T-4 advisory) takes the simplest check that covers the need. This is DD-7, written into `design.md` §5.1 and §12 and into `tasks.md` T-3 before the Implementer was spawned.
+
+**Attempt 1** (2026-09-22, effort high, skills `nestjs-expert`, `tdd`)
+- Files:
+  - `results.service.ts`
+    - `BilateralAccessService` is injected.
+    - `reviewBilateralResult` calls `assertDecision(result, 'review-decision', user)` inside the transaction, before the status and justification checks.
+    - `updateBilateralResultTocMetadata` calls `assertTocWrite(result, initiative_id, 'toc-metadata', user)` in place of the old validator, then the new `_assertTocItemsMatchProgram` (DD-7).
+    - The catch blocks translate `ForbiddenException`.
+  - `bilateral-access.service.ts` + spec: a public `isAdmin(user)`, with 3 tests.
+  - `result.spec.ts`: 4 ToC/DD-7 cases, "non-member approves → 403", and the REJECT-without-justification test updated.
+- Implementer verification:
+  - Red: 7 failed / 106.
+  - Green: `result.spec|bilateral-access|results-toc-results` 13 suites / 362 tests.
+  - eslint and tsc clean.
+- Not Done (verbatim): "`_validateBilateralResultForUpdate` was **not deleted** — it still has 3 live callers outside this task's two named endpoints (`updateBilateralResultReview`/general-info, `updateBilateralResultTitle`, and a DAC-tag update method). The task's DoD phrasing is conditional ('removed **or has zero callers**'); since callers remain, the validator stays, per scope discipline."
+  - Leader adjudication: the DoD is conditional, and the remaining callers are Center writes that T-2 replaces. **Forward pointer → T-2:** delete the validator once general-info, title and DAC-tags use `assertCenterWrite`.
+- Reviewer: **FAIL** (verbatim, condensed only where marked)
+
+> 1. **Discovered Issue:** The new required constructor param breaks bootstrap for two modules. Only `ResultsModule` provides `BilateralAccessService` (`results.module.ts:232`). `ResultsService` is also declared in its own right in `DeleteRecoverDataModule` (`delete-recover-data.module.ts:170`, imported by `app.module.ts:101`) and in `ResultsKnowledgeProductsModule` (`results-knowledge-products.module.ts:99`). Neither provides `BilateralAccessService` or imports a module that exports it. Nest resolves a provider's dependencies inside the module that declares it, so startup will throw `UnknownDependenciesException`. This is the outage from 3 Sep 2026 again: `result-innovation-merge-split.module.ts:5-22` records the same failure. The Jest runs cannot catch it. The code comment at `results.service.ts:207-209` is wrong.
+>    - **Violated Rule:** `tasks.md` §BIL-RTE-T-3 Consumers; the reviewer contract's Stability & Integrity check (the application must boot); `design.md` DD-1.
+>    - **Remediation:** follow the `result-innovation-merge-split.module.ts` pattern: add a `BilateralAccessModule`, import it in the three modules, check for a cycle (no forwardRef), fix the comment, and prove it by booting the app. Jest green does not count.
+> 2. **Discovered Issue:** Falsifier bullet 4 ("A program user approves at status 5 → 6") is not asserted. The only approve test (`result.spec.ts:1758-1789`) checks only `status === OK` and the message. `newStatusId` at `results.service.ts:4109` is never assigned (older than this task).
+>    - **Violated Rule:** `tasks.md` §BIL-RTE-T-3 Falsifier bullet 4 and DoD; `requirements.md` R-6.b.
+>    - **Remediation:** assert `manager.update` was called with `(Result, { id: 100 }, objectContaining({ status_id: 6 }))`, and that `assertDecision` was called.
+> 3. **Discovered Issue:** The seam tests for bullets 1 and 3 mock the helper to reject no matter what it is passed. No test asserts the arguments to `assertTocWrite` or `assertDecision`.
+>    - **Violated Rule:** `tasks.md` §BIL-RTE-T-3 Falsifier bullets 1 and 3; `design.md` §10 (wiring); reviewer contract §3.
+>    - **Remediation:** assert `toHaveBeenCalledWith(objectContaining({ id: 100, status_id: 5 }), SP_X, 'toc-metadata', userTest)` and `(objectContaining({ id: 100 }), 'review-decision', userTest)`, and add an allow-path test for each.
+> 4. **Discovered Issue:** DD-7 adds an extra DB query on every `toc-metadata` save. `isAdmin(user)` at `results.service.ts:5240` repeats `isUserAdmin`, and the "reused" comment is wrong.
+>    - **Violated Rule:** `design.md` §12 DD-7 Consequences ("no extra query"); §8 ("At most two indexed reads per guarded write").
+>    - **Remediation:** run the in-memory loop first and call `isAdmin` only on a mismatch, or have `assertTocWrite` apply DD-7 after its own admin short-circuit.
+>
+> Adjudication highlights: DD-7 cannot be bypassed within its wording (Number() coercion; null and undefined skipped; 0, "" and NaN fail closed; runs before any write). The ForbiddenException translation is faithful. Behaviour changes that follow from the ordering:
+> - a non-member's reject without justification → 403 (was 400);
+> - a non-member at status ≠ 5 → 403 (was 409);
+> - a reject without justification on a missing result → 400 "not found" (was 400 "Justification is required").
+>
+> ADVISORY:
+> - RISK (highest): a residual R-9 bypass. `_updatePlannedTocResult` (`results-toc-results.service.ts:2533`) updates by `result_toc_result_id` alone. An SP-Y member can send SP X's row id with `initiative_id` omitted, and the row is overwritten and reassigned; a row of another result can be targeted too. `_handleIndicators` was not audited. → **Leader action:** folded into a DD-7 amendment under the owner's "simplest check that covers the need" mandate (design §12, tasks T-3), and carried into attempt 2.
+> - RISK/OBSERVABILITY: the DD-7 403 skips `_denyForbidden` (no warn log, and the message is not in the §4.1 form). → carried into attempt 2 (the amendment requires the helper deny path).
+> - RELIABILITY: a non-array `result_toc_results` gives a 500. An `Array.isArray` guard returning 400 would be cleaner.
+> - RESILIENCE: the membership reads run outside the transaction's connection (minor; G-1).
+> - READABILITY: remove the stale "reused" wording.
+
+**Attempt 2** (2026-09-22, effort xhigh)
+- Changes:
+  - New `bilateral-access.module.ts`, imported by `ResultsModule`, `DeleteRecoverDataModule` and `ResultsKnowledgeProductsModule`, with no forwardRef.
+  - Approve test asserts `status_id: 6`. Exact argument assertions on `assertTocWrite` and `assertDecision` for the deny and allow paths.
+  - Public `isAdmin` removed. DD-7 now lives inside `assertTocWrite`, after its admin short-circuit.
+  - DD-7 amendment: row ownership (one `find` on the payload's row ids) and `results_id` mismatch (in memory). All go through `_denyForbidden` with rule `'toc'`.
+  - An `Array.isArray` guard returns 400.
+  - The `_handleIndicators` audit led the Leader to add the `results_id` clause to the DD-7 amendment (design §12, tasks T-3) before review.
+- Boot proof: `npm run start:dev` mapped every route, including `/api/manage-data` and `/api/results/results-knowledge-products`, and logged "Nest application successfully started". The EADDRINUSE on 3400 came after that, from another local instance. No `UnknownDependenciesException`.
+- Implementer verification: jest `result.spec|bilateral-access|results-toc-results|delete-recover-data|results-knowledge-products` 21 suites / 508 tests. eslint and tsc clean.
+- Reviewer: **FAIL** (verbatim)
+
+> 1. **Discovered Issue:** The new cross-result check runs before the status check. In `bilateral-access.service.ts`, `assertTocWrite` evaluates `_itemNamesAnotherResult` (diff lines 587-593) ahead of `_isPendingReview` (595-599). So a non-admin at status 1, 3 or 8 whose payload carries a mismatched `results_id` gets 403 instead of the 409 the spec keeps. Nothing is written either way, so the order buys no security: it only saves one comparison in memory, because the status check is in-memory too. It also makes the rule inconsistent with itself, since the other two DD-7 checks run after the status check and give 409. The only accepted exception to "409 first" is the identity-less call (a T-1 forward pointer).
+>    - **Violated Rule:** `design.md` §5.1, ToC write row ("409 if status ≠ 5 (kept from today); 403 otherwise"); `tasks.md` §BIL-RTE-T-3 Description ("keeping the 409 for a non-admin at status ≠ 5").
+>    - **Remediation Suggestion:** move the `results_id` check to just after the status check and before the `Promise.all` membership reads. Add a helper test: a non-admin at status 1 with `results_id: RESULT_ID + 1` → `ConflictException`. Fix the doc comment at diff lines 555-557.
+>
+> Reviewer confirmed: issues 1–4 from attempt 1 are closed (Nest resolves DI before "successfully started", so the boot proof holds). The owner-null rule matches DD-4. `Number()` coercion is consistent and fails closed. Every check runs before any write, on every traced write path. The duplicated repositories are stateless.
+>
+> ADVISORY:
+> - RISK: `BilateralAccessModule` also exports `RoleByUserRepository` and `ResultByInitiativesRepository`, which leak through `ResultsModule`'s re-export. Export only the service.
+> - RELIABILITY: row ownership keeps `0` and `""` as ids. `updateTocResultPartial:2292` treats a falsy id as a new row, so a drawer sending `0` would get a false 403. Skip falsy ids.
+> - READABILITY: several comments narrate the rework history. Trim them.
+
+**Attempt 3** (2026-09-22, effort xhigh)
+- Changes:
+  - `assertTocWrite` order is admin → user-id guard → status (409) → `results_id` → membership reads → item initiative → row ownership. New test: a non-admin at status 1 with a mismatched `results_id` gets `ConflictException` and no repository call.
+  - `BilateralAccessModule` exports only `BilateralAccessService`. A grep shows every importer declares the repositories itself.
+  - Row ownership skips falsy row ids, as `updateTocResultPartial` does. New test.
+  - Rework-history comments trimmed from production code.
+- Implementer verification:
+  - jest `result.spec|bilateral-access|results-toc-results|delete-recover-data|results-knowledge-products`: 21 suites / 510 tests pass.
+  - eslint and tsc clean.
+  - Boot `PORT=3411 npm run start:dev`: "Nest application successfully started", then "Application is running", with no DI errors.
+- Environment note: the Implementer stopped its server with `pkill -f "nest start --watch"`, which matches any such process on the machine. The other local instance on 3400 was still listening afterwards.
+- Reviewer: **PASS**. "The attempt-2 issue is closed … a non-admin at status ≠ 5 gets 409 before any DD-7 check can deny, as §5.1 requires … All three advisories were applied without regressions."
+- ADVISORY (recorded, not gating): READABILITY. Some "rework attempt / Reviewer FAIL #n" comments remain in the spec files (`result.spec.ts`, `bilateral-access.service.spec.ts`).
+- Behaviour changes recorded, following from the §5.1 ordering (for the P2-3794 comment):
+  - A non-member rejecting without justification now gets 403 (was 400).
+  - A non-member on `review-decision` at status ≠ 5 now gets 403 (was 409).
+  - A reject on a missing result returns 400 "not found".
+- Requirements covered: BIL-RTE-R-3.a (toc-metadata and review-decision), R-5, R-5.a, R-5.b, R-6, R-6.a, R-6.b (server), DD-1, DD-7 and its amendment (R-9 protection against foreign rows and results).
+- Budget: 3 review rounds against a budget of 2 for T-3. Recorded. The tripwire is not treated as tripped: the third round came from the owner-mandated DD-7 amendment (added scope), not from repeated failure on the same issue.
+
+**Forward pointers:**
+- → T-2: delete `_validateBilateralResultForUpdate` once general-info, title and DAC-tags use `assertCenterWrite`, because they are its last 3 callers. Import `BilateralAccessModule`, never the service alone, in any module that declares `ResultsService`.
+- → T-9 HITL: in prtest, try an SP-Y reviewer saving a ToC with an SP-X `result_toc_result_id` (expect 403), and approve/reject by a non-member.
+- → P2-3794 comment: the pre-existing `newStatusId` at `results.service.ts:~4109` is never assigned, so `response.status` is undefined on review-decision. Out of scope, not fixed.
 
 ## Constitution Impact: BIL-RTE-T-1
 

@@ -105,7 +105,7 @@ A single injectable exposes three decisions. Each takes the loaded result and th
 | Decision | Allow when | Otherwise |
 |---|---|---|
 | **Center write** | the user is admin, **or** status ≠ 5 | 403 |
-| **ToC write** | admin; **or** status = 5 **and** the user holds any active role on the payload's initiative **and** that initiative is actively linked to the result | 409 if status ≠ 5 (kept from today); 403 otherwise |
+| **ToC write** | admin; **or** status = 5 **and** the user holds any active role on the payload's initiative **and** that initiative is actively linked to the result **and** every payload item that names an `initiative_id` names that same initiative (DD-7) | 409 if status ≠ 5 (kept from today); 403 otherwise |
 | **Decision** | admin, **or** the user holds any active role on any SP actively linked to the result | 403 |
 
 - **Center write deliberately checks only status 5** (DD-2, scope). It does not turn into "only 1/8". It never checks Center ownership, because that is not asked for and would be a new rule.
@@ -253,6 +253,13 @@ n/a.
   - Acronym list (`'P25'`): rejected, because each future portfolio would need a code change.
   - `portfolio_id ≥ 3`: rejected, because it depends on ids.
 - **Consequences:** Depends on P-7 (assumed until T-0).
+
+### BIL-RTE-DD-7 — ToC items must name the saved program
+- **Context:** T-4 Reviewer advisory. The ToC rule checked only the top-level `initiative_id`, and DD-4 scopes deactivation to the payload items' initiatives too. So a contributor could list the owner's program in an item and deactivate the owner's rows.
+- **Decision (owner, 2026-09-22 — the simplest check that closes it):** for a non-admin, every payload item that sets `initiative_id` must equal the top-level `initiative_id`; otherwise 403 before any write. Admins are not restricted.
+- **Amendment (2026-09-22, T-3 review):** `_updatePlannedTocResult` updates by `result_toc_result_id` alone, so an item could carry another program's (or another result's) row id with no `initiative_id`. For a non-admin, every item that sets `result_toc_result_id` must also point at an active row of **this result** whose `initiative_ids` is the saved program (or null only when the saved program is the owner, per DD-4); otherwise 403. The check is one read of the payload's row ids and is skipped when no item carries an id. Likewise, an item that sets `results_id` to anything other than this result is a 403: `saveIndicatorsPrimarySubmitter` resolves its row by the client's `results_id` (in memory, no query). The DD-7 403 goes through the helper's deny path, so it logs like every other 403 (§9).
+- **Alternatives:** check membership per item (rejected: more queries, same outcome for the reviewer flow); ignore the gap (rejected: breaks R-9).
+- **Consequences:** Legitimate reviewer saves are unaffected, since they only edit their own program. An in-memory loop, plus one read only when items carry row ids. The admin read is not repeated.
 
 ## 13. Open Gaps & Follow-ups
 

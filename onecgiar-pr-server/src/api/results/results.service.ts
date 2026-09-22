@@ -7,6 +7,7 @@ import {
   Optional,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DataSource, In, IsNull } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -148,6 +149,7 @@ import { CreateTocShareResult } from './share-result-request/dto/create-toc-shar
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
 import { ShareResultRequest } from './share-result-request/entities/share-result-request.entity';
+import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
@@ -202,6 +204,12 @@ export class ResultsService {
     private readonly _resultDeletionAuditService: ResultDeletionAuditService,
     private readonly _dataSource: DataSource,
     private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
+    // design §5.1, DD-1 — the access helper for the bilateral review-time decisions (ToC write,
+    // Decision). Required (not @Optional()): this class is declared directly in `ResultsModule`,
+    // `DeleteRecoverDataModule` and `ResultsKnowledgeProductsModule`, all of which import
+    // `BilateralAccessModule` (`bilateral-access/bilateral-access.module.ts`), which provides and
+    // exports this service — that's what keeps a required param here bootstrap-safe.
+    private readonly _bilateralAccessService: BilateralAccessService,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
@@ -4031,17 +4039,6 @@ export class ResultsService {
         };
       }
 
-      if (
-        reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
-        !reviewDecisionDto.justification?.trim()
-      ) {
-        return {
-          response: {},
-          message: 'Justification is required when decision is REJECT',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
       await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
@@ -4053,6 +4050,24 @@ export class ResultsService {
 
         if (!result) {
           throw new BadRequestException('Bilateral result not found');
+        }
+
+        // BIL-RTE-T-3 (design §5.1, R-6) — the Decision rule runs before the existing
+        // status/justification checks below (task description). Admin, or the caller holds an
+        // active role on any SP linked to the result; anyone else gets 403.
+        await this._bilateralAccessService.assertDecision(
+          result,
+          'review-decision',
+          user,
+        );
+
+        if (
+          reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
+          !reviewDecisionDto.justification?.trim()
+        ) {
+          throw new BadRequestException(
+            'Justification is required when decision is REJECT',
+          );
         }
 
         const currentStatusId = Number(result.status_id);
@@ -4158,7 +4173,8 @@ export class ResultsService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
-        error instanceof ConflictException
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException
       ) {
         return {
           response: {},
@@ -5194,6 +5210,21 @@ export class ResultsService {
         };
       }
 
+      // A malformed `result_toc_results` (not an array) would otherwise reach the DD-7 loop
+      // inside `assertTocWrite` and throw a raw TypeError, surfacing as an unhandled 500. This is
+      // client input validation, not an authorization decision, so it's a 400 before the helper
+      // is ever called.
+      if (
+        updateTocMetadataDto.tocMetadata?.result_toc_results !== undefined &&
+        !Array.isArray(updateTocMetadataDto.tocMetadata.result_toc_results)
+      ) {
+        return {
+          response: {},
+          message: '"result_toc_results" must be an array.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       return await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
@@ -5207,10 +5238,17 @@ export class ResultsService {
           throw new BadRequestException('Bilateral result not found');
         }
 
-        await this._validateBilateralResultForUpdate(
-          manager,
-          parsedResultId,
+        // design §5.1, R-5 — the ToC-write decision replaces `_validateBilateralResultForUpdate`
+        // here: admin; or status = 5 AND the caller holds an active role on the payload's
+        // initiative AND that initiative is actively linked to the result AND all three DD-7
+        // checks pass (all applied inside the helper). Keeps the existing 409 for a non-admin at
+        // a status other than 5.
+        await this._bilateralAccessService.assertTocWrite(
+          result,
+          updateTocMetadataDto.tocMetadata?.initiative_id,
+          'toc-metadata',
           user,
+          updateTocMetadataDto.tocMetadata?.result_toc_results,
         );
 
         if (!updateTocMetadataDto.updateExplanation?.trim()) {
@@ -5257,7 +5295,8 @@ export class ResultsService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
-        error instanceof ConflictException
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException
       ) {
         return {
           response: {},

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus } from '@nestjs/common';
+import { ForbiddenException, HttpStatus } from '@nestjs/common';
 import { ResultsService } from './results.service';
+import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
@@ -512,6 +513,20 @@ describe('ResultsService (unit, pure mocks)', () => {
       },
     }),
     sendEmailNotification: jest.fn().mockResolvedValue(undefined),
+    updateTocResultPartial: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+  } as any;
+
+  // BIL-RTE-T-3 — the bilateral entry points call the access helper, mocked at this seam so
+  // ResultsService's wiring (which decision, which endpoint label, which items, reaction to a
+  // throw) is what these tests exercise — not BilateralAccessService's own logic (covered by its
+  // own spec: T-1's matrix, and T-3 rework's DD-7 + DD-7 Amendment tests).
+  const mockBilateralAccessService = {
+    assertCenterWrite: jest.fn().mockResolvedValue(undefined),
+    assertTocWrite: jest.fn().mockResolvedValue(undefined),
+    assertDecision: jest.fn().mockResolvedValue(undefined),
   } as any;
 
   const mockShareResultRequestService = {
@@ -761,6 +776,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: 'ShareResultRequestRepository',
           useValue: mockShareResultRequestRepository,
+        },
+        {
+          provide: BilateralAccessService,
+          useValue: mockBilateralAccessService,
         },
       ],
     }).compile();
@@ -1736,7 +1755,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
   });
 
-  it('reviewBilateralResult approves result successfully', async () => {
+  // BIL-RTE-T-3 falsifier bullet 4 ("A program user approves at status 5 → 6") and issue #3
+  // (rework, attempt 2, Reviewer FAIL #2/#3) — asserts the actual DB write, not just the response
+  // shape, and that the Decision rule was consulted with the right arguments before it.
+  it('reviewBilateralResult approves result successfully (falsifier: status 5 → 6)', async () => {
     const mockResult = {
       id: 100,
       status_id: ResultStatusData.PendingReview.value,
@@ -1747,15 +1769,15 @@ describe('ResultsService (unit, pure mocks)', () => {
       decision: ReviewDecisionEnum.APPROVE,
     };
 
-    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
-      const manager = {
-        findOne: jest.fn().mockResolvedValueOnce(mockResult),
-        update: jest.fn().mockResolvedValue({ affected: 1 }),
-        create: jest.fn().mockReturnValue({ id: 1 }),
-        save: jest.fn().mockResolvedValue({ id: 1 }),
-      };
-      return callback(manager);
-    });
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: jest.fn().mockReturnValue({ id: 1 }),
+      save: jest.fn().mockResolvedValue({ id: 1 }),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
 
     // Mock ShareResultRequestRepository.find for approved case
     mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
@@ -1767,6 +1789,18 @@ describe('ResultsService (unit, pure mocks)', () => {
     );
     expect((res as returnFormatService).status).toBe(HttpStatus.OK);
     expect((res as returnFormatService).message).toContain('approved');
+    expect(mockBilateralAccessService.assertDecision).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 100 }),
+      'review-decision',
+      userTest,
+    );
+    expect(manager.update).toHaveBeenCalledWith(
+      Result,
+      { id: 100 },
+      expect.objectContaining({
+        status_id: ResultStatusData.Approved.value, // 6
+      }),
+    );
   });
 
   it('reviewBilateralResult rejects result successfully', async () => {
@@ -1818,7 +1852,25 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
   });
 
+  // BIL-RTE-T-3: the Decision rule now runs before the justification check (inside the same
+  // transaction), so this case needs a loaded, pending-review result and a passing decision —
+  // the existing 400 must still fire once membership is established (falsifier bullet 5).
   it('reviewBilateralResult returns error when justification is missing for REJECT', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+      const manager = {
+        findOne: jest.fn().mockResolvedValueOnce(mockResult),
+        update: jest.fn(),
+        create: jest.fn(),
+        save: jest.fn(),
+      };
+      return callback(manager);
+    });
+
     const reviewDecision: ReviewDecisionDto = {
       decision: ReviewDecisionEnum.REJECT,
     };
@@ -1890,6 +1942,166 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect((res as returnFormatService).message).toContain(
       'Cannot review result',
     );
+  });
+
+  // BIL-RTE-T-3 — design.md §5.1 (Decision rule), requirements.md R-6/R-6.a.
+  it('reviewBilateralResult: a non-member approving → 403, and the status stays 5 (falsifier)', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
+    mockBilateralAccessService.assertDecision.mockRejectedValueOnce(
+      new ForbiddenException(
+        'Result 100 is under Science Program review (rule: decision).',
+      ),
+    );
+
+    const res = await resultService.reviewBilateralResult(
+      100,
+      { decision: ReviewDecisionEnum.APPROVE } as ReviewDecisionDto,
+      userTest,
+    );
+
+    expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+    expect(manager.update).not.toHaveBeenCalled();
+    // Issue #3 (rework, attempt 2) — the mock must not merely reject unconditionally: assert the
+    // exact arguments the Decision rule was consulted with.
+    expect(mockBilateralAccessService.assertDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 100,
+        status_id: ResultStatusData.PendingReview.value,
+      }),
+      'review-decision',
+      userTest,
+    );
+  });
+
+  // BIL-RTE-T-3 rework, attempt 2 — DD-7 itself (item initiative match, row ownership) now
+  // lives INSIDE `BilateralAccessService.assertTocWrite` (design §12 DD-7/Amendment), covered by
+  // `bilateral-access.service.spec.ts`. What belongs here is WIRING: does `ResultsService` call
+  // the helper with the right arguments (issue #3 — attempt 1's mocks rejected unconditionally,
+  // proving nothing about what was passed) and react correctly to its resolve/throw.
+  describe('updateBilateralResultTocMetadata — BIL-RTE-T-3 (design.md §5.1 ToC write, DD-7 wiring)', () => {
+    const SP_X = 10;
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+
+    function mockTransactionWith(result: any) {
+      mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+        const manager = {
+          findOne: jest.fn().mockResolvedValueOnce(result),
+          update: jest.fn().mockResolvedValue({ affected: 1 }),
+          create: jest.fn().mockReturnValue({}),
+          save: jest.fn().mockResolvedValue({}),
+        };
+        return callback(manager);
+      });
+    }
+
+    it('calls assertTocWrite with the loaded result, the payload initiative, the endpoint, the user and the items — and reacts to a deny by never calling updateTocResultPartial', async () => {
+      mockTransactionWith(mockResult);
+      mockBilateralAccessService.assertTocWrite.mockRejectedValueOnce(
+        new ForbiddenException(
+          'Result 100 is under Science Program review (rule: toc).',
+        ),
+      );
+      const items = [{ toc_result_id: 1, initiative_id: SP_X } as any];
+
+      const res = await resultService.updateBilateralResultTocMetadata(
+        100,
+        {
+          tocMetadata: {
+            initiative_id: SP_X,
+            result_toc_results: items,
+          },
+          updateExplanation: 'Reviewer correction',
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      expect(mockBilateralAccessService.assertTocWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 100,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        SP_X,
+        'toc-metadata',
+        userTest,
+        items,
+      );
+      expect(
+        mockResultsTocResultsService.updateTocResultPartial,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('calls assertTocWrite with the same arguments on the allow path, and proceeds to updateTocResultPartial', async () => {
+      mockTransactionWith(mockResult);
+      mockBilateralAccessService.assertTocWrite.mockResolvedValueOnce(
+        undefined,
+      );
+      const items = [{ toc_result_id: 1 } as any];
+
+      const res = await resultService.updateBilateralResultTocMetadata(
+        100,
+        {
+          tocMetadata: {
+            initiative_id: SP_X,
+            result_toc_results: items,
+          },
+          updateExplanation: 'Reviewer correction',
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockBilateralAccessService.assertTocWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 100,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        SP_X,
+        'toc-metadata',
+        userTest,
+        items,
+      );
+      expect(
+        mockResultsTocResultsService.updateTocResultPartial,
+      ).toHaveBeenCalled();
+    });
+
+    // Optional, small (rework, attempt 2) — a malformed `result_toc_results` must not reach the
+    // DD-7 loop inside the helper and surface as a 500; it is a 400 before any transaction opens.
+    it('returns 400 (not 500) when result_toc_results is not an array', async () => {
+      const res = await resultService.updateBilateralResultTocMetadata(
+        100,
+        {
+          tocMetadata: {
+            initiative_id: SP_X,
+            result_toc_results: 'not-an-array' as any,
+          },
+          updateExplanation: 'Reviewer correction',
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect(mockBilateralAccessService.assertTocWrite).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
   });
 
   describe('getAllInstitutions', () => {

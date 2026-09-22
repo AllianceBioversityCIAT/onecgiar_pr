@@ -4,8 +4,10 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { In } from 'typeorm';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
+import { ResultsTocResultRepository } from '../results-toc-results/repositories/results-toc-results.repository';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -19,19 +21,32 @@ export interface BilateralAccessResult {
   status_id: number;
 }
 
+/**
+ * The subset of a `toc-metadata` payload item DD-7 (and its amendment) need. Both fields come
+ * off the client's `result_toc_results[]` — neither is declared on `ResultTocResultItemDto`
+ * (only the top-level `ResultTocResultBlockDto` declares `initiative_id`), so callers read them
+ * the same loose-cast way `ResultsTocResultsService.updateTocResultPartial` already does.
+ */
+export interface BilateralTocItem {
+  initiative_id?: number;
+  result_toc_result_id?: number;
+  results_id?: number;
+}
+
 /** Which of the three §5.1 decisions denied the write — the only "why" a 403 log line carries. */
 export type BilateralAccessRule = 'center' | 'toc' | 'decision';
 
 /**
- * BIL-RTE-T-1 — `docs/specs/bilateral/review-toc-only-editing/design.md` §5.1, DD-1.
+ * `docs/specs/bilateral/review-toc-only-editing/design.md` §5.1, DD-1.
  *
  * One injectable exposing the three access decisions for a bilateral write at review time:
  *
  * - {@link assertCenterWrite} — Center-reported data (title, general-info, contributors,
  *   planned-result, toc-mapping, geography). Admin, or status ≠ 5.
  * - {@link assertTocWrite} — `toc-metadata`. Admin; or status = 5 AND the user holds an active
- *   role on the payload's initiative AND that initiative is actively linked to the result.
- *   Keeps the existing 409 for a non-admin at a status other than 5 (DD-1: this helper replaces
+ *   role on the payload's initiative AND that initiative is actively linked to the result AND
+ *   every payload item names (or row-owns) that same program (DD-7 + amendment). Keeps the
+ *   existing 409 for a non-admin at a status other than 5 (this helper replaces
  *   `_validateBilateralResultForUpdate`, not its status-conflict signalling).
  * - {@link assertDecision} — `review-decision` (approve/reject). Admin, or the user holds an
  *   active role on any Science Program actively linked to the result. Status/justification
@@ -43,14 +58,14 @@ export type BilateralAccessRule = 'center' | 'toc' | 'decision';
  *
  * Every decision also takes an `endpoint` — a static route label (`'general-info'`,
  * `'toc-metadata'`, …), never the raw URL or query string — solely so a 403 can log which
- * endpoint denied the write (design §9; rework, attempt 2 — Reviewer FAIL #2: the `rule` alone
- * does not stand in for it, since `'center'` alone covers 7 different writes).
+ * endpoint denied the write (design §9): `'center'` alone covers 7 different writes, so the
+ * `rule` alone can't identify which one.
  *
- * **Placement (design §5.1):** this class has no controller, no entity and no module of its
- * own. It is registered as a provider (and exported) directly on `ResultsModule`. Because
- * `BilateralModule` already imports `ResultsModule` (see the `WebhookOutboxModule` note in
- * `results.module.ts`), `BilateralModule` gets it for free through that existing edge — no new
- * import is needed on either side, so no `forwardRef` and no cycle (the task's disqualifier).
+ * **Placement (design §5.1):** this class has no controller and no entity, but it DOES have its
+ * own module — {@link BilateralAccessModule}. `ResultsService` takes this as a required
+ * constructor param and is declared directly in three modules (`ResultsModule`,
+ * `DeleteRecoverDataModule`, `ResultsKnowledgeProductsModule`) — Nest resolves a provider's
+ * dependencies inside the module that declares it, so all three import `BilateralAccessModule`.
  */
 @Injectable()
 export class BilateralAccessService {
@@ -59,6 +74,7 @@ export class BilateralAccessService {
   constructor(
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
   ) {}
 
   /**
@@ -83,19 +99,28 @@ export class BilateralAccessService {
 
   /**
    * ToC write (`toc-metadata`): admin; or status = 5 AND the caller holds an active role on
-   * `initiativeId` (the payload's program) AND `initiativeId` is actively linked to the result.
-   * A non-admin at a status other than 5 keeps today's 409 — the same conflict
-   * `_validateBilateralResultForUpdate` raises today, unaffected by this rule (design §5.1).
+   * `initiativeId` (the payload's program) AND `initiativeId` is actively linked to the result
+   * AND all three DD-7 checks pass. A non-admin at a status other than 5 gets 409, not 403 — every
+   * check below the status check shares that rule, including all three DD-7 checks, so the 409
+   * always wins over a DD-7 denial for a non-pending-review result (design §5.1).
    *
-   * Fails closed with a 403 if the caller has no usable `user.id` (Reviewer advisory, rework
-   * attempt 2) — otherwise a malformed token would reach the repository call below and surface
-   * as an unhandled 500 instead of a 403.
+   * `items` is the payload's `result_toc_results[]` (optional — omitted or empty skips every
+   * DD-7 check). The cross-result check (an item's `results_id` naming another result) runs first
+   * among the three — query-free, right after the status check — followed by the membership
+   * reads, the item-initiative check, then the row-ownership read (which only runs when an item
+   * carries a `result_toc_result_id`, per design §12 DD-7 Amendment "no extra query" budget).
+   * Every DD-7 denial goes through {@link _denyForbidden} with rule `'toc'`, so it logs and
+   * responds exactly like every other decision in this class.
+   *
+   * Fails closed with a 403 if the caller has no usable `user.id` — otherwise a malformed token
+   * would reach the repository calls below and surface as an unhandled 500 instead of a 403.
    */
   async assertTocWrite(
     result: BilateralAccessResult,
     initiativeId: number,
     endpoint: string,
     user: TokenDto,
+    items?: BilateralTocItem[],
   ): Promise<void> {
     if (await this._isAdmin(user)) {
       return;
@@ -109,18 +134,152 @@ export class BilateralAccessService {
       );
     }
 
-    const [hasRoleOnInitiative, initiativeLinkedToResult] = await Promise.all([
+    // DD-7 Amendment #2 — `_handleIndicators` → `saveIndicatorsPrimarySubmitter` resolves its
+    // write target via `toc?.results_id || result_id`, so an item that smuggles another result's
+    // id there (with `indicators` set) could steer that lookup off THIS result. Query-free, so it
+    // runs before the membership reads below without adding a round trip. `null`/`undefined` are
+    // allowed — the client normally never sends `results_id` at all.
+    if (
+      (items ?? []).some((item) =>
+        this._itemNamesAnotherResult(item, result.id),
+      )
+    ) {
+      this._denyForbidden(result.id, 'toc', endpoint, user?.id);
+    }
+
+    const [hasRoleOnInitiative, linkedInitiatives] = await Promise.all([
       this._roleByUserRepository.hasActiveRoleOnInitiative(
         user.id,
         initiativeId,
       ),
-      this._isInitiativeLinkedToResult(result.id, initiativeId),
+      this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
+        result.id,
+      ),
     ]);
+    const initiativeLinkedToResult = (linkedInitiatives ?? []).some(
+      (initiative) => Number(initiative?.id) === Number(initiativeId),
+    );
 
-    if (hasRoleOnInitiative && initiativeLinkedToResult) {
+    if (!hasRoleOnInitiative || !initiativeLinkedToResult) {
+      this._denyForbidden(result.id, 'toc', endpoint, user?.id);
+    }
+
+    // DD-7 — every item that names an `initiative_id` must name the same program as the payload.
+    if (
+      (items ?? []).some((item) =>
+        this._itemNamesAnotherProgram(item, initiativeId),
+      )
+    ) {
+      this._denyForbidden(result.id, 'toc', endpoint, user?.id);
+    }
+
+    // DD-7 Amendment — every item that sets `result_toc_result_id` must point at an active row
+    // of THIS result owned by the saved program (null `initiative_ids` allowed only when the
+    // saved program is the owner, per DD-4). One read, skipped when no item carries a row id.
+    await this._assertTocItemRowsBelongToProgram(
+      result,
+      items,
+      initiativeId,
+      linkedInitiatives,
+      endpoint,
+      user?.id,
+    );
+  }
+
+  /** DD-7: an item that sets `initiative_id` and names a program other than the saved one. */
+  private _itemNamesAnotherProgram(
+    item: BilateralTocItem,
+    savedInitiativeId: number,
+  ): boolean {
+    const itemInitiativeId = item?.initiative_id;
+    if (itemInitiativeId === undefined || itemInitiativeId === null) {
+      return false;
+    }
+    return Number(itemInitiativeId) !== Number(savedInitiativeId);
+  }
+
+  /**
+   * DD-7 Amendment #2: an item that sets `results_id` to a result other than this one.
+   * `null`/`undefined` are allowed — the normal, expected shape.
+   */
+  private _itemNamesAnotherResult(
+    item: BilateralTocItem,
+    resultId: number,
+  ): boolean {
+    const itemResultId = item?.results_id;
+    if (itemResultId === undefined || itemResultId === null) {
+      return false;
+    }
+    return Number(itemResultId) !== Number(resultId);
+  }
+
+  /**
+   * DD-7 Amendment — `_updatePlannedTocResult` (`results-toc-results.service.ts`) updates a
+   * `results_toc_result` row by `result_toc_result_id` alone, with no `result_id` filter. Without
+   * this check, a non-admin could send another program's (or another result's) row id — with
+   * `initiative_id` left unset, so the DD-7 check above never sees it — and overwrite that row.
+   *
+   * Reads the payload's row ids once (skipped entirely when no item carries one — the design's
+   * cost budget), scoped to THIS result and active rows only, and requires each one to belong to
+   * the saved program. A `null` `initiative_ids` (a legacy/owner row) is allowed only when the
+   * saved program IS the owner (`initiative_role_id === 1` in the already-fetched
+   * `linkedInitiatives`, per DD-4) — never for a contributor. A row id with no matching active
+   * row of this result also denies (covers "doesn't exist" and "belongs to another result").
+   */
+  private async _assertTocItemRowsBelongToProgram(
+    result: BilateralAccessResult,
+    items: BilateralTocItem[] | undefined,
+    savedInitiativeId: number,
+    linkedInitiatives: Array<{ id?: number; initiative_role_id?: number }>,
+    endpoint: string,
+    userId: number,
+  ): Promise<void> {
+    // Falsy row ids (0, '', null, undefined) are treated as "no id" — the same test
+    // `updateTocResultPartial` uses (`!t.result_toc_result_id`, results-toc-results.service.ts).
+    const rowIds = Array.from(
+      new Set(
+        (items ?? [])
+          .map((item) => item?.result_toc_result_id)
+          .filter((id) => !!id)
+          .map((id) => Number(id)),
+      ),
+    );
+    if (rowIds.length === 0) {
       return;
     }
-    this._denyForbidden(result.id, 'toc', endpoint, user?.id);
+
+    const ownerInitiativeId = (linkedInitiatives ?? []).find(
+      (initiative) => Number(initiative?.initiative_role_id) === 1,
+    )?.id;
+    const savedIsOwner =
+      ownerInitiativeId !== undefined &&
+      Number(ownerInitiativeId) === Number(savedInitiativeId);
+
+    const activeRows = await this._resultsTocResultRepository.find({
+      where: {
+        result_id: result.id,
+        result_toc_result_id: In(rowIds),
+        is_active: true,
+      },
+    });
+    const rowsById = new Map(
+      activeRows.map((row) => [Number(row.result_toc_result_id), row]),
+    );
+
+    const everyRowBelongsToSavedProgram = rowIds.every((rowId) => {
+      const row = rowsById.get(rowId);
+      if (!row) {
+        return false;
+      }
+      if (row.initiative_ids === null || row.initiative_ids === undefined) {
+        return savedIsOwner;
+      }
+      return Number(row.initiative_ids) === Number(savedInitiativeId);
+    });
+
+    if (!everyRowBelongsToSavedProgram) {
+      this._denyForbidden(result.id, 'toc', endpoint, userId);
+    }
   }
 
   /**
@@ -129,8 +288,8 @@ export class BilateralAccessService {
    * justification checks are the caller's existing responsibility (R-6, G-6) — this decision is
    * membership only.
    *
-   * Fails closed with a 403 if the caller has no usable `user.id` (Reviewer advisory, rework
-   * attempt 2) — same reasoning as {@link assertTocWrite}.
+   * Fails closed with a 403 if the caller has no usable `user.id` — same reasoning as
+   * {@link assertTocWrite}.
    */
   async assertDecision(
     result: BilateralAccessResult,
@@ -164,19 +323,6 @@ export class BilateralAccessService {
     }
     const isAdmin = await this._roleByUserRepository.isUserAdmin(user.id);
     return !!isAdmin;
-  }
-
-  private async _isInitiativeLinkedToResult(
-    resultId: number,
-    initiativeId: number,
-  ): Promise<boolean> {
-    const linkedInitiatives =
-      await this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
-        resultId,
-      );
-    return (linkedInitiatives ?? []).some(
-      (initiative) => Number(initiative?.id) === Number(initiativeId),
-    );
   }
 
   /**

@@ -15,7 +15,7 @@
 
 - [x] `requirements.md` approved (2026-09-22).
 - [x] `design.md` approved (2026-09-22).
-- [ ] **BIL-RTE-T-0 done.** P-2 observed, and P-7 checked (it can change DD-6).
+- [x] **BIL-RTE-T-0 done.** P-7 verified (DD-6 stands); P-2 not observed, kept assumed.
 - [ ] BIL-RTE-OQ-1 answered, or its default accepted (any linked SP may decide).
 - [ ] Branch contains `performance-refactor`. Bilateral work is never based on `staging`.
 - [ ] No in-flight spec touching `results-toc-results.service.ts` / `bilateral-center.service.ts` (checked: `bilateral/*` actives are AI, webhook and bulk-uploader, none of which touch these).
@@ -44,7 +44,7 @@
   - **Disqualifier:** a check cannot be run → record it as `not observed` and keep P-2/P-7 `assumed`. Never infer them.
   - **Consumers:** none (no shared symbol changed)
 - **Definition of done:**
-  - [ ] Three observations recorded, with date and environment.
+  - [x] Observations recorded, with date and environment (check 2 observed; checks 1 and 3 `not observed` per the disqualifier, see `execution.md` pre-flight).
 
 ### [x] BIL-RTE-T-1 — Access helper and membership reads
 
@@ -98,11 +98,14 @@
   - [ ] eslint clean.
   - [ ] Swagger text matches the behaviour.
 
-### BIL-RTE-T-3 — Enforce the ToC and Decision rules
+### [x] BIL-RTE-T-3 — Enforce the ToC and Decision rules
 
 - **Type:** server
 - **Description:**
   - `toc-metadata` uses the ToC-write decision with the payload's `initiative_id`. It replaces the old validator, keeping the 409 for a non-admin at status ≠ 5.
+  - For a non-admin, any payload item whose `initiative_id` is set and differs from the payload's `initiative_id` → 403 before any write (DD-7, owner decision 2026-09-22: the simplest check that stops a contributor from touching another program's rows). Admins are not restricted.
+  - Also for a non-admin: an item's `result_toc_result_id`, when set, must be an active row of this result owned by the saved program (null only when the saved program is the owner) → else 403 (DD-7 amendment).
+  - Also for a non-admin: an item's `results_id`, when set, must equal this result's id → else 403 (DD-7 amendment, closes the indicators path).
   - `review-decision` uses the Decision rule before the status/justification checks. Those existing checks are unchanged.
   - Once `_validateBilateralResultForUpdate` has no callers, delete it.
 - **Implements:** BIL-RTE-R-5.a, R-5.b, R-5 ("non-admin still needs status 5"), R-6.a, R-6.b (server side), R-6 ("existing rules stay"), R-3.a (these two endpoints)
@@ -115,15 +118,17 @@
 - **Verification:**
   - **Falsifier:**
     - A user with a role only on SP Y saves ToC naming SP X at status 5 → 403, and `updateTocResultPartial` is not called.
+    - A member of SP Y saves ToC naming SP Y at the top but an item naming SP X → 403, and `updateTocResultPartial` is not called. Items naming SP Y or no initiative → allowed.
     - A non-member approves → 403, and the status stays 5.
     - A program user approves at status 5 → 6.
     - A reject without justification → the existing 400.
   - **Red run:** `npx jest --testPathPattern="result.spec" --silent --reporters=summary --forceExit`. The first two cases fail before the change.
   - **Disqualifier:** OQ-1 answered "owner SP only" → the Decision rule changes to the owner. Re-spec R-6 before coding.
   - **Consumers:** `reviewBilateralResult` specs `result.spec.ts:1739-1863` (update their mocks for the new check).
+- **Status:** [x] PASS 2026-09-22 (3 attempts, see `execution.md`)
 - **Definition of done:**
-  - [ ] The cases above plus the existing `reviewBilateralResult` suite are green.
-  - [ ] The old validator is removed or has zero callers (grep).
+  - [x] The cases above plus the existing `reviewBilateralResult` suite are green.
+  - [x] The old validator is no longer called by these two endpoints; its last 3 callers are T-2's Center endpoints (forward pointer, deleted there).
 
 ### [x] BIL-RTE-T-4 — Scope ToC deactivation to the saved program
 
