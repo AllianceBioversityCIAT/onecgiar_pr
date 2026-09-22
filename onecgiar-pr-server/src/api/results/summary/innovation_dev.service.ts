@@ -247,6 +247,7 @@ export class InnoDevService {
                 el?.sex_and_age_disaggregation === true ? true : false,
               how_many: el?.how_many,
               addressing_demands: this.isNullData(el?.addressing_demands),
+              ...this.ageFallbackFields(el),
             },
           );
         } else {
@@ -276,6 +277,7 @@ export class InnoDevService {
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
             addressing_demands: this.isNullData(el?.addressing_demands),
+            ...this.ageFallbackFields(el),
           });
         }
       }
@@ -432,6 +434,29 @@ export class InnoDevService {
 
   isNullData(data: any) {
     return data == undefined ? null : data;
+  }
+
+  /**
+   * P2-3785 (4b) — the W3/bilateral actors form now offers the pooled "Age disaggregation not
+   * available" fallback, and this legacy writer is the one it saves through. Written only when the
+   * key travels: the older W1/W2 callers of this endpoint never send it, and an absent key must not
+   * null a value another route stored.
+   */
+  private ageFallbackFields(el: any) {
+    const fields: Record<string, boolean | null> = {};
+    if (el && 'age_disaggregation_not_available' in el) {
+      fields.age_disaggregation_not_available =
+        el.age_disaggregation_not_available == null
+          ? null
+          : !!el.age_disaggregation_not_available;
+    }
+    if (el && 'youth_split_applied_by_system' in el) {
+      fields.youth_split_applied_by_system =
+        el.youth_split_applied_by_system == null
+          ? null
+          : !!el.youth_split_applied_by_system;
+    }
+    return fields;
   }
 
   async saveInitiativeInvestment(

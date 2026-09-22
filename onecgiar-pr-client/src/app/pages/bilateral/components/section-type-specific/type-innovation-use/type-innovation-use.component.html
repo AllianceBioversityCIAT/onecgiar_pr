@@ -72,43 +72,67 @@
                 (ngModelChange)="onFieldChange()"></app-pr-input>
             }
 
-            <app-pr-yes-or-not
-              label="Sex and age disaggregated data available?"
+            <!-- P2-3785 (4b) — set up as in pooled reporting (W1/W2 `innovation-use-form`): the SAME
+                 checkbox, which is also what every reader of `sex_and_age_disaggregation` expects —
+                 ticked (`true`) means the breakdown does NOT apply and only "How many" is reported.
+                 The Yes/No it replaces saved "Yes, available" as that same `true`, the opposite. -->
+            <app-pr-checkbox
+              label="Sex and age disaggregation does not apply"
+              [required]="false"
               [(ngModel)]="actor.sex_and_age_disaggregation"
               (ngModelChange)="onDisaggregationChange(actor)">
-            </app-pr-yes-or-not>
+            </app-pr-checkbox>
 
-            @if (actor.sex_and_age_disaggregation) {
-              <div class="grid grid-cols-2 gap-3">
-                <app-pr-input
-                  label="Women"
-                  type="number"
-                  placeholder="0"
-                  [required]="false"
-                  [(ngModel)]="actor.women"
-                  (ngModelChange)="onFieldChange()"></app-pr-input>
-                <app-pr-input
-                  label="Women (youth)"
-                  type="number"
-                  placeholder="0"
-                  [required]="false"
-                  [(ngModel)]="actor.women_youth"
-                  (ngModelChange)="onFieldChange()"></app-pr-input>
-                <app-pr-input
-                  label="Men"
-                  type="number"
-                  placeholder="0"
-                  [required]="false"
-                  [(ngModel)]="actor.men"
-                  (ngModelChange)="onFieldChange()"></app-pr-input>
-                <app-pr-input
-                  label="Men (youth)"
-                  type="number"
-                  placeholder="0"
-                  [required]="false"
-                  [(ngModel)]="actor.men_youth"
-                  (ngModelChange)="onFieldChange()"></app-pr-input>
-              </div>
+            @if (!actor.sex_and_age_disaggregation) {
+              <app-pr-checkbox
+                label="Age disaggregation not available"
+                [required]="false"
+                [(ngModel)]="actor.age_disaggregation_not_available"
+                (ngModelChange)="onAgeFallbackChange(actor)">
+              </app-pr-checkbox>
+              @if (actor.youth_split_applied_by_system) {
+                <p class="text-xs text-[#5C6BC0]">{{ copy.youthSplitNote }}</p>
+              }
+
+              @for (group of genderGroups; track group.key) {
+                <div class="flex flex-col gap-1">
+                  @if (youthExceeds(actor, group.key)) {
+                    <p class="text-xs text-[var(--pr-color-red-300)]">{{ group.youthWarning }}</p>
+                  }
+                  <div class="grid grid-cols-3 gap-3">
+                    <app-pr-input
+                      [label]="group.label"
+                      type="number"
+                      placeholder="0"
+                      [required]="false"
+                      [(ngModel)]="actor[group.key]"
+                      (ngModelChange)="onGenderChange(actor)"></app-pr-input>
+                    <app-pr-input
+                      label="Youth"
+                      type="number"
+                      placeholder="0"
+                      [required]="false"
+                      [readOnly]="!!actor.youth_split_applied_by_system"
+                      [(ngModel)]="actor[group.key + '_youth']"
+                      (ngModelChange)="onYouthChange(actor, group.key)"></app-pr-input>
+                    <app-pr-input
+                      label="Non-youth"
+                      type="number"
+                      placeholder="0"
+                      [required]="false"
+                      [readOnly]="true"
+                      [ngModel]="nonYouth(actor, group.key)"></app-pr-input>
+                  </div>
+                </div>
+              }
+
+              <app-pr-input
+                label="Total"
+                type="number"
+                placeholder="0"
+                [required]="false"
+                [readOnly]="true"
+                [ngModel]="actorTotal(actor)"></app-pr-input>
             } @else {
               <app-pr-input
                 label="How many"

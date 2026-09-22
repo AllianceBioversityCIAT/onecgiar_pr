@@ -107,3 +107,91 @@ describe('InnoDevService.saveAnticipatedInnoUser', () => {
     expect(measureRepository.save).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * P2-3785 (4b) — the W3/bilateral actors form saves through this legacy writer and now offers the
+ * pooled "Age disaggregation not available" fallback. The two flags must be written when they travel
+ * and left untouched when they do not, so the older W1/W2 callers never null a stored value.
+ */
+describe('InnoDevService.saveAnticipatedInnoUser — age fallback flags (P2-3785)', () => {
+  const buildService = (stored: any = null) => {
+    const actorRepository = {
+      findOne: jest.fn().mockResolvedValue(stored),
+      save: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const service = new InnoDevService(
+      {} as any,
+      actorRepository as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    return { service, actorRepository };
+  };
+
+  it('persists both flags on a new actor when the payload carries them', async () => {
+    const { service, actorRepository } = buildService();
+    await service.saveAnticipatedInnoUser(9545, 90, {
+      innovatonUse: {
+        actors: [
+          {
+            actor_type_id: 1,
+            women: 9,
+            women_youth: 5,
+            sex_and_age_disaggregation: false,
+            age_disaggregation_not_available: true,
+            youth_split_applied_by_system: true,
+          },
+        ],
+      },
+    } as any);
+    expect(actorRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        age_disaggregation_not_available: true,
+        youth_split_applied_by_system: true,
+      }),
+    );
+  });
+
+  it('updates a stored actor with a cleared flag as null', async () => {
+    const { service, actorRepository } = buildService({ result_actors_id: 77 });
+    await service.saveAnticipatedInnoUser(9545, 90, {
+      innovatonUse: {
+        actors: [
+          {
+            result_actors_id: 77,
+            actor_type_id: 1,
+            age_disaggregation_not_available: null,
+            youth_split_applied_by_system: null,
+          },
+        ],
+      },
+    } as any);
+    expect(actorRepository.update).toHaveBeenCalledWith(
+      77,
+      expect.objectContaining({
+        age_disaggregation_not_available: null,
+        youth_split_applied_by_system: null,
+      }),
+    );
+  });
+
+  it('leaves both columns out when an older caller does not send them', async () => {
+    const { service, actorRepository } = buildService({ result_actors_id: 77 });
+    await service.saveAnticipatedInnoUser(9545, 90, {
+      innovatonUse: {
+        actors: [{ result_actors_id: 77, actor_type_id: 1, women: 3 }],
+      },
+    } as any);
+    const written = actorRepository.update.mock.calls[0][1];
+    expect(written).not.toHaveProperty('age_disaggregation_not_available');
+    expect(written).not.toHaveProperty('youth_split_applied_by_system');
+  });
+});

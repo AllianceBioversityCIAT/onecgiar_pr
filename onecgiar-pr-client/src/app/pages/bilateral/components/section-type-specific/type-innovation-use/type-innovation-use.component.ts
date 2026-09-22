@@ -12,6 +12,7 @@ import {
 } from '../../../../../shared/services/global/qa-innovation-development-results.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
 import { EstimatesCgiarComponent } from '../../../../../shared/components/innovation-use-form/components/estimates/estimates.component';
+import { BILATERAL_INNOVATION_USE_ACTORS_COPY } from '../../../../../internationalization/bilateral-innovation-use-actors.copy';
 
 const SECTION_NAME = 'type-specific';
 
@@ -90,6 +91,12 @@ export class TypeInnovationUseComponent implements OnInit {
   readonly graduateStudentsInstitutionTypeId = GRADUATE_STUDENTS_INSTITUTION_TYPE_ID;
   readonly mdsInfoNote = MDS_INFO_NOTE;
   readonly loadErrorNote = LOAD_ERROR_NOTE;
+  readonly copy = BILATERAL_INNOVATION_USE_ACTORS_COPY;
+  /** P2-3785 (4b) — the two sex groups, each with its Youth / Non-youth split, as in pooled reporting. */
+  readonly genderGroups = [
+    { key: 'women', label: 'Women', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.womenYouthWarning },
+    { key: 'men', label: 'Men', youthWarning: BILATERAL_INNOVATION_USE_ACTORS_COPY.menYouthWarning }
+  ] as const;
 
   /**
    * P2-3556 — three-state load flag: `null` while the GET is still in flight, `true` once the
@@ -400,6 +407,13 @@ export class TypeInnovationUseComponent implements OnInit {
     this.normalizeStoredBoolean('innov_use_to_be_determined');
     this.normalizeStoredBoolean('has_scaling_studies');
     this.normalizeStoredBoolean('innov_use_2030_to_be_determined');
+    // P2-3785 (4b) — the actor flags now bind checkboxes, which need a real boolean too.
+    (this.body.actors ?? []).forEach((actor: any) => {
+      for (const key of ['sex_and_age_disaggregation', 'age_disaggregation_not_available', 'youth_split_applied_by_system']) {
+        const value = actor?.[key];
+        if (value !== null && value !== undefined && typeof value !== 'boolean') actor[key] = Boolean(value);
+      }
+    });
   }
 
   /** Rewrites `1`/`0` as `true`/`false`. An unanswered field (`null`/absent) is left untouched. */
@@ -431,13 +445,98 @@ export class TypeInnovationUseComponent implements OnInit {
     this.onFieldChange();
   }
 
+  /**
+   * P2-3785 (4b) — ticking "Sex and age disaggregation does not apply" switches both breakdowns off, so
+   * the figures and the age-only fallback are cleared, as the pooled `cleanActor()` does.
+   * Unticking only drops the single "How many" and keeps whatever Women/Men the row holds: rows saved
+   * under the old Yes/No carry their breakdown behind a `true`, and unticking is how that breakdown
+   * comes back into view — clearing it there would delete what the reporter had entered.
+   */
   onDisaggregationChange(actor: any): void {
-    actor.women = null;
-    actor.women_youth = null;
-    actor.men = null;
-    actor.men_youth = null;
-    actor.how_many = null;
+    if (actor?.sex_and_age_disaggregation) {
+      actor.women = null;
+      actor.women_youth = null;
+      actor.men = null;
+      actor.men_youth = null;
+      actor.how_many = null;
+      actor.age_disaggregation_not_available = null;
+      actor.youth_split_applied_by_system = null;
+    } else {
+      this.syncTotal(actor);
+    }
     this.onFieldChange();
+  }
+
+  /** Non-youth is never stored: it is the group total minus its youth (server `summary.service.ts` derives it the same way). */
+  nonYouth(actor: any, group: 'women' | 'men'): number | null {
+    const total = this.toCount(actor?.[group]);
+    if (total === null) return null;
+    return Math.max(total - (this.toCount(actor?.[`${group}_youth`]) ?? 0), 0);
+  }
+
+  /** The Total the reporter can read — Women + Men, as the pooled form computes it. */
+  actorTotal(actor: any): number | null {
+    const women = this.toCount(actor?.women);
+    const men = this.toCount(actor?.men);
+    if (women === null && men === null) return null;
+    return (women ?? 0) + (men ?? 0);
+  }
+
+  youthExceeds(actor: any, group: 'women' | 'men'): boolean {
+    const total = this.toCount(actor?.[group]);
+    const youth = this.toCount(actor?.[`${group}_youth`]);
+    return total !== null && youth !== null && youth > total;
+  }
+
+  /** Women or Men changed: keep the system 50/50 split in step and the stored total in sync. */
+  onGenderChange(actor: any): void {
+    if (actor?.age_disaggregation_not_available) this.applyYouthSplit(actor);
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  /** Youth cannot be greater than the total of its group — same rule the pooled form enforces. */
+  onYouthChange(actor: any, group: 'women' | 'men'): void {
+    if (this.youthExceeds(actor, group)) actor[`${group}_youth`] = this.toCount(actor[group]);
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  /**
+   * "Age disaggregation not available": the youth figures are split 50/50 by the system and stamped
+   * `youth_split_applied_by_system`; unticking clears them, so an estimate never passes for a reported figure.
+   */
+  onAgeFallbackChange(actor: any): void {
+    if (actor?.age_disaggregation_not_available) {
+      this.applyYouthSplit(actor);
+    } else {
+      actor.women_youth = null;
+      actor.men_youth = null;
+      actor.youth_split_applied_by_system = null;
+    }
+    this.syncTotal(actor);
+    this.onFieldChange();
+  }
+
+  private applyYouthSplit(actor: any): void {
+    const half = (value: any) => {
+      const n = this.toCount(value);
+      return n !== null && n > 0 ? Math.round(n / 2) : 0;
+    };
+    actor.women_youth = half(actor.women);
+    actor.men_youth = half(actor.men);
+    actor.youth_split_applied_by_system = true;
+  }
+
+  /** `how_many` carries the Total while the breakdown applies, as in pooled (`calculateTotalField`). */
+  private syncTotal(actor: any): void {
+    if (!actor?.sex_and_age_disaggregation) actor.how_many = this.actorTotal(actor);
+  }
+
+  private toCount(value: any): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
   addOrganization(): void {
