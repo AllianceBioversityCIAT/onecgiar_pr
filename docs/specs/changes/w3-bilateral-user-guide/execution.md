@@ -843,3 +843,121 @@ A **separate, slower async-data race** survives: across identical read-only runs
 - *Reliability* — §8.1's row-14 anchor `bilateral-footer-pending-list` renders only when a section has missing fields **and** the dropdown is open. Substituted `bilateral-footer-position` rather than force a false state; the Reviewer judged this the right call, since `BG-R-6` asks for *at least one* labelled callout and `bilateral-footer-save` supplies it.
 
 **Final verification** — `VERIFIED` (Leader re-run: all 17 routes measured, selector line and five usages reproduced at their cited lines, `capture.ts` diff limited to the constant and its comment) + `STATUS: PASS` (round-2 `opus` Reviewer).
+
+---
+
+## Budget tripwire — fired, escalated, operator chose to continue
+
+| Signal | Budgeted (`design.md` §12) | Actual at `BG-T-9` close | Verdict |
+|---|---|---|---|
+| Tasks | 13 | 9 closed | on track |
+| LOC | 1,300–1,700 | **~1,405** | **within** |
+| Review rounds | **17** | **19** | **exceeded** |
+
+Pre-agreed tripwire: **>1,700 LOC or >20 rounds**. LOC is healthy; rounds crossed the estimate with four tasks left, so the overrun was reported to the operator **before** 20 rather than after, per `/akili-execute`'s rule that a mis-sized spec is only recoverable while it is still running.
+
+**Operator decision (2026-09-21): continue in full, overrun recorded.** The three pre-agreed cuts were offered and declined.
+
+**Why it overran — and it is not rework churn.** The budget allowed **2 rounds** for each capture-bearing task. `BG-T-7`, `BG-T-8` and `BG-T-9` consumed **8 between them**, and every FAIL was a real defect that no automated gate could see:
+
+| Round spent on | What it caught |
+|---|---|
+| `BG-T-7` ×2 | callout chips covering the search field; a Pivot Record that still claimed the amendment had not been made; the Leader's own scope misreport |
+| `BG-T-8` ×2 | a record certifying a callout as unlabelled while the config shipped it labelled |
+| `BG-T-9` ×2 | the Pivot-3 exception applied beyond its scope; **`BG-R-8` already violated with the gate green** — five loading states invisible to the skeleton guard since `BG-T-1` |
+
+Three of the four biggest findings in this spec were bought with these rounds. The estimate was wrong about **which** tasks are expensive, not about the method: `KZ-REH-1`'s pattern is that browser-shaped gates need more rounds than any plan allows, and this is its **sixth** recurrence.
+
+**Remaining risk profile is different.** `BG-T-10`–`BG-T-13` touch **no production surface** — the 17 captures exist and are verified. Their dominant defect class is **D9** (plausible-but-false prose), whose gate is the operator's own read at HITL, not a guard. Honest estimate given to the operator: **6–10 further rounds**.
+
+---
+
+### Execute-time design amendment — `assemble.ts`'s section model (found in `BG-T-10`)
+
+`design.md` §4 and `BG-DD-9` specify "one markdown file per guide section, assembled in TOC order" — which remains true. What neither noticed is that the **copied `assemble.ts` couples one section to exactly one capture** (`SectionMeta.routeCaptionKey: string`). That held for W1/W2 (6 sections, 6 captures) and does **not** hold here: **18 sections, 17 captures**, with two sections carrying two captures each and two carrying none.
+
+`BG-T-10` surfaced it by running `npm run assemble` and reading the failure past the expected missing `glossary.json`: the `SECTIONS` array is still verbatim W1/W2 metadata, so assembly would next fail on filenames that do not exist in this spec.
+
+**No task owned this.** `BG-T-13`'s description assumed `assemble` works. Assigned to `BG-T-13` — the task that already owns assemble/verify/pdf — with an explicit contract: widen `SectionMeta` to zero-or-more capture keys, rewrite `SECTIONS`, keep `verify-structure`'s heading contract honest rather than relaxing it, and falsify by removing a section and observing the verifier redden.
+
+**Not a Pivot.** No approved requirement changes meaning: `BG-R-1` still asks for cover, intro, TOC, 18 sections and a glossary. The amendment makes that achievable rather than redefining it. **The guide does not reshape itself to fit the tool** — `proposal.md` §4's structure is the approved deliverable.
+
+**Second finding from the same task: a duplicated introduction.** `intro.md` (175 words) and `sections/01-introduction.md` (161 words) were two different openings doing the same job. The archived precedent settles the convention — its `intro.md` is front matter and `sections/01` is the first *screen* — and `proposal.md` §4 row 1 *is* the introduction. Collapsed into `intro.md`; sections now begin at row 2, so `02-…07-*` keep their numbering and `BG-T-11`'s `08–15` range stays correct.
+
+---
+
+### `BG-T-10` — Content: introduction and guide sections 1–7
+
+| Field | Value |
+|---|---|
+| Status | **PASS** (attempt 2) |
+| Date | 2026-09-21 |
+| Implementer attempts | 2 — attempt 1 consumed by a Reviewer FAIL on two D9 defects |
+| Review depth | `checklist` · Reviewer `opus`, Implementer `sonnet` |
+| Review rounds | 2. Cumulative: **21** (budget 17, operator-approved overrun) |
+| Requirements covered | `BG-R-2`, `BG-R-15`, `BG-R-20`, `BG-AC-15`, `BG-R-1` (U.S. English), `BG-R-6` exception condition (b), `BG-DD-9` |
+| Authored LOC | ~1,636 words across 7 files. Cumulative ~1,405 LOC + this prose |
+
+**Delivered:** `intro.md` (224 w) and `sections/02-workspace` (206) · `03-finding-your-project` (268) · `04-starting-a-result` (195) · `05-choosing-how-to-report` (184) · `06-manual-form` (318) · `07-editor-at-a-glance` (241). **1,636 words.**
+
+**The defect class changed with this task, and so did the gate.** Everything before `BG-T-10` was caught by guards, falsifiers and measurements. From here the dominant class is **D9 — a plausible-but-false sentence** — which `requirements.md` §8 records as having **no automated gate**. `tsc` cannot see it, no guard catches it, and a reviewer who reads only the prose and finds it fluent cannot distinguish a true instruction from a fluent invention. The substitute is the citation discipline plus a review that checks prose **against the product**.
+
+#### Three D9 defects, all found by reading the code behind the sentence
+
+| Sentence as written | What the code says |
+|---|---|
+| "clicking it again … clears the filter" (§3 KPI cards) | **No card is a toggle.** `setProgramFilter()` sets unconditionally (`bilateral-projects-panel.component.ts:276`); `setMultiProgramOnly` is only ever called as `(true)` (`.html:192`) — every call site checked |
+| "**Results** lists the bilateral results the Center has **already submitted**" (§2) | The status filter spans `editing`, `qa`, `submitted`, `discontinued` (`bilateral-results-list.component.ts:106-114`). **The reader's own unsubmitted draft lives there** — precisely where they would go looking for it |
+| "or **Reset Filters** clears it" (§3) | `Reset Filters` renders **only** inside `@if (filteredProjects().length === 0)` (`.html:221-229`). A reader with a non-empty filtered list cannot find it |
+
+All three share one shape: **they send a reader after something that is not there**, and all three read perfectly well. The third was a Reviewer *advisory* the Leader escalated to required, because it is the same failure in a quieter form.
+
+**A `BG-R-20` finding worth keeping.** The Results-tab error is also a reuse miss: the in-app tour already says *"Inspect submitted **and in-progress** bilateral results"* (`bilateral-tour.service.ts:141`). The correct, already-approved wording existed for that exact element and was not reused. `BG-R-20` was written for **voice consistency**; it turns out to be an **accuracy control** as well. Where the product already carries a reviewed description, departing from it is also an opportunity to be wrong.
+
+#### A fourth D9 was nearly introduced — by the Leader
+
+Dictating the Results-tab fix, the Leader proposed *"with filters for phase, status and Science Program."* The Implementer verified at source, found `statusFilter`/`programFilter` exist only as signals settable from URL params and removable as chips — **with no interactive picker for either** — and shipped only what it could confirm, flagging the deviation rather than obeying.
+
+The Leader then verified this independently (`statusFilter` has zero template hits; the filter aria-labels are only "Filter by project" and "Filter by created by"), and the round-2 Reviewer confirmed it a third time. **Had the instruction been executed literally, the guide would have told readers to filter by controls that do not exist** — a fourth defect, introduced by the role responsible for catching them.
+
+This is the third time in this spec a subordinate corrected the Leader and was right. The mechanism that makes the chain work is that **the Implementer treats an instruction as a requirement to verify, not an order to execute**.
+
+#### The three ring-only naming obligations — `BG-R-6` condition (b), discharged
+
+Verified in **running prose**, not captions: the **Center identity band** and the **four tabs** in `02-workspace.md`, the **project card** in `03-finding-your-project.md`. The condition exists so a reader who cannot see a label still learns the element's name.
+
+#### A Leader decision submitted for independent judgment, and upheld with an improvement
+
+§5 reads *"**AI-Assisted** is described as a way to reuse information without duplicating effort…"*. The distancing is deliberate: it reports what the card claims rather than asserting what the AI path does, because the deeper behaviour has no primary source and `BG-R-15` forbids the unsourced version. The Leader instructed it **not** be rewritten, then asked the Reviewer to judge whether that was sound discipline or an evasion leaving the reader under-informed at the guide's central decision point.
+
+The Reviewer upheld the distancing **and** identified what was genuinely missing: the *mechanics* are sourceable. Added: *"Picking **AI-Assisted** replaces the drawer's contents with a document-upload panel in place of the form"* (`bilateral-manual-create-drawer-host.component.html:96-99`). The reader is now informed at the fork without a single unsourced claim about the AI.
+
+#### Two structural findings, both from running the tool rather than reading it
+
+1. **`assemble.ts`'s section model cannot express this guide.** Found by running `npm run assemble` and reading **past** the expected missing `glossary.json`: the `SECTIONS` array is still verbatim W1/W2 metadata, and `SectionMeta` pairs **one section to exactly one capture**. True of W1/W2 (6 and 6); false here — **18 sections, 17 captures**, two sections with two captures and two with none. **No task owned this.** Assigned to `BG-T-13` with an explicit contract, recorded above as an execute-time design amendment. Not a Pivot: `BG-R-1` still asks for cover, intro, TOC, 18 sections and glossary; the amendment makes that achievable rather than redefining it. **The guide does not reshape itself to fit the tool.**
+2. **A duplicated introduction.** `intro.md` and `sections/01-introduction.md` were two different openings doing the same job. The archived precedent settles it — `intro.md` is front matter, `sections/01` is the first *screen* — and `proposal.md` §4 row 1 *is* the introduction. Collapsed; sections now begin at row 2, so `02–07` keep their numbers and `BG-T-11`'s `08–15` range stays valid.
+
+#### Citation list — every factual sentence to a primary source
+
+Recorded here because `BG-T-10`'s falsifier requires it in the execution entry, and because the list is the only durable evidence that `BG-R-15` was met. Sources are code, route tables or spec documents; **never** a screenshot label, and **never** `bilateral-tour.service.ts` as evidence even where its wording was reused.
+
+- **intro** — scope → `BG-R-2` · audience → `requirements.md` §5 · ring/chip convention → `annotate.ts` · sign-in URL → `BG-OQ-1` resolution · module separation → `docs/trd/trd.md` §2 + `bilateral-page-header.component.html:93-97` · pages as distinct routes → `routing-data.ts` `BilateralRouting`
+- **§2** — identity band → `bilateral-page-header.component.html:120-152` · four tabs and order → `:286-376` · Overview → `bilateral-overview.component.html` · Reporting → `bilateral-projects-panel` · **Results (corrected)** → `bilateral-results-list.component.ts:106-114`; phase filter → `.html:92-107` · AI Draft Results → `my-draft-results.component.ts` + badge signal `:369-375`
+- **§3** — search → `bilateral-projects-panel.component.html:6-14` · quick chips → `:22-40` · KPI cards → `:124-208` · **clear behaviour (corrected)** → `.ts:275-284`, `.html:24-30`, `:226-228` · **`Reset Filters` visibility (corrected)** → `.html:221-229` · card anatomy → `:234-317` · **grid vs table (corrected)** → `:256-258` vs `:322-393` · drawer opens → `:241, :311`
+- **§4** — drawer title → `bilateral-manual-create.copy.ts` · context header → `bilateral-create-drawer.component.html:23-60` · step 1 multi-SP only → `bilateral-manual-create-flow.service.ts:27-35` + `bilateral-sp-selector.component.html:6-30` · contributing SPs → `:65-95`
+- **§5** — card copy → `bilateral-reporting-way-selector.component.ts:29-44` · disabled until primary SP → `:47-58` · **AI swap (added)** → `bilateral-manual-create-drawer-host.component.html:96-99`, `bilateral-ai-upload.component.html:20-25`
+- **§6** — level cards → `bilateral-result-level-selector.component.ts:3-6` · **seven types, id gap at 3** → `result-types-by-level.ts` · KP tabs → `bilateral-manual-create-form.component.html:37-150` · title auto-fill → `.ts:249-257` · **title appears only after type** → `.html:161` · 30-word gauge → `.ts:137-141` · uniqueness states → `.html:172-220`
+- **§7** — two-column layout → `bilateral-result-creator.component.html:52-412` · six rail sections, type-specific absent for 4/8 → `.ts:219-236` · **editor opens on General information** → `.ts:79` · progress label → `.ts:248-252` · footer position → `.html:311-332` · Save draft → `.html:400-408`
+
+**`UNVERIFIED` sentences: none.** Where a candidate sentence lacked a code-level source (deeper AI-Assisted eligibility, AI Draft Results mechanics), it was written to the level of detail the code supports rather than filled in.
+
+**Both Judgment Day severe findings propagated correctly into the content:** "**seven** result types … the ids run to 8 but there is no id 3", and "the editor opens on **General information**, not Overview". Verified at source by the Reviewer, not taken from the spec.
+
+#### `ADVISORY` (recorded, never gating)
+- *Reliability* — the dense table also omits the grid's Science Program Alignment header and its labelled "View results (N)" link; judged compaction, covered by "a more compact row".
+- *Readability* — §3's Science Program Alignment conditional is loose (the box renders whenever `sciencePrograms.length > 0`); the following single-Program sentence rescues it. Left alone deliberately.
+- *Readability* — the grid header renders `100%` for a single-Program project even when `sp.allocation` is null, where the table renders nothing.
+
+**Closing decision recorded rather than taken silently:** the final one-clause `Reset Filters` qualifier was proposed verbatim by the round-2 Reviewer and verified at source by the Leader, so the task closed without a third review round. That reasoning is written here instead of the gate being quietly skipped.
+
+**Final verification** — `VERIFIED` (Leader re-run: U.S. English sweep clean, no asserted counts, three naming obligations in running prose, all corrected sentences re-read at source) + `STATUS: PASS` (round-2 `opus` Reviewer).

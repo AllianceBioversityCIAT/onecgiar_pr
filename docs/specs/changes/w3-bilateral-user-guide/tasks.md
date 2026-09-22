@@ -216,7 +216,7 @@
   - [ ] `dist/capture-requests.log` shows zero denied requests.
 - **Skills:** `playwright-cli`
 
-### `BG-T-10` — Content: introduction and guide sections 1–7
+### `BG-T-10` — Content: introduction and guide sections 1–7  `[x]`
 
 - **Type:** `docs`
 - **Description:** Author `content/intro.md` and sections 1–7 (introduction, Center workspace, finding your project, the setup drawer, choosing how to report, the manual form, the editor at a glance). Reuse the in-app tour's approved wording where it describes the same element.
@@ -291,6 +291,16 @@
 - **Estimate:** `M` · **Review:** `checklist`
 - **Verification:**
   - **Falsifier:** delete one section file and re-run → `verify-structure` must fail naming the missing section and the unresolved TOC anchor. Separately, insert a fake token string into a content file → the secret audit must go red. Two different gates, two different deliberate breakages.
+  - 🛑 **CARRIED FROM `BG-T-10` (2026-09-21) — a structural gap NO task owned, and `build-guide` cannot succeed until this task closes it.** `assemble.ts`'s `SECTIONS: SectionMeta[]` is still the **verbatim W1/W2 metadata** (`01-landing.md` … `06-innovation-packages.md`), so assembly reads filenames that do not exist here. Worse, its model pairs **exactly one capture per section** (`routeCaptionKey: string`), which was true of W1/W2 (6 sections, 6 captures) and is **false here**: this guide has **18 sections and 17 captures**, and the mapping fans out —
+
+    | Section | Captures |
+    |---|---|
+    | row 1 *Introduction* (`intro.md`) | **none** |
+    | row 3 *Finding your project* | **two** — `02-catalog`, `03-catalog-create-cta` |
+    | row 6 *The manual form* | **two** — `06-manual-form`, `07-manual-form-title` |
+    | row 18 *Glossary* | **none** |
+
+    **This task owns the fix.** Rewrite `SECTIONS` for this guide and widen `SectionMeta` so a section carries **zero or more** capture keys (e.g. `routeCaptionKeys: string[]`) instead of exactly one. The array's comment calls the order *LOAD-BEARING* against `template/README.md`'s heading-count contract — so re-read that contract and keep `verify-structure` honest rather than relaxing it to fit. **Falsifier:** remove one section's entry and confirm `verify-structure` reddens on the missing heading; restore and confirm green. Do **not** reshape the guide's sections to fit the tool — `proposal.md` §4's structure is the approved deliverable and the tool is what adapts.
   - ⚠️ **CARRIED FROM `BG-T-9` (2026-09-21) — a residual skeleton-guard gap that is dormant, not absent.** `SKELETON_SELECTOR` was widened to `app-form-skeleton` after a skeleton-visible capture passed the D2 guard. One convention remains uncovered: `bilateral-results-list.component.html:532-546` (`<ng-template prTableLoading>`) renders `tr.rc-row--skeleton` with **none** of the three markers. It is unreachable today because `prTableLoading` needs `hasRows() && loading()` — a filter, sort or page interaction no route performs. **It goes live the moment any results-list route gains an interaction step.** If this task adds one, extend the selector and falsify it first.
   - ⚠️ **CARRIED FROM `BG-T-8` (2026-09-21) — a live production-latency flake this task must survive.** During `BG-T-8` a route intermittently failed on its **first** attempt and succeeded on an immediate retry. The first occurrence looked like search-filter timing, but it recurred on **`catalog`** — a route with **no `steps` at all**, failing its `readySelector` — so the diagnosis is general production latency on the initial page GET, not step timing. **No `waitFor` in `routes.config.json` can protect a route that has no steps.** This task runs **all seventeen routes in one process**, so a single first-attempt failure kills the whole run rather than one route. Before the authoritative run, add a **bounded per-route retry** in `capture.ts`'s `main()` loop (retry once, then fail), and record how many routes needed a retry. Do **not** paper over it by widening `READY_SELECTOR_TIMEOUT_MS` alone — that hides the signal instead of bounding it.
   - ⚠️ **CARRIED FROM `BG-T-6` (execute-time amendment, 2026-09-21) — `BG-AC-9` is NOT fully discharged until this runs.** `BG-T-6` asserts that `template/guide.css`'s `:where(:root)` build-time defaults match `fonts.scss`/`colors.scss`. But `assemble.ts:407` hard-requires and always injects `tokens.json`, so in every **shipped** PDF those defaults are **inert by design** — the values that actually win the cascade come from live `getComputedStyle` and were never compared to the stylesheets. `BG-AC-9`'s subject is *the rendered guide* and defect class **D5** is therefore still ungated. **This task must assert `tokens.json`'s six keys against `readExpectedTokensFromStylesheets()`**, with **quote normalization** — Chromium serializes `'Manrope'` as `Manrope`, which is why a byte comparison was not viable in `BG-T-6`. Falsifier: substitute Poppins into `tokens.json` and observe red.
