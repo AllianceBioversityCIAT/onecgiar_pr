@@ -884,6 +884,16 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     minPx: number;
   } | null = null;
 
+  /**
+   * Dragging `.rc-col-resizer` and releasing the mouse over the `<th>` (not back over the thin
+   * resizer strip) makes the browser synthesize a `click` on `<th>` after mouseup — reaching both
+   * `PrSortableColumnDirective`'s click listener and `(click)="validateOrder(...)"` and sorting the
+   * column as an unintended side effect of a resize. This guard swallows that one phantom click.
+   * `{ once: true }` self-removes on the common case; `onWindowMouseUp`'s `setTimeout(0)` is a
+   * fallback for the rare case where no click follows (so a later, unrelated click is never swallowed).
+   */
+  private resizeClickGuard: ((event: MouseEvent) => void) | null = null;
+
   private readonly onWindowMouseMove = (event: MouseEvent): void => {
     if (!this.activeResize) return;
     const deltaX = event.clientX - this.activeResize.startX;
@@ -899,6 +909,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     window.removeEventListener('mousemove', this.onWindowMouseMove);
     window.removeEventListener('mouseup', this.onWindowMouseUp);
     writeStoredRcColumnWidths(this.customWidths());
+
+    if (this.resizeClickGuard) {
+      const guard = this.resizeClickGuard;
+      this.resizeClickGuard = null;
+      setTimeout(() => document.removeEventListener('click', guard, true), 0);
+    }
   };
 
   onResizeStart(event: MouseEvent, column: { key: string; minPx: number }, thElement: HTMLElement): void {
@@ -914,6 +930,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     document.body.style.userSelect = 'none';
     window.addEventListener('mousemove', this.onWindowMouseMove);
     window.addEventListener('mouseup', this.onWindowMouseUp);
+
+    this.resizeClickGuard = (clickEvent: MouseEvent) => {
+      clickEvent.preventDefault();
+      clickEvent.stopPropagation();
+    };
+    document.addEventListener('click', this.resizeClickGuard, { capture: true, once: true });
   }
 
   onResizeReset(column: { key: string }, event: MouseEvent): void {
@@ -948,6 +970,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
       window.removeEventListener('mouseup', this.onWindowMouseUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+    }
+    if (this.resizeClickGuard) {
+      document.removeEventListener('click', this.resizeClickGuard, true);
+      this.resizeClickGuard = null;
     }
     this.workAreaScrollCleanup?.();
     this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
