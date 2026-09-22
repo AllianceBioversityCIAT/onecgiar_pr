@@ -571,9 +571,9 @@ describe('ShellTopbarComponent', () => {
       expect(to).toBeGreaterThan(from);
       const cluster = right.slice(from, to);
 
-      // Two rules: Help | bell | user.
-      expect((cluster.match(/pr-topbar-sep/g) || []).length).toBe(2);
-      expect(cluster.indexOf('pr-topbar-actions')).toBeGreaterThan(cluster.indexOf('pr-topbar-sep'));
+      // No divider lines between Help, Release notes, the bell and the user menu (quick/topbar-remove-sep).
+      expect((cluster.match(/pr-topbar-sep/g) || []).length).toBe(0);
+      expect(cluster.indexOf('pr-topbar-actions')).toBeGreaterThan(cluster.indexOf('aria-label="Help"'));
       expect(cluster.indexOf('class="pr-topbar-user"')).toBeGreaterThan(cluster.indexOf('pr-topbar-actions'));
     });
 
