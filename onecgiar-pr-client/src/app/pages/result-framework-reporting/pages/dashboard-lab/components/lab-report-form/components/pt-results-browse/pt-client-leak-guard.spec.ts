@@ -9,6 +9,8 @@
 //   - `*.spec.ts` and `*.cy.ts`           — test-only code, never shipped.
 //   - This file itself                    — it necessarily quotes the forbidden patterns.
 //   - `src/environments/environment*.ts`  — see "Environment files" below.
+//   - `src/app/pages/developers/developers.component.ts` — PRMS public developer documentation
+//     portal displaying PRMS's own public API Gateway endpoints (ingest & Swagger docs).
 //   - non-source assets (`.png`, `.svg`, `.md`, `.json`, `.snap`, fonts, media, …) — nothing
 //     under these extensions is compiled into the Angular bundle, so they sit outside the leak
 //     surface `PTB-R-6a`/`PTB-R-7` describe.
@@ -100,6 +102,14 @@ function isExcludedEnvironmentFile(full: string, name: string): boolean {
   return path.basename(path.dirname(full)) === ENVIRONMENTS_DIR_NAME && ENVIRONMENT_FILE_REGEX.test(name);
 }
 
+// PRMS-owned public developer documentation endpoints (ingest & Swagger docs on AWS API Gateway).
+// These are PRMS-owned developer documentation endpoints, not Progress Tracker upstream leaks
+// (PTB-AC-16: "PRMS's own pre-existing execute-api / synapsis-analytics.com calls are out of scope").
+function isExcludedDevelopersFile(full: string): boolean {
+  const rel = path.relative(CLIENT_SRC_ROOT, full).replace(/\\/g, '/');
+  return rel === 'app/pages/developers/developers.component.ts';
+}
+
 /** Walk `dir` and return absolute paths of every scannable source file, honoring the exclusions above. */
 function collectSourceFiles(dir: string): string[] {
   const out: string[] = [];
@@ -114,6 +124,7 @@ function collectSourceFiles(dir: string): string[] {
     if (!SCAN_EXTENSIONS.has(path.extname(entry.name))) continue;
     if (EXCLUDED_SUFFIXES.some(suffix => entry.name.endsWith(suffix))) continue;
     if (isExcludedEnvironmentFile(full, entry.name)) continue;
+    if (isExcludedDevelopersFile(full)) continue;
     out.push(full);
   }
   return out;
