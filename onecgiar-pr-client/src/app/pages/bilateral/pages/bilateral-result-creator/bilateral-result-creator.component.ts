@@ -709,11 +709,17 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * blocking `window.confirm(...)` — they flush the outgoing section's pending edits first, the same
    * way `triggerManualSave()` already does, and only switch sections once the flush settles without
    * error. A failed flush keeps the user on the section with the same failure alert Save draft shows.
+   *
+   * BIL-RTE-T-8 (design.md §6.2, DD-2's reversion-challenge mitigation): the flush itself is skipped
+   * while `isSubmitting()` — a Center write that raced the submit PATCH used to persist silently at
+   * status 5; now that the server rejects a non-admin Center write at status 5 (DD-2), that same race
+   * would instead surface as a "Save failed" 403. The section switch is plain navigation, not a
+   * write, so it still proceeds.
    */
   async selectSection(section: BilateralEditorSection): Promise<void> {
     const current = this.openSectionName();
     if (current === section) return;
-    if (this.autoSaveService.hasPendingFor(current)) {
+    if (!this.isSubmitting() && this.autoSaveService.hasPendingFor(current)) {
       await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys(current));
       await this.waitForSectionSave(current);
 
@@ -889,8 +895,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   /** Upper bound for the manual-save wait so a stuck request can never freeze the button. */
   private static readonly MANUAL_SAVE_TIMEOUT_MS = 15000;
 
+  /**
+   * BIL-RTE-T-8 (design.md §6.2, DD-2's reversion-challenge mitigation): a zero-call no-op while
+   * `isSubmitting()` — see the matching note on `selectSection()`. Checked before
+   * `isManualSaving()` so a submit in flight is never briefly reported as a save in flight.
+   */
   async triggerManualSave(): Promise<void> {
-    if (this.isManualSaving()) return;
+    if (this.isSubmitting() || this.isManualSaving()) return;
     this.isManualSaving.set(true);
     const activeSection = this.openSectionName();
     // Read before flushing: flush() empties the staged fields, so afterwards nothing distinguishes

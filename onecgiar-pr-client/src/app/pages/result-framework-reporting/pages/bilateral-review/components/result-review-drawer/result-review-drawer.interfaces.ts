@@ -101,6 +101,11 @@ export interface BilateralCommonFields {
    *  derivation — `BSR-R-4`'s matrix branches on `creation_method` alone (`resolveBilateralSource`
    *  ignores this field entirely), so no display behaviour is invented around it here. */
   is_ai_generated?: number;
+  // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, contract from T-5, design.md §5.3)
+  /** The portfolio start year of the result's version. `null` (a version without a portfolio) means
+   *  "not P25-onward" — never treat it as P25-onward and never derive the year from a phase id or a
+   *  constant (R-7.c). `isP25Onward` (this component) is `portfolio_start_year >= 2025`. */
+  portfolio_start_year?: number | null;
 }
 
 export interface BilateralTocMetadata {

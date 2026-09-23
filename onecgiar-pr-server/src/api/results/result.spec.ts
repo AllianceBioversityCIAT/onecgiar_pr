@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus } from '@nestjs/common';
+import { ForbiddenException, HttpStatus } from '@nestjs/common';
 import { ResultsService } from './results.service';
+import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
@@ -78,6 +79,7 @@ import { ResultsTocResultsService } from './results-toc-results/results-toc-resu
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
+import { AdUserService } from '../ad_users';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -512,6 +514,27 @@ describe('ResultsService (unit, pure mocks)', () => {
       },
     }),
     sendEmailNotification: jest.fn().mockResolvedValue(undefined),
+    updateTocResultPartial: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+  } as any;
+
+  // BIL-RTE-T-3 — the bilateral entry points call the access helper, mocked at this seam so
+  // ResultsService's wiring (which decision, which endpoint label, which items, reaction to a
+  // throw) is what these tests exercise — not BilateralAccessService's own logic (covered by its
+  // own spec: T-1's matrix, and T-3 rework's DD-7 + DD-7 Amendment tests).
+  const mockBilateralAccessService = {
+    assertCenterWrite: jest.fn().mockResolvedValue(undefined),
+    assertTocWrite: jest.fn().mockResolvedValue(undefined),
+    assertDecision: jest.fn().mockResolvedValue(undefined),
+  } as any;
+
+  // BIL-RTE-T-2 — Reviewer FAIL (attempt 2): `updateBilateralGeneralInfo` called this (a write,
+  // `ad_users.service.ts` `saveFromADUser`) while building `updates`, ahead of the Center-write
+  // check. Mocked so the falsifier-(b) test below can prove it is never reached on a denial.
+  const mockAdUserService = {
+    resolveOrCreateContact: jest.fn().mockResolvedValue({ id: 777 }),
   } as any;
 
   const mockShareResultRequestService = {
@@ -761,6 +784,14 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: 'ShareResultRequestRepository',
           useValue: mockShareResultRequestRepository,
+        },
+        {
+          provide: BilateralAccessService,
+          useValue: mockBilateralAccessService,
+        },
+        {
+          provide: AdUserService,
+          useValue: mockAdUserService,
         },
       ],
     }).compile();
@@ -1736,7 +1767,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
   });
 
-  it('reviewBilateralResult approves result successfully', async () => {
+  // BIL-RTE-T-3 falsifier bullet 4 ("A program user approves at status 5 → 6") and issue #3
+  // (rework, attempt 2, Reviewer FAIL #2/#3) — asserts the actual DB write, not just the response
+  // shape, and that the Decision rule was consulted with the right arguments before it.
+  it('reviewBilateralResult approves result successfully (falsifier: status 5 → 6)', async () => {
     const mockResult = {
       id: 100,
       status_id: ResultStatusData.PendingReview.value,
@@ -1747,15 +1781,15 @@ describe('ResultsService (unit, pure mocks)', () => {
       decision: ReviewDecisionEnum.APPROVE,
     };
 
-    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
-      const manager = {
-        findOne: jest.fn().mockResolvedValueOnce(mockResult),
-        update: jest.fn().mockResolvedValue({ affected: 1 }),
-        create: jest.fn().mockReturnValue({ id: 1 }),
-        save: jest.fn().mockResolvedValue({ id: 1 }),
-      };
-      return callback(manager);
-    });
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: jest.fn().mockReturnValue({ id: 1 }),
+      save: jest.fn().mockResolvedValue({ id: 1 }),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
 
     // Mock ShareResultRequestRepository.find for approved case
     mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
@@ -1767,6 +1801,18 @@ describe('ResultsService (unit, pure mocks)', () => {
     );
     expect((res as returnFormatService).status).toBe(HttpStatus.OK);
     expect((res as returnFormatService).message).toContain('approved');
+    expect(mockBilateralAccessService.assertDecision).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 100 }),
+      'review-decision',
+      userTest,
+    );
+    expect(manager.update).toHaveBeenCalledWith(
+      Result,
+      { id: 100 },
+      expect.objectContaining({
+        status_id: ResultStatusData.Approved.value, // 6
+      }),
+    );
   });
 
   it('reviewBilateralResult rejects result successfully', async () => {
@@ -1818,7 +1864,25 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
   });
 
+  // BIL-RTE-T-3: the Decision rule now runs before the justification check (inside the same
+  // transaction), so this case needs a loaded, pending-review result and a passing decision —
+  // the existing 400 must still fire once membership is established (falsifier bullet 5).
   it('reviewBilateralResult returns error when justification is missing for REJECT', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+      const manager = {
+        findOne: jest.fn().mockResolvedValueOnce(mockResult),
+        update: jest.fn(),
+        create: jest.fn(),
+        save: jest.fn(),
+      };
+      return callback(manager);
+    });
+
     const reviewDecision: ReviewDecisionDto = {
       decision: ReviewDecisionEnum.REJECT,
     };
@@ -1890,6 +1954,676 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect((res as returnFormatService).message).toContain(
       'Cannot review result',
     );
+  });
+
+  // BIL-RTE-T-3 — design.md §5.1 (Decision rule), requirements.md R-6/R-6.a.
+  it('reviewBilateralResult: a non-member approving → 403, and the status stays 5 (falsifier)', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+    const manager = {
+      findOne: jest.fn().mockResolvedValueOnce(mockResult),
+      update: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+    };
+    mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+      callback(manager),
+    );
+    mockBilateralAccessService.assertDecision.mockRejectedValueOnce(
+      new ForbiddenException(
+        'Result 100 is under Science Program review (rule: decision).',
+      ),
+    );
+
+    const res = await resultService.reviewBilateralResult(
+      100,
+      { decision: ReviewDecisionEnum.APPROVE } as ReviewDecisionDto,
+      userTest,
+    );
+
+    expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+    expect(manager.update).not.toHaveBeenCalled();
+    // Issue #3 (rework, attempt 2) — the mock must not merely reject unconditionally: assert the
+    // exact arguments the Decision rule was consulted with.
+    expect(mockBilateralAccessService.assertDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 100,
+        status_id: ResultStatusData.PendingReview.value,
+      }),
+      'review-decision',
+      userTest,
+    );
+  });
+
+  // BIL-RTE-T-3 rework, attempt 2 — DD-7 itself (item initiative match, row ownership) now
+  // lives INSIDE `BilateralAccessService.assertTocWrite` (design §12 DD-7/Amendment), covered by
+  // `bilateral-access.service.spec.ts`. What belongs here is WIRING: does `ResultsService` call
+  // the helper with the right arguments (issue #3 — attempt 1's mocks rejected unconditionally,
+  // proving nothing about what was passed) and react correctly to its resolve/throw.
+  describe('updateBilateralResultTocMetadata — BIL-RTE-T-3 (design.md §5.1 ToC write, DD-7 wiring)', () => {
+    const SP_X = 10;
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+
+    function mockTransactionWith(result: any) {
+      mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+        const manager = {
+          findOne: jest.fn().mockResolvedValueOnce(result),
+          update: jest.fn().mockResolvedValue({ affected: 1 }),
+          create: jest.fn().mockReturnValue({}),
+          save: jest.fn().mockResolvedValue({}),
+        };
+        return callback(manager);
+      });
+    }
+
+    it('calls assertTocWrite with the loaded result, the payload initiative, the endpoint, the user and the items — and reacts to a deny by never calling updateTocResultPartial', async () => {
+      mockTransactionWith(mockResult);
+      mockBilateralAccessService.assertTocWrite.mockRejectedValueOnce(
+        new ForbiddenException(
+          'Result 100 is under Science Program review (rule: toc).',
+        ),
+      );
+      const items = [{ toc_result_id: 1, initiative_id: SP_X } as any];
+
+      const res = await resultService.updateBilateralResultTocMetadata(
+        100,
+        {
+          tocMetadata: {
+            initiative_id: SP_X,
+            result_toc_results: items,
+          },
+          updateExplanation: 'Reviewer correction',
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      expect(mockBilateralAccessService.assertTocWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 100,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        SP_X,
+        'toc-metadata',
+        userTest,
+        items,
+      );
+      expect(
+        mockResultsTocResultsService.updateTocResultPartial,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('calls assertTocWrite with the same arguments on the allow path, and proceeds to updateTocResultPartial', async () => {
+      mockTransactionWith(mockResult);
+      mockBilateralAccessService.assertTocWrite.mockResolvedValueOnce(
+        undefined,
+      );
+      const items = [{ toc_result_id: 1 } as any];
+
+      const res = await resultService.updateBilateralResultTocMetadata(
+        100,
+        {
+          tocMetadata: {
+            initiative_id: SP_X,
+            result_toc_results: items,
+          },
+          updateExplanation: 'Reviewer correction',
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockBilateralAccessService.assertTocWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 100,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        SP_X,
+        'toc-metadata',
+        userTest,
+        items,
+      );
+      expect(
+        mockResultsTocResultsService.updateTocResultPartial,
+      ).toHaveBeenCalled();
+    });
+
+    // Optional, small (rework, attempt 2) — a malformed `result_toc_results` must not reach the
+    // DD-7 loop inside the helper and surface as a 500; it is a 400 before any transaction opens.
+    it('returns 400 (not 500) when result_toc_results is not an array', async () => {
+      const res = await resultService.updateBilateralResultTocMetadata(
+        100,
+        {
+          tocMetadata: {
+            initiative_id: SP_X,
+            result_toc_results: 'not-an-array' as any,
+          },
+          updateExplanation: 'Reviewer correction',
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect(mockBilateralAccessService.assertTocWrite).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  // BIL-RTE-T-2 — design.md §5.1 (Center write), requirements.md R-2/R-2.a/R-2.b/R-3.a/R-4.a.
+  // The OLD status validator inverted the rule: it threw 409 for a non-admin at any status OTHER
+  // than Pending Review (5) — the exact opposite of "block Pending Review only" — so a Center
+  // user saving at status 1 (Editing) got 409. Verified red against the pre-change code (real
+  // jest run, HEAD's results.service.ts swapped in): "Expected: 200, Received: 409" on this exact
+  // scenario (falsifier case (a)). `assertCenterWrite` is mocked here (its own admin/status
+  // matrix is `bilateral-access.service.spec.ts`'s job) — this suite proves the WIRING: the right
+  // endpoint label, the right arguments, and the reaction to allow/deny.
+  describe('updateBilateralResultTitle — BIL-RTE-T-2 (design.md §5.1 Center write)', () => {
+    const resultId = 501;
+
+    it('falsifier (a): a non-admin at status 1 (Editing) succeeds and writes — R-4.a', async () => {
+      (mockResultRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce({
+          id: resultId,
+          version_id: 1,
+          status_id: ResultStatusData.Editing.value,
+          source: SourceEnum.Bilateral,
+        })
+        .mockResolvedValueOnce(null);
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralResultTitle(
+        resultId,
+        'New Title',
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: resultId,
+          status_id: ResultStatusData.Editing.value,
+        }),
+        'title',
+        userTest,
+      );
+      expect(manager.update).toHaveBeenCalledWith(Result, resultId, {
+        title: 'New Title',
+      });
+    });
+
+    it('falsifier (b): a non-admin denial at status 5 returns 403 and never writes', async () => {
+      (mockResultRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce({
+          id: resultId,
+          version_id: 1,
+          status_id: ResultStatusData.PendingReview.value,
+          source: SourceEnum.Bilateral,
+        })
+        .mockResolvedValueOnce(null);
+      mockDataSource.transaction.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockRejectedValueOnce(
+        new ForbiddenException(
+          `Result ${resultId} is under Science Program review (rule: center).`,
+        ),
+      );
+
+      const res = await resultService.updateBilateralResultTitle(
+        resultId,
+        'New Title',
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      // The decision now runs before `transaction(` opens at all — a denial must never even
+      // start a transaction, not just skip the write inside one.
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: resultId,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'title',
+        userTest,
+      );
+    });
+
+    it('falsifier (c): an admin at status 5 succeeds — R-3.a', async () => {
+      (mockResultRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce({
+          id: resultId,
+          version_id: 1,
+          status_id: ResultStatusData.PendingReview.value,
+          source: SourceEnum.Bilateral,
+        })
+        .mockResolvedValueOnce(null);
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralResultTitle(
+        resultId,
+        'New Title',
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(manager.update).toHaveBeenCalled();
+    });
+
+    // Reviewer FAIL (attempt 1) — the deleted validator filtered `source: SourceEnum.Bilateral`;
+    // that filter was dropped, so any W1/W2 result (never at status 5) sailed through
+    // `assertCenterWrite` for a non-admin. Proves the fix: 400, no helper call, no transaction.
+    it('a non-admin on a W1/W2 (SourceEnum.Result) row at status 1 gets 400, with no assertCenterWrite call and no transaction opened', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        status_id: ResultStatusData.Editing.value,
+        source: SourceEnum.Result,
+      });
+      mockDataSource.transaction.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockClear();
+
+      const res = await resultService.updateBilateralResultTitle(
+        resultId,
+        'New Title',
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toContain(
+        'Bilateral result not found',
+      );
+      expect(
+        mockBilateralAccessService.assertCenterWrite,
+      ).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateBilateralGeneralInfo — BIL-RTE-T-2 (design.md §5.1 Center write)', () => {
+    const resultId = 502;
+    const dto = { description: 'Changed description' } as any;
+
+    it('falsifier (a): a non-admin at status 1 (Editing) succeeds and writes — R-4.a (regression)', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Editing.value,
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        dto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: resultId,
+          status_id: ResultStatusData.Editing.value,
+        }),
+        'general-info',
+        userTest,
+      );
+      expect(manager.update).toHaveBeenCalled();
+    });
+
+    it('falsifier (b): a non-admin denial at status 5 returns 403 and never writes — R-2.a/R-2.b', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      mockDataSource.transaction.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockRejectedValueOnce(
+        new ForbiddenException(
+          `Result ${resultId} is under Science Program review (rule: center).`,
+        ),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        dto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      // The decision now runs before `transaction(` opens at all — a denial must never even
+      // start a transaction, not just skip the write inside one.
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: resultId,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'general-info',
+        userTest,
+      );
+    });
+
+    // Reviewer FAIL (attempt 2): `resolveOrCreateContact` (a write — `ad_users.service.ts`
+    // `saveFromADUser`) used to run while building `updates`, BEFORE `assertCenterWrite`. Proves
+    // the fix: a denial must be reached before that call, not after it.
+    it('falsifier (b) with lead_contact_person_data: a denial never calls resolveOrCreateContact and never opens a transaction', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      mockDataSource.transaction.mockClear();
+      mockAdUserService.resolveOrCreateContact.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockRejectedValueOnce(
+        new ForbiddenException(
+          `Result ${resultId} is under Science Program review (rule: center).`,
+        ),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        {
+          lead_contact_person_data: { mail: 'someone@cgiar.org' },
+        } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.FORBIDDEN);
+      expect(mockAdUserService.resolveOrCreateContact).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+
+    it('falsifier (c): an admin at status 5 succeeds, including a DAC-tag field write — R-3.a', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        { gender_tag_level_id: 2 } as any,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({ id: resultId }),
+        'general-info',
+        userTest,
+      );
+      expect(manager.update).toHaveBeenCalledWith(
+        Result,
+        resultId,
+        expect.objectContaining({ gender_tag_level_id: 2 }),
+      );
+    });
+
+    // requirements.md R-4.a: "a result at status 1 (and separately at 8)".
+    it('falsifier (a), status 8 (Draft): a non-admin succeeds and writes — R-4.a', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Bilateral,
+        title: 'Existing title',
+        status_id: ResultStatusData.Draft.value,
+      });
+      const manager = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) =>
+        callback(manager),
+      );
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        dto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: resultId,
+          status_id: ResultStatusData.Draft.value,
+        }),
+        'general-info',
+        userTest,
+      );
+      expect(manager.update).toHaveBeenCalled();
+    });
+
+    // Reviewer FAIL (attempt 1) — `source` was already selected but never checked. Proves the
+    // fix: a W1/W2 result gets 400 before the helper is even consulted, and no write happens.
+    it('a non-admin on a W1/W2 (SourceEnum.Result) row at status 1 gets 400, with no assertCenterWrite call and no transaction opened', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: resultId,
+        version_id: 1,
+        source: SourceEnum.Result,
+        title: 'Existing title',
+        status_id: ResultStatusData.Editing.value,
+      });
+      mockDataSource.transaction.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockClear();
+
+      const res = await resultService.updateBilateralGeneralInfo(
+        resultId,
+        dto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toContain(
+        'Bilateral result not found',
+      );
+      expect(
+        mockBilateralAccessService.assertCenterWrite,
+      ).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  // BIL-RTE-T-2 forward pointer — Minimum Data Standard fields (`result.description`) are
+  // Center-reported data, the same column `general-info` writes, so this endpoint gets the same
+  // decision (labelled 'data-standard', matching the route `review-update/data-standard/:id`).
+  // The platform-admin gate a few lines above (P2-3154 BR1) already guarantees `user` is an
+  // admin here, so this call is belt-and-suspenders — its purpose is retiring the last remaining
+  // caller of the old status-inverted validator.
+  describe('updateBilateralResultReview — BIL-RTE-T-2 data-standard wiring', () => {
+    it('calls assertCenterWrite with the loaded result and the data-standard label', async () => {
+      const mockResult = {
+        id: 100,
+        status_id: ResultStatusData.PendingReview.value,
+        source: SourceEnum.Bilateral,
+        is_active: true,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      };
+      const mockCommonFields = {
+        id: 100,
+        status_id: ResultStatusData.PendingReview.value,
+        source: SourceEnum.Bilateral,
+        result_description: 'Original description',
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      };
+      mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+        const manager = {
+          findOne: jest.fn().mockResolvedValueOnce(mockResult),
+          update: jest.fn(),
+          create: jest.fn(),
+          save: jest.fn().mockResolvedValueOnce({ id: 1 }),
+        };
+        return callback(manager);
+      });
+      (
+        mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+      ).mockResolvedValueOnce(mockCommonFields);
+      (
+        mockContributorsPartnersService.updatePartnersV2 as jest.Mock
+      ).mockResolvedValueOnce({ status: HttpStatus.OK, response: {} });
+
+      const res = await resultService.updateBilateralResultReview(
+        100,
+        {
+          commonFields: {
+            id: 100,
+            result_type_id: ResultTypeEnum.POLICY_CHANGE,
+          },
+          contributingCenters: [{ code: '1' }] as any,
+          updateExplanation: 'Updated centers',
+        } as ReviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 100,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'data-standard',
+        userTest,
+      );
+    });
+
+    it('returns 400 "Bilateral result not found" when the result cannot be loaded, without opening a transaction', async () => {
+      (
+        mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+      ).mockResolvedValueOnce(null);
+      mockDataSource.transaction.mockClear();
+
+      const res = await resultService.updateBilateralResultReview(
+        999,
+        { commonFields: { id: 999 } } as ReviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toContain(
+        'Bilateral result not found',
+      );
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+
+    // Reviewer FAIL (attempt 1) — `getCommonFieldsBilateralResultById`'s SQL filters only
+    // `r.id = ? AND r.is_active = 1`, not `source`. Proves the widened check: a W1/W2 row (this
+    // endpoint is only reachable by an admin, per the gate above, but the source gap is real
+    // regardless of who calls it) gets 400, no helper call, no transaction.
+    it('a W1/W2 (SourceEnum.Result) row gets 400, with no assertCenterWrite call and no transaction opened', async () => {
+      (
+        mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+      ).mockResolvedValueOnce({
+        id: 101,
+        status_id: ResultStatusData.Editing.value,
+        source: SourceEnum.Result,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      });
+      mockDataSource.transaction.mockClear();
+      mockBilateralAccessService.assertCenterWrite.mockClear();
+
+      const res = await resultService.updateBilateralResultReview(
+        101,
+        { commonFields: { id: 101 } } as ReviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toContain(
+        'Bilateral result not found',
+      );
+      expect(
+        mockBilateralAccessService.assertCenterWrite,
+      ).not.toHaveBeenCalled();
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  // BIL-RTE-T-2 — design.md §5.1: "consult the helper only when the result is bilateral" (v1
+  // geography entry, falsifier case (d)). `saveGeoScope` itself is the shared W1/W2 method and is
+  // deliberately not touched (design §5.1: "never in the shared method").
+  describe('assertGeographyCenterWrite — BIL-RTE-T-2 (design.md §5.1, case (d))', () => {
+    it('case (d): a non-bilateral result never consults the helper', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 700,
+        source: SourceEnum.Result,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+
+      await resultService.assertGeographyCenterWrite(700, userTest);
+
+      expect(
+        mockBilateralAccessService.assertCenterWrite,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a not-found result never consults the helper', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+      await resultService.assertGeographyCenterWrite(701, userTest);
+
+      expect(
+        mockBilateralAccessService.assertCenterWrite,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a bilateral result consults the helper with the geography label', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 702,
+        source: SourceEnum.Bilateral,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+
+      await resultService.assertGeographyCenterWrite(702, userTest);
+
+      expect(mockBilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 702,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'geography',
+        userTest,
+      );
+    });
+
+    it('propagates a denial from the helper', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 703,
+        source: SourceEnum.Bilateral,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      mockBilateralAccessService.assertCenterWrite.mockRejectedValueOnce(
+        new ForbiddenException(
+          'Result 703 is under Science Program review (rule: center).',
+        ),
+      );
+
+      await expect(
+        resultService.assertGeographyCenterWrite(703, userTest),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('getAllInstitutions', () => {
@@ -2201,6 +2935,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
     const mockCommonFields = {
       id: 100,
+      source: SourceEnum.Bilateral,
       result_description: 'Original description',
       result_type_id: ResultTypeEnum.POLICY_CHANGE,
     };

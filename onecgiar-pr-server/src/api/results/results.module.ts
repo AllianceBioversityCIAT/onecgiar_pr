@@ -112,6 +112,7 @@ import { ReportingFullMetadataExportService } from './services/reporting-full-me
 import { ReportingMetadataExportQueueModule } from '../../shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.module';
 import { ReportingMetadataExportConsumer } from './reporting-metadata-export.consumer';
 import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
+import { BilateralAccessModule } from './bilateral-access/bilateral-access.module';
 
 @Module({
   controllers: [ResultsController, ReportingMetadataExportConsumer],
@@ -184,6 +185,10 @@ import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
     PlatformReportModule,
     EmailNotificationManagementModule,
     ReportingMetadataExportQueueModule,
+    // `bilateral-access/bilateral-access.module.ts` — provides `BilateralAccessService` (a
+    // required `ResultsService` constructor param); imported here AND in `DeleteRecoverDataModule`
+    // AND `ResultsKnowledgeProductsModule`, since all three declare `ResultsService` directly.
+    BilateralAccessModule,
   ],
   providers: [
     ResultsService,
@@ -228,6 +233,10 @@ import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
     JwtMiddleware,
     ResultsService,
     ResultQuestionsService,
+    // Re-exports BilateralAccessService (sourced via the BilateralAccessModule import above) so
+    // BilateralModule — which already imports ResultsModule — gets it for free through that
+    // existing edge, with no new import on either side.
+    BilateralAccessModule,
   ],
 })
 export class ResultsModule implements NestModule {

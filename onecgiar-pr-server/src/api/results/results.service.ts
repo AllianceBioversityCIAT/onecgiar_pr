@@ -7,6 +7,7 @@ import {
   Optional,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DataSource, In, IsNull } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -148,6 +149,7 @@ import { CreateTocShareResult } from './share-result-request/dto/create-toc-shar
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
 import { ShareResultRequest } from './share-result-request/entities/share-result-request.entity';
+import { BilateralAccessService } from './bilateral-access/bilateral-access.service';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
@@ -202,6 +204,12 @@ export class ResultsService {
     private readonly _resultDeletionAuditService: ResultDeletionAuditService,
     private readonly _dataSource: DataSource,
     private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
+    // design §5.1, DD-1 — the access helper for the bilateral review-time decisions (ToC write,
+    // Decision). Required (not @Optional()): this class is declared directly in `ResultsModule`,
+    // `DeleteRecoverDataModule` and `ResultsKnowledgeProductsModule`, all of which import
+    // `BilateralAccessModule` (`bilateral-access/bilateral-access.module.ts`), which provides and
+    // exports this service — that's what keeps a required param here bootstrap-safe.
+    private readonly _bilateralAccessService: BilateralAccessService,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
@@ -2427,6 +2435,32 @@ export class ResultsService {
     }
   }
 
+  /**
+   * `docs/specs/bilateral/review-toc-only-editing/design.md` §5.1 — Center-write guard for the
+   * v1 geography entry point. `saveGeoScope` below is the shared W1/W2 method (design §5.1: "v1
+   * `saveGeoScope` also serve[s] W1/W2 ... never in the shared method"), so the check lives here
+   * instead and is called once, from `ResultsController.saveGeographic`, BEFORE `saveGeoScope`
+   * runs. A non-bilateral (or not-found) result never reaches `BilateralAccessService` at all —
+   * falsifier case (d).
+   */
+  async assertGeographyCenterWrite(
+    resultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId },
+      select: ['id', 'source', 'status_id'],
+    });
+    if (!result || result.source !== SourceEnum.Bilateral) {
+      return;
+    }
+    await this._bilateralAccessService.assertCenterWrite(
+      { id: result.id, status_id: result.status_id },
+      'geography',
+      user,
+    );
+  }
+
   async saveGeoScope(createResultGeo: CreateResultGeoDto, user: TokenDto) {
     try {
       await this._resultRegionsService.create(createResultGeo);
@@ -4031,17 +4065,6 @@ export class ResultsService {
         };
       }
 
-      if (
-        reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
-        !reviewDecisionDto.justification?.trim()
-      ) {
-        return {
-          response: {},
-          message: 'Justification is required when decision is REJECT',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
       await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
@@ -4053,6 +4076,24 @@ export class ResultsService {
 
         if (!result) {
           throw new BadRequestException('Bilateral result not found');
+        }
+
+        // BIL-RTE-T-3 (design §5.1, R-6) — the Decision rule runs before the existing
+        // status/justification checks below (task description). Admin, or the caller holds an
+        // active role on any SP linked to the result; anyone else gets 403.
+        await this._bilateralAccessService.assertDecision(
+          result,
+          'review-decision',
+          user,
+        );
+
+        if (
+          reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
+          !reviewDecisionDto.justification?.trim()
+        ) {
+          throw new BadRequestException(
+            'Justification is required when decision is REJECT',
+          );
         }
 
         const currentStatusId = Number(result.status_id);
@@ -4158,7 +4199,8 @@ export class ResultsService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
-        error instanceof ConflictException
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException
       ) {
         return {
           response: {},
@@ -4224,6 +4266,20 @@ export class ResultsService {
           parsedResultId,
         );
 
+      // Reviewer FAIL (attempt 1): `getCommonFieldsBilateralResultById`'s SQL
+      // (`result.repository.ts`) filters only `r.id = ? AND r.is_active = 1` — it is NOT
+      // bilateral-scoped, despite selecting `r.source`. The deleted validator's `manager.findOne`
+      // DID filter `source: SourceEnum.Bilateral`; without checking it here, a non-admin W1/W2
+      // result would (once past the platform-admin gate above, which every caller must also
+      // clear) still be reachable. Widened per Reviewer remediation: check both "not found" and
+      // "not bilateral" the same way title/general-info do.
+      if (
+        !currentCommonFields ||
+        currentCommonFields.source !== SourceEnum.Bilateral
+      ) {
+        throw new BadRequestException('Bilateral result not found');
+      }
+
       const hasMinDataStandardChanges = this._detectMinDataStandardChanges(
         reviewUpdateDto,
         currentCommonFields,
@@ -4234,13 +4290,22 @@ export class ResultsService {
 
       this._validateUpdateExplanation(hasChanges, reviewUpdateDto);
 
-      await this._dataSource.transaction(async (manager) => {
-        await this._validateBilateralResultForUpdate(
-          manager,
-          parsedResultId,
-          user,
-        );
+      // design §5.1, BIL-RTE-T-2 forward pointer — Minimum Data Standard fields (this method's
+      // `description` write) are Center-reported data, the same `result.description` column
+      // `general-info` writes. The platform-admin gate above (P2-3154 BR1) already guarantees
+      // `user` is an admin by the time this runs, so this call is belt-and-suspenders — its
+      // purpose is retiring the last remaining caller of the old status-inverted validator. Runs
+      // before the transaction opens — still before any write.
+      await this._bilateralAccessService.assertCenterWrite(
+        {
+          id: currentCommonFields.id,
+          status_id: currentCommonFields.status_id,
+        },
+        'data-standard',
+        user,
+      );
 
+      await this._dataSource.transaction(async (manager) => {
         //Update description
         await this._updateMinDataStandardFields(
           manager,
@@ -4306,43 +4371,6 @@ export class ResultsService {
         };
       }
       return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  private async _validateBilateralResultForUpdate(
-    manager: any,
-    resultId: number,
-    user?: TokenDto,
-  ): Promise<void> {
-    const result = await manager.findOne(Result, {
-      where: {
-        id: resultId,
-        source: SourceEnum.Bilateral,
-        is_active: true,
-      },
-    });
-
-    if (!result) {
-      throw new BadRequestException('Bilateral result not found');
-    }
-
-    if (user && this._roleByUserRepository) {
-      const isAdmin =
-        await this._roleByUserRepository.validationRolePermissions(
-          user.id,
-          resultId,
-          [RoleEnum.ADMIN],
-        );
-      if (isAdmin) {
-        return;
-      }
-    }
-
-    const currentStatusId = Number(result.status_id);
-    if (currentStatusId !== ResultStatusData.PendingReview.value) {
-      throw new ConflictException(
-        `Cannot update result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
-      );
     }
   }
 
@@ -5194,6 +5222,21 @@ export class ResultsService {
         };
       }
 
+      // A malformed `result_toc_results` (not an array) would otherwise reach the DD-7 loop
+      // inside `assertTocWrite` and throw a raw TypeError, surfacing as an unhandled 500. This is
+      // client input validation, not an authorization decision, so it's a 400 before the helper
+      // is ever called.
+      if (
+        updateTocMetadataDto.tocMetadata?.result_toc_results !== undefined &&
+        !Array.isArray(updateTocMetadataDto.tocMetadata.result_toc_results)
+      ) {
+        return {
+          response: {},
+          message: '"result_toc_results" must be an array.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       return await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
@@ -5207,10 +5250,17 @@ export class ResultsService {
           throw new BadRequestException('Bilateral result not found');
         }
 
-        await this._validateBilateralResultForUpdate(
-          manager,
-          parsedResultId,
+        // design §5.1, R-5 — the ToC-write decision replaces `_validateBilateralResultForUpdate`
+        // here: admin; or status = 5 AND the caller holds an active role on the payload's
+        // initiative AND that initiative is actively linked to the result AND all three DD-7
+        // checks pass (all applied inside the helper). Keeps the existing 409 for a non-admin at
+        // a status other than 5.
+        await this._bilateralAccessService.assertTocWrite(
+          result,
+          updateTocMetadataDto.tocMetadata?.initiative_id,
+          'toc-metadata',
           user,
+          updateTocMetadataDto.tocMetadata?.result_toc_results,
         );
 
         if (!updateTocMetadataDto.updateExplanation?.trim()) {
@@ -5257,7 +5307,8 @@ export class ResultsService {
     } catch (error) {
       if (
         error instanceof BadRequestException ||
-        error instanceof ConflictException
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException
       ) {
         return {
           response: {},
@@ -5298,13 +5349,26 @@ export class ResultsService {
 
       const bilateralResult = await this._resultRepository.findOne({
         where: { id: parsedResultId, is_active: true },
-        select: ['id', 'version_id'],
+        select: ['id', 'version_id', 'status_id', 'source'],
       });
       if (!bilateralResult) {
         return {
           response: {},
           message: 'The result does not exist',
           status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      // Reviewer FAIL (attempt 1): the deleted validator's `manager.findOne` also filtered
+      // `source: SourceEnum.Bilateral` — the load above does not. Without this check, ANY W1/W2
+      // result (never at status 5) would pass `assertCenterWrite` for a non-admin, since it only
+      // blocks Pending Review. `api/results/CLAUDE.md` §7: "source = SourceEnum.Bilateral drives
+      // review-workflow branching… Don't normalise this away."
+      if (bilateralResult.source !== SourceEnum.Bilateral) {
+        return {
+          response: {},
+          message: 'Bilateral result not found',
+          status: HttpStatus.BAD_REQUEST,
         };
       }
 
@@ -5324,13 +5388,16 @@ export class ResultsService {
         };
       }
 
-      await this._dataSource.transaction(async (manager) => {
-        await this._validateBilateralResultForUpdate(
-          manager,
-          parsedResultId,
-          user,
-        );
+      // design §5.1, BIL-RTE-T-2 — Center-write decision (R-2, R-4.a): admin, or status ≠
+      // Pending Review. Replaces the old status-inverted validator (409 whenever status ≠ 5).
+      // Runs before the transaction opens — still before any write.
+      await this._bilateralAccessService.assertCenterWrite(
+        { id: bilateralResult.id, status_id: bilateralResult.status_id },
+        'title',
+        user,
+      );
 
+      await this._dataSource.transaction(async (manager) => {
         await manager.update(Result, parsedResultId, {
           title: title.trim(),
         });
@@ -5404,7 +5471,7 @@ export class ResultsService {
 
       const bilateralResult = await this._resultRepository.findOne({
         where: { id: parsedResultId, is_active: true },
-        select: ['id', 'version_id', 'source', 'title'],
+        select: ['id', 'version_id', 'source', 'title', 'status_id'],
       });
       if (!bilateralResult) {
         return {
@@ -5413,6 +5480,33 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      // Reviewer FAIL (attempt 1): `source` was already selected above but never checked. The
+      // deleted validator's `manager.findOne` filtered `source: SourceEnum.Bilateral` — without
+      // this check, ANY W1/W2 result (never at status 5) would pass `assertCenterWrite` for a
+      // non-admin, since it only blocks Pending Review. `api/results/CLAUDE.md` §7: "source =
+      // SourceEnum.Bilateral drives review-workflow branching… Don't normalise this away."
+      if (bilateralResult.source !== SourceEnum.Bilateral) {
+        return {
+          response: {},
+          message: 'Bilateral result not found',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      // design §5.1, BIL-RTE-T-2 — Center-write decision (R-2, R-4.a): admin, or status ≠
+      // Pending Review. Replaces the old status-inverted validator (409 whenever status ≠ 5).
+      // Covers the DAC-tag / impact-area fields this same method writes below — they share this
+      // one call, not a second one. Reviewer FAIL (attempt 2): this must run BEFORE `updates` is
+      // built, not just before `transaction(` — `dto.lead_contact_person_data` below can call
+      // `_adUserService.resolveOrCreateContact`, which writes an `ad_users` row
+      // (`ad_users.service.ts` `saveFromADUser`) even though that write isn't inside this
+      // method's own transaction.
+      await this._bilateralAccessService.assertCenterWrite(
+        { id: bilateralResult.id, status_id: bilateralResult.status_id },
+        'general-info',
+        user,
+      );
 
       const updates: Partial<Result> = {};
 
@@ -5493,12 +5587,6 @@ export class ResultsService {
       }
 
       await this._dataSource.transaction(async (manager) => {
-        await this._validateBilateralResultForUpdate(
-          manager,
-          parsedResultId,
-          user,
-        );
-
         if (Object.keys(updates).length > 0) {
           await manager.update(Result, parsedResultId, updates);
         }

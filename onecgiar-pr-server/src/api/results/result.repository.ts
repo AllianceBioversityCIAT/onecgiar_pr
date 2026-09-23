@@ -3435,13 +3435,19 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         -- declared" apart from "not answered yet", and the checkbox comes back unticked on reload.
         r.no_applicable_partner,
         r.is_lead_by_partner,
-        v.phase_year AS reporting_year
+        v.phase_year AS reporting_year,
+        -- BIL-RTE-DD-6: "P25 onward" is the portfolio's own start year, never a portfolio id,
+        -- a phase id, or the phase year — those differ between environments. A version without
+        -- a portfolio (LEFT JOIN) surfaces null, which the client/server both treat as false.
+        cpf.start_date AS portfolio_start_year
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
         AND rt.is_active = 1
       LEFT JOIN version v
         ON v.id = r.version_id
+      LEFT JOIN clarisa_portfolios cpf
+        ON cpf.id = v.portfolio_id
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
         AND rbp.is_active = 1
@@ -3472,6 +3478,36 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const results = await this.query(query, [resultId]);
       return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * BIL-RTE-DD-6: the portfolio's start year for a version, via `version.portfolio_id ->
+   * clarisa_portfolios.start_date`. Null when the version has no portfolio (T-0 check 2 found a
+   * row like this in prtest) — callers treat null as "not P25-onward", same as today.
+   */
+  async getPortfolioStartYearByVersionId(
+    versionId: number,
+  ): Promise<number | null> {
+    if (!versionId) return null;
+
+    const query = `
+      SELECT cpf.start_date AS portfolio_start_year
+      FROM version v
+      LEFT JOIN clarisa_portfolios cpf ON cpf.id = v.portfolio_id
+      WHERE v.id = ?
+    `;
+
+    try {
+      const rows = await this.query(query, [versionId]);
+      const value = rows?.[0]?.portfolio_start_year;
+      return value === null || value === undefined ? null : Number(value);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

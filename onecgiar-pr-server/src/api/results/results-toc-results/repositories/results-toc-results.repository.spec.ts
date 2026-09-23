@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { FindOperator } from 'typeorm';
+import { FindOperator, In } from 'typeorm';
 import { ResultsTocResultRepository } from './results-toc-results.repository';
 
 /**
@@ -356,5 +356,199 @@ describe("saveIndicatorsPrimarySubmitter — resolves the tab's own row", () => 
     expect(saveActionAreaTocSpy).not.toHaveBeenCalled();
     expect(saveInditicatorsContributingSpy).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+// BIL-RTE-T-5 / DD-5 — a P25-onward No deactivates the children of the parents the caller
+// already deactivated: indicators, indicator targets (grandchildren, scoped by indicator id,
+// not by parent id), SDG targets, impact-area targets and action-area links. Logical delete
+// only — every assertion below is an `update` call, never `.delete()`/`.remove()`.
+describe('ResultsTocResultRepository.deactivateChildrenForParents (BIL-RTE-T-5)', () => {
+  let repository: ResultsTocResultRepository;
+  let indicatorRepo: any;
+  let targetRepo: any;
+  let impactAreaRepo: any;
+  let sdgTargetRepo: any;
+  let actionAreaRepo: any;
+
+  beforeEach(() => {
+    indicatorRepo = {
+      find: jest.fn().mockResolvedValue([]),
+      update: jest.fn().mockResolvedValue(undefined),
+    };
+    targetRepo = { update: jest.fn().mockResolvedValue(undefined) };
+    impactAreaRepo = { update: jest.fn().mockResolvedValue(undefined) };
+    sdgTargetRepo = { update: jest.fn().mockResolvedValue(undefined) };
+    actionAreaRepo = { update: jest.fn().mockResolvedValue(undefined) };
+
+    const dataSource: any = {
+      createEntityManager: jest.fn().mockReturnValue({}),
+    };
+    const handlersError: any = { returnErrorRepository: jest.fn((e) => e) };
+
+    repository = new ResultsTocResultRepository(
+      dataSource,
+      handlersError,
+      indicatorRepo,
+      impactAreaRepo,
+      sdgTargetRepo,
+      {} as any,
+      actionAreaRepo,
+      targetRepo,
+    );
+  });
+
+  it('deactivates indicators, their targets, SDG targets, impact-area targets and action-area links for the given parents', async () => {
+    indicatorRepo.find.mockResolvedValueOnce([
+      { result_toc_result_indicator_id: 700, is_active: true },
+      { result_toc_result_indicator_id: 701, is_active: true },
+    ]);
+
+    await repository.deactivateChildrenForParents([10350, 10351], 9);
+
+    expect(indicatorRepo.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ is_active: true }),
+      }),
+    );
+    expect(targetRepo.update).toHaveBeenCalledWith(
+      expect.objectContaining({ is_active: true }),
+      { is_active: false, last_updated_by: 9 },
+    );
+    expect(indicatorRepo.update).toHaveBeenCalledWith(
+      { result_toc_result_indicator_id: In([700, 701]) },
+      { is_active: false, last_updated_by: 9 },
+    );
+    expect(sdgTargetRepo.update).toHaveBeenCalledWith(
+      { result_toc_result_id: In([10350, 10351]), is_active: true },
+      { is_active: false, last_updated_by: 9 },
+    );
+    expect(impactAreaRepo.update).toHaveBeenCalledWith(
+      expect.objectContaining({ is_active: true }),
+      { is_active: false, last_updated_by: 9 },
+    );
+    expect(actionAreaRepo.update).toHaveBeenCalledWith(
+      expect.objectContaining({ is_active: true }),
+      { is_active: false, last_updated_by: 9 },
+    );
+  });
+
+  it('is a no-op when no parent ids are given (nothing to cascade)', async () => {
+    await repository.deactivateChildrenForParents([], 9);
+
+    expect(indicatorRepo.find).not.toHaveBeenCalled();
+    expect(sdgTargetRepo.update).not.toHaveBeenCalled();
+    expect(impactAreaRepo.update).not.toHaveBeenCalled();
+    expect(actionAreaRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('skips the target-repository call when the parents have no active indicators', async () => {
+    indicatorRepo.find.mockResolvedValueOnce([]);
+
+    await repository.deactivateChildrenForParents([10350], 9);
+
+    expect(targetRepo.update).not.toHaveBeenCalled();
+    expect(indicatorRepo.update).not.toHaveBeenCalled();
+    // The parent-level link tables are still swept regardless of indicators.
+    expect(sdgTargetRepo.update).toHaveBeenCalled();
+    expect(impactAreaRepo.update).toHaveBeenCalled();
+    expect(actionAreaRepo.update).toHaveBeenCalled();
+  });
+});
+
+// BIL-RTE-T-5 attempt 2 — Reviewer remediation for R-8.b / design.md §5.2 step 6: "A reactivated
+// parent does not reactivate children deactivated by step 4. This must be verified by test, not
+// assumed." The risk lives in `saveInditicatorsContributing` (:1790): its FIRST act, whenever
+// `id_result_toc_result` is given, is a blanket sweep that deactivates every indicator row of that
+// parent — old and new alike — before the per-item loop runs. A later Yes that reactivates an old
+// parent and names a DIFFERENT indicator must never let that old indicator (or its targets) come
+// back active: the per-item loop only ever reactivates the ONE indicator named in the payload, via
+// an explicit `{ is_active: true }` update scoped to that indicator's own id — never the old one.
+describe('ResultsTocResultRepository.saveInditicatorsContributing — R-8.b: a reactivated parent does not revive a different old indicator', () => {
+  let repository: ResultsTocResultRepository;
+  let indicatorRepo: any;
+  let targetRepo: any;
+
+  const PARENT_ID = 10350; // the reactivated OLD parent (result_toc_result_id)
+  const NEW_INDICATOR_ROW_ID = 900;
+
+  beforeEach(() => {
+    indicatorRepo = {
+      // No active row for the NEW indicator under this parent yet -> the
+      // per-item loop takes the INSERT branch (`.save`), never `.update`
+      // with `is_active: true`.
+      findOne: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn().mockResolvedValue({
+        result_toc_result_indicator_id: NEW_INDICATOR_ROW_ID,
+      }),
+    };
+    targetRepo = {
+      findOne: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const dataSource: any = {
+      createEntityManager: jest.fn().mockReturnValue({}),
+    };
+    const handlersError: any = { returnErrorRepository: jest.fn((e) => e) };
+
+    repository = new ResultsTocResultRepository(
+      dataSource,
+      handlersError,
+      indicatorRepo,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      targetRepo,
+    );
+    // getPhaseYearByResult goes through this.query; an empty result set
+    // makes it return null, same as the P2-3608 fixture above.
+    (repository as any).query = jest.fn().mockResolvedValue([]);
+  });
+
+  it('runs the first sweep, never reactivates the old indicator, and never revives its targets', async () => {
+    await repository.saveInditicatorsContributing(
+      [{ toc_results_indicator_id: 'indicator-NEW', targets: [] }],
+      PARENT_ID,
+      500,
+      9,
+    );
+
+    // 1) The first sweep runs, deactivating every indicator of this parent
+    //    (old and new alike) before anything else happens.
+    expect(indicatorRepo.update).toHaveBeenCalledWith(
+      { results_toc_results_id: PARENT_ID },
+      { is_active: false, last_updated_by: 9 },
+    );
+
+    // 2) The indicator repository never receives `is_active: true` for the
+    //    OLD indicator (or for anything) — the new indicator is a fresh
+    //    INSERT (`.save`), never an `.update` reactivation. The sweep above
+    //    is the only `update` call this run makes.
+    expect(indicatorRepo.update).toHaveBeenCalledTimes(1);
+    expect(
+      indicatorRepo.update.mock.calls.some(
+        ([, changes]: any[]) => changes?.is_active === true,
+      ),
+    ).toBe(false);
+
+    // 3) The target repository never reactivates the old indicator's
+    //    targets: no `update` call touches `result_indicators_targets` at
+    //    all in this run (there is no existing indicator row to update the
+    //    targets of).
+    expect(targetRepo.update).not.toHaveBeenCalled();
+
+    // The new indicator was inserted fresh, scoped to its own new row id —
+    // structurally incapable of touching the old indicator's targets.
+    expect(indicatorRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        results_toc_results_id: PARENT_ID,
+        toc_results_indicator_id: 'indicator-NEW',
+        is_active: true,
+      }),
+    );
   });
 });

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { BilateralCenterService } from './bilateral-center.service';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
@@ -30,6 +30,7 @@ import { BilateralQualityAssessmentService } from './quality-assessment/bilatera
 import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { AoWBilateralRepository } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
+import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -41,6 +42,7 @@ describe('BilateralCenterService', () => {
   let bilateralProjectsService: BilateralProjectsService;
   let bilateralService: BilateralService;
   let resultsKnowledgeProductsService: ResultsKnowledgeProductsService;
+  let bilateralAccessService: BilateralAccessService;
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -301,6 +303,16 @@ describe('BilateralCenterService', () => {
             }),
           },
         },
+        // design §5.1, BIL-RTE-T-2 — the Center-write decision consulted by `updatePlannedResult`,
+        // `saveTocMapping` and `saveContributors`. Resolves (allow) by default so every existing
+        // test below keeps exercising its own scenario; the dedicated Center-write tests override
+        // it per case.
+        {
+          provide: BilateralAccessService,
+          useValue: {
+            assertCenterWrite: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -319,6 +331,9 @@ describe('BilateralCenterService', () => {
       module.get<ResultsKnowledgeProductsService>(
         ResultsKnowledgeProductsService,
       );
+    bilateralAccessService = module.get<BilateralAccessService>(
+      BilateralAccessService,
+    );
   });
 
   it('should be defined', () => {
@@ -355,6 +370,90 @@ describe('BilateralCenterService', () => {
       2025,
       36,
     );
+  });
+
+  // BIL-RTE-T-2 — design §5.1: the Center-write decision, before any write. This wiring test
+  // covers the arguments the helper is called with and reacts to deny/allow; the decision's own
+  // admin/status logic is covered by `bilateral-access.service.spec.ts`.
+  describe('updatePlannedResult (BIL-RTE-T-2, design §5.1)', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'test@cgiar.org',
+      first_name: 'Test',
+      last_name: 'User',
+    };
+
+    it('falsifier (b): a non-admin denial returns 403 (via HttpException) and no repository write runs', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        status_id: ResultStatusData.PendingReview.value,
+      } as any);
+      const resultsTocResultsService = module.get<ResultsTocResultsService>(
+        ResultsTocResultsService,
+      );
+      (
+        bilateralAccessService.assertCenterWrite as jest.Mock
+      ).mockRejectedValueOnce(
+        new ForbiddenException(
+          'Result 10 is under Science Program review (rule: center).',
+        ),
+      );
+
+      await expect(
+        service.updatePlannedResult(10, { planned_result: true }, user),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'center-planned-result',
+        user,
+      );
+      expect(
+        resultsTocResultsService.updatePlannedResult,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('falsifier (c): an admin at status 5 proceeds to write (allow path)', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        status_id: ResultStatusData.PendingReview.value,
+      } as any);
+      const resultsTocResultsService = module.get<ResultsTocResultsService>(
+        ResultsTocResultsService,
+      );
+
+      await service.updatePlannedResult(10, { planned_result: true }, user);
+
+      expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'center-planned-result',
+        user,
+      );
+      expect(resultsTocResultsService.updatePlannedResult).toHaveBeenCalledWith(
+        10,
+        true,
+        user.id,
+      );
+    });
+
+    it('returns 404 when the bilateral result cannot be found, and never consults the helper', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValueOnce(null);
+
+      const res = await service.updatePlannedResult(
+        999,
+        { planned_result: true },
+        user,
+      );
+
+      expect(res).toMatchObject({ status: 404 });
+      expect(bilateralAccessService.assertCenterWrite).not.toHaveBeenCalled();
+    });
   });
 
   describe('createResultHeader', () => {
@@ -1369,6 +1468,71 @@ describe('BilateralCenterService', () => {
           },
         ]);
         expect(result.message).toContain('1 failed partners');
+      });
+    });
+
+    // BIL-RTE-T-2 — design §5.1: the Center-write decision, before any write. This wiring test
+    // covers the arguments the helper is called with and reacts to deny/allow; the decision's own
+    // admin/status logic is covered by `bilateral-access.service.spec.ts`.
+    describe('Center-write access rule (BIL-RTE-T-2, design §5.1)', () => {
+      it('falsifier (b): a non-admin denial returns 403 (via HttpException) and no repository write runs', async () => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+          source: SourceEnum.Bilateral,
+        } as any);
+        (
+          bilateralAccessService.assertCenterWrite as jest.Mock
+        ).mockRejectedValueOnce(
+          new ForbiddenException(
+            'Result 10 is under Science Program review (rule: center).',
+          ),
+        );
+        const resultsCenterRepository = module.get<ResultsCenterRepository>(
+          ResultsCenterRepository,
+        );
+
+        await expect(
+          service.saveContributors(10, { contributing_center: [] }, user),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 10,
+            status_id: ResultStatusData.PendingReview.value,
+          }),
+          'center-contributors',
+          user,
+        );
+        expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
+      });
+
+      it('falsifier (c): an admin at status 5 proceeds to write', async () => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+          source: SourceEnum.Bilateral,
+        } as any);
+        const resultsCenterRepository = module.get<ResultsCenterRepository>(
+          ResultsCenterRepository,
+        );
+        jest
+          .spyOn(resultsCenterRepository, 'find')
+          .mockResolvedValue([
+            { center_id: 'LEAD', is_leading_result: true },
+          ] as any);
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 10,
+            status_id: ResultStatusData.PendingReview.value,
+          }),
+          'center-contributors',
+          user,
+        );
+        expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
       });
     });
   });
@@ -2831,6 +2995,62 @@ describe('BilateralCenterService', () => {
       );
 
       expect(resultsTocResultRepository.save).not.toHaveBeenCalled();
+    });
+
+    // BIL-RTE-T-2 — design §5.1: the Center-write decision, before any write.
+    describe('Center-write access rule (BIL-RTE-T-2, design §5.1)', () => {
+      it('falsifier (b): a non-admin denial returns 403 (via HttpException) and no repository write runs', async () => {
+        (
+          bilateralAccessService.assertCenterWrite as jest.Mock
+        ).mockRejectedValueOnce(
+          new ForbiddenException(
+            'Result 10 is under Science Program review (rule: center).',
+          ),
+        );
+
+        const dto = { toc_linkage_mode: 'project_default' as const };
+
+        await expect(
+          service.saveTocMapping(10, dto as any, user),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 10 }),
+          'center-toc-mapping',
+          user,
+        );
+        expect(resultsTocResultRepository.save).not.toHaveBeenCalled();
+        expect(resultsTocResultRepository.update).not.toHaveBeenCalled();
+        expect(
+          resultsTocResultsService.updateTocResultPartial,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('falsifier (c): an admin at status 5 proceeds to write (allow path)', async () => {
+        (
+          resultsTocResultsService.getTocResultTypologyVerdicts as jest.Mock
+        ).mockResolvedValue(new Map([[2001, true]]));
+        (
+          resultsTocResultsService.updateTocResultPartial as jest.Mock
+        ).mockResolvedValue({ status: 200, response: { result_id: 10 } });
+
+        const dto = {
+          toc_linkage_mode: 'custom' as const,
+          result_toc_result: { result_toc_results: [{ toc_result_id: 2001 }] },
+        };
+
+        const res = await service.saveTocMapping(10, dto as any, user);
+
+        expect(res.status).toBe(200);
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 10 }),
+          'center-toc-mapping',
+          user,
+        );
+        expect(
+          resultsTocResultsService.updateTocResultPartial,
+        ).toHaveBeenCalled();
+      });
     });
   });
 });

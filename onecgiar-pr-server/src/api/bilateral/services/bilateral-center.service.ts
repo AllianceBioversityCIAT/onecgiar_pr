@@ -62,6 +62,7 @@ import {
   AoWBilateralRepository,
   ProjectTocLinkageNode,
 } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
+import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 
 // Canonical level names, matching result.repository.ts (~L3940) and toc-level.service.ts —
 // never "Work package Output/Outcome" (stale wording fixed 2026-09-18).
@@ -100,6 +101,10 @@ export class BilateralCenterService {
     private readonly qualityAssessmentService: BilateralQualityAssessmentService,
     private readonly qualityAssessmentRepository: BilateralQualityAssessmentRepository,
     private readonly aowBilateralRepository: AoWBilateralRepository,
+    // design §5.1, BIL-RTE-T-2 — resolvable here via `bilateral.module.ts`'s existing import of
+    // `ResultsModule`, which re-exports `BilateralAccessModule` (see that module's comment); no
+    // new module import needed.
+    private readonly bilateralAccessService: BilateralAccessService,
   ) {}
 
   /**
@@ -1083,6 +1088,24 @@ export class BilateralCenterService {
     user: TokenDto,
   ) {
     try {
+      const centerResult = await this.resultRepository.findOne({
+        where: { id: resultId, source: SourceEnum.Bilateral, is_active: true },
+        select: ['id', 'status_id'],
+      });
+      if (!centerResult) {
+        return {
+          response: { resultId },
+          message: 'Bilateral result not found',
+          status: 404,
+        };
+      }
+      // design §5.1, BIL-RTE-T-2 — Center-write decision, before any write (R-2.a).
+      await this.bilateralAccessService.assertCenterWrite(
+        centerResult,
+        'center-planned-result',
+        user,
+      );
+
       let ownerInitiative =
         await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
@@ -1118,6 +1141,11 @@ export class BilateralCenterService {
         user.id,
       );
     } catch (error) {
+      // A 403 from `assertCenterWrite` (or any other HttpException) must reach the client with
+      // its own status — not get flattened into a 500 by the generic handler below.
+      if (error instanceof HttpException) {
+        throw error;
+      }
       return {
         response: {},
         message:
@@ -1135,6 +1163,24 @@ export class BilateralCenterService {
     user: TokenDto,
   ) {
     try {
+      const centerResult = await this.resultRepository.findOne({
+        where: { id: resultId, source: SourceEnum.Bilateral, is_active: true },
+        select: ['id', 'status_id'],
+      });
+      if (!centerResult) {
+        return {
+          response: { resultId },
+          message: 'Bilateral result not found',
+          status: 404,
+        };
+      }
+      // design §5.1, BIL-RTE-T-2 — Center-write decision, before any write (R-2.a).
+      await this.bilateralAccessService.assertCenterWrite(
+        centerResult,
+        'center-toc-mapping',
+        user,
+      );
+
       const ownerInitiative =
         await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
@@ -1367,7 +1413,7 @@ export class BilateralCenterService {
 
     try {
       const bilResult = await this.resultRepository.findOne({
-        where: { id: resultId, source: SourceEnum.Bilateral },
+        where: { id: resultId, source: SourceEnum.Bilateral, is_active: true },
       });
       if (!bilResult) {
         return {
@@ -1376,6 +1422,12 @@ export class BilateralCenterService {
           status: 404,
         };
       }
+      // design §5.1, BIL-RTE-T-2 — Center-write decision, before any write (R-2.a).
+      await this.bilateralAccessService.assertCenterWrite(
+        bilResult,
+        'center-contributors',
+        user,
+      );
 
       if (dto.contributing_center !== undefined) {
         await this.syncContributingCenters(
@@ -1439,6 +1491,11 @@ export class BilateralCenterService {
             : `Contributors saved with ${result.failedCenters.length} failed centers, ${result.failedProjects.length} failed projects, ${result.failedPartners.length} failed partners and ${result.failedPrograms.length} failed programs`,
       };
     } catch (error) {
+      // A 403 from `assertCenterWrite` (or any other HttpException) must reach the client with
+      // its own status — not get flattened into a 500 by the generic handler below.
+      if (error instanceof HttpException) {
+        throw error;
+      }
       return {
         response: {},
         message:

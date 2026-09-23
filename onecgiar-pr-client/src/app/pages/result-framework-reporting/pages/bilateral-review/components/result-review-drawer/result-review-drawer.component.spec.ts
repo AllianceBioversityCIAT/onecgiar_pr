@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick, flush } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
@@ -24,6 +24,31 @@ if (typeof (globalThis as any).structuredClone !== 'function') {
  * effect are real timers. This yields the event loop so those callbacks can run.
  */
 const macrotask = (ms = 5) => new Promise(resolve => setTimeout(resolve, ms));
+
+// @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6)
+/** Stand-in for the real `app-cp-multiple-wps` (declared in `RdContributorsAndPartnersModule`,
+ *  a heavy dependency graph — see `result-review-drawer.approve-tooltip.cy.ts`'s mount decision
+ *  and the file-wide `template: ''` override above). Same selector and inputs, so the rendered-proof
+ *  tests below can assert real DOM presence/absence of the element the disqualifier requires
+ *  ("assert DOM absence, never a class") without paying for the real component tree. */
+@Component({
+  selector: 'app-cp-multiple-wps',
+  standalone: true,
+  template: '<span>stub-multiple-wps</span>'
+})
+class StubCpMultipleWpsComponent {
+  @Input() editable: any;
+  @Input() initiative: any;
+  @Input() initiativeId: any;
+  @Input() resultLevelId: any;
+  @Input() isIpsr: any;
+  @Input() isContributor: any;
+  @Input() isNotifications: any;
+  @Input() isUnplanned: any;
+  @Input() showMultipleWPsContent: any;
+  @Input() hidden: any;
+  @Input() forceP25: any;
+}
 
 describe('ResultReviewDrawerComponent', () => {
   let component: ResultReviewDrawerComponent;
@@ -401,6 +426,257 @@ describe('ResultReviewDrawerComponent', () => {
     });
   });
 
+  // --------------------------------------- BIL-RTE-T-7 attempt 2 (Reviewer FAIL remediation)
+  //
+  // Attempt 1 proved the admin click mutates `body.has_regions` (CT, GeoscopeManagementComponent)
+  // and pinned the drawer's two `app-geoscope-management` call sites by reading the real HTML off
+  // disk. Neither proved the SAVE side of R-1.b: that the exact mutation the admin's click performs
+  // (`has_regions` flipped on `resultDetail().geographicScope`, the SAME object `[body]` binds to)
+  // actually marks `hasDataStandardUnsavedChanges()` dirty and enables the rendered "Save data
+  // standards" button — and the Reviewer flagged that gap. Full reasoning and attempt history:
+  // `docs/specs/bilateral/review-toc-only-editing/execution.md` §BIL-RTE-T-7.
+  describe('Save data standards — R-1.b behavioral proof (BIL-RTE-T-7 attempt 2)', () => {
+    // (a) LOGIC: the admin's geography mutation dirties the snapshot and blocks Approve. This is
+    // the same mechanism `getApproveButtonTooltip`'s "unsaved data-standard changes" test above
+    // exercises with `evidence`; here the mutated field is `geographicScope.has_regions` — the
+    // EXACT field `GeoscopeManagementComponent`'s `app-pr-yes-or-not` two-way-binds via
+    // `[(ngModel)]="this.body.has_regions"` when the admin clicks "Yes" (see the CT spec's test
+    // (b), same folder). FALSIFIER for this test is run manually below (not re-asserted here): if
+    // `geographicScope` is ever dropped from `normalizeDataStandardForComparison`
+    // (`result-review-drawer.component.ts:420,433`), this exact test goes red — verified by a
+    // temporary local edit + revert, see the Implementer's verification report.
+    it('(a) the admin geography mutation dirties the snapshot and blocks Approve', () => {
+      component.isToCCompleted.set(true);
+      component.resultDetail.set(buildDetail({ geographicScope: { geo_scope_id: 1, has_regions: undefined, regions: [], countries: [] } }));
+      (component as any).captureDataStandardSnapshot();
+      expect(component.hasDataStandardUnsavedChanges()).toBe(false);
+
+      // The exact mutation `pr-yes-or-not.onclickYes()` performs through the two-way binding —
+      // `this.body.has_regions = true` on the SAME object reference `resultDetail().geographicScope`.
+      component.resultDetail().geographicScope.has_regions = true;
+
+      expect(component.hasDataStandardUnsavedChanges()).toBe(true);
+      expect(component.canApprove()).toBe(false);
+    });
+
+    // (b) RENDERED: mounts the REAL "Save data standards" block — extracted from the shipped
+    // template at test time (never hand-typed, so this cannot silently drift from what ships) —
+    // in place of the file-wide `template: ''` override every other test in this file uses. That
+    // override exists because the FULL drawer template pulls in ~5 child-component dependency
+    // graphs behind ApiService (documented in `result-review-drawer.approve-tooltip.cy.ts`'s mount
+    // decision); this one `@if` block has no such dependency — it is `div`/`span`/`button`/`i`
+    // only — so it renders cleanly in jsdom without that cost.
+    describe('rendered proof', () => {
+      const TEMPLATE_PATH = path.join(__dirname, 'result-review-drawer.component.html');
+
+      /** Reads the exact shipped block, brace-matched from the marker comment to its own close —
+       * same technique `BSR-T-5: drawer header Source` above uses, not a substring/regex lock. */
+      const extractSaveButtonBlock = (): string => {
+        const html = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+        const marker = '<!-- Admin Save Changes for Data Standards -->';
+        const markerIndex = html.indexOf(marker);
+        expect(markerIndex).toBeGreaterThan(-1);
+        const ifMarker = '@if (canEditDataStandards()) {';
+        const ifIndex = html.indexOf(ifMarker, markerIndex);
+        expect(ifIndex).toBeGreaterThan(-1);
+        let depth = 1;
+        let cursor = ifIndex + ifMarker.length;
+        for (; cursor < html.length && depth > 0; cursor++) {
+          if (html[cursor] === '{') depth++;
+          else if (html[cursor] === '}') depth--;
+        }
+        expect(depth).toBe(0);
+        return html.slice(markerIndex, cursor);
+      };
+
+      let saveFixture: ComponentFixture<ResultReviewDrawerComponent>;
+      let saveComponent: ResultReviewDrawerComponent;
+
+      beforeEach(async () => {
+        const block = extractSaveButtonBlock();
+        expect(block).toContain('Save data standards');
+        expect(block).toContain('[disabled]="!hasDataStandardUnsavedChanges() || isSaving() || !isGeoScopeCompleted()"');
+
+        TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+          imports: [ResultReviewDrawerComponent],
+          providers: [
+            { provide: ApiService, useValue: apiMock },
+            { provide: RolesService, useValue: rolesMock },
+            { provide: CentersService, useValue: centersMock },
+            { provide: InstitutionsService, useValue: institutionsMock },
+            { provide: Router, useValue: routerMock }
+          ]
+        })
+          .overrideComponent(ResultReviewDrawerComponent, {
+            set: { template: block, imports: [], styles: [], changeDetection: ChangeDetectionStrategy.Default }
+          })
+          .compileComponents();
+
+        saveFixture = TestBed.createComponent(ResultReviewDrawerComponent);
+        saveComponent = saveFixture.componentInstance;
+      });
+
+      it('(b) as admin, after the mutation, "Save data standards" is present and its button is enabled', () => {
+        apiMock.rolesSE.isAdmin = true;
+        saveComponent.resultDetail.set(
+          buildDetail({ geographicScope: { geo_scope_id: 1, has_regions: undefined, regions: [], countries: [] } })
+        );
+        (saveComponent as any).captureDataStandardSnapshot();
+        saveComponent.resultDetail().geographicScope.has_regions = true; // the admin's click
+        saveFixture.detectChanges();
+
+        const host: HTMLElement = saveFixture.nativeElement;
+        expect(host.textContent).toContain('Save data standards');
+        const button = host.querySelector('button');
+        expect(button).toBeTruthy();
+        expect((button as HTMLButtonElement).disabled).toBe(false);
+      });
+
+      it('(b) FALSIFIER — the whole block is absent when canEditDataStandards() is false (non-admin)', () => {
+        apiMock.rolesSE.isAdmin = false;
+        apiMock.dataControlSE.myInitiativesList = [{ official_code: 'SP01' }];
+        TestBed.inject(BilateralResultsService).entityId.set('SP01');
+        saveComponent.resultToReview.set({ id: '1', status_id: 5 } as any);
+        saveComponent.resultDetail.set(
+          buildDetail({ geographicScope: { geo_scope_id: 1, has_regions: undefined, regions: [], countries: [] } })
+        );
+        (saveComponent as any).captureDataStandardSnapshot();
+        saveFixture.detectChanges();
+
+        const host: HTMLElement = saveFixture.nativeElement;
+        expect(host.textContent).not.toContain('Save data standards');
+        expect(host.querySelector('button')).toBeNull();
+      });
+    });
+  });
+
+  // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6)
+  // RENDERED proof that `app-cp-multiple-wps` is genuinely absent from the DOM (not merely CSS
+  // hidden) on a P25-onward No, and present otherwise — the disqualifier requires DOM absence,
+  // never a class. Mounts the REAL shipped block, extracted from the template at test time (same
+  // brace-matching technique the T-7 "rendered proof" block above uses), with a stub
+  // `app-cp-multiple-wps` standing in for the real (heavy) one.
+  describe('P25-onward ToC block rendering — rendered proof (BIL-RTE-T-6, R-7.a/b/c, R-11)', () => {
+    const TEMPLATE_PATH = path.join(__dirname, 'result-review-drawer.component.html');
+
+    /** Reads the exact shipped block, brace-matched from the marker comment through BOTH the
+     *  cp-multiple-wps gating `@if` and the immediately-following missing-initiative-message `@if`
+     *  — same technique T-7's "rendered proof" block above uses (never hand-typed, so this cannot
+     *  silently drift from what ships). */
+    const braceMatchIf = (html: string, ifMarker: string, fromIndex: number): { ifIndex: number; endIndex: number } => {
+      const ifIndex = html.indexOf(ifMarker, fromIndex);
+      expect(ifIndex).toBeGreaterThan(-1);
+      const openBraceIndex = html.indexOf('{', ifIndex);
+      let depth = 1;
+      let cursor = openBraceIndex + 1;
+      for (; cursor < html.length && depth > 0; cursor++) {
+        if (html[cursor] === '{') depth++;
+        else if (html[cursor] === '}') depth--;
+      }
+      expect(depth).toBe(0);
+      return { ifIndex, endIndex: cursor };
+    };
+
+    const extractTocGatingBlock = (): string => {
+      const html = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+      const marker = '<!-- @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-7.a/b, R-11) -->';
+      const markerIndex = html.indexOf(marker);
+      expect(markerIndex).toBeGreaterThan(-1);
+
+      const gatingBlock = braceMatchIf(html, '@if (tocInitiative?.planned_result !== null', markerIndex);
+      const messageBlock = braceMatchIf(html, '@if (tocInitiativeMissingMessage())', gatingBlock.endIndex);
+
+      return html.slice(gatingBlock.ifIndex, messageBlock.endIndex);
+    };
+
+    let gateFixture: ComponentFixture<ResultReviewDrawerComponent>;
+    let gateComponent: ResultReviewDrawerComponent;
+
+    beforeEach(async () => {
+      const block = extractTocGatingBlock();
+      expect(block).toContain('app-cp-multiple-wps');
+      expect(block).toContain('isP25Onward()');
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [ResultReviewDrawerComponent],
+        providers: [
+          { provide: ApiService, useValue: apiMock },
+          { provide: RolesService, useValue: rolesMock },
+          { provide: CentersService, useValue: centersMock },
+          { provide: InstitutionsService, useValue: institutionsMock },
+          { provide: Router, useValue: routerMock }
+        ]
+      })
+        .overrideComponent(ResultReviewDrawerComponent, {
+          set: { template: block, imports: [StubCpMultipleWpsComponent], styles: [], changeDetection: ChangeDetectionStrategy.Default }
+        })
+        .compileComponents();
+
+      gateFixture = TestBed.createComponent(ResultReviewDrawerComponent);
+      gateComponent = gateFixture.componentInstance;
+    });
+
+    it('FALSIFIER 1 — P25-onward (2025) + No: no app-cp-multiple-wps in the DOM', () => {
+      gateComponent.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      gateComponent.tocInitiative = { planned_result: false, initiative_id: 1, result_toc_results: [] };
+      gateFixture.detectChanges();
+
+      const host: HTMLElement = gateFixture.nativeElement;
+      expect(host.querySelector('app-cp-multiple-wps')).toBeNull();
+    });
+
+    it('FALSIFIER 2 — pre-P25 (2022) + No: present, as today', () => {
+      gateComponent.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2022 } }));
+      gateComponent.tocInitiative = { planned_result: false, initiative_id: 1, result_toc_results: [] };
+      gateFixture.detectChanges();
+
+      const host: HTMLElement = gateFixture.nativeElement;
+      expect(host.querySelector('app-cp-multiple-wps')).not.toBeNull();
+    });
+
+    it('FALSIFIER 3 — portfolio_start_year null + No: present (not P25-onward)', () => {
+      gateComponent.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: null } }));
+      gateComponent.tocInitiative = { planned_result: false, initiative_id: 1, result_toc_results: [] };
+      gateFixture.detectChanges();
+
+      const host: HTMLElement = gateFixture.nativeElement;
+      expect(host.querySelector('app-cp-multiple-wps')).not.toBeNull();
+    });
+
+    it('P25-onward + Yes: present, level/HLO/indicator fields shown as today', () => {
+      gateComponent.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      gateComponent.tocInitiative = { planned_result: true, initiative_id: 1, result_toc_results: [] };
+      gateFixture.detectChanges();
+
+      const host: HTMLElement = gateFixture.nativeElement;
+      expect(host.querySelector('app-cp-multiple-wps')).not.toBeNull();
+    });
+
+    it('unanswered (planned_result null) stays absent regardless of portfolio year (R-11)', () => {
+      gateComponent.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      gateComponent.tocInitiative = { planned_result: null, initiative_id: 1, result_toc_results: [] };
+      gateFixture.detectChanges();
+
+      const host: HTMLElement = gateFixture.nativeElement;
+      expect(host.querySelector('app-cp-multiple-wps')).toBeNull();
+    });
+
+    it('FALSIFIER — the missing-initiative message is present when set, absent otherwise', () => {
+      gateComponent.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      gateComponent.tocInitiative = { planned_result: true, initiative_id: 1, result_toc_results: [] };
+      gateFixture.detectChanges();
+      expect(gateFixture.nativeElement.querySelector('[data-testid="toc-initiative-missing-message"]')).toBeNull();
+
+      gateComponent.tocInitiativeMissingMessage.set('We could not determine which program this ToC belongs to.');
+      gateFixture.detectChanges();
+      const messageEl = gateFixture.nativeElement.querySelector('[data-testid="toc-initiative-missing-message"]');
+      expect(messageEl).not.toBeNull();
+      expect(messageEl.textContent).toContain('We could not determine');
+    });
+  });
+
   // -------------------------------------------------------------- getTocMetadata
 
   describe('getTocMetadata', () => {
@@ -426,6 +702,65 @@ describe('ResultReviewDrawerComponent', () => {
 
   it('getTocAlertDescription returns copy', () => {
     expect(component.getTocAlertDescription()).toContain('adaptive management');
+  });
+
+  // ------------------------------------------------- isP25Onward (BIL-RTE-T-6, R-7.c)
+
+  describe('isP25Onward', () => {
+    it('is false when there is no result detail at all', () => {
+      expect(component.isP25Onward()).toBe(false);
+    });
+
+    it('is true for portfolio_start_year 2025', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      expect(component.isP25Onward()).toBe(true);
+    });
+
+    it('is true for a year after 2025', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2030 } }));
+      expect(component.isP25Onward()).toBe(true);
+    });
+
+    it('is false for portfolio_start_year 2022 (pre-P25)', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2022 } }));
+      expect(component.isP25Onward()).toBe(false);
+    });
+
+    it('is false when portfolio_start_year is null — never treated as P25-onward', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: null } }));
+      expect(component.isP25Onward()).toBe(false);
+    });
+
+    it('is false when portfolio_start_year is missing entirely', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101' } }));
+      expect(component.isP25Onward()).toBe(false);
+    });
+  });
+
+  describe('getPlannedResultHelperText / getTocAlertDescription — P25-onward copy (R-10)', () => {
+    it('helper text does not ask to choose an HLO on No when P25-onward', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      const text = component.getPlannedResultHelperText();
+      expect(text.toLowerCase()).not.toContain('choose the hlo');
+    });
+
+    it('helper text keeps asking to choose an HLO on No when pre-P25', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2022 } }));
+      const text = component.getPlannedResultHelperText();
+      expect(text.toLowerCase()).toContain('choose the hlo');
+    });
+
+    it('getTocAlertDescription drops the HLO/level ask when P25-onward', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      const text = component.getTocAlertDescription();
+      expect(text).not.toContain('choose the <strong>HLO</strong>');
+    });
+
+    it('getTocAlertDescription keeps the HLO/level ask when pre-P25', () => {
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2022 } }));
+      const text = component.getTocAlertDescription();
+      expect(text).toContain('choose the <strong>HLO</strong>');
+    });
   });
 
   // ------------------------------------------------------------- canEditInDrawer
@@ -830,7 +1165,7 @@ describe('ResultReviewDrawerComponent', () => {
       component.saveChangesJustification = 'because';
       component.tocInitiative = {
         planned_result: true,
-        initiative_id: null,
+        initiative_id: 77,
         result_toc_results: [
           {
             toc_result_id: 10,
@@ -871,16 +1206,70 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
-    it('falls back to an empty result_toc_results list and a null initiative id', fakeAsync(() => {
+    it('falls back to an empty result_toc_results list when the tab list is empty', fakeAsync(() => {
       jest.spyOn(component as any, 'loadResultDetail').mockImplementation(() => undefined);
       component.resultDetail.set(buildDetail());
       component.initiativeIdSignal.set(null);
-      component.tocInitiative = { planned_result: false, result_toc_results: null };
+      component.tocInitiative = { planned_result: false, initiative_id: 55, result_toc_results: null };
       exec();
       tick();
       const body = apiMock.resultsSE.PATCH_BilateralTocMetadata.mock.calls[0][1];
       expect(body.tocMetadata.result_toc_results).toEqual([]);
-      expect(body.tocMetadata.initiative_id).toBeNull();
+      expect(body.tocMetadata.initiative_id).toBe(55);
+      flush();
+    }));
+
+    // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-5.c) — falsifier: with
+    // tocInitiative.initiative_id undefined, no PATCH is sent and the message is shown.
+    it('blocks the save and shows a message when initiative_id is undefined — no PATCH sent, no signal fallback', () => {
+      component.resultDetail.set(buildDetail());
+      component.initiativeIdSignal.set(999); // must NOT be used as a fallback (R-5.c)
+      component.tocInitiative = { planned_result: true, initiative_id: undefined, result_toc_results: [] };
+      exec();
+      expect(apiMock.resultsSE.PATCH_BilateralTocMetadata).not.toHaveBeenCalled();
+      expect(component.tocInitiativeMissingMessage()).toBeTruthy();
+      expect(component.isSaving()).toBe(false);
+      expect(component.showConfirmSaveChangesDialog()).toBe(false);
+    });
+
+    it('blocks the save and shows a message when initiative_id is null', () => {
+      component.resultDetail.set(buildDetail());
+      component.tocInitiative = { planned_result: false, initiative_id: null, result_toc_results: [] };
+      exec();
+      expect(apiMock.resultsSE.PATCH_BilateralTocMetadata).not.toHaveBeenCalled();
+      expect(component.tocInitiativeMissingMessage()).toBeTruthy();
+    });
+
+    // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-8 defence in depth) —
+    // falsifier: the save body on P25 No has an empty list.
+    it('sends an empty result_toc_results list on a P25-onward No, even if stale tab data exists', fakeAsync(() => {
+      jest.spyOn(component as any, 'loadResultDetail').mockImplementation(() => undefined);
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2025 } }));
+      component.tocInitiative = {
+        planned_result: false,
+        initiative_id: 42,
+        result_toc_results: [{ toc_result_id: 9, toc_level_id: 3, indicators: [] }]
+      };
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralTocMetadata.mock.calls[0][1];
+      expect(body.tocMetadata.result_toc_results).toEqual([]);
+      expect(body.tocMetadata.initiative_id).toBe(42);
+      flush();
+    }));
+
+    it('does NOT force an empty result_toc_results list on a pre-P25 No', fakeAsync(() => {
+      jest.spyOn(component as any, 'loadResultDetail').mockImplementation(() => undefined);
+      component.resultDetail.set(buildDetail({ commonFields: { id: '101', portfolio_start_year: 2022 } }));
+      component.tocInitiative = {
+        planned_result: false,
+        initiative_id: 42,
+        result_toc_results: [{ toc_result_id: 9, toc_level_id: 3, indicators: [] }]
+      };
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralTocMetadata.mock.calls[0][1];
+      expect(body.tocMetadata.result_toc_results.length).toBe(1);
       flush();
     }));
 
@@ -1340,12 +1729,32 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
-    it('stores the initiative list and picks a primary initiative', fakeAsync(() => {
+    // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6) — falsifier: opening a result
+    // with planned_result = null issues zero PATCH calls. Merely loading/normalizing the ToC
+    // answer (R-11 treats it as No) must never write anything.
+    it('FALSIFIER — opening a result with planned_result null makes zero PATCH calls', fakeAsync(() => {
+      apiMock.resultsSE.GET_BilateralResultDetail.mockReturnValue(
+        of({ response: buildDetail({ tocMetadata: { planned_result: null, initiative_id: null, result_toc_results: [] } }) })
+      );
+      fetch();
+      tick(400);
+      expect(component.tocInitiative.planned_result).toBe(false); // R-11: unanswered renders as No
+      expect(apiMock.resultsSE.PATCH_BilateralTocMetadata).not.toHaveBeenCalled();
+      expect(apiMock.resultsSE.PATCH_BilateralDataStandard).not.toHaveBeenCalled();
+      expect(apiMock.resultsSE.PATCH_BilateralReviewDecision).not.toHaveBeenCalled();
+      flush();
+    }));
+
+    it('stores the initiative list for the picker only — does NOT set initiativeIdSignal from it (R-5.c)', fakeAsync(() => {
       apiMock.resultsSE.GET_AllWithoutResults.mockReturnValue(of({ response: [{ id: 12, official_code: 'SP12' }] }));
+      apiMock.resultsSE.GET_BilateralResultDetail.mockReturnValue(of({ response: buildDetail({ tocMetadata: null }) }));
       fetch();
       tick(400);
       expect(component.contributingInitiativesList().length).toBe(1);
-      expect(component.initiativeIdSignal()).toBe(12);
+      // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-5.c): no fallback to the
+      // first program of the global initiatives list — the drawer had no tocMetadata, so it must
+      // NOT guess `initiativeIdSignal` from GET_AllWithoutResults's response[0].id.
+      expect(component.initiativeIdSignal()).toBeNull();
       flush();
     }));
 
@@ -1527,13 +1936,16 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
-    it('falls back to defaults when tocMetadata is an empty array', fakeAsync(() => {
+    it('falls back to defaults when tocMetadata is an empty array — no initiative_id guess (R-5.c)', fakeAsync(() => {
       apiMock.resultsSE.GET_AllWithoutResults.mockReturnValue(of({ response: [{ id: 33 }] }));
       apiMock.resultsSE.GET_BilateralResultDetail.mockReturnValue(of({ response: buildDetail({ tocMetadata: [] }) }));
       fetch();
       tick(400);
       expect(component.tocInitiative.planned_result).toBe(false);
-      expect(component.tocInitiative.initiative_id).toBe(33);
+      // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-5.c): no tocMetadata means
+      // the drawer cannot tell which program this belongs to — it must NOT fall back to the first
+      // program of the global initiatives list (`response[0].id`, here 33).
+      expect(component.tocInitiative.initiative_id).toBeNull();
       flush();
     }));
 

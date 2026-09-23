@@ -584,6 +584,64 @@ describe('BilateralResultCreatorComponent', () => {
     });
   });
 
+  /**
+   * BIL-RTE-T-8 (design.md §6.2, DD-2's reversion-challenge mitigation): a Center "Save draft" or
+   * section-navigation flush that races the Submit-for-review PATCH used to write silently at
+   * status 5 — now that DD-2 blocks non-admin Center writes at status 5 server-side, the same race
+   * would surface as a 403 "Save failed" instead. Both are no-ops while `isSubmitting()` (the
+   * AI-check-or-submit computed, `qualityAssessment.isBusy()`) is true.
+   */
+  describe('BIL-RTE-T-8: no autosave racing the submit', () => {
+    beforeEach(() => {
+      component.openSectionName.set('general-info');
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      // Pending on the first read (the "is there anything to flush" check), settled by the time
+      // any wait-loop re-checks it — same pattern the pre-existing Save-draft tests use, so a
+      // buggy implementation that still calls flush() resolves fast instead of hanging on the
+      // real 15s `waitForSectionSave` timeout.
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+    });
+
+    it('triggerManualSave() is a zero-call no-op while isSubmitting() is true', async () => {
+      qualityAssessment.isBusy.set(true);
+      expect(component.isSubmitting()).toBe(true);
+
+      await component.triggerManualSave();
+
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+      expect(component.isManualSaving()).toBe(false);
+    });
+
+    it('triggerManualSave() proceeds once isSubmitting() is false again', async () => {
+      qualityAssessment.isBusy.set(false);
+      expect(component.isSubmitting()).toBe(false);
+
+      await component.triggerManualSave();
+
+      expect(autoSaveService.flush).toHaveBeenCalledWith(['generalInfo']);
+    });
+
+    it('the section-navigation flush is a no-op while isSubmitting() is true, but the section still switches', async () => {
+      qualityAssessment.isBusy.set(true);
+      expect(component.isSubmitting()).toBe(true);
+
+      await component.selectSection('contributors');
+
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+      expect(component.openSectionName()).toBe('contributors');
+    });
+
+    it('the section-navigation flush proceeds once isSubmitting() is false again', async () => {
+      qualityAssessment.isBusy.set(false);
+
+      await component.selectSection('contributors');
+
+      expect(autoSaveService.flush).toHaveBeenCalledWith(['generalInfo']);
+      expect(component.openSectionName()).toBe('contributors');
+    });
+  });
+
   describe('editor frame (W1/W2 parity)', () => {
     const q = (selector: string) => fixture.nativeElement.querySelector(selector);
 

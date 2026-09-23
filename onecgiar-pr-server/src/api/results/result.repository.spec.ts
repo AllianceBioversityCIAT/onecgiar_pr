@@ -315,6 +315,51 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual([8731]);
   });
 
+  // BIL-RTE-T-5 / DD-6 — the drawer's P25-onward rule reads portfolio_start_year, which must
+  // come from the result's own version -> clarisa_portfolios, never a constant or a portfolio id.
+  it('includes portfolio_start_year in the bilateral common-fields query, joined via the version', async () => {
+    queryMock.mockResolvedValueOnce([{ id: 8731, portfolio_start_year: 2025 }]);
+
+    const row = await repo.getCommonFieldsBilateralResultById(8731);
+
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toContain('portfolio_start_year');
+    expect(sql).toContain('clarisa_portfolios');
+    expect(sql).toContain('v.portfolio_id');
+    expect(row.portfolio_start_year).toBe(2025);
+  });
+
+  describe('getPortfolioStartYearByVersionId', () => {
+    it('returns the portfolio start year for the version', async () => {
+      queryMock.mockResolvedValueOnce([{ portfolio_start_year: 2025 }]);
+
+      const result = await repo.getPortfolioStartYearByVersionId(99);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('clarisa_portfolios');
+      expect(sql).toContain('v.portfolio_id');
+      expect(params).toEqual([99]);
+      expect(result).toBe(2025);
+    });
+
+    it('returns null when the version has no portfolio (T-0 check 2, row 4)', async () => {
+      queryMock.mockResolvedValueOnce([{ portfolio_start_year: null }]);
+
+      const result = await repo.getPortfolioStartYearByVersionId(4);
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null without querying when no versionId is given', async () => {
+      const result = await repo.getPortfolioStartYearByVersionId(
+        undefined as any,
+      );
+
+      expect(result).toBeNull();
+      expect(queryMock).not.toHaveBeenCalled();
+    });
+  });
+
   it('returns created_by and created_by_name for the bilateral centre dashboard', async () => {
     queryMock.mockResolvedValueOnce([]);
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus } from '@nestjs/common';
+import { ForbiddenException, HttpStatus } from '@nestjs/common';
 import { GeographicLocationService } from './geographic-location.service';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionsService } from '../../results/result-regions/result-regions.service';
@@ -11,6 +11,8 @@ import { ResultRegionRepository } from '../../results/result-regions/result-regi
 import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { SourceEnum } from '../../results/entities/result.entity';
+import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 
 /**
  * 🛑 `findGeographicLocation` answers `geo_scope_id: 0` for a result with no scope — this service's
@@ -28,7 +30,8 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
  */
 describe('GeographicLocationService — the 0 placeholder never reaches the column', () => {
   let service: GeographicLocationService;
-  let resultRepository: { update: jest.Mock };
+  let resultRepository: { update: jest.Mock; findOne: jest.Mock };
+  let bilateralAccessService: { assertCenterWrite: jest.Mock };
 
   const user = { id: 2 } as TokenDto;
 
@@ -54,7 +57,13 @@ describe('GeographicLocationService — the 0 placeholder never reaches the colu
     ][1].geographic_scope_id;
 
   beforeEach(async () => {
-    resultRepository = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+    resultRepository = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+    bilateralAccessService = {
+      assertCenterWrite: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,6 +96,7 @@ describe('GeographicLocationService — the 0 placeholder never reaches the colu
         },
         { provide: ResultRegionRepository, useValue: {} },
         { provide: ResultCountryRepository, useValue: {} },
+        { provide: BilateralAccessService, useValue: bilateralAccessService },
       ],
     }).compile();
 
@@ -111,5 +121,109 @@ describe('GeographicLocationService — the 0 placeholder never reaches the colu
     await service.saveGeoScopeV2(bodyWith(id as number), user);
 
     expect(savedScope()).toBe(id);
+  });
+});
+
+// BIL-RTE-T-2 — design.md §5.1: the Center-write guard for the v2 geography entry point, kept
+// out of `saveGeoScopeV2` (called internally by the admin-only data-standard review path) and
+// consulted from the controller instead. Falsifier case (d): a non-bilateral result never
+// consults `BilateralAccessService`.
+describe('GeographicLocationService.assertCenterWriteForBilateral — BIL-RTE-T-2', () => {
+  let service: GeographicLocationService;
+  let resultRepository: { update: jest.Mock; findOne: jest.Mock };
+  let bilateralAccessService: { assertCenterWrite: jest.Mock };
+
+  const user = { id: 2 } as TokenDto;
+
+  beforeEach(async () => {
+    resultRepository = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+    bilateralAccessService = {
+      assertCenterWrite: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        GeographicLocationService,
+        {
+          provide: HandlersError,
+          useValue: { returnErrorRes: jest.fn((e) => e) },
+        },
+        {
+          provide: ResultRegionsService,
+          useValue: { createV2: jest.fn().mockResolvedValue(null) },
+        },
+        {
+          provide: ResultCountriesService,
+          useValue: { createV2: jest.fn().mockResolvedValue(null) },
+        },
+        { provide: ResultRepository, useValue: resultRepository },
+        { provide: ResultsService, useValue: {} },
+        {
+          provide: ElasticService,
+          useValue: { sendBulkOperationToElastic: jest.fn() },
+        },
+        { provide: ResultRegionRepository, useValue: {} },
+        { provide: ResultCountryRepository, useValue: {} },
+        { provide: BilateralAccessService, useValue: bilateralAccessService },
+      ],
+    }).compile();
+
+    service = module.get<GeographicLocationService>(GeographicLocationService);
+  });
+
+  it('case (d): a non-bilateral result never consults the helper', async () => {
+    resultRepository.findOne.mockResolvedValueOnce({
+      id: 800,
+      source: SourceEnum.Result,
+      status_id: 5,
+    });
+
+    await service.assertCenterWriteForBilateral(800, user);
+
+    expect(bilateralAccessService.assertCenterWrite).not.toHaveBeenCalled();
+  });
+
+  it('a not-found result never consults the helper', async () => {
+    resultRepository.findOne.mockResolvedValueOnce(null);
+
+    await service.assertCenterWriteForBilateral(801, user);
+
+    expect(bilateralAccessService.assertCenterWrite).not.toHaveBeenCalled();
+  });
+
+  it('a bilateral result consults the helper with the geography label', async () => {
+    resultRepository.findOne.mockResolvedValueOnce({
+      id: 802,
+      source: SourceEnum.Bilateral,
+      status_id: 5,
+    });
+
+    await service.assertCenterWriteForBilateral(802, user);
+
+    expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 802, status_id: 5 }),
+      'geography',
+      user,
+    );
+  });
+
+  it('propagates a denial from the helper', async () => {
+    resultRepository.findOne.mockResolvedValueOnce({
+      id: 803,
+      source: SourceEnum.Bilateral,
+      status_id: 5,
+    });
+    bilateralAccessService.assertCenterWrite.mockRejectedValueOnce(
+      new ForbiddenException(
+        'Result 803 is under Science Program review (rule: center).',
+      ),
+    );
+
+    await expect(
+      service.assertCenterWriteForBilateral(803, user),
+    ).rejects.toThrow(ForbiddenException);
   });
 });
