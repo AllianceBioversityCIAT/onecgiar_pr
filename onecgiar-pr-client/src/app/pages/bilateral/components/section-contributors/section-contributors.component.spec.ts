@@ -357,6 +357,50 @@ describe('SectionContributorsComponent', () => {
       expect(component.availableProjects()).toEqual([]);
     });
 
+    // Night sweep 2026-09-23, W12-6 (P2-3648): a failed projects catalogue used to count as "ready",
+    // leaving "Lead project" as an unfillable missing field AND letting the next save send
+    // `contributing_bilateral_projects: []` (server: drop every project). Control negative: with the
+    // error branch back to `projectsReady.set(true)` the "does not hydrate" test fails.
+    describe('W12-6 — when the projects catalogue cannot be read', () => {
+      beforeEach(() => {
+        centersService.centersList = [center(1)];
+        api.resultsSE.GET_ClarisaProjects.mockReturnValue(throwError(() => ({ status: 500 })));
+      });
+
+      it('raises the error flag and does not hydrate, so the contributor keys never travel', () => {
+        build();
+        fixture.detectChanges();
+        creation.selectedProject.set({ id: 1 });
+        fixture.detectChanges();
+
+        expect(component.projectsLoadFailed()).toBe(true);
+        expect(component.contributorsHydrated()).toBe(false);
+        component.onProjectsChange([1]);
+        const calls = (autoSave.saveContributors as jest.Mock).mock.calls;
+        for (const [payload] of calls) expect(payload.contributing_bilateral_projects).toBeUndefined();
+      });
+
+      it('retries on demand; a successful read clears the error and restores the lead project', () => {
+        build();
+        fixture.detectChanges();
+        api.resultsSE.GET_ClarisaProjects.mockReturnValue(of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }] }));
+        creation.selectedProject.set({ id: 1 });
+
+        component.retryLoadProjects();
+        fixture.detectChanges();
+
+        expect(component.projectsLoadFailed()).toBe(false);
+        expect(component.contributorsHydrated()).toBe(true);
+        expect(component.readonlyLeadProjectId).toBe(1);
+      });
+
+      it('renders the banner with a Retry button', () => {
+        const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+        expect(html).toContain('@if (projectsLoadFailed()) {');
+        expect(html).toContain('(click)="retryLoadProjects()"');
+      });
+    });
+
     it('unsubscribes on destroy', () => {
       build();
       fixture.detectChanges();
