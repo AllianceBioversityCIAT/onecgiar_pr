@@ -271,7 +271,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * "Section complete" over a value Submit refuses; now the footer falls through to "N fields to fix".
    */
   readonly currentSectionComplete = computed(
-    () => this.getSectionMdsStatus(this.openSectionName()) === 'complete' && this.invalidFieldsFor(this.openSectionName()).length === 0
+    () => this.getSectionMdsStatus(this.openSectionName()) === 'complete'
   );
 
   /**
@@ -690,8 +690,15 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Night sweep 2026-09-23 (BIL-3 / BIL-4 follow-up) — a section holding a P2-3340 invalid item is
+   * never 'complete' for the UI: the tracker keeps it 'complete' (the item IS answered, so the
+   * percentage holds), but the rail check, the "N of M sections complete" counter and the footer all
+   * read this method, so they now agree with Submit, which refuses the invalid field by name.
+   */
   getSectionMdsStatus(sectionName: string): MdsStatus {
-    return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.status ?? 'empty';
+    const status = this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.status ?? 'empty';
+    return status === 'complete' && this.invalidFieldsFor(sectionName as BilateralEditorSection).length ? 'partial' : status;
   }
 
   /** Whether the MDS tracker knows this section — Overview never does, so it gets no completion ring. */
@@ -777,7 +784,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * `submitResult()` re-checks its own guards — this computed is only what greys the button.
    */
   readonly canSubmitFromRail = computed(
-    () => this.mdsTracker.overallStatus() === 'complete' && !this.isSubmitting() && !this.isFormReadOnly()
+    // BIL-3 / BIL-4 follow-up — an answered-but-invalid field (P2-3340) also greys the button now,
+    // so the rail, the counter, the footer and Submit agree; the field is named in the footer's
+    // "N fields to fix" list, and `submitResult()` keeps its alert as the second line of defence.
+    () =>
+      this.mdsTracker.overallStatus() === 'complete' &&
+      this.mdsTracker.invalidFields().length === 0 &&
+      !this.isSubmitting() &&
+      !this.isFormReadOnly()
   );
 
   submitResult(): void {

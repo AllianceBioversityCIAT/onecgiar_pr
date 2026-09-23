@@ -353,6 +353,23 @@ describe('BilateralResultCreatorComponent', () => {
     );
   });
 
+  // Night sweep 2026-09-23 (BIL-3 / BIL-4 follow-up): 4 Policy Change organizations used to get a
+  // green rail check, count as a done section and leave Submit enabled. Control negative: with the
+  // invalid checks removed from `getSectionMdsStatus` / `canSubmitFromRail` these assertions fail.
+  it('a section with an invalid field is not complete on the rail, not counted, and Submit is disabled', () => {
+    const invalidItem = { key: 'policy-institutions', label: 'Whose policy is this?', filled: true, invalid: true, invalidReason: '4 organizations selected; the maximum is 3' };
+    mdsTracker.sectionStatus.set([{ sectionName: 'type-specific', status: 'complete', fields: [invalidItem] }]);
+    mdsTracker.overallStatus.set('complete');
+    mdsTracker.invalidFields.set([invalidItem]);
+
+    expect(component.getSectionMdsStatus('type-specific')).toBe('partial');
+    expect(component.canSubmitFromRail()).toBe(false);
+
+    mdsTracker.sectionStatus.set([{ sectionName: 'type-specific', status: 'complete', fields: [{ ...invalidItem, invalid: false }] }]);
+    mdsTracker.invalidFields.set([]);
+    expect(component.getSectionMdsStatus('type-specific')).toBe('complete');
+  });
+
   it('should have null reporting way by default', () => {
     expect(component.selectedReportingWay()).toBeNull();
   });
