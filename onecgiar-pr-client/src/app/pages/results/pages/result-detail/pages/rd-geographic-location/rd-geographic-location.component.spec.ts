@@ -213,6 +213,24 @@ describe('RdGeographicLocationComponent', () => {
         expect(payload.has_extra_countries).toBe(false);
       });
 
+      // Night sweep 2026-09-23, W12-5 (P2-3637): prtest 11464 kept TZ/UG after "No". Control
+      // negative: with `extraScopeOff` back to `mainFocusHidesExtraScope` this test fails.
+      it('W12-5: drops the extra scope and its countries when the user answers "No" to other geographic areas', () => {
+        const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSectionp25');
+        withMainFocus(GeoScopeEnum.COUNTRY);
+        component.extraGeographicLocationBody.has_extra_geo_scope = false;
+
+        component.onSaveSection();
+
+        const [payload] = spy.mock.calls[spy.mock.calls.length - 1];
+        expect(payload.has_extra_geo_scope).toBe(false);
+        expect(payload.extra_geo_scope_id).toBeNull();
+        expect(payload.extra_countries).toEqual([]);
+        expect(payload.extra_regions).toEqual([]);
+        expect(payload.has_extra_countries).toBe(false);
+        expect(payload.has_extra_regions).toBe(false);
+      });
+
       it('keeps the extra scope untouched while the block is still on screen', () => {
         const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSectionp25');
         withMainFocus(GeoScopeEnum.COUNTRY);

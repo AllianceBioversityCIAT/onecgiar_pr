@@ -352,6 +352,12 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
       const mainFocusHidesExtraScope =
         this.geographicLocationBody.geo_scope_id === GeoScopeEnum.GLOBAL ||
         this.geographicLocationBody.geo_scope_id === GeoScopeEnum.DETERMINED;
+      // Night sweep 2026-09-23, W12-5 (P2-3637) — answering "No" to "other geographic areas" hides
+      // the block just the same, but its scope and countries stayed in the body and were saved next
+      // to `has_extra_geo_scope: false` (prtest 11464: TZ/UG kept, and the results list still
+      // attributed both countries to the result). Same clearing as the hidden-by-main-focus case,
+      // as the bilateral form already does (`section-geography.component.ts` → `resetExtraScope`).
+      const extraScopeOff = mainFocusHidesExtraScope || this.extraGeographicLocationBody.has_extra_geo_scope === false;
 
       return this.api.resultsSE
         .PATCH_geographicSectionp25({
@@ -366,12 +372,12 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
           // reaches the reporter — Save draft simply appears to do nothing. Stored, "none" is NULL,
           // so that is what goes back on the wire, exactly like `extra_geo_scope_id` already does.
           geo_scope_id: this.geographicLocationBody.geo_scope_id || null,
-          extra_geo_scope_id: mainFocusHidesExtraScope ? null : this.extraGeographicLocationBody.geo_scope_id,
-          extra_regions: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.regions,
-          extra_countries: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.countries,
-          has_extra_countries: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_countries,
-          has_extra_regions: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_regions,
-          has_extra_geo_scope: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_extra_geo_scope
+          extra_geo_scope_id: extraScopeOff ? null : this.extraGeographicLocationBody.geo_scope_id,
+          extra_regions: extraScopeOff ? [] : this.extraGeographicLocationBody.regions,
+          extra_countries: extraScopeOff ? [] : this.extraGeographicLocationBody.countries,
+          has_extra_countries: extraScopeOff ? false : this.extraGeographicLocationBody.has_countries,
+          has_extra_regions: extraScopeOff ? false : this.extraGeographicLocationBody.has_regions,
+          has_extra_geo_scope: extraScopeOff ? false : this.extraGeographicLocationBody.has_extra_geo_scope
         })
         .pipe(
           tap(() => {
