@@ -1,3 +1,82 @@
 :host {
   display: block;
 }
+
+/* P2-3744 — keyboard access to a chart's segments.
+ *
+ * The echarts SVG root is one node: nothing inside it can take focus. The activatable controls
+ * therefore live in the visually-hidden data table this component already renders. A control that
+ * cannot be SEEN while focused fails WCAG 2.4.7, so the table drops its `sr-only` clipping while
+ * focus is inside it and restores it on blur.
+ *
+ * Why this is inert for every chart that did not opt in:
+ *  - `:focus-within` needs a focusable descendant, and the ONLY focusable element the template can
+ *    render is `.pr-viz-chart-table-action`, which exists only when the consumer supplied
+ *    `tableModel.actions`. No actions -> no focusable child -> this block never matches.
+ *  - A pointer click on the chart never moves focus into the table, so mouse users never see it.
+ *
+ * These rules are unlayered (Angular component styles) while Tailwind's `sr-only` sits in
+ * `@layer utilities` (src/styles.scss:6,13), so they win the cascade without !important.
+ */
+.pr-viz-chart-a11y-table:focus-within {
+  /* Absolutely positioned over `.pr-viz-chart-wrapper` (which is `relative`), so revealing the
+   * table does NOT reflow the card or the page around it. */
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  z-index: 20;
+  border-radius: 8px;
+  background: var(--pr-surface-card, #ffffff);
+  border: 1px solid var(--pr-border, #e5e7eb);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: var(--pr-text-secondary, #374151);
+  }
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding-bottom: 8px;
+    font-weight: 700;
+    color: var(--pr-text-heading, #111827);
+  }
+
+  th,
+  td {
+    padding: 4px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--pr-border, #e5e7eb);
+  }
+}
+
+.pr-viz-chart-table-action {
+  /* Transparent while the table is hidden — this element only becomes visible together with the
+   * table it lives in, so it needs no styling of its own outside the reveal. */
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-500, #2563eb);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+}

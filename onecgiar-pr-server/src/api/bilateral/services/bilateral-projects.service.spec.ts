@@ -129,6 +129,45 @@ describe('BilateralProjectsService', () => {
     expect(result.projects.map((p) => p.id)).toEqual([42]);
   });
 
+  // The AI-assisted flow refuses to submit without `leadCenter.id`, and every Alliance-descended
+  // project reaches the catalogue through the fallback query above — which selects rows that have
+  // no `obj_organization` by definition. Reading that relation alone reported the whole catalogue
+  // of CIAT (Alliance) and Bioversity (Alliance) as having no lead centre.
+  it('resolves the lead center of a fallback project from the center being queried', async () => {
+    centerRepo.findOne.mockResolvedValueOnce({
+      code: 'CENTER-03',
+      institutionId: 46,
+    });
+    projectRepo.find
+      .mockResolvedValueOnce([]) // primary organizationCode query
+      .mockResolvedValueOnce([
+        {
+          id: 42,
+          isActive: true,
+          phase: CURRENT_YEAR,
+          obj_organization: null,
+          sourceCenterAcronym: 'CIAT',
+          sourceCenterName: 'Alliance of Bioversity International and CIAT',
+          obj_project_mappings: [
+            {
+              programId: 1,
+              programCode: 'SP01',
+              allocation: '100.00',
+              status: 'Confirmed',
+            },
+          ],
+        },
+      ]); // fallback source_center_acronym query
+
+    const result = await service.getProjectsByCenter(46);
+
+    expect(result.projects[0].leadCenter).toEqual({
+      id: 46,
+      name: 'Alliance of Bioversity International and CIAT',
+      acronym: 'CIAT',
+    });
+  });
+
   it('dedupes when a project appears in both the primary and fallback result sets', async () => {
     centerRepo.findOne.mockResolvedValueOnce({
       code: 'CENTER-03',
@@ -365,6 +404,7 @@ describe('BilateralProjectsService', () => {
               'Accelerating Impacts of CGIAR Climate Research for Africa',
             summary: 'AICCRA',
             description: 'Climateresearch',
+            w1w2ContributorCount: 0,
             leadCenter: { id: 5, name: 'X Center', acronym: 'XC' },
             sciencePrograms: [
               {
@@ -378,6 +418,98 @@ describe('BilateralProjectsService', () => {
           },
         ],
       });
+    });
+  });
+
+  // `BIL-POM-OQ-1` correction (2026-09-22): a W1/W2 result can tag a bilateral project as a
+  // contributor via `results_by_projects` (written from the framework create flow's
+  // `bilateral_project` payload field), independent of `is_lead`. See the method's own
+  // docstring in `bilateral-projects.service.ts` for the full investigation.
+  describe('w1w2ContributorCount (BIL-POM-OQ-1 correction)', () => {
+    const project = (id: number) => ({
+      id,
+      isActive: true,
+      phase: CURRENT_YEAR,
+      obj_organization: null,
+      obj_project_mappings: [
+        {
+          programId: 1,
+          programCode: 'SP01',
+          allocation: '100.00',
+          status: 'Confirmed',
+        },
+      ],
+    });
+
+    beforeEach(() => {
+      centerRepo.findOne.mockResolvedValue({
+        code: 'CENTER-99',
+        institutionId: 5,
+      });
+      (projectRepo as any).manager = { query: jest.fn().mockResolvedValue([]) };
+    });
+
+    it('defaults every project to 0 and never queries the DB when versionId is omitted', async () => {
+      projectRepo.find.mockResolvedValueOnce([project(40), project(41)]);
+
+      const result = await service.getProjectsByCenter(5);
+
+      expect(result.projects.map((p: any) => p.w1w2ContributorCount)).toEqual([
+        0, 0,
+      ]);
+      expect((projectRepo as any).manager.query).not.toHaveBeenCalled();
+    });
+
+    it.each([undefined, null, 'bogus', 0, -3])(
+      'defaults to 0 without querying for an invalid versionId (%s)',
+      async (invalid) => {
+        projectRepo.find.mockResolvedValueOnce([project(42)]);
+
+        const result = await service.getProjectsByCenter(
+          5,
+          undefined,
+          invalid as any,
+        );
+
+        expect(result.projects[0].w1w2ContributorCount).toBe(0);
+        expect((projectRepo as any).manager.query).not.toHaveBeenCalled();
+      },
+    );
+
+    it('queries results_by_projects scoped by version_id and maps counts per project', async () => {
+      projectRepo.find.mockResolvedValueOnce([project(50), project(51)]);
+      (projectRepo as any).manager.query.mockResolvedValueOnce([
+        { project_id: 50, cnt: '3' },
+      ]);
+
+      const result = await service.getProjectsByCenter(5, undefined, 36);
+
+      const [sql, params] = (projectRepo as any).manager.query.mock.calls[0];
+      expect(sql).toContain('FROM results_by_projects rbp');
+      expect(sql).toContain("r.source = 'Result'");
+      expect(sql).toContain('r.version_id = ?');
+      expect(sql).toContain('rbp.is_active = 1');
+      expect(sql).toContain('r.is_active = 1');
+      expect(params).toEqual([[50, 51], 36]);
+
+      expect(
+        result.projects.find((p: any) => p.id === 50).w1w2ContributorCount,
+      ).toBe(3);
+      // Project 51 got no row back from the (mocked) query — must default to 0, not undefined/NaN.
+      expect(
+        result.projects.find((p: any) => p.id === 51).w1w2ContributorCount,
+      ).toBe(0);
+    });
+
+    it('accepts versionId as a numeric string (query params arrive as strings)', async () => {
+      projectRepo.find.mockResolvedValueOnce([project(52)]);
+      (projectRepo as any).manager.query.mockResolvedValueOnce([
+        { project_id: 52, cnt: '1' },
+      ]);
+
+      const result = await service.getProjectsByCenter(5, undefined, '36');
+
+      expect(result.projects[0].w1w2ContributorCount).toBe(1);
     });
   });
 

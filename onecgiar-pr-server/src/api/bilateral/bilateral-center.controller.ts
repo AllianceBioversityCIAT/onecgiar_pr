@@ -45,11 +45,22 @@ export class BilateralCenterController {
     description:
       'Optional reporting year to scope the catalog by (positive integer; omitted or invalid falls back to the active year)',
   })
+  @ApiQuery({
+    name: 'versionId',
+    required: false,
+    type: Number,
+    description:
+      // @akili-spec bilateral/project-overview-metrics (BIL-POM-OQ-1 correction, 2026-09-22):
+      // scopes w1w2ContributorCount to a PRMS phase/version_id — a different axis from `year`
+      // (CLARISA project reporting year), which the catalog itself is filtered by.
+      'Optional PRMS phase (version_id) to scope w1w2ContributorCount by. Omitted disables the count (returns 0 for every project).',
+  })
   async getProjects(
     @Query('centerId') centerId: number,
     @Query('year') year?: number,
+    @Query('versionId') versionId?: number,
   ) {
-    return this.bilateralCenterService.getProjects(centerId, year);
+    return this.bilateralCenterService.getProjects(centerId, year, versionId);
   }
 
   @Post('create-header')

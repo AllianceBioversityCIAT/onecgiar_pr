@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { NotificationService } from '../notification/notification.service';
+import { ResultTaggedNotificationService } from '../notification/services/result-tagged-notification.service';
 import {
   NotificationLevelEnum,
   NotificationTypeEnum,
@@ -25,6 +26,10 @@ import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { resolveInitialStatusId } from './constants/initial-status.constants';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { CENTER_ALIAS_TO_CLARISA_CENTER_CODE } from './constants/w3-center-alias.constants';
+import {
+  buildCenterIndex,
+  resolveProjectOwnerCenter,
+} from './utils/project-owner-center.util';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { ResultCreationMethod } from '../../shared/constants/result-creation-method.enum';
@@ -241,6 +246,12 @@ export class BilateralService {
     private readonly _roleByUserRepository: RoleByUserRepository,
     @Optional()
     private readonly _notificationService?: NotificationService,
+    // BCT-T-5 / design §5.5 — trailing @Optional() like `_notificationService` above, so a
+    // caller that constructs this service without it (or with `undefined`) keeps compiling and
+    // keeps emitting the submitted-for-review notification; only the contributor tagging half of
+    // `announcePendingReview` is skipped, with a log.
+    @Optional()
+    private readonly _resultTaggedNotificationService?: ResultTaggedNotificationService,
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
@@ -490,6 +501,11 @@ export class BilateralService {
               bilateralDto.lead_center,
             );
 
+            // BCT-T-3 — derive owner Centers of the just-persisted contributing projects. Runs
+            // inside the closure like its siblings (BCT-P-5: the ingest "transaction" enlists no
+            // repository) and never throws, so it cannot fail the ingest.
+            await this.ensureDerivedContributingCenters(resultId, userId);
+
             let kpExtra: any = {};
             if (isKpType) {
               const kp = await this._resultsKnowledgeProductsRepository.findOne(
@@ -530,10 +546,14 @@ export class BilateralService {
           },
         );
 
-        // Ingested results are born in Pending Review, so the arrival announcement to the primary
-        // Science Program fires here — post-commit, mirroring the centre form's submitForReview.
+        // Ingested results are born in Pending Review, so the Pending Review announcements fire
+        // here — post-commit, mirroring the centre form's submitForReview. BCT-T-5: this now goes
+        // through the shared orchestrator (submitted notification, then contributor tagging)
+        // instead of calling the submitted emitter directly. A `keep_editing: true` ingest lands
+        // in Editing, not Pending Review, so both announcements inside no-op on their own status
+        // guards without any special-casing here.
         if (createdResultId) {
-          await this.emitBilateralSubmittedNotification(
+          await this.announcePendingReview(
             createdResultId,
             submitterUserId ?? 0,
           );
@@ -555,15 +575,62 @@ export class BilateralService {
   }
 
   /**
+   * BCT-T-5 / design §5.5, §2.2, DD-3 — the one orchestrator both Pending Review hooks call: the
+   * centre form's `submitForReview` (`BilateralCenterService`) and the API ingest (`create`,
+   * above), always AFTER the state is committed. Replaces the two direct
+   * `emitBilateralSubmittedNotification` calls that used to sit at each hook.
+   *
+   * Two independent try/catch blocks, in that order — submitted, then tagging — so a throwing
+   * emitter on one side can never suppress the other (BCT-NFR-1). Neither branch actually needs
+   * the wrapper to avoid throwing (both `emitBilateralSubmittedNotification` and
+   * `notifyBilateralContributorsOnSubmission` already swallow their own errors), but the two
+   * blocks are what makes that independence true even if a caller's test double replaces either
+   * method with one that rejects.
+   */
+  // @akili-spec notifications/bilateral-contributor-tagging
+  async announcePendingReview(
+    resultId: number,
+    emitterUserId: number,
+  ): Promise<void> {
+    try {
+      await this.emitBilateralSubmittedNotification(resultId, emitterUserId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit the submitted-for-review notification for result ${resultId}`,
+        error as Error,
+      );
+    }
+
+    try {
+      if (!this._resultTaggedNotificationService) {
+        this.logger.warn(
+          `ResultTaggedNotificationService unavailable; skipping contributor tagging notifications for result ${resultId}`,
+        );
+        return;
+      }
+      await this._resultTaggedNotificationService.notifyBilateralContributorsOnSubmission(
+        resultId,
+        emitterUserId,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit contributor tagging notifications for result ${resultId}`,
+        error as Error,
+      );
+    }
+  }
+
+  /**
    * 2026-09-05 — tells the primary Science Program's members a bilateral result reached Pending
    * Review. Before this, the SP only found out through the review-queue counter; the decision
    * notifications (P2-3157) flow centre-ward, so nothing ever announced the arrival.
    *
-   * Called from BOTH entry paths, always AFTER the state is committed: the centre form's
-   * `submitForReview` (BilateralCenterService) and the API ingest (`create`, where results are
-   * born already in Pending Review). Recipients are every user with an active role in the
-   * primary (role-1) initiative — matching who can actually review today (any member; the role
-   * guard is P2-3414/P2-3155 territory). The emitter is filtered out downstream.
+   * Called by `announcePendingReview` (BCT-T-5) from BOTH entry paths, always AFTER the state is
+   * committed: the centre form's `submitForReview` (BilateralCenterService) and the API ingest
+   * (`create`, where results are born already in Pending Review). Recipients are every user with
+   * an active role in the primary (role-1) initiative — matching who can actually review today
+   * (any member; the role guard is P2-3414/P2-3155 territory). The emitter is filtered out
+   * downstream.
    *
    * The suffix is composed here (the P2-3214/P2-3188 split): the lead centre's acronym is not
    * derivable client-side from the notification payload. Never throws — a notification failure
@@ -4812,6 +4879,126 @@ export class BilateralService {
       this.logger.error(
         `Failed to save contributing center ${center.code} for result ${resultId}`,
         err instanceof Error ? err.stack : JSON.stringify(err),
+      );
+    }
+  }
+
+  /**
+   * BCT-T-3 — derives the owning Center of every active, non-lead contributing project as a
+   * contributing Center of the result (design §5.2). Called from `saveContributors` (only when
+   * `contributing_bilateral_projects` was in the DTO) and from ingest, right after
+   * `handleContributingCenters`, so the same rule applies whichever path wrote the projects.
+   *
+   * Additive only: it never deactivates a `results_center` row and never calls `updateCenter` —
+   * that is what keeps it out of the empty-list trap (BCT-NFR-4) that once wiped the lead row.
+   * It never throws either (BCT-NFR-1): a lookup or write failure is logged with ids only
+   * (BCT-NFR-6) and swallowed, so the caller's save or ingest always completes.
+   */
+  // @akili-spec notifications/bilateral-contributor-tagging
+  public async ensureDerivedContributingCenters(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId },
+        select: ['id', 'source'],
+      });
+      if (!result || result.source !== SourceEnum.Bilateral) return;
+
+      // Active, non-lead contributing projects only — the lead project's owner is the reporting
+      // Center already and must never be derived as a contributor.
+      const projectRows = await this._resultsByProjectsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+      const contributingProjectRows = projectRows.filter((row) => !row.is_lead);
+      if (!contributingProjectRows.length) return;
+
+      const projectIds = [
+        ...new Set(
+          contributingProjectRows
+            .map((row) => Number(row.project_id))
+            .filter((id) => Number.isFinite(id) && id > 0),
+        ),
+      ];
+      if (!projectIds.length) return;
+
+      // Batched: one `clarisa_projects` query with `In`, one Center index load — never a
+      // per-project query loop (BCT-NFR-5).
+      const [projects, centers] = await Promise.all([
+        this._clarisaProjectsRepository.find({
+          where: { id: In(projectIds) },
+        }),
+        this._clarisaCenters.find(),
+      ]);
+      const projectById = new Map(projects.map((p) => [Number(p.id), p]));
+      const centerIndex = buildCenterIndex(centers);
+
+      const derivedCodes = new Set<string>();
+      for (const row of contributingProjectRows) {
+        const project = projectById.get(Number(row.project_id));
+        if (!project) {
+          this.logger.warn(
+            `No CLARISA project found for project ${row.project_id} on result ${resultId} — skipping owner derivation`,
+          );
+          continue;
+        }
+        const owner = resolveProjectOwnerCenter(project, centerIndex);
+        if (!owner) {
+          this.logger.warn(
+            `Unresolved owner Center for project ${row.project_id} on result ${resultId} — skipping owner derivation`,
+          );
+          continue;
+        }
+        derivedCodes.add(owner.code);
+      }
+      if (!derivedCodes.size) return;
+
+      // The reporting-Center exclusion: a project owned by the lead Center never becomes (or
+      // reactivates as) a separate contributing row.
+      const leadingRows = await this._resultsCenterRepository.find({
+        where: { result_id: resultId, is_leading_result: true },
+      });
+      const leadingCodes = new Set(leadingRows.map((row) => row.center_id));
+
+      for (const code of derivedCodes) {
+        if (leadingCodes.has(code)) continue;
+
+        // `find`, not the single-row `getAllResultsCenterByResultIdAndCenterId` helper: a legacy
+        // duplicate (an inactive row alongside an active one, from before this method shipped)
+        // must never be reactivated as a second active row for the same code.
+        const existingRows = await this._resultsCenterRepository.find({
+          where: { result_id: resultId, center_id: code },
+        });
+
+        const activeRow = existingRows.find((row) => row.is_active);
+        if (activeRow) continue;
+
+        if (existingRows.length) {
+          // Reactivate the oldest row deterministically, never touching `is_leading_result` —
+          // this is never a lead row — and never a second row for the same code.
+          const oldest = existingRows.reduce((a, b) => (a.id < b.id ? a : b));
+          await this._resultsCenterRepository.update(
+            { id: oldest.id },
+            { is_active: true, last_updated_by: userId },
+          );
+          continue;
+        }
+
+        await this._resultsCenterRepository.save({
+          result_id: resultId,
+          center_id: code,
+          is_primary: false,
+          is_leading_result: false,
+          from_cgspace: false,
+          is_active: true,
+          created_by: userId,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to derive contributing Centers for result ${resultId}`,
+        error instanceof Error ? error.stack : JSON.stringify(error),
       );
     }
   }

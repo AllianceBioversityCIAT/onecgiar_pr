@@ -139,6 +139,7 @@ export class ResultRepository
         r2.external_platform_id,
         r2.external_platform_code,
         r2.external_reference,
+        r2.is_lead_by_partner,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -179,6 +180,7 @@ export class ResultRepository
         external_platform_id,
         external_platform_code,
         external_reference,
+        is_lead_by_partner,
         is_replicated
         ) select
         r2.description,
@@ -219,6 +221,7 @@ export class ResultRepository
         r2.external_platform_id,
         r2.external_platform_code,
         r2.external_reference,
+        r2.is_lead_by_partner,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -4172,6 +4175,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           LIMIT 1
         ) AS submitter,
         r.creation_method,
+        r.is_replicated,
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rc.is_leading_result
       FROM result r

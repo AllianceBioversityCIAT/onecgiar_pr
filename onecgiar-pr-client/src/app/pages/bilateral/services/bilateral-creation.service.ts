@@ -272,6 +272,8 @@ export class BilateralCreationService {
                 acronym: proj.obj_organization.acronym,
               } : null,
               sciencePrograms: [],
+              // Not populated on this create-flow read path — this consumer never reads it.
+              w1w2ContributorCount: 0,
             });
             if (proj.obj_organization?.id) {
               this.resultLeadCenterId.set(proj.obj_organization.id);

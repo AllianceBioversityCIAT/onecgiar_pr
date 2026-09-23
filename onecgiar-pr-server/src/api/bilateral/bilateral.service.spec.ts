@@ -3,12 +3,19 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { In } from 'typeorm';
 import { BilateralService } from './bilateral.service';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultCreationMethod } from '../../shared/constants/result-creation-method.enum';
+import { SourceEnum } from '../results/entities/result.entity';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { ResultTaggedNotificationService } from '../notification/services/result-tagged-notification.service';
 
 describe('BilateralService (unit)', () => {
-  const makeService = (overrides: Partial<any> = {}) => {
+  const makeService = (
+    overrides: Partial<any> = {},
+    opts: { withResultTaggedNotificationService?: boolean } = {},
+  ) => {
     const initiativeBudgetRepository = {
       findOne: jest.fn().mockResolvedValue(null),
       create: jest.fn((row) => row),
@@ -144,6 +151,15 @@ describe('BilateralService (unit)', () => {
     const notificationService = {
       emitResultNotification: jest.fn().mockResolvedValue(undefined),
     };
+    // BCT-T-5 — the new trailing @Optional() constructor param. Real behaviour (targets,
+    // ordering, dedup, texts) is unit-tested against the real implementation in
+    // `result-tagged-notification.service.spec.ts`; here it is a no-op stub unless a test
+    // overrides it.
+    const resultTaggedNotificationService = {
+      notifyBilateralContributorsOnSubmission: jest
+        .fn()
+        .mockResolvedValue(undefined),
+    };
 
     const service = new BilateralService(
       dataSource,
@@ -193,6 +209,13 @@ describe('BilateralService (unit)', () => {
       adUserService as any,
       roleByUserRepository as any,
       notificationService as any,
+      // BCT-T-5 falsifier: "the service fails to construct when the optional dependency is
+      // absent" — `opts.withResultTaggedNotificationService: false` calls the real constructor
+      // with this argument genuinely omitted (not just set to `undefined` post-construction),
+      // proving the trailing `@Optional()` param.
+      opts.withResultTaggedNotificationService === false
+        ? undefined
+        : (resultTaggedNotificationService as any),
     ) as any;
 
     Object.assign(service, overrides);
@@ -233,6 +256,7 @@ describe('BilateralService (unit)', () => {
         adUserService,
         roleByUserRepository,
         notificationService,
+        resultTaggedNotificationService,
       },
       handlers: {
         knowledgeProductHandler,
@@ -870,7 +894,9 @@ describe('BilateralService (unit)', () => {
 
   // P2-3166. `result.source` says a result arrived through the API but never says from whom,
   // which is what routing a webhook back needs. These two helpers are the whole of that logic;
-  // `create()` itself is a ~20-collaborator transaction and is covered end-to-end elsewhere.
+  // `create()` itself is a ~20-collaborator transaction, exercised end to end (with every
+  // collaborator stubbed) in `describe('create() — call-site ordering (BCT-T-3 / reusable by T5)')`
+  // below.
   describe('external platform identity (P2-3166)', () => {
     const mis = { id: 12, name: 'Reporting Tool', acronym: 'PRMS' };
 
@@ -1508,6 +1534,800 @@ describe('BilateralService (unit)', () => {
         42,
         77,
         'was submitted for your review.',
+      );
+    });
+  });
+
+  describe('announcePendingReview (BCT-T-5)', () => {
+    it('emits the submitted notification, then the tagging notifications, in that order', async () => {
+      const { service, stubs } = makeService();
+      jest
+        .spyOn(service, 'emitBilateralSubmittedNotification')
+        .mockResolvedValue(undefined);
+
+      await service.announcePendingReview(77, 42);
+
+      expect(service.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
+        77,
+        42,
+      );
+      expect(
+        stubs.resultTaggedNotificationService
+          .notifyBilateralContributorsOnSubmission,
+      ).toHaveBeenCalledWith(77, 42);
+      const submittedOrder = (
+        service.emitBilateralSubmittedNotification as jest.Mock
+      ).mock.invocationCallOrder[0];
+      const taggingOrder = (
+        stubs.resultTaggedNotificationService
+          .notifyBilateralContributorsOnSubmission as jest.Mock
+      ).mock.invocationCallOrder[0];
+      expect(taggingOrder).toBeGreaterThan(submittedOrder);
+    });
+
+    // Falsifier: "a throwing submitted emitter skips tagging (or the reverse)". Both real
+    // methods already swallow their own errors (never throw), so this drives the failure through
+    // a test double that DOES throw — the only way to prove the two try/catch blocks are truly
+    // independent rather than one relying on the other never failing.
+    it('still emits the tagging notifications when the submitted emitter throws', async () => {
+      const { service, stubs } = makeService();
+      jest
+        .spyOn(service, 'emitBilateralSubmittedNotification')
+        .mockRejectedValue(new Error('submitted emitter down'));
+
+      await expect(
+        service.announcePendingReview(77, 42),
+      ).resolves.toBeUndefined();
+
+      expect(
+        stubs.resultTaggedNotificationService
+          .notifyBilateralContributorsOnSubmission,
+      ).toHaveBeenCalledWith(77, 42);
+      expect(service.logger.error).toHaveBeenCalledWith(
+        'Failed to emit the submitted-for-review notification for result 77',
+        expect.any(Error),
+      );
+    });
+
+    it('still emits the submitted notification when the tagging emitter throws', async () => {
+      const { service, stubs } = makeService();
+      jest
+        .spyOn(service, 'emitBilateralSubmittedNotification')
+        .mockResolvedValue(undefined);
+      stubs.resultTaggedNotificationService.notifyBilateralContributorsOnSubmission.mockRejectedValue(
+        new Error('tagging down'),
+      );
+
+      await expect(
+        service.announcePendingReview(77, 42),
+      ).resolves.toBeUndefined();
+
+      expect(service.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
+        77,
+        42,
+      );
+      expect(service.logger.error).toHaveBeenCalledWith(
+        'Failed to emit contributor tagging notifications for result 77',
+        expect.any(Error),
+      );
+    });
+
+    // Falsifier: "the service fails to construct when the optional dependency is absent". The
+    // constructor call genuinely omits the trailing argument (see `makeService`'s
+    // `opts.withResultTaggedNotificationService: false`) — this is not the same as passing
+    // `undefined` after the fact, it proves the real `@Optional()` constructor accepts a caller
+    // that never supplies the dependency at all.
+    it('constructs without the optional ResultTaggedNotificationService and still emits the submitted notification, logging the tagging skip', async () => {
+      const { service } = makeService(
+        {},
+        { withResultTaggedNotificationService: false },
+      );
+      jest
+        .spyOn(service, 'emitBilateralSubmittedNotification')
+        .mockResolvedValue(undefined);
+
+      await expect(
+        service.announcePendingReview(77, 42),
+      ).resolves.toBeUndefined();
+
+      expect(service.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
+        77,
+        42,
+      );
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        'ResultTaggedNotificationService unavailable; skipping contributor tagging notifications for result 77',
+      );
+    });
+  });
+
+  describe('ensureDerivedContributingCenters (BCT-T-3)', () => {
+    const AFRICARICE = { code: 'AFRICARICE', institutionId: 1 };
+    const CIP = { code: 'CIP', institutionId: 2 };
+
+    const arrange = (opts: {
+      resultSource?: SourceEnum;
+      projectRows?: Array<{
+        project_id: number;
+        is_lead?: boolean | null;
+        is_active?: boolean;
+      }>;
+      projects?: Array<{
+        id: number;
+        organizationCode: number | null;
+        sourceCenterAcronym?: string | null;
+      }>;
+      centers?: Array<{ code: string; institutionId: number }>;
+      leadingRows?: Array<{ center_id: string }>;
+      /** Rows `find({ where: { result_id, center_id } })` returns per code, before any write. */
+      existingRowsByCode?: Record<
+        string,
+        Array<{ id: number; is_active: boolean }>
+      >;
+    }) => {
+      const saved: any[] = [];
+      const updated: any[] = [];
+      const resultsCenterRepository = {
+        // Discriminates the two shapes the method actually sends: the leading-rows query
+        // (`is_leading_result: true`) and the per-code existing-rows query (`center_id`).
+        find: jest.fn(async ({ where }: any) => {
+          if (where?.is_leading_result) return opts.leadingRows ?? [];
+          return opts.existingRowsByCode?.[where?.center_id] ?? [];
+        }),
+        save: jest.fn(async (row: any) => {
+          saved.push(row);
+          return row;
+        }),
+        update: jest.fn(async (criteria: any, patch: any) => {
+          updated.push({ criteria, patch });
+          return {};
+        }),
+        updateCenter: jest.fn(),
+      };
+      const projectRows = (opts.projectRows ?? []).map((row) => ({
+        is_active: true,
+        is_lead: false,
+        ...row,
+      }));
+      const { service } = makeService({
+        _resultRepository: {
+          findOne: jest.fn().mockResolvedValue({
+            id: 10,
+            source: opts.resultSource ?? SourceEnum.Bilateral,
+          }),
+        },
+        _resultsByProjectsRepository: {
+          // Honours `where.is_active` exactly as MySQL would, so a wrong implementation that
+          // drops the `is_active: true` filter (and would therefore derive from an inactive
+          // project) fails a test instead of passing on a mock that ignores the argument.
+          find: jest.fn(async ({ where }: any) => {
+            if (where?.result_id !== 10) return [];
+            if (where?.is_active === undefined) return projectRows;
+            return projectRows.filter(
+              (row) => row.is_active === where.is_active,
+            );
+          }),
+        },
+        _clarisaProjectsRepository: {
+          find: jest.fn().mockResolvedValue(opts.projects ?? []),
+        },
+        _clarisaCenters: {
+          find: jest.fn().mockResolvedValue(opts.centers ?? []),
+        },
+        _resultsCenterRepository: resultsCenterRepository,
+      });
+      return { service, saved, updated, resultsCenterRepository };
+    };
+
+    it('stores a foreign project owner as an active contributing Center', async () => {
+      const { service, saved } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+      const svc: any = service;
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(svc._resultsByProjectsRepository.find).toHaveBeenCalledWith({
+        where: { result_id: 10, is_active: true },
+      });
+      expect(saved).toEqual([
+        expect.objectContaining({
+          result_id: 10,
+          center_id: 'CIP',
+          is_primary: false,
+          is_leading_result: false,
+          from_cgspace: false,
+          is_active: true,
+          created_by: 42,
+        }),
+      ]);
+      expect(service.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('ignores an inactive contributing project — never derives from it', async () => {
+      // Same owner (CIP) as the positive case above, but the project row itself is inactive.
+      // Only the `is_active`-honouring mock (see `arrange`) can tell a correct implementation
+      // (which filters at the query) from a broken one (which would see this row anyway).
+      const { service, saved } = arrange({
+        projectRows: [{ project_id: 501, is_active: false }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(saved).toEqual([]);
+      expect(service.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('adds no row when the contributing project is owned by the reporting Center', async () => {
+      const { service, saved, updated } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 1 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(saved).toEqual([]);
+      expect(updated).toEqual([]);
+      expect(service.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('never touches the lead row itself (no update, no save, no deactivation, no per-code lookup at all)', async () => {
+      const { service, saved, updated, resultsCenterRepository } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 1 }],
+        centers: [AFRICARICE],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(saved).toEqual([]);
+      expect(updated).toEqual([]);
+      expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
+      // The only `find` call is the leading-rows query — the lead code is excluded before any
+      // per-code lookup, so the lead row is never even read back, let alone written.
+      expect(resultsCenterRepository.find).toHaveBeenCalledTimes(1);
+      expect(service.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('reactivates an inactive derived row instead of leaving it inactive or duplicating it', async () => {
+      const { service, saved, updated, resultsCenterRepository } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+        existingRowsByCode: { CIP: [{ id: 77, is_active: false }] },
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(updated).toEqual([
+        {
+          criteria: { id: 77 },
+          patch: { is_active: true, last_updated_by: 42 },
+        },
+      ]);
+      expect(saved).toEqual([]);
+      expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
+      expect(service.logger.error).not.toHaveBeenCalled();
+    });
+
+    it('reactivates the lowest-id row when several inactive duplicates exist for the same code', async () => {
+      const { service, saved, updated } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+        existingRowsByCode: {
+          CIP: [
+            { id: 9, is_active: false },
+            { id: 5, is_active: false },
+          ],
+        },
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(updated).toEqual([
+        {
+          criteria: { id: 5 },
+          patch: { is_active: true, last_updated_by: 42 },
+        },
+      ]);
+      expect(saved).toEqual([]);
+    });
+
+    it('leaves a legacy duplicate alone when one of its rows is already active — no update, no save', async () => {
+      // An inactive row and an active row for the same code, both predating this method. Any
+      // active row means "do nothing" — reactivating the inactive one too would leave two
+      // active `results_center` rows for the same code (the reviewer's exact concern).
+      const { service, saved, updated } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+        existingRowsByCode: {
+          CIP: [
+            { id: 5, is_active: false },
+            { id: 9, is_active: true },
+          ],
+        },
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(saved).toEqual([]);
+      expect(updated).toEqual([]);
+    });
+
+    it('leaves an already-active derived row alone — no duplicate row from a Center sent and derived together', async () => {
+      const { service, saved, updated } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+        existingRowsByCode: { CIP: [{ id: 77, is_active: true }] },
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(saved).toEqual([]);
+      expect(updated).toEqual([]);
+    });
+
+    it('returns early for a pool funding result — no lookup at all, no row', async () => {
+      const { service, saved } = arrange({
+        resultSource: SourceEnum.Result,
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [CIP],
+      });
+      const svc: any = service;
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      // The source guard fires before the projects are even read — matches the test's own name.
+      expect(svc._resultsByProjectsRepository.find).not.toHaveBeenCalled();
+      expect(saved).toEqual([]);
+    });
+
+    it('returns early when the only active project is the lead project (no lookup)', async () => {
+      const { service, saved } = arrange({
+        projectRows: [{ project_id: 501, is_lead: true }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [CIP],
+      });
+      const svc: any = service;
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(svc._clarisaProjectsRepository.find).not.toHaveBeenCalled();
+      expect(saved).toEqual([]);
+    });
+
+    it('warns with the exact ids-only message when the owner cannot be resolved', async () => {
+      const { service, saved } = arrange({
+        projectRows: [{ project_id: 999 }],
+        projects: [
+          { id: 999, organizationCode: null, sourceCenterAcronym: null },
+        ],
+        centers: [AFRICARICE],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(saved).toEqual([]);
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        'Unresolved owner Center for project 999 on result 10 — skipping owner derivation',
+      );
+    });
+
+    it('warns with the exact ids-only message when the project itself is not in CLARISA', async () => {
+      const { service, saved } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [], // clarisa_projects has no row for 501
+        centers: [AFRICARICE],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(saved).toEqual([]);
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        'No CLARISA project found for project 501 on result 10 — skipping owner derivation',
+      );
+    });
+
+    it('queries clarisa_projects once with In(...), never once per project', async () => {
+      const { service } = arrange({
+        projectRows: [{ project_id: 501 }, { project_id: 502 }],
+        projects: [
+          { id: 501, organizationCode: 2 },
+          { id: 502, organizationCode: 2 },
+        ],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+      const svc: any = service;
+
+      await service.ensureDerivedContributingCenters(10, 42);
+
+      expect(svc._clarisaProjectsRepository.find).toHaveBeenCalledTimes(1);
+      expect(svc._clarisaProjectsRepository.find).toHaveBeenCalledWith({
+        where: { id: In([501, 502]) },
+      });
+    });
+
+    it('never throws when a repository write fails — the caller keeps going', async () => {
+      const { service, resultsCenterRepository } = arrange({
+        projectRows: [{ project_id: 501 }],
+        projects: [{ id: 501, organizationCode: 2 }],
+        centers: [AFRICARICE, CIP],
+        leadingRows: [{ center_id: 'AFRICARICE' }],
+      });
+      resultsCenterRepository.save.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.ensureDerivedContributingCenters(10, 42),
+      ).resolves.toBeUndefined();
+
+      expect(service.logger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('create() — call-site ordering (BCT-T-3 / reusable by T5)', () => {
+    /**
+     * Reusable harness: `create()` has ~20 collaborators, all methods on the same `as any`
+     * service instance, so every one of them is stubbed with `jest.spyOn(svc, 'name')`. T5
+     * (`announcePendingReview` at the ingest hook) needs the exact same shape to assert its own
+     * ordering (post-commit, after the transaction resolves) — reuse `arrangeCreateHarness`
+     * from this describe block rather than re-deriving the collaborator list.
+     *
+     * `dataSource.transaction` runs the closure with a throwaway `{}` manager: `bilateral.service.ts`'s
+     * own comment at :300-306 documents that the transaction enlists no repository (BCT-P-5), so a
+     * fake manager is faithful to what the real one already does.
+     */
+    const buildDto = () => ({
+      result: {
+        data: {
+          result_type_id: ResultTypeEnum.OTHER_OUTPUT,
+          title: 'Harness result',
+          geo_focus: {
+            scope_code: 1,
+            regions: [],
+            countries: [],
+            subnational_areas: [],
+          },
+          lead_center: { acronym: 'AFRICARICE' },
+          contributing_center: [],
+          contributing_bilateral_projects: [],
+          contributing_partners: [],
+          evidence: [],
+        },
+      },
+    });
+
+    const arrangeCreateHarness = () => {
+      const { service } = makeService();
+      const svc: any = service;
+
+      jest.spyOn(svc, 'runResultTypePreflight').mockResolvedValue(undefined);
+      jest
+        .spyOn(svc, 'validateTocMappingInitiatives')
+        .mockResolvedValue(undefined);
+      svc._yearRepository = {
+        findOne: jest.fn().mockResolvedValue({ year: 2025 }),
+      };
+      jest
+        .spyOn(svc, 'resolveContributingProjects')
+        .mockResolvedValue(new Map());
+
+      // `closed` flips only once the transaction closure's promise has actually resolved —
+      // distinct from the mock merely having been *called* (invocationCallOrder proves call
+      // order, not resolution order). The "post-commit" test below asserts on this flag directly.
+      const transactionState = { closed: false };
+      svc.dataSource = {
+        transaction: jest.fn(async (cb: any) => {
+          const result = await cb({});
+          transactionState.closed = true;
+          return result;
+        }),
+      };
+      svc.__transactionState = transactionState;
+
+      svc._userRepository = { findOne: jest.fn().mockResolvedValue({ id: 1 }) };
+      jest.spyOn(svc, 'findOrCreateUser').mockResolvedValue({ id: 42 });
+      jest.spyOn(svc, 'resolveSubmitterPayload').mockReturnValue({});
+      svc._versioningService = {
+        $_findActivePhase: jest.fn().mockResolvedValue({ id: 9 }),
+      };
+      jest.spyOn(svc, 'ensureUniqueTitle').mockResolvedValue(undefined);
+      jest
+        .spyOn(svc, 'buildExternalIdentity')
+        .mockReturnValue({ external_reference: null });
+      jest
+        .spyOn(svc, 'initializeResultHeader')
+        .mockResolvedValue({ id: 10, result_code: 'RC-1' });
+      jest.spyOn(svc, 'handleLeadCenter').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'findScope').mockResolvedValue({ id: 5 });
+      jest.spyOn(svc, 'validateGeoFocus').mockReturnValue(undefined);
+      jest.spyOn(svc, 'handleRegions').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'handleCountries').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'resolveScopeId').mockReturnValue(5);
+      jest.spyOn(svc, 'handleTocMapping').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'handleInstitutions').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'handleEvidence').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'handleNonPooledProject').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'runResultTypeHandlers').mockResolvedValue(undefined);
+      jest.spyOn(svc, 'handleContributingCenters').mockResolvedValue(undefined);
+      jest
+        .spyOn(svc, 'ensureDerivedContributingCenters')
+        .mockResolvedValue(undefined);
+      // Read back after the two writes above: kept truthy (and Bilateral-sourced) so it exercises
+      // `filterActiveRelations` the same way a real ingest would.
+      svc._resultRepository.findOne = jest
+        .fn()
+        .mockResolvedValue({ id: 10, source: SourceEnum.Bilateral });
+      jest
+        .spyOn(svc, 'enrichBilateralResultResponse')
+        .mockResolvedValue(undefined);
+      // BCT-T-5: the ingest hook now calls the orchestrator, not the submitted emitter directly.
+      jest.spyOn(svc, 'announcePendingReview').mockResolvedValue(undefined);
+
+      return { service: svc };
+    };
+
+    it('derives after handleNonPooledProject and handleContributingCenters, with (resultId, userId)', async () => {
+      const { service } = arrangeCreateHarness();
+
+      await service.create(buildDto());
+
+      const nonPooledOrder = (service.handleNonPooledProject as jest.Mock).mock
+        .invocationCallOrder[0];
+      const contributingCentersOrder = (
+        service.handleContributingCenters as jest.Mock
+      ).mock.invocationCallOrder[0];
+      const derivedOrder = (
+        service.ensureDerivedContributingCenters as jest.Mock
+      ).mock.invocationCallOrder[0];
+
+      expect(derivedOrder).toBeGreaterThan(nonPooledOrder);
+      expect(derivedOrder).toBeGreaterThan(contributingCentersOrder);
+      expect(service.ensureDerivedContributingCenters).toHaveBeenCalledWith(
+        10,
+        42,
+      );
+    });
+
+    // BCT-T-5 — the ingest hook. `announcePendingReview` replaces the direct
+    // `emitBilateralSubmittedNotification` call and must fire only after the transaction closure
+    // (which is where `enrichBilateralResultResponse` — the last thing the closure does — runs)
+    // has resolved.
+    it('calls announcePendingReview post-commit, after the transaction closure resolves', async () => {
+      const { service } = arrangeCreateHarness();
+      // Falsifier: the ingest hook must not call the submitted emitter directly any more — only
+      // `announcePendingReview` does, and only when it decides to. Spied (not replaced) so this
+      // stays a call-tracking assertion; `announcePendingReview` is fully mocked above, so the
+      // real method is never reached from `create()` regardless.
+      const emitSpy = jest.spyOn(service, 'emitBilateralSubmittedNotification');
+      // Directly checks the harness's `closed` flag (flipped only once the transaction's own
+      // promise resolves, not merely once the mock was called) at the exact moment
+      // `announcePendingReview` runs.
+      let closedWhenAnnounced: boolean | undefined;
+      (service.announcePendingReview as jest.Mock).mockImplementation(
+        async () => {
+          closedWhenAnnounced = (service as any).__transactionState.closed;
+        },
+      );
+
+      await service.create(buildDto());
+
+      const nonPooledOrder = (service.handleNonPooledProject as jest.Mock).mock
+        .invocationCallOrder[0];
+      const contributingCentersOrder = (
+        service.handleContributingCenters as jest.Mock
+      ).mock.invocationCallOrder[0];
+      const derivedOrder = (
+        service.ensureDerivedContributingCenters as jest.Mock
+      ).mock.invocationCallOrder[0];
+      const enrichOrder = (service.enrichBilateralResultResponse as jest.Mock)
+        .mock.invocationCallOrder[0];
+      const announceOrder = (service.announcePendingReview as jest.Mock).mock
+        .invocationCallOrder[0];
+
+      expect(derivedOrder).toBeGreaterThan(nonPooledOrder);
+      expect(derivedOrder).toBeGreaterThan(contributingCentersOrder);
+      expect(derivedOrder).toBeLessThan(announceOrder);
+      expect(announceOrder).toBeGreaterThan(enrichOrder);
+      expect(service.announcePendingReview).toHaveBeenCalledWith(10, 42);
+      expect(emitSpy).not.toHaveBeenCalled();
+      expect(closedWhenAnnounced).toBe(true);
+    });
+
+    /**
+     * BCT-T-5 / BCT-R-10 — builds the REAL `ResultTaggedNotificationService` (T4), not a
+     * hand-written stand-in for its status guard, so the two tests below can only pass if T4's
+     * own guard (`notifyBilateralContributorsOnSubmission`, status !== Pending Review → no-op)
+     * actually runs. Its `resultRepo` is a fixture independent from `BilateralService`'s own
+     * `_resultRepository`, exactly as the two repositories are independent DI instances in
+     * production. `notificationServiceStub` is T4's emitter, separate from
+     * `service._notificationService` (`emitBilateralSubmittedNotification`'s emitter) — the two
+     * are asserted independently below.
+     */
+    const arrangeRealTaggingService = (statusId: number) => {
+      const notificationServiceStub = {
+        emitResultNotification: jest.fn().mockResolvedValue(undefined),
+      };
+      const resultRepoStub = {
+        findOne: jest.fn().mockResolvedValue({
+          id: 10,
+          status_id: statusId,
+          source: SourceEnum.Bilateral,
+          obj_result_by_initiatives: [],
+        }),
+      };
+      const notificationRepoStub = { find: jest.fn().mockResolvedValue([]) };
+      const roleByUserRepoStub = {
+        getUserIdsByCenter: jest.fn().mockResolvedValue([99]),
+      };
+      const centerRepoStub = { find: jest.fn().mockResolvedValue([]) };
+      const projectRepoStub = { find: jest.fn().mockResolvedValue([]) };
+      const resultsCenterRepoStub = {
+        find: jest.fn().mockResolvedValue([
+          {
+            center_id: 'CIP',
+            is_leading_result: false,
+            is_active: true,
+            clarisa_center_object: {
+              code: 'CIP',
+              clarisa_institution: { name: 'CIP Center' },
+            },
+          },
+        ]),
+      };
+      const resultsByProjectsRepoStub = {
+        find: jest.fn().mockResolvedValue([]),
+      };
+
+      const realTaggingService = new ResultTaggedNotificationService(
+        notificationServiceStub as any,
+        notificationRepoStub as any,
+        roleByUserRepoStub as any,
+        resultRepoStub as any,
+        centerRepoStub as any,
+        projectRepoStub as any,
+        resultsCenterRepoStub as any,
+        resultsByProjectsRepoStub as any,
+      );
+
+      return { realTaggingService, notificationServiceStub };
+    };
+
+    // BCT-T-5 / BCT-R-10 — `keep_editing: true` (design's `resolveInitialStatusId`) births the
+    // result Editing, not Pending Review. The status guard that must catch that lives in T4
+    // (`ResultTaggedNotificationService.notifyBilateralContributorsOnSubmission`, real instance
+    // here — not a copy of its guard) and in the existing `emitBilateralSubmittedNotification`;
+    // this proves `create()` still reaches `announcePendingReview` — using the REAL method, not
+    // the harness's stub — and that both guards, reading their own (Editing) status fixture,
+    // produce no emission.
+    // NOTE: `initializeResultHeader` (where `resolveInitialStatusId` actually runs) is stubbed by
+    // `arrangeCreateHarness`, so the DTO's `keep_editing: true` below documents the scenario; the
+    // real T4 service's own `resultRepo` fixture (Editing) stands in for "what the DB shows after
+    // a keep_editing ingest", which is what T4's guard actually reads.
+    it('ingest with keep_editing: true reaches the real announcePendingReview, but the REAL T4 guard emits no tagging notification', async () => {
+      const { service } = arrangeCreateHarness();
+      (service.announcePendingReview as jest.Mock).mockRestore();
+
+      // BilateralService's own repo — read by `emitBilateralSubmittedNotification`'s guard.
+      service._resultRepository.findOne = jest.fn().mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+        status_id: ResultStatusData.Editing.value,
+      });
+      const { realTaggingService, notificationServiceStub } =
+        arrangeRealTaggingService(ResultStatusData.Editing.value);
+      service._resultTaggedNotificationService = realTaggingService;
+
+      const dto = buildDto();
+      (dto.result.data as any).keep_editing = true;
+
+      await service.create(dto);
+
+      expect(
+        notificationServiceStub.emitResultNotification,
+      ).not.toHaveBeenCalled();
+      // The submitted notification is equally silent — same status read, its own guard.
+      expect(
+        (service as any)._notificationService.emitResultNotification,
+      ).not.toHaveBeenCalled();
+    });
+
+    // The positive twin: without `keep_editing`, the result is born Pending Review, so the same
+    // REAL T4 service (only its status fixture changes) lets the tagging notification through —
+    // proving the previous test's silence is T4's own guard at work, not a fixture that never
+    // fires. Also asserts the submitted notification IS emitted at status 5, using the real
+    // `emitBilateralSubmittedNotification` fixture (its collaborators already default to sensible
+    // values in `makeService`).
+    it('ingest without keep_editing reaches Pending Review, so the REAL T4 guard lets tagging (and the submitted notification) through', async () => {
+      const { service } = arrangeCreateHarness();
+      (service.announcePendingReview as jest.Mock).mockRestore();
+
+      service._resultRepository.findOne = jest.fn().mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      // `emitBilateralSubmittedNotification`'s own collaborators: the harness's default
+      // `_resultByInitiativesRepository` stub only has `findOne`/`logicalDelete`, not
+      // `getOwnerInitiativeByResult` — without this override the real method throws (caught by
+      // its own outer try/catch) before it ever reaches the emitter, same as the dedicated
+      // `emitBilateralSubmittedNotification` describe block above arranges it.
+      service._resultByInitiativesRepository = {
+        getOwnerInitiativeByResult: jest.fn().mockResolvedValue({ id: 6 }),
+      };
+      service._resultsCenterRepository = {
+        getAllResultsCenterByResultId: jest.fn().mockResolvedValue([]),
+      };
+      const { realTaggingService, notificationServiceStub } =
+        arrangeRealTaggingService(ResultStatusData.PendingReview.value);
+      service._resultTaggedNotificationService = realTaggingService;
+
+      await service.create(buildDto());
+
+      expect(
+        notificationServiceStub.emitResultNotification,
+      ).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        [99],
+        42,
+        10,
+        expect.stringContaining('CIP Center'),
+      );
+      expect(
+        (service as any)._notificationService.emitResultNotification,
+      ).toHaveBeenCalled();
+    });
+
+    it('never fails the ingest when the REAL derivation hits a throwing repository (BCT-NFR-1, end to end)', async () => {
+      const { service } = arrangeCreateHarness();
+      // Undo the harness's own stub so the real method (with its own try/catch) runs.
+      (service.ensureDerivedContributingCenters as jest.Mock).mockRestore();
+
+      service._resultsByProjectsRepository = {
+        find: jest
+          .fn()
+          .mockResolvedValue([
+            { project_id: 501, is_lead: false, is_active: true },
+          ]),
+      };
+      service._clarisaProjectsRepository = {
+        find: jest.fn().mockResolvedValue([{ id: 501, organizationCode: 2 }]),
+      };
+      service._clarisaCenters = {
+        find: jest.fn().mockResolvedValue([{ code: 'CIP', institutionId: 2 }]),
+      };
+      service._resultsCenterRepository = {
+        find: jest.fn().mockResolvedValue([]),
+        save: jest.fn().mockRejectedValue(new Error('db down')),
+        update: jest.fn(),
+        updateCenter: jest.fn(),
+      };
+
+      const result = await service.create(buildDto());
+
+      expect(result.status).toBe(201);
+      expect(service.logger.error).toHaveBeenCalledWith(
+        'Failed to derive contributing Centers for result 10',
+        expect.anything(),
       );
     });
   });

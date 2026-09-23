@@ -244,15 +244,6 @@
                   <div class="bpp_card_head">
                     <span class="bpp_code_pill">{{ project.shortName }}</span>
                     <div class="bpp_card_head_right">
-                      <button
-                        type="button"
-                        class="bpp_results_badge"
-                        [class.bpp_results_badge--has-results]="getProjectResultsCount(project) > 0"
-                        (click)="navigateToProjectResults(project, $event)"
-                        [attr.aria-label]="getProjectResultsCount(project) + ' results for ' + project.shortName + ' — view in Results'">
-                        <i class="pi pi-file"></i>
-                        <span>{{ getProjectResultsCount(project) }} result{{ getProjectResultsCount(project) === 1 ? '' : 's' }}</span>
-                      </button>
                       <div class="bpp_status_dot">
                         <span></span> Active
                       </div>
@@ -270,6 +261,42 @@
                       {{ project.summary || project.description }}
                     </p>
                   }
+
+                  <!-- Metrics Pills: Replicated / New for review / Results (interim 3rd metric — BIL-POM-OQ-1 unresolved) -->
+                  <div class="mb-8 flex flex-wrap items-center gap-1.5" data-testid="bpp-metrics-grid">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-opacity hover:opacity-80"
+                      [class]="getProjectReplicatedCount(project) > 0
+                        ? 'border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-secondary-400)]'
+                        : 'border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-4)]'"
+                      (click)="navigateToProjectResults(project, $event)"
+                      [attr.aria-label]="getProjectReplicatedCount(project) + ' replicated innovations for ' + project.shortName + ' — view in Results'">
+                      <i class="pi pi-sync text-[12px] text-amber-600"></i>
+                      <span>{{ getProjectReplicatedCount(project) }} replicated</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-opacity hover:opacity-80"
+                      [class]="getProjectNewForReviewCount(project) > 0
+                        ? 'border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-secondary-400)]'
+                        : 'border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-4)]'"
+                      (click)="navigateToProjectResults(project, $event)"
+                      [attr.aria-label]="getProjectNewForReviewCount(project) + ' new for review innovations for ' + project.shortName + ' — view in Results'">
+                      <i class="pi pi-plus-circle text-[12px] text-emerald-600"></i>
+                      <span>{{ getProjectNewForReviewCount(project) }} new</span>
+                    </button>
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold"
+                      [class]="getProjectW1w2ContributorCount(project) > 0
+                        ? 'border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-secondary-400)]'
+                        : 'border-[var(--pr-color-accents-2)] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-4)]'"
+                      [title]="'W1/W2 results mapped to this project: ' + getProjectW1w2ContributorCount(project)"
+                      [attr.aria-label]="getProjectW1w2ContributorCount(project) + ' W1/W2 results mapped to ' + project.shortName + ' as a contributor'">
+                      <i class="pi pi-link text-[12px]"></i>
+                      <span>{{ getProjectW1w2ContributorCount(project) }} {{ getProjectW1w2ContributorCount(project) === 1 ? 'result' : 'results' }}</span>
+                    </span>
+                  </div>
 
                   <!-- Science Programs Alignment Box -->
                   @if (project.sciencePrograms && project.sciencePrograms.length > 0) {
@@ -365,6 +392,24 @@
                       </div>
                     </td>
                     <td class="bpp_td_results">
+                      <button
+                        type="button"
+                        class="bpp_results_badge"
+                        [class.bpp_results_badge--has-results]="getProjectReplicatedCount(project) > 0"
+                        (click)="navigateToProjectResults(project, $event)"
+                        [attr.aria-label]="getProjectReplicatedCount(project) + ' replicated innovations for ' + project.shortName + ' — view in Results'">
+                        <i class="pi pi-sync"></i>
+                        <span>{{ getProjectReplicatedCount(project) }}</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="bpp_results_badge"
+                        [class.bpp_results_badge--has-results]="getProjectNewForReviewCount(project) > 0"
+                        (click)="navigateToProjectResults(project, $event)"
+                        [attr.aria-label]="getProjectNewForReviewCount(project) + ' new for review innovations for ' + project.shortName + ' — view in Results'">
+                        <i class="pi pi-bell"></i>
+                        <span>{{ getProjectNewForReviewCount(project) }}</span>
+                      </button>
                       <button
                         type="button"
                         class="bpp_results_badge"
