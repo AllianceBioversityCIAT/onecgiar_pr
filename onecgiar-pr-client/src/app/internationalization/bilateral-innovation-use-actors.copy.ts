@@ -7,5 +7,8 @@ export const BILATERAL_INNOVATION_USE_ACTORS_COPY = {
   womenYouthWarning: 'Remember that the value of Youth cannot be greater than total of Women',
   menYouthWarning: 'Remember that the value of Youth cannot be greater than total of Men',
   youthSplitNote:
-    'Youth and Non-youth were split 50/50 by the system because age disaggregation is not available. Change Women or Men and the split is recalculated.'
+    'Youth and Non-youth were split 50/50 by the system because age disaggregation is not available. Change Women or Men and the split is recalculated.',
+  // Night sweep 2026-09-23, BIL-1 — shown on an actor row that holds figures but no actor type. The
+  // server cannot store such a row (it is skipped as blank), so the section waits for the type.
+  actorTypeMissing: 'Select the actor type for this row. Changes in this section are not saved until every actor with figures has a type.'
 };
