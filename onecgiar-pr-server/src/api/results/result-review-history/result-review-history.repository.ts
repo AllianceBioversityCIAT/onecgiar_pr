@@ -43,9 +43,13 @@ export class ResultReviewHistoryRepository extends Repository<ResultReviewHistor
    * `comment`. UPDATE entries are included on purpose so the centre can also see what the Science
    * Program edited during review (UX Finding 5.3.1 — "no review history visible to submitters").
    */
-  async getReviewHistoryByResultId(
-    resultId: number,
-  ): Promise<ResultReviewHistory[]> {
+  async getReviewHistoryByResultId(resultId: number): Promise<
+    (ResultReviewHistory & {
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+    })[]
+  > {
     const queryData = `
     SELECT
       rrh.id,
