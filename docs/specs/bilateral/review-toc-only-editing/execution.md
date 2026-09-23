@@ -329,7 +329,7 @@
   - READABILITY: the "Yes" complement checks only `showDetailForm()`. A single DOM check would prove the "No" test can fail. "Level" is a broad substring; a data-testid would be sturdier.
 - Requirements covered: DD-2 challenge mitigation (R-2.b side effect), R-7 (Center editor clause).
 
-### BIL-RTE-T-5 — P25-onward No: server cascade and portfolio start year — **in progress**
+### BIL-RTE-T-5 — P25-onward No: server cascade and portfolio start year — **PASS**
 
 **Attempt 1** (2026-09-23, effort high, skills `nestjs-expert`, `tdd`; run in parallel with T-6 and T-8)
 - Files:
@@ -387,6 +387,22 @@
   - READABILITY: no single test runs exec() and then checks the message in the DOM.
 - Requirements covered: BIL-RTE-R-7.a, R-7.b, R-7.c (client), R-5.c, R-10, R-11.
 - The DoD item "Copy is reviewed by the owner at HITL" is carried to T-9.
+
+**Attempt 2** (2026-09-23, effort high)
+- Changes:
+  - New repository-level R-8.b test on `saveInditicatorsContributing`: a reactivated old parent with a different indicator. The sweep runs once, no indicator update carries `is_active: true`, and there is no target update.
+  - On a P25 No, the scope ignores payload items (`ignorePayloadItems`). New SP Y test.
+  - `In([...])` matchers replace `expect.anything()`.
+  - Vacuous checks removed.
+- Implementer verification: `results-toc-results|result.repository|result.spec` 15 suites / 412 tests. eslint and tsc clean.
+- Reviewer: **PASS**. "My attempt-1 finding is closed, and the Yes and pre-P25 paths build the same scope as before."
+- ADVISORY (recorded, not gating):
+  - READABILITY: retitle the service-level "later Yes" test to point at the repository test. Tighten the impact-area and action-area matchers to `In([...])`.
+  - **T-9 HITL:** check in MySQL that old children stay `is_active = 0` after a later Yes (the unit tests are mock-only).
+  - Admin reuse of an old row id in `saveImpact` / `saveSdg` / `saveActionAreaToc` was not audited.
+  - PR body: note the additive `portfolio_start_year` field.
+- Requirements covered: BIL-RTE-R-8.a, R-8 (logical deactivation only), R-8.b, R-7.b (server), R-7.c (server), DD-5, DD-6.
+- Budget: 2 review rounds, within the budget of 2 for T-5.
 
 ## Constitution Impact: BIL-RTE-T-1
 

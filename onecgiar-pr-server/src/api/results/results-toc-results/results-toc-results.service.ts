@@ -2306,27 +2306,44 @@ export class ResultsTocResultsService {
         }
       }
 
-      // BIL-RTE-DD-4: a ToC save only ever touches rows of the program(s)
-      // in scope for this save — the saving program, every initiative_id
-      // named in the payload items, and (only when the owner IS the
-      // program saving, or is named in the payload items) legacy rows left
-      // with a null initiative_ids column. Every other program's rows must
-      // survive untouched (R-9), including the owner's own rows when a
+      // BIL-RTE-DD-6: "P25 onward" is resolved once here, from THIS result's own
+      // version -> portfolio, never a constant/phase-year/id (R-7.c). A null
+      // portfolio (or no version) counts as false, same as today (design §5.3).
+      // Computed BEFORE the scope set, because the scope build below needs to
+      // know whether payload items must be ignored (DD-5: they always are on
+      // a P25-onward No).
+      const isP25OnwardNo =
+        resultTocResult?.planned_result === false &&
+        (await this._isResultP25Onward(result));
+
+      // BIL-RTE-DD-4: a ToC save only ever touches rows of the program(s) in
+      // scope for this save. On a P25-onward No, payload items are ignored
+      // outright (design §5.2 step 4), so the scope is ONLY the saving
+      // program, plus null when the owner is the one saving — never an
+      // initiative merely NAMED in an item, which would let a stale/forged
+      // payload item widen the deactivation to another program's rows.
+      // Otherwise (Yes, or a pre-P25 No): the saving program, every
+      // initiative_id named in the payload items, and (only when the owner IS
+      // the program saving, or is named in the payload items) legacy rows
+      // left with a null initiative_ids column. Every other program's rows
+      // must survive untouched (R-9), including the owner's own rows when a
       // contributor is the one saving.
       const scopeInitiativeIds = this._buildTocScopeInitiativeIds(
         savingInitiativeId,
         ownerInitiativeId,
         resultTocResult,
+        isP25OnwardNo,
       );
 
       const incomingIds = this._extractIncomingIds(resultTocResult);
-      await this._deactivateMissingRecords(
+      const deactivatedByMissing = await this._deactivateMissingRecords(
         resultId,
         incomingIds,
         user,
         scopeInitiativeIds,
       );
 
+      let deactivatedByUnplanned: number[] = [];
       if (resultTocResult?.planned_result === true) {
         await this._handlePlannedResult(
           resultId,
@@ -2336,17 +2353,34 @@ export class ResultsTocResultsService {
           user,
         );
       } else if (resultTocResult?.planned_result === false) {
-        await this._handleUnplannedResult(
+        deactivatedByUnplanned = await this._handleUnplannedResult(
           resultId,
           result,
           resultTocResult,
           savingInitiativeId,
           user,
           scopeInitiativeIds,
+          isP25OnwardNo,
         );
       }
 
-      await this._handleIndicators(result, resultId, resultTocResult, user);
+      if (isP25OnwardNo) {
+        // BIL-RTE-DD-5 (R-8.a): the union of everything this save deactivated
+        // (whether caught by the "missing from payload" sweep or by the
+        // unconditional No sweep) is the exact set of in-scope parents that
+        // just went inactive — their children go with them, never re-inserted.
+        const deactivatedParentIds = Array.from(
+          new Set([...deactivatedByMissing, ...deactivatedByUnplanned]),
+        );
+        if (deactivatedParentIds.length) {
+          await this._resultsTocResultRepository.deactivateChildrenForParents(
+            deactivatedParentIds,
+            user.id,
+          );
+        }
+      } else {
+        await this._handleIndicators(result, resultId, resultTocResult, user);
+      }
 
       return {
         response: { result_id: resultId },
@@ -2391,11 +2425,19 @@ export class ResultsTocResultsService {
    * would sweep in the owner's legacy null rows too, breaking R-9
    * (design.md §5.2 step 1 and §12 DD-4: "a toc-metadata save of a
    * contributor SP would then touch the owner").
+   *
+   * `ignorePayloadItems` (BIL-RTE-DD-5, T-5 attempt 2 Reviewer remediation):
+   * on a P25-onward No, payload items are ignored outright, so they must
+   * never widen the scope either — only `savingInitiativeId` (plus `null`
+   * when the owner is the one saving) is in scope. Without this, a payload
+   * item naming another program's `initiative_id` would deactivate that
+   * program's rows on a save it never asked for (R-9).
    */
   private _buildTocScopeInitiativeIds(
     savingInitiativeId: number | null,
     ownerInitiativeId: number | null,
     resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    ignorePayloadItems = false,
   ): Set<number | null> {
     const scopeInitiativeIds = new Set<number | null>();
 
@@ -2403,12 +2445,14 @@ export class ResultsTocResultsService {
       scopeInitiativeIds.add(savingInitiativeId);
     }
 
-    for (const t of resultTocResult?.result_toc_results ?? []) {
-      const itemInitiativeId = this._normalizeInitiativeId(
-        (t as any)?.initiative_id,
-      );
-      if (itemInitiativeId != null) {
-        scopeInitiativeIds.add(itemInitiativeId);
+    if (!ignorePayloadItems) {
+      for (const t of resultTocResult?.result_toc_results ?? []) {
+        const itemInitiativeId = this._normalizeInitiativeId(
+          (t as any)?.initiative_id,
+        );
+        if (itemInitiativeId != null) {
+          scopeInitiativeIds.add(itemInitiativeId);
+        }
       }
     }
 
@@ -2427,11 +2471,12 @@ export class ResultsTocResultsService {
     keepIds: Set<number>,
     user: TokenDto,
     scopeInitiativeIds: Set<number | null>,
-  ): Promise<void> {
+  ): Promise<number[]> {
     const existingAll = await this._resultsTocResultRepository.find({
       where: { result_id: resultId },
     });
 
+    const deactivatedIds: number[] = [];
     await Promise.all(
       existingAll.map(async (row) => {
         if (
@@ -2446,9 +2491,12 @@ export class ResultsTocResultsService {
               last_updated_by: user.id,
             },
           );
+          deactivatedIds.push(Number(row.result_toc_result_id));
         }
       }),
     );
+
+    return deactivatedIds;
   }
 
   private async _handlePlannedResult(
@@ -2608,17 +2656,36 @@ export class ResultsTocResultsService {
     resultId: number,
     result: any,
     resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
-    primaryInitiativeId: number | null,
+    savingInitiativeId: number | null,
     user: TokenDto,
     scopeInitiativeIds: Set<number | null>,
-  ): Promise<void> {
-    await this._deactivateAllActiveRecords(resultId, user, scopeInitiativeIds);
+    isP25Onward: boolean,
+  ): Promise<number[]> {
+    const deactivatedParentIds = await this._deactivateAllActiveRecords(
+      resultId,
+      user,
+      scopeInitiativeIds,
+    );
+
+    if (isP25Onward) {
+      // BIL-RTE-DD-5/R-8.a: on a P25-onward No, payload items are ignored
+      // outright — no level/HLO is re-inserted even if the client still sends
+      // one. Only the existing special-case row (null level/toc_result,
+      // planned_result = false) records the program's answer.
+      await this._handleUnplannedSpecialCase(
+        resultId,
+        result,
+        resultTocResult,
+        user,
+      );
+      return deactivatedParentIds;
+    }
 
     if (resultTocResult?.result_toc_results?.length) {
       await this._processUnplannedTocResults(
         result,
         resultTocResult,
-        primaryInitiativeId,
+        savingInitiativeId,
         user,
       );
     } else {
@@ -2629,17 +2696,20 @@ export class ResultsTocResultsService {
         user,
       );
     }
+
+    return deactivatedParentIds;
   }
 
   private async _deactivateAllActiveRecords(
     resultId: number,
     user: TokenDto,
     scopeInitiativeIds: Set<number | null>,
-  ): Promise<void> {
+  ): Promise<number[]> {
     const allActiveRecords = await this._resultsTocResultRepository.find({
       where: { result_id: resultId, is_active: true },
     });
 
+    const deactivatedIds: number[] = [];
     for (const record of allActiveRecords ?? []) {
       if (!scopeInitiativeIds.has(record.initiative_ids ?? null)) {
         continue;
@@ -2651,7 +2721,27 @@ export class ResultsTocResultsService {
           last_updated_by: user.id,
         },
       );
+      deactivatedIds.push(Number(record.result_toc_result_id));
     }
+
+    return deactivatedIds;
+  }
+
+  /**
+   * BIL-RTE-DD-6 (R-7.c): "P25 onward" is resolved from THIS result's own
+   * version -> `clarisa_portfolios.start_date`, never a constant, the phase
+   * year, or a numeric portfolio/phase id (those differ between
+   * environments). A version without a portfolio, or a result without a
+   * version, counts as false — same as today's behaviour.
+   */
+  private async _isResultP25Onward(result: any): Promise<boolean> {
+    const versionId = this.toNumberOrNull(result?.version_id);
+    if (versionId == null) return false;
+
+    const portfolioStartYear =
+      await this._resultRepository.getPortfolioStartYearByVersionId(versionId);
+
+    return portfolioStartYear != null && Number(portfolioStartYear) >= 2025;
   }
 
   private async _processUnplannedTocResults(

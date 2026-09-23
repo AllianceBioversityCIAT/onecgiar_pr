@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'node:process';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { indicatorResultTypeCaseSql } from '../../../../shared/constants/indicator-type-mapping.constant';
 import { ResultsTocResult } from '../entities/results-toc-result.entity';
@@ -66,6 +66,64 @@ export class ResultsTocResultRepository
           debug: true,
         }),
       );
+  }
+
+  /**
+   * BIL-RTE-DD-5 (R-8.a): on a P25-onward No, the parents already deactivated by the caller
+   * (scoped to the saved program — never every initiative) take their children down with them:
+   * indicators, indicator targets, SDG targets, impact-area targets and action-area links.
+   * Logical delete only (`is_active = 0`); never `.delete()`/`.remove()`. Every child repository
+   * used here already extends `BaseEntity`, so `is_active` exists on all of them (T-5's
+   * disqualifier: stop if a child table lacks it — none do).
+   */
+  async deactivateChildrenForParents(
+    parentIds: number[],
+    userId?: number,
+  ): Promise<void> {
+    const scopedParentIds = (parentIds ?? []).filter(
+      (id) => id !== null && id !== undefined,
+    );
+    if (!scopedParentIds.length) return;
+
+    const activeIndicators =
+      await this._resultsTocResultIndicatorRepository.find({
+        where: {
+          results_toc_results_id: In(scopedParentIds),
+          is_active: true,
+        },
+      });
+    const indicatorIds = activeIndicators.map(
+      (indicator) => indicator.result_toc_result_indicator_id,
+    );
+
+    if (indicatorIds.length) {
+      // Targets are grandchildren (target -> indicator -> parent): scope by indicator id, not
+      // by parent id directly.
+      await this._resultTocIndicatorTargetRepository.update(
+        {
+          result_toc_result_indicator_id: In(indicatorIds),
+          is_active: true,
+        },
+        { is_active: false, last_updated_by: userId },
+      );
+      await this._resultsTocResultIndicatorRepository.update(
+        { result_toc_result_indicator_id: In(indicatorIds) },
+        { is_active: false, last_updated_by: userId },
+      );
+    }
+
+    await this._resultsTocSdgTargetRepository.update(
+      { result_toc_result_id: In(scopedParentIds), is_active: true },
+      { is_active: false, last_updated_by: userId },
+    );
+    await this._resultsTocImpactAreaTargetRepository.update(
+      { result_toc_result_id: In(scopedParentIds), is_active: true },
+      { is_active: false, last_updated_by: userId },
+    );
+    await this._resultActionAreaRepository.update(
+      { result_toc_result_id: In(scopedParentIds), is_active: true },
+      { is_active: false, last_updated_by: userId },
+    );
   }
 
   async replicable(

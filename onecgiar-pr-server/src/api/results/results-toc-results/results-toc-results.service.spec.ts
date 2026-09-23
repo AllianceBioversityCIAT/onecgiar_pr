@@ -66,6 +66,7 @@ describe('ResultsTocResultsService', () => {
       getRTRPrimary: jest.fn().mockResolvedValue([]),
       saveIndicatorsPrimarySubmitter: jest.fn().mockResolvedValue(undefined),
       saveIndicatorsContributors: jest.fn().mockResolvedValue(undefined),
+      deactivateChildrenForParents: jest.fn().mockResolvedValue(undefined),
     };
 
     const resultByInitiativesRepositoryMock: Partial<
@@ -91,6 +92,10 @@ describe('ResultsTocResultsService', () => {
         result_level_id: 3,
         initiative_id: 50,
       } as any),
+      // Default: no version_id resolved on the mocked result -> not P25-onward
+      // (BIL-RTE-DD-6 treats a null portfolio/version as false). Tests for the
+      // P25-onward branch override getResultById AND this mock explicitly.
+      getPortfolioStartYearByVersionId: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -1215,6 +1220,183 @@ describe('ResultsTocResultsService', () => {
       );
       expect(deactivatedIds()).toContain(71001);
       expect(deactivatedIds()).not.toContain(71002);
+    });
+  });
+
+  describe('updateTocResultPartial — BIL-RTE-DD-5/DD-6: P25-onward No cascade (R-7.c, R-8)', () => {
+    function deactivatedIds() {
+      return resultsTocResultRepository.update.mock.calls
+        .filter(([, changes]) => (changes as any)?.is_active === false)
+        .map(([id]) => id);
+    }
+
+    const activeParentRow = {
+      result_toc_result_id: 10350,
+      result_id: 1,
+      initiative_ids: 50,
+      is_active: true,
+    };
+
+    function mockP25Onward() {
+      resultRepository.getResultById.mockResolvedValueOnce({
+        id: 1,
+        result_level_id: 3,
+        initiative_id: 50,
+        version_id: 777,
+      } as any);
+      resultRepository.getPortfolioStartYearByVersionId.mockResolvedValueOnce(
+        2025,
+      );
+    }
+
+    it('P25 No ignores a payload that still carries the HLO: no active parent/child, no reinsert with a toc_result_id, nothing physically deleted', async () => {
+      mockP25Onward();
+      resultsTocResultRepository.find
+        .mockResolvedValueOnce([activeParentRow] as any) // _deactivateMissingRecords
+        .mockResolvedValueOnce([activeParentRow] as any); // _deactivateAllActiveRecords
+
+      const payload: any = {
+        planned_result: false,
+        initiative_id: 50,
+        // The client still sends the old HLO/indicator selection — the server must ignore it.
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+            toc_level_id: 1,
+            indicators: [{ toc_results_indicator_id: 'indicator-1' }],
+          },
+        ],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 1 } as TokenDto);
+
+      // Parent deactivated, never re-inserted with the payload's HLO.
+      expect(deactivatedIds()).toContain(10350);
+      const insertCalls = resultsTocResultRepository.insert.mock.calls;
+      expect(insertCalls.length).toBeGreaterThan(0);
+      for (const [payloadArg] of insertCalls) {
+        expect((payloadArg as any).toc_result_id).toBeNull();
+      }
+      // No update call re-attaches the payload's toc_result_id (6286) either.
+      expect(
+        resultsTocResultRepository.update.mock.calls.some(
+          ([, changes]) => (changes as any)?.toc_result_id === 6286,
+        ),
+      ).toBe(false);
+
+      // Children cascade fired for the deactivated parent, scoped by DD-5.
+      expect(
+        resultsTocResultRepository.deactivateChildrenForParents,
+      ).toHaveBeenCalledWith(
+        expect.arrayContaining([10350]),
+        1, // user.id
+      );
+
+      // Indicators are skipped for this branch (task instruction).
+      expect(
+        resultsTocResultRepository.saveIndicatorsPrimarySubmitter,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('P25 No scopes the deactivation to the saving initiative only: an item naming SP Y leaves Y untouched (DD-4/R-9)', async () => {
+      mockP25Onward();
+      const spXRow = activeParentRow; // initiative_ids: 50 (the saving/admin program)
+      const spYRow = {
+        result_toc_result_id: 20450,
+        result_id: 1,
+        initiative_ids: 99,
+        is_active: true,
+      };
+      resultsTocResultRepository.find
+        .mockResolvedValueOnce([spXRow, spYRow] as any) // _deactivateMissingRecords
+        .mockResolvedValueOnce([spXRow, spYRow] as any); // _deactivateAllActiveRecords
+
+      const payload: any = {
+        planned_result: false,
+        initiative_id: 50,
+        // A stale/forged item names SP Y's own active row. Payload items are
+        // ignored on a P25 No, so this must NOT pull SP Y into scope.
+        result_toc_results: [
+          {
+            result_toc_result_id: 20450,
+            toc_result_id: 7777,
+            initiative_id: 99,
+          },
+        ],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 1 } as TokenDto);
+
+      expect(deactivatedIds()).toContain(10350);
+      expect(deactivatedIds()).not.toContain(20450);
+      expect(
+        resultsTocResultRepository.deactivateChildrenForParents,
+      ).toHaveBeenCalledWith(expect.arrayContaining([10350]), 1);
+      expect(
+        resultsTocResultRepository.deactivateChildrenForParents,
+      ).not.toHaveBeenCalledWith(expect.arrayContaining([20450]), 1);
+    });
+
+    it('a later Yes with a different HLO does not touch child rows (nothing reactivates them)', async () => {
+      mockP25Onward();
+      resultsTocResultRepository.find.mockResolvedValueOnce([
+        activeParentRow,
+      ] as any); // _deactivateMissingRecords only (Yes path skips _deactivateAllActiveRecords)
+
+      const payload: any = {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            // Fresh selection: no result_toc_result_id, so a NEW parent row is inserted.
+            toc_result_id: 9999,
+            toc_level_id: 2,
+            indicators: [{ toc_results_indicator_id: 'indicator-2' }],
+          },
+        ],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 1 } as TokenDto);
+
+      expect(
+        resultsTocResultRepository.deactivateChildrenForParents,
+      ).not.toHaveBeenCalled();
+      // Today's indicator sync still runs for Yes saves.
+      expect(
+        resultsTocResultRepository.saveIndicatorsPrimarySubmitter,
+      ).toHaveBeenCalled();
+    });
+
+    it("pre-P25 No keeps today's path: payload items are still processed and no cascade fires", async () => {
+      // Default resultRepository mocks already resolve a null portfolio start
+      // year (see beforeEach) -> not P25-onward.
+      resultsTocResultRepository.find
+        .mockResolvedValueOnce([activeParentRow] as any) // _deactivateMissingRecords
+        .mockResolvedValueOnce([activeParentRow] as any); // _deactivateAllActiveRecords
+
+      const payload: any = {
+        planned_result: false,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+            toc_level_id: 1,
+          },
+        ],
+      };
+
+      await service.updateTocResultPartial(1, payload, { id: 1 } as TokenDto);
+
+      // Today's path: the payload item IS re-processed (not ignored).
+      expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+        10350,
+        expect.objectContaining({ toc_result_id: 6286, planned_result: false }),
+      );
+      expect(
+        resultsTocResultRepository.deactivateChildrenForParents,
+      ).not.toHaveBeenCalled();
     });
   });
 });

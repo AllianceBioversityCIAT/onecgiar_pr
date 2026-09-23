@@ -158,7 +158,7 @@
   - [x] The three cases are asserted.
   - [x] The existing `results-toc-results` suite is green.
 
-### BIL-RTE-T-5 — P25-onward No: server cascade and portfolio start year
+### [x] BIL-RTE-T-5 — P25-onward No: server cascade and portfolio start year
 
 - **Type:** server
 - **Description:**
@@ -182,9 +182,10 @@
   - **Disqualifier:** a child table has no `is_active` column → stop. Re-design DD-5 for that table; never hard-delete as a workaround. Also, a mock-only green **does not prove the MySQL state**; that check belongs to T-9.
   - **Consumers:** `getCommonFieldsBilateralResultById` callers `results.service.ts:3795` (drawer GET) and `:4223` (data-standard). The additive field must not break either.
 - **Definition of done:**
-  - [ ] The three cases are asserted.
-  - [ ] `npx tsc --noEmit` passes (entity/repository touched; the focused jest does not see every spec).
-  - [ ] Additive-field note in the PR.
+- **Status:** [x] PASS 2026-09-23 (2 attempts, see `execution.md`; PR note pending until the PR is opened)
+  - [x] The three cases are asserted.
+  - [x] `npx tsc --noEmit` passes (entity/repository touched; the focused jest does not see every spec).
+  - [ ] Additive-field note in the PR (when the PR is opened).
 
 ### [x] BIL-RTE-T-6 — Drawer ToC: P25 No renders nothing, correct program, copy
 
