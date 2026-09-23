@@ -21,8 +21,6 @@ const POLICY_TYPE_DESC = `<strong>Policy type guidance</strong> <ul>
 
 /** Shortened from the W1/W2 copy — bilateral has no partner-request flow to link to. */
 const INSTITUTIONS_DESC = 'Select min 1, max 3 organizations.';
-/** Night sweep 2026-09-23, BIL-3 — the ceiling `INSTITUTIONS_DESC` announces, enforced by `updateMds()`. */
-const INSTITUTIONS_MAX = 3;
 
 /**
  * P2-3556 — what the person reads when the section could not be fetched. Plain language on purpose:
@@ -220,20 +218,13 @@ export class TypePolicyChangeComponent implements OnInit {
   // question the spec calls optional. Submit is gated on overallStatus() === 'complete', so that
   // silently disabled the button. Same failure mode as P2-3348 and as Capacity Sharing.
   updateMds(): void {
-    // BIL-3 — "max 3" was text only: 4 organizations were stored and the section read complete
-    // (prtest 11407). Reported the P2-3340 way: still `filled`, but `invalid`, so Submit refuses and
-    // names it; the pick itself is not blocked (the multi-select has no cap input).
-    const institutionsCount = this.body.institutions?.length ?? 0;
     this.mdsTracker.setSectionFields('type-specific', [
       { key: 'policy-type', label: 'Policy type', filled: !!this.body.policy_type_id },
       { key: 'policy-stage', label: 'Stage', filled: !!this.body.policy_stage_id },
       {
         key: 'policy-institutions',
         label: 'Whose policy is this? (Implementing organizations)',
-        filled: institutionsCount > 0,
-        ...(institutionsCount > INSTITUTIONS_MAX
-          ? { invalid: true, invalidReason: `${institutionsCount} organizations selected; the maximum is ${INSTITUTIONS_MAX}` }
-          : {})
+        filled: (this.body.institutions?.length ?? 0) > 0
       }
     ]);
   }
