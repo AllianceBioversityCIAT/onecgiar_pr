@@ -1810,6 +1810,61 @@ describe('BilateralCenterService', () => {
       ).rejects.toThrow('not available in the CLARISA catalogue');
       expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
     });
+
+    // P2-3807 — the form lets an admin edit Project Information; the save must not 403.
+    it('lets an admin without the Center User role save the assignment', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+      (
+        bilateralProjectsService.getProjectsByCenter as jest.Mock
+      ).mockResolvedValue({
+        projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+      });
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      ) as any;
+      clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP04',
+        active: true,
+      });
+      configureTransaction();
+
+      await service.updatePrimaryAssignment(user, 11513, {
+        project_id: 20,
+        primary_science_program_id: 701,
+        contribution_percentage: 42,
+      });
+
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
+      expect(resultRepository.manager.transaction).toHaveBeenCalled();
+    });
+
+    it('still refuses a non-admin without the Center User role on the lead centre', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      await expect(
+        service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+    });
   });
 
   // P2-3157 — the transition that makes the Science Program review loop reachable.

@@ -162,7 +162,11 @@ export class BilateralCenterService {
     }
 
     const leadCenter = await this.getLeadCenter(parsedResultId);
-    await this.assertCenterPermission(user, parsedResultId);
+    // P2-3807 — an admin edits every section of a W3 result (client `rolesSE.readOnly`, and
+    // `BilateralAccessService` D-1), so the Project Information save admits them too, as
+    // `changeResultType` already does.
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) await this.assertCenterPermission(user, parsedResultId);
 
     // The catalogue is the server-side authority for ownership, active phase,
     // confirmed status and positive allocation. The client list is convenience only.
