@@ -706,6 +706,45 @@ describe('ResultRepository (unit)', () => {
       expect(sql).not.toContain('LEFT JOIN results_policy_changes');
       expect(queryMock).toHaveBeenCalledWith(expect.any(String), [456]);
     });
+
+    // Night sweep 2026-09-23, D-1 (prtest 12039 / 12040): the org without an acronym was skipped, the
+    // review drawer sent the short list back and the writer deactivated it. Control negative: with
+    // `&& row.acronym` back in the two conditions this test fails.
+    it('D-1: returns every implementing organization, including one with no acronym', async () => {
+      const base = {
+        result_policy_change_id: 7,
+        policy_type_id: 2,
+        policy_stage_id: 1,
+        institution_roles_id: 4,
+        policy_stage_name: 'Stage 1',
+        policy_type_name: 'Legal instrument',
+      };
+      queryMock.mockResolvedValue([
+        {
+          ...base,
+          institution_id: 1,
+          acronym: 'WUR',
+          institution_name: 'Wageningen',
+        },
+        {
+          ...base,
+          institution_id: 768,
+          acronym: null,
+          institution_name: 'Mancomunidad La Montañona',
+        },
+      ]);
+
+      const [pc] = await repo.getPolicyChangeBilateralResultById(12039);
+
+      expect(pc.implementing_organization).toEqual([
+        { institution_id: 1, acronym: 'WUR', institution_name: 'Wageningen' },
+        {
+          institution_id: 768,
+          acronym: null,
+          institution_name: 'Mancomunidad La Montañona',
+        },
+      ]);
+    });
   });
 });
 

@@ -3730,14 +3730,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
         if (!policyChangeMap.has(policyChangeId)) {
           const implementingOrg = [];
-          if (
-            Number(row.institution_roles_id) === 4 &&
-            row.institution_id &&
-            row.acronym
-          ) {
+          if (Number(row.institution_roles_id) === 4 && row.institution_id) {
             implementingOrg.push({
               institution_id: row.institution_id,
-              acronym: row.acronym,
+              acronym: row.acronym ?? null,
               institution_name: row.institution_name,
             });
           }
@@ -3754,11 +3750,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
         const policyChange = policyChangeMap.get(policyChangeId);
 
-        if (
-          Number(row.institution_roles_id) === 4 &&
-          row.institution_id &&
-          row.acronym
-        ) {
+        if (Number(row.institution_roles_id) === 4 && row.institution_id) {
           const institutionExists = policyChange.implementing_organization.some(
             (inst: any) => inst.institution_id === row.institution_id,
           );
@@ -3766,7 +3758,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           if (!institutionExists) {
             policyChange.implementing_organization.push({
               institution_id: row.institution_id,
-              acronym: row.acronym,
+              acronym: row.acronym ?? null,
               institution_name: row.institution_name,
             });
           }
