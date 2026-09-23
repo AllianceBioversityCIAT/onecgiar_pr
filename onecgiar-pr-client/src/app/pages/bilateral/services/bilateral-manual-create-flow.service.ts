@@ -130,6 +130,11 @@ export class BilateralManualCreateFlowService {
 
   submitCreate(payload: BilateralManualCreatePayload): void {
     if (!payload.levelId || !payload.typeId) return;
+    // Night sweep 2026-09-23, C-2 — re-entry guard. The form's `canCreate` reads `creating` through an
+    // input that only refreshes on the next change detection, so a fast double-click emitted twice and
+    // two identical results were created (prtest #9573/#9574, #9577/#9578). This signal is set
+    // synchronously below, so the second call returns here.
+    if (this.isCreating()) return;
     this.creationService.resultLevelId.set(payload.levelId);
     this.creationService.resultTypeId.set(payload.typeId);
     this.isCreating.set(true);
