@@ -34,7 +34,8 @@ import {
   lucideUsers,
   lucideHouse,
   lucideAward,
-  lucideCode
+  lucideCode,
+  lucideExternalLink
 } from '@ng-icons/lucide';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan/sidebar';
 import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
@@ -111,7 +112,8 @@ interface IconFlyout {
       lucideUsers,
       lucideHouse,
       lucideAward,
-      lucideCode
+      lucideCode,
+      lucideExternalLink
     })
   ]
 })
