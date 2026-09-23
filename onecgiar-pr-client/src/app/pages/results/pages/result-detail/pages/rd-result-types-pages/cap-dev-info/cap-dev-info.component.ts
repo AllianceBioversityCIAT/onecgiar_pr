@@ -225,6 +225,13 @@ export class CapDevInfoComponent implements OnInit, CanComponentDeactivate {
   }
 
   validate_capdev_term_id() {
+    // Night sweep 2026-09-23, W12B-1 — the degree (PhD / MSc) only exists under Long-term (4).
+    // `clean_capdev_term_2()` runs on the radio's `selectOptionEvent`, which the shared
+    // `app-pr-radio-button` emits BEFORE the new value is written (`pr-radio-button.component.ts`
+    // `onSelect`), so it read the old Long-term and kept the degree: Long-term + PhD → Short-term saved
+    // PhD again (prtest 8994, 2/2). The rule is enforced here, at save time, whatever the event order.
+    // The shared radio is not changed (98 callers).
+    if (this.capdev_term_id_1 != 4) this.capdev_term_id_2 = null;
     this.capDevInfoRoutingBody.capdev_term_id = this.capdev_term_id_2 ? this.capdev_term_id_2 : this.capdev_term_id_1;
   }
 

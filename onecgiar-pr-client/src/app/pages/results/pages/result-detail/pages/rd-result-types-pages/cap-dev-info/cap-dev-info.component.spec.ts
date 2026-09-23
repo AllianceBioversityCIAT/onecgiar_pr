@@ -175,13 +175,29 @@ describe('CapDevInfoComponent', () => {
   });
 
   describe('validate_capdev_term_id()', () => {
-    it('should set capdev_term_id to capdev_term_id_2 if capdev_term_id_2 is defined', () => {
-      component.capdev_term_id_1 = 3;
+    it('should set capdev_term_id to capdev_term_id_2 if capdev_term_id_2 is defined under Long-term (4)', () => {
+      component.capdev_term_id_1 = 4;
       component.capdev_term_id_2 = 2;
 
       component.validate_capdev_term_id();
 
       expect(component.capDevInfoRoutingBody.capdev_term_id).toEqual(2);
+    });
+
+    // Night sweep 2026-09-23, W12B-1 (prtest 8994): Long-term + PhD → Short-term saved PhD. The Dec-2023
+    // spec above used to pin exactly that (term 3 + degree 2 → 2). Control negative: without the
+    // `!= 4` clear this test fails.
+    it('W12B-1: drops a stale degree when the length of training is Short-term (3) or unanswered', () => {
+      component.capdev_term_id_1 = 3;
+      component.capdev_term_id_2 = 1;
+      component.validate_capdev_term_id();
+      expect(component.capDevInfoRoutingBody.capdev_term_id).toEqual(3);
+      expect(component.capdev_term_id_2).toBeNull();
+
+      component.capdev_term_id_1 = null;
+      component.capdev_term_id_2 = 1;
+      component.validate_capdev_term_id();
+      expect(component.capDevInfoRoutingBody.capdev_term_id).toBeNull();
     });
 
     it('should set capdev_term_id to capdev_term_id_1 if capdev_term_id_2 is not defined', () => {
