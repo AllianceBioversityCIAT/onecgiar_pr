@@ -178,6 +178,21 @@ export class TypePolicyChangeComponent implements OnInit {
     this.queueTypeSave();
   }
 
+  /**
+   * Night sweep 2026-09-23, BIL-9 — the USD amount and its status only exist for "Program, budget or
+   * investment" (policy type 1, the template's `@if (body.policy_type_id == 1)`). Switching to another
+   * type hid them but kept them stored (prtest 11407: Legal instrument with amount 1234). Cleared here,
+   * like every other hidden dependent value in these sections; the server writes `amount || null` and
+   * `status_amount` as received, so null is stored.
+   */
+  onPolicyTypeChange(): void {
+    if (this.body.policy_type_id != 1) {
+      this.body.amount = null;
+      this.body.status_amount = null;
+    }
+    this.onFieldChange();
+  }
+
   onSave(): void {
     this.queueTypeSave(0);
   }

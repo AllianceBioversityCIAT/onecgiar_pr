@@ -363,6 +363,23 @@ describe('TypePolicyChangeComponent', () => {
       expect(three.invalid).toBeUndefined();
     });
 
+    // Night sweep 2026-09-23, BIL-9 (prtest 11407). Control negative: without the clearing in
+    // `onPolicyTypeChange` the first test fails.
+    it('BIL-9: switching away from "Program, budget or investment" clears the USD amount and its status', () => {
+      build();
+      component.body = { ...component.body, policy_type_id: 2, amount: 1234, status_amount: 1 };
+      component.onPolicyTypeChange();
+      expect(component.body.amount).toBeNull();
+      expect(component.body.status_amount).toBeNull();
+    });
+
+    it('BIL-9: keeps the amount while the type is still Program, budget or investment', () => {
+      build();
+      component.body = { ...component.body, policy_type_id: 1, amount: 1234, status_amount: 1 };
+      component.onPolicyTypeChange();
+      expect(component.body.amount).toBe(1234);
+    });
+
     it('counts a fully answered form as filled', () => {
       build();
       component.body = { policy_type_id: 1, policy_stage_id: 2, institutions: [{ institutions_id: 1 }] };
