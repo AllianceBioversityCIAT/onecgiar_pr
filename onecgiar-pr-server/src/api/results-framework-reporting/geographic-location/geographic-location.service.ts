@@ -18,6 +18,8 @@ import { ResultRegion } from '../../results/result-regions/entities/result-regio
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
 import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
+import { SourceEnum } from '../../results/entities/result.entity';
+import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 
 @Injectable()
 export class GeographicLocationService {
@@ -32,7 +34,37 @@ export class GeographicLocationService {
     private readonly _elasticService: ElasticService,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
+    // design §5.1, BIL-RTE-T-2 — resolvable here via `forwardRef(() => ResultsModule)` below,
+    // which imports and re-exports `BilateralAccessModule` (`results.module.ts` exports it
+    // precisely so sibling modules get it for free through that edge).
+    private readonly _bilateralAccessService: BilateralAccessService,
   ) {}
+
+  /**
+   * `docs/specs/bilateral/review-toc-only-editing/design.md` §5.1 — Center-write guard for the
+   * v2 geography entry point. `saveGeoScopeV2` below is also called internally by the admin-only
+   * data-standard review path (`ResultsService._updateGeographicScope`), so the check lives here
+   * and is called once, from `GeographicLocationController.saveGeographic`, BEFORE
+   * `saveGeoScopeV2` runs — never inside the shared method. A non-bilateral (or not-found) result
+   * never reaches `BilateralAccessService` at all — falsifier case (d).
+   */
+  async assertCenterWriteForBilateral(
+    resultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId },
+      select: ['id', 'source', 'status_id'],
+    });
+    if (!result || result.source !== SourceEnum.Bilateral) {
+      return;
+    }
+    await this._bilateralAccessService.assertCenterWrite(
+      { id: result.id, status_id: result.status_id },
+      'geography',
+      user,
+    );
+  }
 
   async saveGeoScopeV2(
     createResultGeo: CreateGeographicLocationDto,

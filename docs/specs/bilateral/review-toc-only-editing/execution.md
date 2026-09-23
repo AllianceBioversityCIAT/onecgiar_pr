@@ -239,6 +239,77 @@
 - → T-9 HITL: in prtest, try an SP-Y reviewer saving a ToC with an SP-X `result_toc_result_id` (expect 403), and approve/reject by a non-member.
 - → P2-3794 comment: the pre-existing `newStatusId` at `results.service.ts:~4109` is never assigned, so `response.status` is undefined on review-decision. Out of scope, not fixed.
 
+### BIL-RTE-T-2 — Enforce the Center-write rule at bilateral entry points — **PASS**
+
+**Attempt 1** (2026-09-23, effort high, skills `nestjs-expert`, `tdd`, `api-design-principles`)
+- Files:
+  - `results.service.ts`: title, general-info and data-standard call `assertCenterWrite` (`'title'`, `'general-info'`, `'data-standard'`); new `assertGeographyCenterWrite`; the validator is deleted.
+  - `results.controller.ts`: v1 geography guard, and the `title` Swagger text.
+  - `bilateral-center.service.ts`: planned-result, toc-mapping and contributors are gated; catch blocks rethrow `HttpException`.
+  - `geographic-location.service.ts` and `geographic-location.controller.ts`: the v2 guard.
+  - Specs: result, results.controller, bilateral-center.service and geographic-location.service.
+  - DI goes through the transitive `ResultsModule` → `BilateralAccessModule` export.
+- Judgment call (Implementer): the validator's third caller was `updateBilateralResultReview` (data-standard, admin-only, writes `result.description`), not a DAC-tag method. It was gated as a behavioural no-op so the validator could be deleted.
+- Red run (executed after the Leader asked; the first report inferred it from the code): HEAD's service was swapped in and restored byte-identical.
+  - Case (a): `Expected: 200 Received: 409`.
+  - Case (b) on bilateral-center: planned-result and contributors resolved (the write proceeded); toc-mapping threw BadRequest instead of Forbidden.
+- Green run: jest `result.spec|bilateral-center.service.spec|geographic|results.controller.spec` 5 suites / 269 tests. `bilateral-center.controller.spec` 14/14 and `results.module.spec` 4/4. tsc and eslint (9 files) clean.
+- Boot: **not verified**. The DB is unreachable (ETIMEDOUT, VPN down); asked the owner.
+- Environment: the Leader stopped two orphaned `dist/src/main` processes from T-3's boots in this worktree (PIDs from 2026-09-22 16:55 and 17:05; one held 3411). The owner's instance on 3400 was not touched.
+- Reviewer: **FAIL** (verbatim)
+
+> 1. **Discovered Issue:** The deleted validator did two things: it loaded the result with `where: { id, source: SourceEnum.Bilateral, is_active: true }` and returned 400 "Bilateral result not found" when that failed, and it applied the status rule. Only the status rule was replaced. The title and general-info methods load with `where: { id, is_active: true }` and never check `source`. General-info even selects `source` and ignores it. Every W1/W2 result is at status 1, 2 or 3, never 5, so `assertCenterWrite` allows it. As a result, any authenticated non-admin can now rename, or rewrite the description, DAC tags and impact areas of, **any W1/W2 result, including Submitted ones**, through `PATCH api/results/bilateral/:id/title` and `/bilateral/general-info/:id`. Before this change both calls returned 400. Data-standard has the same gap: the new comment says `getCommonFieldsBilateralResultById` is "a bilateral-scoped query", but its SQL (`result.repository.ts:3464-3466`) filters only `r.id = ? AND r.is_active = 1`. None of the new tests uses a non-bilateral result on these three methods.
+>    - **Violated Rule:** `tasks.md` §BIL-RTE-T-2 (the Center-write call *replaces* the validator; per design P-1 and DD-2, only the inverted status rule was meant to change); `design.md` §2.2 step 2 ("loads the result (id, **source**, status, version)"); §5.1 ("Placement: bilateral entry points only"); TRD §8; `api/results/CLAUDE.md` §7 ("`source = SourceEnum.Bilateral` drives review-workflow branching… Don't normalise this away").
+>    - **Remediation Suggestion:** In title and general-info, add `'source'` to the select, and when `source !== SourceEnum.Bilateral` return `{ status: 400, message: 'Bilateral result not found' }` before any write. In data-standard, widen the check to `!currentCommonFields || currentCommonFields.source !== SourceEnum.Bilateral` and correct the comment. Add tests: a non-admin on a `SourceEnum.Result` row at status 1 gets 400 on all three, with no `manager.update` and no transaction.
+> 2. **Discovered Issue:** Falsifier (b) is not asserted for the v2 geography write. No test proves `GeographicLocationController.saveGeographic` skips `saveGeoScopeV2` when `assertCenterWriteForBilateral` rejects, or that the check runs first.
+>    - **Violated Rule:** `tasks.md` §BIL-RTE-T-2 Falsifier (b) ("each of the 7 writes → 403, and **no repository write mock was called**") and DoD ("(a)–(d) asserted").
+>    - **Remediation Suggestion:** add `geographic-location.controller.spec.ts` mirroring `results.controller.spec.ts:256-280`: reject → `saveGeoScopeV2` not called; allow → the check is called with `(id, user)`, then `saveGeoScopeV2({ ...dto, result_id }, user)`.
+>
+> Reviewer confirmed: geography is at the entry points only (W1 `saveGeoScope`, `saveGeoScopeV2` and `results.service.ts:4448` untouched); non-bilateral results never reach the helper; no concrete DI risk (`GeographicLocationModule` already resolves `ResultsService` through the same `forwardRef`, and `ResultsModule` re-exports `BilateralAccessModule`); the `HttpException` rethrow only changes the new 403 path and leaks nothing; the Swagger status text matches.
+>
+> ADVISORY:
+> - RISK (contract doc): the change log's own history records input-only and status-code changes on `/api/bilateral/center/*`, and root `CLAUDE.md` asks for an entry on every bilateral change. Consider one row.
+> - RELIABILITY: planned-result and toc-mapping now return 404 for inactive or non-bilateral results (they used to write), and this is missing from the behaviour list. `saveContributors` still loads without `is_active: true`.
+> - RELIABILITY: R-4.a names status 8 too; add a one-line status-8 case.
+> - RESILIENCE: the helper runs inside `_dataSource.transaction` in title, general-info and data-standard. Move it just before `transaction(`.
+> - READABILITY: the data-standard admin read is repeated (acceptable, and the comment explains it).
+> - PERF: every W1 geography save does one extra PK read of `result` (negligible).
+> - READABILITY: the general-info Swagger text doesn't mention the status-5 403.
+
+**Attempt 2** (2026-09-23, effort xhigh)
+- Changes:
+  - The source check is restored on title and general-info (400 "Bilateral result not found" for non-bilateral) and widened on data-standard. Each has a `SourceEnum.Result` test.
+  - New `geographic-location.controller.spec.ts`.
+  - `assertCenterWrite` moved before `transaction(`. New status-8 case. `saveContributors` filters on `is_active: true`. General-info Swagger mentions the 403.
+  - Change-log row 2026-09-23 in `bilateral-result-summaries.en.md`.
+- Implementer verification: jest 6 suites / 277 tests; tsc and eslint (10 files) clean.
+- **Boot verified by the Leader** (owner connected the VPN): `PORT=3411 npm run start:dev` on the attempt-2 tree logged "Nest application successfully started" and "Application is running http://localhost:3411". `BilateralCenterController`, `GeographicLocationController` and `ResultsController` were mapped, with no DI error. The tree was stopped by PID; the owner's 3400 instance was untouched.
+- Reviewer: **FAIL**. Both attempt-1 issues are closed, with no regression. Remaining findings (verbatim):
+
+> 1. **Discovered Issue:** In `updateBilateralGeneralInfo`, the Center-write check still runs after a write. Building `updates` calls `this._adUserService.resolveOrCreateContact(dto.lead_contact_person_data.mail, dto.lead_contact_person_data)` (`results.service.ts` around lines 5515–5522). When the mail is not already known, that inserts an `ad_users` row from data the client sent (`ad_users.service.ts:184-185`, `saveFromADUser`). So a non-admin at status 5 who sends `lead_contact_person_data` gets a row written and then a 403.
+>    - **Violated Rule:** `tasks.md` §BIL-RTE-T-2 ("before any write"; Falsifier (b) "no repository write mock was called"); `design.md` §2.2 step 3; `requirements.md` R-2.
+>    - **Remediation:** move `assertCenterWrite(..., 'general-info', user)` to just after the source check, before `const updates`. Add a falsifier-(b) case with `lead_contact_person_data: { mail }` asserting `resolveOrCreateContact` is not called and no transaction is opened.
+> 2. **Discovered Issue:** The change-log row does not fully match the code:
+>    - (a) says "all six", but seven endpoints are listed.
+>    - (a) omits the new 404 on `center/contributors` for inactive results.
+>    - (b) understates review-decision: before T-3, a non-member at status 5 with a valid payload **succeeded**.
+>    - **Violated Rule:** `api/bilateral/CLAUDE.md` §8 (the doc and the code ship together).
+>    - **Remediation:** say "all seven"; add the contributors 404; reword the review-decision sentence.
+>
+> ADVISORY: every W1 geography save does one extra PK read (acceptable); no DI risk.
+
+**Attempt 3** (2026-09-23, effort xhigh)
+- Changes:
+  - `updateBilateralGeneralInfo` runs `assertCenterWrite('general-info')` right after the source check, before `updates` is built, before the uniqueness read and before `resolveOrCreateContact`. The duplicate call is removed.
+  - New falsifier-(b) test with `lead_contact_person_data` and an `AdUserService` mock: 403, no contact write, no transaction.
+  - Title and data-standard re-checked: only SELECTs or pure functions run before their checks.
+  - The change-log row is corrected: seven endpoints, the contributors 404, and the review-decision 200 path from before T-3.
+- Implementer verification: jest 6 suites / 278 tests; tsc and eslint clean. No module or constructor changed, so the attempt-2 boot (Leader, VPN on) stands.
+- Reviewer: **PASS**. "Both attempt-2 findings are closed … no regressions."
+- ADVISORY: every W1 geography save (v1/v2) does one extra PK read. Acceptable.
+- Requirements covered: BIL-RTE-R-2 (R-2.a on all 7 endpoints, data unchanged, R-2.b), R-3.a (Center), R-4.a (status 1 and 8 → 2xx; red run 409 → 200), DD-1, DD-2. `_validateBilateralResultForUpdate` is deleted with zero callers, which closes the T-3 DoD pointer.
+- Budget: 3 review rounds against a budget of 2 for T-2. Recorded. Round 2 was self-inflicted: the validator's deletion dropped its source check.
+
 ## Constitution Impact: BIL-RTE-T-1
 
 - New injectable `BilateralAccessService` at `onecgiar-pr-server/src/api/results/bilateral-access/`. `ResultsModule` provides and exports it, which adds to that module's public surface.

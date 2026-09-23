@@ -70,7 +70,7 @@
   - [x] eslint clean (`npx eslint "<changed files>" --quiet`).
   - [x] No secret in logs.
 
-### BIL-RTE-T-2 — Enforce the Center-write rule at bilateral entry points
+### [x] BIL-RTE-T-2 — Enforce the Center-write rule at bilateral entry points
 
 - **Type:** server
 - **Description:**
@@ -93,10 +93,11 @@
   - **Red run:** `npx jest --testPathPattern="result.spec|bilateral-center.service.spec|geographic" --silent --reporters=summary --forceExit`. Case (a) must fail before the change.
   - **Disqualifier:** case (a) passes before the change **and** T-0 check 1 was 2xx → R-4 is not a regression; drop the "red" claim and record it. A W1 geography spec turns red → the check leaked into a shared method; move it.
   - **Consumers:** `_validateBilateralResultForUpdate` stays referenced from `toc-metadata` until T-3 (grep its callers after the change). `updatePlannedResult` in `ResultsTocResultsService` (also called from `contributors-partners.service.ts:786`) is not modified.
+- **Status:** [x] PASS 2026-09-23 (3 attempts, see `execution.md`)
 - **Definition of done:**
-  - [ ] (a)–(d) asserted.
-  - [ ] eslint clean.
-  - [ ] Swagger text matches the behaviour.
+  - [x] (a)–(d) asserted.
+  - [x] eslint clean.
+  - [x] Swagger text matches the behaviour.
 
 ### [x] BIL-RTE-T-3 — Enforce the ToC and Decision rules
 
