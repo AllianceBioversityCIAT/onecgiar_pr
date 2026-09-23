@@ -5,6 +5,8 @@ import { IpsrDataControlService } from '../../../../../../services/ipsr-data-con
 import { Router } from '@angular/router';
 import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum';
 import { ExpertWorkshopOrganized } from '../step-n3/model/Ipsr-step-3-body.model';
+import { untypedInnovationUseRowsMessage } from '../../../../../../utils/untyped-innovation-use-rows.util';
+import { IPSR_UNTYPED_ROWS_COPY } from '../../../../../../../../internationalization/ipsr-untyped-rows.copy';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
@@ -130,6 +132,7 @@ export class StepN1Component implements OnInit {
   onSaveSection() {
     // IPSR-2 — never send a body that was not read from the server.
     if (this.loaded() !== true) return;
+    if (this.refuseUntypedRows()) return;
     this.convertOrganizationsTosave();
     this.api.resultsSE
       .PATCHInnovationPathwayByStepOneResultId({
@@ -151,6 +154,7 @@ export class StepN1Component implements OnInit {
       return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
         queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
       });
+    if (this.refuseUntypedRows()) return null;
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
       this.getSectionInformation();
@@ -159,6 +163,18 @@ export class StepN1Component implements OnInit {
       });
     });
     return null;
+  }
+
+  /**
+   * Night sweep 2026-09-23, IPSR-3 — a row with figures but no type is skipped by the server with a
+   * 200 (see `untyped-innovation-use-rows.util.ts`). Refuse the save and say which rows, so nothing is
+   * lost in silence. Returns true when the save must not go out.
+   */
+  private refuseUntypedRows(): boolean {
+    const message = untypedInnovationUseRowsMessage(this.ipsrStep1Body?.innovatonUse);
+    if (!message) return false;
+    this.api.alertsFe.show({ id: 'ipsrUntypedRows', title: IPSR_UNTYPED_ROWS_COPY.title, description: message, status: 'error' });
+    return true;
   }
 
   convertOrganizations(organizations) {

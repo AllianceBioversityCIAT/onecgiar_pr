@@ -152,6 +152,18 @@ describe('StepN1Component', () => {
     component.loaded.set(true);
   });
 
+  // Night sweep 2026-09-23, IPSR-3: a row with figures and no type was dropped with a 200.
+  // Control negative: without `refuseUntypedRows()` in onSaveSection the PATCH is sent.
+  it('IPSR-3: refuses to save an actor row with figures and no actor type, and says why', () => {
+    const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
+    const show = jest.fn();
+    mockApiService.alertsFe = { show };
+    component.ipsrStep1Body.innovatonUse.actors = [{ women_youth: 7 } as any];
+    component.onSaveSection();
+    expect(patch).not.toHaveBeenCalled();
+    expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'ipsrUntypedRows', status: 'error' }));
+  });
+
   // Night sweep 2026-09-23, IPSR-2 (prtest 11172): GET 500 → Save wiped EOI, partners and geo scope.
   // Control negative: with the gate lines removed the no-PATCH tests fail.
   describe('IPSR-2 — refuses to save after a failed Step-1 load', () => {
