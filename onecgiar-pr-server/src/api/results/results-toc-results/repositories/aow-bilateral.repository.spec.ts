@@ -1757,11 +1757,13 @@ describe('AoWBilateralRepository', () => {
       expect(dataSourceQueryMock).toHaveBeenCalledTimes(1);
       const [query, params] = dataSourceQueryMock.mock.calls[0];
 
-      // Bound as a string against the varchar trp.project_id column (design.md §5); never a name
-      expect(params).toContain('501');
+      // A clarisa_projects.id, resolved to the ToC row by code; never a name
+      expect(params).toContain(501);
       expect(params).not.toContain(502);
       expect(params).not.toContain('502');
-      expect(query).toContain('trp.project_id = ?');
+      expect(query).toContain('cp.short_name = trp.code');
+      expect(query).toContain('cp.id = ?');
+      expect(query).not.toContain('trp.project_id = ?');
       expect(query).toContain(
         'trit.project_id = CAST(trp.project_id AS SIGNED)',
       );
@@ -1892,20 +1894,38 @@ describe('AoWBilateralRepository', () => {
       await repository.findProjectTocLinkage(42, 'SP02', 'PHASE-2', 2026);
 
       const [, params] = dataSourceQueryMock.mock.calls[0];
-      expect(params).toContain('42');
+      expect(params).toContain(42);
       expect(params).toContain('SP02');
       expect(params).toContain('PHASE-2');
       expect(params).toContain(2026);
     });
 
-    it('binds projectId as a string, never a number, against the varchar trp.project_id column (design.md §5 type caveat)', async () => {
+    it('binds projectId as the CLARISA id, not against the ToC trp.project_id (the two id spaces differ)', async () => {
       dataSourceQueryMock.mockResolvedValueOnce([]);
 
-      await repository.findProjectTocLinkage(194, 'SP06', 'PHASE-2026', 2026);
+      await repository.findProjectTocLinkage(1676, 'SP03', 'PHASE-2026', 2026);
 
-      const [, params] = dataSourceQueryMock.mock.calls[0];
-      expect(params).toContain('194');
-      expect(params).not.toContain(194);
+      const [query, params] = dataSourceQueryMock.mock.calls[0];
+      expect(params).toContain(1676);
+      expect(query).toContain('cp.short_name = trp.code');
+      expect(query).toContain('cp.id = ?');
+    });
+
+    it('bilateral project lookups return the CLARISA id matched by code, not the ToC project_id', async () => {
+      dataSourceQueryMock.mockResolvedValue([]);
+
+      await repository.findBilateralProjectById(1, 'PHASE-2026');
+      await repository.findBilateralProjectsByProgramOfficialCode(
+        'SP03',
+        'PHASE-2026',
+      );
+
+      for (const [query] of dataSourceQueryMock.mock.calls) {
+        expect(query).toContain('cp.id AS project_id');
+        expect(query).toContain('cp.short_name = trp.code');
+        expect(query).not.toContain('trp.project_id AS project_id');
+        expect(query).not.toContain('cp.id = trp.project_id');
+      }
     });
   });
 });

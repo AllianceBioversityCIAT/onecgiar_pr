@@ -1281,7 +1281,7 @@ export class AoWBilateralRepository {
       SELECT
         tr.id AS toc_result_id,
         tr.official_code AS official_code,
-        trp.project_id AS project_id, 
+        cp.id AS project_id,
         trp.name AS project_name,
         trp.project_summary AS project_summary,
         cp.organization_code AS organization_code,
@@ -1291,7 +1291,8 @@ export class AoWBilateralRepository {
         ci.website_link AS organization_website_link
       FROM ${env.DB_TOC}.toc_results tr
       JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
-      LEFT JOIN clarisa_projects cp ON cp.id = trp.project_id
+      -- trp.project_id is the ToC's own id; CLARISA is matched by code (short_name).
+      LEFT JOIN clarisa_projects cp ON cp.short_name = trp.code
       LEFT JOIN clarisa_institutions ci ON ci.id = cp.organization_code
       WHERE tr.id = ?
         AND tr.phase = ?
@@ -1316,7 +1317,7 @@ export class AoWBilateralRepository {
       SELECT
         tr.id AS toc_result_id,
         tr.official_code AS official_code,
-        trp.project_id AS project_id,
+        cp.id AS project_id,
         trp.name AS project_name,
         trp.project_summary AS project_summary,
         cp.organization_code AS organization_code,
@@ -1326,7 +1327,8 @@ export class AoWBilateralRepository {
         ci.website_link AS organization_website_link
       FROM ${env.DB_TOC}.toc_results tr
       JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
-      LEFT JOIN ${env.DB_NAME}.clarisa_projects cp ON cp.id = trp.project_id
+      -- trp.project_id is the ToC's own id; CLARISA is matched by code (short_name).
+      LEFT JOIN ${env.DB_NAME}.clarisa_projects cp ON cp.short_name = trp.code
       LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci ON ci.id = cp.organization_code
       WHERE UPPER(TRIM(tr.official_code)) = UPPER(TRIM(?))
         AND tr.phase = ?
@@ -1470,7 +1472,8 @@ export class AoWBilateralRepository {
   /**
    * Reads flat project ToC linkage rows for a project under a science program and phase.
    * Cross-schema query starting from Integration_information.toc_result_projects.
-   * Never filters or joins by project name — project_id is the sole key (R-1, R-8).
+   * Never filters or joins by project name (R-1, R-8). `projectId` is a clarisa_projects.id,
+   * resolved to the ToC row through `trp.code = cp.short_name` (the ToC's own project_id differs).
    * One query; grouping into ProjectTocLinkageNode[] is done by callers (design §5).
    * Returns [] when no rows found; returns null on error and logs result context (never throws).
    */
@@ -1493,6 +1496,8 @@ export class AoWBilateralRepository {
         trit.target_value AS target_value,
         tritc.center_id AS center_id
       FROM ${env.DB_TOC}.toc_result_projects trp
+      -- projectId is a clarisa_projects.id; the ToC links it by code, not by its own project_id.
+      JOIN ${env.DB_NAME}.clarisa_projects cp ON cp.short_name = trp.code
       JOIN ${env.DB_TOC}.toc_results tr ON tr.related_node_id = trp.toc_result_id_toc
       LEFT JOIN ${env.DB_TOC}.toc_results_indicators tri
         ON tri.toc_results_id = tr.id
@@ -1503,7 +1508,7 @@ export class AoWBilateralRepository {
         AND trit.target_date = ?
       LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc
         ON tritc.toc_indicator_target_id = trit.toc_indicator_target_id
-      WHERE trp.project_id = ?
+      WHERE cp.id = ?
         AND UPPER(TRIM(tr.official_code)) = UPPER(TRIM(?))
         AND tr.phase = ?
         AND tr.is_active = 1
@@ -1513,7 +1518,7 @@ export class AoWBilateralRepository {
     try {
       const rows = await this.dataSource.query(query, [
         reportingYear,
-        String(projectId),
+        projectId,
         programOfficialCode,
         phaseUuid,
       ]);
