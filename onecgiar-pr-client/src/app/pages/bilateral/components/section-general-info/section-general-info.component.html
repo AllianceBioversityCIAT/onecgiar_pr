@@ -21,7 +21,7 @@
   <app-pr-input
     label="Title of Result"
     type="text"
-    [maxWords]="30"
+    [maxWords]="titleMaxWords"
     [required]="true"
     [tooltip]="guidance('[general-info]-title')"
     placeholder="Enter result title"
@@ -35,7 +35,7 @@
   <app-bilateral-field-quality-flag section="general_information" field="description" />
   <app-pr-textarea
     label="Description of Result"
-    [maxWords]="300"
+    [maxWords]="descriptionMaxWords"
     [required]="true"
     [tooltip]="guidance('[general-info]-description')"
     [rows]="4"
