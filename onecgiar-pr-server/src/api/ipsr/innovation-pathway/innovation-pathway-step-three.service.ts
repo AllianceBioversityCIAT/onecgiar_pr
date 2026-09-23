@@ -236,7 +236,11 @@ export class InnovationPathwayStepThreeService {
         };
       }
 
-      if (!workShopEvidence) {
+      // Night sweep 2026-09-23, IPSR-1b — an unanswered workshop question (null) reaches here with no
+      // link; inserting a workshop-list evidence without one violated the NOT NULL `link` column
+      // ("Field 'link' doesn't have a default value") and every Step-1 save of a NEW package answered
+      // 500 (prtest 12037 / 12038, 3/3). No link to store is not an error: nothing is inserted.
+      if (!workShopEvidence && lwl) {
         await this._evidenceRepository.save({
           result_id: resultId,
           link: lwl,
@@ -244,7 +248,7 @@ export class InnovationPathwayStepThreeService {
           created_by: user.id,
           last_updated_by: user.id,
         });
-      } else {
+      } else if (workShopEvidence) {
         await this._evidenceRepository.update(workShopEvidence.id, {
           link: lwl,
           last_updated_by: user.id,
