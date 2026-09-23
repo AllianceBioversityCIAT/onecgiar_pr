@@ -17,6 +17,12 @@ export const RESULT_DETAIL_SECTION_LOAD_COPY = {
    * `LOAD_ERROR_NOTE` the P2-3556 bilateral sections already show, for the bilateral sections that
    * now get the same gate (Evidence, Geography).
    */
+  /** Night sweep 2026-09-23 (R-3 / R-4) — bilateral Geography while its stored data is still loading. */
+  bilateralGeographyLoading: 'Loading the geography saved for this result…',
+  /** Night sweep 2026-09-23 (W12-6) — bilateral Contributors when the CLARISA projects catalogue failed. */
+  bilateralProjectsLoadError:
+    'We could not load the projects catalogue needed for this section, so the lead project cannot be shown and nothing here can be saved right now. Please retry.',
+  bilateralProjectsRetry: 'Retry loading projects',
   bilateralLoadErrorNote:
     'We could not load the information saved for this section, so the fields below are empty and nothing typed here will be saved. ' +
     'Please reload the page to try again — the information reported earlier has not been changed.'

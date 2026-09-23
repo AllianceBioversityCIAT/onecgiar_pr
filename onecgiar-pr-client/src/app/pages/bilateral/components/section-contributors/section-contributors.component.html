@@ -114,17 +114,14 @@
     -->
     @if (projectsLoadFailed()) {
       <div class="flex flex-col items-start gap-[8px]" data-testid="projects-load-error">
-        <app-alert-status
-          status="error"
-          description="We could not load the projects catalogue needed for this section, so the lead project cannot be shown and nothing here can be saved right now. Please retry.">
-        </app-alert-status>
+        <app-alert-status status="error" [description]="loadCopy.bilateralProjectsLoadError"></app-alert-status>
         <button
           type="button"
           class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
           data-testid="projects-load-retry"
           (click)="retryLoadProjects()">
-          <i class="material-icons-round text-[14px]">refresh</i>
-          Retry loading projects
+          <ng-icon name="lucideRefreshCw" class="text-[14px]" aria-hidden="true" />
+          {{ loadCopy.bilateralProjectsRetry }}
         </button>
       </div>
     }

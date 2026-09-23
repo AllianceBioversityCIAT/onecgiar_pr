@@ -16,7 +16,7 @@
   @if (loaded() === false) {
     <app-alert-status status="error" [collapsible]="false" [description]="loadErrorNote" data-testid="section-load-error"></app-alert-status>
   } @else if (loaded() === null) {
-    <app-alert-status status="info" [collapsible]="false" description="Loading the geography saved for this result…" data-testid="section-loading"></app-alert-status>
+    <app-alert-status status="info" [collapsible]="false" [description]="loadingNote" data-testid="section-loading"></app-alert-status>
   }
 
   <!-- Main geographic focus -->

@@ -399,6 +399,19 @@ describe('SectionContributorsComponent', () => {
         expect(html).toContain('@if (projectsLoadFailed()) {');
         expect(html).toContain('(click)="retryLoadProjects()"');
       });
+
+      // R37: copy lives in *.copy.ts and icons are Lucide. Control negative: re-inlining the text or
+      // putting back the material icon makes this fail.
+      it('takes its copy from the copy file and its icon from Lucide', () => {
+        const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+        const start = html.indexOf('@if (projectsLoadFailed()) {');
+        const banner = html.slice(start, html.indexOf('</div>', start));
+        expect(banner).toContain('[description]="loadCopy.bilateralProjectsLoadError"');
+        expect(banner).toContain('{{ loadCopy.bilateralProjectsRetry }}');
+        expect(banner).toContain('<ng-icon name="lucideRefreshCw"');
+        expect(banner).not.toContain('material-icons-round');
+        expect(banner).not.toContain('Retry loading projects');
+      });
     });
 
     it('unsubscribes on destroy', () => {

@@ -64,6 +64,7 @@ export class SectionGeographyComponent {
    */
   readonly loaded = signal<boolean | null>(null);
   readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.bilateralLoadErrorNote;
+  readonly loadingNote = RESULT_DETAIL_SECTION_LOAD_COPY.bilateralGeographyLoading;
   /** What the template binds to `[readOnly]`: the result's own lock, or "the stored geography is not on screen yet". */
   readonly locked = computed(() => this.readOnly() || this.loaded() !== true);
 

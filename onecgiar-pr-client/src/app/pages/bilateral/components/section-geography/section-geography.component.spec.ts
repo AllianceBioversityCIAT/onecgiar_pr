@@ -217,6 +217,15 @@ describe('SectionGeographyComponent', () => {
       expect(component.geographicLocationBody().regions).toEqual([{ id: 1 }]);
     });
 
+    // R37: the loading line comes from the copy file. Control negative: re-inlining it fails this.
+    it('R-4: takes the loading line from the copy file', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'section-geography.component.html'), 'utf8');
+      expect(html).toContain('[description]="loadingNote"');
+      expect(html).not.toContain('Loading the geography saved');
+    });
+
     it('R-3: a failed GET leaves the section locked with the error, and nothing is ever staged', () => {
       bilateralApi.GET_geographic.mockReturnValue(throwError(() => ({ status: 500 })));
 

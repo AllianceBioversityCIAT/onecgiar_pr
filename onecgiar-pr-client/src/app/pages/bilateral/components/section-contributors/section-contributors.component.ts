@@ -13,6 +13,9 @@ import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideRefreshCw } from '@ng-icons/lucide';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 interface CenterOption {
   institutionId: number;
@@ -38,7 +41,9 @@ const PARTNERS_MDS_GROUP = 'partners';
 
 @Component({
   selector: 'app-section-contributors',
-  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
+  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent, NgIcon],
+  // W12-6 — the projects Retry uses Lucide, the repo's icon set (R37).
+  providers: [provideIcons({ lucideRefreshCw })],
   templateUrl: './section-contributors.component.html',
   styleUrl: './section-contributors.component.scss'
 })
@@ -262,6 +267,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * is shown with a Retry and hydration waits for a real catalogue, exactly like the centers case.
    */
   readonly projectsLoadFailed = signal(false);
+  readonly loadCopy = RESULT_DETAIL_SECTION_LOAD_COPY;
 
   /** AC5/AC7: the field is satisfied by EITHER at least one partner OR the explicit "none" declaration. */
   readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
