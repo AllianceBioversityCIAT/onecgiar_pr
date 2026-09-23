@@ -43,7 +43,7 @@ describe('DevelopersComponent', () => {
     expect(steps.length).toBe(5);
 
     expect(steps[0].textContent).toContain('Request your test API key');
-    expect(steps[1].textContent).toContain('Read the field documentation');
+    expect(steps[1].textContent).toContain('Read the official documentation');
     expect(steps[2].textContent).toContain('Send a result to the test environment');
     expect(steps[2].textContent).toContain('external_reference');
     expect(steps[3].textContent).toContain('Register a webhook');
@@ -76,23 +76,48 @@ describe('DevelopersComponent', () => {
     expect(component.productionEndpoints.length).toBe(3);
     expect(component.productionEndpoints[0].url).toBe('https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/docs');
     expect(component.productionEndpoints[1].url).toBe('https://v6a9z2e4y5.execute-api.us-east-1.amazonaws.com/ingest');
-    expect(component.productionEndpoints[2].url).toBe('https://b1a4fsvgni.execute-api.us-east-1.amazonaws.com/ingest');
+    expect(component.productionEndpoints[2].url).toBe('https://bla4fsvgni.execute-api.us-east-1.amazonaws.com/ingest');
 
     expect(compiled.textContent).toContain('Use single result ingest for one to ten results, and bulk ingest for more.');
   });
 
-  it('renders the right column cards: Field documentation, Result decision webhooks, and What you still do in PRMS', () => {
+  it('renders the right column cards: Official documentation, Result decision webhooks, and What you still do in PRMS', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Field documentation');
-    expect(compiled.textContent).toContain('Open the field documentation');
+    expect(compiled.textContent).toContain('Official documentation');
+    expect(compiled.textContent).toContain('Open the official documentation');
+    expect(compiled.textContent).toContain('Try the endpoints in the test Swagger');
 
     expect(compiled.textContent).toContain('Result decision webhooks');
-    expect(compiled.textContent).toContain('Set up webhooks');
+    expect(compiled.textContent).toContain('Set up webhooks in the test Swagger');
 
     expect(compiled.textContent).toContain('What you still do in PRMS');
     expect(compiled.textContent).toContain('Confidential evidence');
     expect(compiled.textContent).toContain('Fields beyond the minimum data standards');
     expect(compiled.textContent).toContain('keep_editing');
+  });
+
+  it('points the official documentation CTA at the public Notion field documentation', () => {
+    expect(component.officialDocsUrl).toContain('cgiar-prms.notion.site');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const cta = Array.from(compiled.querySelectorAll('a')).find(a => a.textContent?.includes('Open the official documentation'));
+    expect(cta?.getAttribute('href')).toBe(component.officialDocsUrl);
+    expect(cta?.getAttribute('target')).toBe('_blank');
+  });
+
+  it('keeps the production bulk ingest host as the one that actually resolves', () => {
+    // b1a4fsvgni (digit one) has no DNS record; bla4fsvgni (letter l) answers 401 Missing x-api-key.
+    // The two are indistinguishable by eye, so this locks the working one in.
+    expect(component.productionEndpoints[2].url).toContain('bla4fsvgni');
+    expect(component.productionEndpoints[2].url).not.toContain('b1a4fsvgni');
+  });
+
+  it('opens the test Swagger from both doc links, with no dead #/Webhooks anchor', () => {
+    // Deliberately not environment-aware: the page lists every environment at once.
+    expect(component.swaggerDocsUrl).toContain('v2f4lv8av4');
+    expect(component.webhooksDocUrl).toContain('v2f4lv8av4');
+    // The OpenAPI document declares no tags, so swagger-ui renders no Webhooks section to jump to.
+    expect(component.webhooksDocUrl).not.toContain('#');
   });
 
   it('renders the footer with contact support link', () => {

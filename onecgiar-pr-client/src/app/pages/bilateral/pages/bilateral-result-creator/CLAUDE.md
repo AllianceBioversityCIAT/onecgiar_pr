@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
+**Verified:** 2026-09-22 · el flag global de solo-lectura ahora responde a la pertenencia al centro líder (un Center User ya puede editar); prior: 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -71,6 +71,15 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
 - **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
   única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo
   recibe por input, y un `effect` del constructor llama `autoSaveService.setReadOnly()` con él.
+- **Y hay una TERCERA puerta, global y ajena: `RolesService.readOnly`** (22-sep-2026). Todos los
+  `custom-fields` esconden su control mientras ese flag esté arriba (`pr-multi-select.component.html:16`
+  y la misma línea en `pr-input`, `pr-select`, `pr-textarea`…). Es un mecanismo de W1/W2: arranca en
+  **true** para todo el que no sea admin de aplicación (`roles.service.ts:75`) y solo baja al cargar un
+  resultado W1/W2 de una **iniciativa** del usuario (`current-result.service.ts:52`) — un camino que
+  bilateral no recorre. Por eso este componente lo responde con la pregunta del servidor: **Center User
+  del centro LÍDER** (`isCenterUserOfLeadCenter()`, el mismo `role = 9` sobre `leadCenter.code` que
+  `validationCenterPermissions` exige) **y** el resultado en *Editing*. Y lo **restaura en `ngOnDestroy`**
+  (`!isAdmin`): el flag es global y sobrevive a la navegación.
 
 ## Dónde se usa
 - `bilateral-routing.module.ts` — rutas `create` y `result/:id`.
@@ -96,6 +105,13 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   muda.
 - `hasTypeSpecificSection` lee `creationService.resultTypeId()`, no el signal local: el local solo lo
   escribe el wizard y en el editor siempre es `null`.
+- ⚠️ **Un formulario sin un solo control no es un formulario deshabilitado: es `RolesService.readOnly`.**
+  Ángel no podía editar el resultado 9553 —que él mismo había creado, con `CENTER-12 · Center User` en
+  `role_by_user` y el resultado en *Editing*— porque el flag global nunca bajaba para un no-admin.
+  Medido: **6 hosts de `app-pr-input`, 0 `<input>`**. Durante meses **solo los admin de aplicación
+  pudieron editar un bilateral**, y eso no lo pidió nadie. Al tocar permisos aquí, la prueba se hace
+  con los roles de un Center User inyectados, no con la sesión propia: una cuenta admin no puede ver
+  este fallo.
 - ⚠️ **El candado de solo lectura son DOS mitades y hacen falta las dos.** Deshabilitar los controles
   es la visible; `autoSaveService.setReadOnly()` es la que impide que Save draft llegue a la base.
   Con solo la primera, cualquier control que se quede interactivo podría persistir mientras el

@@ -102,4 +102,37 @@ describe('ResultByIntitutionsTypeRepository (unit)', () => {
       expect(sql).toContain('rbit.results_id = 2000');
     });
   });
+
+  /** P2-3428 — the optional section filter is additive: without it the SQL and params are unchanged. */
+  describe('getNewResultByInstitutionTypeExists section filter', () => {
+    const normalize = (sql: string) => sql.replace(/\s+/g, ' ').trim();
+    let query: jest.SpyInstance;
+
+    beforeEach(() => {
+      query = jest.spyOn(repo, 'query').mockResolvedValue([]);
+    });
+
+    it('keeps the legacy lookup exactly as it was when no section is passed', async () => {
+      await repo.getNewResultByInstitutionTypeExists(15, 12, 5);
+      const [sql, params] = query.mock.calls[0];
+      expect(normalize(sql)).not.toContain('section_id');
+      expect(params).toEqual([15, 5, 12]);
+    });
+
+    it('restricts the match to one section with `only`', async () => {
+      await repo.getNewResultByInstitutionTypeExists(15, 12, 5, { only: 2 });
+      const [sql, params] = query.mock.calls[0];
+      expect(normalize(sql)).toContain('and rbit.section_id = ?;');
+      expect(params).toEqual([15, 5, 12, 2]);
+    });
+
+    it('keeps a section out, NULL rows included, with `exclude`', async () => {
+      await repo.getNewResultByInstitutionTypeExists(15, 12, 5, { exclude: 2 });
+      const [sql, params] = query.mock.calls[0];
+      expect(normalize(sql)).toContain(
+        'and (rbit.section_id is null or rbit.section_id <> ?);',
+      );
+      expect(params).toEqual([15, 5, 12, 2]);
+    });
+  });
 });

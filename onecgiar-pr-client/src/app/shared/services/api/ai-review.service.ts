@@ -151,6 +151,23 @@ export class AiReviewService {
     });
   }
 
+  /**
+   * P2-2385: a Knowledge Product gets IMPACT AREAS ONLY.
+   *
+   * Its title and description are auto-synced from CGSpace, so no AI text proposal may be offered
+   * for one — not shown, and not even persisted as a proposal. Read from
+   * `isKnowledgeProductSignal` and not from the `isKnowledgeProduct` getter so the type and the
+   * `currentResultSignal().id` used by every request below come from the SAME object
+   * (`current-result.service.ts:47` empties the signal alone on a result switch).
+   *
+   * `GET_aiContext()` is deliberately NOT branched: the title and description are the AI's *input*
+   * for judging the impact areas, and withholding them would degrade the only output a Knowledge
+   * Product is allowed to receive.
+   */
+  private get restrictToImpactAreas(): boolean {
+    return this.dataControlSE.isKnowledgeProductSignal();
+  }
+
   // on AI review click
   async onAIReviewClick() {
     try {
@@ -158,10 +175,19 @@ export class AiReviewService {
 
       this.aiReviewButtonState = 'loading';
 
+      const impactAreasOnly = this.restrictToImpactAreas;
+
       // TODO: To async all steps
       await this.POST_createSession();
       await this.GET_aiContext();
-      await this.GET_resultContext();
+      // The editable text fields (title / description / short_title) are not even requested for a
+      // Knowledge Product; the list is emptied so a previously opened result's cards cannot leak
+      // into this dialog — `currnetFieldsList` is a root-service signal shared across results.
+      if (impactAreasOnly) {
+        this.currnetFieldsList.set([]);
+      } else {
+        await this.GET_resultContext();
+      }
 
       // Obtener DAC scores y recomendaciones de IA en paralelo
       const [dacScoresData, { json_content }] = await Promise.all([
@@ -176,38 +202,7 @@ export class AiReviewService {
       const enrichedDacScores = this.enrichDacScoresWithAIRecommendations(dacScoresData, json_content.impact_area_scores);
       this.dacScores.set(enrichedDacScores);
 
-      const allFieldsMapping = [
-        { field_name_label: 'Title', field_name: 'new_title' },
-        { field_name_label: 'Description', field_name: 'new_description' },
-        { field_name_label: 'Innovation Short Title', field_name: 'short_name' }
-      ];
-
-      // Filtrar solo los campos que existen en json_content
-      const availableFields = allFieldsMapping.filter(field => json_content[field.field_name] !== undefined);
-
-      this.currnetFieldsList.update(res => {
-        // Filtrar la lista para incluir solo los campos disponibles en json_content
-        const filteredList = res.filter((_, index) => {
-          const fieldMapping = allFieldsMapping[index];
-          return fieldMapping && json_content[fieldMapping.field_name] !== undefined;
-        });
-
-        // Mapear los campos disponibles con sus datos correspondientes
-        filteredList.forEach((item, index) => {
-          const fieldMapping = availableFields[index];
-          if (fieldMapping) {
-            item.proposed_text = json_content[fieldMapping.field_name];
-            item.needs_improvement = true;
-            item.field_name_label = fieldMapping.field_name_label;
-          }
-        });
-
-        return filteredList;
-      });
-
-      await this.POST_createProposal({
-        proposals: this.currnetFieldsList()
-      });
+      if (!impactAreasOnly) await this.buildAndSaveTextProposals(json_content);
 
       // Mostrar animación de completado
       this.aiReviewButtonState = 'completed';
@@ -221,6 +216,46 @@ export class AiReviewService {
       console.error('Error creating AI session:', error);
       this.aiReviewButtonState = 'idle';
     }
+  }
+
+  /**
+   * Matches the AI's text answers against the editable fields of the result and persists them as
+   * proposals. Extracted from `onAIReviewClick` by P2-2385 so the whole title/description half can
+   * be skipped in one place for a Knowledge Product. Behaviour is unchanged for every other type.
+   */
+  private async buildAndSaveTextProposals(json_content: any) {
+    const allFieldsMapping = [
+      { field_name_label: 'Title', field_name: 'new_title' },
+      { field_name_label: 'Description', field_name: 'new_description' },
+      { field_name_label: 'Innovation Short Title', field_name: 'short_name' }
+    ];
+
+    // Filtrar solo los campos que existen en json_content
+    const availableFields = allFieldsMapping.filter(field => json_content[field.field_name] !== undefined);
+
+    this.currnetFieldsList.update(res => {
+      // Filtrar la lista para incluir solo los campos disponibles en json_content
+      const filteredList = res.filter((_, index) => {
+        const fieldMapping = allFieldsMapping[index];
+        return fieldMapping && json_content[fieldMapping.field_name] !== undefined;
+      });
+
+      // Mapear los campos disponibles con sus datos correspondientes
+      filteredList.forEach((item, index) => {
+        const fieldMapping = availableFields[index];
+        if (fieldMapping) {
+          item.proposed_text = json_content[fieldMapping.field_name];
+          item.needs_improvement = true;
+          item.field_name_label = fieldMapping.field_name_label;
+        }
+      });
+
+      return filteredList;
+    });
+
+    await this.POST_createProposal({
+      proposals: this.currnetFieldsList()
+    });
   }
 
   /**

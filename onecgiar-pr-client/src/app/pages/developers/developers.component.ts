@@ -61,12 +61,22 @@ export class DevelopersComponent {
     },
     {
       label: 'Bulk ingest',
-      url: 'https://b1a4fsvgni.execute-api.us-east-1.amazonaws.com/ingest'
+      url: 'https://bla4fsvgni.execute-api.us-east-1.amazonaws.com/ingest'
     }
   ];
 
+  // The authority on payload shape lives in Notion (public, no account needed); the Swagger
+  // reference below is the try-it-out surface, not the contract.
+  readonly officialDocsUrl =
+    'https://cgiar-prms.notion.site/PRMS-Normalizer-Technical-Field-Documentation-287f271224788055a0d9c2bc23b1a06b';
+  // Both point at the TEST gateway by design: the page is a reference for every environment at
+  // once, not a view of the one it happens to be served from, so it never switches on the
+  // environment. The production Swagger is one row down, in the Environments card. Whoever moves
+  // these must keep the copy that says which environment they open.
   readonly swaggerDocsUrl = 'https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/docs/';
-  readonly webhooksDocUrl = 'https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/docs/#/Webhooks';
+  // No #/Webhooks fragment: the OpenAPI document declares no tags, so swagger-ui renders no such
+  // section and the anchor resolves to nothing (verified against v1.2.0 on both gateways).
+  readonly webhooksDocUrl = 'https://v2f4lv8av4.execute-api.us-east-1.amazonaws.com/docs/';
 
   requestApiKey(): void {
     const subject = encodeURIComponent('PRMS API Key Request');

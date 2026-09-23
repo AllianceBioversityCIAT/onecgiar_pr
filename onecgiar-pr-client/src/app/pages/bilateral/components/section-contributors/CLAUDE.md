@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
+**Verified:** 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -65,6 +65,19 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   proyecto líder. Sin centro líder, `assertCenterPermission` rechaza el submit para siempre y **el
   usuario no puede arreglarlo** (el líder es read-only aquí). Clave omitida = "no tocar".
   Backstop: `syncContributingCenters` une los `leadingCodes` antes de `updateCenter`.
+- 🛑 **BCT-T-6 (22-sep-2026): un centro dueño de un proyecto no líder seleccionado queda bloqueado
+  igual que el líder.** `ownerCenterInstitutionId` viaja en `ProjectOption` desde
+  `owner_center_institution_id` del catálogo (`GET clarisa/projects/get/all`, BCT-DD-4); `null` no
+  bloquea nada. `lockedCenterInstitutionIds` excluye el proyecto líder y el propio centro líder (el
+  proyecto del centro que reporta no bloquea nada — no hay nada que agregar, ya es el líder). Es
+  union, no reemplazo: `onProjectsChange` **une** el set bloqueado a lo que el usuario ya tenía
+  seleccionado, antes del único persist — nunca lo reemplaza. `onCentersChange`/`removeCenter` lo
+  rechazan igual que al líder, y el chip oculta su "×" igual que el del líder
+  (`!isLeadCenter(id) && !lockedCenterInstitutionIds().has(id)`, con la misma clase
+  `sc-chip-readonly`). `hydrateLeadAndSelection` lo une **sin** persistir (mismo patrón que la
+  reinyección del líder). Quitar el proyecto NO deselecciona el centro (queda "sticky", BCT-R-4):
+  el candado simplemente deja de aplicar porque el set es un `computed`, no un flag guardado, y
+  entonces sí vuelve a ser removible.
  (⚠️ = ya rompió algo, o va a romper)
 
 - ✅ **P2-3443 resuelto para socios externos** (26-ago-2026). Ojo con la clave: es `institutions_id`,
@@ -157,8 +170,8 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 | Green check de partners en bilateral | La función MySQL exige un delivery type por socio y bilateral no los captura (AC6). | Producto + BACK |
 
 ## Tests
-`section-contributors.component.spec.ts` — 111 casos (BIL-T-1 añadió 7: centers-load-failure
-regression). El template se sobreescribe con
+`section-contributors.component.spec.ts` — 123 casos (BCT-T-6 añadió 12: lock/auto-select de centros
+derivados; BIL-T-1 añadió 7: centers-load-failure regression). El template se sobreescribe con
 `<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds — y eso es justo lo que
 dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).
 

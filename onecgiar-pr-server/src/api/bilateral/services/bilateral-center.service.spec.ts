@@ -61,6 +61,17 @@ describe('BilateralCenterService', () => {
             emitBilateralSubmittedNotification: jest
               .fn()
               .mockResolvedValue(undefined),
+            // BCT-T-5: `submitForReview` now calls the orchestrator instead of the submitted
+            // emitter directly. Its own behaviour (submitted → tagging, independent try/catch) is
+            // unit-tested against the real `BilateralService` in `bilateral.service.spec.ts`;
+            // here it is a no-op stub.
+            announcePendingReview: jest.fn().mockResolvedValue(undefined),
+            // BCT-T-3: `saveContributors` calls this after the sync* block, only when the DTO
+            // touched `contributing_bilateral_projects`. Its own behaviour is unit-tested against
+            // the real `BilateralService` in `bilateral.service.spec.ts`; here it is a no-op stub.
+            ensureDerivedContributingCenters: jest
+              .fn()
+              .mockResolvedValue(undefined),
           },
         },
         {
@@ -320,6 +331,7 @@ describe('BilateralCenterService', () => {
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
       undefined,
+      undefined,
     );
   });
 
@@ -330,6 +342,18 @@ describe('BilateralCenterService', () => {
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
       2025,
+      undefined,
+    );
+  });
+
+  // bilateral/project-overview-metrics (BIL-POM-OQ-1 correction): the optional `versionId`
+  // rides along too, so the catalog service can scope w1w2ContributorCount to this phase.
+  it('should forward the optional versionId to the catalog service', async () => {
+    await service.getProjects(10, 2025, 36);
+    expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
+      10,
+      2025,
+      36,
     );
   });
 
@@ -489,11 +513,15 @@ describe('BilateralCenterService', () => {
       const clarisaRepo = module.get<ClarisaInitiativesRepository>(
         ClarisaInitiativesRepository,
       );
-      (clarisaRepo.findOne as jest.Mock).mockImplementation(({ where }: any) => {
-        if (where.official_code === 'SP01') return Promise.resolve({ id: 10, official_code: 'SP01' });
-        if (where.official_code === 'SP02') return Promise.resolve({ id: 20, official_code: 'SP02' });
-        return Promise.resolve(null);
-      });
+      (clarisaRepo.findOne as jest.Mock).mockImplementation(
+        ({ where }: any) => {
+          if (where.official_code === 'SP01')
+            return Promise.resolve({ id: 10, official_code: 'SP01' });
+          if (where.official_code === 'SP02')
+            return Promise.resolve({ id: 20, official_code: 'SP02' });
+          return Promise.resolve(null);
+        },
+      );
 
       const shareRepo = module.get<ShareResultRequestRepository>(
         ShareResultRequestRepository,
@@ -1025,6 +1053,105 @@ describe('BilateralCenterService', () => {
       expect(result.message).toBe('Contributors saved successfully');
     });
 
+    // BCT-T-3 (design §5.2) — the derivation is only worth its lookup cost when this save
+    // actually touched the projects list; the guard is `dto.contributing_bilateral_projects
+    // !== undefined`, independent of whether centers were also sent.
+    describe('ensureDerivedContributingCenters call site', () => {
+      beforeEach(() => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          source: SourceEnum.Bilateral,
+        } as any);
+        (bilateralService as any).ensureDerivedContributingCenters = jest
+          .fn()
+          .mockResolvedValue(undefined);
+      });
+
+      it('is called when contributing_bilateral_projects is in the DTO', async () => {
+        const resultsByProjectsService = module.get<ResultsByProjectsService>(
+          ResultsByProjectsService,
+        );
+        jest
+          .spyOn(resultsByProjectsService, 'syncBilateralProjects')
+          .mockResolvedValue({
+            status: 200,
+            message: 'ok',
+            response: { set_active: [], deactivated: [] },
+          } as any);
+
+        await service.saveContributors(
+          10,
+          { contributing_bilateral_projects: [] },
+          user,
+        );
+
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).toHaveBeenCalledWith(10, 42);
+      });
+
+      it('is NOT called when the save never mentions contributing_bilateral_projects', async () => {
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).not.toHaveBeenCalled();
+      });
+
+      // Reviewer FAIL (lens: resilience/test), attempt 1: moving the derivation call above
+      // `syncContributingCenters` would let that sync undo the very reactivation derivation just
+      // performed (R-3's "direct PATCH omitting → still active" scenario), and no test caught it.
+      // `syncContributingCenters` is a real, unmocked private method here (spied, not replaced),
+      // so this exercises the actual call order `saveContributors` produces, not a stand-in.
+      it('runs derivation strictly after syncContributingCenters when both keys are sent', async () => {
+        const syncSpy = jest.spyOn(service as any, 'syncContributingCenters');
+
+        await service.saveContributors(
+          10,
+          { contributing_center: [], contributing_bilateral_projects: [] },
+          user,
+        );
+
+        expect(syncSpy).toHaveBeenCalled();
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).toHaveBeenCalled();
+        const syncOrder = syncSpy.mock.invocationCallOrder[0];
+        const derivedOrder = (
+          bilateralService.ensureDerivedContributingCenters as jest.Mock
+        ).mock.invocationCallOrder[0];
+        expect(derivedOrder).toBeGreaterThan(syncOrder);
+      });
+    });
+
+    // BCT-T-5 falsifier — the Contributors save must never itself trigger a Pending Review
+    // announcement; only `submitForReview` does. A save on an Editing/Draft result (BCT-R-10)
+    // must produce no tagging notification either.
+    it('never calls announcePendingReview from saveContributors', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+      } as any);
+      const resultsByProjectsService = module.get<ResultsByProjectsService>(
+        ResultsByProjectsService,
+      );
+      jest
+        .spyOn(resultsByProjectsService, 'syncBilateralProjects')
+        .mockResolvedValue({
+          status: 200,
+          message: 'ok',
+          response: { set_active: [], deactivated: [] },
+        } as any);
+
+      await service.saveContributors(
+        10,
+        { contributing_center: [], contributing_bilateral_projects: [] },
+        user,
+      );
+
+      expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+    });
+
     // P2-3443 — the External partners block. Everything here mirrors what pool funding writes in
     // `ResultsByInstitutionsService.savePartnersInstitutionsByResultV2`, on purpose: same table,
     // same role ids, same two flags on `result`. Diverging would hide bilateral partners from the
@@ -1378,7 +1505,7 @@ describe('BilateralCenterService', () => {
         }),
       );
 
-      return { initiativeRepository };
+      return { initiativeRepository, projectRepository };
     };
 
     it('stores the internal CLARISA initiative id, not the W3 project-mapping id', async () => {
@@ -1412,6 +1539,91 @@ describe('BilateralCenterService', () => {
       expect(response.response).toEqual(
         expect.objectContaining({ primaryScienceProgramId: 701 }),
       );
+    });
+
+    // P2-3760 — the Contribution % the bilateral form now asks for (P2-3352 § 6).
+    describe('contribution percentage', () => {
+      const withCatalogue = () => {
+        (resultRepository.findOne as jest.Mock).mockResolvedValue(
+          editingResult,
+        );
+        (
+          bilateralProjectsService.getProjectsByCenter as jest.Mock
+        ).mockResolvedValue({
+          projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+        });
+        (
+          module.get<ClarisaInitiativesRepository>(
+            ClarisaInitiativesRepository,
+          ) as any
+        ).findOne.mockResolvedValue({
+          id: 404,
+          official_code: 'SP04',
+          active: true,
+        });
+      };
+
+      it('persists it on the newly created lead row, with two decimals', async () => {
+        withCatalogue();
+        const { projectRepository } = configureTransaction();
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+          contribution_percentage: 42.5,
+        });
+
+        expect(projectRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            project_id: 20,
+            contribution_percentage: '42.50',
+          }),
+        );
+      });
+
+      // An older client does not send the key. If the write went through anyway it would blank a
+      // stored percentage on every project change — the compatibility trap this guards.
+      it('does not touch the stored value when the client omits it', async () => {
+        withCatalogue();
+        const { projectRepository } = configureTransaction();
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        });
+
+        const savedRow = projectRepository.save.mock.calls[0][0];
+        expect(savedRow).not.toHaveProperty('contribution_percentage');
+        for (const call of projectRepository.update.mock.calls) {
+          expect(call[1]).not.toHaveProperty('contribution_percentage');
+        }
+      });
+
+      it('updates the percentage alone when the lead row is already the selected project', async () => {
+        withCatalogue();
+        const { projectRepository } = configureTransaction();
+        projectRepository.find.mockResolvedValue([
+          { id: 9, project_id: 20, is_lead: true, is_active: true },
+        ]);
+        projectRepository.findOne.mockResolvedValue({
+          id: 9,
+          project_id: 20,
+          is_lead: true,
+          is_active: true,
+        });
+
+        await service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+          contribution_percentage: 75,
+        });
+
+        expect(projectRepository.save).not.toHaveBeenCalled();
+        expect(projectRepository.update).toHaveBeenCalledWith(
+          9,
+          expect.objectContaining({ contribution_percentage: '75.00' }),
+        );
+      });
     });
 
     it('fails before opening a transaction when the mapped program is absent from CLARISA', async () => {
@@ -1518,16 +1730,29 @@ describe('BilateralCenterService', () => {
     });
 
     // 2026-09-05 — the primary SP's members are told the result is waiting for them, post-commit.
-    it('announces the arrival to the primary Science Program after the transaction', async () => {
+    // BCT-T-5: this now goes through the shared orchestrator, not the submitted emitter directly.
+    it('announces Pending Review (submitted + tagging) to the orchestrator after the transaction', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const bilateral = module.get<BilateralService>(BilateralService) as any;
 
       await service.submitForReview(user, 77, decisionDto);
 
-      expect(bilateral.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
-        77,
-        user.id,
-      );
+      expect(bilateral.announcePendingReview).toHaveBeenCalledWith(77, user.id);
+      // Falsifier: `submitForReview` must no longer emit the submitted notification directly —
+      // that call now lives inside `announcePendingReview` (proved on the real service in
+      // `bilateral.service.spec.ts`).
+      expect(
+        bilateral.emitBilateralSubmittedNotification,
+      ).not.toHaveBeenCalled();
+      // The title's "after the transaction" claim, actually asserted: the transaction call is
+      // always registered on the mock before `announcePendingReview` can be, because the second
+      // line only runs once the `await` on the first resolves.
+      const transactionOrder = (
+        resultRepository.manager.transaction as jest.Mock
+      ).mock.invocationCallOrder[0];
+      const announceOrder = (bilateral.announcePendingReview as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(announceOrder).toBeGreaterThan(transactionOrder);
     });
 
     it('stamps the submission date the review queue shows', async () => {

@@ -35,4 +35,19 @@ export class ResultsByProjects extends BaseEntity {
 
   @Column({ type: 'boolean', nullable: true, default: false })
   is_lead: boolean;
+
+  /**
+   * P2-3760 — share of this result attributed to the project, as a percentage.
+   * NULL means the question was never answered; the form renders that as 100, so rows
+   * written before the column existed keep reading correctly. Stored as a string because
+   * TypeORM maps MySQL `decimal` that way.
+   */
+  @Column({
+    name: 'contribution_percentage',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  contribution_percentage: string | null;
 }

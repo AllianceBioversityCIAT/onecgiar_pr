@@ -43,4 +43,11 @@ export interface BilateralCenterResult {
   creation_method?: string;
   is_ai_generated?: boolean | number;
   is_leading_result: 0 | 1;
+  /**
+   * BIL-POM-T-2 — raw SQL response (`getResultsByBilateralCenter` uses `this.query(...)`, not the
+   * TypeORM entity layer): arrives as MySQL `tinyint` (`0`/`1`/possibly `null`), NOT a JS boolean.
+   * The consumer of this field (replicated / new-for-review counts, BIL-POM-T-3) MUST normalize
+   * it, not compare with strict `=== true`/`=== false`.
+   */
+  is_replicated: boolean;
 }

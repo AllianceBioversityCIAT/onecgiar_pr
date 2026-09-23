@@ -13,7 +13,12 @@
          `sr-only`'s `width:1px` cannot constrain a table — it lays out at full content size and,
          being `position:absolute` with nothing clipping it, inflates the document's scroll area.
          A `div` honours `width:1px`; the table inside keeps its semantics for assistive tech. -->
-    <div class="sr-only">
+    <!-- P2-3744: `pr-viz-chart-a11y-table` only ADDS a `:focus-within` reveal (see the stylesheet).
+         A chart with no `actions` has no focusable child, so `:focus-within` can never match and
+         the wrapper stays a plain `sr-only` div — byte-identical behaviour for every existing
+         chart. A pointer click on the chart cannot move focus in here either, so mouse users
+         never see it. -->
+    <div class="sr-only pr-viz-chart-a11y-table">
       <table [attr.aria-label]="chartTitle() || model.caption">
         <caption>{{ model.caption }}</caption>
         @if (model.headers && model.headers.length > 0) {
@@ -26,13 +31,29 @@
           </thead>
         }
         <tbody>
-          @for (row of model.rows; track $index) {
+          @for (row of model.rows; track $index; let rowIndex = $index) {
             <tr>
-              @for (cell of row; track $index) {
-                @if ($index === 0) {
+              @for (cell of row; track $index; let columnIndex = $index) {
+                @if (columnIndex === 0) {
                   <th scope="row">{{ cell }}</th>
                 } @else {
-                  <td>{{ cell }}</td>
+                  <td>
+                    <!-- P2-3744: the ONLY focusable element this component ever renders, and only
+                         when the consumer registered an action for this exact cell. The cell value
+                         stays the visible text; `aria-label` carries the sentence a screen reader
+                         needs ("Editing, Innovation development: 12 results. Open in Results."). -->
+                    @if (actionAt(model, rowIndex, columnIndex); as action) {
+                      <button
+                        type="button"
+                        class="pr-viz-chart-table-action"
+                        [attr.aria-label]="action.label"
+                        (click)="activateTableAction(action)">
+                        {{ cell }}
+                      </button>
+                    } @else {
+                      {{ cell }}
+                    }
+                  </td>
                 }
               }
             </tr>

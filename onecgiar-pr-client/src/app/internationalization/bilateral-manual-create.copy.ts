@@ -11,6 +11,12 @@ export const BILATERAL_MANUAL_CREATE_COPY = {
     closeAriaLabel: 'Close',
     resizeAriaLabel: 'Resize panel',
     primaryScienceProgramLabel: 'Primary Science Program',
+    projectSummaryLabel: 'Project Summary',
+    projectDescriptionLabel: 'Project Description',
+    projectDetailsEmpty: 'No summary or description available for this project.',
+    projectDetailsExpand: 'Read more',
+    projectDetailsCollapse: 'Read less',
+    projectDetailsToggleAriaLabel: 'Toggle full project summary and description',
     programIconAlt: (code: string): string => `${code} icon`
   },
   navigation: {

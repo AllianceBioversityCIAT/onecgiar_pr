@@ -291,6 +291,67 @@ describe('BilateralCreationService', () => {
       expect(service.currentResultId()).toBe(11012);
     });
 
+    // P2-3760 — this service is a root singleton. The percentage is only hydrated from a lead row
+    // that carries its CLARISA project, so without an explicit reset the number from the PREVIOUS
+    // result stays on screen for the next one and gets saved onto it.
+    it('hydrates the contribution percentage from the lead project row', () => {
+      respondWith({
+        commonFields: { id: 11012 },
+        contributingProjects: [
+          {
+            is_lead: true,
+            project_id: 20,
+            contribution_percentage: '42.50',
+            obj_clarisa_project: { id: 20, shortName: 'P-1', fullName: 'Project one' },
+          },
+        ],
+      });
+
+      service.loadResult(11012);
+
+      expect(service.resultContributionPercentage()).toBe(42.5);
+    });
+
+    it('clears the contribution percentage between results instead of carrying it over', () => {
+      respondWith({
+        commonFields: { id: 11012 },
+        contributingProjects: [
+          {
+            is_lead: true,
+            project_id: 20,
+            contribution_percentage: '42.50',
+            obj_clarisa_project: { id: 20, shortName: 'P-1', fullName: 'Project one' },
+          },
+        ],
+      });
+      service.loadResult(11012);
+      expect(service.resultContributionPercentage()).toBe(42.5);
+
+      // The next result has no lead row carrying a project, so nothing re-hydrates it.
+      respondWith({ commonFields: { id: 11013 }, contributingProjects: [] });
+      service.loadResult(11013);
+
+      expect(service.resultContributionPercentage()).toBeNull();
+    });
+
+    it('reads a never-answered percentage as null, not as a number', () => {
+      respondWith({
+        commonFields: { id: 11012 },
+        contributingProjects: [
+          {
+            is_lead: true,
+            project_id: 20,
+            contribution_percentage: null,
+            obj_clarisa_project: { id: 20, shortName: 'P-1', fullName: 'Project one' },
+          },
+        ],
+      });
+
+      service.loadResult(11012);
+
+      expect(service.resultContributionPercentage()).toBeNull();
+    });
+
     it('maps status_id for the header badge and clears it between results (P2-3352)', () => {
       respondWith({ commonFields: { id: 11012, status_id: '5' } });
       service.loadResult(11012);
@@ -486,6 +547,7 @@ describe('BilateralCreationService', () => {
         description: 'description',
         leadCenter: { id: 88, name: 'Center', acronym: 'CTR' },
         sciencePrograms: [],
+        w1w2ContributorCount: 0,
       });
       expect(service.resultLeadCenterId()).toBe(88);
       expect(service.resultContributingProjectIds()).toEqual([5, 6]);

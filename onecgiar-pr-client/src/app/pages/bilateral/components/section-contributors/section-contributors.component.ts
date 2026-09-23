@@ -26,6 +26,12 @@ interface ProjectOption {
   id: number;
   shortName: string;
   fullName: string;
+  /**
+   * BCT-DD-4 — the owning Center of this project, additive on `GET clarisa/projects/get/all`
+   * (`owner_center_institution_id`). `null`/`undefined` means the owner could not be resolved and
+   * locks nothing (see `lockedCenterInstitutionIds`).
+   */
+  ownerCenterInstitutionId?: number | null;
 }
 
 const PARTNERS_MDS_GROUP = 'partners';
@@ -90,14 +96,65 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
     const leadInstId = leadCenterId ? Number(leadCenterId) : null;
+    const locked = this.lockedCenterInstitutionIds();
     return this.availableCenters().map(c => ({
       ...c,
-      disabled: Number(c.institutionId) === leadInstId
+      disabled: Number(c.institutionId) === leadInstId || locked.has(Number(c.institutionId))
     }));
   });
 
   readonly disabledCenterOptions = computed(() => this.availableCentersComputed().filter(c => c.disabled));
   readonly disabledProjectOptions = computed(() => this.availableProjectsComputed().filter(p => p.disabled));
+
+  /**
+   * BCT-R-1 / BCT-R-3 / BCT-R-4 — Centers owned by a currently-selected, non-lead project.
+   *
+   * Excludes:
+   * - the lead project's own owner (the lead is handled by its own read-only mechanism, and its
+   *   owner must never be treated as "derived" — falsifier: "the lead project's owner is locked");
+   * - the lead Center's own id (it is already disabled as the lead; folding it into this set would
+   *   just make it redundant, and the reporting Center's own project must lock nothing — BCT-R-1
+   *   "reporting Center's project" scenario);
+   * - `null`/unresolved owners (BCT-R-1 "owner cannot be resolved" scenario — locks nothing).
+   */
+  readonly lockedCenterInstitutionIds = computed<Set<number>>(() => {
+    const leadProject = this.creationService.selectedProject();
+    const leadProjectId = leadProject?.id ? Number(leadProject.id) : null;
+
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    const leadCenterId = leadProject?.leadCenter?.id ?? resultLeadCenterId;
+    const leadInstId = leadCenterId ? Number(leadCenterId) : null;
+
+    const projectsById = new Map(this.availableProjects().map(p => [p.id, p]));
+    const locked = new Set<number>();
+    for (const id of this.selectedProjectIds()) {
+      if (leadProjectId != null && id === leadProjectId) continue;
+      const owner = projectsById.get(id)?.ownerCenterInstitutionId;
+      if (owner == null) continue;
+      const ownerId = Number(owner);
+      if (leadInstId != null && ownerId === leadInstId) continue;
+      locked.add(ownerId);
+    }
+    return locked;
+  });
+
+  /** Unions `lockedCenterInstitutionIds()` into the current Center selection, in place. Returns whether anything changed. */
+  private unionLockedCentersIntoSelection(): boolean {
+    const locked = this.lockedCenterInstitutionIds();
+    if (!locked.size) return false;
+    const centerIds = new Set<number>(this.selectedCenterInstitutionIds());
+    let changed = false;
+    for (const id of locked) {
+      if (!centerIds.has(id)) {
+        centerIds.add(id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.selectedCenterInstitutionIds.set(Array.from(centerIds));
+    }
+    return changed;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // P2-3368 · Contributing science programs (optional, multi)
@@ -314,6 +371,9 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
             id: Number(p.id),
             shortName: p.shortName,
             fullName: p.fullName,
+            // BCT-DD-4: additive field on the catalog. `null` (unresolved owner, or the field
+            // simply absent from an older payload) means "locks nothing".
+            ownerCenterInstitutionId: p.owner_center_institution_id != null ? Number(p.owner_center_institution_id) : null,
           }))
         );
         this.projectsReady.set(true);
@@ -394,6 +454,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       projectIds.add(this.readonlyLeadProjectId);
     }
     this.selectedProjectIds.set(Array.from(projectIds));
+
+    // BCT-R-1 "appears selected without reload": a legacy result whose contributing project was
+    // saved before Part A shipped may load with its owner Center not yet in
+    // `resultContributingCenterIds()`. Union it in here — no network, no persist (BCT-NFR-4 keeps
+    // the payload guarded by `contributorsHydrated()` regardless).
+    this.unionLockedCentersIntoSelection();
 
     this.updateContributorsMds();
   }
@@ -704,6 +770,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     if (this.readonlyLeadCenterInstitutionId && !finalIds.includes(this.readonlyLeadCenterInstitutionId)) {
       finalIds = [this.readonlyLeadCenterInstitutionId, ...finalIds];
     }
+    // BCT-R-3: a locked Center (owner of a currently-selected non-lead project) is refused the same
+    // way the lead Center is — re-added if the multiselect model change tried to drop it.
+    for (const lockedId of this.lockedCenterInstitutionIds()) {
+      if (!finalIds.includes(lockedId)) {
+        finalIds = [...finalIds, lockedId];
+      }
+    }
     this.selectedCenterInstitutionIds.set(finalIds);
     this.persistContributors();
   }
@@ -714,6 +787,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       finalIds = [this.readonlyLeadProjectId, ...finalIds];
     }
     this.selectedProjectIds.set(finalIds);
+
+    // BCT-R-1: fold each newly-derived owner into the Center selection before the single persist
+    // below — never a second `saveContributors` call just for the lock.
+    this.unionLockedCentersIntoSelection();
+
     this.persistContributors();
   }
 
@@ -763,6 +841,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   removeCenter(id: number): void {
     if (id === this.readonlyLeadCenterInstitutionId) {
+      return;
+    }
+    // BCT-R-3: same refusal as the lead Center, including through the chip's remove action.
+    if (this.lockedCenterInstitutionIds().has(id)) {
       return;
     }
     this.onCentersChange(this.selectedCenterInstitutionIds().filter(i => i !== id));
