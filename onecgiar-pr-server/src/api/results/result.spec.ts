@@ -1762,6 +1762,34 @@ describe('ResultsService (unit, pure mocks)', () => {
     );
   });
 
+  // P2-3228 — a result_code can have more than one row in the same phase: a rollover that was
+  // re-run leaves the earlier copy deactivated (9073 on prtest: 11545 inactive, 12026 active). The
+  // common-fields query requires `r.is_active = 1`, so resolving to the inactive copy answered
+  // "Common fields not found" right after a successful phase change from the bilateral module.
+  it('getBilateralResultById resolves code + phase to the active row only (P2-3228)', async () => {
+    (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+    await resultService.getBilateralResultById(11592, 36);
+
+    expect(mockResultRepository.findOne).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        result_code: 11592,
+        version_id: 36,
+        is_active: true,
+      }),
+    });
+  });
+
+  it('getBilateralResultById resolves an internal id to the active row only (P2-3228)', async () => {
+    (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+    await resultService.getBilateralResultById(12066);
+
+    expect(mockResultRepository.findOne).toHaveBeenCalledWith({
+      where: expect.objectContaining({ id: 12066, is_active: true }),
+    });
+  });
+
   it('getBilateralResultById returns error when resultId is invalid', async () => {
     const res = await resultService.getBilateralResultById(-1);
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
