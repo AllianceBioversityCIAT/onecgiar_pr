@@ -6,6 +6,7 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { ResultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
+import { UserLastLoginRow } from '../../interfaces/user.interface';
 
 describe('ResultsApiService', () => {
   let service: ResultsApiService;
@@ -2105,6 +2106,28 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_userLastLoginReport', () => {
+    it('should GET admin-panel/report/users/last-login with no params and no body', done => {
+      const rows: UserLastLoginRow[] = [
+        { id: 1, first_name: 'John', last_name: 'Doe', email: 'john.doe@example.com', is_cgiar: 1, active: 1, last_login: '2026-09-01 10:00:00', days_since_last_login: 22 },
+        { id: 2, first_name: 'Jane', last_name: 'Roe', email: 'jane.roe@example.com', is_cgiar: 0, active: 1, last_login: null, days_since_last_login: null }
+      ];
+
+      service.GET_userLastLoginReport().subscribe(response => {
+        expect(response.response).toEqual(rows);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}admin-panel/report/users/last-login`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.keys()).toEqual([]);
+      expect(req.request.urlWithParams).toBe(req.request.url);
+      expect(req.request.body).toBeNull();
+
+      req.flush({ response: rows });
     });
   });
 

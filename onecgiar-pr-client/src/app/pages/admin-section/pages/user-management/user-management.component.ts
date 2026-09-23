@@ -14,6 +14,7 @@ import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
+import { UserLastLoginRow } from '../../../../shared/interfaces/user.interface';
 
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
@@ -99,6 +100,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   selectedReportingRoles = signal<number[]>([]);
   showFiltersPanel = signal<boolean>(false);
   loading = signal<boolean>(false);
+  /** ULR-T-4: true while the last login report request is in flight (single-flight guard + button state). */
+  downloadingLastLogin = signal<boolean>(false);
   isActivatingUser = signal<boolean>(false);
   isEditingUser = signal<boolean>(false);
   loadingUserRole = signal<boolean>(false);
@@ -675,5 +678,54 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     ];
 
     this.exportTablesSE.exportExcel(usersListMapped, 'user_report', wscols);
+  }
+
+  /**
+   * ULR-T-4 - global "last login" report. Deliberately does not read users(), the search text or any
+   * filter signal (ULR-R-8): the server returns every active user and the file mirrors that.
+   * Null values become '' here because ExportTablesService turns null into 'Not provided' (ULR-DD-5);
+   * last_login stays the server's text, never a Date (ULR-R-9).
+   */
+  downloadLastLoginReport(): void {
+    if (this.downloadingLastLogin()) return;
+    this.downloadingLastLogin.set(true);
+
+    this.resultsApiService.GET_userLastLoginReport().subscribe({
+      next: res => {
+        const rows = (res.response ?? []).map((row: UserLastLoginRow) => ({
+          id: row.id,
+          first_name: row.first_name,
+          last_name: row.last_name,
+          email: row.email,
+          is_cgiar: row.is_cgiar,
+          active: row.active,
+          last_login: row.last_login ?? '',
+          days_since_last_login: row.days_since_last_login ?? ''
+        }));
+
+        const wscols = [
+          { header: 'id', key: 'id', width: 10 },
+          { header: 'first_name', key: 'first_name', width: 18 },
+          { header: 'last_name', key: 'last_name', width: 18 },
+          { header: 'email', key: 'email', width: 38 },
+          { header: 'is_cgiar', key: 'is_cgiar', width: 12 },
+          { header: 'active', key: 'active', width: 10 },
+          { header: 'last_login', key: 'last_login', width: 22 },
+          { header: 'days_since_last_login', key: 'days_since_last_login', width: 24 }
+        ];
+
+        this.downloadingLastLogin.set(false);
+        this.exportTablesSE.exportExcel(rows, 'last_login', wscols);
+      },
+      error: () => {
+        this.downloadingLastLogin.set(false);
+        this.api.alertsFe.show({
+          id: 'lastLoginReportError',
+          title: 'Could not download the report',
+          description: 'The last login report could not be generated. Please try again.',
+          status: 'error'
+        });
+      }
+    });
   }
 }

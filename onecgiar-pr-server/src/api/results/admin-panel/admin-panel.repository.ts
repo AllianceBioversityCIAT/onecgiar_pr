@@ -278,4 +278,30 @@ export class AdminPanelRepository {
       });
     }
   }
+
+  async userLastLoginReport() {
+    const queryData = `
+    SELECT
+      u.id,
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.is_cgiar,
+      u.active,
+      DATE_FORMAT(u.last_login, '%Y-%m-%d %H:%i:%s') AS last_login,
+      DATEDIFF(CURDATE(), DATE(u.last_login)) AS days_since_last_login
+    FROM users u
+    WHERE u.active = 1
+    ORDER BY u.last_login IS NULL, u.last_login DESC, u.id ASC;
+    `;
+    try {
+      return await this.dataSource.query(queryData);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: AdminPanelRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
