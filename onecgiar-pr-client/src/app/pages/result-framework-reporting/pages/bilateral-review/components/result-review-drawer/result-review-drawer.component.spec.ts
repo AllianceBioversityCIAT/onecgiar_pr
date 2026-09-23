@@ -1039,24 +1039,28 @@ describe('ResultReviewDrawerComponent', () => {
     }));
 
     // Night sweep 2026-09-23, D-2 (prtest 12039 / 12040): with the CLARISA catalogue empty the list
-    // came out [] and the server unlinked every centre. The 7-Sep spec above (JuanCode) used to pin
-    // "drop the unknown ones" (a partial list); a list that cannot be resolved in full is now not
-    // sent at all. Control negative: without the `resolvedCenters.length === codes.length` check
-    // this fails.
-    it('D-2: omits contributingCenters when the catalogue could not resolve every stored centre', fakeAsync(() => {
+    // came out [] and the server unlinked every centre. Control negative: without the
+    // `catalogue.length` check the first test fails; with the old "drop unknown codes" filter the
+    // second one does.
+    it('D-2: omits contributingCenters when the catalogue failed / is empty', fakeAsync(() => {
       centersMock.centersList = [];
       component.resultDetail.set(buildDetail({ contributingCenters: ['CENTER-01'] }));
       exec();
       tick();
-      let body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
       expect('contributingCenters' in body).toBe(false);
+      flush();
+    }));
 
+    it('D-2: with the catalogue loaded, keeps a stored centre it no longer lists (retired) as stored', fakeAsync(() => {
       centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
-      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', { code: 'ZZZ' }] }));
+      component.resultDetail.set(buildDetail({ contributingCenters: [{ code: 'ZZZ' }, 'AAA'] }));
       exec();
       tick();
-      body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
-      expect('contributingCenters' in body).toBe(false);
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect(body.contributingCenters.map((c: any) => c.code)).toEqual(['ZZZ', 'AAA']);
+      expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      expect(body.contributingCenters[1].name).toBe('Alpha');
       flush();
     }));
 

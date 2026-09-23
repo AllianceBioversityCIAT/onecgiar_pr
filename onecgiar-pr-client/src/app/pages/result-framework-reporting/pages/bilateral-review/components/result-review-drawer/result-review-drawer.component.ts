@@ -830,28 +830,29 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       })
       .filter(Boolean);
 
-    // Night sweep 2026-09-23, D-2 — each code is resolved against the CLARISA catalogue; when the
-    // catalogue failed (or lacks a code) the list came out short or empty and the server unlinked
-    // every centre, lead included (prtest 12039 / 12040). A list that cannot be resolved in full is
-    // not sent at all: the server treats the absent key as "leave the centres untouched" for this
-    // caller (`preserveCentersWhenAbsent`, results.service.ts `_updatePartners`).
-    const resolvedCenters = codes
-      .map((code: string, index: number) => {
-        const center = this.centersSE.centersList.find((c: any) => c.code === code);
-        if (!center) return null;
-
+    // Night sweep 2026-09-23, D-2 — two different situations:
+    // - The CLARISA catalogue failed / is empty: nothing can be resolved, and a list sent from here
+    //   would come out empty and unlink every centre, lead included (prtest 12039 / 12040). The key is
+    //   omitted; the server leaves the centres untouched for this caller (`preserveCentersWhenAbsent`,
+    //   results.service.ts `_updatePartners`).
+    // - The catalogue loaded: send the list the reviewer sees. A stored centre the catalogue no longer
+    //   lists (the catalogue query keeps active centres only, clarisa-centers.repository.ts
+    //   `getAllCenters`, e.g. a retired centre) is kept as stored — its code and its position/lead —
+    //   instead of being dropped, so it is not silently unlinked and the reviewer's real edits still go.
+    const catalogue = this.centersSE.centersList ?? [];
+    // No stored centres → nothing to resolve; [] is exactly what is stored.
+    if (catalogue.length || !codes.length) {
+      body.contributingCenters = codes.map((code: string, index: number) => {
+        const center = catalogue.find((c: any) => c.code === code);
         return {
-          ...center,
+          ...(center ?? { code }),
           result_id: String(resultId),
           is_leading_result: index === 0 ? 1 : null,
           selected: true,
           new: true,
           is_active: true
         };
-      })
-      .filter(Boolean);
-    if (resolvedCenters.length === codes.length) {
-      body.contributingCenters = resolvedCenters;
+      });
     }
 
     // Always send current contributingProjects so clearing centers does not clear bilateral projects
