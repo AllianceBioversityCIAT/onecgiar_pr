@@ -572,6 +572,9 @@ describe('BilateralResultCreatorComponent', () => {
         }),
       );
       expect(component.missingLabel()).toBe('1 field to fix');
+      // Night sweep 2026-09-23 (BIL-3 / BIL-4): the footer must not also say "Section complete".
+      // Control negative: without the invalid check in `currentSectionComplete` this line fails.
+      expect(component.currentSectionComplete()).toBe(false);
     });
 
     it('reports a failed request as soon as it fails instead of waiting out the timeout', async () => {

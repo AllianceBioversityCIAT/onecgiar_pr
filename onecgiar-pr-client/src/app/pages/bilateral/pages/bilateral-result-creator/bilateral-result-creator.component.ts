@@ -265,7 +265,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   readonly currentSectionIndex = computed(() => this.sectionNavigation().findIndex(section => section.name === this.openSectionName()));
   readonly currentSectionLabel = computed(() => this.sectionNavigation()[this.currentSectionIndex()]?.label ?? '');
-  readonly currentSectionComplete = computed(() => this.getSectionMdsStatus(this.openSectionName()) === 'complete');
+  /**
+   * Night sweep 2026-09-23 (BIL-3 / BIL-4) — "complete" also requires no P2-3340 invalid item. An
+   * over-limit field stays `filled` (so the percentage holds), which left the footer reading
+   * "Section complete" over a value Submit refuses; now the footer falls through to "N fields to fix".
+   */
+  readonly currentSectionComplete = computed(
+    () => this.getSectionMdsStatus(this.openSectionName()) === 'complete' && this.invalidFieldsFor(this.openSectionName()).length === 0
+  );
 
   /**
    * Labels of the open section's MDS fields still empty. Read off `sectionStatus()` (not
