@@ -11,5 +11,13 @@
 export const RESULT_DETAIL_SECTION_LOAD_COPY = {
   loadErrorNote:
     'We could not load the information saved for this section, so the fields below are empty and saving is turned off. ' +
+    'Please reload the page to try again — the information reported earlier has not been changed.',
+  /**
+   * Night sweep 2026-09-23 (R-2 / R-3) — the bilateral editor's wording, word for word the
+   * `LOAD_ERROR_NOTE` the P2-3556 bilateral sections already show, for the bilateral sections that
+   * now get the same gate (Evidence, Geography).
+   */
+  bilateralLoadErrorNote:
+    'We could not load the information saved for this section, so the fields below are empty and nothing typed here will be saved. ' +
     'Please reload the page to try again — the information reported earlier has not been changed.'
 };

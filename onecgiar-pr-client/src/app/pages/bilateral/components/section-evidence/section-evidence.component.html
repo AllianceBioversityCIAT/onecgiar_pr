@@ -12,6 +12,11 @@
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
 
+  <!-- Night sweep 2026-09-23, R-2: the evidence GET failed; adding and saving are off. -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [collapsible]="false" [description]="loadErrorNote" data-testid="section-load-error"></app-alert-status>
+  }
+
   @if (isLoading()) {
     <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="true" [extraRows]="3" />
   } @else {
@@ -86,12 +91,12 @@
       }
     </div>
 
-      @if (!evidences.length) {
+      @if (!evidences.length && loaded() !== false) {
         <app-no-data-text title="No evidence added"></app-no-data-text>
       }
 
       <br />
-      @if (canAddMore && !readOnly()) {
+      @if (canAddMore && !readOnly() && loaded() === true) {
         <app-add-button name="Add evidence" (clickEvent)="addNew()"></app-add-button>
       }
       @if (!canAddMore) {
