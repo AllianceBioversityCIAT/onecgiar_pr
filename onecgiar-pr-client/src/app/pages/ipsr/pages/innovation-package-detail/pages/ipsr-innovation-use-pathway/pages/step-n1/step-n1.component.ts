@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body, CoreResult, Measure, Actor, Organization } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum';
 import { ExpertWorkshopOrganized } from '../step-n3/model/Ipsr-step-3-body.model';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
   selector: 'app-step-n1',
@@ -16,6 +17,15 @@ export class StepN1Component implements OnInit {
   ipsrStep1Body = new IpsrStep1Body();
 
   coreResult = new CoreResult();
+
+  /**
+   * Night sweep 2026-09-23, IPSR-2 — three-state load flag (P2-3556 contract). The Step-1 GET had no
+   * error branch: on a failure the blank `IpsrStep1Body` stayed on screen with Save enabled, and saving
+   * it wiped the EOI outcomes, the scaling partners and the geographic scope (prtest 11172, 2/2).
+   * Save refuses and "Save & go to next step" only navigates until the stored data is in hand.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
 
   radioOptions = [
     { id: true, name: 'Yes, an expert workshop was organized' },
@@ -77,7 +87,17 @@ export class StepN1Component implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
+    this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe({
+      next: ({ response }) => this.onSectionInformation(response),
+      // IPSR-2 — see `loaded`.
+      error: () => {
+        if (this.loaded() !== true) this.loaded.set(false);
+      }
+    });
+  }
+
+  private onSectionInformation(response: any) {
+    {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
       this.ipsrStep1Body.innov_use_to_be_determined = false;
@@ -103,10 +123,13 @@ export class StepN1Component implements OnInit {
       if (this.ipsrStep1Body.innovatonUse.organization.length == 0) {
         this.ipsrStep1Body.innovatonUse.organization.push(new Organization());
       }
-    });
+      this.loaded.set(true);
+    }
   }
 
   onSaveSection() {
+    // IPSR-2 — never send a body that was not read from the server.
+    if (this.loaded() !== true) return;
     this.convertOrganizationsTosave();
     this.api.resultsSE
       .PATCHInnovationPathwayByStepOneResultId({
@@ -123,7 +146,8 @@ export class StepN1Component implements OnInit {
   }
 
   saveAndNextStep(descrip: string) {
-    if (this.api.rolesSE.readOnly)
+    // IPSR-2 — without the stored data in hand the button only navigates, it never saves.
+    if (this.api.rolesSE.readOnly || this.loaded() !== true)
       return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
         queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
       });

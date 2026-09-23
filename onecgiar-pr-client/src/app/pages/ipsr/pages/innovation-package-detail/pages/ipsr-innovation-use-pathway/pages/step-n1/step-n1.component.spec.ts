@@ -18,7 +18,7 @@ import { StepN1ImpactAreasComponent } from './components/step-n1-impact-areas/st
 import { GeoscopeManagementComponent } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.component';
 import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-button/save-button.component';
 import { FeedbackValidationDirective } from '../../../../../../../../shared/directives/feedback-validation.directive';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
@@ -148,6 +148,34 @@ describe('StepN1Component', () => {
 
     fixture = TestBed.createComponent(StepN1Component);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (IPSR-2): the save tests model a loaded step; the gate has its own block.
+    component.loaded.set(true);
+  });
+
+  // Night sweep 2026-09-23, IPSR-2 (prtest 11172): GET 500 → Save wiped EOI, partners and geo scope.
+  // Control negative: with the gate lines removed the no-PATCH tests fail.
+  describe('IPSR-2 — refuses to save after a failed Step-1 load', () => {
+    beforeEach(() => {
+      component.loaded.set(null);
+      mockApiService.resultsSE.GETInnovationPathwayByStepOneResultId = () => throwError(() => ({ status: 500 }));
+    });
+
+    it('marks the step as not loaded and Save sends nothing', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
+      component.getSectionInformation();
+      component.onSaveSection();
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to next step" only navigates, without saving', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultIdNextStep');
+      const nav = jest.spyOn((component as any).router, 'navigate').mockResolvedValue(true);
+      component.getSectionInformation();
+      component.saveAndNextStep('next');
+      expect(patch).not.toHaveBeenCalled();
+      expect(nav).toHaveBeenCalled();
+    });
   });
 
   afterEach(() => {
