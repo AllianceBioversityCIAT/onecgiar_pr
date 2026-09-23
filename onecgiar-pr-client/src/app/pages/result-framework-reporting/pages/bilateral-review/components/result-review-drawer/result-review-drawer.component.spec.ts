@@ -962,6 +962,34 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
+    // Night sweep 2026-09-23 (W12-5 follow-up): the server retires extra countries on an explicit
+    // false. Control negative: back to `|| false` / unconditional lists, these two tests fail.
+    it('W12-5: keeps an unanswered (NULL) extra-scope flag as NULL and sends the loaded extra countries', fakeAsync(() => {
+      component.resultDetail.set(
+        buildDetail({ geographicScope: { geo_scope_id: 3, has_extra_geo_scope: null, extra_countries: [{ id: 404, sub_national: null }], has_extra_countries: true } })
+      );
+      exec();
+      tick();
+      const geo = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls[0][1].geographicScope;
+      expect(geo.has_extra_geo_scope).toBeNull();
+      expect(geo.extra_countries).toEqual([{ id: 404, sub_national: [] }]);
+      flush();
+    }));
+
+    it('W12-5: sends empty extra lists only when the reviewer answered No', fakeAsync(() => {
+      component.resultDetail.set(
+        buildDetail({ geographicScope: { geo_scope_id: 3, has_extra_geo_scope: false, extra_countries: [{ id: 404, sub_national: null }], extra_regions: [{ id: 2 }], has_extra_countries: true } })
+      );
+      exec();
+      tick();
+      const geo = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls[0][1].geographicScope;
+      expect(geo.has_extra_geo_scope).toBe(false);
+      expect(geo.extra_countries).toEqual([]);
+      expect(geo.extra_regions).toEqual([]);
+      expect(geo.has_extra_countries).toBe(false);
+      flush();
+    }));
+
     it('maps the geographic scope including sub-nationals', fakeAsync(() => {
       component.resultDetail.set(
         buildDetail({

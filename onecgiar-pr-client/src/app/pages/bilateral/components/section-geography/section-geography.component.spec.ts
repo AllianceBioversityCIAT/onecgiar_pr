@@ -617,13 +617,26 @@ describe('SectionGeographyComponent', () => {
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
         'geography',
         expect.objectContaining({
-          has_extra_geo_scope: false,
           extra_geo_scope_id: null,
           extra_regions: [],
           has_extra_regions: false
         }),
         expect.any(Object)
       );
+      // Night sweep 2026-09-23 (W12-5 follow-up): the question is not shown for this type, so it is
+      // not answered — an explicit `false` would now make the server retire the stored extra
+      // countries (e.g. ones a reviewer added). Control negative: sending false again fails this.
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect('has_extra_geo_scope' in payload).toBe(false);
+    });
+
+    it('W12-5 follow-up: an innovation result hidden by a Global main focus still sends has_extra_geo_scope: false', () => {
+      build();
+      creation.resultTypeId.set(7);
+      component.geographicLocationBody.set({ has_countries: false, has_regions: false, regions: [], countries: [], geo_scope_id: GeoScopeEnum.GLOBAL });
+      component.queueGeographySave();
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.has_extra_geo_scope).toBe(false);
     });
   });
 

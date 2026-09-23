@@ -268,7 +268,7 @@ export class SectionGeographyComponent {
       geo.geo_scope_id === GeoScopeEnum.DETERMINED;
 
     if (extraScopeHidden) {
-      return {
+      const payload: Record<string, unknown> = {
         has_countries: geo.has_countries,
         has_regions: geo.has_regions,
         regions: geo.regions,
@@ -278,9 +278,17 @@ export class SectionGeographyComponent {
         extra_regions: [],
         extra_countries: [],
         has_extra_countries: false,
-        has_extra_regions: false,
-        has_extra_geo_scope: false
+        has_extra_regions: false
       };
+      // Night sweep 2026-09-23 (W12-5 follow-up) — the server retires stored extra countries on an
+      // explicit `has_extra_geo_scope: false`. For a non-innovation result this form never shows the
+      // question, so it must not answer it: the key is OMITTED (TypeORM skips undefined, and
+      // `ResultCountriesService.createV2` leaves the extra block alone), otherwise every autosave
+      // would delete extra countries a reviewer added. An innovation result whose MAIN focus is
+      // Global / to be determined still sends false: that is the deliberate orphan clean-up the
+      // W1/W2 form does too (the user's own choice hid the block).
+      if (this.isInnovationResult()) payload['has_extra_geo_scope'] = false;
+      return payload;
     }
 
     return {

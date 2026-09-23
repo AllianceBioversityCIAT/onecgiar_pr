@@ -62,6 +62,16 @@ describe('ResultCountriesService.createV2 — extra scope answered "No" (W12-5)'
     expect(extraCalls(service)).toEqual([]);
   });
 
+  // W12-5 follow-up: a NULL flag (never answered / legacy row, now kept as NULL by the review
+  // drawer) is not a "No" and must not retire anything.
+  it('leaves the extra block alone when the flag is NULL', async () => {
+    const service = makeService();
+
+    await service.createV2({ ...base, has_extra_geo_scope: null }, user);
+
+    expect(extraCalls(service)).toEqual([]);
+  });
+
   it('still writes the extra countries when the answer is Yes', async () => {
     const service = makeService();
 

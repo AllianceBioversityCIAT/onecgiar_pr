@@ -799,6 +799,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         return { id: countryId, sub_national: subNational };
       };
 
+      // Night sweep 2026-09-23 (W12-5 follow-up) — the server now retires the stored extra countries
+      // on an explicit `has_extra_geo_scope: false` (the W1/W2 "No"). So the drawer must send the
+      // answer as it is: a stored/unanswered NULL stays NULL (it used to become false, which would now
+      // delete), and the extra lists follow the answer — only a real "No" sends them empty.
+      const extraAnswer: boolean | null =
+        geoScope.has_extra_geo_scope === null || geoScope.has_extra_geo_scope === undefined ? null : !!geoScope.has_extra_geo_scope;
+      const extraAnsweredNo = extraAnswer === false;
       body.geographicScope = {
         has_countries: geoScope.has_countries || false,
         has_regions: geoScope.has_regions || false,
@@ -806,11 +813,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         countries: geoScope.countries?.map(mapCountryWithSubNational) || [],
         geo_scope_id: geoScope.geo_scope_id || null,
         extra_geo_scope_id: geoScope.extra_geo_scope_id || null,
-        extra_regions: geoScope.extra_regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
-        extra_countries: geoScope.extra_countries?.map(mapCountryWithSubNational) || [],
-        has_extra_countries: geoScope.has_extra_countries || false,
-        has_extra_regions: geoScope.has_extra_regions || false,
-        has_extra_geo_scope: geoScope.has_extra_geo_scope || false
+        extra_regions: extraAnsweredNo ? [] : geoScope.extra_regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
+        extra_countries: extraAnsweredNo ? [] : geoScope.extra_countries?.map(mapCountryWithSubNational) || [],
+        has_extra_countries: extraAnsweredNo ? false : geoScope.has_extra_countries || false,
+        has_extra_regions: extraAnsweredNo ? false : geoScope.has_extra_regions || false,
+        has_extra_geo_scope: extraAnswer
       };
     }
 
