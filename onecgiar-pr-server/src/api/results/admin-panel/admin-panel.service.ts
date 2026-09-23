@@ -507,6 +507,20 @@ export class AdminPanelService implements OnModuleInit {
     }
   }
 
+  async userLastLoginReport() {
+    try {
+      const users = await this._adminPanelRepository.userLastLoginReport();
+      this._logger.log(`User last-login report rows: ${users.length}`);
+      return {
+        response: users,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async kpBulkSync(
     user: TokenDto,
     status: string,

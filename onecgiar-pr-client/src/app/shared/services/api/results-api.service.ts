@@ -14,6 +14,7 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
+import { UserLastLoginRow } from '../../interfaces/user.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
@@ -875,6 +876,10 @@ export class ResultsApiService {
 
   GET_historicalByResultId(resultId) {
     return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/${resultId}/submissions`);
+  }
+
+  GET_userLastLoginReport() {
+    return this.http.get<{ response: UserLastLoginRow[] }>(`${this.apiBaseUrl}admin-panel/report/users/last-login`);
   }
 
   GET_reportUsers() {

@@ -8,6 +8,7 @@ import {
   UseInterceptors,
   Patch,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -29,6 +30,12 @@ import { BulkKpDto } from './dto/bulk-kp.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 import { PatchPhaseInitiativeReportingDto } from './dto/patch-phase-initiative-reporting.dto';
 import { BulkPhaseInitiativeReportingDto } from './dto/bulk-phase-initiative-reporting.dto';
+import { Roles } from '../../../shared/decorators/roles.decorator';
+import { ValidRoleGuard } from '../../../shared/guards/valid-role.guard';
+import {
+  RoleEnum,
+  RoleTypeEnum,
+} from '../../../shared/constants/role-type.enum';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -129,6 +136,19 @@ export class AdminPanelController {
   @ApiOkResponse({ description: 'User report retrieved.' })
   userReport() {
     return this.adminPanelService.userReport();
+  }
+
+  @Get('report/users/last-login')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  @ApiOperation({
+    summary: 'Get last-login report for active users',
+    description:
+      'Returns every active user with last_login (text, YYYY-MM-DD HH:mm:ss) and days_since_last_login. Restricted to application administrators.',
+  })
+  @ApiOkResponse({ description: 'User last-login report retrieved.' })
+  userLastLoginReport() {
+    return this.adminPanelService.userLastLoginReport();
   }
 
   @Patch('bulk/kps')
