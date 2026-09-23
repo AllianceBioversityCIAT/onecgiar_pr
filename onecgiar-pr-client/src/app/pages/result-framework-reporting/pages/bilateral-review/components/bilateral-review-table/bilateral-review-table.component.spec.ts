@@ -1,9 +1,12 @@
 // @akili-spec changes/sp-bilateral-review-tab (BRT-T-4, BRT-T-5, BRT-AC-8, BRT-AC-15)
 // @akili-spec changes/bilateral-review-ux-polish (BRP-T-2, R-8, R-9, R-11, R-12, R-14 (f))
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BilateralReviewTableComponent, BilateralReviewGroup } from './bilateral-review-table.component';
 import { ResultToReview } from '../result-review-drawer/result-review-drawer.interfaces';
 import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
+import { RESULT_STATUS_TOKENS } from '../../../../../../shared/constants/result-status-tokens';
 
 function row(partial: Partial<ResultToReview> & { id: string }): ResultToReview {
   return {
@@ -44,6 +47,9 @@ describe('BilateralReviewTableComponent', () => {
   let component: BilateralReviewTableComponent;
 
   const root = () => fixture.nativeElement as HTMLElement;
+  /** X-1: the pill colours travel as inline styles, which jsdom drops when the value is a `var()`,
+   *  so the tone is read from the component and the binding is pinned on the template below. */
+  const toneOf = (statusId: number | string) => component.statusTone({ status_id: statusId } as ResultToReview);
   const byTestId = (id: string): HTMLElement[] => Array.from(root().querySelectorAll(`[data-testid="${id}"]`));
 
   beforeEach(async () => {
@@ -105,10 +111,11 @@ describe('BilateralReviewTableComponent', () => {
       render([GROUP_A, GROUP_B]);
       const badges = byTestId('bilateral-review-group-pending');
 
-      expect(badges[0].className).toContain('bg-[var(--pr-status-in-progress-bg)]');
-      expect(badges[0].className).toContain('text-[var(--pr-status-in-progress-fg)]');
+      // X-1 (night sweep 2026-09-23): the badge reads the shared enum's Pending review pair.
+      expect(badges.length).toBeGreaterThan(0);
+      expect(component.groupPendingBadgeTone()).toEqual(RESULT_STATUS_TOKENS[5]);
+      expect(component.groupPendingBadgeTone().bg).not.toContain('--pr-status-in-progress');
       expect(badges[0].className).not.toContain('yellow');
-      expect(badges[1].className).not.toContain('bg-[var(--pr-status-in-progress-bg)]');
     });
 
     it('project-mode caption shows the distinct lead centers; center-mode caption shows "N projects"', () => {
@@ -409,14 +416,12 @@ describe('BilateralReviewTableComponent', () => {
       render([statuses]);
 
       const chips = byTestId('bilateral-review-row-status');
-      expect(chips[0].className).toContain('bg-[var(--pr-status-in-progress-bg)]');
-      expect(chips[0].className).toContain('text-[var(--pr-status-in-progress-fg)]');
-      expect(chips[1].className).toContain('bg-[var(--pr-status-approved-bg)]');
-      expect(chips[1].className).toContain('text-[var(--pr-status-approved-fg)]');
-      expect(chips[2].className).toContain('bg-[var(--pr-danger-bg)]');
-      expect(chips[2].className).toContain('text-[var(--pr-danger)]');
-      expect(chips[3].className).toContain('bg-[var(--pr-status-not-started-bg)]');
-      expect(chips[3].className).toContain('text-[var(--pr-status-not-started-fg)]');
+      // X-1 (night sweep 2026-09-23): every pill reads the shared enum — Pending review is the
+      // enum's blue pair (as in the review drawer), not the Editing amber it used to borrow.
+      expect(chips.length).toBe(4);
+      [5, 6, 7, 1, 3, 2].forEach((id) => expect(toneOf(id)).toEqual(RESULT_STATUS_TOKENS[id]));
+      expect(toneOf('5')).toEqual(RESULT_STATUS_TOKENS[5]); // the wire may send "5"
+      expect(toneOf(5).bg).not.toContain('--pr-status-in-progress');
       expect(chips[3].textContent?.trim()).toBe('Editing');
     });
 
@@ -1038,9 +1043,9 @@ describe('BilateralReviewTableComponent', () => {
       render([GROUP_A, GROUP_B]); // GROUP_A has 1 pending, GROUP_B has 0.
       const toggles = byTestId('bilateral-review-group-toggle');
 
-      expect(toggles[0].className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(toggles[0].className).toContain('!border-l-[var(--pr-status-submitted-fg)]');
       expect(toggles[1].className).toContain('!border-l-[var(--pr-border)]');
-      expect(toggles[1].className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(toggles[1].className).not.toContain('!border-l-[var(--pr-status-submitted-fg)]');
     });
 
     // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9;
@@ -1052,9 +1057,9 @@ describe('BilateralReviewTableComponent', () => {
       const toggles = byTestId('bilateral-review-group-toggle');
 
       expect(toggles[0].className).toContain('!border-l-[3px]');
-      expect(toggles[0].className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(toggles[0].className).toContain('!border-l-[var(--pr-status-submitted-fg)]');
       expect(toggles[1].className).toContain('!border-l-[var(--pr-border)]');
-      expect(toggles[1].className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+      expect(toggles[1].className).not.toContain('!border-l-[var(--pr-status-submitted-fg)]');
     });
 
     it('the label is a single-line truncated span with title, inside a min-w-0 flex-1 container — the row never wraps', () => {
@@ -1212,11 +1217,14 @@ describe('BilateralReviewTableComponent', () => {
       it('a Pending Review row carries the amber status pill and the amber 3px left border accent', () => {
         render([GROUP_A]); // a1: status_id 5, pending.
         const statusPill = byTestId('bilateral-review-row-status')[0];
-        expect(statusPill.className).toContain('bg-[var(--pr-status-in-progress-bg)]');
+        expect(statusPill).toBeTruthy();
+        expect(toneOf(5)).toEqual(RESULT_STATUS_TOKENS[5]);
 
         const codeCell = byTestId('bilateral-review-row-code')[0];
         expect(codeCell.className).toContain('!border-l-[3px]');
-        expect(codeCell.className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+        // The accent is a literal `!` class (it must beat the cell's `!border-[...]`), pinned here to
+        // the shared enum's Pending review fg.
+        expect(codeCell.className).toContain(`!border-l-[${RESULT_STATUS_TOKENS[5].fg}]`);
       });
 
       it('an Editing/Draft row carries a structured neutral status pill and a neutral left border accent', () => {
@@ -1224,12 +1232,13 @@ describe('BilateralReviewTableComponent', () => {
         // Zero pending — the group cold-loads collapsed (BRH-R-4); force it open to reach the row.
         render([group], { expandAllNonce: 1, allExpanded: true });
         const statusPill = byTestId('bilateral-review-row-status')[0];
-        expect(statusPill.className).toContain('bg-[var(--pr-status-not-started-bg)]');
-        expect(statusPill.className).not.toContain('bg-[var(--pr-status-in-progress-bg)]');
+        // Editing (1) is the enum's Editing pair (amber), exactly like the Results Center.
+        expect(statusPill).toBeTruthy();
+        expect(toneOf(1)).toEqual(RESULT_STATUS_TOKENS[1]);
 
         const codeCell = byTestId('bilateral-review-row-code')[0];
         expect(codeCell.className).toContain('!border-l-[var(--pr-border)]');
-        expect(codeCell.className).not.toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+        expect(codeCell.className).not.toContain(`!border-l-[${RESULT_STATUS_TOKENS[5].fg}]`);
       });
 
       it('an Approved row carries the emerald accent; a Rejected row carries the danger accent', () => {
@@ -1257,7 +1266,7 @@ describe('BilateralReviewTableComponent', () => {
         render([group], { narrow: true });
         const card = byTestId('bilateral-review-card')[0];
         expect(card.className).toContain('!border-l-[3px]');
-        expect(card.className).toContain('!border-l-[var(--pr-status-in-progress-fg)]');
+        expect(card.className).toContain(`!border-l-[${RESULT_STATUS_TOKENS[5].fg}]`);
       });
     });
 
@@ -1463,6 +1472,24 @@ describe('BilateralReviewTableComponent', () => {
         const widths = cols.map(c => c.style.width);
         expect(widths).toEqual(['96px', '', '88px', '116px', '120px', '184px', '100px', '100px']);
       });
+    });
+  });
+
+  describe('X-1 (night sweep 2026-09-23) — status pills read the shared result-status enum', () => {
+    const template = readFileSync(join(__dirname, 'bilateral-review-table.component.html'), 'utf8');
+    const source = readFileSync(join(__dirname, 'bilateral-review-table.component.ts'), 'utf8');
+
+    it('both status pills (table row and narrow card) bind the enum pair as inline styles', () => {
+      expect(template.match(/\[style\.background-color\]="statusTone\(row\)\.bg"/g)?.length).toBe(2);
+      expect(template.match(/\[style\.color\]="statusTone\(row\)\.fg"/g)?.length).toBe(2);
+      expect(template).toContain('[style.background-color]="groupPendingBadgeTone().bg"');
+      expect(template).toContain('[style.color]="groupPendingBadgeTone().fg"');
+    });
+
+    it('keeps no private status colour map: no Editing amber for Pending review, no pill fills in the class', () => {
+      expect(source).toContain("from '../../../../../../shared/constants/result-status-tokens'");
+      expect(source).not.toContain('--pr-status-in-progress');
+      expect(component.statusToneClass({ status_id: 5 } as ResultToReview)).toBe('border border-transparent');
     });
   });
 });

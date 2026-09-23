@@ -7,6 +7,7 @@ import { BILATERAL_REVIEW_COPY } from '../../bilateral-review.copy';
 import { BilateralReviewGroupMode } from '../../bilateral-review.query-params';
 import { BilateralReviewSourceChipComponent } from '../bilateral-review-source-chip/bilateral-review-source-chip.component';
 import { BilateralSourceDescriptor, resolveBilateralSource } from '../bilateral-review-source-chip/resolve-bilateral-source';
+import { ResultStatusTokenPair, resultStatusToken } from '../../../../../../shared/constants/result-status-tokens';
 
 /** Loose-equality status helpers — the wire may send `status_id` as a string (legacy gotcha 5). */
 function isPending(row: ResultToReview): boolean {
@@ -531,32 +532,28 @@ export class BilateralReviewTableComponent {
    *  between the three surfaces. Replaces the raw `amber/emerald/red/slate` classes AND the `BRP`
    *  group badge's `--pr-color-yellow-100/900/300` (PRMS's `-100` shades are saturated mid-tones,
    *  never pill fills — `colors.scss:236-245`). */
-  private toneClasses(tone: 'pending' | 'approved' | 'rejected' | 'neutral'): string {
-    switch (tone) {
-      case 'pending':
-        return 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)] border border-transparent';
-      case 'approved':
-        return 'bg-[var(--pr-status-approved-bg)] text-[var(--pr-status-approved-fg)] border border-transparent';
-      case 'rejected':
-        return 'bg-[var(--pr-danger-bg)] text-[var(--pr-danger)] border border-transparent';
-      default:
-        return 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)] border border-transparent';
-    }
+  /** Night sweep 2026-09-23 (X-1): the pill colours are no longer a private map. They come from
+   *  the shared `result-status-tokens.ts` enum (P2-3786), the same one the review drawer and the
+   *  Results Center read — this table used to paint Pending review amber while the drawer painted
+   *  it blue. Colours travel as inline styles (a Tailwind arbitrary class cannot be built from a
+   *  runtime value); the class only keeps the transparent border. */
+  statusToneClass(_row: ResultToReview): string {
+    return 'border border-transparent';
   }
 
-  /** Token-pair tone classes by loose `status_id` (5 pending, 6 approved, 7 rejected, else
-   *  neutral) — drives the row pill AND the card pill (same method, both templates call it). */
-  statusToneClass(row: ResultToReview): string {
-    if (isPending(row)) return this.toneClasses('pending');
-    if (isApproved(row)) return this.toneClasses('approved');
-    if (isRejected(row)) return this.toneClasses('rejected');
-    return this.toneClasses('neutral');
+  /** fg/bg pair of the row's own status, from the shared enum (row pill AND card pill). */
+  statusTone(row: ResultToReview): ResultStatusTokenPair {
+    return resultStatusToken(row.status_id);
   }
 
-  /** The group-header (and cards group-bar) pending badge — reuses the SAME `'pending'` branch
-   *  `statusToneClass` uses, so it can never fall out of sync with the row pill's tone. */
+  /** The group-header (and cards group-bar) pending badge — same class as the pill. */
   groupPendingBadgeClass(): string {
-    return this.toneClasses('pending');
+    return 'border border-transparent';
+  }
+
+  /** The pending badge paints the Pending review (5) pair from the shared enum. */
+  groupPendingBadgeTone(): ResultStatusTokenPair {
+    return resultStatusToken(5);
   }
 
   // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9)
@@ -565,7 +562,9 @@ export class BilateralReviewTableComponent {
    *  token otherwise. Both surfaces compensate their left padding by 3px so the accent doesn't
    *  shift the label relative to the rows below it. */
   groupAccentClass(group: BilateralReviewGroup): string {
-    return this.pendingCount(group) > 0 ? '!border-l-[var(--pr-status-in-progress-fg)]' : '!border-l-[var(--pr-border)]';
+    // Pending review fg of the shared enum (RESULT_STATUS_TOKENS[5].fg) — kept as a literal `!` class
+    // because the cell's `!border-[...]` would beat an inline style; the spec pins it to the enum.
+    return this.pendingCount(group) > 0 ? '!border-l-[var(--pr-status-submitted-fg)]' : '!border-l-[var(--pr-border)]';
   }
 
   // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3, BRH-R-7, design.md §4.2)
@@ -619,7 +618,8 @@ export class BilateralReviewTableComponent {
    *  this method's row-level accent (on the leftmost `<td>` / the card `<li>`) is the sole owner of
    *  the per-RESULT accent design.md §4.3 asks for. */
   rowAccentClass(row: ResultToReview): string {
-    if (isPending(row)) return '!border-l-[var(--pr-status-in-progress-fg)]';
+    // Pending review fg of the shared enum (RESULT_STATUS_TOKENS[5].fg); see groupAccentClass.
+    if (isPending(row)) return '!border-l-[var(--pr-status-submitted-fg)]';
     if (isApproved(row)) return '!border-l-[var(--pr-status-approved-fg)]';
     if (isRejected(row)) return '!border-l-[var(--pr-danger)]';
     return '!border-l-[var(--pr-border)]';

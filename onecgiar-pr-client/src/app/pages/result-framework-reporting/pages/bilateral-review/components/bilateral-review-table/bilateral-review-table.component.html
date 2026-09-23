@@ -134,6 +134,8 @@
       <span
         class="inline-flex items-center whitespace-nowrap rounded-full px-[10px] py-[2px] text-[11.5px] font-semibold"
         [class]="statusToneClass(row)"
+        [style.background-color]="statusTone(row).bg"
+        [style.color]="statusTone(row).fg"
         data-testid="bilateral-review-row-status">
         {{ row.status_name }}
       </span>
@@ -321,6 +323,8 @@
       <span
         class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-[10px] py-[2px] text-[11.5px] font-semibold"
         [class]="statusToneClass(row)"
+        [style.background-color]="statusTone(row).bg"
+        [style.color]="statusTone(row).fg"
         data-testid="bilateral-review-row-status">
         {{ row.status_name }}
       </span>
@@ -463,7 +467,7 @@
                 <span class="ml-auto flex shrink-0 items-center gap-[6px]">
                   <span class="text-[11.5px] font-medium text-[var(--pr-text-secondary)] tabular-nums" data-testid="bilateral-review-group-summary">{{ resultsLabel(group) }}</span>
                   @if (pendingCount(group) > 0) {
-                    <span class="rounded-full border border-transparent px-[6px] py-[1px] text-[10.5px] font-semibold tabular-nums" [class]="groupPendingBadgeClass()" data-testid="bilateral-review-group-pending">
+                    <span class="rounded-full border border-transparent px-[6px] py-[1px] text-[10.5px] font-semibold tabular-nums" [class]="groupPendingBadgeClass()" [style.background-color]="groupPendingBadgeTone().bg" [style.color]="groupPendingBadgeTone().fg" data-testid="bilateral-review-group-pending">
                       {{ pendingLabel(group) }}
                     </span>
                   } @else {
