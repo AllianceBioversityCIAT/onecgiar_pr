@@ -51,6 +51,12 @@ export class StageAssessmentComponent {
     return true;
   }
 
+  /** W12B-3 — writes the new value first, then cleans up against it (see the template). */
+  onSelected(value: unknown) {
+    if (this.question) this.question['radioButtonValue'] = value;
+    this.handleSelectionChange();
+  }
+
   handleSelectionChange() {
     this.innovationDevInfoUtilsSE.mapBoolean(this.question);
     const selected = this.selectedOption;
