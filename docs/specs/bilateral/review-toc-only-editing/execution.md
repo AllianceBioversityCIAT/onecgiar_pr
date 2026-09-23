@@ -310,6 +310,25 @@
 - Requirements covered: BIL-RTE-R-2 (R-2.a on all 7 endpoints, data unchanged, R-2.b), R-3.a (Center), R-4.a (status 1 and 8 → 2xx; red run 409 → 200), DD-1, DD-2. `_validateBilateralResultForUpdate` is deleted with zero callers, which closes the T-3 DoD pointer.
 - Budget: 3 review rounds against a budget of 2 for T-2. Recorded. Round 2 was self-inflicted: the validator's deletion dropped its source check.
 
+### BIL-RTE-T-8 — Center editor: no autosave racing the submit; pin R-7 for the Center — **PASS**
+
+**Owner direction (2026-09-23):** "Aborda de una vez la T5 y T6. Pero asap", then T-8 as well. T-5, T-6 and T-8 ran in parallel, in separate packages and folders, under a minimal-change brief.
+
+**Attempt 1** (2026-09-23, effort medium, skill `angular-developer`)
+- Files: `bilateral-result-creator.component.ts` + spec, `section-toc.component.spec.ts`.
+  - `triggerManualSave()` returns immediately while `isSubmitting()`.
+  - `selectSection()` skips the flush, the wait and the error alert while submitting. The section still switches.
+- Flush callers: creator `:717` (`selectSection`) and `:902` (`triggerManualSave`) are guarded. `bilateral-accordion.component.ts:59` is left untouched.
+- Red: the two no-op cases went from 1 call to an expected 0.
+- Disqualifier: `section-toc.spec` was green before the change (102/102), so R-7 already held for the Center.
+- Green: `bilateral-result-creator.component.spec|section-toc.component.spec|bilateral-auto-save` 3 suites / 203 tests. The BIL-T-1 flush-on-navigate block stays green. `ng lint` clean.
+- Not Done / Assumptions (Implementer): the section switch still proceeds while submitting, because the task names only the flush. The accordion flush was left alone, being outside the given boundary. Leader: the Reviewer adjudicated both as sound.
+- Reviewer: **PASS**. "Save draft and the section-navigation flush both check isSubmitting() before writing, and the tests cover the true and false cases … The R-7 Center pin checks that the elements are absent from the real template's DOM, and it passed before the change."
+- ADVISORY (recorded, not gating):
+  - RELIABILITY: the accordion flush is rendered only in the wizard and the manual-create drawer, never in the editor. It cannot race a submit, since the submit dialog's overlay also blocks it. If an accordion is ever added to the editor, guard it too.
+  - READABILITY: the "Yes" complement checks only `showDetailForm()`. A single DOM check would prove the "No" test can fail. "Level" is a broad substring; a data-testid would be sturdier.
+- Requirements covered: DD-2 challenge mitigation (R-2.b side effect), R-7 (Center editor clause).
+
 ## Constitution Impact: BIL-RTE-T-1
 
 - New injectable `BilateralAccessService` at `onecgiar-pr-server/src/api/results/bilateral-access/`. `ResultsModule` provides and exports it, which adds to that module's public surface.

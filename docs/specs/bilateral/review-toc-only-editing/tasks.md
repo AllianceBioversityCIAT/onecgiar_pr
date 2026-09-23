@@ -243,7 +243,7 @@
   - [x] Three CT cases green; module CT suite green.
   - [x] Lint clean.
 
-### BIL-RTE-T-8 — Center editor: no autosave racing the submit; pin R-7 for the Center
+### [x] BIL-RTE-T-8 — Center editor: no autosave racing the submit; pin R-7 for the Center
 
 - **Type:** client
 - **Description:**
@@ -265,8 +265,9 @@
   - **Disqualifier:** the section-toc test is red before the change → R-7 is **not** already true for the Center. Stop and re-scope; this task must not grow a Center fix silently.
   - **Consumers:** `bilateral-auto-save.service` flush callers (navigation). Grep them.
 - **Definition of done:**
-  - [ ] Cases asserted.
-  - [ ] The recent `bugfix--bilateral-section-autosave-on-navigate` tests are still green.
+- **Status:** [x] PASS 2026-09-23 (1 attempt, see `execution.md`)
+  - [x] Cases asserted.
+  - [x] The recent `bugfix--bilateral-section-autosave-on-navigate` tests are still green.
 
 ### BIL-RTE-T-9 — Docs and post-deploy HITL
 
