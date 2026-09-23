@@ -589,6 +589,34 @@ describe('SectionGeneralInfoComponent', () => {
       expect(autoSave.updateField).not.toHaveBeenCalled();
     });
 
+    // Night sweep 2026-09-23, BIL-8 (prtest 11416): "(0) Not Targeted" kept the sub-areas stored.
+    // Control negative: without the clearing block in `onDacTagChange` the first test fails.
+    it('BIL-8: "(0) Not Targeted" clears that area\'s sub-areas and stages the cleared lists', () => {
+      creation.resultDacSubScores.set({ gender: [10], climate_change: [5] });
+      creation.setDacSubScores.mockImplementation((key: string, ids: number[]) =>
+        creation.resultDacSubScores.update((s: any) => ({ ...s, [key]: ids }))
+      );
+      build();
+      autoSave.updateFieldsBatch.mockClear();
+
+      component.onDacTagChange('gender', 1);
+
+      expect(creation.setDacSubScores).toHaveBeenCalledWith('gender', []);
+      expect(autoSave.updateFieldsBatch).toHaveBeenCalledWith(
+        expect.objectContaining({ gender_impact_area_ids: [], climate_impact_area_ids: [5] })
+      );
+    });
+
+    it('BIL-8: a targeted level (Significant) keeps the sub-areas untouched', () => {
+      creation.resultDacSubScores.set({ gender: [10] });
+      build();
+      autoSave.updateFieldsBatch.mockClear();
+
+      component.onDacTagChange('gender', 2);
+
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+    });
+
     it('adds a sub-score when it is not selected yet', () => {
       build();
       component.toggleSubScore('gender', 10);
