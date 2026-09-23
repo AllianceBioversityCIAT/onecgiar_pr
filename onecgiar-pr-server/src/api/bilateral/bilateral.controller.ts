@@ -73,7 +73,7 @@ export class BilateralController {
     summary:
       'Carry an approved result from a previous phase into the current one',
     description:
-      'Creates a new version of an approved W3/Bilateral result in the open reporting phase, linked to the original by its result code. The approved prior-phase record is not modified. The new version lands in Draft: this operation continues the result, it does not report on it — whoever edits it afterwards is who submits it for review. Knowledge Products cannot be carried forward. Only the platform that reported a result may carry it forward.',
+      'Creates a new version of an approved W3/Bilateral result in the open reporting phase, linked to the original by its result code. The approved prior-phase record is not modified. The new version lands in Editing: a centre user completes it and then submits it for review. Knowledge Products cannot be carried forward. Only the platform that reported a result may carry it forward.',
   })
   @ApiBody({ type: VersionResultDto })
   async version(
