@@ -187,6 +187,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private _lastContributingInitiativesReapplyKey: string = '';
   originalContributingInitiatives: any = null;
   originalContributingInstitutions: any[] | null = null;
+  /**
+   * Night sweep 2026-09-23, D-2b — the centres as stored, captured on load before they are reduced to
+   * codes. `pr-multi-select.writeValue` drops codes that are not in the (active-only) catalogue, so the
+   * first add/remove by the reviewer replaces the list without a retired centre; `buildBody` merges it
+   * back from here (the reviewer can neither see nor remove it) and keeps it as lead if it was.
+   */
+  originalContributingCenters: { code: string; is_leading_result: any }[] | null = null;
 
   /** Snapshot for detecting unsaved data standard changes (baseline after load/save). */
   private originalDataStandardSnapshot: string | null = null;
@@ -842,7 +849,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const catalogue = this.centersSE.centersList ?? [];
     // No stored centres → nothing to resolve; [] is exactly what is stored.
     if (catalogue.length || !codes.length) {
-      body.contributingCenters = codes.map((code: string, index: number) => {
+      // D-2b — stored centres the catalogue does not list are invisible to the reviewer (the
+      // multi-select drops them), so they are always merged back; a retired stored lead stays lead.
+      const inCatalogue = (code: string) => catalogue.some((c: any) => c.code === code);
+      const retired = catalogue.length
+        ? (this.originalContributingCenters ?? []).filter(c => !inCatalogue(c.code) && !codes.includes(c.code))
+        : [];
+      const retiredLead = retired.find(c => Number(c.is_leading_result) === 1);
+      const ordered = retiredLead
+        ? [retiredLead.code, ...codes, ...retired.filter(c => c !== retiredLead).map(c => c.code)]
+        : [...codes, ...retired.map(c => c.code)];
+      body.contributingCenters = ordered.map((code: string, index: number) => {
         const center = catalogue.find((c: any) => c.code === code);
         return {
           ...(center ?? { code }),
@@ -1244,6 +1261,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         });
 
         if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
+          this.originalContributingCenters = detail.contributingCenters
+            .filter((center: any) => center?.code)
+            .map((center: any) => ({ code: center.code, is_leading_result: center.is_leading_result }));
           detail.contributingCenters = detail.contributingCenters.map((center: any) => center.code);
         } else {
           detail.contributingCenters = [];
@@ -1698,6 +1718,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.originalDataStandardSnapshot = null;
     this.originalContributingInitiatives = null;
     this.originalContributingInstitutions = null;
+    this.originalContributingCenters = null;
     this.leadProjectIds.set([]);
     this.originalAcceptedContributingInitiatives = [];
     this.contributingInitiativesStatusMap.set(new Map());

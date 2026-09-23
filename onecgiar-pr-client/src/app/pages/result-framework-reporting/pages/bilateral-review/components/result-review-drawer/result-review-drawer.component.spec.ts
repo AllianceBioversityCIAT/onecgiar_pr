@@ -1052,6 +1052,40 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
+    // Night sweep 2026-09-23, D-2b: pr-multi-select drops a retired code on the first edit, so the
+    // field no longer carries it. Control negative: without the `retired` merge both tests fail.
+    it('D-2b: reviewer touches the field, the retired stored centre survives', fakeAsync(() => {
+      centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }, { code: 'BBB', name: 'Beta' }];
+      component.originalContributingCenters = [
+        { code: 'AAA', is_leading_result: 1 },
+        { code: 'OLD', is_leading_result: null }
+      ];
+      // what the field holds after the reviewer added BBB (the multi-select already dropped OLD)
+      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', 'BBB'] }));
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect(body.contributingCenters.map((c: any) => c.code)).toEqual(['AAA', 'BBB', 'OLD']);
+      expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      flush();
+    }));
+
+    it('D-2b: a retired stored lead stays lead when the reviewer edits the list', fakeAsync(() => {
+      centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
+      component.originalContributingCenters = [
+        { code: 'OLD', is_leading_result: 1 },
+        { code: 'AAA', is_leading_result: null }
+      ];
+      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA'] }));
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect(body.contributingCenters.map((c: any) => c.code)).toEqual(['OLD', 'AAA']);
+      expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      expect(body.contributingCenters[1].is_leading_result).toBeNull();
+      flush();
+    }));
+
     it('D-2: with the catalogue loaded, keeps a stored centre it no longer lists (retired) as stored', fakeAsync(() => {
       centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
       component.resultDetail.set(buildDetail({ contributingCenters: [{ code: 'ZZZ' }, 'AAA'] }));
