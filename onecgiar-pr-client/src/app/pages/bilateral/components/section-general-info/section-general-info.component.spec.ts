@@ -163,28 +163,17 @@ describe('SectionGeneralInfoComponent', () => {
       ]);
     });
 
-    // Night sweep 2026-09-23, BIL-4: a 35-word title was stored and the section read complete
-    // (prtest 11416). Control negative: without the `overLimit` spread these two tests fail.
-    it('BIL-4: flags a title over 30 words as invalid (still filled), so Submit refuses and names it', () => {
+    // Decision (Cami, P2-3765 18-Sep and P2-3340 cancelled 14-Sep): the word limit is a hint that
+    // must not stop the user. Night sweep 2026-09-23: 912a38a58 made an over-limit title an invalid
+    // (Submit-blocking) item and was reverted; this pins that it stays a plain, filled field.
+    it('an over-limit title stays a plain filled field (the red counter is only a hint)', () => {
       creation.resultTitle.set(Array.from({ length: 35 }, (_, i) => `w${i}`).join(' '));
       creation.resultDescription.set('Some description');
       build();
       fixture.detectChanges();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
-        { key: 'title', label: 'Title', filled: true, invalid: true, invalidReason: '35 words; the maximum is 30' },
-        { key: 'description', label: 'Description', filled: true },
-        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
-      ]);
-    });
-
-    it('BIL-4: flags a description over 300 words the same way, and leaves exactly 30 words alone', () => {
-      creation.resultTitle.set(Array.from({ length: 30 }, (_, i) => `w${i}`).join(' '));
-      creation.resultDescription.set(Array.from({ length: 301 }, (_, i) => `d${i}`).join(' '));
-      build();
-      fixture.detectChanges();
-      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
         { key: 'title', label: 'Title', filled: true },
-        { key: 'description', label: 'Description', filled: true, invalid: true, invalidReason: '301 words; the maximum is 300' },
+        { key: 'description', label: 'Description', filled: true },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
       ]);
     });

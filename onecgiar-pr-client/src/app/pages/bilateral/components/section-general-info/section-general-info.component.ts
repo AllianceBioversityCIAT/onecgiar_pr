@@ -5,8 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { FieldsManagerService } from '../../../../shared/services/fields-manager.service';
-import { BilateralMdsTrackerService, MdsFieldItem } from '../../services/bilateral-mds-tracker.service';
-import { WordCounterService } from '../../../../shared/services/word-counter.service';
+import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -89,10 +88,6 @@ const TAG_LEVELS = [
   { value: 3, label: '(2) Principal' },
 ];
 
-/** BIL-4 — the word ceilings the template paints (`[maxWords]` on Title / Description). */
-const TITLE_MAX_WORDS = 30;
-const DESCRIPTION_MAX_WORDS = 300;
-
 @Component({
   selector: 'app-section-general-info',
   imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule, BilateralChangeResultTypeDialogComponent, BilateralFieldQualityFlagComponent],
@@ -104,10 +99,6 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   private readonly fieldsManagerSE = inject(FieldsManagerService);
   private readonly autoSaveService = inject(BilateralAutoSaveService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
-  private readonly wordCounter = inject(WordCounterService);
-  /** BIL-4 — one source for the ceiling the template paints and the one the MDS enforces. */
-  readonly titleMaxWords = TITLE_MAX_WORDS;
-  readonly descriptionMaxWords = DESCRIPTION_MAX_WORDS;
   /** `protected`, not `private`: the template binds `creationService.*` into the change-type dialog (P2-3233). */
   protected readonly creationService = inject(BilateralCreationService);
 
@@ -318,18 +309,9 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     // with an MDS field its centre user cannot complete.
     const leadContactFilled = !!body.lead_contact_person;
 
-    // Night sweep 2026-09-23, BIL-4 — the template caps Title at 30 words and Description at 300
-    // (`[maxWords]`), but `pr-input`/`pr-textarea` only paint the box red: a 35-word title was stored,
-    // the section read "complete" and Submit went through (prtest 11416 / 11417). Reported the P2-3340
-    // way (same as the Innovation Development short title): an over-limit field stays `filled` — it IS
-    // answered — and carries `invalid`, which makes Submit refuse and name it.
-    const overLimit = (text: string, max: number): Partial<MdsFieldItem> => {
-      const words = this.wordCounter.counter(text);
-      return words > max ? { invalid: true, invalidReason: `${words} words; the maximum is ${max}` } : {};
-    };
     this.mdsTracker.setSectionFields('general-info', [
-      { key: 'title', label: 'Title', filled: titleFilled, ...(titleFilled ? overLimit(t, this.titleMaxWords) : {}) },
-      { key: 'description', label: 'Description', filled: descriptionFilled, ...(descriptionFilled ? overLimit(d, this.descriptionMaxWords) : {}) },
+      { key: 'title', label: 'Title', filled: titleFilled },
+      { key: 'description', label: 'Description', filled: descriptionFilled },
       { key: 'lead_contact_person', label: 'Lead Contact Person', filled: leadContactFilled },
     ]);
 
