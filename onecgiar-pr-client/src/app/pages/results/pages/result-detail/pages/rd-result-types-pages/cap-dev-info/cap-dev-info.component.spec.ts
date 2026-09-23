@@ -13,7 +13,8 @@ import { FormsModule } from '@angular/forms';
 import { of, throwError, delay } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { environment } from '../../../../../../../../environments/environment';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
@@ -195,6 +196,8 @@ describe('CapDevInfoComponent', () => {
 
   describe('validate_capdev_term_id()', () => {
     it('should call validate_capdev_term_id and cleanOrganizationsList when onSaveSection is called', () => {
+      // W12-1: Save only runs once the section has loaded.
+      component.getSectionInformation();
       component.capDevInfoRoutingBody.is_attending_for_organization = false;
 
       const validateCapDevTermIdSpy = jest.spyOn(component, 'validate_capdev_term_id');
@@ -837,5 +840,116 @@ describe('CapDevInfoComponent — CanComponentDeactivate (UCA-T-11)', () => {
     const roundTripped = JSON.parse(JSON.stringify(component.capDevInfoRoutingBody));
 
     expect(roundTripped).toEqual(component.capDevInfoRoutingBody);
+  });
+});
+
+/**
+ * Night sweep 2026-09-23, W12-1 — a failed section GET must not let Save send the blank body.
+ * Measured on prtest (result 8994): the PATCH went out as
+ * `{ institutions: [], female_using: 5, capdev_term_id: null }` and the server zeroed Men /
+ * Non-binary / Unknown, nulled Length of training and de-activated the IRRI organization.
+ * Control negative: with the `loaded` gate removed from `performSave()` / `onSaveSection()`, the
+ * "does not PATCH" tests below fail (the PATCH spy is called with the wipe payload).
+ */
+describe('CapDevInfoComponent — refuses to save after a failed section load (W12-1)', () => {
+  let component: CapDevInfoComponent;
+  let fixture: ComponentFixture<CapDevInfoComponent>;
+  let mockApiService: any;
+
+  beforeEach(async () => {
+    mockApiService = {
+      resultsSE: {
+        GET_capdevsTerms: () => of({ response: [] }),
+        GET_capdevsDeliveryMethod: () => of({ response: [] }),
+        GET_capacityDevelopent: jest.fn(() => throwError(() => ({ status: 500 }))),
+        PATCH_capacityDevelopent: jest.fn(() => of({})),
+        GET_allInstitutions: () => of({ response: [] }),
+        GET_allInstitutionTypes: () => of({ response: [] }),
+        GET_allChildlessInstitutionTypes: () => of({ response: [] }),
+        currentResultCode: 1,
+        currentResultPhase: 1
+      },
+      dataControlSE: {
+        currentResultSectionName: signal<string>(''),
+        findClassTenSeconds: jest.fn(() => Promise.resolve())
+      }
+    };
+
+    await TestBed.configureTestingModule({
+      // No FormsModule: NO_ERRORS_SCHEMA stubs the custom inputs, so `[(ngModel)]` stays inert here.
+      declarations: [CapDevInfoComponent, AlertStatusComponent],
+      imports: [HttpClientTestingModule],
+      providers: [{ provide: ApiService, useValue: mockApiService }],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CapDevInfoComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('marks the section as not loaded when the first GET fails', () => {
+    component.getSectionInformation();
+
+    expect(component.loaded()).toBe(false);
+    expect(component.sectionLoading()).toBe(false);
+  });
+
+  it('does not PATCH from the Save button after a failed load, even once the user typed a value', () => {
+    component.getSectionInformation();
+    component.capDevInfoRoutingBody.female_using = 5;
+
+    component.onSaveSection();
+
+    expect(mockApiService.resultsSE.PATCH_capacityDevelopent).not.toHaveBeenCalled();
+  });
+
+  it('saveSection() (unsaved-changes guard) resolves false without PATCHing after a failed load', () => {
+    component.getSectionInformation();
+    component.capDevInfoRoutingBody.female_using = 5;
+
+    let resolved: boolean | undefined;
+    component.saveSection().subscribe(result => (resolved = result));
+
+    expect(resolved).toBe(false);
+    expect(mockApiService.resultsSE.PATCH_capacityDevelopent).not.toHaveBeenCalled();
+  });
+
+  it('does not PATCH while the first GET is still in flight', () => {
+    component.onSaveSection();
+
+    expect(component.loaded()).toBeNull();
+    expect(mockApiService.resultsSE.PATCH_capacityDevelopent).not.toHaveBeenCalled();
+  });
+
+  it('shows the load-error note and disables the bottom-bar Save after a failed load', () => {
+    fixture.detectChanges();
+
+    const note = fixture.nativeElement.querySelector('[data-testid="section-load-error"]');
+    expect(note).not.toBeNull();
+    expect(component.loadErrorNote).toContain('saving is turned off');
+    const bar = fixture.debugElement.query(By.css('app-section-bottom-bar'));
+    expect(bar.properties['disabled']).toBe(true);
+  });
+
+  it('saves normally once the GET succeeded', () => {
+    mockApiService.resultsSE.GET_capacityDevelopent.mockReturnValue(of({ response: { capdev_term_id: 3, female_using: 3 } }));
+    component.getSectionInformation();
+
+    component.onSaveSection();
+
+    expect(component.loaded()).toBe(true);
+    expect(mockApiService.resultsSE.PATCH_capacityDevelopent).toHaveBeenCalledTimes(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="section-load-error"]')).toBeNull();
+  });
+
+  it('a failed RE-load after a successful load keeps Save available (the body in hand is what the server holds)', () => {
+    mockApiService.resultsSE.GET_capacityDevelopent.mockReturnValueOnce(of({ response: { capdev_term_id: 3, female_using: 3 } }));
+    component.getSectionInformation();
+    component.getSectionInformation(); // second call hits the failing default
+
+    expect(component.loaded()).toBe(true);
+    component.onSaveSection();
+    expect(mockApiService.resultsSE.PATCH_capacityDevelopent).toHaveBeenCalledTimes(1);
   });
 });

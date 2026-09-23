@@ -7,6 +7,7 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
 import { CapDevInfoRoutingBody } from './model/capDevInfoRoutingBody';
 import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
   selector: 'app-cap-dev-info',
@@ -42,6 +43,25 @@ export class CapDevInfoComponent implements OnInit, CanComponentDeactivate {
    * Released on `next` AND `error` — a failed GET must not leave the section shimmering.
    */
   readonly sectionLoading = signal(true);
+
+  /**
+   * Night sweep 2026-09-23, W12-1 — three-state load flag, same contract as the bilateral twin
+   * (`type-capacity-sharing.component.ts`, P2-3556): `null` while the section GET is in flight,
+   * `true` once the server's body is in hand, `false` when the FIRST load failed.
+   *
+   * Before this, `error` only released the skeleton: the form painted blank with Save enabled and
+   * no message, and the first Save sent `{ institutions: [], female_using: 5, capdev_term_id: null }`.
+   * The server reads that as a deletion — `x || 0` on the counts
+   * (`onecgiar-pr-server/src/api/results/summary/summary.service.ts:499-502`), the term as received
+   * (`:504`) and `institutions: []` → `updateGenericIstitutions(resultId, [], 3, …)` de-activating
+   * every stored organization (`:554-560`). Measured on prtest (result 8994): Men/Non-binary/Unknown
+   * → 0, Length of training → null, IRRI gone.
+   *
+   * A failed RE-load after a successful save does not flip it back to `false`: the body in hand is
+   * then exactly what the server just persisted, so saving it again is safe.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
 
   /**
    * `UCA-T-11` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]`
@@ -106,9 +126,14 @@ export class CapDevInfoComponent implements OnInit, CanComponentDeactivate {
         // just derived `capdev_term_id_1`/`capdev_term_id_2` from the loaded body, so this is the
         // first point both halves are consistent with what the server returned.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.loaded.set(true);
         this.sectionLoading.set(false);
       },
-      error: () => this.sectionLoading.set(false)
+      error: () => {
+        // W12-1 — see `loaded`. Only the first load can leave the body empty-by-construction.
+        if (this.loaded() !== true) this.loaded.set(false);
+        this.sectionLoading.set(false);
+      }
     });
   }
 
@@ -204,6 +229,9 @@ export class CapDevInfoComponent implements OnInit, CanComponentDeactivate {
   }
 
   onSaveSection() {
+    // W12-1 — same gate as `performSave()`, checked first so the refusal is silent here (the
+    // button is already disabled and the error note is on screen) instead of an uncaught Error.
+    if (this.loaded() !== true) return;
     this.performSave().subscribe();
   }
 
@@ -214,6 +242,11 @@ export class CapDevInfoComponent implements OnInit, CanComponentDeactivate {
    * logic (`UCA-DD-3`). Same body assembly as the pre-task `onSaveSection()`, unchanged.
    */
   private performSave(): Observable<void> {
+    // W12-1 — the single choke point of every write here (`onSaveSection`, `saveSection` for the
+    // unsaved-changes guard). A section that never read what the server holds cannot tell "empty
+    // because the user emptied it" from "empty because it never loaded", so it writes nothing.
+    if (this.loaded() !== true) return throwError(() => new Error('Capacity Sharing section not loaded; save refused'));
+
     this.validate_capdev_term_id();
 
     if (!this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
