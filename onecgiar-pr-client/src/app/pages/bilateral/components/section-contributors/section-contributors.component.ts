@@ -91,6 +91,23 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     }));
   });
 
+  /**
+   * P2-3228 — the read-only "Lead center" value. The lead project's organisation wins, as before;
+   * a result with no project (API-reported W3/bilateral results often have none) falls back to the
+   * result's own lead Center, the same id `hydrateLeadAndSelection` already selects below.
+   */
+  readonly leadCenterLabel = computed(() => {
+    const projectLead = this.creationService.selectedProject()?.leadCenter;
+    if (projectLead?.acronym || projectLead?.name) {
+      return [projectLead.acronym, projectLead.name].filter(Boolean).join(' - ');
+    }
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    const resultLead = resultLeadCenterId
+      ? this.availableCenters().find(c => c.institutionId === Number(resultLeadCenterId))
+      : null;
+    return resultLead ? `${resultLead.acronym} - ${resultLead.name}` : '-';
+  });
+
   readonly availableCentersComputed = computed(() => {
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();

@@ -73,7 +73,7 @@
   <!-- Read-only like the W1/W2 "Submitter": standard header + a disabled-looking value, no badge. -->
   <div class="sc-block">
     <app-pr-field-header label="Lead center" [required]="false" [readOnly]="true"></app-pr-field-header>
-    <div class="sc-readonly-value">{{ creationService.selectedProject()?.leadCenter?.acronym }} - {{ creationService.selectedProject()?.leadCenter?.name }}</div>
+    <div class="sc-readonly-value">{{ leadCenterLabel() }}</div>
   </div>
 
   <div class="sc-block sc-block--centers">

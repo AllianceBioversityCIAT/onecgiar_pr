@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
+**Verified:** 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -57,6 +57,7 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   🛑 **Si añades un peldaño nuevo a la escalera, que no pase de 300** o el arreglo deja de valer —
   el candado que lo vigila está en `section-contributors.component.spec.ts`.
 
+- ⚠️ **P2-3228 (23-sep-2026): un resultado bilateral puede NO tener proyecto** (los que llegan por API: 7663 en prtest, `project_id: null`, `contributingProjects: []`). El valor read-only "Lead center" sale de `leadCenterLabel()`: primero la organización del proyecto líder y, si no hay, `resultLeadCenterId()` buscado en `availableCenters()`. Antes leía sólo el proyecto y pintaba " - " aunque el centro líder estuviera guardado y seleccionado abajo como chip.
 - ⚠️ **`contributing_center` / `contributing_bilateral_projects` no viajan hasta que
   `contributorsHydrated()` es `true`** (flag **independiente** de `partnersHydrated`). Se filtran
   contra los catálogos, así que antes de que carguen —o tras un GET fallido, que igual pone
@@ -170,7 +171,7 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 | Green check de partners en bilateral | La función MySQL exige un delivery type por socio y bilateral no los captura (AC6). | Producto + BACK |
 
 ## Tests
-`section-contributors.component.spec.ts` — 123 casos (BCT-T-6 añadió 12: lock/auto-select de centros
+`section-contributors.component.spec.ts` — 126 casos (P2-3228 añadió 3: etiqueta del Lead center sin proyecto; BCT-T-6 añadió 12: lock/auto-select de centros
 derivados; BIL-T-1 añadió 7: centers-load-failure regression). El template se sobreescribe con
 `<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds — y eso es justo lo que
 dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).

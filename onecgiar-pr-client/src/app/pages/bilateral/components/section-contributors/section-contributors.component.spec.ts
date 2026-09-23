@@ -1289,6 +1289,39 @@ describe('SectionContributorsComponent', () => {
     });
   });
 
+  // P2-3228 — a W3/bilateral result reported by API often has no project at all (7663 on prtest:
+  // `project_id: null`, `contributingProjects: []`). Its lead Center lives only on the result, as
+  // `commonFields.lead_center_id`. The field used to read the lead PROJECT's organisation alone and
+  // rendered a bare "-" although the lead Center was stored and even selected below it.
+  describe('P2-3228 · lead center label', () => {
+    it('shows the project lead center when the result has a lead project', () => {
+      centersService.centersList = [center(5), center(49, 'CENTER-02', 'Bioversity (Alliance)')];
+      creation.selectedProject.set({ id: 1, leadCenter: { id: 5, acronym: 'A5', name: 'Center 5' }, sciencePrograms: [] });
+      build();
+      fixture.detectChanges();
+
+      expect(component.leadCenterLabel()).toBe('A5 - Center 5');
+    });
+
+    it('falls back to the result lead center when there is no project', () => {
+      centersService.centersList = [center(5), center(49, 'CENTER-02', 'Bioversity (Alliance)')];
+      build();
+      fixture.detectChanges();
+      creation.resultLeadCenterId.set(49);
+      fixture.detectChanges();
+
+      expect(component.leadCenterLabel()).toBe('Bioversity (Alliance) - Center 49');
+    });
+
+    it('shows a dash, not " - ", when neither the project nor the result has a lead center', () => {
+      centersService.centersList = [center(5)];
+      build();
+      fixture.detectChanges();
+
+      expect(component.leadCenterLabel()).toBe('-');
+    });
+  });
+
   describe('P2-3368 · read-only lead center and primary science program (AC1)', () => {
     it('never lets the researcher drop the lead center from the contributing list', () => {
       build();
