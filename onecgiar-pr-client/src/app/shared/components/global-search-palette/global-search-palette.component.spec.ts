@@ -93,7 +93,7 @@ describe('GlobalSearchPaletteComponent', () => {
     });
 
     it('uses stable ids as item values, never the title', () => {
-      const r = { id: 10, code: 5844, title: 'Maize', submitterCode: 'SP01', statusId: 1, statusName: 'Editing', versionId: 12 };
+      const r = { id: 10, code: 5844, title: 'Maize', submitterCode: 'SP01', statusId: 1, statusName: 'Editing', versionId: 12, sourceName: null, leadCenter: null };
       expect(component.resultValue(r)).toBe('result:10');
       expect(component.programValue({ id: 1, code: 'SP01', name: 'Sustainable Farming' })).toBe('program:SP01');
     });
@@ -134,7 +134,7 @@ describe('GlobalSearchPaletteComponent', () => {
     it('puts the TITLE first — the code and status lead visually but the title is what is hunted', () => {
       expect(
         component.resultAriaLabel({
-          id: 10, code: 5844, title: 'Maize resilience', submitterCode: 'SP01', statusId: 1, statusName: 'Editing', versionId: 12
+          id: 10, code: 5844, title: 'Maize resilience', submitterCode: 'SP01', statusId: 1, statusName: 'Editing', versionId: 12, sourceName: null, leadCenter: null
         })
       ).toBe('Maize resilience, SP01, Editing');
     });
@@ -142,7 +142,7 @@ describe('GlobalSearchPaletteComponent', () => {
     it('drops empty parts instead of leaving dangling commas', () => {
       expect(
         component.resultAriaLabel({
-          id: 1, code: 1, title: 'Only a title', submitterCode: '', statusId: 0, statusName: '', versionId: 1
+          id: 1, code: 1, title: 'Only a title', submitterCode: '', statusId: 0, statusName: '', versionId: 1, sourceName: null, leadCenter: null
         })
       ).toBe('Only a title');
     });
@@ -158,11 +158,22 @@ describe('GlobalSearchPaletteComponent', () => {
     it('closes then navigates to the result, carrying the phase', () => {
       component.openPalette();
       component.openResult({
-        id: 10, code: 5844, title: 'Maize', submitterCode: 'SP01', statusId: 1, statusName: 'Editing', versionId: 12
+        id: 10, code: 5844, title: 'Maize', submitterCode: 'SP01', statusId: 1, statusName: 'Editing', versionId: 12, sourceName: null, leadCenter: null
       });
       expect(component.open()).toBe(false);
       expect(navigate).toHaveBeenCalledWith(['/result', 'result-detail', 5844, 'general-information'], {
         queryParams: { phase: 12 }
+      });
+    });
+
+    it('opens an editing bilateral result in its lead centre editor, like the results list', () => {
+      component.openPalette();
+      component.openResult({
+        id: 20, code: 9585, title: 'Rice', submitterCode: 'SP01', statusId: 1, statusName: 'Editing', versionId: 36,
+        sourceName: 'W3/Bilaterals', leadCenter: 'AfricaRice'
+      });
+      expect(navigate).toHaveBeenCalledWith(['/bilateral', 'AfricaRice', 'result', 9585], {
+        queryParams: { phase: 36 }
       });
     });
 
