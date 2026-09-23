@@ -404,6 +404,20 @@
 - Requirements covered: BIL-RTE-R-8.a, R-8 (logical deactivation only), R-8.b, R-7.b (server), R-7.c (server), DD-5, DD-6.
 - Budget: 2 review rounds, within the budget of 2 for T-5.
 
+### BIL-RTE-T-9 — Docs and post-deploy HITL — **in progress**
+
+**Owner HITL, local stack, 2026-09-23** (this branch's server on :3400, VPN on; the owner reported each check as "done"):
+1. A non-admin program user cannot edit geography or Center data in the drawer, and Approve stays enabled. ✅
+2. A P25 "No" on ToC hides the detail block, and the save deactivates that program's rows and children. ✅ The No help text was reviewed (T-6 DoD copy item).
+3. A non-member gets 403 on approve and reject. ✅
+4. A Center user can edit at status 1 (no 409) and cannot at Pending Review. ✅
+5. As admin, an edit in the drawer's second geography block persists after reopening. ✅ This clears the T-7 attempt-1 RISK advisory.
+- SQL evidence, result 11625 (code 9157):
+  - `result_review_history` 717: UPDATE "Update to correct toc". 718: APPROVE "Approved". Both by user 323.
+  - `results_toc_result` 13740: `initiative_id` 50, `toc_result_id` 7045, `planned_result` 1, active.
+  - Note: the DB column is `initiative_id`, not `initiative_ids`.
+- Still open for T-9: the P2-3794 ticket comment (what shipped) and the post-deploy prtest check after the merge.
+
 ## Constitution Impact: BIL-RTE-T-1
 
 - New injectable `BilateralAccessService` at `onecgiar-pr-server/src/api/results/bilateral-access/`. `ResultsModule` provides and exports it, which adds to that module's public surface.

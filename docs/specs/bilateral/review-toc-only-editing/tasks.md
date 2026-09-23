@@ -219,7 +219,7 @@
   - [x] The six cases are asserted.
   - [x] `npx ng lint --quiet` clean.
   - [x] `ng build --configuration development` exit 0 (the template compile gate).
-  - [ ] Copy is reviewed by the owner at HITL (T-9).
+  - [x] Copy is reviewed by the owner at HITL (T-9, 2026-09-23).
 
 ### [x] BIL-RTE-T-7 — Lock geography Yes/No in the drawer
 
