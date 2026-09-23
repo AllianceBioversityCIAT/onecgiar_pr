@@ -483,9 +483,38 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     return Array.isArray(detail.tocMetadata) ? detail.tocMetadata[0] : detail.tocMetadata;
   }
 
+  // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-7.c, design.md §5.3)
+  /** "P25 onward" = the result's own version has a portfolio whose start year is >= 2025. `null`
+   *  (no portfolio on that version) is NOT P25-onward — same rule the server applies (design.md
+   *  §5.3). Never a portfolio id, a phase id, or the phase year (R-7.c). */
+  isP25Onward = computed<boolean>(() => {
+    const year = this.resultDetail()?.commonFields?.portfolio_start_year;
+    if (year === null || year === undefined) return false;
+    const numericYear = typeof year === 'number' ? year : Number(year);
+    return Number.isFinite(numericYear) && numericYear >= 2025;
+  });
+
+  /** No-answer helper text under the ToC question (R-10): a P25-onward result asks for nothing
+   *  further on No, because no HLO/level is shown below the question at all. */
+  getPlannedResultHelperText(): string {
+    if (this.isP25Onward()) {
+      return "Select whether this result contributes to the Program's planned Theory of Change indicators. If Yes, select the relevant HLO, indicator, and contribution. If No, nothing further is needed.";
+    }
+    return "Select whether this result contributes to the Program's planned Theory of Change indicators. If Yes, select the relevant HLO, indicator, and contribution. If No, choose the HLO under which to report it.";
+  }
+
   getTocAlertDescription(): string {
+    if (this.isP25Onward()) {
+      return 'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the Program\'s Theory of Change, please select <strong>No</strong> — no further ToC details are needed. These "No"-flagged results may be reviewed by the Program team as part of the adaptive management process.';
+    }
     return 'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These "No"-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program\'s 2026 ToC and planned indicators.';
   }
+
+  // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-5.c)
+  /** Set when a ToC save is blocked because the drawer cannot tell which program the ToC belongs
+   *  to. `null` clears the message. Never falls back to the first program of the global initiatives
+   *  list (R-5.c) — a missing `tocInitiative.initiative_id` is a hard stop, not a guess. */
+  tocInitiativeMissingMessage = signal<string | null>(null);
 
   onPlannedResultChangeValue(value: boolean | null): void {
     if (!this.tocInitiative) return;
@@ -639,6 +668,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-5.c)
+    // The saved initiative_id comes ONLY from the ToC actually shown (tocInitiative). No fallback
+    // to the first program of the global initiatives list — if the drawer cannot tell which
+    // program this ToC belongs to, refuse to save and say so, rather than guess.
+    const initiativeId = this.tocInitiative.initiative_id;
+    if (initiativeId === null || initiativeId === undefined) {
+      this.tocInitiativeMissingMessage.set(
+        'We could not determine which program this ToC belongs to. Please close and reopen the result, then try again.'
+      );
+      this.isSaving.set(false);
+      this.showConfirmSaveChangesDialog.set(false);
+      this.cdr.markForCheck();
+      return;
+    }
+    this.tocInitiativeMissingMessage.set(null);
+
     const resultId = Number.parseInt(detail.commonFields.id, 10);
 
     const resultTocResults = (this.tocInitiative.result_toc_results || []).map((tab: any) => {
@@ -683,11 +728,16 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       return resultTocResult;
     });
 
+    // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-8 defence in depth)
+    // A P25-onward No always sends an empty list — the server ignores items on No either way, but
+    // the client must not send stale detail rows for a program that just answered No.
+    const isP25OnwardNo = this.isP25Onward() && this.tocInitiative.planned_result === false;
+
     const body = {
       tocMetadata: {
         planned_result: this.tocInitiative.planned_result,
-        initiative_id: this.tocInitiative.initiative_id || this.initiativeIdSignal() || null,
-        result_toc_results: resultTocResults.length > 0 ? resultTocResults : []
+        initiative_id: initiativeId,
+        result_toc_results: isP25OnwardNo ? [] : resultTocResults.length > 0 ? resultTocResults : []
       },
       updateExplanation: this.saveChangesJustification
     };
@@ -1195,7 +1245,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           this.api.dataControlSE.currentResultSignal.set(currentResultData);
         }
 
-        let primaryInitiativeId: number | null = null;
+        // @akili-spec bilateral/review-toc-only-editing (BIL-RTE-T-6, R-5.c)
+        // `finalInitiativeId` / `initiativeIdSignal` are derived ONLY from the ToC actually shown
+        // (tocMetadata.initiative_id below). There is deliberately no fallback here to the first
+        // program of the global initiatives list fetched by GET_AllWithoutResults — that list only
+        // feeds the "Contributing Science Programs" picker now.
         let finalInitiativeId: number | null = null;
 
         const setInitiativeIdIfNeeded = (initiativeId: number | null) => {
@@ -1211,18 +1265,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe({
           next: ({ response }) => {
             this.contributingInitiativesList.set(filterOutAvisaInitiatives(response || []));
-            if (!primaryInitiativeId && response && response.length > 0 && response[0].id) {
-              primaryInitiativeId = response[0].id;
-            }
-            if (primaryInitiativeId && !finalInitiativeId) {
-              finalInitiativeId = primaryInitiativeId;
-              setInitiativeIdIfNeeded(finalInitiativeId);
-            }
-            if (primaryInitiativeId && !this.initiativeIdSignal()) {
-              setInitiativeIdIfNeeded(primaryInitiativeId);
-            }
-            // Note: The effect will automatically handle mapping when initiativesList is available
-            // No need to force update here as it could cause infinite loops
           },
           error: () => this.contributingInitiativesList.set([])
         });
@@ -1455,7 +1497,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               this.cdr.markForCheck();
             }, 0);
 
-            finalInitiativeId = tocMeta.initiative_id ?? primaryInitiativeId;
+            finalInitiativeId = tocMeta.initiative_id ?? null;
 
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
@@ -1466,10 +1508,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               this.cdr.markForCheck();
             }, 100);
           } else {
-            finalInitiativeId = primaryInitiativeId;
+            // No tocMeta object — the drawer cannot tell which program this belongs to.
+            // No fallback to the global initiatives list (R-5.c); Save is blocked instead.
             Object.assign(this.tocInitiative, {
               planned_result: false, // null treated as false (No)
-              initiative_id: primaryInitiativeId,
+              initiative_id: null,
               official_code: null,
               short_name: null,
               result_toc_results: [
@@ -1478,7 +1521,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                   toc_level_id: null,
                   toc_result_id: null,
                   planned_result: false, // null treated as false (No)
-                  initiative_id: primaryInitiativeId,
+                  initiative_id: null,
                   toc_progressive_narrative: null,
                   indicators: [
                     {
@@ -1505,10 +1548,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }, 100);
           }
         } else {
-          finalInitiativeId = primaryInitiativeId;
+          // No detail.tocMetadata at all — same rule: no fallback to the global initiatives list.
           Object.assign(this.tocInitiative, {
             planned_result: false, // null treated as false (No)
-            initiative_id: primaryInitiativeId,
+            initiative_id: null,
             official_code: null,
             short_name: null,
             result_toc_results: [
@@ -1517,7 +1560,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                 toc_level_id: null,
                 toc_result_id: null,
                 planned_result: false, // null treated as false (No)
-                initiative_id: primaryInitiativeId,
+                initiative_id: null,
                 toc_progressive_narrative: null,
                 indicators: [
                   {
@@ -1717,6 +1760,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     });
     this.initiativeIdSignal.set(null);
     this.tocConsumed.set(true);
+    this.tocInitiativeMissingMessage.set(null);
     this.showConfirmApproveDialog.set(false);
     this.showConfirmRejectDialog.set(false);
   }

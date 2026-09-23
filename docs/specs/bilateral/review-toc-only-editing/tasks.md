@@ -186,7 +186,7 @@
   - [ ] `npx tsc --noEmit` passes (entity/repository touched; the focused jest does not see every spec).
   - [ ] Additive-field note in the PR.
 
-### BIL-RTE-T-6 — Drawer ToC: P25 No renders nothing, correct program, copy
+### [x] BIL-RTE-T-6 — Drawer ToC: P25 No renders nothing, correct program, copy
 
 - **Type:** client
 - **Description:**
@@ -214,10 +214,11 @@
   - **Disqualifier:** jsdom can't prove the block is visually absent when CSS hides it rather than removing it → assert DOM absence (not rendered), never a class. A presence-only assertion is not accepted.
   - **Consumers:** `dataControlSE.currentResult` / `currentResultSignal`, set by the drawer and read by `app-cp-multiple-wps` and `FieldsManagerService`. Grep the readers of `.portfolio` before changing the value.
 - **Definition of done:**
-  - [ ] The six cases are asserted.
-  - [ ] `npx ng lint --quiet` clean.
-  - [ ] `ng build --configuration development` exit 0 (the template compile gate).
-  - [ ] Copy is reviewed by the owner at HITL.
+- **Status:** [x] PASS 2026-09-23 (1 attempt, see `execution.md`; copy review carried to T-9)
+  - [x] The six cases are asserted.
+  - [x] `npx ng lint --quiet` clean.
+  - [x] `ng build --configuration development` exit 0 (the template compile gate).
+  - [ ] Copy is reviewed by the owner at HITL (T-9).
 
 ### [x] BIL-RTE-T-7 — Lock geography Yes/No in the drawer
 

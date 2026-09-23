@@ -329,6 +329,65 @@
   - READABILITY: the "Yes" complement checks only `showDetailForm()`. A single DOM check would prove the "No" test can fail. "Level" is a broad substring; a data-testid would be sturdier.
 - Requirements covered: DD-2 challenge mitigation (R-2.b side effect), R-7 (Center editor clause).
 
+### BIL-RTE-T-5 — P25-onward No: server cascade and portfolio start year — **in progress**
+
+**Attempt 1** (2026-09-23, effort high, skills `nestjs-expert`, `tdd`; run in parallel with T-6 and T-8)
+- Files:
+  - `result.repository.ts` + spec: `portfolio_start_year` (`number | null`) on `getCommonFieldsBilateralResultById` through a LEFT JOIN on `clarisa_portfolios`, plus a new `getPortfolioStartYearByVersionId`.
+  - `results-toc-results.service.ts` + spec: `isP25OnwardNo`. The deactivate helpers return the ids they deactivated. The children are cascaded and `_handleIndicators` is skipped. `_handleUnplannedResult` goes straight to the special-case null row, and its parameter is renamed `savingInitiativeId` (the T-4 pointer).
+  - `results-toc-results.repository.ts` + spec: `deactivateChildrenForParents`, which uses `.update` only over the 5 injected child repositories.
+- Implementer verification:
+  - Red: compile errors (TS2339/TS2353).
+  - Green: 4 suites / 102 tests, and 7 suites / 245 tests with the consumers.
+  - eslint and tsc clean. No module or constructor changed.
+- Not Done / Assumptions (Implementer):
+  - The cascade lives in the ToC repository, not the expected files.
+  - `migration:check` was not run (no schema change).
+  - A later Yes that reuses an old row id could bring back old indicators.
+- Reviewer: **FAIL** (condensed)
+  > 1. **Discovered Issue:** the R-8.b case ("a later Yes keeps the old children inactive") only asserts that the cascade isn't called and that the `saveIndicatorsPrimarySubmitter` mock was called. Nothing checks that the old indicator and target rows stay inactive, and the scenario skips the reactivated-parent case.
+  >    - **Violated Rule:** `design.md` §5.2 step 6 ("A reactivated parent does not reactivate children deactivated by step 4 (R-8.b). This must be verified by test, not assumed.") and `tasks.md` T-5 Falsifier 2 / DoD.
+  >    - **Remediation:** a test-only repository-level test of `saveInditicatorsContributing` (`results-toc-results.repository.ts:1790`) for a reactivated old parent whose payload names a different indicator. Assert that the first sweep runs, and that the old indicator and its targets never receive `is_active: true`.
+  >
+  > Reviewer confirmed:
+  > - Cascade scope matches DD-4.
+  > - The special-case null row is kept.
+  > - Every child entity has `is_active` and `last_updated_by`, and the column names are right.
+  > - P25 detection: `YEAR` column, null-safe.
+  > - Consumers are unbroken, and this is not a `/api/bilateral` contract change.
+  > - The reused old row id is closed for non-admins by DD-7. For admins, a different HLO keeps the old indicators inactive; only re-picking the same indicator brings it back, which is a deliberate choice.
+  >
+  > ADVISORY:
+  > - On a P25 No, payload items still widen the scope (an admin could cascade SP Y); consider dropping the items from the scope.
+  > - With no top-level `initiative_id`, no special-case row is written (pre-existing).
+  > - The cascade writes are not in a transaction (idempotent on the next save).
+  > - Replace `expect.anything()` with `In([...])` in the repository spec.
+  > - The `.delete`/`.remove` checks are vacuous.
+  > - The additive-field note belongs in the PR body.
+
+### BIL-RTE-T-6 — Drawer ToC: P25 No renders nothing, correct program, copy — **PASS**
+
+**Attempt 1** (2026-09-23, effort high, skill `angular-developer`; run in parallel with T-5 against the `portfolio_start_year: number | null` contract)
+- Files: `result-review-drawer.component.{ts,html,spec.ts}` and `result-review-drawer.interfaces.ts`.
+  - New `isP25Onward` computed (`portfolio_start_year >= 2025`; null counts as false).
+  - `app-cp-multiple-wps` is wrapped in `@if (planned_result !== null && (!isP25Onward() || planned_result === true))`. This only adds to the old condition.
+  - A P25 No sends `result_toc_results: []`.
+  - `initiative_id` comes only from `tocInitiative`, and the `response[0].id` fallback is removed. A missing initiative blocks Save and shows `tocInitiativeMissingMessage` inline.
+  - The copy in `getPlannedResultHelperText` and `getTocAlertDescription` now differs for P25.
+- Implementer verification:
+  - Red: 20 of 224 failed against HEAD.
+  - Green: 224/224.
+  - `ng lint` clean, `ng build --configuration development` exit 0, drawer CT 17/17.
+  - Correction from the Reviewer: the "planned_result null → zero PATCH" case very likely passed at HEAD too. It works as a regression guard, not as a red-first case.
+- **Deviation (accepted by the Reviewer, recorded here):** `currentResultData.portfolio = 'P25'` is kept, even though `tasks.md` §T-6 and `design.md:146` say to replace it. The R-7 decision now reads only `isP25Onward()`. The hardcode still feeds the contributing-programs picker (`GET_AllWithoutResults`) and `FieldsManagerService` through `currentResultSignal`. Mapping it to `'P22'` for pre-P25 results would change their behaviour, which would break R-7.b. **For /akili-archive:** `design.md:146` is out of date.
+- Reviewer: **PASS**. "The six falsifiers are asserted behaviourally, the P25 gating is a DOM-absence check that only adds to the old condition (pre-P25 and null unchanged), the R-5.c fallback is removed in every load branch and save is blocked with a message, and the copy differs for P25 (R-10)."
+- ADVISORY (recorded, not gating):
+  - READABILITY: the missing-initiative message uses Tailwind palette colours, `text-xs` and a primeicons icon, against client hard rules 8, 20 and 21. It copies the reject-button styling already in the file.
+  - RELIABILITY: the read-only "Other contributors" `app-cp-multiple-wps` block is not P25-gated. **T-9 HITL: ask the owner.**
+  - READABILITY: no single test runs exec() and then checks the message in the DOM.
+- Requirements covered: BIL-RTE-R-7.a, R-7.b, R-7.c (client), R-5.c, R-10, R-11.
+- The DoD item "Copy is reviewed by the owner at HITL" is carried to T-9.
+
 ## Constitution Impact: BIL-RTE-T-1
 
 - New injectable `BilateralAccessService` at `onecgiar-pr-server/src/api/results/bilateral-access/`. `ResultsModule` provides and exports it, which adds to that module's public surface.
