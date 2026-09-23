@@ -385,6 +385,34 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/search`, { params });
   }
 
+  // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1, PTB-R-6a/6b/7)
+  /**
+   * Progress Tracker drafting proposals for one PRMS ToC indicator.
+   *
+   * ⚠️ `baseApiBaseUrl` (`api/`), NOT `apiBaseUrl` (`api/results/`) — this route is not under
+   * `api/results/`. Getting this wrong yields a 404 that looks like the `not_found` envelope
+   * status (`design.md` §4).
+   *
+   * `tocIndicatorId` is the PRMS id; the client never sends a Progress Tracker `indicator_id`.
+   * `params` is a plain object — pass `refresh` as a literal `true`/`false` only, never `1`/`0`:
+   * the server DTO uses a strict boolean with `forbidNonWhitelisted: true` and rejects anything
+   * else with 400.
+   */
+  GET_progressTrackerResults(tocIndicatorId: string | number, params: any): Observable<any> {
+    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/indicators/${tocIndicatorId}/results`, { params });
+  }
+
+  // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1, PTB-R-6a/6b/7)
+  /**
+   * Progress Tracker ready-counts for one PRMS program. Ships unused for now — the badge that
+   * consumes it is a follow-up (`design.md` §4, `S-out-2`).
+   *
+   * ⚠️ Same `baseApiBaseUrl` note as `GET_progressTrackerResults` above.
+   */
+  GET_progressTrackerReadyCounts(programId: string | number, params: any): Observable<any> {
+    return this.http.get<any>(`${this.baseApiBaseUrl}progress-tracker/programs/${programId}/ready-counts`, { params });
+  }
+
   // @akili-spec changes/kp-multi-repository-browse — KPM-R-9 / design §6.2
   /**
    * Facet values for one logical name, unioned over the selected repositories.

@@ -5413,4 +5413,58 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1)
+  describe('GET_progressTrackerResults', () => {
+    // PTB-T-1 falsifier: the assertion is on the FULL built URL, not a path suffix — a suffix-only
+    // check would pass under both baseApiBaseUrl and the apiBaseUrl trap (design.md §4).
+    it('builds the full URL under baseApiBaseUrl (api/), not apiBaseUrl (api/results/)', done => {
+      service.GET_progressTrackerResults(123, {}).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const expectedUrl = `${environment.apiBaseUrl}api/progress-tracker/indicators/123/results`;
+      const req = httpMock.expectOne(r => r.url === expectedUrl);
+      expect(req.request.url).toBe(expectedUrl);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('forwards params as-is, including a literal boolean refresh (never 1/0)', done => {
+      const params = { max_results: 5, refresh: true, mode: 'auto' };
+      service.GET_progressTrackerResults(123, params).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/progress-tracker/indicators/123/results`);
+      expect(req.request.params.get('max_results')).toBe('5');
+      expect(req.request.params.get('refresh')).toBe('true');
+      expect(req.request.params.get('mode')).toBe('auto');
+      req.flush(mockResponse);
+    });
+  });
+
+  // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-1)
+  describe('GET_progressTrackerReadyCounts', () => {
+    it('builds the full URL under baseApiBaseUrl (api/), not apiBaseUrl (api/results/)', done => {
+      service.GET_progressTrackerReadyCounts(456, {}).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const expectedUrl = `${environment.apiBaseUrl}api/progress-tracker/programs/456/ready-counts`;
+      const req = httpMock.expectOne(r => r.url === expectedUrl);
+      expect(req.request.url).toBe(expectedUrl);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('forwards params as-is', done => {
+      const params = { min_evidence: 2 };
+      service.GET_progressTrackerReadyCounts(456, params).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiBaseUrl}api/progress-tracker/programs/456/ready-counts`);
+      expect(req.request.params.get('min_evidence')).toBe('2');
+      req.flush(mockResponse);
+    });
+  });
 });

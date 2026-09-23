@@ -152,6 +152,54 @@ export interface CreateResultPayloadOptions {
   hasInnovationLink?: boolean | null;
   /** The single Innovation Development result picked when the answer is "Yes". */
   linkedResultId?: number | null;
+  /**
+   * PTB-T-5 — the minimal shape this builder needs from a picked Progress Tracker proposal
+   * (`../../pages/dashboard-lab/components/lab-report-form/components/pt-results-browse/pt-results-browse.component.ts`'s
+   * `PtProposalDto`, narrowed to only what this file writes into the payload). `undefined`/`null`
+   * for every caller that never went through the Progress Tracker tab — that is what keeps
+   * `PTB-R-17` true: the key is ABSENT from the payload, not `null` or `{}` (`PTB-AC-13`).
+   */
+  ptProposal?: PtProvenanceInput | null;
+}
+
+/**
+ * The fields `buildCreateResultPayload` reads off a Progress Tracker proposal. Deliberately NOT the
+ * full `PtProposalDto` — this file has no reason to know about guidance-only fields
+ * (`countries` / `impact_areas` / `gender_split`, `PTB-R-18`) or the fields the pre-fill mapping in
+ * `lab-report-form.component.ts` already consumed before building the payload (`title`,
+ * `result_type`, `knowledge_product_handle`).
+ */
+export interface PtProvenanceInput {
+  /** The draft narrative — becomes the body of `toc_progressive_narrative` (`PTB-R-16`). */
+  description: string;
+  /** `<indicator_id>:<n>` — sent back verbatim so the server can persist the provenance link. */
+  result_key: string;
+  /** Envelope-level fields child 1 copies onto every proposal; both optional, per `PtProposalDto`. */
+  evidence_fingerprint?: string;
+  generated_at?: string;
+}
+
+/**
+ * PTB-R-16 provenance tail appended to the proposal's draft description. Chosen format — short,
+ * readable, deterministic, and it degrades gracefully when `generated_at` is missing (envelope
+ * fields are optional on `PtProposalDto`): "Drafted from Progress Tracker proposal <result_key>[,
+ * generated <generated_at>]." Exported so the exact wording is asserted from one place instead of
+ * copied into a test fixture by hand.
+ */
+export function buildPtProvenanceTail(proposal: PtProvenanceInput): string {
+  const parts = [`Drafted from Progress Tracker proposal ${proposal.result_key}`];
+  if (proposal.generated_at) parts.push(`generated ${proposal.generated_at}`);
+  return `${parts.join(', ')}.`;
+}
+
+/**
+ * `PTB-R-16` — the draft description plus the provenance tail. Only the Progress Tracker path ever
+ * calls this; every other caller keeps sending `''` (`PTB-R-17`, `PTB-AC-13`).
+ */
+export function buildPtProgressiveNarrative(proposal: PtProvenanceInput): string {
+  const description = (proposal.description ?? '').trim();
+  const tail = buildPtProvenanceTail(proposal);
+  return description ? `${description}\n\n${tail}` : tail;
 }
 
 /**
@@ -210,9 +258,39 @@ function resolveInnovationLink(options: CreateResultPayloadOptions): Record<stri
   return { has_innovation_link: options.hasInnovationLink === true, linked_results: linked };
 }
 
+/**
+ * `PTB-R-17` / `PTB-AC-13`: every caller that never went through the Progress Tracker tab keeps
+ * sending exactly `''`, as the legacy modal always has.
+ */
+function resolveProgressiveNarrative(options: CreateResultPayloadOptions): string {
+  return options.ptProposal ? buildPtProgressiveNarrative(options.ptProposal) : '';
+}
+
+/**
+ * `PTB-R-16`: a sibling of `toc_progressive_narrative` inside the top-level body, never inside
+ * `result` (mirrors where `toc_progressive_narrative` itself sits). `undefined` — not `null`, not
+ * `{}` — when there is no pick, so the key is genuinely ABSENT from the JSON body for every existing
+ * caller (`PTB-AC-13`'s "exactly as today"). Only `result_key`, `evidence_fingerprint` and
+ * `generated_at` travel: the server's `environment` / `model` fields are optional and not carried by
+ * `PtProposalDto` — the Implementer brief for `PTB-T-5` is explicit that they must be omitted here,
+ * not backfilled with a guess.
+ */
+function resolveProgressTrackerProvenance(options: CreateResultPayloadOptions): Record<string, any> | undefined {
+  const proposal = options.ptProposal;
+  if (!proposal) return undefined;
+  // Built via spreads rather than mutating a `Record<string, any>` — assigning a named property to
+  // an index-signature-typed object trips `noPropertyAccessFromIndexSignature` (TS4111).
+  return {
+    result_key: proposal.result_key,
+    ...(proposal.evidence_fingerprint ? { evidence_fingerprint: proposal.evidence_fingerprint } : {}),
+    ...(proposal.generated_at ? { generated_at: proposal.generated_at } : {})
+  };
+}
+
 export function buildCreateResultPayload(options: CreateResultPayloadOptions): Record<string, any> {
   const resultTypeId = resolveResultTypeId(options);
   const indicator = options.indicator;
+  const ptProvenance = resolveProgressTrackerProvenance(options);
 
   return {
     result: {
@@ -233,14 +311,18 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
     contributing_center: mergeContributors(options.tocCentersSelected ?? [], options.otherCentersSelected ?? [], center => center?.code === OTHER_CENTERS_CODE),
     knowledge_product: resolveKnowledgeProduct(options, resultTypeId),
     toc_result_id: options.tocNode?.['toc_result_id'],
-    // The legacy modal always sends an empty string here: it has no narrative field, and neither
-    // does the aside. Kept so the body shape does not change under the server.
-    toc_progressive_narrative: '',
+    // PTB-R-16/17: '' for every caller that never went through the Progress Tracker tab — the
+    // legacy modal and every other caller have no narrative field, so they must keep sending
+    // exactly the empty string the server already sees today (`PTB-AC-13`).
+    toc_progressive_narrative: resolveProgressiveNarrative(options),
     // `stripReportingDisplayKeys` is defence in depth. The Reporting table bolts `__hloNode` — the
     // WHOLE HLO group, every sibling indicator included — onto each row, and this entry point
     // receives rows that never passed through `buildReportModalNode`.
     indicators: indicator ? stripReportingDisplayKeys(indicator) : [],
     contributors_result_toc_result: mergeContributors(options.tocScienceSelected ?? [], options.otherScienceSelected ?? [], sp => sp?.id === OTHER_SP_ID),
-    bilateral_project: options.bilateralProjects ?? []
+    bilateral_project: options.bilateralProjects ?? [],
+    // PTB-R-16 — a sibling of `toc_progressive_narrative`, never inside `result`. Spread only when
+    // there IS a pick, so the key is genuinely absent (not `null`/`{}`) for every other caller.
+    ...(ptProvenance ? { progress_tracker_provenance: ptProvenance } : {})
   };
 }

@@ -1,6 +1,6 @@
 # lab-report-form
 
-**Verified:** 2026-09-11 · qa-development-2026-ss (spec `changes/emerging-creation-hide-indicator-ui`, EHU-T-1: Card 2 + the ToC-attribution note are gated behind `!isEmerging()` — see "Trampa: Card 2/Card 3 comparten un solo `@if`" below); prior: 2026-09-11 · qa-development-2026-ss (spec `bugfix/emerging-contribution-not-required`, ECN-T-1: `missingFields()` no longer requires `contribution_to_indicator_target` when `isEmerging()` is true); prior: 2026-09-10 · qa-development-2026 · 2a4d965e9 (KPM-T-8, spec `changes/kp-multi-repository-browse`: Browse tab is now `Browse repositories`, live across CGSpace/MELSpace/WorldFish); prior: 2026-09-09 · qa-development-2026-ss · b1ca9ef1f (ERC-T-2); prior: 2026-09-05 · qa-development-2026 · b2d5f1c31
+**Verified:** 2026-09-22 · JuankCadavid/progress-tracker-pull-bridge (spec `changes/progress-tracker-pull-bridge/progress-tracker-results-browse`, PTB-T-1–T-7: third entry mode `progress-tracker`, `app-pt-results-browse`, Create-and-continue-only for PT picks, short tab labels Browse/Manual/Tracker under a 640px container); prior: 2026-09-11 · qa-development-2026-ss (spec `changes/emerging-creation-hide-indicator-ui`, EHU-T-1: Card 2 + the ToC-attribution note are gated behind `!isEmerging()` — see "Trampa: Card 2/Card 3 comparten un solo `@if`" below); prior: 2026-09-11 · qa-development-2026-ss (spec `bugfix/emerging-contribution-not-required`, ECN-T-1: `missingFields()` no longer requires `contribution_to_indicator_target` when `isEmerging()` is true); prior: 2026-09-10 · qa-development-2026 · 2a4d965e9 (KPM-T-8, spec `changes/kp-multi-repository-browse`: Browse tab is now `Browse repositories`, live across CGSpace/MELSpace/WorldFish); prior: 2026-09-09 · qa-development-2026-ss · b1ca9ef1f (ERC-T-2); prior: 2026-09-05 · qa-development-2026 · b2d5f1c31
 
 ## Qué es
 El formulario de creación de resultado que vive **dentro del aside** (`indicator-drawer`). Copia
@@ -14,6 +14,7 @@ inputs   tocNode · indicator · initiativeId (required) · programCode · emerg
 outputs  created · dirtyChange
 signals  canSave · currentResultIsKnowledgeProduct · needsResultLevelChoice · chosenResultLevelId
          needsCategoryChoice · categoryUnavailable · resultTypes · kpEntryMode
+         ptDraft (Progress Tracker pick; null until the user chooses a proposal)
 ```
 - Payload: **no se arma aquí** → `create-result-payload.util`. Handle: **no se valida aquí** →
   `kp-handle.validator` (ambos en `../../../../shared/report-result/`).
@@ -81,7 +82,7 @@ muestra su selección como chips con `×` debajo del control**. Footer sticky co
 ## Desviaciones conocidas del diseño
 - Chevron de desplegables y formato del contador: chrome compartido de `custom-fields/pr-multi-select`, no un retoque local. `Saved 2s ago` **no se pinta**: no hay autoguardado y fingirlo mentiría sobre el estado.
 
-## Trampa: Card 2 / Card 3 compartían un solo `@if` (spec `changes/emerging-creation-hide-indicator-ui`, EHU-T-1)
+## Trampa: Card 2 / Card 3 compartían un solo `@if` (spec `changes/emerging-creation-hide-indicator-ui`, EHU-T-1; amended by PTB-T-3/T-5)
 - ⚠️ Card 2 y Card 3 vivían bajo el MISMO `@if (!currentResultIsKnowledgeProduct() || kpEntryMode()
   === 'manual' || createResultBody().handler) { ... }`. Se **partió en dos `@if` independientes**,
   pero son **asimétricos — no los trates igual**: el de Card 2 (`!isEmerging() && (...)`) cierra
@@ -90,17 +91,35 @@ muestra su selección como chips con `×` debajo del control**. Footer sticky co
   continue`, y es dueño del `@else` (footer Cancel-only de modo browse). `!isEmerging()` NO puede ir
   en esa condición ni cerrarse tras `</section>`: cualquiera de las dos huérfana el `@else` y borra
   el footer de creación en modo emergente.
+- ⚠️ **Progress Tracker pick (`ptDraft()`)** extends the same reveal OR on **all three** sites with
+  an identical `|| ptDraft()` term (PTB-T-5). Keep the three sites identical. A PT pick never
+  auto-creates a KP result: while `ptDraft()` is set, handle Sync validates without calling
+  `autoCreateIfKnowledgeProduct()`; creation stays on **Create and continue** only (`PTB-R-11`).
 - Solo `toc-attribution-note` (dentro de Card 3) se gatea tras `!isEmerging()`; los `<select>` debajo
   quedan siempre incondicionales.
 - El número del header de Card 3 (`{{ isEmerging() ? '2' : '3' }}. Collaboration & Attribution`) es
   reactivo: con Card 2 oculta, Card 3 pasa a ser la 2ª tarjeta visible. Card 1 nunca cambia su "1.".
 
+## Entry modes (`kpEntryMode`)
+`KpEntryMode` here is `'browse' | 'manual' | 'progress-tracker'` (this file only — siblings keep
+their own unions; do not widen them). Defaults: KP → `'browse'`; non-KP → `'manual'`; emerging →
+no switcher and no PT panel.
+- **KP:** three tabs — Browse repositories · Manual entry · Progress Tracker (narrow container
+  <640px short labels: Browse · Manual · Tracker, full names on `aria-label`/`title`).
+- **Non-KP:** two tabs — Manual entry · Progress Tracker (no Browse).
+- **Browse repositories:** live (`kpBrowseEnabled = true`). CGSpace/MELSpace/WorldFish via
+  `app-kp-cgspace-browse`. `onCgspaceItemSelected` sets `selectedKpRepository` and the banner
+  names the real repo.
+- **Progress Tracker:** lazy-mounts `app-pt-results-browse` on first open, then `[hidden]`-retains
+  it (`PTB-R-22`). Fetches through `ResultsApiService.GET_progressTrackerResults` on the PRMS
+  origin only. "Use this result" pre-fills via `onPtResultSelected` / `ptDraft` and does **not**
+  POST. Banner "Drafted from Progress Tracker proposal" stays visible outside every `[hidden]`
+  panel. Provenance goes in `buildCreateResultPayload` as `progress_tracker_provenance` plus the
+  draft narrative in `toc_progressive_narrative`.
+- Geometry gate: `lab-report-form.tabs.cy.ts` (rendered rects, not classes). Pre-existing footer
+  bleed at narrow widths is gap `PTB-G-4`, not asserted.
+
 ## Pendiente / Coming soon
-- Pestaña **`Browse repositories`**: **VIVA** (`kpBrowseEnabled = true`, sin gate). Busca en
-  **CGSpace, MELSpace y WorldFish** vía `app-kp-cgspace-browse`
-  (`GET /api/results/knowledge-products/cgspace/search`), no solo `mqap?handle=`. `onCgspaceItemSelected`
-  guarda `selectedKpRepository` y el banner nombra el repo real (`kpRepositoryLabel`,
-  `kp-repositories.constants.ts`). Si una nota vieja dice "oculto" o "sin endpoint", desconfía.
 - `fundingSource` existe pero solo vale `'w1w2'`: hueco para las secciones bilaterales (P2-3352 /
   P2-3341 / P2-3353). No añadir `Contribution %` ni `Primary contributing SP` aquí.
 
