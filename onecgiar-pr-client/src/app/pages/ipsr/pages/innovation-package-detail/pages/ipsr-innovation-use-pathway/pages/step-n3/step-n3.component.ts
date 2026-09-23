@@ -3,6 +3,8 @@ import { ActorN3, IpsrStep3Body, OrganizationN3 } from './model/Ipsr-step-3-body
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
+import { untypedInnovationUseRowsMessage } from '../../../../../../utils/untyped-innovation-use-rows.util';
+import { IPSR_UNTYPED_ROWS_COPY } from '../../../../../../../../internationalization/ipsr-untyped-rows.copy';
 
 @Component({
   selector: 'app-step-n3',
@@ -87,12 +89,24 @@ export class StepN3Component implements OnInit {
     });
   }
 
+  /**
+   * Night sweep 2026-09-23, IPSR-5 — same as Step 1 (IPSR-3): a "Current use" row with figures but no
+   * type was skipped by the server with a 200 (prtest 12037). Refuse and say which rows.
+   */
+  private refuseUntypedRows(): boolean {
+    const message = untypedInnovationUseRowsMessage(this.ipsrStep3Body?.innovatonUse);
+    if (!message) return false;
+    this.api.alertsFe.show({ id: 'ipsrUntypedRows', title: IPSR_UNTYPED_ROWS_COPY.title, description: message, status: 'error' });
+    return true;
+  }
+
   isOptionalUseLevel() {
     this.innoUseLevel = this.innovationUseList.findIndex(item => item.id === this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based);
     return Boolean(this.innoUseLevel === 0);
   }
 
   onSaveSection() {
+    if (this.refuseUntypedRows()) return;
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
       this.getSectionInformation();
@@ -109,6 +123,8 @@ export class StepN3Component implements OnInit {
 
       return;
     }
+
+    if (this.refuseUntypedRows()) return;
 
     this.convertOrganizationsTosave();
 
