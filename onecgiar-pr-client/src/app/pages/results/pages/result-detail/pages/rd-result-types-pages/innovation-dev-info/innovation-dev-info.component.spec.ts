@@ -619,6 +619,19 @@ describe('InnovationDevInfoComponent', () => {
       expect(patch).not.toHaveBeenCalled();
     });
 
+    it('W12-3: P25 path, a failed body GET blocks the save — the default body would null the readiness level', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationDevP25').mockReturnValue(throwError(() => ({ status: 500 })));
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
+      component.getSectionInformationp25();
+      component.innovationDevInfoBody.short_title = 'zz-fail';
+
+      await component.onSaveSection();
+
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
     it('a failed questions GET also blocks the save', async () => {
       jest.spyOn(mockApiService.resultsSE, 'GET_questionsInnovationDevelopment').mockReturnValue(throwError(() => ({ status: 500 })));
       const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev');
