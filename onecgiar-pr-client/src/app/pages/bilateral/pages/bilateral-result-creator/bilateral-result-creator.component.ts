@@ -290,7 +290,11 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   private missingFieldsFor(section: BilateralEditorSection): string[] {
     const fields = this.mdsTracker.sectionStatus().find(s => s.sectionName === section)?.fields ?? [];
-    return fields.filter(field => !field.filled).map(field => field.label);
+    // Night sweep 2026-09-23, BIL-5 — an `optional` item (today the ToC mapping block) never gates the
+    // section (`bilateral-mds-tracker.service.ts` counts only non-optional fields), so it must not be
+    // listed as "missing" either: the footer said "2 fields missing" and then jumped to "Section
+    // complete" with the optional Indicator still empty (prtest 11987).
+    return fields.filter(field => !field.filled && !field.optional).map(field => field.label);
   }
 
   /**

@@ -370,6 +370,23 @@ describe('BilateralResultCreatorComponent', () => {
     expect(component.getSectionMdsStatus('type-specific')).toBe('complete');
   });
 
+  // Night sweep 2026-09-23, BIL-5. Control negative: without `!field.optional` this test fails.
+  it('BIL-5: an optional empty item is not counted as missing', () => {
+    component.openSectionName.set('contributors');
+    mdsTracker.sectionStatus.set([
+      {
+        sectionName: 'contributors',
+        status: 'partial',
+        fields: [
+          { key: 'toc-indicator', label: 'Indicator', filled: false, optional: true },
+          { key: 'external-partners', label: 'External partners', filled: false }
+        ]
+      }
+    ]);
+    expect(component.missingFields()).toEqual(['External partners']);
+    expect(component.missingLabel()).toBe('1 field missing');
+  });
+
   it('should have null reporting way by default', () => {
     expect(component.selectedReportingWay()).toBeNull();
   });
