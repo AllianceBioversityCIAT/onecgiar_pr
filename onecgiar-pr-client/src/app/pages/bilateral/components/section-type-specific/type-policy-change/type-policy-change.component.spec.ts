@@ -345,6 +345,24 @@ describe('TypePolicyChangeComponent', () => {
       expect(items.map((i: any) => i.key)).toEqual(['policy-type', 'policy-stage', 'policy-institutions']);
     });
 
+    // Night sweep 2026-09-23, BIL-3: 4 organizations were stored and the section read complete
+    // (prtest 11407). Control negative: without the INSTITUTIONS_MAX spread this test fails.
+    it('BIL-3: flags more than 3 implementing organizations as invalid (still filled); exactly 3 is fine', () => {
+      build();
+      const orgs = (n: number) => Array.from({ length: n }, (_, i) => ({ institutions_id: i + 1 }));
+      component.body = { policy_type_id: 1, policy_stage_id: 2, institutions: orgs(4) };
+      component.updateMds();
+      const four = mdsTracker.setSectionFields.mock.calls.at(-1)[1].find((f: any) => f.key === 'policy-institutions');
+      expect(four).toEqual(
+        expect.objectContaining({ filled: true, invalid: true, invalidReason: '4 organizations selected; the maximum is 3' })
+      );
+
+      component.body = { ...component.body, institutions: orgs(3) };
+      component.updateMds();
+      const three = mdsTracker.setSectionFields.mock.calls.at(-1)[1].find((f: any) => f.key === 'policy-institutions');
+      expect(three.invalid).toBeUndefined();
+    });
+
     it('counts a fully answered form as filled', () => {
       build();
       component.body = { policy_type_id: 1, policy_stage_id: 2, institutions: [{ institutions_id: 1 }] };
