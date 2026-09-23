@@ -4467,6 +4467,9 @@ export class ResultsService {
         resultId,
         partnersPayload,
         user,
+        // Night sweep 2026-09-23, D-2 — the drawer omits `contributingCenters` when it could not
+        // resolve them against the catalogue; absent must mean "leave the centres untouched".
+        { preserveCentersWhenAbsent: true },
       );
     if (partnersResult.status !== HttpStatus.OK) {
       this._logger.warn(`Failed to update partners for result ${resultId}`);

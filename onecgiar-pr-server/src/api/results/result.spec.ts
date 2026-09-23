@@ -2269,6 +2269,12 @@ describe('ResultsService (unit, pure mocks)', () => {
       expect(
         mockContributorsPartnersService.updatePartnersV2,
       ).toHaveBeenCalled();
+      // Night sweep 2026-09-23, D-2: the drawer omits centres it could not resolve; the reviewer path
+      // asks the writer to leave them untouched. Control negative: without the option this fails.
+      const call = (
+        mockContributorsPartnersService.updatePartnersV2 as jest.Mock
+      ).mock.calls.at(-1);
+      expect(call[3]).toEqual({ preserveCentersWhenAbsent: true });
     });
 
     /**

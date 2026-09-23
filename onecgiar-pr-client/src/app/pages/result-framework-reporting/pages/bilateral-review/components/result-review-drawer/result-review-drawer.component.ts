@@ -830,7 +830,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       })
       .filter(Boolean);
 
-    body.contributingCenters = codes
+    // Night sweep 2026-09-23, D-2 — each code is resolved against the CLARISA catalogue; when the
+    // catalogue failed (or lacks a code) the list came out short or empty and the server unlinked
+    // every centre, lead included (prtest 12039 / 12040). A list that cannot be resolved in full is
+    // not sent at all: the server treats the absent key as "leave the centres untouched" for this
+    // caller (`preserveCentersWhenAbsent`, results.service.ts `_updatePartners`).
+    const resolvedCenters = codes
       .map((code: string, index: number) => {
         const center = this.centersSE.centersList.find((c: any) => c.code === code);
         if (!center) return null;
@@ -845,6 +850,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         };
       })
       .filter(Boolean);
+    if (resolvedCenters.length === codes.length) {
+      body.contributingCenters = resolvedCenters;
+    }
 
     // Always send current contributingProjects so clearing centers does not clear bilateral projects
     const projectsArray = Array.isArray(detail.contributingProjects) ? detail.contributingProjects : [];

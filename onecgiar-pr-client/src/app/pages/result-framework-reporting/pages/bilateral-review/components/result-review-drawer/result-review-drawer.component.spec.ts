@@ -1027,14 +1027,36 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
-    it('maps centers using the centers catalogue and drops unknown ones', fakeAsync(() => {
+    it('maps centers using the centers catalogue (entries without a code are ignored) and flags the first as lead', fakeAsync(() => {
       centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
-      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', { code: 'ZZZ' }, { nope: 1 }] }));
+      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', { nope: 1 }] }));
       exec();
       tick();
       const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls[0][1];
       expect(body.contributingCenters.length).toBe(1);
       expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      flush();
+    }));
+
+    // Night sweep 2026-09-23, D-2 (prtest 12039 / 12040): with the CLARISA catalogue empty the list
+    // came out [] and the server unlinked every centre. The 7-Sep spec above (JuanCode) used to pin
+    // "drop the unknown ones" (a partial list); a list that cannot be resolved in full is now not
+    // sent at all. Control negative: without the `resolvedCenters.length === codes.length` check
+    // this fails.
+    it('D-2: omits contributingCenters when the catalogue could not resolve every stored centre', fakeAsync(() => {
+      centersMock.centersList = [];
+      component.resultDetail.set(buildDetail({ contributingCenters: ['CENTER-01'] }));
+      exec();
+      tick();
+      let body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect('contributingCenters' in body).toBe(false);
+
+      centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
+      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', { code: 'ZZZ' }] }));
+      exec();
+      tick();
+      body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect('contributingCenters' in body).toBe(false);
       flush();
     }));
 
