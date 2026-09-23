@@ -478,6 +478,7 @@ export class SummaryService {
     capdev: CapdevDto,
     resultId: number,
     user: TokenDto,
+    options: { preserveInstitutionsWhenAbsent?: boolean } = {},
   ) {
     try {
       const {
@@ -551,7 +552,14 @@ export class SummaryService {
           }
         }
         await this._resultByIntitutionsRepository.save(institutionsList);
-      } else {
+      } else if (
+        // Night sweep 2026-09-23, R-1 — a caller that never read the organizations (the reviewer's
+        // "Save data standards", `results.service.ts` review-update) omits the key; for it an ABSENT
+        // key means "leave untouched". Before this, it fell through to the delete-all below and
+        // de-activated every role-3 organization (prtest 12034 / 12036: 2 → 0). An explicit `[]`
+        // still deletes all, for every caller: that is how the forms say "the user removed them".
+        !(options.preserveInstitutionsWhenAbsent && institutions === undefined)
+      ) {
         await this._resultByIntitutionsRepository.updateGenericIstitutions(
           resultId,
           [],
