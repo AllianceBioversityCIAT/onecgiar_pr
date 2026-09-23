@@ -49,45 +49,59 @@ export class CurrentResultService {
 
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
-        this.rolesSE.validateReadOnly(response);
+        const roleCheck = this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
         this.resultLevelSE.currentResultLevelIdSignal.set(response.result_level_id);
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         this.dataControlSE.currentResult = response;
         this.dataControlSE.currentResultSignal.set(response);
-        const is_phase_open = response.is_phase_open;
-        switch (is_phase_open) {
-          case 0:
-            this.api.rolesSE.readOnly = !this.api.rolesSE.isAdmin;
-            break;
-
-          case 1: {
-            if (this.dataControlSE.currentResult.status_id != 1 && this.dataControlSE.currentResult.status_id != 6 && !this.api.rolesSE.isAdmin)
-              this.api.rolesSE.readOnly = true;
-            // Allow editing again when phase is open for Innovation development (7) / Innovation use (2)
-            // so users can switch discontinued → continued (P2-2923).
-            const rt = Number(response.result_type_id);
-            if (response.is_discontinued && rt !== 7 && rt !== 2) {
-              this.api.rolesSE.readOnly = response.is_discontinued;
-            }
-            break;
-          }
-        }
-
-        if (
-          isAvisaInitiative({
-            initiative_id: response.initiative_id,
-            official_code: response.initiative_official_code
-          })
-        ) {
-          this.api.rolesSE.readOnly = true;
-        }
+        // Night sweep 2026-09-23, W12B-2 — `validateReadOnly` is async (it re-reads the roles over HTTP)
+        // and, for a Science Program member, ends by writing `readOnly = false`, which used to land
+        // AFTER the status / phase lock below and undo it: a member saw a SUBMITTED result editable.
+        // The lock is applied now (so the screen never opens editable) and again once the roles refresh
+        // has settled, so the last write is always the stricter one.
+        this.applyResultLock(response);
+        Promise.resolve(roleCheck).then(() => {
+          // Only while this is still the open result — a later load owns the lock by then.
+          if (this.dataControlSE.currentResult === response) this.applyResultLock(response);
+        });
       },
       error: err => {
         if (err.error.statusCode == 404) this.router.navigate([`/`]);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'Result not found.', status: 'error' });
       }
     });
+  }
+
+  /** Status / phase / AVISA read-only lock for the open W1/W2 result (see W12B-2 in `GET_resultById`). */
+  private applyResultLock(response: any): void {
+    const is_phase_open = response.is_phase_open;
+    switch (is_phase_open) {
+      case 0:
+        this.api.rolesSE.readOnly = !this.api.rolesSE.isAdmin;
+        break;
+
+      case 1: {
+        if (response.status_id != 1 && response.status_id != 6 && !this.api.rolesSE.isAdmin)
+          this.api.rolesSE.readOnly = true;
+        // Allow editing again when phase is open for Innovation development (7) / Innovation use (2)
+        // so users can switch discontinued → continued (P2-2923).
+        const rt = Number(response.result_type_id);
+        if (response.is_discontinued && rt !== 7 && rt !== 2) {
+          this.api.rolesSE.readOnly = response.is_discontinued;
+        }
+        break;
+      }
+    }
+
+    if (
+      isAvisaInitiative({
+        initiative_id: response.initiative_id,
+        official_code: response.initiative_official_code
+      })
+    ) {
+      this.api.rolesSE.readOnly = true;
+    }
   }
 }
