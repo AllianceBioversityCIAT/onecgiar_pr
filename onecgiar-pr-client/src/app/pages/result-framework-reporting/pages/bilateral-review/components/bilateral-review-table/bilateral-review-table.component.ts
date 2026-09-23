@@ -546,14 +546,10 @@ export class BilateralReviewTableComponent {
     return resultStatusToken(row.status_id);
   }
 
-  /** The group-header (and cards group-bar) pending badge — same class as the pill. */
+  /** The group-header (and cards group-bar) "N pending" badge is a WARNING count, not a status
+   *  chip: it keeps its amber attention pair on purpose (BRV-T-2), so it is not read from the enum. */
   groupPendingBadgeClass(): string {
-    return 'border border-transparent';
-  }
-
-  /** The pending badge paints the Pending review (5) pair from the shared enum. */
-  groupPendingBadgeTone(): ResultStatusTokenPair {
-    return resultStatusToken(5);
+    return 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)] border border-transparent';
   }
 
   // @akili-spec changes/bilateral-review-viewport-and-table-polish (BRV-T-2, R-6, AC-9)
@@ -562,9 +558,8 @@ export class BilateralReviewTableComponent {
    *  token otherwise. Both surfaces compensate their left padding by 3px so the accent doesn't
    *  shift the label relative to the rows below it. */
   groupAccentClass(group: BilateralReviewGroup): string {
-    // Pending review fg of the shared enum (RESULT_STATUS_TOKENS[5].fg) — kept as a literal `!` class
-    // because the cell's `!border-[...]` would beat an inline style; the spec pins it to the enum.
-    return this.pendingCount(group) > 0 ? '!border-l-[var(--pr-status-submitted-fg)]' : '!border-l-[var(--pr-border)]';
+    // Group-level "has pending work" attention accent — pairs with the amber pending badge, not a status.
+    return this.pendingCount(group) > 0 ? '!border-l-[var(--pr-status-in-progress-fg)]' : '!border-l-[var(--pr-border)]';
   }
 
   // @akili-spec changes/bilateral-review-hierarchy-ux (BRH-T-3, BRH-R-7, design.md §4.2)
@@ -618,7 +613,8 @@ export class BilateralReviewTableComponent {
    *  this method's row-level accent (on the leftmost `<td>` / the card `<li>`) is the sole owner of
    *  the per-RESULT accent design.md §4.3 asks for. */
   rowAccentClass(row: ResultToReview): string {
-    // Pending review fg of the shared enum (RESULT_STATUS_TOKENS[5].fg); see groupAccentClass.
+    // Pending review fg of the shared enum (RESULT_STATUS_TOKENS[5].fg) — kept as a literal `!` class
+    // because the cell's `!border-[...]` would beat an inline style; the spec pins it to the enum.
     if (isPending(row)) return '!border-l-[var(--pr-status-submitted-fg)]';
     if (isApproved(row)) return '!border-l-[var(--pr-status-approved-fg)]';
     if (isRejected(row)) return '!border-l-[var(--pr-danger)]';
