@@ -14,6 +14,7 @@ import {
   isKnowledgeProductResultType,
   OTHER_CENTERS_CODE,
   OTHER_SP_ID,
+  PtProvenanceInput,
   ReportResultFormBody,
   resolveReportResultTypeId,
   resolveReportResultTypeName
@@ -34,6 +35,8 @@ import {
   kpRepositoryLabel
 } from '../../../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-repositories.constants';
 import { ResultFrameworkReportingHomeService } from '../../../result-framework-reporting-home/services/result-framework-reporting-home.service';
+// @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-3)
+import { PtResultsBrowseComponent, PtProposalDto } from './components/pt-results-browse/pt-results-browse.component';
 
 // @akili-spec changes/kp-program-accelerator-match (KPAM-T-3, KPAM-R-2)
 export const SCIENCE_PROGRAM_NAMES: Record<string, string> = {
@@ -50,8 +53,30 @@ export const SCIENCE_PROGRAM_NAMES: Record<string, string> = {
   SGP02: 'Accelerating Varietal Improvement in Seed Systems in Africa'
 };
 
-/** Which entry mode the knowledge-product block is on. */
-export type KpEntryMode = 'browse' | 'manual';
+/**
+ * Which source the result is being entered from. `'progress-tracker'` added by
+ * `PTB-T-3` — `KpEntryMode` is declared independently in three other components
+ * (`design.md` `P-3`); this is the only file this task touches.
+ */
+export type KpEntryMode = 'browse' | 'manual' | 'progress-tracker';
+
+/** PTB-R-9 — PRMS's title cap for a Progress Tracker pre-fill. */
+export const PT_TITLE_MAX_WORDS = 30;
+
+/**
+ * PTB-R-9 / PTB-AC-8 — truncates a Progress Tracker proposal's title to `maxWords`, reporting
+ * whether truncation actually happened so the caller can show a visible notice (never a silent
+ * truncation). Splits on a literal space, mirroring `WordCounterService.counter()`'s own splitter,
+ * so the truncated text never re-trips `titleWordCount() > 30` the moment it lands in the form —
+ * that count uses the same split rule and would otherwise disagree with the 30 words just kept.
+ */
+export function truncatePtTitle(title: string, maxWords: number = PT_TITLE_MAX_WORDS): { text: string; truncated: boolean } {
+  const trimmed = (title ?? '').trim();
+  if (!trimmed) return { text: '', truncated: false };
+  const words = trimmed.split(' ').filter(word => word !== '' && word !== '\n' && word !== '\t');
+  if (words.length <= maxWords) return { text: trimmed, truncated: false };
+  return { text: words.slice(0, maxWords).join(' '), truncated: true };
+}
 
 /** Keys for required fields that can be highlighted when validation is shown. */
 export type ReportFormFieldKey = 'category' | 'title' | 'handler' | 'contribution' | 'innovationLink';
@@ -84,7 +109,7 @@ const MISSING_FIELD_KEY: Readonly<Record<string, ReportFormFieldKey>> = Object.f
 @Component({
   selector: 'app-lab-report-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomFieldsModule, KpCgspaceBrowseComponent],
+  imports: [CommonModule, FormsModule, CustomFieldsModule, KpCgspaceBrowseComponent, PtResultsBrowseComponent],
   templateUrl: './lab-report-form.component.html',
   styleUrls: ['./lab-report-form.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -157,6 +182,10 @@ export class LabReportFormComponent {
       return;
     }
     if (this.currentResultIsKnowledgeProduct() && !this.mqapJson()) {
+      // PTB-T-5 rework (ruling c): the handle field lives on the Manual entry panel — switch there
+      // first so this button is not a no-op when the user is on Browse repositories or the
+      // Progress Tracker tab (a PT pick pre-fills the handle but never syncs it).
+      if (this.kpEntryMode() !== 'manual') this.kpEntryMode.set('manual');
       const container = this.handlerContainer()?.nativeElement;
       const target = container?.querySelector<HTMLElement>('input, textarea, a.field, [tabindex]') || container;
       target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
@@ -330,6 +359,93 @@ export class LabReportFormComponent {
   readonly selectedBilateral = signal<any[]>([]);
   readonly kpEntryMode = signal<KpEntryMode>('browse');
   readonly handleSource = signal<'browse' | 'manual'>('browse');
+
+  // ---- Progress Tracker source (PTB-T-3) -----------------------------------
+  /**
+   * The proposal picked on the Progress Tracker tab. Setting it only records the pick — nothing is
+   * persisted (`PTB-R-14`) and no other field is prefilled here; prefill/banner/payload land in
+   * `PTB-T-5`. `resetForm()` clears it whenever the drawer re-arms for a new indicator.
+   */
+  readonly ptDraft = signal<PtProposalDto | null>(null);
+  /**
+   * `PTB-R-22`: the panel is mounted once the tab is opened for the first time, then kept mounted
+   * and `[hidden]`-toggled so switching away and back never remounts it (and never re-fetches).
+   * Reset alongside the rest of the form in `resetForm()` — a fresh indicator gets a fresh mount.
+   */
+  readonly ptTabOpened = signal(false);
+  /**
+   * `PTB-R-9` / `PTB-AC-8`: true only right after a pick whose title needed truncation. Reset
+   * whenever the draft is cleared (a fresh pick, `resetForm()`, or "Change proposal") so a stale
+   * notice never survives past the pick that caused it.
+   */
+  readonly ptTitleTruncated = signal(false);
+
+  /** `related_node_id` is the string the Progress Tracker route expects (server decision block, `progress-tracker.service.ts`). */
+  readonly ptTocIndicatorId = computed<string | number | null>(() => this.indicator()?.related_node_id ?? null);
+  /**
+   * Whether the indicator already fixes its result type — same rule the picker itself uses
+   * (`resolvedIndicatorResultTypeId`, `needsCategoryChoice`). `PTB-T-5` is the actual type guard on
+   * pre-fill; here it is only passed through as an input.
+   */
+  readonly ptIndicatorFixesResultType = computed<boolean>(() => this.resolvedIndicatorResultTypeId() != null);
+
+  onOpenProgressTrackerTab(): void {
+    this.kpEntryMode.set('progress-tracker');
+    this.ptTabOpened.set(true);
+  }
+
+  /** "Change proposal" in the pick banner — clears the pick alongside its truncation flag together,
+   * so a stale notice cannot survive a proposal that no longer exists. */
+  clearPtDraft(): void {
+    this.ptDraft.set(null);
+    this.ptTitleTruncated.set(false);
+  }
+
+  /**
+   * PTB-T-5 — pre-fills through the SAME `patch()` mechanism `onCgspaceItemSelected` uses (`P-8`,
+   * `DD-3`), and — critically — never touches `mqapJson`: a PT proposal is not MQAP metadata, so a
+   * KP indicator's handle entry keeps clearing through the existing MQAP Sync (`validateHandle()`),
+   * exactly as `DD-3` requires. Records the pick (`ptDraft`); nothing is persisted here (`PTB-R-14`)
+   * — only `Create and continue` issues a request.
+   */
+  onPtResultSelected(proposal: PtProposalDto): void {
+    this.ptDraft.set(proposal);
+
+    // PTB-R-9 / PTB-AC-8: truncate to 30 words, always noting whether truncation happened so the
+    // template can show a visible notice — never a silent truncation.
+    const { text, truncated } = truncatePtTitle(proposal.title);
+    this.ptTitleTruncated.set(truncated);
+    this.patch('result_name', text);
+
+    // PTB-R-10 / PTB-AC-9 / PTB-AC-10: pre-fill the type ONLY when the indicator leaves it open.
+    // Reuses the canonical label→id table (`resolveReportResultTypeId`) instead of a second mapping,
+    // so a proposal's type resolves exactly the way the manual category picker's own catalog does.
+    // No mapping resolves -> leave `result_type_id` untouched (still open, per `PTB-R-10`).
+    if (!this.ptIndicatorFixesResultType()) {
+      const wasKnowledgeProduct = this.currentResultIsKnowledgeProduct();
+      const mappedTypeId = resolveReportResultTypeId({
+        result_type_name: proposal.result_type_label,
+        type_name: proposal.result_type
+      });
+      if (mappedTypeId != null) {
+        this.patch('result_type_id', mappedTypeId);
+      }
+      // [advisory, Leader ruling] mirrors `onCategoryChange`'s KP -> non-KP clearing: a type that no
+      // longer resolves to Knowledge product must not keep stale repository metadata around for
+      // reuse if the user later switches back. `result_name` is left alone — it was just set above.
+      if (wasKnowledgeProduct && !this.currentResultIsKnowledgeProduct()) {
+        this.mqapJson.set(null);
+        this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
+        this.patch('handler', '');
+      }
+    }
+
+    // PTB-R-11: KP handle pre-fill. Read AFTER the type patch above so a proposal that resolves an
+    // open-type indicator's category TO Knowledge product is correctly recognised as KP here too.
+    if (this.currentResultIsKnowledgeProduct() && proposal.knowledge_product_handle) {
+      this.patch('handler', proposal.knowledge_product_handle);
+    }
+  }
 
   /** Stored from the arming effect — auto-create (KPAC-T-2/T-3) awaits this Promise. */
   preselectCentersP?: Promise<void>;
@@ -591,8 +707,15 @@ export class LabReportFormComponent {
     });
     this.mqapJson.set(null);
     this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
-    this.kpEntryMode.set('browse');
+    // PTB-T-3 (design.md `DD-5` reversion challenge, item 3): a KP indicator still defaults to
+    // Browse repositories, exactly as today. A non-KP indicator has no Browse tab at all, so it
+    // must default to Manual entry — leaving the 'browse' default here is precisely the breakage
+    // the reversion challenge found (a non-KP indicator would select a tab that does not exist).
+    this.kpEntryMode.set(this.currentResultIsKnowledgeProduct() ? 'browse' : 'manual');
     this.handleSource.set('browse');
+    this.ptDraft.set(null);
+    this.ptTabOpened.set(false);
+    this.ptTitleTruncated.set(false);
     // P2-3420: back to the story's default, NO.
     this.hasInnovationLink.set(false);
     this.linkedResultId.set(null);
@@ -626,9 +749,18 @@ export class LabReportFormComponent {
     });
   }
 
-  /** KPAC-T-2/T-3 — after MQAP success, await preselect then auto-create when save-ready. */
+  /**
+   * KPAC-T-2/T-3 — after MQAP success, await preselect then auto-create when save-ready.
+   *
+   * PTB-T-5 rework (Requester ruling, 2026-09-22 — amends `PTB-R-11`): while a Progress Tracker
+   * proposal is selected (`ptDraft()` set), creation happens ONLY through "Create and continue"
+   * (`PTB-R-14`) — Sync still validates and fills `mqapJson` exactly as today, it just never reaches
+   * this auto-create. With no pick this bails identically to before (`byte-identical`, `PTB-R-13`),
+   * which is what keeps the existing KP auto-create tests green unchanged.
+   */
   private async autoCreateIfKnowledgeProduct(): Promise<void> {
     if (!this.currentResultIsKnowledgeProduct()) return;
+    if (this.ptDraft()) return;
     await Promise.resolve(this.preselectCentersP);
     if (this.canSave()) {
       this.autoCreateHint.set(null);
@@ -692,6 +824,21 @@ export class LabReportFormComponent {
   onCategoryChange(resultTypeId: number | null): void {
     const wasKnowledgeProduct = this.currentResultIsKnowledgeProduct();
     this.patch('result_type_id', resultTypeId);
+    const isKnowledgeProduct = this.currentResultIsKnowledgeProduct();
+    // PTB-T-3 rework (Reviewer FAIL, attempt 2): the re-arm-time default in `resetForm()` only
+    // covers the moment the drawer opens. Two entry paths carry NO category at that moment —
+    // `emergingMode=true` with no `emergingCategory`, and any planned indicator without one
+    // (`needsCategoryChoice()`, ~350 uncategorised indicators) — so the default was fixed at
+    // `'manual'`/`'browse'` before the user ever touched the picker. Picking "Knowledge product"
+    // here never used to touch `kpEntryMode`, so a hand-picked KP category kept the earlier
+    // default (`'manual'`) instead of `'browse'`, and the reverse flip (KP -> non-KP) left an
+    // orphaned `'browse'` selection with no matching tab. Whenever the
+    // category flips KP-ness, re-derive the mode the same way `resetForm()` does — unless the
+    // user is already on the Progress Tracker tab, which exists for both KP and non-KP (`DD-2`),
+    // so a flip must never yank them off it.
+    if (wasKnowledgeProduct !== isKnowledgeProduct && this.kpEntryMode() !== 'progress-tracker') {
+      this.kpEntryMode.set(isKnowledgeProduct ? 'browse' : 'manual');
+    }
     // A knowledge product contributes 1 by definition (KPAC-R-1) — the same default the re-arm
     // applies to KP indicators, now also when the category is picked by hand.
     if (resultTypeId === KNOWLEDGE_PRODUCT_TYPE_ID && !wasKnowledgeProduct) {
@@ -769,6 +916,9 @@ export class LabReportFormComponent {
       next: async (resp: any) => {
         this.mqapJson.set(resp.response);
         this.patch('result_name', resp.response?.title ?? '');
+        // [advisory] the title just came from the repository, not the (possibly truncated) PT
+        // proposal title it may have replaced — the truncation notice no longer applies.
+        this.ptTitleTruncated.set(false);
         this.validatingHandler.set(false);
         if (this.handleSource() === 'manual') {
           this.api.alertsFe.show({
@@ -878,6 +1028,22 @@ export class LabReportFormComponent {
         ? { id: selectedType.id, name: selectedType.name ?? '', levelId: this.resultLevelId() as number }
         : null);
 
+    // PTB-R-16/17: a payload only ever carries `ptProposal` when a Progress Tracker pick actually
+    // happened on THIS form instance (`ptDraft() !== null`) — independent of which tab is active at
+    // submit time. Every other create path passes `null`, which keeps `toc_progressive_narrative`
+    // `''` and omits `progress_tracker_provenance` entirely (`PTB-AC-13`). Only the four fields the
+    // builder reads travel — never `countries` / `impact_areas` / `gender_split` (`PTB-R-18`,
+    // `PTB-AC-17`), which this file never even destructures off `ptDraft()`.
+    const ptDraft = this.ptDraft();
+    const ptProposal: PtProvenanceInput | null = ptDraft
+      ? {
+          description: ptDraft.description,
+          result_key: ptDraft.result_key,
+          evidence_fingerprint: ptDraft.evidence_fingerprint,
+          generated_at: ptDraft.generated_at
+        }
+      : null;
+
     const body = buildCreateResultPayload({
       indicator: this.indicator(),
       tocNode: this.tocNode(),
@@ -891,7 +1057,8 @@ export class LabReportFormComponent {
       otherScienceSelected: this.otherScienceSelected(),
       bilateralProjects: this.selectedBilateral(),
       hasInnovationLink: this.showsInnovationLink() ? this.hasInnovationLink() : null,
-      linkedResultId: this.linkedResultId()
+      linkedResultId: this.linkedResultId(),
+      ptProposal
     });
 
     this.autoCreateHint.set(null);

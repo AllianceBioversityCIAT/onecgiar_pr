@@ -336,7 +336,11 @@ describe('SectionContributorsComponent', () => {
       );
       build();
       fixture.detectChanges();
-      expect(component.availableProjects()).toEqual([{ id: 11, shortName: 'P11', fullName: 'Project 11' }]);
+      // BCT-DD-4: `owner_center_institution_id` is additive on the catalog; absent (as here) or
+      // unresolved both map to `null`, which locks nothing (`lockedCenterInstitutionIds`).
+      expect(component.availableProjects()).toEqual([
+        { id: 11, shortName: 'P11', fullName: 'Project 11', ownerCenterInstitutionId: null }
+      ]);
     });
 
     it('defaults to an empty list when the projects response is null', () => {
@@ -649,6 +653,193 @@ describe('SectionContributorsComponent', () => {
         contributing_center: [],
         contributing_programs: []
       });
+    });
+  });
+
+  // ── BCT-T-6 · lock and auto-select derived Centers (requirements BCT-R-1, R-3, R-4) ──
+  describe('BCT-T-6 · locked derived Centers', () => {
+    const CIP = 2;
+    const AFRICA_RICE = 1;
+
+    /** AfricaRice is the lead (reporting) Center; CIP is a second, non-lead Center. */
+    const setupCatalogues = () => {
+      component.availableCenters.set([center(AFRICA_RICE, 'AR', 'AR'), center(CIP, 'CIP', 'CIP')] as any);
+      creation.resultLeadCenterId.set(AFRICA_RICE);
+    };
+
+    it('maps owner_center_institution_id onto the project catalogue (BCT-DD-4)', () => {
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({
+          response: [
+            { id: '10', shortName: 'P10', fullName: 'Project 10', owner_center_institution_id: CIP },
+            { id: '11', shortName: 'P11', fullName: 'Project 11', owner_center_institution_id: null }
+          ]
+        })
+      );
+      build();
+      fixture.detectChanges();
+      expect(component.availableProjects().find(p => p.id === 10)?.ownerCenterInstitutionId).toBe(CIP);
+      expect(component.availableProjects().find(p => p.id === 11)?.ownerCenterInstitutionId).toBeNull();
+    });
+
+    it('BCT-R-1: adding a CIP-owned project auto-selects CIP without a reload', () => {
+      build();
+      setupCatalogues();
+      component.contributorsHydrated.set(true);
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+    });
+
+    it('BCT-R-1: auto-select UNIONS the derived owner into the existing selection, it does not replace it', () => {
+      const OTHER = 3;
+      build();
+      setupCatalogues();
+      component.availableCenters.set([center(AFRICA_RICE, 'AR', 'AR'), center(CIP, 'CIP', 'CIP'), center(OTHER, 'OTHER', 'OTHER')] as any);
+      component.contributorsHydrated.set(true);
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      // The user had already picked a Center by hand, unrelated to any project.
+      component.selectedCenterInstitutionIds.set([OTHER]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.selectedCenterInstitutionIds()).toEqual(expect.arrayContaining([OTHER, CIP]));
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual(
+        expect.arrayContaining([{ institution_id: OTHER }, { institution_id: CIP }])
+      );
+    });
+
+    it('BCT-R-1: a project owned by the reporting (lead) Center adds no Center', () => {
+      build();
+      setupCatalogues();
+      component.contributorsHydrated.set(true);
+      component.availableProjects.set([{ id: 10, shortName: 'AR proj', fullName: 'AR proj', ownerCenterInstitutionId: AFRICA_RICE }]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.selectedCenterInstitutionIds()).toEqual([]);
+    });
+
+    it("does not lock the lead project's own owner", () => {
+      build();
+      setupCatalogues();
+      creation.selectedProject.set({ id: 10 });
+      component.readonlyLeadProjectId = 10;
+      component.availableProjects.set([{ id: 10, shortName: 'Lead proj', fullName: 'Lead proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+
+      component.onProjectsChange([]);
+
+      expect(component.selectedProjectIds()).toContain(10);
+      expect(component.selectedCenterInstitutionIds()).not.toContain(CIP);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(false);
+    });
+
+    it('BCT-R-3: a locked Center cannot be removed via the multiselect', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      component.onProjectsChange([10]);
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+
+      // The user tries to deselect CIP through the Centers multiselect.
+      component.onCentersChange(component.selectedCenterInstitutionIds().filter(id => id !== CIP));
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(true);
+    });
+
+    it('BCT-R-3: a locked Center cannot be removed via the chip remove action', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      component.onProjectsChange([10]);
+
+      // Pins the guard's own effect: the chip's remove action must not even reach a persist.
+      autoSave.saveContributors.mockClear();
+      component.removeCenter(CIP);
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+
+    it('BCT-R-4: removing the last CIP-owned project keeps CIP selected and enables it', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      component.onProjectsChange([10]);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(true);
+
+      component.onProjectsChange([]);
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(false);
+    });
+
+    it('BCT-R-4: once unlocked, removing CIP deactivates it on the next save (second half of the scenario)', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      // CIP gets derived, then loses its only owning project — it becomes an ordinary,
+      // removable Center (sticky, but no longer locked).
+      component.onProjectsChange([10]);
+      component.onProjectsChange([]);
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+
+      component.removeCenter(CIP);
+
+      expect(component.selectedCenterInstitutionIds()).not.toContain(CIP);
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).not.toContainEqual({ institution_id: CIP });
+    });
+
+    it('a project change persists exactly once even when it locks a Center', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+
+      autoSave.saveContributors.mockClear();
+      component.onProjectsChange([10]);
+
+      expect(autoSave.saveContributors).toHaveBeenCalledTimes(1);
+    });
+
+    it('never builds contributing keys before contributorsHydrated(), even while locking a Center', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+
+      component.onProjectsChange([10]);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toBeUndefined();
+      expect(payload.contributing_bilateral_projects).toBeUndefined();
+      // The selection itself is updated even though nothing is sent to the server yet.
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+    });
+
+    it('hydration unions the locked Center without persisting', () => {
+      centersService.centersList = [center(AFRICA_RICE, 'AR', 'AR'), center(CIP, 'CIP', 'CIP')];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '10', shortName: 'CIP proj', fullName: 'CIP proj', owner_center_institution_id: CIP }] })
+      );
+      creation.resultLeadCenterId.set(AFRICA_RICE);
+      creation.resultContributingProjectIds.set([10]);
+      build();
+
+      autoSave.saveContributors.mockClear();
+      fixture.detectChanges();
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
     });
   });
 
