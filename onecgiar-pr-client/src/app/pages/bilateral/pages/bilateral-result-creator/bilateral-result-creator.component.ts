@@ -29,6 +29,7 @@ import { CopyButtonComponent } from '../../../../shared/components/copy-button/c
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -122,12 +123,6 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * load fails — falling back to "Report New Bilateral Result" told the user they were creating a
    * result when they were editing one. A neutral label is honest in both states.
    */
-  private static readonly STATUS_LABELS: Record<number, string> = {
-    1: 'Editing',
-    5: 'Pending review',
-    6: 'Approved',
-    7: 'Rejected',
-  };
 
   readonly backTarget = computed(() => {
     const activeUrl = this.router.url?.includes('/result/') || this.router.url?.includes('/create')
@@ -157,40 +152,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     return code != null && String(code).trim() !== '' ? String(code) : '';
   });
   readonly resultTypeName = computed(() => this.creationService.resultTypeName() ?? '');
-  readonly statusLabel = computed(() => {
-    const id = this.creationService.resultStatusId();
-    return id != null ? BilateralResultCreatorComponent.STATUS_LABELS[Number(id)] ?? '' : '';
-  });
-  readonly statusFg = computed(() => {
-    const id = this.creationService.resultStatusId();
-    switch (Number(id)) {
-      case 1:
-        return 'var(--pr-status-in-progress-fg)';
-      case 5:
-        return '#B45309';
-      case 6:
-        return 'var(--pr-status-approved-fg)';
-      case 7:
-        return 'var(--pr-status-rejected-fg)';
-      default:
-        return 'var(--pr-status-not-started-fg)';
-    }
-  });
-  readonly statusBg = computed(() => {
-    const id = this.creationService.resultStatusId();
-    switch (Number(id)) {
-      case 1:
-        return 'var(--pr-status-in-progress-bg)';
-      case 5:
-        return '#FEF3C7';
-      case 6:
-        return 'var(--pr-status-approved-bg)';
-      case 7:
-        return 'var(--pr-status-rejected-bg)';
-      default:
-        return 'var(--pr-status-not-started-bg)';
-    }
-  });
+  // Night sweep 2026-09-23 (X-2): label and colours come from the shared result-status enum
+  // (result-status-tokens.ts, P2-3786) like the review drawer and the bilateral page header. The
+  // private map painted Pending review amber (#B45309/#FEF3C7) and only knew 1/5/6/7, so a
+  // Submitted (3) or Quality Assessed (2) result showed no chip at all.
+  readonly statusLabel = computed(() => resultStatusLabel(this.creationService.resultStatusId()));
+  readonly statusFg = computed(() => resultStatusFg(this.creationService.resultStatusId()));
+  readonly statusBg = computed(() => resultStatusBg(this.creationService.resultStatusId()));
   readonly isLoadingResult = computed(() => this.creationService.isLoadingResult());
 
   readonly resultLevelName = computed(() => {

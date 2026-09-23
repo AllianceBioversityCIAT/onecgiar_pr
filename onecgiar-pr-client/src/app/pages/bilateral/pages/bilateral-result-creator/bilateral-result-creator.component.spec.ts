@@ -16,6 +16,7 @@ import { BilateralManualCreateFlowService } from '../../services/bilateral-manua
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
+import { RESULT_STATUS_TOKENS } from '../../../../shared/constants/result-status-tokens';
 
 @Injectable()
 class MockBilateralAiService {
@@ -1144,8 +1145,10 @@ describe('BilateralResultCreatorComponent', () => {
       fixture.detectChanges();
       statusEl = q('[data-testid="bilateral-rail-status"]');
       expect(statusEl.textContent.trim()).toBe('Pending review');
-      expect(component.statusFg()).toBe('#B45309');
-      expect(component.statusBg()).toBe('#FEF3C7');
+      // X-2: Pending review reads the shared enum (blue), not the private amber.
+      expect(component.statusFg()).toBe(RESULT_STATUS_TOKENS[5].fg);
+      expect(component.statusBg()).toBe(RESULT_STATUS_TOKENS[5].bg);
+      expect(component.statusFg()).not.toBe('#B45309');
 
       // Status 6: Approved
       creationService.resultStatusId.set(6);
@@ -1162,6 +1165,33 @@ describe('BilateralResultCreatorComponent', () => {
       expect(statusEl.textContent.trim()).toBe('Rejected');
       expect(component.statusFg()).toBe('var(--pr-status-rejected-fg)');
       expect(component.statusBg()).toBe('var(--pr-status-rejected-bg)');
+    });
+
+    it('X-2: a Submitted or Quality Assessed result shows its chip from the shared enum (it used to show none)', () => {
+      creationService.resultStatusId.set(3);
+      enterEditor(42);
+      let statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl).not.toBeNull();
+      expect(statusEl.textContent.trim()).toBe('Submitted');
+      expect(component.statusFg()).toBe(RESULT_STATUS_TOKENS[3].fg);
+      expect(component.statusBg()).toBe(RESULT_STATUS_TOKENS[3].bg);
+
+      creationService.resultStatusId.set(2);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Quality Assessed');
+      expect(component.statusBg()).toBe(RESULT_STATUS_TOKENS[2].bg);
+
+      // The wire may send the id as a string.
+      creationService.resultStatusId.set('3' as any);
+      fixture.detectChanges();
+      expect(component.statusLabel()).toBe('Submitted');
+    });
+
+    it('X-2: no status id still renders no chip', () => {
+      creationService.resultStatusId.set(null);
+      enterEditor(42);
+      expect(q('[data-testid="bilateral-rail-status"]')).toBeNull();
     });
 
     it('renders identity skeleton loader when isLoadingResult is true and resultId is null (BRRA-R-2)', () => {
