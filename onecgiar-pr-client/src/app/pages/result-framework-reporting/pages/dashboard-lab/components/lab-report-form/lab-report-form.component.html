@@ -77,36 +77,70 @@
     </div>
   }
 
-  <!-- Knowledge products come from a repository. The design specifies two entry modes, but
-       browsing has no endpoint yet (P2-3231) and business asked to hide it rather than show it
-       disabled while P/As are testing (P2-3479) — so the whole switcher is gated behind
-       `kpBrowseEnabled`. Manual entry stays, it is simply no longer presented as a choice. -->
+  <!-- Entry-mode switcher (`PTB-T-3`, `design.md` §6.2, Leader correction). Emerging mode renders
+       EXACTLY as HEAD: the KP Browse/Manual switcher, the Browse panel and the handle field are
+       KP-only and unconditional on `isEmerging()` — only the NEW things (the Progress Tracker tab,
+       its panel, and the non-KP two-tab switcher) are gated on "not emerging" (`PTB-R-12`,
+       `PTB-R-13`). Concretely: KP+not-emerging → Browse | Manual | Progress Tracker; KP+emerging →
+       Browse | Manual, as HEAD; non-KP+not-emerging → Manual | Progress Tracker; non-KP+emerging →
+       no switcher, as HEAD. -->
   @if (currentResultIsKnowledgeProduct()) {
     <div class="mb-2">
       @if (kpBrowseEnabled) {
-        <div class="mb-4 flex w-full rounded-xl bg-gray-100 p-1" role="tablist" aria-label="How to add the knowledge product">
+        <!-- PTB-T-6 rework (design.md §6.3, requester-approved): below a 640px ASIDE width the
+             labels wrap to two lines (measured 57px vs the 35px single-line baseline). Each tab
+             now carries a short (`@min-[640px]:hidden`) and a full (`hidden @min-[640px]:inline`)
+             label; the accessible name (`aria-label`) and `title` stay the FULL text at every
+             width. `@container` (container-type: inline-size) on the tablist itself is deliberate
+             over a viewport `min-[640px]:` breakpoint — the aside is user-resizable independently
+             of the browser viewport (`indicator-drawer.component.ts`'s drag-resize), so the
+             viewport is not the width that matters here. Same `@container`/`@min-[Npx]:` pattern
+             already used in `program-overview.component.html`. Never mix this with a viewport
+             `min-[640px]:`/`sm:` on the SAME property (project-tailwind-named-vs-arbitrary-breakpoints.md). -->
+        <div class="mb-4 flex w-full rounded-xl bg-gray-100 p-1 @container" role="tablist" aria-label="How to add the knowledge product">
           <button
             type="button"
             role="tab"
             [attr.aria-selected]="kpEntryMode() === 'browse'"
+            aria-label="Browse repositories"
+            title="Browse repositories"
             (click)="kpEntryMode.set('browse')"
             class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
             [ngClass]="kpEntryMode() === 'browse' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
-            Browse repositories
+            <span class="@min-[640px]:hidden" data-testid="tab-label-short">Browse</span>
+            <span class="hidden @min-[640px]:inline" data-testid="tab-label-full">Browse repositories</span>
           </button>
           <button
             type="button"
             role="tab"
             [attr.aria-selected]="kpEntryMode() === 'manual'"
+            aria-label="Manual entry"
+            title="Manual entry"
             (click)="kpEntryMode.set('manual')"
             class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
             [ngClass]="kpEntryMode() === 'manual' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
-            Manual entry
+            <span class="@min-[640px]:hidden" data-testid="tab-label-short">Manual</span>
+            <span class="hidden @min-[640px]:inline" data-testid="tab-label-full">Manual entry</span>
           </button>
+          @if (!isEmerging()) {
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="kpEntryMode() === 'progress-tracker'"
+              aria-label="Progress Tracker"
+              title="Progress Tracker"
+              (click)="onOpenProgressTrackerTab()"
+              class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
+              [ngClass]="kpEntryMode() === 'progress-tracker' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
+              <span class="@min-[640px]:hidden" data-testid="tab-label-short">Tracker</span>
+              <span class="hidden @min-[640px]:inline" data-testid="tab-label-full">Progress Tracker</span>
+            </button>
+          }
         </div>
       }
 
-      <!-- Browse panel: mounted and kept with [hidden] per R-21 -->
+      <!-- Browse panel: mounted and kept with [hidden] per R-21. KP-only, unchanged — unconditional
+           on `isEmerging()`, exactly as HEAD. -->
       <div [hidden]="kpEntryMode() !== 'browse'">
         @if (createResultBody().handler) {
           <!-- Selected KP item banner -->
@@ -154,7 +188,8 @@
         }
       </div>
 
-      <!-- Manual entry panel -->
+      <!-- Manual entry panel: the KP handle field. KP-only, unchanged — unconditional on
+           `isEmerging()`, exactly as HEAD. -->
       <div [hidden]="kpEntryMode() !== 'manual'" #handlerContainer class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('handler')" data-testid="field-handler">
         <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
           Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
@@ -192,10 +227,129 @@
           <p class="lrf-field-error" role="alert">Sync a valid repository handle before creating the result.</p>
         }
       </div>
+
+      <!-- Progress Tracker panel: NEW, not-emerging only. Lazy-mounted the first time this tab
+           opens, then kept mounted and `[hidden]`-toggled so switching tabs away and back never
+           remounts or re-fetches (`PTB-R-22`, `DD-2`). -->
+      @if (!isEmerging() && ptTabOpened()) {
+        <div [hidden]="kpEntryMode() !== 'progress-tracker'">
+          <!-- PTB-T-5 rework (Reviewer FAIL, attempt 2): the "nothing saved" banner moved OUT of
+               this [hidden] panel — see the reveal-gated block below, so it travels with the pick
+               across every tab, not just this one. This inline prompt is PT-tab-specific: a KP pick
+               whose handle has not been synced yet cannot complete through this tab at all (`Sync`
+               only lives on Manual entry), so say so here instead of leaving a dead end. -->
+          @if (currentResultIsKnowledgeProduct() && ptDraft() && !mqapJson()) {
+            <div
+              class="mb-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 flex flex-col gap-2.5 shadow-xs"
+              data-testid="pt-sync-required-prompt">
+              <p class="m-0 text-[12.5px] leading-relaxed text-amber-800">
+                <span class="material-icons-round align-middle text-[15px] mr-1" aria-hidden="true">info</span>
+                This proposal's repository handle is already filled in, but must be synced before you
+                can create this result. Go to Manual entry and press Sync.
+              </p>
+              <button
+                type="button"
+                (click)="kpEntryMode.set('manual')"
+                data-testid="pt-sync-required-switch-to-manual"
+                class="self-start inline-flex items-center gap-1.5 rounded-lg border-0 bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700 cursor-pointer">
+                Go to Manual entry
+              </button>
+            </div>
+          }
+          <app-pt-results-browse
+            [tocIndicatorId]="ptTocIndicatorId()"
+            [indicatorFixesResultType]="ptIndicatorFixesResultType()"
+            [isKnowledgeProduct]="currentResultIsKnowledgeProduct()"
+            [busy]="validatingHandler() || creatingResult()"
+            (proposalSelected)="onPtResultSelected($event)"
+            (switchToManual)="kpEntryMode.set('manual')">
+          </app-pt-results-browse>
+        </div>
+      }
+    </div>
+  } @else if (!isEmerging()) {
+    <!-- NEW: non-KP, not emerging → two-tab switcher (Manual entry, Progress Tracker). A non-KP
+         emerging result shows no switcher at all, exactly as HEAD. -->
+    <div class="mb-2">
+      <!-- PTB-T-6 rework (design.md §6.3) — same short/full label + @container mechanism as the
+           KP three-tab switcher above; see its comment for the rationale. -->
+      <div class="mb-4 flex w-full rounded-xl bg-gray-100 p-1 @container" role="tablist" aria-label="How to add this result">
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="kpEntryMode() === 'manual'"
+          aria-label="Manual entry"
+          title="Manual entry"
+          (click)="kpEntryMode.set('manual')"
+          class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
+          [ngClass]="kpEntryMode() === 'manual' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
+          <span class="@min-[640px]:hidden" data-testid="tab-label-short">Manual</span>
+          <span class="hidden @min-[640px]:inline" data-testid="tab-label-full">Manual entry</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="kpEntryMode() === 'progress-tracker'"
+          aria-label="Progress Tracker"
+          title="Progress Tracker"
+          (click)="onOpenProgressTrackerTab()"
+          class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
+          [ngClass]="kpEntryMode() === 'progress-tracker' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
+          <span class="@min-[640px]:hidden" data-testid="tab-label-short">Tracker</span>
+          <span class="hidden @min-[640px]:inline" data-testid="tab-label-full">Progress Tracker</span>
+        </button>
+      </div>
+
+      @if (ptTabOpened()) {
+        <div [hidden]="kpEntryMode() !== 'progress-tracker'">
+          <!-- PTB-T-5 rework: no banner and no sync prompt here — non-KP has no handle to sync, and
+               the "nothing saved" banner now lives outside this [hidden] panel (below) so it
+               travels with the pick across every tab, not just this one. -->
+          <app-pt-results-browse
+            [tocIndicatorId]="ptTocIndicatorId()"
+            [indicatorFixesResultType]="ptIndicatorFixesResultType()"
+            [isKnowledgeProduct]="currentResultIsKnowledgeProduct()"
+            [busy]="validatingHandler() || creatingResult()"
+            (proposalSelected)="onPtResultSelected($event)"
+            (switchToManual)="kpEntryMode.set('manual')">
+          </app-pt-results-browse>
+        </div>
+      }
     </div>
   }
 
-  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler || !!ptDraft()) {
+    <!-- PTB-T-5 rework (Reviewer FAIL, attempt 2): the pick and its disclosure travel TOGETHER on
+         every tab — this banner lives OUTSIDE both [hidden] PT panels above, gated on `ptDraft()`
+         alone (the reveal condition on this whole block is too), so switching to Manual or Browse
+         after a pick never hides the "nothing saved" notice while the prefilled fields are still
+         live in the form. Mirrors the KP selected-item banner's visual language (`:127-157`). -->
+    @if (ptDraft(); as ptPick) {
+      <div
+        class="mb-4 rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/90 to-violet-50/40 p-4 flex flex-col gap-2 shadow-xs"
+        data-testid="pt-pick-banner">
+        <div class="flex items-center justify-between gap-3">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 border border-violet-200">
+            <span class="material-icons-round text-[13px]" aria-hidden="true">bolt</span>
+            Progress Tracker draft selected
+          </span>
+          <button
+            type="button"
+            (click)="clearPtDraft()"
+            data-testid="pt-change-proposal"
+            class="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 hover:text-violet-900 transition-colors cursor-pointer bg-transparent border-0 p-0">
+            <span class="material-icons-round text-[15px]" aria-hidden="true">swap_horiz</span>
+            Change proposal
+          </button>
+        </div>
+        <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">{{ ptPick.title }}</h4>
+        <p class="m-0 text-[12px] font-semibold text-violet-700" data-testid="pt-nothing-saved-note">
+          Nothing has been saved yet — press "Create and continue" below to create this result.
+        </p>
+      </div>
+    }
+
     <!-- result title. For a knowledge product it is filled by the sync and stays locked: `disabled`
          is the lever that does that — `readOnly` is inert while `isStatic` is on. -->
     <div class="lrf-field" [class.lrf-field--invalid]="fieldInvalid('title')" data-testid="field-title">
@@ -252,6 +406,15 @@
           }
         </p>
       }
+      <!-- PTB-R-9 / PTB-AC-8: a VISIBLE notice — never a silent truncation — when the Progress
+           Tracker proposal's title needed shortening to PRMS's 30-word cap. Gated on `ptDraft()`
+           too so it cannot outlive the pick that caused it (e.g. after "Change proposal"). -->
+      @if (ptDraft() && ptTitleTruncated()) {
+        <p class="m-0 mt-1.5 flex items-center gap-1.5 text-[12px] text-amber-700" data-testid="pt-title-truncated-notice">
+          <span class="material-icons-round text-[14px]" aria-hidden="true">content_cut</span>
+          This title was longer than 30 words and was shortened to fit PRMS's limit.
+        </p>
+      }
     </div>
 
   <!-- P2-3420 — link to a QA'd Innovation Development result. Innovation use only, 2026 phase
@@ -304,7 +467,7 @@
 }
   </section>
 
-  @if (!isEmerging() && (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler)) {
+  @if (!isEmerging() && (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler || !!ptDraft())) {
     <!-- ==================== CARD 2: TARGET CONTRIBUTION ==================== -->
     <section
       data-testid="card-target-contribution"
@@ -367,7 +530,7 @@
     </section>
   }
 
-  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler || !!ptDraft()) {
     <!-- ==================== CARD 3: COLLABORATION & ATTRIBUTION ==================== -->
     <section
       data-testid="card-collaboration"
