@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { RdGeographicLocationComponent } from './rd-geographic-location.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -72,6 +74,9 @@ describe('RdGeographicLocationComponent', () => {
 
     fixture = TestBed.createComponent(RdGeographicLocationComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (P1 twin): these tests model a section whose GETs already landed;
+    // the load-failure gate has its own describe block.
+    component.loaded.set(true);
   });
 
   describe('Component Initialization', () => {
@@ -103,6 +108,61 @@ describe('RdGeographicLocationComponent', () => {
       component.getSectionInformation();
 
       expect(component.geographicLocationBody.geo_scope_id).toBe(GeoScopeEnum.COUNTRY);
+    });
+  });
+
+  describe('P1 twin (night sweep 2026-09-23) — refuses to save after a failed section load', () => {
+    // Control negative: with the `loaded` gate lines removed from `performSave()` / `onSaveSection()`
+    // the "does not PATCH" tests below fail.
+    beforeEach(() => {
+      component.loaded.set(null);
+      mockApiService.resultsSE.GET_geographicSection = () => throwError(() => ({ status: 500 }));
+    });
+
+    it('marks the section as not loaded when the first GET fails', () => {
+      component.getSectionInformation();
+
+      expect(component.loaded()).toBe(false);
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('does not PATCH from the Save button after a failed load', () => {
+      const legacy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSection');
+      const p25 = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSectionp25');
+      component.getSectionInformation();
+
+      component.onSaveSection();
+
+      expect(legacy).not.toHaveBeenCalled();
+      expect(p25).not.toHaveBeenCalled();
+    });
+
+    it('saveSection() (unsaved-changes guard) resolves false without PATCHing', () => {
+      const legacy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSection');
+      component.getSectionInformation();
+
+      let resolved: boolean | undefined;
+      component.saveSection().subscribe(result => (resolved = result));
+
+      expect(resolved).toBe(false);
+      expect(legacy).not.toHaveBeenCalled();
+    });
+
+    it('a failed RE-load after a successful load keeps Save available', () => {
+      const legacy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSection');
+      component.loaded.set(true);
+      component.getSectionInformation();
+
+      component.onSaveSection();
+
+      expect(component.loaded()).toBe(true);
+      expect(legacy).toHaveBeenCalled();
+    });
+
+    it('renders the load-error note only on a failed load, and disables the bottom-bar Save', () => {
+      const html = readFileSync(join(__dirname, 'rd-geographic-location.component.html'), 'utf8');
+      expect(html).toContain('@if (loaded() === false) {');
+      expect(html).toContain('[disabled]="loaded() !== true"');
     });
   });
 
