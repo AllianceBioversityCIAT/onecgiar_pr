@@ -1,10 +1,13 @@
 import {
   buildCreateResultPayload,
+  buildPtProgressiveNarrative,
+  buildPtProvenanceTail,
   CreateResultPayloadOptions,
   isKnowledgeProductResultType,
   OTHER_CENTERS_CODE,
   OTHER_OUTPUT_TYPE_ID,
   OTHER_SP_ID,
+  PtProvenanceInput,
   resolveReportResultTypeId,
   resolveReportResultTypeName
 } from './create-result-payload.util';
@@ -390,5 +393,109 @@ describe('buildCreateResultPayload — KPAC knowledge-product contribution (KPAC
 
       expect(payload['contributing_indicator']).toBe(contribution);
     }
+  });
+});
+
+/**
+ * @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-results-browse (PTB-T-5)
+ *
+ * `PTB-R-16`/`PTB-R-17`/`PTB-AC-12`/`PTB-AC-13`: the Progress Tracker path is the ONLY caller that
+ * ever sets `toc_progressive_narrative` to something other than `''`, and the ONLY caller that ever
+ * adds `progress_tracker_provenance` to the body.
+ */
+describe('buildCreateResultPayload — Progress Tracker provenance (PTB-T-5)', () => {
+  const ptProposal: PtProvenanceInput = {
+    description: 'A conflict sensitivity hub established as a strategic mechanism.',
+    result_key: '8006329bfd49:1',
+    evidence_fingerprint: 'f9adbe6f47c1e67fba54eac88e3c7f50aefa75c6bf4b1bbe9359e586aa01a181',
+    generated_at: '2026-09-22T18:47:26.657864+00:00'
+  };
+
+  // Falsifier 2 (task brief): mutating the builder's default `toc_progressive_narrative` from ''
+  // to the draft for every caller must turn this red. Uses a `reporting-aow-table`-shaped indicator
+  // row (carrying `__hloNode`/`__hlo`, exactly as `ReportingIndicator` rows arrive here) because
+  // `reporting-aow-table.component.ts` itself never calls `buildCreateResultPayload` directly (0
+  // hits beyond a docstring — confirmed by `grep -n "buildCreateResultPayload"` on that file) — its
+  // rows reach this builder only via `lab-report-form.component.ts`'s single call site. This is
+  // the test that stands in for "the reporting-aow-table payload test" the brief asks for.
+  it('PTB-AC-13 — a reporting-aow-table-shaped row with no Progress Tracker pick still sends an empty narrative', () => {
+    const payload = buildCreateResultPayload(
+      options({
+        indicator: indicatorOfType(7, { __hlo: 'HLO1', __hloNode: { indicators: [1, 2, 3] }, __aowCode: 'AOW01' }),
+        body: { ...emptyBody, result_name: 'x' }
+      })
+    );
+
+    expect(payload['toc_progressive_narrative']).toBe('');
+  });
+
+  // Falsifier 3 (advisory-grade, task brief): the provenance block must be ABSENT — not `{}`, not
+  // `null` — for every caller with no pick.
+  it('PTB-AC-13 — omits progress_tracker_provenance entirely when there is no pick', () => {
+    const payload = buildCreateResultPayload(options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' } }));
+
+    expect(payload).not.toHaveProperty('progress_tracker_provenance');
+    expect(Object.keys(payload)).not.toContain('progress_tracker_provenance');
+  });
+
+  it('PTB-AC-12 — carries the draft description plus the provenance tail in toc_progressive_narrative', () => {
+    const payload = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal })
+    );
+
+    expect(payload['toc_progressive_narrative']).toBe(
+      'A conflict sensitivity hub established as a strategic mechanism.\n\n' +
+        'Drafted from Progress Tracker proposal 8006329bfd49:1, generated 2026-09-22T18:47:26.657864+00:00.'
+    );
+  });
+
+  it('PTB-AC-12 — the tail degrades gracefully when generated_at is missing', () => {
+    const tail = buildPtProvenanceTail({ description: '', result_key: '8006329bfd49:2' });
+    expect(tail).toBe('Drafted from Progress Tracker proposal 8006329bfd49:2.');
+  });
+
+  it('buildPtProgressiveNarrative falls back to the tail alone when the draft has no description', () => {
+    expect(buildPtProgressiveNarrative({ description: '  ', result_key: '8006329bfd49:2' })).toBe(
+      'Drafted from Progress Tracker proposal 8006329bfd49:2.'
+    );
+  });
+
+  it('PTB-R-16 — sends result_key, evidence_fingerprint and generated_at as a sibling of result, never inside it', () => {
+    const payload = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal })
+    );
+
+    expect(payload['progress_tracker_provenance']).toEqual({
+      result_key: '8006329bfd49:1',
+      evidence_fingerprint: 'f9adbe6f47c1e67fba54eac88e3c7f50aefa75c6bf4b1bbe9359e586aa01a181',
+      generated_at: '2026-09-22T18:47:26.657864+00:00'
+    });
+    expect(payload['result']).not.toHaveProperty('progress_tracker_provenance');
+  });
+
+  it('omits evidence_fingerprint / generated_at from the provenance block when the proposal carries neither', () => {
+    const payload = buildCreateResultPayload(
+      options({
+        indicator: indicatorOfType(7),
+        body: { ...emptyBody, result_name: 'x' },
+        ptProposal: { description: 'x', result_key: '8006329bfd49:3' }
+      })
+    );
+
+    expect(payload['progress_tracker_provenance']).toEqual({ result_key: '8006329bfd49:3' });
+  });
+
+  // [advisory, Leader-examined]: PtProvenanceInput structurally has no countries/impact_areas/
+  // gender_split fields, so this assertion cannot fail — it is not the real PTB-AC-17 lock. The
+  // real lock is the component test asserting the guidance-only fields are absent from the payload
+  // built with a live ptDraft() (`lab-report-form.component.spec.ts`, "PTB-AC-12 / PTB-R-16 /
+  // PTB-AC-17" test). Retitled rather than deleted: it is still a real (if narrow) regression guard
+  // against someone widening `PtProvenanceInput` to the full `PtProposalDto` shape later.
+  it('PtProvenanceInput carries no guidance-only fields by construction (the real PTB-AC-17 lock is the component test)', () => {
+    const payload = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(7), body: { ...emptyBody, result_name: 'x' }, ptProposal })
+    );
+
+    expect(JSON.stringify(payload)).not.toMatch(/countries|impact_areas|gender_split/);
   });
 });
