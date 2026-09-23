@@ -17,7 +17,7 @@ import { PrSelectComponent } from '../../../../../../../../custom-fields/pr-sele
 import { LabelNamePipe } from '../../../../../../../../custom-fields/pr-select/label-name.pipe';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 describe('StepN4Component', () => {
   let component: StepN4Component;
@@ -37,6 +37,35 @@ describe('StepN4Component', () => {
     fixture = TestBed.createComponent(StepN4Component);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
+    // Night sweep 2026-09-23 (IPSR-4): the save tests model a loaded step; the gate has its own block.
+    component.loaded.set(true);
+  });
+
+  // Night sweep 2026-09-23, IPSR-4 (prtest 12037): GET 500 → Save deactivated every reference
+  // material. Control negative: with the gate lines removed these tests fail.
+  describe('IPSR-4 — refuses to save after a failed Step-4 load', () => {
+    beforeEach(() => {
+      component.loaded.set(null);
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepFourByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+    });
+
+    it('marks the step as not loaded and Save sends nothing', () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiId').mockReturnValue(of({ response: {} }) as any);
+      component.getSectionInformation();
+      component.onSaveSection();
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to previous step" only navigates, without saving', () => {
+      component.api.rolesSE.readOnly = false;
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiIdPrevious').mockReturnValue(of({ response: {} }) as any);
+      const nav = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+      component.getSectionInformation();
+      component.onSavePrevious('previous');
+      expect(patch).not.toHaveBeenCalled();
+      expect(nav).toHaveBeenCalled();
+    });
   });
 
   it('should create', () => {
