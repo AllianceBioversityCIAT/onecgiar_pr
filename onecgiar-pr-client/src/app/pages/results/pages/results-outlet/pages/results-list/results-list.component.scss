@@ -844,9 +844,11 @@
   color: var(--pr-status-not-started-fg) !important;
   background: var(--pr-status-not-started-bg) !important;
 }
+// P2-3553 · Pending review rides the Submitted pair: same rung of the flow (sent, waiting on
+// someone else). Grey used to say "inactive" about a result that is mid-flight.
 .status_tag.status_5 {
-  color: var(--pr-status-not-started-fg) !important;
-  background: var(--pr-status-not-started-bg) !important;
+  color: var(--pr-status-submitted-fg) !important;
+  background: var(--pr-status-submitted-bg) !important;
 }
 .status_tag.status_6 {
   color: var(--pr-status-approved-fg) !important;
@@ -953,8 +955,8 @@
 
 .status_5 {
   border-color: transparent !important;
-  color: var(--pr-status-not-started-fg) !important;
-  background: var(--pr-status-not-started-bg) !important;
+  color: var(--pr-status-submitted-fg) !important;
+  background: var(--pr-status-submitted-bg) !important;
 }
 
 .status_6 {
@@ -969,15 +971,10 @@
   background: var(--pr-status-rejected-bg) !important;
 }
 
-.status_6 {
-  border-color: var(--pr-color-green-600);
-  color: var(--pr-color-green-600);
-}
-
-.status_7 {
-  border-color: var(--pr-color-red-300);
-  color: var(--pr-color-red-300);
-}
+// P2-3553 · A trailing override used to repaint Approved and Rejected with the LEGACY PRMS green
+// and red (--pr-color-green-600 / --pr-color-red-300) while keeping the token background from the
+// block above — i.e. half of one pair on half of another, which UI-RULES rule 9 exists to forbid.
+// Removed: the status pairs above are the only definition.
 
 // ── Metadata chips ─────────────────────────────────────────────────────────
 // Turn categorical metadata columns (funding source, indicator category, center)

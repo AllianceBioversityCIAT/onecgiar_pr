@@ -102,13 +102,16 @@
           @if (subNationalSelectionMissing) {
             <p class="sg-field-error">Select at least one sub-national location for each country.</p>
           }
+          <!-- P2-3788: `[readOnly]="false"` duro dejaba borrar países y sub-nacionales en un
+               resultado ya enviado. El autosave no escribe (P2-3520), así que la pantalla fingía
+               editar: el usuario quitaba una entrada, recargaba y seguía ahí. -->
           @for (country of geographicLocationBody().countries; track country.id; let idx = $index) {
             <app-sub-geoscope
               [obj_country]="country"
               [index]="idx"
               [obj_countrySelected]="geographicLocationBody().countries"
               [name]="country.name"
-              [readOnly]="false"
+              [readOnly]="readOnly()"
               (changed)="queueGeographySave()">
             </app-sub-geoscope>
           }
@@ -201,13 +204,14 @@
             @if (extraSubNationalSelectionMissing) {
               <p class="sg-field-error">Select at least one sub-national location for each extra country.</p>
             }
+            <!-- P2-3788: mismo caso que el bloque principal. -->
             @for (country of extraGeographicLocationBody().countries; track country.id; let idx = $index) {
               <app-sub-geoscope
                 [obj_country]="country"
                 [index]="idx"
                 [obj_countrySelected]="extraGeographicLocationBody().countries"
                 [name]="country.name"
-                [readOnly]="false"
+                [readOnly]="readOnly()"
                 (changed)="queueGeographySave()">
               </app-sub-geoscope>
             }

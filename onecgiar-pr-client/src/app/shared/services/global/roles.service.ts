@@ -22,6 +22,14 @@ export class RolesService {
   private readonly _readOnly = signal<boolean>(true);
   currentInitiativeRole = null;
   roles: any;
+  /**
+   * Bumped every time the roles payload is (re)applied. `roles` is a plain property, so anything
+   * derived from it — `getMyCenters()`, `validateCenterAccess()` — is invisible to the signal
+   * graph: a `computed()` that asks "does this user belong to centre X?" caches the answer it got
+   * BEFORE `GET role-by-user/get/user/:id` resolved and never recomputes. Reading this counter
+   * alongside the call makes that derivation react to the roles arriving.
+   */
+  private readonly rolesVersionState = signal(0);
   private readonly isAdminState = signal(false);
   firstValidationOfReadOnly = false;
   access = {
@@ -58,6 +66,11 @@ export class RolesService {
     this._readOnly.set(value);
   }
 
+  /** Changes whenever `roles` is replaced; read it to make a `roles`-derived computed reactive. */
+  get rolesVersion(): number {
+    return this.rolesVersionState();
+  }
+
   get isAdmin(): boolean {
     return this.isAdminState();
   }
@@ -80,6 +93,7 @@ export class RolesService {
   applyRolesResponse(response: any) {
     if (!response) return;
     this.roles = response;
+    this.rolesVersionState.update(v => v + 1);
     localStorage.setItem('roles', JSON.stringify(response));
     const { isAdmin } = this.validateApplication(response.application);
     if (isAdmin) {
@@ -146,6 +160,7 @@ export class RolesService {
 
     try {
       this.roles = JSON.parse(stored);
+      this.rolesVersionState.update(v => v + 1);
       this.getIsAdminValue();
       this.firstValidationOfReadOnly = true;
     } catch {

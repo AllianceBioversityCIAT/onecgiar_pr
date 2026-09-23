@@ -2,6 +2,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   HostListener,
   input,
@@ -12,6 +13,8 @@ import {
 import { BILATERAL_MANUAL_CREATE_COPY } from '../../../../internationalization/bilateral-manual-create.copy';
 
 const DEFAULT_WIDTH = 760;
+/** Above this combined length the project text is clamped behind a Read more toggle. */
+const PROJECT_DETAILS_CLAMP_THRESHOLD = 160;
 const MIN_WIDTH = 520;
 const MOBILE_BREAKPOINT = 640;
 
@@ -40,8 +43,14 @@ export class BilateralCreateDrawerComponent implements OnDestroy {
 
   readonly projectCode = input('');
   readonly projectTitle = input('');
-  /** Bilateral Mapping Tool summary or description shown under the project title. */
-  readonly projectSubtitle = input('');
+  /**
+   * P2-3756 (AC2/AC3): the CLARISA project summary and description, each rendered as its own
+   * read-only labelled block. They arrive already normalised and de-duplicated from
+   * `BilateralManualCreateFlowService`, so an empty string here means "this project has no such
+   * text" — the block is skipped rather than rendered empty.
+   */
+  readonly projectSummary = input('');
+  readonly projectDescription = input('');
   readonly programCode = input('');
   readonly programName = input('');
   /** Element to restore focus to when the drawer closes (BIL-MCD-R-8). */
@@ -52,6 +61,17 @@ export class BilateralCreateDrawerComponent implements OnDestroy {
 
   readonly width = signal(initialWidth());
   readonly isMobile = signal(typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
+
+  /** Whether the project text is shown in full; the drawer is the only place this text is readable. */
+  readonly projectDetailsExpanded = signal(false);
+
+  readonly hasProjectDetails = computed(() => !!this.projectSummary() || !!this.projectDescription());
+
+  readonly canToggleProjectDetails = computed(
+    () => this.projectSummary().length + this.projectDescription().length > PROJECT_DETAILS_CLAMP_THRESHOLD
+  );
+
+  readonly projectDetailsClamped = computed(() => this.canToggleProjectDetails() && !this.projectDetailsExpanded());
 
   private dragging = false;
   private previousBodyOverflow = '';
@@ -67,6 +87,10 @@ export class BilateralCreateDrawerComponent implements OnDestroy {
     if (typeof document !== 'undefined') {
       document.body.style.overflow = this.previousBodyOverflow;
     }
+  }
+
+  toggleProjectDetails(): void {
+    this.projectDetailsExpanded.update(expanded => !expanded);
   }
 
   requestClose(): void {

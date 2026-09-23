@@ -4,12 +4,21 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { SummaryService } from '../../results/summary/summary.service';
 
 /**
- * P2-3428 — bilateral Innovation Use has four minimum-data standards. The
- * bilateral editor can keep incomplete drafts, but neither the external create
- * endpoint nor the internal submit-for-review transition may bypass this gate.
+ * P2-3428 — bilateral Innovation Use minimum-data standards. The bilateral editor
+ * can keep incomplete drafts, but neither the external create endpoint nor the
+ * internal submit-for-review transition may bypass this gate.
  *
  * This deliberately does not use the P25/W1-W2 validators: the two reporting
  * flows have different submission lifecycles and this rule is W3-only.
+ *
+ * P2-3785 AC1 (Nicoleta Trifa, #INC-163204 point 4a, 21-Sep-2026): **three** standards
+ * now, not four — the Innovation Use LEVEL was withdrawn from the standard and no longer
+ * holds a submission back. Removed here and not merely in the form: this gate answers
+ * both `submitForReview` and `POST /api/bilateral/create`, so a client-only change would
+ * have left external producers refused by an ingest rule nobody could see, and reporters
+ * looking at a green section that the Submit button rejects. Results already stored
+ * without a use level become submittable; none becomes invalid, because this only ever
+ * refused — it never wrote.
  */
 @Injectable()
 export class InnovationUseMdsValidator {
@@ -23,7 +32,6 @@ export class InnovationUseMdsValidator {
       actorsToBeDetermined: current?.innov_use_to_be_determined,
       actors: current?.actors,
       measures: current?.measures,
-      innovationUseLevel: dto.innovation_use?.innovation_use_level,
       investments: dto.contributing_bilateral_projects?.map((project) => ({
         amount: project.usd_budget,
         isDetermined: project.is_determined,
@@ -44,7 +52,6 @@ export class InnovationUseMdsValidator {
       actorsToBeDetermined: data?.innov_use_to_be_determined,
       actors: data?.actors,
       measures: data?.measures,
-      innovationUseLevel: data?.innovation_use_level_id,
       investments: data?.investment_bilateral?.map((row) => ({
         amount: row.kind_cash,
         isDetermined: row.is_determined,
@@ -59,7 +66,6 @@ export class InnovationUseMdsValidator {
     actorsToBeDetermined: unknown;
     actors: unknown;
     measures: unknown;
-    innovationUseLevel: unknown;
     investments:
       | Array<{ amount: unknown; isDetermined: unknown; label?: unknown }>
       | undefined;
@@ -90,10 +96,6 @@ export class InnovationUseMdsValidator {
       errors.push(
         'Quantitative measures: add at least one measure with a unit and quantity.',
       );
-    }
-
-    if (!this.hasValue(input.innovationUseLevel)) {
-      errors.push('Innovation Use level: select a level.');
     }
 
     if (!Array.isArray(input.investments) || input.investments.length === 0) {
@@ -182,15 +184,6 @@ export class InnovationUseMdsValidator {
     const hasAmount = Number(investment.amount) > 0;
     const isDetermined = investment.isDetermined === true;
     return hasAmount !== isDetermined;
-  }
-
-  private hasValue(value: unknown): boolean {
-    if (value === null || value === undefined || value === '') return false;
-    if (typeof value === 'object') {
-      const level = value as { level?: unknown; name?: unknown };
-      return this.hasValue(level.level) || this.hasValue(level.name);
-    }
-    return true;
   }
 
   private throwIfIncomplete(errors: string[]): void {

@@ -611,11 +611,14 @@
   text-transform: uppercase;
   letter-spacing: 0.3px;
 
-  &--draft { color: #4338CA; background: #E0E7FF; }
-  &--editing { color: #475569; background: #F1F5F9; }
-  &--pending { color: #B45309; background: #FEF3C7; }
-  &--approved { color: #047857; background: #D1FAE5; }
-  &--rejected { color: #B91C1C; background: #FEE2E2; }
+  // P2-3553 · Raw hexes replaced by the status pairs. This copy had drifted twice over: Draft wore
+  // an indigo that belongs to no status at all, and Editing was grey while every table paints it
+  // amber — the same result read as two different states depending on the screen you opened.
+  &--draft { color: var(--pr-status-not-started-fg); background: var(--pr-status-not-started-bg); }
+  &--editing { color: var(--pr-status-in-progress-fg); background: var(--pr-status-in-progress-bg); }
+  &--pending { color: var(--pr-status-submitted-fg); background: var(--pr-status-submitted-bg); }
+  &--approved { color: var(--pr-status-approved-fg); background: var(--pr-status-approved-bg); }
+  &--rejected { color: var(--pr-status-rejected-fg); background: var(--pr-status-rejected-bg); }
 }
 
 .mdr-date {

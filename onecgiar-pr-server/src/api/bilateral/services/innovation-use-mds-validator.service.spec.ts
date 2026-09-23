@@ -12,7 +12,6 @@ describe('InnovationUseMdsValidator', () => {
           actors: [{ actor_type_id: 1 }],
           measures: [{ unit_of_measure: 'hectares', quantity: 0 }],
         },
-        innovation_use_level: { level: 2 },
       },
       contributing_bilateral_projects: [
         { grant_title: 'Project A', usd_budget: 100 },
@@ -23,9 +22,40 @@ describe('InnovationUseMdsValidator', () => {
     innov_use_to_be_determined: false,
     actors: [{ id: 1 }],
     measures: [{ unit_of_measure: 'hectares', quantity: 0 }],
-    innovation_use_level_id: 2,
     investment_bilateral: [{ kind_cash: 100, is_determined: null }],
   };
+
+  /**
+   * P2-3785 AC1 — the use level left the standard (Nicoleta Trifa, #INC-163204 point 4a).
+   *
+   * Written as its own case and not left implicit in the fixtures above: those would keep passing if
+   * someone re-added the rule and also re-added the field to them, and the fixtures are edited far more
+   * often than this rule changes. Here the ABSENCE is the subject — both entry points, because the gate
+   * answers external create AND submit-for-review, and a rule restored on one of them is exactly the
+   * shape of bug this validator exists to prevent.
+   */
+  describe('the use level is no longer a minimum data standard (P2-3785 AC1)', () => {
+    it('accepts an external payload that carries no use level', async () => {
+      const validator = new InnovationUseMdsValidator({} as any);
+      const payload = completeExternal();
+      delete payload.innovation_use.innovation_use_level;
+
+      await expect(
+        validator.assertExternalCreateMds(payload),
+      ).resolves.toBeUndefined();
+    });
+
+    it('accepts a persisted draft whose use level is null', async () => {
+      const summaryService = {
+        getInnovationUse: jest.fn().mockResolvedValue({
+          response: { ...completePersisted, innovation_use_level_id: null },
+        }),
+      } as any;
+      const validator = new InnovationUseMdsValidator(summaryService);
+
+      await expect(validator.assertPersistedMds(1)).resolves.toBeUndefined();
+    });
+  });
 
   it('accepts a complete external Innovation Use payload', async () => {
     const validator = new InnovationUseMdsValidator({} as any);

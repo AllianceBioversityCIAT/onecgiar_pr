@@ -708,7 +708,7 @@ $phase-color-border:  #cbd5e1;
 .status_2 { color: var(--pr-status-in-qa-fg); background: var(--pr-status-in-qa-bg); } // Quality Assessed
 .status_3 { color: var(--pr-status-submitted-fg); background: var(--pr-status-submitted-bg); } // Submitted
 .status_4 { color: var(--pr-status-not-started-fg); background: var(--pr-status-not-started-bg); } // Discontinued
-.status_5 { color: var(--pr-status-not-started-fg); background: var(--pr-status-not-started-bg); } // Pending review
+.status_5 { color: var(--pr-status-submitted-fg); background: var(--pr-status-submitted-bg); } // Pending review — P2-3553
 .status_6 { color: var(--pr-status-approved-fg); background: var(--pr-status-approved-bg); } // Approved
 .status_7 { color: var(--pr-status-rejected-fg); background: var(--pr-status-rejected-bg); } // Rejected
 

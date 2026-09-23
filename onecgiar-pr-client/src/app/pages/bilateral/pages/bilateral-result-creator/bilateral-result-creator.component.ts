@@ -441,6 +441,28 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     });
 
     /**
+     * The custom-fields (`app-pr-input`, `app-pr-select`, `app-pr-multi-select`, …) hide their
+     * control when the GLOBAL `RolesService.readOnly` is up — see
+     * `pr-multi-select.component.html:16`. That flag is a W1/W2 mechanism: it starts TRUE for
+     * everyone who is not an application admin (`roles.service.ts:75`) and is only lowered when a
+     * W1/W2 result is loaded for a user who belongs to its INITIATIVE
+     * (`current-result.service.ts:52`). Bilateral never loads through that path, so a Center User
+     * opening a W3 result saw 0 inputs on a form the server would happily let them write —
+     * measured on result 9553 with Ángel's real roles: 6 `app-pr-input` hosts, 0 `<input>`.
+     * Only admins could edit, which is not a rule anyone wrote.
+     *
+     * W3 ownership is the LEAD CENTRE, exactly as the server gates it
+     * (`validationCenterPermissions` → `role_by_user.role = 9` on `leadCenter.code`), so the flag
+     * is answered here with that question. The status half stays in `isEditableByCenterUser()`:
+     * a result out of Editing is read-only for its Center User too.
+     */
+    effect(() => {
+      const isAdmin = this.api.rolesSE.isAdmin;
+      const editable = this.creationService.isEditableByCenterUser() && this.isCenterUserOfLeadCenter();
+      this.api.rolesSE.readOnly = !(isAdmin || editable);
+    });
+
+    /**
      * `APF-R-12` — reads this result's banner dismissal back from `sessionStorage` whenever the
      * bound result changes (new visit, or navigating between results), so a session-scoped
      * dismissal survives a reload of the SAME result but never leaks onto a different one.
@@ -463,6 +485,45 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   /** P2-3520 — single gate the sections and the Submit button read, so no template knows the status numbers. */
   readonly isFormReadOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+  /**
+   * Center User role id, as `validationCenterPermissions` hard-codes it server-side
+   * (`RoleByUser.repository.ts:316` — `rbu.role = 9`) and `bulk-uploader-handoff/requirements.md:337`
+   * states it holds in every environment.
+   */
+  private static readonly CENTER_USER_ROLE_ID = 9;
+
+  /**
+   * True when the signed-in user holds Center User on the LEAD centre of the result being edited.
+   * Falls back to the centre in the route while no result is loaded (the create wizard), matching
+   * on the acronym the way `api.service.ts:297` already does — `getMyCenters()` carries both the
+   * code (`center_id`) and the acronym, and the route only knows the latter.
+   */
+  readonly isCenterUserOfLeadCenter = computed(() => {
+    /*
+     * `roles` is a plain property, so `getMyCenters()` is invisible to the signal graph: on a cold
+     * start the roles GET can resolve AFTER the result detail, and without this read the computed
+     * would cache the empty list it saw first and leave a legitimate Center User locked out for the
+     * rest of the visit. `rolesVersion` changes when the payload lands.
+     */
+    this.api.rolesSE.rolesVersion;
+    const centers = (this.api.rolesSE.getMyCenters() ?? []) as {
+      center_id?: string;
+      center_acronym?: string;
+      role_id?: number | string;
+    }[];
+    const isCenterUser = (c: { role_id?: number | string }) =>
+      Number(c?.role_id) === BilateralResultCreatorComponent.CENTER_USER_ROLE_ID;
+
+    const leadCenterCode = this.creationService.resultLeadCenterCode();
+    if (leadCenterCode) {
+      return centers.some(c => String(c?.center_id) === leadCenterCode && isCenterUser(c));
+    }
+
+    const routeAcronym = this.ctx.centerAcronym();
+    if (!routeAcronym) return false;
+    return centers.some(c => c?.center_acronym === routeAcronym && isCenterUser(c));
+  });
 
   /**
    * `APF-R-12` / `APF-DD-10` — two of the five provenance surfaces live on this page, split by
@@ -941,6 +1002,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    /*
+     * `RolesService.readOnly` is global and survives navigation, so leaving it lowered would hand a
+     * W1/W2 screen an edit permission this page granted for a bilateral centre. Restore the app
+     * default (`validateApplication`: editable only for admins) and let whatever page comes next
+     * answer the question for itself, exactly as it does today.
+     */
+    this.api.rolesSE.readOnly = !this.api.rolesSE.isAdmin;
     this.autoSaveService.reset();
     this.mdsTracker.reset();
     // Always clear wizard + legacy LS so the next create visit starts empty.

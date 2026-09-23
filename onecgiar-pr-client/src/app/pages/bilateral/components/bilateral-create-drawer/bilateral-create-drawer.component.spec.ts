@@ -72,22 +72,79 @@ describe('BilateralCreateDrawerComponent', () => {
     expect(sp?.textContent).toContain('Climate Action');
   });
 
-  it('renders project subtitle below the title when provided', () => {
-    fixture.componentRef.setInput('projectSubtitle', 'Climate adaptation training across partner countries');
+  // P2-3756 (AC2/AC3): the drawer is where the creation flow lives now, so the read-only project
+  // summary and description have to be legible here — one labelled block per field that has text.
+  it('renders labelled Project Summary and Project Description blocks when both are filled', () => {
+    fixture.componentRef.setInput('projectSummary', 'Climate adaptation training across partner countries');
+    fixture.componentRef.setInput('projectDescription', 'Longer description text');
     fixture.detectChanges();
 
-    const subtitleEl = (fixture.nativeElement as HTMLElement).querySelector(
-      '[data-testid="bilateral-create-drawer-project-subtitle"]'
-    );
-    expect(subtitleEl?.textContent).toContain('Climate adaptation training');
-    expect(subtitleEl?.getAttribute('title')).toBe('Climate adaptation training across partner countries');
+    const host = fixture.nativeElement as HTMLElement;
+    const summary = host.querySelector('[data-testid="bilateral-create-drawer-project-summary"]');
+    const description = host.querySelector('[data-testid="bilateral-create-drawer-project-description"]');
+
+    expect(summary?.textContent).toContain(BILATERAL_MANUAL_CREATE_COPY.drawer.projectSummaryLabel);
+    expect(summary?.textContent).toContain('Climate adaptation training across partner countries');
+    expect(description?.textContent).toContain(BILATERAL_MANUAL_CREATE_COPY.drawer.projectDescriptionLabel);
+    expect(description?.textContent).toContain('Longer description text');
+    expect(host.querySelector('[data-testid="bilateral-create-drawer-project-details-empty"]')).toBeNull();
   });
 
-  it('omits project subtitle when empty', () => {
-    fixture.componentRef.setInput('projectSubtitle', '');
+  it('renders only the description block when CLARISA left the summary empty', () => {
+    fixture.componentRef.setInput('projectSummary', '');
+    fixture.componentRef.setInput('projectDescription', 'Groundwater management support in Laos');
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[data-testid="bilateral-create-drawer-project-summary"]')).toBeNull();
+    expect(host.querySelector('[data-testid="bilateral-create-drawer-project-description"]')?.textContent).toContain(
+      'Groundwater management support in Laos'
+    );
+  });
+
+  it('states that the project has neither field instead of rendering nothing', () => {
+    fixture.componentRef.setInput('projectSummary', '');
+    fixture.componentRef.setInput('projectDescription', '');
+    fixture.detectChanges();
+
+    const empty = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="bilateral-create-drawer-project-details-empty"]'
+    );
+    expect(empty?.textContent).toContain(BILATERAL_MANUAL_CREATE_COPY.drawer.projectDetailsEmpty);
+  });
+
+  it('clamps long project text behind a Read more toggle and expands it on click', () => {
+    const longText = 'Varietal improvement of potato and sweetpotato for biotic resistance with ICAR institutes in India. '.repeat(
+      3
+    );
+    fixture.componentRef.setInput('projectSummary', longText);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const text = host.querySelector(
+      '[data-testid="bilateral-create-drawer-project-summary"] p:last-of-type'
+    ) as HTMLElement;
+    const toggle = host.querySelector(
+      '[data-testid="bilateral-create-drawer-project-details-toggle"]'
+    ) as HTMLButtonElement;
+
+    expect(text.classList.contains('line-clamp-2')).toBe(true);
+    expect(toggle.textContent?.trim()).toBe(BILATERAL_MANUAL_CREATE_COPY.drawer.projectDetailsExpand);
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(text.classList.contains('line-clamp-2')).toBe(false);
+    expect(toggle.textContent?.trim()).toBe(BILATERAL_MANUAL_CREATE_COPY.drawer.projectDetailsCollapse);
+  });
+
+  it('omits the toggle for text short enough to read in full', () => {
+    fixture.componentRef.setInput('projectSummary', 'Short summary');
     fixture.detectChanges();
     expect(
-      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="bilateral-create-drawer-project-subtitle"]')
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-testid="bilateral-create-drawer-project-details-toggle"]'
+      )
     ).toBeNull();
   });
 
