@@ -155,6 +155,10 @@ export class ResultCountrySubnationalRepository
     geoScopeRoleId: number = 1,
   ) {
     const subnationals = subnationalCodes ?? [];
+    // Night sweep 2026-09-23: the codes travel as bound parameters, one `?` each, never
+    // interpolated into the SQL. An empty list still takes the "inactivate all" branch below,
+    // so the `in (...)` / `not in (...)` queries are never run with an empty list.
+    const codePlaceholders = subnationals.map(() => '?').join(', ');
 
     const upDateInactive = `
       update result_country_subnational  
@@ -164,9 +168,7 @@ export class ResultCountrySubnationalRepository
       where is_active > 0 
         and result_country_id  = ?
         and geo_scope_role_id = ?
-        and clarisa_subnational_scope_code not in (${subnationals
-          .map((c) => `"${c}"`)
-          .toString()});
+        and clarisa_subnational_scope_code not in (${codePlaceholders});
     `;
 
     const upDateActive = `
@@ -176,9 +178,7 @@ export class ResultCountrySubnationalRepository
         last_updated_by = ?
       where result_country_id  = ?
         and geo_scope_role_id = ?
-        and clarisa_subnational_scope_code in (${subnationals
-          .map((c) => `"${c}"`)
-          .toString()});
+        and clarisa_subnational_scope_code in (${codePlaceholders});
     `;
 
     const upDateAllInactive = `
@@ -192,9 +192,19 @@ export class ResultCountrySubnationalRepository
 
     try {
       if (subnationals?.length) {
-        await this.query(upDateInactive, [userId, rcId, geoScopeRoleId]);
+        await this.query(upDateInactive, [
+          userId,
+          rcId,
+          geoScopeRoleId,
+          ...subnationals,
+        ]);
 
-        return await this.query(upDateActive, [userId, rcId, geoScopeRoleId]);
+        return await this.query(upDateActive, [
+          userId,
+          rcId,
+          geoScopeRoleId,
+          ...subnationals,
+        ]);
       } else {
         return await this.query(upDateAllInactive, [
           userId,
@@ -253,10 +263,12 @@ export class ResultCountrySubnationalRepository
         UPDATE result_country_subnational
         set is_active = 0
         WHERE result_country_id in (${
-          result_country_id?.length ? result_country_id.toString() : null
+          result_country_id?.length
+            ? result_country_id.map(() => '?').join(', ')
+            : null
         });
       `;
-      await this.query(inactiveQuery);
+      await this.query(inactiveQuery, result_country_id ?? []);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultCountrySubnationalRepository.name,
