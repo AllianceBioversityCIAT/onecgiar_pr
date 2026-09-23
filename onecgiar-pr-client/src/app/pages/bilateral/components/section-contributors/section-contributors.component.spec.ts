@@ -495,6 +495,24 @@ describe('SectionContributorsComponent', () => {
       expect(component.selectedProjectIds()).not.toContain(1);
     });
 
+    it('clears the previous lead when the next loaded result has no lead project', () => {
+      centersService.centersList = [center(1)];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }] })
+      );
+      build();
+      fixture.detectChanges();
+      creation.selectedProject.set({ id: 1 });
+      fixture.detectChanges();
+
+      creation.selectedProject.set(null);
+      creation.resultContributingProjectIds.set([]);
+      fixture.detectChanges();
+
+      expect(component.readonlyLeadProjectId).toBeNull();
+      expect(component.selectedProjectIds()).toEqual([]);
+    });
+
     it('drops unknown project ids from the payload via onProjectsChange', () => {
       centersService.centersList = [center(1)];
       api.resultsSE.GET_ClarisaProjects.mockReturnValue(
@@ -942,6 +960,7 @@ describe('SectionContributorsComponent', () => {
   // with nothing on screen explaining why.
   describe('updateContributorsMds', () => {
     it('tracks only the lead pair, never the optional contributing selection', () => {
+      creation.selectedProject.set({ id: 3 });
       build();
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
       component.readonlyLeadCenterInstitutionId = 7;
@@ -957,7 +976,7 @@ describe('SectionContributorsComponent', () => {
       expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
     });
 
-    it('leaves the lead pair unfilled when the result has no lead center or project yet', () => {
+    it('does not require a lead project when the loaded result has none', () => {
       build();
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
       component.readonlyLeadCenterInstitutionId = null;
@@ -966,7 +985,19 @@ describe('SectionContributorsComponent', () => {
       component.updateContributorsMds();
 
       const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'external-partners']);
       expect(items.every((i: any) => i.filled === false)).toBe(true);
+    });
+
+    it('keeps the lead project required when the result has one but its catalogue has not loaded', () => {
+      creation.selectedProject.set({ id: 3 });
+      build();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+
+      component.updateContributorsMds();
+
+      const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items.find((i: any) => i.key === 'lead-project').filled).toBe(false);
     });
   });
 
@@ -1066,7 +1097,7 @@ describe('SectionContributorsComponent', () => {
       const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
       expect(section).toBe('contributors');
       expect(group).toBe('partners');
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'external-partners']);
       expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(true);
     });
 

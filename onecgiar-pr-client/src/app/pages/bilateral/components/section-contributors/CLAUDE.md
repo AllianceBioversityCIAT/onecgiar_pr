@@ -25,7 +25,8 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   (**signal**), `InnovationUseResultsService.resultsList`. Que carguen tarde es el origen de la
   primera trampa.
 - **Progreso / Submit:** `BilateralMdsTrackerService.setSectionFields('contributors', […],
-  'partners')` con tres ítems: `lead-center`, `lead-project`, `external-partners`. Este último va
+  'partners')` incluye `lead-center` y `external-partners`; `lead-project` cuenta solo si el resultado
+  cargado tiene proyecto líder. Los resultados de API o versionados pueden no tenerlo. Este último va
   `filled: partnersHydrated() && externalPartnersSatisfied()` — ver la invariante abajo.
   ⚠️ **El grupo `toc` que publica `<app-section-toc>` en este mismo bucket va todo
   `optional: true` desde el 9-sep-2026** (decisión del PO): se lista en el checklist pero **no
