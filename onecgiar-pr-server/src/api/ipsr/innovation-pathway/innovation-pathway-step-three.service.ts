@@ -200,10 +200,17 @@ export class InnovationPathwayStepThreeService {
       } = saveStepTwoThree;
 
       if (rip.is_expert_workshop_organized === false) {
-        await this._evidenceRepository.update(workShopEvidence?.id, {
-          is_active: 0,
-          last_updated_by: user.id,
-        });
+        // Night sweep 2026-09-23, IPSR-1 — once a package has answered "No", there is no active
+        // workshop-list evidence left, and `update(undefined, …)` threw TypeORM's "Empty criteria(s)
+        // are not allowed for the update method" → every later Step-1 save answered 500 (and blocked
+        // "Save & go to next step") although everything before this point was already written
+        // (prtest 11172, 4/4). Nothing to deactivate is not an error.
+        if (workShopEvidence?.id) {
+          await this._evidenceRepository.update(workShopEvidence.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
 
         const expertWorkshopExist: ResultIpExpertWorkshopOrganized[] =
           await this._resultIpExpertWorkshopRepository.find({

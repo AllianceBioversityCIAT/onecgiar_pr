@@ -174,6 +174,36 @@ describe('InnovationPathwayStepThreeService', () => {
     });
 
     /*
+     * Night sweep 2026-09-23, IPSR-1 — after a first "No", no active workshop-list evidence is left;
+     * TypeORM's update(undefined) throws "Empty criteria(s)…", which turned every later Step-1 save
+     * into a 500. The mock reproduces that throw. Control negative: without the `workShopEvidence?.id`
+     * guard this test gets status 500.
+     */
+    it('IPSR-1: a second "No" with no workshop evidence left does not fail', async () => {
+      (mockEvidenceRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
+      (mockEvidenceRepo.update as jest.Mock).mockImplementationOnce(
+        async (criteria: unknown) => {
+          if (criteria === undefined || criteria === null)
+            throw new Error(
+              'Empty criteria(s) are not allowed for the update method.',
+            );
+          return {};
+        },
+      );
+      (mockWorkshopRepo.find as jest.Mock).mockResolvedValueOnce([]);
+
+      const res = await service.saveWorkshop(11, user, {
+        result_ip: { is_expert_workshop_organized: false },
+      } as any);
+
+      expect((res as any).status).not.toBe(500);
+      expect(mockEvidenceRepo.update).not.toHaveBeenCalledWith(
+        undefined,
+        expect.anything(),
+      );
+    });
+
+    /*
      * P2-3747 — a blank row is a row the user did not fill, not an error. It used to abort the
      * whole save, so every named facilitator listed AFTER it was silently dropped while the
      * client still showed "saved successfully" (reproduced on prtest #9409, 2026-09-21).
