@@ -1,0 +1,1 @@
+{"detail":[{"type":"literal_error","loc":["query","mode"],"msg":"Input should be 'auto' or 'template'","input":"bogus","ctx":{"expected":"'auto' or 'template'"}}]}

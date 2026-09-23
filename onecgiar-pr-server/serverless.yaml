@@ -23,10 +23,14 @@ provider:
     CGSPACE_DISCOVERY_URL: ${env:CGSPACE_DISCOVERY_URL}
     MELSPACE_DISCOVERY_URL: ${env:MELSPACE_DISCOVERY_URL}
     WORLDFISH_DISCOVERY_URL: ${env:WORLDFISH_DISCOVERY_URL}
+    PT_INTEROP_BASE_URL: ${env:PT_INTEROP_BASE_URL}
+    PT_INTEROP_API_KEY: ${env:PT_INTEROP_API_KEY}
+    PT_INTEROP_TIMEOUT_MS: ${env:PT_INTEROP_TIMEOUT_MS}
 
 functions:
- main: 
+ main:
    handler: dist/lambda.handler
+   timeout: 30
    events:
      - http:
          method: any
