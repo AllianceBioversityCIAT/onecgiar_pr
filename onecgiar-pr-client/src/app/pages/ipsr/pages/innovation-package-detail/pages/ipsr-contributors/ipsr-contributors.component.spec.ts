@@ -11,6 +11,7 @@ import { IpsrNonPooledProjectsComponent } from './components/ipsr-non-pooled-pro
 import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { IpsrContributorsTocComponent } from './components/ipsr-contributors-toc/ipsr-contributors-toc.component';
 import { of } from 'rxjs';
+import { throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutComponent } from '../../../../../results/pages/result-detail/pages/rd-theory-of-change/components/shared/toc-initiative-out/toc-initiative-out.component';
 import { PrYesOrNotComponent } from '../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
@@ -718,7 +719,39 @@ describe('IpsrContributorsComponent', () => {
     });
   });
 
+  // Night sweep 2026-09-23, IPSR-8 (prtest 11172 / 12037): GET 500 → Save stripped the owner SP.
+  // Control negative: with the gate line removed from `onSaveSection()` the no-PATCH test fails.
+  describe('IPSR-8 — refuses to save after a failed section load', () => {
+    it('marks the section as not loaded and does not PATCH', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = () => throwError(() => ({ status: 500 }));
+      component.loaded.set(null);
+      component.getSectionInformation();
+
+      component.onSaveSection();
+
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('does not PATCH while the first GET is still in flight', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      component.loaded.set(null);
+      component.onSaveSection();
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('the template shows the error note and disables Save until loaded', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'ipsr-contributors.component.html'), 'utf8');
+      expect(html).toContain('@if (loaded() === false) {');
+      expect(html).toContain('[disabled]="loaded() !== true"');
+    });
+  });
+
   describe('onSaveSection', () => {
+    beforeEach(() => component.loaded.set(true));
     it('should call PATCHContributorsByIpsrResultId and getSectionInformation on onSaveSection', () => {
       const patchContributorsSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');

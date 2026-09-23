@@ -10,6 +10,7 @@ import { ResultLevelService } from '../../../../../results/pages/result-creator/
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -35,6 +36,17 @@ export class IpsrContributorsComponent implements OnInit {
   contributors_result_toc_result = null;
   initiativeIdSignal = signal<any>(null);
   getConsumed = signal<boolean>(false);
+
+  /**
+   * Night sweep 2026-09-23, IPSR-8 — three-state load flag (P2-3556 contract). The GET had no error
+   * branch: on a failure the empty `ContributorsBody` stayed on screen with Save enabled, and saving
+   * it sent `result_toc_result.initiative_id: null` with no `changePrimaryInit` (only set after a
+   * successful GET). The server's `createTocMappingV2` reads that as "change the owner" and demoted
+   * the package's Science Program — the package vanished from the list and Contributors answered 404
+   * (prtest 11172 / 12037, not repairable from the UI). A failed RE-load keeps `true`.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
   tocConsumed = true;
   constructor(
     public api: ApiService,
@@ -235,7 +247,17 @@ export class IpsrContributorsComponent implements OnInit {
 
   getSectionInformation() {
     this.rdPartnersSE.contributingInitiativeNew = [];
-    this.api.resultsSE.GETContributorsByIpsrResultId(this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
+    this.api.resultsSE.GETContributorsByIpsrResultId(this.fieldsManagerSE.isP25()).subscribe({
+      next: ({ response }) => this.onSectionInformation(response),
+      // IPSR-8 — see `loaded`.
+      error: () => {
+        if (this.loaded() !== true) this.loaded.set(false);
+      }
+    });
+  }
+
+  private onSectionInformation(response: any) {
+    {
       this.contributorsBody = response;
       this.rdPartnersSE.partnersBody = response;
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
@@ -251,7 +273,8 @@ export class IpsrContributorsComponent implements OnInit {
 
       // P2-3746 — the owner only becomes known with this response; re-run the exclusion now.
       this.applyOwnerExclusion();
-    });
+      this.loaded.set(true);
+    }
   }
 
   saveTocLogic() {
@@ -283,6 +306,8 @@ export class IpsrContributorsComponent implements OnInit {
   }
 
   onSaveSection() {
+    // IPSR-8 — never send a body that was not read from the server (see `loaded`).
+    if (this.loaded() !== true) return;
     this.fieldsManagerSE.isP25() ? this.saveTocLogicp25() : this.saveTocLogic();
 
     const sendedData: any = {
