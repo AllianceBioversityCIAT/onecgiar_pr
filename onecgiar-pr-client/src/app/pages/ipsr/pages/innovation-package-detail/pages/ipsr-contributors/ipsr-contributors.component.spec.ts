@@ -752,6 +752,17 @@ describe('IpsrContributorsComponent', () => {
 
   describe('onSaveSection', () => {
     beforeEach(() => component.loaded.set(true));
+    // Night sweep 2026-09-23, IPSR-7. Control negative: without the two deletes this test fails.
+    it('IPSR-7: does not echo has_innovation_link / linked_results from the GET body', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      (component.contributorsBody as any).has_innovation_link = false;
+      (component.contributorsBody as any).linked_results = [11866];
+      component.onSaveSection();
+      const [sent] = patch.mock.calls.at(-1) as any[];
+      expect('has_innovation_link' in sent).toBe(false);
+      expect('linked_results' in sent).toBe(false);
+    });
+
     it('should call PATCHContributorsByIpsrResultId and getSectionInformation on onSaveSection', () => {
       const patchContributorsSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');

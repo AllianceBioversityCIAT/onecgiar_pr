@@ -334,6 +334,14 @@ export class IpsrContributorsComponent implements OnInit {
       sendedData.mqap_institutions = this.rdPartnersSE.partnersBody.mqap_institutions;
     }
 
+    // Night sweep 2026-09-23, IPSR-7 — the GET body carries `has_innovation_link` / `linked_results`,
+    // and spreading it echoed them back. No IPSR screen asks that question, but the shared P25 service
+    // (`contributors-partners.service.ts` ~373, ~474-482) reads their mere presence as an answer and
+    // re-wrote the links, dropping the ones Step 2.1 had auto-linked (prtest 12037: 1 → 0). Absent keys
+    // mean "leave untouched" there, so they are not sent.
+    delete sendedData.has_innovation_link;
+    delete sendedData.linked_results;
+
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
       this.ipsrCompletenessStatusSE.updateGreenChecks();
