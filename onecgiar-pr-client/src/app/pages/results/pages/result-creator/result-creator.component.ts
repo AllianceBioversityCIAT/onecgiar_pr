@@ -1,5 +1,5 @@
 import { Component, DoCheck, OnDestroy, OnInit, NgZone, signal, computed } from '@angular/core';
-import { Subject, Subscription, catchError, debounceTime, distinctUntilChanged, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
+import { Subject, Subscription, catchError, debounceTime, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
 import { internationalizationData } from '../../../../shared/data/internationalization-data';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
@@ -261,7 +261,10 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
       .pipe(
         filter(title => !!title?.trim()),
         debounceTime(ResultCreatorComponent.TITLE_SEARCH_DEBOUNCE_MS),
-        distinctUntilChanged(),
+        // Night sweep 2026-09-23, C-1 — no distinctUntilChanged: every keystroke resets the gate
+        // (loading flag on, exact-title flags off), so a title equal to the last one checked (a typo
+        // fixed, or cleared and pasted again) must be checked again or the gate never re-opens.
+        // switchMap still cancels the superseded request.
         switchMap(title => this.searchSimilarResultsWithTitleUniqueness(title)),
         takeUntil(this.destroy$)
       )
