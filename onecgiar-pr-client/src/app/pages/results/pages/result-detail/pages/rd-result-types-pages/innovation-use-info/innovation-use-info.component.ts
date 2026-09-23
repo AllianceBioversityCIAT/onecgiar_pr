@@ -299,7 +299,11 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
       },
       error: err => {
         console.error(err);
-        this.markLoaded(false);
+        // A 404 is this endpoint's "no Innovation Use row yet" (`results-framework-reporting/
+        // innovation-use/innovation-use.service.ts` `getInnovationUse` throws NOT_FOUND until the
+        // first save creates the row) — the normal state of a brand-new result, so it counts as
+        // loaded; treating it as a failure would make the section impossible to ever save.
+        this.markLoaded(err?.status === 404);
         this.sectionLoading.set(false);
       }
     });

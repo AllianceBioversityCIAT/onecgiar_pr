@@ -206,6 +206,14 @@ describe('InnovationUseInfoComponent', () => {
       expect(patch).not.toHaveBeenCalled();
     });
 
+    it('P25 path: a 404 ("no Innovation Use row yet", brand-new result) counts as loaded, so the first save can create it', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(throwError(() => ({ status: 404 })));
+      component.getSectionInformationp25();
+
+      expect(component.loaded()).toBe(true);
+    });
+
     it('saves once the GET succeeded', () => {
       const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
       component.getSectionInformation();
