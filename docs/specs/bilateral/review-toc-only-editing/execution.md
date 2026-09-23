@@ -404,7 +404,7 @@
 - Requirements covered: BIL-RTE-R-8.a, R-8 (logical deactivation only), R-8.b, R-7.b (server), R-7.c (server), DD-5, DD-6.
 - Budget: 2 review rounds, within the budget of 2 for T-5.
 
-### BIL-RTE-T-9 — Docs and post-deploy HITL — **in progress**
+### BIL-RTE-T-9 — Docs and post-deploy HITL — **PASS** (UAT with Cami)
 
 **Owner HITL, local stack, 2026-09-23** (this branch's server on :3400, VPN on; the owner reported each check as "done"):
 1. A non-admin program user cannot edit geography or Center data in the drawer, and Approve stays enabled. ✅
@@ -416,7 +416,9 @@
   - `result_review_history` 717: UPDATE "Update to correct toc". 718: APPROVE "Approved". Both by user 323.
   - `results_toc_result` 13740: `initiative_id` 50, `toc_result_id` 7045, `planned_result` 1, active.
   - Note: the DB column is `initiative_id`, not `initiative_ids`.
-- Still open for T-9: the P2-3794 ticket comment (what shipped) and the post-deploy prtest check after the merge.
+- 2026-09-23: merged into `performance-refactor` at `ef7af5662`, after first bringing in 30 upstream commits. The only conflict was the contract change-log row, and both rows were kept. Re-verified on the merge: server 42 suites / 1,217 tests, client 17 suites / 708 tests, tsc clean.
+- P2-3794 comment 42880 posted with what shipped. Ticket moved Open → Ready For UAT (291 → 161 → 181 → 221) and assigned to Cami. Cami notified on Slack in non-technical terms.
+- The post-deploy prtest check is Cami's UAT. The pipeline deploys on merge.
 
 ## Constitution Impact: BIL-RTE-T-1
 
