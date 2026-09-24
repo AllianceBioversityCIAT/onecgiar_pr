@@ -191,11 +191,17 @@ export class ContributorsPartnersService {
    * dropping it would hide a real disagreement behind an unrecognised label.
    */
   private contributionBoxesOf(resultTocResult: any): ContributionBox[] {
-    const nodes = Array.isArray(resultTocResult)
-      ? resultTocResult
-      : resultTocResult
-        ? [resultTocResult]
-        : [];
+    // P2-3817 — `getTocByResultV2` wraps the owner's nodes: `{ initiative_id, …,
+    // result_toc_results: [node, …] }`. Reading `indicators` off the wrapper found no box on any
+    // result, so every check came back NOTHING_TO_COMPARE and no message ever reached the screen.
+    const wrapped = resultTocResult?.result_toc_results;
+    const nodes = Array.isArray(wrapped)
+      ? wrapped
+      : Array.isArray(resultTocResult)
+        ? resultTocResult
+        : resultTocResult
+          ? [resultTocResult]
+          : [];
 
     return nodes.flatMap((node: any) =>
       (node?.indicators ?? []).flatMap((indicator: any) =>
