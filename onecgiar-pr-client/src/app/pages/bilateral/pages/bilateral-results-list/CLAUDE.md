@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-18 · branch qa-development-2026 · 601b04dbf · spec `changes/project-multiselect-filter` (`PMF-T-1` wave 2, pivot)
+**Verified:** 2026-09-24 · branch qa-development-2026-ss · pending commit (this change) · spec `changes/bilateral-science-program-filter` (`BSF-T-1`/`BSF-T-2`)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -65,6 +65,40 @@ name `Filter by project`, visible label `Project`.
 - `onProjectFilterChange` normalizes the emitted array and routes it through the existing
   `projectFilter` signal, `filterCenterResults` predicate, chips and `syncUrlParams()` — no second
   state path. Chip removal reuses `removeProjectFilter`; Clear all reuses `clearAllFilters`.
+
+## Science Program multiselect filter (`changes/bilateral-science-program-filter`, `BSF-T-1`/`BSF-T-2`)
+The Filters popover exposes the pre-existing `program` URL contract (already read/written by
+`filterCenterResults`/`currentContractParams`/`applyUrlParams`/`syncUrlParams` before this spec)
+through the same `app-pr-filter-multiselect` the Project field uses — placed immediately after
+Project and before Created by, group name `Filter by science program`, visible label `Science
+Program`.
+- Options come from the **portfolio-wide** CLARISA initiatives catalog — deliberately NOT
+  centre-scoped, unlike the Project filter (`PMF-*`): Science Programs are a small, stable,
+  portfolio-wide list, so listing every program in the active portfolio (not only ones with rows at
+  this centre) is the more useful default (see the spec's `DD-1`). `ResultsApiService.
+  GET_AllInitiatives(portfolioAcronym)` is requested once per portfolio acronym per page lifetime
+  (keyed off `selectedPhase()?.obj_portfolio?.acronym`, via a `toObservable(selectedPhase)` pipe in
+  the constructor — parallel to, never blocking, the results/project-catalog pipelines), cached in
+  `programCatalogByPortfolio`, filtered through the shared `filterOutAvisaInitiatives` util (drops
+  SGP-02/AVISA), and unioned into `programOptions`: labels are **code-first**
+  (`${official_code} - ${short_name || name}`, bare code when no name) — mirrors `catalogProjectLabel`
+  and matters because the code (`SPxx`) is what the deep-link fallback and the `[filter]="true"`
+  search box key off. A failed portfolio is recorded and never retried, degrading to an empty list
+  for that portfolio — no program-specific loading/error surface.
+- `programSelectOptions` appends URL-selected codes the catalog doesn't carry (bare-code label), so a
+  deep link stays ticked and removable — same pattern as `projectSelectOptions`.
+- `onProgramFilterChange` normalizes the emitted array (unique, trimmed) and routes it through the
+  existing `programFilter` signal, `filterCenterResults` predicate, chips and `syncUrlParams()` — no
+  second state path. Chip removal reuses `removeProgramFilter`; Clear all resets `programFilter`
+  alongside the other filters.
+- ⚠️ **`filterOutAvisaInitiatives<T extends AvisaInitiativeLike>` cannot infer `T` from an
+  `any`-typed argument** (`GET_AllInitiatives` returns `Observable<any>`) — TypeScript silently falls
+  back to the bare `AvisaInitiativeLike` constraint (only `official_code`-family + `id` fields, no
+  `short_name`/`name`), which compiles fine under `ng lint`/Jest (ts-jest transform) but fails a real
+  `ng build`/`ng serve` with `TS2339`. Always pass an explicit type argument at the call site (see
+  `loadProgramCatalog`) when consuming `filterOutAvisaInitiatives` on an `any`-sourced array — don't
+  rely on inference, and don't trust lint/Jest alone to catch this class of error; verify with an
+  actual `ng build` when touching this codepath.
 
 ## "Update result" (P2-3229, P2-3653)
 `canUpdateResult()` delegates to `ApiService.canUpdateBilateral` so this list and the Results Center

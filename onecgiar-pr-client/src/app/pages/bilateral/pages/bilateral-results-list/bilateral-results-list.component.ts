@@ -71,6 +71,7 @@ import {
   StatusKey,
 } from '../../bilateral-query-params';
 import { filterCenterResults } from '../../bilateral-result-filter';
+import { filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
 
 export type { BilateralCenterResult };
 
@@ -95,7 +96,7 @@ const RESULTS_TAB_MANAGED_QUERY_PARAMS = [
 ] as const;
 
 /** `status_id` key → display label for the new **Status** chip group (`COV-R-14`). */
-type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'createdBy' | 'search';
+type BilateralFilterChipDimension = 'phase' | 'source' | 'role' | 'status' | 'project' | 'program' | 'createdBy' | 'search';
 
 interface BilateralFilterChip {
   dimension: BilateralFilterChipDimension;
@@ -218,6 +219,13 @@ interface ProjectFilterOption {
   label: string;
 }
 
+/** `BSF-R-1`/`BSF-R-10` — one selectable Science Program option, built from the portfolio-wide
+ *  CLARISA initiatives catalog (`DD-1`). */
+interface ProgramFilterOption {
+  value: string;
+  label: string;
+}
+
 /**
  * `PMF-R-1` (pivot) — the catalog's option label: trimmed `shortName` and `fullName` joined with
  * a space, the table column's `A-AG10156 Accelerating Impacts…` format; an entry with no usable
@@ -330,6 +338,14 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
   /** The center the cached years belong to — switching centers resets the cache so two
    *  centers' catalogs can never mix into one option list (foreign-center exclusion). */
   private projectCatalogCenter: string | null = null;
+
+  // ── Science Program catalog (`BSF-R-1`/`BSF-R-10`/`DD-1`) ──────────────────────────
+  /** Page-lifetime catalog cache keyed by portfolio acronym — Science Programs don't vary by
+   *  phase year the way center projects do. */
+  private readonly programCatalogByPortfolio = signal<ReadonlyMap<string, ProgramFilterOption[]>>(new Map());
+  /** Portfolio acronyms already requested this page lifetime, succeeded OR failed — a failed
+   *  portfolio is never retried (`PMF-NFR-1` pattern). */
+  private readonly programCatalogPortfoliosRequested = new Set<string>();
 
   /**
    * `COV-DD-2`: the primary phase shared by the other center tabs lives on `BilateralContextService`
@@ -488,6 +504,26 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     return missing.length ? [...options, ...missing] : options;
   });
 
+  /** `BSF-R-1`/`BSF-R-10` — the portfolio-wide Science Program catalog for the current portfolio,
+   *  sorted case-insensitively by label — mirrors `projectOptions`. */
+  readonly programOptions = computed(() => {
+    const acronym = this.selectedPhase()?.obj_portfolio?.acronym;
+    const cache = this.programCatalogByPortfolio();
+    const options = acronym ? cache.get(acronym) ?? [] : [];
+    return [...options].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  });
+
+  /** `BSF-R-1` (mirrors `PMF-R-2`/`PMF-DD-3`) — appends URL-selected codes the catalog union does
+   *  not carry, labelled with the bare code, so a deep link stays ticked and removable. */
+  readonly programSelectOptions = computed(() => {
+    const options = this.programOptions();
+    const known = new Set(options.map(option => option.value));
+    const missing = this.programFilter()
+      .filter(code => !known.has(code))
+      .map(code => ({ value: code, label: code }));
+    return missing.length ? [...options, ...missing] : options;
+  });
+
   readonly filteredResults = computed(() => filterCenterResults(this.results(), this.currentContractParams()));
 
   readonly totalCount = computed(() => this.filteredResults().length);
@@ -514,6 +550,16 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     return this.projectFilter().map(id => {
       const match = rows.find(r => r.project_id != null && Number(r.project_id) === id);
       return { id, label: match?.project_name || `Project ${id}` };
+    });
+  });
+
+  /** `BSF-R-3` — a chip per active Science Program code, label from `programSelectOptions()`,
+   *  else the bare code — mirrors `projectChips`. */
+  readonly programChips = computed(() => {
+    const options = this.programSelectOptions();
+    return this.programFilter().map(code => {
+      const match = options.find(option => option.value === code);
+      return { code, label: match?.label ?? code };
     });
   });
 
@@ -563,6 +609,10 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
 
     for (const chip of this.projectChips()) {
       chips.push({ dimension: 'project', value: String(chip.id), label: `Project: ${chip.label}` });
+    }
+
+    for (const chip of this.programChips()) {
+      chips.push({ dimension: 'program', value: chip.code, label: `Science Program: ${chip.label}` });
     }
 
     for (const name of this.createdByFilter()) {
@@ -651,6 +701,18 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     ])
       .pipe(takeUntilDestroyed())
       .subscribe(([centerId, years]) => this.loadProjectCatalog(centerId, years));
+
+    // `BSF-R-1`/`BSF-R-10`/`DD-1` — the Science Program multiselect's options come from the
+    // portfolio-wide CLARISA initiatives catalog: one request per portfolio acronym per page
+    // lifetime, never retried on failure, never blocking the rest of the popover.
+    toObservable(this.selectedPhase)
+      .pipe(
+        map(phase => phase?.obj_portfolio?.acronym ?? null),
+        filter((acronym): acronym is string => !!acronym),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe(acronym => this.loadProgramCatalog(acronym));
 
     // Reset the table to its default sort + page 0 whenever the filtered set changes
     // (filter chips, search, new data) — mirrors the Results Center pattern.
@@ -879,6 +941,22 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     this.syncUrlParams();
   }
 
+  /** `BSF-R-3` — removes one Science Program code from the chip and writes the URL — mirrors
+   *  `removeProjectFilter`. */
+  removeProgramFilter(code: string): void {
+    this.programFilter.update(codes => codes.filter(existing => existing !== code));
+    this.syncUrlParams();
+  }
+
+  /** `BSF-R-1`/`BSF-R-2` — the multiselect's emitted array normalized to unique trimmed codes,
+   *  then routed through the existing program signal, predicate, chips and URL synchronization —
+   *  mirrors `onProjectFilterChange`. */
+  onProgramFilterChange(values: string[]): void {
+    const codes = [...new Set((values ?? []).map(value => (typeof value === 'string' ? value.trim() : '')).filter(code => !!code))];
+    this.programFilter.set(codes);
+    this.syncUrlParams();
+  }
+
   /**
    * `PMF-R-1` (pivot) — requests the center catalog for every selected phase year not already
    *  requested this page lifetime (`PMF-NFR-1`: at most one request per year, so repeated
@@ -917,6 +995,40 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
         },
       });
     }
+  }
+
+  /**
+   * `BSF-R-1`/`BSF-R-10`/`DD-1` — requests the portfolio-wide CLARISA initiatives catalog once
+   * per portfolio acronym not already requested this page lifetime (mirrors `loadProjectCatalog`'s
+   * `PMF-NFR-1` pattern: a failing portfolio is never retried). AVISA/SGP-02 is filtered out via the
+   * shared `filterOutAvisaInitiatives` util; options are cached and unioned by the `programOptions`
+   * computed. Loading and failure stay implicit — the control simply shows what the cache holds,
+   * never a program-specific loading or error state, and never blocks the rest of the popover.
+   */
+  private loadProgramCatalog(portfolioAcronym: string): void {
+    if (this.programCatalogPortfoliosRequested.has(portfolioAcronym)) return;
+    this.programCatalogPortfoliosRequested.add(portfolioAcronym);
+
+    this.resultsApiService.GET_AllInitiatives(portfolioAcronym).subscribe({
+      next: ({ response }) => {
+        const initiatives = filterOutAvisaInitiatives<{ official_code?: string; short_name?: string; name?: string; id?: number }>(response ?? []);
+        const options: ProgramFilterOption[] = [];
+        const seen = new Set<string>();
+        for (const initiative of initiatives) {
+          const code = typeof initiative?.official_code === 'string' ? initiative.official_code.trim() : '';
+          if (!code || seen.has(code)) continue;
+          seen.add(code);
+          const name = (typeof initiative?.short_name === 'string' ? initiative.short_name : typeof initiative?.name === 'string' ? initiative.name : '').trim();
+          const label = name ? `${code} - ${name}` : code;
+          options.push({ value: code, label });
+        }
+        this.programCatalogByPortfolio.update(cache => new Map(cache).set(portfolioAcronym, options));
+      },
+      error: () => {
+        // Recorded above, never retried: the portfolio stays absent from the cache and
+        // `programOptions` degrades to an empty list for it.
+      },
+    });
   }
 
   @HostListener('document:click', ['$event'])
@@ -985,6 +1097,9 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
         return;
       case 'project':
         this.removeProjectFilter(Number(chip.value));
+        return;
+      case 'program':
+        this.removeProgramFilter(chip.value);
         return;
       case 'createdBy':
         this.removeCreatedByFilter(chip.value);

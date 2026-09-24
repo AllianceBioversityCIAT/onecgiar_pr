@@ -1164,12 +1164,160 @@ describe('BilateralResultsListComponent', () => {
       const labels = Array.from(popover.querySelectorAll('.brl_filter_group_label')).map(
         el => (el.textContent ?? '').trim(),
       );
-      expect(labels).toEqual(['Phase', 'Source', 'Project', 'Created by', 'Center role']);
+      expect(labels).toEqual(['Phase', 'Source', 'Project', 'Science Program', 'Created by', 'Center role']);
 
       const projectField = popover.querySelector('.brl-filter-field[aria-label="Filter by project"]');
       expect(projectField).toBeTruthy();
       expect(projectField.querySelector('app-pr-filter-multiselect')).toBeTruthy();
     });
+  });
+
+  /**
+   * `changes/bilateral-science-program-filter` (`BSF-T-1`/`BSF-T-2`) — the Science Program
+   * multiselect in the Filters popover. Wiring (options → `programFilter` → `filterCenterResults` →
+   * chips → URL) mirrors the Project multiselect field-for-field, so these tests mirror the
+   * PMF-T-1 tests' structure/patterns above, exercising `program*` signals throughout — never
+   * `project*` ones left over from a copy-paste.
+   */
+  describe('Science Program filter (BSF-T-1/BSF-T-2)', () => {
+    it('narrows visible rows to the selected Science Program (BSF-R-2, Scenario "Filtering by one Science Program")', () => {
+      component.results.set([
+        result({ id: 1, submitter: 'SP01' }),
+        result({ id: 2, result_code: '8707', submitter: 'SP02' }),
+      ]);
+
+      component.onProgramFilterChange(['SP01']);
+
+      expect(component.programFilter()).toEqual(['SP01']);
+      expect(component.filteredResults().map(r => r.id)).toEqual([1]);
+    });
+
+    it('shows a removable "Science Program: <label>" chip with dimension "program" once a program is selected (BSF-R-3)', () => {
+      component.onProgramFilterChange(['SP01']);
+      fixture.detectChanges();
+
+      const chip = component.activeChips().find(c => c.dimension === 'program');
+      expect(chip).toBeTruthy();
+      expect(chip!.value).toBe('SP01');
+      // No catalog entry loaded for 'SP01' in this test, so the label falls back to the bare code
+      // (`programSelectOptions` `PMF-DD-3`-style fallback) — still the required `Science Program: …` shape.
+      expect(chip!.label).toBe('Science Program: SP01');
+      expect(chipTexts().some(text => text.includes('Science Program: SP01'))).toBe(true);
+    });
+
+    it('removing the chip restores the full applicable row set and clears the multiselect, without disturbing an active Project filter (BSF-R-3, Scenario "Removing the filter via chip")', () => {
+      component.results.set([
+        result({ id: 1, submitter: 'SP01', project_id: 118, project_name: 'Rice for Africa' }),
+        result({ id: 2, result_code: '8707', submitter: 'SP02', project_id: 118, project_name: 'Rice for Africa' }),
+        result({ id: 3, result_code: '8708', submitter: 'SP01', project_id: 204 }),
+      ]);
+
+      component.onProjectFilterChange([118]);
+      component.onProgramFilterChange(['SP01']);
+      expect(component.filteredResults().map(r => r.id)).toEqual([1]);
+
+      component.removeProgramFilter('SP01');
+
+      expect(component.programFilter()).toEqual([]);
+      // The Project filter (118) is still active and untouched — rows 1 and 2 both carry it.
+      expect(component.projectFilter()).toEqual([118]);
+      expect(component.filteredResults().map(r => r.id)).toEqual([1, 2]);
+      expect(component.activeChips().some(c => c.dimension === 'program')).toBe(false);
+      expect(component.activeChips().some(c => c.dimension === 'project')).toBe(true);
+    });
+
+    it('Clear all also clears the Science Program selection (BSF-R-4)', () => {
+      component.onProgramFilterChange(['SP01']);
+      expect(component.programFilter()).toEqual(['SP01']);
+
+      component.clearAllFilters();
+
+      expect(component.programFilter()).toEqual([]);
+    });
+
+    it('hydrates programFilter and filters the table from a deep link ?program=SP02 (BSF-R-5, Scenario "Deep link with a Science Program preselected")', () => {
+      bilateralApiService.GET_bilateralCenterResults.mockReturnValue(
+        of({
+          response: [
+            result({ id: 1, submitter: 'SP01' }),
+            result({ id: 2, result_code: '8707', submitter: 'SP02' }),
+          ],
+        }),
+      );
+
+      recreateOn({ program: 'SP02' });
+
+      expect(component.programFilter()).toEqual(['SP02']);
+      expect(component.filteredResults().map(r => r.id)).toEqual([2]);
+    });
+
+    it('loads Science Program options from GET_AllInitiatives, filtering out AVISA/SGP-02 entries (BSF-R-10)', fakeAsync(() => {
+      const resultsApiSE = TestBed.inject(ResultsApiService);
+      jest.spyOn(resultsApiSE, 'GET_AllInitiatives').mockReturnValue(
+        of({
+          response: [
+            { id: 1, official_code: 'SP01', short_name: 'Multifunctional Landscapes', name: 'Multifunctional Landscapes' },
+            { id: 2, official_code: 'SP02', short_name: 'Diversification', name: 'Diversification' },
+            { id: 41, official_code: 'SGP-02', short_name: 'AVISA', name: 'AVISA' },
+          ],
+        }),
+      );
+
+      recreateOn();
+      tick();
+      fixture.detectChanges();
+
+      expect(resultsApiSE.GET_AllInitiatives).toHaveBeenCalledWith('P25');
+      expect(component.programOptions().map(o => o.value)).toEqual(['SP01', 'SP02']);
+      expect(component.programSelectOptions().map(o => o.value)).toEqual(['SP01', 'SP02']);
+    }));
+
+    it('renders the control without throwing and never blocks the rest of the popover when the catalog fails (BSF-R-10, Scenario "No Science Program options available")', fakeAsync(() => {
+      const resultsApiSE = TestBed.inject(ResultsApiService);
+      jest.spyOn(resultsApiSE, 'GET_AllInitiatives').mockReturnValue(throwError(() => new Error('catalog unavailable')));
+
+      expect(() => {
+        recreateOn();
+        tick();
+        fixture.detectChanges();
+      }).not.toThrow();
+
+      // Proves the failing request actually ran — `toEqual([])` below would also pass if the
+      // catalog request never fired at all.
+      expect(resultsApiSE.GET_AllInitiatives).toHaveBeenCalledWith('P25');
+      expect(component.programSelectOptions()).toEqual([]);
+
+      component.filterPopoverOpen.set(true);
+      fixture.detectChanges();
+      const popover = fixture.nativeElement.querySelector('div[role="dialog"][aria-label="Result filters"]');
+      expect(popover).toBeTruthy();
+      expect(popover.querySelector('.brl-filter-field[aria-label="Filter by science program"]')).toBeTruthy();
+      // The other filters in the same popover render unaffected.
+      expect(popover.querySelector('.brl-filter-field[aria-label="Filter by project"]')).toBeTruthy();
+    }));
+
+    it('writes ?program=SP01 to the URL on selection and removes only "program" on chip removal, leaving an active Project filter untouched (BSF-R-5, Scenarios "Filtering by one Science Program" / "Removing the filter via chip")', fakeAsync(() => {
+      // An unrelated active filter (`project`) must survive both the write and the removal below.
+      component.onProjectFilterChange([118]);
+      tick();
+
+      component.onProgramFilterChange(['SP01']);
+      tick();
+      fixture.detectChanges();
+
+      expect(queryParams$.value['program']).toBe('SP01');
+      expect(queryParams$.value['project']).toBe('118');
+
+      // Real chip-click path — exercises `clearChip`'s `'program'` case, not `removeProgramFilter` directly.
+      chipRemoveButton('Science Program: SP01')!.click();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.programFilter()).toEqual([]);
+      expect('program' in queryParams$.value).toBe(false);
+      expect(queryParams$.value['project']).toBe('118');
+      expect(chipTexts().some(text => text.includes('Science Program:'))).toBe(false);
+    }));
   });
 
   describe('Column resize and pagination', () => {
