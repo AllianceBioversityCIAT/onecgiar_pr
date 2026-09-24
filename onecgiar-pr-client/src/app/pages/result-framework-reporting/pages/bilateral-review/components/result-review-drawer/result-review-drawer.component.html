@@ -368,7 +368,6 @@
                         label="Are there any regions that you wish to specify for this Output?"
                         [(ngModel)]="fields.geographicScope.has_extra_geo_scope"
                         [disabled]="!canEditDataStandards()"
-                        [readOnly]="!canEditDataStandards()"
                         [required]="false">
                       </app-pr-radio-button>
                       }

@@ -753,7 +753,8 @@ describe('TypeInnovationUseComponent', () => {
     };
     const MEASURES = {
       key: 'use-measures',
-      label: 'Other quantitative measures of innovation use'
+      label: 'Other quantitative measures of innovation use',
+      optional: true
     };
     const INVESTMENT = {
       key: 'use-investment',
@@ -868,6 +869,21 @@ describe('TypeInnovationUseComponent', () => {
       expect(html).toContain('innovationControlListSE.useLevelsList');
     });
 
+    it('keeps optional Organizations in full metadata and gates current-use measures on TBD = No', () => {
+      const template = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+      const organizations = template.indexOf('label="Organizations" description="Types of organizations involved in innovation use');
+      const fullMetadataToggle = template.indexOf('@if (showAllFields())');
+      const useTbdGates = [...template.matchAll(/@if \(body\.innov_use_to_be_determined === false\)/g)];
+      const measureLabel = template.indexOf('label="Other quantitative measures of innovation use"');
+      const measuresGate = useTbdGates[1]?.index ?? -1;
+
+      expect(organizations).toBeGreaterThan(-1);
+      expect(organizations).toBeGreaterThan(fullMetadataToggle);
+      expect(measuresGate).toBeGreaterThan(-1);
+      expect(measuresGate).toBeLessThan(measureLabel);
+      expect(template).toContain('[required]="false">\n        </app-pr-field-header>');
+    });
+
     /**
      * P2-3785 AC3 (Nicoleta Trifa, #INC-163204 point 4c): the three destinations of the USD estimation
      * — Program, bilateral project, external partners — are rendered TOGETHER, above the full-metadata
@@ -953,17 +969,16 @@ describe('TypeInnovationUseComponent', () => {
       expect(lastFields()).toContainEqual({ ...INVESTMENT, filled: false });
     });
 
-    it('P2-3428 — all four MDS fields are needed to complete the section', () => {
+    it('allows the section to complete without quantitative measures', () => {
       build();
       component.body = {
         innov_use_to_be_determined: false,
         actors: [{ actor_type_id: 1, is_active: true }],
-        measures: [{ unit_of_measure: 'ha', quantity: 3, is_active: true }],
-        innovation_use_level_id: '6',
         investment_bilateral: [{ kind_cash: 500, is_determined: null }]
       };
       component.updateMds();
-      expect(lastFields().every((f: any) => f.filled)).toBe(true);
+      expect(lastFields().filter((f: any) => !f.optional).every((f: any) => f.filled)).toBe(true);
+      expect(lastFields()).toContainEqual({ ...MEASURES, filled: false });
     });
 
     it('AC16 — nothing revealed by the toggle moves the MDS tracker', () => {

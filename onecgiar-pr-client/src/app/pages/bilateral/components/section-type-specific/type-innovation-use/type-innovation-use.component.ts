@@ -760,7 +760,8 @@ export class TypeInnovationUseComponent implements OnInit {
       {
         key: 'use-measures',
         label: 'Other quantitative measures of innovation use',
-        filled: this.hasCompleteMeasure()
+        filled: this.hasCompleteMeasure(),
+        optional: true
       },
       {
         key: 'use-investment',

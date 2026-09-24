@@ -527,6 +527,31 @@ describe('BilateralResultCreatorComponent', () => {
       );
     });
 
+    it('does not report an unanswered optional measure as missing', async () => {
+      component.openSectionName.set('type-specific');
+      autoSaveService.getEndpointKeys.mockReturnValue(['typeSpecific']);
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'type-specific',
+          status: 'partial',
+          fields: [
+            { key: 'use-measures', label: 'Other quantitative measures of innovation use', filled: false, optional: true },
+            { key: 'use-investment', label: 'Investment by CGIAR W3 or bilateral projects', filled: false },
+          ],
+        },
+      ]);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+
+      await component.triggerManualSave();
+
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Nothing to save yet',
+          description: 'Still missing: Investment by CGIAR W3 or bilateral projects.',
+        }),
+      );
+    });
+
     it('says the section is up to date when nothing was staged and nothing is missing', async () => {
       mdsTracker.sectionStatus.set([{ sectionName: 'general-info', status: 'complete', fields: [] }]);
       autoSaveService.hasPendingFor.mockReturnValue(false);

@@ -114,7 +114,7 @@ describe('ResultReviewDrawerComponent shipped geography template', () => {
     expect(radios.every(radio => radio.disabled)).toBe(!isAdmin);
     const radioControl = fixture.debugElement.query(By.css('app-pr-radio-button[label="Are there any regions that you wish to specify for this Output?"]')).componentInstance;
     const regionControl = fixture.debugElement.query(By.css('app-pr-multi-select[label="Select extra regions"]')).componentInstance;
-    expect(radioControl.readOnly).toBe(!isAdmin);
+    expect(radioControl.disabled).toBe(!isAdmin);
     expect(regionControl.readOnly()).toBe(!isAdmin);
   });
 });

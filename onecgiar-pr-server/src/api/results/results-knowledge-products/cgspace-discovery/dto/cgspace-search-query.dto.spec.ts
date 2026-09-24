@@ -41,7 +41,8 @@ describe('CgspaceSearchQueryDto', () => {
 
   it('should pass validation when project filter alone is provided (KPPJ bilateral)', async () => {
     const dto = plainToInstance(CgspaceSearchQueryDto, {
-      project: 'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa',
+      project:
+        'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa',
     });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);

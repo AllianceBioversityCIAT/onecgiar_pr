@@ -54,45 +54,48 @@
       </div>
     }
 
-    <!-- P2-3428 MDS field 2 / AC12: this block used to live inside the full-metadata toggle as an optional
-       field. It is MDS now, so it sits above the toggle and must NOT be repeated inside it. -->
-    <div>
-      <app-pr-field-header label="Other quantitative measures of innovation use" description="E.g. # of hectares." [required]="true">
-      </app-pr-field-header>
+    <!-- P2-3428: this optional field used to live inside the full-metadata toggle. It stays above the
+       toggle, with row-level unit and quantity required whenever a measure is added. It only applies
+       when current innovation use is known, matching the W1/W2 current-use gate. -->
+    @if (body.innov_use_to_be_determined === false) {
+      <div>
+        <app-pr-field-header label="Other quantitative measures of innovation use" description="E.g. # of hectares." [required]="false">
+        </app-pr-field-header>
 
-      @for (measure of visibleMeasures; track $index) {
-        <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
-          <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-            <app-pr-input
-              label="Unit of measure"
-              placeholder="e.g. # of projects"
-              [required]="true"
-              [(ngModel)]="measure.unit_of_measure"
-              (ngModelChange)="onFieldChange()"></app-pr-input>
-            <app-pr-input
-              label="Quantity"
-              type="number"
-              placeholder="0"
-              [required]="true"
-              [(ngModel)]="measure.quantity"
-              (ngModelChange)="onFieldChange()"></app-pr-input>
+        @for (measure of visibleMeasures; track $index) {
+          <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
+            <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+              <app-pr-input
+                label="Unit of measure"
+                placeholder="e.g. # of projects"
+                [required]="true"
+                [(ngModel)]="measure.unit_of_measure"
+                (ngModelChange)="onFieldChange()"></app-pr-input>
+              <app-pr-input
+                label="Quantity"
+                type="number"
+                placeholder="0"
+                [required]="true"
+                [(ngModel)]="measure.quantity"
+                (ngModelChange)="onFieldChange()"></app-pr-input>
+            </div>
+            <button
+              type="button"
+              class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+              (click)="deleteMeasure(measure)"
+              aria-label="Remove measure">
+              <i class="material-icons-round">delete</i>
+            </button>
           </div>
-          <button
-            type="button"
-            class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
-            (click)="deleteMeasure(measure)"
-            aria-label="Remove measure">
-            <i class="material-icons-round">delete</i>
-          </button>
-        </div>
-      }
+        }
 
-      @if (!visibleMeasures.length) {
-        <app-no-data-text title="Other quantitative measures not added"></app-no-data-text>
-      }
+        @if (!visibleMeasures.length) {
+          <app-no-data-text title="Other quantitative measures not added"></app-no-data-text>
+        }
 
-      <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
-    </div>
+        <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
+      </div>
+    }
 
     <!-- P2-3785 AC1 — the use level is NO LONGER part of the bilateral MDS (Nicoleta Trifa, #INC-163204
        point 4a, 21-Sep-2026), reversing what P2-3428 established. It stays here rather than moving under
