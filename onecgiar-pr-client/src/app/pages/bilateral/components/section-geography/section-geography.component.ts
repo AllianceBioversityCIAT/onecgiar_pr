@@ -11,6 +11,7 @@ import { GeoscopeManagementModule } from '../../../../shared/components/geoscope
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 import { BilateralExpandableStateService } from '../../services/bilateral-expandable-state.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 /**
  * `result_type_id` values FieldsManagerService treats as "an innovation" (`isAnInnovation()`).
@@ -67,6 +68,25 @@ export class SectionGeographyComponent {
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+  /**
+   * Night sweep 2026-09-23, R-3 / R-4 — three-state load flag (P2-3556 contract: `null` in flight,
+   * `true` loaded, `false` when the FIRST load failed).
+   *
+   * R-3: `GET_geographic` had no error branch, so a failed load left the empty default body on
+   * screen and the next save (e.g. adding one country) replaced every stored country with it.
+   * R-4: the realistic race — the GET arrived ~15 s late, the user had already edited, the late
+   * response was DISCARDED (`!this.hasLocalGeographyChanges`) and the save wiped the stored countries.
+   *
+   * Fix: the controls are locked (`locked`) until the stored geography is on screen, so there is
+   * nothing local to protect when it arrives and it is always applied; and `queueGeographySave`
+   * refuses to stage a body that was never read. A failed re-load after a successful one keeps `true`.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.bilateralLoadErrorNote;
+  readonly loadingNote = RESULT_DETAIL_SECTION_LOAD_COPY.bilateralGeographyLoading;
+  /** What the template binds to `[readOnly]`: the result's own lock, or "the stored geography is not on screen yet". */
+  readonly locked = computed(() => this.readOnly() || this.loaded() !== true);
 
   /**
    * The scope the RADIO is told to show — `null` whenever nothing is chosen.
@@ -207,6 +227,8 @@ export class SectionGeographyComponent {
       this.geographicLocationBody.set({ has_countries: false, has_regions: false, regions: [], countries: [], geo_scope_id: undefined });
       this.extraGeographicLocationBody.set({ geo_scope_id: undefined, has_regions: false, has_countries: false, regions: [], countries: [], has_extra_geo_scope: null });
       this.showAllFields.set(this.expandableState.getShowAllFields(resultId, 'geography'));
+      // R-3 / R-4 — a different result: what is in hand belongs to the previous one.
+      this.loaded.set(null);
       this.loadGeographicData();
     });
   }
@@ -217,8 +239,10 @@ export class SectionGeographyComponent {
 
     this.bilateralApi.GET_geographic(resultId).subscribe({
       next: ({ response }) => {
+        // Stale response for a result the user already left (performance-refactor guard).
         if (resultId !== this.creationService.currentResultId() || resultId !== this.hydratedResultId) return;
-        if (response && !this.hasLocalGeographyChanges) {
+        // R-4 — no longer discarded when the user "already edited": editing is locked until here.
+        if (response) {
           const scopeId = Number(response.geo_scope_id);
           const isCountryOrSubNational =
             scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL;
@@ -248,7 +272,13 @@ export class SectionGeographyComponent {
 
           this.updateTracker();
         }
-        if (!this.hasLocalGeographyChanges) this.loadedResultId.set(resultId);
+        this.loadedResultId.set(resultId);
+        this.loaded.set(true);
+      },
+      // R-3 — see `loaded`.
+      error: () => {
+        if (resultId !== this.hydratedResultId) return;
+        if (this.loaded() !== true) this.loaded.set(false);
       }
     });
   }
@@ -277,6 +307,8 @@ export class SectionGeographyComponent {
   }
 
   queueGeographySave(debounceMs = 500): void {
+    // R-3 / R-4 — never stage a body that was not read from the server (see `loaded`).
+    if (this.loaded() !== true) return;
     this.hasLocalGeographyChanges = true;
     this.autoSaveService.schedulePayload('geography', this.buildGeographyPayload(), {
       debounceMs,

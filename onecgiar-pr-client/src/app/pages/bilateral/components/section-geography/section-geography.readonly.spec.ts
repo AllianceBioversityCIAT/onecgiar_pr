@@ -40,7 +40,9 @@ describe('SectionGeographyComponent · P2-3788 read-only reaches sub-national co
 
   it('binds every sub-geoscope to the section read-only gate', () => {
     for (const tag of subGeoscopeTags) {
-      expect(tag).toMatch(/\[readOnly\]\s*=\s*"readOnly\(\)"/);
+      // Night sweep 2026-09-23 (R-3 / R-4): the gate is now `locked()` = `readOnly() || not loaded`,
+      // a superset of the P2-3788 gate (pinned in the component spec), so a locked result stays locked.
+      expect(tag).toMatch(/\[readOnly\]\s*=\s*"locked\(\)"/);
     }
   });
 

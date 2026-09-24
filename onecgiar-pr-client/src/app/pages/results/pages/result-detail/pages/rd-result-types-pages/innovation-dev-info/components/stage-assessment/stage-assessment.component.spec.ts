@@ -170,6 +170,31 @@ describe('StageAssessmentComponent', () => {
     });
   });
 
+  // Night sweep 2026-09-23, W12B-3 (prtest 8995): the clean-up ran on selectOptionEvent, which the
+  // shared radio emits BEFORE writing the new value, so the "Why?" of Not applicable survived.
+  // Control negative: with the template back on `(selectOptionEvent)="handleSelectionChange()"` the
+  // wiring test fails; the onSelected test shows the clean-up runs against the NEW value.
+  describe('W12B-3 — clean-up runs against the new selection', () => {
+    it('the radio is wired through ngModelChange, not selectOptionEvent', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'stage-assessment.component.html'), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+      expect(html).toContain('(ngModelChange)="onSelected($event)"');
+      expect(html).not.toContain('(selectOptionEvent)="handleSelectionChange()"');
+    });
+
+    it('moving from Not applicable to another stage drops the reason', () => {
+      const notApplicable = select('Not applicable');
+      notApplicable.answer_text = 'No formal risk assessment has been conducted yet';
+      const emerging = component.question.options.find((o: any) => o.question_text.startsWith('Emerging'));
+
+      component.onSelected(emerging.result_question_id);
+
+      expect(component.question['radioButtonValue']).toBe(emerging.result_question_id);
+      expect(notApplicable.answer_text).toBeNull();
+    });
+  });
+
   describe('handleSelectionChange', () => {
     it('delegates the boolean mapping to the shared utils service', () => {
       select('Emerging: specific GESI strategies being tested');

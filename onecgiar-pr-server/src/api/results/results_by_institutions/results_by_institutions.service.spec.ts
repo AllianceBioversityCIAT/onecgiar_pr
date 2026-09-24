@@ -338,6 +338,57 @@ describe('ResultsByInstitutionsService', () => {
     });
   });
 
+  // Night sweep 2026-09-23, D-2 (prtest 12039 / 12040): the review drawer omits centres it could not
+  // resolve; with the opt-in an absent key must not reach handleContributingCenters (which unlinks
+  // all on []). Control negative: without the preserveCentersWhenAbsent guard the first test fails.
+  describe('savePartnersInstitutionsByResultV2 — absent centres (D-2)', () => {
+    const arrange = () => {
+      (mockResultRepository as any).findOne = jest.fn().mockResolvedValue({
+        id: 12039,
+        result_type_id: 1,
+        result_by_institution_array: [],
+      });
+      (mockResultRepository as any).update = jest.fn();
+      (mockUserRepository as any).getUserById = jest
+        .fn()
+        .mockResolvedValue({ id: 2 });
+      mockGlobalParameterRepository.findOne.mockResolvedValue({ value: '0.5' });
+      mockResultKnowledgeProductRepository.findOne.mockResolvedValue(null);
+      jest
+        .spyOn(service as any, 'handleInstitutions')
+        .mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'syncInstitutionFromTocFlags')
+        .mockResolvedValue(undefined);
+      return jest
+        .spyOn(service, 'handleContributingCenters')
+        .mockResolvedValue(undefined);
+    };
+
+    it('leaves the centres alone when the reviewer path omits them', async () => {
+      const centers = arrange();
+      await service.savePartnersInstitutionsByResultV2(
+        { result_id: 12039, institutions: [] } as any,
+        { id: 2 } as any,
+        { preserveCentersWhenAbsent: true },
+      );
+      expect(centers).not.toHaveBeenCalled();
+    });
+
+    it('keeps the old behaviour (absent -> []) for every other caller', async () => {
+      const centers = arrange();
+      await service.savePartnersInstitutionsByResultV2(
+        { result_id: 12039, institutions: [] } as any,
+        { id: 2 } as any,
+      );
+      expect(centers).toHaveBeenCalledWith(
+        [],
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+  });
+
   describe('handleContributingCenters', () => {
     const baseUser = { id: 5 } as any;
     const baseDto = { result_id: 123 };

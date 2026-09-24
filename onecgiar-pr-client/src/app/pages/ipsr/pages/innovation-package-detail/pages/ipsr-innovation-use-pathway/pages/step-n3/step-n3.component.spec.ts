@@ -169,6 +169,17 @@ describe('StepN3Component', () => {
     expect(isOptionalUseLevel).toBe(false);
   });
 
+  // Night sweep 2026-09-23, IPSR-5 (prtest 12037). Control negative: without `refuseUntypedRows()`
+  // in onSaveSection the PATCH is sent.
+  it('IPSR-5: refuses to save a Current-use actor with figures and no actor type', () => {
+    const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+    const show = jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+    component.ipsrStep3Body.innovatonUse.actors = [{ women: 2, men: 2, evidence_link: 'https://example.org/zz' } as any];
+    component.onSaveSection();
+    expect(patch).not.toHaveBeenCalled();
+    expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'ipsrUntypedRows' }), );
+  });
+
   it('should call PATCHInnovationPathwayByRiId and getSectionInformation on onSaveSection', () => {
     const PATCHInnovationPathwayByRiIdSpy = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
     const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');

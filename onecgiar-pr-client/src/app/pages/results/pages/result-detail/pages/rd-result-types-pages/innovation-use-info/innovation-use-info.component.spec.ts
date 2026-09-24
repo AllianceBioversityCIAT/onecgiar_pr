@@ -128,6 +128,9 @@ describe('InnovationUseInfoComponent', () => {
 
     fixture = TestBed.createComponent(InnovationUseInfoComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (P1 twin): these tests model a section whose GETs already landed;
+    // the load-failure gate has its own describe block.
+    component.loaded.set(true);
   });
 
 
@@ -170,6 +173,63 @@ describe('InnovationUseInfoComponent', () => {
       component.getSectionInformation();
 
       expect(apiServiceSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('P1 twin (night sweep 2026-09-23) — refuses to save after a failed section load', () => {
+    // Control negative: with the `loaded` gate lines removed from `performSave()` / `onSaveSection()`
+    // the "does not PATCH" tests below fail.
+    beforeEach(() => component.loaded.set(null));
+
+    it('legacy path: a failed GET marks the section not loaded and Save sends nothing', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse').mockReturnValue(throwError(() => ({ status: 500 })));
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
+      component.getSectionInformation();
+
+      component.onSaveSection();
+
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('P25 path: a failed GET marks the section not loaded and the guard save resolves false', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(throwError(() => ({ status: 500 })));
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.getSectionInformationp25();
+
+      let resolved: boolean | undefined;
+      component.saveSection().subscribe(result => (resolved = result));
+
+      expect(component.loaded()).toBe(false);
+      expect(resolved).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('P25 path: a 404 ("no Innovation Use row yet", brand-new result) counts as loaded, so the first save can create it', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(throwError(() => ({ status: 404 })));
+      component.getSectionInformationp25();
+
+      expect(component.loaded()).toBe(true);
+    });
+
+    it('saves once the GET succeeded', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
+      component.getSectionInformation();
+
+      component.onSaveSection();
+
+      expect(component.loaded()).toBe(true);
+      expect(patch).toHaveBeenCalled();
+    });
+
+    it('renders the load-error note only on a failed load, and disables the bottom-bar Save', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'innovation-use-info.component.html'), 'utf8');
+      expect(html).toContain('@if (loaded() === false) {');
+      expect(html).toContain('[disabled]="loaded() !== true"');
     });
   });
 

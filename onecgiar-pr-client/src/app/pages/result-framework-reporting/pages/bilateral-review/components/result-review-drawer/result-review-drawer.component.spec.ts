@@ -1351,6 +1351,33 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
+    // Night sweep 2026-09-23 (W12-5 follow-up): the server retires extra countries on an explicit
+    // false. Control negative: back to `|| false` / unconditional lists, these two tests fail.
+    it('W12-5: keeps an unanswered (NULL) extra-scope flag as NULL and sends the loaded extra countries', fakeAsync(() => {
+      component.resultDetail.set(
+        buildDetail({ geographicScope: { geo_scope_id: 3, has_extra_geo_scope: null, extra_countries: [{ id: 404, sub_national: null }], has_extra_countries: true } })
+      );
+      exec();
+      tick();
+      const geo = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls[0][1].geographicScope;
+      expect(geo.has_extra_geo_scope).toBeNull();
+      expect(geo.extra_countries).toEqual([{ id: 404, sub_national: [] }]);
+      flush();
+    }));
+
+    // Merge note (night sweep × 74f39d186): the drawer passes the stored "No" through unchanged; the
+    // server is what retires the stored extra countries on an explicit false (W12-5).
+    it('W12-5: sends a stored "No" as an explicit false so the server retires the extra countries', fakeAsync(() => {
+      component.resultDetail.set(
+        buildDetail({ geographicScope: { geo_scope_id: 3, has_extra_geo_scope: false, extra_countries: [{ id: 404, sub_national: null }], extra_regions: [{ id: 2 }], has_extra_countries: true } })
+      );
+      exec();
+      tick();
+      const geo = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls[0][1].geographicScope;
+      expect(geo.has_extra_geo_scope).toBe(false);
+      flush();
+    }));
+
     it('maps the geographic scope including sub-nationals', fakeAsync(() => {
       component.resultDetail.set(
         buildDetail({
@@ -1403,14 +1430,74 @@ describe('ResultReviewDrawerComponent', () => {
       flush();
     }));
 
-    it('maps centers using the centers catalogue and drops unknown ones', fakeAsync(() => {
+    it('maps centers using the centers catalogue (entries without a code are ignored) and flags the first as lead', fakeAsync(() => {
       centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
-      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', { code: 'ZZZ' }, { nope: 1 }] }));
+      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', { nope: 1 }] }));
       exec();
       tick();
       const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls[0][1];
       expect(body.contributingCenters.length).toBe(1);
       expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      flush();
+    }));
+
+    // Night sweep 2026-09-23, D-2 (prtest 12039 / 12040): with the CLARISA catalogue empty the list
+    // came out [] and the server unlinked every centre. Control negative: without the
+    // `catalogue.length` check the first test fails; with the old "drop unknown codes" filter the
+    // second one does.
+    it('D-2: omits contributingCenters when the catalogue failed / is empty', fakeAsync(() => {
+      centersMock.centersList = [];
+      component.resultDetail.set(buildDetail({ contributingCenters: ['CENTER-01'] }));
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect('contributingCenters' in body).toBe(false);
+      flush();
+    }));
+
+    // Night sweep 2026-09-23, D-2b: pr-multi-select drops a retired code on the first edit, so the
+    // field no longer carries it. Control negative: without the `retired` merge both tests fail.
+    it('D-2b: reviewer touches the field, the retired stored centre survives', fakeAsync(() => {
+      centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }, { code: 'BBB', name: 'Beta' }];
+      component.originalContributingCenters = [
+        { code: 'AAA', is_leading_result: 1 },
+        { code: 'OLD', is_leading_result: null }
+      ];
+      // what the field holds after the reviewer added BBB (the multi-select already dropped OLD)
+      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA', 'BBB'] }));
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect(body.contributingCenters.map((c: any) => c.code)).toEqual(['AAA', 'BBB', 'OLD']);
+      expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      flush();
+    }));
+
+    it('D-2b: a retired stored lead stays lead when the reviewer edits the list', fakeAsync(() => {
+      centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
+      component.originalContributingCenters = [
+        { code: 'OLD', is_leading_result: 1 },
+        { code: 'AAA', is_leading_result: null }
+      ];
+      component.resultDetail.set(buildDetail({ contributingCenters: ['AAA'] }));
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect(body.contributingCenters.map((c: any) => c.code)).toEqual(['OLD', 'AAA']);
+      expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      expect(body.contributingCenters[1].is_leading_result).toBeNull();
+      flush();
+    }));
+
+    it('D-2: with the catalogue loaded, keeps a stored centre it no longer lists (retired) as stored', fakeAsync(() => {
+      centersMock.centersList = [{ code: 'AAA', name: 'Alpha' }];
+      component.resultDetail.set(buildDetail({ contributingCenters: [{ code: 'ZZZ' }, 'AAA'] }));
+      exec();
+      tick();
+      const body = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls.at(-1)[1];
+      expect(body.contributingCenters.map((c: any) => c.code)).toEqual(['ZZZ', 'AAA']);
+      expect(body.contributingCenters[0].is_leading_result).toBe(1);
+      expect(body.contributingCenters[1].name).toBe('Alpha');
       flush();
     }));
 

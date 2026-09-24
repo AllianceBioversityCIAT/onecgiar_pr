@@ -134,6 +134,8 @@
       <span
         class="inline-flex items-center whitespace-nowrap rounded-full px-[10px] py-[2px] text-[11.5px] font-semibold"
         [class]="statusToneClass(row)"
+        [style.background-color]="statusTone(row).bg"
+        [style.color]="statusTone(row).fg"
         data-testid="bilateral-review-row-status">
         {{ row.status_name }}
       </span>
@@ -321,6 +323,8 @@
       <span
         class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-[10px] py-[2px] text-[11.5px] font-semibold"
         [class]="statusToneClass(row)"
+        [style.background-color]="statusTone(row).bg"
+        [style.color]="statusTone(row).fg"
         data-testid="bilateral-review-row-status">
         {{ row.status_name }}
       </span>

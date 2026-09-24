@@ -52,6 +52,34 @@ describe('CurrentResultService', () => {
     service = new CurrentResultService(mockResultLevelService, mockApiService, mockRolesService, mockDataControlService, mockRouter);
   });
 
+  // Night sweep 2026-09-23, W12B-2: the async roles check ended with `readOnly = false` for a
+  // Science Program member AFTER the status lock, so a SUBMITTED result opened editable.
+  // Control negative: without the deferred re-apply this test fails.
+  it('W12B-2: keeps a SUBMITTED result read-only after the async roles check resolves for a member', async () => {
+    const response = { is_phase_open: 1, status_id: 3, result_type_id: 1, is_discontinued: false, initiative_id: 50 };
+    let resolveRoles: () => void;
+    mockRolesService.validateReadOnly.mockImplementation(
+      () =>
+        new Promise<void>(res => {
+          resolveRoles = () => {
+            mockApiService.rolesSE.readOnly = false; // what validateReadOnly does for a member
+            res();
+          };
+        })
+    );
+    mockDataControlService.currentResultSignal.set.mockImplementation(() => undefined);
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
+
+    service.GET_resultById();
+    expect(mockApiService.rolesSE.readOnly).toBe(true);
+
+    resolveRoles!();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockApiService.rolesSE.readOnly).toBe(true);
+  });
+
   it('should get result by id successfully', async () => {
     const response = {
       result_level_name: 'level1',

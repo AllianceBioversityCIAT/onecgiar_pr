@@ -13,6 +13,9 @@ import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideRefreshCw } from '@ng-icons/lucide';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 interface CenterOption {
   institutionId: number;
@@ -47,7 +50,9 @@ const INNOVATION_DEVELOPMENT_RESULT_TYPE_ID = 7;
 
 @Component({
   selector: 'app-section-contributors',
-  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
+  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent, NgIcon],
+  // W12-6 — the projects Retry uses Lucide, the repo's icon set (R37).
+  providers: [provideIcons({ lucideRefreshCw })],
   templateUrl: './section-contributors.component.html',
   styleUrl: './section-contributors.component.scss'
 })
@@ -275,6 +280,18 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    */
   readonly centersLoadFailed = signal(false);
 
+  /**
+   * Night sweep 2026-09-23, W12-6 (P2-3648) — the projects-catalogue twin of `centersLoadFailed`.
+   * A failed `GET_ClarisaProjects` used to set `availableProjects = []` AND `projectsReady = true`,
+   * so hydration ran against an empty catalogue: `readonlyLeadProjectId` stayed null ("Lead project"
+   * listed as a missing field the user cannot fill — it is read-only here), and, because the section
+   * then counted as hydrated, the next save sent `contributing_bilateral_projects: []`, which the
+   * server reads as "drop every project, lead included" (see `contributorsHydrated`). Now the failure
+   * is shown with a Retry and hydration waits for a real catalogue, exactly like the centers case.
+   */
+  readonly projectsLoadFailed = signal(false);
+  readonly loadCopy = RESULT_DETAIL_SECTION_LOAD_COPY;
+
   /** AC5/AC7: the field is satisfied by EITHER at least one partner OR the explicit "none" declaration. */
   readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
 
@@ -423,13 +440,21 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
             ownerCenterInstitutionId: p.owner_center_institution_id != null ? Number(p.owner_center_institution_id) : null,
           }))
         );
+        this.projectsLoadFailed.set(false);
         this.projectsReady.set(true);
       },
+      // W12-6 — see `projectsLoadFailed`: do NOT mark the catalogue ready on a failure.
       error: () => {
         this.availableProjects.set([]);
-        this.projectsReady.set(true);
+        this.projectsLoadFailed.set(true);
       }
     });
+  }
+
+  /** W12-6 — manual second chance for a failed projects-catalogue read, mirrors `retryLoadCenters()`. */
+  retryLoadProjects(): void {
+    this.projectsLoadFailed.set(false);
+    this.loadProjects();
   }
 
   ngOnDestroy(): void {

@@ -15,7 +15,7 @@ import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fie
 import { PrFieldValidationsComponent } from '../../../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 jest.useFakeTimers();
 
@@ -56,6 +56,8 @@ describe('ComplementaryInnovationComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(ComplementaryInnovationComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (IPSR-6): the save tests model a loaded step; the gate has its own tests.
+    component.loaded.set(true);
   });
 
   it('should create', () => {
@@ -490,6 +492,44 @@ describe('ComplementaryInnovationComponent', () => {
       expect(component.complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions).toEqual([
         { complementary_innovation_functions_id: 1, name: 'function 1' }
       ]);
+    });
+  });
+
+  // Night sweep 2026-09-23, IPSR-6 (prtest 12037): selection GET 500 → Save 200 unlinked everything.
+  // Control negative: with the gate lines removed from onSaveSection / onSavePreviousNext these fail.
+  describe('IPSR-6 — refuses to save after a failed load', () => {
+    beforeEach(() => {
+      component.loaded.set(null);
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepTwoInnovationSelect').mockReturnValue(throwError(() => ({ status: 500 })));
+      jest.spyOn(component.api.resultsSE, 'GET_resultsLinked').mockReturnValue(of({ response: { links: [] } }) as any);
+    });
+
+    it('marks the step as not loaded and Save sends nothing', () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of({}) as any);
+      component.loadInnovationPackage();
+      component.loadLinkedResults();
+      component.onSaveSection();
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('Previous / Next only navigate, without saving', () => {
+      component.api.rolesSE.readOnly = false;
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(of({}) as any);
+      const nav = jest.spyOn(component as any, 'navigateToStep').mockImplementation(() => undefined);
+      component.loadInnovationPackage();
+      component.loadLinkedResults();
+      component.onSavePreviousNext('next');
+      expect(patch).not.toHaveBeenCalled();
+      expect(nav).toHaveBeenCalledWith('next');
+    });
+
+    it('is loaded only once both GETs landed', () => {
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepTwoInnovationSelect').mockReturnValue(of({ response: [] }) as any);
+      component.loadInnovationPackage();
+      expect(component.loaded()).toBeNull();
+      component.loadLinkedResults();
+      expect(component.loaded()).toBe(true);
     });
   });
 });

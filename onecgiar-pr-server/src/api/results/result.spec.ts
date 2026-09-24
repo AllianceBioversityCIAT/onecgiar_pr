@@ -3041,6 +3041,12 @@ describe('ResultsService (unit, pure mocks)', () => {
       expect(
         mockContributorsPartnersService.updatePartnersV2,
       ).toHaveBeenCalled();
+      // Night sweep 2026-09-23, D-2: the drawer omits centres it could not resolve; the reviewer path
+      // asks the writer to leave them untouched. Control negative: without the option this fails.
+      const call = (
+        mockContributorsPartnersService.updatePartnersV2 as jest.Mock
+      ).mock.calls.at(-1);
+      expect(call[3]).toEqual({ preserveCentersWhenAbsent: true });
     });
 
     /**
@@ -3108,9 +3114,25 @@ describe('ResultsService (unit, pure mocks)', () => {
 
         const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
           .mock.calls[0];
-        // An empty array would be harmless today (the writer is guarded by institutions?.length),
-        // but sending nothing is what actually states the intent: the reviewer does not touch them.
+        // Sending nothing states the intent: the reviewer does not touch them. (Night sweep
+        // 2026-09-23, R-1: an empty array would NOT be harmless — the writer's `else` clears all.)
         expect(dto.institutions).toBeUndefined();
+      });
+
+      it('asks the writer to preserve the absent organizations (R-1, night sweep 2026-09-23)', async () => {
+        withStoredAttending(true);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          capdevReview,
+          userTest,
+        );
+
+        const [, , , options] = (
+          mockSummaryService.saveCapacityDevelopents as jest.Mock
+        ).mock.calls[0];
+        expect(options).toEqual({ preserveInstitutionsWhenAbsent: true });
       });
 
       it("lets the reviewer's own answer win when the payload carries one", async () => {

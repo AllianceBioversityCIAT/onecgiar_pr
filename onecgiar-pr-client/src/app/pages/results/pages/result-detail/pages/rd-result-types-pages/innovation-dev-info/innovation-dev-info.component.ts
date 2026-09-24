@@ -13,6 +13,7 @@ import { DataControlService } from '../../../../../../../shared/services/data-co
 import { SharePointUploadService } from '../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../internationalization/result-detail-section-load.copy';
 
 /**
  * Guidance printed under "Innovation Developer" up to the 2025 phase. Kept verbatim — P2-3272 Part 4
@@ -85,6 +86,30 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
   private sectionDataLoaded = false;
   private questionsLoaded = false;
 
+  /**
+   * Night sweep 2026-09-23 (P1 twin of W12-1 / W12-2) — whether every GET whose data this section
+   * SENDS BACK on save has landed: the body, the questions and, on the P25 path that still posts it,
+   * the evidence list. `null` while any is in flight, `false` once one failed on its FIRST load,
+   * `true` when all are in hand. Before this, each `error` only released the skeleton and marked
+   * itself "loaded", so the form painted blank with Save enabled and no message; the evidence POST
+   * in particular takes the whole list as the new truth (see `performSave()`), so an empty list from
+   * a failed GET would de-activate the stored ones. A failed RE-load after a successful load keeps a
+   * part `true`: what is in hand is what the server holds.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
+  private readonly loadParts: Record<'body' | 'questions' | 'evidence', boolean | null> = { body: null, questions: null, evidence: null };
+
+  private markLoadPart(part: 'body' | 'questions' | 'evidence', ok: boolean): void {
+    if (ok) this.loadParts[part] = true;
+    else if (this.loadParts[part] !== true) this.loadParts[part] = false;
+    const needsEvidence = this.fieldsManagerSE.isP25() && !this.fieldsManagerSE.isInnovationDevFormReduced2026();
+    const needed = [this.loadParts.body, this.loadParts.questions, ...(needsEvidence ? [this.loadParts.evidence] : [])];
+    if (needed.includes(false)) this.loaded.set(false);
+    else if (needed.every(v => v === true)) this.loaded.set(true);
+    else this.loaded.set(null);
+  }
+
   private checkSectionLoading(): void {
     if (this.sectionDataLoaded && this.questionsLoaded) {
       this.sectionLoading.set(false);
@@ -149,6 +174,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
         this.sectionDataLoaded = true;
+        this.markLoadPart('body', true);
         this.checkSectionLoading();
         // `UCA-T-11` — one of 3 concurrent load GETs feeding the composite snapshot; see the
         // `dirtyTracker` docstring above for why each of the 3 snapshots independently.
@@ -158,6 +184,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         console.error(err);
         this.savingSection = false;
         this.sectionDataLoaded = true;
+        this.markLoadPart('body', false);
         this.checkSectionLoading();
       }
     });
@@ -175,6 +202,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q4);
         this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
         this.questionsLoaded = true;
+        this.markLoadPart('questions', true);
         this.checkSectionLoading();
         // `UCA-T-11` — see above; this is the 2nd of 3 concurrent load GETs.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
@@ -182,6 +210,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
       error: err => {
         console.error(err);
         this.questionsLoaded = true;
+        this.markLoadPart('questions', false);
         this.checkSectionLoading();
       }
     });
@@ -201,6 +230,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
         this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
         this.questionsLoaded = true;
+        this.markLoadPart('questions', true);
         this.checkSectionLoading();
         // `UCA-T-11` — one of 2 concurrent load GETs (legacy path) feeding the composite snapshot;
         // see the `dirtyTracker` docstring on this class for why each snapshots independently.
@@ -209,6 +239,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
       error: err => {
         console.error(err);
         this.questionsLoaded = true;
+        this.markLoadPart('questions', false);
         this.checkSectionLoading();
       }
     });
@@ -228,6 +259,7 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
         this.sectionDataLoaded = true;
+        this.markLoadPart('body', true);
         this.checkSectionLoading();
         // `UCA-T-11` — the 2nd of 2 concurrent load GETs (legacy path); see above.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
@@ -236,17 +268,27 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
         console.error(err);
         this.savingSection = false;
         this.sectionDataLoaded = true;
+        this.markLoadPart('body', false);
         this.checkSectionLoading();
       }
     });
   }
 
   private getEvidenceDemandP25() {
-    this.api.resultsSE.GET_evidenceDemandP25().subscribe(({ response }) => {
-      this.evidencesBody = response ?? new EvidencesBody();
-      // `UCA-T-11` — the 3rd of 3 concurrent load GETs (P25 path); see the `dirtyTracker`
-      // docstring on this class for why each snapshots independently.
-      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+    this.api.resultsSE.GET_evidenceDemandP25().subscribe({
+      next: ({ response }) => {
+        this.evidencesBody = response ?? new EvidencesBody();
+        this.markLoadPart('evidence', true);
+        // `UCA-T-11` — the 3rd of 3 concurrent load GETs (P25 path); see the `dirtyTracker`
+        // docstring on this class for why each snapshots independently.
+        this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+      },
+      // P1 twin — before, a failed evidence GET left the empty default list in place and the next
+      // save posted it as the new truth.
+      error: err => {
+        console.error(err);
+        this.markLoadPart('evidence', false);
+      }
     });
   }
 
@@ -529,6 +571,8 @@ export class InnovationDevInfoComponent implements CanComponentDeactivate {
    * self-subscribing `void`/`async` to a single `Observable<boolean>` both callers share.
    */
   private performSave(): Observable<boolean> {
+    // P1 twin (night sweep 2026-09-23) — never send bodies that were not read from the server.
+    if (this.loaded() !== true) return of(false);
     this.savingSection = true;
     this.convertOrganizationsTosave();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {

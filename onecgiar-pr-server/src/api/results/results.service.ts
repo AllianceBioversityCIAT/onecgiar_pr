@@ -4573,6 +4573,9 @@ export class ResultsService {
         resultId,
         partnersPayload,
         user,
+        // Night sweep 2026-09-23, D-2 — the drawer omits `contributingCenters` when it could not
+        // resolve them against the catalogue; absent must mean "leave the centres untouched".
+        { preserveCentersWhenAbsent: true },
       );
     if (partnersResult.status !== HttpStatus.OK) {
       this._logger.warn(`Failed to update partners for result ${resultId}`);
@@ -4937,8 +4940,10 @@ export class ResultsService {
           // mention must be READ BACK, never assumed. `is_attending_for_organization` used to be
           // hardcoded to false here, which wiped the reporter's answer every time a reviewer pressed
           // "Save changes" — and the green check requires it, so the section stopped being green.
-          // `institutions` is left out of the DTO on purpose: `saveCapacityDevelopents` only rewrites
-          // them behind `if (institutions?.length)`, so omitting them preserves what is stored.
+          // `institutions` is left out of the DTO on purpose, and `preserveInstitutionsWhenAbsent`
+          // is what makes that true: without it `saveCapacityDevelopents` took the absent key down
+          // its `else` branch and de-activated every stored organization (night sweep 2026-09-23,
+          // R-1 — the comment here used to claim omission preserved them; it did not).
           const storedAttending =
             await this._readStoredAttendingForOrganization(resultId);
 
@@ -4953,6 +4958,7 @@ export class ResultsService {
             capdevDto,
             resultId,
             user,
+            { preserveInstitutionsWhenAbsent: true },
           );
         } else {
           this._logger.warn(

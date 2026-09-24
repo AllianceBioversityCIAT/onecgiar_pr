@@ -221,11 +221,13 @@ export class ContributorsPartnersService {
     resultId: number,
     dto: SavePartnersV2Dto,
     user: TokenDto,
+    options: { preserveCentersWhenAbsent?: boolean } = {},
   ) {
     dto.result_id = resultId;
     return this._resultsByInstitutionsService.savePartnersInstitutionsByResultV2(
       dto,
       user,
+      options,
     );
   }
 

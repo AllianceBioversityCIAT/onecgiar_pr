@@ -107,6 +107,25 @@
   </div>
 
   <div class="sc-block sc-block--projects">
+    <!--
+      Night sweep 2026-09-23, W12-6 (P2-3648): the projects catalogue failed, so the read-only lead
+      project cannot be shown and the section cannot be saved safely. Same banner + Retry as the
+      centers catalogue (BIL-T-1) instead of an unexplained "Lead project" missing field.
+    -->
+    @if (projectsLoadFailed()) {
+      <div class="flex flex-col items-start gap-[8px]" data-testid="projects-load-error">
+        <app-alert-status status="error" [description]="loadCopy.bilateralProjectsLoadError"></app-alert-status>
+        <button
+          type="button"
+          class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+          data-testid="projects-load-retry"
+          (click)="retryLoadProjects()">
+          <ng-icon name="lucideRefreshCw" class="text-[14px]" aria-hidden="true" />
+          {{ loadCopy.bilateralProjectsRetry }}
+        </button>
+      </div>
+    }
+
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing W3/bilateral projects"

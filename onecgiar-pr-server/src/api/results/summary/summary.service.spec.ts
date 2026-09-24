@@ -926,6 +926,65 @@ describe('SummaryService', () => {
     });
   });
 
+  /**
+   * Night sweep 2026-09-23, R-1 — the reviewer's "Save data standards" omits `institutions`; that
+   * absent key used to fall into the delete-all branch. Control negative: without the
+   * `preserveInstitutionsWhenAbsent` guard the first test fails (updateGenericIstitutions called
+   * with []).
+   */
+  describe('saveCapacityDevelopents — absent institutions (R-1)', () => {
+    const base = {
+      female_using: 2,
+      male_using: 4,
+      has_unkown_using: 0,
+      non_binary_using: 0,
+      capdev_delivery_method_id: 1,
+      capdev_term_id: 3,
+      is_attending_for_organization: true,
+    } as any;
+
+    beforeEach(() => {
+      mockResultsCapacityDevelopmentsRepository.capDevExists.mockResolvedValueOnce(
+        { result_capacity_development_id: 9 },
+      );
+      mockResultsCapacityDevelopmentsRepository.save.mockImplementation(
+        async (payload) => payload,
+      );
+      mockResultByIntitutionsRepository.updateGenericIstitutions.mockClear();
+    });
+
+    it('leaves the stored organizations untouched when the caller asked to preserve an absent key', async () => {
+      await service.saveCapacityDevelopents({ ...base }, 12034, user, {
+        preserveInstitutionsWhenAbsent: true,
+      });
+
+      expect(
+        mockResultByIntitutionsRepository.updateGenericIstitutions,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still deletes all on an explicit [] even with the option (the user removed them)', async () => {
+      await service.saveCapacityDevelopents(
+        { ...base, institutions: [] },
+        12034,
+        user,
+        { preserveInstitutionsWhenAbsent: true },
+      );
+
+      expect(
+        mockResultByIntitutionsRepository.updateGenericIstitutions,
+      ).toHaveBeenCalledWith(12034, [], 3, user.id);
+    });
+
+    it('keeps the old behaviour for every other caller (no option): absent still clears', async () => {
+      await service.saveCapacityDevelopents({ ...base }, 12034, user);
+
+      expect(
+        mockResultByIntitutionsRepository.updateGenericIstitutions,
+      ).toHaveBeenCalledWith(12034, [], 3, user.id);
+    });
+  });
+
   describe('getCapacityDevelopents', () => {
     it('returns default response when no capacity development found', async () => {
       mockResultsCapacityDevelopmentsRepository.capDevExists.mockResolvedValueOnce(

@@ -36,7 +36,15 @@ import { ResultCreationMethod } from '../../shared/constants/result-creation-met
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { AdUserService } from '../ad_users/ad_users.service';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
-import { DataSource, In, IsNull, Like, SelectQueryBuilder } from 'typeorm';
+import {
+  DataSource,
+  Equal,
+  In,
+  IsNull,
+  Like,
+  Or,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { GenderTagLevel } from '../results/gender_tag_levels/entities/gender_tag_level.entity';
 import { ResultImpactAreaScore } from '../result-impact-area-scores/entities/result-impact-area-score.entity';
 import {
@@ -121,6 +129,17 @@ const INNOVATION_DEV_INSTITUTION_TYPE_OTHER_CODE = 78;
 /** PRMS Innovation Use — current (reporting year) vs 2030 sections on actors / orgs / measures. */
 const INNOVATION_USE_SECTION_CURRENT = 1;
 const INNOVATION_USE_SECTION_2030 = 2;
+/**
+ * Night sweep 2026-09-23, BIL-2 — which `section_id` values mean "current use" when READING.
+ * The W3/bilateral form's writer (`results/summary/innovation_dev.service.ts`
+ * `saveAnticipatedInnoUser`) stamps only the 2030 projection (`section_id = 2`) and leaves current
+ * rows at NULL, while the ingest API writes 1. Reading only 1 hid every row a reporter added in the
+ * form from this summary (measured on prtest, result 9519). NULL is read as current; 2 never is.
+ */
+const INNOVATION_USE_SECTION_CURRENT_READ = Or(
+  Equal(INNOVATION_USE_SECTION_CURRENT),
+  IsNull(),
+);
 
 /** Capacity sharing — implementing organizations (`summary.service` / PRMS role 3). */
 const CAPACITY_SHARING_IMPLEMENTING_ORG_ROLE_ID = 3;
@@ -3326,7 +3345,7 @@ export class BilateralService {
         where: {
           result_id: resultId,
           is_active: true,
-          section_id: INNOVATION_USE_SECTION_CURRENT,
+          section_id: INNOVATION_USE_SECTION_CURRENT_READ,
         },
         relations: { obj_actor_type: true },
       }),
@@ -3335,7 +3354,7 @@ export class BilateralService {
           results_id: resultId,
           institution_roles_id: INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID,
           is_active: true,
-          section_id: INNOVATION_USE_SECTION_CURRENT,
+          section_id: INNOVATION_USE_SECTION_CURRENT_READ,
         },
         relations: { obj_institution_types: true },
       }),
@@ -3343,7 +3362,7 @@ export class BilateralService {
         where: {
           result_id: resultId,
           is_active: true,
-          section_id: INNOVATION_USE_SECTION_CURRENT,
+          section_id: INNOVATION_USE_SECTION_CURRENT_READ,
         },
       }),
       this.dataSource.getRepository(ResultActor).find({

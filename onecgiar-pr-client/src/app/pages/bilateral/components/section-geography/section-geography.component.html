@@ -11,10 +11,18 @@
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
 
+  <!-- Night sweep 2026-09-23 (R-3 / R-4): controls stay locked until the stored geography is on
+       screen; a failed load says so instead of offering an empty form to save over. -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [collapsible]="false" [description]="loadErrorNote" data-testid="section-load-error"></app-alert-status>
+  } @else if (loaded() === null) {
+    <app-alert-status status="info" [collapsible]="false" [description]="loadingNote" data-testid="section-loading"></app-alert-status>
+  }
+
   <!-- Main geographic focus -->
   <div class="sg-block sg-block--main">
     <app-pr-radio-button
-      [readOnly]="readOnly()"
+      [readOnly]="locked()"
       label="What is the geographic focus of the result?"
       description="This should reflect where the result has taken place/contributed to benefit."
       [options]="geoscopeOptions"
@@ -33,7 +41,7 @@
     @if (geographicLocationBody().geo_scope_id && geographicLocationBody().geo_scope_id !== 1 && geographicLocationBody().geo_scope_id !== 50) {
       @if (showsMainRegionsYesNo) {
         <app-pr-yes-or-not
-          [readOnly]="readOnly()"
+          [readOnly]="locked()"
           label="Are there any regions that you wish to specify for this result?"
           [required]="true"
           [hideDescription]="true"
@@ -45,7 +53,7 @@
       @if (geographicLocationBody().geo_scope_id === 2 || geographicLocationBody().has_regions) {
         <div class="sg-field">
           <app-pr-multi-select
-            [readOnly]="readOnly()"
+            [readOnly]="locked()"
             label="Select regions"
             [description]="REGIONS_STANDARD_NOTE"
             selectedLabel="Regions(s) selected"
@@ -66,7 +74,7 @@
 
       @if (geographicLocationBody().geo_scope_id !== 3 && geographicLocationBody().geo_scope_id !== 5) {
         <app-pr-yes-or-not
-          [readOnly]="readOnly()"
+          [readOnly]="locked()"
           label="Are there any countries that you wish to specify for this result?"
           [required]="true"
           [hideDescription]="true"
@@ -78,7 +86,7 @@
       @if (geographicLocationBody().geo_scope_id === 3 || geographicLocationBody().geo_scope_id === 5 || geographicLocationBody().has_countries) {
         <div class="sg-field">
           <app-pr-multi-select
-            [readOnly]="readOnly()"
+            [readOnly]="locked()"
             label="Select countries"
             [description]="COUNTRIES_STANDARD_NOTE"
             selectedLabel="Countries selected"
@@ -111,7 +119,7 @@
               [index]="idx"
               [obj_countrySelected]="geographicLocationBody().countries"
               [name]="country.name"
-              [readOnly]="readOnly()"
+              [readOnly]="locked()"
               (changed)="queueGeographySave()">
             </app-sub-geoscope>
           }
@@ -132,7 +140,7 @@
            other typologies keep the legacy wording. Both come from `isInnovationResult()`. -->
       @if (showExtraGeoScopeQuestion()) {
       <app-pr-yes-or-not
-        [readOnly]="readOnly()"
+        [readOnly]="locked()"
         [label]="extraScopeQuestionLabel()"
         [description]="extraScopeQuestionDescription()"
         [hideDescription]="!extraScopeQuestionDescription()"
@@ -144,7 +152,7 @@
 
       @if (extraGeographicLocationBody().geo_scope_id) {
         <app-pr-radio-button
-          [readOnly]="readOnly()"
+          [readOnly]="locked()"
           label="What is the geographic scope where there may be potential impact in other geographic areas?"
           [options]="extraGeoscopeOptions"
           optionLabel="name"
@@ -158,7 +166,7 @@
         @if (extraGeographicLocationBody().regions?.length) {
           <div class="sg-field">
             <app-pr-multi-select
-              [readOnly]="readOnly()"
+              [readOnly]="locked()"
               label="Select extra regions"
               [description]="REGIONS_STANDARD_NOTE"
               selectedLabel="Regions(s) selected"
@@ -177,7 +185,7 @@
         @if (extraGeographicLocationBody().countries?.length) {
           <div class="sg-field">
             <app-pr-multi-select
-              [readOnly]="readOnly()"
+              [readOnly]="locked()"
               label="Select extra countries"
               [description]="COUNTRIES_STANDARD_NOTE"
               selectedLabel="Countries selected"
@@ -203,7 +211,7 @@
                 [index]="idx"
                 [obj_countrySelected]="extraGeographicLocationBody().countries"
                 [name]="country.name"
-                [readOnly]="readOnly()"
+                [readOnly]="locked()"
                 (changed)="queueGeographySave()">
               </app-sub-geoscope>
               }

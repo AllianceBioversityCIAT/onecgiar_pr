@@ -21,6 +21,8 @@ const POLICY_TYPE_DESC = `<strong>Policy type guidance</strong> <ul>
 
 /** Shortened from the W1/W2 copy — bilateral has no partner-request flow to link to. */
 const INSTITUTIONS_DESC = 'Select min 1, max 3 organizations.';
+/** Night sweep 2026-09-23, BIL-3 — the ceiling `INSTITUTIONS_DESC` announces, enforced by `updateMds()`. */
+const INSTITUTIONS_MAX = 3;
 
 /**
  * P2-3556 — what the person reads when the section could not be fetched. Plain language on purpose:
@@ -176,6 +178,21 @@ export class TypePolicyChangeComponent implements OnInit {
     this.queueTypeSave();
   }
 
+  /**
+   * Night sweep 2026-09-23, BIL-9 — the USD amount and its status only exist for "Program, budget or
+   * investment" (policy type 1, the template's `@if (body.policy_type_id == 1)`). Switching to another
+   * type hid them but kept them stored (prtest 11407: Legal instrument with amount 1234). Cleared here,
+   * like every other hidden dependent value in these sections; the server writes `amount || null` and
+   * `status_amount` as received, so null is stored.
+   */
+  onPolicyTypeChange(): void {
+    if (this.body.policy_type_id != 1) {
+      this.body.amount = null;
+      this.body.status_amount = null;
+    }
+    this.onFieldChange();
+  }
+
   onSave(): void {
     this.queueTypeSave(0);
   }
@@ -203,13 +220,20 @@ export class TypePolicyChangeComponent implements OnInit {
   // question the spec calls optional. Submit is gated on overallStatus() === 'complete', so that
   // silently disabled the button. Same failure mode as P2-3348 and as Capacity Sharing.
   updateMds(): void {
+    // BIL-3 — "max 3" was text only: 4 organizations were stored and the section read complete
+    // (prtest 11407). Reported the P2-3340 way: still `filled`, but `invalid`, so Submit refuses and
+    // names it; the pick itself is not blocked (the multi-select has no cap input).
+    const institutionsCount = this.body.institutions?.length ?? 0;
     this.mdsTracker.setSectionFields('type-specific', [
       { key: 'policy-type', label: 'Policy type', filled: !!this.body.policy_type_id },
       { key: 'policy-stage', label: 'Stage', filled: !!this.body.policy_stage_id },
       {
         key: 'policy-institutions',
         label: 'Whose policy is this? (Implementing organizations)',
-        filled: (this.body.institutions?.length ?? 0) > 0
+        filled: institutionsCount > 0,
+        ...(institutionsCount > INSTITUTIONS_MAX
+          ? { invalid: true, invalidReason: `${institutionsCount} organizations selected; the maximum is ${INSTITUTIONS_MAX}` }
+          : {})
       }
     ]);
   }
