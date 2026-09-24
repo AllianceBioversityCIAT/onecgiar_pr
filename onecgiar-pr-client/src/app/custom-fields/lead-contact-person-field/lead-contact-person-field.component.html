@@ -6,7 +6,8 @@
   [description]="guidanceAsTooltip ? '' : leadContactField.description"
   [tooltip]="guidanceAsTooltip ? leadContactField.description : ''"
   [required]="required"
-  [hasValue]="hasSelectedContact">
+  [hasValue]="hasSelectedContact"
+  [editLocked]="readOnly">
 <div class="lead-contact-container">
   <div class="contact-select-wrapper" [hidden]="isContactLocked">
     <app-pr-input

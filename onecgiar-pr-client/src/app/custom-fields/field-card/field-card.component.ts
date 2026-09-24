@@ -61,6 +61,13 @@ export class FieldCardComponent implements OnInit, OnChanges {
    * Yeck el 14-sep-2026 al ver una pantalla con seis bandas verdes de campos intocables.
    */
   @Input() readOnly = false;
+  /**
+   * P2-3788 — the projected control cannot be edited, but the card keeps its status tint. Only
+   * blocks the "Unsaved changes" mark: on a result out of Editing a click on the Yes/No or on a
+   * region chip changed nothing and still showed the pill. Wrappers that do not pass `readOnly`
+   * (it would drop the tint) pass this instead.
+   */
+  @Input() editLocked = false;
   @Input() pinGuidanceByDefault = false;
   /** Clave de persistencia. Por defecto se deriva del label, que es lo que identifica al campo. */
   @Input() pinKey = '';
@@ -144,6 +151,7 @@ export class FieldCardComponent implements OnInit, OnChanges {
 
   /** `input`/`change` bubble out of the projected control, so one listener on the card is enough. */
   markEdited(): void {
+    if (this.readOnly || this.editLocked) return;
     if (!this.edited()) this.edited.set(true);
   }
 

@@ -72,7 +72,7 @@ describe('BIL-RTE-T-7 — geography Yes/No lock in the review drawer', () => {
       // the same card (textarea, multi-selects, …), so an unscoped substring count over-counts
       // (measured 8, not 2) and would not actually pin the geoscope call sites.
       const geoscopeBlocks = html.match(/<app-geoscope-management[\s\S]*?<\/app-geoscope-management>/g) ?? [];
-      expect(geoscopeBlocks, 'app-geoscope-management call sites in the drawer').to.have.length(2);
+      expect(geoscopeBlocks, 'main app-geoscope-management call site in the drawer').to.have.length(1);
       geoscopeBlocks.forEach(block => {
         expect(block, 'each app-geoscope-management site').to.include('[readOnly]="!canEditDataStandards()"');
       });

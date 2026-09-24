@@ -164,7 +164,7 @@ export class WebhookDispatchService {
     const enriched = await this._bilateralService.findOne(delivery.result_id);
     const data = (enriched as { response?: unknown })?.response ?? null;
 
-    const justification = await this.resolveJustification(delivery);
+    const review = await this.resolveReview(delivery);
 
     return {
       result_id: Number(delivery.result_id),
@@ -175,35 +175,55 @@ export class WebhookDispatchService {
         (data as { external_reference?: string })?.external_reference ?? null,
       decision: delivery.decision,
       decided_at: new Date().toISOString(),
+      reviewed_by: review.reviewer,
       // Omitted entirely when there is none — never an empty string. That is the contract P2-3157
       // fixed when it removed the hardcoded 'Approved' literal from the review history.
-      ...(justification ? { justification } : {}),
+      ...(review.justification ? { justification: review.justification } : {}),
       data,
     };
   }
 
-  /**
-   * AC2 requires the exact rejection justification. It lives in `result_review_history.comment`,
-   * whose reader P2-3157 built; the most recent row for the result is the decision being reported.
-   */
-  private async resolveJustification(
-    delivery: WebhookDelivery,
-  ): Promise<string | null> {
+  /** The review history supplies the decision's justification and reviewer identity. */
+  private async resolveReview(delivery: WebhookDelivery): Promise<{
+    justification: string | null;
+    reviewer: {
+      id: number;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+    } | null;
+  }> {
     try {
       const history =
         await this._reviewHistoryRepository.getReviewHistoryByResultId(
           Number(delivery.result_id),
         );
 
-      const comment = history?.[0]?.comment;
+      const decision = history?.find(
+        (entry) =>
+          entry.action === delivery.decision &&
+          new Date(entry.created_at).getTime() <=
+            new Date(delivery.created_date).getTime(),
+      );
+      const comment = decision?.comment;
       const trimmed = typeof comment === 'string' ? comment.trim() : '';
-      return trimmed.length ? trimmed : null;
+      return {
+        justification: trimmed.length ? trimmed : null,
+        reviewer: decision?.created_by
+          ? {
+              id: Number(decision.created_by),
+              first_name: decision.first_name ?? null,
+              last_name: decision.last_name ?? null,
+              email: decision.email ?? null,
+            }
+          : null,
+      };
     } catch (error) {
       this._logger.warn(
-        `Could not resolve justification for delivery ${delivery.id}`,
+        `Could not resolve review details for delivery ${delivery.id}`,
         error as Error,
       );
-      return null;
+      return { justification: null, reviewer: null };
     }
   }
 

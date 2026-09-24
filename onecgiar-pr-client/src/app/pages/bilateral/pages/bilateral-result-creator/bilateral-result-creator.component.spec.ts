@@ -1008,6 +1008,30 @@ describe('BilateralResultCreatorComponent', () => {
       expect(submitButton().textContent).toContain('Submit for review');
     });
 
+    it('gates Submit using the real MDS tracker when geography contains only main fields', () => {
+      const tracker = new BilateralMdsTrackerService();
+      for (const section of ['general-info', 'contributors', 'evidence', 'type-specific']) {
+        tracker.setSectionFields(section, [{ key: `${section}-required`, label: section, filled: true }]);
+      }
+      tracker.setSectionFields('geography', [
+        { key: 'geo-scope', label: 'Geographic scope', filled: true },
+        { key: 'countries', label: 'Countries', filled: true },
+      ]);
+
+      creationService.isEditableByCenterUser.set(true);
+      mdsTracker.overallStatus.set(tracker.overallStatus());
+      expect(tracker.overallStatus()).toBe('complete');
+      expect(component.canSubmitFromRail()).toBe(true);
+
+      tracker.setSectionFields('geography', [
+        { key: 'geo-scope', label: 'Geographic scope', filled: false },
+        { key: 'countries', label: 'Countries', filled: true },
+      ]);
+      mdsTracker.overallStatus.set(tracker.overallStatus());
+      expect(tracker.overallStatus()).toBe('partial');
+      expect(component.canSubmitFromRail()).toBe(false);
+    });
+
     it('names the AI check while it runs', () => {
       qualityAssessment.isBusy.set(true);
       fixture.detectChanges();

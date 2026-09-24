@@ -93,6 +93,8 @@ describe('BilateralCreationService', () => {
   });
 
   it('clearEditorState should wipe description and contributing project ids', () => {
+    service.selectedProject.set({ id: 99 } as any);
+    service.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '100' });
     service.resultDescription.set('stale description');
     service.resultContributingProjectIds.set([99, 100]);
     service.resultTitle.set('stale title');
@@ -100,6 +102,8 @@ describe('BilateralCreationService', () => {
     expect(service.resultDescription()).toBe('');
     expect(service.resultTitle()).toBe('');
     expect(service.resultContributingProjectIds()).toEqual([]);
+    expect(service.selectedProject()).toBeNull();
+    expect(service.selectedPrimarySp()).toBeNull();
   });
 
   it('loadResult should clear editor state before applying the payload', () => {

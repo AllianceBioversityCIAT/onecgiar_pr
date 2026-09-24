@@ -4036,7 +4036,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return [
       { label: 'Areas of work', items: aows },
       {
-        label: 'Programme-level',
+        // P2-3816 — American spelling, as the twin `programme-results` group and the P2-3505 sweep.
+        label: 'Program-level',
         items: [
           { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate outcomes' },
           { value: OUTCOMES_2030_CODE, label: '2030 outcomes' }

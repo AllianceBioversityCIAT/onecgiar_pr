@@ -111,6 +111,8 @@ export class BilateralCreationService {
 
   /** Clears editor signals so a previous result cannot leak into a new one. */
   clearEditorState(): void {
+    this.selectedProject.set(null);
+    this.selectedPrimarySp.set(null);
     this.isAiGenerated.set(false);
     this.resultCode.set(null);
     this.isW3Bilateral.set(false);

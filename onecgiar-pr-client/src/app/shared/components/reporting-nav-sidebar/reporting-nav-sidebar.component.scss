@@ -483,7 +483,8 @@ hlm-sidebar[data-collapsible='icon'] {
     // ("R", "I.", "C"…). Hide it here, in the same layer that resized the button. The chevron of the
     // expandable items goes with it: there is nothing to expand in the rail.
     > span,
-    > ng-icon.ms-auto {
+    > ng-icon.ms-auto,
+    > ng-icon.ml-auto {
       display: none !important;
     }
 

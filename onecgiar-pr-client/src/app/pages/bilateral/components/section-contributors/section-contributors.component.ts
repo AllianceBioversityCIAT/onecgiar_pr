@@ -91,6 +91,23 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     }));
   });
 
+  /**
+   * P2-3228 — the read-only "Lead center" value. The lead project's organisation wins, as before;
+   * a result with no project (API-reported W3/bilateral results often have none) falls back to the
+   * result's own lead Center, the same id `hydrateLeadAndSelection` already selects below.
+   */
+  readonly leadCenterLabel = computed(() => {
+    const projectLead = this.creationService.selectedProject()?.leadCenter;
+    if (projectLead?.acronym || projectLead?.name) {
+      return [projectLead.acronym, projectLead.name].filter(Boolean).join(' - ');
+    }
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    const resultLead = resultLeadCenterId
+      ? this.availableCenters().find(c => c.institutionId === Number(resultLeadCenterId))
+      : null;
+    return resultLead ? `${resultLead.acronym} - ${resultLead.name}` : '-';
+  });
+
   readonly availableCentersComputed = computed(() => {
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
@@ -425,6 +442,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   /** One-shot UI hydrate after centers/projects/result data are available. No network. */
   hydrateLeadAndSelection(): void {
+    this.readonlyLeadCenterInstitutionId = null;
+    this.readonlyLeadProjectId = null;
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
@@ -558,11 +577,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
           label: 'Lead center',
           filled: this.readonlyLeadCenterInstitutionId != null,
         },
-        {
-          key: 'lead-project',
-          label: 'Lead project',
-          filled: this.readonlyLeadProjectId != null,
-        },
+        // Manual creation always assigns a lead project before this editor opens. API imports and
+        // versions may legitimately have none, and there is no required lead-project choice here.
+        ...(this.creationService.selectedProject()
+          ? [{
+              key: 'lead-project',
+              label: 'Lead project',
+              filled: this.readonlyLeadProjectId != null,
+            }]
+          : []),
         // P2-3443: restored. It was held out of the tracker only because the answer was not
         // persisted — a reload turned it back to incomplete and Submit stayed blocked with no way
         // out. Now that the partners and the "no external partners" flag round-trip, the mandatory

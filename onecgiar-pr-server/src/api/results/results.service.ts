@@ -3748,16 +3748,24 @@ export class ResultsService {
         };
       }
 
+      // P2-3228: `is_active` is load-bearing. A re-run rollover leaves an inactive copy of the same
+      // result_code in the same phase, and `getCommonFieldsBilateralResultById` only reads active
+      // rows — resolving to that copy failed the detail right after a successful phase change.
       const result = versionId
         ? await this._resultRepository.findOne({
             where: {
               result_code: resultId,
               version_id: versionId,
               source: SourceEnum.Bilateral,
+              is_active: true,
             },
           })
         : await this._resultRepository.findOne({
-            where: { id: resultId, source: SourceEnum.Bilateral },
+            where: {
+              id: resultId,
+              source: SourceEnum.Bilateral,
+              is_active: true,
+            },
           });
 
       if (!result) {
