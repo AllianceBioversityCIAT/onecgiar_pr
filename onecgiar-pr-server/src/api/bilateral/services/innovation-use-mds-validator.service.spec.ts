@@ -22,7 +22,9 @@ describe('InnovationUseMdsValidator', () => {
     innov_use_to_be_determined: false,
     actors: [{ id: 1 }],
     measures: [{ unit_of_measure: 'hectares', quantity: 0 }],
-    investment_bilateral: [{ kind_cash: 100, is_determined: null }],
+    investment_bilateral: [
+      { kind_cash: 100, is_determined: null, name: 'Project A' },
+    ],
   };
 
   /**
@@ -77,33 +79,42 @@ describe('InnovationUseMdsValidator', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('rejects incomplete external investment before create', async () => {
+  it('accepts an identified external project without a budget', async () => {
     const validator = new InnovationUseMdsValidator({} as any);
     const payload = completeExternal();
     delete payload.contributing_bilateral_projects[0].usd_budget;
 
-    await expect(validator.assertExternalCreateMds(payload)).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(
+      validator.assertExternalCreateMds(payload),
+    ).resolves.toBeUndefined();
   });
 
-  it('rejects a persisted draft when a linked project has neither amount nor TBD', async () => {
+  it('accepts a persisted linked project when its budget has neither amount nor TBD', async () => {
     const summaryService = {
       getInnovationUse: jest.fn().mockResolvedValue({
         response: {
           ...completePersisted,
-          investment_bilateral: [{ kind_cash: null, is_determined: null }],
+          investment_bilateral: [
+            { kind_cash: null, is_determined: null, name: 'Project A' },
+          ],
         },
       }),
     };
     const validator = new InnovationUseMdsValidator(summaryService as any);
 
-    await expect(validator.assertPersistedMds(12)).rejects.toThrow(
-      'Investment by CGIAR W3 or bilateral projects',
+    await expect(validator.assertPersistedMds(12)).resolves.toBeUndefined();
+  });
+
+  it('still rejects an external project without its identifying grant title', async () => {
+    const validator = new InnovationUseMdsValidator({} as any);
+    const payload = completeExternal();
+    delete payload.contributing_bilateral_projects[0].grant_title;
+    await expect(validator.assertExternalCreateMds(payload)).rejects.toThrow(
+      'every project must be identified',
     );
   });
 
-  it('names the project that is short, not just the rule', async () => {
+  it('does not require budgets for any identified persisted project', async () => {
     const summaryService = {
       getInnovationUse: jest.fn().mockResolvedValue({
         response: {
@@ -117,9 +128,7 @@ describe('InnovationUseMdsValidator', () => {
     };
     const validator = new InnovationUseMdsValidator(summaryService as any);
 
-    await expect(validator.assertPersistedMds(12)).rejects.toThrow(
-      '"Delta Agronomy"',
-    );
+    await expect(validator.assertPersistedMds(12)).resolves.toBeUndefined();
   });
 
   it('falls back to the row position when the project link carries no name', async () => {

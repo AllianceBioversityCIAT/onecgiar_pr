@@ -51,6 +51,7 @@ describe('BilateralService (unit)', () => {
       ),
     } as any;
     const resultInstitutionsBudgetRepository = {
+      findOne: jest.fn().mockResolvedValue(undefined),
       save: jest.fn().mockResolvedValue([]),
     } as any;
     const clarisaInstitutionsRepository = {} as any;
@@ -726,9 +727,9 @@ describe('BilateralService (unit)', () => {
 
         expect(
           stubs.resultInstitutionsBudgetRepository.save,
-        ).toHaveBeenCalledWith([
+        ).toHaveBeenCalledWith(
           expect.objectContaining({ kind_cash: 7500, is_determined: null }),
-        ]);
+        );
       });
 
       it('nulls the amount when the partner says it is yet to be determined', async () => {
@@ -743,12 +744,12 @@ describe('BilateralService (unit)', () => {
 
         expect(
           stubs.resultInstitutionsBudgetRepository.save,
-        ).toHaveBeenCalledWith([
+        ).toHaveBeenCalledWith(
           expect.objectContaining({ kind_cash: null, is_determined: true }),
-        ]);
+        );
       });
 
-      it('still writes the row with a null amount when the payload states nothing', async () => {
+      it('marks an omitted Innovation Use partner amount as yet to be determined', async () => {
         const { service, stubs } = withMatchedInstitution();
 
         await service.handleInstitutions(
@@ -760,9 +761,9 @@ describe('BilateralService (unit)', () => {
 
         expect(
           stubs.resultInstitutionsBudgetRepository.save,
-        ).toHaveBeenCalledWith([
-          expect.objectContaining({ kind_cash: null, is_determined: null }),
-        ]);
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ kind_cash: null, is_determined: true }),
+        );
       });
     });
 
@@ -813,7 +814,7 @@ describe('BilateralService (unit)', () => {
 
       // Silence must stay silent: seeding an empty row for every ingested result would put a
       // line in the form that nobody wrote.
-      it('writes nothing when the payload states no investment at all', async () => {
+      it('marks an omitted Innovation Use lead program amount as yet to be determined', async () => {
         const { service, stubs } = makeService();
 
         await service.saveLeadProgramInvestment(
@@ -824,7 +825,23 @@ describe('BilateralService (unit)', () => {
           1,
         );
 
-        expect(stubs.initiativeBudgetRepository.save).not.toHaveBeenCalled();
+        expect(stubs.initiativeBudgetRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({ kind_cash: null, is_determined: true }),
+        );
+      });
+
+      it('treats a zero Innovation Use lead program amount as yet to be determined', async () => {
+        const { service, stubs } = makeService();
+        await service.saveLeadProgramInvestment(
+          11962,
+          9,
+          { usd_budget: 0 },
+          ResultTypeEnum.INNOVATION_USE,
+          1,
+        );
+        expect(stubs.initiativeBudgetRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({ kind_cash: null, is_determined: true }),
+        );
       });
 
       it('writes nothing for a type that carries no investment tables', async () => {

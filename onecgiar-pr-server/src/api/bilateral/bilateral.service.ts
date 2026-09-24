@@ -3898,7 +3898,11 @@ export class BilateralService {
       );
 
       if (isInnovationDevOrUse && savedResultProject) {
-        await this.createOrUpdateBudget(savedResultProject, nonpp, userId);
+        await this.createOrUpdateBudget(
+          savedResultProject,
+          this.normalizeInnovationUseInvestment(nonpp, resultTypeId),
+          userId,
+        );
       }
     }
   }
@@ -3909,6 +3913,22 @@ export class BilateralService {
       ResultTypeEnum.INNOVATION_USE,
       ResultTypeEnum.INNOVATION_USE_IPSR,
     ].includes(resultTypeId);
+  }
+
+  /** P2-3819: Innovation Use treats an omitted or zero amount as yet to be determined. */
+  private normalizeInnovationUseInvestment(source: any, resultTypeId?: number) {
+    if (
+      resultTypeId !== ResultTypeEnum.INNOVATION_USE ||
+      !source ||
+      typeof source !== 'object'
+    ) {
+      return source;
+    }
+    const amount = source.usd_budget;
+    if (amount === null || amount === undefined || Number(amount) === 0) {
+      return { ...source, usd_budget: null, is_determined: true };
+    }
+    return source;
   }
 
   /**
@@ -5027,9 +5047,11 @@ export class BilateralService {
   ) {
     if (!this.isInnovationType(resultTypeId)) return;
 
-    const investment = this.readIncomingInvestment(toc);
-    // Nothing stated is not the same as zero: a payload that never mentions investment must not
-    // seed an empty row, or every ingested result grows one the form then has to explain.
+    const investment = this.readIncomingInvestment(
+      this.normalizeInnovationUseInvestment(toc, resultTypeId),
+    );
+    // Other innovation types keep the historical no-row behavior when no investment is stated;
+    // Innovation Use reaches this point with an explicit TBD pair after normalization.
     if (investment.amount === null && investment.isDetermined === null) return;
 
     const resultInitiative = await this._resultByInitiativesRepository.findOne({
@@ -5215,7 +5237,9 @@ export class BilateralService {
         resolvedInstitutionIds.push(matched.id);
         investmentByInstitutionId.set(
           matched.id,
-          this.readIncomingInvestment(input),
+          this.readIncomingInvestment(
+            this.normalizeInnovationUseInvestment(input, resultTypeId),
+          ),
         );
       }
     }
@@ -5240,6 +5264,7 @@ export class BilateralService {
     );
 
     const toPersist: ResultsByInstitution[] = [];
+    const partnerByInstitutionId = new Map<number, ResultsByInstitution>();
     for (const instId of resolvedInstitutionIds) {
       const exists =
         await this._resultByIntitutionsRepository.getResultByInstitutionExists(
@@ -5256,31 +5281,37 @@ export class BilateralService {
         newPartner.institutions_id = instId;
         newPartner.is_active = true;
         toPersist.push(newPartner);
+      } else {
+        partnerByInstitutionId.set(instId, exists);
       }
     }
 
     if (toPersist.length) {
       const savedPartners =
         await this._resultByIntitutionsRepository.save(toPersist);
+      for (const row of Array.isArray(savedPartners)
+        ? savedPartners
+        : [savedPartners]) {
+        partnerByInstitutionId.set(row.institutions_id, row);
+      }
+    }
 
-      const isInnovationDevOrUse = this.isInnovationType(resultTypeId);
-      if (isInnovationDevOrUse && savedPartners.length) {
-        const budgets = (
-          Array.isArray(savedPartners) ? savedPartners : [savedPartners]
-        ).map((rbi) => {
-          const budget = new ResultInstitutionsBudget();
-          budget.created_by = userId;
-          budget.result_institution_id = rbi.id;
-          budget.is_active = true;
-          // The row used to be written with its identifiers only, so a `usd_budget` that
-          // passed DTO validation was accepted and then dropped: the amount never left this
-          // method. Carried through `investmentByInstitutionId` now.
-          const investment = investmentByInstitutionId.get(rbi.institutions_id);
-          budget.kind_cash = investment?.amount ?? null;
-          budget.is_determined = investment?.isDetermined ?? null;
-          return budget;
+    const isInnovationDevOrUse = this.isInnovationType(resultTypeId);
+    if (isInnovationDevOrUse && partnerByInstitutionId.size) {
+      for (const [institutionId, partner] of partnerByInstitutionId) {
+        const investment = investmentByInstitutionId.get(institutionId);
+        if (!investment) continue;
+        let budget = await this._resultInstitutionsBudgetRepository.findOne({
+          where: { result_institution_id: partner.id, is_active: true },
         });
-        await this._resultInstitutionsBudgetRepository.save(budgets);
+        budget ??= new ResultInstitutionsBudget();
+        budget.created_by ??= userId;
+        budget.last_updated_by = userId;
+        budget.result_institution_id = partner.id;
+        budget.is_active = true;
+        budget.kind_cash = investment.amount;
+        budget.is_determined = investment.isDetermined;
+        await this._resultInstitutionsBudgetRepository.save(budget);
       }
     }
   }
