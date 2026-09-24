@@ -177,6 +177,17 @@ describe('GlobalSearchPaletteComponent', () => {
       });
     });
 
+    it('opens an approved bilateral result in its lead centre editor, like the results list', () => {
+      component.openPalette();
+      component.openResult({
+        id: 28728, code: 28728, title: 'Wheat', submitterCode: 'SP01', statusId: 6, statusName: 'Approved', versionId: 6,
+        sourceName: 'W3/Bilaterals', leadCenter: 'CIMMYT'
+      });
+      expect(navigate).toHaveBeenCalledWith(['/bilateral', 'CIMMYT', 'result', 28728], {
+        queryParams: { phase: 6 }
+      });
+    });
+
     it('closes then navigates to the programme, addressed by code', () => {
       component.openPalette();
       component.openProgram({ id: 1, code: 'SP01', name: 'Sustainable Farming' });

@@ -1030,6 +1030,22 @@ describe('ResultsListComponent', () => {
       expect(component.getResultQueryParams(result)).toEqual({ phase: 36 });
     });
 
+    it('should link an Approved W3/Bilaterals result with a lead center to the center editor', () => {
+      const result = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Approved',
+        status_id: 6,
+        lead_center: 'CIMMYT',
+        result_code: '28728',
+        version_id: 6,
+        id: 'id-28728'
+      } as any;
+
+      expect(component.getResultLink(result)).toEqual(['/bilateral', 'CIMMYT', 'result', '28728']);
+      expect(component.getResultQueryParams(result)).toEqual({ phase: 6 });
+    });
+
     it('should return the same object identity for the same result (cached for routerLink)', () => {
       const result = { source_name: 'Initiative', result_code: 'R-3', version_id: 10 } as any;
 
@@ -1059,6 +1075,24 @@ describe('ResultsListComponent', () => {
       } as any;
 
       component.onResultLinkClick({ button: 0 } as MouseEvent, editingResult);
+
+      expect(component.bilateralResultsService.currentResultToReview()).toBeNull();
+      expect(component.bilateralResultsService.showReviewDrawer()).toBe(false);
+    });
+
+    it('should not preload the review drawer for an Approved W3/Bilaterals result', () => {
+      const approvedResult = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Approved',
+        status_id: 6,
+        lead_center: 'CIMMYT',
+        result_code: '28728',
+        version_id: 6,
+        id: 'id-28728'
+      } as any;
+
+      component.onResultLinkClick({ button: 0 } as MouseEvent, approvedResult);
 
       expect(component.bilateralResultsService.currentResultToReview()).toBeNull();
       expect(component.bilateralResultsService.showReviewDrawer()).toBe(false);
