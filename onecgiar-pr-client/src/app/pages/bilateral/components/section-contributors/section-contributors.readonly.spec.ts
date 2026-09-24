@@ -9,6 +9,7 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../shared/services/global/institutions.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
 import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -303,6 +304,72 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       buildWithLinkedResults();
 
       expect(fixture.nativeElement.querySelector('[data-testid="linked-result-coming-soon"]')).toBeNull();
+    });
+
+    // P2-3823 — a stored link the catalogue cannot name (only QA'd/approved results are listed)
+    // used to vanish from the read-only view: the real `pr-multi-select` drops ids it cannot map.
+    it('shows a chip for every stored link, including one the catalogue does not list (AC14)', async () => {
+      TestBed.inject(InnovationUseResultsService).resultsList = [{ id: 11164, title: 'Listed result' }] as any;
+      editable.set(false);
+      build();
+      component.showAllFields.set(true);
+      component.hasLinkedResult.set(true);
+      component.selectedLinkedResultIds.set([11164, 777]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const text = pickerFor(LINKED_PICKER_LABEL).textContent ?? '';
+      expect(text).toContain('Listed result');
+      expect(text).toContain('internal id 777');
+    });
+
+    // P2-3823 — a click before the stored answer is on screen would be overwritten by hydration.
+    // `[disabled]` next to `[(ngModel)]` is applied by NgModel on a microtask, hence `whenStable`.
+    // `pr-radio-button` also disables itself while the global `RolesService.readOnly` is up, and
+    // that flag starts TRUE until the role request resolves. Lowered here so ONLY this section's
+    // gates decide — otherwise both radio tests would pass on the roles flag and prove nothing.
+    const lowerGlobalRoleLock = () => {
+      TestBed.inject(RolesService).readOnly = false;
+    };
+
+    const settle = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    it('keeps the Yes/No radio locked until the stored answer has been read back', async () => {
+      editable.set(true);
+      lowerGlobalRoleLock();
+      build();
+      component.showAllFields.set(true);
+      component.linkedHydrated.set(false);
+      await settle();
+      const radios = () =>
+        (Array.from(fixture.nativeElement.querySelectorAll('input[type="radio"]')) as HTMLInputElement[]).filter(r =>
+          (r.closest('app-pr-radio-button')?.textContent ?? '').includes('linked or bundled')
+        );
+      expect(radios().length).toBe(2);
+      expect(radios().every(r => r.disabled)).toBe(true);
+
+      component.linkedHydrated.set(true);
+      await settle();
+      expect(radios().every(r => !r.disabled)).toBe(true);
+    });
+
+    it('keeps the Yes/No radio disabled on a read-only result (AC14)', async () => {
+      editable.set(false);
+      lowerGlobalRoleLock();
+      build();
+      component.showAllFields.set(true);
+      component.linkedHydrated.set(true);
+      await settle();
+      const radios = (Array.from(fixture.nativeElement.querySelectorAll('input[type="radio"]')) as HTMLInputElement[]).filter(r =>
+        (r.closest('app-pr-radio-button')?.textContent ?? '').includes('linked or bundled')
+      );
+      expect(radios.length).toBe(2);
+      expect(radios.every(r => r.disabled)).toBe(true);
     });
 
     it('drops the whole block for an Innovation Use result, which asks the question elsewhere', () => {

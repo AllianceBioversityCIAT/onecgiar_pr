@@ -1534,8 +1534,20 @@ export class BilateralCenterService {
    * project change, delegating to it would wipe those rows on the first save. So this mirrors the
    * protocol P2-3424 settled on (`summary.service.ts:336-366`):
    *  - "Yes" + a selection → that selection becomes the stored set;
+   *  - "Yes" without `linked_results` → only the flag changes, the rows stay as they are;
    *  - "No" AND a stored "Yes" → the retraction clears the links;
    *  - the question left unanswered (`null`) → nothing is written at all.
+   *
+   * ⚠️ What "narrow" spares, exactly (P2-3823 correction): only the `legacy_link` rows (NULL
+   * `linked_results_id`). Rows the P22 "Links to results" section wrote through the classic
+   * editor carry a real id and ARE replaced by a selection and deactivated by a retraction — the
+   * same contract Innovation Use accepted in P2-3424, because `linked_result` does not record
+   * which section wrote a row.
+   *
+   * 🛑 Input is normalised HERE, not by class-validator: no `ValidationPipe` is registered for
+   * this controller (nor globally), so the DTO decorators never run. A string `"false"` would read
+   * as `true` through `Boolean()`, and a `null` list would reach the writer as "empty" and wipe
+   * every id row. Anything that is not a real boolean / a real array is treated as absent.
    *
    * 🛑 Result types 2 and 7 are excluded ON PURPOSE, and the client hides the question for them:
    *  - Innovation Use asks it in its own type-specific section (PO decision, Ángel Jarrín,
@@ -1565,9 +1577,9 @@ export class BilateralCenterService {
     }
 
     const answer =
-      dto.has_innovation_link === null || dto.has_innovation_link === undefined
-        ? null
-        : Boolean(dto.has_innovation_link);
+      typeof dto.has_innovation_link === 'boolean'
+        ? dto.has_innovation_link
+        : null;
 
     // Unanswered is not an answer: the radio has no way back to blank once clicked, so a `null`
     // here means the question was never touched and the stored value must survive.
@@ -1585,11 +1597,16 @@ export class BilateralCenterService {
     });
 
     if (answer === true) {
-      // An omitted `linked_results` with a "Yes" means "the flag changed, the list did not".
-      if (dto.linked_results === undefined) return;
+      // An omitted (or non-array) `linked_results` with a "Yes" means "the flag changed, the list
+      // did not" — never "empty", which would deactivate every id row.
+      if (!Array.isArray(dto.linked_results)) return;
+      const linkedIds = await this.normaliseLinkedResultIds(
+        dto.linked_results,
+        bilResult.id,
+      );
       await this.resultsInnovationsUseRepository.replaceLinkedResultsByOrigin(
         bilResult.id,
-        dto.linked_results,
+        linkedIds,
         user.id,
       );
       return;
@@ -1604,6 +1621,34 @@ export class BilateralCenterService {
         user.id,
       );
     }
+  }
+
+  /**
+   * P2-3823 — the hygiene the classic writer applies (`ContributorsPartnersService.filterActiveLinkedResults`,
+   * `contributors-partners.service.ts:755-769`) and this path lacked: positive integers only, no
+   * link from a result to itself, no link to an inactive result.
+   */
+  private async normaliseLinkedResultIds(
+    raw: unknown[],
+    originId: number,
+  ): Promise<number[]> {
+    const ids = Array.from(
+      new Set(
+        raw
+          .map((id) => Number(id))
+          .filter(
+            (id) => Number.isInteger(id) && id > 0 && id !== Number(originId),
+          ),
+      ),
+    );
+    if (!ids.length) return [];
+    const placeholders = ids.map(() => '?').join(', ');
+    const rows = await this.resultRepository.query(
+      `SELECT id FROM result WHERE id IN (${placeholders}) AND is_active > 0`,
+      ids,
+    );
+    const active = new Set((rows ?? []).map((row: any) => Number(row?.id)));
+    return ids.filter((id) => active.has(id));
   }
 
   /** Contribution requests the centre form manages: 4 = draft (pre-approval), 1 = pending accept. */

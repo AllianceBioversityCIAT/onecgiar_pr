@@ -273,7 +273,7 @@
             <app-pr-radio-button
               [label]="linkedResultQuestionLabel"
               [required]="false"
-              [disabled]="readOnly()"
+              [disabled]="readOnly() || !linkedHydrated()"
               [options]="yesNoOptions"
               optionLabel="label"
               optionValue="value"
@@ -288,8 +288,8 @@
             <app-pr-multi-select
               [readOnly]="readOnly()"
               label="Select a result."
-              [options]="innovationUseResultsSE.resultsList"
-              [ngModel]="selectedLinkedResultIds()"
+              [options]="linkedResultOptions()"
+              [ngModel]="linkedResultModel()"
               (ngModelChange)="onLinkedResultsModelChange($event)"
               optionLabel="title"
               optionValue="id"

@@ -845,8 +845,18 @@ describe('BilateralCenterService', () => {
           .fn()
           .mockResolvedValue([]);
         (resultRepository.update as jest.Mock).mockClear();
+        // P2-3823 — the active-results filter: every id asked about is active unless the test
+        // says otherwise (`inactiveIds`).
+        (resultRepository.query as jest.Mock).mockImplementation(
+          async (_sql: string, ids: number[] = []) =>
+            ids
+              .filter((id) => !activeFilter.inactive.has(Number(id)))
+              .map((id) => ({ id })),
+        );
+        activeFilter.inactive = new Set();
         return linkedRepo;
       };
+      const activeFilter: { inactive: Set<number> } = { inactive: new Set() };
 
       it('stores a Yes with its selection through the narrow writer', async () => {
         const linkedRepo = arrangeResult();
@@ -946,6 +956,56 @@ describe('BilateralCenterService', () => {
           ).not.toHaveBeenCalled();
         },
       );
+
+      // ── P2-3823: no ValidationPipe runs on this route, so the service is the only guard ──
+      it('ignores a string flag: "false" must not be stored as Yes', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: false });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: 'false', linked_results: [11164] } as any,
+          user,
+        );
+
+        expect(resultRepository.update).not.toHaveBeenCalled();
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('treats a null list as absent: a Yes never wipes the stored rows', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: true, linked_results: null } as any,
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: true }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('drops the result itself, inactive results and junk ids before writing', async () => {
+        const linkedRepo = arrangeResult();
+        activeFilter.inactive = new Set([555]);
+
+        await service.saveContributors(
+          10,
+          {
+            has_innovation_link: true,
+            linked_results: [11164, 10, 555, -3, 'x', 11164, 9600] as any,
+          },
+          user,
+        );
+
+        expect(linkedRepo.replaceLinkedResultsByOrigin).toHaveBeenCalledWith(
+          10,
+          [11164, 9600],
+          user.id,
+        );
+      });
 
       it('keeps the stored list when a Yes arrives without linked_results', async () => {
         const linkedRepo = arrangeResult({ has_innovation_link: true });
