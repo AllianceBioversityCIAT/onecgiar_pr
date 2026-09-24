@@ -120,49 +120,49 @@
     }
   </div>
 
-  <!-- Potential impact in other geographic areas (extra scope) — innovations only, like W1/W2 -->
-  @if (
-    showExtraGeoScopeQuestion() &&
-    geographicLocationBody().geo_scope_id &&
-    geographicLocationBody().geo_scope_id !== 1 &&
-    geographicLocationBody().geo_scope_id !== 50
-  ) {
+  @if (showExtraMetadata()) {
+    <button type="button" class="sg-metadata-toggle" [attr.aria-expanded]="showAllFields()" aria-controls="geography-full-metadata" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
+    </button>
+  }
+  @if (showExtraMetadata() && showAllFields()) {
+    <div id="geography-full-metadata">
     <div class="sg-block sg-block--extra">
       <!-- P2-3504 · Innovation results ask the business-approved geographic-impact question;
            other typologies keep the legacy wording. Both come from `isInnovationResult()`. -->
+      @if (showExtraGeoScopeQuestion()) {
       <app-pr-yes-or-not
         [readOnly]="readOnly()"
         [label]="extraScopeQuestionLabel()"
         [description]="extraScopeQuestionDescription()"
         [hideDescription]="!extraScopeQuestionDescription()"
-        [required]="true"
+        [required]="false"
         [ngModel]="extraGeographicLocationBody().has_extra_geo_scope"
         (selectOptionEvent)="setHasExtraScope($event)">
       </app-pr-yes-or-not>
-      @if (extraScopeAnswerMissing) {
-        <p class="sg-field-error">Please answer Yes or No.</p>
       }
 
-      @if (extraGeographicLocationBody().has_extra_geo_scope) {
+      @if (extraGeographicLocationBody().geo_scope_id) {
         <app-pr-radio-button
           [readOnly]="readOnly()"
           label="What is the geographic scope where there may be potential impact in other geographic areas?"
           [options]="extraGeoscopeOptions"
           optionLabel="name"
           optionValue="id"
-          [required]="true"
+          [required]="false"
           [ngModel]="extraScopeSelection()"
           (ngModelChange)="onExtraScopeChange($event)">
         </app-pr-radio-button>
+      }
 
-        @if (extraGeographicLocationBody().geo_scope_id === 2 || extraGeographicLocationBody().has_regions) {
+        @if (extraGeographicLocationBody().regions?.length) {
           <div class="sg-field">
             <app-pr-multi-select
               [readOnly]="readOnly()"
               label="Select extra regions"
               [description]="REGIONS_STANDARD_NOTE"
               selectedLabel="Regions(s) selected"
-              [required]="true"
+              [required]="false"
               [options]="regionsCountriesSE.regionsList"
               optionLabel="name"
               optionValue="id"
@@ -171,20 +171,17 @@
               [ngModel]="extraGeographicLocationBody().regions"
               (ngModelChange)="onExtraRegionsChange($event)">
             </app-pr-multi-select>
-            @if (extraRegionsSelectionMissing) {
-              <p class="sg-field-error">Select at least one extra region for this geographic scope.</p>
-            }
           </div>
         }
 
-        @if (extraGeographicLocationBody().geo_scope_id === 3 || extraGeographicLocationBody().geo_scope_id === 5 || extraGeographicLocationBody().has_countries) {
+        @if (extraGeographicLocationBody().countries?.length) {
           <div class="sg-field">
             <app-pr-multi-select
               [readOnly]="readOnly()"
               label="Select extra countries"
               [description]="COUNTRIES_STANDARD_NOTE"
               selectedLabel="Countries selected"
-              [required]="true"
+              [required]="false"
               [options]="regionsCountriesSE.countriesList"
               optionLabel="full_name"
               optionValue="id"
@@ -193,19 +190,14 @@
               [ngModel]="extraGeographicLocationBody().countries"
               (ngModelChange)="onExtraCountriesChange($event)">
             </app-pr-multi-select>
-            @if (extraCountriesSelectionMissing) {
-              <p class="sg-field-error">Select at least one extra country for this geographic scope.</p>
-            }
           </div>
         }
 
-        @if (extraGeographicLocationBody().geo_scope_id === 5 && extraGeographicLocationBody().countries.length) {
+        @if (extraGeographicLocationBody().countries?.length) {
           <div class="sg-field">
-            @if (extraSubNationalSelectionMissing) {
-              <p class="sg-field-error">Select at least one sub-national location for each extra country.</p>
-            }
             <!-- P2-3788: mismo caso que el bloque principal. -->
             @for (country of extraGeographicLocationBody().countries; track country.id; let idx = $index) {
+              @if (country.sub_national?.length) {
               <app-sub-geoscope
                 [obj_country]="country"
                 [index]="idx"
@@ -214,10 +206,11 @@
                 [readOnly]="readOnly()"
                 (changed)="queueGeographySave()">
               </app-sub-geoscope>
+              }
             }
           </div>
         }
-      }
+    </div>
     </div>
   }
 </div>
