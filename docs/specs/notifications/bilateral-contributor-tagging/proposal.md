@@ -53,7 +53,7 @@ Evidence:
 | # | Trigger | Recipients | Message |
 |---|---|---|---|
 | 6 | result reaches Pending Review (5), from submit or ingest | active Center Users of each non-lead contributing Center | `The result <code> - <title> reported by <reporting Center acronym> has tagged the <tagged Center name>. Click to see the result.` |
-| 7 | same | active Center Users of the owner of each **non-lead** contributing project, including the reporting Center's other users (AC36) | `The result <code> - <title> reported by <reporting Center acronym> has tagged the <project name> of your center. Click to see the result.` |
+| 7 | same | active Center Users of the owner of each **non-lead** contributing project, including the reporting Center's other users (AC36) | `The result <code> - <title> reported by <reporting Center acronym> has tagged the <project name> of your center (<owner Center acronym>). Click to see the result.` |
 
 Rules shared by both scenarios:
 - The submitter is never notified (`notification.service.ts:73-75`).
@@ -110,7 +110,7 @@ Rules shared by both scenarios:
 - The owning Center of each non-lead contributing project is persisted as a contributing Center (form and ingest), except when it is the lead Center or cannot be resolved.
 - Derived Centers are locked in the selector while any project they own is selected.
 - On the transition to Pending Review, emit `Result Bilateral Project Tagged` for the owners of non-lead contributing projects, then `Result Center Tagged` for non-lead contributing Centers, one notification per user per result.
-- The tagging text for Center-authored results reads `reported by <acronym || code>`; project labels append ` of your center`.
+- The tagging text for Center-authored results reads `reported by <acronym || code>`; project labels append ` of your center (<owner Center acronym>)` (amended by `changes/notification-tagged-center-name`).
 
 ### MODIFIED Requirements
 
@@ -139,7 +139,7 @@ Part B keeps the option already agreed: **emit on submission** (the save-time an
 2. **Form save:** in `saveContributors`, when `contributing_bilateral_projects` is present, union the owners of the non-lead projects into `contributing_center` before `syncContributingCenters`. Return the effective Center set.
 3. **Ingest:** same union before `handleContributingCenters` (`bilateral.service.ts:486`), using the already-resolved projects.
 4. **Client:** a `lockedCenterIds` computed from the selected projects plus the server echo; auto-select on add; disable in `availableCentersComputed`; never auto-remove.
-5. **Notify on Pending Review:** guard `status_id === 5`; targets are non-lead projects' owners (project label + ` of your center`) **first**, then non-lead Centers; lead-in `reported by <lead acronym || code>`; try/catch and never throw.
+5. **Notify on Pending Review:** guard `status_id === 5`; targets are non-lead projects' owners (project label + ` of your center (<acronym || code>)`) **first**, then non-lead Centers; lead-in `reported by <lead acronym || code>`; try/catch and never throw.
 
 ## 12. Decisions And Open Items
 
@@ -148,7 +148,7 @@ Part B keeps the option already agreed: **emit on submission** (the save-time an
 | D-1 | Removing the project leaves the derived Center in place (sticky) | Decided, Juan David, 2026-09-22 |
 | D-2 | A derived Center is locked while its project is selected | Decided, Juan David, 2026-09-22 |
 | D-3 | The rule applies to the ingest API too; no contract change; documented | Decided, Juan David, 2026-09-22 |
-| D-4 | Scenario-7 text follows AC35 (`… of your center`) | Decided (delegated), 2026-09-22 |
+| D-4 | Scenario-7 text follows AC35 (`… of your center`), amended to `… of your center (<owner Center acronym>)` by `changes/notification-tagged-center-name` | Decided (delegated), 2026-09-22; amended |
 | D-5 | Reporting Center shown by acronym (`acronym \|\| code`) | Decided, Juan David, 2026-09-22 |
 | D-6 | The lead project is excluded from scenario-7 targets (its owner is the reporting Center; notifying its colleagues about their own lead project is noise) | Proposed, confirm at specify |
 | R-1 | **Scope beyond the US:** Part A is not in P2-3792. Tell Ángel so QA tests it and the story is not closed without it. | Open, Juan David |

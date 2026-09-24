@@ -154,7 +154,9 @@ The payload contract document SHALL carry a change-log entry stating that ingest
 
 #### BCT-R-7 — Notify owners of contributing projects on Pending Review (scenario 7)
 
-When a bilateral result reaches Pending Review, the system SHALL notify the active Center Users of the owning Center of each **contributing** project with: `The result <code> - <title> reported by <reporting Center acronym> has tagged the <project name> of your center. Click to see the result.`
+When a bilateral result reaches Pending Review, the system SHALL notify the active Center Users of the owning Center of each **contributing** project with: `The result <code> - <title> reported by <reporting Center acronym> has tagged the <project name> of your center (<owner Center acronym>). Click to see the result.`
+
+> Amended by `changes/notification-tagged-center-name` (NTC-R-1): the label ends with the owner Center acronym in parentheses (fallback: Center `code`). "That text" in the scenario below means this amended text.
 
 ##### Scenario: Submit with a CIP-owned project
 - GIVEN an AfricaRice result in Editing with a CIP-owned contributing project

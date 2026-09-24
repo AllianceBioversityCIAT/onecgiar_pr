@@ -106,7 +106,7 @@ Effect on the form round-trip: if the client omitted a derived Center, `syncCont
 ### 5.3 `notifyBilateralContributorsOnSubmission(resultId, emitterUserId)` (BCT-R-7..R-11)
 1. Load the result. Return unless `status_id === 5` and `source = Bilateral` (BCT-R-10).
 2. Reporting Center: the leading `results_center` row → Center → institution `acronym || code`. If there is none, log and use the lead-in `reported by a CGIAR Center` (degraded, never blocking).
-3. Project targets **first**: active non-lead `results_by_projects` rows → resolver → `{ centerCode, label: "<shortName ?? fullName ?? 'project <id>'> of your center", type: RESULT_BILATERAL_PROJECT_TAGGED }`. Skip unresolved projects with a warning (AC38).
+3. Project targets **first**: active non-lead `results_by_projects` rows → resolver → `{ centerCode, label: "<shortName ?? fullName ?? 'project <id>'> of your center (<acronym || code>)", type: RESULT_BILATERAL_PROJECT_TAGGED }`. Skip unresolved projects with a warning (AC38). Label amended by `changes/notification-tagged-center-name` (NTC-R-1/R-2).
 4. Center targets: active `results_center` rows with `is_leading_result` falsy → `{ centerCode, label: <institution name ?? code>, type: RESULT_CENTER_TAGGED }`, with the same label rule `notifyTaggedCenters` uses.
 5. `emitFor(resultId, emitterUserId, targets, leadIn)`.
 6. try/catch: log and return.

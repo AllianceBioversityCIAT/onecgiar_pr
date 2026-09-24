@@ -375,8 +375,16 @@ describe('ResultTaggedNotificationService', () => {
         },
       ]);
       centerRepo.find.mockResolvedValueOnce([
-        { code: 'AR', institutionId: 1 },
-        { code: 'CIP', institutionId: 67 },
+        {
+          code: 'AR',
+          institutionId: 1,
+          clarisa_institution: { acronym: 'AR' },
+        },
+        {
+          code: 'CIP',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'CIP' },
+        },
       ]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
 
@@ -390,11 +398,89 @@ describe('ResultTaggedNotificationService', () => {
       const [, type, userIds, , , suffix] = lastEmitCall();
       expect(type).toBe(NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED);
       expect(userIds).toEqual([21]);
-      // Acronym, not the full institution name — and the project label carries " of your center".
+      // Acronym, not the full institution name — and the project label carries the owner Center.
       expect(suffix).toBe(
-        'reported by AR has tagged the P-CIP of your center. Click to see the result.',
+        'reported by AR has tagged the P-CIP of your center (CIP). Click to see the result.',
       );
     });
+
+    // NTC-R-1 / S1 — the acronym differs from the code, so a code/acronym mix-up fails. The text
+    // names only the owner Center: exactly one parenthesis group.
+    it('names the owner Center by its institution acronym, not its code (NTC S1)', async () => {
+      resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
+      resultsCenterRepo.find.mockResolvedValueOnce([leadingCenterRow('AR')]);
+      resultsByProjectsRepo.find.mockResolvedValueOnce([
+        {
+          project_id: 300,
+          is_lead: false,
+          obj_clarisa_project: {
+            id: 300,
+            shortName: 'S-YAU44',
+            organizationCode: 88,
+          },
+        },
+      ]);
+      centerRepo.find.mockResolvedValueOnce([
+        {
+          code: 'IC-CODE',
+          institutionId: 88,
+          clarisa_institution: { acronym: 'ICRISAT' },
+        },
+      ]);
+      roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+      await service.notifyBilateralContributorsOnSubmission(RESULT_ID, EMITTER);
+
+      const suffix = lastEmitCall()[5] as string;
+      expect(suffix).toBe(
+        'reported by AR has tagged the S-YAU44 of your center (ICRISAT). Click to see the result.',
+      );
+      expect(suffix.match(/\(/g)).toHaveLength(1);
+      expect(centerRepo.find).toHaveBeenCalledTimes(1);
+    });
+
+    // NTC-R-2 / S2 — no institution acronym: fall back to the Center code, never `()`.
+    it.each([
+      ['no institution', undefined],
+      ['an institution without acronym', { name: 'No Acronym Institution' }],
+      ['an empty acronym', { acronym: '', name: 'Empty' }],
+    ])(
+      'falls back to the owner Center code when there is %s, never rendering () (NTC S2)',
+      async (_label, institution) => {
+        resultRepo.findOne.mockResolvedValue(pendingReviewBilateralResult);
+        resultsCenterRepo.find.mockResolvedValueOnce([leadingCenterRow('AR')]);
+        resultsByProjectsRepo.find.mockResolvedValueOnce([
+          {
+            project_id: 301,
+            is_lead: false,
+            obj_clarisa_project: {
+              id: 301,
+              shortName: 'S-YAU44',
+              organizationCode: 99,
+            },
+          },
+        ]);
+        centerRepo.find.mockResolvedValueOnce([
+          {
+            code: 'AR-CODE-Z',
+            institutionId: 99,
+            clarisa_institution: institution,
+          },
+        ]);
+        roleByUserRepo.getUserIdsByCenter.mockResolvedValueOnce([21]);
+
+        await service.notifyBilateralContributorsOnSubmission(
+          RESULT_ID,
+          EMITTER,
+        );
+
+        const suffix = lastEmitCall()[5] as string;
+        expect(suffix).toBe(
+          'reported by AR has tagged the S-YAU44 of your center (AR-CODE-Z). Click to see the result.',
+        );
+        expect(suffix).not.toContain('()');
+      },
+    );
 
     // Reviewer FAIL issue 1 (attempt 2) — AC36: a project owned by the *reporting* Center is a
     // legitimate project target (only the lead PROJECT and the leading Center's own Center-tagged
@@ -524,7 +610,11 @@ describe('ResultTaggedNotificationService', () => {
         },
       ]);
       centerRepo.find.mockResolvedValueOnce([
-        { code: 'CIP', institutionId: 67 },
+        {
+          code: 'CIP',
+          institutionId: 67,
+          clarisa_institution: { acronym: 'CIP' },
+        },
       ]);
       roleByUserRepo.getUserIdsByCenter.mockResolvedValue([21]);
 
@@ -536,7 +626,7 @@ describe('ResultTaggedNotificationService', () => {
       expect(lastEmitCall()[1]).toBe(
         NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
       );
-      expect(lastEmitCall()[5]).toContain('P-CIP of your center');
+      expect(lastEmitCall()[5]).toContain('P-CIP of your center (CIP)');
     });
 
     it('does not re-notify a user already told about this result (AC32)', async () => {

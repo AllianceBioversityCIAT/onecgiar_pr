@@ -101,7 +101,7 @@
 ### [x] BCT-T-4 — Tagging emitter for bilateral submissions
 
 - **Type:** server
-- **Description:** Add an optional `leadIn` to `emitFor` (absent → today's `created by …` text, verbatim). Add `notifyBilateralContributorsOnSubmission(resultId, emitterUserId)` per design §5.3: status 5 and bilateral guard; reporting Center `acronym || code` (fallback `a CGIAR Center`); **project targets first** with label `<shortName ?? fullName ?? 'project <id>'> of your center`, skipping `is_lead` rows and unresolved owners; then non-leading Center targets; try/catch. Register `ResultsCenter` and `ResultsByProjects` in `NotificationModule`'s `TypeOrmModule.forFeature`.
+- **Description:** Add an optional `leadIn` to `emitFor` (absent → today's `created by …` text, verbatim). Add `notifyBilateralContributorsOnSubmission(resultId, emitterUserId)` per design §5.3: status 5 and bilateral guard; reporting Center `acronym || code` (fallback `a CGIAR Center`); **project targets first** with label `<shortName ?? fullName ?? 'project <id>'> of your center (<acronym || code>)` (amended by `changes/notification-tagged-center-name`), skipping `is_lead` rows and unresolved owners; then non-leading Center targets; try/catch. Register `ResultsCenter` and `ResultsByProjects` in `NotificationModule`'s `TypeOrmModule.forFeature`.
 - **Implements:** BCT-R-7, BCT-R-8, BCT-R-9, BCT-R-10 (status guard), BCT-R-11, BCT-R-12, BCT-NFR-1, NFR-2, NFR-6; design DD-5, §5.3, §5.4
 - **Files (expected):** `onecgiar-pr-server/src/api/notification/services/result-tagged-notification.service.ts` (+ spec), `onecgiar-pr-server/src/api/notification/notification.module.ts`
 - **Depends on:** T1
@@ -204,7 +204,7 @@
     - `npm run migration:check` reports a pending migration;
     - on prtest, a known Alliance-descended contributing project does not derive its Center;
     - in the browser, the derived Center shows enabled while its project is selected;
-    - a bell item for scenario 7 renders without ` of your center` or without the result link;
+    - a bell item for scenario 7 renders without ` of your center (<acronym || code>)` or without the result link;
     - `SHOW CREATE TABLE result_review_history` shows `action` without `UPDATE` in the target environment.
   - **Red run:** n/a (no test gate) — manual. `npm run migration:check` (server) is the one command.
   - **Disqualifier:** a manual check run on a local DB that lacks the environment's CLARISA rows proves nothing about Alliance projects. It must run where those rows exist.

@@ -199,11 +199,15 @@ export class ResultTaggedNotificationService {
           );
           continue;
         }
+        // NTC-R-1/R-2: name the owner Center by institution acronym, else its code — never `()`.
+        const ownerCenterLabel =
+          centerIndex.byCode.get(centerCode)?.clarisa_institution?.acronym ||
+          centerCode;
         targets.push({
           centerCode,
           label: `${
             project.shortName ?? project.fullName ?? `project ${project.id}`
-          } of your center`,
+          } of your center (${ownerCenterLabel})`,
           type: NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED,
         });
       }
@@ -237,7 +241,9 @@ export class ResultTaggedNotificationService {
    * BCT-DD-1 resolver reads from. Never call this inside a per-project loop (BCT-NFR-5).
    */
   private async loadCenterIndex(): Promise<CenterIndex> {
-    const centers = await this.centerRepo.find();
+    const centers = await this.centerRepo.find({
+      relations: { clarisa_institution: true },
+    });
     return buildCenterIndex(centers);
   }
 
