@@ -36,6 +36,15 @@ interface ProjectOption {
 
 const PARTNERS_MDS_GROUP = 'partners';
 
+/**
+ * Result types whose linked/bundled answer is owned by another surface — see
+ * `linkedQuestionOwnedElsewhere()`. Declared here rather than imported from
+ * `qa-innovation-development-results.service.ts` so this section does not depend on a QA service
+ * for two numbers; same idiom as `type-innovation-use.component.ts:56`.
+ */
+const INNOVATION_USE_RESULT_TYPE_ID = 2;
+const INNOVATION_DEVELOPMENT_RESULT_TYPE_ID = 7;
+
 @Component({
   selector: 'app-section-contributors',
   imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
@@ -211,23 +220,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   readonly selectedSecondarySpIds = computed(() => this.creationService.selectedSecondarySps().map(sp => Number(sp.programId)));
 
-  /**
-   * 🛑 HOUSE RULE — a control whose value cannot be stored ships VISIBLE BUT DISABLED with a
-   * `Coming soon` tag, and never tells the user it will be saved.
-   *
-   * Two controls are in that state here: the **linked/bundled question** and the **results
-   * dropdown** it unlocks. Neither has a field on `SaveBilateralContributorsDto` nor a home in the
-   * bilateral detail payload, so answering them wrote to a component signal and nothing else — the
-   * answer was gone on the next reload. Same markup as `result-ai-item.component.html`
-   * (`globalDisabled` + the tag span). Contributing science programs left this list on 2026-09-03:
-   * the DTO now accepts `contributing_programs[]` and the detail payload returns them (role 2).
-   *
-   * The flag is a named member rather than a literal in the template because the spec overrides
-   * the template: an inline `[ngClass]="{ globalDisabled: true }"` would be untestable. Flip it to
-   * `false` — and put the fields back into `hiddenFieldsWithValues()` — the day the DTO accepts
-   * them.
-   */
-  readonly unpersistedFieldsComingSoon: boolean = true;
+  // 🛑 HOUSE RULE — a control whose value cannot be stored ships VISIBLE BUT DISABLED with a
+  // `Coming soon` tag, and never tells the user it will be saved. NOTHING in this section is in
+  // that state any more: the linked/bundled question and its results dropdown were the last two
+  // out, on 2026-09-24 (P2-3368 AC10-AC14), after contributing science programs on 2026-09-03.
+  // Put the tag back — never a silently-dropped value — if a control here ever loses its storage.
 
   // ─────────────────────────────────────────────────────────────────────────
   // P2-3368 · External partners (mandatory: at least one partner OR the "no partners" checkbox)
@@ -250,6 +247,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    */
   readonly partnersHydrated = signal(false);
   private partnersLoadedForResultId: number | null = null;
+
+  /**
+   * P2-3368 AC10-AC14 — the linked/bundled twin of `partnersHydrated`, and it is load-bearing for
+   * the same reason: `saveContributors` fires on every centre or project change, so a payload sent
+   * before the stored answer is on screen would PATCH `has_innovation_link: null` over a saved
+   * "Yes" and, with it, drop the links. Omitting the keys is what tells the server to leave the
+   * block alone. Set from the same detail read that hydrates the partners.
+   */
+  readonly linkedHydrated = signal(false);
 
   /**
    * The read failed and there is NO automatic second chance: `hydrateWhenReady` only re-runs when
@@ -294,29 +300,53 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   selectedLinkedResultIds = signal<(number | string)[]>([]);
 
   /**
-   * AC13's message ("N hidden field(s) has values and will be saved.") is a PROMISE, and the only
-   * field behind the toggle is the linked/bundled question — which is `Coming soon` precisely
-   * because nothing persists it (see `unpersistedFieldsComingSoon`). Counting it made the screen
-   * promise a save that never happened: the user answered, read the note, reloaded, and the answer
-   * was gone.
+   * AC13's message ("N hidden field(s) has values and will be saved.") is a PROMISE: it may only
+   * count fields that actually reach the server. It stayed at 0 while the linked/bundled question
+   * was `Coming soon`; since P2-3368 AC10-AC14 the answer persists, so it counts again — one term
+   * per hidden field with a value.
    *
-   * So the count is 0 while every hidden field is Coming soon, and the note never renders. This
-   * stays a `computed` — not a constant — because it is the template's contract: add the term back
-   * here, one per field, as soon as a hidden field actually reaches the server.
+   * 🛑 It also stays at 0 for the result types that do not ask the question here at all
+   * (`linkedQuestionOwnedElsewhere()`); otherwise a collapsed block would promise to save a field
+   * this section never renders.
    */
   readonly hiddenFieldsWithValues = computed(() => {
-    if (this.unpersistedFieldsComingSoon) return 0;
+    if (this.linkedQuestionOwnedElsewhere()) return 0;
     return this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0 ? 1 : 0;
   });
 
   readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
 
   /**
-   * The three Block-2 gates are named computeds rather than inline template expressions so the spec
-   * can assert the SAME expression the template renders. The suite overrides the template (see
+   * 🛑 Innovation Use (2) and Innovation Development (7) do NOT ask the linked/bundled question in
+   * this section, and the server ignores both keys for them.
+   *
+   * - Innovation Use asks it in its own type-specific section, which writes the very same
+   *   `result.has_innovation_link` + `linked_result` storage (`type-innovation-use.component.html:332`).
+   *   That is the PO decision Ángel Jarrín took on 2026-09-10 (P2-3424), already implemented this
+   *   way in the pooled form, which drops the whole block for those results
+   *   (`rd-contributors-and-partners.component.html:552-558`). Two editing surfaces over one
+   *   answer is exactly the defect P2-3199 removed.
+   * - Innovation Development mirrors the flag into `results_innovations_dev.has_innovation_link`,
+   *   the row the green-check functions read; only the classic writer maintains that mirror.
+   *
+   * Hidden, not disabled: a disabled control with no tag is unexplained furniture, and for
+   * Innovation Use the question is one section away.
+   */
+  readonly linkedQuestionOwnedElsewhere = computed(() => {
+    // Optional call: hosts and specs stub `BilateralCreationService` field by field, and a stub
+    // without this signal must not crash the section — same guard `showsQaInnovationLink` uses in
+    // the pooled form. An unknown type keeps the question here, which is the reversible side: the
+    // server ignores the keys for types 2 and 7 anyway.
+    const typeId = Number(this.creationService.resultTypeId?.());
+    return typeId === INNOVATION_USE_RESULT_TYPE_ID || typeId === INNOVATION_DEVELOPMENT_RESULT_TYPE_ID;
+  });
+
+  /**
+   * The Block-2 gates are named computeds rather than inline template expressions so the spec can
+   * assert the SAME expression the template renders. The suite overrides the template (see
    * `section-contributors.component.spec.ts`), so an inline `@if` would be untested.
    */
-  readonly showLinkedResultQuestion = computed(() => this.showAllFields());
+  readonly showLinkedResultQuestion = computed(() => this.showAllFields() && !this.linkedQuestionOwnedElsewhere());
   readonly showLinkedResultsDropdown = computed(() => this.showLinkedResultQuestion() && this.hasLinkedResult() === true);
   readonly fullMetadataButtonLabel = computed(() => (this.showAllFields() ? 'Hide full metadata' : 'Complete full metadata'));
 
@@ -490,6 +520,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     institutions?: { institutions_id: number }[];
     no_external_partners?: boolean;
     is_lead_by_partner?: boolean;
+    has_innovation_link?: boolean | null;
+    linked_results?: number[];
   } {
     const selectedCenters = this.selectedCenterInstitutionIds()
       .map(id => {
@@ -518,6 +550,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       institutions?: { institutions_id: number }[];
       no_external_partners?: boolean;
       is_lead_by_partner?: boolean;
+      has_innovation_link?: boolean | null;
+      linked_results?: number[];
     } = {};
 
     // See `contributorsHydrated`: omitting the keys is the only safe default. The server treats a
@@ -547,6 +581,14 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       // `validation_partners_*` MySQL functions treat a NULL `is_lead_by_partner` as "not answered"
       // and never turn the section green.
       payload.is_lead_by_partner = false;
+    }
+
+    // P2-3368 AC10-AC14. Guarded by `linkedHydrated` for the same reason as the partner keys, and
+    // skipped entirely for the types that do not ask the question here — the server ignores them
+    // too, but a payload that never carries the keys is the honest contract.
+    if (this.linkedHydrated() && !this.linkedQuestionOwnedElsewhere()) {
+      payload.has_innovation_link = this.hasLinkedResult();
+      payload.linked_results = this.selectedLinkedResultIds().map(id => Number(id));
     }
 
     return payload;
@@ -690,6 +732,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
         // reads as true — compare numerically (same trap as `is_ai_generated`).
         this.noExternalPartners.set(ids.length === 0 && Number(response?.commonFields?.no_applicable_partner) === 1);
         this.partnersHydrated.set(true);
+        this.hydrateLinkedBundled(response);
         this.updateContributorsMds();
       },
       error: () => {
@@ -698,11 +741,35 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
         // `retryLoadExternalPartners()` fire the GET again — the hydrate effect will not.
         this.partnersLoadedForResultId = null;
         this.partnersLoadFailed.set(true);
+        // Same posture for the linked/bundled keys: unhydrated means "do not send", so a failed
+        // read can never let a blank answer overwrite the stored one.
+        this.linkedHydrated.set(false);
         // Re-publish so `external-partners` drops back to unfilled: the section must not stay
         // green on a selection whose keys the next PATCH will discard.
         this.updateContributorsMds();
       }
     });
+  }
+
+  /**
+   * P2-3368 AC13/AC14 — reads the stored linked/bundled answer out of the detail response the
+   * partner block already fetches.
+   *
+   * 🛑 `has_innovation_link` is a MySQL tinyint and can arrive as the string '0', which `!!` reads
+   * as true — the same trap `no_applicable_partner` documents two lines above. It is compared
+   * numerically, and a NULL stays `null`: "never answered" is not "answered No", and AC13's
+   * counter tells them apart.
+   */
+  private hydrateLinkedBundled(response: any): void {
+    const storedAnswer = response?.commonFields?.has_innovation_link;
+    this.hasLinkedResult.set(storedAnswer === null || storedAnswer === undefined ? null : Number(storedAnswer) === 1);
+
+    const linkedIds = (response?.linkedResults ?? [])
+      .map((id: any) => Number(id))
+      .filter((id: number) => Number.isFinite(id) && id > 0);
+    this.selectedLinkedResultIds.set(Array.from(new Set<number>(linkedIds)));
+
+    this.linkedHydrated.set(true);
   }
 
   /** Manual second chance for a failed partner read — the hydrate effect never re-fires by itself. */
@@ -720,22 +787,22 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   /**
    * AC12: answering "No" collapses the results dropdown AND clears whatever was already picked.
-   * Disabled on screen — see `unpersistedFieldsComingSoon`.
+   *
+   * The clearing is not only cosmetic — the payload below carries the emptied list, and the server
+   * turns a "No" that retracts a stored "Yes" into the narrow `linked_result` cleanup (P2-3424).
    */
   onHasLinkedResultChange(value: boolean | null): void {
     this.hasLinkedResult.set(value);
     if (value !== true) {
       this.selectedLinkedResultIds.set([]);
     }
-    // ⚠️ UNREACHABLE from the UI while `unpersistedFieldsComingSoon` is true: the question is
-    // rendered disabled with a `Coming soon` tag because the answer and the linked results it
-    // unlocks have no field on SaveBilateralContributorsDto and no home in the detail payload.
-    // Kept so the clearing rule (AC12) is one flag away from working.
+    this.persistContributors();
   }
 
   onLinkedResultsModelChange(selected: any[]): void {
     const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? item.id : item));
     this.selectedLinkedResultIds.set(ids);
+    this.persistContributors();
   }
 
   /** Same label shape W1/W2 shows in its linked-results dropdown (`rd-contributors-and-partners.component.ts:551`). */

@@ -3435,6 +3435,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         -- declared" apart from "not answered yet", and the checkbox comes back unticked on reload.
         r.no_applicable_partner,
         r.is_lead_by_partner,
+        -- P2-3368 AC10-AC14: the linked/bundled answer of the same Contributors section. The
+        -- column is the generic one the pooled form writes; the selected results travel apart,
+        -- as linkedResults, because they live in the shared linked_result table.
+        r.has_innovation_link,
         v.phase_year AS reporting_year,
         -- BIL-RTE-DD-6: "P25 onward" is the portfolio's own start year, never a portfolio id,
         -- a phase id, or the phase year — those differ between environments. A version without
@@ -3478,6 +3482,44 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const results = await this.query(query, [resultId]);
       return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3368 AC10-AC14 — ids of the results a bilateral result is linked or bundled with, for the
+   * detail GET that rehydrates the Contributors & Partners section.
+   *
+   * 🛑 `linked_results_id IS NOT NULL` is not cosmetic: `linked_result` also stores legacy rows
+   * that carry a free-text `legacy_link` and no id (see `replaceLinkedResultsByOrigin`'s contract
+   * in `summary/repositories/results-innovations-use.repository.ts:262`). Handing those nulls to
+   * the picker would paint an empty chip the user cannot remove.
+   *
+   * Read-only twin of `ResultsInnovationsUseRepository.getLinkedResultsByOrigin`, kept here so the
+   * bilateral detail does not have to inject that repository into `ResultsService` — a service
+   * provided by several modules, where a new dependency is a bootstrap risk.
+   */
+  async getActiveLinkedResultIdsByOrigin(resultId: number): Promise<number[]> {
+    if (!resultId) return [];
+
+    const query = `
+      SELECT linked_results_id
+      FROM linked_result
+      WHERE origin_result_id = ?
+        AND is_active = TRUE
+        AND linked_results_id IS NOT NULL;
+    `;
+
+    try {
+      const rows = await this.query(query, [resultId]);
+      return (rows ?? [])
+        .map((row: any) => Number(row.linked_results_id))
+        .filter((id: number) => Number.isFinite(id));
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

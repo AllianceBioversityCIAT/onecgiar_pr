@@ -107,6 +107,8 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       selectedSecondarySps: signal<any[]>([]),
       currentResultId: signal<number | null>(9464),
       resultLevelId: signal<number | null>(null),
+      // P2-3368: the linked/bundled question is hidden for result types 2 and 7.
+      resultTypeId: signal<number | null>(null),
       isLoadingResult: signal(false)
     };
 
@@ -259,6 +261,56 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       const retryButton = fixture.nativeElement.querySelector('[data-testid="centers-load-retry"]');
       expect(banner).toBeNull();
       expect(retryButton).toBeNull();
+    });
+  });
+
+  // ── P2-3368 AC14: the linked-results picker is the FIFTH one, and it used to be exempt ────
+  //
+  // While the question was `Coming soon` this picker carried a hard `[isStatic]="true"`, so the
+  // very defect P2-3520 fixed for the other four survived here untested: on a submitted result the
+  // dropdown still opened. Now that the answer persists, AC14 ("read-only view reflects saved
+  // values") makes that visible to real users, so it is measured with the same instrument.
+  describe('linked/bundled results picker (AC14)', () => {
+    const LINKED_PICKER_LABEL = 'Select a result.';
+
+    const buildWithLinkedResults = () => {
+      build();
+      component.showAllFields.set(true);
+      component.hasLinkedResult.set(true);
+      component.selectedLinkedResultIds.set([11164]);
+      fixture.detectChanges();
+    };
+
+    it('stays operable while the result is in Editing (the control case)', () => {
+      editable.set(true);
+      buildWithLinkedResults();
+
+      const { trigger } = interactiveControlsIn(pickerFor(LINKED_PICKER_LABEL));
+      expect(trigger).toBeTruthy();
+    });
+
+    it('offers no interactive control once the result is read-only', () => {
+      editable.set(false);
+      buildWithLinkedResults();
+
+      const { trigger, focusable } = interactiveControlsIn(pickerFor(LINKED_PICKER_LABEL));
+      expect(trigger).toBeNull();
+      expect(focusable).toEqual([]);
+    });
+
+    it('no longer renders the Coming soon tag', () => {
+      editable.set(true);
+      buildWithLinkedResults();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="linked-result-coming-soon"]')).toBeNull();
+    });
+
+    it('drops the whole block for an Innovation Use result, which asks the question elsewhere', () => {
+      editable.set(true);
+      creation.resultTypeId.set(2);
+      buildWithLinkedResults();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
     });
   });
 });
