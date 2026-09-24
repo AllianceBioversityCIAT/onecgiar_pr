@@ -31,6 +31,7 @@ import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { AoWBilateralRepository } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
 import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
+import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -311,6 +312,15 @@ describe('BilateralCenterService', () => {
           provide: BilateralAccessService,
           useValue: {
             assertCenterWrite: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        // P2-3368 AC10-AC14 — the NARROW `linked_result` writer. Mocked, never the shared
+        // `createForInnovationUse`: the tests below assert exactly which of the two is asked to
+        // run, because the wrong one wipes the rows of other sections.
+        {
+          provide: ResultsInnovationsUseRepository,
+          useValue: {
+            replaceLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
           },
         },
       ],
@@ -811,6 +821,145 @@ describe('BilateralCenterService', () => {
     // whatever the project maps to. Since 2026-09-04 they are staged as share-request DRAFTS
     // (status 4, the ingest shape) — NOT role-2 rows, which meant "already accepted", skipped the
     // contributor's consent and were wiped by the approval's updateResultByInitiative.
+    /*
+     * P2-3368 AC10-AC14 — "Is this result linked or bundled with another CGIAR-reported result?".
+     *
+     * Every test here exists because of ONE failure mode: `linked_result` is shared with the P22
+     * "Links to results" section, and this endpoint autosaves on every centre or project change.
+     * A write that is not narrow deletes other people's rows on a save the user never associated
+     * with this question.
+     */
+    describe('linked/bundled answer', () => {
+      const arrangeResult = (overrides: Record<string, unknown> = {}) => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          source: SourceEnum.Bilateral,
+          result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          has_innovation_link: null,
+          ...overrides,
+        } as any);
+        const linkedRepo = module.get<ResultsInnovationsUseRepository>(
+          ResultsInnovationsUseRepository,
+        ) as any;
+        linkedRepo.replaceLinkedResultsByOrigin = jest
+          .fn()
+          .mockResolvedValue([]);
+        (resultRepository.update as jest.Mock).mockClear();
+        return linkedRepo;
+      };
+
+      it('stores a Yes with its selection through the narrow writer', async () => {
+        const linkedRepo = arrangeResult();
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: true, linked_results: [11164, 9600] },
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: true }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).toHaveBeenCalledWith(
+          10,
+          [11164, 9600],
+          user.id,
+        );
+      });
+
+      it('clears the links when a stored Yes is retracted to No (AC12)', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: false, linked_results: [] },
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: false }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).toHaveBeenCalledWith(
+          10,
+          [],
+          user.id,
+        );
+      });
+
+      it('leaves the shared table alone on a No that was never a Yes', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: null });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: false, linked_results: [] },
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: false }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing when the question is unanswered (AC10)', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        const response = await service.saveContributors(
+          10,
+          { has_innovation_link: null },
+          user,
+        );
+
+        expect(response.status).toBeUndefined();
+        expect(resultRepository.update).not.toHaveBeenCalled();
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing when the key is absent — an autosave of other blocks', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['Innovation Use', ResultTypeEnum.INNOVATION_USE],
+        ['Innovation Development', ResultTypeEnum.INNOVATION_DEVELOPMENT],
+      ])(
+        'ignores both keys for %s, whose answer has another owner',
+        async (_label, resultTypeId) => {
+          const linkedRepo = arrangeResult({ result_type_id: resultTypeId });
+
+          await service.saveContributors(
+            10,
+            { has_innovation_link: true, linked_results: [11164] },
+            user,
+          );
+
+          expect(resultRepository.update).not.toHaveBeenCalled();
+          expect(
+            linkedRepo.replaceLinkedResultsByOrigin,
+          ).not.toHaveBeenCalled();
+        },
+      );
+
+      it('keeps the stored list when a Yes arrives without linked_results', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(10, { has_innovation_link: true }, user);
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: true }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+    });
+
     describe('contributing_programs', () => {
       const user2: TokenDto = {
         id: 7,

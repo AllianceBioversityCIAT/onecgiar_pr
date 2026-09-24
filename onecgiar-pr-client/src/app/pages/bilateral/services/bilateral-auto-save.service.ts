@@ -577,6 +577,10 @@ export class BilateralAutoSaveService {
     institutions?: { institutions_id: number }[];
     no_external_partners?: boolean;
     is_lead_by_partner?: boolean;
+    // P2-3368 AC10-AC14 — linked/bundled answer. `null` is a real value here ("on screen, not
+    // answered yet"); the key is simply absent until the section has hydrated.
+    has_innovation_link?: boolean | null;
+    linked_results?: number[];
   }): void {
     this.schedulePayload('contributors', contributorsData as Record<string, unknown>, {
       debounceMs: 0,

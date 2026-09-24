@@ -101,6 +101,8 @@ describe('ResultsService (unit, pure mocks)', () => {
     getPendingReviewCountByProgram: jest.fn().mockResolvedValue([]),
     getResultsByProgramAndCenters: jest.fn().mockResolvedValue([]),
     getCommonFieldsBilateralResultById: jest.fn().mockResolvedValue(null),
+    // P2-3368 AC13/AC14 — ids of the linked/bundled results the bilateral detail returns.
+    getActiveLinkedResultIdsByOrigin: jest.fn().mockResolvedValue([]),
     getTocMetadataBilateralResult: jest.fn().mockResolvedValue([]),
     getCapacitySharingBilateralResultById: jest.fn().mockResolvedValue([]),
     getKnowledgeProductBilateralResultById: jest.fn().mockResolvedValue([]),
@@ -1746,10 +1748,17 @@ describe('ResultsService (unit, pure mocks)', () => {
       mockResultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult as jest.Mock
     ).mockResolvedValueOnce([]);
 
+    // P2-3368 AC13/AC14 — without these ids the Contributors section cannot rehydrate the
+    // linked/bundled answer, and its next autosave would travel with an empty selection.
+    (
+      mockResultRepository.getActiveLinkedResultIdsByOrigin as jest.Mock
+    ).mockResolvedValueOnce([11164, 9600]);
+
     const res = await resultService.getBilateralResultById(100);
     expect(res).toMatchObject({ status: HttpStatus.OK });
     expect(res.response.commonFields).toBeDefined();
     expect(res.response.tocMetadata).toBeDefined();
+    expect(res.response.linkedResults).toEqual([11164, 9600]);
   });
 
   it('getBilateralResultById returns error when result not found', async () => {

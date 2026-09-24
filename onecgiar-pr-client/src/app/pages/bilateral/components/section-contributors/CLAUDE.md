@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
+**Verified:** 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -34,8 +34,10 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   review". Con el Primary Science Program elegido ya se puede pasar a Pending Review; el servidor
   nunca pidió más (`bilateral-center.service.ts → submitForReview`: centro líder del que el usuario
   es miembro + Science Program asignado). Los tres ítems de `partners` **sí** siguen contando.
-- **Coming soon:** `unpersistedFieldsComingSoon` (constante `true`) apaga los tres controles que no
-  se pueden guardar.
+- **Coming soon:** ya **no queda ningún control** en ese estado. El último en salir fue
+  enlazado/agrupado el 24-sep-2026 (P2-3368 AC10-AC14); los contributing science programs habían
+  salido el 3-sep. La regla sigue viva: un control sin storage va **visible pero deshabilitado con
+  el tag**, nunca aceptando un valor que se tira.
 - **Gates del template expuestos como computeds**: el spec sobreescribe el template, así que un
   `@if` inline quedaría sin test. Si añades un gate nuevo, exponlo igual.
 
@@ -117,12 +119,22 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   **Si la persistencia se rompe, saca el ítem otra vez — no aflojes la UI.** Centros y proyectos
   siguen fuera por otro motivo (P2-3348: van `[required]="false"`, y trackear un campo que la UI
   llama Optional bloquea Submit sin explicación).
-- 🛑 **Sigue sin persistirse** (fuera del alcance de P2-3443, que sólo pidió socios + los dos flags):
-  los **contributing science programs** y la respuesta **enlazado/agrupado** con sus `linked_results`.
-  Desde 26-ago van **visibles pero DESHABILITADOS con tag `Coming soon`** (regla de la casa; mismo
-  markup que `result-ai-item.component.html`) y **fuera de `hiddenFieldsWithValues()`**, que ahora
-  devuelve `0`: el cartel *"1 hidden field has values and will be saved."* prometía un guardado que
-  no existía. **No quites el disable sin conectar antes el DTO**, o vuelve la promesa falsa.
+- ✅ **Enlazado/agrupado ya se persiste** (P2-3368 AC10-AC14, 24-sep-2026): `has_innovation_link` +
+  `linked_results` en `SaveBilateralContributorsDto`, y de vuelta en el detalle como
+  `commonFields.has_innovation_link` + `linkedResults`. `hiddenFieldsWithValues()` vuelve a contarlo.
+  - 🛑 **La escritura es ESTRECHA a propósito** (`bilateral-center.service.ts → syncLinkedBundledAnswer`):
+    `linked_result` es **compartida** con la sección P22 *Links to results*, y este endpoint autosalva
+    en cada cambio de centro o proyecto. Protocolo P2-3424: "Yes" + selección reemplaza · "No" limpia
+    **sólo** si lo guardado era "Yes" · pregunta sin responder u omitida **no toca nada**. Nunca uses
+    `createForInnovationUse`: con selección vacía barre todas las filas del origen.
+  - 🛑 **Tipos 2 y 7 quedan FUERA** (`linkedQuestionOwnedElsewhere()`): Innovation Use pregunta lo
+    mismo en su sección de tipo (decisión de Ángel Jarrín, 10-sep-2026, P2-3424) e Innovation
+    Development espeja el flag en `results_innovations_dev.has_innovation_link`, que es lo que leen
+    las funciones del green check. Dos superficies sobre una respuesta = defecto P2-3199. El bloque
+    se **oculta**, no se deshabilita, y el servidor ignora las claves igual.
+  - 🛑 **`linkedHydrated` manda**: las claves no viajan hasta que la lectura del detalle vuelve, igual
+    que `partnersHydrated`. Sin ese guard, el primer cambio de centro de la sesión pisa un "Yes"
+    guardado.
 - ⚠️ **No se escriben delivery types ni presupuesto de socio**, a diferencia de pool funding: P2-3368
   AC6 los deja fuera de bilateral. Pero `validation_partners_P25` exige una fila en
   `result_by_institutions_by_deliveries_type` **por cada socio**, así que el green check de partners
@@ -136,10 +148,10 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   **la pantalla mentía**. Se arregló desde aquí y **no tocando `pr-multi-select`**, que es
   compartido por toda la app; en modo editable `!readOnly()` vale `true`, o sea exactamente lo de
   antes (`validateShowDeleteButton`, líneas 259/262, da `false` en los dos casos).
-  ⚠️ **Siguen con `[isStatic]="true"` duro**, y por tanto siguen clicables en solo-lectura, el
-  `app-pr-checkbox` *"This result has no external partners"* (línea 168) y el multi-select de
-  *Select a result* del bloque Full Metadata (línea 283, hoy tapado por `unpersistedFieldsComingSoon`).
-  Ninguno de los dos entraba en el alcance del ticket.
+  ⚠️ **Sigue con `[isStatic]="true"` duro**, y por tanto clicable en solo-lectura, el
+  `app-pr-checkbox` *"This result has no external partners"* (línea 168); no entraba en el alcance
+  del ticket. El multi-select de *Select a result* **ya se corrigió** el 24-sep (P2-3368): pasa
+  `[isStatic]="!readOnly()"` y lo cubre `section-contributors.readonly.spec.ts`.
 - ⚠️ **`selectedProject().sciencePrograms` viene `[]` al cargar un resultado existente**
   (`bilateral-creation.service.ts:170`). El multi-select de "Contributing science programs" sólo se
   renderiza si hay opciones; en un resultado guardado se ven únicamente los chips read-only. No
@@ -168,7 +180,9 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 | ToC KPI read-only para researcher (AC2) | Vive en `../section-toc/section-toc.component.html:3`, **fuera de esta carpeta**, y no acepta input de solo-lectura. Además **no existe el rol "SP staff"** en el cliente. | Producto (definir el rol) + ticket que toque `section-toc` |
 | Tooltip ⓘ en centros y en proyectos W3 | P2-3368 pide el icono pero **no da el texto**, y W1/W2 no tiene ninguno que reutilizar. | Producto (redactar el copy) |
 | ~~Guardado de contributing science programs~~ | **Hecho 2026-09-03:** `contributing_programs[]` en el DTO, filas rol 2 en `results_by_inititiative`, catálogo P25 completo (`clarisa/initiatives/p25`). Ver nota al final. | — |
-| Guardado de enlazado/agrupado + linked results (controles `Coming soon`) | Sin campo en el DTO ni en el GET de detalle; P2-3443 no lo pidió. | Ticket nuevo (BACK) |
+| ~~Guardado de enlazado/agrupado + linked results~~ | **Hecho 2026-09-24** (P2-3368 AC10-AC14): claves en el DTO, protocolo estrecho P2-3424, detalle devuelve `linkedResults`. | — |
+| Enlazado/agrupado para Innovation Use (2) e Innovation Development (7) | Tipo 2 lo pregunta en su propia sección (P2-3424); tipo 7 necesita el espejo `results_innovations_dev` que sólo mantiene el writer clásico y que leen las funciones del green check. | Producto + el dueño del green check |
+| Validación "Yes ⇒ al menos un enlace" en el green check | `validation_contributor_partner_*` no lee `result.has_innovation_link` para tipos no-innovación. **No verificado contra la BD viva** (hace falta VPN). AC10-AC14 no lo piden. | Producto + el dueño del green check |
 | Green check de partners en bilateral | La función MySQL exige un delivery type por socio y bilateral no los captura (AC6). | Producto + BACK |
 
 ## Tests
@@ -195,7 +209,7 @@ renderizaba; en un resultado guardado tampoco (`sciencePrograms: []` al cargar).
   → `clarisa/initiatives/p25` (tipos de entidad 22/23/24 = programas y aceleradores P25). Menos el
   primario. Los SPs del proyecto quedan como fallback mientras carga el catálogo.
 - **Card siempre visible** (se quitó el `@if` exterior y el tag `Coming soon` del bloque de SPs).
-  `unpersistedFieldsComingSoon` sigue existiendo pero ya sólo cubre enlazado/agrupado.
+  `unpersistedFieldsComingSoon` **ya no existe**: el 24-sep-2026 salió también enlazado/agrupado.
 - **Guardado:** `buildContributorsPayload()` manda `contributing_programs: [{ science_program_id: programCode }]`
   cuando `contributorsHydrated()`; `onSecondarySpsModelChange` llama `persistContributors()`.
   🛑 **Desde 2026-09-04 el server (`syncContributingPrograms`) escribe DRAFTS de `share_result_request`
