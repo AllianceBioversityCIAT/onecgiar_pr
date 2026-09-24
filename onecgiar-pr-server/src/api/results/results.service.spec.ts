@@ -2,6 +2,7 @@ import { ResultsService } from './results.service';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { MWB_COMPLETENESS_CAP } from './results-validation-module/completeness';
+import { ReviewDecisionEnum } from './dto/review-decision.dto';
 
 /**
  * `changes/my-work-board` MWB-T-1 — `findAllByRoleFiltered` (the `roles/filter` list) gains an
@@ -403,5 +404,123 @@ describe('ResultsService — getScienceProgramProgress plannedKpis & results bre
     expect(res.status).toBe(200);
     const item = res.response.otherSciencePrograms[0];
     expect(item.plannedKpis).toBe(415);
+  });
+});
+
+describe('ResultsService — emitBilateralReviewNotification per-recipient wording (NDCW-T-1)', () => {
+  const submitter = 11;
+  const centerUser = 22;
+  const emitter = { id: 99 } as TokenDto;
+
+  function makeService(opts: {
+    centerUserIds?: number[];
+    ownerLookup?: jest.Mock;
+    external?: number | null;
+    createdBy?: number;
+  }) {
+    const service: any = Object.create(ResultsService.prototype);
+    service._logger = { warn: jest.fn(), error: jest.fn(), log: jest.fn() };
+    service._notificationService = {
+      emitResultNotification: jest.fn().mockResolvedValue(undefined),
+    };
+    service._resultRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 1,
+        external_submitter: opts.external ?? null,
+        created_by: opts.createdBy ?? submitter,
+      }),
+    };
+    service._resultsCenterRepository = {
+      getAllResultsCenterByResultId: jest
+        .fn()
+        .mockResolvedValue([{ is_leading_result: 1, code: 'CIMMYT' }]),
+    };
+    service._roleByUserRepository = {
+      getUserIdsByCenter: jest
+        .fn()
+        .mockResolvedValue(opts.centerUserIds ?? [centerUser]),
+    };
+    service._resultByInitiativesRepository = {
+      getResultByInitiativeOwnerFull:
+        opts.ownerLookup ?? jest.fn().mockResolvedValue({ inititiative_id: 3 }),
+    };
+    service._clarisaInitiativesRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 3, official_code: 'SP03' }),
+    };
+    service.getLeadCenterCode = jest.fn().mockResolvedValue('CIMMYT');
+    return service;
+  }
+
+  it('emits to the submitter without text and to center users with the center sentence (approve)', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][2]).toEqual([submitter]);
+    expect(calls[0][5]).toBeUndefined();
+    expect(calls[1][2]).toEqual([centerUser]);
+    expect(calls[1][5]).toBe(
+      'where your center was tagged, has been approved by the Science Program SP03.',
+    );
+  });
+
+  it('uses "rejected" for a Reject decision', async () => {
+    const service = makeService({});
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.REJECT,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls[1][5]).toBe(
+      'where your center was tagged, has been rejected by the Science Program SP03.',
+    );
+  });
+
+  it('emits once, to the submitter without text, when the submitter is also a Center User', async () => {
+    const service = makeService({ centerUserIds: [submitter] });
+
+    await service.emitBilateralReviewNotification(
+      1,
+      ReviewDecisionEnum.APPROVE,
+      emitter,
+    );
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0][2]).toEqual([submitter]);
+    expect(calls[0][5]).toBeUndefined();
+  });
+
+  it('degrades to the no-code sentence and does not throw when the owner lookup fails', async () => {
+    const service = makeService({
+      ownerLookup: jest.fn().mockRejectedValue(new Error('db down')),
+    });
+
+    await expect(
+      service.emitBilateralReviewNotification(
+        1,
+        ReviewDecisionEnum.APPROVE,
+        emitter,
+      ),
+    ).resolves.toBeUndefined();
+
+    const calls =
+      service._notificationService.emitResultNotification.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1][5]).toBe(
+      'where your center was tagged, has been approved by the Science Program.',
+    );
   });
 });

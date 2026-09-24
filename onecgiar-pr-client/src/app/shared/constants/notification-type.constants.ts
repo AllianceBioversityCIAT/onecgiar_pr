@@ -51,6 +51,8 @@ const ACTOR_VERBS: Partial<Record<NotificationType, string>> = {
 export interface NotificationTextParts {
   /** Rendered before the "<code> - <title>" link. */
   prefix: string | null;
+  /** Rendered immediately after the link, with no whitespace between (e.g. an attached comma). */
+  linkTrailer?: string;
   /** Rendered after the link. */
   suffix: string | null;
   /**
@@ -114,6 +116,18 @@ function buildBilateralReviewSuffix(decisionLabel: string, notification: any): s
   return `has been ${decisionLabel} by ${programText}.`;
 }
 
+/**
+ * NDCW-R-2: a decision notification addressed to a tagged centre carries a server-composed sentence
+ * on `text` ("where your center was tagged, has been approved by ..."). It renders as
+ * "The result <link>, <text>" — the comma is attached to the link via `linkTrailer`.
+ * Returns null when there is no text (submitter copy, "Your Result").
+ */
+function buildCenterDecisionParts(notification: any): NotificationTextParts | null {
+  const text = notification?.text?.trim();
+  if (!text) return null;
+  return { prefix: 'The result', linkTrailer: ',', suffix: text, emphasizePrefix: false };
+}
+
 /** The text of a result-level notification, split around the result link. */
 export function getResultNotificationTextParts(notification: any): NotificationTextParts {
   const type = resolveNotificationType(notification);
@@ -133,18 +147,22 @@ export function getResultNotificationTextParts(notification: any): NotificationT
 
     // P2-3157 AC2
     case NotificationType.BILATERAL_RESULT_APPROVED:
-      return {
-        prefix: '✅ Your Result',
-        suffix: buildBilateralReviewSuffix('Approved', notification),
-        emphasizePrefix: true
-      };
+      return (
+        buildCenterDecisionParts(notification) ?? {
+          prefix: '✅ Your Result',
+          suffix: buildBilateralReviewSuffix('Approved', notification),
+          emphasizePrefix: true
+        }
+      );
 
     case NotificationType.BILATERAL_RESULT_REJECTED:
-      return {
-        prefix: '❌ Your Result',
-        suffix: buildBilateralReviewSuffix('Rejected', notification),
-        emphasizePrefix: true
-      };
+      return (
+        buildCenterDecisionParts(notification) ?? {
+          prefix: '❌ Your Result',
+          suffix: buildBilateralReviewSuffix('Rejected', notification),
+          emphasizePrefix: true
+        }
+      );
 
     // P2-3214 AC3. Unlike every other type, the variable half of this sentence names the tagged
     // centre or project — which cannot be derived from the result (a result carries several
@@ -173,8 +191,8 @@ export function getResultNotificationTextParts(notification: any): NotificationT
 
 /** Flattened single-string form — for search indexes and plain-text contexts. */
 export function buildResultNotificationText(notification: any): string {
-  const { prefix, suffix } = getResultNotificationTextParts(notification);
-  const identity = `${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}`;
+  const { prefix, suffix, linkTrailer } = getResultNotificationTextParts(notification);
+  const identity = `${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}${linkTrailer ?? ''}`;
 
   return [prefix, identity, suffix].filter(part => !!part).join(' ');
 }

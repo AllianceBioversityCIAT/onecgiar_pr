@@ -825,6 +825,7 @@ export class NotificationService {
           resultCode,
           resultTitle,
           programCode,
+          storedText,
         );
       case NotificationTypeEnum.BILATERAL_RESULT_REJECTED:
         return this.buildBilateralReviewDescription(
@@ -833,6 +834,7 @@ export class NotificationService {
           resultCode,
           resultTitle,
           programCode,
+          storedText,
         );
       case NotificationTypeEnum.RESULT_CENTER_TAGGED:
       case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED:
@@ -874,10 +876,19 @@ export class NotificationService {
     resultCode?: number,
     resultTitle?: string,
     programCode?: string,
+    storedText?: string,
   ): string {
     const identity = [resultCode, this.truncateTitle(resultTitle)]
       .filter((part) => part !== undefined && part !== null && part !== '')
       .join(' - ');
+    // Center recipients: the stored text already names the relationship and the deciding
+    // program, so it replaces the "Your Result ..." sentence (NDCW-R-2/R-3).
+    const centerText = storedText?.trim();
+    if (centerText) {
+      return identity
+        ? `The result ${identity}, ${centerText}`
+        : `The result, ${centerText}`;
+    }
     const resultText = identity ? `Your Result ${identity}` : 'Your result';
     const programText = programCode
       ? ` by the Science Program ${programCode}`

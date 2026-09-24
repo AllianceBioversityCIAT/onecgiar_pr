@@ -394,6 +394,7 @@ describe('NotificationService', () => {
     const emitAndReadDescription = async (
       notificationType: NotificationTypeEnum,
       resultOverrides: Record<string, any> = {},
+      renderedText?: string,
     ): Promise<string> => {
       mockNotificationLevelRepository.findOne.mockResolvedValue({
         notifications_level_id: 2,
@@ -432,12 +433,39 @@ describe('NotificationService', () => {
         [2],
         9,
         4321,
+        renderedText,
       );
 
       const [, payload] =
         mockSocketManagementService.sendNotificationToUsers.mock.calls.at(-1);
       return payload.desc;
     };
+
+    // NDCW-R-2/R-3: the center sentence is stored text; the toast must carry the same words.
+    it('builds the center copy from stored text (approved)', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+        {},
+        'where your center was tagged, has been approved by the Science Program SP03.',
+      );
+
+      expect(desc).toBe(
+        'The result 4321 - A bilateral result title, where your center was tagged, has been approved by the Science Program SP03.',
+      );
+      expect(desc).not.toContain('Your Result');
+    });
+
+    it('builds the center copy from stored text (rejected, no program code)', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+        {},
+        'where your center was tagged, has been rejected by the Science Program.',
+      );
+
+      expect(desc).toBe(
+        'The result 4321 - A bilateral result title, where your center was tagged, has been rejected by the Science Program.',
+      );
+    });
 
     it('builds the approved copy with the result identity and the owner program code', async () => {
       const desc = await emitAndReadDescription(

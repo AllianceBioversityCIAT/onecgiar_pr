@@ -60,9 +60,9 @@
           }
         }
 
-        <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: var(--pr-color-black)">
-          {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
-        </a>
+        <!-- Attached comma (NDCW-R-2): no whitespace inside the link's tail nor between </a> and the trailer. -->
+        <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: var(--pr-color-black)">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</a
+        >{{ parts.linkTrailer }}
 
         @if (parts.suffix) {
           <b> {{ parts.suffix }} </b>

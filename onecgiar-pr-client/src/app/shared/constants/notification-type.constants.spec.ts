@@ -137,6 +137,57 @@ describe('notification-type constants', () => {
     });
   });
 
+  // NDCW-R-1 / R-2 / R-5: center wording when `text` is present, attached comma.
+  describe('bilateral review decisions — center wording (NDCW)', () => {
+    const centerText = (verb: string) => `where your center was tagged, has been ${verb} by the Science Program SP03.`;
+    const withText = (type: NotificationType, text: string | null) =>
+      notificationOf(type, {
+        text,
+        obj_result: resultOf({ result_code: 9561, title: 'T', obj_result_by_initiatives: [] })
+      });
+
+    it.each([
+      [NotificationType.BILATERAL_RESULT_APPROVED, 'approved'],
+      [NotificationType.BILATERAL_RESULT_REJECTED, 'rejected']
+    ])('flattens %s with the comma attached to the title', (type, verb) => {
+      const flat = buildResultNotificationText(withText(type, centerText(verb)));
+      expect(flat).toBe(`The result 9561 - T, ${centerText(verb)}`);
+      expect(flat).not.toContain('T ,');
+      expect(flat).not.toContain('Your Result');
+    });
+
+    it('exposes the comma as linkTrailer and a non-emphasised prefix', () => {
+      const parts = getResultNotificationTextParts(withText(NotificationType.BILATERAL_RESULT_APPROVED, centerText('approved')));
+      expect(parts).toEqual({
+        prefix: 'The result',
+        linkTrailer: ',',
+        suffix: centerText('approved'),
+        emphasizePrefix: false
+      });
+    });
+
+    it.each([null, '', '   '])('keeps "Your Result" when text is %p', text => {
+      const notification = notificationOf(NotificationType.BILATERAL_RESULT_APPROVED, {
+        text,
+        obj_result: resultOf({ result_code: 9561, title: 'T', obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP03' } }] })
+      });
+      expect(buildResultNotificationText(notification)).toBe(
+        '✅ Your Result 9561 - T has been Approved by the Science Program SP03.'
+      );
+      expect(getResultNotificationTextParts(notification).linkTrailer).toBeUndefined();
+    });
+
+    it('keeps "Your Result" for Rejected without text', () => {
+      const notification = notificationOf(NotificationType.BILATERAL_RESULT_REJECTED, {
+        text: null,
+        obj_result: resultOf({ result_code: 9561, title: 'T', obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP03' } }] })
+      });
+      expect(buildResultNotificationText(notification)).toBe(
+        '❌ Your Result 9561 - T has been Rejected by the Science Program SP03.'
+      );
+    });
+  });
+
   describe('getResultNotificationTextParts', () => {
     it('emphasises the actor phrase but not the bare lead-in', () => {
       expect(getResultNotificationTextParts(notificationOf(NotificationType.RESULT_SUBMITTED)).emphasizePrefix).toBe(

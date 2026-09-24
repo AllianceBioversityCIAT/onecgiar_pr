@@ -2851,30 +2851,52 @@ export class ResultsService {
         return;
       }
 
-      const recipientIds = await this.getBilateralReviewRecipientIds(
-        resultId,
-        user.id,
-      );
+      const { submitterIds, centerIds } =
+        await this.getBilateralReviewRecipientIds(resultId, user.id);
 
-      if (!recipientIds.length) {
+      if (!submitterIds.length && !centerIds.length) {
         this._logger.warn(
           `No recipients resolved for bilateral review notification on result ${resultId}`,
         );
         return;
       }
 
-      const notificationType =
-        decision === ReviewDecisionEnum.APPROVE
-          ? NotificationTypeEnum.BILATERAL_RESULT_APPROVED
-          : NotificationTypeEnum.BILATERAL_RESULT_REJECTED;
+      const isApprove = decision === ReviewDecisionEnum.APPROVE;
+      const notificationType = isApprove
+        ? NotificationTypeEnum.BILATERAL_RESULT_APPROVED
+        : NotificationTypeEnum.BILATERAL_RESULT_REJECTED;
 
-      await this._notificationService.emitResultNotification(
-        NotificationLevelEnum.RESULT,
-        notificationType,
-        recipientIds,
-        user.id,
-        resultId,
-      );
+      // Submitter: no stored text, so the legacy "Your Result ..." wording applies.
+      if (submitterIds.length) {
+        await this._notificationService.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          notificationType,
+          submitterIds,
+          user.id,
+          resultId,
+        );
+      }
+
+      // Center Users who did not submit: the stored text names the center relationship.
+      if (centerIds.length) {
+        const programCode =
+          await this.resolveOwnerProgramCodeForResult(resultId);
+        const programText = programCode
+          ? ` by the Science Program ${programCode}`
+          : ' by the Science Program';
+        const renderedText = `where your center was tagged, has been ${
+          isApprove ? 'approved' : 'rejected'
+        }${programText}.`;
+
+        await this._notificationService.emitResultNotification(
+          NotificationLevelEnum.RESULT,
+          notificationType,
+          centerIds,
+          user.id,
+          resultId,
+          renderedText,
+        );
+      }
     } catch (error) {
       this._logger.warn(
         `Failed to emit bilateral review notification for result ${resultId}`,
@@ -2884,14 +2906,45 @@ export class ResultsService {
   }
 
   /**
-   * Submitter + every active Center User of the result's lead centre, de-duplicated.
-   * The emitter is filtered out downstream by `emitResultNotification`.
+   * Official code of the owner Science Program (`initiative_role_id = 1`, active), or null.
+   * Never throws: a failed lookup degrades to the no-code sentence.
+   */
+  private async resolveOwnerProgramCodeForResult(
+    resultId: number,
+  ): Promise<string | null> {
+    try {
+      const owner =
+        await this._resultByInitiativesRepository.getResultByInitiativeOwnerFull(
+          resultId,
+        );
+      // Raw SQL row: the DB column is spelled `inititiative_id` (entity property is `initiative_id`).
+      const ownerInitiativeId =
+        (owner as any)?.inititiative_id ?? owner?.initiative_id;
+      if (!ownerInitiativeId) return null;
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { id: ownerInitiativeId },
+      });
+      return initiative?.official_code || null;
+    } catch (error) {
+      this._logger.warn(
+        `Failed to resolve owner program code for result ${resultId}`,
+        error as Error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Submitter and the other recipients (every active Center User of the result's lead centre),
+   * kept separate because their wording differs. Overall de-duplicated: a submitter who is also
+   * a Center User appears only in `submitterIds`. The emitter is removed from both.
    */
   private async getBilateralReviewRecipientIds(
     resultId: number,
     emitterUserId: number,
-  ): Promise<number[]> {
+  ): Promise<{ submitterIds: number[]; centerIds: number[] }> {
     const recipientIds = new Set<number>();
+    const submitterIds = new Set<number>();
 
     const result = await this._resultRepository.findOne({
       where: { id: resultId },
@@ -2905,6 +2958,7 @@ export class ResultsService {
     );
     if (Number.isFinite(submitterId) && submitterId > 0) {
       recipientIds.add(submitterId);
+      submitterIds.add(submitterId);
     }
 
     const leadCenterCode = await this.getLeadCenterCode(resultId);
@@ -2922,7 +2976,13 @@ export class ResultsService {
     }
 
     recipientIds.delete(emitterUserId);
-    return Array.from(recipientIds.values());
+    submitterIds.delete(emitterUserId);
+    return {
+      submitterIds: Array.from(submitterIds.values()),
+      centerIds: Array.from(recipientIds.values()).filter(
+        (id) => !submitterIds.has(id),
+      ),
+    };
   }
 
   /** CLARISA code of the result's lead centre, or null when none is flagged. */
