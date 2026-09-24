@@ -1019,7 +1019,10 @@ describe('TypeInnovationUseComponent', () => {
       expect(error?.error?.message).toBe(component.copy.actorTypeMissing);
     });
 
-    it('keeps "Actors" incomplete while such a row is on screen', () => {
+    // Review room NS-07 (Cami, 24-Sep-2026): the alert has to NAME the missing actor type, and the
+    // section must not read "Section complete". Reported the P2-3340 way: answered but `invalid`,
+    // which is what `getSectionMdsStatus` (rail, counter, footer) and `canSubmitFromRail` read.
+    it('keeps "Actors" out of "complete" and says the actor type is what is missing', () => {
       build();
       component.body = {
         innov_use_to_be_determined: false,
@@ -1031,7 +1034,40 @@ describe('TypeInnovationUseComponent', () => {
       component.onFieldChange();
 
       expect(component.actorMissingType(component.body.actors[1])).toBe(true);
-      expect(lastActorsField().filled).toBe(false);
+      expect(lastActorsField()).toEqual(
+        expect.objectContaining({ invalid: true, invalidReason: component.copy.actorTypeMissingReason })
+      );
+      expect(component.copy.actorTypeMissingReason).toContain('actor type');
+    });
+
+    it('drops the flag as soon as the row gets a type (no stale "field to fix")', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: false,
+        actors: [{ actor_type_id: null, women: 5, is_active: true }]
+      };
+      component.onFieldChange();
+      expect(lastActorsField().invalid).toBe(true);
+
+      component.body.actors[0].actor_type_id = 4;
+      component.onFieldChange();
+
+      expect(lastActorsField().invalid).toBeUndefined();
+      expect(lastActorsField().filled).toBe(true);
+    });
+
+    // The save is only held for rows the executor refuses on, so nothing may be flagged when the
+    // use is still "to be determined" (hidden rows) — otherwise the section could never be closed.
+    it('flags nothing while the use is still to be determined', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: true,
+        actors: [{ actor_type_id: null, women: 5, is_active: true }]
+      };
+      component.onFieldChange();
+
+      expect(lastActorsField().invalid).toBeUndefined();
+      expect(lastActorsField().filled).toBe(true);
     });
 
     it('still sends a truly blank staged row (146d26112 keeps discarding it server-side)', () => {

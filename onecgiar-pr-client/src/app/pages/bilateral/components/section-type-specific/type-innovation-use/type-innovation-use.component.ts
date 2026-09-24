@@ -794,13 +794,22 @@ export class TypeInnovationUseComponent implements OnInit {
     const hasActors = (this.body.actors ?? []).some((a: any) => a.is_active !== false);
     // BIL-1 — while a row with figures and no actor type is on screen the save is being held (see
     // `queueTypeSave`), so "Actors" must not read complete.
-    const actorWithoutType = (this.body.actors ?? []).some((a: any) => this.actorMissingType(a));
+    //
+    // Review room NS-07 (Cami, 24-Sep-2026): "agregar en las alertas en que falta actor type y no
+    // dejarlo como Section complete". The row IS answered, so it is reported the P2-3340 way —
+    // `filled` with `invalid` + a reason — instead of reading as empty: the footer then says
+    // "1 field to fix · Actors (a row has figures but no actor type…)" rather than the bare "Actors",
+    // `getSectionMdsStatus` drops the section to `partial`, and `canSubmitFromRail` refuses and names
+    // it. Scope = the same rows the save refuses on (`hasActorMissingType`): current use only while
+    // the use is not "to be determined", plus the 2030 list while it is shown.
+    const actorWithoutType = this.hasActorMissingType;
     this.mdsTracker.setSectionFields('type-specific', [
       {
         key: 'use-actors',
         label: 'Actors',
         // AC4: when the use is still to be determined no actor is requested, so the field is satisfied.
-        filled: tbdSet && (tbd === true || (hasActors && !actorWithoutType))
+        filled: tbdSet && (tbd === true || hasActors),
+        ...(actorWithoutType ? { invalid: true, invalidReason: this.copy.actorTypeMissingReason } : {})
       },
       {
         key: 'use-measures',
