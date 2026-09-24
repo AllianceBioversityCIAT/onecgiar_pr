@@ -28,6 +28,13 @@ export interface BilateralOpenRouteResult {
 
 const EDITING_STATUS_ID = 1;
 const DRAFT_STATUS_ID = 8;
+export const APPROVED_STATUS_ID = 6;
+
+export function isApprovedStatus(input: Pick<BilateralOpenRouteInput, 'statusId' | 'statusName'>): boolean {
+  const id = input.statusId != null && input.statusId !== '' ? Number(input.statusId) : NaN;
+  if (!Number.isNaN(id)) return id === APPROVED_STATUS_ID;
+  return (input.statusName ?? '') === 'Approved';
+}
 
 export function isW3BilateralsAvisa(input: Pick<BilateralOpenRouteInput, 'sourceOrOrigin' | 'submitterCode'>): boolean {
   if (input.sourceOrOrigin !== 'W3/Bilaterals') return false;
@@ -64,17 +71,13 @@ export function usesBilateralReviewFlow(input: BilateralOpenRouteInput): boolean
 }
 
 export function classifyBilateralOpenRoute(input: BilateralOpenRouteInput): BilateralOpenRouteKind {
-  if (!isW3BilateralRow(input) || isW3BilateralsAvisa(input) || input.statusName === 'Approved') {
+  if (!isW3BilateralRow(input) || isW3BilateralsAvisa(input)) {
     return 'result-detail';
   }
 
   const leadCenter = (input.leadCenter ?? '').trim();
-  if (isBilateralCenterEditorStatus(input) && leadCenter) {
-    return 'center-editor';
-  }
-
-  if (isBilateralCenterEditorStatus(input) && !leadCenter) {
-    return 'result-detail';
+  if (isApprovedStatus(input) || isBilateralCenterEditorStatus(input)) {
+    return leadCenter ? 'center-editor' : 'result-detail';
   }
 
   return 'review-drawer';
