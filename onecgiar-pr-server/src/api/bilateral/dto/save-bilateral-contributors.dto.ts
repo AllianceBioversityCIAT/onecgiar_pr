@@ -153,4 +153,25 @@ export class SaveBilateralContributorsDto {
   @ValidateNested({ each: true })
   @Type(() => ContributingScienceProgramDto)
   contributing_programs?: ContributingScienceProgramDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'P2-3368 AC10-AC14. Answer to "Is this result linked or bundled with another CGIAR-reported result?". Persisted on `result.has_innovation_link`, the same column the pooled Contributors & Partners form writes. Omitting the key leaves the stored answer untouched; `null` means the question is on screen and still unanswered.',
+    example: true,
+    nullable: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  has_innovation_link?: boolean | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Internal ids of the results this one is linked or bundled with. Stored as `linked_result` rows for the same `origin_result_id`. Only read when `has_innovation_link` is true; a retraction to false clears the rows this section owns (P2-3424 narrow protocol).',
+    type: [Number],
+    example: [11164],
+  })
+  @IsArray()
+  @IsOptional()
+  @IsNumber({}, { each: true })
+  linked_results?: number[];
 }

@@ -51,6 +51,8 @@ describe('SectionContributorsComponent', () => {
       selectedSecondarySps: signal<any[]>([]),
       currentResultId: signal<number | null>(4242),
       resultLevelId: signal<number | null>(null),
+      // P2-3368: the linked/bundled question is hidden for result types 2 and 7.
+      resultTypeId: signal<number | null>(null),
       isLoadingResult: signal(false)
     };
 
@@ -1455,53 +1457,144 @@ describe('SectionContributorsComponent', () => {
       expect(component.selectedLinkedResultIds()).toEqual([]);
     });
 
-    // ── the linked/bundled block is Coming soon ────────────────────────────────────────────
-    // 🛑 HOUSE RULE: a control whose value cannot be stored ships visible-but-DISABLED with the
-    // tag, and the screen never claims it will be saved. The answer has no field on
-    // SaveBilateralContributorsDto and no home in the detail payload — it only ever reached a
-    // component signal. AC13's note used to count it, so the user read "1 hidden field has values
-    // and will be saved.", reloaded, and found it empty. These tests hold that shut.
-    describe('linked/bundled question · Coming soon', () => {
-      it('flags the unpersisted controls so the template disables them and shows the tag', () => {
-        build();
-        expect(component.unpersistedFieldsComingSoon).toBe(true);
-      });
+    // ── the linked/bundled block PERSISTS (P2-3368 AC10-AC14, 2026-09-24) ─────────────────
+    // 🛑 These tests replace the `Coming soon` ones. The answer now travels on the contributors
+    // PATCH (`has_innovation_link` + `linked_results`) and comes back with the detail, so AC13's
+    // note is allowed to count it again. What they guard is the pair of invariants that make the
+    // promise true: nothing is sent before the stored value is on screen, and nothing is sent at
+    // all for the two result types whose answer is owned by another section.
+    describe('linked/bundled question · persistence', () => {
+      const hydrate = () => {
+        component.linkedHydrated.set(true);
+        component.contributorsHydrated.set(true);
+      };
 
-      it('never promises a save: the hidden-field counter stays at zero and the note never shows', () => {
+      /**
+       * The hydrate effect only fires once the centres AND projects catalogues are ready, so the
+       * cached list has to be primed BEFORE the component is built or the detail GET never runs —
+       * and a hydration test whose GET never runs passes on an empty component, proving nothing.
+       * Every test below that reads a stored value asserts the call happened, as its own control.
+       */
+      const buildHydrated = () => {
+        centersService.centersList = [center(1)];
+        build();
+        fixture.detectChanges();
+        expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(4242);
+      };
+
+      it('counts the answer in the hidden-field note once it can be saved (AC13)', () => {
         build();
         expect(component.hiddenFieldsWithValues()).toBe(0);
-        expect(component.showHiddenFieldsNote()).toBe(false);
 
-        // Even with the signals populated (only reachable from code while the control is disabled)
-        // there is nothing to announce, because nothing of this leaves the browser.
         component.onHasLinkedResultChange(true);
         component.onLinkedResultsModelChange([{ id: 11 }]);
-        expect(component.hiddenFieldsWithValues()).toBe(0);
-        expect(component.showHiddenFieldsNote()).toBe(false);
+
+        expect(component.hiddenFieldsWithValues()).toBe(1);
+        expect(component.showHiddenFieldsNote()).toBe(true);
 
         component.toggleShowAll();
+        // Expanded, the fields are visible, so there is nothing "hidden" to announce.
         expect(component.showHiddenFieldsNote()).toBe(false);
       });
 
-      it('sends nothing of the answer to the server', () => {
+      it('sends the answer and the selection on the contributors PATCH', () => {
         build();
+        hydrate();
         autoSave.saveContributors.mockClear();
 
         component.onHasLinkedResultChange(true);
         component.onLinkedResultsModelChange([{ id: 11 }, { id: 12 }]);
 
-        expect(autoSave.saveContributors).not.toHaveBeenCalled();
+        expect(autoSave.saveContributors).toHaveBeenCalledTimes(2);
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: true, linked_results: [11, 12] })
+        );
       });
 
-      // Kept green so the wiring is one flag away from working the day the DTO accepts the field.
-      it('still clears the selected results when the answer flips back to No (AC12)', () => {
+      it('clears the selection and reports it when the answer flips back to No (AC12)', () => {
         build();
+        hydrate();
         component.onHasLinkedResultChange(true);
         component.onLinkedResultsModelChange([{ id: 11 }, { id: 12 }]);
         expect(component.selectedLinkedResultIds()).toEqual([11, 12]);
+        autoSave.saveContributors.mockClear();
 
         component.onHasLinkedResultChange(false);
+
         expect(component.selectedLinkedResultIds()).toEqual([]);
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: false, linked_results: [] })
+        );
+      });
+
+      // 🛑 The one that protects stored data: this PATCH is fired by every centre and project
+      // change too, so a payload carrying a blank answer before the read comes back would erase a
+      // saved "Yes" — and the links with it.
+      it('omits both keys until the stored answer has been read back', () => {
+        build();
+        component.contributorsHydrated.set(true);
+        autoSave.saveContributors.mockClear();
+
+        component.onHasLinkedResultChange(true);
+
+        expect(autoSave.saveContributors).toHaveBeenCalledWith(
+          expect.not.objectContaining({ has_innovation_link: expect.anything() })
+        );
+      });
+
+      it('hydrates the answer and the linked ids from the detail read', () => {
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({
+            response: {
+              commonFields: { has_innovation_link: 1 },
+              contributingInstitutions: [],
+              linkedResults: [11164, 9600]
+            }
+          })
+        );
+        buildHydrated();
+
+        expect(component.hasLinkedResult()).toBe(true);
+        expect(component.selectedLinkedResultIds()).toEqual([11164, 9600]);
+        expect(component.linkedHydrated()).toBe(true);
+      });
+
+      // A tinyint arrives as '0' over JSON often enough that `!!` has burned this section before
+      // (see `no_applicable_partner`). "Never answered" must stay null, not become false.
+      it.each([
+        ['0', false],
+        [0, false],
+        [null, null],
+        [undefined, null]
+      ])('reads a stored %p as %p', (stored, expected) => {
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({ response: { commonFields: { has_innovation_link: stored }, contributingInstitutions: [] } })
+        );
+        buildHydrated();
+
+        expect(component.hasLinkedResult()).toBe(expected);
+        expect(component.linkedHydrated()).toBe(true);
+      });
+
+      it.each([
+        ['Innovation Use', 2],
+        ['Innovation Development', 7]
+      ])('hides the question and sends nothing for %s', (_label, typeId) => {
+        creation.resultTypeId.set(typeId);
+        build();
+        hydrate();
+        component.toggleShowAll();
+        autoSave.saveContributors.mockClear();
+
+        expect(component.linkedQuestionOwnedElsewhere()).toBe(true);
+        expect(component.showLinkedResultQuestion()).toBe(false);
+        expect(component.hiddenFieldsWithValues()).toBe(0);
+
+        component.onHasLinkedResultChange(true);
+
+        expect(autoSave.saveContributors).toHaveBeenCalledWith(
+          expect.not.objectContaining({ has_innovation_link: expect.anything() })
+        );
       });
     });
 

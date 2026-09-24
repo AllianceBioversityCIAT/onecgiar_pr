@@ -3844,6 +3844,15 @@ export class ResultsService {
       const contributingInstitutions =
         await this._loadContributingInstitutions(internalId);
 
+      // P2-3368 AC13/AC14 — the linked/bundled answer of the Contributors section. The flag rides
+      // in `commonFields` (it is a `result` column); the ids come apart because they live in the
+      // shared `linked_result` table. Without both the section cannot tell "answered No" from
+      // "never answered" and reloads empty.
+      const linkedResults =
+        await this._resultRepository.getActiveLinkedResultIdsByOrigin(
+          internalId,
+        );
+
       const [contributingProjects, contributingInitiatives, evidence] =
         await this._loadBilateralRelatedData(internalId);
 
@@ -3870,6 +3879,7 @@ export class ResultsService {
         geographicScope: geoScope ?? null,
         contributingCenters: contributingCenters ?? [],
         contributingInstitutions: contributingInstitutions ?? [],
+        linkedResults: linkedResults ?? [],
         contributingProjects: contributingProjects ?? [],
         contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],

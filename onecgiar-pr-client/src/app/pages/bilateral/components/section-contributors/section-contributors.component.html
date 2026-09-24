@@ -258,21 +258,22 @@
         <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">You are completing the full metadata for this section. These fields are optional.</span>
 
         <!--
-          ── Linked / bundled question — visible but DISABLED, `Coming soon` ──────────────────
+          ── Linked / bundled question ───────────────────────────────────────────────────────
           P2-3358 wording: one question for every typology. No mandatory indicator (AC10).
-          The answer (and the results it unlocks) has no field on SaveBilateralContributorsDto and
-          no home in the bilateral detail payload: it used to be written to a component signal and
-          nothing else, so the user answered, was told "1 hidden field has values and will be
-          saved.", reloaded, and found it empty. The controls stay on screen because the flow
-          expects them; the tag is what keeps them honest. Unblocked by a BACK ticket that adds the
-          field — then flip `unpersistedFieldsComingSoon`.
+          P2-3368 AC10-AC14: the answer now reaches the server (`has_innovation_link` +
+          `linked_results` on SaveBilateralContributorsDto) and comes back with the detail, so the
+          `Coming soon` marker this block used to carry is gone.
+          🛑 `showLinkedResultQuestion()` also hides the whole block for Innovation Use and
+          Innovation Development: for those two types the same stored answer has another owner
+          (the Innovation Use section / the `results_innovations_dev` mirror), and two editing
+          surfaces over one answer is the defect P2-3199 removed.
         -->
         <div class="flex items-start gap-[8px]">
-          <div class="flex-1" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
+          <div class="flex-1">
             <app-pr-radio-button
               [label]="linkedResultQuestionLabel"
               [required]="false"
-              [disabled]="unpersistedFieldsComingSoon"
+              [disabled]="readOnly()"
               [options]="yesNoOptions"
               optionLabel="label"
               optionValue="value"
@@ -280,17 +281,10 @@
               (ngModelChange)="onHasLinkedResultChange($event)">
             </app-pr-radio-button>
           </div>
-          @if (unpersistedFieldsComingSoon) {
-            <span
-              class="mt-[2px] shrink-0 rounded-full bg-[var(--pr-surface-app)] px-[8px] py-[2px] text-[11px] font-medium text-[var(--pr-text-muted)]"
-              data-testid="linked-result-coming-soon"
-              >Coming soon</span
-            >
-          }
         </div>
 
         @if (showLinkedResultsDropdown()) {
-          <div class="w-full max-w-[480px]" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
+          <div class="w-full max-w-[480px]">
             <app-pr-multi-select
               [readOnly]="readOnly()"
               label="Select a result."
@@ -306,7 +300,7 @@
               placeholder="Please select a result"
               [displayLabelFormatter]="formatResultLabel"
               [required]="false"
-              [isStatic]="true">
+              [isStatic]="!readOnly()">
             </app-pr-multi-select>
           </div>
         }
