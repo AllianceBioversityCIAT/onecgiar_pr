@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-24 · branch qa-development-2026-ss · pending commit (this change) · spec `changes/bilateral-science-program-filter` (`BSF-T-1`/`BSF-T-2`)
+**Verified:** 2026-09-24 · branch qa-development-2026-ss · 8764605b0 · spec `changes/bilateral-science-program-filter` (`BSF-T-1`/`BSF-T-2`)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
