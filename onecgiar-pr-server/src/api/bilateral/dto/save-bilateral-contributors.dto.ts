@@ -166,7 +166,7 @@ export class SaveBilateralContributorsDto {
 
   @ApiPropertyOptional({
     description:
-      'Internal ids of the results this one is linked or bundled with. Stored as `linked_result` rows for the same `origin_result_id`. Only read when `has_innovation_link` is true; a retraction to false clears the rows this section owns (P2-3424 narrow protocol).',
+      'Internal ids of the results this one is linked or bundled with. Stored as `linked_result` rows for the same `origin_result_id`. Only read when `has_innovation_link` is true; omitted with a true flag = the list is left as stored. Inactive results and the result itself are dropped. A retraction to false deactivates every row that carries a `linked_results_id` (including rows written by the P22 "Links to results" section); only `legacy_link` rows survive (P2-3424 narrow protocol). Validated in the service: no ValidationPipe runs on this route.',
     type: [Number],
     example: [11164],
   })
