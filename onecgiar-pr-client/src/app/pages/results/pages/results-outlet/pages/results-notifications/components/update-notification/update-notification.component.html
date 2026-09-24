@@ -1,11 +1,7 @@
 @let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;
 @let initOfficialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
-<!-- 2026-09-05: "submitted for your review" links to the SP's review queue — the detail route does
-     not serve a bilateral result to its reviewer; the queue's drawer does. -->
-@let resultUrl =
-  isBilateralSubmitted
-    ? '/result-framework-reporting/entity-details/' + initOfficialCode + '/bilateral-review'
-    : '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
+<!-- resultUrl (component): review request = full review-drawer URL; decision = Result Detail, upgraded
+     to the lead-center editor by (click); others unchanged. -->
 
 <div
   [ngSwitch]="notification?.obj_notification_level?.notifications_level_id"
@@ -61,7 +57,7 @@
         }
 
         <!-- Attached comma (NDCW-R-2): no whitespace inside the link's tail nor between </a> and the trailer. -->
-        <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: var(--pr-color-black)">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</a
+        <a [href]="resultUrl" (click)="onDecisionLinkClick($event)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: var(--pr-color-black)">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</a
         >{{ parts.linkTrailer }}
 
         @if (parts.suffix) {

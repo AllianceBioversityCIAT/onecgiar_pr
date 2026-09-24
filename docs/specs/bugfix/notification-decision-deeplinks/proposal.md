@@ -12,7 +12,7 @@
 | Depends on | none in code. Same PR as `bugfix/notification-decision-center-wording` (executed, uncommitted) |
 | Parallel-safe | **no** — edits `update-notification.component.html`, `pop-up-notification-item.component.{ts,html}` and their specs, the same files the wording spec touched. Specify and execute after that spec is committed, or on top of its working tree |
 | Related | `notifications/bilateral-review-decision` (NOTIF-R-4), `bugfix/bilateral-approved-open-route` (shipped the route util reused here) |
-| Status | Draft, awaiting approval |
+| Status | approved 2026-09-24 |
 
 ## Intent
 

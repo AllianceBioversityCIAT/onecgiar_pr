@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
+import { DECISION_URL_TIMEOUT_MS } from '../../../../services/notification-navigation.service';
 
 import { PopUpNotificationItemComponent } from './pop-up-notification-item.component';
 import { BilateralApiService } from '../../../../services/api/bilateral-api.service';
@@ -204,7 +205,9 @@ describe('PopUpNotificationItemComponent', () => {
 
       expect(event.preventDefault).toHaveBeenCalled();
       expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(55);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/result-framework-reporting/entity-details/SP5/bilateral-review');
+      expect(router.navigateByUrl).toHaveBeenCalledWith(
+        '/result-framework-reporting/entity-details/SP5/bilateral-review?reviewResult=R100&reviewResultId=77'
+      );
       expect(emitted).toHaveBeenCalled();
     });
 
@@ -221,7 +224,7 @@ describe('PopUpNotificationItemComponent', () => {
       expect(router.navigateByUrl).not.toHaveBeenCalled();
     });
 
-    it('routes a bilateral review notification to the lead centre dashboard with the result in focus', () => {
+    it('routes a bilateral decision notification to the result in the lead centre editor', () => {
       bilateralApi.GET_centersByResultId.mockReturnValue(
         of({ response: [{ code: '3', acronym: 'CIAT', is_leading_result: 1 }] })
       );
@@ -232,9 +235,61 @@ describe('PopUpNotificationItemComponent', () => {
 
       expect(event.preventDefault).toHaveBeenCalled();
       expect(bilateralApi.GET_centersByResultId).toHaveBeenCalledWith(77);
-      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'CIAT', 'home'], {
-        queryParams: { result: 'R100' }
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/bilateral/CIAT/result/R100?phase=v1');
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('routes result 9544 (CIMMYT lead, phase 36) to the center editor and closes the popup', () => {
+      const emitted = jest.fn();
+      component.itemSelected.subscribe(emitted);
+      bilateralApi.GET_centersByResultId.mockReturnValue(of({ response: [{ code: '5', acronym: 'CIMMYT', is_leading_result: 1 }] }));
+      component.notification = bilateralNotification({
+        result_id: 9544,
+        obj_notification_type: { type: NotificationType.BILATERAL_RESULT_APPROVED },
+        obj_result: { result_code: 9544, obj_version: { id: 36 }, obj_result_by_initiatives: [] }
       });
+
+      component.onNotificationClick(clickEvent());
+
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/bilateral/CIMMYT/result/9544?phase=36');
+      expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(55);
+      expect(emitted).toHaveBeenCalled();
+    });
+
+    it('reaches the review drawer for result 9544 (SP03) from a review request', () => {
+      const emitted = jest.fn();
+      component.itemSelected.subscribe(emitted);
+      component.notification = bilateralNotification({
+        result_id: 91,
+        obj_notification_type: { type: NotificationType.BILATERAL_RESULT_SUBMITTED },
+        obj_result: { result_code: 9544, obj_version: { id: 36 }, obj_result_by_initiatives: [{ obj_initiative: { official_code: 'SP03' } }] }
+      });
+
+      component.onNotificationClick(clickEvent());
+
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/result-framework-reporting/entity-details/SP03/bilateral-review?reviewResult=9544&reviewResultId=91');
+      expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(55);
+      expect(emitted).toHaveBeenCalled();
+    });
+
+    it('opens Result Detail, without throwing, when the centres lookup hangs', () => {
+      jest.useFakeTimers();
+      try {
+        const emitted = jest.fn();
+        component.itemSelected.subscribe(emitted);
+        bilateralApi.GET_centersByResultId.mockReturnValue(NEVER);
+        component.notification = bilateralNotification();
+
+        component.onNotificationClick(clickEvent());
+        expect(router.navigateByUrl).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(DECISION_URL_TIMEOUT_MS + 1);
+
+        expect(router.navigateByUrl).toHaveBeenCalledWith('/result/result-detail/R100/general-information?phase=v1');
+        expect(emitted).toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it('marks the notification as read on click (AC5)', () => {
@@ -267,16 +322,25 @@ describe('PopUpNotificationItemComponent', () => {
 
       component.onNotificationClick(clickEvent());
 
-      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'CIAT', 'home'], expect.anything());
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/bilateral/CIAT/result/R100?phase=v1');
     });
 
-    it('falls back to the notifications list when no centre can be resolved', () => {
+    it('falls back to Result Detail when no centre can be resolved', () => {
       bilateralApi.GET_centersByResultId.mockReturnValue(of({ response: [] }));
       component.notification = bilateralNotification();
 
       component.onNotificationClick(clickEvent());
 
       expect(router.navigate).not.toHaveBeenCalled();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/result/result-detail/R100/general-information?phase=v1');
+    });
+
+    it('falls back to the notifications list when the payload has no result code', () => {
+      bilateralApi.GET_centersByResultId.mockReturnValue(of({ response: [] }));
+      component.notification = bilateralNotification({ obj_result: { obj_version: { id: 'v1' }, obj_result_by_initiatives: [{ obj_initiative: { id: 'i', official_code: 'SP5' } }] } });
+
+      component.onNotificationClick(clickEvent());
+
       expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('results-notifications/updates'));
     });
 
@@ -355,13 +419,13 @@ describe('PopUpNotificationItemComponent', () => {
       });
     });
 
-    it('falls back to the notifications list when the centre lookup fails', () => {
+    it('falls back to Result Detail when the centre lookup fails', () => {
       bilateralApi.GET_centersByResultId.mockReturnValue(throwError(() => new Error('boom')));
       component.notification = bilateralNotification();
 
       component.onNotificationClick(clickEvent());
 
-      expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('results-notifications/updates'));
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/result/result-detail/R100/general-information?phase=v1');
     });
   });
 });

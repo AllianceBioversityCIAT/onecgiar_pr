@@ -83,29 +83,57 @@ export function classifyBilateralOpenRoute(input: BilateralOpenRouteInput): Bila
   return 'review-drawer';
 }
 
+/** Center editor route: `/bilateral/<center>/result/<code>?phase=`. */
+export function buildCenterEditorRoute(
+  center: string | null | undefined,
+  resultCode: string | number | null | undefined,
+  phase: string | number | null | undefined
+): BilateralOpenRouteResult {
+  return {
+    kind: 'center-editor',
+    commands: ['/bilateral', center, 'result', resultCode ?? ''],
+    queryParams: { phase: phase ?? '' }
+  };
+}
+
+/** Programme review drawer route: `.../<programme>/bilateral-review?reviewResult=&reviewResultId=`. */
+export function buildReviewDrawerRoute(
+  programmeCode: string | null | undefined,
+  resultCode: string | number | null | undefined,
+  resultId: string | number | null | undefined
+): BilateralOpenRouteResult {
+  return {
+    kind: 'review-drawer',
+    commands: ['/result-framework-reporting', 'entity-details', programmeCode || '', 'bilateral-review'],
+    queryParams: {
+      [REVIEW_RESULT_QUERY_PARAM]: resultCode ?? '',
+      [REVIEW_RESULT_ID_QUERY_PARAM]: resultId
+    }
+  };
+}
+
+/** Serializes a route result to a plain URL string (no router needed). */
+export function bilateralRouteToUrl(route: Pick<BilateralOpenRouteResult, 'commands' | 'queryParams'>): string {
+  const path = route.commands.map(segment => String(segment)).join('/');
+  const query = Object.entries(route.queryParams)
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  return query ? `${path}?${query}` : path;
+}
+
 export function resolveBilateralResultOpenRoute(input: BilateralOpenRouteInput): BilateralOpenRouteResult {
   const kind = classifyBilateralOpenRoute(input);
   const phase = input.versionId ?? '';
   const code = input.resultCode ?? '';
 
   if (kind === 'center-editor') {
-    return {
-      kind,
-      commands: ['/bilateral', input.leadCenter, 'result', code],
-      queryParams: { phase }
-    };
+    return buildCenterEditorRoute(input.leadCenter, code, phase);
   }
 
   if (kind === 'review-drawer') {
     const programmeCode = input.submitterCode || input.programmeCodeFallback || '';
-    return {
-      kind,
-      commands: ['/result-framework-reporting', 'entity-details', programmeCode, 'bilateral-review'],
-      queryParams: {
-        [REVIEW_RESULT_QUERY_PARAM]: code,
-        [REVIEW_RESULT_ID_QUERY_PARAM]: input.resultId
-      }
-    };
+    return buildReviewDrawerRoute(programmeCode, code, input.resultId);
   }
 
   return {

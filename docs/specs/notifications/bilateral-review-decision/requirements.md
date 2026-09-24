@@ -81,6 +81,8 @@ Baseline citations:
   `role = RoleEnum.CENTER_USER`.
 - **NOTIF-R-4** — Clicking the notification MUST navigate to `/bilateral/:centerAcronym/home` with
   the decided result in focus, and MUST mark the notification read.
+  _Amended 2026-09-24: the click destination is now defined by `bugfix/notification-decision-deeplinks`
+  (NDDL-R-1: `/bilateral/<lead center>/result/<code>?phase=`). Mark-as-read on click still applies._
 - **NOTIF-R-5** — The review trail (including `comment`) MUST be readable over HTTP for a result.
 - **NOTIF-R-6** — Notification types MUST be resolved by NAME, never by database id, on both server
   and client.
