@@ -106,6 +106,25 @@ describe('SectionGeographyComponent', () => {
   });
 
   describe('loadGeographicData', () => {
+    it.each(['A then B', 'B then A'])('keeps active result B when deferred loads resolve %s', order => {
+      const a$ = new Subject<any>();
+      const b$ = new Subject<any>();
+      bilateralApi.GET_geographic.mockImplementation((id: number) => id === 77 ? a$.asObservable() : b$.asObservable());
+      build();
+      fixture.detectChanges();
+      creation.currentResultId.set(78);
+      fixture.detectChanges();
+      const emitA = () => a$.next({ response: { geo_scope_id: GeoScopeEnum.GLOBAL, has_extra_geo_scope: false, extra_geo_scope_id: 1 } });
+      const emitB = () => b$.next({ response: { geo_scope_id: GeoScopeEnum.COUNTRY, has_countries: true, countries: [{ id: 9 }], has_extra_geo_scope: null, extra_regions: [{ id: 1 }] } });
+      if (order === 'A then B') { emitA(); emitB(); } else { emitB(); emitA(); }
+      expect(component.loadedResultId()).toBe(78);
+      expect(component.geographicLocationBody().geo_scope_id).toBe(GeoScopeEnum.COUNTRY);
+      expect(component.extraGeographicLocationBody().regions).toEqual([{ id: 1 }]);
+      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBeNull();
+      expect(component.showExtraMetadata()).toBe(true);
+      component.onScopeChange(GeoScopeEnum.GLOBAL);
+      expect(autoSave.schedulePayload.mock.lastCall[1]).toEqual(expect.objectContaining({ extra_regions: [{ id: 1 }], has_extra_geo_scope: null }));
+    });
     it('does nothing without a result id', () => {
       creation.currentResultId.set(null);
       build();
@@ -297,8 +316,8 @@ describe('SectionGeographyComponent', () => {
       expect(body.regions).toEqual([]);
       expect(body.countries).toEqual([]);
       expect(body.has_regions).toBe(false);
-      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBe(false);
-      expect(component.extraGeographicLocationBody().regions).toEqual([]);
+      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBe(true);
+      expect(component.extraGeographicLocationBody().regions).toEqual([{ id: 3 }]);
       expect(component.extraGeographicLocationBody().geo_scope_id).toBeUndefined();
     });
 
@@ -556,11 +575,11 @@ describe('SectionGeographyComponent', () => {
       build();
       creation.resultTypeId.set(7);
       component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
-      expect(component.showExtraGeoScopeQuestion()).toBe(true);
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
       expect(component.requiresExtraScopeAnswer).toBe(true);
     });
 
-    it('clears extra-scope data in the payload for non-innovation results', () => {
+    it('preserves extra-scope data in the payload for non-innovation results', () => {
       build();
       creation.resultTypeId.set(8);
       component.geographicLocationBody.set({
@@ -580,13 +599,34 @@ describe('SectionGeographyComponent', () => {
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
         'geography',
         expect.objectContaining({
-          has_extra_geo_scope: false,
-          extra_geo_scope_id: null,
-          extra_regions: [],
+          has_extra_geo_scope: true,
+          extra_geo_scope_id: GeoScopeEnum.REGIONAL,
+          extra_regions: [{ id: 1 }],
           has_extra_regions: false
         }),
         expect.any(Object)
       );
+    });
+  });
+
+  describe('optional bilateral extra geography', () => {
+    it.each([2, 7, 8])('completes valid main geography without an extra answer for type %i', typeId => {
+      build();
+      creation.resultTypeId.set(typeId);
+      component.geographicLocationBody.set({ geo_scope_id: GeoScopeEnum.COUNTRY, has_countries: true, has_regions: false, regions: [], countries: [{ id: 9 }] });
+      component.updateTracker();
+      expect(component.isGeographyComplete()).toBe(true);
+      expect(mdsTracker.setSectionFields.mock.lastCall[1].map((field: any) => field.key)).toEqual(['geo-scope', 'countries']);
+      component.geographicLocationBody.update(b => ({ ...b, countries: [] }));
+      expect(component.isGeographyComplete()).toBe(false);
+    });
+
+    it.each([null, false, true])('preserves %s and saved children when main scope is saved', answer => {
+      build();
+      creation.resultTypeId.set(8);
+      component.extraGeographicLocationBody.set({ geo_scope_id: GeoScopeEnum.REGIONAL, has_regions: true, has_countries: false, regions: [{ id: 1 }], countries: [], has_extra_geo_scope: answer });
+      component.onScopeChange(GeoScopeEnum.GLOBAL);
+      expect(autoSave.schedulePayload.mock.lastCall[1]).toEqual(expect.objectContaining({ has_extra_geo_scope: answer, extra_geo_scope_id: GeoScopeEnum.REGIONAL, extra_regions: [{ id: 1 }], has_extra_regions: true }));
     });
   });
 

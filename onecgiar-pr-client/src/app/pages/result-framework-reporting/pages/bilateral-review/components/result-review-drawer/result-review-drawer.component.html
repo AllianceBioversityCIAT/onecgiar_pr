@@ -355,8 +355,9 @@
                     module="reporting">
                   </app-geoscope-management>
 
-                  @if (fields.geographicScope.geo_scope_id && fields.geographicScope.geo_scope_id !== 1 && fields.geographicScope.geo_scope_id !== 50) {
+                  @if (hasSavedExtraGeography(fields.geographicScope)) {
                     <div class="mt-3">
+                      @if (fields.geographicScope.has_extra_geo_scope === true || fields.geographicScope.has_extra_geo_scope === false) {
                       <app-pr-radio-button
                         [options]="[
                           { value: true, label: 'Yes' },
@@ -366,25 +367,62 @@
                         optionValue="value"
                         label="Are there any regions that you wish to specify for this Output?"
                         [(ngModel)]="fields.geographicScope.has_extra_geo_scope"
-                        [disabled]="!canEditDataStandards()">
+                        [disabled]="!canEditDataStandards()"
+                        [required]="false">
                       </app-pr-radio-button>
+                      }
 
-                      @if (fields.geographicScope.has_extra_geo_scope) {
+                      @if (fields.geographicScope.extra_geo_scope_id) {
                         <div class="mt-2">
-                          <app-geoscope-management
+                          <app-pr-radio-button
                             label="What is the geographic scope where there may be potential impact in other geographic areas?"
-                            [body]="{
-                              geo_scope_id: fields.geographicScope.extra_geo_scope_id,
-                              regions: fields.geographicScope.extra_regions || [],
-                              countries: fields.geographicScope.extra_countries || [],
-                              has_regions: fields.geographicScope.has_extra_regions,
-                              has_countries: fields.geographicScope.has_extra_countries
-                            }"
+                            [options]="extraGeoScopeOptions"
+                            optionLabel="name"
+                            optionValue="id"
+                            [(ngModel)]="fields.geographicScope.extra_geo_scope_id"
                             [readOnly]="!canEditDataStandards()"
-                            [hideTobeDetermined]="true"
-                            module="reporting">
-                          </app-geoscope-management>
+                            [required]="false">
+                          </app-pr-radio-button>
                         </div>
+                      }
+                      @if (fields.geographicScope.extra_regions?.length) {
+                        <app-pr-multi-select
+                          label="Select extra regions"
+                          [options]="fields.geographicScope.extra_regions"
+                          selectedLabel="Regions(s) selected"
+                          selectedOptionLabel="name"
+                          optionLabel="name"
+                          optionValue="id"
+                          [ngModel]="fields.geographicScope.extra_regions"
+                          (ngModelChange)="fields.geographicScope.extra_regions = $event"
+                          [readOnly]="!canEditDataStandards()"
+                          [required]="false">
+                        </app-pr-multi-select>
+                      }
+                      @if (fields.geographicScope.extra_countries?.length) {
+                        <app-pr-multi-select
+                          label="Select extra countries"
+                          [options]="fields.geographicScope.extra_countries"
+                          selectedLabel="Countries selected"
+                          selectedOptionLabel="name"
+                          optionLabel="full_name"
+                          optionValue="id"
+                          [ngModel]="fields.geographicScope.extra_countries"
+                          (ngModelChange)="fields.geographicScope.extra_countries = $event"
+                          [readOnly]="!canEditDataStandards()"
+                          [required]="false">
+                        </app-pr-multi-select>
+                        @for (country of fields.geographicScope.extra_countries; track country.id; let idx = $index) {
+                          @if (country.sub_national?.length) {
+                            <app-sub-geoscope
+                              [obj_country]="country"
+                              [index]="idx"
+                              [obj_countrySelected]="fields.geographicScope.extra_countries"
+                              [name]="country.name"
+                              [readOnly]="!canEditDataStandards()">
+                            </app-sub-geoscope>
+                          }
+                        }
                       }
                     </div>
                   }

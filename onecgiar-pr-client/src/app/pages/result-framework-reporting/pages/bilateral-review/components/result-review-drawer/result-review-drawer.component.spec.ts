@@ -1374,6 +1374,21 @@ describe('ResultReviewDrawerComponent', () => {
       expect(body.geographicScope.countries[1].sub_national).toEqual([]);
       expect(body.geographicScope.has_regions).toBe(false);
       expect(body.geographicScope.extra_regions).toEqual([{ id: 8 }]);
+      expect(body.geographicScope.has_extra_geo_scope).toBeNull();
+      flush();
+    }));
+
+    it.each([false, true])('preserves the saved extra answer %s and children', fakeAsync(answer => {
+      component.resultDetail.set(buildDetail({ geographicScope: {
+        geo_scope_id: 1, has_extra_geo_scope: answer, extra_geo_scope_id: 2,
+        extra_regions: [{ id: 8 }], extra_countries: [{ id: 9, sub_national: [{ id: 4 }] }],
+        has_extra_regions: true, has_extra_countries: true
+      } }));
+      exec();
+      tick();
+      const geo = apiMock.resultsSE.PATCH_BilateralDataStandard.mock.calls[0][1].geographicScope;
+      expect(geo).toEqual(expect.objectContaining({ has_extra_geo_scope: answer, extra_geo_scope_id: 2, extra_regions: [{ id: 8 }], has_extra_regions: true, has_extra_countries: true }));
+      expect(geo.extra_countries[0].sub_national[0].id).toBe(4);
       flush();
     }));
 

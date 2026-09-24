@@ -62,6 +62,16 @@ import { resultStatusLabel, resultStatusToken } from '../../../../../../shared/c
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
+  hasSavedExtraGeography(geo: any): boolean {
+    return !!geo && (geo.has_extra_geo_scope === true || geo.has_extra_geo_scope === false ||
+      !!geo.extra_geo_scope_id || geo.has_extra_regions === true || geo.has_extra_countries === true ||
+      !!geo.extra_regions?.length || !!geo.extra_countries?.length);
+  }
+
+  readonly extraGeoScopeOptions = [
+    { id: 1, name: 'Global' }, { id: 2, name: 'Regional' },
+    { id: 3, name: 'Country' }, { id: 5, name: 'Sub-national' }
+  ];
   private readonly api = inject(ApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
@@ -860,7 +870,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         extra_countries: geoScope.extra_countries?.map(mapCountryWithSubNational) || [],
         has_extra_countries: geoScope.has_extra_countries || false,
         has_extra_regions: geoScope.has_extra_regions || false,
-        has_extra_geo_scope: geoScope.has_extra_geo_scope || false
+        has_extra_geo_scope: geoScope.has_extra_geo_scope ?? null
       };
     }
 
