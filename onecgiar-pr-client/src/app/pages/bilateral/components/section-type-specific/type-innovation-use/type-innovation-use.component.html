@@ -492,10 +492,6 @@
           [(ngModel)]="organization.institution_types_id"
           (ngModelChange)="onOrganizationTypeChange(organization)">
         </app-pr-select>
-        <!-- Night sweep 2026-09-23, BIL-1b: figures without an institution type are not storable. -->
-        @if (organizationMissingType(organization)) {
-          <p class="text-xs text-[var(--pr-color-red-300)] sm:col-span-2" data-testid="organization-type-missing">{{ copy.organizationTypeMissing }}</p>
-        }
 
         @if (organization.institution_types_id && getInstitutionsTypeTreeChildren(organization.institution_types_id).length) {
           <app-pr-select

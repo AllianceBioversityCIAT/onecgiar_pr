@@ -1079,33 +1079,6 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.hasActorMissingType).toBe(true);
     });
 
-    // BIL-1b (organizations, prtest 11412). Control negative: without the organization refusal
-    // in `patchUnlessActorMissingType` the first test fails.
-    it('BIL-1b: refuses to send an organization with "How many" but no institution type, and says why', () => {
-      build();
-      component.body = { ...component.body, innov_use_to_be_determined: true, organization: [] };
-      component.addOrganization();
-      const executor = executorOf();
-      component.body.organization[0].how_many = 7;
-
-      let error: any;
-      executor(123, {}).subscribe({ error: (e: any) => (error = e) });
-
-      expect(bilateralApi.PATCH_innovationUse).not.toHaveBeenCalled();
-      expect(error?.error?.message).toBe(component.copy.organizationTypeMissing);
-    });
-
-    it('BIL-1b: a blank staged organization still goes through (146d26112 discards it server-side)', () => {
-      build();
-      component.body = { ...component.body, innov_use_to_be_determined: true, organization: [] };
-      component.addOrganization();
-
-      executorOf()(123, {}).subscribe();
-
-      expect(component.organizationMissingType(component.body.organization[0])).toBe(false);
-      expect(bilateralApi.PATCH_innovationUse).toHaveBeenCalled();
-    });
-
     it('the row carries the message in the template', () => {
       const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
       expect(html).toContain('@if (actorMissingType(actor)) {');

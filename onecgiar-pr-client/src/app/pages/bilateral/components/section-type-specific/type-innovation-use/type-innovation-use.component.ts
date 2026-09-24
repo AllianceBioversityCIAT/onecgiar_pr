@@ -226,27 +226,6 @@ export class TypeInnovationUseComponent implements OnInit {
     return [...current, ...projection].some((actor: any) => this.actorMissingType(actor));
   }
 
-  /**
-   * Night sweep 2026-09-23, BIL-1b — the organization twin of `actorMissingType`: the server skips a
-   * new organization row judged only by `institution_types_id` as blank (`innovation_dev.service.ts`
-   * `isDiscardable(el, el?.id, el?.institution_types_id)`, 146d26112) and answers 201, so a row with
-   * "How many" 7 and no type vanished on reload (prtest 11412). Blank rows stay discardable.
-   */
-  organizationMissingType(organization: any): boolean {
-    if (!organization || organization.is_active === false) return false;
-    const type = organization.institution_types_id;
-    if (type !== null && type !== undefined && `${type}`.trim() !== '') return false;
-    const filled = (value: unknown) => value !== null && value !== undefined && `${value}`.trim() !== '';
-    return [organization.how_many, organization.other_institution, organization.graduate_students, organization.addressing_demands, organization.institution_sub_type_id].some(filled);
-  }
-
-  /** BIL-1b — current-use organizations (sent whether or not full metadata is open) or the 2030 ones while shown. */
-  get hasOrganizationMissingType(): boolean {
-    const current = this.body.organization ?? [];
-    const projection = this.showProjection2030Lists ? (this.body.innovation_use_2030?.organization ?? []) : [];
-    return [...current, ...projection].some((organization: any) => this.organizationMissingType(organization));
-  }
-
   /** Numeric use level (0..9) behind the selected `innovation_use_level_id`; -1 when nothing is picked. */
   get useLevelNumber(): number {
     const selectedId = this.body.innovation_use_level_id;
@@ -729,10 +708,6 @@ export class TypeInnovationUseComponent implements OnInit {
   private patchUnlessActorMissingType(resultId: number, body: Record<string, unknown>): Observable<unknown> {
     if (this.hasActorMissingType) {
       return throwError(() => ({ status: 400, error: { message: this.copy.actorTypeMissing } }));
-    }
-    // BIL-1b — same refusal for an organization with figures and no institution type.
-    if (this.hasOrganizationMissingType) {
-      return throwError(() => ({ status: 400, error: { message: this.copy.organizationTypeMissing } }));
     }
     return this.bilateralApi.PATCH_innovationUse(resultId, body);
   }
