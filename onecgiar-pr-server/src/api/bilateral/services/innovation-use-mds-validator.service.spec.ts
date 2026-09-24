@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
 
@@ -84,9 +83,12 @@ describe('InnovationUseMdsValidator', () => {
   );
 
   it('accepts a persisted draft without quantitative measures', async () => {
-    const { measures: _measures, ...withoutMeasures } = completePersisted;
+    const { measures, ...withoutMeasures } = completePersisted;
+    expect(measures).toBeDefined();
     const summaryService = {
-      getInnovationUse: jest.fn().mockResolvedValue({ response: withoutMeasures }),
+      getInnovationUse: jest
+        .fn()
+        .mockResolvedValue({ response: withoutMeasures }),
     } as any;
     const validator = new InnovationUseMdsValidator(summaryService);
 
@@ -108,12 +110,15 @@ describe('InnovationUseMdsValidator', () => {
   it('ignores saved measures when current innovation use is marked TBD', async () => {
     const validator = new InnovationUseMdsValidator({} as any);
     const payload = completeExternal();
-    payload.innovation_use.current_innovation_use_numbers.innov_use_to_be_determined = true;
+    payload.innovation_use.current_innovation_use_numbers.innov_use_to_be_determined =
+      true;
     payload.innovation_use.current_innovation_use_numbers.measures = [
       { unit_of_measure: 'hectares' },
     ];
 
-    await expect(validator.assertExternalCreateMds(payload)).resolves.toBeUndefined();
+    await expect(
+      validator.assertExternalCreateMds(payload),
+    ).resolves.toBeUndefined();
   });
 
   it('does not block persisted submission on measures when current use is TBD', async () => {
