@@ -283,7 +283,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   private missingFieldsFor(section: BilateralEditorSection): string[] {
     const fields = this.mdsTracker.sectionStatus().find(s => s.sectionName === section)?.fields ?? [];
-    return fields.filter(field => !field.filled).map(field => field.label);
+    return fields.filter(field => !field.filled && !field.optional).map(field => field.label);
   }
 
   /**

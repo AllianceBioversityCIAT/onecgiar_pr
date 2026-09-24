@@ -66,6 +66,71 @@ describe('InnovationUseMdsValidator', () => {
     ).resolves.toBeUndefined();
   });
 
+  it.each(['omitted', 'empty'])(
+    'accepts an external payload with quantitative measures %s',
+    async (state) => {
+      const validator = new InnovationUseMdsValidator({} as any);
+      const payload = completeExternal();
+      if (state === 'omitted') {
+        delete payload.innovation_use.current_innovation_use_numbers.measures;
+      } else {
+        payload.innovation_use.current_innovation_use_numbers.measures = [];
+      }
+
+      await expect(
+        validator.assertExternalCreateMds(payload),
+      ).resolves.toBeUndefined();
+    },
+  );
+
+  it('accepts a persisted draft without quantitative measures', async () => {
+    const { measures: _measures, ...withoutMeasures } = completePersisted;
+    const summaryService = {
+      getInnovationUse: jest.fn().mockResolvedValue({ response: withoutMeasures }),
+    } as any;
+    const validator = new InnovationUseMdsValidator(summaryService);
+
+    await expect(validator.assertPersistedMds(12)).resolves.toBeUndefined();
+  });
+
+  it('still rejects a partially completed quantitative measure row', async () => {
+    const validator = new InnovationUseMdsValidator({} as any);
+    const payload = completeExternal();
+    payload.innovation_use.current_innovation_use_numbers.measures = [
+      { unit_of_measure: 'hectares' },
+    ];
+
+    await expect(validator.assertExternalCreateMds(payload)).rejects.toThrow(
+      'add at least one measure with a unit and quantity',
+    );
+  });
+
+  it('ignores saved measures when current innovation use is marked TBD', async () => {
+    const validator = new InnovationUseMdsValidator({} as any);
+    const payload = completeExternal();
+    payload.innovation_use.current_innovation_use_numbers.innov_use_to_be_determined = true;
+    payload.innovation_use.current_innovation_use_numbers.measures = [
+      { unit_of_measure: 'hectares' },
+    ];
+
+    await expect(validator.assertExternalCreateMds(payload)).resolves.toBeUndefined();
+  });
+
+  it('does not block persisted submission on measures when current use is TBD', async () => {
+    const summaryService = {
+      getInnovationUse: jest.fn().mockResolvedValue({
+        response: {
+          ...completePersisted,
+          innov_use_to_be_determined: 1,
+          measures: [{ unit_of_measure: null, quantity: null }],
+        },
+      }),
+    } as any;
+    const validator = new InnovationUseMdsValidator(summaryService);
+
+    await expect(validator.assertPersistedMds(12)).resolves.toBeUndefined();
+  });
+
   it('accepts an explicit TBD amount for every external bilateral project', async () => {
     const validator = new InnovationUseMdsValidator({} as any);
     const payload = completeExternal();

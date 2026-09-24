@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-09-14 · P2-3424 AC4 — dropdown moved onto the shared QA catalogue (was P2-3428 worktree implementation, 2026-09-09)
+**Verified:** 2026-09-24 · Innovation Use quantitative measures are optional in the bilateral form, MDS tracker, and server gate.
 
 ## What it is
 Section 5 of the W3/bilateral result creator when the type is **Innovation Use**. Shows the MDS fields
@@ -11,8 +11,8 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 ## Contract
 - No `@Input`/`@Output`: all state travels through services.
 - `BilateralCreationService.currentResultId()` — which result; `reportingYear()` — the phase gate.
-- `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — four entries:
-  `use-actors`, `use-measures`, `use-level`, `use-investment`. The last one is the W3/bilateral-project
+- `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — three entries:
+  `use-actors`, `use-measures` (optional), `use-investment`. The last one is the W3/bilateral-project
   table only; Submit is gated on `overallStatus() === 'complete'`.
 - `BilateralAutoSaveService.schedulePayload('typeSpecific', …)` — autosave, 800 ms debounce.
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
@@ -114,7 +114,8 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 - The whole spec uses `overrideTemplate`, so the HTML is not compiled in Jest: template facts are asserted by
   reading the `.html` file as text, and copy that QA quotes lives in a constant (`MDS_INFO_NOTE`,
   `LOAD_ERROR_NOTE`).
-- A quantitative measure only counts for the MDS with **both unit AND quantity** (AC6).
+- Quantitative measures are optional. When a row is added, it only counts as complete with **both unit AND quantity** (AC6).
+- Organizations are optional and remain under the full-metadata toggle; the Fetcher schema and MDS do not require an organization row. Current-use measures are optional and shown only when `innov_use_to_be_determined === false`; they do not count toward the MDS.
 
 - **P2-3785 (4b) — actors use the POOLED meaning of `sex_and_age_disaggregation`**: ticked (`true`) =
   the breakdown does NOT apply, only "How many". The old "Sex and age disaggregated data available?"

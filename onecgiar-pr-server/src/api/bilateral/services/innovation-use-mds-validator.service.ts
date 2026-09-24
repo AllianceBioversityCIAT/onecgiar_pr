@@ -90,7 +90,9 @@ export class InnovationUseMdsValidator {
     }
 
     if (
-      !Array.isArray(input.measures) ||
+      actorsToBeDetermined === false &&
+      Array.isArray(input.measures) &&
+      input.measures.length > 0 &&
       !input.measures.some((measure) => this.isCompleteMeasure(measure))
     ) {
       errors.push(
