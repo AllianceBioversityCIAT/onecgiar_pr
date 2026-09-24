@@ -404,18 +404,6 @@
           <li hlmSidebarMenuItem>
             <a
               hlmSidebarMenuButton
-              [href]="aiUseInPrmsUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              tooltip="AI use in PRMS">
-              <ng-icon name="lucideSparkles" />
-              <span>AI use in PRMS</span>
-              <ng-icon name="lucideExternalLink" class="ml-auto shrink-0 text-[10px] opacity-50" />
-            </a>
-          </li>
-          <li hlmSidebarMenuItem>
-            <a
-              hlmSidebarMenuButton
               routerLink="/developers"
               routerLinkActive
               #rlaDevelopers="routerLinkActive"
@@ -423,6 +411,18 @@
               tooltip="Developers">
               <ng-icon name="lucideCode" />
               <span>Developers</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
+              [href]="aiUseInPrmsUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              tooltip="AI use in PRMS">
+              <ng-icon name="lucideSparkles" />
+              <span>AI use in PRMS</span>
+              <ng-icon name="lucideExternalLink" class="ml-auto shrink-0 text-[10px] opacity-50" />
             </a>
           </li>
           <li hlmSidebarMenuItem>
