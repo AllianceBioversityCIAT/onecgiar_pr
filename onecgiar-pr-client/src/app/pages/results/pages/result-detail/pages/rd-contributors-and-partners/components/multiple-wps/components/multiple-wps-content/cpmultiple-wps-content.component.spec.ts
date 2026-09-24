@@ -326,6 +326,23 @@ describe('CPMultipleWPsContentComponent', () => {
       expect(c.contributionCheckMessage()).toContain('7');
       expect(c.contributionCheckMessage()).toContain('single unit');
     });
+
+    // P2-3817 — "Existing results are not affected": the 2025 form stays silent even on a real
+    // disagreement or a KP outside 0/1.
+    it('stays silent outside the 2026 form', () => {
+      const c = buildComponent(false);
+      (c.rdPartnersSE as any).partnersBody = {
+        contribution_consistency: { status: 'DIFFERS', expected: 200, reported: 150, boxesCounted: 1 }
+      };
+
+      expect(c.showContributionCheck()).toBe(false);
+
+      (c.rdPartnersSE as any).partnersBody = {
+        contribution_consistency: { status: 'REJECTED', expected: 1, reported: 7, boxesCounted: 1 }
+      };
+
+      expect(c.showContributionCheck()).toBe(false);
+    });
   });
   /**
    * P2-3608 — the contribution box accepted a negative number and stored it, with no message.
