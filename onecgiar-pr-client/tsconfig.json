@@ -38,7 +38,9 @@
       "@spartan/command": ["./src/app/spartan/command/src/index.ts"],
       "@spartan/native-select": ["./src/app/spartan/native-select/src/index.ts"],
       "@spartan/popover": ["./src/app/spartan/popover/src/index.ts"],
-      "@spartan/tabs": ["./src/app/spartan/tabs/src/index.ts"]
+      "@spartan/tabs": ["./src/app/spartan/tabs/src/index.ts"],
+      "@spartan/badge": ["./src/app/spartan/badge/src/index.ts"],
+      "@spartan/checkbox": ["./src/app/spartan/checkbox/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
