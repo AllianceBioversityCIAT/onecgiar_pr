@@ -7,7 +7,7 @@
 - **Ticket:** **P2-3542** under epic **P2-3512**
 - **Owner / driver:** Juan David Delgado
 - **Branch base:** `performance-refactor` @ `9354317d4`
-- **Status:** in-progress — `SBT-T-1` [x] (2026-09-25); `SBT-T-2`, `SBT-T-3` pending
+- **Status:** in-progress — `SBT-T-1` [x] · `SBT-T-2` [x] (2026-09-25); `SBT-T-3` pending (browser walk + folder guides)
 - **Budget (`design.md` §12):** 3 tasks · ~150 LOC · 1 review round. `/akili-execute` escalates rather than continuing if any is exceeded.
 
 ---
@@ -54,7 +54,7 @@
 
 ---
 
-### `SBT-T-2` — Publish the gaps of the ToC tabs that are not rendered (regression test)
+### `SBT-T-2` — Publish the gaps of the ToC tabs that are not rendered (regression test) [x]
 
 - **Type:** `client`
 - **Description:** `CPMultipleWPsComponent` registers a gap source on init and drops it on destroy. It reports every tab except the rendered one — and the rendered one too while `showMultipleWPsContent` is `false` — using `completnessStatusValidation(tab)` unchanged as the per-tab truth. Gate: `!isContributor && !isNotifications && !hidden && !isUnplanned`. Labels: `<tab title> N~<n>: <first missing field>`. **This task carries the mandatory Bug Mode regression test.**
@@ -72,15 +72,15 @@
   - **Disqualifier:** if `completnessStatusValidation(tab)` turns out to disagree with the tab's own check icon for any fixture (`P-4` false), **stop** — the publisher has no trustworthy source and `DD-3` collapses. Re-specify rather than adding a second completeness rule.
   - **Consumers:** the six `app-cp-multiple-wps` mount sites, each exercised by the gate: `rd-contributors-and-partners.component.html:69,493` · `ipsr-contributors.component.html:21,196` · `share-request-modal.component.html:64` · `notification-item.component.html:353` · `result-review-drawer.component.html:265,539`. Plus `rd-contributors-and-partners.zoneless.spec.ts` (runs the real scan over the real template) and `cypress/e2e/result-detail/save-validation.cy.ts` (**not on CI** — `P-9`; re-read `:70-88` if the row label shape changes)
 - **Definition of done:**
-  - [ ] `SBT-AC-1` — two tabs, tab 2 empty, standing on tab 1 → the gap is published and named
-  - [ ] `SBT-AC-2` — the rendered tab is **not** published (no double count) · `SBT-AC-3` — both complete → nothing published
-  - [ ] `SBT-AC-4` — the active tab **is** published while `showMultipleWPsContent` is `false`
-  - [ ] `SBT-AC-5` — a single tab publishes nothing · `SBT-AC-7` — `isContributor` publishes nothing · `SBT-AC-8` — `isUnplanned` publishes nothing
-  - [ ] `SBT-AC-6` — the source is gone after `fixture.destroy()`
-  - [ ] `SBT-AC-9` — `rd-contributors-and-partners.zoneless.spec.ts` and `data-control.service.spec.ts` still green: no regression for sections with no ToC tabs
-  - [ ] Both falsifier mutations executed against the post-change code and observed **red**
-  - [ ] Labels resolve in form order: `Level` → `Outcome`/`Output` → `Contribution to indicator target`
-  - [ ] `npx jest --testPathPattern="(cpmultiple-wps|data-control.service|rd-contributors-and-partners)"` green · `npx tsc --noEmit` clean · `npx ng lint --quiet` clean
+  - [x] `SBT-AC-1` — two tabs, tab 2 empty, standing on tab 1 → the gap is published and named
+  - [x] `SBT-AC-2` — the rendered tab is **not** published (no double count) · `SBT-AC-3` — both complete → nothing published
+  - [x] `SBT-AC-4` — the active tab **is** published while `showMultipleWPsContent` is `false`
+  - [x] `SBT-AC-5` — a single tab publishes nothing · `SBT-AC-7` — `isContributor` publishes nothing · `SBT-AC-8` — `isUnplanned` publishes nothing
+  - [x] `SBT-AC-6` — the source is gone after `fixture.destroy()`
+  - [x] `SBT-AC-9` — `rd-contributors-and-partners.zoneless.spec.ts` and `data-control.service.spec.ts` still green: no regression for sections with no ToC tabs
+  - [x] Both falsifier mutations executed against the post-change code and observed **red**
+  - [x] Labels resolve in form order: `Level` → `Outcome`/`Output` → `Contribution to indicator target`
+  - [x] `npx jest --testPathPattern="(cpmultiple-wps|data-control.service|rd-contributors-and-partners)"` green · `npx tsc --noEmit` clean · `npx ng lint --quiet` clean
 
 ---
 
