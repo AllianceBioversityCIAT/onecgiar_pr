@@ -15,6 +15,12 @@ export class ResultsPolicyChangesRepository
   extends BaseRepository<ResultsPolicyChanges>
   implements LogicalDelete<ResultsPolicyChanges>
 {
+  /**
+   * Phase replication. Night sweep 2026-09-23, P3 / R4 (NS-45): the column lists below are written by
+   * hand and `actors_influenced`, `linked_innovation_dev`, `linked_innovation_use` and
+   * `result_related_engagement` were never added, so the new-phase copy lost them while the linked
+   * results themselves DID travel (versioning.service `_linkedResultRepository.replicate`).
+   */
   createQueries(
     config: ReplicableConfigInterface<ResultsPolicyChanges>,
   ): ConfigCustomQueryInterface {
@@ -33,7 +39,11 @@ export class ResultsPolicyChangesRepository
       null as last_updated_by,
       rpc.policy_stage_id,
       rpc.policy_type_id,
-      rpc.status_amount
+      rpc.status_amount,
+      rpc.actors_influenced,
+      rpc.linked_innovation_dev,
+      rpc.linked_innovation_use,
+      rpc.result_related_engagement
       from results_policy_changes rpc 
       WHERE rpc.result_id = ${config.old_result_id} and rpc.is_active > 0
       `,
@@ -49,7 +59,11 @@ export class ResultsPolicyChangesRepository
       last_updated_by,
       policy_stage_id,
       policy_type_id,
-      status_amount
+      status_amount,
+      actors_influenced,
+      linked_innovation_dev,
+      linked_innovation_use,
+      result_related_engagement
       )
       select 
       rpc.amount,
@@ -63,7 +77,11 @@ export class ResultsPolicyChangesRepository
       null as last_updated_by,
       rpc.policy_stage_id,
       rpc.policy_type_id,
-      rpc.status_amount
+      rpc.status_amount,
+      rpc.actors_influenced,
+      rpc.linked_innovation_dev,
+      rpc.linked_innovation_use,
+      rpc.result_related_engagement
       from results_policy_changes rpc 
       WHERE rpc.result_id = ${config.old_result_id} and rpc.is_active > 0`,
       returnQuery: `

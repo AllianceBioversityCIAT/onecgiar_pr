@@ -50,3 +50,47 @@ describe('ResultsPolicyChangesRepository — the read must return every persiste
     expect(params).toEqual([11465]);
   });
 });
+
+/**
+ * Night sweep 2026-09-23, P3 / R4 (NS-45) — phase replication (`createQueries`) copies the Policy
+ * Change row with hand-written column lists, and the four columns below were missing: the new-phase
+ * copy lost them. Guard test on the lists themselves. Control negative: with the columns removed
+ * from the queries these tests fail.
+ */
+describe('ResultsPolicyChangesRepository.createQueries — phase replication copies every answer', () => {
+  const repository: any = Object.create(
+    ResultsPolicyChangesRepository.prototype,
+  );
+  const queries = repository.createQueries({
+    old_result_id: 1,
+    new_result_id: 2,
+    user: { id: 3 },
+  } as any);
+  const squash = (sql: string) => sql.replace(/\s+/g, ' ');
+
+  it.each([
+    'actors_influenced',
+    'linked_innovation_dev',
+    'linked_innovation_use',
+    'result_related_engagement',
+  ])('copies %s in the INSERT column list and in both SELECTs', (column) => {
+    const insertCols = squash(queries.insertQuery).match(
+      /insert into results_policy_changes \(([^)]*)\)/,
+    )[1];
+    expect(insertCols).toContain(column);
+    expect(squash(queries.insertQuery)).toContain(`rpc.${column}`);
+    expect(squash(queries.findQuery)).toContain(`rpc.${column}`);
+  });
+
+  it('keeps the INSERT column list and its SELECT the same length', () => {
+    const sql = squash(queries.insertQuery);
+    const cols = sql
+      .match(/insert into results_policy_changes \(([^)]*)\)/)[1]
+      .split(',').length;
+    const selected = sql
+      .split(/\bselect\b/i)[1]
+      .split(/\bfrom results_policy_changes\b/i)[0]
+      .split(',').length;
+    expect(selected).toBe(cols);
+  });
+});

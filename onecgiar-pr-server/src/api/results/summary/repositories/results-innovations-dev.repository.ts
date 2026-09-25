@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsInnovationsDev } from '../entities/results-innovations-dev.entity';
 import {
@@ -16,6 +16,13 @@ export class ResultsInnovationsDevRepository
   extends BaseRepository<ResultsInnovationsDev>
   implements LogicalDelete<ResultsInnovationsDev>
 {
+  /**
+   * Phase replication. Night sweep 2026-09-23, P3 / R6 (NS-47): the column lists below are written by
+   * hand and `has_innovation_link`, `has_scaling_studies` and `ip_support_center_id` were never added,
+   * so the new-phase copy had its linked results (they DO travel) hidden behind an unanswered question,
+   * and its scaling studies answer and support centre gone. The study links themselves live in
+   * `result_scaling_study_urls` and are copied by `replicateScalingStudyUrls` right after this row.
+   */
   createQueries(
     config: ReplicableConfigInterface<ResultsInnovationsDev>,
   ): ConfigCustomQueryInterface {
@@ -43,7 +50,10 @@ export class ResultsInnovationsDevRepository
       rid.innovation_readiness_level_id,
       rid.innovation_acknowledgement,
       rid.innovation_pdf,
-      rid.innovation_user_to_be_determined
+      rid.innovation_user_to_be_determined,
+      rid.has_innovation_link,
+      rid.has_scaling_studies,
+      rid.ip_support_center_id
       from results_innovations_dev rid where rid.results_id = ${
         config.old_result_id
       } and rid.is_active > 0
@@ -69,7 +79,10 @@ export class ResultsInnovationsDevRepository
       innovation_readiness_level_id,
       innovation_acknowledgement,
       innovation_pdf,
-      innovation_user_to_be_determined
+      innovation_user_to_be_determined,
+      has_innovation_link,
+      has_scaling_studies,
+      ip_support_center_id
       )
       select 
       rid.short_title,
@@ -92,7 +105,10 @@ export class ResultsInnovationsDevRepository
       rid.innovation_readiness_level_id,
       rid.innovation_acknowledgement,
       rid.innovation_pdf,
-      rid.innovation_user_to_be_determined
+      rid.innovation_user_to_be_determined,
+      rid.has_innovation_link,
+      rid.has_scaling_studies,
+      rid.ip_support_center_id
       from results_innovations_dev rid where rid.results_id = ${
         config.old_result_id
       } and rid.is_active > 0`,
@@ -102,6 +118,45 @@ export class ResultsInnovationsDevRepository
       from results_innovations_dev rid where rid.results_id = ${config.new_result_id}`,
     };
   }
+  /**
+   * NS-47 — copy the Innovation Development scaling-study links (`result_scaling_study_urls`, keyed by
+   * `result_innov_dev_id`) to the row `replicate` just inserted for the new phase. Runs on the same
+   * transaction manager so it sees that row. Additive: the old links are untouched, and a result with
+   * no links inserts nothing.
+   */
+  async replicateScalingStudyUrls(
+    manager: EntityManager,
+    config: ReplicableConfigInterface<ResultsInnovationsDev>,
+  ): Promise<void> {
+    await manager.query(
+      `
+      insert into result_scaling_study_urls
+      (
+      study_url,
+      result_innov_dev_id,
+      is_active,
+      created_date,
+      created_by
+      )
+      select
+      u.study_url,
+      (
+        select rid2.result_innovation_dev_id
+        from results_innovations_dev rid2
+        where rid2.results_id = ? and rid2.is_active > 0
+        order by rid2.result_innovation_dev_id desc
+        limit 1
+      ) as result_innov_dev_id,
+      1 as is_active,
+      ${predeterminedDateValidation(config?.predetermined_date)} as created_date,
+      ? as created_by
+      from result_scaling_study_urls u
+      inner join results_innovations_dev rid on rid.result_innovation_dev_id = u.result_innov_dev_id
+      where rid.results_id = ? and rid.is_active > 0 and u.is_active > 0`,
+      [config.new_result_id, config.user.id, config.old_result_id],
+    );
+  }
+
   private readonly _logger: Logger = new Logger(
     ResultsInnovationsDevRepository.name,
   );
