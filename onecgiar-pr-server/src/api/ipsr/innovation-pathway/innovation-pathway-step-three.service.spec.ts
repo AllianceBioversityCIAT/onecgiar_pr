@@ -19,6 +19,7 @@ import { EvidencesRepository } from '../../results/evidences/evidences.repositor
 import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { VersioningService } from '../../versioning/versioning.service';
+import { EvidencesService } from '../../results/evidences/evidences.service';
 
 describe('InnovationPathwayStepThreeService', () => {
   let service: InnovationPathwayStepThreeService;
@@ -112,6 +113,7 @@ describe('InnovationPathwayStepThreeService', () => {
         },
         { provide: VersionsService, useValue: mockVersionsService },
         { provide: VersioningService, useValue: mockVersioningService },
+        { provide: EvidencesService, useValue: {} },
       ],
     }).compile();
 

@@ -318,6 +318,14 @@ export class IpsrRepository
     }
   }
 
+  /**
+   * P2-3824 — the five `evidence_*_tag` subqueries read only the General-information Impact Area
+   * rows (P2-3210 writes `evidence_type_id = NULL`; rows from before Apr-2023 carry `1` from
+   * the `1681481669519-updateMainRole` backfill, so only type 7 is excluded). Step 3 evidence
+   * (`EvidenceTypeEnum.IPSR_STEP_THREE`) lives on the same package result and carries the same
+   * tag flags; without the type filter a tagged Step 3 file would surface here as the package's
+   * General-information evidence.
+   */
   async getResultInnovationById(resultId: number) {
     const resultInnovationByIdQuery = `
         SELECT
@@ -373,6 +381,7 @@ export class IpsrRepository
                     e1.result_id = r.id
                     AND e1.gender_related = TRUE
                     AND e1.is_active = 1
+                    AND (e1.evidence_type_id IS NULL OR e1.evidence_type_id <> 7)
                     LIMIT 1
             ) AS evidence_gender_tag,
             r.climate_change_tag_level_id,
@@ -402,6 +411,7 @@ export class IpsrRepository
                     e2.result_id = r.id
                     AND e2.youth_related = TRUE
                     AND e2.is_active = 1
+                    AND (e2.evidence_type_id IS NULL OR e2.evidence_type_id <> 7)
                     LIMIT 1
             ) AS evidence_climate_tag,
             r.nutrition_tag_level_id,
@@ -431,6 +441,7 @@ export class IpsrRepository
                     e3.result_id = r.id
                     AND e3.nutrition_related = TRUE
                     AND e3.is_active = 1
+                    AND (e3.evidence_type_id IS NULL OR e3.evidence_type_id <> 7)
                     LIMIT 1
             ) AS evidence_nutrition_tag,
             r.environmental_biodiversity_tag_level_id,
@@ -460,6 +471,7 @@ export class IpsrRepository
                     e4.result_id = r.id
                     AND e4.environmental_biodiversity_related = TRUE
                     AND e4.is_active = 1
+                    AND (e4.evidence_type_id IS NULL OR e4.evidence_type_id <> 7)
                     LIMIT 1
             ) AS evidence_environment_tag,
             r.poverty_tag_level_id,
@@ -489,6 +501,7 @@ export class IpsrRepository
                     e5.result_id = r.id
                     AND e5.poverty_related = TRUE
                     AND e5.is_active = 1
+                    AND (e5.evidence_type_id IS NULL OR e5.evidence_type_id <> 7)
                     LIMIT 1
             ) AS evidence_poverty_tag,
             IF((r.is_krs = 1), true, false ) AS is_krs,

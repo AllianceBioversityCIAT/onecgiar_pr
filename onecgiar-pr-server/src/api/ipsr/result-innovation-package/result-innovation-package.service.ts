@@ -22,7 +22,8 @@ import { IpsrRepository } from '../ipsr.repository';
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
-import { FindOptionsWhere, In } from 'typeorm';
+import { FindOptionsWhere, In, IsNull, Not, Or } from 'typeorm';
+import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
 import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
@@ -811,10 +812,14 @@ export class ResultInnovationPackageService {
         );
       }
 
+      // P2-3824: the five lookups below are scoped to `evidence_type_id IS NULL` (the General-
+      // information rows). Step 3 evidence carries the same tag flags on this same result and must
+      // never be overwritten or deactivated from here.
       const genderEvidenceExist = await this._evidenceRepository.findOne({
         where: {
           result_id: resultId,
           is_active: 1,
+          evidence_type_id: Or(IsNull(), Not(EvidenceTypeEnum.IPSR_STEP_THREE)),
           gender_related: true,
         },
       });
@@ -852,6 +857,7 @@ export class ResultInnovationPackageService {
         where: {
           result_id: resultId,
           is_active: 1,
+          evidence_type_id: Or(IsNull(), Not(EvidenceTypeEnum.IPSR_STEP_THREE)),
           youth_related: true,
         },
       });
@@ -889,6 +895,7 @@ export class ResultInnovationPackageService {
         where: {
           result_id: resultId,
           is_active: 1,
+          evidence_type_id: Or(IsNull(), Not(EvidenceTypeEnum.IPSR_STEP_THREE)),
           nutrition_related: true,
         },
       });
@@ -926,6 +933,7 @@ export class ResultInnovationPackageService {
         where: {
           result_id: resultId,
           is_active: 1,
+          evidence_type_id: Or(IsNull(), Not(EvidenceTypeEnum.IPSR_STEP_THREE)),
           environmental_biodiversity_related: true,
         },
       });
@@ -963,6 +971,7 @@ export class ResultInnovationPackageService {
         where: {
           result_id: resultId,
           is_active: 1,
+          evidence_type_id: Or(IsNull(), Not(EvidenceTypeEnum.IPSR_STEP_THREE)),
           poverty_related: true,
         },
       });
