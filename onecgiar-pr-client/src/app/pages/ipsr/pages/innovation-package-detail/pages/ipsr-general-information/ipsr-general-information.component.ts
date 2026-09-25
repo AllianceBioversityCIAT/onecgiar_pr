@@ -108,9 +108,14 @@ export class IpsrGeneralInformationComponent implements OnInit {
    *
    * Deliberately NOT a portfolio-year gate: this is "which portfolio", not "from which phase on".
    * The older portfolios keep their own rule, so the two cannot be collapsed into one threshold.
+   *
+   * P2-3824 (25-Sep-2026) supersedes the current-portfolio half: the Impact Area evidence moved to
+   * IPSR Step 3, where every piece of evidence can be tagged with the Impact Areas and a score of 2
+   * raises an alert until one is. So for P25 the field is never shown (and therefore never
+   * required) — the score-2 note keeps pointing to Step 3. Older portfolios: unchanged.
    */
   showImpactAreaEvidenceField(tagLevelId: number | string | null | undefined): boolean {
-    if (this.fieldsManagerSE.isP25()) return Number(tagLevelId) === 3;
+    if (this.fieldsManagerSE.isP25()) return false;
     return tagLevelId != null;
   }
 

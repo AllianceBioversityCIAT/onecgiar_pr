@@ -139,8 +139,8 @@
   <!-- P2-3210: this Impact Area evidence field used to render for the older portfolios ONLY, so a
        score of 2 in the current one asked for evidence the person had nowhere to enter — the note
        above sent them to step 3, which holds the readiness/use evidence, a different thing.
-       `showImpactAreaEvidenceField()` keeps the older-portfolio rule untouched and adds the current
-       portfolio, where the field appears exactly when the score is 2 (principal). -->
+       `showImpactAreaEvidenceField()` keeps the older-portfolio rule untouched. P2-3824: for the
+       current portfolio the evidence now lives in Step 3 (tagged per Impact Area), so it is hidden. -->
   @if (this.showImpactAreaEvidenceField(this.ipsrGeneralInformationBody.gender_tag_level_id)) {
     <app-pr-input
       label="Evidence"

@@ -46,14 +46,26 @@ export class StepN3ComplementaryInnovationsComponent implements OnInit {
     return this.rangeLevel2Required;
   }
 
+  /** P2-3824 — a readiness level other than 0 needs at least one evidence. Pure: no shared field written. */
+  isReadinessEvidenceRequired(bodyItem): boolean {
+    return this.rangesOptions.findIndex(item => item.id == bodyItem?.['readiness_level_evidence_based']) != 0;
+  }
+
+  /** P2-3824 — same rule for the use level. */
+  isUseEvidenceRequired(bodyItem): boolean {
+    return this.innovationUseList.findIndex(item => item.id == bodyItem?.['use_level_evidence_based']) != 0;
+  }
+
+  /**
+   * Green icon of one enabler: both levels picked and, for each level that is not 0, at least one
+   * evidence in its list (P2-3824 — was the single legacy link).
+   */
   allFieldsRequired(bodyItem) {
     this.updateRangeLevel1(bodyItem);
     this.updateRangeLevel2(bodyItem);
-    const attrListTovalidate = ['readiness_level_evidence_based', 'use_level_evidence_based'];
-    const readiness_level_evidence_based_index = this.rangesOptions.findIndex(item => item.id == bodyItem['readiness_level_evidence_based']);
-    const use_level_evidence_based_index = this.innovationUseList.findIndex(item => item.id == bodyItem['use_level_evidence_based']);
-    if (readiness_level_evidence_based_index != 0) attrListTovalidate.push('readinees_evidence_link');
-    if (use_level_evidence_based_index != 0) attrListTovalidate.push('use_evidence_link');
-    return attrListTovalidate.every((attr: any) => bodyItem[attr]);
+    const levelsPicked = ['readiness_level_evidence_based', 'use_level_evidence_based'].every(attr => bodyItem?.[attr]);
+    const readinessOk = !this.isReadinessEvidenceRequired(bodyItem) || (bodyItem?.readiness_evidences?.length ?? 0) > 0;
+    const useOk = !this.isUseEvidenceRequired(bodyItem) || (bodyItem?.use_evidences?.length ?? 0) > 0;
+    return levelsPicked && readinessOk && useOk;
   }
 }

@@ -1,0 +1,34 @@
+:host {
+  display: block;
+}
+
+// The dialog panel lives inside `app-pr-dialog`, so its width can only be set through its
+// `styleClass` — same width and flush body as the Results "Add New Evidence" dialog.
+::ng-deep app-pr-dialog .ipsr-step3-evidence-dialog {
+  &.pr-dialog {
+    width: 720px;
+    max-width: 95vw;
+  }
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
+// Left accent of the card, as in the Results evidence list: always present and discreet, firm on hover.
+.ev-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--pr-color-primary-300);
+  opacity: 0.28;
+  transition: opacity 0.18s ease;
+}
+
+.ev-card:hover::before {
+  opacity: 1;
+}

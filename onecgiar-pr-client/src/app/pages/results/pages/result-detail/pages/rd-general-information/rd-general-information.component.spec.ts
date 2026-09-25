@@ -1025,6 +1025,15 @@ describe('RdGeneralInformationComponent', () => {
   });
 
   describe('showAlerts', () => {
+    it('P2-3824: the score-2 note opens the Evidence section of this result\'s phase', () => {
+      component.api.resultsSE.currentResultCode = '8995' as any;
+      component.api.resultsSE.currentResultPhase = '36';
+      expect(component.evidenceSectionUrl).toMatch(/result\/result-detail\/8995\/evidences\?phase=36$/);
+
+      component.api.resultsSE.currentResultPhase = null;
+      expect(component.evidenceSectionUrl).toMatch(/result\/result-detail\/8995\/evidences$/);
+    });
+
     it('should handle partnerRequest click event', () => {
       const spyShowAlerts = jest.spyOn(component, 'showAlerts');
       component.showAlerts();

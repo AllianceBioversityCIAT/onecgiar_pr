@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { StepN3ComplementaryInnovationsComponent } from './step-n3-complementary-innovations.component';
@@ -58,12 +60,13 @@ describe('StepN3ComplementaryInnovationsComponent', () => {
     expect(component.rangeLevel2Required).toBeTruthy();
   });
 
+  // P2-3824: a level other than 0 needs at least one evidence in its LIST (was the legacy link).
   it('should return true if all fields are required', () => {
     const bodyItem = {
       readiness_level_evidence_based: 1,
       use_level_evidence_based: 1,
-      readinees_evidence_link: 'https://example.com',
-      use_evidence_link: 'https://example.com'
+      readiness_evidences: [{ link: 'https://example.com' }],
+      use_evidences: [{ link: 'https://example.com' }]
     };
     const result = component.allFieldsRequired(bodyItem);
     expect(result).toBeTruthy();
@@ -73,9 +76,38 @@ describe('StepN3ComplementaryInnovationsComponent', () => {
     const bodyItem = {
       readiness_level_evidence_based: 1,
       use_level_evidence_based: 1,
-      readinees_evidence_link: 'https://example.com'
+      readiness_evidences: [{ link: 'https://example.com' }],
+      use_evidences: []
     };
     const result = component.allFieldsRequired(bodyItem);
     expect(result).toBeFalsy();
+  });
+
+  it('P2-3824: a legacy link alone no longer counts, the list does', () => {
+    const bodyItem = {
+      readiness_level_evidence_based: 1,
+      use_level_evidence_based: 1,
+      readinees_evidence_link: 'https://example.com',
+      use_evidence_link: 'https://example.com'
+    };
+    expect(component.allFieldsRequired(bodyItem)).toBeFalsy();
+  });
+
+  it('P2-3824: a level at 0 needs no evidence', () => {
+    component.rangesOptions = [{ id: 10 }, { id: 11 }];
+    component.innovationUseList = [{ id: 20 }, { id: 21 }];
+    const bodyItem = { readiness_level_evidence_based: 10, use_level_evidence_based: 21, readiness_evidences: [], use_evidences: [{ link: 'x' }] };
+    expect(component.isReadinessEvidenceRequired(bodyItem)).toBe(false);
+    expect(component.isUseEvidenceRequired(bodyItem)).toBe(true);
+    expect(component.allFieldsRequired(bodyItem)).toBe(true);
+    bodyItem.use_evidences = [];
+    expect(component.allFieldsRequired(bodyItem)).toBe(false);
+  });
+
+  it('P2-3824 markup: each enabler has a readiness and a use evidence list, required per item', () => {
+    const html = readFileSync(join(__dirname, 'step-n3-complementary-innovations.component.html'), 'utf8');
+    expect(html).not.toContain('Evidence link');
+    expect(html).toMatch(/<app-ipsr-step3-evidence-list[^>]*level="readiness"[^>]*\[required\]="isReadinessEvidenceRequired\(bodyItem\)"/);
+    expect(html).toMatch(/<app-ipsr-step3-evidence-list[^>]*level="use"[^>]*\[required\]="isUseEvidenceRequired\(bodyItem\)"/);
   });
 });
