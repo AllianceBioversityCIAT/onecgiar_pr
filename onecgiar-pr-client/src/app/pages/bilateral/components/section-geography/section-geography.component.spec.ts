@@ -564,6 +564,52 @@ describe('SectionGeographyComponent', () => {
     });
   });
 
+  // 🛑 P2-3832 — 48 of the 248 countries in CLARISA have NO sub-national levels (American Samoa,
+  // Puerto Rico, Hong Kong, Guam…). The picker never renders for them, so demanding a selection
+  // kept `sub-national` unfilled forever and, through `overallStatus`, disabled Submit for the whole
+  // result. The classic form exempts them in the green-check SQL; this is the same rule.
+  describe('countries with no sub-national catalogue (P2-3832)', () => {
+    const withAmericanSamoa = () => {
+      build();
+      component.geographicLocationBody.update(b => ({
+        ...b,
+        geo_scope_id: GeoScopeEnum.SUB_NATIONAL,
+        countries: [{ id: 16, name: 'American Samoa', iso_alpha_2: 'AS', sub_national: [] }],
+      }));
+    };
+
+    it('still demands a selection while the catalogue has not come back', () => {
+      withAmericanSamoa();
+      expect(component.subNationalSelectionMissing).toBe(true);
+    });
+
+    it('stops demanding one once the catalogue comes back empty', () => {
+      withAmericanSamoa();
+      component.onSubNationalCatalogue({ iso_alpha_2: 'AS', hasLevels: false });
+      expect(component.subNationalSelectionMissing).toBe(false);
+    });
+
+    it('republishes the checklist with sub-national filled', () => {
+      withAmericanSamoa();
+      component.onSubNationalCatalogue({ iso_alpha_2: 'AS', hasLevels: false });
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith(
+        'geography',
+        expect.arrayContaining([expect.objectContaining({ key: 'sub-national', filled: true })])
+      );
+    });
+
+    it('keeps demanding a selection for a country that DOES have levels', () => {
+      build();
+      component.geographicLocationBody.update(b => ({
+        ...b,
+        geo_scope_id: GeoScopeEnum.SUB_NATIONAL,
+        countries: [{ id: 57, name: 'Colombia', iso_alpha_2: 'CO', sub_national: [] }],
+      }));
+      component.onSubNationalCatalogue({ iso_alpha_2: 'CO', hasLevels: true });
+      expect(component.subNationalSelectionMissing).toBe(true);
+    });
+  });
+
   // Country / Sub-national main scope must match W1/W2: no "regions for this result?" gate — the
   // country multi-select appears directly; the extra-scope card keeps its own Yes/No below.
   describe('main scope Country (W1/W2 parity)', () => {
