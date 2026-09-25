@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
+**Verified:** 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3823 blindaje (claves solo al tocar la pregunta, selector sin pérdida, entrada normalizada) + P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -124,9 +124,15 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   `commonFields.has_innovation_link` + `linkedResults`. `hiddenFieldsWithValues()` vuelve a contarlo.
   - 🛑 **La escritura es ESTRECHA a propósito** (`bilateral-center.service.ts → syncLinkedBundledAnswer`):
     `linked_result` es **compartida** con la sección P22 *Links to results*, y este endpoint autosalva
-    en cada cambio de centro o proyecto. Protocolo P2-3424: "Yes" + selección reemplaza · "No" limpia
-    **sólo** si lo guardado era "Yes" · pregunta sin responder u omitida **no toca nada**. Nunca uses
-    `createForInnovationUse`: con selección vacía barre todas las filas del origen.
+    en cada cambio de centro o proyecto. Protocolo P2-3424: "Yes" + selección reemplaza · "Yes" sin
+    `linked_results` solo cambia el flag · "No" limpia **sólo** si lo guardado era "Yes" · pregunta
+    sin responder u omitida **no toca nada**. Nunca uses `createForInnovationUse`: con selección
+    vacía barre todas las filas del origen.
+    ⚠️ **"Estrecha" perdona SOLO las filas `legacy_link`** (id NULL). Las que escribió P22 *Links to
+    results* desde el editor clásico llevan id real y **sí** se reemplazan/desactivan — la tabla no
+    guarda qué sección escribió cada fila (corregido en P2-3823; el comentario original decía lo contrario).
+    🛑 **Sin `ValidationPipe`** en esta ruta: el servicio normaliza. Flag que no sea booleano real =
+    ausente; lista que no sea array (incluido `null`) = ausente; fuera auto-enlace e inactivos.
   - 🛑 **Tipos 2 y 7 quedan FUERA** (`linkedQuestionOwnedElsewhere()`): Innovation Use pregunta lo
     mismo en su sección de tipo (decisión de Ángel Jarrín, 10-sep-2026, P2-3424) e Innovation
     Development espeja el flag en `results_innovations_dev.has_innovation_link`, que es lo que leen
@@ -135,6 +141,22 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   - 🛑 **`linkedHydrated` manda**: las claves no viajan hasta que la lectura del detalle vuelve, igual
     que `partnersHydrated`. Sin ese guard, el primer cambio de centro de la sesión pisa un "Yes"
     guardado.
+  - 🛑 **P2-3823 — las claves viajan solo desde que el usuario TOCA la pregunta** (`linkedAnswerTouched`;
+    la lista, solo si tocó el selector: `linkedListTouched`). Antes cada autosave de centros reenviaba
+    la foto de enlaces de esa pestaña y el server la reemplazaba: un enlace puesto desde otra pestaña
+    se perdía con un cambio de centro. ⚠️ Y **no** "solo en el clic": `BilateralAutoSaveService`
+    guarda UN payload pendiente por endpoint y lo **reemplaza**; si solo el PATCH de la pregunta
+    llevara las claves, el cambio de centro siguiente lo pisaría en la cola.
+  - 🛑 **El selector no puede perder enlaces**: `pr-multi-select.writeValue` descarta ids que no están
+    en `[options]`, y el catálogo solo lista resultados QA'd/aprobados y llega tarde. Por eso
+    `linkedResultOptions()` = catálogo + un placeholder *"Result not in the list (internal id N)"* por
+    cada id guardado desconocido, y `linkedResultModel()` es un array nuevo en cada cambio de opciones
+    (fuerza el re-mapeo). `onLinkedResultsModelChange` además une los ids que el selector no recibió.
+    El catálogo llega como signal por `InnovationUseResultsService.resultsListSig` (aditivo).
+  - Radio bloqueado hasta `linkedHydrated()` y contador AC13 en 0 sin hidratar. Tests del radio
+    en `readonly.spec` bajan `RolesService.readOnly` (arranca en TRUE y deshabilita todos los radios).
+  - ⚠️ El W1/W2 clásico usa el mismo `pr-multi-select` y comparte el hueco de los ids fuera del
+    catálogo. No se tocó aquí (dueño: result-framework-reporting).
 - ⚠️ **No se escriben delivery types ni presupuesto de socio**, a diferencia de pool funding: P2-3368
   AC6 los deja fuera de bilateral. Pero `validation_partners_P25` exige una fila en
   `result_by_institutions_by_deliveries_type` **por cada socio**, así que el green check de partners

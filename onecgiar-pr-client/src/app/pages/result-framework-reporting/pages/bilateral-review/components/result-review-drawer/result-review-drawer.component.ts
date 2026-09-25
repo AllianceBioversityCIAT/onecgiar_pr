@@ -197,6 +197,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private _lastContributingInitiativesReapplyKey: string = '';
   originalContributingInitiatives: any = null;
   originalContributingInstitutions: any[] | null = null;
+  /**
+   * Night sweep 2026-09-23, D-2b — the centres as stored, captured on load before they are reduced to
+   * codes. `pr-multi-select.writeValue` drops codes that are not in the (active-only) catalogue, so the
+   * first add/remove by the reviewer replaces the list without a retired centre; `buildBody` merges it
+   * back from here (the reviewer can neither see nor remove it) and keeps it as lead if it was.
+   */
+  originalContributingCenters: { code: string; is_leading_result: any }[] | null = null;
 
   /** Snapshot for detecting unsaved data standard changes (baseline after load/save). */
   private originalDataStandardSnapshot: string | null = null;
@@ -859,6 +866,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         return { id: countryId, sub_national: subNational };
       };
 
+      // Merge note (night sweep W12-5 × 74f39d186): the drawer passes the stored extra answer and its
+      // children through as they are; an explicit "No" is enforced by the server, which retires the
+      // stored extra countries (`result-countries.service.ts`, W12-5).
       body.geographicScope = {
         has_countries: geoScope.has_countries || false,
         has_regions: geoScope.has_regions || false,
@@ -883,21 +893,40 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       })
       .filter(Boolean);
 
-    body.contributingCenters = codes
-      .map((code: string, index: number) => {
-        const center = this.centersSE.centersList.find((c: any) => c.code === code);
-        if (!center) return null;
-
+    // Night sweep 2026-09-23, D-2 — two different situations:
+    // - The CLARISA catalogue failed / is empty: nothing can be resolved, and a list sent from here
+    //   would come out empty and unlink every centre, lead included (prtest 12039 / 12040). The key is
+    //   omitted; the server leaves the centres untouched for this caller (`preserveCentersWhenAbsent`,
+    //   results.service.ts `_updatePartners`).
+    // - The catalogue loaded: send the list the reviewer sees. A stored centre the catalogue no longer
+    //   lists (the catalogue query keeps active centres only, clarisa-centers.repository.ts
+    //   `getAllCenters`, e.g. a retired centre) is kept as stored — its code and its position/lead —
+    //   instead of being dropped, so it is not silently unlinked and the reviewer's real edits still go.
+    const catalogue = this.centersSE.centersList ?? [];
+    // No stored centres → nothing to resolve; [] is exactly what is stored.
+    if (catalogue.length || !codes.length) {
+      // D-2b — stored centres the catalogue does not list are invisible to the reviewer (the
+      // multi-select drops them), so they are always merged back; a retired stored lead stays lead.
+      const inCatalogue = (code: string) => catalogue.some((c: any) => c.code === code);
+      const retired = catalogue.length
+        ? (this.originalContributingCenters ?? []).filter(c => !inCatalogue(c.code) && !codes.includes(c.code))
+        : [];
+      const retiredLead = retired.find(c => Number(c.is_leading_result) === 1);
+      const ordered = retiredLead
+        ? [retiredLead.code, ...codes, ...retired.filter(c => c !== retiredLead).map(c => c.code)]
+        : [...codes, ...retired.map(c => c.code)];
+      body.contributingCenters = ordered.map((code: string, index: number) => {
+        const center = catalogue.find((c: any) => c.code === code);
         return {
-          ...center,
+          ...(center ?? { code }),
           result_id: String(resultId),
           is_leading_result: index === 0 ? 1 : null,
           selected: true,
           new: true,
           is_active: true
         };
-      })
-      .filter(Boolean);
+      });
+    }
 
     // Always send current contributingProjects so clearing centers does not clear bilateral projects
     const projectsArray = Array.isArray(detail.contributingProjects) ? detail.contributingProjects : [];
@@ -1280,6 +1309,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         });
 
         if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
+          this.originalContributingCenters = detail.contributingCenters
+            .filter((center: any) => center?.code)
+            .map((center: any) => ({ code: center.code, is_leading_result: center.is_leading_result }));
           detail.contributingCenters = detail.contributingCenters.map((center: any) => center.code);
         } else {
           detail.contributingCenters = [];
@@ -1735,6 +1767,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.originalDataStandardSnapshot = null;
     this.originalContributingInitiatives = null;
     this.originalContributingInstitutions = null;
+    this.originalContributingCenters = null;
     this.leadProjectIds.set([]);
     this.originalAcceptedContributingInitiatives = [];
     this.contributingInitiativesStatusMap.set(new Map());

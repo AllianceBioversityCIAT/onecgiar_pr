@@ -413,6 +413,13 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     if (area) {
       this.autoSaveService.updateField(area.dtoKey, numValue, 'select');
     }
+    // Night sweep 2026-09-23, BIL-8 — below "(1) Significant" the sub-areas are hidden
+    // (`showsSubScores`), but they stayed stored and came back pre-selected on reselect (prtest 11416).
+    // Clear them through the same batch the checkboxes use, only when there is something to clear.
+    if (numValue < 2 && (this.creationService.resultDacSubScores()[areaKey] ?? []).length) {
+      this.creationService.setDacSubScores(areaKey, []);
+      this.stageSubScores();
+    }
   }
 
   toggleSubScore(areaKey: string, scoreId: number): void {
@@ -424,7 +431,11 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
       current.push(scoreId);
     }
     this.creationService.setDacSubScores(areaKey, current);
+    this.stageSubScores();
+  }
 
+  /** Stages every area's sub-score ids in one batch (the server reconciles each list as sent). */
+  private stageSubScores(): void {
     const allScores = this.creationService.resultDacSubScores();
     this.autoSaveService.updateFieldsBatch({
       gender_impact_area_ids: allScores['gender'] ?? [],

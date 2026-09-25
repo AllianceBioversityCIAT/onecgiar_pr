@@ -359,6 +359,63 @@ describe('SectionContributorsComponent', () => {
       expect(component.availableProjects()).toEqual([]);
     });
 
+    // Night sweep 2026-09-23, W12-6 (P2-3648): a failed projects catalogue used to count as "ready",
+    // leaving "Lead project" as an unfillable missing field AND letting the next save send
+    // `contributing_bilateral_projects: []` (server: drop every project). Control negative: with the
+    // error branch back to `projectsReady.set(true)` the "does not hydrate" test fails.
+    describe('W12-6 — when the projects catalogue cannot be read', () => {
+      beforeEach(() => {
+        centersService.centersList = [center(1)];
+        api.resultsSE.GET_ClarisaProjects.mockReturnValue(throwError(() => ({ status: 500 })));
+      });
+
+      it('raises the error flag and does not hydrate, so the contributor keys never travel', () => {
+        build();
+        fixture.detectChanges();
+        creation.selectedProject.set({ id: 1 });
+        fixture.detectChanges();
+
+        expect(component.projectsLoadFailed()).toBe(true);
+        expect(component.contributorsHydrated()).toBe(false);
+        component.onProjectsChange([1]);
+        const calls = (autoSave.saveContributors as jest.Mock).mock.calls;
+        for (const [payload] of calls) expect(payload.contributing_bilateral_projects).toBeUndefined();
+      });
+
+      it('retries on demand; a successful read clears the error and restores the lead project', () => {
+        build();
+        fixture.detectChanges();
+        api.resultsSE.GET_ClarisaProjects.mockReturnValue(of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }] }));
+        creation.selectedProject.set({ id: 1 });
+
+        component.retryLoadProjects();
+        fixture.detectChanges();
+
+        expect(component.projectsLoadFailed()).toBe(false);
+        expect(component.contributorsHydrated()).toBe(true);
+        expect(component.readonlyLeadProjectId).toBe(1);
+      });
+
+      it('renders the banner with a Retry button', () => {
+        const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+        expect(html).toContain('@if (projectsLoadFailed()) {');
+        expect(html).toContain('(click)="retryLoadProjects()"');
+      });
+
+      // R37: copy lives in *.copy.ts and icons are Lucide. Control negative: re-inlining the text or
+      // putting back the material icon makes this fail.
+      it('takes its copy from the copy file and its icon from Lucide', () => {
+        const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+        const start = html.indexOf('@if (projectsLoadFailed()) {');
+        const banner = html.slice(start, html.indexOf('</div>', start));
+        expect(banner).toContain('[description]="loadCopy.bilateralProjectsLoadError"');
+        expect(banner).toContain('{{ loadCopy.bilateralProjectsRetry }}');
+        expect(banner).toContain('<ng-icon name="lucideRefreshCw"');
+        expect(banner).not.toContain('material-icons-round');
+        expect(banner).not.toContain('Retry loading projects');
+      });
+    });
+
     it('unsubscribes on destroy', () => {
       build();
       fixture.detectChanges();
@@ -1441,6 +1498,7 @@ describe('SectionContributorsComponent', () => {
 
     it('shows the results dropdown only on Yes, and never while the block is collapsed (AC11)', () => {
       build();
+      component.linkedHydrated.set(true);
       component.onHasLinkedResultChange(true);
       expect(component.showLinkedResultsDropdown()).toBe(false); // still collapsed
 
@@ -1484,6 +1542,7 @@ describe('SectionContributorsComponent', () => {
 
       it('counts the answer in the hidden-field note once it can be saved (AC13)', () => {
         build();
+        hydrate();
         expect(component.hiddenFieldsWithValues()).toBe(0);
 
         component.onHasLinkedResultChange(true);
@@ -1535,11 +1594,128 @@ describe('SectionContributorsComponent', () => {
         component.contributorsHydrated.set(true);
         autoSave.saveContributors.mockClear();
 
+        // P2-3823: the click itself is refused before hydration (it would be overwritten a moment
+        // later), and the centre/project autosave that does go out carries neither key.
         component.onHasLinkedResultChange(true);
+        expect(component.hasLinkedResult()).toBeNull();
+        (component as any).persistContributors();
 
+        expect(autoSave.saveContributors).toHaveBeenCalledTimes(1);
         expect(autoSave.saveContributors).toHaveBeenCalledWith(
           expect.not.objectContaining({ has_innovation_link: expect.anything() })
         );
+      });
+
+      // ── P2-3823: the second pass over the delivered code ───────────────────────────────────
+      const storedYes = (ids: number[]) =>
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({ response: { commonFields: { has_innovation_link: 1 }, contributingInstitutions: [], linkedResults: ids } })
+        );
+
+      // 🛑 The two-tab defect: every centre change used to re-send this tab's snapshot of the
+      // links, and the server replaced `linked_result` with it.
+      it('a centre change after hydration carries NO linked keys while the question is untouched', () => {
+        storedYes([11164, 9600]);
+        buildHydrated();
+        autoSave.saveContributors.mockClear();
+
+        (component as any).persistContributors();
+
+        const payload = autoSave.saveContributors.mock.calls[0][0];
+        expect(payload).not.toHaveProperty('has_innovation_link');
+        expect(payload).not.toHaveProperty('linked_results');
+      });
+
+      // 🛑 The queue trap: `schedulePayload` keeps ONE pending body per endpoint and replaces it. If
+      // only the question's own PATCH carried the keys, a centre change right after answering would
+      // overwrite it in the queue and the answer would never reach the server.
+      it('once answered, a later centre change still carries the answer (the queue replaces bodies)', () => {
+        storedYes([11164]);
+        buildHydrated();
+        component.onLinkedResultsModelChange([{ id: 11164 }, { id: 9600 }]);
+        autoSave.saveContributors.mockClear();
+
+        (component as any).persistContributors();
+
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: true, linked_results: [11164, 9600] })
+        );
+      });
+
+      it('answering Yes sends the flag WITHOUT a list, so stored rows are not replaced', () => {
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({ response: { commonFields: { has_innovation_link: 0 }, contributingInstitutions: [], linkedResults: [] } })
+        );
+        buildHydrated();
+        autoSave.saveContributors.mockClear();
+
+        component.onHasLinkedResultChange(true);
+
+        const payload = autoSave.saveContributors.mock.calls[0][0];
+        expect(payload.has_innovation_link).toBe(true);
+        expect(payload).not.toHaveProperty('linked_results');
+      });
+
+      it('Yes → No → Yes before saving sends the empty list the user now sees', () => {
+        storedYes([11164]);
+        buildHydrated();
+
+        component.onHasLinkedResultChange(false);
+        component.onHasLinkedResultChange(true);
+
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: true, linked_results: [] })
+        );
+      });
+
+      // 🛑 The picker drops ids it cannot map to an option (`pr-multi-select.writeValue`). The
+      // catalogue only lists QA'd/approved results and loads late, so a stored link can be missing.
+      it('offers a placeholder for a stored link the catalogue cannot name', () => {
+        innovationUseResults.resultsList = [{ id: 11164, title: 'Listed result' }];
+        storedYes([11164, 777]);
+        buildHydrated();
+
+        const options = component.linkedResultOptions();
+        expect(options.map((o: any) => o.id)).toEqual([11164, 777]);
+        expect(options.find((o: any) => o.id === 777)).toEqual(expect.objectContaining({ unlisted: true }));
+        expect(component.linkedResultModel()).toEqual([11164, 777]);
+      });
+
+      it('swaps the placeholder for the real entry when the catalogue arrives late, with a fresh model', () => {
+        const catalogue = signal<any[]>([]);
+        (innovationUseResults as any).resultsListSig = catalogue;
+        storedYes([11164]);
+        buildHydrated();
+        expect(component.linkedResultOptions()[0]).toEqual(expect.objectContaining({ id: 11164, unlisted: true }));
+        const modelBefore = component.linkedResultModel();
+
+        catalogue.set([{ id: 11164, title: 'Listed result' }]);
+
+        expect(component.linkedResultOptions()).toEqual([{ id: 11164, title: 'Listed result' }]);
+        expect(component.linkedResultModel()).toEqual([11164]);
+        expect(component.linkedResultModel()).not.toBe(modelBefore);
+      });
+
+      it('never loses a stored id the picker was not offered when it emits a new selection', () => {
+        storedYes([11164]);
+        buildHydrated();
+        // Simulate the one path left: the options handed to the picker lack the stored id.
+        jest.spyOn(component, 'linkedResultOptions').mockReturnValue([{ id: 9600, title: 'Other' }]);
+
+        component.onLinkedResultsModelChange([{ id: 9600 }]);
+
+        expect(component.selectedLinkedResultIds()).toEqual([9600, 11164]);
+      });
+
+      it('does not promise to save the answer after the detail read failed (AC13)', () => {
+        centersService.centersList = [center(1)];
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(throwError(() => new Error('boom')));
+        build();
+        fixture.detectChanges();
+        component.hasLinkedResult.set(true);
+
+        expect(component.linkedHydrated()).toBe(false);
+        expect(component.hiddenFieldsWithValues()).toBe(0);
       });
 
       it('hydrates the answer and the linked ids from the detail read', () => {

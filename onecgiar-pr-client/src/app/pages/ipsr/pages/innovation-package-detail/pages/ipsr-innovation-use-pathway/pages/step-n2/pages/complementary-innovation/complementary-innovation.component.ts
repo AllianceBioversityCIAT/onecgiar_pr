@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 import { ComplementaryInnovationService } from './services/complementary-innovation.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../../../internationalization/result-detail-section-load.copy';
 
 export class ComplementaryInnovation {
   climate_change_tag_level_id: string;
@@ -80,9 +81,32 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.innovationPackageCreatorBody.push(event);
   }
 
+  /**
+   * Night sweep 2026-09-23, IPSR-6 — whether the two GETs this step SENDS BACK on save have landed:
+   * the selected complementary innovations (PATCHed as the whole new list) and the linked results
+   * (re-POSTed with the recent additions). The selection GET had no error branch: on a failure the
+   * step showed nothing selected, and Save answered 200 "Data was saved correctly" while unlinking
+   * every stored complementary innovation (prtest 12037, 2/2). `null` in flight, `false` when a
+   * FIRST load failed, `true` when both are in hand.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
+  private readonly loadParts: Record<'selection' | 'links', boolean | null> = { selection: null, links: null };
+
+  private markLoadPart(part: 'selection' | 'links', ok: boolean): void {
+    if (ok) this.loadParts[part] = true;
+    else if (this.loadParts[part] !== true) this.loadParts[part] = false;
+    const parts = Object.values(this.loadParts);
+    this.loaded.set(parts.includes(false) ? false : parts.every(p => p === true) ? true : null);
+  }
+
   loadInnovationPackage(): void {
-    this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe(resp => {
-      this.innovationPackageCreatorBody = resp?.response;
+    this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe({
+      next: resp => {
+        this.innovationPackageCreatorBody = resp?.response;
+        this.markLoadPart('selection', true);
+      },
+      error: () => this.markLoadPart('selection', false)
     });
   }
 
@@ -192,12 +216,19 @@ export class ComplementaryInnovationComponent implements OnInit {
   }
 
   loadLinkedResults(): void {
-    this.api.resultsSE.GET_resultsLinked(true).subscribe(({ response }) => {
-      this.linksToResultsBody = response;
+    this.api.resultsSE.GET_resultsLinked(true).subscribe({
+      next: ({ response }) => {
+        this.linksToResultsBody = response;
+        this.markLoadPart('links', true);
+      },
+      // IPSR-6 — see `loaded`.
+      error: () => this.markLoadPart('links', false)
     });
   }
 
   onSaveSection(): void {
+    // IPSR-6 — never send a selection that was not read from the server.
+    if (this.loaded() !== true) return;
     const recentAdditions = this.innovationPackageCreatorBody.filter(
       element =>
         element.created_date && element.result_type_id === 7 && !this.linksToResultsBody.links.some(link => link.result_id === element.result_id)
@@ -218,7 +249,8 @@ export class ComplementaryInnovationComponent implements OnInit {
   }
 
   onSavePreviousNext(description: string): void {
-    if (this.api.rolesSE.readOnly) {
+    // IPSR-6 — without the stored selection in hand the buttons only navigate, they never save.
+    if (this.api.rolesSE.readOnly || this.loaded() !== true) {
       this.navigateToStep(description);
       return;
     }

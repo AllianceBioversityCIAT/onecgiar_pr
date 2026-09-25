@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from './bilateral-context.service';
@@ -198,5 +198,19 @@ describe('BilateralManualCreateFlowService', () => {
     expect(mockOverviewService.invalidate).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalled();
     expect(service.drawerOpen()).toBe(false);
+  });
+
+  // Night sweep 2026-09-23, C-2: a fast double-click on "Create and continue" created two identical
+  // results. Control negative: without the `isCreating()` re-entry guard createResult is called twice.
+  it('C-2: ignores a second submit while the first create is still in flight', () => {
+    const pending = new Subject<any>();
+    (creationService.createResult as jest.Mock).mockReturnValue(pending.asObservable());
+    creationService.selectProject(singleSpProject);
+    creationService.selectPrimarySp({ programId: 1, programCode: 'SP13', allocation: '100' });
+
+    service.submitCreate({ levelId: 4, typeId: 8, title: 'Manual title' });
+    service.submitCreate({ levelId: 4, typeId: 8, title: 'Manual title' });
+
+    expect(creationService.createResult).toHaveBeenCalledTimes(1);
   });
 });

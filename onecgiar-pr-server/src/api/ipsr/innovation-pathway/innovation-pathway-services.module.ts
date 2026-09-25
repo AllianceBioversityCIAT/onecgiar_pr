@@ -60,6 +60,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/res
 import { AdUsersModule } from '../../ad_users';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
 import { ResultDeletionAuditModule } from '../../results/result-deletion-audit/result-deletion-audit.module';
+import { EvidencesModule } from '../../results/evidences/evidences.module';
 
 /**
  * Innovation pathway step services and dependencies without HTTP routes, so consumers
@@ -71,6 +72,8 @@ import { ResultDeletionAuditModule } from '../../results/result-deletion-audit/r
     forwardRef(() => VersioningModule),
     AdUsersModule,
     ResultDeletionAuditModule,
+    // P2-3824: Step 3 saves its evidence lists through `EvidencesService` (SharePoint + tags).
+    EvidencesModule,
   ],
   providers: [
     InnovationPathwayStepOneService,

@@ -552,3 +552,662 @@ describe('ResultsTocResultRepository.saveInditicatorsContributing — R-8.b: a r
     );
   });
 });
+
+// -----------------------------------------------------------------------------
+// TTD-T-1 (bugfix/toc-target-row-duplication) — regression coverage, red on
+// ca99689b4. `saveInditicatorsContributing` cannot recognise the row a ToC
+// meta already owns: the GET writes a ToC-catalog id into the payload field
+// `indicators_targets` for a meta with no stored row yet
+// (results-toc-results.service.ts:3329), the write reads that field back as a
+// `result_indicators_targets` primary key (:1883-1892), and the fallback
+// lookup then compares the meta's raw `number_target` against a row whose
+// stored value this same method already overwrote to the canonical value
+// (:1870-1874 vs :1899). See requirements.md TTD-R-1, TTD-R-2, TTD-R-5,
+// TTD-AC-1, TTD-AC-2, TTD-AC-4 and the *duplication* / *lost contribution*
+// scenarios; design.md §3.2, §7, TTD-DD-3; tasks.md TTD-T-1 — all under
+// docs/specs/bugfix/toc-target-row-duplication/.
+//
+// Unlike the P2-3608 `buildRepository()` above, `indicatorRepo`/`targetRepo`
+// here are STATEFUL fakes backed by real in-memory arrays: proving row
+// IDENTITY across two saves requires the second save's lookups to actually
+// see what the first save persisted, which a one-shot jest mock cannot
+// express. `(repo as any).query` is stubbed to return REAL rows for both
+// `getPhaseYearByResult` and `getCanonicalIndicatorTarget` — the existing
+// blocks' `[]` stub makes the canonical resolution return `null` in every
+// case, which would make these three tests assert nothing about identity.
+// The two helpers below are shared by the three `describe` blocks that
+// follow; nothing here touches the existing harness above.
+// -----------------------------------------------------------------------------
+
+const TTD_PARENT_ID = 5001; // results_toc_results_id
+const TTD_RESULT_ID = 12099; // result.id — feeds getPhaseYearByResult
+const TTD_USER_ID = 9;
+const TTD_PHASE_YEAR = 2026;
+const TTD_CANONICAL_NUMBER_TARGET = 6; // one canonical value per indicator (resolvedNumberTarget, :1870-1874)
+
+// TTD-T-3 (bugfix/toc-target-row-duplication) — the RESILIENCE forward
+// pointer from TTD-T-1's Reviewer: `ttdMatches` used to compare every
+// criterion with `===`, so a real TypeORM operator object (this task's
+// retire pass uses `Not(In([...]))`) would never equal a plain row value and
+// would silently match ZERO rows — the retire pass would look green while
+// actually being inert. Evaluated through the operator's OWN `type`/`child`/
+// `value` getters (never hand-rolled SQL semantics), so the fake stays
+// faithful to what TypeORM itself would do: `In([]).type === 'in'` with an
+// empty array is the same "matches nothing" case the real query builder
+// renders as `0=1` (node_modules/typeorm/query-builder/QueryBuilder.js), so
+// `Not(In([]))` here evaluates to true for every row, exactly like the real
+// `NOT(0=1)`.
+const isTtdFindOperator = (value: unknown): value is FindOperator<any> =>
+  !!value &&
+  typeof value === 'object' &&
+  (value as any)['@instanceof'] === Symbol.for('FindOperator');
+
+const evaluateTtdOperator = (
+  operator: FindOperator<any>,
+  actual: any,
+): boolean => {
+  if (operator.type === 'not') {
+    const child = operator.child;
+    if (child) return !evaluateTtdOperator(child, actual);
+    return actual !== operator.value;
+  }
+  if (operator.type === 'in') {
+    return (operator.value as any[]).includes(actual);
+  }
+  throw new Error(
+    `ttdMatches: unsupported FindOperator type "${operator.type}" — teach the fake before trusting a green from it.`,
+  );
+};
+
+const ttdMatches = (row: Record<string, any>, where: Record<string, any>) =>
+  Object.entries(where).every(([key, value]) =>
+    isTtdFindOperator(value)
+      ? evaluateTtdOperator(value, row[key])
+      : row[key] === value,
+  );
+
+/**
+ * One catalog meta the design's future per-meta identity read will need: its
+ * own ToC-namespace id plus its own raw `number_target`/`target_date` — the
+ * shape `getCanonicalIndicatorTarget`'s real SQL selects
+ * (`trit.number_target`, `trit.target_date`) plus the identity column real
+ * catalog rows carry (`toc_indicator_target_id`; verified at source, prtest
+ * row 2235 carries 624180).
+ */
+type TtdCatalogMeta = {
+  toc_indicator_target_id: number;
+  number_target: number;
+  target_date?: string;
+};
+
+const buildTtdStatefulRepository = (catalogMetas: TtdCatalogMeta[] = []) => {
+  const indicatorRows: any[] = [];
+  const targetRows: any[] = [];
+  let nextIndicatorId = 900;
+  let nextTargetId = 9000;
+
+  const indicatorRepo: any = {
+    findOne: jest.fn(async ({ where }: any) => {
+      const found = indicatorRows.find((row) => ttdMatches(row, where));
+      return found ? { ...found } : null;
+    }),
+    update: jest.fn(async (where: any, changes: any) => {
+      indicatorRows
+        .filter((row) => ttdMatches(row, where))
+        .forEach((row) => Object.assign(row, changes));
+    }),
+    save: jest.fn(async (row: any) => {
+      const saved = {
+        result_toc_result_indicator_id: nextIndicatorId++,
+        ...row,
+      };
+      indicatorRows.push(saved);
+      return { ...saved };
+    }),
+  };
+
+  const targetRepo: any = {
+    findOne: jest.fn(async ({ where }: any) => {
+      const found = targetRows.find((row) => ttdMatches(row, where));
+      return found ? { ...found } : null;
+    }),
+    update: jest.fn(async (where: any, changes: any) => {
+      targetRows
+        .filter((row) => ttdMatches(row, where))
+        .forEach((row) => Object.assign(row, changes));
+    }),
+    save: jest.fn(async (row: any) => {
+      const saved = { indicators_targets: nextTargetId++, ...row };
+      targetRows.push(saved);
+      return { ...saved };
+    }),
+  };
+
+  const dataSource: any = {
+    createEntityManager: jest.fn().mockReturnValue({}),
+  };
+  const handlersError: any = { returnErrorRepository: jest.fn((e) => e) };
+
+  const repo = new ResultsTocResultRepository(
+    dataSource,
+    handlersError,
+    indicatorRepo,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    targetRepo,
+  );
+
+  // getPhaseYearByResult and getCanonicalIndicatorTarget both go through
+  // this.query. Both are stubbed with REAL rows (never `[]`) so canonical
+  // resolution is actually exercised — an empty catalog would make
+  // getCanonicalIndicatorTarget return null and neuter these tests.
+  (repo as any).query = jest.fn(async (sql: string) => {
+    if (typeof sql === 'string' && sql.includes('phase_year')) {
+      return [{ phase_year: TTD_PHASE_YEAR }];
+    }
+    if (
+      typeof sql === 'string' &&
+      sql.includes('toc_result_indicator_target')
+    ) {
+      // getCanonicalIndicatorTarget's real SQL is `ORDER BY target_date DESC
+      // LIMIT 1` and the method only ever reads `rows[0]` — so the canonical
+      // row goes FIRST, keeping today's resolution untouched (still
+      // TTD_CANONICAL_NUMBER_TARGET, which TTD-TEST-3 depends on staying
+      // shared across metas of one indicator). The per-meta rows that follow
+      // are real catalog shapes (their own `toc_indicator_target_id`,
+      // `number_target`, `target_date`) that today's method never reads past
+      // index 0 — they exist so a real catalog row set is available, per the
+      // task's own Red run clause ("stub the catalog read with real rows
+      // instead, or they assert nothing about identity"), and so a future
+      // per-meta catalog read (TTD-T-2) has rows to resolve identity
+      // against.
+      return [
+        {
+          number_target: TTD_CANONICAL_NUMBER_TARGET,
+          target_date: '2026-01-01',
+        },
+        ...catalogMetas.map((meta) => ({
+          number_target: meta.number_target,
+          target_date: meta.target_date ?? '2026-01-01',
+          toc_indicator_target_id: meta.toc_indicator_target_id,
+        })),
+      ];
+    }
+    return [];
+  });
+
+  return { repo, indicatorRepo, targetRepo, indicatorRows, targetRows };
+};
+
+describe('ResultsTocResultRepository.saveInditicatorsContributing — TTD-TEST-1: the duplication (red on ca99689b4)', () => {
+  it('a second save of an unchanged multi-meta payload must not insert new rows (TTD-R-1, TTD-AC-1)', async () => {
+    const { repo, targetRepo, targetRows } = buildTtdStatefulRepository([
+      { toc_indicator_target_id: 700001, number_target: 17 },
+      { toc_indicator_target_id: 700002, number_target: 28 },
+    ]);
+
+    // Both metas carry a ToC-catalog id in `indicators_targets` — exactly
+    // what the GET writes for a meta with no stored row yet
+    // (results-toc-results.service.ts:3329) — never a
+    // result_indicators_targets primary key.
+    const payload = [
+      {
+        toc_results_indicator_id: 'toc-node-1',
+        targets: [
+          {
+            indicators_targets: 700001,
+            number_target: 17,
+            contributing_indicator: null,
+          },
+          {
+            indicators_targets: 700002,
+            number_target: 28,
+            contributing_indicator: null,
+          },
+        ],
+      },
+    ];
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    expect(targetRepo.save).toHaveBeenCalledTimes(2);
+    const rowIdsAfterFirstSave = targetRows
+      .map((row) => row.indicators_targets)
+      .sort();
+    expect(rowIdsAfterFirstSave).toHaveLength(2);
+
+    targetRepo.save.mockClear();
+    targetRepo.update.mockClear();
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    // TTD-R-1 / TTD-AC-1 / the *duplication* scenario's `BUT` clause: the
+    // second save of an unchanged payload must not INSERT — it must resolve
+    // every meta to the row the first save created and UPDATE it.
+    expect(targetRepo.save).not.toHaveBeenCalled();
+    const updatedRowIds = targetRepo.update.mock.calls
+      .map(([where]: any) => where?.indicators_targets)
+      .filter((id: any) => rowIdsAfterFirstSave.includes(id));
+    expect(updatedRowIds.sort()).toEqual(rowIdsAfterFirstSave);
+  });
+});
+
+describe('ResultsTocResultRepository.saveInditicatorsContributing — TTD-TEST-2: the lost contribution (red on ca99689b4)', () => {
+  const INDICATOR_ROW_ID = 501;
+  const STORED_TARGET_PK = 2235; // mirrors the real row the creation flow writes
+
+  it('a stored contribution re-affirmed by the payload must not gain a null-carrying successor row (TTD-R-2, TTD-AC-2)', async () => {
+    const { repo, indicatorRows, targetRows } = buildTtdStatefulRepository();
+
+    // Seed: the indicator and the target row the creation flow already wrote
+    // — active, carrying the contribution (6) the reporter typed
+    // (framework-result-toc-indicators.service.ts:215-247).
+    indicatorRows.push({
+      result_toc_result_indicator_id: INDICATOR_ROW_ID,
+      results_toc_results_id: TTD_PARENT_ID,
+      toc_results_indicator_id: 'toc-node-M',
+      is_active: true,
+    });
+    targetRows.push({
+      indicators_targets: STORED_TARGET_PK,
+      result_toc_result_indicator_id: INDICATOR_ROW_ID,
+      number_target: TTD_CANONICAL_NUMBER_TARGET,
+      contributing_indicator: 6,
+      is_active: true,
+      target_date: TTD_PHASE_YEAR,
+    });
+
+    // The payload the (buggy) GET returns for this indicator: one entry that
+    // correctly echoes the stored row's own primary key (the one case the
+    // GET gets right — results-toc-results.service.ts:647-656), PLUS the
+    // phantom catalog duplicate for the SAME meta M — appended because the
+    // merge at results-toc-results.service.ts:3300-3320 compares the row's
+    // now-canonical `number_target` (6) against the catalog's own raw number
+    // (42) and finds no match.
+    const payload = [
+      {
+        toc_results_indicator_id: 'toc-node-M',
+        targets: [
+          {
+            indicators_targets: STORED_TARGET_PK,
+            number_target: TTD_CANONICAL_NUMBER_TARGET,
+            contributing_indicator: 6,
+          },
+          {
+            indicators_targets: 700003, // ToC id, not a result_indicators_targets PK
+            number_target: 42, // M's own raw catalog number
+            contributing_indicator: null,
+          },
+        ],
+      },
+    ];
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    const storedRow = targetRows.find(
+      (row) => row.indicators_targets === STORED_TARGET_PK,
+    );
+    expect(storedRow.is_active).toBe(true);
+    expect(storedRow.contributing_indicator).toBe(6);
+
+    // TTD-R-2 / the *lost contribution* scenario's `AND IT MUST NOT` clause:
+    // no second row for meta M may exist carrying a null contribution.
+    const rowsForIndicator = targetRows.filter(
+      (row) => row.result_toc_result_indicator_id === INDICATOR_ROW_ID,
+    );
+    expect(rowsForIndicator).toHaveLength(1);
+  });
+
+  it("must never deactivate the stored row without an active successor already carrying its value (TTD-R-6, the *lost contribution* scenario's `BUT` clause)", async () => {
+    const { repo, indicatorRows, targetRepo, targetRows } =
+      buildTtdStatefulRepository();
+
+    // Same seed as the sibling test above — duplicated rather than shared so
+    // each test stays independently readable (matches this file's own R-8.b
+    // precedent of duplicating fixtures for isolation).
+    indicatorRows.push({
+      result_toc_result_indicator_id: INDICATOR_ROW_ID,
+      results_toc_results_id: TTD_PARENT_ID,
+      toc_results_indicator_id: 'toc-node-M',
+      is_active: true,
+    });
+    targetRows.push({
+      indicators_targets: STORED_TARGET_PK,
+      result_toc_result_indicator_id: INDICATOR_ROW_ID,
+      number_target: TTD_CANONICAL_NUMBER_TARGET,
+      contributing_indicator: 6,
+      is_active: true,
+      target_date: TTD_PHASE_YEAR,
+    });
+
+    const payload = [
+      {
+        toc_results_indicator_id: 'toc-node-M',
+        targets: [
+          {
+            indicators_targets: STORED_TARGET_PK,
+            number_target: TTD_CANONICAL_NUMBER_TARGET,
+            contributing_indicator: 6,
+          },
+          {
+            indicators_targets: 700003,
+            number_target: 42,
+            contributing_indicator: null,
+          },
+        ],
+      },
+    ];
+
+    // Wrap the fake's `update` so a deactivating call is checked against the
+    // LIVE state at the instant it fires — the blanket sweep
+    // (repository.ts:1857-1866) deactivates every target of the indicator
+    // BEFORE the per-meta loop runs any lookup, so this must be red today
+    // even though the row is correctly restored later in the SAME call. A
+    // snapshot taken only at the end (after the restore) could never observe
+    // that intermediate, unreachable state.
+    const deactivationChecks: boolean[] = [];
+    const baseTargetUpdate = targetRepo.update.getMockImplementation();
+    targetRepo.update.mockImplementation(async (where: any, changes: any) => {
+      await baseTargetUpdate(where, changes);
+      const isDeactivatingRow2235 =
+        changes?.is_active === false &&
+        (where?.result_toc_result_indicator_id === INDICATOR_ROW_ID ||
+          where?.indicators_targets === STORED_TARGET_PK);
+      if (isDeactivatingRow2235) {
+        const hasActiveSuccessor = targetRows.some(
+          (row) =>
+            row.result_toc_result_indicator_id === INDICATOR_ROW_ID &&
+            row.is_active &&
+            row.contributing_indicator === 6,
+        );
+        deactivationChecks.push(hasActiveSuccessor);
+      }
+    });
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    // Sanity: the check above must actually have fired at least once, or
+    // this assertion would pass vacuously.
+    expect(deactivationChecks.length).toBeGreaterThan(0);
+    // TTD-R-6 / the *lost contribution* scenario's `BUT` clause: no `update`
+    // may deactivate the row without an active successor already carrying
+    // its value AT THAT MOMENT — today's blanket-sweep-then-restore pattern
+    // violates this even though the row ends the call correctly restored.
+    expect(deactivationChecks.every(Boolean)).toBe(true);
+  });
+});
+
+describe('ResultsTocResultRepository.saveInditicatorsContributing — TTD-TEST-3: no collapse (red on ca99689b4)', () => {
+  it('two metas sharing one canonical number_target must stay two distinct rows across saves (TTD-R-5, TTD-AC-4)', async () => {
+    const { repo, targetRepo, targetRows } = buildTtdStatefulRepository([
+      { toc_indicator_target_id: 700004, number_target: 17 },
+      { toc_indicator_target_id: 700005, number_target: 28 },
+    ]);
+
+    // Two metas of ONE indicator: getCanonicalTarget is resolved once per
+    // indicator and stamped on every one of its metas (:1819-1824,
+    // :1870-1874), so both resolve to the SAME canonical number_target (6)
+    // once written — while their own raw catalog numbers (17, 28) and ToC
+    // ids (700004, 700005) stay distinct. Mirrors the 11-metas-one-canonical
+    // shape confirmed at source on prtest (tasks.md TTD-T-1: distinct_numbers
+    // = 1 across 11 distinct catalog metas).
+    const payload = [
+      {
+        toc_results_indicator_id: 'toc-node-shared',
+        targets: [
+          {
+            indicators_targets: 700004,
+            number_target: 17,
+            contributing_indicator: null,
+          },
+          {
+            indicators_targets: 700005,
+            number_target: 28,
+            contributing_indicator: null,
+          },
+        ],
+      },
+    ];
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    const activeIdsAfterFirstSave = targetRows
+      .filter((row) => row.is_active)
+      .map((row) => row.indicators_targets)
+      .sort();
+    expect(activeIdsAfterFirstSave).toHaveLength(2);
+    // Both share the canonical value — the exact condition a "key the lookup
+    // on resolvedNumberTarget" fix would exploit to collapse them (TTD-DD-3).
+    expect(
+      targetRows.every(
+        (row) => row.number_target === TTD_CANONICAL_NUMBER_TARGET,
+      ),
+    ).toBe(true);
+
+    targetRepo.save.mockClear();
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    // Named mutation (design.md TTD-DD-3, tasks.md TTD-T-1 falsifier): keying
+    // the fallback lookup on the canonical `resolvedNumberTarget` instead of
+    // the payload's raw number would make the second meta match the first
+    // meta's row and collapse onto it. This assertion must catch that as
+    // surely as it catches today's duplication.
+    expect(targetRepo.save).not.toHaveBeenCalled();
+    const activeIdsAfterSecondSave = targetRows
+      .filter((row) => row.is_active)
+      .map((row) => row.indicators_targets)
+      .sort();
+    expect(activeIdsAfterSecondSave).toEqual(activeIdsAfterFirstSave);
+  });
+});
+
+describe('ResultsTocResultRepository.saveInditicatorsContributing — TTD-TEST-4: retire only the untouched rows (TTD-T-3)', () => {
+  // Both cases below are deliberately NOT end-state-only. On `ca99689b4`
+  // (the still-unmoved, still-blanket sweep at the top of the `if
+  // (targetIndicators)` branch) the FINAL row state looks identical whether
+  // the sweep runs before or after the per-meta loop — sweep-then-restore
+  // produces the same end state as retire-after-loop. tasks.md's Red run
+  // clause names this by hand: "today they pass by accident through the
+  // blanket sweep". What the OLD code can never produce is a deactivating
+  // `update` call whose `where` narrows `indicators_targets` at all — its
+  // blanket sweep's `where` is `{ result_toc_result_indicator_id }` alone,
+  // with no such key. That shape (`Not(In(touched))`) is the assertion that
+  // actually distinguishes the moved-and-narrowed retire pass from the
+  // accident, so each test below checks it in addition to the end state.
+  const findDeactivatingCall = (
+    targetRepo: any,
+    resultTocResultIndicatorId: number,
+  ) =>
+    targetRepo.update.mock.calls.find(
+      ([where, changes]: any) =>
+        changes?.is_active === false &&
+        where?.result_toc_result_indicator_id === resultTocResultIndicatorId,
+    );
+
+  // Reads the `Not(In([...]))` shape through the FindOperator's OWN
+  // `type`/`child`/`value` getters (never hand-rolled SQL semantics) — the
+  // same discipline `ttdMatches` above uses, per the RESILIENCE forward
+  // pointer from TTD-T-1's Reviewer.
+  const asNotInOperator = (value: unknown): FindOperator<any> | null => {
+    if (!isTtdFindOperator(value)) return null;
+    if (value.type !== 'not') return null;
+    const child = value.child;
+    if (!child || child.type !== 'in') return null;
+    return value;
+  };
+
+  it('an indicator whose targets is absent must still retire every stored row for it (Step 2.3 condition (a), TTD-R-6, TTD-AC-6)', async () => {
+    const INDICATOR_ROW_ID = 9101;
+    const { indicatorRows, repo, targetRepo, targetRows } =
+      buildTtdStatefulRepository();
+
+    indicatorRows.push({
+      result_toc_result_indicator_id: INDICATOR_ROW_ID,
+      results_toc_results_id: TTD_PARENT_ID,
+      toc_results_indicator_id: 'toc-node-no-targets',
+      is_active: true,
+    });
+    targetRows.push(
+      {
+        indicators_targets: 9001,
+        result_toc_result_indicator_id: INDICATOR_ROW_ID,
+        number_target: TTD_CANONICAL_NUMBER_TARGET,
+        contributing_indicator: null,
+        is_active: true,
+        target_date: TTD_PHASE_YEAR,
+      },
+      {
+        indicators_targets: 9002,
+        result_toc_result_indicator_id: INDICATOR_ROW_ID,
+        number_target: TTD_CANONICAL_NUMBER_TARGET,
+        contributing_indicator: null,
+        is_active: true,
+        target_date: TTD_PHASE_YEAR,
+      },
+    );
+
+    // DTO-legal shape (create-results-toc-result-v2.dto.ts: `targets` is
+    // `@ApiPropertyOptional`): this indicator's payload entry omits it
+    // entirely, exactly the shape condition (a) exists to guard.
+    const payload = [{ toc_results_indicator_id: 'toc-node-no-targets' }];
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    // Fake-inertness / Disqualifier proof together: if the retire pass were
+    // skipped outright (the named mutation — "skip the retire pass when no
+    // ids were collected") OR the fake silently matched zero rows for a
+    // `Not(In([]))` criterion, these rows would still read `is_active: true`
+    // here.
+    const rowsForIndicator = targetRows.filter(
+      (row) => row.result_toc_result_indicator_id === INDICATOR_ROW_ID,
+    );
+    expect(rowsForIndicator).toHaveLength(2);
+    expect(rowsForIndicator.every((row) => row.is_active === false)).toBe(true);
+
+    // Post-change-ordering proof (Red run clause) — see the describe-level
+    // comment: this is what stays red on `ca99689b4` while the end-state
+    // assertion above passes there by accident.
+    const deactivatingCall = findDeactivatingCall(targetRepo, INDICATOR_ROW_ID);
+    expect(deactivatingCall).toBeDefined();
+    const [where] = deactivatingCall;
+    const operator = asNotInOperator(where.indicators_targets);
+    expect(operator).not.toBeNull();
+    expect(operator!.value).toEqual([]);
+  });
+
+  it('a payload carrying one of two stored metas retires only the other, keeping the carried one active (TTD-R-6, TTD-AC-6)', async () => {
+    const INDICATOR_ROW_ID = 9102;
+    const KEPT_PK = 9201;
+    const DROPPED_PK = 9202;
+    const { indicatorRows, repo, targetRepo, targetRows } =
+      buildTtdStatefulRepository();
+
+    indicatorRows.push({
+      result_toc_result_indicator_id: INDICATOR_ROW_ID,
+      results_toc_results_id: TTD_PARENT_ID,
+      toc_results_indicator_id: 'toc-node-partial',
+      is_active: true,
+    });
+    targetRows.push(
+      {
+        indicators_targets: KEPT_PK,
+        result_toc_result_indicator_id: INDICATOR_ROW_ID,
+        number_target: TTD_CANONICAL_NUMBER_TARGET,
+        contributing_indicator: 6,
+        is_active: true,
+        target_date: TTD_PHASE_YEAR,
+      },
+      {
+        indicators_targets: DROPPED_PK,
+        result_toc_result_indicator_id: INDICATOR_ROW_ID,
+        number_target: TTD_CANONICAL_NUMBER_TARGET,
+        contributing_indicator: null,
+        is_active: true,
+        target_date: TTD_PHASE_YEAR,
+      },
+    );
+
+    // Only the kept meta is re-affirmed by this save; the dropped meta is
+    // simply not in the payload any more (the ordinary "no longer contains
+    // it" shape of TTD-AC-6).
+    const payload = [
+      {
+        toc_results_indicator_id: 'toc-node-partial',
+        targets: [
+          {
+            indicators_targets: KEPT_PK,
+            number_target: TTD_CANONICAL_NUMBER_TARGET,
+            contributing_indicator: 6,
+          },
+        ],
+      },
+    ];
+
+    await repo.saveInditicatorsContributing(
+      payload,
+      TTD_PARENT_ID,
+      TTD_RESULT_ID,
+      TTD_USER_ID,
+    );
+
+    const keptRow = targetRows.find(
+      (row) => row.indicators_targets === KEPT_PK,
+    );
+    const droppedRow = targetRows.find(
+      (row) => row.indicators_targets === DROPPED_PK,
+    );
+    // Fake-inertness proof, the non-empty-touched-set case the Reviewer's
+    // forward pointer named directly: a `Not(In([KEPT_PK]))` criterion the
+    // fake silently matched zero rows against would leave `droppedRow`
+    // active.
+    expect(keptRow.is_active).toBe(true);
+    expect(droppedRow.is_active).toBe(false);
+
+    // Post-change-ordering proof (Red run clause) — see the describe-level
+    // comment.
+    const deactivatingCall = findDeactivatingCall(targetRepo, INDICATOR_ROW_ID);
+    expect(deactivatingCall).toBeDefined();
+    const [where] = deactivatingCall;
+    const operator = asNotInOperator(where.indicators_targets);
+    expect(operator).not.toBeNull();
+    expect(operator!.value).toEqual([KEPT_PK]);
+  });
+});

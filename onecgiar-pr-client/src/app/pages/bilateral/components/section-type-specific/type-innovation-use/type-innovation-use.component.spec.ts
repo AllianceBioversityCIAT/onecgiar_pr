@@ -1001,6 +1001,142 @@ describe('TypeInnovationUseComponent', () => {
     });
   });
 
+  /**
+   * Night sweep 2026-09-23, BIL-1 — measured on prtest (result 9519): an actor row with Women 5 /
+   * Men 6 and no actor type went out in the PATCH, the server skipped it as blank (146d26112's
+   * `isDiscardable`, which judges a new actor row by `actor_type_id` only) and answered 201; the row
+   * was gone on reload while the section read complete. Control negative: with
+   * `patchUnlessActorMissingType` sending unconditionally and `actorWithoutType` dropped from
+   * `updateMds`, the "refuses" and "incomplete" tests below fail.
+   */
+  describe('BIL-1 — an actor row with figures but no actor type', () => {
+    const executorOf = () => {
+      const [, , options] = autoSave.schedulePayload.mock.calls.at(-1);
+      return options.executor as (resultId: number, body: Record<string, unknown>) => any;
+    };
+    const lastActorsField = () => {
+      const [, fields] = mdsTracker.setSectionFields.mock.calls.at(-1);
+      return fields.find((f: any) => f.key === 'use-actors');
+    };
+
+    it('refuses to send the staged payload and says why, even when it was staged while the row was still blank', () => {
+      build();
+      component.body = { ...component.body, innov_use_to_be_determined: false, actors: [] };
+      component.addActor(); // staged with a blank row — discardable, fine to stage
+      const executor = executorOf();
+      component.body.actors[0].women = 5; // typed afterwards, into the SAME row object the payload holds
+      component.body.actors[0].men = 6;
+
+      let error: any;
+      executor(123, {}).subscribe({ error: (e: any) => (error = e) });
+
+      expect(bilateralApi.PATCH_innovationUse).not.toHaveBeenCalled();
+      expect(error?.error?.message).toBe(component.copy.actorTypeMissing);
+    });
+
+    // Review room NS-07 (Cami, 24-Sep-2026): the alert has to NAME the missing actor type, and the
+    // section must not read "Section complete". Reported the P2-3340 way: answered but `invalid`,
+    // which is what `getSectionMdsStatus` (rail, counter, footer) and `canSubmitFromRail` read.
+    it('keeps "Actors" out of "complete" and says the actor type is what is missing', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: false,
+        actors: [
+          { actor_type_id: 1, women: 2, is_active: true },
+          { actor_type_id: null, women: 5, men: 6, is_active: true }
+        ]
+      };
+      component.onFieldChange();
+
+      expect(component.actorMissingType(component.body.actors[1])).toBe(true);
+      expect(lastActorsField()).toEqual(
+        expect.objectContaining({ invalid: true, invalidReason: component.copy.actorTypeMissingReason })
+      );
+      expect(component.copy.actorTypeMissingReason).toContain('actor type');
+    });
+
+    it('drops the flag as soon as the row gets a type (no stale "field to fix")', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: false,
+        actors: [{ actor_type_id: null, women: 5, is_active: true }]
+      };
+      component.onFieldChange();
+      expect(lastActorsField().invalid).toBe(true);
+
+      component.body.actors[0].actor_type_id = 4;
+      component.onFieldChange();
+
+      expect(lastActorsField().invalid).toBeUndefined();
+      expect(lastActorsField().filled).toBe(true);
+    });
+
+    // The save is only held for rows the executor refuses on, so nothing may be flagged when the
+    // use is still "to be determined" (hidden rows) — otherwise the section could never be closed.
+    it('flags nothing while the use is still to be determined', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: true,
+        actors: [{ actor_type_id: null, women: 5, is_active: true }]
+      };
+      component.onFieldChange();
+
+      expect(lastActorsField().invalid).toBeUndefined();
+      expect(lastActorsField().filled).toBe(true);
+    });
+
+    it('still sends a truly blank staged row (146d26112 keeps discarding it server-side)', () => {
+      build();
+      component.body = { ...component.body, innov_use_to_be_determined: false, actors: [{ actor_type_id: 1, women: 2, is_active: true }] };
+      component.addActor();
+
+      executorOf()(123, { any: 1 }).subscribe();
+
+      expect(component.actorMissingType(component.body.actors[1])).toBe(false);
+      expect(bilateralApi.PATCH_innovationUse).toHaveBeenCalledWith(123, { any: 1 });
+    });
+
+    it('sends normally once the row gets its actor type', () => {
+      build();
+      component.body = { ...component.body, innov_use_to_be_determined: false, actors: [{ actor_type_id: null, women: 5, is_active: true }] };
+      component.body.actors[0].actor_type_id = 1;
+      component.onFieldChange();
+
+      executorOf()(123, {}).subscribe();
+
+      expect(bilateralApi.PATCH_innovationUse).toHaveBeenCalledTimes(1);
+      expect(lastActorsField().filled).toBe(true);
+    });
+
+    it('ignores a deleted row and rows hidden behind "yet to be determined"', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: true,
+        actors: [{ actor_type_id: null, women: 5, is_active: true }],
+        innovation_use_2030: { actors: [{ actor_type_id: null, men: 3, is_active: false }], organization: [], measures: [] }
+      };
+
+      expect(component.hasActorMissingType).toBe(false);
+    });
+
+    it('also catches the 2030 projection actors while that list is shown (same server writer)', () => {
+      build();
+      component.body = {
+        innov_use_to_be_determined: true,
+        innov_use_2030_to_be_determined: false,
+        innovation_use_2030: { actors: [{ actor_type_id: null, how_many: 7, is_active: true }], organization: [], measures: [] }
+      };
+
+      expect(component.hasActorMissingType).toBe(true);
+    });
+
+    it('the row carries the message in the template', () => {
+      const html = readFileSync(join(__dirname, 'type-innovation-use.component.html'), 'utf8');
+      expect(html).toContain('@if (actorMissingType(actor)) {');
+      expect(html).toContain('{{ copy.actorTypeMissing }}');
+    });
+  });
+
   describe('save flow', () => {
     it('onFieldChange sends the top-level fields and the nested innovatonUse payload', () => {
       build();

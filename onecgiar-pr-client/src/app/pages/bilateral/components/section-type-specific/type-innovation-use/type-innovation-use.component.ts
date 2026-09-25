@@ -1,6 +1,7 @@
 import { Component, effect, inject, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
+import { Observable, throwError } from 'rxjs';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
@@ -198,6 +199,31 @@ export class TypeInnovationUseComponent implements OnInit {
 
   activeRows(rows: any[] | null | undefined): any[] {
     return (rows ?? []).filter((r: any) => r.is_active !== false);
+  }
+
+  /**
+   * Night sweep 2026-09-23, BIL-1 — an active actor row that carries something to store (a figure,
+   * the free-text type, the demand text) but no `actor_type_id`.
+   *
+   * The server skips a NEW row whose only judged value is `actor_type_id` as blank
+   * (`onecgiar-pr-server/src/api/results/summary/innovation_dev.service.ts` `isDiscardable(el,
+   * el?.result_actors_id, el?.actor_type_id)`, 146d26112 — deliberately, so the blank row "Add" stages
+   * does not sink the whole save), and answers 201. So a row with Women 5 / Men 6 and no type vanished
+   * on reload with no message while the section read complete (measured on prtest, result 9519).
+   * Truly blank rows are NOT caught here — they stay discardable exactly as 146d26112 intends.
+   */
+  actorMissingType(actor: any): boolean {
+    if (!actor || actor.is_active === false) return false;
+    if (actor.actor_type_id !== null && actor.actor_type_id !== undefined && `${actor.actor_type_id}`.trim() !== '') return false;
+    const filled = (value: unknown) => value !== null && value !== undefined && `${value}`.trim() !== '';
+    return [actor.women, actor.women_youth, actor.men, actor.men_youth, actor.how_many, actor.other_actor_type, actor.addressing_demands].some(filled);
+  }
+
+  /** BIL-1 — any VISIBLE actor list (current use, or the 2030 projection while shown) holds such a row. */
+  get hasActorMissingType(): boolean {
+    const current = this.body.innov_use_to_be_determined === false ? (this.body.actors ?? []) : [];
+    const projection = this.showProjection2030Lists ? (this.body.innovation_use_2030?.actors ?? []) : [];
+    return [...current, ...projection].some((actor: any) => this.actorMissingType(actor));
   }
 
   /** Numeric use level (0..9) behind the selected `innovation_use_level_id`; -1 when nothing is picked. */
@@ -666,8 +692,24 @@ export class TypeInnovationUseComponent implements OnInit {
     this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
       debounceMs,
       statusKey: 'type-specific',
-      executor: (resultId, body) => this.bilateralApi.PATCH_innovationUse(resultId, body)
+      executor: (resultId, body) => this.patchUnlessActorMissingType(resultId, body)
     });
+  }
+
+  /**
+   * Night sweep 2026-09-23, BIL-1 — the refusal lives in the EXECUTOR, i.e. at the moment Save draft
+   * (or leaving the section) actually sends the staged payload, not at staging time: the staged body
+   * holds the same row objects the form edits, so a payload staged when the row was still blank would
+   * otherwise leave with Women/Men typed in afterwards and no type — and the server skips it as blank
+   * and answers 201 (`innovation_dev.service.ts` `isDiscardable`, 146d26112). Failing here reuses the
+   * editor's own path: the section is marked in error, Save draft shows "Save failed" with this
+   * reason, and Next/Back keep the person on the section. Blank rows never trip it.
+   */
+  private patchUnlessActorMissingType(resultId: number, body: Record<string, unknown>): Observable<unknown> {
+    if (this.hasActorMissingType) {
+      return throwError(() => ({ status: 400, error: { message: this.copy.actorTypeMissing } }));
+    }
+    return this.bilateralApi.PATCH_innovationUse(resultId, body);
   }
 
   /** Flattens a sub-type back into `institution_types_id`, without mutating `body` (which the UI's cascade still needs). */
@@ -750,12 +792,24 @@ export class TypeInnovationUseComponent implements OnInit {
     const tbd = this.body.innov_use_to_be_determined;
     const tbdSet = tbd !== null && tbd !== undefined;
     const hasActors = (this.body.actors ?? []).some((a: any) => a.is_active !== false);
+    // BIL-1 — while a row with figures and no actor type is on screen the save is being held (see
+    // `queueTypeSave`), so "Actors" must not read complete.
+    //
+    // Review room NS-07 (Cami, 24-Sep-2026): "agregar en las alertas en que falta actor type y no
+    // dejarlo como Section complete". The row IS answered, so it is reported the P2-3340 way —
+    // `filled` with `invalid` + a reason — instead of reading as empty: the footer then says
+    // "1 field to fix · Actors (a row has figures but no actor type…)" rather than the bare "Actors",
+    // `getSectionMdsStatus` drops the section to `partial`, and `canSubmitFromRail` refuses and names
+    // it. Scope = the same rows the save refuses on (`hasActorMissingType`): current use only while
+    // the use is not "to be determined", plus the 2030 list while it is shown.
+    const actorWithoutType = this.hasActorMissingType;
     this.mdsTracker.setSectionFields('type-specific', [
       {
         key: 'use-actors',
         label: 'Actors',
         // AC4: when the use is still to be determined no actor is requested, so the field is satisfied.
-        filled: tbdSet && (tbd === true || hasActors)
+        filled: tbdSet && (tbd === true || hasActors),
+        ...(actorWithoutType ? { invalid: true, invalidReason: this.copy.actorTypeMissingReason } : {})
       },
       {
         key: 'use-measures',

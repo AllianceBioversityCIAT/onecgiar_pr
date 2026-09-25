@@ -1131,15 +1131,18 @@ export class InnovationUseService {
       const measures = await this.getMeasuresData(resultId);
       const organization = await this.getOrganizationsData(resultId);
 
-      const actors_current = actorsData.filter(
-        (a) => Number(a.section_id) === 1,
-      );
-      const organizations_current = organization.filter(
-        (o) => Number(o.section_id) === 1,
-      );
-      const measures_current = measures.filter(
-        (m) => Number(m.section_id) === 1,
-      );
+      // Night sweep 2026-09-23, BIL-2 — this feeds the bilateral detail the review drawer reads
+      // (`GET results/bilateral/:id`). Rows added in the W3/bilateral form are written with
+      // `section_id = NULL` for current use (`results/summary/innovation_dev.service.ts`
+      // `saveAnticipatedInnoUser` stamps only the 2030 projection), rows from the ingest API with 1.
+      // Reading only 1 hid the form's rows from the reviewer. NULL counts as current; 2 (2030) never.
+      const isCurrentUse = (row: any) =>
+        row?.section_id === null ||
+        row?.section_id === undefined ||
+        Number(row.section_id) === 1;
+      const actors_current = actorsData.filter(isCurrentUse);
+      const organizations_current = organization.filter(isCurrentUse);
+      const measures_current = measures.filter(isCurrentUse);
 
       const investment_partners = await this.getInvestmentPartners(resultId);
       const investment_projects = await this.getInvestmentProjects(resultId);

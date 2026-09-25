@@ -6,6 +6,12 @@
     <app-alert-status [collapsible]="false" [description]="alertStatus()"> </app-alert-status>
   }
 
+  <!-- Night sweep 2026-09-23, W12-2: the evidence GET failed, so the list below is empty for a
+       reason unrelated to what is stored. Adding/saving is off (see `loaded` / `performSave()`). -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [collapsible]="false" [description]="loadErrorNote" data-testid="section-load-error"></app-alert-status>
+  }
+
   <app-alert-status *ngIf="isOptional" [collapsible]="false" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
   </app-alert-status>
 
@@ -178,14 +184,14 @@
   </div>
 
   <app-no-data-text
-    *ngIf="!this.evidencesBody?.evidences?.length"
+    *ngIf="!this.evidencesBody?.evidences?.length && loaded() !== false"
     [title]="this.api.dataControlSE.isKnowledgeProduct ? 'No evidence' : 'No evidence added'"></app-no-data-text>
 
   <br />
   <app-add-button
     name="Add evidence"
     (clickEvent)="addEvidence()"
-    *ngIf="this.evidencesBody?.evidences?.length < 6 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly">
+    *ngIf="loaded() === true && this.evidencesBody?.evidences?.length < 6 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly">
   </app-add-button>
 
   <br /><br />
@@ -197,7 +203,7 @@
   <div appFeedbackValidation labelText="Empty, repeated or invalid link" [isComplete]="!this.validateButtonDisabled"></div>
 </div>
 
-<app-section-bottom-bar [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()" />
+<app-section-bottom-bar [disabled]="this.validateButtonDisabled || loaded() !== true" (clickSave)="onSaveSection()" />
 
 <!-- Visor de la imagen. Vive fuera de la lista y no dentro de cada tarjeta: una sola instancia
      para las seis, y así ninguna arrastra un diálogo oculto. -->

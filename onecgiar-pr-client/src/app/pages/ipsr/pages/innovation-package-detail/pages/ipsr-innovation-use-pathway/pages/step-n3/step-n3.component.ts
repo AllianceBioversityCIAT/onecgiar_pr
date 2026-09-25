@@ -1,8 +1,19 @@
-import { Component, OnInit } from '@angular/core';
-import { ActorN3, IpsrStep3Body, OrganizationN3 } from './model/Ipsr-step-3-body.model';
+import { Component, OnInit, inject } from '@angular/core';
+import { ActorN3, IpsrPrincipalImpactArea, IpsrStep3Body, OrganizationN3 } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
+import { untypedInnovationUseRowsMessage } from '../../../../../../utils/untyped-innovation-use-rows.util';
+import { IPSR_UNTYPED_ROWS_COPY } from '../../../../../../../../internationalization/ipsr-untyped-rows.copy';
+import { SharePointUploadService } from '../../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
+import { SaveButtonService } from '../../../../../../../../custom-fields/save-button/save-button.service';
+import { IPSR_STEP3_EVIDENCE_COPY } from './components/ipsr-step3-evidence-list/ipsr-step3-evidence-list.copy';
+import {
+  buildIpsrStep3SavePayload,
+  ipsrStep3AllEvidences,
+  ipsrStep3MissingPrincipalImpactAreas,
+  normalizeIpsrStep3Component
+} from './components/ipsr-step3-evidence-list/ipsr-step3-evidence.util';
 
 @Component({
   selector: 'app-step-n3',
@@ -17,9 +28,11 @@ export class StepN3Component implements OnInit {
   result_core_innovation: any;
   innoUseLevel: number;
   rangeLevel2Required = true;
-  showDetailsOfReadiness = false;
-  showDetailsOfUseLevel = false;
   savingSection = false;
+
+  /** P2-3220 — the single path to SharePoint; Step 3 evidence files go up through it before the PATCH. */
+  private readonly sharePointUploadSE = inject(SharePointUploadService);
+  private readonly saveButtonSE = inject(SaveButtonService);
 
   constructor(
     public ipsrDataControlSE: IpsrDataControlService,
@@ -64,13 +77,7 @@ export class StepN3Component implements OnInit {
 
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.result_core_innovation = response.result_core_innovation;
-        this.showDetailsOfReadiness = !!this.ipsrStep3Body?.result_ip_result_core?.readiness_details_of_evidence;
-        this.showDetailsOfUseLevel = !!this.ipsrStep3Body?.result_ip_result_core?.use_details_of_evidence;
-
-        this.ipsrStep3Body?.result_ip_result_complementary.forEach((item: any) => {
-          item.showDetailsOfReadiness = !!item.readiness_details_of_evidence;
-          item.showDetailsOfUseLevel = !!item.use_details_of_evidence;
-        });
+        this.normalizeEvidenceLists();
 
         if (this.ipsrStep3Body.innovatonUse.actors.length === 0) {
           this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
@@ -87,19 +94,88 @@ export class StepN3Component implements OnInit {
     });
   }
 
+  /**
+   * P2-3824 — both evidence lists of every component always exist and hold the shapes the dialog
+   * compares by identity; `principal_impact_areas` falls back to none (older server, or no score 2).
+   */
+  private normalizeEvidenceLists(): void {
+    const body = this.ipsrStep3Body;
+    if (!body) return;
+    body.result_ip_result_core = normalizeIpsrStep3Component(body.result_ip_result_core ?? ({} as any));
+    body.result_ip_result_complementary = (body.result_ip_result_complementary ?? []).map(item => normalizeIpsrStep3Component(item));
+    body.principal_impact_areas = Array.isArray(body.principal_impact_areas) ? body.principal_impact_areas : [];
+  }
+
+  /** P2-3824 — Impact Areas scored 2 with no tagged evidence anywhere in the step (recomputed on every render). */
+  missingPrincipalImpactAreas(): IpsrPrincipalImpactArea[] {
+    return ipsrStep3MissingPrincipalImpactAreas(this.ipsrStep3Body);
+  }
+
+  principalImpactAreaAlert(area: IpsrPrincipalImpactArea): string {
+    return IPSR_STEP3_EVIDENCE_COPY.principalImpactAreaAlert(IPSR_STEP3_EVIDENCE_COPY.impactAreaNames[area]);
+  }
+
+  /**
+   * P2-3824 — uploads every pending evidence file of the step (core + enablers, both levels) to the
+   * package's repository folder. Returns false, and says which files, when one did not make it: the
+   * PATCH is then NOT sent, because a file evidence without its SharePoint link would be stored empty.
+   */
+  async uploadPendingEvidenceFiles(): Promise<boolean> {
+    const pending = ipsrStep3AllEvidences(this.ipsrStep3Body).filter(evidence => evidence?.is_sharepoint && evidence?.file && !evidence?.link);
+    if (!pending.length) return true;
+
+    const resultId = this.ipsrDataControlSE.resultInnovationId;
+    let failed: string[];
+    if (resultId) {
+      this.saveButtonSE.showSaveSpinner();
+      failed = await this.sharePointUploadSE.uploadPending(pending, { resultId, flow: 'evidences', logLabel: 'ipsr-step3' });
+      this.saveButtonSE.hideSaveSpinner();
+    } else {
+      // The service silently skips a call with no result id; here that would PATCH files with no link.
+      failed = pending.map(evidence => evidence.file?.name ?? 'file');
+    }
+
+    if (!failed.length) return true;
+    this.api.alertsFe.show({
+      id: 'ipsr-step3-evidence-upload-failed',
+      title: IPSR_STEP3_EVIDENCE_COPY.uploadFailedTitle(failed.length, failed),
+      description: IPSR_STEP3_EVIDENCE_COPY.uploadFailedDescription,
+      status: 'error'
+    });
+    return false;
+  }
+
+  /** P2-3824 — the PATCH body: evidence arrays, no legacy single-link fields, no File objects. */
+  buildSavePayload(): IpsrStep3Body {
+    return buildIpsrStep3SavePayload(this.ipsrStep3Body);
+  }
+
+  /**
+   * Night sweep 2026-09-23, IPSR-5 — same as Step 1 (IPSR-3): a "Current use" row with figures but no
+   * type was skipped by the server with a 200 (prtest 12037). Refuse and say which rows.
+   */
+  private refuseUntypedRows(): boolean {
+    const message = untypedInnovationUseRowsMessage(this.ipsrStep3Body?.innovatonUse);
+    if (!message) return false;
+    this.api.alertsFe.show({ id: 'ipsrUntypedRows', title: IPSR_UNTYPED_ROWS_COPY.title, description: message, status: 'error' });
+    return true;
+  }
+
   isOptionalUseLevel() {
     this.innoUseLevel = this.innovationUseList.findIndex(item => item.id === this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based);
     return Boolean(this.innoUseLevel === 0);
   }
 
-  onSaveSection() {
+  async onSaveSection() {
+    if (this.refuseUntypedRows()) return;
     this.convertOrganizationsTosave();
-    this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
+    if (!(await this.uploadPendingEvidenceFiles())) return;
+    this.api.resultsSE.PATCHInnovationPathwayByRiId(this.buildSavePayload()).subscribe(({ response }) => {
       this.getSectionInformation();
     });
   }
 
-  onSaveSectionWithStep(descrip: string) {
+  async onSaveSectionWithStep(descrip: string) {
     const urlBasePath = `/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway`;
     const urlPath = descrip === 'next' ? `${urlBasePath}/step-4` : `${urlBasePath}/step-2`;
     const queryParams = { phase: this.ipsrDataControlSE.resultInnovationPhase };
@@ -110,9 +186,12 @@ export class StepN3Component implements OnInit {
       return;
     }
 
-    this.convertOrganizationsTosave();
+    if (this.refuseUntypedRows()) return;
 
-    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(() => {
+    this.convertOrganizationsTosave();
+    if (!(await this.uploadPendingEvidenceFiles())) return;
+
+    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.buildSavePayload(), descrip).subscribe(() => {
       this.getSectionInformation();
 
       this.router.navigate([urlPath], { queryParams });

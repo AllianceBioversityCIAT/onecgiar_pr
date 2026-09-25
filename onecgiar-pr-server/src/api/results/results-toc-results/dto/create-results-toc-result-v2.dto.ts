@@ -48,6 +48,14 @@ export class ResultTocIndicatorTargetDto {
   @ApiPropertyOptional()
   indicators_targets?: number | null;
 
+  @ApiPropertyOptional({
+    description:
+      'The ToC target this meta answers (TTD-T-4, bugfix/toc-target-row-duplication). ' +
+      'Additive and optional: a client that ignores it keeps working, since identity is ' +
+      'resolved server-side (TTD-DD-1). `indicators_targets` keeps meaning the PRMS row PK.',
+  })
+  toc_indicator_target_id?: number | null;
+
   @ApiPropertyOptional()
   number_target?: number | null;
 

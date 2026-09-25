@@ -349,6 +349,7 @@ export class ResultsByInstitutionsService {
   async savePartnersInstitutionsByResultV2(
     data: SavePartnersV2Dto,
     user: TokenDto,
+    options: { preserveCentersWhenAbsent?: boolean } = {},
   ) {
     try {
       return await this._dataSource.transaction(async () => {
@@ -462,11 +463,22 @@ export class ResultsByInstitutionsService {
           );
         }
 
-        await this.handleContributingCenters(
-          data.contributing_center ?? [],
-          data,
-          user,
-        );
+        // Night sweep 2026-09-23, D-2 — a caller that could not resolve the centres (the bilateral
+        // review drawer when the CLARISA catalogue failed) omits the key; for it an ABSENT key means
+        // "leave the centres untouched". Before, `?? []` turned it into "unlink every centre, lead
+        // included" (prtest 12039 / 12040). Every other caller keeps the old behaviour.
+        if (
+          !(
+            options.preserveCentersWhenAbsent &&
+            data.contributing_center === undefined
+          )
+        ) {
+          await this.handleContributingCenters(
+            data.contributing_center ?? [],
+            data,
+            user,
+          );
+        }
 
         if (Array.isArray(data.bilateral_project)) {
           const syncResult =

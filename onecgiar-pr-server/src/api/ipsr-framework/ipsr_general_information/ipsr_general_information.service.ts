@@ -23,6 +23,8 @@ import { ResultImpactAreaScoresService } from '../../result-impact-area-scores/r
 import { ImpactAreaNames } from '../../results/impact_areas_scores_components/enum/impact-area-names.enum';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { Evidence } from '../../results/evidences/entities/evidence.entity';
+import { IsNull, Not, Or } from 'typeorm';
+import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
 
 @Injectable()
 export class IpsrGeneralInformationService {
@@ -328,6 +330,9 @@ export class IpsrGeneralInformationService {
         where: {
           result_id: resultId,
           is_active: 1,
+          // P2-3824: only the General-information row. Step 3 evidence carries the same tag flags
+          // on the same package result, and must never be overwritten or deactivated from here.
+          evidence_type_id: Or(IsNull(), Not(EvidenceTypeEnum.IPSR_STEP_THREE)),
           [relatedColumn]: true,
         },
       });

@@ -6,7 +6,7 @@ import { ResultBody } from '../../../../../../shared/interfaces/result.interface
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
-import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
+import { Subject, catchError, debounceTime, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
 import {
   filterOutAvisaFromGroupedInitiativeOptions,
   filterOutAvisaInitiatives
@@ -561,7 +561,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       .pipe(
         filter(title => !!title?.trim()),
         debounceTime(this.titleSearchDebounceMs),
-        distinctUntilChanged(),
+        // Night sweep 2026-09-23, C-1 — no distinctUntilChanged: every keystroke resets the gate
+        // (loading flag on, exact-title flags off), so a title equal to the last one checked (a typo
+        // fixed, or cleared and pasted again) must be checked again or the gate never re-opens.
+        // switchMap still cancels the superseded request.
         switchMap(title => this.searchResultsWithTitleUniqueness(title)),
         takeUntil(this.destroy$)
       )

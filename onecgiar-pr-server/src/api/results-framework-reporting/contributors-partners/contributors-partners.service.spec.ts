@@ -369,16 +369,8 @@ describe('ContributorsPartnersService', () => {
           is_lead_by_partner: true,
           has_innovation_link: true,
           linked_results: [1001, 1002],
-          // P2-2932 — stubbed to the quiet outcome above; the check has its own suite.
-          contribution_consistency: {
-            status: 'NOTHING_TO_COMPARE',
-            expected: null,
-            reported: null,
-            boxesCounted: 0,
-            boxesTotal: 0,
-            boxesOfAnotherType: 0,
-            defaultValue: null,
-          },
+          // P2-3833 — the check is switched off, so nothing reaches the client.
+          contribution_consistency: null,
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
@@ -874,27 +866,70 @@ describe('ContributorsPartnersService', () => {
    * → targets[] and must carry each indicator's own category through, or the mixed-type rule has
    * nothing to act on. A mutation removing that one line passed every other test in this repo.
    */
+  describe('P2-3833 — the consistency check is switched off', () => {
+    it('never runs the check and returns contribution_consistency: null', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 10,
+        result_code: 900,
+        title: 't',
+        result_level_id: 3,
+        result_type_id: 5,
+      } as any);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 1 } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: { result_toc_result: null },
+      } as any);
+
+      const res: any = await service.getContributorsPartnersByResultId(10);
+
+      expect(consistencyService.check).not.toHaveBeenCalled();
+      expect(res.response.contribution_consistency).toBeNull();
+    });
+  });
+
   describe('P2-2932 — the boxes handed to the consistency check', () => {
+    // P2-3833 switched the check off; these keep the extraction honest for when it comes back.
+    beforeEach(() => {
+      (service as any).contributionCheckEnabled = true;
+    });
+
     const tocWithMixedIndicators = {
       contributing_initiatives: {
         accepted_contributing_initiatives: [],
         pending_contributing_initiatives: [],
       },
       contributing_and_primary_initiative: [],
+      // P2-3817 — the shape `getTocByResultV2` really returns: the owner's nodes sit inside
+      // `result_toc_results`. The earlier fixture put `indicators` straight on the wrapper, so the
+      // extractor passed here and found no box at all in production.
       result_toc_result: {
-        indicators: [
+        planned_result: true,
+        initiative_id: 56,
+        result_toc_results: [
           {
-            indicator_result_type_id: 5,
-            targets: [{ contributing_indicator: 120 }],
+            result_toc_result_id: 1,
+            indicators: [
+              {
+                indicator_result_type_id: 5,
+                targets: [{ contributing_indicator: 120 }],
+              },
+              {
+                indicator_result_type_id: 7,
+                targets: [{ contributing_indicator: 999 }],
+              },
+            ],
           },
           {
-            indicator_result_type_id: 7,
-            targets: [{ contributing_indicator: 999 }],
-          },
-          // No recognised category — must arrive as undefined, not as null or 0.
-          {
-            indicator_result_type_id: null,
-            targets: [{ contributing_indicator: 50 }],
+            result_toc_result_id: 2,
+            indicators: [
+              // No recognised category — must arrive as undefined, not as null or 0.
+              {
+                indicator_result_type_id: null,
+                targets: [{ contributing_indicator: 50 }],
+              },
+            ],
           },
         ],
       },
@@ -927,6 +962,56 @@ describe('ContributorsPartnersService', () => {
         { contributingIndicator: 120, indicatorResultTypeId: 5 },
         { contributingIndicator: 999, indicatorResultTypeId: 7 },
         { contributingIndicator: 50, indicatorResultTypeId: undefined },
+      ]);
+    });
+
+    it('P2-3817: reads every node of the wrapped ToC answer (result #9588 on prtest)', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 12056,
+        result_code: 9588,
+        title: 'QA test - CapDev multi-indicator sum mismatch',
+        result_level_id: 3,
+        result_type_id: 5,
+      } as any);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 56 } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: {
+          ...tocWithMixedIndicators,
+          result_toc_result: {
+            planned_result: true,
+            initiative_id: 56,
+            official_code: 'SP07',
+            result_toc_results: [
+              {
+                result_toc_result_id: 13941,
+                indicators: [
+                  {
+                    indicator_result_type_id: 5,
+                    targets: [{ contributing_indicator: 12 }],
+                  },
+                ],
+              },
+              {
+                result_toc_result_id: 13942,
+                indicators: [
+                  {
+                    indicator_result_type_id: 5,
+                    targets: [{ contributing_indicator: 8 }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      } as any);
+
+      await service.getContributorsPartnersByResultId(12056);
+
+      expect(consistencyService.check.mock.calls.at(-1)?.[2]).toEqual([
+        { contributingIndicator: 12, indicatorResultTypeId: 5 },
+        { contributingIndicator: 8, indicatorResultTypeId: 5 },
       ]);
     });
 

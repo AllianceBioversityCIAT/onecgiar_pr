@@ -119,10 +119,19 @@ export class ResultCountriesService {
         geoScopeRoleId,
       );
 
+      // Night sweep 2026-09-23, W12-5 (P2-3637) — an explicit "No" to "other geographic areas"
+      // (`has_extra_geo_scope === false`) must retire the extra countries too. Before this, a "No"
+      // payload (no extra scope, no extra countries) skipped the extra block entirely and the stored
+      // extra countries stayed active (prtest 11464: TZ/UG kept; the results list still showed them).
+      // Extra REGIONS are already handled unconditionally in `ResultRegionsService.createV2`.
+      const extraScopeAnsweredNo =
+        (createResultCountryDto as { has_extra_geo_scope?: boolean })
+          .has_extra_geo_scope === false;
       if (
         extra_geo_scope_id ||
         has_extra_countries ||
-        (extra_countries?.length ?? 0) > 0
+        (extra_countries?.length ?? 0) > 0 ||
+        extraScopeAnsweredNo
       ) {
         geoScopeRoleId = EnumGeoScopeRole.EXTRA;
         await this.handleCountries(

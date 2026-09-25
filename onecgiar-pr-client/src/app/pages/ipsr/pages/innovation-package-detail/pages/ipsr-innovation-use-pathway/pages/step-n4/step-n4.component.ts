@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
 import { Router } from '@angular/router';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
   selector: 'app-step-n4',
@@ -12,6 +13,15 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
+
+  /**
+   * Night sweep 2026-09-23, IPSR-4 — three-state load flag (P2-3556 contract). The Step-4 GET had no
+   * error branch; saving the blank body sent `ipsr_materials: []` and the server deactivated every
+   * reference-material link (prtest 12037, 2/2). Save refuses and "Save & go to previous step" only
+   * navigates until the stored data is in hand.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
   disabledOptionsPartners = [];
 
   /**
@@ -117,7 +127,17 @@ export class StepN4Component implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationPathwayStepFourByRiId(this.api.fieldsManagerSE.isP25()).subscribe(({ response }) => {
+    this.api.resultsSE.GETInnovationPathwayStepFourByRiId(this.api.fieldsManagerSE.isP25()).subscribe({
+      next: ({ response }) => this.onSectionInformation(response),
+      // IPSR-4 — see `loaded`.
+      error: () => {
+        if (this.loaded() !== true) this.loaded.set(false);
+      }
+    });
+  }
+
+  private onSectionInformation(response: any) {
+    {
       this.ipsrStep4Body = response;
 
       this.disabledOptionsPartners = this.ipsrStep4Body.institutions_expected_investment.map(item => ({
@@ -131,17 +151,21 @@ export class StepN4Component implements OnInit {
           return item?.obj_result_institution?.institution_roles_id == 7;
         }
       });
-    });
+      this.loaded.set(true);
+    }
   }
 
   onSaveSection() {
+    // IPSR-4 — never send a body that was not read from the server.
+    if (this.loaded() !== true) return;
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body, this.api.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
     });
   }
 
   onSavePrevious(descrip) {
-    if (this.api.rolesSE.readOnly)
+    // IPSR-4 — without the stored data in hand the button only navigates, it never saves.
+    if (this.api.rolesSE.readOnly || this.loaded() !== true)
       return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
         queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
       });

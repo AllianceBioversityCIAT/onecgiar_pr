@@ -1,4 +1,8 @@
 <div class="step_title"><strong>Step 1:</strong>Scaling Ambition, Experts and Consultation</div>
+<!-- Night sweep 2026-09-23, IPSR-2: the Step-1 GET failed; saving is off until a reload. -->
+@if (loaded() === false) {
+  <app-alert-status status="error" [collapsible]="false" [description]="loadErrorNote" data-testid="section-load-error"></app-alert-status>
+}
 <app-pr-field-header
   [required]="false"
   [label]="
@@ -96,7 +100,7 @@
 
 <!-- <app-step-n1-consensus-and-consultation [body]="this.ipsrStep1Body"></app-step-n1-consensus-and-consultation> -->
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-save-button class="position_sticky" [disabled]="loaded() !== true" (clickSave)="onSaveSection()"></app-save-button>
 <div class="toggle_change_step">
   <app-pr-button
     (click)="saveAndNextStep('next')"

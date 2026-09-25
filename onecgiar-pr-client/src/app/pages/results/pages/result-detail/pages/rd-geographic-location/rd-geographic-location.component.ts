@@ -13,6 +13,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { CustomField } from '../../../../../../shared/interfaces/customField.interface';
 import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -39,6 +40,21 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
    * would have left the skeleton stuck forever.
    */
   readonly sectionLoading = signal(true);
+
+  /**
+   * Night sweep 2026-09-23 (P1 twin of W12-1 / W12-2) — three-state load flag: `null` while the
+   * section GET is in flight, `true` once the server's body is in hand, `false` when the FIRST load
+   * failed. Before this, `error` only released the skeleton, so the form painted blank with Save
+   * enabled and no message, and saving it sent that blank body over what is stored (regions/countries lists written as received; effect in the DB not measured).
+   * A failed RE-load after a successful save keeps `true`: the body in hand is what was just stored.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
+
+  private markLoaded(ok: boolean): void {
+    if (ok) this.loaded.set(true);
+    else if (this.loaded() !== true) this.loaded.set(false);
+  }
 
   /**
    * `UCA-T-7` — component-scoped dirty-diff tracker (`providers: [SectionDirtyTrackerService]`
@@ -176,9 +192,13 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
         // `UCA-T-7` — true end of this load flow: `fillGeographicLocationBody` is entirely
         // synchronous, so a freshly loaded, unedited section is correctly non-dirty right here.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.markLoaded(true);
         this.releaseSkeleton();
       },
-      error: () => this.releaseSkeleton()
+      error: () => {
+        this.markLoaded(false);
+        this.releaseSkeleton();
+      }
     });
   }
 
@@ -297,13 +317,19 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
         // `UCA-T-7` — true end of this load flow: both fill methods above are entirely
         // synchronous, so a freshly loaded, unedited section is correctly non-dirty right here.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.markLoaded(true);
         this.releaseSkeleton();
       },
-      error: () => this.releaseSkeleton()
+      error: () => {
+        this.markLoaded(false);
+        this.releaseSkeleton();
+      }
     });
   }
 
   onSaveSection() {
+    // P1 twin — same gate as `performSave()`, checked first so the refusal stays silent here.
+    if (this.loaded() !== true) return;
     this.performSave().subscribe();
   }
 
@@ -314,6 +340,8 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
    * logic (`UCA-DD-3`).
    */
   private performSave(): Observable<void> {
+    // P1 twin (night sweep 2026-09-23) — never send a body that was not read from the server.
+    if (this.loaded() !== true) return throwError(() => new Error('Geographic location section not loaded; save refused'));
     if (this.fieldsManagerSE.isP25()) {
       // The extra geographic scope block is only on screen while the MAIN focus is neither Global nor
       // "yet to be determined" (see the `@if` guarding it in the template). When the reporter switches
@@ -324,6 +352,12 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
       const mainFocusHidesExtraScope =
         this.geographicLocationBody.geo_scope_id === GeoScopeEnum.GLOBAL ||
         this.geographicLocationBody.geo_scope_id === GeoScopeEnum.DETERMINED;
+      // Night sweep 2026-09-23, W12-5 (P2-3637) — answering "No" to "other geographic areas" hides
+      // the block just the same, but its scope and countries stayed in the body and were saved next
+      // to `has_extra_geo_scope: false` (prtest 11464: TZ/UG kept, and the results list still
+      // attributed both countries to the result). Same clearing as the hidden-by-main-focus case,
+      // as the bilateral form already does (`section-geography.component.ts` → `resetExtraScope`).
+      const extraScopeOff = mainFocusHidesExtraScope || this.extraGeographicLocationBody.has_extra_geo_scope === false;
 
       return this.api.resultsSE
         .PATCH_geographicSectionp25({
@@ -338,12 +372,12 @@ export class RdGeographicLocationComponent implements CanComponentDeactivate {
           // reaches the reporter — Save draft simply appears to do nothing. Stored, "none" is NULL,
           // so that is what goes back on the wire, exactly like `extra_geo_scope_id` already does.
           geo_scope_id: this.geographicLocationBody.geo_scope_id || null,
-          extra_geo_scope_id: mainFocusHidesExtraScope ? null : this.extraGeographicLocationBody.geo_scope_id,
-          extra_regions: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.regions,
-          extra_countries: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.countries,
-          has_extra_countries: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_countries,
-          has_extra_regions: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_regions,
-          has_extra_geo_scope: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_extra_geo_scope
+          extra_geo_scope_id: extraScopeOff ? null : this.extraGeographicLocationBody.geo_scope_id,
+          extra_regions: extraScopeOff ? [] : this.extraGeographicLocationBody.regions,
+          extra_countries: extraScopeOff ? [] : this.extraGeographicLocationBody.countries,
+          has_extra_countries: extraScopeOff ? false : this.extraGeographicLocationBody.has_countries,
+          has_extra_regions: extraScopeOff ? false : this.extraGeographicLocationBody.has_regions,
+          has_extra_geo_scope: extraScopeOff ? false : this.extraGeographicLocationBody.has_extra_geo_scope
         })
         .pipe(
           tap(() => {

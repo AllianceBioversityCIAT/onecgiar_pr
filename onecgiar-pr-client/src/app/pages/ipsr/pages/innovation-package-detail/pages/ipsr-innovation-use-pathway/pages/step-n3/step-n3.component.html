@@ -4,6 +4,13 @@
     <div class="ipsr-sub-title" style="margin-top: 20px;">Evidence-based assessment (adjusted scoring post IPSR workshop
         based on available evidence)</div>
 
+    <!-- P2-3824: one warning per Impact Area scored 2 (principal) in General information that no
+         evidence of this step (core or any enabler, either level) is tagged with yet. -->
+    @for (area of missingPrincipalImpactAreas(); track area) {
+        <app-alert-status status="warning" [collapsible]="false" [description]="principalImpactAreaAlert(area)"
+            data-testid="principal-impact-area-alert"></app-alert-status>
+    }
+
     <div class="ipsr-sub-title-2" style="margin-top: 20px;">Core innovation</div>
 
     <app-pr-field-header label="" style="margin-left: 20px;" [required]="false"
@@ -26,25 +33,9 @@
             [options]="this.rangesOptions"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based"></app-pr-range-level>
 
-        <app-pr-input label="Evidence link" placeholder="Link goes here" type="link"
-            [required]="this.updateRangeLevel1(this.ipsrStep3Body.result_ip_result_core)"
-            [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
-        </app-pr-input>
-
-        
-
-        <div style="display: flex; align-items: center;">
-            <input type="checkbox" class="pr-native-check" id="ReadinessDetails" name="check" [(ngModel)]="this.showDetailsOfReadiness"
-            (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence = null"/>
-        <label for="ReadinessDetails" style="margin-left: 10px;"> I want to provide evidence details. </label>
-        </div>
-
-        <app-pr-textarea 
-            *ngIf="this.showDetailsOfReadiness"
-            placeholder="Enter text"
-            label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-            type="text" [required]="false"
-            [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence"></app-pr-textarea>
+        <!-- P2-3824: the single "Evidence link" + details became a list (link or file, tags, details). -->
+        <app-ipsr-step3-evidence-list [owner]="this.ipsrStep3Body.result_ip_result_core" level="readiness"
+            [required]="this.updateRangeLevel1(this.ipsrStep3Body.result_ip_result_core)"></app-ipsr-step3-evidence-list>
 
         <div class="fragment_section_divider"></div>
 
@@ -59,23 +50,8 @@
             [options]="this.innovationUseList"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
 
-        <app-pr-input label="Evidence link" placeholder="Link goes here" type="link"
-            [required]="this.updateRangeLevel2(this.ipsrStep3Body.result_ip_result_core)"
-            [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
-        </app-pr-input>
-
-        <div style="display: flex; align-items: center;">
-            <input type="checkbox" class="pr-native-check" id="UseDetails" name="check" [(ngModel)]="this.showDetailsOfUseLevel"
-            (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence = null"/>
-            <label for="UseDetails" style="margin-left: 10px;"> I want to provide evidence details. </label>
-        </div>
-
-        <app-pr-textarea 
-            *ngIf="this.showDetailsOfUseLevel"
-            placeholder="Enter text"
-            label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-            type="text" [required]="false"
-            [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence"></app-pr-textarea>
+        <app-ipsr-step3-evidence-list [owner]="this.ipsrStep3Body.result_ip_result_core" level="use"
+            [required]="this.updateRangeLevel2(this.ipsrStep3Body.result_ip_result_core)"></app-ipsr-step3-evidence-list>
     </div>
 
     <div class="fragment_section_divider"></div>

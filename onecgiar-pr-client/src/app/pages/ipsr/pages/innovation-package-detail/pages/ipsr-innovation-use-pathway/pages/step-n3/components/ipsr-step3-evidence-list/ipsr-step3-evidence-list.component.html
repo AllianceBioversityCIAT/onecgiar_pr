@@ -1,0 +1,345 @@
+<!-- P2-3824 — evidence list of one level of one Step 3 component. Same card language as the Results
+     Evidence section (seal · content · actions) so a reporter recognises the piece. -->
+<section class="mt-3 mb-2 flex flex-col gap-2.5" data-testid="ipsr-step3-evidence-list" [attr.data-level]="level">
+  <header class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1.5">
+    <div class="flex min-w-0 flex-col gap-0.5">
+      <span class="text-[13px] font-bold text-[var(--pr-text)]">
+        {{ copy.listTitle(level) }}
+        @if (required) {
+          <span class="text-[var(--pr-color-red-500)]" aria-hidden="true">*</span>
+        }
+      </span>
+      <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ copy.listHint }}</span>
+    </div>
+
+    <!-- Counter for the whole component (readiness + use): the cap is shared by both lists. -->
+    <span
+      class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap"
+      [ngClass]="
+        atCap
+          ? 'border-[var(--pr-color-orange-200)] bg-[var(--pr-color-orange-50)] text-[var(--pr-color-orange-700)]'
+          : 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-500)]'
+      "
+      data-testid="evidence-counter">
+      <span class="h-1.5 w-1.5 rounded-full" [ngClass]="atCap ? 'bg-[var(--pr-color-orange-500)]' : 'bg-[var(--pr-color-primary-300)]'"></span>
+      {{ copy.counter(componentCount, maxPerComponent) }}
+    </span>
+  </header>
+
+  @if (evidences.length) {
+    <ol class="m-0 flex list-none flex-col gap-2.5 p-0">
+      @for (evidence of evidences; track $index; let i = $index) {
+        <li
+          class="ev-card group relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3.5 rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-3.5 pr-3.5 pl-4 transition-[border-color,box-shadow] duration-200 hover:border-[var(--pr-border-strong)] hover:shadow-[var(--pr-shadow-2)]"
+          data-testid="evidence-card">
+          <!-- Seal: link (violet) or file (amber, with its format), numbered like the Results cards. -->
+          <div
+            class="relative flex h-10 w-10 flex-none items-center justify-center rounded-xl text-white"
+            [ngClass]="
+              isFile(evidence)
+                ? 'bg-gradient-to-b from-[var(--pr-color-orange-400)] to-[var(--pr-color-orange-500)] shadow-[0_2px_6px_rgba(249,115,22,0.28)]'
+                : 'bg-gradient-to-b from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] shadow-[0_2px_6px_rgba(var(--pr-color-primary-rgb),0.28)]'
+            ">
+            @if (isFile(evidence) && fileFormat(evidence)) {
+              <span class="text-[10px] leading-none font-extrabold tracking-wide">{{ fileFormat(evidence) }}</span>
+            } @else {
+              <ng-icon [name]="isFile(evidence) ? 'lucideFileText' : 'lucideLink'" class="text-[18px]" aria-hidden="true" />
+            }
+            <span
+              class="absolute -right-1.5 -bottom-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full border-2 border-[var(--pr-surface-card)] bg-[var(--pr-text)] px-1 text-[10px] leading-none font-bold text-white"
+              >{{ i + 1 }}</span
+            >
+          </div>
+
+          <div class="flex min-w-0 flex-col gap-1 pt-px">
+            <div class="flex min-w-0 items-center gap-2">
+              @if (evidence.link) {
+                <a
+                  class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-color-primary-400)] no-underline hover:underline"
+                  [href]="href(evidence.link)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [prTooltip]="evidence.link"
+                  prTooltipPosition="top"
+                  data-testid="evidence-link">
+                  @if (isFile(evidence)) {
+                    {{ fileName(evidence) || linkHost(evidence.link) }}
+                  } @else {
+                    <span>{{ linkHost(evidence.link) }}</span><span class="font-normal text-[var(--pr-text-muted)]">{{ linkRest(evidence.link) }}</span>
+                  }
+                </a>
+              } @else {
+                <span class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text)]">{{ fileName(evidence) || '—' }}</span>
+              }
+
+              @if (isFile(evidence) && !isPendingUpload(evidence) && evidence.is_public_file !== null) {
+                <ng-icon
+                  [name]="evidence.is_public_file ? 'lucideLockOpen' : 'lucideLock'"
+                  class="flex-none text-[14px]"
+                  [ngClass]="evidence.is_public_file ? 'text-[var(--pr-color-green-500)]' : 'text-[var(--pr-text-subtle)]'"
+                  [prTooltip]="evidence.is_public_file ? copy.publicFile : copy.privateFile"
+                  prTooltipPosition="top" />
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span
+                class="rounded-full border px-2 py-0.5 text-[10.5px] font-bold tracking-[0.03em] uppercase"
+                [ngClass]="
+                  isFile(evidence)
+                    ? 'border-[var(--pr-color-orange-200)] bg-[var(--pr-color-orange-50)] text-[var(--pr-color-orange-700)]'
+                    : 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-500)]'
+                "
+                >{{ isFile(evidence) ? copy.fileKind : copy.linkKind }}</span
+              >
+              @if (isPendingUpload(evidence)) {
+                <span class="inline-flex items-center gap-1 text-[11px] text-[var(--pr-color-orange-700)]" data-testid="evidence-pending">
+                  <ng-icon name="lucideCloudUpload" class="text-[13px]" aria-hidden="true" />{{ copy.pendingUpload }}
+                </span>
+              }
+              @if (evidence.legacy) {
+                <span class="inline-flex items-center gap-1 text-[11px] text-[var(--pr-text-subtle)]">
+                  <ng-icon name="lucideHistory" class="text-[12px]" aria-hidden="true" />{{ copy.legacyBadge }}
+                </span>
+              }
+            </div>
+
+            @if (evidence.description) {
+              <p class="m-0 mt-1 border-l-2 border-[var(--pr-border)] pl-2.5 text-[12.5px] leading-[1.55] break-words text-[var(--pr-text)]">
+                {{ evidence.description }}
+              </p>
+            }
+
+            @if (selectedTags(evidence).length) {
+              <div class="mt-1.5 flex flex-wrap gap-1.5" data-testid="evidence-tags">
+                @for (tag of selectedTags(evidence); track tag) {
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full border border-[var(--pr-color-primary-200)] bg-gradient-to-b from-[var(--pr-color-primary-25)] to-[var(--pr-color-primary-50)] py-[3px] pr-[11px] pl-[9px] text-[11px] font-semibold text-[var(--pr-color-primary-500)]">
+                    <span class="h-[5px] w-[5px] flex-none rounded-full bg-[var(--pr-color-primary-300)]"></span>{{ tag }}
+                  </span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="flex flex-none items-center gap-1.5">
+            @if (evidence.link) {
+              <a
+                class="inline-flex h-[30px] items-center gap-1.5 rounded-lg border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-2.5 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)] no-underline transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-50)]"
+                [href]="href(evidence.link)"
+                target="_blank"
+                rel="noopener noreferrer">
+                {{ copy.open }}<ng-icon name="lucideExternalLink" class="text-[13px]" aria-hidden="true" />
+              </a>
+            }
+            @if (!readOnly) {
+              <div class="flex items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                <button
+                  type="button"
+                  class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-[var(--pr-text-muted)] transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-400)]"
+                  [prTooltip]="copy.edit"
+                  prTooltipPosition="top"
+                  [attr.aria-label]="copy.edit"
+                  data-testid="evidence-edit"
+                  (click)="openEdit(i)">
+                  <ng-icon name="lucidePencil" class="text-[15px]" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-[var(--pr-text-muted)] transition-colors hover:bg-[var(--pr-color-red-50)] hover:text-[var(--pr-color-red-500)]"
+                  [prTooltip]="copy.remove"
+                  prTooltipPosition="top"
+                  [attr.aria-label]="copy.remove"
+                  data-testid="evidence-remove"
+                  (click)="remove(i)">
+                  <ng-icon name="lucideTrash2" class="text-[15px]" aria-hidden="true" />
+                </button>
+              </div>
+            }
+          </div>
+        </li>
+      }
+    </ol>
+  } @else {
+    <!-- Empty state: says what is missing, and turns amber when the level needs evidence. -->
+    <div
+      class="flex items-center gap-3 rounded-[14px] border border-dashed px-4 py-3.5"
+      [ngClass]="
+        required
+          ? 'border-[var(--pr-color-orange-200)] bg-[var(--pr-color-orange-50)]'
+          : 'border-[var(--pr-border)] bg-[var(--pr-surface-subtle)]'
+      "
+      data-testid="evidence-empty">
+      <span
+        class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-[var(--pr-surface-card)]"
+        [ngClass]="required ? 'text-[var(--pr-color-orange-500)]' : 'text-[var(--pr-text-subtle)]'">
+        <ng-icon name="lucideFileSearch" class="text-[18px]" aria-hidden="true" />
+      </span>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[12.5px] font-semibold text-[var(--pr-text)]">{{ copy.empty }}</span>
+        @if (required) {
+          <span class="text-[11.5px] text-[var(--pr-color-orange-700)]">{{ copy.requiredNote }}</span>
+        }
+      </div>
+    </div>
+  }
+
+  @if (!readOnly) {
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <app-add-button [name]="copy.addButton" [disabled]="atCap" (clickEvent)="openAdd()" data-testid="evidence-add"></app-add-button>
+      @if (atCap) {
+        <span class="text-[11.5px] text-[var(--pr-color-orange-700)]" data-testid="evidence-cap-note">{{ copy.capReached(maxPerComponent) }}</span>
+      }
+    </div>
+  }
+
+  <!-- Hidden marker read by the section's missing-fields scan, same as every other required field. -->
+  @if (required) {
+    <div appFeedbackValidation [labelText]="copy.feedbackLabel(level)" [isComplete]="isComplete"></div>
+  }
+</section>
+
+<app-pr-dialog
+  [visible]="dialogVisible"
+  (visibleChange)="!$event && closeDialog()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="false"
+  styleClass="ipsr-step3-evidence-dialog">
+  @if (dialogVisible) {
+    <div class="flex max-h-[min(85vh,calc(100vh-260px))] flex-col gap-5 overflow-hidden px-10 py-8" data-testid="evidence-dialog">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex flex-col gap-1">
+          <span class="font-['Manrope','Poppins',sans-serif] text-[20px] font-bold text-[var(--pr-color-primary-300)]">
+            {{ isEditing ? copy.dialogEditTitle : copy.dialogAddTitle }}
+          </span>
+          <span
+            class="w-max rounded-full border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-2.5 py-0.5 text-[10.5px] font-bold tracking-[0.03em] text-[var(--pr-color-primary-500)] uppercase"
+            >{{ copy.dialogSubtitle(level) }}</span
+          >
+        </div>
+        <button
+          type="button"
+          class="flex cursor-pointer items-center border-0 bg-transparent p-1 text-[var(--pr-color-accents-5)] transition-colors hover:text-[var(--pr-color-primary-300)]"
+          [prTooltip]="copy.close"
+          [attr.aria-label]="copy.close"
+          (click)="closeDialog()">
+          <ng-icon name="lucideX" class="text-[22px]" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
+        <app-pr-radio-button
+          [options]="sourceOptions"
+          optionLabel="name"
+          optionValue="id"
+          [label]="copy.sourceLabel"
+          [(ngModel)]="draft.is_sharepoint"
+          (ngModelChange)="onSourceChange($event)">
+        </app-pr-radio-button>
+
+        @if (!draft.is_sharepoint) {
+          <app-pr-input [label]="copy.linkLabel" [placeholder]="copy.linkPlaceholder" type="link" [required]="true" [(ngModel)]="draft.link"></app-pr-input>
+          @if (draftLinkInvalid) {
+            <span class="-mt-1 text-[11.5px] font-medium text-[var(--pr-color-red-500)]" data-testid="evidence-invalid-link">{{ copy.invalidLink }}</span>
+          }
+          @if (draftLinkDuplicate) {
+            <span class="-mt-1 text-[11.5px] font-medium text-[var(--pr-color-red-500)]" data-testid="evidence-duplicate-link">{{ copy.duplicateLink }}</span>
+          }
+          @if (draftCloudLink) {
+            <app-alert-status status="warning" [collapsible]="false" [description]="copy.cloudLinkWarning"></app-alert-status>
+          }
+        } @else {
+          <app-pr-radio-button
+            [options]="publicOptions"
+            optionLabel="name"
+            optionValue="id"
+            [label]="copy.publicQuestion"
+            [tooltip]="publicTooltip()"
+            [(ngModel)]="draft.is_public_file">
+          </app-pr-radio-button>
+
+          <app-field-card [label]="copy.fileLabel" [required]="true" [useColon]="true" [hasValue]="draftHasFile" [tooltip]="copy.fileTooltip">
+            @if (draftHasFile) {
+              <div
+                class="flex items-center gap-3 rounded-xl border border-[var(--pr-color-orange-200)] bg-[var(--pr-color-orange-50)] px-3.5 py-2.5"
+                data-testid="evidence-file-row">
+                <ng-icon name="lucideFileText" class="flex-none text-[18px] text-[var(--pr-color-orange-500)]" aria-hidden="true" />
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text)]">{{ fileName(draft) }}</span>
+                  <span class="text-[11px] text-[var(--pr-text-muted)]">{{ draft.file ? fileSizeMb(draft.file) + ' · ' + copy.pendingUpload : '' }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-[var(--pr-text-muted)] transition-colors hover:bg-[var(--pr-color-red-50)] hover:text-[var(--pr-color-red-500)]"
+                  [prTooltip]="copy.replaceFile"
+                  [attr.aria-label]="copy.replaceFile"
+                  data-testid="evidence-file-clear"
+                  (click)="clearFile()">
+                  <ng-icon name="lucideTrash2" class="text-[15px]" aria-hidden="true" />
+                </button>
+              </div>
+            } @else if (draft.is_public_file === true || draft.is_public_file === false) {
+              <div
+                class="flex flex-col items-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors"
+                [ngClass]="
+                  incorrectFile
+                    ? 'border-[var(--pr-color-red-500)] bg-[var(--pr-color-red-50)]'
+                    : 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-25)] hover:border-[var(--pr-color-primary-300)]'
+                "
+                data-testid="evidence-dropzone"
+                (drop)="onFileDropped($event)"
+                (dragover)="onDragOver($event)">
+                <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]">
+                  <ng-icon name="lucideCloudUpload" class="text-[20px]" aria-hidden="true" />
+                </span>
+                <span class="text-[12.5px] font-semibold text-[var(--pr-text)]">{{ copy.dropTitle }}</span>
+                <app-pr-button [text]="copy.selectFile" (clickEvent)="fileInput.click()"></app-pr-button>
+                <span class="text-[11px] text-[var(--pr-text-muted)]">{{ acceptedFileTypesLabel }}</span>
+              </div>
+              <input #fileInput class="hidden" type="file" [attr.accept]="acceptedFileTypes" (change)="onFileSelected($event)" />
+              @if (incorrectFile) {
+                <span class="mt-1 block text-[11.5px] font-medium text-[var(--pr-color-red-500)]" data-testid="evidence-incorrect-file">{{
+                  copy.incorrectFile(acceptedFileTypesLabel)
+                }}</span>
+              }
+            } @else {
+              <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ copy.answerPublicFirst }}</span>
+            }
+          </app-field-card>
+        }
+
+        <app-field-card [label]="copy.tagsLabel" [required]="false" [hasValue]="selectedTags(draft).length > 0">
+          <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2" data-testid="evidence-tag-options">
+            @for (tag of tagOptions; track tag.field) {
+              <app-pr-checkbox [label]="tag.label" [required]="false" [(ngModel)]="draft[tag.field]"></app-pr-checkbox>
+            }
+          </div>
+        </app-field-card>
+
+        <app-pr-textarea
+          [label]="copy.detailsLabel(draft.is_sharepoint)"
+          [placeholder]="copy.detailsPlaceholder"
+          [required]="false"
+          [maxWords]="maxDetailWords"
+          [(ngModel)]="draft.description">
+        </app-pr-textarea>
+        @if (draftWordCount > maxDetailWords) {
+          <span class="-mt-1 text-[11.5px] font-medium text-[var(--pr-color-red-500)]">{{ copy.tooManyWords(maxDetailWords) }}</span>
+        }
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <app-pr-button padding="medium" [text]="copy.cancel" colorType="secondary" (clickEvent)="closeDialog()"></app-pr-button>
+        <app-pr-button
+          padding="medium"
+          [text]="isEditing ? copy.confirmEdit : copy.confirmAdd"
+          [icon]="isEditing ? 'save' : 'add'"
+          [disabled]="!draftValid"
+          (clickEvent)="confirmDialog()"
+          data-testid="evidence-confirm"></app-pr-button>
+      </div>
+    </div>
+  }
+</app-pr-dialog>

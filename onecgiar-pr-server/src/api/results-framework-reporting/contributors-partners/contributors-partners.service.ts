@@ -26,6 +26,14 @@ import { ResultDeletionAuditService } from '../../results/result-deletion-audit/
 export class ContributorsPartnersService {
   private readonly logger = new Logger(ContributorsPartnersService.name);
 
+  /**
+   * P2-3833 — the P2-2932 Section 2 vs Section 5 check is switched off while its comparison logic
+   * is reworked: the alerts it raised on new results were confusing users. With it off the payload
+   * carries `contribution_consistency: null` and the client shows nothing. Flip to re-enable; the
+   * check itself is untouched.
+   */
+  private readonly contributionCheckEnabled = false;
+
   constructor(
     private readonly _resultRepository: ResultRepository,
     private readonly _handlersError: HandlersError,
@@ -137,15 +145,17 @@ export class ContributorsPartnersService {
       // P2-2932. Fails soft on purpose: this is an advisory reading on a section that must load
       // whether or not the check can run. A failure here must never cost the user their form.
       let contributionConsistency = null;
-      try {
-        contributionConsistency =
-          await this._contributionConsistencyService.check(
-            result.id,
-            resultTypeId,
-            this.contributionBoxesOf(tocMapping.result_toc_result),
-          );
-      } catch (error) {
-        this._handlersError.returnErrorRes({ error, debug: true });
+      if (this.contributionCheckEnabled) {
+        try {
+          contributionConsistency =
+            await this._contributionConsistencyService.check(
+              result.id,
+              resultTypeId,
+              this.contributionBoxesOf(tocMapping.result_toc_result),
+            );
+        } catch (error) {
+          this._handlersError.returnErrorRes({ error, debug: true });
+        }
       }
 
       return {
@@ -191,11 +201,17 @@ export class ContributorsPartnersService {
    * dropping it would hide a real disagreement behind an unrecognised label.
    */
   private contributionBoxesOf(resultTocResult: any): ContributionBox[] {
-    const nodes = Array.isArray(resultTocResult)
-      ? resultTocResult
-      : resultTocResult
-        ? [resultTocResult]
-        : [];
+    // P2-3817 — `getTocByResultV2` wraps the owner's nodes: `{ initiative_id, …,
+    // result_toc_results: [node, …] }`. Reading `indicators` off the wrapper found no box on any
+    // result, so every check came back NOTHING_TO_COMPARE and no message ever reached the screen.
+    const wrapped = resultTocResult?.result_toc_results;
+    const nodes = Array.isArray(wrapped)
+      ? wrapped
+      : Array.isArray(resultTocResult)
+        ? resultTocResult
+        : resultTocResult
+          ? [resultTocResult]
+          : [];
 
     return nodes.flatMap((node: any) =>
       (node?.indicators ?? []).flatMap((indicator: any) =>
@@ -221,11 +237,13 @@ export class ContributorsPartnersService {
     resultId: number,
     dto: SavePartnersV2Dto,
     user: TokenDto,
+    options: { preserveCentersWhenAbsent?: boolean } = {},
   ) {
     dto.result_id = resultId;
     return this._resultsByInstitutionsService.savePartnersInstitutionsByResultV2(
       dto,
       user,
+      options,
     );
   }
 

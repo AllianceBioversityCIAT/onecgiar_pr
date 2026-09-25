@@ -518,6 +518,15 @@ export class ResultsTocResultsService {
         indicator_result_type_id: number | null;
         targets: Array<{
           indicators_targets: number | null;
+          /**
+           * TTD-T-4 (bugfix/toc-target-row-duplication), design.md §6/§9,
+           * TTD-DD-5: the ToC target this row answers. `indicators_targets`
+           * stays the PRMS primary key (or null for a meta with no stored
+           * row yet) — this field is what `applyCatalogTargetsToInitiativesMap`
+           * matches a saved target against a catalog meta on, so the same
+           * meta is never appended a second time (TTD-R-7, TTD-R-10).
+           */
+          toc_indicator_target_id: number | null;
           number_target: number | null;
           contributing_indicator: number | null;
           target_date: number | null;
@@ -654,6 +663,11 @@ export class ResultsTocResultsService {
             if (!existingTarget) {
               indicatorEntry.targets.push({
                 indicators_targets: targetId,
+                toc_indicator_target_id:
+                  row?.toc_indicator_target_id !== null &&
+                  row?.toc_indicator_target_id !== undefined
+                    ? Number(row.toc_indicator_target_id)
+                    : null,
                 number_target:
                   row?.number_target !== null &&
                   row?.number_target !== undefined
@@ -664,10 +678,7 @@ export class ResultsTocResultsService {
                   row?.contributing_indicator !== undefined
                     ? Number(row.contributing_indicator)
                     : null,
-                target_date:
-                  row?.target_date !== null && row?.target_date !== undefined
-                    ? Number(row.target_date)
-                    : null,
+                target_date: this.extractTargetYear(row?.target_date),
                 target_progress_narrative:
                   row?.target_progress_narrative ?? null,
                 indicator_question:
@@ -3201,6 +3212,36 @@ export class ResultsTocResultsService {
     }
   }
 
+  /**
+   * TTD-T-4 (bugfix/toc-target-row-duplication), design.md §6/§9 — `trit.target_date`
+   * (and the PRMS `target_date` it is copied onto) holds both a bare year ('2026') and a
+   * full-date form ('2026-01-01'); the write path's catalog read normalises the same column
+   * with a SQL REGEXP (`repositories/results-toc-results.repository.ts` `getIndicatorTargetCatalog`).
+   * Mirrors that normalisation JS-side so the GET merge compares year-to-year on both sides —
+   * a string/integer mismatch here would silently stop the fallback match and re-create the
+   * duplicate this task removes.
+   */
+  private extractTargetYear(value: unknown): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value.getUTCFullYear();
+    }
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+    const date = new Date(value as string);
+    if (!Number.isNaN(date.getTime())) {
+      return date.getUTCFullYear();
+    }
+    return null;
+  }
+
   private groupCatalogTargetsByIndicatorNodeId(
     catalogTargets: Array<{
       toc_result_indicator_id: string;
@@ -3262,6 +3303,7 @@ export class ResultsTocResultsService {
                 toc_results_indicator_id: string | null;
                 targets: Array<{
                   indicators_targets: number | null;
+                  toc_indicator_target_id: number | null;
                   number_target: number | null;
                   contributing_indicator: number | null;
                   target_date: number | null;
@@ -3295,43 +3337,84 @@ export class ResultsTocResultsService {
 
           const catalogRows = catalogByIndicator.get(nodeId) ?? [];
           for (const catalog of catalogRows) {
+            const tocIndicatorTargetId =
+              catalog.toc_indicator_target_id !== null &&
+              catalog.toc_indicator_target_id !== undefined
+                ? Number(catalog.toc_indicator_target_id)
+                : null;
             const numberTarget =
               catalog.number_target !== null &&
               catalog.number_target !== undefined
                 ? Number(catalog.number_target)
                 : null;
-            const targetDate = Number(catalog.target_date);
+            const targetDate = this.extractTargetYear(catalog.target_date);
             const targetValue =
               catalog.target_value !== null &&
               catalog.target_value !== undefined
                 ? Number(catalog.target_value)
                 : null;
 
-            const existing = indicator.targets.find((target) => {
-              const sameNumber =
-                numberTarget === null ||
-                target.number_target === numberTarget ||
-                `${target.number_target}` === `${catalog.number_target}`;
-              const sameYear =
-                !Number.isFinite(targetDate) ||
-                target.target_date === targetDate;
-              return sameNumber && sameYear;
-            });
+            // TTD-T-4 (bugfix/toc-target-row-duplication), design.md §6/§9, TTD-DD-5,
+            // TTD-R-7/TTD-R-10: match on `toc_indicator_target_id` first — the identity
+            // the write path (TTD-T-2) now maintains — never on `number_target` alone,
+            // which the stored, resolved value shares across every meta of one indicator
+            // (TTD-DD-3). Fall back to number_target + year ONLY for a saved target that
+            // predates the column (no `toc_indicator_target_id` of its own), which is what
+            // stops the same meta being appended on top of the row that already answers it.
+            let existing: (typeof indicator.targets)[number] | undefined =
+              tocIndicatorTargetId !== null
+                ? indicator.targets.find(
+                    (target) =>
+                      target.toc_indicator_target_id === tocIndicatorTargetId,
+                  )
+                : undefined;
+
+            if (!existing) {
+              existing = indicator.targets.find((target) => {
+                const predatesColumn =
+                  target.toc_indicator_target_id === null ||
+                  target.toc_indicator_target_id === undefined;
+                if (!predatesColumn) {
+                  return false;
+                }
+                const sameNumber =
+                  numberTarget === null ||
+                  target.number_target === numberTarget ||
+                  `${target.number_target}` === `${catalog.number_target}`;
+                const sameYear =
+                  targetDate === null || target.target_date === targetDate;
+                return sameNumber && sameYear;
+              });
+            }
 
             if (existing) {
               if (existing.target_value == null && targetValue != null) {
                 existing.target_value = targetValue;
               }
+              // Backfill the new field on a legacy match so a second catalog meta sharing
+              // the same canonical number + year in this same call cannot match this row
+              // again through the fallback (TTD-R-10) — never touches `indicators_targets`,
+              // which stays the row's real PK (TTD-T-2 lookup (b) resolves on it).
+              if (
+                (existing.toc_indicator_target_id === null ||
+                  existing.toc_indicator_target_id === undefined) &&
+                tocIndicatorTargetId !== null
+              ) {
+                existing.toc_indicator_target_id = tocIndicatorTargetId;
+              }
               continue;
             }
 
+            // TTD-R-7: a meta with no stored row yet reports `indicators_targets: null`,
+            // never a ToC-namespace id in the PK field — the ToC id lives in the new field.
             indicator.targets.push({
-              indicators_targets: catalog.toc_indicator_target_id ?? null,
+              indicators_targets: null,
+              toc_indicator_target_id: tocIndicatorTargetId,
               number_target: Number.isFinite(numberTarget)
                 ? numberTarget
                 : null,
               contributing_indicator: null,
-              target_date: Number.isFinite(targetDate) ? targetDate : null,
+              target_date: targetDate,
               target_progress_narrative: null,
               indicator_question: null,
               target_value: targetValue,

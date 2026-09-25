@@ -26,27 +26,12 @@
           optionLabel="name"
           optionValue="id"
           [(ngModel)]="bodyItem.readiness_level_evidence_based"></app-pr-range-level>
-        <app-pr-input
-          label="Evidence link"
-          placeholder="Link goes here..."
-          type="link"
-          [required]="rangeLevel1Required"
-          [(ngModel)]="bodyItem.readinees_evidence_link">
-        </app-pr-input>
-
-        <app-pr-checkbox
-          name="check"
-          [(ngModel)]="bodyItem.showDetailsOfReadiness"
-          label="I want to provide evidence details."
-          (ngModelChange)="bodyItem.readiness_details_of_evidence = null"></app-pr-checkbox>
-
-        <app-pr-textarea
-          *ngIf="bodyItem.showDetailsOfReadiness"
-          placeholder="Enter text"
-          label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-          type="text"
-          [required]="false"
-          [(ngModel)]="bodyItem.readiness_details_of_evidence"></app-pr-textarea>
+        <!-- P2-3824: evidence list per level (was one single link + details). `required` is computed
+             per item: the old shared `rangeLevel1Required` field held whichever item was checked last. -->
+        <app-ipsr-step3-evidence-list
+          [owner]="bodyItem"
+          level="readiness"
+          [required]="isReadinessEvidenceRequired(bodyItem)"></app-ipsr-step3-evidence-list>
 
         <div class="fragment_section_divider"></div>
 
@@ -61,27 +46,10 @@
           optionValue="id"
           [(ngModel)]="bodyItem.use_level_evidence_based"></app-pr-range-level>
 
-        <app-pr-input
-          label="Evidence link"
-          placeholder="Link goes here..."
-          type="link"
-          [required]="rangeLevel2Required"
-          [(ngModel)]="bodyItem.use_evidence_link">
-        </app-pr-input>
-
-        <app-pr-checkbox
-          name="check"
-          [(ngModel)]="bodyItem.showDetailsOfUseLevel"
-          label="I want to provide evidence details."
-          (ngModelChange)="bodyItem.use_details_of_evidence = null"></app-pr-checkbox>
-
-        <app-pr-textarea
-          *ngIf="bodyItem.showDetailsOfUseLevel"
-          placeholder="Enter text"
-          label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-          type="text"
-          [required]="false"
-          [(ngModel)]="bodyItem.use_details_of_evidence"></app-pr-textarea>
+        <app-ipsr-step3-evidence-list
+          [owner]="bodyItem"
+          level="use"
+          [required]="isUseEvidenceRequired(bodyItem)"></app-ipsr-step3-evidence-list>
       </div>
     </div>
   </app-collapsible-container>

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'node:process';
-import { DataSource, In, IsNull, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { indicatorResultTypeCaseSql } from '../../../../shared/constants/indicator-type-mapping.constant';
 import { ResultsTocResult } from '../entities/results-toc-result.entity';
@@ -17,6 +17,21 @@ import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { CreateResultsTocResultDto } from '../dto/create-results-toc-result.dto';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+
+/**
+ * TTD-T-2 (bugfix/toc-target-row-duplication), design.md §7 "Catalog read":
+ * one meta of the ToC catalog for an indicator + reporting year. Selected
+ * verbatim from `toc_result_indicator_target` — the same table
+ * `TocResultsRepository.getCatalogTargetsByIndicatorNodeIds`
+ * (toc/toc-results/toc-results.repository.ts:1200) reads for the payload —
+ * so the write resolves identity against the source the payload was built
+ * from instead of a second, differently-keyed read.
+ */
+interface TocTargetCatalogMeta {
+  toc_indicator_target_id: number | null;
+  number_target: number | null;
+  target_date: number | null;
+}
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -464,6 +479,7 @@ export class ResultsTocResultRepository
         rtri.indicator_contributing,
         rtri.status AS indicator_status,
         rit.indicators_targets,
+        rit.toc_indicator_target_id,
         rit.number_target,
         rit.contributing_indicator,
         rit.target_date,
@@ -1808,19 +1824,30 @@ export class ResultsTocResultRepository
 
       const indicatorMetaCache = new Map<
         string,
-        { number_target: number | null; target_date: number | null }
+        {
+          number_target: number | null;
+          target_date: number | null;
+          catalogMetas: TocTargetCatalogMeta[];
+        }
       >();
 
+      // TTD-T-2 (bugfix/toc-target-row-duplication), design.md §7: ONE catalog
+      // read per indicator per save, cached in this same per-call map exactly
+      // as before — the canonical is derived from that same list (no second
+      // query), so the budget this method already spent (getCanonicalTarget's
+      // own cache) is unchanged.
       const getCanonicalTarget = async (
         relatedNodeId: string | null | undefined,
       ) => {
         if (!relatedNodeId) return null;
         if (!indicatorMetaCache.has(relatedNodeId)) {
-          const meta = await this.getCanonicalIndicatorTarget(
-            relatedNodeId,
-            phaseYear,
-          );
-          indicatorMetaCache.set(relatedNodeId, meta);
+          const { canonical, catalogMetas } =
+            await this.getIndicatorTargetCatalog(relatedNodeId, phaseYear);
+          indicatorMetaCache.set(relatedNodeId, {
+            number_target: canonical?.number_target ?? null,
+            target_date: canonical?.target_date ?? null,
+            catalogMetas,
+          });
         }
         return indicatorMetaCache.get(relatedNodeId) ?? null;
       };
@@ -1854,18 +1881,24 @@ export class ResultsTocResultRepository
               last_updated_by: userId ?? undefined,
             },
           );
-          await this._resultTocIndicatorTargetRepository.update(
-            {
-              result_toc_result_indicator_id:
-                targetIndicators.result_toc_result_indicator_id,
-            },
-            {
-              is_active: false,
-              last_updated_by: userId ?? undefined,
-            },
-          );
+          // TTD-T-3 (bugfix/toc-target-row-duplication), design.md §7
+          // *Retire* / TTD-DD-4: the blanket is_active=false sweep that used
+          // to run HERE, before any meta was resolved, moved to AFTER the
+          // per-meta loop below and is narrowed to the rows this save did
+          // not re-affirm. `touchedTargetIds` is declared here — not inside
+          // the `Array.isArray` guard — so the retire pass below still runs,
+          // with an empty set, for an indicator whose `targets` is absent or
+          // not an array: condition (a) of the Step 2.3 challenge. That
+          // shape is DTO-legal (create-results-toc-result-v2.dto.ts:81) and
+          // must keep retiring everything, exactly as today's pre-loop sweep
+          // did.
+          const touchedTargetIds = new Set<number>();
 
           if (Array.isArray(itemIndicator.targets)) {
+            // TTD-T-2 (bugfix/toc-target-row-duplication), design.md §7: rows
+            // a meta in THIS save already claimed must never be re-claimed by
+            // a later meta's lookup (Leader adjudication on TTD-T-1's
+            // reliability finding — grounds: TTD-R-2, TTD-R-3).
             for (const target of itemIndicator.targets) {
               const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
@@ -1879,33 +1912,55 @@ export class ResultsTocResultRepository
                 this.toNumberOrNull(target.target_date) ??
                 null;
 
-              let targetInfo = null;
-              if (target.indicators_targets) {
-                targetInfo =
-                  await this._resultTocIndicatorTargetRepository.findOne({
-                    where: {
-                      indicators_targets: this.toNumberOrNull(
-                        target.indicators_targets,
-                      ),
-                    },
-                  });
-              }
-              if (!targetInfo) {
-                targetInfo =
-                  await this._resultTocIndicatorTargetRepository.findOne({
-                    where: {
-                      result_toc_result_indicator_id:
-                        targetIndicators.result_toc_result_indicator_id,
-                      number_target: this.toNumberOrNull(target.number_target),
-                    },
-                  });
+              const catalogMetas = canonical?.catalogMetas ?? [];
+              const { tocTargetId, identityResolved } =
+                this.resolveTargetIdentity(target, catalogMetas, phaseYear);
+
+              const { row: targetInfo, claimedByAnother } =
+                await this.resolveExistingTargetRow({
+                  resultTocResultIndicatorId:
+                    targetIndicators.result_toc_result_indicator_id,
+                  tocTargetId,
+                  targetsPk: this.toNumberOrNull(target.indicators_targets),
+                  resolvedNumberTarget,
+                  rawNumberTarget: this.toNumberOrNull(target.number_target),
+                  resolvedTargetDate,
+                  excludeIds: touchedTargetIds,
+                });
+
+              const resolvedContributingIndicator =
+                this.toContributingIndicator(
+                  target.contributing_indicator ?? target.contributing,
+                );
+
+              // TTD-R-9 / the *lost contribution* scenario's MUST NOT clause:
+              // the clause forbids inserting a NULL-carrying second row for a
+              // meta that already owns one — it does not forbid inserting a
+              // meta that carries a real, typed contribution. A meta with no
+              // catalog identity of its own, that would only land on a row
+              // another meta in this save already claimed, AND that carries
+              // no contribution, is skipped rather than overwritten onto a
+              // fresh row. The same meta with a real value is inserted below
+              // instead of dropped — losing a typed answer is strictly worse
+              // than the duplicate row `TTD-T-4` already fixes. A meta with
+              // no candidate row at all is genuinely new (design.md §7's
+              // default) and always gets inserted, contribution or not.
+              if (
+                claimedByAnother &&
+                !identityResolved &&
+                resolvedContributingIndicator === null
+              ) {
+                this._logger.warn(
+                  `saveInditicatorsContributing: unresolved ToC target meta ` +
+                    `- result_id=${result_id}, indicator_id=${indicatorId}, ` +
+                    `number_target=${this.toNumberOrNull(target.number_target)}`,
+                );
+                continue;
               }
 
               const payload = {
                 is_active: true,
-                contributing_indicator: this.toContributingIndicator(
-                  target.contributing_indicator ?? target.contributing,
-                ),
+                contributing_indicator: resolvedContributingIndicator,
                 indicator_question:
                   target.indicator_question === null ||
                   target.indicator_question === undefined
@@ -1915,6 +1970,17 @@ export class ResultsTocResultRepository
                   target.target_progress_narrative ?? null,
                 number_target: resolvedNumberTarget,
                 target_date: resolvedTargetDate,
+                // TTD-R-4 is scoped to a NULL column ("backfill ... so the
+                // next save resolves by identity"); it never asks to
+                // overwrite an id the row already carries. A row matched by
+                // (b)/(c) with a stored id can independently resolve a
+                // DIFFERENT id here (the two ToC doors disagree in
+                // production, TTD-OQ-4) — preferring the existing value
+                // avoids silently corrupting an already-correct identity. A
+                // stale id left alone is still recoverable by (c)'s
+                // number+date fallback; a wrongly overwritten one is not.
+                toc_indicator_target_id:
+                  targetInfo?.toc_indicator_target_id ?? tocTargetId ?? null,
               };
 
               if (targetInfo != null) {
@@ -1929,17 +1995,44 @@ export class ResultsTocResultRepository
                     last_updated_by: userId ?? undefined,
                   },
                 );
+                touchedTargetIds.add(targetInfo.indicators_targets);
               } else {
-                await this._resultTocIndicatorTargetRepository.save({
-                  result_toc_result_indicator_id:
-                    targetIndicators.result_toc_result_indicator_id,
-                  created_by: userId ?? undefined,
-                  last_updated_by: userId ?? undefined,
-                  ...payload,
-                });
+                const savedTarget =
+                  await this._resultTocIndicatorTargetRepository.save({
+                    result_toc_result_indicator_id:
+                      targetIndicators.result_toc_result_indicator_id,
+                    created_by: userId ?? undefined,
+                    last_updated_by: userId ?? undefined,
+                    ...payload,
+                  });
+                if (savedTarget?.indicators_targets != null) {
+                  touchedTargetIds.add(savedTarget.indicators_targets);
+                }
               }
             }
           }
+
+          // TTD-T-3, design.md §7 *Retire* / TTD-DD-4: retire only the rows
+          // this save did not touch, scoped to this indicator — the sweep
+          // that used to run before the loop now runs after it, narrowed to
+          // `indicators_targets NOT IN (touched)`. An empty
+          // `touchedTargetIds` (condition (a): `targets` absent/not an
+          // array, or every meta skipped) makes `Not(In([]))` match every
+          // row — TypeORM's query builder renders an empty `In` as `0=1`
+          // (node_modules/typeorm/query-builder/QueryBuilder.js), so
+          // `Not(In([]))` becomes `NOT(0=1)`, true for every row — retiring
+          // everything, exactly as today's pre-loop blanket sweep did.
+          await this._resultTocIndicatorTargetRepository.update(
+            {
+              result_toc_result_indicator_id:
+                targetIndicators.result_toc_result_indicator_id,
+              indicators_targets: Not(In(Array.from(touchedTargetIds))),
+            },
+            {
+              is_active: false,
+              last_updated_by: userId ?? undefined,
+            },
+          );
         } else {
           const resultTocResultIndicator =
             await this._resultsTocResultIndicatorRepository.save({
@@ -1951,6 +2044,11 @@ export class ResultsTocResultRepository
               last_updated_by: userId ?? undefined,
             });
           if (Array.isArray(itemIndicator.targets)) {
+            // A freshly created indicator row has no pre-existing target
+            // rows, so this set only guards against two metas of the SAME
+            // brand-new indicator resolving to one another's row within this
+            // loop (design.md §7; same rule as the UPDATE branch above).
+            const touchedTargetIds = new Set<number>();
             for (const target of itemIndicator.targets) {
               const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
@@ -1964,25 +2062,88 @@ export class ResultsTocResultRepository
                 this.toNumberOrNull(target.target_date) ??
                 null;
 
-              await this._resultTocIndicatorTargetRepository.save({
-                result_toc_result_indicator_id:
-                  resultTocResultIndicator.result_toc_result_indicator_id,
-                contributing_indicator: this.toContributingIndicator(
+              const catalogMetas = canonical?.catalogMetas ?? [];
+              const { tocTargetId, identityResolved } =
+                this.resolveTargetIdentity(target, catalogMetas, phaseYear);
+
+              const { row: targetInfo, claimedByAnother } =
+                await this.resolveExistingTargetRow({
+                  resultTocResultIndicatorId:
+                    resultTocResultIndicator.result_toc_result_indicator_id,
+                  tocTargetId,
+                  targetsPk: this.toNumberOrNull(target.indicators_targets),
+                  resolvedNumberTarget,
+                  rawNumberTarget: this.toNumberOrNull(target.number_target),
+                  resolvedTargetDate,
+                  excludeIds: touchedTargetIds,
+                });
+
+              const resolvedContributingIndicator =
+                this.toContributingIndicator(
                   target.contributing_indicator ?? target.contributing,
-                ),
+                );
+
+              // See the matching comment in the UPDATE branch above: the
+              // MUST NOT clause is specifically about a NULL-carrying second
+              // row, not about a meta carrying a real contribution.
+              if (
+                claimedByAnother &&
+                !identityResolved &&
+                resolvedContributingIndicator === null
+              ) {
+                this._logger.warn(
+                  `saveInditicatorsContributing: unresolved ToC target meta ` +
+                    `- result_id=${result_id}, indicator_id=${indicatorId}, ` +
+                    `number_target=${this.toNumberOrNull(target.number_target)}`,
+                );
+                continue;
+              }
+
+              const payload = {
+                is_active: true,
+                contributing_indicator: resolvedContributingIndicator,
                 indicator_question:
                   target.indicator_question === null ||
                   target.indicator_question === undefined
                     ? null
                     : Boolean(target.indicator_question),
-                is_active: true,
                 number_target: resolvedNumberTarget,
                 target_date: resolvedTargetDate,
                 target_progress_narrative:
                   target.target_progress_narrative ?? null,
-                created_by: userId ?? undefined,
-                last_updated_by: userId ?? undefined,
-              });
+                // See the matching comment in the UPDATE branch above:
+                // TTD-R-4 backfills a NULL column, it does not overwrite one
+                // that already carries an id.
+                toc_indicator_target_id:
+                  targetInfo?.toc_indicator_target_id ?? tocTargetId ?? null,
+              };
+
+              if (targetInfo != null) {
+                await this._resultTocIndicatorTargetRepository.update(
+                  {
+                    result_toc_result_indicator_id:
+                      resultTocResultIndicator.result_toc_result_indicator_id,
+                    indicators_targets: targetInfo.indicators_targets,
+                  },
+                  {
+                    ...payload,
+                    last_updated_by: userId ?? undefined,
+                  },
+                );
+                touchedTargetIds.add(targetInfo.indicators_targets);
+              } else {
+                const savedTarget =
+                  await this._resultTocIndicatorTargetRepository.save({
+                    result_toc_result_indicator_id:
+                      resultTocResultIndicator.result_toc_result_indicator_id,
+                    created_by: userId ?? undefined,
+                    last_updated_by: userId ?? undefined,
+                    ...payload,
+                  });
+                if (savedTarget?.indicators_targets != null) {
+                  touchedTargetIds.add(savedTarget.indicators_targets);
+                }
+              }
             }
           }
         }
@@ -2465,21 +2626,43 @@ select *
     return null;
   }
 
-  private async getCanonicalIndicatorTarget(
+  /**
+   * TTD-T-2 (bugfix/toc-target-row-duplication), design.md §7 "Catalog read":
+   * replaces the old single-row `getCanonicalIndicatorTarget` with one query
+   * returning EVERY meta for the indicator + reporting year. The canonical
+   * value `saveInditicatorsContributing` stamps on every meta
+   * (`resolvedNumberTarget`, :1870-1874 / :1956-1960 in the pre-task file —
+   * untouched by this task, TTD-DD-3) is derived from the SAME list —
+   * `rows[0]` after `ORDER BY target_date DESC`, exactly as the old method
+   * read it — so no second query is spent and no stored `number_target`
+   * changes (TTD-AC-10).
+   *
+   * Joins both ToC doors at once (`trit.id_indicator = tri.id AND
+   * trit.toc_result_indicator_id = tri.related_node_id`), the relation
+   * already used at :3137-3139, so one read serves both the node-id and the
+   * numeric-id spelling PRMS stores in `toc_results_indicator_id`.
+   */
+  private async getIndicatorTargetCatalog(
     relatedNodeId: string,
     phaseYear?: number | null,
   ): Promise<{
-    number_target: number | null;
-    target_date: number | null;
-  } | null> {
+    canonical: {
+      number_target: number | null;
+      target_date: number | null;
+    } | null;
+    catalogMetas: TocTargetCatalogMeta[];
+  }> {
     const params: any[] = [relatedNodeId];
     let query = `
       SELECT
+        trit.toc_indicator_target_id,
         trit.number_target,
         trit.target_date
       FROM ${env.DB_TOC}.toc_results_indicators tri
       JOIN ${env.DB_TOC}.toc_result_indicator_target trit
-        ON tri.id = trit.id_indicator
+        ON trit.id_indicator = tri.id
+        AND CONVERT(trit.toc_result_indicator_id USING utf8mb4)
+          = CONVERT(tri.related_node_id USING utf8mb4)
       WHERE tri.related_node_id = ?
     `;
 
@@ -2494,7 +2677,7 @@ select *
       params.push(phaseYear);
     }
 
-    query += ' ORDER BY trit.target_date DESC LIMIT 1';
+    query += ' ORDER BY trit.target_date DESC';
 
     let rows = await this.query(query, params);
 
@@ -2502,31 +2685,40 @@ select *
       rows = await this.query(
         `
         SELECT
+          trit.toc_indicator_target_id,
           trit.number_target,
           trit.target_date
         FROM ${env.DB_TOC}.toc_results_indicators tri
         JOIN ${env.DB_TOC}.toc_result_indicator_target trit
-          ON tri.id = trit.id_indicator
+          ON trit.id_indicator = tri.id
+          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4)
+            = CONVERT(tri.related_node_id USING utf8mb4)
         WHERE tri.related_node_id = ?
         ORDER BY trit.target_date DESC
-        LIMIT 1
       `,
         [relatedNodeId],
       );
     }
 
     if (!rows || !rows.length) {
-      return null;
+      return { canonical: null, catalogMetas: [] };
     }
 
-    const row = rows[0];
-    const numberTarget = this.toNumberOrNull(row?.number_target);
-    const targetYear = phaseYear ?? this.extractYear(row?.target_date);
+    const catalogMetas: TocTargetCatalogMeta[] = rows.map((row: any) => ({
+      toc_indicator_target_id: this.toNumberOrNull(
+        row?.toc_indicator_target_id,
+      ),
+      number_target: this.toNumberOrNull(row?.number_target),
+      target_date: this.extractYear(row?.target_date),
+    }));
 
-    return {
-      number_target: numberTarget,
-      target_date: targetYear,
+    const canonicalRow = rows[0];
+    const canonical = {
+      number_target: this.toNumberOrNull(canonicalRow?.number_target),
+      target_date: phaseYear ?? this.extractYear(canonicalRow?.target_date),
     };
+
+    return { canonical, catalogMetas };
   }
 
   private toNumberOrNull(value: any): number | null {
@@ -2571,6 +2763,159 @@ select *
       return date.getUTCFullYear();
     }
     return null;
+  }
+
+  /**
+   * TTD-T-2 (bugfix/toc-target-row-duplication), design.md §7 "Identity
+   * resolution": resolves the ToC target id a payload meta owns, first hit
+   * wins — TTD-R-3, TTD-DD-1.
+   *   1. `target.toc_indicator_target_id` — clients that already send it.
+   *   2. `target.indicators_targets`, ONLY if it names a catalog meta of
+   *      THIS indicator + year — never trusted as a primary key (TTD-AC-3).
+   *   3. a catalog meta whose `number_target` + year equal the meta's own.
+   * `identityResolved` is kept separate from the numeric id it returns
+   * because step 3 can match a catalog row that itself carries no id (a real
+   * shape, not just a test artifact — the ToC canonical read has always been
+   * able to return a row a different key than the per-meta catalog read
+   * does, TTD-OQ-4); callers need to tell "matches the catalog, id unknown"
+   * from "matches nothing in the catalog" (TTD-R-9) apart.
+   */
+  private resolveTargetIdentity(
+    target: any,
+    catalogMetas: TocTargetCatalogMeta[],
+    phaseYear?: number | null,
+  ): { tocTargetId: number | null; identityResolved: boolean } {
+    const ownId = this.toNumberOrNull(target?.toc_indicator_target_id);
+    if (ownId != null) {
+      return { tocTargetId: ownId, identityResolved: true };
+    }
+
+    const targetsPk = this.toNumberOrNull(target?.indicators_targets);
+    if (targetsPk != null) {
+      const byId = catalogMetas.find(
+        (meta) =>
+          this.toNumberOrNull(meta.toc_indicator_target_id) === targetsPk,
+      );
+      if (byId) {
+        return {
+          tocTargetId: this.toNumberOrNull(byId.toc_indicator_target_id),
+          identityResolved: true,
+        };
+      }
+    }
+
+    const rawNumberTarget = this.toNumberOrNull(target?.number_target);
+    const rawTargetYear =
+      this.toNumberOrNull(target?.target_date) ?? phaseYear ?? null;
+    const byNumberDate = catalogMetas.find(
+      (meta) =>
+        this.toNumberOrNull(meta.number_target) === rawNumberTarget &&
+        (rawTargetYear == null || meta.target_date === rawTargetYear),
+    );
+    if (byNumberDate) {
+      return {
+        tocTargetId: this.toNumberOrNull(byNumberDate.toc_indicator_target_id),
+        identityResolved: true,
+      };
+    }
+
+    return { tocTargetId: null, identityResolved: false };
+  }
+
+  /**
+   * TTD-T-2 (bugfix/toc-target-row-duplication), design.md §7 "Row lookup":
+   * (a) by `(indicator, toc_indicator_target_id)`; (b) by
+   * `(indicator, indicators_targets)` — the PK lookup SCOPED to the indicator
+   * (TTD-DD-2 — the unscoped `findOne` a foreign id could hit another
+   * result's row through); (c) by `(indicator, number_target, target_date)`,
+   * trying both stored conventions — the canonical value this path writes
+   * and the meta's own raw value — so a legacy row is findable whichever
+   * writer created it (TTD-R-4, the *legacy row* scenario). Every step
+   * excludes rows a prior meta in this same save already claimed
+   * (`excludeIds`) — a row another meta owns is not this meta's (TTD-R-2,
+   * TTD-R-3; the Leader's adjudication on TTD-T-1's reliability finding).
+   * `claimedByAnother` reports when a step found a real candidate that only
+   * missed because it was already claimed — as opposed to no candidate
+   * existing at all — so the caller can tell "this meta is trying to steal
+   * an already-affirmed row" (skip it, TTD-R-9) from "this meta genuinely has
+   * no row yet" (insert it, design.md §7's default "treated as new").
+   */
+  private async resolveExistingTargetRow(params: {
+    resultTocResultIndicatorId: number;
+    tocTargetId: number | null;
+    targetsPk: number | null;
+    resolvedNumberTarget: number | null;
+    rawNumberTarget: number | null;
+    resolvedTargetDate: number | null;
+    excludeIds: Set<number>;
+  }): Promise<{ row: any | null; claimedByAnother: boolean }> {
+    const {
+      resultTocResultIndicatorId,
+      tocTargetId,
+      targetsPk,
+      resolvedNumberTarget,
+      rawNumberTarget,
+      resolvedTargetDate,
+      excludeIds,
+    } = params;
+
+    let claimedByAnother = false;
+    const consider = (row: any): any | null => {
+      if (row == null) return null;
+      if (excludeIds.has(row.indicators_targets)) {
+        claimedByAnother = true;
+        return null;
+      }
+      return row;
+    };
+
+    if (tocTargetId != null) {
+      const byTocId = await this._resultTocIndicatorTargetRepository.findOne({
+        where: {
+          result_toc_result_indicator_id: resultTocResultIndicatorId,
+          toc_indicator_target_id: tocTargetId,
+        },
+      });
+      const row = consider(byTocId);
+      if (row) return { row, claimedByAnother };
+    }
+
+    if (targetsPk != null) {
+      const byPk = await this._resultTocIndicatorTargetRepository.findOne({
+        where: {
+          result_toc_result_indicator_id: resultTocResultIndicatorId,
+          indicators_targets: targetsPk,
+        },
+      });
+      const row = consider(byPk);
+      if (row) return { row, claimedByAnother };
+    }
+
+    // Raw-first (the meta's own number before the canonical one every meta of
+    // the indicator shares): an unresolvable-by-id meta gets its best shot at
+    // a row that matches its OWN number before it can ever collide on the
+    // canonical value another meta already claimed.
+    const numberCandidates = Array.from(
+      new Set(
+        [rawNumberTarget, resolvedNumberTarget].filter(
+          (numberTarget): numberTarget is number => numberTarget != null,
+        ),
+      ),
+    );
+    for (const numberTarget of numberCandidates) {
+      const byNumberDate =
+        await this._resultTocIndicatorTargetRepository.findOne({
+          where: {
+            result_toc_result_indicator_id: resultTocResultIndicatorId,
+            number_target: numberTarget,
+            target_date: resolvedTargetDate,
+          },
+        });
+      const row = consider(byNumberDate);
+      if (row) return { row, claimedByAnother };
+    }
+
+    return { row: null, claimedByAnother };
   }
 
   async saveActionAreaToc(

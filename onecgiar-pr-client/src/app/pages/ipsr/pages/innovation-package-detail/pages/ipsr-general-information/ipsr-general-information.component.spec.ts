@@ -665,17 +665,15 @@ describe('IpsrGeneralInformationComponent', () => {
    * information.
    */
   describe('Impact Area evidence field (P2-3210)', () => {
-    describe('current portfolio', () => {
+    /** P2-3824 — for P25 the Impact Area evidence moved to IPSR Step 3 (tagged evidence + alert). */
+    describe('current portfolio (P2-3824: evidence lives in Step 3)', () => {
       beforeEach(() => {
         mockFieldsManagerService.isP25.mockReturnValue(true);
       });
 
-      it('shows the field when the score is 2 (principal)', () => {
-        expect(component.showImpactAreaEvidenceField(3)).toBe(true);
-      });
-
-      it('accepts the score as a string, which is how the form hands it back', () => {
-        expect(component.showImpactAreaEvidenceField('3')).toBe(true);
+      it('no longer shows the field when the score is 2 (principal)', () => {
+        expect(component.showImpactAreaEvidenceField(3)).toBe(false);
+        expect(component.showImpactAreaEvidenceField('3')).toBe(false);
       });
 
       it('does not ask for evidence at score 0 or 1', () => {
@@ -729,7 +727,7 @@ describe('IpsrGeneralInformationComponent', () => {
         return Array.from(fixture.nativeElement.querySelectorAll('app-pr-input[label="Evidence"]'));
       };
 
-      it('gives the current portfolio one evidence field per score of 2, and none for the other scores', () => {
+      it('P2-3824: gives the current portfolio no evidence field, even for a score of 2', () => {
         const evidenceFields = renderWith(true, {
           gender_tag_level_id: 3,
           poverty_tag_level_id: 3,
@@ -737,7 +735,7 @@ describe('IpsrGeneralInformationComponent', () => {
           nutrition_tag_level_id: 1
         });
 
-        expect(evidenceFields).toHaveLength(2);
+        expect(evidenceFields).toHaveLength(0);
       });
 
       it('asks the current portfolio for nothing while no score is 2', () => {

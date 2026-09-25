@@ -13,6 +13,9 @@ import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideRefreshCw } from '@ng-icons/lucide';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 interface CenterOption {
   institutionId: number;
@@ -47,7 +50,9 @@ const INNOVATION_DEVELOPMENT_RESULT_TYPE_ID = 7;
 
 @Component({
   selector: 'app-section-contributors',
-  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
+  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent, NgIcon],
+  // W12-6 — the projects Retry uses Lucide, the repo's icon set (R37).
+  providers: [provideIcons({ lucideRefreshCw })],
   templateUrl: './section-contributors.component.html',
   styleUrl: './section-contributors.component.scss'
 })
@@ -275,6 +280,18 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    */
   readonly centersLoadFailed = signal(false);
 
+  /**
+   * Night sweep 2026-09-23, W12-6 (P2-3648) — the projects-catalogue twin of `centersLoadFailed`.
+   * A failed `GET_ClarisaProjects` used to set `availableProjects = []` AND `projectsReady = true`,
+   * so hydration ran against an empty catalogue: `readonlyLeadProjectId` stayed null ("Lead project"
+   * listed as a missing field the user cannot fill — it is read-only here), and, because the section
+   * then counted as hydrated, the next save sent `contributing_bilateral_projects: []`, which the
+   * server reads as "drop every project, lead included" (see `contributorsHydrated`). Now the failure
+   * is shown with a Retry and hydration waits for a real catalogue, exactly like the centers case.
+   */
+  readonly projectsLoadFailed = signal(false);
+  readonly loadCopy = RESULT_DETAIL_SECTION_LOAD_COPY;
+
   /** AC5/AC7: the field is satisfied by EITHER at least one partner OR the explicit "none" declaration. */
   readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
 
@@ -300,6 +317,62 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   selectedLinkedResultIds = signal<(number | string)[]>([]);
 
   /**
+   * P2-3823 — the linked keys travel only once the user has changed THIS question in this visit.
+   *
+   * Before, every centre/project/partner autosave re-sent this tab's snapshot of the links, and
+   * the server replaced `linked_result` with it: a link added meanwhile from another tab, user or
+   * section was deactivated by an unrelated centre change.
+   *
+   * 🛑 Why "since touched" and not "only on the click itself": `BilateralAutoSaveService` keeps ONE
+   * pending payload per endpoint and REPLACES it (`schedulePayload` → `_pendingPayloads.set`); the
+   * body only leaves on Save draft / page leave. If the question's PATCH were the only one to carry
+   * the keys, a centre change right after answering would overwrite it in the queue and the
+   * answer would be lost. So once touched, every later payload keeps carrying the user's state.
+   *
+   * Two flags because the list is riskier than the flag: answering Yes must not replace rows the
+   * picker never showed (server contract: Yes without `linked_results` = "flag changed, list did
+   * not"). Both reset on hydration — a fresh read is the new baseline.
+   */
+  private readonly linkedAnswerTouched = signal(false);
+  private readonly linkedListTouched = signal(false);
+
+  /** The results catalogue as a signal; stubs without `resultsListSig` fall back to the array. */
+  private readonly linkedCatalogue = computed<any[]>(() => {
+    const sig = this.innovationUseResultsSE.resultsListSig?.();
+    if (Array.isArray(sig) && sig.length) return sig;
+    return Array.isArray(this.innovationUseResultsSE.resultsList) ? this.innovationUseResultsSE.resultsList : [];
+  });
+
+  /**
+   * P2-3823 — the picker's options: the catalogue PLUS a placeholder for every stored link the
+   * catalogue cannot name.
+   *
+   * 🛑 `app-pr-multi-select.writeValue` maps ids to options and DROPS the misses
+   * (`pr-multi-select.component.ts:295-300`); the next pick then emits the shortened list and the
+   * server deactivates the missing rows. Misses are real: the catalogue only lists QA'd/approved
+   * results (`status_id IN (2, 6)`), and it loads asynchronously. With a placeholder for every
+   * selected id the picker always finds them, and a read-only result (AC14) still shows a chip.
+   */
+  readonly linkedResultOptions = computed<any[]>(() => {
+    const catalogue = this.linkedCatalogue();
+    const known = new Set(catalogue.map((o: any) => Number(o?.id)));
+    const placeholders = this.selectedLinkedResultIds()
+      .map(id => Number(id))
+      .filter(id => Number.isFinite(id) && id > 0 && !known.has(id))
+      .map(id => ({ id, title: `Result not in the list (internal id ${id})`, unlisted: true }));
+    return placeholders.length ? [...catalogue, ...placeholders] : catalogue;
+  });
+
+  /**
+   * The picker's model. A NEW array whenever the options change, so `writeValue` re-maps the ids
+   * against the current options (a late catalogue swaps placeholders for real labels).
+   */
+  readonly linkedResultModel = computed<(number | string)[]>(() => {
+    this.linkedResultOptions();
+    return [...this.selectedLinkedResultIds()];
+  });
+
+  /**
    * AC13's message ("N hidden field(s) has values and will be saved.") is a PROMISE: it may only
    * count fields that actually reach the server. It stayed at 0 while the linked/bundled question
    * was `Coming soon`; since P2-3368 AC10-AC14 the answer persists, so it counts again — one term
@@ -311,6 +384,9 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    */
   readonly hiddenFieldsWithValues = computed(() => {
     if (this.linkedQuestionOwnedElsewhere()) return 0;
+    // P2-3823 — unhydrated keys never travel (`buildContributorsPayload`), so after a failed read
+    // the note must not promise to save them.
+    if (!this.linkedHydrated()) return 0;
     return this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0 ? 1 : 0;
   });
 
@@ -423,13 +499,21 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
             ownerCenterInstitutionId: p.owner_center_institution_id != null ? Number(p.owner_center_institution_id) : null,
           }))
         );
+        this.projectsLoadFailed.set(false);
         this.projectsReady.set(true);
       },
+      // W12-6 — see `projectsLoadFailed`: do NOT mark the catalogue ready on a failure.
       error: () => {
         this.availableProjects.set([]);
-        this.projectsReady.set(true);
+        this.projectsLoadFailed.set(true);
       }
     });
+  }
+
+  /** W12-6 — manual second chance for a failed projects-catalogue read, mirrors `retryLoadCenters()`. */
+  retryLoadProjects(): void {
+    this.projectsLoadFailed.set(false);
+    this.loadProjects();
   }
 
   ngOnDestroy(): void {
@@ -586,9 +670,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     // P2-3368 AC10-AC14. Guarded by `linkedHydrated` for the same reason as the partner keys, and
     // skipped entirely for the types that do not ask the question here — the server ignores them
     // too, but a payload that never carries the keys is the honest contract.
-    if (this.linkedHydrated() && !this.linkedQuestionOwnedElsewhere()) {
+    // P2-3823 — and only once the user changed the question in this visit (`linkedAnswerTouched`),
+    // so an unrelated centre change never re-sends a stale snapshot of the links.
+    if (this.linkedHydrated() && !this.linkedQuestionOwnedElsewhere() && this.linkedAnswerTouched()) {
       payload.has_innovation_link = this.hasLinkedResult();
-      payload.linked_results = this.selectedLinkedResultIds().map(id => Number(id));
+      if (this.linkedListTouched()) {
+        payload.linked_results = this.selectedLinkedResultIds()
+          .map(id => Number(id))
+          .filter(id => Number.isFinite(id) && id > 0);
+      }
     }
 
     return payload;
@@ -769,6 +859,9 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       .filter((id: number) => Number.isFinite(id) && id > 0);
     this.selectedLinkedResultIds.set(Array.from(new Set<number>(linkedIds)));
 
+    // A fresh read is the new baseline: nothing the user did before it may travel.
+    this.linkedAnswerTouched.set(false);
+    this.linkedListTouched.set(false);
     this.linkedHydrated.set(true);
   }
 
@@ -792,16 +885,34 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * turns a "No" that retracts a stored "Yes" into the narrow `linked_result` cleanup (P2-3424).
    */
   onHasLinkedResultChange(value: boolean | null): void {
+    // P2-3823 — belt and braces for the template's `!linkedHydrated()` lock: a click that lands
+    // before the stored answer is on screen would be overwritten by hydration a moment later.
+    if (!this.linkedHydrated()) return;
     this.hasLinkedResult.set(value);
-    if (value !== true) {
+    this.linkedAnswerTouched.set(true);
+    if (value !== true && this.selectedLinkedResultIds().length) {
+      // Clearing IS a list change: if the user comes back to Yes before saving, the payload must
+      // carry the empty list they now see, not leave the old rows alive behind an empty picker.
       this.selectedLinkedResultIds.set([]);
+      this.linkedListTouched.set(true);
     }
     this.persistContributors();
   }
 
   onLinkedResultsModelChange(selected: any[]): void {
-    const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? item.id : item));
-    this.selectedLinkedResultIds.set(ids);
+    if (!this.linkedHydrated()) return;
+    const pickerIds = (selected ?? [])
+      .map(item => Number(typeof item === 'object' && item !== null ? item.id : item))
+      .filter(id => Number.isFinite(id) && id > 0);
+    // P2-3823 — last line of defence against the picker's silent drop: a stored id that is not
+    // among the options the picker was given can never be removed by omission, only by No (AC12).
+    const offered = new Set(this.linkedResultOptions().map((o: any) => Number(o?.id)));
+    const kept = this.selectedLinkedResultIds()
+      .map(id => Number(id))
+      .filter(id => !offered.has(id) && !pickerIds.includes(id));
+    this.selectedLinkedResultIds.set(Array.from(new Set<number>([...pickerIds, ...kept])));
+    this.linkedAnswerTouched.set(true);
+    this.linkedListTouched.set(true);
     this.persistContributors();
   }
 

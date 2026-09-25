@@ -15,6 +15,8 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { ResultImpactAreaScoresService } from '../../result-impact-area-scores/result-impact-area-scores.service';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
+import { IsNull, Not, Or } from 'typeorm';
+import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
 
 describe('IpsrGeneralInformationService', () => {
   let service: IpsrGeneralInformationService;
@@ -391,6 +393,32 @@ describe('IpsrGeneralInformationService', () => {
      * renders under a score of 2 would have lost whatever was typed on the next GET.
      */
     describe('Impact Area evidence (P2-3210)', () => {
+      it('P2-3824: looks up the General-information row (NULL type or the Apr-2023 type-1 backfill), never a tagged Step 3 evidence', async () => {
+        mockEvidencesRepo.findOne.mockResolvedValue(null);
+
+        await service.generalInformation(
+          1,
+          { ...mockDto, evidence_gender_tag: 'https://example.org/gender' },
+          mockUser,
+        );
+
+        expect(mockEvidencesRepo.findOne).toHaveBeenCalledWith({
+          where: {
+            result_id: 1,
+            is_active: 1,
+            evidence_type_id: Or(
+              IsNull(),
+              Not(EvidenceTypeEnum.IPSR_STEP_THREE),
+            ),
+            gender_related: true,
+          },
+        });
+        // The row it creates keeps a NULL type, so the next lookup still finds it.
+        expect(mockEvidencesRepo.save).toHaveBeenCalledWith(
+          expect.not.objectContaining({ evidence_type_id: expect.anything() }),
+        );
+      });
+
       it('stores a link the form had nowhere to save before', async () => {
         mockEvidencesRepo.findOne.mockResolvedValue(null);
 

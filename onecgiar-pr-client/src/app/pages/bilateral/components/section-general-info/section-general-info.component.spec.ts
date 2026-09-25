@@ -163,6 +163,21 @@ describe('SectionGeneralInfoComponent', () => {
       ]);
     });
 
+    // Decision (Cami, P2-3765 18-Sep and P2-3340 cancelled 14-Sep): the word limit is a hint that
+    // must not stop the user. Night sweep 2026-09-23: 912a38a58 made an over-limit title an invalid
+    // (Submit-blocking) item and was reverted; this pins that it stays a plain, filled field.
+    it('an over-limit title stays a plain filled field (the red counter is only a hint)', () => {
+      creation.resultTitle.set(Array.from({ length: 35 }, (_, i) => `w${i}`).join(' '));
+      creation.resultDescription.set('Some description');
+      build();
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: true },
+        { key: 'description', label: 'Description', filled: true },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
+      ]);
+    });
+
     it('does not count an absent lead contact', () => {
       build();
       fixture.detectChanges();
@@ -561,6 +576,34 @@ describe('SectionGeneralInfoComponent', () => {
       component.onDacTagChange('unknown', 2);
       expect(component.selectedDacLevels()).toEqual({ unknown: 2 });
       expect(autoSave.updateField).not.toHaveBeenCalled();
+    });
+
+    // Night sweep 2026-09-23, BIL-8 (prtest 11416): "(0) Not Targeted" kept the sub-areas stored.
+    // Control negative: without the clearing block in `onDacTagChange` the first test fails.
+    it('BIL-8: "(0) Not Targeted" clears that area\'s sub-areas and stages the cleared lists', () => {
+      creation.resultDacSubScores.set({ gender: [10], climate_change: [5] });
+      creation.setDacSubScores.mockImplementation((key: string, ids: number[]) =>
+        creation.resultDacSubScores.update((s: any) => ({ ...s, [key]: ids }))
+      );
+      build();
+      autoSave.updateFieldsBatch.mockClear();
+
+      component.onDacTagChange('gender', 1);
+
+      expect(creation.setDacSubScores).toHaveBeenCalledWith('gender', []);
+      expect(autoSave.updateFieldsBatch).toHaveBeenCalledWith(
+        expect.objectContaining({ gender_impact_area_ids: [], climate_impact_area_ids: [5] })
+      );
+    });
+
+    it('BIL-8: a targeted level (Significant) keeps the sub-areas untouched', () => {
+      creation.resultDacSubScores.set({ gender: [10] });
+      build();
+      autoSave.updateFieldsBatch.mockClear();
+
+      component.onDacTagChange('gender', 2);
+
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
     });
 
     it('adds a sub-score when it is not selected yet', () => {

@@ -16,6 +16,15 @@ export class SubGeoscopeComponent implements OnInit {
   @Input() name: string = '01';
   @Input() readOnly: boolean = false;
   @Output() changed = new EventEmitter<void>();
+  /**
+   * P2-3832 — tells the PARENT whether CLARISA actually has sub-national levels for this country.
+   *
+   * 48 of the 248 countries in the catalogue have none (American Samoa, Puerto Rico, Hong Kong,
+   * Guam, Martinique…). Only this component knows that, and a parent that demands a selection
+   * anyway leaves the form permanently incomplete. Emitted once, when the catalogue has LOADED —
+   * never while it is in flight or after it failed, where the same emptiness means something else.
+   */
+  @Output() catalogueLoaded = new EventEmitter<{ iso_alpha_2: string; hasLevels: boolean }>();
   public subNationList: any[] = [];
   public currentCountryId: number;
   public selectedSubNational: any[] = [];
@@ -47,6 +56,7 @@ export class SubGeoscopeComponent implements OnInit {
       next: ({ response }) => {
         this.subNationList = this.subNationalMapper(response);
         this.subNationalStatus = 'loaded';
+        this.catalogueLoaded.emit({ iso_alpha_2: isoAlpha2, hasLevels: this.subNationList.length > 0 });
       },
       error: () => {
         // Without this branch a failed request left the list empty forever, and the template

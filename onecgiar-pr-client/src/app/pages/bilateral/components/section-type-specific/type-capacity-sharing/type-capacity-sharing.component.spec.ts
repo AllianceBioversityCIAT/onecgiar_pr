@@ -390,6 +390,19 @@ describe('TypeCapacitySharingComponent', () => {
       expect(component.body.capdev_term_id).toBe(3);
     });
 
+    // Night sweep 2026-09-23, BIL-6 (prtest 11980): un-ticking Long-term saved the old PhD.
+    // Control negative: with the condition back to `=== 3` this test fails (capdev_term_id stays 1).
+    it('BIL-6: clears the degree when Long-term is un-ticked, so the payload carries no length of training', () => {
+      build();
+      component.body = {};
+      component.capdevTermId1 = null;
+      component.capdevTermId2 = 1;
+      component.onCapdevTermId1Change();
+      expect(component.capdevTermId2).toBeNull();
+      expect(component.body.capdev_term_id).toBeNull();
+      expect(component.lengthOfTrainingFilled).toBe(false);
+    });
+
     it('keeps the sub-term and derives the saved id from it when the cascade term (4) is selected', () => {
       build();
       component.body = {};

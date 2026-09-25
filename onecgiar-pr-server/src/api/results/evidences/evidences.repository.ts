@@ -20,6 +20,13 @@ export class EvidencesRepository
   extends BaseRepository<Evidence>
   implements LogicalDelete<Evidence>
 {
+  /**
+   * P2-3824: the IPSR Step 3 component/level of an evidence lives in its own table
+   * (`result_ip_step_three_evidence`), not on `evidence`, so this replication — shared by every
+   * result of the platform — does not name any P2-3824 column. A rolled-over Step 3 evidence is
+   * copied without its component link: the new phase shows the legacy single-link columns
+   * (first evidence per level) until versioning remaps it (out of P2-3824's scope).
+   */
   createQueries(
     config: ReplicableConfigInterface<Evidence>,
   ): ConfigCustomQueryInterface {
@@ -471,6 +478,194 @@ export class EvidencesRepository
         [resultId, is_supplementary, type],
       );
       return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3824 — every active IPSR Step 3 evidence of an innovation package, all components and
+   * levels at once (the caller groups them by `result_by_innovation_package_id` +
+   * `ipsr_evidence_level`). Same SELECT and SharePoint join as `getEvidencesByResultId`, so an
+   * uploaded file reads back exactly like a Results evidence. `id` breaks creation-date ties:
+   * the pieces saved in one request share the same second, and the first one is the one
+   * dual-written to the legacy single-link columns.
+   */
+  async getIpsrStepThreeEvidences(
+    resultId: number,
+  ): Promise<EvidenceWithEvidenceSharepoint[]> {
+    const query = `
+    SELECT
+    e.id,
+    es.id AS sp_evidence_id,
+    es.document_id AS sp_document_id,
+    es.file_name AS sp_file_name,
+    es.folder_path AS sp_folder_path,
+    es.is_public_file,
+    e.description,
+    e.is_active,
+    e.creation_date,
+    e.link,
+    e.is_sharepoint,
+    e.gender_related,
+    e.youth_related,
+    e.nutrition_related,
+    e.environmental_biodiversity_related,
+    e.poverty_related,
+    e.innovation_use_related,
+    e.result_id,
+    s.result_by_innovation_package_id,
+    s.ipsr_evidence_level
+    FROM evidence e
+    INNER JOIN result_ip_step_three_evidence s
+      ON s.evidence_id = e.id AND s.is_active = 1
+    LEFT JOIN (
+        SELECT es1.*
+        FROM evidence_sharepoint es1
+        INNER JOIN (
+            SELECT evidence_id, MAX(created_date) AS max_created_date
+            FROM evidence_sharepoint
+            WHERE is_active > 0
+            GROUP BY evidence_id
+        ) es2 ON es1.evidence_id = es2.evidence_id AND es1.created_date = es2.max_created_date
+        WHERE es1.is_active > 0
+    ) es ON e.id = es.evidence_id
+    WHERE e.result_id = ?
+      AND e.is_active > 0
+      AND e.evidence_type_id = ?
+    ORDER BY e.creation_date ASC, e.id ASC;
+    `;
+
+    try {
+      const evidence: EvidenceWithEvidenceSharepoint[] = await this.query(
+        query,
+        [resultId, EvidenceTypeEnum.IPSR_STEP_THREE],
+      );
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3824 — soft-deletes the IPSR Step 3 evidence of ONE component and level that the reporter
+   * removed. Scoped on purpose: `updateEvidences` deactivates by `(result_id, is_supplementary,
+   * evidence_type_id)`, which here would wipe the lists of every other component of the package.
+   */
+  async deactivateIpsrStepThreeEvidences(
+    resultId: number,
+    resultByInnovationPackageId: number,
+    level: string,
+    keepIds: number[],
+    userId: number,
+  ): Promise<void> {
+    const kept = (keepIds ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const query = `
+      UPDATE evidence e
+      INNER JOIN result_ip_step_three_evidence s
+        ON s.evidence_id = e.id AND s.is_active = 1
+      SET e.is_active = 0,
+        e.last_updated_date = NOW(),
+        e.last_updated_by = ?
+      WHERE e.is_active > 0
+        AND e.result_id = ?
+        AND e.evidence_type_id = ?
+        AND s.result_by_innovation_package_id = ?
+        AND s.ipsr_evidence_level = ?
+        ${kept.length ? 'AND e.id NOT IN (?)' : ''};
+    `;
+    const params: unknown[] = [
+      userId,
+      resultId,
+      EvidenceTypeEnum.IPSR_STEP_THREE,
+      resultByInnovationPackageId,
+      level,
+    ];
+    if (kept.length) {
+      params.push(kept);
+    }
+
+    try {
+      await this.query(query, params);
+    } catch (error) {
+      this._logger.error(error);
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3824 — the id of an active Step 3 evidence ONLY if it belongs to this package, component
+   * and level; an id from another list is treated by the caller as a new piece of evidence.
+   */
+  async findIpsrStepThreeEvidenceId(
+    evidenceId: number,
+    resultId: number,
+    resultByInnovationPackageId: number,
+    level: string,
+  ): Promise<number | null> {
+    try {
+      const rows: { id: number }[] = await this.query(
+        `
+        SELECT e.id
+        FROM evidence e
+        INNER JOIN result_ip_step_three_evidence s
+          ON s.evidence_id = e.id AND s.is_active = 1
+        WHERE e.id = ?
+          AND e.result_id = ?
+          AND e.evidence_type_id = ?
+          AND e.is_active > 0
+          AND s.result_by_innovation_package_id = ?
+          AND s.ipsr_evidence_level = ?
+        LIMIT 1;
+        `,
+        [
+          evidenceId,
+          resultId,
+          EvidenceTypeEnum.IPSR_STEP_THREE,
+          resultByInnovationPackageId,
+          level,
+        ],
+      );
+      return rows?.[0]?.id ? Number(rows[0].id) : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /** P2-3824 — ties a newly created Step 3 evidence to its component and level. */
+  async linkIpsrStepThreeEvidence(
+    evidenceId: number,
+    resultByInnovationPackageId: number,
+    level: string,
+  ): Promise<void> {
+    try {
+      await this.query(
+        `
+        INSERT INTO result_ip_step_three_evidence
+          (evidence_id, result_by_innovation_package_id, ipsr_evidence_level)
+        VALUES (?, ?, ?);
+        `,
+        [evidenceId, resultByInnovationPackageId, level],
+      );
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: EvidencesRepository.name,

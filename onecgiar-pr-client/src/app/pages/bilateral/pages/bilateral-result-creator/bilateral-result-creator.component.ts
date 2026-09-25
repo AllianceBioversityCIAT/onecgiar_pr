@@ -29,6 +29,7 @@ import { CopyButtonComponent } from '../../../../shared/components/copy-button/c
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -122,12 +123,6 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * load fails — falling back to "Report New Bilateral Result" told the user they were creating a
    * result when they were editing one. A neutral label is honest in both states.
    */
-  private static readonly STATUS_LABELS: Record<number, string> = {
-    1: 'Editing',
-    5: 'Pending review',
-    6: 'Approved',
-    7: 'Rejected',
-  };
 
   readonly backTarget = computed(() => {
     const activeUrl = this.router.url?.includes('/result/') || this.router.url?.includes('/create')
@@ -157,40 +152,13 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     return code != null && String(code).trim() !== '' ? String(code) : '';
   });
   readonly resultTypeName = computed(() => this.creationService.resultTypeName() ?? '');
-  readonly statusLabel = computed(() => {
-    const id = this.creationService.resultStatusId();
-    return id != null ? BilateralResultCreatorComponent.STATUS_LABELS[Number(id)] ?? '' : '';
-  });
-  readonly statusFg = computed(() => {
-    const id = this.creationService.resultStatusId();
-    switch (Number(id)) {
-      case 1:
-        return 'var(--pr-status-in-progress-fg)';
-      case 5:
-        return '#B45309';
-      case 6:
-        return 'var(--pr-status-approved-fg)';
-      case 7:
-        return 'var(--pr-status-rejected-fg)';
-      default:
-        return 'var(--pr-status-not-started-fg)';
-    }
-  });
-  readonly statusBg = computed(() => {
-    const id = this.creationService.resultStatusId();
-    switch (Number(id)) {
-      case 1:
-        return 'var(--pr-status-in-progress-bg)';
-      case 5:
-        return '#FEF3C7';
-      case 6:
-        return 'var(--pr-status-approved-bg)';
-      case 7:
-        return 'var(--pr-status-rejected-bg)';
-      default:
-        return 'var(--pr-status-not-started-bg)';
-    }
-  });
+  // Night sweep 2026-09-23 (X-2): label and colours come from the shared result-status enum
+  // (result-status-tokens.ts, P2-3786) like the review drawer and the bilateral page header. The
+  // private map painted Pending review amber (#B45309/#FEF3C7) and only knew 1/5/6/7, so a
+  // Submitted (3) or Quality Assessed (2) result showed no chip at all.
+  readonly statusLabel = computed(() => resultStatusLabel(this.creationService.resultStatusId()));
+  readonly statusFg = computed(() => resultStatusFg(this.creationService.resultStatusId()));
+  readonly statusBg = computed(() => resultStatusBg(this.creationService.resultStatusId()));
   readonly isLoadingResult = computed(() => this.creationService.isLoadingResult());
 
   readonly resultLevelName = computed(() => {
@@ -265,7 +233,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   readonly currentSectionIndex = computed(() => this.sectionNavigation().findIndex(section => section.name === this.openSectionName()));
   readonly currentSectionLabel = computed(() => this.sectionNavigation()[this.currentSectionIndex()]?.label ?? '');
-  readonly currentSectionComplete = computed(() => this.getSectionMdsStatus(this.openSectionName()) === 'complete');
+  /**
+   * Night sweep 2026-09-23 (BIL-3 / BIL-4) — "complete" also requires no P2-3340 invalid item. An
+   * over-limit field stays `filled` (so the percentage holds), which left the footer reading
+   * "Section complete" over a value Submit refuses; now the footer falls through to "N fields to fix".
+   */
+  readonly currentSectionComplete = computed(
+    () => this.getSectionMdsStatus(this.openSectionName()) === 'complete'
+  );
 
   /**
    * Labels of the open section's MDS fields still empty. Read off `sectionStatus()` (not
@@ -283,6 +258,10 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   private missingFieldsFor(section: BilateralEditorSection): string[] {
     const fields = this.mdsTracker.sectionStatus().find(s => s.sectionName === section)?.fields ?? [];
+    // Night sweep 2026-09-23, BIL-5 — an `optional` item (today the ToC mapping block) never gates the
+    // section (`bilateral-mds-tracker.service.ts` counts only non-optional fields), so it must not be
+    // listed as "missing" either: the footer said "2 fields missing" and then jumped to "Section
+    // complete" with the optional Indicator still empty (prtest 11987).
     return fields.filter(field => !field.filled && !field.optional).map(field => field.label);
   }
 
@@ -683,8 +662,15 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Night sweep 2026-09-23 (BIL-3 / BIL-4 follow-up) — a section holding a P2-3340 invalid item is
+   * never 'complete' for the UI: the tracker keeps it 'complete' (the item IS answered, so the
+   * percentage holds), but the rail check, the "N of M sections complete" counter and the footer all
+   * read this method, so they now agree with Submit, which refuses the invalid field by name.
+   */
   getSectionMdsStatus(sectionName: string): MdsStatus {
-    return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.status ?? 'empty';
+    const status = this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.status ?? 'empty';
+    return status === 'complete' && this.invalidFieldsFor(sectionName as BilateralEditorSection).length ? 'partial' : status;
   }
 
   /** Whether the MDS tracker knows this section — Overview never does, so it gets no completion ring. */
@@ -776,7 +762,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * `submitResult()` re-checks its own guards — this computed is only what greys the button.
    */
   readonly canSubmitFromRail = computed(
-    () => this.mdsTracker.overallStatus() === 'complete' && !this.isSubmitting() && !this.isFormReadOnly()
+    // BIL-3 / BIL-4 follow-up — an answered-but-invalid field (P2-3340) also greys the button now,
+    // so the rail, the counter, the footer and Submit agree; the field is named in the footer's
+    // "N fields to fix" list, and `submitResult()` keeps its alert as the second line of defence.
+    () =>
+      this.mdsTracker.overallStatus() === 'complete' &&
+      this.mdsTracker.invalidFields().length === 0 &&
+      !this.isSubmitting() &&
+      !this.isFormReadOnly()
   );
 
   submitResult(): void {
