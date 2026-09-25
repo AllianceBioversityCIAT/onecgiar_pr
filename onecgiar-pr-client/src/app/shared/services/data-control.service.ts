@@ -34,6 +34,17 @@ export class DataControlService {
   readonly fieldFeedbackList = signal<string[]>([]);
   /** Cuántos campos obligatorios tiene la sección abierta — el denominador de su progreso. */
   readonly mandatoryFieldsTotal = signal<number>(0);
+  /**
+   * Gap-source registry (SBT-DD-1, P2-3542): a mounted section that has mandatory fields it does
+   * NOT render (e.g. a ToC tab that is not the active one) registers a function here that returns
+   * the labels of what it knows is missing off screen. The scan folds them into
+   * `fieldFeedbackList` / `mandatoryFieldsTotal` on its own existing cadence — this registry
+   * neither schedules nor caches anything itself.
+   *
+   * One-sided contract: the publisher owns removal (`unregisterOffscreenFeedback`). A source that
+   * outlives its section reports its gaps against whatever section opens next (SBT-R-4).
+   */
+  private readonly offscreenFeedbackSources = new Set<() => string[]>();
   showShareRequest = false;
   chagePhaseModal = false;
   updateResultModal = false;
@@ -253,6 +264,39 @@ export class DataControlService {
     return [...found];
   }
 
+  /**
+   * Registers a gap source: a function returning the labels of the mandatory fields a mounted
+   * section knows are missing off screen (SBT-DD-1). Called by the scan on its own cadence.
+   */
+  registerOffscreenFeedback(source: () => string[]): void {
+    this.offscreenFeedbackSources.add(source);
+  }
+
+  /**
+   * Removes a gap source. The publisher owns this call — it MUST unregister on destroy, or its
+   * gaps keep reporting against whatever section opens next (SBT-R-4).
+   */
+  unregisterOffscreenFeedback(source: () => string[]): void {
+    this.offscreenFeedbackSources.delete(source);
+  }
+
+  /**
+   * Labels from every registered gap source. A throwing source must not take the scan down with
+   * it (SBT-AC-10) — each source runs in its own try/catch, so one bad source loses only its own
+   * labels, never anyone else's, and never the DOM pass's.
+   */
+  private offscreenFeedback(): string[] {
+    const labels: string[] = [];
+    this.offscreenFeedbackSources.forEach(source => {
+      try {
+        labels.push(...source());
+      } catch (error) {
+        console.error(error);
+      }
+    });
+    return labels;
+  }
+
   someMandatoryFieldIncompleteResultDetail(container) {
     if (!document.querySelector(container)) {
       if (this.fieldFeedbackList().length) this.fieldFeedbackList.set([]);
@@ -295,6 +339,11 @@ export class DataControlService {
     } catch (error) {
       console.error(error);
     }
+    // Off-screen gaps (SBT-DD-1): folded AFTER the DOM pass and OUTSIDE its try/catch, so a DOM
+    // error can never swallow them and a throwing gap source can never swallow the DOM's own gaps.
+    const offscreen = this.offscreenFeedback();
+    feedback.push(...offscreen);
+    mandatoryTotal += offscreen.length;
     // Update the signal only when the list actually changed: avoids needless
     // notifications/renders and lets callers compare by reference to know if it changed.
     if (!this.sameFeedback(this.fieldFeedbackList(), feedback)) {
@@ -308,7 +357,7 @@ export class DataControlService {
     }
     // Counts, not the arrays: `Boolean([])` is `true`, so the previous version answered
     // "something is incomplete" on every call, even with every field filled in.
-    return incompleteInputs > 0 || incompleteSelects > 0;
+    return incompleteInputs > 0 || incompleteSelects > 0 || offscreen.length > 0;
   }
 
   /**
