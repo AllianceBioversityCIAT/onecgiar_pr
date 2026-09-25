@@ -369,16 +369,8 @@ describe('ContributorsPartnersService', () => {
           is_lead_by_partner: true,
           has_innovation_link: true,
           linked_results: [1001, 1002],
-          // P2-2932 — stubbed to the quiet outcome above; the check has its own suite.
-          contribution_consistency: {
-            status: 'NOTHING_TO_COMPARE',
-            expected: null,
-            reported: null,
-            boxesCounted: 0,
-            boxesTotal: 0,
-            boxesOfAnotherType: 0,
-            defaultValue: null,
-          },
+          // P2-3833 — the check is switched off, so nothing reaches the client.
+          contribution_consistency: null,
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
@@ -874,7 +866,35 @@ describe('ContributorsPartnersService', () => {
    * → targets[] and must carry each indicator's own category through, or the mixed-type rule has
    * nothing to act on. A mutation removing that one line passed every other test in this repo.
    */
+  describe('P2-3833 — the consistency check is switched off', () => {
+    it('never runs the check and returns contribution_consistency: null', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 10,
+        result_code: 900,
+        title: 't',
+        result_level_id: 3,
+        result_type_id: 5,
+      } as any);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 1 } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: { result_toc_result: null },
+      } as any);
+
+      const res: any = await service.getContributorsPartnersByResultId(10);
+
+      expect(consistencyService.check).not.toHaveBeenCalled();
+      expect(res.response.contribution_consistency).toBeNull();
+    });
+  });
+
   describe('P2-2932 — the boxes handed to the consistency check', () => {
+    // P2-3833 switched the check off; these keep the extraction honest for when it comes back.
+    beforeEach(() => {
+      (service as any).contributionCheckEnabled = true;
+    });
+
     const tocWithMixedIndicators = {
       contributing_initiatives: {
         accepted_contributing_initiatives: [],
