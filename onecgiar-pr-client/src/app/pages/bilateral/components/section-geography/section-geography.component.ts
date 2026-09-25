@@ -593,14 +593,45 @@ export class SectionGeographyComponent {
     );
   }
 
-  /** Sub-national scope requires ≥1 sub-national unit per selected country. */
+  /**
+   * P2-3832 — iso_alpha_2 of every country whose CLARISA sub-national catalogue came back EMPTY.
+   *
+   * Fed by `app-sub-geoscope`, the only place that reads the catalogue. 48 of the 248 countries
+   * have no sub-national levels at all (American Samoa, Puerto Rico, Hong Kong, Guam…): the picker
+   * never renders, `sub_national` can never be filled, and demanding it kept the `sub-national`
+   * tracker item unfilled forever — which, through `overallStatus`, disabled Submit for the whole
+   * result. The classic form has always exempted them; the rule lives in the green-check SQL
+   * (`results-validation-module.repository.ts`): require a selection only
+   * `if(count(clarisa_subnational_scopes for this iso) > 0, …, true)`. This mirrors it.
+   */
+  private readonly countriesWithoutSubNationalLevels = signal<Set<string>>(new Set<string>());
+
+  onSubNationalCatalogue(event: { iso_alpha_2: string; hasLevels: boolean }): void {
+    const iso = event?.iso_alpha_2;
+    if (!iso) return;
+    const known = this.countriesWithoutSubNationalLevels();
+    if (known.has(iso) === !event.hasLevels) return;
+    const next = new Set(known);
+    if (event.hasLevels) next.delete(iso);
+    else next.add(iso);
+    this.countriesWithoutSubNationalLevels.set(next);
+    // The catalogue lands AFTER the last `updateTracker()`, so the checklist has to be re-published.
+    this.updateTracker();
+  }
+
+  /** False only once the catalogue is known to be empty — while it is in flight the field stays required. */
+  private countryRequiresSubNational(country: any): boolean {
+    return !this.countriesWithoutSubNationalLevels().has(country?.iso_alpha_2);
+  }
+
+  /** Sub-national scope requires ≥1 sub-national unit per selected country that HAS levels (P2-3832). */
   get subNationalSelectionMissing(): boolean {
     if (Number(this.geographicLocationBody().geo_scope_id) !== GeoScopeEnum.SUB_NATIONAL) {
       return false;
     }
     const countries = this.geographicLocationBody().countries ?? [];
     if (!countries.length) return true;
-    return countries.some((c: any) => !(c.sub_national?.length > 0));
+    return countries.some((c: any) => this.countryRequiresSubNational(c) && !(c.sub_national?.length > 0));
   }
 
   get extraSubNationalSelectionMissing(): boolean {
@@ -612,7 +643,7 @@ export class SectionGeographyComponent {
     }
     const countries = this.extraGeographicLocationBody().countries ?? [];
     if (!countries.length) return true;
-    return countries.some((c: any) => !(c.sub_national?.length > 0));
+    return countries.some((c: any) => this.countryRequiresSubNational(c) && !(c.sub_national?.length > 0));
   }
 
   isGeographyComplete(): boolean {

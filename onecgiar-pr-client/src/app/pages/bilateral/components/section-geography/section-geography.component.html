@@ -120,6 +120,7 @@
               [obj_countrySelected]="geographicLocationBody().countries"
               [name]="country.name"
               [readOnly]="locked()"
+              (catalogueLoaded)="onSubNationalCatalogue($event)"
               (changed)="queueGeographySave()">
             </app-sub-geoscope>
           }
@@ -212,6 +213,7 @@
                 [obj_countrySelected]="extraGeographicLocationBody().countries"
                 [name]="country.name"
                 [readOnly]="locked()"
+                (catalogueLoaded)="onSubNationalCatalogue($event)"
                 (changed)="queueGeographySave()">
               </app-sub-geoscope>
               }
