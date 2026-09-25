@@ -80,6 +80,18 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 10px;
+
+  // Without a definite width, a flex item's shrink-to-fit sizing bottoms out at each child's
+  // min-content — and `app-pr-select`'s field-card header title uses `overflow-wrap: anywhere`
+  // (`styles/field-card.scss` .fch_title), whose min-content is a single character. That collapsed
+  // "Phases"/"Entity" into a one-letter-per-line column here (the only place in the app that lays
+  // these fields out in a bare flex row with no assigned width — every other `app-pr-select` usage
+  // sits in a grid/column that already has a definite width). A fixed min-width gives the flex item
+  // a real basis to shrink FROM, matching the pattern `filters-list.scss` already uses elsewhere.
+  &_field {
+    min-width: 220px;
+    flex: 1 1 220px;
+  }
 }
 
 .local_container {

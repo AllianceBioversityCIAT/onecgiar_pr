@@ -47,7 +47,7 @@
        of gating the whole container on the Updates URL directly. Settings still renders nothing
        here (it never matched `/updates` either). -->
   <div class="notifications_filters" *ngIf="router.url.includes('/results-notifications/updates')">
-    <div>
+    <div class="notifications_filters_field">
       <app-pr-select
         label="Phases"
         [required]="false"
@@ -62,6 +62,7 @@
     </div>
 
     <div
+      class="notifications_filters_field"
       [prTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
       prTooltipPosition="right">
       <app-pr-select
@@ -76,7 +77,7 @@
       </app-pr-select>
     </div>
 
-    <div>
+    <div class="notifications_filters_field">
       <app-pr-field-header label="Search"></app-pr-field-header>
       <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.resultsNotificationsSE.searchFilter" style="width: 100%" />
     </div>
