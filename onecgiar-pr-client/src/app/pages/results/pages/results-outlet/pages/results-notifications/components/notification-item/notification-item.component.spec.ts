@@ -6,7 +6,13 @@ import { ShareRequestModalService } from '../../../../../result-detail/component
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { of, throwError } from 'rxjs';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+// NOTIF-T-7: real Helm badge directive so the decision-chip rendering assertions exercise the
+// actual component, not just an inert attribute (NO_ERRORS_SCHEMA below is only for the many
+// unrelated custom elements — app-pr-button, app-pr-dialog, app-cp-multiple-wps, etc. — this
+// template never rendered through TestBed before this task).
+import { HlmBadgeImports } from '@spartan/badge';
 
 describe('NotificationItemComponent', () => {
   let component: NotificationItemComponent;
@@ -66,7 +72,7 @@ describe('NotificationItemComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [NotificationItemComponent],
-      imports: [HttpClientTestingModule, FormatTimeAgoPipe],
+      imports: [HttpClientTestingModule, FormatTimeAgoPipe, CommonModule, ...HlmBadgeImports],
       providers: [
         {
           provide: ApiService,
@@ -80,7 +86,12 @@ describe('NotificationItemComponent', () => {
           provide: ShareRequestModalService,
           useValue: mockShareRequestModalService
         }
-      ]
+      ],
+      // NOTIF-T-7: the template pulls in app-pr-button/app-pr-dialog/app-cp-multiple-wps/app-pr-yes-or-not
+      // (real components declared elsewhere in NotificationItemModule, not needed by these unit tests).
+      // No pre-existing test here ever rendered the template — this schema only affects the NEW
+      // rendering tests below; the existing method-level tests never call detectChanges().
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(NotificationItemComponent);
@@ -721,6 +732,217 @@ describe('NotificationItemComponent', () => {
       expect(component.invalidateRequest()).toBe(true);
       expect(patchSpy).not.toHaveBeenCalled();
       expect(mockApiService.dataControlSE.showShareRequest).toBeFalsy();
+    });
+  });
+
+  // NOTIF-T-7: row restyle + decision chip. Template/CSS only — the .ts is untouched (proven by
+  // every pre-existing test above still passing unmodified). These are the FIRST tests in this
+  // file that ever render the template (fixture.detectChanges()).
+  describe('NOTIF-T-7 — row restyle + decision chip (template)', () => {
+    const buildRenderableNotification = (overrides: any = {}) => ({
+      share_result_request_id: 4001,
+      result_id: '9001',
+      requested_date: '2026-09-20T10:00:00.000Z',
+      aprovaed_date: '2026-09-21T10:00:00.000Z',
+      is_map_to_toc: true,
+      obj_requested_by: { id: 1, first_name: 'Jane', last_name: 'Doe' },
+      obj_approved_by: { id: 2, first_name: 'Jane', last_name: 'Approver' },
+      obj_owner_initiative: { id: 31, official_code: 'INIT-31', name: 'Owner program' },
+      obj_shared_inititiative: { id: 77, official_code: 'INIT-77', name: 'Contributor program' },
+      ...overrides,
+      obj_result: {
+        result_code: 'RC-9001',
+        title: 'A reported result',
+        status_id: '1',
+        source_name: 'W1/W2',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_results_toc_result: [],
+        ...(overrides.obj_result ?? {})
+      }
+    });
+
+    beforeEach(() => {
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.rolesSE.isAdmin = false;
+      component.requestingAccept = false;
+      component.requestingReject = false;
+      component.isSent = false;
+    });
+
+    it('renders both the existing "Accepted by …" text and the new decision chip for request_status_id 2', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 2 });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.textContent).toContain('Accepted');
+      expect(root.textContent).toContain('by Jane Approver');
+
+      const chip = root.querySelector('[data-notif-decision-chip="accepted"]');
+      expect(chip).toBeTruthy();
+      expect(chip?.textContent?.trim()).toBe('Accepted');
+      expect(chip?.className).toContain('notification_decision_chip_accepted');
+    });
+
+    it('renders both the existing "Rejected by …" text and the new decision chip for request_status_id 3', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 3 });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.textContent).toContain('Rejected');
+      expect(root.textContent).toContain('by Jane Approver');
+
+      const chip = root.querySelector('[data-notif-decision-chip="declined"]');
+      expect(chip).toBeTruthy();
+      expect(chip?.textContent?.trim()).toBe('Declined');
+      expect(chip?.className).toContain('notification_decision_chip_declined');
+    });
+
+    it('renders no decision chip for a pending (request_status_id 1) row', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 1 });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-notif-decision-chip]')).toBeNull();
+    });
+
+    // NOTIF-T-10 (supersedes NOTIF-T-7's assertion): the row was restructured into ONE flat flex row
+    // per the user's updated reference file — avatar/icon is now a DIRECT child of `.notification_content`
+    // (the row shell itself), sitting BEFORE the text column (`.notification_content_body`, which now
+    // holds only the text/caption, not the avatar). Old assertion ("avatar's parent is
+    // .notification_content_body") no longer holds by design; this checks the new structural fact:
+    // the row shell (`.notification_content`) is a flex row (jsdom-safe: computed via the SCSS class
+    // list membership, not a real layout computation) and the avatar is its first element child.
+    it('places the avatar as the first child of the .notification_content row shell (NOTIF-T-10)', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 2 });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const avatar = root.querySelector('.notification_avatar');
+      expect(avatar).toBeTruthy();
+
+      const rowShell = avatar?.parentElement;
+      expect(rowShell?.classList.contains('notification_content')).toBe(true);
+      expect(rowShell?.firstElementChild).toBe(avatar);
+
+      // The old header chip row is gone entirely (NOTIF-T-10).
+      expect(root.querySelector('.notification_header')).toBeFalsy();
+      expect(root.querySelector('.notification_header_item')).toBeFalsy();
+    });
+
+    // NOTIF-T-10: the decided-state caption moved from a separate right-side actions column into the
+    // text column, directly below the main sentence — assert the new location instead of the old one.
+    it('renders the decided-state caption inside the text column, below the main sentence (NOTIF-T-10)', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 2 });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const body = root.querySelector('.notification_content_body');
+      expect(body).toBeTruthy();
+
+      const caption = body?.querySelector('.notification_content_caption');
+      expect(caption).toBeTruthy();
+      expect(caption?.textContent).toContain('Accepted by Jane Approver');
+
+      const mainText = body?.querySelector('.notification_content_body_text');
+      expect(mainText).toBeTruthy();
+      // Caption must come after the main sentence within the same column.
+      expect(mainText?.compareDocumentPosition(caption!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('clicking Accept contribution on a pending bilateral fixture still opens showTocPromptDialog, unchanged (.ts untouched)', () => {
+      component.notification = buildRenderableNotification({
+        request_status_id: 1,
+        is_map_to_toc: false,
+        obj_result: { source_name: 'W3/Bilaterals' }
+      });
+      fixture.detectChanges();
+
+      const acceptBtn: HTMLElement = fixture.nativeElement.querySelector('[data-testid="accept-contribution-btn"]');
+      expect(acceptBtn).toBeTruthy();
+
+      acceptBtn.dispatchEvent(new Event('click'));
+
+      expect(component.showTocPromptDialog()).toBe(true);
+    });
+  });
+
+  // NOTIF-T-9 (POST-PASS defect fix on NOTIF-T-6/NOTIF-T-7): individual-requester rows show initials
+  // in a circle; bilateral/entity rows show an icon in a rounded square. Template/CSS only, `.ts`
+  // untouched — same discipline as NOTIF-T-7 above.
+  describe('NOTIF-T-9 — avatar defect fixes (initials + rounded-square icon)', () => {
+    const buildRenderableNotification = (overrides: any = {}) => ({
+      share_result_request_id: 4001,
+      result_id: '9001',
+      requested_date: '2026-09-20T10:00:00.000Z',
+      aprovaed_date: '2026-09-21T10:00:00.000Z',
+      is_map_to_toc: true,
+      obj_requested_by: { id: 1, first_name: 'Samuel', last_name: 'Otieno' },
+      obj_approved_by: { id: 2, first_name: 'Jane', last_name: 'Approver' },
+      obj_owner_initiative: { id: 31, official_code: 'INIT-31', name: 'Owner program' },
+      obj_shared_inititiative: { id: 77, official_code: 'INIT-77', name: 'Contributor program' },
+      ...overrides,
+      obj_result: {
+        result_code: 'RC-9001',
+        title: 'A reported result',
+        status_id: '1',
+        source_name: 'W1/W2',
+        obj_version: { id: '30', phase_name: 'Reporting 2026', status: true, obj_portfolio: { acronym: 'P25' } },
+        obj_result_type: { id: 7, name: 'Innovation development' },
+        obj_result_level: { id: 4, name: 'Initiative output' },
+        obj_results_toc_result: [],
+        ...(overrides.obj_result ?? {})
+      }
+    });
+
+    beforeEach(() => {
+      mockApiService.rolesSE.platformIsClosed = false;
+      mockApiService.rolesSE.isAdmin = false;
+      component.requestingAccept = false;
+      component.requestingReject = false;
+      component.isSent = false;
+    });
+
+    it('renders the requester initials, uppercased, inside a circle avatar for an individual (non-bilateral) row', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 1, obj_result: { source_name: 'W1/W2' } });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const avatar = root.querySelector('.notification_avatar');
+      expect(avatar).toBeTruthy();
+      expect(avatar?.classList.contains('notification_avatar_bilateral')).toBe(false);
+
+      const initials = avatar?.querySelector('.notification_avatar_initials');
+      expect(initials).toBeTruthy();
+      expect(initials?.textContent?.trim()).toBe('SO');
+      expect(avatar?.querySelector('i.pi')).toBeFalsy();
+    });
+
+    it('renders an icon inside a rounded-square (bilateral) avatar for a W3/Bilaterals row, never initials', () => {
+      component.notification = buildRenderableNotification({ request_status_id: 1, obj_result: { source_name: 'W3/Bilaterals' } });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const avatar = root.querySelector('.notification_avatar');
+      expect(avatar).toBeTruthy();
+      expect(avatar?.classList.contains('notification_avatar_bilateral')).toBe(true);
+
+      expect(avatar?.querySelector('i.pi.pi-building')).toBeTruthy();
+      expect(avatar?.querySelector('.notification_avatar_initials')).toBeFalsy();
+    });
+
+    it('falls back to an empty-string initial per missing name part, never rendering "undefined"/"null"', () => {
+      component.notification = buildRenderableNotification({
+        request_status_id: 1,
+        obj_result: { source_name: 'W1/W2' },
+        obj_requested_by: { id: 1, first_name: '', last_name: undefined }
+      });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      const initials = root.querySelector('.notification_avatar_initials');
+      expect(initials?.textContent?.trim()).toBe('');
     });
   });
 });

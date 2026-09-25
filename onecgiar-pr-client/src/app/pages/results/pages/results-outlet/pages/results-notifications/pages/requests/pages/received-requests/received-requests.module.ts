@@ -5,9 +5,17 @@ import { ReceivedRequestsRoutingModule } from './received-requests-routing.modul
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { NotificationItemModule } from '../../../../components/notification-item/notification-item.module';
 import { SkeletonNotificationItemComponent } from '../../../../components/notification-item/skeleton-notification-item/skeleton-notification-item.component';
+import { HlmBadgeImports } from '@spartan/badge';
 
 @NgModule({
   declarations: [ReceivedRequestsComponent],
-  imports: [CommonModule, ReceivedRequestsRoutingModule, CustomFieldsModule, NotificationItemModule, SkeletonNotificationItemComponent]
+  imports: [
+    CommonModule,
+    ReceivedRequestsRoutingModule,
+    CustomFieldsModule,
+    NotificationItemModule,
+    SkeletonNotificationItemComponent,
+    ...HlmBadgeImports
+  ]
 })
 export class ReceivedRequestsModule {}

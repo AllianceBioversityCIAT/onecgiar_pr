@@ -1,5 +1,22 @@
 <div class="local_container" style="padding: 20px 50px 50px 50px">
-  <h1 class="notifications_title">Notifications</h1>
+  <h1 class="notifications_title">
+    Notifications
+    <!-- Reviewer finding (NOTIF-T-18): reuse the shared ⓘ trigger pattern (P2-3262/P2-3339) instead
+         of a bespoke <i class="material-icons-round"> — same mechanism as result-detail.component.html's
+         section-guidance ⓘ (button.sgi-dac-info > app-pr-info-icon, prTooltipStyleClass="sgi-dac-tooltip").
+         Gated on non-empty content so it doesn't render as a dead, do-nothing trigger on Settings. -->
+    @if (notificationsInfoTooltip) {
+      <button
+        type="button"
+        class="sgi-dac-info"
+        [prTooltip]="notificationsInfoTooltip"
+        prTooltipPosition="right"
+        prTooltipStyleClass="sgi-dac-tooltip"
+        aria-label="About this page">
+        <app-pr-info-icon />
+      </button>
+    }
+  </h1>
 
   <div class="options">
     <div class="tabs">
@@ -14,42 +31,33 @@
       </a>
     </div>
 
-    <div class="tabs">
-      <a
-        class="tab"
-        [ngClass]="{ active: router.url.includes('/results-notifications/settings') }"
-        routerLink="settings"
-        [queryParams]="{ init: this.api.dataControlSE?.myInitiativesList[0]?.id }"
-        style="padding: 8px">
-        <i class="pi pi-cog" style="font-size: 22px; font-weight: 500"></i>
-      </a>
-    </div>
+    <!-- Removed 2026-09-25 per user request: this icon-only Settings tab became redundant once
+         `NOTIF-T-11` added a labeled "Notification settings" button in the Requests tab's own
+         combined filter row (`requests.component.html`), which reuses this exact same
+         routerLink="settings" + queryParams destination. -->
   </div>
 
   <div class="line"></div>
 
-  <p class="request_description" *ngIf="router.url.includes('/results-notifications/requests')">
-    This tab displays collaboration requests received from other Programs/Accelerators or W3/Bilateral projects. You can accept or decline each
-    invitation — if you accept, you will be able to link the collaborative result to your own ToC indicators and targets, provided the result was also
-    planned in your ToC. Note that requests can be accepted or declined even after the result has been submitted.
-  </p>
-
-  <p class="request_description" *ngIf="router.url.includes('/results-notifications/updates')">
-    In this section, there are updates on any results to which your entity(ies) are contributing.
-  </p>
-
-  <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">
+  <!-- NOTIF-T-11: the Requests-only Filter popover + Center/Bilateral-project facets + chips +
+       "Clear all" (formerly the `@if` branch here) relocated to `RequestsComponent`, alongside the
+       Received/Sent segmented tabs, per the mockup's single-row layout. This container now renders
+       ONLY for Updates — the `@if (router.url.includes('/results-notifications/requests'))` /
+       `@else` split no longer makes sense with the Requests branch gone, so it was removed in favor
+       of gating the whole container on the Updates URL directly. Settings still renders nothing
+       here (it never matched `/updates` either). -->
+  <div class="notifications_filters" *ngIf="router.url.includes('/results-notifications/updates')">
     <div>
       <app-pr-select
         label="Phases"
         [required]="false"
-        [options]="this.phaseList"
+        [options]="this.resultsNotificationsSE.phaseList"
         optionLabel="phase_name_status"
         optionValue="id"
         placeholder="Select phase"
         [overlayToBody]="true"
         [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
-        (ngModelChange)="onPhaseChange($event)">
+        (ngModelChange)="this.resultsNotificationsSE.onPhaseChange($event)">
       </app-pr-select>
     </div>
 
@@ -57,12 +65,12 @@
       [prTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
       prTooltipPosition="right">
       <app-pr-select
-        [label]="entityLabel"
+        [label]="this.resultsNotificationsSE.entityLabel"
         [required]="false"
-        [options]="this.filteredInitiatives"
+        [options]="this.resultsNotificationsSE.filteredInitiatives"
         optionLabel="full_name"
         optionValue="initiative_id"
-        [placeholder]="!this.resultsNotificationsSE.phaseFilter ? 'Select a phase first' : 'Select ' + entityLabel"
+        [placeholder]="!this.resultsNotificationsSE.phaseFilter ? 'Select a phase first' : 'Select ' + this.resultsNotificationsSE.entityLabel"
         [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
         [disabled]="!this.resultsNotificationsSE.phaseFilter">
       </app-pr-select>

@@ -1,52 +1,44 @@
-<div
-  class="notification"
-  [ngStyle]="{
-    'background-color': notification?.request_status_id === 1 ? 'var(--pr-color-primary-25)' : '',
-    border: notification?.request_status_id === 1 ? '1px solid var(--pr-color-primary-100)' : ''
-  }">
-  <div class="notification_header">
-    @if (!isBilateralResult) {
-      <div class="notification_header_item">
-        <p class="notification_header_item_text">
-          <b>Requester</b>
-          {{ requesterCode }}
-        </p>
-      </div>
-
-      <div class="notification_header_item">
-        <p class="notification_header_item_text">
-          <b> Responder </b>
-          {{ responderCode }}
-        </p>
-      </div>
-    }
-
-    @if (isBilateralResult) {
-      <div class="notification_header_item">
-        <p class="notification_header_item_text">
-          {{ notification?.obj_result?.source_name }}
-        </p>
-      </div>
-    }
-  </div>
-
+<!-- NOTIF-T-10 (2026-09-25): the Requester/Responder/bilateral-source chip row (".notification_header")
+     was removed entirely — the user's updated reference file (`PRMS Reporting.dc.html`, search
+     `showNotifications`, the row block ~L1842-1868) has no equivalent: it renders ONE flat row per
+     notification, no header chips above it. See ./CLAUDE.md for the full account. -->
+<div class="notification">
   @switch (notification?.request_status_id) {
     @case (1) {
       <div class="notification_content">
+        <!-- NOTIF-T-9 (defect fix): individual requester → initials in a CIRCLE (mockup's
+             `r.initials`, e.g. "SO"); bilateral/entity row → icon in a ROUNDED SQUARE (8px radius),
+             visually distinct shape on purpose (mockup `showNotifications`, row avatar vs. row
+             entity icon). `.ts` untouched — initials computed inline in the template. -->
+        <div class="notification_avatar" [ngClass]="{ notification_avatar_bilateral: isBilateralResult }">
+          @if (isBilateralResult) {
+            <i class="pi pi-building" aria-hidden="true"></i>
+          } @else {
+            <span class="notification_avatar_initials">{{
+              ((notification?.obj_requested_by?.first_name?.charAt(0) ?? '') + (notification?.obj_requested_by?.last_name?.charAt(0) ?? ''))
+                | uppercase
+            }}</span>
+          }
+        </div>
+
+        <!-- NOTIF-T-10: text column — main sentence only for pending rows (no caption below it). -->
         <div class="notification_content_body">
           @if (isBilateralResult) {
             @let centerName = notification?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym;
 
-            <p class="notification_content_body_text">
+            <p class="notification_content_body_text notification_content_body_text_compact">
               Center <b>{{ centerName }}</b> has reported a <b>w3/bilateral result</b> under project
-              <span style="text-decoration: underline; color: var(--pr-color-black); cursor: pointer" (click)="navigateToResult(notification)">
+              <span
+                class="font-mono"
+                style="text-decoration: underline; color: var(--pr-color-black); cursor: pointer"
+                (click)="navigateToResult(notification)">
                 {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
               </span>
               and the result <b> has been approved by Science Program {{ requesterCode }} </b>. You have been tagged as contributor to this result. Do
               you confirm program's <b>{{ responderCode }}</b> contribution to the result?
             </p>
           } @else {
-            <p class="notification_content_body_text">
+            <p class="notification_content_body_text notification_content_body_text_compact">
               <b>
                 {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
                 {{ requesterCode }}
@@ -65,6 +57,7 @@
                 [href]="resultUrl(notification)"
                 target="_blank"
                 rel="noopener noreferrer"
+                class="font-mono"
                 style="text-decoration: underline; color: var(--pr-color-black)">
                 {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
               </a>
@@ -76,60 +69,84 @@
           }
         </div>
 
-        <!-- P2-3085: read-only ToC metadata the submitter configured (from backend toc_contribution_review[]). -->
-        @if (notification?.is_map_to_toc && tocReview.length) {
-          <div class="toc_review">
-            @for (review of tocReview; track $index) {
-              <div class="toc_review_card">
-                <div class="toc_review_row"><span class="toc_review_label">Level</span><span class="toc_review_value">{{ review.level || '—' }}</span></div>
-                <div class="toc_review_row"><span class="toc_review_label">High Level Output / Intermediate Outcome / 2030 Outcome</span><span class="toc_review_value">{{ review.outcome_label || '—' }}</span></div>
-                <div class="toc_review_row"><span class="toc_review_label">Outcome Statement</span><span class="toc_review_value">{{ review.outcome_statement || '—' }}</span></div>
-                <!-- P2-3204: `statement` carries the TOC type name; `indicator_typology` is the internal sentinel ("custom"). -->
-                <div class="toc_review_row"><span class="toc_review_label">Indicator Typology</span><span class="toc_review_value">{{ tocTypologyOf(review) }}</span></div>
-                <div class="toc_review_row"><span class="toc_review_label">Unit of measurement</span><span class="toc_review_value">{{ review.unit_of_measurement || '—' }}</span></div>
-                <div class="toc_review_row"><span class="toc_review_label">Target</span><span class="toc_review_value">{{ review.target ?? '—' }}</span></div>
-                <div class="toc_review_row"><span class="toc_review_label">Contribution Target</span><span class="toc_review_value">{{ review.contribution_target ?? '—' }}</span></div>
-              </div>
-            }
+        <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
+
+        @if (!isSent) {
+          <!-- NOTIF-T-10 (amends P2-3106's "Accept contribution" / "Decline contribution" unify):
+               the user's updated reference file's row buttons read plain "Accept" / "Decline"
+               (mockup `showNotifications` row, `r.accept`/`r.decline` buttons) — shortened here on
+               purpose, not an accidental revert of P2-3106. Click handlers/bindings unchanged. -->
+          @let buttonTextConfirm = 'Accept';
+
+          <div class="notification_content_actions_buttons">
+            <app-pr-button
+              data-testid="accept-contribution-btn"
+              class="notification_accept_btn"
+              [text]="buttonTextConfirm"
+              colorType="success"
+              [showBackground]="false"
+              (click)="onAcceptContribution()"
+              [rotating]="this.requestingAccept"
+              [disabled]="invalidateRequest()"
+              [icon]="this.requestingAccept ? 'loop' : ''"
+              [tooltipText]="this.isQAed ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
+              [verticalMargin]="0"
+              [style]="{ whiteSpace: 'nowrap' }"
+              tooltipStyleClass="tooltip-w-300"></app-pr-button>
+
+            <app-pr-button
+              data-testid="decline-contribution-btn"
+              class="notification_decline_btn"
+              [text]="'Decline'"
+              colorType="danger"
+              [showBackground]="false"
+              (click)="showConfirmRejectDialog.set(true)"
+              [verticalMargin]="0"
+              [style]="{ whiteSpace: 'nowrap' }"
+              [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
           </div>
         }
+      </div>
 
-        <div class="notification_content_actions">
-          @if (!isSent) {
-            <!-- P2-3106: unify accept/reject labels to "Accept contribution" / "Decline contribution". Click handlers unchanged. -->
-            @let buttonTextConfirm = 'Accept contribution';
-
-            <div class="notification_content_actions_buttons">
-              <app-pr-button
-                [text]="buttonTextConfirm"
-                colorType="success"
-                (click)="onAcceptContribution()"
-                [rotating]="this.requestingAccept"
-                [disabled]="invalidateRequest()"
-                [icon]="this.requestingAccept ? 'loop' : ''"
-                [tooltipText]="this.isQAed ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
-                [verticalMargin]="0"
-                [style]="{ whiteSpace: 'nowrap' }"
-                tooltipStyleClass="tooltip-w-300"></app-pr-button>
-
-              <app-pr-button
-                [text]="'Decline contribution'"
-                colorType="danger"
-                (click)="showConfirmRejectDialog.set(true)"
-                [verticalMargin]="0"
-                [style]="{ whiteSpace: 'nowrap' }"
-                [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+      <!-- P2-3085: read-only ToC metadata the submitter configured (from backend toc_contribution_review[]).
+           Not part of the reference row shape — kept as an extra block below the row, unchanged. -->
+      @if (notification?.is_map_to_toc && tocReview.length) {
+        <div class="toc_review">
+          @for (review of tocReview; track $index) {
+            <div class="toc_review_card">
+              <div class="toc_review_row"><span class="toc_review_label">Level</span><span class="toc_review_value">{{ review.level || '—' }}</span></div>
+              <div class="toc_review_row"><span class="toc_review_label">High Level Output / Intermediate Outcome / 2030 Outcome</span><span class="toc_review_value">{{ review.outcome_label || '—' }}</span></div>
+              <div class="toc_review_row"><span class="toc_review_label">Outcome Statement</span><span class="toc_review_value">{{ review.outcome_statement || '—' }}</span></div>
+              <!-- P2-3204: `statement` carries the TOC type name; `indicator_typology` is the internal sentinel ("custom"). -->
+              <div class="toc_review_row"><span class="toc_review_label">Indicator Typology</span><span class="toc_review_value">{{ tocTypologyOf(review) }}</span></div>
+              <div class="toc_review_row"><span class="toc_review_label">Unit of measurement</span><span class="toc_review_value">{{ review.unit_of_measurement || '—' }}</span></div>
+              <div class="toc_review_row"><span class="toc_review_label">Target</span><span class="toc_review_value">{{ review.target ?? '—' }}</span></div>
+              <div class="toc_review_row"><span class="toc_review_label">Contribution Target</span><span class="toc_review_value">{{ review.contribution_target ?? '—' }}</span></div>
             </div>
           }
-
-          <div class="notification_date" style="min-width: 165px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
         </div>
-      </div>
+      }
     }
     @case (2) {
       <div class="notification_content">
+        <!-- NOTIF-T-9 (defect fix): see the case (1) block above for the rationale. -->
+        <div class="notification_avatar" [ngClass]="{ notification_avatar_bilateral: isBilateralResult }">
+          @if (isBilateralResult) {
+            <i class="pi pi-building" aria-hidden="true"></i>
+          } @else {
+            <span class="notification_avatar_initials">{{
+              ((notification?.obj_requested_by?.first_name?.charAt(0) ?? '') + (notification?.obj_requested_by?.last_name?.charAt(0) ?? ''))
+                | uppercase
+            }}</span>
+          }
+        </div>
+
+        <!-- NOTIF-T-10: decided-state row — the "Accepted by X on date" caption MOVED here, into the
+             text column, directly below the main sentence (mockup `r.showRes`/`r.resPrefix`/`r.resBy`/
+             `r.resDate`, a second line under the main text) — it used to live in a separate right-side
+             actions column, alongside the "Status:" label (dropped, redundant with the decision chip). -->
         <div class="notification_content_body">
-          <p class="notification_content_body_text">
+          <p class="notification_content_body_text notification_content_body_text_compact">
             <b>
               {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
               {{ requesterCode }}
@@ -148,6 +165,7 @@
               [href]="resultUrl(notification)"
               target="_blank"
               rel="noopener noreferrer"
+              class="font-mono"
               style="text-decoration: underline; color: var(--pr-color-black)">
               {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
             </a>
@@ -156,24 +174,41 @@
               <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
             }
           </p>
-        </div>
 
-        <div class="notification_content_actions" style="min-width: 280px; max-width: 280px">
-          <p class="notification_content_actions_status">
-            <b style="color: var(--pr-color-primary-300)"> Status: </b>
-            <span style="font-weight: 500; color: var(--pr-color-green-500)"> Accepted</span> by {{ notification?.obj_approved_by?.first_name }}
-            {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
+          <p class="notification_content_caption">
+            Accepted by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
+            {{ notification?.obj_approved_by?.last_name }}</span> ·
+            <span class="notification_content_caption_date font-mono">{{ notification?.aprovaed_date | date }}</span>
           </p>
-
-          <div class="notification_date" style="min-width: 150px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
         </div>
+
+        <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
+
+        <!-- NOTIF-DD-4: decision chip, last in the row (mockup `r.showChip`); reuses
+             --pr-color-green-500 (no new tokens). -->
+        <span hlmBadge variant="outline" data-notif-decision-chip="accepted" class="notification_decision_chip notification_decision_chip_accepted">
+          Accepted
+        </span>
       </div>
     }
 
     @case (3) {
       <div class="notification_content">
+        <!-- NOTIF-T-9 (defect fix): see the case (1) block above for the rationale. -->
+        <div class="notification_avatar" [ngClass]="{ notification_avatar_bilateral: isBilateralResult }">
+          @if (isBilateralResult) {
+            <i class="pi pi-building" aria-hidden="true"></i>
+          } @else {
+            <span class="notification_avatar_initials">{{
+              ((notification?.obj_requested_by?.first_name?.charAt(0) ?? '') + (notification?.obj_requested_by?.last_name?.charAt(0) ?? ''))
+                | uppercase
+            }}</span>
+          }
+        </div>
+
+        <!-- NOTIF-T-10: decided-state row — see case (2) above for the rationale (caption moved here). -->
         <div class="notification_content_body">
-          <p class="notification_content_body_text">
+          <p class="notification_content_body_text notification_content_body_text_compact">
             <b>
               {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
               {{ requesterCode }}
@@ -192,6 +227,7 @@
               [href]="resultUrl(notification)"
               target="_blank"
               rel="noopener noreferrer"
+              class="font-mono"
               style="text-decoration: underline; color: var(--pr-color-black)">
               {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
             </a>
@@ -200,17 +236,21 @@
               <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
             }
           </p>
-        </div>
 
-        <div class="notification_content_actions" style="min-width: 280px; max-width: 280px">
-          <p class="notification_content_actions_status">
-            <b style="color: var(--pr-color-primary-300)"> Status: </b>
-            <span style="font-weight: 500; color: var(--pr-color-red-300)">Rejected</span> by {{ notification?.obj_approved_by?.first_name }}
-            {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
+          <p class="notification_content_caption">
+            Rejected by <span class="notification_content_caption_by">{{ notification?.obj_approved_by?.first_name }}
+            {{ notification?.obj_approved_by?.last_name }}</span> ·
+            <span class="notification_content_caption_date font-mono">{{ notification?.aprovaed_date | date }}</span>
           </p>
-
-          <div class="notification_date" style="min-width: 150px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
         </div>
+
+        <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
+
+        <!-- NOTIF-DD-4: decision chip, last in the row (mockup `r.showChip`); reuses
+             --pr-color-red-300 (no new tokens). -->
+        <span hlmBadge variant="outline" data-notif-decision-chip="declined" class="notification_decision_chip notification_decision_chip_declined">
+          Declined
+        </span>
       </div>
     }
   }

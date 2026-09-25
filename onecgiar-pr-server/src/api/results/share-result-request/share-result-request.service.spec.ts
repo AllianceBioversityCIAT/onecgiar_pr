@@ -161,6 +161,53 @@ describe('ShareResultRequestService', () => {
       ).toBeUndefined();
     });
 
+    // NOTIF-T-16 REWORK (Reviewer fail, attempt 2): `results_by_projects` is soft-deleted
+    // (`is_active: false`), not removed, when a project is unlinked from a result
+    // (`results_by_projects.service.ts:92-100`). `getRequest()` must drop inactive links before
+    // the response reaches the client, mirroring `ResultTaggedNotificationService` /
+    // `BilateralProjectsService.getProjectsByCenter`.
+    it('drops inactive obj_result_by_project links and keeps only the active one', async () => {
+      mockShareResultRequestRepository.find
+        .mockResolvedValueOnce([
+          {
+            share_result_request_id: 5,
+            result_id: 700,
+            shared_inititiative_id: 60,
+            request_status_id: 1,
+            is_map_to_toc: false,
+            obj_result: {
+              source: 'Result',
+              result_code: 'R-700',
+              obj_result_by_project: [
+                {
+                  id: 1,
+                  project_id: 10,
+                  is_active: true,
+                  obj_clarisa_project: { id: 10, shortName: 'B-A1080' },
+                },
+                {
+                  id: 2,
+                  project_id: 11,
+                  is_active: false,
+                  obj_clarisa_project: { id: 11, shortName: 'B-A9999' },
+                },
+              ],
+            },
+          },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const response: any = await service.getReceivedResultRequest(user);
+
+      const links =
+        response.response.receivedContributionsPending[0].obj_result
+          .obj_result_by_project;
+      expect(links).toHaveLength(1);
+      expect(links[0].id).toBe(1);
+      expect(links[0].is_active).toBe(true);
+    });
+
     it('should cache toc review lookups for duplicate result/initiative pairs', async () => {
       mockShareResultRequestRepository.find
         .mockResolvedValueOnce([

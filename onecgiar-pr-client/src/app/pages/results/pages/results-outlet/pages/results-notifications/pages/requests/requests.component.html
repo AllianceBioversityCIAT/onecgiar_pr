@@ -1,9 +1,203 @@
-<div class="requests_header">
-  <a class="requests_header_item pr-body-2" routerLinkActive="active" routerLink="received" (click)="clearFiltersAndUpdateResults()">
-    Requests received
-  </a>
-  <a class="requests_header_item pr-body-2" routerLinkActive="active" routerLink="sent" (click)="clearFiltersAndUpdateResults()"> Requests sent </a>
+<!-- NOTIF-T-11: Received/Sent segmented tabs + Search + Filter popover + (via spacer) Notification
+     settings, all in ONE flex row, per the reference (`PRMS Reporting.dc.html`, `showNotifications`,
+     ~L1726-1815: `<Received|Sent>` `<Search box>` `<Filter button+popover>` flex:1 spacer
+     `<Notification settings>`). The Filter popover + Center/Bilateral-project chips + "Clear all"
+     relocated here verbatim from `ResultsNotificationsComponent` (NOTIF-T-6/NOTIF-T-9) — see this
+     component's own `.ts` for the full history. Per the mockup, the chips + "Clear all" render in a
+     SEPARATE row below this one (`ntHasChips`), not inline with the segmented tabs/Search/Filter. -->
+<div class="requests_header group/tabs flex flex-wrap items-center gap-[12px]" data-orientation="horizontal">
+  <div
+    class="inline-flex w-fit items-center justify-center gap-[2px] rounded-[10px] bg-[var(--pr-color-accents-1)] p-[3px]"
+    data-slot="tabs-list"
+    data-variant="default">
+    <a
+      #receivedLinkActive="routerLinkActive"
+      routerLinkActive
+      routerLink="received"
+      [attr.data-active]="receivedLinkActive.isActive ? '' : null"
+      (click)="clearFiltersAndUpdateResults()"
+      data-slot="tabs-trigger"
+      class="relative inline-flex h-[30px] cursor-pointer items-center justify-center whitespace-nowrap rounded-[8px] px-[16px] text-[13px] font-semibold text-[var(--pr-color-accents-5)] transition-all duration-150 hover:text-[var(--pr-color-secondary-400)] focus-visible:shadow-[var(--pr-focus-ring)] data-active:bg-[var(--pr-color-white)] data-active:text-[var(--pr-color-secondary-400)] data-active:shadow-[0_1px_3px_rgba(25,21,36,0.08)]">
+      Received
+    </a>
+    <a
+      #sentLinkActive="routerLinkActive"
+      routerLinkActive
+      routerLink="sent"
+      [attr.data-active]="sentLinkActive.isActive ? '' : null"
+      (click)="clearFiltersAndUpdateResults()"
+      data-slot="tabs-trigger"
+      class="relative inline-flex h-[30px] cursor-pointer items-center justify-center whitespace-nowrap rounded-[8px] px-[16px] text-[13px] font-semibold text-[var(--pr-color-accents-5)] transition-all duration-150 hover:text-[var(--pr-color-secondary-400)] focus-visible:shadow-[var(--pr-focus-ring)] data-active:bg-[var(--pr-color-white)] data-active:text-[var(--pr-color-secondary-400)] data-active:shadow-[0_1px_3px_rgba(25,21,36,0.08)]">
+      Sent
+    </a>
+  </div>
+
+  <div class="flex min-w-[220px] w-[320px] flex-col gap-[4px]">
+    <input type="text" hlmInput placeholder="Search requests…" [(ngModel)]="this.resultsNotificationsSE.searchFilter" class="w-full" />
+  </div>
+
+  <!-- NOTIF-DD-7: `hlm-popover`/CDK overlay replaced with a plain, self-positioned dropdown — a
+       `position:relative` wrapper around the trigger button, and the panel as a conditionally
+       rendered sibling `position:absolute` below it. Exactly the technique the reference mockup
+       uses (`PRMS-Reporting.dc.html`, `ntFilterOpen`). See `design.md` §12 `NOTIF-DD-7` for the full
+       rationale (four rounds of real CDK-popover defects: `NOTIF-T-6`/`NOTIF-T-9`/`NOTIF-T-12`/`NOTIF-T-13`). -->
+  <div class="relative">
+    <button
+      #filterTriggerBtn
+      type="button"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="filterPopoverOpen() ? 'true' : 'false'"
+      (click)="toggleFilterPopover()"
+      class="flex h-[36px] cursor-pointer items-center gap-[8px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[14px] text-[13px] font-semibold text-[var(--pr-color-secondary-400)] outline-none transition-colors duration-150 hover:border-[var(--pr-color-primary-300)] focus-visible:shadow-[var(--pr-focus-ring)]">
+      <i class="material-icons-round text-[18px]" aria-hidden="true">filter_list</i>
+      Filter
+      @if (activeFilterCount > 0) {
+        <span hlmBadge variant="default">{{ activeFilterCount }}</span>
+      }
+    </button>
+
+    @if (filterPopoverOpen()) {
+      <!-- NOTIF-T-9: width/height-cap kept off Tailwind arbitrary-value utilities onto a plain
+           compiled SCSS class (`.notifications-filter-popover-content`, `requests.component.scss`)
+           — defensive move against this codebase's own Tailwind-JIT-timing risk. Positioning
+           (`position:absolute;top;left`/`.filter-popover--align-end`) now lives in the same SCSS
+           class per NOTIF-DD-7. -->
+      <div
+        #filterPanel
+        role="dialog"
+        aria-label="Filter"
+        class="notifications-filter-popover-content flex-col gap-[16px] p-[16px]"
+        [class.filter-popover--align-end]="filterPopoverAlign() === 'end'">
+        <div>
+          <app-pr-select
+            label="Phases"
+            [required]="false"
+            [options]="this.resultsNotificationsSE.phaseList"
+            optionLabel="phase_name_status"
+            optionValue="id"
+            placeholder="Select phase"
+            [overlayToBody]="true"
+            [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
+            (ngModelChange)="this.resultsNotificationsSE.onPhaseChange($event)">
+          </app-pr-select>
+        </div>
+
+        <div
+          [prTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
+          prTooltipPosition="right">
+          <app-pr-select
+            [label]="this.resultsNotificationsSE.entityLabel"
+            [required]="false"
+            [options]="this.resultsNotificationsSE.filteredInitiatives"
+            optionLabel="full_name"
+            optionValue="initiative_id"
+            [placeholder]="!this.resultsNotificationsSE.phaseFilter ? 'Select a phase first' : 'Select ' + this.resultsNotificationsSE.entityLabel"
+            [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
+            [disabled]="!this.resultsNotificationsSE.phaseFilter">
+          </app-pr-select>
+        </div>
+
+        <div class="flex flex-col gap-[6px]">
+          <app-pr-field-header label="Center"></app-pr-field-header>
+          <!-- NOTIF-T-15: hand-built search, above the list, per the mockup (`ntCenterSel.query`).
+               Same `hlmInput` convention as the main Search box above and `app-pr-select`'s own
+               built-in search input (`pr-select.component.html`). -->
+          <input
+            type="text"
+            hlmInput
+            placeholder="Search centers"
+            [ngModel]="centerSearchQuery()"
+            (ngModelChange)="centerSearchQuery.set($event)"
+            class="w-full" />
+          <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+            @for (center of filteredCenterFacetOptions; track center.id) {
+              <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                <hlm-checkbox
+                  [checked]="isCenterFilterChecked(center.id)"
+                  (checkedChange)="onCenterFilterChange(center.id, $event)"></hlm-checkbox>
+                <span class="truncate">{{ center.label }}</span>
+              </label>
+            } @empty {
+              @if (centerFacetOptions.length > 0) {
+                <p class="text-[12px] text-[var(--pr-color-accents-5)]">Nothing matches that search.</p>
+              } @else {
+                <p class="text-[12px] text-[var(--pr-color-accents-5)]">No centers available yet.</p>
+              }
+            }
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-[6px]">
+          <app-pr-field-header label="Bilateral project"></app-pr-field-header>
+          <!-- NOTIF-T-15: hand-built search, above the list, per the mockup (`ntProjectSel.query`). -->
+          <input
+            type="text"
+            hlmInput
+            placeholder="Search projects"
+            [ngModel]="bilateralProjectSearchQuery()"
+            (ngModelChange)="bilateralProjectSearchQuery.set($event)"
+            class="w-full" />
+          <div class="flex max-h-[160px] flex-col gap-[6px] overflow-y-auto">
+            @for (project of filteredBilateralProjectFacetOptions; track project.code) {
+              <label class="flex cursor-pointer items-center gap-[8px] text-[13px] text-[var(--pr-color-secondary-400)]">
+                <hlm-checkbox
+                  [checked]="isBilateralProjectFilterChecked(project.code)"
+                  (checkedChange)="onBilateralProjectFilterChange(project.code, $event)"></hlm-checkbox>
+                <span class="truncate" [title]="project.label">{{ project.label }}</span>
+              </label>
+            } @empty {
+              @if (bilateralProjectFacetOptions.length > 0) {
+                <p class="text-[12px] text-[var(--pr-color-accents-5)]">Nothing matches that search.</p>
+              } @else {
+                <p class="text-[12px] text-[var(--pr-color-accents-5)]">No bilateral projects available yet.</p>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Reference layout: a flex:1 spacer pushes "Notification settings" to the far right. -->
+  <div class="flex-1 min-w-[16px]"></div>
+
+  <!-- Additional entry point to the SAME settings destination as the existing gear-icon tab in
+       `ResultsNotificationsComponent`'s top Requests|Updates|⚙ row (untouched, per task scope) —
+       reuses its exact navigation (`routerLink` + `queryParams`), just relative one level up since
+       this button lives inside the routed `requests` child, not the parent. -->
+  <button
+    type="button"
+    routerLink="../settings"
+    [queryParams]="{ init: this.api.dataControlSE?.myInitiativesList[0]?.id }"
+    class="flex h-[36px] flex-none cursor-pointer items-center gap-[7px] rounded-[8px] border border-[var(--pr-color-accents-2)] bg-[var(--pr-color-white)] px-[12px] text-[14px] font-medium text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
+    <i class="pi pi-cog" style="font-size: 16px"></i>
+    Notification settings
+  </button>
 </div>
+
+@if (activeFilterChips.length > 0) {
+  <div class="flex flex-wrap items-center gap-[8px] -mt-[8px] mb-[20px]">
+    @for (chip of activeFilterChips; track chip.type + chip.id) {
+      <span hlmBadge variant="secondary" class="flex items-center gap-[6px] py-[4px] pl-[10px] pr-[6px]">
+        {{ chip.label }}
+        <button
+          type="button"
+          aria-label="Remove filter"
+          (click)="removeFilterChip(chip)"
+          class="flex h-[16px] w-[16px] cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-inherit">
+          <i class="material-icons-round text-[14px]" aria-hidden="true">close</i>
+        </button>
+      </span>
+    }
+
+    <button
+      type="button"
+      (click)="clearAllFilters()"
+      class="cursor-pointer border-0 bg-transparent text-[12.5px] font-semibold text-[var(--pr-color-primary-300)] hover:underline">
+      Clear all
+    </button>
+  </div>
+}
 
 <div class="requests">
   <router-outlet></router-outlet>

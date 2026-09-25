@@ -21,11 +21,21 @@ p {
       font-weight: 600;
     }
 
+    /* NOTIF-T-10: the "card" look (background/border/radius, `overflow:hidden`) moves HERE from each
+       row (`notification-item`'s own `.notification` used to carry it) — the reference file
+       (`PRMS Reporting.dc.html`, `showNotifications`) renders ONE continuous bordered container per
+       group, with only a border-bottom separating rows inside it. Headers/badges above this div are
+       untouched (NOTIF-T-5's own grouping markup — out of scope here). `gap: 0` replaces the old
+       `10px` row gap: rows now separate via `notification-item`'s own `border-bottom`, not a gap. */
     .received_container_content_item {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 0;
       width: 100%;
+      background: var(--pr-color-white);
+      border: 1px solid var(--pr-color-accents-2);
+      border-radius: 12px;
+      overflow: hidden;
     }
 
     .received_container_content_empty {

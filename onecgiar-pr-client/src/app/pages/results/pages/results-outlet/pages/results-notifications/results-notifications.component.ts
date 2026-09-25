@@ -2,7 +2,6 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
-import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
@@ -12,9 +11,14 @@ import { ActivatedRoute, Router } from '@angular/router';
   standalone: false
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
-  filteredInitiatives = [];
-  phaseList = [];
-  entityLabel = 'Entity';
+  // NOTIF-T-11 (rework attempt 2): `phaseList`/`filteredInitiatives`/`entityLabel` and
+  // `getAllPhases()`/`onPhaseChange()`/`filterInitiativesByPhase()` moved to `ResultsNotificationsService`
+  // — this component and `RequestsComponent` used to each hold their OWN copy, which meant switching
+  // phase on Requests then clicking over to Updates left this tab's Program dropdown showing the OLD
+  // phase's initiatives under the OLD portfolio label (a real `NOTIF-AC-5` violation). Both components
+  // now bind `this.resultsNotificationsSE.phaseList`/`.filteredInitiatives`/`.entityLabel` directly —
+  // single source of truth, no prop-drilling, same reasoning `phaseFilter`/`initiativeIdFilter` already
+  // had for living on the service.
 
   constructor(
     public api: ApiService,
@@ -25,7 +29,7 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.getAllPhases();
+    this.resultsNotificationsSE.getAllPhases();
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
     this.api.dataControlSE.getCurrentPhases().subscribe();
@@ -58,8 +62,8 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
 
   clearAllFilters() {
     this.resultsNotificationsSE.phaseFilter = null;
-    this.entityLabel = 'Entity';
-    this.filteredInitiatives = [];
+    this.resultsNotificationsSE.entityLabel = 'Entity';
+    this.resultsNotificationsSE.filteredInitiatives = [];
     this.resultsNotificationsSE.resetFilters();
   }
 
@@ -75,45 +79,25 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     });
   }
 
-  onPhaseChange(phaseId) {
-    this.resultsNotificationsSE.get_updates_notifications(phaseId);
-    this.resultsNotificationsSE.get_section_information(phaseId);
-    this.resultsNotificationsSE.get_sent_notifications(phaseId);
-    this.filterInitiativesByPhase(phaseId);
-  }
-
-  filterInitiativesByPhase(phaseId) {
-    const selectedPhase = this.phaseList.find(p => p.id == phaseId);
-    if (!selectedPhase) return;
-
-    const portfolioId = selectedPhase.obj_portfolio?.id;
-    const portfolioAcronym = selectedPhase.obj_portfolio?.acronym?.toLowerCase();
-
-    this.entityLabel = portfolioId === 2 ? 'Initiative' : 'Entity';
-
-    if (this.api.rolesSE.isAdmin) {
-      this.api.resultsSE.GET_AllInitiatives(portfolioAcronym).subscribe(({ response }) => {
-        this.filteredInitiatives = response;
-      });
-    } else {
-      this.filteredInitiatives = this.api.dataControlSE.myInitiativesList.filter(init => init.portfolio_id === portfolioId);
+  /** Per-user-request (2026-09-25): the page-level explainer that used to render as a permanently
+   * visible `<p class="request_description">` under the tabs is now surfaced via the ⓘ icon's
+   * tooltip next to the "Notifications" title instead, matching the mockup convention. Content
+   * switches with the active tab, same as the paragraph it replaces did (Requests vs Updates); no
+   * copy for Settings, mirroring the paragraph's prior behavior of rendering nothing there either. */
+  get notificationsInfoTooltip(): string {
+    if (this.router.url.includes('/results-notifications/requests')) {
+      return (
+        'This tab displays collaboration requests received from other Programs/Accelerators or W3/Bilateral projects. ' +
+        'You can accept or decline each invitation — if you accept, you will be able to link the collaborative result to ' +
+        'your own ToC indicators and targets, provided the result was also planned in your ToC. Note that requests can be ' +
+        'accepted or declined even after the result has been submitted.'
+      );
     }
-  }
 
-  getAllPhases() {
-    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
-      this.phaseList = response;
-      // P2-3106 (AC2): default the Phases dropdown to the current active reporting phase when none is set
-      // (a phase from query params, applied in setQueryParams, takes precedence).
-      if (!this.resultsNotificationsSE.phaseFilter) {
-        const activePhaseId = this.api.dataControlSE.reportingCurrentPhase?.phaseId;
-        if (activePhaseId && this.phaseList.some(p => p.id == activePhaseId)) {
-          this.resultsNotificationsSE.phaseFilter = activePhaseId;
-        }
-      }
-      if (this.resultsNotificationsSE.phaseFilter) {
-        this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
-      }
-    });
+    if (this.router.url.includes('/results-notifications/updates')) {
+      return 'In this section, there are updates on any results to which your entity(ies) are contributing.';
+    }
+
+    return '';
   }
 }

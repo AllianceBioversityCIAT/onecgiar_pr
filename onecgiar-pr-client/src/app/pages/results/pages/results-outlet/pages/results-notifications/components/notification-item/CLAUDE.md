@@ -1,16 +1,33 @@
 # notification-item
 
-**Verified:** 2026-09-04 · branch feat/p2-3484-sp-review-closure (P2-3187 AC4 built, deterministic v1/v2 routing)
+**Verified:** 2026-09-25 (`NOTIF-T-10` rework, attempt 2) · branch qa-development-2026-ss —
+template/CSS only, `.ts` untouched.
+
+- Row is ONE flat flex row (`.notification_content`): avatar/icon → text column (main sentence +,
+  status 2/3 only, `.notification_content_caption` below it) → timestamp → actions (case 1) or
+  decision chip (case 2/3). The border-bottom row separator and `:host(:last-child)` removal live on
+  the outer `.notification` (not `.notification_content`), so the `toc_review` block stays grouped
+  with its own row; `.notification` carries no border/background of its own otherwise. Card look
+  lives on the GROUP container in `received-requests`/`sent-requests`, not this component.
+  Accept/Decline buttons read `'Accept'`/`'Decline'` (supersedes P2-3106's longer labels); their
+  `::ng-deep` overrides also hide `pr-button`'s always-rendered `.filter` div (`display:none`),
+  which fixed a real off-center label bug — see the `.scss` header comment for the root cause.
 
 ## What it is
-One card in the notifications list (Notifications → Requests → Received / Sent). It shows a
-contribution request and, unless `[isSent]="true"`, the **Accept contribution** / **Decline
-contribution** buttons. For bilateral requests the Accept button opens the **optional ToC step**
-(P2-3187 AC4, Option A): a prompt ("Not now" / "Map it") and, behind "Map it", an in-card mapping
-dialog reusing `app-cp-multiple-wps` with `forceP25` — the same composition the bilateral review
-drawer ships.
+One row in the notifications list (Notifications → Requests → Received / Sent). It shows a
+contribution request and, unless `[isSent]="true"`, the **Accept** / **Decline** buttons
+(`NOTIF-T-10`; formerly "Accept contribution"/"Decline contribution", `P2-3106`). For bilateral
+requests the Accept button opens the **optional ToC step** (P2-3187 AC4, Option A): a prompt
+("Not now" / "Map it") and, behind "Map it", an in-card mapping dialog reusing
+`app-cp-multiple-wps` with `forceP25` — the same composition the bilateral review drawer ships.
 
 ## Contract
+- **`notification-item.module.ts` is the registration home for this folder's sibling filter pipes**
+  (`FilterNotificationByPhasePipe`, `FilterNotificationByInitiativePipe`,
+  `FilterNotificationBySearchPipe`, `FilterNotificationByCenterPipe`,
+  `FilterNotificationByBilateralProjectPipe`) plus `GroupNotificationsByRecencyPipe` — this is why
+  `received-requests`/`sent-requests` import `NotificationItemModule` even though they don't use
+  the component itself, only its pipe chain.
 - Inputs: `notification` (raw row from `GET /api/results/request/get/received|sent`), `isSent`.
 - Output: `requestEvent` — the parent refetches the list. Emitted in `finalize`, i.e. **after** the
   `next` handler, and it destroys this instance (`@for … track $index`).
@@ -70,6 +87,23 @@ drawer ships.
   `acceptsWithoutToc` silently falls back to the legacy flow.
 - The mapping dialog passes `[hidden]="true"` to `app-cp-multiple-wps` — that input only hides the
   multi-tab strip (one mapping per accept, same as the review drawer), not the form.
+
+## Prior touch history (condensed)
+- **`NOTIF-T-9`** (defect fix, avatar): individual-requester rows show initials in a CIRCLE;
+  bilateral/entity rows show an icon in a ROUNDED SQUARE (8px radius) — `.notification_avatar`
+  shrank 32px → 28px per the mockup. Accept/Decline buttons got `[showBackground]="false"` +
+  `::ng-deep .notification_accept_btn/.notification_decline_btn .pr_button { ... !important }`
+  overrides (Accept: `--pr-color-primary-300` border/white bg; Decline: `--pr-color-accents-5`
+  text) — `!important` is required because a bare `::ng-deep` rule gets NO `[_ngcontent-x]` host
+  attribute under emulated encapsulation and so compiles to LOWER specificity than
+  `pr-button.component.scss`'s own base rules, losing the cascade without it (confirmed against
+  three existing precedents in this codebase: `section-evidence`, `rd-evidences`, `sync-button`
+  component `.scss` files, all using the same `!important` pattern, never a bare `::ng-deep` alone).
+  `pr-button.component.*` itself never touched.
+- **`NOTIF-T-7`** (row restyle + decision chip): added the leading avatar/entity icon, `font-mono`
+  result code, single-line-clamped body text, and a Helm `badge` decision chip
+  (`--pr-color-green-500`/`--pr-color-red-300`, `NOTIF-DD-4`) for status 2/3 — superseded in SHAPE
+  by `NOTIF-T-10` above (chip now sits at row-end, not in a side column).
 
 ## History
 - **2026-09-04 (P2-3187 closure):** AC4 built as Option A (prompt + in-card mapping step, single

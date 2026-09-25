@@ -4,92 +4,188 @@ p {
   margin: 0;
 }
 
+/* NOTIF-T-10 (2026-09-25) — restructured per the user's updated reference file
+   (`PRMS Reporting.dc.html`, search `showNotifications`, row block ~L1842-1868):
+   - `.notification_header` (Requester/Responder/bilateral-source chip row) is GONE — no
+     equivalent in the reference markup. The "card" background/border/padding that used to sit on
+     `.notification` itself is ALSO gone — that look now belongs to the GROUP container in
+     `received-requests`/`sent-requests` (`.received_container_content_item` /
+     `.sent_container_content_item`), matching the reference's single continuous bordered list.
+   - `.notification_content` is now the reference's flat row: avatar/icon → text column
+     (`.notification_content_body`, main sentence + decided-state caption below it) → timestamp
+     (`.notification_date`) → actions (buttons) / decision chip, in that order, `align-items:center`,
+     no wrap. Token mapping: reference `--surface:#FFFFFF` → `--pr-color-white`; reference
+     `--text-4`/`--text-3` (muted captions/timestamp) → `--pr-color-accents-5` (`#666`), already
+     this file's own muted-caption convention — not chasing the mockup's exact hex per the project's
+     token-tracing rule, not pixel-matching. */
+/* NOTIF-T-10 (rework, attempt 2 — Reviewer FAIL #2 corrected): the row-separator border-bottom now
+   lives on `.notification` (the outer wrapper, one per component instance) instead of
+   `.notification_content` (the inner block, which for case (1) is only PART of the row — the
+   `toc_review` block renders as its OWN sibling after it). Putting the border on the outer element
+   keeps `toc_review` visually grouped with its own row and draws exactly one separator per
+   notification, regardless of case. The former `[ngStyle]` on `.notification` (pending-row violet
+   border/tint) is REMOVED entirely — it was leftover from before this restructure and drew a
+   violet box around the whole row, in violation of the project's "no violet border, no tinted
+   background on content surfaces" hard rule; the flat list look is carried by border-bottom only. */
 .notification {
-  padding: 0 30px 15px 30px;
-  background-color: var(--pr-color-accents-1);
-  border: 1px solid var(--pr-color-accents-4);
-  border-radius: 10px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+}
 
-  .notification_header {
+/* Avoid a double border where the last row's own border-bottom meets the group container's own
+   bottom border in received-requests/sent-requests. `:host(:last-child)` reaches the component's
+   own position among its siblings in the LIST (the real DOM parent is
+   `.received_container_content_item` / `.sent_container_content_item`). Targeting `.notification`
+   (not `.notification_content`) removes the separator from the whole row, including any trailing
+   `toc_review` block, so there is no dangling border below it either. */
+:host(:last-child) .notification {
+  border-bottom: none;
+}
+
+.notification_content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 64px;
+  background: var(--pr-color-white);
+
+  .notification_content_actions_buttons {
     display: flex;
-    justify-content: flex-start;
     align-items: center;
     gap: 10px;
-
-    .notification_header_item {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 2px 15px;
-      border: 1px solid var(--pr-color-primary-300);
-      border-radius: 0 0 10px 10px;
-      border-top: none;
-      background: var(--pr-color-primary-100);
-      color: var(--pr-color-primary-300);
-
-      .notification_header_item_text {
-        @include fonts.pr-typography('body-2');
-        font-weight: 500;
-      }
-    }
+    flex: none;
   }
+}
 
-  .notification_content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    margin-top: 5px;
-    min-height: 52px;
+.notification_content_body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
 
-    .notification_content_actions {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-end;
-
-      .notification_content_actions_status {
-        text-align: center;
-        @include fonts.pr-typography('body-2');
-        padding: 5px 20px;
-        border-left: 1px solid var(--pr-color-primary-300);
-        border-right: 1px solid var(--pr-color-primary-300);
-        border-radius: 10px;
-      }
-
-      .notification_content_actions_buttons {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .notification_content_actions_sent {
-        color: var(--pr-color-accents-5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
-        font-weight: 500;
-      }
-    }
-
-    .notification_content_body {
-      .notification_content_body_text {
-        @include fonts.pr-typography('body-2');
-        font-weight: 500;
-      }
-    }
-  }
-
-  .notification_date {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    width: 100%;
-    color: var(--pr-color-accents-5);
-    margin-top: 5px;
+  .notification_content_body_text {
     @include fonts.pr-typography('body-2');
+    font-weight: 500;
+  }
+
+  /* NOTIF-T-7: single-line text, ellipsis-truncated (reference: white-space:nowrap;overflow:hidden;
+     text-overflow:ellipsis via -webkit-line-clamp:1 here). */
+  .notification_content_body_text_compact {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+  }
+
+  /* NOTIF-T-10: decided-state caption ("Accepted/Declined by X · date"), moved here from the old
+     right-side actions column — directly below the main sentence, per the reference's second line
+     (`r.showRes`/`r.resPrefix`/`r.resBy`/`r.resDate`). Single muted tone (--pr-color-accents-5) for
+     the whole line, per this file's own existing muted-caption convention — not chasing the
+     reference's two-tone text-4/text-3 split. */
+  .notification_content_caption {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-5);
+
+    .notification_content_caption_by {
+      font-weight: 500;
+    }
+  }
+}
+
+/* NOTIF-T-9 (defect fix): 28px × 28px per the mockup (`mockups/PRMS-Reporting.dc.html`,
+   `showNotifications`, row avatar `width:28px;height:28px;border-radius:999px` / row entity
+   icon `width:28px;height:28px;border-radius:8px`) — was 32px. */
+.notification_avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 9999px; /* individual requester: CIRCLE, containing initials */
+  background: var(--pr-color-primary-100);
+  color: var(--pr-color-primary-300);
+  font-size: 14px;
+
+  .notification_avatar_initials {
+    @include fonts.pr-typography('body-3');
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.2px;
+  }
+
+  /* Center-tagged / Bilateral-project-tagged rows: ROUNDED SQUARE (8px radius) containing an
+     icon — deliberately distinct from the individual-requester circle above (mockup's own
+     entity-icon shape, not a color-only variant). */
+  &.notification_avatar_bilateral {
+    border-radius: 8px;
+    background: var(--pr-color-secondary-100);
+    color: var(--pr-color-secondary-400);
+  }
+}
+
+.notification_date {
+  flex: none;
+  white-space: nowrap;
+  color: var(--pr-color-accents-5);
+  @include fonts.pr-typography('body-2');
+}
+
+/* NOTIF-T-7 / NOTIF-DD-4: decision chip — reuses the existing status tokens, no new hex/tokens.
+   Last in the row per the reference (`r.showChip`), so `flex: none` keeps it from stretching. */
+.notification_decision_chip {
+  flex: none;
+  white-space: nowrap;
+
+  &_accepted {
+    border-color: var(--pr-color-green-500);
+    color: var(--pr-color-green-500);
+    background-color: color-mix(in srgb, var(--pr-color-green-500) 12%, transparent);
+  }
+
+  &_declined {
+    border-color: var(--pr-color-red-300);
+    color: var(--pr-color-red-300);
+    background-color: color-mix(in srgb, var(--pr-color-red-300) 12%, transparent);
+  }
+}
+
+/* P2-3085: read-only ToC metadata block in the Contribution Request review */
+.toc_review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 16px;
+
+  &_card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--pr-color-neutral-300);
+    border-radius: 8px;
+    background: var(--pr-color-accents-1);
+  }
+
+  &_row {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  &_label {
+    color: var(--pr-color-neutral-600);
+    font-weight: 500;
+    flex: 0 0 auto;
+    max-width: 60%;
+  }
+
+  &_value {
+    color: var(--pr-color-black);
+    text-align: right;
   }
 }
 
@@ -140,47 +236,76 @@ p {
   color: var(--pr-color-red-500);
 }
 
-/* P2-3085: read-only ToC metadata block in the Contribution Request review */
-.toc_review {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 8px 0 4px;
-
-  &_card {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
-    border: 1px solid var(--pr-color-neutral-300);
-    border-radius: 8px;
-    background: var(--pr-color-accents-1);
-  }
-
-  &_row {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-    justify-content: space-between;
-  }
-
-  &_label {
-    color: var(--pr-color-neutral-600);
-    font-weight: 500;
-    flex: 0 0 auto;
-    max-width: 60%;
-  }
-
-  &_value {
-    color: var(--pr-color-black);
-    text-align: right;
-  }
-}
-
 /* P2-3187 AC4 — optional ToC mapping step for bilateral contribution requests.
    The dialog panel class must pierce the view boundary (same pattern as .share-request-dialog). */
 ::ng-deep app-pr-dialog .toc-mapping-dialog {
   width: min(760px, 92vw);
+}
+
+/* NOTIF-DD-6 — pending-state Accept/Decline restyle (local override, never pr-button.component.*).
+   [showBackground]="false" already removes the filled background and (per pr-button's own
+   `.text, i { color: var(--pr-color-primary-300) }` base rule, only overridden when
+   `.show_background` is present) leaves Accept's text/icon in --pr-color-primary-300 for free —
+   this file's own former `.notification_header_item` border (removed in NOTIF-T-10) had already
+   established primary-300 as the "outlined action" border tint on this exact component, reused
+   here rather than inventing one.
+
+   Rework (attempt 2, POST-FAIL): Angular's emulated encapsulation attaches the `[_ngcontent-x]`
+   host attribute to every simple selector of a rule compiled from THIS component's own stylesheet
+   (pr-button.component.scss's base `.pr_button { border-radius: 5px }` and `.text, i { color: ... }`
+   rules), but attaches NOTHING to a rule that starts with `::ng-deep` (nothing sits to its left to
+   carry the attribute) — so this override was compiling to a LOWER specificity than the rule it
+   means to beat, and losing the cascade regardless of source order. Fixed the same way this exact
+   problem is already fixed elsewhere in this codebase — `!important` on every overriding
+   declaration — matching the precedent in section-evidence.component.scss (~L314-322),
+   rd-evidences.component.scss (`app-pr-button:first-child ::ng-deep { ... !important }`) and
+   sync-button.component.scss (`::ng-deep .pr_button { ... !important }`). `!important` wins
+   regardless of selector specificity as long as it isn't fighting another `!important` — confirmed
+   pr-button.component.scss's own `.pr_button { border-radius: 5px }` and `.text, i { color: ... }`
+   base rules use no `!important`, so there is nothing here to out-`!important`. Corrected 2026-09-25
+   (Reviewer, attempt 2 PASS): the three precedent files don't actually use a BARE top-level
+   `::ng-deep` — each nests it under a selector from its own component (e.g.
+   `.buttons app-pr-button:first-child ::ng-deep { .pr_button {...} }` in section-evidence.component.scss
+   and rd-evidences.component.scss; `.fixed_button.in-bottom-bar ::ng-deep .pr_button` in
+   sync-button.component.scss). The real shared convention across all three is `!important` on every
+   overriding declaration, not the bare-`::ng-deep` shape. This file's own top-level
+   `::ng-deep .notification_accept_btn .pr_button`/`.notification_decline_btn .pr_button` selectors
+   are still safe (they can only match elements carrying those two unique classes, so nothing leaks),
+   and this file already has an existing precedent for a top-level `::ng-deep` too
+   (`::ng-deep app-pr-dialog .toc-mapping-dialog`, above) — but the earlier claim that this matched
+   the OTHER three files' exact selector shape was wrong; only the `!important` part does.
+
+   NOTIF-T-10 (rework, attempt 2 — Reviewer FAIL #1 corrected): there IS a real centering bug, and
+   the previous "none found" conclusion was wrong. `pr-button.component.html`'s `.filter` div is
+   rendered UNCONDITIONALLY (no `*ngIf`) — only its `[ngStyle]` positioning is gated on
+   `showBackground`. Both notification buttons pass `[showBackground]="false"`, so `.filter` stays
+   in the DOM as a normal, zero-width flex item, and `.pr_button`'s `gap:10px` still reserves a gap
+   between it and `.text` — pushing the label ~5px off true center. The icon `<i>` really is
+   `*ngIf`-removed (that half of the earlier analysis was correct), but `.filter` was the missed
+   second always-rendered element. Fix: hide `.filter` outright for these two buttons — safe because
+   `.filter` does nothing when `showBackground` is false (no gradient, no transform), and preferred
+   over zeroing `.pr_button`'s `gap` since the loading-icon (`rotating`) state still needs it between
+   the icon and the label. */
+::ng-deep .notification_accept_btn .pr_button,
+::ng-deep .notification_decline_btn .pr_button {
+  .filter {
+    display: none !important;
+  }
+}
+
+::ng-deep .notification_accept_btn .pr_button {
+  border: 1px solid var(--pr-color-primary-300) !important;
+  border-radius: 8px !important;
+  background-color: var(--pr-color-white) !important;
+}
+
+/* Decline: no background, no border, muted-gray text — reuses --pr-color-accents-5, already the
+   muted-caption token in this same file (.notification_content_caption / .notification_date). */
+::ng-deep .notification_decline_btn .pr_button {
+  .text,
+  i {
+    color: var(--pr-color-accents-5) !important;
+  }
 }
 
 .toc-mapping-body {
