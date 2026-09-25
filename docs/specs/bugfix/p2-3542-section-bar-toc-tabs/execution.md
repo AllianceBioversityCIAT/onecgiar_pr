@@ -166,3 +166,71 @@ None. First-attempt PASS, no runtime events, no rework.
 #### Budget actuals (recorded, not escalated — user decision at the `SBT-T-1` gate)
 
 `SBT-T-2` added **254 LOC** (80 production, 174 test). Spec running total: **382 LOC of a ~150 budget (255%)**, across 2 of 3 tasks, with **2 review rounds of a budgeted 1** (one per task, no rework in either). The budget under-counted the regression suite, which is the ticket's actual deliverable in Bug Mode. Per the user's decision this is logged rather than escalated; `design.md` §12 is left as the historical estimate rather than rewritten after the fact.
+
+---
+
+### `SBT-T-3` — Confirm in a real browser and re-stamp the folder guides
+
+| Field | Value |
+|---|---|
+| **Final status** | **`[~]` PARTIAL** — docs half `PASS`; the `D9` browser gate is **outstanding**, parked with the user |
+| Date | 2026-09-25 |
+| Implementer attempts | 1 (docs half) |
+| Reviewer verdict | `PASS` (attempt 1, docs half only) |
+| Effort assigned | `medium` — mechanical in shape, but the content is load-bearing: a folder guide is an obligation future agents execute |
+| Skills assigned | `cognitive-doc-design`. **Deviation from the task's list, recorded:** the task names `systematic-debugging` and `playwright-cli`; both belong to the parked browser half, so neither was assigned to the docs worker. `cognitive-doc-design` was substituted because the deliverable is two persistent documents |
+
+#### Task split — why this task is `[~]` and not `[x]`
+
+`SBT-T-3` owns two unrelated halves. At the `SBT-T-2` continue gate the user chose to **walk the browser reproduction personally** and have the Leader record the result. The docs half was therefore executed now; the browser half is held open. **`SBT-T-3` cannot reach `[x]` until the browser evidence lands** — it is the substitute gate for `D9`, the defect class with no automated check, and closing the task without it would record a gate that was never run.
+
+| Half | State |
+|---|---|
+| Re-stamp the two folder guides | **Done** — Reviewer `PASS` |
+| Browser walk on TEST, result 8954 · `validation_contributor_partner_P25(11422)` · `D8` ring by eye · Jira comment | **Outstanding — owned by the user** |
+
+#### Attempt 1 (docs half)
+
+- **runtime events:** none
+- **Files changed:**
+  - `…/result-detail/CLAUDE.md` (+13 / −1)
+  - `…/result-detail/pages/rd-contributors-and-partners/CLAUDE.md` (+33 / −1)
+- **What was written:** the child guide documents the publisher, the register/unregister-by-reference `Set` mechanism, the four-term gate with **`isIpsr`'s deliberate absence flagged as the trap a future reader would otherwise "fix"**, the rendered-tab skip and its remount-window exception, and the delegation to `completnessStatusValidation` unchanged. The parent guide notes only that `fieldFeedbackList` now carries off-screen gaps and points at the child, per the parent/child rule (*root guides are the parent; child guides add or narrow, never duplicate*). Both `**Verified:**` lines re-stamped with the new entry prepended and the full `prior:` chain preserved.
+- **Evidence re-run (non-author):** **VERIFIED** — mode: Leader-inline. `git diff --stat` → +44 / −2 across the two files; the only two deletions are the `**Verified:**` lines themselves, each rewritten to prepend the new entry, with `prior: 2026-09-16 · performance-refactor · 01891aebd` confirmed present in both. No existing section removed. `npx ng lint --quiet` clean.
+- **Reviewer verdict:** `PASS`.
+  > Every claim in both added sections is true of the code as committed — I verified the register/unregister-by-reference `Set`, the exact four-term gate, the `index === activeTabIndex && showMultipleWPsContent` skip and its remount exception, the untouched delegation to `completnessStatusValidation`, the label order, and the fold into both signals that makes the "no bar consumer needs a change" claim hold.
+
+  It independently confirmed the `isIpsr` warning is correctly aimed (`ipsr-contributors.component.html:21` binds `[isIpsr]="true"`, `[isContributor]="false"`, `[isNotifications]="false"`, no `hidden`), that the parent/child boundary holds with a working relative link, and that no secret appears in either addition.
+
+#### `ADVISORY` findings (recorded, never gating, never minted into a task)
+
+1. **Readability — deferred deliberately, not dismissed.** The parent guide says the fold enters `fieldFeedbackList` **and** `mandatoryFieldsTotal` "igual que un gap del DOM". True of the mechanism, loose about the denominator: a DOM field counts in `mandatoryFieldsTotal` whether or not it is complete, while an off-screen tab adds to the total **only when it is missing**. That asymmetry is exactly **`D8`**, the recorded accepted risk (`requirements.md` §9). **Leader decision: hold the clarifying clause until the user's by-eye `D8` check reports.** Writing it now would document a denominator nobody has looked at; writing it after costs one clause and is then evidence-backed.
+2. **Risk** — the `[advisory-grade]` note is correctly tagged and framed as a note for the next author rather than a defect. The Reviewer confirmed both cited escapes at source: `result-review-drawer.component.spec.ts:127` sets `{ template: '' }` file-wide, `share-request-modal.zoneless.spec.ts:117,256` uses `NO_ERRORS_SCHEMA`. Carries `SBT-T-2`'s ADVISORY 3 in intent; adds no scope.
+3. **Readability / proportionality** — placement and Spanish register match the house style, and +33 / +13 for the ticket's headline behaviour is proportionate. Both files nonetheless exceed the 120-line cap in `onecgiar-pr-client/docs/COMPONENT-DOCS.md` §4 (204 and 665 lines) and stamp history at the top rather than the bottom. **Pre-existing and repo-wide, not introduced here.** §4's own remedy is a separate ticketed cleanup and was deliberately **not** folded into this commit — doing so would be scope the approved task list never named.
+
+#### Requirements covered (this half)
+
+The folder-guide rows of `SBT-T-3`'s Definition of done. **`SBT-AC-1` end-to-end, `D8` and `D9` remain uncovered** pending the browser walk.
+
+#### Decisions made
+
+- **Task split and left `[~]`** rather than closed — see the split table above. User decision at the `SBT-T-2` gate, 2026-09-25.
+- **Skill deviation recorded** (`cognitive-doc-design` substituted for the browser-half skills).
+- **`SBT-T-2` ADVISORY 3 carried into the guide as `[advisory-grade]`** — user decision at the `SBT-T-2` gate. The guide was already this task's named deliverable, so this added no scope and minted no task.
+- **`D8` clause deferred** pending the user's by-eye check (ADVISORY 1 above).
+- **No execute-time spec edit was made.** `requirements.md` and `design.md` remain unchanged across all three tasks.
+
+#### Issues encountered
+
+None in the docs half. The browser half has not been attempted by any agent — it is held for the user by their own decision, not blocked by a probe-confirmed obstacle.
+
+#### Final verification result (docs half)
+
+`npx ng lint --quiet` → **All files pass linting.** · diff confirmed additive, both `prior:` chains intact. **The `D9` gate is not yet satisfied.**
+
+#### Outstanding — what closes `SBT-T-3`
+
+- [ ] The reproduction walked on TEST (result 8954): bar and rail agree on tabs 1 and 2, before and after a full reload
+- [ ] `SELECT validation_contributor_partner_P25(11422)` run and its value recorded against what the screen showed — **a green bar against a `0` is the failure**
+- [ ] `D8` confirmed by eye: the ring may under-count its denominator but never reads full while something is missing
+- [ ] The Jira comment stating what shipped and correcting QA's `ResultSectionsService` attribution (`requirements.md` §12)

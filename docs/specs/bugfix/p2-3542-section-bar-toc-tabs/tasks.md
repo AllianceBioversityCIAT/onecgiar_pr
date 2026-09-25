@@ -7,7 +7,7 @@
 - **Ticket:** **P2-3542** under epic **P2-3512**
 - **Owner / driver:** Juan David Delgado
 - **Branch base:** `performance-refactor` @ `9354317d4`
-- **Status:** in-progress — `SBT-T-1` [x] · `SBT-T-2` [x] (2026-09-25); `SBT-T-3` pending (browser walk + folder guides)
+- **Status:** in-progress — `SBT-T-1` [x] · `SBT-T-2` [x] · `SBT-T-3` [~] (2026-09-25): folder guides done, the `D9` browser walk on TEST is outstanding and owned by the user
 - **Budget (`design.md` §12):** 3 tasks · ~150 LOC · 1 review round. `/akili-execute` escalates rather than continuing if any is exceeded.
 
 ---
@@ -84,7 +84,7 @@
 
 ---
 
-### `SBT-T-3` — Confirm in a real browser and re-stamp the folder guides
+### `SBT-T-3` — Confirm in a real browser and re-stamp the folder guides [~]
 
 - **Type:** `docs` + manual verification
 - **Description:** The gate for `D9` — the class with no automated check. Walk the reproduction on TEST against result 8954 and confirm the bar and the rail agree; check `D8`'s ring reading by eye while there. Then update the two folder guides that describe this bar and re-stamp their `Verified:` lines in the **same commit**, per the folder-doc convention.
@@ -105,7 +105,7 @@
   - [ ] The reproduction walked on TEST; bar and rail agree on tabs 1 and 2, before and after a reload
   - [ ] `SELECT validation_contributor_partner_P25(11422)` run and its value recorded against what the screen showed
   - [ ] `D8` confirmed by eye: the ring may under-count its denominator but never reads full while something is missing — recorded as the accepted risk it is
-  - [ ] Both folder `CLAUDE.md` files updated and `Verified:` re-stamped in the same commit
+  - [x] Both folder `CLAUDE.md` files updated and `Verified:` re-stamped in the same commit
   - [ ] The Jira comment states what shipped, and corrects QA's `ResultSectionsService` attribution (`requirements.md` §12) — decisions and deviations only, never a checklist of what is pending
 
 ---
