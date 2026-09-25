@@ -1,7 +1,5 @@
 # shell-topbar
 
-**Verified:** 2026-09-22 · branch qa-development-2026-mc · TRN-T-1: swapped bell/Release-notes DOM order to match documented order
-
 The app shell header: centered Search · **Support menu** · **Release notes** · notifications popover ·
 user menu. Rendered by `app.component.html:38`, and hidden entirely when `dataControlSE.show_qa_full_screen`
 or `focusMode()` is on — so nothing in here exists in QA full-screen or focus mode, **including the
@@ -67,6 +65,10 @@ service any more.
   accepts either modifier regardless.
 - The search control keeps `cursor: text` even though it is a button — the design specifies it
   (`cursor:text` at snapshot line 232) because it opens a search surface.
+- `NOTIF-T-8`: the bell/badge (`.pr-topbar-badge-wrap`/`.pr-topbar-badge`) already matched the
+  `notifications-revamp` mockup pixel-for-pixel (32px button, 16px badge, 2px border) — resist
+  re-tweaking its sizing again without a fresh measured diff against the mockup. Its border/digit
+  color now reads `var(--pr-color-white, #fff)` instead of a bare `#fff` literal.
 
 ## Children
 
@@ -74,3 +76,5 @@ service any more.
 |---|---|---|
 | `app-global-search-palette` | the palette overlay | has its own `CLAUDE.md` — read it before touching the trigger |
 | `app-pop-up-notification-item` | one unread-notification row | lives under `header-panel/components/` |
+
+**Verified:** 2026-09-25 · qa-development-2026-ss · `NOTIF-T-8` (token cleanup only, bell sizing unchanged)

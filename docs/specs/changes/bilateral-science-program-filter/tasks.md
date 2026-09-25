@@ -7,7 +7,7 @@
   `docs/specs/changes/bilateral-science-program-filter/design.md`
 - **Sprint / target phase (if any):** —
 - **Owner / driver:** Santiago Sanchez (via AKILI)
-- **Status:** complete — both `BSF-T-1` and `BSF-T-2` `[x]`; commit + folder `CLAUDE.md` re-stamp pending
+- **Status:** complete — both `BSF-T-1` and `BSF-T-2` `[x]`, committed as `8764605b0`, folder `CLAUDE.md` re-stamped in the same commit
 
 ## 2. Pre-flight checklist
 
@@ -66,7 +66,7 @@
     component; the shared `program` contract (`bilateral-query-params.ts`,
     `bilateral-result-filter.ts`) itself is not edited.
 - **Definition of done:**
-  - [ ] Code merged via `<emoji> <type>(<scope>) [ticket]: <description>` (e.g. `✨ feat(bilateral-results-list): add Science Program filter`). — deferred to the single PR covering both `BSF-T-1` and `BSF-T-2` (per PR Strategy below); pending explicit user go-ahead to commit.
+  - [x] Code merged via `<emoji> <type>(<scope>) [ticket]: <description>` — committed as `8764605b0` on `qa-development-2026-ss`, covering both `BSF-T-1` and `BSF-T-2` per PR Strategy below (user confirmed manual browser verification first).
   - [x] Lint clean (`npx ng lint --quiet`).
   - [x] `clearAllFilters()` now resets `programFilter` (closes the DD-2 gap).
   - [x] Manually verified in browser by the user (real session): a TS2339 compile error was caught
