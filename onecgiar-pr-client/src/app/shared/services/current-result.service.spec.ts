@@ -80,6 +80,57 @@ describe('CurrentResultService', () => {
     expect(mockApiService.rolesSE.readOnly).toBe(true);
   });
 
+  // Re-validation 24-Sep-2026 (NS-30): Contributors & partners re-fetches the result and replaces
+  // `currentResult` with a NEW object of the same result before the roles check settles. Control
+  // negative: with the old identity check (`currentResult === response`) this test fails.
+  it('NS-30: re-applies the lock when a section replaced currentResult with a new object of the same result', async () => {
+    const response = { id: 8916, is_phase_open: 1, status_id: 3, result_type_id: 1, is_discontinued: false, initiative_id: 50 };
+    let resolveRoles: () => void;
+    mockRolesService.validateReadOnly.mockImplementation(
+      () =>
+        new Promise<void>(res => {
+          resolveRoles = () => {
+            mockApiService.rolesSE.readOnly = false;
+            res();
+          };
+        })
+    );
+    mockDataControlService.currentResultSignal.set.mockImplementation(() => undefined);
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
+
+    service.GET_resultById();
+    mockDataControlService.currentResult = { ...response }; // rd-contributors-and-partners re-fetch
+    resolveRoles!();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockApiService.rolesSE.readOnly).toBe(true);
+  });
+
+  it('NS-30: leaves the lock alone when another result was opened meanwhile', async () => {
+    const response = { id: 8916, is_phase_open: 1, status_id: 3, result_type_id: 1, is_discontinued: false, initiative_id: 50 };
+    let resolveRoles: () => void;
+    mockRolesService.validateReadOnly.mockImplementation(
+      () =>
+        new Promise<void>(res => {
+          resolveRoles = () => {
+            mockApiService.rolesSE.readOnly = false;
+            res();
+          };
+        })
+    );
+    mockDataControlService.currentResultSignal.set.mockImplementation(() => undefined);
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
+
+    service.GET_resultById();
+    mockDataControlService.currentResult = { id: 9999, status_id: 1, is_phase_open: 1 };
+    resolveRoles!();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockApiService.rolesSE.readOnly).toBe(false);
+  });
+
   it('should get result by id successfully', async () => {
     const response = {
       result_level_name: 'level1',

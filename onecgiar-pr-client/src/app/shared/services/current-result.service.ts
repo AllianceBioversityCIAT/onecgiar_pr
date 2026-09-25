@@ -64,7 +64,12 @@ export class CurrentResultService {
         this.applyResultLock(response);
         Promise.resolve(roleCheck).then(() => {
           // Only while this is still the open result — a later load owns the lock by then.
-          if (this.dataControlSE.currentResult === response) this.applyResultLock(response);
+          // Re-validation 24-Sep-2026 (NS-30): compared by id, not by object. Sections such as
+          // Contributors & partners and Theory of Change re-fetch the same result and replace
+          // `currentResult` with a new object; the identity check then failed, the lock was never
+          // re-applied and the member's `readOnly = false` won (prtest 8916 / 8526, opened or reloaded
+          // directly on Contributors).
+          if (this.isStillOpenResult(response)) this.applyResultLock(response);
         });
       },
       error: err => {
@@ -72,6 +77,14 @@ export class CurrentResultService {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'Result not found.', status: 'error' });
       }
     });
+  }
+
+  /** Same result still open, even if a section re-fetched it into a new object. */
+  private isStillOpenResult(response: any): boolean {
+    const open = this.dataControlSE.currentResult;
+    if (!open || !response) return false;
+    if (open === response) return true;
+    return open.id != null && response.id != null && String(open.id) === String(response.id);
   }
 
   /** Status / phase / AVISA read-only lock for the open W1/W2 result (see W12B-2 in `GET_resultById`). */
