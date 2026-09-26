@@ -1,24 +1,113 @@
-import { Directive, EventEmitter, Input, Output, TemplateRef, ViewContainerRef, inject } from '@angular/core';
+import { Directive, EventEmitter, HostListener, Input, Output, TemplateRef, ViewContainerRef, effect, inject, signal } from '@angular/core';
 
 @Directive({ selector: '[brnButton]', standalone: true })
 export class BrnButton {
   @Input() disabled: boolean | string | undefined;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Sheet primitives (@spartan-ng/brain/sheet) — added for the contribution request drawer
+// (`changes/contribution-request-drawer`, CRD-T-1). Unlike the Dialog/Popover stubs below (opened
+// imperatively, once, via a service call, so `*hlmDialogPortal`/`*hlmPopoverPortal` can just always
+// render inline), the Sheet is this repo's first primitive driven DECLARATIVELY from a persisting
+// component's `[state]` input (`<hlm-sheet [state]="open() ? 'open' : 'closed'">`) — so this stub
+// actually gates the portaled content on that state, instead of always rendering it. There is still
+// no real CDK Overlay/portal under Jest: content renders INLINE where `*hlmSheetPortal` sits in the
+// template, not moved into `document.body` the way it is in a real browser — that part of CRD-P-4
+// is not jsdom-provable and is deferred to CRD-T-6.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
 @Directive({ selector: '[brnSheet]', standalone: true })
-export class BrnSheet {}
+export class BrnSheet {
+  @Input() side: 'top' | 'bottom' | 'left' | 'right' | undefined;
+
+  // Mirrors the `BrnDialog` stub below (the real `BrnSheet extends BrnDialog`): `HlmSheet extends
+  // BrnSheet`, so `[state]` / `(closed)` / `(stateChanged)` on `<hlm-sheet>` resolve against THIS
+  // class under Jest.
+  @Input()
+  set state(value: 'open' | 'closed' | null | undefined) {
+    this._open.set(value === 'open');
+  }
+  get state(): 'open' | 'closed' | null | undefined {
+    return this._open() ? 'open' : 'closed';
+  }
+  @Output() readonly stateChanged = new EventEmitter<'open' | 'closed'>();
+  @Output() readonly closed = new EventEmitter<unknown>();
+
+  readonly _open = signal(false);
+
+  // Real Escape handling happens on the CDK OverlayRef, wherever focus is. Under this inline stub
+  // there is no overlay, so a bubbled `keydown.escape` reaching the `<hlm-sheet>` host is the
+  // closest reproduction — sufficient for CRD-T-1's falsifier ("pressing Escape ... does not emit
+  // closed"), not a substitute for the real focus-trapped Escape handling verified in CRD-T-6.
+  @HostListener('keydown.escape', ['$event'])
+  onEscape(event: Event): void {
+    if (!this._open()) return;
+    event.stopPropagation();
+    this.close();
+  }
+
+  close(result?: unknown): void {
+    if (!this._open()) return;
+    this._open.set(false);
+    this.stateChanged.emit('closed');
+    this.closed.emit(result);
+  }
+}
 
 @Directive({ selector: '[brnSheetOverlay]', standalone: true })
-export class BrnSheetOverlay {}
+export class BrnSheetOverlay {
+  private readonly _sheet = inject(BrnSheet, { optional: true });
+
+  /** Stands in for the real CDK backdrop click → `dialogRef.dismiss('backdrop')`. */
+  @HostListener('click')
+  onClick(): void {
+    this._sheet?.close();
+  }
+}
 
 @Directive({ selector: '[brnSheetTitle]', standalone: true })
 export class BrnSheetTitle {}
 
+/**
+ * The real directive captures a `TemplateRef` for the CDK Dialog service to render later, inside
+ * the overlay. Under Jest there is no overlay, so this stub instantiates the template in place —
+ * but, unlike `BrnDialogContent`/`BrnPopoverContent` below, it does so only while the owning
+ * `BrnSheet` reports `open`, via an `effect()` on that signal, so `open`-driven presence in the DOM
+ * is still assertable (CRD-P-3).
+ */
 @Directive({ selector: '[brnSheetContent]', standalone: true })
-export class BrnSheetContent {}
+export class BrnSheetContent {
+  @Input('class') className: string | null | undefined;
+  @Input() context: Record<string, unknown> | undefined;
+
+  private readonly _template = inject(TemplateRef, { optional: true });
+  private readonly _viewContainer = inject(ViewContainerRef);
+  private readonly _sheet = inject(BrnSheet, { optional: true });
+
+  constructor() {
+    if (!this._template) return;
+    const template = this._template;
+    effect(() => {
+      const isOpen = this._sheet ? this._sheet._open() : true;
+      this._viewContainer.clear();
+      if (isOpen) {
+        this._viewContainer.createEmbeddedView(template, { $implicit: {} });
+      }
+    });
+  }
+}
 
 @Directive({ selector: '[brnSheetClose]', standalone: true })
-export class BrnSheetClose {}
+export class BrnSheetClose {
+  private readonly _sheet = inject(BrnSheet, { optional: true });
+
+  /** Stands in for the real `BrnSheetClose extends BrnDialogClose` click → `dialogRef.close()`. */
+  @HostListener('click')
+  onClick(): void {
+    this._sheet?.close();
+  }
+}
 
 @Directive({ selector: '[brnSheetDescription]', standalone: true })
 export class BrnSheetDescription {}

@@ -2,7 +2,19 @@
      was removed entirely — the user's updated reference file (`PRMS Reporting.dc.html`, search
      `showNotifications`, the row block ~L1842-1868) has no equivalent: it renders ONE flat row per
      notification, no header chips above it. See ./CLAUDE.md for the full account. -->
-<div class="notification">
+<!-- CRD-R-1 / CRD-T-4: the row is an interactive control ONLY for a pending, non-Sent request
+     (`isPending`). Decided rows (status 2/3) and every Sent row get no role/tabindex/handler at
+     all — they render through the very same `.notification` wrapper below, so the bindings are
+     conditional on `isPending`, not structural per-case markup. -->
+<div
+  class="notification"
+  [class.notification_interactive]="isPending"
+  [attr.role]="isPending ? 'button' : null"
+  [attr.tabindex]="isPending ? '0' : null"
+  [attr.aria-label]="isPending ? copy.rowAriaLabel(notification?.obj_result?.result_code) : null"
+  (click)="isPending && openDrawer('details')"
+  (keydown.enter)="isPending && $event.target === $event.currentTarget && openDrawer('details')"
+  (keydown.space)="onRowSpaceKeydown($event)">
   @switch (notification?.request_status_id) {
     @case (1) {
       <div class="notification_content">
@@ -31,7 +43,7 @@
               <span
                 class="font-mono"
                 style="text-decoration: underline; color: var(--pr-color-black); cursor: pointer"
-                (click)="navigateToResult(notification)">
+                (click)="$event.stopPropagation(); navigateToResult(notification)">
                 {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
               </span>
               and the result <b> has been approved by Science Program {{ requesterCode }} </b>. You have been tagged as contributor to this result. Do
@@ -58,7 +70,8 @@
                 target="_blank"
                 rel="noopener noreferrer"
                 class="font-mono"
-                style="text-decoration: underline; color: var(--pr-color-black)">
+                style="text-decoration: underline; color: var(--pr-color-black)"
+                (click)="$event.stopPropagation()">
                 {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
               </a>
 
@@ -85,7 +98,7 @@
               [text]="buttonTextConfirm"
               colorType="success"
               [showBackground]="false"
-              (click)="onAcceptContribution()"
+              (click)="$event.stopPropagation(); onAcceptContribution()"
               [rotating]="this.requestingAccept"
               [disabled]="invalidateRequest()"
               [icon]="this.requestingAccept ? 'loop' : ''"
@@ -100,7 +113,7 @@
               [text]="'Decline'"
               colorType="danger"
               [showBackground]="false"
-              (click)="showConfirmRejectDialog.set(true)"
+              (click)="$event.stopPropagation(); showConfirmRejectDialog.set(true)"
               [verticalMargin]="0"
               [style]="{ whiteSpace: 'nowrap' }"
               [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
@@ -109,7 +122,8 @@
       </div>
 
       <!-- P2-3085: read-only ToC metadata the submitter configured (from backend toc_contribution_review[]).
-           Not part of the reference row shape — kept as an extra block below the row, unchanged. -->
+           Restored from HEAD by the 2026-09-25 pivot (CRD-DD-10 / CRD-T-7) — kept as an extra block
+           below the row, unchanged. -->
       @if (notification?.is_map_to_toc && tocReview.length) {
         <div class="toc_review">
           @for (review of tocReview; track $index) {
@@ -256,7 +270,8 @@
   }
 </div>
 
-<!-- Reject contribution Dialog -->
+<!-- Reject contribution Dialog. CRD-T-7 (pivot, CRD-DD-10): restored verbatim from HEAD — the row's
+     Decline stays on this popup; the drawer's own inline confirm-decline footer is unaffected. -->
 <app-pr-dialog
   [(visible)]="showConfirmRejectDialog"
   [modal]="true"
@@ -315,9 +330,10 @@
   </div>
 </app-pr-dialog>
 
-<!-- P2-3187 AC4 (Option A) — after the contributor chooses to accept a bilateral contribution, the ToC
-     mapping is offered as an OPTIONAL step. Both dialogs live in this card and feed ONE accept PATCH:
-     the mapping (when given) travels with the accept, which is the contract approveRequest/V2 were
+<!-- P2-3187 AC4 (Option A) — CRD-T-7 (pivot, CRD-DD-10): restored verbatim from HEAD. After the
+     contributor chooses to accept a bilateral contribution via the ROW button, the ToC mapping is
+     offered as an OPTIONAL step. Both dialogs live in this card and feed ONE accept PATCH: the
+     mapping (when given) travels with the accept, which is the contract approveRequest/V2 were
      built for. Never reopen <app-share-request-modal> here — see the trap list in ./CLAUDE.md. -->
 <app-pr-dialog
   [(visible)]="showTocPromptDialog"
@@ -361,7 +377,8 @@
 
 <!-- The mapping step: the same composition the bilateral review drawer ships (planned-result question +
      app-cp-multiple-wps with forceP25), pointed at the CONTRIBUTOR initiative. "Skip and accept" is
-     always available, so an unfinishable mapping never blocks the acceptance (AC3/AC5). -->
+     always available, so an unfinishable mapping never blocks the acceptance (AC3/AC5). CRD-T-7
+     (pivot): restored verbatim from HEAD. -->
 <app-pr-dialog
   [(visible)]="showTocMappingDialog"
   [modal]="true"
@@ -427,3 +444,77 @@
       [ngClass]="{ globalDisabled: invalidateRequest() || !isTocMappingComplete() }"></app-pr-button>
   </div>
 </app-pr-dialog>
+
+<!-- @akili-spec changes/contribution-request-drawer
+     CRD-R-1..R-11: replaces the removed reject-confirm / "Map to your Theory of Change?" / mapping
+     popup dialogs and the inline toc_review block. Mounted unconditionally (cheap while closed —
+     design.md §8); `notification-item` owns every input/output, the drawer itself is presentational. -->
+<app-contribution-request-drawer
+  [open]="drawerOpen()"
+  [mode]="drawerMode()"
+  [headerParts]="drawerHeader()"
+  [resultCode]="notification?.obj_result?.result_code"
+  [resultTitle]="notification?.obj_result?.title"
+  [reviewRows]="drawerReviewTables()"
+  [acceptDisabled]="requestingAccept || requestingReject || (acceptsWithoutToc && isTocMappingTouched() && !isTocMappingComplete())"
+  [declineDisabled]="requestingAccept || requestingReject"
+  [acceptBusy]="requestingAccept"
+  [declineBusy]="requestingReject"
+  [blockedReason]="drawerBlockedReason()"
+  [acceptHelper]="drawerAcceptHelper()"
+  [focusAlign]="drawerFocusAlign()"
+  (closed)="onDrawerClosedSignal()"
+  (resultActivated)="onDrawerResult()"
+  (acceptClicked)="onDrawerAccept()"
+  (declineClicked)="drawerMode.set('confirm-decline')"
+  (declineConfirmed)="acceptOrReject(false)"
+  (declineCancelled)="drawerMode.set('decide')">
+  @if (isBilateralResult && tocInitiative) {
+    <!-- CRD-R-5: today's mapping controls, moved inline (bilateral only). CRD-P-5: relative + a
+         z-index so the ToC widget's dropdowns are not clipped by the sheet body's own scroll. -->
+    <div crdAlign style="position: relative; z-index: 1" class="flex flex-col gap-3">
+      <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.align }}</h3>
+      <p class="text-[13px] leading-[1.5] text-ink-secondary">{{ copy.align.hint }}</p>
+
+      <app-pr-yes-or-not
+        label="Does this result align with the Program's planned TOC indicators?"
+        [required]="false"
+        [editable]="true"
+        [(ngModel)]="tocInitiative.planned_result"
+        (selectOptionEvent)="onTocPlannedResultChange()">
+      </app-pr-yes-or-not>
+
+      @if (tocInitiative.planned_result !== null && tocMappingConsumed()) {
+        <app-cp-multiple-wps
+          [editable]="true"
+          [initiative]="tocInitiative"
+          [initiativeId]="tocInitiative?.initiative_id"
+          [resultLevelId]="notification?.obj_result?.obj_result_level?.id"
+          [isIpsr]="false"
+          [isContributor]="false"
+          [isNotifications]="false"
+          [isUnplanned]="!tocInitiative.planned_result"
+          [showMultipleWPsContent]="tocMappingConsumed()"
+          [hidden]="true"
+          [forceP25]="true">
+        </app-cp-multiple-wps>
+      }
+
+      @if (isTocMappingTouched()) {
+        <!-- CRD-R-8 "Busy": Clear mapping must be disabled while an accept/decline PATCH is in flight,
+             same as the drawer's own actions, so it cannot re-seed `tocInitiative` mid-request. -->
+        <button
+          type="button"
+          hlmBtn
+          variant="ghost"
+          size="sm"
+          class="self-start text-[13px]"
+          data-testid="crd-align-clear-mapping-btn"
+          [disabled]="requestingAccept || requestingReject"
+          (click)="onClearTocMappingActivate()">
+          {{ copy.align.clearMapping }}
+        </button>
+      }
+    </div>
+  }
+</app-contribution-request-drawer>

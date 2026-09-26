@@ -263,3 +263,41 @@ the code disagree on tab count, that is an open item to raise with the owner —
   `programme-results`/`my-work-board` to this wider pin, or accept the split as permanent
   (`docs/specs/changes/bilateral-review-viewport-and-table-polish/design.md` §13). Added
   2026-09-08.
+
+## 17. Contribution request drawer: Align keeps today's mapping controls, not the mockup's single dropdown
+
+- **Design says:** the drawer mockup shows one "Select an indicator" dropdown for the Align
+  section.
+- **We do:** the drawer's Align section (bilateral requests only) projects the same
+  planned-result question + `app-cp-multiple-wps` mapping controls the row's popup flow has used
+  since P2-3187 — multiple tabs, a level/node picker per tab, "Clear mapping" as the escape hatch.
+- **Why:** this is a deliberate deferral, not a rejection — proposal OQ-3 tracks the single-dropdown
+  / multi-item redesign as a follow-up spec. Building it now would invent a mapping model the
+  server doesn't support yet. `CRD-DD-3` (`docs/specs/changes/contribution-request-drawer/design.md`).
+- 🛑 Do not "simplify" the Align section to a single dropdown without that follow-up spec landing
+  first — the current controls are the only supported mapping path.
+
+## 18. Contribution request drawer: an inline decline confirmation, absent from the mockup
+
+- **Design says:** the drawer mockup has no confirmation step before Decline is recorded.
+- **We do:** Decline flips the drawer footer to an inline confirmation state (`mode: 'confirm-
+  decline'`) with its own Cancel/Confirm decline buttons, before the PATCH fires.
+- **Why:** declining is irreversible and the step already existed (as a popup) before this spec;
+  removing it would be a capability regression, not a fidelity fix. `CRD-DD-5`
+  (`docs/specs/changes/contribution-request-drawer/design.md`).
+
+## 19. Contribution request drawer: the row's popups and inline ToC block stay, alongside the drawer
+
+- **Design says:** the mockup routes every row decision through the drawer — no popups.
+- **We do:** the row's Accept/Decline buttons keep the pre-existing popup flow (reject-confirm, the
+  "Map to your Theory of Change?" prompt, the mapping step) and the inline `toc_review` block
+  exactly as before this spec. The row body opens the drawer as a **second**, independent entry
+  point with its own flow. The two are never shown together (`openDrawer()` clears the popup
+  signals; nothing reachable from the drawer sets them).
+- **Why:** product-owner request (Santiago Sanchez, 2026-09-25), after the drawer-only flow had
+  already shipped: users keep the flow they already know, and the drawer is additive rather than a
+  replacement. `CRD-DD-10` supersedes `CRD-DD-7`/`CRD-DD-9`
+  (`docs/specs/changes/contribution-request-drawer/design.md`, execution.md "Pivot Record:
+  CRD-T-5"). Task `CRD-T-7` implements it.
+- 🛑 Do not "finish the job" by removing the popups or the inline block again — that was tried
+  (`CRD-T-4`) and reverted by this decision.

@@ -23,20 +23,27 @@ p {
    `.notification_content` (the inner block, which for case (1) is only PART of the row — the
    `toc_review` block renders as its OWN sibling after it). Putting the border on the outer element
    keeps `toc_review` visually grouped with its own row and draws exactly one separator per
-   notification, regardless of case. The former `[ngStyle]` on `.notification` (pending-row violet
-   border/tint) is REMOVED entirely — it was leftover from before this restructure and drew a
-   violet box around the whole row, in violation of the project's "no violet border, no tinted
-   background on content surfaces" hard rule; the flat list look is carried by border-bottom only. */
+   notification, regardless of case. CRD-T-7 (pivot, 2026-09-25): `toc_review` was restored from
+   `HEAD` (CRD-DD-10 superseded the earlier CRD-T-4 removal, CRD-DD-9). The former `[ngStyle]` on
+   `.notification` (pending-row violet border/tint) is REMOVED entirely — it was leftover from
+   before this restructure and drew a violet box around the whole row, in violation of the
+   project's "no violet border, no tinted background on content surfaces" hard rule; the flat list
+   look is carried by border-bottom only. */
 .notification {
   border-bottom: 1px solid var(--pr-color-accents-2);
+}
+
+/* CRD-T-4 / CRD-R-1: pointer affordance for a pending, non-Sent row — the ONLY visual cue besides
+   the focus ring; the `role`/`tabindex`/handlers themselves are bound conditionally in the template. */
+.notification_interactive {
+  cursor: pointer;
 }
 
 /* Avoid a double border where the last row's own border-bottom meets the group container's own
    bottom border in received-requests/sent-requests. `:host(:last-child)` reaches the component's
    own position among its siblings in the LIST (the real DOM parent is
    `.received_container_content_item` / `.sent_container_content_item`). Targeting `.notification`
-   (not `.notification_content`) removes the separator from the whole row, including any trailing
-   `toc_review` block, so there is no dangling border below it either. */
+   (not `.notification_content`) removes the separator from the whole row. */
 :host(:last-child) .notification {
   border-bottom: none;
 }
@@ -152,7 +159,8 @@ p {
   }
 }
 
-/* P2-3085: read-only ToC metadata block in the Contribution Request review */
+/* P2-3085: read-only ToC metadata block in the Contribution Request review. CRD-T-7 (pivot):
+   restored from HEAD. */
 .toc_review {
   display: flex;
   flex-direction: column;
@@ -189,6 +197,7 @@ p {
   }
 }
 
+/* CRD-T-7 (pivot): the row popup dialogs, restored from HEAD. */
 .modal-close-icon {
   position: absolute;
   top: 16px;

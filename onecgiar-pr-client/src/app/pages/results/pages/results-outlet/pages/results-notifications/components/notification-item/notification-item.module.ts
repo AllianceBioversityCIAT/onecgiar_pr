@@ -12,12 +12,19 @@ import { GroupNotificationsByRecencyPipe } from '../../pipes/group-notifications
 import { FilterNotificationByCenterPipe } from '../../pipes/filter-notification-by-center.pipe';
 import { FilterNotificationByBilateralProjectPipe } from '../../pipes/filter-notification-by-bilateral-project.pipe';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
+// CRD-T-7 (pivot, CRD-DD-10): restored from HEAD — the row's three popups (reject confirm, ToC
+// prompt, mapping step) coexist with the drawer again.
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
-// P2-3187 AC4: exports CPMultipleWPsComponent, the proven P25 ToC mapping widget the optional
-// post-accept step reuses (the same composition the bilateral review drawer ships).
+// P2-3187 AC4: exports CPMultipleWPsComponent, the proven P25 ToC mapping widget both the row
+// popup's mapping step and the drawer's Align section reuse (the same composition the bilateral
+// review drawer ships).
 import { RdContributorsAndPartnersModule } from '../../../../../result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 // NOTIF-T-7: Helm badge for the accepted/declined decision chip (landed by NOTIF-T-1).
 import { HlmBadgeImports } from '@spartan/badge';
+// CRD-T-4: the drawer's own Helm button variants (Decline/Accept/Cancel/Confirm decline/Clear mapping).
+import { HlmButtonImports } from '@spartan/button';
+// CRD-T-4: the contribution request drawer, a second flow the row body opens (CRD-DD-10).
+import { ContributionRequestDrawerComponent } from '../contribution-request-drawer/contribution-request-drawer.component';
 
 const modules = [
   NotificationItemComponent,
@@ -31,7 +38,16 @@ const modules = [
 
 @NgModule({
   declarations: [...modules],
-  imports: [CommonModule, CustomFieldsModule, FormatTimeAgoPipe, PrDialogComponent, RdContributorsAndPartnersModule, ...HlmBadgeImports],
+  imports: [
+    CommonModule,
+    CustomFieldsModule,
+    FormatTimeAgoPipe,
+    PrDialogComponent,
+    RdContributorsAndPartnersModule,
+    ContributionRequestDrawerComponent,
+    ...HlmBadgeImports,
+    ...HlmButtonImports
+  ],
   exports: [...modules]
 })
 export class NotificationItemModule {}

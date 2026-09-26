@@ -1,113 +1,116 @@
 # notification-item
 
-**Verified:** 2026-09-25 (`NOTIF-T-10` rework, attempt 2) · branch qa-development-2026-ss —
-template/CSS only, `.ts` untouched.
-
-- Row is ONE flat flex row (`.notification_content`): avatar/icon → text column (main sentence +,
-  status 2/3 only, `.notification_content_caption` below it) → timestamp → actions (case 1) or
-  decision chip (case 2/3). The border-bottom row separator and `:host(:last-child)` removal live on
-  the outer `.notification` (not `.notification_content`), so the `toc_review` block stays grouped
-  with its own row; `.notification` carries no border/background of its own otherwise. Card look
-  lives on the GROUP container in `received-requests`/`sent-requests`, not this component.
-  Accept/Decline buttons read `'Accept'`/`'Decline'` (supersedes P2-3106's longer labels); their
-  `::ng-deep` overrides also hide `pr-button`'s always-rendered `.filter` div (`display:none`),
-  which fixed a real off-center label bug — see the `.scss` header comment for the root cause.
-
 ## What it is
-One row in the notifications list (Notifications → Requests → Received / Sent). It shows a
-contribution request and, unless `[isSent]="true"`, the **Accept** / **Decline** buttons
-(`NOTIF-T-10`; formerly "Accept contribution"/"Decline contribution", `P2-3106`). For bilateral
-requests the Accept button opens the **optional ToC step** (P2-3187 AC4, Option A): a prompt
-("Not now" / "Map it") and, behind "Map it", an in-card mapping dialog reusing
-`app-cp-multiple-wps` with `forceP25` — the same composition the bilateral review drawer ships.
+One row in the notifications list (Notifications → Requests → Received / Sent). For a pending,
+non-Sent request it offers **two independent, coexisting ways to decide it** (CRD-DD-10, pivot
+2026-09-25): the row's Accept/Decline buttons keep their original popup flow, and clicking the row
+body opens a right-side detail drawer (`app-contribution-request-drawer`) with its own flow. They
+are never visible together, and neither one is "the new one" that replaced the other.
+
+## The two flows (CRD-DD-10)
+- **Popups (row buttons, unchanged since before this spec).** Decline opens the reject-confirm
+  `app-pr-dialog` (`showConfirmRejectDialog`). Accept: ToC-carried → PATCH immediately; bilateral →
+  the "Map to your Theory of Change?" prompt (`showTocPromptDialog`) → "Map it" opens the mapping
+  step (`showTocMappingDialog`, `openTocMappingStep()`); legacy → `<app-share-request-modal>`. The
+  inline `toc_review` block (P2-3085) stays below the row, always expanded, independent of either
+  flow.
+- **Drawer (row body click, or Enter/Space on the row itself — `openDrawer('details')`).** Its own
+  inline decline confirmation (`drawerMode() === 'confirm-decline'`), an Align section for
+  bilateral requests projected via `[crdAlign]`, and a single "Accept contribution" button
+  (`onDrawerAccept()`). See `../contribution-request-drawer/CLAUDE.md`.
+- **Mutual exclusion:** `openDrawer()` sets all three popup signals to `false`. The popup path
+  never opens the drawer directly — the shared `acceptOrReject()` `finalize` only resets the
+  drawer to closed/`'decide'` (it calls `closeDrawer()` on every PATCH, popup or drawer alike), it
+  never sets `drawerOpen` to `true`.
+- Both flows end at the same `acceptOrReject(isAccept, withTocMapping?)` → one PATCH.
+
+## Drawer ownership
+`notification-item` owns **all** decision state for the drawer path: `drawerOpen`, `drawerMode`,
+`drawerFocusAlign`, `tocInitiative`, `tocMappingConsumed`, busy/blocked derivations. The drawer
+component is purely presentational — it renders inputs and emits outputs, makes no API calls, and
+has `[crdAlign]` content projected into it. Do not move decision logic into the drawer component.
+
+## DD-6 trap: close-before-refetch, twice
+- **Instance reuse.** `@for … track $index` reuses this component instance across a refetch —
+  after `requestEvent.emit()` the "same" row may render a **different** notification.
+  `acceptOrReject()`'s `finalize` calls `closeDrawer()` **first**, before resetting the three popup
+  signals or emitting `requestEvent`. Reordering `finalize` would let the drawer stay open across
+  the swap and show the wrong request.
+- **The late `closed` event.** The real `BrnDialog` (under `hlm-sheet`) emits `closed`
+  asynchronously, after the exit animation, for a **programmatic** close too (not only ✕/scrim/
+  Escape). `onDrawerClosedSignal()` guards it: a no-op once `drawerOpen()` is already `false`, so
+  the late event never runs `closeDrawer()` a second time. Known gap: if the drawer is reopened
+  within the exit-animation window, the earlier late `closed` can close the new drawer — checked
+  in CRD-T-6. Never delete this guard to "simplify" the `(closed)` binding.
+
+## Hydration (CRD-DD-3)
+- **Popup path:** `openTocMappingStep()` calls `hydrateGlobalTocState()` on open, and never sets
+  `tocHydrated`. If the user then answers the planned-result question, `onTocPlannedResultChange()`
+  hydrates **again** (it only checks its own `tocHydrated` flag, popup or drawer). Harmless —
+  hydration just rewrites the same global fields — but it is a real double call, not a doc slip.
+- **Drawer path:** hydration is deferred to the **first** planned-result answer
+  (`onTocPlannedResultChange()`); `openDrawer()` never hydrates. Viewing the drawer has no global
+  side effects.
+
+## Row interactivity (CRD-R-1)
+Only a pending, non-Sent row (`isPending`) gets `role="button"`, `tabindex="0"` and the
+click/keydown handlers. Every inner control (result link, bilateral link, Accept/Decline) calls
+`$event.stopPropagation()`. Space uses `onRowSpaceKeydown()` (needs `preventDefault()` plus the
+`isPending` guard, which an inline binding can't combine); it and the inline `(keydown.enter)`
+binding only fire `openDrawer()` when `event.target === event.currentTarget`, so Enter/Space on a
+focused nested control never bubbles into a second open.
+
+## Jest caveat
+`tests/mocks/spartanBrainMock.ts` doesn't host-bind `disabled` through `BrnButton` — a `[disabled]`
+binding on a Helm button never reaches the native attribute in a Jest DOM query, on any Helm/Brn
+button in this folder (row or drawer). Assert through the real `BrnButton`/`HlmButtonImports`, or
+through the handler guard itself (e.g. `onClearTocMappingActivate()`), never `nativeElement.disabled`.
+
+## Dormant entry mode
+`openDrawer('align')` and `drawerFocusAlign` exist and are exercised only by specs — no template
+call routes there today (CRD-DD-10 superseded CRD-DD-7, which would have). Don't remove it as "dead
+code" without checking design.md CRD-DD-10's consequences note first.
 
 ## Contract
-- **`notification-item.module.ts` is the registration home for this folder's sibling filter pipes**
-  (`FilterNotificationByPhasePipe`, `FilterNotificationByInitiativePipe`,
-  `FilterNotificationBySearchPipe`, `FilterNotificationByCenterPipe`,
-  `FilterNotificationByBilateralProjectPipe`) plus `GroupNotificationsByRecencyPipe` — this is why
-  `received-requests`/`sent-requests` import `NotificationItemModule` even though they don't use
-  the component itself, only its pipe chain.
-- Inputs: `notification` (raw row from `GET /api/results/request/get/received|sent`), `isSent`.
-- Output: `requestEvent` — the parent refetches the list. Emitted in `finalize`, i.e. **after** the
-  `next` handler, and it destroys this instance (`@for … track $index`).
-- The decision is recorded by `ResultsApiService.PATCH_updateRequest(body, isP25)` →
-  `PATCH {api|v2/api}/results/request/update`. Since 2026-09-04 `isP25` comes from
-  `isP25Request` (the request's own `obj_version.obj_portfolio.acronym`), **not** from
-  `FieldsManagerService.isP25()` — deterministic, safe now that the server's V2 method emits the
-  lead-centre decision notification too (P2-3188 parity).
-- **The optional mapping rides the SAME accept PATCH** (`acceptOrReject(true, true)` →
-  `buildTocMappingPayload()`): `approveRequest`/`approveRequestV2` call
-  `mapWorkPackagesToInitiative*`, which writes the contributor's `result_toc_result` rows, and
-  `saveIndicatorsForPrimarySubmitter` finds those rows by `(results_id, initiative_id,
-  toc_result_id)` — which is why every tab carries the CONTRIBUTOR's `initiative_id` and the
-  notification's `result_id` as `results_id`. One PATCH total; no post-accept save endpoint exists
-  or is needed.
-- `openTocMappingModal()` (legacy non-bilateral flow) **accepts nothing**: it hydrates global state
-  and sets `dataControlSE.showShareRequest = true`; the modal lives at `app.component.html:63`.
-  The shared hydration now lives in `hydrateGlobalTocState()`, also used by `openTocMappingStep()`
-  because `app-cp-multiple-wps` resolves the result id from `dataControlSE.currentNotification` and
-  the level from `currentResultSignal`.
+- `notification-item.module.ts` registers this folder's sibling filter pipes
+  (`FilterNotificationBy*Pipe`, `GroupNotificationsByRecencyPipe`) — why `received-requests`/
+  `sent-requests` import it even without using the component. It also imports the standalone
+  `ContributionRequestDrawerComponent` and keeps `PrDialogComponent` (CRD-T-7 restored it).
+- Inputs: `notification`, `isSent`. Output: `requestEvent` — emitted in `finalize`, **after** the
+  `next` handler, and the refetch may rebind this instance to a different notification (see the
+  DD-6 trap above).
+- The decision is recorded by `ResultsApiService.PATCH_updateRequest(body, isP25Request)` →
+  `PATCH {api|v2/api}/results/request/update`. The optional ToC mapping rides the SAME accept PATCH
+  (`acceptOrReject(true, true)`), from either flow.
+- `openTocMappingModal()` (legacy flow, from `mapAndAccept()`) **accepts nothing**: it hydrates
+  global state and sets `dataControlSE.showShareRequest = true` (modal at `app.component.html:63`).
 
 ## Where it is used
-- `.../results-notifications/pages/requests/pages/received/received.component.html` — with buttons.
-- `.../results-notifications/pages/requests/pages/sent/sent.component.html` — `[isSent]="true"`, no buttons.
+- `.../requests/pages/received/received.component.html` — with buttons.
+- `.../requests/pages/sent/sent.component.html` — `[isSent]="true"`, no buttons.
 
 ## Traps (⚠️ = already broke something)
-- ⚠️ **`is_map_to_toc` does NOT mean "already mapped to a ToC".** It is the request KIND, stamped at
-  creation: `true` = the ToC mapping travelled WITH the request (server
-  `share-result-request.service.ts`, from `createTocShareResult.isToc`, which only
-  `share-request-modal onRequest()` ever sends); `false` = no mapping came with it. **Bilateral
-  requests are always born `false`** (server `results.service.ts`, `_updateContributingInitiatives`).
-  Reading it as "already mapped" is the mistake that caused P2-3187.
-- ⚠️ **The accept PATCH tolerates a missing ToC only by accident.** The server dereferences
-  `result_toc_result.result_toc_results` in `approveRequest`/`approveRequestV2` whenever
-  `is_map_to_toc` is `false`; without that field it throws a TypeError that the same method's
-  `try/catch` swallows — after the status was already persisted. That is why the plain accept sends
-  an explicit inert payload (`{ planned_result: null, result_toc_results: [] }`). Do not remove it.
-- ⚠️ **Do NOT reopen `<app-share-request-modal>` as the AC4 step.** Its ToC control is `[hidden]`
-  for bilateral (P2-2498), completing it fires a **second** `request_status_id: 2` PATCH, and
-  answering "Yes" dead-ends on `validateAcceptOrReject`. AC4 was built as an IN-CARD dialog with a
-  single PATCH precisely to avoid all three; the spec test
-  `never opens the legacy share-request modal…` locks it.
-- ⚠️ `invalidateRequest()` is true while `requestingAccept` is true, and `finalize` runs **after**
-  `next`: anything called from the `next` handler cannot go through `mapAndAccept()`.
-- ⚠️ **`invalidateRequest()` disables BOTH buttons** for non-admins when
-  `obj_result.obj_version.id != reportingCurrentPhase.phaseId` and `obj_result.status_id != 3`. On
-  prtest every pending bilateral request sits in the closed phase 34 → a non-admin cannot accept any
-  of them. Pre-existing: QA needs a bilateral request in the open phase, or an admin account.
-- ⚠️ **`isTocMappingComplete()` mirrors the review drawer's `validateIsToCCompleted`:** planned
-  mappings also demand the indicator (`toc_results_indicator_id`). If the selected node has no
-  indicators to offer, "Accept with mapping" stays disabled — "Skip and accept" is the deliberate
-  escape hatch (AC3/AC5), so never remove it.
-- ⚠️ **Closing either AC4 dialog records NOTHING** — the request stays pending on purpose. The
-  accept only exists once a PATCH fires; do not "helpfully" auto-accept on close.
-- `source_name` is a **derived** field in the server's `getRequest()`
-  (`source === 'Result' ? 'W1/W2' : 'W3/Bilaterals'`), not a column. If that mapping changes,
-  `acceptsWithoutToc` silently falls back to the legacy flow.
-- The mapping dialog passes `[hidden]="true"` to `app-cp-multiple-wps` — that input only hides the
-  multi-tab strip (one mapping per accept, same as the review drawer), not the form.
+- ⚠️ **`is_map_to_toc` is the request KIND, not "already mapped".** Stamped at creation; bilateral
+  requests are always born `false`. Misreading it as "already mapped" caused P2-3187.
+- ⚠️ **The accept PATCH tolerates a missing ToC only by accident** — the plain accept sends an
+  explicit inert payload (`{ planned_result: null, result_toc_results: [] }`). Do not remove it.
+- ⚠️ **Never reopen `<app-share-request-modal>` as the AC4 step**, in either flow — its ToC control
+  is `[hidden]` for bilateral, and completing it fires a second `request_status_id: 2` PATCH.
+- ⚠️ `invalidateRequest()` disables buttons and the drawer's footer alike for non-admins when the
+  request's phase differs from the current one. On prtest every pending bilateral request sits in
+  closed phase 34 — needs an admin account or an open-phase request.
+- ⚠️ **Closing any popup, or the drawer, records NOTHING** (CRD-R-9). Never auto-accept on close.
+- `source_name` is **derived** server-side, not a column; if that mapping changes, `acceptsWithoutToc`
+  silently falls back to the legacy flow.
 
 ## Prior touch history (condensed)
-- **`NOTIF-T-9`** (defect fix, avatar): individual-requester rows show initials in a CIRCLE;
-  bilateral/entity rows show an icon in a ROUNDED SQUARE (8px radius) — `.notification_avatar`
-  shrank 32px → 28px per the mockup. Accept/Decline buttons got `[showBackground]="false"` +
-  `::ng-deep .notification_accept_btn/.notification_decline_btn .pr_button { ... !important }`
-  overrides (Accept: `--pr-color-primary-300` border/white bg; Decline: `--pr-color-accents-5`
-  text) — `!important` is required because a bare `::ng-deep` rule gets NO `[_ngcontent-x]` host
-  attribute under emulated encapsulation and so compiles to LOWER specificity than
-  `pr-button.component.scss`'s own base rules, losing the cascade without it (confirmed against
-  three existing precedents in this codebase: `section-evidence`, `rd-evidences`, `sync-button`
-  component `.scss` files, all using the same `!important` pattern, never a bare `::ng-deep` alone).
-  `pr-button.component.*` itself never touched.
-- **`NOTIF-T-7`** (row restyle + decision chip): added the leading avatar/entity icon, `font-mono`
-  result code, single-line-clamped body text, and a Helm `badge` decision chip
-  (`--pr-color-green-500`/`--pr-color-red-300`, `NOTIF-DD-4`) for status 2/3 — superseded in SHAPE
-  by `NOTIF-T-10` above (chip now sits at row-end, not in a side column).
+- **CRD-T-7** (pivot, 2026-09-25): restored the popups/inline block from `HEAD` alongside the
+  drawer — CRD-DD-10 superseded CRD-DD-7/CRD-DD-9.
+- **CRD-T-1..T-4**: built the drawer and row-body open/keyboard handling.
+- **NOTIF-T-10/T-9/T-7**: row restyle history (flat row, avatar shape, decision chip).
 
-## History
-- **2026-09-04 (P2-3187 closure):** AC4 built as Option A (prompt + in-card mapping step, single
-  PATCH); endpoint version derived from the request portfolio; server V2 gained the P2-3188
-  lead-centre notification, removing the reason the deterministic fix was reverted on 2026-08-27.
-- **2026-08-27:** bilateral accept stopped opening the (empty) mapping modal; inert ToC payload
-  added; AC4 deliberately deferred pending the Option A/B product decision.
+## Not verified
+- CRD-P-3/P-4 (real CDK focus trap/restore, real portal projection) are gated on `CRD-T-6`'s manual
+  browser pass, not this doc.
+
+**Verified:** 2026-09-25 · qa-development-2026-ss · 485847996
