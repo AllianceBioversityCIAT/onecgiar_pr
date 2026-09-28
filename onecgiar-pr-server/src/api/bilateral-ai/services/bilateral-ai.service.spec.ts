@@ -93,6 +93,9 @@ describe('BilateralAiService (unit)', () => {
     };
     const roleByUserRepository = {
       validationCenterPermissions: jest.fn().mockResolvedValue(1),
+      // `ASC-T-5`: default false so every pre-existing case (which never asserts on admin
+      // status) keeps behaving exactly as before this pivot.
+      isUserAdmin: jest.fn().mockResolvedValue(false),
     };
     const clarisaCentersRepository = {
       findOne: jest.fn().mockResolvedValue({ code: 'TEST_CENTER' }),
@@ -1320,6 +1323,119 @@ describe('BilateralAiService (unit)', () => {
         message: 'AI draft discarded',
         status: 200,
       });
+    });
+  });
+
+  describe("ASC-T-5 — admin reads a centre's AI drafts but cannot act on them", () => {
+    // Falsifier fixture (tasks.md `ASC-T-5`): a user who `isUserAdmin` = true and
+    // `validationCenterPermissions` = 0 for centre 52, plus a draft of centre 52.
+    const nonMemberAdminStubs = (stubs: any) => {
+      stubs.roleByUserRepository.validationCenterPermissions.mockResolvedValue(
+        0,
+      );
+      stubs.roleByUserRepository.isUserAdmin.mockResolvedValue(true);
+      stubs.clarisaCentersRepository.findOne.mockResolvedValue({ code: 'C52' });
+    };
+
+    it('ASC-AC-12 — listDrafts resolves for an admin who is not a member of the centre', async () => {
+      const { service, stubs } = makeService();
+      nonMemberAdminStubs(stubs);
+      stubs.draftRepository.find.mockResolvedValue([{ id: 1 }]);
+
+      const result = await service.listDrafts(42, 52);
+
+      expect(result).toEqual([{ id: 1 }]);
+      expect(stubs.roleByUserRepository.isUserAdmin).toHaveBeenCalledWith(42);
+    });
+
+    it('ASC-AC-12 — getDraft resolves for an admin who is not a member of the centre', async () => {
+      const { service, stubs } = makeService();
+      nonMemberAdminStubs(stubs);
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        job: { center_id: 52 },
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([{ id: 10 }]);
+
+      const result = await service.getDraft(5, 42);
+
+      expect(result.response).toEqual(
+        expect.objectContaining({ id: 5, evidence: [{ id: 10 }] }),
+      );
+    });
+
+    it('ASC-AC-13 — promoteDraft is forbidden for the same admin', async () => {
+      const { service, stubs } = makeService();
+      nonMemberAdminStubs(stubs);
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { center_id: 52 },
+      });
+
+      await expect(service.promoteDraft(5, 42)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('ASC-AC-13 — discardDraft is forbidden for the same admin', async () => {
+      const { service, stubs } = makeService();
+      nonMemberAdminStubs(stubs);
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { center_id: 52 },
+      });
+
+      await expect(service.discardDraft(5, 42)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('ASC-AC-13 — setFormalEvidence is forbidden for the same admin', async () => {
+      const { service, stubs } = makeService();
+      nonMemberAdminStubs(stubs);
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        job: { center_id: 52 },
+      });
+
+      await expect(service.setFormalEvidence(5, 10, true, 42)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('ASC-AC-14 — a non-admin non-member is still forbidden on all five', async () => {
+      const { service, stubs } = makeService();
+      stubs.roleByUserRepository.validationCenterPermissions.mockResolvedValue(
+        0,
+      );
+      stubs.roleByUserRepository.isUserAdmin.mockResolvedValue(false);
+      stubs.clarisaCentersRepository.findOne.mockResolvedValue({ code: 'C52' });
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { center_id: 52 },
+      });
+
+      await expect(service.listDrafts(7, 52)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.getDraft(5, 7)).rejects.toThrow(ForbiddenException);
+      await expect(service.promoteDraft(5, 7)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.discardDraft(5, 7)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.setFormalEvidence(5, 10, true, 7)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 

@@ -117,12 +117,13 @@
             <a
               class="pr-nav-rail-btn"
               [routerLink]="centerHomeLink(center)"
-              routerLinkActive
-              #rlaRailCenter="routerLinkActive"
-              [class.pr-nav-rail-btn--active]="rlaRailCenter.isActive"
-              [attr.aria-label]="center.center_name"
-              [title]="center.center_name + ' · ' + center.role_name">
+              [class.pr-nav-rail-btn--active]="isActiveCenter(center)"
+              [attr.aria-label]="center.isAssigned ? center.center_name + ', ' + assignedMarkerLabel : center.center_name"
+              [title]="centerTooltip(center)">
               <span class="pr-nav-center-diamond" [style.background]="programDotColor(center.center_id)"></span>
+              @if (center.isAssigned) {
+                <ng-icon name="lucideCheck" class="pr-nav-center-check--rail text-[9px]" aria-hidden="true" />
+              }
             </a>
           }
         }
@@ -249,22 +250,37 @@
     }
 
     <!-- MY CGIAR CENTERS — own labelled block, diamond marker (reference lines 131-144).
-         Only rendered when the user actually has centres. -->
+         Only rendered when the user actually has centres. Collapsible via the same
+         "Other science programs" toggle vocabulary (ASC-R-11, ASC-DD-6); collapsed, only the
+         centre the user is currently in stays visible (ASC-R-12). -->
     @if (!isCollapsed() && getMyCenters().length > 0) {
       <div hlmSidebarGroup class="pr-nav-programs" data-guide="platform-tour-sidebar-centers">
-        <div class="pr-nav-section-label pr-nav-section-label--spaced">My CGIAR centers</div>
+        <button
+          type="button"
+          class="pr-nav-others-toggle"
+          (click)="toggleGroup('centers')"
+          [attr.aria-expanded]="isGroupOpen('centers')">
+          <span class="pr-nav-section-label pr-nav-section-label--inline">My CGIAR centers</span>
+          <span class="pr-nav-others-count">{{ getMyCenters().length }}</span>
+          <ng-icon
+            name="lucideChevronDown"
+            class="shrink-0 text-[14px] transition-transform duration-200"
+            [class.rotate-180]="isGroupOpen('centers')" />
+        </button>
         <div class="flex flex-col gap-[6px]">
-          @for (center of getMyCenters(); track center.center_id) {
+          @for (center of visibleCenters(); track center.center_id) {
             <a
               class="pr-nav-program-card pr-nav-center-card"
               [routerLink]="centerHomeLink(center)"
-              routerLinkActive
-              #rlaCenter="routerLinkActive"
-              [class.pr-nav-program-card--active]="rlaCenter.isActive"
-              [attr.aria-current]="rlaCenter.isActive ? 'page' : null"
-              [title]="center.center_name + ' · ' + center.role_name">
+              [class.pr-nav-program-card--active]="isActiveCenter(center)"
+              [attr.aria-current]="isActiveCenter(center) ? 'page' : null"
+              [title]="centerTooltip(center)">
               <span class="pr-nav-center-diamond" [style.background]="programDotColor(center.center_id)"></span>
               <span class="pr-nav-program-name">{{ center.center_name }}</span>
+              @if (center.isAssigned) {
+                <ng-icon name="lucideCheck" class="pr-nav-program-check shrink-0 text-[14px]" aria-hidden="true" />
+                <span class="sr-only">{{ assignedMarkerLabel }}</span>
+              }
             </a>
           }
         </div>

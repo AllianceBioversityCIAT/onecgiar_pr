@@ -2370,7 +2370,11 @@ export class BilateralCenterService {
       );
     }
 
-    await this.assertCenterPermission(user, parsedResultId);
+    // ASC-DD-9 / ASC-R-18 — a platform admin runs the quality check and submits any bilateral
+    // result for review, whether or not they are a Center User of its lead centre. Every other
+    // precondition in this method still applies (status above; owner SP and MDS below).
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) await this.assertCenterPermission(user, parsedResultId);
 
     const owner =
       await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
@@ -2433,7 +2437,11 @@ export class BilateralCenterService {
       );
     }
 
-    await this.assertCenterPermission(user, parsedResultId);
+    // ASC-DD-9 (amended 2026-09-28) — the client polls this endpoint while `assess` runs and
+    // loads it on open, so an admin non-member needs the same bypass `assertSubmittable` gets.
+    // Read-only: no other precondition to preserve here.
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) await this.assertCenterPermission(user, parsedResultId);
     const dto = await this.qualityAssessmentService.getLatest(parsedResultId);
 
     return {
