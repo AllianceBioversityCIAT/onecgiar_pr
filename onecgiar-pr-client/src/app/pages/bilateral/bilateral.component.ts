@@ -32,7 +32,16 @@ export class BilateralComponent implements OnInit, OnDestroy {
       // Set the acronym synchronously so links built from ctx.centerAcronym()
       // (e.g. "Create result") are correct immediately, before the async
       // center/name lookup below resolves.
-      this.ctx.setCenter(acronym, this.ctx.centerName(), this.ctx.centerId() ?? undefined, this.ctx.centerInstitutionId());
+      // On a center switch the code and institution id are cleared rather than carried over:
+      // until `resolveCenter` lands they belong to the PREVIOUS center, and anything keyed by
+      // them (the bulk uploader handoff, the drafts fetch) would act on the wrong one.
+      const sameCenter = acronym === this.ctx.centerAcronym();
+      this.ctx.setCenter(
+        acronym,
+        this.ctx.centerName(),
+        sameCenter ? (this.ctx.centerId() ?? undefined) : undefined,
+        sameCenter ? this.ctx.centerInstitutionId() : null,
+      );
       void this.resolveCenter(acronym);
     });
   }

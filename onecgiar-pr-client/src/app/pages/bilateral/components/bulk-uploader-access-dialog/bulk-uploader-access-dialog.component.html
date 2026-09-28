@@ -1,0 +1,24 @@
+<div hlmDialogHeader>
+  <div class="flex items-center gap-[10px]">
+    <ng-icon name="lucideTriangleAlert" size="20" class="shrink-0 text-[var(--pr-color-yellow-300)]" aria-hidden="true" />
+    <h2 hlmDialogTitle class="text-[18px]!">{{ copy.title }}</h2>
+  </div>
+  <p hlmDialogDescription class="text-[15px]! leading-[1.5]!">{{ copy.body }}</p>
+  <p class="text-[15px] leading-[1.5] text-[var(--pr-color-secondary-400)]">{{ copy.contact }}</p>
+</div>
+
+<div hlmDialogFooter>
+  <button type="button" hlmBtn variant="outline" class="text-[14px]! h-10! px-4!" (click)="cancel()">
+    {{ copy.cancelLabel }}
+  </button>
+  <button
+    #continueButton
+    type="button"
+    hlmBtn
+    variant="brand"
+    class="text-[14px]! h-10! px-4!"
+    data-testid="bulk-uploader-access-continue"
+    (click)="continueAnyway()">
+    {{ copy.continueLabel }}
+  </button>
+</div>

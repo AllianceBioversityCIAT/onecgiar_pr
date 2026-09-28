@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -10,6 +10,8 @@ import { ReportingNavSidebarComponent } from './reporting-nav-sidebar.component'
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { ApiService } from '../../services/api/api.service';
+import { CentersService } from '../../services/global/centers.service';
+import { CenterDto } from '../../interfaces/center.dto';
 import { FontScaleService } from '../../services/font-scale.service';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
@@ -18,6 +20,18 @@ import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 const PLANNED = '/result-framework-reporting/planned-toc';
+
+/** CLARISA catalogue row builder — ASC-T-1 (`CenterDto` has no role field, `P-8`). */
+const catalogueCenter = (acronym: string, overrides: Partial<CenterDto> = {}): CenterDto => ({
+  code: acronym,
+  financial_code: '',
+  institutionId: 0,
+  name: acronym,
+  acronym,
+  lead_center: '',
+  full_name: acronym,
+  ...overrides
+});
 
 describe('ReportingNavSidebarComponent', () => {
   let component: ReportingNavSidebarComponent;
@@ -29,6 +43,7 @@ describe('ReportingNavSidebarComponent', () => {
   let dataControlMock: any;
   let homeMock: any;
   let apiMock: any;
+  let centersMock: { centers: ReturnType<typeof signal<CenterDto[]>> };
   let fontScaleMock: any;
   let notificationsMock: any;
   let sidebarMock: any;
@@ -50,6 +65,7 @@ describe('ReportingNavSidebarComponent', () => {
         { provide: DataControlService, useValue: dataControlMock },
         { provide: ResultFrameworkReportingHomeService, useValue: homeMock },
         { provide: ApiService, useValue: apiMock },
+        { provide: CentersService, useValue: centersMock },
         { provide: FontScaleService, useValue: fontScaleMock },
         { provide: ResultsNotificationsService, useValue: notificationsMock },
         { provide: HlmSidebarService, useValue: sidebarMock },
@@ -95,6 +111,11 @@ describe('ReportingNavSidebarComponent', () => {
       rolesSE: { roles: null as any, getMyCenters: jest.fn().mockReturnValue([{ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Member' }]) },
       dataControlSE: { myInitiativesList: [] as any[] }
     };
+
+    // Populated by default (not just for admin fixtures): the non-admin case MUST run against a
+    // populated catalogue, or dropping the `isAdmin` guard (falsifier mutation (b)) reads the same
+    // as correct code and the ASC-AC-3 gate asserts nothing.
+    centersMock = { centers: signal<CenterDto[]>([catalogueCenter('IITA'), catalogueCenter('CIP')]) };
 
     fontScaleMock = { set: jest.fn(), scale: signal('default') };
     notificationsMock = { updatesPopUpData: [] as any[] };
@@ -725,7 +746,10 @@ describe('ReportingNavSidebarComponent', () => {
       );
     });
 
-    it('getMyCenters delegates to the roles service', async () => {
+    // ASC-T-1: for a non-admin the wrapper still delegates verbatim (ASC-R-2, ASC-AC-3) — the
+    // catalogue (populated by default in `centersMock`, see beforeEach) must be ignored entirely.
+    it('getMyCenters delegates to the roles service for a non-admin, ignoring a populated catalogue (ASC-AC-3)', async () => {
+      rolesMock.isAdmin = false;
       await build();
       expect(component.getMyCenters()).toEqual([
         { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Member' }
@@ -739,6 +763,97 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.getMyCenters()).toEqual([{ center_acronym: 'CIP' }]);
     });
 
+    // ------------------------------------------------------------------------- ASC-T-1
+    // Admin union: assignments ∪ catalogue, deduped on acronym (assignment wins), assignments
+    // first, tagged by provenance. See `docs/specs/changes/admin-sees-all-centers/`.
+    describe('admin centre union (ASC-T-1)', () => {
+      it('ASC-AC-1 / D5: an admin with ZERO assignments gets the whole catalogue, not an empty block', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]); // empty roles.center — the D5 trap
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(3);
+        expect(result.map((c: any) => c.center_acronym)).toEqual(['CIAT', 'IITA', 'CIP']);
+        expect(result.every((c: any) => c.isAssigned === false)).toBe(true);
+      });
+
+      it('ASC-AC-2 / ASC-R-10 / D6: an assigned centre also present in the catalogue appears once, assigned, and sorts first', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([
+          { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' }
+        ]);
+        // The falsifier fixture: CIAT is in BOTH sources, or dedup mutation (a) is inert.
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(3);
+        expect(result.filter((c: any) => c.center_acronym === 'CIAT')).toHaveLength(1);
+        expect(result[0]).toEqual({
+          center_id: 'CIAT',
+          center_name: 'CIAT',
+          center_acronym: 'CIAT',
+          role_name: 'Center User',
+          isAssigned: true
+        });
+        expect(result.map((c: any) => c.center_acronym)).toEqual(['CIAT', 'IITA', 'CIP']);
+      });
+
+      it('ASC-AC-5 / D8-adjacent: an admin with a failed (empty) catalogue still sees their assignments, not an empty block', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([
+          { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' },
+          { center_id: 'IITA', center_name: 'IITA', center_acronym: 'IITA', role_name: 'Center User' }
+        ]);
+        centersMock.centers.set([]); // catalogue fetch failed / empty
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(2);
+        expect(result.map((c: any) => c.center_acronym)).toEqual(['CIAT', 'IITA']);
+      });
+
+      it('ASC-AC-6 / D7: catalogue landing AFTER first render grows the list — no computed(), no stale cache', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        centersMock.centers.set([]); // cold: nothing resolved yet at first render
+        await build();
+
+        expect(component.getMyCenters()).toHaveLength(0);
+
+        // The catalogue resolves later — set AFTER first render/first read (D7's trap).
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA')]);
+        expect(component.getMyCenters()).toHaveLength(2);
+      });
+
+      it('ASC-AC-8: does not mutate what RolesService.getMyCenters() returns while composing the admin union', async () => {
+        rolesMock.isAdmin = true;
+        const originalAssignment = { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' };
+        apiMock.rolesSE.getMyCenters.mockReturnValue([originalAssignment]);
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA')]);
+        await build();
+
+        component.getMyCenters();
+
+        expect(apiMock.rolesSE.getMyCenters()).toEqual([originalAssignment]);
+        expect(originalAssignment).toEqual({ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' });
+        expect((originalAssignment as any).isAssigned).toBeUndefined();
+      });
+
+      it('ASC-AC-9 / D4: a catalogue row with neither acronym nor code is omitted', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        centersMock.centers.set([catalogueCenter('IITA'), { ...catalogueCenter('CIP'), acronym: undefined as any, code: undefined as any }]);
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(1);
+        expect(result[0].center_acronym).toBe('IITA');
+      });
+    });
+
     it('centerHomeLink falls back to the centre id when the acronym is missing', async () => {
       await build();
       expect(component.centerHomeLink({ center_acronym: 'CIP' })).toEqual(['/bilateral', 'CIP', 'home']);
@@ -749,6 +864,409 @@ describe('ReportingNavSidebarComponent', () => {
       await build();
       component.onEscape();
       expect(component.iconFlyout()).toBeNull();
+    });
+  });
+
+  // ------------------------------------------------------------------------ ASC-T-2
+  // Rendered (not parsed-text) checks for the "mine" marker and the tooltip. Every OTHER test in
+  // this file overrides the template to `''` (see the block comment above the sidebar-toggle
+  // describe below) because the real template trips `NG0311` from `hlmSidebarMenuButton`'s tooltip
+  // host directive the instant it renders — but that directive lives only in the Platform/Extras
+  // sections. This block extracts JUST the centres loop, verbatim, from the real `.html` file
+  // (never hand-typed) via `extractTemplateBlock`, and compiles THAT as the component's template —
+  // the real-artifact lock the ASC-T-2 disqualifier demands, without tripping the unrelated bug.
+  describe('rendered centre markers (ASC-T-2)', () => {
+    /** Extracts one balanced `@if (...) { ... }` block starting at `startMarker`, straight from the
+     *  real template text — brace-counting skips `{{ }}` interpolations so they don't unbalance it. */
+    const extractTemplateBlock = (html: string, startMarker: string): string => {
+      const start = html.indexOf(startMarker);
+      if (start === -1) throw new Error(`ASC-T-2 test anchor not found in the real template: ${startMarker}`);
+      let depth = 0;
+      let i = start;
+      for (; i < html.length; i++) {
+        if (html[i] === '{' && html[i + 1] === '{') {
+          i++;
+          continue;
+        }
+        if (html[i] === '}' && html[i + 1] === '}') {
+          i++;
+          continue;
+        }
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            i++;
+            break;
+          }
+        }
+      }
+      return html.slice(start, i);
+    };
+
+    /** Compiles `templateHtml` as `ReportingNavSidebarComponent`'s template and renders it, with a
+     *  REAL `Router` (`provideRouter([])`) so `[routerLink]`/`routerLinkActive` resolve real hrefs —
+     *  the hand-rolled `routerMock` used everywhere else has no `createUrlTree`. */
+    const buildRendered = async (templateHtml: string) => {
+      await TestBed.configureTestingModule({
+        imports: [ReportingNavSidebarComponent],
+        providers: [
+          provideRouter([]),
+          { provide: RolesService, useValue: rolesMock },
+          { provide: DataControlService, useValue: dataControlMock },
+          { provide: ResultFrameworkReportingHomeService, useValue: homeMock },
+          { provide: ApiService, useValue: apiMock },
+          { provide: CentersService, useValue: centersMock },
+          { provide: FontScaleService, useValue: fontScaleMock },
+          { provide: ResultsNotificationsService, useValue: notificationsMock },
+          { provide: HlmSidebarService, useValue: sidebarMock },
+          { provide: ReportingGuideService, useValue: reportingGuideMock }
+        ],
+        schemas: [NO_ERRORS_SCHEMA]
+      })
+        .overrideComponent(ReportingNavSidebarComponent, { set: { template: templateHtml } })
+        .compileComponents();
+
+      const renderedFixture = TestBed.createComponent(ReportingNavSidebarComponent);
+      renderedFixture.detectChanges();
+      return renderedFixture;
+    };
+
+    const readTemplateHtml = (): string => readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+
+    /** The falsifier fixture (tasks.md `ASC-T-2`): admin assigned to CIAT with role `Center User`
+     *  (`AUTH-R-2` — the role every assignment carries), catalogue holding CIAT and IITA. The
+     *  assigned role MUST be exactly `Center User`, or mutation (b) below passes when it should not. */
+    const seedFalsifierFixture = () => {
+      rolesMock.isAdmin = true;
+      apiMock.rolesSE.getMyCenters.mockReturnValue([{ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' }]);
+      centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA')]);
+    };
+
+    it('ASC-AC-2 / ASC-AC-7 (expanded): marks CIAT, not IITA; no `undefined`; hrefs resolve', async () => {
+      seedFalsifierFixture();
+
+      const block = extractTemplateBlock(readTemplateHtml(), '@if (!isCollapsed() && getMyCenters().length > 0) {');
+      const renderedFixture = await buildRendered(block);
+
+      // ASC-T-6 (ASC-R-17): the block now starts CLOSED for everyone, so a collapsed render would
+      // only carry the assigned CIAT — open it to see the full list this case is about.
+      (renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement).click();
+      renderedFixture.detectChanges();
+
+      const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+      expect(links).toHaveLength(2);
+
+      const ciat = links.find(a => a.textContent?.includes('CIAT'))!;
+      const iita = links.find(a => a.textContent?.includes('IITA'))!;
+      expect(ciat).toBeTruthy();
+      expect(iita).toBeTruthy();
+
+      // ASC-AC-7 / ASC-R-5 / D3 — checked FIRST, and named on IITA specifically (a catalogue row,
+      // no role): mutation (a) (the unconditional `' · ' + center.role_name` concat) must be caught
+      // HERE, on IITA's own tooltip, not incidentally on a later CIAT assertion (Jest stops at the
+      // first failed `expect`, so ordering decides which case's name the red actually reports).
+      expect(iita.getAttribute('title')).not.toContain('undefined');
+      expect(renderedFixture.nativeElement.textContent).not.toContain('undefined');
+
+      // ASC-AC-2 / ASC-DD-5: the marker comes from provenance (isAssigned), never from role text —
+      // CIAT's role is `Center User`, which `shouldShowAssignmentRole` filters, yet CIAT still marks.
+      expect(ciat.textContent).toContain(renderedFixture.componentInstance.assignedMarkerLabel);
+      expect(iita.textContent).not.toContain(renderedFixture.componentInstance.assignedMarkerLabel);
+
+      // ASC-DD-4: the role suffix is gated by shouldShowAssignmentRole — CIAT's `Center User` is
+      // filtered (no suffix), and IITA (a catalogue row) has no role to begin with.
+      expect(ciat.getAttribute('title')).toBe('CIAT');
+      expect(iita.getAttribute('title')).toBe('IITA');
+
+      // ASC-AC-7 / ASC-R-6: each link resolves to /bilateral/<acronym>/home.
+      expect(ciat.getAttribute('href')).toBe('/bilateral/CIAT/home');
+      expect(iita.getAttribute('href')).toBe('/bilateral/IITA/home');
+
+      // Marker is not colour-only: an sr-only TEXT node carries it (a11y NFR).
+      const srOnly = ciat.querySelector('.sr-only');
+      expect(srOnly?.textContent).toBe(renderedFixture.componentInstance.assignedMarkerLabel);
+    });
+
+    it('ASC-AC-2 / ASC-AC-7 (collapsed rail): aria-label/title carry the marker and tolerate the absent role', async () => {
+      seedFalsifierFixture();
+
+      const block = extractTemplateBlock(readTemplateHtml(), '@if (getMyCenters().length > 0) {');
+      const renderedFixture = await buildRendered(block);
+
+      const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+      expect(links).toHaveLength(2);
+
+      const ciat = links.find(a => a.getAttribute('href') === '/bilateral/CIAT/home')!;
+      const iita = links.find(a => a.getAttribute('href') === '/bilateral/IITA/home')!;
+      expect(ciat).toBeTruthy();
+      expect(iita).toBeTruthy();
+
+      // ASC-AC-7 / ASC-R-5 / D3 — checked FIRST and named on IITA (a catalogue row, no role), so
+      // mutation (a)'s red is observed here, not on a later CIAT assertion.
+      expect(iita.getAttribute('title')).not.toContain('undefined');
+      expect(iita.getAttribute('aria-label')).not.toContain('undefined');
+      expect(renderedFixture.nativeElement.textContent).not.toContain('undefined');
+
+      // Rail keeps aria-label WITH the centre name (NFR Accessibility) and marks the assigned one.
+      expect(ciat.getAttribute('aria-label')).toBe(`CIAT, ${renderedFixture.componentInstance.assignedMarkerLabel}`);
+      expect(iita.getAttribute('aria-label')).toBe('IITA');
+
+      expect(ciat.getAttribute('title')).toBe('CIAT');
+      expect(iita.getAttribute('title')).toBe('IITA');
+    });
+
+    it('ASC-AC-4: a non-admin with zero assignments renders no block at all', async () => {
+      // The extraction anchor IS the guard (`@if (!isCollapsed() && getMyCenters().length > 0) {`),
+      // so rendering this fragment with an empty `getMyCenters()` proves the guard actually
+      // suppresses the block — not just that the wrapper returns an empty array.
+      rolesMock.isAdmin = false;
+      apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+      centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA')]);
+
+      const block = extractTemplateBlock(readTemplateHtml(), '@if (!isCollapsed() && getMyCenters().length > 0) {');
+      const renderedFixture = await buildRendered(block);
+
+      expect(renderedFixture.nativeElement.querySelector('[data-guide="platform-tour-sidebar-centers"]')).toBeNull();
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(0);
+      expect(renderedFixture.nativeElement.textContent.trim()).toBe('');
+    });
+  });
+
+  // ------------------------------------------------------------------------ ASC-T-4
+  // Rendered checks for the collapsible "My CGIAR centers" block. Same real-artifact extraction
+  // as ASC-T-2, but with a REAL `Router` that can actually navigate: a `**` catch-all route (the
+  // same pattern `bilateral-overview.component.spec.ts` uses) lets `navigateByUrl` resolve, which
+  // `provideRouter([])` alone cannot — there is no route to match `/bilateral/CIAT/home` against.
+  describe('collapsible centres block (ASC-T-4)', () => {
+    const extractTemplateBlock = (html: string, startMarker: string): string => {
+      const start = html.indexOf(startMarker);
+      if (start === -1) throw new Error(`ASC-T-4 test anchor not found in the real template: ${startMarker}`);
+      let depth = 0;
+      let i = start;
+      for (; i < html.length; i++) {
+        if (html[i] === '{' && html[i + 1] === '{') {
+          i++;
+          continue;
+        }
+        if (html[i] === '}' && html[i + 1] === '}') {
+          i++;
+          continue;
+        }
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            i++;
+            break;
+          }
+        }
+      }
+      return html.slice(start, i);
+    };
+
+    const readTemplateHtml = (): string => readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+
+    const buildRendered = async (templateHtml: string) => {
+      await TestBed.configureTestingModule({
+        imports: [ReportingNavSidebarComponent],
+        providers: [
+          provideRouter([{ path: '**', children: [] }]),
+          { provide: RolesService, useValue: rolesMock },
+          { provide: DataControlService, useValue: dataControlMock },
+          { provide: ResultFrameworkReportingHomeService, useValue: homeMock },
+          { provide: ApiService, useValue: apiMock },
+          { provide: CentersService, useValue: centersMock },
+          { provide: FontScaleService, useValue: fontScaleMock },
+          { provide: ResultsNotificationsService, useValue: notificationsMock },
+          { provide: HlmSidebarService, useValue: sidebarMock },
+          { provide: ReportingGuideService, useValue: reportingGuideMock }
+        ],
+        schemas: [NO_ERRORS_SCHEMA]
+      })
+        .overrideComponent(ReportingNavSidebarComponent, { set: { template: templateHtml } })
+        .compileComponents();
+
+      const renderedFixture = TestBed.createComponent(ReportingNavSidebarComponent);
+      renderedFixture.detectChanges();
+      return renderedFixture;
+    };
+
+    /** Falsifier fixture (tasks.md `ASC-T-4`): admin assigned to CIAT, catalogue CIAT/IITA/CIP. */
+    const seedThreeCenters = () => {
+      rolesMock.isAdmin = true;
+      apiMock.rolesSE.getMyCenters.mockReturnValue([{ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' }]);
+      centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+    };
+
+    const wholeBlock = () => extractTemplateBlock(readTemplateHtml(), '@if (!isCollapsed() && getMyCenters().length > 0) {');
+
+    it('ASC-AC-10: the toggle collapses and reopens the list; aria-expanded follows', async () => {
+      seedThreeCenters();
+      const renderedFixture = await buildRendered(wholeBlock());
+
+      const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+      // ASC-T-6 (ASC-R-17): closed by default for everyone now — only the assigned CIAT shows,
+      // nobody being "inside" a centre on the default route.
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(1);
+
+      toggle.click();
+      renderedFixture.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+
+      toggle.click();
+      renderedFixture.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(1);
+    });
+
+    it('ASC-AC-11: collapsed while inside CIAT shows only CIAT, active and marked', async () => {
+      seedThreeCenters();
+      const renderedFixture = await buildRendered(wholeBlock());
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/bilateral/CIAT/home');
+      renderedFixture.detectChanges();
+
+      // ASC-T-6 (ASC-R-17): already collapsed on first render — no click needed to get here.
+      const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+      const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+      expect(links).toHaveLength(1);
+      expect(links[0].textContent).toContain('CIAT');
+      expect(links[0].classList.contains('pr-nav-program-card--active')).toBe(true);
+      expect(links[0].textContent).toContain(renderedFixture.componentInstance.assignedMarkerLabel);
+
+      toggle.click();
+      renderedFixture.detectChanges();
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+    });
+
+    // ----------------------------------------------------------- ASC-R-16 / ASC-AC-15
+    // The user's own words: on ANY route under a centre — not only its `/home` link — that centre
+    // must read as active. Reviewer's diagnosis: `routerLinkActive` on the `/home` link only
+    // matches `/home` and its children, so `/bilateral/CIAT/result/…` left CIAT unmarked. Fixed by
+    // driving both loops' active state from `isActiveCenter()` — the same URL source the collapsed
+    // filter already uses — instead of `routerLinkActive`.
+    describe('active on any /bilateral/<x>/… route, not only /home (ASC-R-16)', () => {
+      const seedWithAfricaRice = () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        centersMock.centers.set([catalogueCenter('AfricaRice'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+      };
+
+      it('ASC-AC-15 (expanded): active with aria-current="page" on a deep route with a query string', async () => {
+        seedWithAfricaRice();
+        const renderedFixture = await buildRendered(wholeBlock());
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/AfricaRice/result/9652?phase=36');
+        renderedFixture.detectChanges();
+
+        // ASC-T-6 (ASC-R-17): closed by default; none of these three are assigned, so a collapsed
+        // render would only carry the active AfricaRice — open it to see all three and their state.
+        (renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement).click();
+        renderedFixture.detectChanges();
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        expect(links).toHaveLength(3);
+        const africaRice = links.find(a => a.textContent?.includes('AfricaRice'))!;
+        const others = links.filter(a => a !== africaRice);
+        expect(africaRice).toBeTruthy();
+
+        expect(africaRice.classList.contains('pr-nav-program-card--active')).toBe(true);
+        expect(africaRice.getAttribute('aria-current')).toBe('page');
+        others.forEach(a => {
+          expect(a.classList.contains('pr-nav-program-card--active')).toBe(false);
+          expect(a.getAttribute('aria-current')).toBeNull();
+        });
+      });
+
+      it('ASC-AC-15 (rail): the rail button is active on the same deep route; the others are not', async () => {
+        seedWithAfricaRice();
+        // Same anchor ASC-T-2's collapsed-rail test uses: the INNER `@if`, so the fragment never
+        // calls the outer rail guard's `homeSE.isLoadingSPLists()` (unstubbed on this mock).
+        const railBlock = extractTemplateBlock(readTemplateHtml(), '@if (getMyCenters().length > 0) {');
+        const renderedFixture = await buildRendered(railBlock);
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/AfricaRice/result/9652?phase=36');
+        renderedFixture.detectChanges();
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        expect(links).toHaveLength(3);
+        const africaRice = links.find(a => a.getAttribute('href') === '/bilateral/AfricaRice/home')!;
+        const others = links.filter(a => a !== africaRice);
+        expect(africaRice).toBeTruthy();
+
+        expect(africaRice.classList.contains('pr-nav-rail-btn--active')).toBe(true);
+        others.forEach(a => expect(a.classList.contains('pr-nav-rail-btn--active')).toBe(false));
+      });
+
+      it('ASC-R-16: a bare fragment (#x) still resolves to the centre', async () => {
+        seedWithAfricaRice();
+        const renderedFixture = await buildRendered(wholeBlock());
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/AfricaRice#x');
+        renderedFixture.detectChanges();
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        const africaRice = links.find(a => a.textContent?.includes('AfricaRice'))!;
+        expect(africaRice).toBeTruthy();
+        expect(africaRice.classList.contains('pr-nav-program-card--active')).toBe(true);
+        expect(africaRice.getAttribute('aria-current')).toBe('page');
+      });
+    });
+
+    // ----------------------------------------------------------- ASC-T-6 / ASC-R-17 / ASC-DD-8
+    // Supersedes ASC-T-4's open-by-default and active-only-when-closed: the block now starts
+    // CLOSED for everyone, and while closed it shows the rows the user is assigned to PLUS
+    // wherever they currently are, in `getMyCenters()` order.
+    describe('closed by default; mine plus the current centre (ASC-T-6)', () => {
+      it('ASC-AC-16: first render is collapsed, lists CIAT (mine) and IITA (active), not CIP; opening shows all three', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([
+          { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' }
+        ]);
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+
+        const renderedFixture = await buildRendered(wholeBlock());
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/IITA/home');
+        renderedFixture.detectChanges();
+
+        const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+        // First render, no click: collapsed.
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        expect(links).toHaveLength(2);
+        expect(links[0].textContent).toContain('CIAT');
+        expect(links[1].textContent).toContain('IITA');
+        expect(links[0].textContent).toContain(renderedFixture.componentInstance.assignedMarkerLabel);
+        expect(links[1].classList.contains('pr-nav-program-card--active')).toBe(true);
+
+        toggle.click();
+        renderedFixture.detectChanges();
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+      });
+
+      it('ASC-AC-17: zero assignments and outside any centre — first render is collapsed and empty, toggle visible', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        // Populated catalogue (ASC-AC-1: an admin with zero assignments still gets it), so the
+        // block itself renders and the toggle is there to be seen — only its CONTENT is empty.
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+
+        const renderedFixture = await buildRendered(wholeBlock());
+        renderedFixture.detectChanges();
+
+        const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+        expect(toggle).toBeTruthy();
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(0);
+      });
     });
   });
 

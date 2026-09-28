@@ -537,6 +537,124 @@ describe('BilateralQualityAssessmentClient', () => {
     });
   });
 
+  describe('evidence reason sanitisation (QEL-R-2, QEL-R-3)', () => {
+    const EVIDENCE_LINK_UNREADABLE_REASON =
+      "We couldn't open this link, so it was not reviewed. Check that it is a complete, public URL (starting with https://).";
+
+    it('QEL-AC-3: a technical tool error is replaced with the plain-language message, verdict kept', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.evidence[0].verdict = 'grey';
+      body.evidence[0].reason =
+        'Page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL Call log: - navigating to "www.google.com", waiting until "domcontentloaded"';
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.evidence[0].reason).toBe(
+          EVIDENCE_LINK_UNREADABLE_REASON,
+        );
+        expect(result.response.evidence[0].reason).not.toContain(
+          'www.google.com',
+        );
+        expect(result.response.evidence[0].verdict).toBe('grey');
+      }
+    });
+
+    it('QEL-AC-4: a normal reason mentioning a host is kept, with the host redacted', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.evidence[0].reason = 'Looks credible, see example.org/report';
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        // HOST_PATTERN (reused as-is, QEL-DD-2: no new redaction patterns) matches only the
+        // dotted host label, not a path segment after it — the same behaviour
+        // sanitizeDegradedReason already has. The host itself never survives.
+        expect(result.response.evidence[0].reason).toBe(
+          'Looks credible, see [redacted]/report',
+        );
+        expect(result.response.evidence[0].reason).not.toContain('example.org');
+      }
+    });
+
+    it('QEL-AC-5: a normal reason with no URL or host is unchanged', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.evidence[0].reason = 'Public URL resolves to a relevant document.';
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.evidence[0].reason).toBe(
+          'Public URL resolves to a relevant document.',
+        );
+      }
+    });
+
+    it('a reason is not truncated to 255 (that cap belongs to degraded_reason only)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      const longReason = 'A '.repeat(200).trim();
+      body.evidence[0].reason = longReason;
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.evidence[0].reason).toBe(longReason);
+        expect(result.response.evidence[0].reason.length).toBeGreaterThan(255);
+      }
+    });
+
+    it('the `partial` status flows through the same reason sanitisation as `completed`', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.status = 'partial';
+      body.evidence[0].reason =
+        'net::ERR_NAME_NOT_RESOLVED at ai-internal.example';
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.ai_status).toBe('partial');
+        expect(result.response.evidence[0].reason).toBe(
+          EVIDENCE_LINK_UNREADABLE_REASON,
+        );
+      }
+    });
+
+    it('a missing or null reason is passed through unchanged, verdict kept (Reviewer, QEL-T-1 attempt 2: isValidEvidenceItem never checks reason)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      delete body.evidence[0].reason;
+      body.evidence[0].verdict = 'amber';
+      body.evidence[1].reason = null;
+      body.evidence[1].verdict = 'grey';
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.evidence[0].reason).toBeUndefined();
+        expect(result.response.evidence[0].verdict).toBe('amber');
+        expect(result.response.evidence[1].reason).toBeNull();
+        expect(result.response.evidence[1].verdict).toBe('grey');
+      }
+    });
+  });
+
   describe('type_specific is optional', () => {
     // 🛑 Result 11883 (Other output, 17-sep-2026): the AI answered `completed` with four good
     // sections and no `type_specific`, because that result type HAS no type-specific section. The

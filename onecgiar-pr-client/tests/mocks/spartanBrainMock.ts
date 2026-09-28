@@ -1,4 +1,5 @@
-import { Directive, EventEmitter, HostListener, Input, Output, TemplateRef, ViewContainerRef, effect, inject, signal } from '@angular/core';
+import { Directive, EventEmitter, HostListener, Injectable, Input, Output, TemplateRef, ViewContainerRef, effect, inject, signal } from '@angular/core';
+import { EMPTY, Observable } from 'rxjs';
 
 @Directive({ selector: '[brnButton]', standalone: true })
 export class BrnButton {
@@ -269,6 +270,7 @@ export class BrnDialogContent {
 
 export class BrnDialogRef<T = unknown> {
   state = () => 'closed' as BrnDialogState;
+  readonly closed$: Observable<T | undefined> = EMPTY;
   close(_result?: T): void {}
 }
 
@@ -276,6 +278,9 @@ export function injectBrnDialogContext<T = unknown>(_opts?: { optional?: boolean
   return null;
 }
 
+// Root-provided like the real one, so a component that injects `HlmDialogService` can be created
+// in a spec that never opens a dialog. Specs that do open one stub `HlmDialogService.open` directly.
+@Injectable({ providedIn: 'root' })
 export class BrnDialogService {
   open(..._args: unknown[]): BrnDialogRef {
     return new BrnDialogRef();

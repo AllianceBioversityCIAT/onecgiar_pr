@@ -2267,6 +2267,8 @@ describe('BilateralCenterService', () => {
       ).rejects.toThrow(/valid positive number/);
     });
 
+    // ASC-AC-19 — this is the non-admin, non-member case: `isUserAdmin` stays at the
+    // suite's default (false), so the bypass added for ASC-T-7 never applies here.
     it('refuses a user without the Center User role on the lead centre', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const roleByUserRepository =
@@ -2278,6 +2280,87 @@ describe('BilateralCenterService', () => {
       await expect(
         service.submitForReview(user, 77, decisionDto),
       ).rejects.toThrow(/do not have permission/);
+    });
+
+    // ASC-T-7 / ASC-R-18 — an admin runs submit-for-review on a result whose lead centre they
+    // are not a Center User of. `validationCenterPermissions` is stubbed at 0 (would 403 a
+    // non-admin) precisely so this proves the admin bypass, not a permissive default.
+    it('ASC-AC-18: lets an admin without the Center User role submit for review', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      const result = await service.submitForReview(user, 77, decisionDto);
+
+      expect((result.response as any).status).toBe(
+        ResultStatusData.PendingReview.value,
+      );
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
+    });
+
+    // ASC-T-7 — the status gate (`:2367`) runs before `isUserAdmin` (`:2376`), so
+    // `isUserAdmin` is never reached on this path and this test proves nothing about the
+    // bypass itself. It only proves the status precondition still exists on an admin call —
+    // the bypass proof for the owner-SP precondition is the test below.
+    it('an admin still gets BadRequestException on a result already under review (status gate, not bypass-proving)', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+
+      let caught: unknown;
+      try {
+        await service.submitForReview(user, 77, decisionDto);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(BadRequestException);
+      expect((caught as BadRequestException).message).toMatch(
+        /Editing or Draft/,
+      );
+    });
+
+    // ASC-T-7 / ASC-DD-9 (Reviewer finding, attempt 1) — the status gate runs before the
+    // bypass, so it cannot prove the bypass path skips only `assertCenterPermission`. The
+    // owner-SP gate runs AFTER the bypass, so this is the case a bug like `return result`
+    // right after the admin branch (skipping owner-SP and MDS for admins) would actually
+    // break. `isUserAdmin` is asserted called so a fixture with the wrong stub can't pass by
+    // accident.
+    it('ASC-AC-18 preconditions: an admin with no Science Program assigned still gets BadRequestException (proves the bypass path, not just the status gate)', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+      const resultByInitiativesRepository =
+        module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        );
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue(null);
+
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/no Science Program assigned/);
+      expect(roleByUserRepository.isUserAdmin).toHaveBeenCalledWith(user.id);
     });
 
     it('refuses a result with no lead centre', async () => {
@@ -2414,6 +2497,7 @@ describe('BilateralCenterService', () => {
       );
     });
 
+    // ASC-AC-19 — non-admin, non-member: `isUserAdmin` stays at the suite's default (false).
     it('gate parity: refuses a user without the Center User role, same message as submitForReview', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const roleByUserRepository =
@@ -2426,6 +2510,32 @@ describe('BilateralCenterService', () => {
         /do not have permission/,
       );
       expect(qualityAssessmentService.assess).not.toHaveBeenCalled();
+    });
+
+    // ASC-T-7 / ASC-R-18 — the button runs `assess` first, so this half of ASC-AC-18 matters as
+    // much as the submit half: an admin who is not a Center User of the result's lead centre must
+    // still get past the shared `assertSubmittable` guard here too.
+    it('ASC-AC-18: lets an admin without the Center User role run the quality assessment', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      const result = await service.assess(user, 77);
+
+      expect(qualityAssessmentService.assess).toHaveBeenCalledWith(
+        user,
+        editingResult,
+      );
+      expect(result.status).toBe(200);
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
     });
 
     it('gate parity: refuses a result with no Science Program assigned, same message as submitForReview', async () => {
@@ -2505,6 +2615,7 @@ describe('BilateralCenterService', () => {
       expect(qualityAssessmentService.getLatest).toHaveBeenCalledWith(77);
     });
 
+    // ASC-AC-19 — non-admin, non-member: `isUserAdmin` stays at the suite's default (false).
     it('still refuses a user without the Center User role on the lead centre', async () => {
       const roleByUserRepository =
         module.get<RoleByUserRepository>(RoleByUserRepository);
@@ -2515,6 +2626,31 @@ describe('BilateralCenterService', () => {
       await expect(service.getLatest(user, 77)).rejects.toThrow(
         /do not have permission/,
       );
+    });
+
+    // ASC-T-7 / ASC-DD-9 (amended 2026-09-28) — the client polls `getLatest` while `assess`
+    // runs and loads it on open, so an admin non-member needs the same bypass.
+    // `validationCenterPermissions` is stubbed at 0 (would 403 a non-admin) so this proves the
+    // admin bypass, not a permissive default.
+    it('ASC-AC-18: lets an admin without the Center User role read the latest quality assessment', async () => {
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+      const qualityAssessmentService =
+        module.get<BilateralQualityAssessmentService>(
+          BilateralQualityAssessmentService,
+        );
+
+      await expect(service.getLatest(user, 77)).resolves.toBeDefined();
+      expect(qualityAssessmentService.getLatest).toHaveBeenCalledWith(77);
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
     });
 
     it('rejects an invalid resultId', async () => {
