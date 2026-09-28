@@ -37,7 +37,10 @@ export class StepN3CurrentUseComponent implements OnInit {
   }
 
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
+    // A row the user just added (`new ActorN3()` / `OrganizationN3` / `MeasureN3`) has no `is_active` yet but is
+    // already on screen; only an explicitly removed row (`is_active === false`) is hidden. Counting by truthiness
+    // showed "No actors provided" under a visible row. Same rule as the row's own `hideElement` binding.
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
     return finalList.length;
   }
 

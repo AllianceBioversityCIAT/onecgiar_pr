@@ -309,3 +309,40 @@ describe('StepN3CurrentUseComponent', () => {
     `);
   });
 });
+
+// False empty state: a freshly added row (no `is_active` yet) is on screen, so the list is not empty.
+describe('StepN3CurrentUseComponent — empty state vs rows on screen', () => {
+  const { readFileSync } = require('fs');
+  const { join } = require('path');
+  const { ActorN3, OrganizationN3, MeasureN3 } = require('../../model/Ipsr-step-3-body.model');
+  const html: string = readFileSync(join(__dirname, 'step-n3-current-use.component.html'), 'utf8');
+  const make = (readOnly: boolean) => {
+    const c = Object.create(StepN3CurrentUseComponent.prototype);
+    c.api = { rolesSE: { readOnly } };
+    return c as StepN3CurrentUseComponent;
+  };
+
+  it('counts a just-added actor, organization and measure (no is_active) in edit mode', () => {
+    const c = make(false);
+    expect(c.hasElementsWithId([new ActorN3()], 'result_ip_actors_id')).toBe(1);
+    expect(c.hasElementsWithId([new OrganizationN3()], 'id')).toBe(1);
+    expect(c.hasElementsWithId([new MeasureN3()], 'result_ip_result_measures_id')).toBe(1);
+  });
+
+  it('still drops a removed row (is_active === false) so the empty state comes back', () => {
+    expect(make(false).hasElementsWithId([{ is_active: false }], 'id')).toBe(0);
+  });
+
+  it('read-only keeps counting only saved rows (the unsaved ones are hidden there)', () => {
+    expect(make(true).hasElementsWithId([new ActorN3(), { result_ip_actors_id: 7 }], 'result_ip_actors_id')).toBe(1);
+  });
+
+  it('each row hides on is_active == false, the same rule the empty-state count uses', () => {
+    for (const v of ['actorItem', 'organizationItem', 'measuresItem']) {
+      expect(html).toContain(`${v}.is_active == false`);
+    }
+    expect(html).toContain("!hasElementsWithId(this.body.innovatonUse.actors,'result_ip_actors_id')");
+    expect(html).toContain("!hasElementsWithId(this.body.innovatonUse.organization,'id')");
+    expect(html).toContain("!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_result_measures_id')");
+  });
+});
