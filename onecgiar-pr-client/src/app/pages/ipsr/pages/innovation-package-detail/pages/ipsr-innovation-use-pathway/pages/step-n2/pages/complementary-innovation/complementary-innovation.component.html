@@ -17,40 +17,18 @@
   [columns]="cols"
   (cancelEvent)="cancelInnovation($event)"></app-table-innovation>
 
+<!-- P2-3840 — the bundle as cards; the add button + its modal sit right under it, where the list grows. -->
+<app-selected-innovations
+  [items]="this.innovationPackageCreatorBody"
+  [readOnly]="this.api.rolesSE.readOnly"
+  (openEvent)="getComplementaryInnovation($event.result_id, $event)"
+  (removeEvent)="cancelInnovation($event)"></app-selected-innovations>
+
 <app-new-complementary-innovation
   [complementaryInnovationFunction]="complementaryFunction"
   (createInnovationEvent)="createInnovationEvent($event)"
   [columns]="cols"
   (editEvent)="saveEdit()"></app-new-complementary-innovation>
-
-<app-pr-field-header
-  [required]="false"
-  [description]="
-    'Complementary innovation(s)/ enabler(s)/ solution(s) selected(' + this.innovationPackageCreatorBody?.length + '):'
-  "></app-pr-field-header>
-
-@if (this.innovationPackageCreatorBody.length > 0) {
-  @for (result of this.innovationPackageCreatorBody; track $index) {
-    <div class="core_innovation_selected" style="margin-top: 10px">
-      <div>
-        <strong>{{ result.result_code }}</strong> -
-        <span style="text-overflow: ellipsis">{{ result.title }}</span>
-        -
-        <strong>{{ result.initiative_official_code }}</strong>
-      </div>
-
-      <div class="action_buttons">
-        <i class="material-icons-round" (click)="getComplementaryInnovation(result.result_id, result)">
-          {{ this.api.rolesSE.readOnly ? 'visibility' : result.result_type_id === 7 ? 'visibility' : 'edit' }}
-        </i>
-
-        @if (!this.api.rolesSE.readOnly) {
-          <i class="material-icons-round" (click)="cancelInnovation(result)"> cancel </i>
-        }
-      </div>
-    </div>
-  }
-}
 
 <app-save-button class="position_sticky" [disabled]="loaded() !== true" (clickSave)="onSaveSection()"></app-save-button>
 

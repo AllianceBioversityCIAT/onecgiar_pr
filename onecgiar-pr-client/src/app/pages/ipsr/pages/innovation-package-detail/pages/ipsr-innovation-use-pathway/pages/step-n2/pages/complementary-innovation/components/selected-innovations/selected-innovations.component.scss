@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+// Left accent of the card, as in the Step 3 evidence list: discreet at rest, firm on hover.
+.ci-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--pr-color-primary-300);
+  opacity: 0.28;
+  transition: opacity 0.18s ease;
+}
+
+.ci-card:hover::before {
+  opacity: 1;
+}

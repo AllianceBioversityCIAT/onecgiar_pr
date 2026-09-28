@@ -1,8 +1,10 @@
+<!-- P2-3840 — candidate table: left-aligned titles, ghost row actions and a real search field,
+     in place of centred text and two solid violet buttons per row. Same pipes, same handlers. -->
 <div *ngIf="dataTable.length != 0">
-  <div class="search_input">
-    <i class="material-icons-round">search</i>
-    <input type="text" placeholder="Find Innovation" [(ngModel)]="searchText" />
-  </div>
+  <label class="search_input" data-testid="candidate-search">
+    <ng-icon name="lucideSearch" class="search_icon" aria-hidden="true" />
+    <input type="text" [placeholder]="copy.searchPlaceholder" [attr.aria-label]="copy.searchPlaceholder" [(ngModel)]="searchText" />
+  </label>
 
   <div class="table">
     <app-pr-table
@@ -15,7 +17,7 @@
       [rowsPerPageOptions]="[10, 50, 100]">
       <ng-template prTableHeader>
         <tr>
-          <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 61px">Select</th>
+          <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 64px">Select</th>
 
           @for (column of columnOrder; track $index) {
             <th [id]="column.attr" [prSortableColumn]="column.attr" [style]="{ width: column.width }">
@@ -24,39 +26,63 @@
             </th>
           }
 
-          <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 140px">Action</th>
+          <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 72px">Action</th>
         </tr>
       </ng-template>
 
       <ng-template prTableBody let-result>
-        <tr>
+        <tr [class.is_selected]="result.selected" data-testid="candidate-row">
           @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
-            <td class="actionsSelect" style="min-height: 72px; height: 100%">
-              <div class="link_button" (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result)">
-                <i class="material-icons-round" style="font-size: 20px">
-                  {{ !result.selected ? 'check_circle' : 'remove_circle_outline' }}
-                </i>
-              </div>
+            <td class="actionsSelect">
+              <button
+                type="button"
+                class="select_toggle"
+                [class.selected]="result.selected"
+                [attr.title]="result.selected ? copy.deselect : copy.select"
+                [attr.aria-label]="result.selected ? copy.deselect : copy.select"
+                [attr.aria-pressed]="!!result.selected"
+                data-testid="candidate-toggle"
+                (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result)">
+                <ng-icon [name]="result.selected ? 'lucideCheck' : 'lucidePlus'" aria-hidden="true" />
+              </button>
             </td>
           }
 
           @for (column of columnOrder; track $index) {
-            <td [class]="column.attr" style="min-height: 72px; height: 100%">
-              <a [class]="column.class">
-                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'yyyy-MM-dd') }}
-              </a>
-
-              <div class="transparent_text">
-                {{ result[column.attr] }}
-              </div>
+            <td [class]="column.attr">
+              @switch (column.attr) {
+                @case ('title') {
+                  <span class="cell_title">{{ result.title }}</span>
+                }
+                @case ('initiative_official_code') {
+                  @if (result.initiative_official_code) {
+                    <span class="cell_chip">{{ result.initiative_official_code }}</span>
+                  }
+                }
+                @case ('created_date') {
+                  <span class="cell_muted">{{ result.created_date | date: 'yyyy-MM-dd' }}</span>
+                }
+                @case ('result_code') {
+                  <span class="cell_code">{{ result.result_code }}</span>
+                }
+                @default {
+                  <span class="cell_text">{{ result[column.attr] }}</span>
+                }
+              }
             </td>
           }
 
           @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
-            <td class="actions" style="min-height: 72px; height: 100%">
-              <div class="link_button" (click)="openNewWindow(result)">
-                <i class="material-icons-round" style="font-size: 20px">visibility</i>
-              </div>
+            <td class="actions">
+              <button
+                type="button"
+                class="ghost_action"
+                [attr.title]="copy.openResult"
+                [attr.aria-label]="copy.openResult"
+                data-testid="candidate-open"
+                (click)="openNewWindow(result)">
+                <ng-icon name="lucideExternalLink" aria-hidden="true" />
+              </button>
             </td>
           }
         </tr>
@@ -64,12 +90,11 @@
     </app-pr-table>
 
     <div class="total" *ngIf="(dataTable | filterByText: searchText)?.length">
-      Total:
-      {{ (dataTable | filterByText: searchText)?.length }} / {{ dataTable?.length }}
+      {{ copy.total((dataTable | filterByText: searchText)?.length, dataTable?.length) }}
     </div>
 
     @if (!(dataTable | filterByText: searchText)?.length) {
-      <div class="noDataText">There are no results for the selected filters.</div>
+      <app-no-data-text [title]="copy.noMatches"></app-no-data-text>
     }
   </div>
 </div>

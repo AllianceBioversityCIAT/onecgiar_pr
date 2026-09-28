@@ -1,0 +1,81 @@
+<!-- P2-3840 — the bundle as cards (seal · content · actions), the Step 3 evidence list language. -->
+<section class="mt-6 flex flex-col gap-3" data-testid="selected-innovations">
+  <header class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <span class="text-[14px] font-semibold text-[var(--pr-text-heading)]">{{ copy.selectedTitle }}</span>
+    <span class="text-[12px] font-medium whitespace-nowrap text-[var(--pr-text-subtle)]" data-testid="selected-counter">{{
+      copy.selectedCount(items?.length ?? 0)
+    }}</span>
+  </header>
+
+  @if (items?.length) {
+    <ol class="m-0 flex list-none flex-col gap-2.5 p-0">
+      @for (result of items; track $index) {
+        <li
+          class="ci-card group relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3.5 rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-3 pr-3 pl-[18px] transition-[border-color,box-shadow] duration-200 hover:border-[var(--pr-border-strong)] hover:shadow-[var(--pr-shadow-2)]"
+          data-testid="selected-innovation">
+          <!-- Seal: solid violet for an entry created here, soft violet for a result reported in PRMS. -->
+          <div
+            class="flex h-10 w-10 flex-none items-center justify-center rounded-xl"
+            [ngClass]="
+              isCreatedInIpsr(result)
+                ? 'bg-gradient-to-b from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] text-white shadow-[0_2px_6px_rgba(var(--pr-color-primary-rgb),0.28)]'
+                : 'border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+            ">
+            <ng-icon [name]="isCreatedInIpsr(result) ? 'lucideSparkles' : 'lucideFileText'" class="text-[18px]" aria-hidden="true" />
+          </div>
+
+          <div class="flex min-w-0 flex-col gap-1">
+            <span class="min-w-0 text-[14.5px] leading-[1.4] font-semibold break-words text-[var(--pr-text-heading)]">{{ result.title }}</span>
+            <div class="flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-text-muted)]">
+              <span class="font-semibold text-[var(--pr-text-secondary)]">{{ result.result_code }}</span>
+              @if (result.initiative_official_code) {
+                <span aria-hidden="true">·</span>
+                <span
+                  class="rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-2 py-px text-[10.5px] font-bold tracking-[0.03em] text-[var(--pr-text-secondary)]"
+                  >{{ result.initiative_official_code }}</span
+                >
+              }
+              <span aria-hidden="true">·</span>
+              <span
+                class="rounded-full border px-2 py-px text-[10.5px] font-bold tracking-[0.03em] uppercase"
+                [ngClass]="
+                  isCreatedInIpsr(result)
+                    ? 'border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-500)]'
+                    : 'border-[var(--pr-border)] bg-transparent text-[var(--pr-text-muted)]'
+                "
+                >{{ isCreatedInIpsr(result) ? copy.createdKind : result.result_type_name || copy.prmsKind }}</span
+              >
+            </div>
+          </div>
+
+          <div class="action_buttons flex flex-none items-center gap-0.5 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+            <button
+              type="button"
+              class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-[var(--pr-text-muted)] transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-400)]"
+              [attr.title]="isViewOnly(result) ? copy.view : copy.edit"
+              [attr.aria-label]="isViewOnly(result) ? copy.view : copy.edit"
+              data-testid="selected-innovation-open"
+              (click)="openEvent.emit(result)">
+              <ng-icon [name]="isViewOnly(result) ? 'lucideEye' : 'lucidePencil'" class="text-[17px]" aria-hidden="true" />
+            </button>
+            @if (!readOnly) {
+              <button
+                type="button"
+                class="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-[var(--pr-text-muted)] transition-colors hover:bg-[var(--pr-color-red-50)] hover:text-[var(--pr-color-red-500)]"
+                [attr.title]="copy.remove"
+                [attr.aria-label]="copy.remove"
+                data-testid="selected-innovation-remove"
+                (click)="removeEvent.emit(result)">
+                <ng-icon name="lucideX" class="text-[17px]" aria-hidden="true" />
+              </button>
+            }
+          </div>
+        </li>
+      }
+    </ol>
+  } @else {
+    <div data-testid="selected-innovations-empty">
+      <app-no-data-text [title]="copy.selectedEmpty"></app-no-data-text>
+    </div>
+  }
+</section>

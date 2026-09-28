@@ -1,5 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideExternalLink, lucidePlus, lucideSearch } from '@ng-icons/lucide';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
+import { COMPLEMENTARY_INNOVATION_COPY } from '../complementary-innovation.copy';
 
 interface ComplementaryInnovation {
   climate_change_tag_level_id: string;
@@ -23,7 +26,9 @@ interface ComplementaryInnovation {
   selector: 'app-table-innovation',
   templateUrl: './table-innovation.component.html',
   styleUrls: ['./table-innovation.component.scss'],
-  standalone: false
+  standalone: false,
+  // P2-3840 — Lucide icons of the row actions and the search field (NgIcon comes from the module).
+  providers: [provideIcons({ lucideCheck, lucideExternalLink, lucidePlus, lucideSearch })]
 })
 export class TableInnovationComponent {
   @Input() dataTable: any[] = [];
@@ -32,13 +37,14 @@ export class TableInnovationComponent {
   @Output() editEvent = new EventEmitter<any>();
   @Output() cancelEvent = new EventEmitter<any>();
 
+  readonly copy = COMPLEMENTARY_INNOVATION_COPY;
   searchText = '';
   columnOrder = [
-    { title: 'Code', attr: 'result_code', width: '61px' },
+    { title: 'Code', attr: 'result_code', width: '84px' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Lead', attr: 'initiative_official_code', width: '70px' },
+    { title: 'Lead', attr: 'initiative_official_code', width: '80px' },
     { title: 'Innovation Type', attr: 'result_type_name', width: '150px' },
-    { title: 'Creation date', attr: 'created_date', width: '150px' }
+    { title: 'Creation date', attr: 'created_date', width: '130px' }
   ];
 
   constructor(public api: ApiService) {}
