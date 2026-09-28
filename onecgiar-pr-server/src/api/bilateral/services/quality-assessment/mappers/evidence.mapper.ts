@@ -22,6 +22,27 @@ const TAG_LABELS: ReadonlyArray<readonly [key: string, label: string]> = [
   ['poverty_related', 'Poverty'],
 ];
 
+/** A URL scheme, e.g. `https://`, `http://` (QEL-DD-1). */
+const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
+
+/**
+ * Normalises a public evidence link (`QEL-R-1`): trims it, `''`/whitespace-only → `null`,
+ * and prefixes `https://` when it has no scheme. A link that already has a scheme is left
+ * unchanged (never upgraded/downgraded). Fixes rows already stored without a scheme — no
+ * data migration — because the AI's fetch tool requires one. Never called for a private row;
+ * those stay `null` regardless of what is stored.
+ */
+function normalizePublicLink(link: unknown): string | null {
+  if (typeof link !== 'string') {
+    return null;
+  }
+  const trimmed = link.trim();
+  if (trimmed === '') {
+    return null;
+  }
+  return SCHEME_PATTERN.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 export function mapEvidence(
   detail: Record<string, any>,
 ): QualityPayloadEvidenceItem[] {
@@ -47,7 +68,7 @@ export function mapEvidence(
 
     return {
       description: row?.description ?? '',
-      link: visibility === 'private' ? null : (row?.link ?? null),
+      link: visibility === 'private' ? null : normalizePublicLink(row?.link),
       source: isSharepoint ? 'prms_repository' : 'url',
       visibility,
       tags,
