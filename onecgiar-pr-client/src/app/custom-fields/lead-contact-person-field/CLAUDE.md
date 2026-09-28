@@ -1,6 +1,6 @@
 # lead-contact-person-field
 
-**Verified:** 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3761 (clear button now obeys `readOnly`); prior: 2026-09-08 · quick/lead-contact-clear-button (clear button relocated into the selected-contact card)
+**Verified:** 2026-09-28 · bugfix/ipsr-lead-contact-save-guard · IPSR now mirrors the Results save guard and opts into the tooltip presentation; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3761 (clear button now obeys `readOnly`); prior: 2026-09-08 · quick/lead-contact-clear-button (clear button relocated into the selected-contact card)
 
 ---
 
@@ -51,6 +51,14 @@ reporting surfaces, none of which own it.
   from ever saving, or (with the portfolio carve-out that used to paper over it) lets the save ship
   `lead_contact_person: null` and **wipes the stored name**. See `rd-general-information`'s
   `onSaveSection`.
+- ⚠️ **Both section consumers that save this field — Results (`rd-general-information`) and IPSR
+  (`ipsr-general-information`) — share ONE save-guard rule, kept textually identical on purpose**
+  (`bugfix/ipsr-lead-contact-save-guard`, 2026-09-28): `searchQuery.trim() && !selectedUser &&
+  !leadContactPersonField?.queryCameFromHydration`, same side effects (`hasValidContact = false`,
+  `showContactError = true`, return), no portfolio check. IPSR used to carve out `isP22()`, which
+  let P25 erase a stored contact and blocked P22's legitimate free-text names — see that guard's
+  own rationale comment in `ipsr-general-information.component.ts:onSaveSection`. A future change to
+  the rule belongs on both consumers, not one.
 - ⚠️ **Typing nulls both payload keys immediately** (`onSearchInput`). Anything downstream that reads
   `body.lead_contact_person` mid-typing sees `null`, and any save fired while the user is mid-search
   sends `null` — `createResultGeneralInformation` writes that straight through

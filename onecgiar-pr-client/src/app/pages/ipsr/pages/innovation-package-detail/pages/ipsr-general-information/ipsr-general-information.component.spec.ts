@@ -480,10 +480,148 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(mockIpsrCompletenessStatusSE.updateGreenChecks).toHaveBeenCalled();
     });
 
-    it('should skip contact validation when isP22 is false', () => {
+    // IPSR-LCG-T-1 — was: "should skip contact validation when isP22 is false". That test PINNED the
+    // defect: with isP22() false (i.e. P25) it asserted the save request WAS sent while a typed,
+    // never-picked name sat in the field — the very data-loss path `docs/specs/bugfix/
+    // ipsr-lead-contact-save-guard/requirements.md` Scenario 1.1 exists to close. Inverted here to
+    // assert the fixed behaviour instead: the guard now runs on every portfolio and blocks. Before:
+    // `expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled()`. After: NOT called, contact flags set,
+    // body untouched. Recorded per `IPSR-LCG-DD-1` reversion note (design.md §10).
+    it('IPSR-LCG-R-1 Scenario 1.1: P25 (isP22 false) blocks save on a typed-unpicked name and does not touch the stored contact', () => {
       mockFieldsManagerService.isP22.mockReturnValue(false);
-      mockUserSearchService.searchQuery = 'invalid user';
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'Juan Per';
       mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
+      component.ipsrGeneralInformationBody.lead_contact_person = 'Original Stored Contact';
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).not.toHaveBeenCalled();
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockUserSearchService.hasValidContact).toBe(false);
+      expect(component.ipsrGeneralInformationBody.lead_contact_person).toBe('Original Stored Contact');
+    });
+
+    it('IPSR-LCG-R-1 Scenario 1.2: P22 blocks save on a typed-unpicked name and does not touch the stored contact', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(true);
+      mockFieldsManagerService.isP25.mockReturnValue(false);
+      mockUserSearchService.searchQuery = 'Juan Per';
+      mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
+      component.ipsrGeneralInformationBody.lead_contact_person = 'Original Stored Contact';
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).not.toHaveBeenCalled();
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockUserSearchService.hasValidContact).toBe(false);
+      expect(component.ipsrGeneralInformationBody.lead_contact_person).toBe('Original Stored Contact');
+    });
+
+    // IPSR-LCG-DD-2 — an unresolved view child counts as "not loaded": fail-safe towards not
+    // erasing data. `leadContactPersonField` is left undefined here, the way it is before T-2 adds
+    // the `@ViewChild`.
+    it('IPSR-LCG-DD-2: an unresolved leadContactPersonField still blocks a typed-unpicked name (P25)', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'Juan Per';
+      mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = undefined;
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).not.toHaveBeenCalled();
+    });
+
+    describe('IPSR-LCG-R-2 Scenario 2.1: accepted name (queryCameFromHydration true) saves, on every portfolio', () => {
+      it('P22', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(true);
+        mockFieldsManagerService.isP25.mockReturnValue(false);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+        expect(mockUserSearchService.showContactError).toBe(false);
+      });
+
+      it('P25', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(false);
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+        expect(mockUserSearchService.showContactError).toBe(false);
+      });
+    });
+
+    describe('IPSR-LCG-R-2 Scenario 2.2: loaded free-text name (queryCameFromHydration true) saves, on every portfolio', () => {
+      it('P22', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(true);
+        mockFieldsManagerService.isP25.mockReturnValue(false);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+      });
+
+      it('P25', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(false);
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+      });
+    });
+
+    it('IPSR-LCG-R-2 Scenario 2.3: a picked contact saves on P25', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'John Doe';
+      mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+    });
+
+    it('IPSR-LCG-R-2 Scenario 2.3: a blank/whitespace-only field saves on P25', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = '   ';
+      mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
 
       const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
 
@@ -502,6 +640,26 @@ describe('IpsrGeneralInformationComponent', () => {
       component.onSaveSection();
 
       expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+    });
+  });
+
+  describe('IPSR-LCG-R-3 Scenario 3.1: Lead contact person tooltip binding tracks the 2026 reporting-guidance flag', () => {
+    it('binds guidanceAsTooltip=true on the field when the flag is on', () => {
+      mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+      fixture.detectChanges();
+
+      const field = fixture.debugElement.query(By.css('app-lead-contact-person-field'));
+      expect(field).not.toBeNull();
+      expect(field.properties['guidanceAsTooltip']).toBe(true);
+    });
+
+    it('binds guidanceAsTooltip=false on the field when the flag is off', () => {
+      mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+      fixture.detectChanges();
+
+      const field = fixture.debugElement.query(By.css('app-lead-contact-person-field'));
+      expect(field).not.toBeNull();
+      expect(field.properties['guidanceAsTooltip']).toBe(false);
     });
   });
 

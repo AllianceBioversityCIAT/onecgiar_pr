@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, computed, inject } from '@angular/core';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -9,6 +9,7 @@ import { GetImpactAreasScoresService } from '../../../../../../shared/services/g
 import { environment } from '../../../../../../../environments/environment';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
 
 @Component({
   selector: 'app-ipsr-general-information',
@@ -17,6 +18,9 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
   standalone: false
 })
 export class IpsrGeneralInformationComponent implements OnInit {
+  /** Read only to tell a typed contact name from one loaded with the package — see `onSaveSection`. */
+  @ViewChild(LeadContactPersonFieldComponent) leadContactPersonField?: LeadContactPersonFieldComponent;
+
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
 
   fieldsManagerSE = inject(FieldsManagerService);
@@ -54,8 +58,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
 
   /**
    * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
-   * Innovation Packages go through the very same green check as pooled results
-   * (`validation_general_information_P25`), so the form asks for it under the same gate.
+   * This getter only gates the FORM's own required marker (`isLeadContactPersonMandatory2026`).
+   * Whether Innovation Packages' green check enforces the field the same way pooled results do
+   * is a separate, unresolved question — see proposal OQ-1 (`bugfix/ipsr-lead-contact-save-guard`).
    */
   get isLeadContactPersonRequired(): boolean {
     return this.fieldsManagerSE.isLeadContactPersonMandatory2026();
@@ -205,7 +210,20 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
-    if (this.fieldsManagerSE.isP22() && this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
+    // @akili-spec bugfix/ipsr-lead-contact-save-guard
+    // The guard blocks a contact name the user TYPED and never picked from the directory list, and
+    // it must not look at the portfolio (mirrors `rd-general-information.component.ts:onSaveSection`).
+    //
+    // The `isP22()` carve-out it replaces let P25 silently erase a stored contact (typing without
+    // picking sends `lead_contact_person: null`) and blocked P22 from saving legitimate free-text
+    // names. `queryCameFromHydration` is the same distinction the field already makes in
+    // `onContactBlur`, so both halves now agree: typed and unmatched is an error on every portfolio,
+    // loaded (or accepted via "use this name anyway") is not.
+    if (
+      this.userSearchService.searchQuery.trim() &&
+      !this.userSearchService.selectedUser &&
+      !this.leadContactPersonField?.queryCameFromHydration
+    ) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
       return;
