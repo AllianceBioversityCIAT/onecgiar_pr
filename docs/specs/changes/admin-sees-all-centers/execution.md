@@ -506,3 +506,9 @@ Green, as listed above.
 - **Requirements covered:** `ASC-R-14`, `ASC-R-15`, NFR *Authorization* (read grant), `ASC-AC-12`, `-13`, `-14`.
 - **Runtime events:** none.
 - **Final status:** **PASS** (attempt 2 of 3).
+
+### `ASC-T-3` — Confirm on a real admin account and settle the catalogue count
+
+- **2026-09-28, user:** "Todo excelente. ya probé." The user ran the hands-on walk, holds VPN and DB access, and confirmed the behaviour.
+- **Not recorded by the user:** the rendered-vs-DB catalogue count (`P-10`), the flat-list verdict for `D9`, and the `D8` flicker check. `P-10` in `design.md` keeps its `UNVERIFIED` marker until the count is recorded.
+- **Status:** `[~]`. The walk was confirmed by the user; the DoD items above are still owed. Integration was requested ("Haz commit y push y merge en performance-refactor").

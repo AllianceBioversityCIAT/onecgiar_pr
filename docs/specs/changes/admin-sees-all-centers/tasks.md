@@ -7,7 +7,7 @@
 - **Ticket:** none — user-originated
 - **Owner / driver:** Juan David Delgado
 - **Branch base:** `performance-refactor` @ `f37e1c728`
-- **Status:** `in-progress` — `ASC-T-1`, `ASC-T-2` done; `ASC-T-1`, `-2`, `-4`, `-5`, `-6`, `-7` done; `ASC-T-3` (manual walk on TEST) pending
+- **Status:** `in-progress` — `ASC-T-1`, `-2`, `-4`, `-5`, `-6`, `-7` done; `ASC-T-3` [~] — walk confirmed by the user 2026-09-28; P-10 count still to record
 - **Budget (`design.md` §14):** 3 tasks · ~130 LOC · 1 review round. `/akili-execute` escalates rather than continuing if any is exceeded.
 
 ---
