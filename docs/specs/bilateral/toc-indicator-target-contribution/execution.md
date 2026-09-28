@@ -90,3 +90,37 @@
 - RELIABILITY: when an `existingTarget` row is found, a sent value is dropped silently and the row not updated — unreachable on `POST /create` today (new result → new rows); matters only if `handleTocMapping` is reused for re-pushes.
 - RESILIENCE: no upper bound in the DTO vs column `decimal(12,2)`; a value ≥ 1e10 passes validation, the MySQL error is swallowed by the per-mapping `catch … continue`, and the result is created without a target row (error logged, no 400). Outside the spec's "invalid" definition.
 - RISK: a producer already sending a negative or string `target_contribution` now gets 400 where the field was silently stripped before — spec-mandated; worth one sentence in the BTC-T-3 change-log row (through the Fetcher only integers arrive).
+
+### `BTC-T-3` — Contract change log
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** |
+| Date | 2026-09-28 |
+| Attempts | 1 |
+| Skills / effort | `cognitive-doc-design` (as listed) · Implementer `low` · Reviewer `high`, lens checklist |
+| Requirements | `BTC-R-3` |
+
+- **Review intensity:** `tasks.md` marks it `skip-eligible`; not earned — Disqualifier names a judgment (row vs. implemented behaviour) and override (b) applies (edits a shared contract doc). Conformance Reviewer spawned.
+- **Files changed:** `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` — one row at the top of the change log (`:442`), dated 2026-09-28.
+- **Falsifier (grep per key):** in `getTocMappingsByResultId`: `'indicators'`, `'toc_results_indicator_id'`, `'indicator_description'`, `'indicator_type'`, `'number_target'`, `'target_date'`, `'target_contribution'` → 1 each; `target_contribution` in `create-bilateral.dto.ts` → 1. No zero hit.
+- **Evidence re-run (Leader-inline, non-author):** same greps → identical → **VERIFIED**.
+- **Reviewer verdict:** `PASS` — every claim traced to `67bfd9736` / `bf2c5002e`; all `BTC-R-3` elements present; format matches neighbouring rows; no secrets. The two `[advisory-grade]` clauses (order unspecified; invalid value now 400 where previously stripped) confirmed accurate. Issues: none.
+- **runtime events:** none.
+
+**ADVISORY (recorded — no rework)**
+
+- The row does not mention the `existingTarget` case (a sent value neither stored nor warned when a target row already exists) — unreachable on `POST /create` for a new result.
+- `bilateral-result-summaries.en.md:95` ("May also appear (bilateral enrichment)" → `obj_results_toc_result`) does not mention `indicators[]` — incomplete, not contradictory; outside T-3's scope.
+
+## Summary
+
+All three tasks `[x]`, each PASS on attempt 1 (3 Reviewer rounds vs. budget of 1 round per task — within budget: 3 tasks, 1 round each). No HALT, no Pivot, no runtime events.
+
+| Task | Commit | Result |
+|---|---|---|
+| `BTC-T-1` read — `toc_mappings[].indicators[]` | `67bfd9736` | PASS + TEST-DB check PASS (rows 2 = 2, `indicators` populated) |
+| `BTC-T-2` write — `toc_mapping.target_contribution` | `bf2c5002e` | PASS |
+| `BTC-T-3` change log | this commit | PASS |
+
+**Carried forward (recorded, not new tasks):** DTO has no upper bound vs `decimal(12,2)` (≥ 1e10 → no target row, error logged, no 400); uncovered test branches in T-2 (title-only, `number_target: null`, `0` stored as `0`); pre-existing duplicate `toc_mappings[]` entries seen on TEST (two identical mappings per initiative) — for the ticket comment; Fetcher declares `integer`, widen to `number` only if STAR needs decimals.

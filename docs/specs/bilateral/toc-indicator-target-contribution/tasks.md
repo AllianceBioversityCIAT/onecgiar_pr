@@ -5,7 +5,7 @@
 - **Module / feature:** `bilateral` / `toc-indicator-target-contribution`
 - **Linked spec:** `./requirements.md` + `./design.md`
 - **Owner / driver:** Juan David Delgado
-- **Status:** not-started
+- **Status:** done (2026-09-28)
 - **Base branch:** `performance-refactor`
 
 ## 2. Pre-flight checklist
@@ -66,7 +66,7 @@
   - [ ] Four cases green; falsifier mutations observed red.
   - [ ] `tsc` + lint clean. Warning text carries no payload data.
 
-### [ ] `BTC-T-3` — Contract change log
+### [x] `BTC-T-3` — Contract change log
 
 - **Type:** `docs`
 - **Description:** Add a 2026-09-28 row at the top of the change log in `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`: new `toc_mappings[].indicators[]` (keys, `[]` rule, one element per indicator × target, present in webhook / `POST /create` response / `GET` detail); new optional input `toc_mapping.target_contribution` (validation, default `1`, dropped-with-warning rule); `contributing_programs[]` unaffected; Fetcher note: the field is the one its `toc_mapping` schema already declares (`integer`), so through the Fetcher only integers arrive.
