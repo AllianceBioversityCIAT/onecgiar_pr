@@ -23,6 +23,7 @@ import { ViewRefreshService } from '../../../../../../../../../../shared/service
 import { EvidenceItemComponent } from '../../../../../../../../../results/pages/result-detail/pages/rd-evidences/evidence-item/evidence-item.component';
 import {
   IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT,
+  IpsrPrincipalImpactArea,
   IpsrStep3EvidenceLevel,
   IpsrStepThreeEvidence,
   Resultipresultcomplementary
@@ -85,6 +86,12 @@ export class IpsrStep3EvidenceListComponent {
   @Input({ required: true }) level: IpsrStep3EvidenceLevel = 'readiness';
   /** True when the level above is not 0 — then the level needs at least one evidence. */
   @Input() required = false;
+  /**
+   * P2-3824 follow-up — the step-wide list of principal-scored (score 2) Impact Areas still missing
+   * evidence anywhere in Step 3, computed once by `step-n3.component.ts` and passed down unfiltered
+   * to every instance so the dialog shows the same warning(s) as the page banner (`IPSR-DD-2/3`).
+   */
+  @Input() missingPrincipalImpactAreas: IpsrPrincipalImpactArea[] = [];
 
   readonly copy = IPSR_STEP3_EVIDENCE_COPY;
   readonly maxPerComponent = IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT;

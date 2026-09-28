@@ -35,7 +35,8 @@
 
         <!-- P2-3824: the single "Evidence link" + details became a list (link or file, tags, details). -->
         <app-ipsr-step3-evidence-list [owner]="this.ipsrStep3Body.result_ip_result_core" level="readiness"
-            [required]="this.updateRangeLevel1(this.ipsrStep3Body.result_ip_result_core)"></app-ipsr-step3-evidence-list>
+            [required]="this.updateRangeLevel1(this.ipsrStep3Body.result_ip_result_core)"
+            [missingPrincipalImpactAreas]="missingPrincipalImpactAreas()"></app-ipsr-step3-evidence-list>
 
         <div class="fragment_section_divider"></div>
 
@@ -51,7 +52,8 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
 
         <app-ipsr-step3-evidence-list [owner]="this.ipsrStep3Body.result_ip_result_core" level="use"
-            [required]="this.updateRangeLevel2(this.ipsrStep3Body.result_ip_result_core)"></app-ipsr-step3-evidence-list>
+            [required]="this.updateRangeLevel2(this.ipsrStep3Body.result_ip_result_core)"
+            [missingPrincipalImpactAreas]="missingPrincipalImpactAreas()"></app-ipsr-step3-evidence-list>
     </div>
 
     <div class="fragment_section_divider"></div>
@@ -67,7 +69,7 @@
         <app-pr-field-header label="" [required]="false"
             [description]="this.ipsrStep3Body.result_ip_result_complementary?.length ? goToStep() : ''"></app-pr-field-header>
         <app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
-            [innovationUseList]="this.innovationUseList"
+            [innovationUseList]="this.innovationUseList" [missingPrincipalImpactAreas]="missingPrincipalImpactAreas()"
             *ngIf="this.rangesOptions?.length && this.ipsrStep3Body.result_ip_result_complementary?.length">
         </app-step-n3-complementary-innovations>
 

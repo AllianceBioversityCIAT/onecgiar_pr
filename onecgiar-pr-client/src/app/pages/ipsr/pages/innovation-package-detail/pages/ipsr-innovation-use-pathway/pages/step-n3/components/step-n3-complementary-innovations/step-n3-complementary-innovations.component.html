@@ -31,7 +31,8 @@
         <app-ipsr-step3-evidence-list
           [owner]="bodyItem"
           level="readiness"
-          [required]="isReadinessEvidenceRequired(bodyItem)"></app-ipsr-step3-evidence-list>
+          [required]="isReadinessEvidenceRequired(bodyItem)"
+          [missingPrincipalImpactAreas]="missingPrincipalImpactAreas"></app-ipsr-step3-evidence-list>
 
         <div class="fragment_section_divider"></div>
 
@@ -49,7 +50,8 @@
         <app-ipsr-step3-evidence-list
           [owner]="bodyItem"
           level="use"
-          [required]="isUseEvidenceRequired(bodyItem)"></app-ipsr-step3-evidence-list>
+          [required]="isUseEvidenceRequired(bodyItem)"
+          [missingPrincipalImpactAreas]="missingPrincipalImpactAreas"></app-ipsr-step3-evidence-list>
       </div>
     </div>
   </app-collapsible-container>

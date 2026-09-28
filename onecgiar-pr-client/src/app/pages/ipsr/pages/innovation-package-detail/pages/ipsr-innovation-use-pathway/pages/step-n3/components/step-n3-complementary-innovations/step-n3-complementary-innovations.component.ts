@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
+import { IpsrPrincipalImpactArea, IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
 
 @Component({
     selector: 'app-step-n3-complementary-innovations',
@@ -11,6 +11,8 @@ export class StepN3ComplementaryInnovationsComponent implements OnInit {
   @Input() rangesOptions: any[] = [];
   @Input() innovationUseList: any[] = [];
   @Input() body = new IpsrStep3Body();
+  /** P2-3824 follow-up — forwarded unchanged to every `app-ipsr-step3-evidence-list` instance below. */
+  @Input() missingPrincipalImpactAreas: IpsrPrincipalImpactArea[] = [];
   open = false;
   rangeLevel1Required = true;
   rangeLevel2Required = true;

@@ -110,4 +110,14 @@ describe('StepN3ComplementaryInnovationsComponent', () => {
     expect(html).toMatch(/<app-ipsr-step3-evidence-list[^>]*level="readiness"[^>]*\[required\]="isReadinessEvidenceRequired\(bodyItem\)"/);
     expect(html).toMatch(/<app-ipsr-step3-evidence-list[^>]*level="use"[^>]*\[required\]="isUseEvidenceRequired\(bodyItem\)"/);
   });
+
+  it('step3-evidence-modal-impact-alerts markup: forwards missingPrincipalImpactAreas unchanged to both evidence lists', () => {
+    const html = readFileSync(join(__dirname, 'step-n3-complementary-innovations.component.html'), 'utf8');
+    const bindings = html.match(/\[missingPrincipalImpactAreas\]="missingPrincipalImpactAreas"/g) ?? [];
+    expect(bindings).toHaveLength(2);
+  });
+
+  it('step3-evidence-modal-impact-alerts: has its own @Input default [], mirroring the sibling @Input pattern', () => {
+    expect(new StepN3ComplementaryInnovationsComponent().missingPrincipalImpactAreas).toEqual([]);
+  });
 });

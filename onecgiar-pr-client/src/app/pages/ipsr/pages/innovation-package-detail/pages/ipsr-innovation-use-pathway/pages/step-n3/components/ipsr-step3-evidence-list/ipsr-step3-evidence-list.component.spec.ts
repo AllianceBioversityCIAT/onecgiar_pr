@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { IpsrStep3EvidenceListComponent } from './ipsr-step3-evidence-list.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { ViewRefreshService } from '../../../../../../../../../../shared/services/view-refresh.service';
@@ -310,6 +311,62 @@ describe('IpsrStep3EvidenceListComponent (P2-3824)', () => {
   });
 });
 
+/**
+ * Dialog alert integration (P2-3824 follow-up, step3-evidence-modal-impact-alerts `IPSR-AC-1/2/3`):
+ * unlike the "behaviour" suite above, this renders the REAL template so the `@for` over
+ * `missingPrincipalImpactAreas` and the `app-alert-status` it emits are exercised end to end.
+ */
+describe('IpsrStep3EvidenceListComponent dialog — missing Impact Area alerts', () => {
+  let component: IpsrStep3EvidenceListComponent;
+  let fixture: ComponentFixture<IpsrStep3EvidenceListComponent>;
+  let api: any;
+
+  beforeEach(async () => {
+    api = { rolesSE: { readOnly: false }, alertsFe: { show: jest.fn() } };
+
+    await TestBed.configureTestingModule({
+      imports: [IpsrStep3EvidenceListComponent, HttpClientTestingModule],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ViewRefreshService, useValue: { schedule: jest.fn() } }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(IpsrStep3EvidenceListComponent);
+    component = fixture.componentInstance;
+    component.owner = { readiness_evidences: [], use_evidences: [] } as any;
+    component.level = 'readiness';
+  });
+
+  const alertEls = () => fixture.nativeElement.querySelectorAll('[data-testid="dialog-principal-impact-area-alert"]');
+
+  it('renders the warning inside the dialog when missingPrincipalImpactAreas is non-empty (IPSR-AC-1/2)', () => {
+    component.missingPrincipalImpactAreas = ['environment'];
+    component.openAdd();
+    fixture.detectChanges();
+
+    const alerts = alertEls();
+    expect(alerts.length).toBe(1);
+    expect(alerts[0].textContent).toContain(IPSR_STEP3_EVIDENCE_COPY.impactAreaNames.environment);
+    expect(alerts[0].textContent).toContain('A principal contribution score (2) has been recorded');
+  });
+
+  it('renders no alert block when missingPrincipalImpactAreas is empty (IPSR-AC-3)', () => {
+    component.missingPrincipalImpactAreas = [];
+    component.openAdd();
+    fixture.detectChanges();
+
+    expect(alertEls().length).toBe(0);
+  });
+
+  it('renders no alert block when missingPrincipalImpactAreas is omitted (default [])', () => {
+    component.openAdd();
+    fixture.detectChanges();
+
+    expect(alertEls().length).toBe(0);
+  });
+});
+
 /** Markup contract: the template on disk, since the behaviour tests run with an empty one. */
 describe('IpsrStep3EvidenceListComponent markup (P2-3824)', () => {
   const html = readFileSync(join(__dirname, 'ipsr-step3-evidence-list.component.html'), 'utf8');
@@ -326,6 +383,11 @@ describe('IpsrStep3EvidenceListComponent markup (P2-3824)', () => {
   it('shows the component counter and feeds the missing-fields scan when required', () => {
     expect(html).toContain('copy.counter(componentCount, maxPerComponent)');
     expect(html).toMatch(/appFeedbackValidation[^>]*\[isComplete\]="isComplete"/);
+  });
+
+  it('renders the missing-principal-Impact-Area alerts as the first thing inside the dialog body (IPSR-DD-1)', () => {
+    expect(html).toMatch(/@for \(area of missingPrincipalImpactAreas; track area\) \{\s*<app-alert-status[^>]*status="warning"[^>]*data-testid="dialog-principal-impact-area-alert"/);
+    expect(html).toContain('copy.principalImpactAreaAlert(copy.impactAreaNames[area])');
   });
 
   it('builds the dialog from the platform primitives, not native controls', () => {
