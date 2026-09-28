@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, HostBinding, Input, computed, effect, inject } from '@angular/core';
 import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
 import { RdContributorsAndPartnersService } from '../../../../rd-contributors-and-partners.service';
 import { InstitutionsService } from '../../../../../../../../../../shared/services/global/institutions.service';
@@ -14,6 +14,15 @@ import { FieldsManagerService } from '../../../../../../../../../../shared/servi
   standalone: false
 })
 export class CPNormalSelectorComponent {
+  // P2-3839: opt-in look for IPSR Contributors — Partner role as one segmented group (same
+  // geometry as the Impact Area selector). Results W1/W2 never set it, so they keep 'default'
+  // and render exactly as before; the ipsr styles are scoped under `:host(.ipsr-variant)`.
+  @Input() variant: 'default' | 'ipsr' = 'default';
+
+  @HostBinding('class.ipsr-variant') get isIpsrVariant(): boolean {
+    return this.variant === 'ipsr';
+  }
+
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
 

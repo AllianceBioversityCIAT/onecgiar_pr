@@ -405,3 +405,120 @@ describe('CPNormalSelectorComponent — partner cards need every role (P2-3738)'
     expect(selector([withRole(1)], []).otherPartnersRolesComplete).toBe(false);
   });
 });
+
+/**
+ * P2-3839 — the segmented Partner role look is opt-in for IPSR (`variant="ipsr"`). Results W1/W2
+ * never set the variant, so they must keep the old markup: pills without the inline check SVG and
+ * the Material `delete` icon. The IPSR variant renders the check SVG in every pill and a real
+ * `<button class="remove_partner">` wired to the same handlers.
+ */
+describe('CPNormalSelectorComponent — Partner role variant (P2-3839)', () => {
+  let fixture: ComponentFixture<CPNormalSelectorComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+
+  @Pipe({ name: 'countInstitutionsTypes', standalone: false })
+  class CountInstitutionsTypesStubPipe implements PipeTransform {
+    transform(value: any[]): any[] {
+      return value || [];
+    }
+  }
+
+  const chipOption = (id: number, name: string) => ({
+    institutions_id: id,
+    institutions_name: name,
+    full_name: name,
+    delivery: [{ partner_delivery_type_id: 1 }],
+    obj_institutions: { name, obj_institution_type_code: { name: 'NGO', id: 1 } }
+  });
+
+  const setup = (variant?: 'default' | 'ipsr') => {
+    TestBed.configureTestingModule({
+      declarations: [CPNormalSelectorComponent, CountInstitutionsTypesStubPipe],
+      imports: [CommonModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: ApiService,
+          useValue: { dataControlSE: { currentResult: { result_code: 'R-1', version_id: 1 } }, rolesSE: { readOnly: false } }
+        },
+        { provide: RolesService, useValue: { readOnly: false } },
+        RdContributorsAndPartnersService,
+        {
+          provide: InstitutionsService,
+          useValue: { institutionsWithoutCentersListPartners: [], institutionsWithoutCentersPartners: signal<any[]>([]) }
+        },
+        { provide: GreenChecksService, useValue: {} },
+        { provide: DataControlService, useValue: { isKnowledgeProduct: false } },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    });
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    rdPartnersSE.partnersBody = { institutions: [chipOption(10, 'ToC partner')], no_applicable_partner: false } as any;
+    rdPartnersSE.otherPartnersSelected = [chipOption(20, 'Other partner')];
+
+    fixture = TestBed.createComponent(CPNormalSelectorComponent);
+    if (variant) fixture.componentRef.setInput('variant', variant);
+    fixture.detectChanges();
+  };
+
+  const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+  const rows = (): HTMLElement[] => Array.from(el().querySelectorAll('.pr_chip_selected'));
+
+  it('defaults to the W1/W2 look: no host class, no check SVG, Material delete icon, no remove button', () => {
+    setup();
+
+    expect(fixture.componentInstance.variant).toBe('default');
+    expect(el().classList.contains('ipsr-variant')).toBe(false);
+    expect(rows().length).toBe(2);
+    expect(el().querySelectorAll('.dlv_check').length).toBe(0);
+    expect(el().querySelectorAll('.remove_partner').length).toBe(0);
+
+    rows().forEach(row => {
+      const container = row.querySelector('.deliveries_container') as HTMLElement;
+      // Same element structure as before P2-3839: the pill track, then the <i>delete</i> icon.
+      expect(Array.from(container.children).map(c => c.tagName)).toEqual(['DIV', 'I']);
+      const icon = container.querySelector('i') as HTMLElement;
+      expect(icon.className).toBe('material-icons-round');
+      expect(icon.textContent.trim()).toBe('delete');
+      // Pills keep only their label text (the default check is the CSS ::before glyph).
+      const pills = Array.from(row.querySelectorAll('.delivery')) as HTMLElement[];
+      expect(pills.map(p => p.children.length)).toEqual([0, 0, 0, 0]);
+      expect(pills.map(p => p.textContent.trim())).toEqual(['Scaling', 'Demand', 'Innovation', 'Other']);
+    });
+  });
+
+  it('variant="ipsr" renders the segmented group: host class, a check SVG per pill and a remove button per row', () => {
+    setup('ipsr');
+
+    expect(el().classList.contains('ipsr-variant')).toBe(true);
+    expect(el().querySelectorAll('.deliveries_container i.material-icons-round').length).toBe(0);
+
+    rows().forEach(row => {
+      const pills = Array.from(row.querySelectorAll('.delivery')) as HTMLElement[];
+      expect(pills.map(p => p.textContent.trim())).toEqual(['Scaling', 'Demand', 'Innovation', 'Other']);
+      pills.forEach(p => expect(p.querySelector('svg.dlv_check')).not.toBeNull());
+      const remove = row.querySelector('button.remove_partner') as HTMLButtonElement;
+      expect(remove).not.toBeNull();
+      expect(remove.getAttribute('type')).toBe('button');
+      expect(remove.getAttribute('aria-label')).toBe('Remove partner');
+    });
+  });
+
+  it('variant="ipsr" keeps the same handlers: pills toggle roles and the remove buttons call removePartner / deleteOtherPartner', () => {
+    setup('ipsr');
+    const removeSpy = jest.spyOn(rdPartnersSE, 'removePartner').mockImplementation(() => undefined);
+    const deleteOtherSpy = jest.spyOn(fixture.componentInstance, 'deleteOtherPartner').mockImplementation(() => undefined);
+
+    const [tocRow, otherRow] = rows();
+    (tocRow.querySelectorAll('.delivery')[1] as HTMLElement).click();
+    fixture.detectChanges();
+    expect(rdPartnersSE.partnersBody.institutions[0].delivery.map((d: any) => d.partner_delivery_type_id).sort()).toEqual([1, 2]);
+
+    (tocRow.querySelector('button.remove_partner') as HTMLButtonElement).click();
+    expect(removeSpy).toHaveBeenCalledWith(0);
+    (otherRow.querySelector('button.remove_partner') as HTMLButtonElement).click();
+    expect(deleteOtherSpy).toHaveBeenCalledWith(0);
+  });
+});

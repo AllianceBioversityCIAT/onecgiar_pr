@@ -866,4 +866,142 @@ describe('RdContributorsAndPartnersService', () => {
       expect(option.delivery).toEqual([]);
     });
   });
+  /**
+   * P2-3838 — IPSR: a Contributing W3/bilateral project selects its owning Center (bilateral BCT-R-1/R-3 rule),
+   * and removing the project removes ONLY a Center this mechanism added. Owner = catalogue
+   * `owner_center_institution_id` ↔ `centersList[].institutionId`.
+   */
+  describe('syncProjectDerivedCenters (P2-3838)', () => {
+    const codes = () => (service.partnersBody.contributing_center || []).map((c: any) => c.code);
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      (mockCentersSE.centersList as any) = [
+        { code: 'C1', full_name: 'Center One', institutionId: 101 },
+        { code: 'C2', full_name: 'Center Two', institutionId: 102 },
+        { code: 'C3', full_name: 'Center Three', institutionId: 103 }
+      ];
+      service.clarisaProjectsList = [
+        { id: 1, project_id: 1, fullName: 'P-1 owned by C1', owner_center_institution_id: 101 },
+        { id: 2, project_id: 2, fullName: 'P-2 owned by C1', owner_center_institution_id: 101 },
+        { id: 3, project_id: 3, fullName: 'P-3 owned by C2', owner_center_institution_id: 102 },
+        { id: 4, project_id: 4, fullName: 'P-4 unknown owner', owner_center_institution_id: null }
+      ];
+      service.partnersBody.contributing_center = [];
+      service.partnersBody.bilateral_projects = [];
+    });
+
+    afterEach(() => jest.useRealTimers());
+
+    it('adds the owner Center when a project is picked, locked and in the dropdown lock list', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1, fullName: 'P-1 owned by C1' }] as any;
+      service.syncProjectDerivedCenters();
+
+      expect(codes()).toEqual(['C1']);
+      const c1 = service.partnersBody.contributing_center[0];
+      expect(service.isProjectDerivedCenter(c1)).toBe(true);
+      expect(service.isDerivedCenterEntering(c1)).toBe(true);
+      expect(service.centersLockedInDropdown.map((c: any) => c.code)).toEqual(['C1']);
+      expect(service.projectDerivedCenterTooltip(c1)).toContain('P-1 owned by C1');
+    });
+
+    it('removes the auto-added Center (after the exit animation) when its project is removed', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+
+      expect(service.isDerivedCenterLeaving(service.partnersBody.contributing_center[0])).toBe(true);
+      jest.advanceTimersByTime(RdContributorsAndPartnersService.DERIVED_CHIP_LEAVE_MS);
+      expect(codes()).toEqual([]);
+      expect(service.centersLockedInDropdown).toEqual([]);
+    });
+
+    it('never removes a Center the user picked by hand — it is only locked while the project stays', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', institutionId: 101 }] as any;
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      expect(codes()).toEqual(['C1']);
+      expect(service.isProjectDerivedCenter(service.partnersBody.contributing_center[0])).toBe(true);
+
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual(['C1']);
+      expect(service.isProjectDerivedCenter(service.partnersBody.contributing_center[0])).toBe(false);
+    });
+
+    it('keeps the Center while ANOTHER selected project still owns it', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }, { project_id: 2 }] as any;
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [{ project_id: 2 }] as any;
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual(['C1']);
+    });
+
+    it('adds one chip per owner, never a duplicate', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }, { project_id: 2 }, { project_id: 3 }] as any;
+      service.syncProjectDerivedCenters();
+      service.syncProjectDerivedCenters(); // double call = same state
+      expect(codes()).toEqual(['C1', 'C2']);
+    });
+
+    it('derives nothing for a project whose owner cannot be resolved', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 4 }] as any;
+      service.syncProjectDerivedCenters();
+      expect(codes()).toEqual([]);
+    });
+
+    it('cancels the exit when the project comes back before the animation ends', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual(['C1']);
+      expect(service.isProjectDerivedCenter(service.partnersBody.contributing_center[0])).toBe(true);
+    });
+
+    it('clears the Lead center when it pointed at the auto-added Center that leaves', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.leadCenterCode = 'C1';
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(service.leadCenterCode).toBeNull();
+    });
+
+    it('takes over a Center the Lead pick auto-added, so a later Lead swap cannot strip it', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', institutionId: 101 }] as any;
+      service.autoAddedLeadCenterCode = 'C1';
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      expect(service.autoAddedLeadCenterCode).toBeNull();
+
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual([]);
+    });
+
+    it('resolves a SAVED project from obj_clarisa_project.organizationCode when the catalogue has no row', () => {
+      service.clarisaProjectsList = [];
+      service.partnersBody.bilateral_projects = [{ project_id: 99, obj_clarisa_project: { id: 99, organizationCode: '102', fullName: 'Saved' } }] as any;
+      service.syncProjectDerivedCenters({ animate: false });
+      expect(codes()).toEqual(['C2']);
+      expect(service.isDerivedCenterEntering(service.partnersBody.contributing_center[0])).toBe(false);
+    });
+
+    it('resetState forgets every derived Center', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.resetState();
+      expect(service.centersLockedInDropdown).toEqual([]);
+      expect(service.isProjectDerivedCenter({ code: 'C1' })).toBe(false);
+    });
+  });
 });

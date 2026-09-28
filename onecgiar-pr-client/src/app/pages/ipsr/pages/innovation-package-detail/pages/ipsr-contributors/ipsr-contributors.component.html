@@ -80,20 +80,42 @@
       optionValue="code"
       [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
       placeholder="Select center(s)"
-      [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+      [disableOptions]="this.rdPartnersSE.centersLockedInDropdown"
       (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
     </app-pr-multi-select>
 
+    <!-- P2-3838 (Ángel, 28-Sep-2026): a Center that owns a selected W3/bilateral project is added here on its
+         own, as the bilateral form does (`section-contributors.component.html:96-104`), and shown as a locked
+         chip: ★, no ×, tooltip naming the project. It enters with a short highlight and leaves with a fade
+         when its project is removed — keeping its derived skin while it leaves, so it never flashes back to a plain chip. `data-derived-tick` only READS the tick signal so the timer-driven
+         writes of the service schedule a render under zoneless CD. -->
     <div class="medal_selector selected_container">
-      <div class="centers chips_container">
+      <div class="centers chips_container" [attr.data-derived-tick]="this.rdPartnersSE.projectDerivedCentersTick()">
         <div
           class="center pr_chip_selected"
-          [prTooltip]="this.disabledText"
-          [prTooltipDisabled]="!center.from_cgspace"
+          [class.is_derived]="this.rdPartnersSE.isProjectDerivedCenter(center) || this.rdPartnersSE.isDerivedCenterLeaving(center)"
+          [class.is_entering]="this.rdPartnersSE.isDerivedCenterEntering(center)"
+          [class.is_leaving]="this.rdPartnersSE.isDerivedCenterLeaving(center)"
+          [attr.data-testid]="this.rdPartnersSE.isProjectDerivedCenter(center) ? 'ipsr-derived-center-chip' : null"
+          [prTooltip]="this.rdPartnersSE.isProjectDerivedCenter(center) ? this.rdPartnersSE.projectDerivedCenterTooltip(center) : this.disabledText"
+          [prTooltipDisabled]="!center.from_cgspace && !this.rdPartnersSE.isProjectDerivedCenter(center)"
           *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+          @if (this.rdPartnersSE.isProjectDerivedCenter(center) || this.rdPartnersSE.isDerivedCenterLeaving(center)) {
+            <span class="derived_mark" aria-hidden="true">★</span>
+          }
           <div class="name" [innerHtml]="center?.name"></div>
+          @if (this.rdPartnersSE.isProjectDerivedCenter(center) || this.rdPartnersSE.isDerivedCenterLeaving(center)) {
+            <span class="derived_tag">from project</span>
+            <i class="material-icons-round derived_lock" aria-label="Added from a contributing project">lock</i>
+          }
           <i
-            *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+            *ngIf="
+              !this.api.rolesSE.readOnly &&
+              !this.api.dataControlSE?.currentResult?.status &&
+              !center.from_cgspace &&
+              !this.rdPartnersSE.isProjectDerivedCenter(center) &&
+              !this.rdPartnersSE.isDerivedCenterLeaving(center)
+            "
             class="material-icons-round"
             (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
             >cancel</i
@@ -114,7 +136,7 @@
           [required]="true"
           [options]="this.rdPartnersSE.possibleLeadCenters"
           [(ngModel)]="this.rdPartnersSE.leadCenterCode"
-          (selectOptionEvent)="onLeadCenterSelected($event?.code ?? null)"
+          (selectOptionEvent)="onLeadCenterSelected($event?.code ?? null); this.rdPartnersSE.syncProjectDerivedCenters()"
           optionLabel="full_name"
           optionValue="code"
           placeholder="Select a lead center..."
@@ -135,7 +157,9 @@
         label="Contributing W3 and/or bilateral projects"
         selectedLabel="Projects selected"
         selectedOptionLabel="fullName"
-        placeholder="Select project">
+        placeholder="Select project"
+        (selectOptionEvent)="this.rdPartnersSE.syncProjectDerivedCenters()"
+        (removeOptionEvent)="this.rdPartnersSE.syncProjectDerivedCenters()">
       </app-pr-multi-select>
     }
     <app-pr-multi-select
@@ -257,7 +281,7 @@
     </div>
 
     <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
-    <app-normal-selector></app-normal-selector>
+    <app-normal-selector variant="ipsr"></app-normal-selector>
 
     <!-- Lead partner start. P2-3427: the Lead center lives above, next to the centers; the partner
          toggle no longer wipes it (`onLeadByPartnerChange`, decoupled in W1/W2 by 268cbc622). -->
