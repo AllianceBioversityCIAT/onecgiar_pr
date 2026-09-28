@@ -1214,6 +1214,33 @@ describe('IpsrContributorsComponent', () => {
     });
   });
 
+  // P2-3427 (package 9638): no ToC row saved → "Yes" showed only "+", "No" had no row for the financial answer.
+  describe('P2-3427 — a package without ToC rows gets one so the Level and the financial answer have a home', () => {
+    it('ensureTocRow adds exactly one default row when the list is empty and leaves an existing list alone', () => {
+      const item: any = { initiative_id: 7, official_code: 'SP13', short_name: 'Genebank', planned_result: true, result_toc_results: [] };
+      component.ensureTocRow(item);
+      expect(item.result_toc_results).toHaveLength(1);
+      expect(item.result_toc_results[0]).toMatchObject({ initiative_id: 7, official_code: 'SP13', planned_result: true, toc_level_id: null, toc_result_id: null });
+      component.ensureTocRow(item);
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('onPlannedResultChange keeps one row and creates it when there was none', () => {
+      const item: any = { initiative_id: 7, result_toc_results: [] };
+      component.onPlannedResultChange(item);
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('load path (getTocLogicp25) also guarantees the row', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockRdPartnersSE.partnersBody.result_toc_result = { initiative_id: 7, official_code: 'SP13', result_toc_results: [] };
+      mockRdPartnersSE.partnersBody.contributing_and_primary_initiative = [];
+      component.contributorsBody = { ...mockResponse, bilateral_projects: [] } as any;
+      component.getTocLogicp25({ ...mockResponse, linked_results: [] });
+      expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results).toHaveLength(1);
+    });
+  });
+
   describe('P2-3427 — ToC question reads like W1/W2', () => {
     const html = readFileSync(join(__dirname, 'ipsr-contributors.component.html'), 'utf8');
 
@@ -1231,7 +1258,7 @@ describe('IpsrContributorsComponent', () => {
       mockFieldsManagerService.isContributorsPartners2026.mockReturnValue(false);
       expect(component.tocQuestionLabel()).toBe("Does this result align with the Program's planned TOC indicators?");
       expect(component.tocQuestionInfoNote()).toContain('2025 ToC');
-      expect(html).toMatch(/@if \(!isCP2026\(\)\) \{\s*<app-alert-status/);
+      expect(html).toMatch(/@if \(!isCP2026\(\)\) \{[\s\S]*?<app-alert-status[\s\S]*?\[collapsible\]="false"/);
     });
 
     it('the financial-resources radio reads the first ToC row and writes every row', () => {

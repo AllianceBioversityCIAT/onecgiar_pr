@@ -16,7 +16,9 @@
     </app-pr-yes-or-not>
 
     @if (!isCP2026()) {
+      <!-- P2-3427: full note, not the collapsed "(i)" badge — W1/W2 uses [collapsible]="false" on every note. -->
       <app-alert-status
+        [collapsible]="false"
         description="If your response to this question is <strong>YES</strong>, then please return to the Program's main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.">
       </app-alert-status>
     }
@@ -267,7 +269,7 @@
       [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
     </app-pr-yes-or-not>
     @if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
-      <app-alert-status [description]="getMessageLead()"></app-alert-status>
+      <app-alert-status [collapsible]="false" [description]="getMessageLead()"></app-alert-status>
       @if (!this.rdPartnersSE.updatingLeadData) {
         <app-pr-select
           label="Lead partner"
@@ -283,6 +285,7 @@
 
     <app-alert-status
       *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+      [collapsible]="false"
       description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
     </app-alert-status>
     <br /><br /><br /><br /><br /><br /><br /><br /><br /><br />

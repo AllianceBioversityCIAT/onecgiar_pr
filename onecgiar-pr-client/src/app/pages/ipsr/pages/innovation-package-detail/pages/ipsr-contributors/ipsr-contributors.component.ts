@@ -267,6 +267,8 @@ export class IpsrContributorsComponent implements OnInit {
       this.result_toc_result = this.rdPartnersSE.partnersBody?.result_toc_result;
       this.result_toc_result.planned_result = this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results?.[0]?.planned_result ?? null;
       this.result_toc_result.showMultipleWPsContent = true;
+      // P2-3427: a never-saved package arrives with no ToC row; give it the one the form expects.
+      this.ensureTocRow(this.result_toc_result);
     }
     if (this.rdPartnersSE.partnersBody?.contributors_result_toc_result !== null) {
       this.contributors_result_toc_result = this.rdPartnersSE.partnersBody?.contributors_result_toc_result;
@@ -299,10 +301,38 @@ export class IpsrContributorsComponent implements OnInit {
     this.rdPartnersSE.runAutoAssignLeads();
   }
 
+  /**
+   * P2-3427 (PO's package 9638, 25-Sep-2026): a package that never saved its ToC answer comes back from the
+   * server with ZERO `result_toc_results` rows. With no row, answering "Yes" showed only the "+" tab and an
+   * empty strip instead of loading the Level (PO: "acá haría cargarme una vez el level… como se ha venido
+   * trabajando"), and answering "No" left the financial-resources radio with no row to write to. W1/W2 always
+   * gets at least one row from its endpoint; IPSR did not. Same shape as `multiple-wps.onAddTab()`.
+   */
+  ensureTocRow(item: any) {
+    if (!item) return;
+    if (!Array.isArray(item.result_toc_results)) item.result_toc_results = [];
+    if (item.result_toc_results.length) return;
+    item.result_toc_results.push({
+      action_area_outcome_id: null,
+      initiative_id: item.initiative_id,
+      official_code: item.official_code,
+      planned_result: item.planned_result ?? null,
+      results_id: null,
+      short_name: item.short_name,
+      toc_level_id: null,
+      toc_result_id: null,
+      uniqueId: '0',
+      related_node_id: null,
+      toc_progressive_narrative: null,
+      indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
+    });
+  }
+
   onPlannedResultChange(item: any) {
     if (item?.result_toc_results?.length > 1) {
       item.result_toc_results = [item.result_toc_results[0]];
     }
+    this.ensureTocRow(item);
 
     item?.result_toc_results?.forEach((tab: any) => {
       if (tab.indicators?.[0]) {
