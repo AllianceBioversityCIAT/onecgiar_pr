@@ -469,3 +469,40 @@ Green, as listed above.
   - RELIABILITY: mutation (b) was not recorded for `getLatest`. Its `ASC-AC-19` test covers the case structurally.
 - **Requirements covered:** `ASC-R-18`, `ASC-AC-18`, `ASC-AC-19`.
 - **Final status:** **PASS** (attempt 2 of 3).
+
+#### Attempt 2: PASS (both lenses)
+
+- **Feedback:** both lens FAIL reports were relayed verbatim, with an attempt history attached. The worker was resumed by message. Effort was xhigh.
+- **Files this round:**
+  - `bilateral-manual-create-flow.service.ts` (24) and its `.spec.ts` (+33)
+  - `bilateral-manual-create-drawer-host.component.spec.ts` (+53)
+  - `bilateral-result-creator.component.spec.ts` (+59)
+  - The attempt-1 files are unchanged, and the server is unchanged.
+- **Fix:**
+  - `BilateralManualCreateFlowService.canUseAi` now ANDs `isCenterMember(getMyCenters(), ctx.centerId(), ctx.centerAcronym())`. It reads `rolesVersion` and never reads `isAdmin`.
+  - One gate covers both routes: the home page's "+ Create result" (`beginFromProject`) and the creator's drawer.
+  - The DOM specs render the real `app-bilateral-reporting-way-selector` and check two cases on both surfaces (drawer host and creator):
+    - member: AI card has `aria-disabled="false"`
+    - non-member admin: AI card has `aria-disabled="true"` and `brws-card--disabled`, and a click does not select `'ai'`
+- **Mutation:** `isAdmin` OR-ed into the util turned the drawer-host DOM case red: `Expected: "true" Received: "false" > expect(card.getAttribute('aria-disabled')).toBe('true')`. The Implementer isolated this from the signal check before recording it, then reverted.
+- **Implementer verification:**
+  - Client: 263/263 across 9 suites, app tsc clean, lint pass.
+  - Server: `bilateral-ai` 228/228.
+- **Evidence re-run (Leader-inline): VERIFIED.**
+  - Client: 307/307 across 10 suites, app tsc 0 errors, lint exit 0.
+  - Server: 228/228.
+- **Reviewer, security lens (opus): PASS.** The attempt-1 issue is closed: every route into `app-bilateral-ai-upload` that the UI offers is now gated. No regressions, and the server gate still fails closed.
+- **Reviewer, conformance + tests lens (opus): PASS.**
+  - Both issues are closed.
+  - The DOM tests would catch a template that drops `[canUseAi]`, because the member cases fail when the selector input defaults to `false`.
+  - Running the creator case against the util mutation "does not block the gate", because the creator uses its own role-9 predicate.
+  - Submit for review is untouched, and there is no scope creep.
+- **ADVISORY (both lenses; recorded only, never tasks):**
+  - RISK/RELIABILITY: "member" has two definitions. The util ignores `role_id`; the creator and the server require role 9. Adding a role-9 filter to the util would align them.
+  - RISK: the creator's `?job=` deep link (`bilateral-result-creator.component.ts:619-650`) sets `'ai'` without checking `canUseAi`. It is reachable only with a job id the user already owns (`getJob` is scoped to the creator). The durable fix is a centre check in `createJob`, as its own task.
+  - RISK: `getDraft` returns the whole `job` entity to any platform admin. Consider a projection.
+  - TEST INTEGRITY: the creator-local mutation (OR `isAdmin` into the creator's `canUseAi`) has not been run or recorded.
+  - Carried from attempt 1: `isUserAdmin` has no `ORDER BY` (pre-existing).
+- **Requirements covered:** `ASC-R-14`, `ASC-R-15`, NFR *Authorization* (read grant), `ASC-AC-12`, `-13`, `-14`.
+- **Runtime events:** none.
+- **Final status:** **PASS** (attempt 2 of 3).

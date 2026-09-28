@@ -8,6 +8,11 @@ import { PrTooltipDirective } from '../../../../shared/directives/pr-tooltip.dir
 import { MyDraftResultsComponent } from './my-draft-results.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
+import { BilateralContextService } from '../../services/bilateral-context.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
+
+/** A Center User assignment for the centre every test in this file opens as (see `ctx.setCenter`). */
+const CIAT_MEMBER = { center_id: 'CIAT_CODE', center_acronym: 'CIAT', role_name: 'Center User', role_id: 9 };
 
 /**
  * Shaped after a real `GET /api/bilateral/center/ai/drafts` row: the endpoint loads
@@ -48,6 +53,12 @@ describe('MyDraftResultsComponent', () => {
     fixture = TestBed.createComponent(MyDraftResultsComponent);
     component = fixture.componentInstance;
     bilateralAiService = TestBed.inject(BilateralAiService);
+    // `ASC-T-5`: every existing test in this file exercises a Center User of the current centre —
+    // the real `RolesService`/`BilateralContextService` singletons default to no centre and no
+    // assignments, which would hide Create Result/Delete for every fixture below. Set a matching
+    // assignment here; the admin-non-member case (`isCenterMember` describe block) overrides it.
+    TestBed.inject(BilateralContextService).setCenter('CIAT', 'CIAT');
+    TestBed.inject(RolesService).roles = { center: [CIAT_MEMBER] };
     fixture.detectChanges();
   });
 
@@ -973,6 +984,52 @@ describe('MyDraftResultsComponent', () => {
     it('renders data-guide="bilateral-tab-drafts" on the drafts container (BGT-T-3, BGT-R-2, Gate D1)', () => {
       const draftsEl = fixture.nativeElement.querySelector('[data-guide="bilateral-tab-drafts"]');
       expect(draftsEl).toBeTruthy();
+    });
+  });
+
+  // `ASC-T-5` (`ASC-AC-13`, `ASC-R-15`): a platform admin who is not a Center User of the current
+  // centre must never see Create Result / Delete here — the server 403s both anyway (P2-3700
+  // pivot, `bilateral-ai.service.ts` `assertCenterEntitlement`, mode 'act').
+  describe('ASC-T-5 — Create Result / Delete hidden for a non-member admin', () => {
+    beforeEach(() => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+    });
+
+    it('renders Create Result and Delete for the default Center User fixture', () => {
+      const actions = fixture.debugElement.query(By.css('.mdr-actions'));
+      expect(actions).toBeTruthy();
+      expect(actions.query(By.css('.mdr-btn--promote'))).toBeTruthy();
+      expect(actions.query(By.css('.mdr-btn--discard'))).toBeTruthy();
+    });
+
+    it('ASC-AC-13 — hides Create Result and Delete for an admin who is not a Center User of this centre', () => {
+      // `applyRolesResponse` — not a bare `.roles =` mutation — because it bumps the real
+      // `rolesVersion` signal the component's `isCenterMember` computed depends on; without it the
+      // computed would keep returning the FIRST answer it cached and this second render would be
+      // a false negative (the same class of bug `ASC-DD-2`/`D7` guard against elsewhere).
+      component.api.rolesSE.applyRolesResponse({ center: [], application: { role_id: 1 } });
+      fixture.detectChanges();
+
+      expect(component.isCenterMember()).toBe(false);
+      const actions = fixture.debugElement.query(By.css('.mdr-actions'));
+      expect(actions.query(By.css('.mdr-btn--promote'))).toBeNull();
+      expect(actions.query(By.css('.mdr-btn--discard'))).toBeNull();
+      // Review — the read-only preview `ASC-R-14` grants — stays visible.
+      expect(actions.query(By.css('.mdr-btn--review'))).toBeTruthy();
+    });
+
+    it('renders the aside preview Create Result / Discard only for a Center User of this centre', () => {
+      component.selectedDraft.set(draftStub);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.mdr-aside-footer')).toBeTruthy();
+
+      component.api.rolesSE.applyRolesResponse({ center: [], application: { role_id: 1 } });
+      fixture.detectChanges();
+
+      expect(component.isCenterMember()).toBe(false);
+      expect(fixture.nativeElement.querySelector('.mdr-aside-footer')).toBeNull();
     });
   });
 });

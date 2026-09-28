@@ -7,7 +7,7 @@
 - **Ticket:** none — user-originated
 - **Owner / driver:** Juan David Delgado
 - **Branch base:** `performance-refactor` @ `f37e1c728`
-- **Status:** `in-progress` — `ASC-T-1`, `ASC-T-2` done; `ASC-T-4` (collapse) done, `ASC-T-5` (admin read-only drafts, Pivot) and `ASC-T-3` pending
+- **Status:** `in-progress` — `ASC-T-1`, `ASC-T-2` done; `ASC-T-1`, `-2`, `-4`, `-5`, `-6`, `-7` done; `ASC-T-3` (manual walk on TEST) pending
 - **Budget (`design.md` §14):** 3 tasks · ~130 LOC · 1 review round. `/akili-execute` escalates rather than continuing if any is exceeded.
 
 ---
@@ -147,12 +147,13 @@
     - Never run the unscoped server suite.
   - **Consumers:** `bilateral-ai.controller.ts` (the five routes) · `bilateral-ai.controller.spec.ts` · the client AI-draft components · `RoleByUserRepository.isUserAdmin` (read only, not modified)
 - **Definition of done:**
-  - [ ] `ASC-AC-12` — the admin non-member lists and reads drafts
-  - [ ] `ASC-AC-13` — the admin non-member is forbidden on promote, discard and formal evidence (server), and sees none of those controls (client)
-  - [ ] `ASC-AC-14` — a non-admin non-member is still forbidden everywhere
-  - [ ] Both falsifier mutations executed and observed **red**
-  - [ ] Server: `npx jest --testPathPattern="bilateral-ai"` green · `npx eslint` on the touched files `--quiet` clean · `npx tsc --noEmit` clean on touched files
-  - [ ] Client: the touched specs green · `npx tsc --noEmit -p tsconfig.app.json` clean · `npx ng lint --quiet` clean
+  - [x] `ASC-AC-12` — the admin non-member lists and reads drafts
+  - [x] `ASC-AC-13` — the admin non-member is forbidden on promote, discard and formal evidence (server), and sees none of those controls (client)
+  - [x] `ASC-AC-14` — a non-admin non-member is still forbidden everywhere
+  - [x] Both falsifier mutations executed and observed **red**
+  - [x] Server: `npx jest --testPathPattern="bilateral-ai"` green · `npx eslint` on the touched files `--quiet` clean · `npx tsc --noEmit` clean on touched files
+  - [x] Client: the touched specs green · `npx tsc --noEmit -p tsconfig.app.json` clean · `npx ng lint --quiet` clean
+- **Status:** [x] — PASS attempt 2 (both lenses), 2026-09-28 (`execution.md` → `ASC-T-5`)
 
 ---
 
