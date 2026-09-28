@@ -1,6 +1,6 @@
 # complementary-innovation (IPSR Step 2.1)
 
-**Verified:** 2026-08-28 · branch performance-refactor · 743fc1908
+**Verified:** 2026-09-28 · branch performance-refactor · P2-3846 (working tree)
 
 ## What it is
 IPSR Step 2 – Package > 2.1. Lets the user bundle PRMS-reported Innovation Developments with the core
@@ -30,7 +30,7 @@ innovation, and create/edit ad-hoc "complementary innovation / enabler / solutio
 | Component | What it does | Trap |
 |---|---|---|
 | `components/new-complementary-innovation/` | The create/edit modal (`app-pr-dialog`, `styleClass="new-complementary-innovation-dialog"`) | Its `.scss` owns the dialog's scroll model — see traps |
-| `components/table-innovation/` | Selectable table of PRMS Innovation Developments | — |
+| `components/table-innovation/` | P2-3846: search-first list of PRMS results (type chips, `+ Link / ✓ Linked` rows, "Show more" by 10) | Ranking + highlight reuse `result-framework-reporting/pages/dashboard-lab/pipes/planned-search.util.ts` (exact phrase → all words any order → typos). The evaluation is memoised on (list ref, length, query, types) — it runs Levenshtein over ~1,300 rows, so never move it into a template call without the cache. Type label comes from `result_type_id` because the wire sends type 7 as "Innovation development (QAed)" even when Submitted; the status has its own chip (`result-status-tokens`). |
 
 ## Traps (⚠️ = already broke something)
 - ⚠️ **The Function checkboxes match by REFERENCE, not by value** (P2-3529). They are native inputs with

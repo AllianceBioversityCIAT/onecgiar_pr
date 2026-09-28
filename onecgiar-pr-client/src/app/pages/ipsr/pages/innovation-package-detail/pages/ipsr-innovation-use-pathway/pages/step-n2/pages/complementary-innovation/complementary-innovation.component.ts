@@ -6,6 +6,7 @@ import { IpsrDataControlService } from '../../../../../../../../services/ipsr-da
 import { Router } from '@angular/router';
 import { ComplementaryInnovationService } from './services/complementary-innovation.service';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../../../internationalization/result-detail-section-load.copy';
+import { COMPLEMENTARY_INNOVATION_COPY } from './components/complementary-innovation.copy';
 import { CanComponentDeactivate } from '../../../../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 import { UnsavedNavigationIntentService } from '../../../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
@@ -107,6 +108,8 @@ export class ComplementaryInnovationComponent implements OnInit, CanComponentDea
    */
   readonly loaded = signal<boolean | null>(null);
   readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
+  /** P2-3846 — copy of the "Not in PRMS yet? / 2 · Add manually" block. */
+  readonly copy = COMPLEMENTARY_INNOVATION_COPY;
   private readonly loadParts: Record<'selection' | 'links', boolean | null> = { selection: null, links: null };
 
   private markLoadPart(part: 'selection' | 'links', ok: boolean): void {

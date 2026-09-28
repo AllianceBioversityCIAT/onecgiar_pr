@@ -1,100 +1,145 @@
-<!-- P2-3840 — candidate table: left-aligned titles, ghost row actions and a real search field,
-     in place of centred text and two solid violet buttons per row. Same pipes, same handlers. -->
-<div *ngIf="dataTable.length != 0">
-  <label class="search_input" data-testid="candidate-search">
-    <ng-icon name="lucideSearch" class="search_icon" aria-hidden="true" />
-    <input type="text" [placeholder]="copy.searchPlaceholder" [attr.aria-label]="copy.searchPlaceholder" [(ngModel)]="searchText" />
-  </label>
+<!-- P2-3846 — search-first candidate list (Ángel's mockup, 28-Sep-2026) in PRMS colours: one card with the
+     search + type chips on top and the results as rows with a Link action. Same inputs, outputs and handlers
+     as the P2-3840 table it replaces; which results are listed is still decided by the parent. -->
+@if (dataTable?.length) {
+  <section class="ci-search mt-2 overflow-hidden rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]" data-testid="candidate-search">
+    <div class="border-b border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-5 pt-[18px] pb-4">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span class="ci-step">1</span>
+        <h3 class="m-0 text-[15px] font-semibold text-[var(--pr-text-heading)]">{{ copy.searchTitle }}</h3>
+        <span
+          class="rounded-full border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-2 py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-700)]"
+          >{{ copy.recommended }}</span
+        >
+      </div>
+      <p class="mt-1.5 mb-0 max-w-[760px] text-[13px] leading-[1.5] text-[var(--pr-text-muted)]">{{ copy.searchHint }}</p>
 
-  <div class="table">
-    <app-pr-table
-      sortField="result_code"
-      [sortOrder]="-1"
-      [value]="dataTable | filterByText: searchText"
-      [paginator]="!!(dataTable | filterByText: searchText)?.length"
-      [rows]="10"
-      selectionMode="single"
-      [rowsPerPageOptions]="[10, 50, 100]">
-      <ng-template prTableHeader>
-        <tr>
-          <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 64px">Select</th>
+      <label class="ci-field mt-3.5">
+        <ng-icon name="lucideSearch" class="flex-none text-[18px] text-[var(--pr-text-subtle)]" aria-hidden="true" />
+        <input
+          type="text"
+          class="min-w-0 flex-1 border-0 bg-transparent text-[14px] text-[var(--pr-text-heading)] outline-none placeholder:text-[var(--pr-text-subtle)]"
+          [placeholder]="copy.searchPlaceholder"
+          [attr.aria-label]="copy.searchPlaceholder"
+          data-testid="candidate-search-input"
+          [(ngModel)]="searchText"
+          (ngModelChange)="onSearchChange()" />
+        @if (searchText) {
+          <button type="button" class="ci-icon-btn" [attr.aria-label]="copy.clearSearch" [attr.title]="copy.clearSearch" (click)="clearSearch()">
+            <ng-icon name="lucideX" aria-hidden="true" />
+          </button>
+        }
+      </label>
 
-          @for (column of columnOrder; track $index) {
-            <th [id]="column.attr" [prSortableColumn]="column.attr" [style]="{ width: column.width }">
-              <pr-sort-icon [field]="column.attr"></pr-sort-icon>
-              {{ column.title }}
-            </th>
+      @if (typeChips.length > 1) {
+        <div class="mt-3 flex flex-wrap items-center gap-2" data-testid="candidate-type-chips">
+          <span class="mr-0.5 text-[12px] font-medium text-[var(--pr-text-muted)]">{{ copy.resultTypes }}</span>
+          <button type="button" class="ci-chip" [class.is-on]="!activeTypes.length" [attr.aria-pressed]="!activeTypes.length" (click)="showAllTypes()">
+            {{ copy.allTypes }}
+          </button>
+          @for (chip of typeChips; track chip.id) {
+            <button
+              type="button"
+              class="ci-chip"
+              [class.is-on]="isTypeActive(chip.id)"
+              [attr.aria-pressed]="isTypeActive(chip.id)"
+              data-testid="candidate-type-chip"
+              (click)="toggleType(chip.id)">
+              {{ chip.label }}
+              <span class="ci-chip__count">{{ chip.count }}</span>
+            </button>
           }
+        </div>
+      }
+    </div>
 
-          <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 72px">Action</th>
-        </tr>
-      </ng-template>
+    <div class="flex items-center justify-between border-b border-[var(--pr-border)] px-5 py-2.5">
+      <span class="text-[12px] font-medium text-[var(--pr-text-muted)]" data-testid="candidate-count">{{
+        copy.resultsCount(filteredRows.length, dataTable.length, !!searchText.trim() || !!activeTypes.length)
+      }}</span>
+    </div>
 
-      <ng-template prTableBody let-result>
-        <tr [class.is_selected]="result.selected" data-testid="candidate-row">
-          @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
-            <td class="actionsSelect">
+    @if (filteredRows.length) {
+      <ul class="m-0 list-none p-0">
+        @for (result of visibleRows; track result.result_id) {
+          <li class="ci-row" [class.is-linked]="result.selected" data-testid="candidate-row">
+            @if (canEdit) {
               <button
                 type="button"
-                class="select_toggle"
-                [class.selected]="result.selected"
+                class="ci-check"
+                [class.is-on]="result.selected"
                 [attr.title]="result.selected ? copy.deselect : copy.select"
                 [attr.aria-label]="result.selected ? copy.deselect : copy.select"
                 [attr.aria-pressed]="!!result.selected"
                 data-testid="candidate-toggle"
-                (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result)">
-                <ng-icon [name]="result.selected ? 'lucideCheck' : 'lucidePlus'" aria-hidden="true" />
+                (click)="toggleLink(result)">
+                @if (result.selected) {
+                  <ng-icon name="lucideCheck" aria-hidden="true" />
+                }
               </button>
-            </td>
-          }
+            }
 
-          @for (column of columnOrder; track $index) {
-            <td [class]="column.attr">
-              @switch (column.attr) {
-                @case ('title') {
-                  <span class="cell_title">{{ result.title }}</span>
+            <div class="ci-row__body min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span class="rounded-[6px] border px-2 py-[2px] text-[11.5px] font-semibold" [ngClass]="typeTone(result)">{{ typeLabel(result) }}</span>
+                <span class="font-mono text-[12px] text-[var(--pr-text-muted)]" [innerHTML]="result.result_code | highlightSearch: searchText"></span>
+                @if (result.status_id) {
+                  <span class="rounded-full px-2 py-[1px] text-[11px] font-semibold" [style.color]="statusFg(result)" [style.background]="statusBg(result)">{{
+                    statusLabel(result)
+                  }}</span>
                 }
-                @case ('initiative_official_code') {
-                  @if (result.initiative_official_code) {
-                    <span class="cell_chip">{{ result.initiative_official_code }}</span>
-                  }
+              </div>
+              <p
+                class="mt-1 mb-0 text-[14px] leading-[1.45] font-semibold break-words text-[var(--pr-text-heading)]"
+                data-testid="candidate-title"
+                [innerHTML]="result.title | highlightSearch: searchText"></p>
+              <p class="mt-0.5 mb-0 flex flex-wrap items-center gap-x-1.5 text-[12px] text-[var(--pr-text-muted)]">
+                @if (result.initiative_official_code) {
+                  <span class="font-semibold text-[var(--pr-text-secondary)]" [innerHTML]="result.initiative_official_code | highlightSearch: searchText"></span>
                 }
-                @case ('created_date') {
-                  <span class="cell_muted">{{ result.created_date | date: 'yyyy-MM-dd' }}</span>
+                @if (result.initiative_short_name) {
+                  <span aria-hidden="true">·</span>
+                  <span [innerHTML]="result.initiative_short_name | highlightSearch: searchText"></span>
                 }
-                @case ('result_code') {
-                  <span class="cell_code">{{ result.result_code }}</span>
+                @if (result.created_date) {
+                  <span aria-hidden="true">·</span>
+                  <span>{{ copy.created }} {{ result.created_date | date: 'yyyy-MM-dd' }}</span>
                 }
-                @default {
-                  <span class="cell_text">{{ result[column.attr] }}</span>
-                }
-              }
-            </td>
-          }
+              </p>
+            </div>
 
-          @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
-            <td class="actions">
+            <div class="ci-row__actions flex flex-none items-center gap-1.5 self-center">
               <button
                 type="button"
-                class="ghost_action"
+                class="ci-icon-btn"
                 [attr.title]="copy.openResult"
                 [attr.aria-label]="copy.openResult"
                 data-testid="candidate-open"
                 (click)="openNewWindow(result)">
                 <ng-icon name="lucideExternalLink" aria-hidden="true" />
               </button>
-            </td>
-          }
-        </tr>
-      </ng-template>
-    </app-pr-table>
+              @if (canEdit) {
+                <button type="button" class="ci-link" [class.is-linked]="result.selected" data-testid="candidate-link" (click)="toggleLink(result)">
+                  <ng-icon [name]="result.selected ? 'lucideCheck' : 'lucidePlus'" aria-hidden="true" />
+                  {{ result.selected ? copy.linked : copy.link }}
+                </button>
+              } @else if (result.selected) {
+                <span class="ci-link is-linked is-static"><ng-icon name="lucideCheck" aria-hidden="true" />{{ copy.linked }}</span>
+              }
+            </div>
+          </li>
+        }
+      </ul>
 
-    <div class="total" *ngIf="(dataTable | filterByText: searchText)?.length">
-      {{ copy.total((dataTable | filterByText: searchText)?.length, dataTable?.length) }}
-    </div>
-
-    @if (!(dataTable | filterByText: searchText)?.length) {
-      <app-no-data-text [title]="copy.noMatches"></app-no-data-text>
+      @if (filteredRows.length > visibleRows.length) {
+        <div class="flex justify-center border-t border-[var(--pr-border)] px-5 py-3">
+          <button type="button" class="ci-more" data-testid="candidate-more" (click)="showMore()">
+            {{ copy.showMore(filteredRows.length - visibleRows.length) }}
+          </button>
+        </div>
+      }
+    } @else {
+      <div class="px-5 py-6 text-center text-[13px] text-[var(--pr-text-muted)]" data-testid="candidate-empty">{{ copy.noMatches }}</div>
     }
-  </div>
-</div>
+  </section>
+}

@@ -21,6 +21,7 @@ import { PrCheckboxValueAccessorModule } from '../../../../../../../../../../sha
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../../../shared/directives/feedback-validation-directive.module';
 import { NgIcon } from '@ng-icons/core';
 import { SelectedInnovationsComponent } from './components/selected-innovations/selected-innovations.component';
+import { HighlightSearchPipe } from '../../../../../../../../../result-framework-reporting/pages/dashboard-lab/pipes/highlight-search.pipe';
 
 @NgModule({
   declarations: [ComplementaryInnovationComponent, TableInnovationComponent, NewComplementaryInnovationComponent],
@@ -41,7 +42,9 @@ import { SelectedInnovationsComponent } from './components/selected-innovations/
     FeedbackValidationDirectiveModule,
     // P2-3840 — Lucide icons of the candidate table + the bundle list (standalone).
     NgIcon,
-    SelectedInnovationsComponent
+    SelectedInnovationsComponent,
+    // P2-3846 — marks the words the search found (exact phrase, any-order words, near misses).
+    HighlightSearchPipe
   ],
   exports: [ComplementaryInnovationComponent]
 })

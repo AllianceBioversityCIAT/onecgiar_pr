@@ -98,4 +98,84 @@ describe('TableInnovationComponent', () => {
     const expectedUrl = `/result/result-detail/${result.result_code}/general-information?phase=${result.version_id}`;
     expect(windowSpy).toHaveBeenCalledWith(expectedUrl, '_blank');
   });
+
+  // P2-3846 — search-first list: ranking, type chips and paging are pure component logic.
+  describe('P2-3846 — search, type chips and paging', () => {
+    const rows = () => [
+      { result_id: '1', result_code: '9001', title: 'Drought tolerant maize varieties for East Africa', result_type_id: 7, result_type_name: 'Innovation development (QAed)', status_id: '3', initiative_official_code: 'SP01' },
+      { result_id: '2', result_code: '9002', title: 'Training of national extension officers on seed systems', result_type_id: 5, result_type_name: 'Capacity sharing for development', status_id: '2', initiative_official_code: 'SP02' },
+      { result_id: '3', result_code: '9003', title: 'Maize seed policy framework revision', result_type_id: 1, result_type_name: 'Policy change', status_id: '2', initiative_official_code: 'SP03' },
+      { result_id: '4', result_code: '9004', title: 'East Africa maize drought', result_type_id: 7, result_type_name: 'Innovation development (QAed)', status_id: '2', initiative_official_code: 'SP01' }
+    ];
+
+    beforeEach(() => {
+      component.dataTable = rows();
+    });
+
+    it('lists every row by newest code when there is no search', () => {
+      expect(component.filteredRows.map(r => r.result_code)).toEqual(['9004', '9003', '9002', '9001']);
+    });
+
+    it('ranks the exact phrase first, then the same words in another order', () => {
+      component.searchText = 'maize drought';
+      expect(component.filteredRows.map(r => r.result_code)).toEqual(['9004', '9001']);
+    });
+
+    it('still finds a result with a typo', () => {
+      component.searchText = 'extensoin officers';
+      expect(component.filteredRows.map(r => r.result_code)).toEqual(['9002']);
+    });
+
+    it('offers one chip per type present, counted against the search, and filters by it', () => {
+      component.searchText = 'maize';
+      expect(component.typeChips).toEqual([
+        { id: 7, label: 'Innovation development', count: 2 },
+        { id: 1, label: 'Policy change', count: 1 },
+        { id: 5, label: 'Capacity sharing', count: 0 }
+      ]);
+      component.toggleType(1);
+      expect(component.filteredRows.map(r => r.result_code)).toEqual(['9003']);
+      component.showAllTypes();
+      expect(component.filteredRows).toHaveLength(3);
+    });
+
+    it('drops the "(QAed)" suffix from the type and shows the real status instead', () => {
+      const submitted = component.dataTable[0];
+      expect(component.typeLabel(submitted)).toBe('Innovation development');
+      expect(component.statusLabel(submitted)).toBe('Submitted');
+    });
+
+    it('pages by ten and resets the page when the search changes', () => {
+      component.dataTable = Array.from({ length: 25 }, (_, i) => ({ result_id: String(i), result_code: String(1000 + i), title: `Result ${i}`, result_type_id: 7 }));
+      expect(component.visibleRows).toHaveLength(10);
+      component.showMore();
+      expect(component.visibleRows).toHaveLength(20);
+      component.searchText = 'Result';
+      component.onSearchChange();
+      expect(component.visibleRows).toHaveLength(10);
+    });
+
+    it('toggleLink links an unlinked row and unlinks a linked one', () => {
+      const selectSpy = jest.spyOn(component.selectEvent, 'emit');
+      const cancelSpy = jest.spyOn(component.cancelEvent, 'emit');
+      const row: any = component.dataTable[0];
+      component.toggleLink(row);
+      expect(selectSpy).toHaveBeenCalledWith(row);
+      expect(row.selected).toBe(true);
+      component.toggleLink(row);
+      expect(cancelSpy).toHaveBeenCalledWith(row);
+    });
+
+    it('does not match a row by its type name alone (the chips filter by type)', () => {
+      component.searchText = 'capacity sharing';
+      expect(component.filteredRows).toHaveLength(0);
+    });
+
+    it('re-evaluates when the parent swaps the list', () => {
+      component.searchText = 'maize';
+      expect(component.filteredRows).toHaveLength(3);
+      component.dataTable = rows().slice(0, 1);
+      expect(component.filteredRows).toHaveLength(1);
+    });
+  });
 });

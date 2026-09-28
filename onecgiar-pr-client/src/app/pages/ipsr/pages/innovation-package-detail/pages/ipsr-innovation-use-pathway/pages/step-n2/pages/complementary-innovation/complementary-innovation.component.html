@@ -17,18 +17,38 @@
   [columns]="cols"
   (cancelEvent)="cancelInnovation($event)"></app-table-innovation>
 
-<!-- P2-3840 — the bundle as cards; the add button + its modal sit right under it, where the list grows. -->
-<app-selected-innovations
-  [items]="this.innovationPackageCreatorBody"
-  [readOnly]="this.api.rolesSE.readOnly"
-  (openEvent)="getComplementaryInnovation($event.result_id, $event)"
-  (removeEvent)="cancelInnovation($event)"></app-selected-innovations>
+<!-- P2-3846 — mockup order: 1 · search PRMS first (above) → "Not in PRMS yet?" → 2 · add one manually.
+     The bundle list follows, so everything linked or created is reviewed in one place before saving. -->
+@if (!this.api.rolesSE.readOnly) {
+  <section class="mt-5" data-testid="add-manual-block">
+    <div class="flex items-center gap-3 text-[12.5px] text-[var(--pr-text-subtle)] italic">
+      <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
+      {{ copy.notInPrms }}
+      <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
+    </div>
+    <div class="mt-3 flex items-center gap-2.5">
+      <span
+        class="inline-flex h-[24px] w-[24px] flex-none items-center justify-center rounded-full border border-[var(--pr-border-strong)] bg-[var(--pr-surface-subtle)] text-[12px] font-bold text-[var(--pr-text-secondary)]"
+        >2</span
+      >
+      <span class="text-[14px] font-semibold text-[var(--pr-text-heading)]">{{ copy.addManualTitle }}</span>
+    </div>
+    <p class="mt-1 mb-0 pl-[34px] text-[12.5px] text-[var(--pr-text-muted)]">{{ copy.addManualHint }}</p>
+  </section>
+}
 
 <app-new-complementary-innovation
   [complementaryInnovationFunction]="complementaryFunction"
   (createInnovationEvent)="createInnovationEvent($event)"
   [columns]="cols"
   (editEvent)="saveEdit()"></app-new-complementary-innovation>
+
+<!-- P2-3840 — the bundle as cards. -->
+<app-selected-innovations
+  [items]="this.innovationPackageCreatorBody"
+  [readOnly]="this.api.rolesSE.readOnly"
+  (openEvent)="getComplementaryInnovation($event.result_id, $event)"
+  (removeEvent)="cancelInnovation($event)"></app-selected-innovations>
 
 <app-save-button class="position_sticky" [disabled]="loaded() !== true" (clickSave)="onSaveSection()"></app-save-button>
 

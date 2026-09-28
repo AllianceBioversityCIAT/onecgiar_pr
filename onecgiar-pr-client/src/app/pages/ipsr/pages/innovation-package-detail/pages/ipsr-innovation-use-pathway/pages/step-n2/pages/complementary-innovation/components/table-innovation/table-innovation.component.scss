@@ -1,201 +1,274 @@
-// P2-3840 — candidate table of IPSR Step 2.1 on the new look: text reads left to right, the row
-// actions are quiet ghost buttons (the Step 3 evidence cards' language) and the selected rows are
-// tinted instead of carrying a second solid violet button.
+// P2-3846 — search-first candidate list of IPSR Step 2.1. Layout lives in Tailwind in the template;
+// this file only holds the interactive states (hover / focus / on) that read better as one block.
 
-.search_input {
+:host {
+  display: block;
+}
+
+.ci-step {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--pr-color-primary-300), var(--pr-color-primary-400));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.28);
+}
+
+.ci-field {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 40px;
-  max-width: 420px;
-  margin: 8px 0 14px;
-  padding: 0 12px;
-  border: 1px solid var(--pr-border);
-  border-radius: 10px;
+  gap: 10px;
+  height: 46px;
+  max-width: 760px;
+  padding: 0 8px 0 14px;
+  border: 1.5px solid var(--pr-border-strong);
+  border-radius: 12px;
   background: var(--pr-surface-card);
   cursor: text;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 
   &:hover {
-    border-color: var(--pr-border-strong);
+    border-color: var(--pr-color-primary-200);
   }
 
   &:focus-within {
     border-color: var(--pr-color-primary-300);
-    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.14);
-  }
-
-  .search_icon {
-    flex: none;
-    font-size: 16px;
-    color: var(--pr-text-subtle);
-  }
-
-  input {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    font-size: 13px;
-    color: var(--pr-text);
-
-    &::placeholder {
-      color: var(--pr-text-subtle);
-    }
+    box-shadow: 0 0 0 4px rgba(var(--pr-color-primary-rgb), 0.14);
   }
 }
 
-tr {
-  td {
-    vertical-align: middle;
-  }
-
-  .result_code,
-  .initiative_official_code,
-  .created_date {
-    white-space: nowrap;
-  }
-
-  &.is_selected td {
-    background: var(--pr-surface-band);
-  }
-}
-
-.cell_title {
-  display: block;
-  text-align: left;
-  font-size: 13px;
-  line-height: 1.45;
-  font-weight: 500;
-  color: var(--pr-text-heading);
-  overflow-wrap: anywhere;
-}
-
-.cell_code {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--pr-text-secondary);
-}
-
-.cell_text {
-  font-size: 12.5px;
-  line-height: 1.4;
-  color: var(--pr-text-secondary);
-}
-
-.cell_muted {
-  font-size: 12px;
-  color: var(--pr-text-muted);
-}
-
-.cell_chip {
+.ci-chip {
   display: inline-flex;
   align-items: center;
-  padding: 1px 8px;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
   border: 1px solid var(--pr-border);
   border-radius: 999px;
-  background: var(--pr-surface-subtle);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--pr-text-secondary);
-}
-
-// Select / deselect: an outlined round "+" at rest, the brand check once the row is in the bundle.
-.select_toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 1px solid var(--pr-color-primary-200);
-  border-radius: 999px;
   background: var(--pr-surface-card);
-  color: var(--pr-color-primary-400);
-  font-size: 16px;
+  color: var(--pr-text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
 
   &:hover {
-    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-200);
+    color: var(--pr-color-primary-700);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+
+  &.is-on {
+    border-color: var(--pr-color-primary-400);
+    background: var(--pr-color-primary-400);
+    color: #fff;
+  }
+
+  &__count {
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(var(--pr-color-primary-rgb), 0.1);
+    color: var(--pr-color-primary-700);
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.is-on &__count {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+  }
+}
+
+.ci-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--pr-border);
+  transition: background 0.16s ease;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: var(--pr-surface-subtle);
+  }
+
+  // Linked rows carry a brand lip on the left instead of a tinted surface (content stays neutral).
+  &.is-linked::before {
+    content: '';
+    position: absolute;
+    inset: 10px auto 10px 0;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--pr-color-primary-400);
+  }
+}
+
+.ci-check {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  border: 1.5px solid var(--pr-border-strong);
+  border-radius: 999px;
+  background: var(--pr-surface-card);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease;
+
+  &:hover {
     border-color: var(--pr-color-primary-300);
   }
 
   &:focus-visible {
-    outline: 0;
-    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.2);
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
   }
 
-  &.selected {
-    border-color: transparent;
-    background: linear-gradient(180deg, var(--pr-color-primary-300) 0%, var(--pr-color-primary-400) 100%);
-    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.28);
-    color: var(--pr-color-white);
-
-    &:hover {
-      background: linear-gradient(180deg, var(--pr-color-primary-400) 0%, var(--pr-color-primary-500) 100%);
-    }
+  &.is-on {
+    border-color: var(--pr-color-primary-400);
+    background: var(--pr-color-primary-400);
   }
 }
 
-.actionsSelect,
-.actions {
-  text-align: center;
-}
-
-.ghost_action {
+.ci-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
+  width: 34px;
+  height: 34px;
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--pr-text-muted);
-  font-size: 17px;
+  color: var(--pr-text-subtle);
+  font-size: 16px;
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
 
-  &:hover,
+  &:hover {
+    background: rgba(var(--pr-color-primary-rgb), 0.08);
+    color: var(--pr-color-primary-700);
+  }
+
   &:focus-visible {
-    outline: 0;
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 1px;
+  }
+}
+
+.ci-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  min-width: 92px;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--pr-border-strong);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  color: var(--pr-text-heading);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+
+  &:hover {
+    border-color: var(--pr-color-primary-300);
+    color: var(--pr-color-primary-700);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+
+  &.is-linked {
+    border-color: var(--pr-color-primary-200);
     background: var(--pr-color-primary-50);
-    color: var(--pr-color-primary-400);
+    color: var(--pr-color-primary-700);
+  }
+
+  &.is-static {
+    cursor: default;
   }
 }
 
-.table {
-  // overrides Tailwind's `.table` utility (display:table) that collides with this class
-  display: block;
-  position: relative;
-  margin-bottom: 24px;
+.ci-more {
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--pr-border);
+  border-radius: 999px;
+  background: var(--pr-surface-card);
+  color: var(--pr-color-primary-700);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 
-  .total {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    padding-left: 16px;
-    padding-bottom: 23px;
-    font-size: 12px;
-    color: var(--pr-text-muted);
+  &:hover {
+    border-color: var(--pr-color-primary-300);
+    background: rgba(var(--pr-color-primary-rgb), 0.06);
   }
 }
 
-/* Restore compact fixed-width columns + automatic horizontal scroll (pre-redesign behavior).
-   The Spartan app-pr-table renders with table-layout:auto, which ignores the defined column
-   widths and stretches each column to its content; `fixed` honors the widths and `min-width`
-   makes the wrapper's overflow-x kick in once the viewport can't fit the whole table. */
-:host ::ng-deep .pr-table {
-  table-layout: fixed;
-  // P2-3840: 780 (was 900) so the Action column fits the section at 1440 px; below that it scrolls.
-  min-width: 780px;
+// Phone: the text keeps the full width next to the check and the actions drop to their own line
+// under it. (Wrapping with `flex: 1` alone let the actions win and squeezed the text to ~20px.)
+@media (max-width: 640px) {
+  .ci-row {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+  }
 
-  thead th {
-    white-space: normal;
+  .ci-row__body {
+    flex: 1 1 calc(100% - 40px);
+  }
+
+  .ci-row__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ci-field,
+  .ci-chip,
+  .ci-row,
+  .ci-check,
+  .ci-icon-btn,
+  .ci-link {
+    transition-duration: 1ms;
   }
 }
