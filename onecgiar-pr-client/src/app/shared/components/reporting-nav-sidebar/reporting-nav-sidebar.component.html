@@ -276,7 +276,7 @@
               [attr.aria-current]="isActiveCenter(center) ? 'page' : null"
               [title]="centerTooltip(center)">
               <span class="pr-nav-center-diamond" [style.background]="programDotColor(center.center_id)"></span>
-              <span class="pr-nav-program-name">{{ center.center_name }}</span>
+              <span class="pr-nav-program-name">{{ center.center_acronym || center.center_name }}</span>
               @if (center.isAssigned) {
                 <ng-icon name="lucideCheck" class="pr-nav-program-check shrink-0 text-[14px]" aria-hidden="true" />
                 <span class="sr-only">{{ assignedMarkerLabel }}</span>
