@@ -8,6 +8,7 @@ import {
 } from './bilateral-quality-payload.builder';
 import { QualityPayload, contentHash } from './bilateral-quality-rules';
 import { stripIdentifiers } from './mappers/strip-identifiers';
+import { mapEvidence } from './mappers/evidence.mapper';
 import {
   POLICY_CHANGE_FIELD_LABELS,
   INNOVATION_USE_FIELD_LABELS,
@@ -1175,5 +1176,70 @@ describe('stripIdentifiers (denylist pass)', () => {
     // `sections` — so request_id (the one identifier the contract allows) is never a candidate.
     const contentOnly = stripIdentifiers({ evidence_id: 1, label: 'x' });
     expect(contentOnly).toEqual({ label: 'x' });
+  });
+});
+
+describe('mapEvidence (QEL-DD-1 link normalisation)', () => {
+  function detailWith(
+    rows: Record<string, unknown>[],
+  ): Record<string, unknown> {
+    return { evidence_array: rows };
+  }
+
+  it('QEL-AC-1: a public link stored with no scheme gets https:// prefixed', () => {
+    const [item] = mapEvidence(
+      detailWith([
+        { description: 'x', link: 'www.google.com', is_sharepoint: 0 },
+      ]),
+    );
+    expect(item.link).toBe('https://www.google.com');
+  });
+
+  it('QEL-AC-2: a link that already has an https:// scheme is sent unchanged', () => {
+    const [item] = mapEvidence(
+      detailWith([
+        { description: 'x', link: 'https://x.org/a', is_sharepoint: 0 },
+      ]),
+    );
+    expect(item.link).toBe('https://x.org/a');
+  });
+
+  it('QEL-AC-2: a link that already has an http:// scheme is sent unchanged (not upgraded)', () => {
+    const [item] = mapEvidence(
+      detailWith([
+        { description: 'x', link: 'http://x.org', is_sharepoint: 0 },
+      ]),
+    );
+    expect(item.link).toBe('http://x.org');
+  });
+
+  it('QEL-AC-2: a scheme-less link is trimmed before https:// is added', () => {
+    const [item] = mapEvidence(
+      detailWith([
+        { description: 'x', link: '  www.x.org  ', is_sharepoint: 0 },
+      ]),
+    );
+    expect(item.link).toBe('https://www.x.org');
+  });
+
+  it('QEL-AC-2: an empty (whitespace-only) link becomes null', () => {
+    const [item] = mapEvidence(
+      detailWith([{ description: 'x', link: '   ', is_sharepoint: 0 }]),
+    );
+    expect(item.link).toBeNull();
+  });
+
+  it('QEL-AC-2: a private SharePoint row link stays null, scheme or not', () => {
+    const [item] = mapEvidence(
+      detailWith([
+        {
+          description: 'x',
+          link: 'www.private.example',
+          is_sharepoint: 1,
+          evidenceSharepointArray: [{ is_public_file: 0 }],
+        },
+      ]),
+    );
+    expect(item.link).toBeNull();
   });
 });
