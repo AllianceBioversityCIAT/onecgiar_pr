@@ -13,7 +13,8 @@ import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../pages/ipsr/services/ipsr-data-control.service';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -1051,5 +1052,114 @@ describe('IpsrGeneralInformationComponent', () => {
         expect(prField.classList.contains('mandatory')).toBe(false);
       });
     });
+  });
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — `CanComponentDeactivate` wiring. `SectionDirtyTrackerService` is
+   * component-scoped, so each spec gets a fresh instance via `TestBed.createComponent`.
+   *
+   * The discontinued-options GET is mocked with a genuine async boundary (`delay(0)` under `fakeAsync`):
+   * a synchronous mock would hide the real race — `getSectionInformation()`'s `next` handler fires that GET,
+   * whose callback (`convertChecklistToDiscontinuedOptions()`) mutates the body asynchronously — and would
+   * pass even if the snapshot were taken too early.
+   */
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    // Local literals, never the file-level consts: `getSectionInformation()` assigns the response BY
+    // REFERENCE and earlier tests mutate the shared consts in place.
+    const loadedBody = () => ({
+      title: '[TEST P2-3427] loaded title',
+      is_krs: false,
+      lead_contact_person: '',
+      lead_contact_person_data: null,
+      result_type_id: 1,
+      discontinued_options: [{ investment_discontinued_option_id: 3, value: true, is_active: true }]
+    });
+    const catalogueOptions = () => [{ investment_discontinued_option_id: 1, value: true, is_active: false, description: 'desc1' }];
+
+    beforeEach(() => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockApiService.resultsSE.GETInnovationByResultId = jest.fn(() => of({ response: loadedBody() }));
+      mockApiService.resultsSE.GET_investmentDiscontinuedOptions = jest.fn(() => of({ response: catalogueOptions() }).pipe(delay(0)));
+    });
+
+    it('is false right after the load flow genuinely completes (including the async discontinued-options catalogue)', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      expect(component.ipsrGeneralInformationBody.discontinued_options[0].investment_discontinued_option_id).toBe(1);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    it('is true after editing a bound field', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      component.ipsrGeneralInformationBody.title = `${component.ipsrGeneralInformationBody.title ?? ''} edited`;
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    it('is false right when saveSection() emits true, even when the follow-up reload never lands', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      component.ipsrGeneralInformationBody.title = `${component.ipsrGeneralInformationBody.title ?? ''} edited`;
+      expect(component.hasUnsavedChanges()).toBe(true);
+
+      // The reload `performSave()` triggers is forced to never resolve (its subscribe has no error branch, so a
+      // thrown error would only surface as an unhandled timer under fakeAsync). Whatever makes the section
+      // clean at the instant `true` is emitted is therefore the snapshot inside `performSave()` itself.
+      mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(NEVER);
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+      tick();
+
+      expect(sawTrue).toBe(true);
+      expect(reloadSpy).toHaveBeenCalledTimes(1);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    it('saveSection() resolves false (not throws) when PATCHIpsrGeneralInfo fails, keeps the edits and does not reload', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      component.ipsrGeneralInformationBody.title = '[TEST P2-3427] rejected title';
+      jest.spyOn(console, 'error').mockImplementation();
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+      mockApiService.resultsSE.PATCHIpsrGeneralInfo.mockReturnValue(throwError(() => new Error('save failed')));
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({ next: value => (result = value), error: () => (errored = true) });
+      tick();
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+      expect(component.ipsrGeneralInformationBody.title).toBe('[TEST P2-3427] rejected title');
+      expect(component.hasUnsavedChanges()).toBe(true);
+      // the existing error branch survives the wrapper: indicators refreshed, no re-fetch
+      expect(mockIpsrCompletenessStatusSE.updateGreenChecks).toHaveBeenCalled();
+    }));
+
+    it('saveSection() resolves false without calling the PATCH when the P22 contact precondition refuses', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      mockFieldsManagerService.isP22.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'typed but never picked';
+      mockUserSearchService.selectedUser = null;
+      mockUserSearchService.showContactError = false;
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(value => (result = value));
+
+      expect(result).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(mockUserSearchService.showContactError).toBe(true);
+    }));
   });
 });
