@@ -519,7 +519,7 @@ describe('BilateralPageHeaderComponent', () => {
       alertService = TestBed.inject(CustomizedAlertsFeService);
       tabStub = { location: { href: '' }, close: jest.fn(), opener: {} };
 
-      ctx.setCenter('SMO', 'CGIAR System Organization', 'SMO-CODE');
+      ctx.setCenter('SMO', 'CGIAR System Organization', 'CENTER-05');
       fixture.componentRef.setInput('activeTab', 'overview');
       fixture.detectChanges();
     });
@@ -610,6 +610,50 @@ describe('BilateralPageHeaderComponent', () => {
       httpMock.expectNone(HANDOFF_URL);
       expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
       expect(component.isMinting()).toBe(false);
+    });
+
+    it('(f) mints for the resolved CLARISA centre code, never the acronym', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+
+      clickCta();
+
+      const req = httpMock.expectOne(HANDOFF_URL);
+      expect(req.request.body).toEqual({ center_code: 'CENTER-05' });
+      req.flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=c' } });
+    });
+
+    it.each([
+      ['not resolved yet', undefined],
+      ['not a CLARISA centre code', 'SMO'],
+    ])('(g) disables the CTA and opens nothing while the centre code is %s', (_label, code) => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+      ctx.setCenter('SMO', 'CGIAR System Organization', code);
+      fixture.detectChanges();
+
+      const cta = fixture.debugElement.query(By.css('[data-testid="bilateral-bulk-uploader-cta"]'));
+      expect(cta.nativeElement.disabled).toBe(true);
+
+      component.openBulkUploader();
+
+      expect(openSpy).not.toHaveBeenCalled();
+      httpMock.expectNone(HANDOFF_URL);
+    });
+
+    it('(h) shows the default copy when a 400 carries a list of validation messages', () => {
+      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+      const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
+
+      clickCta();
+      httpMock
+        .expectOne(HANDOFF_URL)
+        .flush(
+          { statusCode: 400, message: ['center_code must match the CENTER-<digits> format'] },
+          { status: 400, statusText: 'Bad Request' },
+        );
+
+      expect(showSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ description: 'The Bulk Results Uploader could not be opened. Please try again.' }),
+      );
     });
   });
 

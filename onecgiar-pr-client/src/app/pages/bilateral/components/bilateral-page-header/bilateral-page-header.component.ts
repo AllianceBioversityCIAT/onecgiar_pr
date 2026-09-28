@@ -297,6 +297,16 @@ export class BilateralPageHeaderComponent {
   readonly isMinting = signal(false);
 
   /**
+   * The CLARISA centre code the handoff is minted for, or `null` while it is not known yet.
+   * `start` only accepts `CENTER-<digits>` (`HandoffStartDto`), so an acronym fallback can only
+   * ever earn a 400; the CTA stays disabled until the shell has resolved the code instead.
+   */
+  readonly handoffCenterCode = computed(() => {
+    const code = this.ctx.centerId()?.trim() ?? '';
+    return /^CENTER-\d+$/.test(code) ? code : null;
+  });
+
+  /**
    * @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-7)
    *
    * Order of operations per `design.md` §6.2 / R-12 "order of operations": the tab MUST open
@@ -311,6 +321,9 @@ export class BilateralPageHeaderComponent {
    * (the partner tab never gets a `window.opener` back to PRMS), without losing the handle.
    */
   openBulkUploader(): void {
+    const centerCode = this.handoffCenterCode();
+    if (!centerCode || this.isMinting()) return;
+
     // (1) Open synchronously, before any HTTP call.
     const tab = window.open('', '_blank');
 
@@ -326,7 +339,7 @@ export class BilateralPageHeaderComponent {
     // (3) Mint the code.
     this.isMinting.set(true);
     this.authService
-      .POST_bilateralHandoffStart({ center_code: this.ctx.centerId() || this.ctx.centerAcronym() || '' })
+      .POST_bilateralHandoffStart({ center_code: centerCode })
       .subscribe({
         next: ({ response }) => {
           // (4) Success: navigate the already-open tab.
@@ -342,11 +355,16 @@ export class BilateralPageHeaderComponent {
       });
   }
 
-  private showBulkHandoffError(description?: string): void {
+  /**
+   * Only a plain string from the server reaches the alert: a `ValidationPipe` 400 answers
+   * `message` as a list of constraint messages, which is not copy meant for the user.
+   */
+  private showBulkHandoffError(description?: unknown): void {
+    const message = typeof description === 'string' ? description.trim() : '';
     this.customAlertService.show({
       id: 'bulkHandoffAlert',
       title: 'Oops!',
-      description: description || 'The Bulk Results Uploader could not be opened. Please try again.',
+      description: message || 'The Bulk Results Uploader could not be opened. Please try again.',
       status: 'error'
     });
   }
