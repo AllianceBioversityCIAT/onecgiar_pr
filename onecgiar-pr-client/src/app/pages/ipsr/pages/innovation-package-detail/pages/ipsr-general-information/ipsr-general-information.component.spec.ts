@@ -466,6 +466,8 @@ describe('IpsrGeneralInformationComponent', () => {
 
       expect(getSectionInformationSpy).not.toHaveBeenCalled();
       expect(component.ipsrGeneralInformationBody.title).toBe('[TEST P2-3427] corrected title');
+      // the indicators still follow the server (the save is not transactional there)
+      expect(mockIpsrCompletenessStatusSE.updateGreenChecks).toHaveBeenCalled();
     });
 
     it('should skip contact validation when isP22 is false', () => {

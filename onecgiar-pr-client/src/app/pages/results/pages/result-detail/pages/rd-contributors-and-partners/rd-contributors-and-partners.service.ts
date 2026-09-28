@@ -145,8 +145,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.catalogueSubs.add(
       this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
         if (loaded) {
-          this.setPossibleLeadPartners(true);
+          // P2-3427 (27-Sep-2026): same order as `getSectionInformation` — read the SAVED lead first and
+          // auto-assign LAST. The old order auto-assigned and then `setLeadPartnerOnLoad` overwrote it with
+          // `undefined` whenever the catalogue landed after the section GET (cold load / deep link).
+          this.setPossibleLeadPartners(true, false);
           this.setLeadPartnerOnLoad(true);
+          this.runAutoAssignLeads();
           this.onCatalogueDrivenLeadUpdate?.('institutions');
         }
       })
@@ -157,8 +161,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           this.nppCenters = this.centersSE.centersList?.map(center => {
             return { ...center, selected: false, disabled: false };
           });
-          this.setPossibleLeadCenters(true);
+          // P2-3427 (27-Sep-2026): saved lead first, auto-assign last — see the institutions branch above. With
+          // a result saved with ONE center and no `is_leading_result`, the old order left the Lead center empty
+          // (the exact defect the PO reported on IPSR) whenever the CLARISA catalogue arrived late.
+          this.setPossibleLeadCenters(true, false);
           this.setLeadCenterOnLoad(true);
+          this.runAutoAssignLeads();
           this.onCatalogueDrivenLeadUpdate?.('centers');
         }
       })

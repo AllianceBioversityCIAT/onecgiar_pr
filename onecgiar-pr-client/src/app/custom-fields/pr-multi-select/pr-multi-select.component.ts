@@ -109,7 +109,13 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
     // P2-3737: a NATIVE listener outside the Angular zone — placing a panel changes no Angular state,
     // so it must not cost a change-detection pass. See `placeOptions` for why the measure waits a frame.
     const host = inject(ElementRef<HTMLElement>).nativeElement as HTMLElement;
-    inject(NgZone).runOutsideAngular(() => host.addEventListener('pointerdown', event => this.placeOptions(event)));
+    inject(NgZone).runOutsideAngular(() => {
+      host.addEventListener('pointerdown', event => this.placeOptions(event));
+      // P2-3678: a keyboard user opens the list with Tab/focus and never fires `pointerdown`; the panel must
+      // still be placed and the virtual viewport re-measured (27-Sep-2026 review). Focus moving inside the
+      // open panel is filtered out by `placeOptions` itself.
+      host.addEventListener('focusin', event => this.placeOptions(event));
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {

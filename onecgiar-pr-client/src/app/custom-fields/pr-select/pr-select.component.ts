@@ -226,6 +226,11 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     if (this.expandSpaceOnOpen()) {
       this.isDropdownOpen.set(true); // Only track state if expansion is enabled
     }
+    // P2-3678: same virtual viewport as `pr-multi-select` — re-measure once the panel is visible, because a
+    // control mounted inside a `[hidden]` parent was measured at 0px and renders only its minimum buffer.
+    // Runs for BOTH panel modes: the bilateral ToC dropdowns (`section-toc`) use `overlayToBody` and sit in
+    // the same hidden section (found by the 27-Sep-2026 review — the first cut had it after the early return).
+    requestAnimationFrame(() => this.virtualViewport?.checkViewportSize());
     if (this.overlayToBody()) {
       this.positionOverlay();
       if (this.overlayStyles()) this.attachScrollListener();
@@ -236,9 +241,6 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     const trigger = document.getElementById(this.triggerId);
     const panel = trigger?.querySelector<HTMLElement>('.options');
     if (trigger && panel) panel.classList.toggle('options_up', shouldOpenUpward(trigger, panel));
-    // P2-3678: same virtual viewport as `pr-multi-select` — re-measure once the panel is visible, because a
-    // control mounted inside a `[hidden]` parent was measured at 0px and renders only its minimum buffer.
-    requestAnimationFrame(() => this.virtualViewport?.checkViewportSize());
   }
 
   /** Keep wheel events inside the option viewport instead of passing them to the result page. */
