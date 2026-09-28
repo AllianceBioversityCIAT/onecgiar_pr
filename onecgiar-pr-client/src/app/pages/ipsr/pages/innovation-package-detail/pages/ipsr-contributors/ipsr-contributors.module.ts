@@ -11,6 +11,7 @@ import { IpsrContributorsNonCgiarPartnersComponent } from './components/ipsr-con
 import { IpsrContributorsCentersComponent } from './components/ipsr-contributors-centers/ipsr-contributors-centers.component';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { RdContributorsAndPartnersModule } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
+import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [
@@ -26,7 +27,9 @@ import { RdContributorsAndPartnersModule } from '../../../../../results/pages/re
     CustomFieldsModule,
     TocInitiativeOutModule,
     TermPipe,
-    RdContributorsAndPartnersModule
+    RdContributorsAndPartnersModule,
+    // P2-3427: the 2026 "financial resources" radio counts in the section's missing-fields scan (appFeedbackValidation).
+    FeedbackValidationDirectiveModule
   ]
 })
 export class IpsrContributorsModule {}

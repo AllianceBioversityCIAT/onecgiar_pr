@@ -342,6 +342,10 @@ export class ResultInnovationPackageService {
         description: result.description,
         gender_tag_level_id: result.gender_tag_level_id,
         climate_change_tag_level_id: result.climate_change_tag_level_id,
+        nutrition_tag_level_id: result.nutrition_tag_level_id,
+        environmental_biodiversity_tag_level_id:
+          result.environmental_biodiversity_tag_level_id,
+        poverty_tag_level_id: result.poverty_tag_level_id,
         lead_contact_person: result.lead_contact_person,
         reported_year_id: year.year,
         result_level_id: 3,

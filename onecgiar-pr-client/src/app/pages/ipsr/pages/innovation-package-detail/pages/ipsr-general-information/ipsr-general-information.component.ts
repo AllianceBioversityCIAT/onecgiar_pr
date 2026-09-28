@@ -187,9 +187,17 @@ export class IpsrGeneralInformationComponent implements OnInit {
         next: resp => {
           this.getSectionInformation();
         },
+        // P2-3427 (Ángel, 25-Sep-2026, "General Information – Bugs" ≈2:45): the error branch used to re-fetch the
+        // section, which OVERWROTE what the reporter had just typed with the stored copy — the corrected title
+        // vanished and the screen looked as if nothing had been saved, while the only trace of the real cause (a
+        // 400 from the server, e.g. a duplicated title) was a toast. The toast still comes from `isSavingPipe`;
+        // the form now keeps the reporter's edits so they can read the message and fix the field.
         error: err => {
           console.error(err);
-          this.getSectionInformation();
+          // The save is not transactional on the server (title/tags update first, components and evidences
+          // after): if a later step throws, part of the body IS stored. The form keeps the reporter's edits,
+          // and the section indicators are refreshed so they reflect what the server actually holds.
+          this.ipsrCompletenessStatusSE.updateGreenChecks();
         }
       });
   }

@@ -453,14 +453,21 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(getSectionInformationSpy).toHaveBeenCalled();
     });
 
-    it('should call PATCHIpsrGeneralInfo and show error alert on onSaveSection error', () => {
+    // P2-3427 (Ángel, 25-Sep-2026): a failed save must NOT re-fetch the section — the re-fetch overwrote the
+    // reporter's corrected title with the stored one and the screen looked as if nothing had been saved.
+    it('keeps the reporter edits when PATCHIpsrGeneralInfo fails (no re-fetch)', () => {
       const mockError = new Error('Error');
       jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo').mockReturnValue(throwError({ error: mockError }));
+      jest.spyOn(console, 'error').mockImplementation();
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
+      component.ipsrGeneralInformationBody.title = '[TEST P2-3427] corrected title';
 
       component.onSaveSection();
 
-      expect(getSectionInformationSpy).toHaveBeenCalled();
+      expect(getSectionInformationSpy).not.toHaveBeenCalled();
+      expect(component.ipsrGeneralInformationBody.title).toBe('[TEST P2-3427] corrected title');
+      // the indicators still follow the server (the save is not transactional there)
+      expect(mockIpsrCompletenessStatusSE.updateGreenChecks).toHaveBeenCalled();
     });
 
     it('should skip contact validation when isP22 is false', () => {

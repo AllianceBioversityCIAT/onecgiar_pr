@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { IpsrContributorsComponent } from './ipsr-contributors.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
@@ -88,6 +90,7 @@ describe('IpsrContributorsComponent', () => {
     mockFieldsManagerService = {
       isP25: jest.fn().mockReturnValue(false),
       isP22: jest.fn().mockReturnValue(true),
+      isContributorsPartners2026: jest.fn().mockReturnValue(false),
       fields: jest.fn().mockReturnValue({})
     };
 
@@ -121,6 +124,10 @@ describe('IpsrContributorsComponent', () => {
       setLeadPartnerOnLoad: jest.fn(),
       setPossibleLeadCenters: jest.fn(),
       setLeadCenterOnLoad: jest.fn(),
+      runAutoAssignLeads: jest.fn(),
+      onLeadByPartnerChange: jest.fn(),
+      resetState: jest.fn(),
+      autoAddedLeadCenterCode: null,
       loadClarisaProjects: jest.fn()
     };
 
@@ -285,17 +292,18 @@ describe('IpsrContributorsComponent', () => {
     });
   });
 
-  describe('getMessageLead', () => {
-    it('should return message for partner when is_lead_by_partner is true', () => {
-      mockRdPartnersSE.partnersBody.is_lead_by_partner = true;
+  describe('getMessageLead / getMessageLeadCenter', () => {
+    it('the partner note keeps the "already added" restriction', () => {
       const msg = component.getMessageLead();
       expect(msg).toContain('partner');
+      expect(msg).toContain('already added in this section');
     });
 
-    it('should return message for CG Center when is_lead_by_partner is false', () => {
-      mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
-      const msg = component.getMessageLead();
+    // P2-3427: the Lead center offers the full catalogue (LC-DD-1), so its note carries no restriction.
+    it('the Lead center note has no "already added" restriction', () => {
+      const msg = component.getMessageLeadCenter();
       expect(msg).toContain('CG Center');
+      expect(msg).not.toContain('already added');
     });
   });
 
@@ -511,9 +519,10 @@ describe('IpsrContributorsComponent', () => {
       expect(component.contributors_result_toc_result).not.toBeNull();
       expect(component.disabledOptions.length).toBe(2);
       expect(component.getConsumed()).toBe(true);
-      expect(mockRdPartnersSE.setPossibleLeadPartners).toHaveBeenCalledWith(true);
+      expect(mockRdPartnersSE.setPossibleLeadPartners).toHaveBeenCalledWith(true, false);
       expect(mockRdPartnersSE.setLeadPartnerOnLoad).toHaveBeenCalledWith(true);
-      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+      // P2-3427: auto-assign is OFF here and runs last, in runAutoAssignLeads().
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true, false);
       expect(mockRdPartnersSE.setLeadCenterOnLoad).toHaveBeenCalledWith(true);
     });
 
@@ -693,7 +702,8 @@ describe('IpsrContributorsComponent', () => {
       expect(mockRdPartnersSE.partnersBody.mqap_institutions[1].is_leading_result).toBe(false);
       expect(mockRdPartnersSE.partnersBody.institutions[0].is_leading_result).toBe(true);
       expect(mockRdPartnersSE.partnersBody.institutions[1].is_leading_result).toBe(false);
-      expect(mockRdPartnersSE.partnersBody.contributing_center[0].is_leading_result).toBe(false);
+      // P2-3427: the Lead center is stamped whatever the partner toggle says (decoupled, as W1/W2).
+      expect(mockRdPartnersSE.partnersBody.contributing_center[0].is_leading_result).toBe(true);
     });
 
     it('should map is_leading_result for centers when is_lead_by_partner is false', () => {
@@ -1119,6 +1129,144 @@ describe('IpsrContributorsComponent', () => {
       const first = component.contributingInitiativesList;
 
       expect(component.contributingInitiativesList).toBe(first);
+    });
+  });
+
+  // P2-3427 (Ángel, 25-Sep-2026 review of the IPSR flow) — Lead center placement and sync, ToC question wording.
+  describe('P2-3427 — Lead center like W1/W2', () => {
+    const html = readFileSync(join(__dirname, 'ipsr-contributors.component.html'), 'utf8');
+
+    it('loads the saved lead FIRST and runs the auto-assign LAST (the old order lost the single-center lead)', () => {
+      const order: string[] = [];
+      mockRdPartnersSE.setPossibleLeadCenters.mockImplementation((...args: any[]) => order.push('setPossibleLeadCenters:' + JSON.stringify(args)));
+      mockRdPartnersSE.setLeadCenterOnLoad.mockImplementation(() => order.push('setLeadCenterOnLoad'));
+      mockRdPartnersSE.runAutoAssignLeads.mockImplementation(() => order.push('runAutoAssignLeads'));
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockRdPartnersSE.partnersBody.contributing_and_primary_initiative = [];
+      component.contributorsBody = { ...mockResponse, bilateral_projects: [] } as any;
+
+      component.getTocLogicp25({ ...mockResponse, linked_results: [] });
+
+      expect(order).toEqual(['setPossibleLeadCenters:[true,false]', 'setLeadCenterOnLoad', 'runAutoAssignLeads']);
+    });
+
+    it('resets the shared service state before loading (root singleton leaks W1/W2 selections otherwise)', () => {
+      jest.spyOn(component, 'getSectionInformation').mockImplementation();
+      component.ngOnInit();
+      expect(mockRdPartnersSE.resetState).toHaveBeenCalled();
+    });
+
+    it('adds a lead that is not a contributor yet to contributing_center and remembers it as auto-added', () => {
+      component.centersSE.centersList = [{ code: 'C9', name: 'Center 9', full_name: 'C9 - Center 9' }] as any;
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1', name: 'Center 1' }];
+
+      component.onLeadCenterSelected('C9');
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', 'C9']);
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBe('C9');
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+    });
+
+    it('swapping the lead strips only the center the previous pick auto-added', () => {
+      component.centersSE.centersList = [
+        { code: 'C8', name: 'Center 8' },
+        { code: 'C9', name: 'Center 9' }
+      ] as any;
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1', name: 'Center 1' }, { code: 'C9', name: 'Center 9' }];
+      mockRdPartnersSE.autoAddedLeadCenterCode = 'C9';
+
+      component.onLeadCenterSelected('C8');
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', 'C8']);
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBe('C8');
+    });
+
+    it('does nothing when the pick is already a contributor (negative control)', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1', name: 'Center 1' }];
+      mockRdPartnersSE.setPossibleLeadCenters.mockClear();
+
+      component.onLeadCenterSelected('C1');
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
+    });
+
+    it('forgets the auto-added code when that center is removed by hand', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1' }, { code: 'C9' }];
+      mockRdPartnersSE.autoAddedLeadCenterCode = 'C9';
+      mockRdPartnersSE.leadCenterCode = 'C9';
+
+      component.deleteContributingCenter(1);
+
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBeNull();
+      expect(mockRdPartnersSE.leadCenterCode).toBeNull();
+    });
+
+    it('markup: the Lead center sits right under the centers chips, before the W3/bilateral projects, and always shows', () => {
+      const lead = html.indexOf('data-testid="ipsr-field-contributing_center~lead"');
+      const chips = html.indexOf('class="centers chips_container"');
+      const projects = html.indexOf('label="Contributing W3 and/or bilateral projects"');
+      expect(lead).toBeGreaterThan(chips);
+      expect(lead).toBeLessThan(projects);
+      expect(html).not.toContain('#selectLeadCenter');
+      expect(html).toMatch(/\(selectOptionEvent\)="onLeadCenterSelected\(\$event\?\.code \?\? null\)"/);
+      expect(html).toMatch(/\(selectOptionEvent\)="this\.rdPartnersSE\.onLeadByPartnerChange\(\$event\)"/);
+    });
+  });
+
+  // P2-3427 (package 9638): no ToC row saved → "Yes" showed only "+", "No" had no row for the financial answer.
+  describe('P2-3427 — a package without ToC rows gets one so the Level and the financial answer have a home', () => {
+    it('ensureTocRow adds exactly one default row when the list is empty and leaves an existing list alone', () => {
+      const item: any = { initiative_id: 7, official_code: 'SP13', short_name: 'Genebank', planned_result: true, result_toc_results: [] };
+      component.ensureTocRow(item);
+      expect(item.result_toc_results).toHaveLength(1);
+      expect(item.result_toc_results[0]).toMatchObject({ initiative_id: 7, official_code: 'SP13', planned_result: true, toc_level_id: null, toc_result_id: null });
+      component.ensureTocRow(item);
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('onPlannedResultChange keeps one row and creates it when there was none', () => {
+      const item: any = { initiative_id: 7, result_toc_results: [] };
+      component.onPlannedResultChange(item);
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('load path (getTocLogicp25) also guarantees the row', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockRdPartnersSE.partnersBody.result_toc_result = { initiative_id: 7, official_code: 'SP13', result_toc_results: [] };
+      mockRdPartnersSE.partnersBody.contributing_and_primary_initiative = [];
+      component.contributorsBody = { ...mockResponse, bilateral_projects: [] } as any;
+      component.getTocLogicp25({ ...mockResponse, linked_results: [] });
+      expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results).toHaveLength(1);
+    });
+  });
+
+  describe('P2-3427 — ToC question reads like W1/W2', () => {
+    const html = readFileSync(join(__dirname, 'ipsr-contributors.component.html'), 'utf8');
+
+    it('2026 phase: KPI label, 2026 note, financial-resources question on No, 50-word justification', () => {
+      mockFieldsManagerService.isContributorsPartners2026.mockReturnValue(true);
+      expect(component.tocQuestionLabel()).toBe('Can this result be mapped to a ToC KPI?');
+      expect(component.tocQuestionInfoNote()).toContain('2026 ToC KPI');
+      expect(html).toContain('[label]="tocQuestionLabel()"');
+      expect(html).toContain('[tooltip]="tocQuestionInfoNote()"');
+      expect(html).toMatch(/@if \(isCP2026\(\) && !this\.rdPartnersSE\.partnersBody\.result_toc_result\.planned_result\) \{\s*<app-pr-yes-or-not\s*label="Did the Program invest financial resources/);
+      expect(html).toContain('[maxWords]="isCP2026() ? 50 : 30"');
+    });
+
+    it('2025 phase keeps the 2025 wording and its alert (phase gate, not portfolio)', () => {
+      mockFieldsManagerService.isContributorsPartners2026.mockReturnValue(false);
+      expect(component.tocQuestionLabel()).toBe("Does this result align with the Program's planned TOC indicators?");
+      expect(component.tocQuestionInfoNote()).toContain('2025 ToC');
+      expect(html).toMatch(/@if \(!isCP2026\(\)\) \{[\s\S]*?<app-alert-status[\s\S]*?\[collapsible\]="false"/);
+    });
+
+    it('the financial-resources radio reads the first ToC row and writes every row', () => {
+      mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results = [{ planned_result: false }, { planned_result: false }];
+      expect(component.programInvestedFinancialResources).toBeNull();
+      component.programInvestedFinancialResources = true;
+      expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results.map((r: any) => r.program_invested_financial_resources)).toEqual([true, true]);
+      expect(component.programInvestedFinancialResources).toBe(true);
     });
   });
 });
