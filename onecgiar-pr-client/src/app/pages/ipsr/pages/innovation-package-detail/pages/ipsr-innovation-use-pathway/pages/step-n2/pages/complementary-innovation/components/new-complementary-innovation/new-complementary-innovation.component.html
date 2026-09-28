@@ -1,10 +1,8 @@
 @if (!this.api.rolesSE.readOnly) {
-  <app-pr-button
-    text="Add new complementary innovation/ enabler/ solution"
-    icon="add_box"
-    [reverse]="true"
-    [verticalMargin]="20"
-    (click)="complementaryInnovationService.dialogStatus = true"></app-pr-button>
+  <!-- P2-3840 — the platform's "add one more" button, left under the bundle list (was a full-width bar). -->
+  <div class="add_new_row" data-testid="add-complementary-innovation">
+    <app-add-button name="Add new complementary innovation/ enabler/ solution" (clickEvent)="complementaryInnovationService.dialogStatus = true"></app-add-button>
+  </div>
 }
 
 <app-pr-dialog

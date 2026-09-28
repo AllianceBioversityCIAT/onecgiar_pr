@@ -109,3 +109,9 @@
     margin-left: 0;
   }
 }
+
+// P2-3840 — `app-add-button` centres itself; under the bundle list it belongs on the left edge.
+.add_new_row {
+  display: flex;
+  margin-top: 4px;
+}

@@ -1,121 +1,188 @@
-@use '../../../../../../../../../../../../../styles/fonts.scss' as fonts;
+// P2-3840 — candidate table of IPSR Step 2.1 on the new look: text reads left to right, the row
+// actions are quiet ghost buttons (the Step 3 evidence cards' language) and the selected rows are
+// tinted instead of carrying a second solid violet button.
 
-tr {
-  th {
-    text-align: center;
+.search_input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  max-width: 420px;
+  margin: 8px 0 14px;
+  padding: 0 12px;
+  border: 1px solid var(--pr-border);
+  border-radius: 10px;
+  background: var(--pr-surface-card);
+  cursor: text;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+
+  &:hover {
+    border-color: var(--pr-border-strong);
   }
 
-  .creation_date {
-    .transparent_text,
-    a {
-      min-width: 200px !important;
-    }
+  &:focus-within {
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.14);
   }
 
-  .contributes_to {
-    .transparent_text,
-    a {
-      min-width: 100px !important;
-    }
+  .search_icon {
+    flex: none;
+    font-size: 16px;
+    color: var(--pr-text-subtle);
   }
 
-  .owner {
-    .transparent_text,
-    a {
-      min-width: 100px !important;
-    }
-  }
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: 13px;
+    color: var(--pr-text);
 
-  .id {
-    .transparent_text,
-    a {
-      min-width: 60px !important;
-    }
-  }
-
-  td {
-    position: relative;
-
-    .transparent_text {
-      color: transparent;
-    }
-
-    a {
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      text-decoration: none;
-      color: var(--color-primary) !important;
-      padding: 0px 10px;
-    }
-
-    i {
-      cursor: pointer;
+    &::placeholder {
+      color: var(--pr-text-subtle);
     }
   }
 }
 
-.noDataText {
-  text-align: center;
-  padding: 50px 0px;
-  @include fonts.pr-typography('h4');
+tr {
+  td {
+    vertical-align: middle;
+  }
+
+  .result_code,
+  .initiative_official_code,
+  .created_date {
+    white-space: nowrap;
+  }
+
+  &.is_selected td {
+    background: var(--pr-surface-band);
+  }
+}
+
+.cell_title {
+  display: block;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.45;
   font-weight: 500;
-  color: var(--pr-color-primary-300);
+  color: var(--pr-text-heading);
+  overflow-wrap: anywhere;
+}
+
+.cell_code {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--pr-text-secondary);
+}
+
+.cell_text {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--pr-text-secondary);
+}
+
+.cell_muted {
+  font-size: 12px;
+  color: var(--pr-text-muted);
+}
+
+.cell_chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border: 1px solid var(--pr-border);
+  border-radius: 999px;
+  background: var(--pr-surface-subtle);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--pr-text-secondary);
+}
+
+// Select / deselect: an outlined round "+" at rest, the brand check once the row is in the bundle.
+.select_toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--pr-color-primary-200);
+  border-radius: 999px;
+  background: var(--pr-surface-card);
+  color: var(--pr-color-primary-400);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+
+  &:hover {
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-300);
+  }
+
+  &:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.2);
+  }
+
+  &.selected {
+    border-color: transparent;
+    background: linear-gradient(180deg, var(--pr-color-primary-300) 0%, var(--pr-color-primary-400) 100%);
+    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.28);
+    color: var(--pr-color-white);
+
+    &:hover {
+      background: linear-gradient(180deg, var(--pr-color-primary-400) 0%, var(--pr-color-primary-500) 100%);
+    }
+  }
+}
+
+.actionsSelect,
+.actions {
+  text-align: center;
+}
+
+.ghost_action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pr-text-muted);
+  font-size: 17px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+
+  &:hover,
+  &:focus-visible {
+    outline: 0;
+    background: var(--pr-color-primary-50);
+    color: var(--pr-color-primary-400);
+  }
 }
 
 .table {
   // overrides Tailwind's `.table` utility (display:table) that collides with this class
   display: block;
   position: relative;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
 
   .total {
     position: absolute;
     left: 0;
     bottom: 0;
-    padding-left: 30px;
+    padding-left: 16px;
     padding-bottom: 23px;
-  }
-}
-
-.actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-
-  .link_button {
-    color: var(--pr-color-white);
-    background-color: var(--pr-color-primary-300);
-    padding: 3px 10px;
-    width: 35px;
-    border-radius: 3px;
-    cursor: pointer;
-    text-align: center;
-    display: flex;
-    align-content: center;
-    justify-content: center;
-  }
-}
-
-.actionsSelect {
-  .link_button {
-    color: var(--pr-color-white);
-    background-color: var(--pr-color-primary-300);
-    padding: 3px 10px;
-    width: 40px;
-    border-radius: 3px;
-    cursor: pointer;
-    text-align: center;
-    display: flex;
-    align-content: center;
-    justify-content: center;
+    font-size: 12px;
+    color: var(--pr-text-muted);
   }
 }
 
@@ -125,7 +192,8 @@ tr {
    makes the wrapper's overflow-x kick in once the viewport can't fit the whole table. */
 :host ::ng-deep .pr-table {
   table-layout: fixed;
-  min-width: 900px;
+  // P2-3840: 780 (was 900) so the Action column fits the section at 1440 px; below that it scrolls.
+  min-width: 780px;
 
   thead th {
     white-space: normal;
