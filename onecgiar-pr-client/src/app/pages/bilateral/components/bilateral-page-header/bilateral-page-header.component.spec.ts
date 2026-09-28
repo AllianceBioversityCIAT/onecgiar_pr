@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClient, provideHttpClient } from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { HlmDialogService } from '@spartan/dialog';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { RouterModule } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -11,6 +13,10 @@ import { normalizeJob } from '../../bilateral-ai-job.model';
 import { rawJob } from '../../bilateral-ai-job.fixtures';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
+import {
+  BulkUploaderAccessDialogComponent,
+  BulkUploaderAccessResult,
+} from '../bulk-uploader-access-dialog/bulk-uploader-access-dialog.component';
 
 describe('BilateralPageHeaderComponent', () => {
   let component: BilateralPageHeaderComponent;
@@ -502,22 +508,30 @@ describe('BilateralPageHeaderComponent', () => {
   /**
    * @akili-spec bilateral/bulk-uploader-handoff (BIL-HO-T-7)
    *
-   * The CTA is a <button> that mints a one-time handoff code, then navigates a tab it opened
-   * *before* the mint (R-12 "order of operations"). jsdom cannot observe a real popup blocker, so
-   * (a) is a call-order proxy — the real blocker behaviour is the T-9 manual/browser check.
+   * The CTA first shows the access warning; only "Continue Anyway" mints a one-time handoff code
+   * and navigates the tab the dialog opened inside that click (R-12 "order of operations"). The
+   * dialog is stubbed here: what it resolves with is the seam — `{ tab }` on Continue (`tab: null`
+   * when the popup was blocked), `undefined` on Cancel/Escape. That the tab opens inside the
+   * Continue click is pinned by `bulk-uploader-access-dialog.component.spec.ts`; the real popup
+   * blocker is the T-9 manual/browser check.
    */
-  describe('Bulk Results Uploader CTA — mint-then-navigate (BIL-HO-T-7)', () => {
+  describe('Bulk Results Uploader CTA — warn, then mint and navigate (BIL-HO-T-7)', () => {
     const HANDOFF_URL = `${environment.apiBaseUrl}api/bilateral/center/handoff`;
+    const DEFAULT_ERROR_COPY = 'The Bulk Results Uploader could not be opened. Please try again.';
 
     let httpMock: HttpTestingController;
     let alertService: CustomizedAlertsFeService;
-    let openSpy: jest.SpyInstance;
-    let tabStub: { location: { href: string }; close: jest.Mock; opener: unknown };
+    let dialogOpenSpy: jest.Mock;
+    let dialogResult: Subject<BulkUploaderAccessResult | undefined>;
+    let tabStub: { location: { href: string }; close: jest.Mock };
 
     beforeEach(() => {
       httpMock = TestBed.inject(HttpTestingController);
       alertService = TestBed.inject(CustomizedAlertsFeService);
-      tabStub = { location: { href: '' }, close: jest.fn(), opener: {} };
+      tabStub = { location: { href: '' }, close: jest.fn() };
+      dialogResult = new Subject();
+      dialogOpenSpy = jest.fn(() => ({ closed$: dialogResult.asObservable() }));
+      jest.spyOn(TestBed.inject(HlmDialogService), 'open').mockImplementation(dialogOpenSpy as never);
 
       ctx.setCenter('SMO', 'CGIAR System Organization', 'CENTER-05');
       fixture.componentRef.setInput('activeTab', 'overview');
@@ -529,7 +543,6 @@ describe('BilateralPageHeaderComponent', () => {
       // construction; drain it so `verify()` only judges the handoff traffic this block is about.
       httpMock.match(req => req.url.includes('api/versioning')).forEach(req => req.flush({ response: [] }));
       httpMock.verify();
-      openSpy?.mockRestore();
     });
 
     function clickCta(): void {
@@ -537,42 +550,36 @@ describe('BilateralPageHeaderComponent', () => {
       cta.nativeElement.click();
     }
 
-    it('(a) opens the tab before the HTTP request to `start` is issued', () => {
-      const httpClient = TestBed.inject(HttpClient) as unknown as { post: HttpClient['post'] };
-      const postSpy = jest.spyOn(httpClient, 'post');
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+    function continueAnyway(tab: typeof tabStub | null = tabStub): void {
+      dialogResult.next({ tab: tab as unknown as Window | null });
+      dialogResult.complete();
+    }
 
+    it('(a) opens the access warning and issues no HTTP request until it is answered', () => {
       clickCta();
 
-      expect(openSpy).toHaveBeenCalledTimes(1);
-      expect(postSpy).toHaveBeenCalledTimes(1);
-      expect(openSpy.mock.invocationCallOrder[0]).toBeLessThan(postSpy.mock.invocationCallOrder[0]);
-
-      httpMock
-        .expectOne(HANDOFF_URL)
-        .flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=c' } });
+      expect(dialogOpenSpy).toHaveBeenCalledWith(
+        BulkUploaderAccessDialogComponent,
+        expect.objectContaining({ role: 'alertdialog', showCloseButton: false }),
+      );
+      httpMock.expectNone(HANDOFF_URL);
     });
 
-    it('(b) opens with no destination URL and severs the opener link before minting', () => {
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
+    it('(b) on Cancel (or Escape) mints nothing and shows no alert', () => {
+      const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
 
       clickCta();
+      dialogResult.next(undefined);
+      dialogResult.complete();
 
-      // No URL/features string is ever passed to `open` — `rel="noopener"` on an <a> would make
-      // `open` return null by spec, so the handle is obtained plain and the opener link severed
-      // by hand (see the docstring on `openBulkUploader`).
-      expect(openSpy).toHaveBeenCalledWith('', '_blank');
-      expect(tabStub.opener).toBeNull();
-
-      httpMock
-        .expectOne(HANDOFF_URL)
-        .flush({ response: { code: 'c', expires_in: 120, redirect_url: 'https://partner.test/entry/?code=c' } });
+      httpMock.expectNone(HANDOFF_URL);
+      expect(showSpy).not.toHaveBeenCalled();
+      expect(component.isMinting()).toBe(false);
     });
 
-    it('(c) navigates the already-open tab to `redirect_url` on success', () => {
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
-
+    it('(c) on Continue navigates the already-open tab to `redirect_url`', () => {
       clickCta();
+      continueAnyway();
       expect(component.isMinting()).toBe(true);
 
       httpMock
@@ -585,27 +592,27 @@ describe('BilateralPageHeaderComponent', () => {
     });
 
     it('(d) on a 403 closes the tab, shows the error alert, re-enables the CTA, and never navigates', () => {
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
       // `.show()` touches the real DOM (`<app-root>`, absent in this component's test host) —
       // stub it the way it's actually intended to be exercised: recorded, not executed.
       const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
 
       clickCta();
+      continueAnyway();
       httpMock
         .expectOne(HANDOFF_URL)
         .flush({ statusCode: 403, message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
       expect(tabStub.close).toHaveBeenCalledTimes(1);
-      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
+      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error', description: 'Forbidden' }));
       expect(component.isMinting()).toBe(false);
       expect(tabStub.location.href).toBe('');
     });
 
-    it('(e) when the popup is blocked, shows the error alert and issues no HTTP request', () => {
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(null);
+    it('(e) when the popup was blocked, shows the error alert and issues no HTTP request', () => {
       const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
 
       clickCta();
+      continueAnyway(null);
 
       httpMock.expectNone(HANDOFF_URL);
       expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
@@ -613,9 +620,8 @@ describe('BilateralPageHeaderComponent', () => {
     });
 
     it('(f) mints for the resolved CLARISA centre code, never the acronym', () => {
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
-
       clickCta();
+      continueAnyway();
 
       const req = httpMock.expectOne(HANDOFF_URL);
       expect(req.request.body).toEqual({ center_code: 'CENTER-05' });
@@ -626,7 +632,6 @@ describe('BilateralPageHeaderComponent', () => {
       ['not resolved yet', undefined],
       ['not a CLARISA centre code', 'SMO'],
     ])('(g) disables the CTA and opens nothing while the centre code is %s', (_label, code) => {
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
       ctx.setCenter('SMO', 'CGIAR System Organization', code);
       fixture.detectChanges();
 
@@ -635,15 +640,15 @@ describe('BilateralPageHeaderComponent', () => {
 
       component.openBulkUploader();
 
-      expect(openSpy).not.toHaveBeenCalled();
+      expect(dialogOpenSpy).not.toHaveBeenCalled();
       httpMock.expectNone(HANDOFF_URL);
     });
 
     it('(h) shows the default copy when a 400 carries a list of validation messages', () => {
-      openSpy = jest.spyOn(window, 'open').mockReturnValue(tabStub as unknown as Window);
       const showSpy = jest.spyOn(alertService, 'show').mockImplementation(() => undefined);
 
       clickCta();
+      continueAnyway();
       httpMock
         .expectOne(HANDOFF_URL)
         .flush(
@@ -651,9 +656,7 @@ describe('BilateralPageHeaderComponent', () => {
           { status: 400, statusText: 'Bad Request' },
         );
 
-      expect(showSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ description: 'The Bulk Results Uploader could not be opened. Please try again.' }),
-      );
+      expect(showSpy).toHaveBeenCalledWith(expect.objectContaining({ description: DEFAULT_ERROR_COPY }));
     });
   });
 
