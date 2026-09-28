@@ -1,4 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body, CoreResult, Measure, Actor, Organization } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
@@ -8,15 +10,28 @@ import { ExpertWorkshopOrganized } from '../step-n3/model/Ipsr-step-3-body.model
 import { untypedInnovationUseRowsMessage } from '../../../../../../utils/untyped-innovation-use-rows.util';
 import { IPSR_UNTYPED_ROWS_COPY } from '../../../../../../../../internationalization/ipsr-untyped-rows.copy';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../internationalization/result-detail-section-load.copy';
+import { CanComponentDeactivate } from '../../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { UnsavedNavigationIntentService } from '../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 @Component({
   selector: 'app-step-n1',
   templateUrl: './step-n1.component.html',
   styleUrls: ['./step-n1.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class StepN1Component implements OnInit {
+export class StepN1Component implements OnInit, CanComponentDeactivate {
   ipsrStep1Body = new IpsrStep1Body();
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — component-scoped dirty tracker for `UnsavedChangesGuard`
+   * (registered on this step's inner route). Snapshotted at the end of `onSectionInformation()` and
+   * again the instant a PATCH resolves. Same mechanism as the Results sections (`rd-general-information`).
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+  /** P2-3427 — "Save & go to next step" must never open the unsaved-changes dialog: it marks its navigation silent. */
+  private readonly intentSE = inject(UnsavedNavigationIntentService);
 
   coreResult = new CoreResult();
 
@@ -126,15 +141,98 @@ export class StepN1Component implements OnInit {
         this.ipsrStep1Body.innovatonUse.organization.push(new Organization());
       }
       this.loaded.set(true);
+      // P2-3427 — true end of the load flow: the default rows above are the last mutation the body
+      // receives, so a freshly loaded, untouched step reports `hasUnsavedChanges() === false`.
+      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
     }
+  }
+
+  /** P2-3427 — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — the value the dirty tracker snapshots and diffs.
+   *
+   * `onSectionInformation()` REPLACES `ipsrStep1Body` with the raw GET response, so on the next
+   * change-detection pass `app-innovation-use-form` gets a new `[body]` reference and its
+   * `ngOnChanges()` → `initializeComponentProperties()` (`innovation-use-form.component.ts:47-87`)
+   * seeds defaults for keys the Step-1 GET does not send (`initiative_expected_investment`,
+   * `pictures`, `innovation_use_2030`, `innov_use_2030_to_be_determined`…). That write lands strictly
+   * AFTER the load-flow snapshot, so an untouched Step 1 reported dirty and the tab switch opened the
+   * Save/Discard dialog (measured on package 9635). Same bug class as W1/W2 `innovation-use-info`
+   * (`dirtySnapshotValue()`), but here two of those keys are real editable fields (the 2030
+   * projection), so they are default-matched instead of dropped: "missing" and "the child's empty
+   * default" compare equal, any real edit still differs. The normalized keys are re-appended in a
+   * fixed order so JSON key-insertion order (snapshot vs. child-seeded body) never matters. Also
+   * projects out `app-studies-link`'s blank placeholder row (`studies-link.component.ts:21-28`).
+   * Only the diff sees this value: the body and the PATCH payload are untouched.
+   */
+  private dirtySnapshotValue(): unknown {
+    const body = (this.ipsrStep1Body ?? {}) as any;
+    const rest: any = { ...body };
+    for (const key of Object.keys(StepN1Component.INNOVATION_USE_FORM_LOAD_DEFAULTS)) delete rest[key];
+    for (const [key, makeDefault] of Object.entries(StepN1Component.INNOVATION_USE_FORM_LOAD_DEFAULTS)) {
+      const value = body[key];
+      if (key === 'innov_use_2030_to_be_determined') rest[key] = value === undefined ? makeDefault() : value;
+      else if (key === 'scaling_studies_urls') rest[key] = StepN1Component.nonBlankStudyLinks(value);
+      else rest[key] = value ? value : makeDefault();
+    }
+    return rest;
+  }
+
+  /** Same defaults, same falsy test, as `InnovationUseFormComponent.initializeComponentProperties()`. */
+  private static readonly INNOVATION_USE_FORM_LOAD_DEFAULTS: Record<string, () => unknown> = {
+    initiative_expected_investment: () => [],
+    bilateral_expected_investment: () => [],
+    institutions_expected_investment: () => [],
+    reference_materials: () => [{ link: '' }],
+    pictures: () => [{ link: '' }],
+    studies_links: () => [{ link: '' }],
+    scaling_studies_urls: () => [],
+    innovation_use_2030: () => ({ actors: [], measures: [], organization: [] }),
+    innov_use_2030_to_be_determined: () => false,
+    result: () => ({ title: '' })
+  };
+
+  /** Blank placeholder rows (`''` or `{ link: '' }`) are never a user edit. */
+  private static nonBlankStudyLinks(urls: unknown): unknown[] {
+    return (Array.isArray(urls) ? urls : []).filter(u => {
+      const link = typeof u === 'string' ? u : (u as any)?.link;
+      return !(typeof link === 'string' && link.trim() === '') && u != null;
+    });
+  }
+
+  /**
+   * P2-3427 — `CanComponentDeactivate.saveSection()` for `UnsavedChangesGuard`. Same preconditions
+   * as `onSaveSection()`: a refused save resolves `false` (the step stays, the alert says why).
+   */
+  saveSection(): Observable<boolean> {
+    if (this.loaded() !== true) return of(false);
+    if (this.refuseUntypedRows()) return of(false);
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
   }
 
   onSaveSection() {
     // IPSR-2 — never send a body that was not read from the server.
     if (this.loaded() !== true) return;
     if (this.refuseUntypedRows()) return;
+    this.performSave().subscribe();
+  }
+
+  /**
+   * P2-3427 — the exact PATCH `onSaveSection()` always sent, shared with `saveSection()`.
+   * `convertOrganizationsTosave()` mutates the body before the PATCH, so the snapshot is taken inside
+   * the success `tap`: at that instant the local body is precisely what the server just persisted,
+   * and the step is clean even if the follow-up reload fails. No reload on error (as before).
+   */
+  private performSave(): Observable<void> {
     this.convertOrganizationsTosave();
-    this.api.resultsSE
+    return this.api.resultsSE
       .PATCHInnovationPathwayByStepOneResultId({
         ...this.ipsrStep1Body,
         result_ip: {
@@ -142,22 +240,32 @@ export class StepN1Component implements OnInit {
           participants_consent: this.validateParticipantsConsent() ? this.ipsrStep1Body.result_ip.participants_consent : null
         }
       })
-      .subscribe((resp: any) => {
-        this.api.GETInnovationPackageDetail();
-        this.getSectionInformation();
-      });
+      .pipe(
+        tap(() => {
+          this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+          this.api.GETInnovationPackageDetail();
+          this.getSectionInformation();
+        }),
+        map(() => undefined)
+      );
   }
 
   saveAndNextStep(descrip: string) {
     // IPSR-2 — without the stored data in hand the button only navigates, it never saves.
-    if (this.api.rolesSE.readOnly || this.loaded() !== true)
+    if (this.api.rolesSE.readOnly || this.loaded() !== true) {
+      // P2-3427 — a navigation this button performs never opens the dialog (the guard saves silently if dirty).
+      this.intentSE.markSilent();
       return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
         queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
       });
+    }
     if (this.refuseUntypedRows()) return null;
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
+      // P2-3427 — the body just persisted is the new baseline; the reload below only refines it.
+      this.dirtyTracker.snapshot(this.dirtySnapshotValue());
       this.getSectionInformation();
+      this.intentSE.markSilent();
       this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
         queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
       });

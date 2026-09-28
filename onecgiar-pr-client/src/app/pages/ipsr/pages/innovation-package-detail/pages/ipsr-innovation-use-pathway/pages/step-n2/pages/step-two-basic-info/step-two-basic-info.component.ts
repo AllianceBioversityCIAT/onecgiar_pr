@@ -1,15 +1,21 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { CanComponentDeactivate } from '../../../../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { UnsavedNavigationIntentService } from '../../../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 @Component({
     selector: 'app-step-two-basic-info',
     templateUrl: './step-two-basic-info.component.html',
     styleUrls: ['./step-two-basic-info.component.scss'],
-    standalone: false
+    standalone: false,
+    providers: [SectionDirtyTrackerService]
 })
-export class StepTwoBasicInfoComponent implements OnInit {
+export class StepTwoBasicInfoComponent implements OnInit, CanComponentDeactivate {
   informartion: any[] = [];
   selectOne: any[] = [];
   selectTow: any[] = [];
@@ -32,6 +38,15 @@ export class StepTwoBasicInfoComponent implements OnInit {
   bodyStep2: InnovationComplementary[] = [];
   init = false;
 
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — component-scoped dirty-diff tracker for `UnsavedChangesGuard`
+   * (registered on this sub-step's inner route). Snapshotted at the end of `getInnovationComplementaries()`
+   * and again, synchronously, when the save call succeeds. Same mechanism as the Results sections.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+  /** P2-3427 — "Save & go to previous/next step" navigates silently, never through the dialog. */
+  private readonly intentSE = inject(UnsavedNavigationIntentService);
+
   constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
 
   ngOnInit(): void {
@@ -42,7 +57,34 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.api.resultsSE.PostStepTwoComentariesInnovation(this.bodyStep2).subscribe(resp => {});
+    this.performSave().subscribe();
+  }
+
+  /** P2-3427 — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.bodyStep2);
+  }
+
+  /**
+   * P2-3427 — `CanComponentDeactivate.saveSection()` for `UnsavedChangesGuard`: the same call as the Save
+   * button (`performSave()`), resolving `true`/`false` instead of void. This sub-step has no save
+   * precondition today, so nothing is refused here either.
+   */
+  saveSection(): Observable<boolean> {
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /** The exact save call the Save button always did, shared by `onSaveSection()` and `saveSection()` (P2-3427). */
+  private performSave(): Observable<void> {
+    return this.api.resultsSE.PostStepTwoComentariesInnovation(this.bodyStep2).pipe(
+      // P2-3427 — snapshot synchronously the instant the save resolves: the body at this moment is what the
+      // server just persisted. There is no follow-up reload in this sub-step.
+      tap(() => this.dirtyTracker.snapshot(this.bodyStep2)),
+      map(() => undefined)
+    );
   }
 
   convertCols() {
@@ -104,14 +146,18 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 
   async onSavePreviuosNext(descrip) {
+    // P2-3427 — every navigation of these buttons is silent: `UnsavedChangesGuard` consumes the flag on the
+    // next navigation and, if anything is still dirty, saves instead of opening the dialog.
     if (this.api.rolesSE.readOnly) {
       if (this.api.isStepTwoTwo && descrip == 'next') {
+        this.intentSE.markSilent();
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
           queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
         });
       }
 
       if (descrip == 'previous') {
+        this.intentSE.markSilent();
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation'], {
           queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
         });
@@ -119,13 +165,17 @@ export class StepTwoBasicInfoComponent implements OnInit {
       return;
     }
     this.api.resultsSE.PostStepTwoComentariesInnovationPrevius(this.bodyStep2, descrip).subscribe(resp => {
+      // P2-3427 — what was just saved is the new baseline, so the silent navigation below has nothing to re-save.
+      this.dirtyTracker.snapshot(this.bodyStep2);
       if (this.api.isStepTwoTwo && descrip == 'next') {
+        this.intentSE.markSilent();
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
           queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
         });
       }
 
       if (descrip == 'previous') {
+        this.intentSE.markSilent();
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation'], {
           queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
         });
@@ -158,6 +208,10 @@ export class StepTwoBasicInfoComponent implements OnInit {
         respe.open = true;
         this.informartion[0].open = false;
       });
+      // P2-3427 — the TRUE end of the load flow: `bodyStep2` is only filled here (one row per complementary
+      // innovation). `getComplementaryTypes()` fills the catalogue (`cols`), never the body, and the checkbox
+      // cascade (`selectedOneLevel` / `selectedTwo`) runs on user action only — those must read dirty.
+      this.dirtyTracker.snapshot(this.bodyStep2);
     });
   }
 

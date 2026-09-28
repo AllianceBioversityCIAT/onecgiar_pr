@@ -1,18 +1,33 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
 import { Router } from '@angular/router';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../internationalization/result-detail-section-load.copy';
+import { CanComponentDeactivate } from '../../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { UnsavedNavigationIntentService } from '../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 @Component({
   selector: 'app-step-n4',
   templateUrl: './step-n4.component.html',
   styleUrls: ['./step-n4.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class StepN4Component implements OnInit {
+export class StepN4Component implements OnInit, CanComponentDeactivate {
   ipsrStep4Body = new IpsrStep4Body();
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — component-scoped dirty tracker for `UnsavedChangesGuard`
+   * (registered on this step's inner route). Snapshotted at the end of `onSectionInformation()` and
+   * again the instant a PATCH resolves. Same mechanism as the Results sections (`rd-general-information`).
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+  /** P2-3427 — "Save & go to previous step" never opens the unsaved-changes dialog: it marks its navigation silent. */
+  private readonly intentSE = inject(UnsavedNavigationIntentService);
 
   /**
    * Night sweep 2026-09-23, IPSR-4 — three-state load flag (P2-3556 contract). The Step-4 GET had no
@@ -152,26 +167,65 @@ export class StepN4Component implements OnInit {
         }
       });
       this.loaded.set(true);
+      // P2-3427 — true end of the load flow: the role filter above is the last mutation the body
+      // receives, so a freshly loaded, untouched step reports `hasUnsavedChanges() === false`.
+      this.dirtyTracker.snapshot(this.ipsrStep4Body);
     }
+  }
+
+  /** P2-3427 — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.ipsrStep4Body);
+  }
+
+  /**
+   * P2-3427 — `CanComponentDeactivate.saveSection()` for `UnsavedChangesGuard`. Same precondition as
+   * `onSaveSection()`: a step that never loaded resolves `false` and sends nothing (IPSR-4).
+   */
+  saveSection(): Observable<boolean> {
+    if (this.loaded() !== true) return of(false);
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
   }
 
   onSaveSection() {
     // IPSR-4 — never send a body that was not read from the server.
     if (this.loaded() !== true) return;
-    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body, this.api.fieldsManagerSE.isP25()).subscribe(({ response }) => {
-      this.getSectionInformation();
-    });
+    this.performSave().subscribe();
+  }
+
+  /**
+   * P2-3427 — the exact PATCH `onSaveSection()` always sent, shared with `saveSection()`. The snapshot
+   * is taken inside the success `tap`: at that instant the local body is precisely what the server just
+   * persisted, and the step is clean even if the follow-up reload fails. No reload on error (as before).
+   */
+  private performSave(): Observable<void> {
+    return this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body, this.api.fieldsManagerSE.isP25()).pipe(
+      tap(() => {
+        this.dirtyTracker.snapshot(this.ipsrStep4Body);
+        this.getSectionInformation();
+      }),
+      map(() => undefined)
+    );
   }
 
   onSavePrevious(descrip) {
     // IPSR-4 — without the stored data in hand the button only navigates, it never saves.
-    if (this.api.rolesSE.readOnly || this.loaded() !== true)
+    if (this.api.rolesSE.readOnly || this.loaded() !== true) {
+      // P2-3427 — a navigation this button performs never opens the dialog (the guard saves silently if dirty).
+      this.intentSE.markSilent();
       return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
         queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
       });
+    }
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip).subscribe(({ response }) => {
+      // P2-3427 — the body just persisted is the new baseline; the reload below only refines it.
+      this.dirtyTracker.snapshot(this.ipsrStep4Body);
       this.getSectionInformation();
       setTimeout(() => {
+        this.intentSE.markSilent();
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
           queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
         });
