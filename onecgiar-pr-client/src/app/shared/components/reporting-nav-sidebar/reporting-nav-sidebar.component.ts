@@ -46,7 +46,9 @@ import { APP_VERSION } from '../../constants/app-version.constants';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
+import { CentersService } from '../../services/global/centers.service';
 import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
+import { REPORTING_NAV_SIDEBAR_COPY } from '../../../internationalization/reporting-nav-sidebar.copy';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
 
@@ -124,6 +126,7 @@ export class ReportingNavSidebarComponent {
   public readonly router = inject(Router);
   public readonly api = inject(ApiService);
   public readonly sidebarSE = inject(HlmSidebarService);
+  public readonly centersSE = inject(CentersService);
 
   readonly isProduction = environment.production;
   readonly appVersion = APP_VERSION;
@@ -244,6 +247,8 @@ export class ReportingNavSidebarComponent {
   /** Whether Admin module is expanded to reveal its child pages. */
   readonly adminModuleExpanded = signal(this.router.url.startsWith('/admin-module'));
   /** Which program groups are open. "My programs" starts open, the rest collapsed. */
+  // @akili-spec changes/admin-sees-all-centers (ASC-T-6, ASC-DD-8) — the centres block starts
+  // CLOSED for everyone, superseding ASC-T-4's open-by-default (ASC-R-17).
   readonly openGroups = signal<Set<string>>(new Set(['mine']));
   private otherAutoOpened = false;
   /** Ensures the (lazy) programs fetch is triggered at most once. */
@@ -635,17 +640,115 @@ export class ReportingNavSidebarComponent {
     return this.programDotPalette[index % this.programDotPalette.length];
   }
 
+  // @akili-spec changes/admin-sees-all-centers
   getMyCenters() {
     // A centre with no acronym AND no id would build `/bilateral/undefined/home`, which the
     // `:acronym` route happily matches — rendering a bilateral shell for a nonexistent centre.
-    return (this.api.rolesSE.getMyCenters() ?? []).filter((center: { center_acronym?: string; center_id?: unknown }) =>
-      Boolean(center?.center_acronym || center?.center_id)
-    );
+    const isValidCenter = (center: { center_acronym?: string; center_id?: unknown }) =>
+      Boolean(center?.center_acronym || center?.center_id);
+
+    const assignments = this.api.rolesSE.getMyCenters() ?? [];
+
+    // Non-admin: byte-identical to today (ASC-R-2). The catalogue is never consulted.
+    if (!this.rolesSE?.isAdmin) {
+      return assignments.filter(isValidCenter);
+    }
+
+    // Admin (ASC-DD-1..4): assignments ∪ catalogue, deduplicated on acronym (falling back to id),
+    // the assignment winning on a collision, assignments first (ASC-R-10). Every row is tagged with
+    // its provenance (`isAssigned`) so the template can mark "mine" without reading a role string
+    // (ASC-DD-5) — `shouldShowAssignmentRole()` stays the role-TEXT gate only, unrelated to this.
+    const assigned = assignments.map((center: { center_acronym?: string; center_id?: unknown }) => ({
+      ...center,
+      isAssigned: true
+    }));
+    const dedupeKey = (center: { center_acronym?: unknown; center_id?: unknown }) => center?.center_acronym ?? center?.center_id;
+    const assignedKeys = new Set(assigned.map(dedupeKey));
+
+    // Catalogue rows are mapped into the assignment card shape at the boundary (ASC-DD-4). The
+    // catalogue carries no role, so `role_name` is legitimately absent — the template must tolerate
+    // that (ASC-T-2), not this wrapper.
+    const catalogueOnly = this.centersSE.centers()
+      .map(center => ({
+        center_id: center.code,
+        center_name: center.name,
+        center_acronym: center.acronym,
+        role_name: undefined as string | undefined,
+        isAssigned: false
+      }))
+      .filter(center => !assignedKeys.has(dedupeKey(center)));
+
+    return [...assigned, ...catalogueOnly].filter(isValidCenter);
   }
 
   /** Bilateral home for a centre, falling back to its id when the acronym is missing. */
   centerHomeLink(center: { center_acronym?: string; center_id?: unknown }): unknown[] {
     return ['/bilateral', center?.center_acronym || String(center?.center_id ?? ''), 'home'];
+  }
+
+  // @akili-spec changes/admin-sees-all-centers (ASC-T-4, ASC-DD-6, ASC-R-16)
+  /** The `/bilateral/<x>/…` segment of the current URL, or `null` outside any centre (`ASC-R-12`).
+   *  Reactive to navigation — same `toSignal` + `NavigationEnd` shape as `activeSpCode` above —
+   *  so the collapsed block and the active state update as the user enters or leaves a centre.
+   *  ANY route under `/bilateral/<acronym>/…` counts (`ASC-R-16`), not just its `/home` link. */
+  readonly activeCenterKey = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.readActiveCenterKey())
+    ),
+    { initialValue: this.readActiveCenterKey() }
+  );
+
+  private readActiveCenterKey(): string | null {
+    // Query string, fragment AND matrix params are all irrelevant to "which centre" — strip at
+    // the first of `?`, `#` or `;` before matching (ASC-R-16: `?phase=36` must not break the match).
+    const path = this.router.url.split(/[?#;]/)[0];
+    const match = /^\/bilateral\/([^/]+)/.exec(path);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  /** Whether `center` is the one the user is currently inside, on ANY route under its
+   *  `/bilateral/<x>/…` prefix (`ASC-R-16`) — by the same acronym-or-id key `centerHomeLink`
+   *  builds its URL from. Drives both the expanded card's active class/`aria-current` and the
+   *  rail's active class directly, instead of `routerLinkActive` on the `/home` link, which only
+   *  matched `/home` and its own children (`ASC-AC-15`). */
+  isActiveCenter(center: { center_acronym?: string; center_id?: unknown }): boolean {
+    const key = this.activeCenterKey();
+    return key != null && key === (center?.center_acronym || String(center?.center_id ?? ''));
+  }
+
+  /** Centres rendered in the expanded block: every centre when the group is open; while closed
+   *  (the default — `ASC-R-17`, `ASC-DD-8`), the assigned ones plus wherever the user currently is,
+   *  in `getMyCenters()` order (assignments first, `ASC-R-10`). Supersedes ASC-T-4's
+   *  active-only closed list. */
+  visibleCenters() {
+    const centers = this.getMyCenters();
+    return this.isGroupOpen('centers')
+      ? centers
+      : centers.filter(center => center.isAssigned || this.isActiveCenter(center));
+  }
+
+  // @akili-spec changes/admin-sees-all-centers (ASC-T-2)
+  // Mirrors `shell-topbar.component.ts`'s `shouldShowAssignmentRole` verbatim — copied, not
+  // imported, per ASC-T-2's scope: that symbol must stay untouched and unexported. Generic
+  // "Center User" roles (every assignment, per `AUTH-R-2`) add no information in a tooltip.
+  shouldShowAssignmentRole(role?: string | null): boolean {
+    const normalized = role?.trim();
+    if (!normalized) return false;
+    return normalized.toLowerCase() !== 'center user';
+  }
+
+  /** sr-only + tooltip text for the "mine" marker (`ASC-DD-5`), per requirements.md §7 NFR
+   *  *Internationalization* — `REPORTING_NAV_SIDEBAR_COPY` (`internationalization/`). */
+  readonly assignedMarkerLabel = REPORTING_NAV_SIDEBAR_COPY.assignedMarkerLabel;
+
+  /** Tooltip for a centre card/rail button: the role suffix is gated by `shouldShowAssignmentRole`
+   *  (`ASC-DD-4`) so a catalogue row's absent `role_name` never renders the literal `undefined`
+   *  (`ASC-R-5`, `D3`). */
+  centerTooltip(center: { center_name?: string; role_name?: string }): string {
+    const name = center?.center_name ?? '';
+    return this.shouldShowAssignmentRole(center?.role_name) ? `${name} · ${center.role_name}` : name;
   }
 
   @HostListener('document:keydown.escape')

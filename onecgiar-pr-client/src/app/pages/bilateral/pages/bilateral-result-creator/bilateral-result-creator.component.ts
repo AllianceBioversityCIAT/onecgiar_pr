@@ -365,7 +365,19 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     setTimeout(() => el.classList.remove('pr-field-flash'), 2000);
   }
 
-  canUseAi = computed(() => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp());
+  /**
+   * `ASC-T-5` (`ASC-R-15`): the AI "create with AI" entry point is hidden for a platform admin who
+   * is not a Center User of the current centre, the same rule `promoteDraft`/`discardDraft` enforce
+   * server-side once a draft exists. Reuses `isCenterUserOfLeadCenter()` — the existing, stricter
+   * (role_id === 9) membership check this component already keeps for the read-only gate — rather
+   * than a second ad-hoc check, so the two never drift apart.
+   */
+  canUseAi = computed(
+    () =>
+      !!this.creationService.selectedProject() &&
+      !!this.creationService.selectedPrimarySp() &&
+      this.isCenterUserOfLeadCenter()
+  );
 
   isAiProcessing = computed(() => {
     const status = this.bilateralAiService.uploadState().status;
