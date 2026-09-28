@@ -19,37 +19,32 @@
             <div class="pr_chip_selected" *ngFor="let option of contributorsBody.institutions; let i=index">
                 <div class="name">{{option?.institutions_name}}</div>
                 <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
-                <div style="margin-top: -10px;margin-bottom: -20px;">
-                    <app-pr-field-header label="Partner role">
-                    </app-pr-field-header>
-                </div>
-                <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
-                    <div class="delivery"
-                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,1) : true"
-                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,1)}"
-                        (click)="onSelectDelivery(option,1)">Scaling</div>
-                    <div class="delivery"
-                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,2) : true"
-                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,2)}"
-                        (click)="onSelectDelivery(option,2)">Demand</div>
-                    <div class="delivery"
-                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,3) : true"
-                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,3)}"
-                        (click)="onSelectDelivery(option,3)">Innovation</div>
-                    <div class="delivery"
-                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,4) : true"
-                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,4)}"
-                        (click)="onSelectDelivery(option,4)">Other</div>
-
+                <div class="deliveries_row" role="group" aria-label="Partner role">
+                    <span class="role_label">Partner role<span class="role_required" aria-hidden="true">*</span></span>
+                    <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
+                        <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,1) : true"
+                            [ngClass]="{'active': validateDeliverySelection(option?.deliveries,1)}"
+                            (click)="onSelectDelivery(option,1)"><svg class="dlv_check" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3 3 6.6-6.8" /></svg>Scaling</div>
+                        <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,2) : true"
+                            [ngClass]="{'active': validateDeliverySelection(option?.deliveries,2)}"
+                            (click)="onSelectDelivery(option,2)"><svg class="dlv_check" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3 3 6.6-6.8" /></svg>Demand</div>
+                        <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,3) : true"
+                            [ngClass]="{'active': validateDeliverySelection(option?.deliveries,3)}"
+                            (click)="onSelectDelivery(option,3)"><svg class="dlv_check" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3 3 6.6-6.8" /></svg>Innovation</div>
+                        <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,4) : true"
+                            [ngClass]="{'active': validateDeliverySelection(option?.deliveries,4)}"
+                            (click)="onSelectDelivery(option,4)"><svg class="dlv_check" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3 3 6.6-6.8" /></svg>Other</div>
+                    </div>
                     <div class="info_button" (click)="showInfo = true">
-
-                        <i class="material-icons-round">help_outline
-                        </i>
+                        <i class="material-icons-round">help_outline</i>
                     </div>
                 </div>
-                <i class="material-icons-round remove_button" *ngIf="!this.rolesSE.readOnly"
-                    (click)="removePartner(i)">remove_circle
-                </i>
+                <button type="button" class="remove_partner" aria-label="Remove partner" *ngIf="!this.rolesSE.readOnly"
+                    (click)="removePartner(i)"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg></button>
             </div>
             <div class="content" *ngIf="showInfo">
                 <div class="texts">

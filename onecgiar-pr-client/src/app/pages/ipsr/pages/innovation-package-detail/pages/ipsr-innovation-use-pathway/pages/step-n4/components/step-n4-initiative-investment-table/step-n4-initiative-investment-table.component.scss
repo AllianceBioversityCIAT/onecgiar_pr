@@ -1,10 +1,86 @@
-table {
+// P2-3841 — soft table shell, same language as the revamp's native tables
+// (portfolio-overview.component.html:570-578 · my-draft-results.component.html:301) and the
+// Step 3 readiness table: neutral --pr-surface-app header with small uppercase semibold labels,
+// one outer hairline, row separators only (no vertical grid).
+.ipsr-table-shell {
   width: 100%;
-  border-collapse: collapse;
+  overflow-x: auto;
+  margin-top: 8px;
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  background: var(--pr-surface-card);
 }
 
-td,
-th {
-  border: 2px solid rgba(var(--pr-color-primary-rgb), 0.431);
-  padding: 10px;
+.ipsr-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  th {
+    padding: 10px 14px;
+    background: var(--pr-surface-app);
+    color: var(--pr-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--pr-border);
+  }
+
+  td {
+    padding: 10px 14px;
+    vertical-align: middle;
+    color: var(--pr-text);
+    border-top: 1px solid var(--pr-border-divider);
+  }
+
+  // the header row is the table's first <tr>; the first data row needs no rule under the header
+  tr:nth-child(2) td {
+    border-top: 0;
+  }
+
+  tr:not(:first-child) {
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover {
+      background: var(--pr-surface-app);
+    }
+  }
+
+  // row label column
+  td:first-child {
+    min-width: 200px;
+    font-weight: 600;
+    color: var(--pr-text-heading);
+  }
+
+  // trailing action column (delete) stays narrow
+  th:empty:last-child,
+  td:last-child:has(.step-4-delete-button) {
+    width: 48px;
+  }
+
+  // second header line "(in-cash + in-kind)": a quieter hint, not a second shouted label
+  .th_hint {
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--pr-text-muted);
+  }
+
+  // "This is yet to be determined" reads on one line: the column takes its content width
+  td:has(app-pr-radio-button) {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  app-pr-input,
+  app-pr-radio-button {
+    display: block;
+    width: 100%;
+    margin: 0;
+  }
 }

@@ -19,6 +19,8 @@ import { NewComplementaryInnovationComponent } from './components/new-complement
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { PrCheckboxValueAccessorModule } from '../../../../../../../../../../shared/directives/pr-checkbox-value-accessor.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../../../shared/directives/feedback-validation-directive.module';
+import { NgIcon } from '@ng-icons/core';
+import { SelectedInnovationsComponent } from './components/selected-innovations/selected-innovations.component';
 
 @NgModule({
   declarations: [ComplementaryInnovationComponent, TableInnovationComponent, NewComplementaryInnovationComponent],
@@ -36,7 +38,10 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../../../..
     CustomFieldsModule,
     PrDialogComponent,
     PrCheckboxValueAccessorModule,
-    FeedbackValidationDirectiveModule
+    FeedbackValidationDirectiveModule,
+    // P2-3840 — Lucide icons of the candidate table + the bundle list (standalone).
+    NgIcon,
+    SelectedInnovationsComponent
   ],
   exports: [ComplementaryInnovationComponent]
 })

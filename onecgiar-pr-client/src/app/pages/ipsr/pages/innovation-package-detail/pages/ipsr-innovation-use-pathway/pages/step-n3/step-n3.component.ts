@@ -1,4 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { Observable, defer, firstValueFrom, from, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ActorN3, IpsrPrincipalImpactArea, IpsrStep3Body, OrganizationN3 } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -14,14 +16,18 @@ import {
   ipsrStep3MissingPrincipalImpactAreas,
   normalizeIpsrStep3Component
 } from './components/ipsr-step3-evidence-list/ipsr-step3-evidence.util';
+import { CanComponentDeactivate } from '../../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { UnsavedNavigationIntentService } from '../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 @Component({
   selector: 'app-step-n3',
   templateUrl: './step-n3.component.html',
   styleUrls: ['./step-n3.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class StepN3Component implements OnInit {
+export class StepN3Component implements OnInit, CanComponentDeactivate {
   rangesOptions = [];
   ipsrStep3Body = new IpsrStep3Body();
   innovationUseList = [];
@@ -33,6 +39,15 @@ export class StepN3Component implements OnInit {
   /** P2-3220 — the single path to SharePoint; Step 3 evidence files go up through it before the PATCH. */
   private readonly sharePointUploadSE = inject(SharePointUploadService);
   private readonly saveButtonSE = inject(SaveButtonService);
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — component-scoped dirty tracker for `UnsavedChangesGuard`
+   * (registered on this step's inner route). Snapshotted at the end of `getSectionInformation()`'s
+   * success branch and again the instant a PATCH resolves. Same mechanism as the Results sections.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+  /** P2-3427 — "Save & go to next/previous step" never opens the unsaved-changes dialog: it marks its navigation silent. */
+  private readonly intentSE = inject(UnsavedNavigationIntentService);
 
   constructor(
     public ipsrDataControlSE: IpsrDataControlService,
@@ -86,6 +101,9 @@ export class StepN3Component implements OnInit {
           this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
         }
         this.savingSection = false;
+        // P2-3427 — true end of the load flow: the normalised lists and default rows above are the last
+        // mutation the body receives, so a freshly loaded, untouched step reports `hasUnsavedChanges() === false`.
+        this.dirtyTracker.snapshot(this.ipsrStep3Body);
       },
       error: err => {
         this.savingSection = false;
@@ -166,13 +184,54 @@ export class StepN3Component implements OnInit {
     return Boolean(this.innoUseLevel === 0);
   }
 
-  async onSaveSection() {
-    if (this.refuseUntypedRows()) return;
+  /** P2-3427 — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.ipsrStep3Body);
+  }
+
+  /**
+   * P2-3427 — `CanComponentDeactivate.saveSection()` for `UnsavedChangesGuard`. The step uploads its
+   * pending evidence files before the PATCH (async/await), so the flow is wrapped as a deferred
+   * Promise: `true` only once the PATCH resolved, `false` when a precondition refused or it errored.
+   */
+  saveSection(): Observable<boolean> {
+    return defer(() => from(this.saveFlow())).pipe(catchError(() => of(false)));
+  }
+
+  private async saveFlow(): Promise<boolean> {
+    if (!(await this.prepareSave())) return false;
+    await firstValueFrom(this.performSave());
+    return true;
+  }
+
+  /**
+   * P2-3427 — the preconditions every save path ran before the PATCH, in the same order: untyped
+   * rows refuse, organisations are converted, pending evidence files go up (a failed upload refuses).
+   */
+  private async prepareSave(): Promise<boolean> {
+    if (this.refuseUntypedRows()) return false;
     this.convertOrganizationsTosave();
-    if (!(await this.uploadPendingEvidenceFiles())) return;
-    this.api.resultsSE.PATCHInnovationPathwayByRiId(this.buildSavePayload()).subscribe(({ response }) => {
-      this.getSectionInformation();
-    });
+    return this.uploadPendingEvidenceFiles();
+  }
+
+  /**
+   * P2-3427 — the exact PATCH `onSaveSection()` always sent, shared with `saveSection()`. The snapshot
+   * is taken inside the success `tap`: at that instant the local body is precisely what the server just
+   * persisted, and the step is clean even if the follow-up reload fails. No reload on error (as before).
+   */
+  private performSave(): Observable<void> {
+    return this.api.resultsSE.PATCHInnovationPathwayByRiId(this.buildSavePayload()).pipe(
+      tap(() => {
+        this.dirtyTracker.snapshot(this.ipsrStep3Body);
+        this.getSectionInformation();
+      }),
+      map(() => undefined)
+    );
+  }
+
+  async onSaveSection() {
+    if (!(await this.prepareSave())) return;
+    this.performSave().subscribe();
   }
 
   async onSaveSectionWithStep(descrip: string) {
@@ -181,19 +240,21 @@ export class StepN3Component implements OnInit {
     const queryParams = { phase: this.ipsrDataControlSE.resultInnovationPhase };
 
     if (this.api.rolesSE.readOnly) {
+      // P2-3427 — a navigation this button performs never opens the dialog (the guard saves silently if dirty).
+      this.intentSE.markSilent();
       this.router.navigate([urlPath], { queryParams });
 
       return;
     }
 
-    if (this.refuseUntypedRows()) return;
-
-    this.convertOrganizationsTosave();
-    if (!(await this.uploadPendingEvidenceFiles())) return;
+    if (!(await this.prepareSave())) return;
 
     this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.buildSavePayload(), descrip).subscribe(() => {
+      // P2-3427 — the body just persisted is the new baseline; the reload below only refines it.
+      this.dirtyTracker.snapshot(this.ipsrStep3Body);
       this.getSectionInformation();
 
+      this.intentSE.markSilent();
       this.router.navigate([urlPath], { queryParams });
     });
   }

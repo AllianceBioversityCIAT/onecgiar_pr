@@ -11,6 +11,8 @@ import { ComplementaryInnovationService } from './services/complementary-innovat
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { PrCheckboxValueAccessorDirective } from '../../../../../../../../../../shared/directives/pr-checkbox-value-accessor.directive';
+// P2-3840 — the edit/view button now lives in the bundle list component (standalone), so it is imported for real.
+import { SelectedInnovationsComponent } from './components/selected-innovations/selected-innovations.component';
 
 /**
  * No-op ControlValueAccessor. The modal binds `[(ngModel)]` on `custom-fields` controls that are not
@@ -69,7 +71,7 @@ describe('ComplementaryInnovationComponent (zoneless change detection) — funct
   let service: ComplementaryInnovationService;
 
   const checkboxes = () => fixture.nativeElement.querySelectorAll('input.pr-native-check');
-  const editIcon = () => fixture.nativeElement.querySelector('.action_buttons .material-icons-round') as HTMLElement;
+  const editIcon = () => fixture.nativeElement.querySelector('[data-testid="selected-innovation-open"]') as HTMLElement;
 
   const tick = async (ms: number) => {
     await new Promise(resolve => setTimeout(resolve, ms));
@@ -115,7 +117,7 @@ describe('ComplementaryInnovationComponent (zoneless change detection) — funct
 
     await TestBed.configureTestingModule({
       declarations: [ComplementaryInnovationComponent, NewComplementaryInnovationComponent, StubPrDialogComponent],
-      imports: [CommonModule],
+      imports: [CommonModule, SelectedInnovationsComponent],
       providers: [
         provideZonelessChangeDetection(),
         ComplementaryInnovationService,
@@ -139,7 +141,7 @@ describe('ComplementaryInnovationComponent (zoneless change detection) — funct
   });
 
   it('brings the function checkboxes back after opening an innovation for edit', async () => {
-    // Real flow: `(click)="getComplementaryInnovation(result.result_id, result)"` on the edit icon.
+    // Real flow: the edit button of the bundle list emits `openEvent`, bound to `getComplementaryInnovation(result.result_id, result)` (P2-3840).
     editIcon().click();
     await fixture.whenStable();
 
@@ -239,7 +241,7 @@ describe('ComplementaryInnovationComponent — P2-3529 function checkboxes rehyd
         StubPrTextareaComponent,
         StubPrRadioButtonComponent
       ],
-      imports: [CommonModule, FormsModule],
+      imports: [CommonModule, FormsModule, SelectedInnovationsComponent],
       providers: [
         provideZonelessChangeDetection(),
         ComplementaryInnovationService,
@@ -258,7 +260,7 @@ describe('ComplementaryInnovationComponent — P2-3529 function checkboxes rehyd
   });
 
   it('renders the two saved functions as checked, and the unsaved one as unchecked', async () => {
-    (fixture.nativeElement.querySelector('.action_buttons .material-icons-round') as HTMLElement).click();
+    (fixture.nativeElement.querySelector('[data-testid="selected-innovation-open"]') as HTMLElement).click();
     await fixture.whenStable();
     await tick(200);
 
@@ -276,7 +278,7 @@ describe('ComplementaryInnovationComponent — P2-3529 function checkboxes rehyd
   it('rehydrates with the SAME object references the checkbox group is bound to', () => {
     // The invariant `prCheckboxValue.indexOf` depends on. A structurally equal literal passes `toEqual`
     // and still renders unchecked — only reference identity keeps the box ticked.
-    (fixture.nativeElement.querySelector('.action_buttons .material-icons-round') as HTMLElement).click();
+    (fixture.nativeElement.querySelector('[data-testid="selected-innovation-open"]') as HTMLElement).click();
 
     const selected = component.complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions;
     const options = component.cols.flat();

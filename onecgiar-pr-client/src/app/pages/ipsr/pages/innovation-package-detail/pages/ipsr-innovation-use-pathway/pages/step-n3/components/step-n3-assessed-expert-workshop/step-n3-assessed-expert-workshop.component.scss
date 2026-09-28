@@ -1,17 +1,111 @@
-table,
-th,
-td {
-  border: 1px solid var(--pr-color-black);
-  padding: 7px;
-}
-
-table {
-  border-collapse: collapse;
+// P2-3841 — soft table shell, same language as the revamp's native tables
+// (portfolio-overview.component.html:570-578 · my-draft-results.component.html:301):
+// neutral --pr-surface-app header with small uppercase semibold labels, one outer hairline,
+// row separators only (no vertical grid), a single divider that marks where a column group starts.
+.ipsr-table-shell {
   width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  background: var(--pr-surface-card);
 }
 
-.first_col {
-  max-width: 250px;
+.ipsr-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  th {
+    padding: 10px 14px;
+    background: var(--pr-surface-app);
+    color: var(--pr-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--pr-border);
+  }
+
+  // first header cell = the row-label column
+  thead tr:first-child th:first-child {
+    text-align: left;
+  }
+
+  // group title ("Current situation (now)") sits on its own band, separated from its sub-columns
+  thead tr:first-child th[colspan] {
+    color: var(--pr-text);
+    border-bottom-color: var(--pr-border-divider);
+  }
+
+  thead tr:nth-child(2) th {
+    font-size: 10.5px;
+    color: var(--pr-text-muted);
+  }
+
+  td {
+    padding: 10px 14px;
+    vertical-align: middle;
+    color: var(--pr-text);
+    border-top: 1px solid var(--pr-border-divider);
+  }
+
+  tbody tr:first-child td {
+    border-top: 0;
+  }
+
+  // the only vertical rule: where a column group starts
+  .group_start {
+    border-left: 1px solid var(--pr-border);
+  }
+
+  // body cells 2 and 4 open the "Current" / "Potential" groups (attrList index 1 and 3)
+  tbody td:nth-child(2),
+  tbody td:nth-child(4) {
+    border-left: 1px solid var(--pr-border);
+  }
+
+  tbody tr {
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover {
+      background: var(--pr-surface-app);
+    }
+  }
+
+  // controls fill the cell and sit on the row's centre line
+  app-pr-select {
+    display: block;
+    width: 100%;
+    margin: 0;
+  }
+}
+
+.element_label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+
+  strong {
+    font-weight: 600;
+    color: var(--pr-text-heading);
+  }
+}
+
+.element_sublabel {
+  font-size: 11px;
+  color: var(--pr-text-muted);
+}
+
+// td index 0 is the row-label column (min width so the title wraps instead of squeezing the selects)
+.ipsr-table tbody td:first-child {
+  min-width: 220px;
+  max-width: 360px;
 }
 
 .min_select {

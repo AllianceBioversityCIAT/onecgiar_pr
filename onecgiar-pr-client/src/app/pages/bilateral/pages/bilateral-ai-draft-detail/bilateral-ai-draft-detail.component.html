@@ -17,26 +17,28 @@
         <i class="material-icons-round">arrow_back</i>
         Back to Drafts
       </a>
-      <div class="badd-actions">
-        <button
-          type="button"
-          class="badd-btn badd-btn--promote"
-          [disabled]="bilateralAiService.isPromoting()"
-          (click)="onPromoteClick()"
-        >
-          <i class="material-icons-round">arrow_upward</i>
-          {{ bilateralAiService.isPromoting() ? 'Creating…' : 'Create Result' }}
-        </button>
-        <button
-          type="button"
-          class="badd-btn badd-btn--discard"
-          [disabled]="bilateralAiService.isPromoting()"
-          (click)="onDiscardClick()"
-        >
-          <i class="material-icons-round">delete_outline</i>
-          Discard
-        </button>
-      </div>
+      @if (isCenterMember()) {
+        <div class="badd-actions">
+          <button
+            type="button"
+            class="badd-btn badd-btn--promote"
+            [disabled]="bilateralAiService.isPromoting()"
+            (click)="onPromoteClick()"
+          >
+            <i class="material-icons-round">arrow_upward</i>
+            {{ bilateralAiService.isPromoting() ? 'Creating…' : 'Create Result' }}
+          </button>
+          <button
+            type="button"
+            class="badd-btn badd-btn--discard"
+            [disabled]="bilateralAiService.isPromoting()"
+            (click)="onDiscardClick()"
+          >
+            <i class="material-icons-round">delete_outline</i>
+            Discard
+          </button>
+        </div>
+      }
     </div>
 
     <div class="badd-content">

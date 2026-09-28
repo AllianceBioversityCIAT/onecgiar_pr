@@ -1,9 +1,14 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 import { ComplementaryInnovationService } from './services/complementary-innovation.service';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../../../../internationalization/result-detail-section-load.copy';
+import { CanComponentDeactivate } from '../../../../../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { UnsavedNavigationIntentService } from '../../../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 export class ComplementaryInnovation {
   climate_change_tag_level_id: string;
@@ -30,9 +35,10 @@ export class ComplementaryInnovation {
     selector: 'app-complementary-innovation',
     templateUrl: './complementary-innovation.component.html',
     styleUrls: ['./complementary-innovation.component.scss'],
-    standalone: false
+    standalone: false,
+    providers: [SectionDirtyTrackerService]
 })
-export class ComplementaryInnovationComponent implements OnInit {
+export class ComplementaryInnovationComponent implements OnInit, CanComponentDeactivate {
   body: any;
   innovationPackageCreatorBody: ComplementaryInnovation[] = [];
   complementaryFunction: any;
@@ -59,6 +65,16 @@ export class ComplementaryInnovationComponent implements OnInit {
    */
   private static readonly ENABLER_TYPE_IDS_LEGACY = [7];
   private static readonly ENABLER_TYPE_IDS_2026 = [1, 2, 5, 7];
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — component-scoped dirty-diff tracker for `UnsavedChangesGuard`
+   * (registered on this step's inner route). Snapshotted in `markLoadPart()` each time the step becomes
+   * loaded and again, synchronously, when a PATCH succeeds. Same mechanism as the Results sections
+   * (`rd-general-information.component.ts`).
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+  /** P2-3427 — "Save & go to previous/next step" navigates silently, never through the dialog. */
+  private readonly intentSE = inject(UnsavedNavigationIntentService);
 
   constructor(
     public api: ApiService,
@@ -98,6 +114,12 @@ export class ComplementaryInnovationComponent implements OnInit {
     else if (this.loadParts[part] !== true) this.loadParts[part] = false;
     const parts = Object.values(this.loadParts);
     this.loaded.set(parts.includes(false) ? false : parts.every(p => p === true) ? true : null);
+    // P2-3427 — the TRUE end of the load flow: the selection GET replaces `innovationPackageCreatorBody`
+    // with the server list and the step only counts as loaded once both GETs landed. The same GET runs
+    // again after the modal creates/edits an entry (`createInnovationEvent`, `saveEdit`), and each time it
+    // lands the body IS what the server holds — so it is the dirty-diff baseline. The other GETs of this
+    // step (`loadComplementaryFunctions`, `loadInformationComplementaryInnovations`) never touch the body.
+    if (this.loaded() === true) this.dirtyTracker.snapshot(this.innovationPackageCreatorBody);
   }
 
   loadInnovationPackage(): void {
@@ -229,6 +251,32 @@ export class ComplementaryInnovationComponent implements OnInit {
   onSaveSection(): void {
     // IPSR-6 — never send a selection that was not read from the server.
     if (this.loaded() !== true) return;
+    this.performSave().subscribe();
+  }
+
+  /** P2-3427 — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.innovationPackageCreatorBody);
+  }
+
+  /**
+   * P2-3427 — `CanComponentDeactivate.saveSection()` for `UnsavedChangesGuard`: the same PATCH as the
+   * Save button (`performSave()`), resolving `true`/`false` instead of void. The IPSR-6 gate applies here
+   * too: a selection that was never read from the server is not sent.
+   */
+  saveSection(): Observable<boolean> {
+    if (this.loaded() !== true) return of(false);
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * The exact PATCH the Save button always did (plus the follow-up POST of the newly linked results),
+   * shared by `onSaveSection()` and `saveSection()` (P2-3427).
+   */
+  private performSave(): Observable<void> {
     const recentAdditions = this.innovationPackageCreatorBody.filter(
       element =>
         element.created_date && element.result_type_id === 7 && !this.linksToResultsBody.links.some(link => link.result_id === element.result_id)
@@ -241,11 +289,17 @@ export class ComplementaryInnovationComponent implements OnInit {
 
     this.body = this.registerInnovationComplementary(this.innovationPackageCreatorBody);
 
-    this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).subscribe(() => {
-      if (recentAdditions.length > 0) {
-        this.api.resultsSE.POST_resultsLinked(updatedLinksBody, true, false).subscribe();
-      }
-    });
+    return this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).pipe(
+      tap(() => {
+        // P2-3427 — snapshot synchronously the instant the PATCH resolves: the body at this exact moment is
+        // what the server just persisted, whatever happens to the follow-up POST below.
+        this.dirtyTracker.snapshot(this.innovationPackageCreatorBody);
+        if (recentAdditions.length > 0) {
+          this.api.resultsSE.POST_resultsLinked(updatedLinksBody, true, false).subscribe();
+        }
+      }),
+      map(() => undefined)
+    );
   }
 
   onSavePreviousNext(description: string): void {
@@ -268,6 +322,8 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.body = this.registerInnovationComplementary(this.innovationPackageCreatorBody);
 
     this.api.resultsSE.PATCHComplementaryInnovationPrevious({ complementaryInovatins: this.body }, description).subscribe(() => {
+      // P2-3427 — what was just PATCHed is the new baseline, so the silent navigation below has nothing to re-save.
+      this.dirtyTracker.snapshot(this.innovationPackageCreatorBody);
       if (recentAdditions.length > 0) {
         this.api.resultsSE.POST_resultsLinked(updatedLinksBody, true, false).subscribe();
       }
@@ -290,13 +346,18 @@ export class ComplementaryInnovationComponent implements OnInit {
     const baseRoute = `/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway`;
     const queryParams = { queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase } };
 
+    // P2-3427 — every navigation of the "Save & go to …" buttons is silent: `UnsavedChangesGuard` consumes
+    // the flag on the next navigation and, if anything is still dirty, saves instead of opening the dialog.
     if (description === 'next') {
       if (this.api.rolesSE.isAdmin && !this.api.isStepTwoTwo) {
+        this.intentSE.markSilent();
         this.router.navigate([`${baseRoute}/step-2/basic-info`], queryParams);
       } else {
+        this.intentSE.markSilent();
         this.router.navigate([`${baseRoute}/step-3`], queryParams);
       }
     } else if (description === 'previous') {
+      this.intentSE.markSilent();
       this.router.navigate([`${baseRoute}/step-1`], queryParams);
     }
   }

@@ -19,67 +19,69 @@
   </div>
 </div>
 
-<table>
-  <tr>
-    <th>{{ 'term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio }}</th>
-    @if (!this.fieldsManagerSE.isP25()) {
-      <th>
-        Current calendar year <br />
-        (USD value)
-      </th>
-      <th>
-        Next calendar year <br />
-        (USD value)
-      </th>
-    }
-    @if (this.fieldsManagerSE.isP25()) {
-      <th>
-        Total USD Value <br />
-        (in-cash + in-kind)
-      </th>
-    }
-    <th></th>
-  </tr>
-  <tr *ngFor="let item of this.body.initiative_expected_investment">
-    <td>{{ item.obj_result_initiative.obj_initiative.official_code }} - {{ item.obj_result_initiative.obj_initiative.name }}</td>
-    @if (!this.fieldsManagerSE.isP25()) {
+<div class="ipsr-table-shell">
+  <table class="ipsr-table">
+    <tr>
+      <th>{{ 'term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio }}</th>
+      @if (!this.fieldsManagerSE.isP25()) {
+        <th>
+          Current calendar year <br />
+          <span class="th_hint">(USD value)</span>
+        </th>
+        <th>
+          Next calendar year <br />
+          <span class="th_hint">(USD value)</span>
+        </th>
+      }
+      @if (this.fieldsManagerSE.isP25()) {
+        <th>
+          Total USD Value <br />
+          <span class="th_hint">(in-cash + in-kind)</span>
+        </th>
+      }
+      <th></th>
+    </tr>
+    <tr *ngFor="let item of this.body.initiative_expected_investment">
+      <td>{{ item.obj_result_initiative.obj_initiative.official_code }} - {{ item.obj_result_initiative.obj_initiative.name }}</td>
+      @if (!this.fieldsManagerSE.isP25()) {
+        <td>
+          <app-pr-input
+            [(ngModel)]="item.current_year"
+            placeholder="Enter text"
+            type="currency"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [required]="false">
+          </app-pr-input>
+        </td>
+        <td>
+          <app-pr-input
+            [(ngModel)]="item.next_year"
+            placeholder="Enter text"
+            type="currency"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [required]="false">
+          </app-pr-input>
+        </td>
+      } @else {
+        <td>
+          <app-pr-input
+            [(ngModel)]="item.kind_cash"
+            placeholder="Enter text"
+            type="currency"
+            [disabled]="!!item.is_determined"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [required]="false">
+          </app-pr-input>
+        </td>
+      }
       <td>
-        <app-pr-input
-          [(ngModel)]="item.current_year"
-          placeholder="Enter text"
-          type="currency"
-          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-          [required]="false">
-        </app-pr-input>
+        <app-pr-radio-button
+          [(ngModel)]="item.is_determined"
+          optionLabel="name"
+          optionValue="id"
+          [options]="[{ name: 'This is yet to be determined', id: true }]">
+        </app-pr-radio-button>
       </td>
-      <td>
-        <app-pr-input
-          [(ngModel)]="item.next_year"
-          placeholder="Enter text"
-          type="currency"
-          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-          [required]="false">
-        </app-pr-input>
-      </td>
-    } @else {
-      <td>
-        <app-pr-input
-          [(ngModel)]="item.kind_cash"
-          placeholder="Enter text"
-          type="currency"
-          [disabled]="!!item.is_determined"
-          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-          [required]="false">
-        </app-pr-input>
-      </td>
-    }
-    <td>
-      <app-pr-radio-button
-        [(ngModel)]="item.is_determined"
-        optionLabel="name"
-        optionValue="id"
-        [options]="[{ name: 'This is yet to be determined', id: true }]">
-      </app-pr-radio-button>
-    </td>
-  </tr>
-</table>
+    </tr>
+  </table>
+</div>

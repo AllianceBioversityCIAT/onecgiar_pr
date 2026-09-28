@@ -1,4 +1,6 @@
-import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ContributorsBody } from './model/contributorsBody';
@@ -11,15 +13,36 @@ import { InnovationUseResultsService } from '../../../../../../shared/services/g
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../internationalization/result-detail-section-load.copy';
+import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 @Component({
   selector: 'app-ipsr-contributors',
   templateUrl: './ipsr-contributors.component.html',
   styleUrls: ['./ipsr-contributors.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class IpsrContributorsComponent implements OnInit {
+export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponentDeactivate {
   contributorsBody = new ContributorsBody();
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — component-scoped dirty-diff tracker, the mechanism W1/W2's
+   * Contributors and Partners already uses (`rd-contributors-and-partners.component.ts`). Snapshotted at
+   * the end of `onSectionInformation()` and again the instant a save resolves (`performSave()`).
+   *
+   * What it diffs is NOT the bare `contributorsBody` — see `dirtySnapshotValue()`: the Lead center /
+   * Lead partner picks and the P25 "new contributing initiatives" feed the PATCH payload but live on
+   * `RdContributorsAndPartnersService`, and the shared ToC children (`app-cp-multiple-wps`) stamp
+   * client-only fields onto the ToC rows after this component's snapshot.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+  /**
+   * The exact value last handed to `dirtyTracker.snapshot(...)`, frozen as an independent copy, so
+   * `reconcileLeadFieldsAfterLateCatalogue()` can compare against it (the tracker keeps only a string).
+   */
+  private lastDirtySnapshot: Record<string, unknown> | null = null;
+  private readonly onCatalogueDrivenLeadUpdate = (source: 'centers' | 'institutions') => this.reconcileLeadFieldsAfterLateCatalogue(source);
   disabledOptions = [];
   rdPartnersSE = inject(RdContributorsAndPartnersService);
   centersSE = inject(CentersService);
@@ -92,6 +115,10 @@ export class IpsrContributorsComponent implements OnInit {
     // result (`otherCentersSelected`, ToC reference centers) leak into the package and break the "exactly one
     // contributing center" check behind the automatic Lead center. W1/W2 does the same (component.ts:356).
     this.rdPartnersSE.resetState();
+    // P2-3427 — the CLARISA centers/institutions catalogue can land AFTER this section's own GET and re-run
+    // `setLeadCenterOnLoad`/`setLeadPartnerOnLoad` (service constructor). Let the service call us back so the
+    // dirty baseline follows that catalogue-driven lead, not a user edit. Detached in `ngOnDestroy`.
+    this.rdPartnersSE.onCatalogueDrivenLeadUpdate = this.onCatalogueDrivenLeadUpdate;
     this.getSectionInformation();
     this.requestEvent();
     this.api.dataControlSE.detailSectionTitle('Contributors');
@@ -100,6 +127,13 @@ export class IpsrContributorsComponent implements OnInit {
     if (this.fieldsManagerSE.isP25()) {
       this.GET_AllWithoutResults();
       this.rdPartnersSE.loadClarisaProjects();
+    }
+  }
+
+  /** P2-3427 — detach our callback from the root-provided service (only if it is still ours). */
+  ngOnDestroy(): void {
+    if (this.rdPartnersSE.onCatalogueDrivenLeadUpdate === this.onCatalogueDrivenLeadUpdate) {
+      this.rdPartnersSE.onCatalogueDrivenLeadUpdate = undefined;
     }
   }
 
@@ -384,6 +418,12 @@ export class IpsrContributorsComponent implements OnInit {
       // P2-3746 — the owner only becomes known with this response; re-run the exclusion now.
       this.applyOwnerExclusion();
       this.loaded.set(true);
+
+      // P2-3427 — the END of the load flow: `getTocLogicp25()` / `getTocLogic()` above are synchronous
+      // (they also run `setLeadCenterOnLoad`/`runAutoAssignLeads`, so the lead fields already reflect this
+      // load), and nothing else in this component mutates the body afterwards. A freshly loaded, untouched
+      // section must report `hasUnsavedChanges() === false`.
+      this.snapshotBaseline();
     }
   }
 
@@ -419,6 +459,108 @@ export class IpsrContributorsComponent implements OnInit {
   onSaveSection() {
     // IPSR-8 — never send a body that was not read from the server (see `loaded`).
     if (this.loaded() !== true) return;
+    this.performSave().subscribe({ error: () => {} });
+  }
+
+  /** P2-3427 — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.dirtySnapshotValue());
+  }
+
+  /**
+   * P2-3427 — `CanComponentDeactivate.saveSection()`. Wraps `performSave()`'s exact PATCH call to resolve
+   * `true`/`false` instead of void, for `UnsavedChangesGuard`. The IPSR-8 precondition resolves `false`
+   * without calling the server, exactly as the Save button refuses.
+   */
+  saveSection(): Observable<boolean> {
+    if (this.loaded() !== true) return of(false);
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * P2-3427 — the value the dirty tracker snapshots and diffs: `contributorsBody` (same object as
+   * `rdPartnersSE.partnersBody`) with its ToC rows normalized (`normalizeTocResultsForDiff()`), PLUS the
+   * fields the PATCH payload reads from `RdContributorsAndPartnersService` that are not on the body:
+   * the Lead center / Lead partner (stamped onto `is_leading_result` only at save time by
+   * `saveTocLogicp25()`), the "Other(s)" External Partners and the P25 new contributing initiatives. Same shape as W1/W2's
+   * `dirtySnapshotValue()`; the body's own `contributingInitiativeNew` (non-P25 path) travels in the spread.
+   */
+  private dirtySnapshotValue(): Record<string, unknown> {
+    const body: any = this.contributorsBody;
+    const resultTocResult = body?.result_toc_result
+      ? { ...body.result_toc_result, result_toc_results: this.normalizeTocResultsForDiff(body.result_toc_result.result_toc_results) }
+      : body?.result_toc_result;
+    const contributorsResultTocResult = (body?.contributors_result_toc_result ?? []).map((contributor: any) => ({
+      ...contributor,
+      result_toc_results: this.normalizeTocResultsForDiff(contributor?.result_toc_results)
+    }));
+    return {
+      ...body,
+      result_toc_result: resultTocResult,
+      contributors_result_toc_result: contributorsResultTocResult,
+      leadCenterCode: this.rdPartnersSE.leadCenterCode,
+      leadPartnerId: this.rdPartnersSE.leadPartnerId,
+      // P2-3066 "Other(s)" External Partners: picked in the second dropdown, kept on the service, sent in the payload.
+      otherPartnersSelected: this.rdPartnersSE.otherPartnersSelected,
+      serviceContributingInitiativeNew: this.rdPartnersSE.contributingInitiativeNew
+    };
+  }
+
+  /**
+   * P2-3427 — the shared ToC children write client-only fields onto the rows AFTER this component's
+   * snapshot: `CPMultipleWPsComponent.ngOnChanges()` stamps `uniqueId`, and `multiple-wps-content`'s
+   * `getIndicatorsList()` mirrors `toc_results_indicator_id` into `indicators[0].related_node_id` and
+   * defaults `toc_progressive_narrative` from `null` to `''`. None of them is a user edit, so they are
+   * stripped/normalized on BOTH sides of the diff (same rule as W1/W2's `normalizeTocResultsForDiff()`).
+   */
+  private normalizeTocResultsForDiff(rows: any[] | undefined | null): any[] {
+    return (rows ?? []).map((row: any) => {
+      const { uniqueId, ...rest } = row ?? {};
+      const indicators = (rest.indicators ?? []).map((indicator: any) => {
+        const { related_node_id, ...indicatorRest } = indicator ?? {};
+        return indicatorRest;
+      });
+      return {
+        ...rest,
+        indicators,
+        toc_progressive_narrative: rest.toc_progressive_narrative ?? ''
+      };
+    });
+  }
+
+  /** P2-3427 — single write path for the tracker's baseline and its frozen structural copy. */
+  private snapshotBaseline(value: Record<string, unknown> = this.dirtySnapshotValue()): void {
+    this.dirtyTracker.snapshot(value);
+    this.lastDirtySnapshot = JSON.parse(JSON.stringify(value));
+  }
+
+  /**
+   * P2-3427 — invoked by the service whenever the centers/institutions catalogue emits `loaded`, which may
+   * re-run `setLeadCenterOnLoad`/`setLeadPartnerOnLoad` after our snapshot on a cold entry (hard reload or
+   * deep link straight onto this section). The baseline moves ONLY when nothing but that one lead field
+   * differs from it: a real concurrent edit must stay dirty, and a plain "re-snapshot" would swallow it.
+   */
+  private reconcileLeadFieldsAfterLateCatalogue(source: 'centers' | 'institutions'): void {
+    if (!this.lastDirtySnapshot) return;
+    const current = this.dirtySnapshotValue();
+    const currentWithBaselineLeadFields = {
+      ...current,
+      ...(source === 'institutions' ? { leadPartnerId: this.lastDirtySnapshot['leadPartnerId'] } : {}),
+      ...(source === 'centers' ? { leadCenterCode: this.lastDirtySnapshot['leadCenterCode'] } : {})
+    };
+    if (JSON.stringify(currentWithBaselineLeadFields) !== JSON.stringify(this.lastDirtySnapshot)) return;
+    this.snapshotBaseline(current);
+  }
+
+  /**
+   * P2-3427 — returns the PATCH `Observable` instead of self-subscribing, so the Save button
+   * (`onSaveSection`) and the guard (`saveSection`) drive the exact same payload and side effects.
+   * The body of this method is the former `onSaveSection()`, moved verbatim.
+   */
+  private performSave(): Observable<void> {
     this.fieldsManagerSE.isP25() ? this.saveTocLogicp25() : this.saveTocLogic();
 
     const sendedData: any = {
@@ -441,7 +583,33 @@ export class IpsrContributorsComponent implements OnInit {
       ];
       sendedData.result_toc_result = this.rdPartnersSE.partnersBody.result_toc_result;
       sendedData.is_lead_by_partner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
-      sendedData.institutions = this.rdPartnersSE.partnersBody.institutions;
+      // P2-3427 (Ángel, 28-Sep-2026 review, prtest) — the shared External Partners selector (`normal-selector`,
+      // P2-3066) keeps the "Other(s)" SENTINEL (`institutions_id = OTHER_PARTNERS_CODE`, -999999) inside
+      // `partnersBody.institutions` and the partners picked in the second dropdown in
+      // `rdPartnersSE.otherPartnersSelected`. Sending `institutions` as-is posted the sentinel — MySQL answered
+      // "Cannot add or update a child row: a foreign key constraint fails (results_by_institution.institutions_id
+      // -> clarisa_institutions.id)" — and silently dropped the chosen Other(s). Same payload as W1/W2
+      // (`rd-contributors-and-partners.component.ts:1142-1151`), which this endpoint shares on the server
+      // (`contributors-partners.service.ts:243` → `results_by_institutions.service.ts:1092/1107`): ToC partners minus
+      // the sentinel (`from_toc: true`) ∪ Other(s) (`from_toc: false`), lead computed with the ONE criterion
+      // `saveTocLogicp25()` already stamps (`is_lead_by_partner && leadPartnerId === institutions_id`). Gated on the
+      // 2026 phase exactly like W1/W2: the sentinel and `otherPartnersSelected` only exist there (`applyTocMappingOnLoad`
+      // returns early otherwise, `normal-selector.component.html:183`), so a 2025 package keeps today's payload.
+      if (this.isCP2026()) {
+        const isLeadByPartner = !!this.rdPartnersSE.partnersBody.is_lead_by_partner;
+        const isLeadPartner = (p: any) => isLeadByPartner && this.rdPartnersSE.leadPartnerId === p?.institutions_id;
+        const tocPartners = (this.rdPartnersSE.partnersBody.institutions || [])
+          .filter((p: any) => p?.institutions_id !== this.rdPartnersSE.OTHER_PARTNERS_CODE)
+          .map((p: any) => ({ ...p, from_toc: true, is_leading_result: isLeadPartner(p) }));
+        const otherPartners = (this.rdPartnersSE.otherPartnersSelected || []).map((p: any) => ({
+          ...p,
+          from_toc: false,
+          is_leading_result: isLeadPartner(p)
+        }));
+        sendedData.institutions = [...tocPartners, ...otherPartners];
+      } else {
+        sendedData.institutions = this.rdPartnersSE.partnersBody.institutions;
+      }
       sendedData.mqap_institutions = this.rdPartnersSE.partnersBody.mqap_institutions;
     }
 
@@ -453,10 +621,22 @@ export class IpsrContributorsComponent implements OnInit {
     delete sendedData.has_innovation_link;
     delete sendedData.linked_results;
 
-    this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
-      this.getSectionInformation();
-      this.ipsrCompletenessStatusSE.updateGreenChecks();
-    });
+    return this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).pipe(
+      tap(() => {
+        // Snapshot HERE, synchronously, the instant the PATCH resolves — after `saveTocLogic*()` stamped the
+        // leads onto the body, so the persisted state is the baseline. `saveSection()`'s `map(() => true)` can
+        // reach the guard before the reload below (and its own re-snapshot) lands, or the reload can fail:
+        // a genuinely saved section must not report dirty in either case.
+        this.snapshotBaseline();
+        this.getSectionInformation();
+        this.ipsrCompletenessStatusSE.updateGreenChecks();
+      }),
+      map(() => undefined),
+      catchError(err => {
+        console.error(err);
+        return throwError(() => err);
+      })
+    );
   }
 
   /**

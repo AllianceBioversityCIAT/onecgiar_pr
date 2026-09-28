@@ -1,8 +1,13 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { ComplementaryInnovationComponent } from './complementary-innovation.component';
+import { UnsavedChangesGuard } from '../../../../../../../../../../shared/guards/unsaved-changes.guard';
 
-const routes: Routes = [{ path: '', component: ComplementaryInnovationComponent}];
+// P2-3427 (Ángel, 28-Sep-2026 review) — `canDeactivate` lives on THIS inner route, not on the outer
+// `loadChildren` entry of the step (which has no `component`): Angular invokes a guard on that outer node
+// with `component: null` and `UnsavedChangesGuard` dereferences `component.hasUnsavedChanges()` unguarded.
+// Same placement as `rd-general-information-routing.module.ts`.
+const routes: Routes = [{ path: '', component: ComplementaryInnovationComponent, canDeactivate: [UnsavedChangesGuard] }];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],

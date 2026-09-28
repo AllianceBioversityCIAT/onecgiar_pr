@@ -4,8 +4,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { StepN3Component } from './step-n3.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Router } from '@angular/router';
+import { UnsavedNavigationIntentService } from '../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
+import { ActorN3 } from './model/Ipsr-step-3-body.model';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { StepN4ReferenceMaterialLinksComponent } from '../step-n4/components/step-n4-reference-material-links/step-n4-reference-material-links.component';
 import { IpsrStep3EvidenceListComponent } from './components/ipsr-step3-evidence-list/ipsr-step3-evidence-list.component';
@@ -443,6 +445,112 @@ describe('StepN3Component', () => {
       const alertAt = html.indexOf('missingPrincipalImpactAreas()');
       expect(alertAt).toBeGreaterThan(html.indexOf('Evidence-based assessment'));
       expect(alertAt).toBeLessThan(html.indexOf('Core innovation'));
+    });
+  });
+
+  // P2-3427 (Ángel, 28-Sep-2026 review): Step 3 never tracked a dirty snapshot, so switching tabs with
+  // an unsaved edit silently dropped it. Control negative: without the snapshot at the end of
+  // `getSectionInformation()` the mutation test fails; without the snapshot inside the PATCH `tap` the
+  // "reload fails" test fails.
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    const loadedResponse = () => ({
+      result_ip_result_complementary: [{ result_by_innovation_package_id: 1, open: false }],
+      innovatonUse: { organization: [], actors: [] },
+      result_ip_result_core: { readiness_evidences: [], use_evidences: [] },
+      result_core_innovation: null
+    });
+    const drain = (source: any): Promise<boolean[]> =>
+      new Promise(resolve => {
+        const seen: boolean[] = [];
+        source.subscribe({ next: (value: boolean) => seen.push(value, component.hasUnsavedChanges()), complete: () => resolve(seen) });
+      });
+
+    beforeEach(() => {
+      component.api.rolesSE.readOnly = false;
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(of({ response: loadedResponse() }));
+      component.getSectionInformation();
+    });
+
+    it('is clean right after the load flow completes, untouched', () => {
+      expect(component.ipsrStep3Body.innovatonUse.actors).toHaveLength(1);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('is dirty after a bound field of the body changes', () => {
+      component.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('saveSection() emits true and the step is already clean at that instant, even when the reload fails', async () => {
+      component.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+      expect(component.hasUnsavedChanges()).toBe(true);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+      // The follow-up reload dies: the snapshot must NOT depend on it.
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const seen = await drain(component.saveSection());
+
+      expect(patch).toHaveBeenCalledTimes(1);
+      expect(seen).toEqual([true, false]);
+    });
+
+    it('saveSection() resolves false (does not throw) when the PATCH errors', async () => {
+      jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+      const seen = await drain(component.saveSection());
+      expect(seen[0]).toBe(false);
+    });
+
+    it('saveSection() resolves false without calling the PATCH when a Current-use row has figures and no type', async () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+      const show = jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+      component.ipsrStep3Body.innovatonUse.actors = [{ women: 2, men: 2, evidence_link: 'https://example.org/zz' } as any];
+
+      const seen = await drain(component.saveSection());
+
+      expect(seen[0]).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'ipsrUntypedRows' }));
+    });
+
+    it('saveSection() resolves false without calling the PATCH when a pending evidence upload fails', async () => {
+      component.ipsrDataControlSE.resultInnovationId = 4242 as any;
+      (component.ipsrStep3Body.result_ip_result_core as any).readiness_evidences = [
+        { id: null, link: null, description: null, is_sharepoint: true, is_public_file: true, file: new File(['x'], 'broken.pdf') }
+      ];
+      jest.spyOn((component as any).sharePointUploadSE, 'uploadPending').mockResolvedValue(['broken.pdf']);
+      jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+
+      const seen = await drain(component.saveSection());
+
+      expect(seen[0]).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to next step" marks the navigation silent before navigating, and re-snapshots on PATCH success', async () => {
+      const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+      const navigate = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+      jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiIdNextPrevius').mockReturnValue(of({}));
+      component.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+
+      await component.onSaveSectionWithStep('next');
+
+      expect(markSilent).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('"Save & go to previous step" marks the navigation silent in the read-only branch too', async () => {
+      component.api.rolesSE.readOnly = true;
+      const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+      const navigate = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+
+      await component.onSaveSectionWithStep('previous');
+
+      expect(markSilent).toHaveBeenCalledTimes(1);
+      expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
     });
   });
 });

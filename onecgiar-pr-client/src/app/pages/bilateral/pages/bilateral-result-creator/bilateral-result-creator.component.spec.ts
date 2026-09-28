@@ -1521,4 +1521,63 @@ describe('BilateralResultCreatorComponent', () => {
       expect(component.isCenterUserOfLeadCenter()).toBe(true);
     });
   });
+
+  // `ASC-T-5` (`ASC-R-15`): the AI create entry point must not be offered to a platform admin who
+  // is not a Center User of the current centre — the client-side half of the pivot the server side
+  // enforces in `bilateral-ai.service.ts` (`assertCenterEntitlement`, mode 'act').
+  describe('canUseAi — the AI create entry point (ASC-T-5)', () => {
+    function primeWizardSelection(): void {
+      creationService.selectedProject.set({ id: 1 });
+      creationService.selectedPrimarySp.set({ id: 2 });
+      creationService.resultLeadCenterCode.set(null);
+      TestBed.inject(BilateralContextService).setCenter('ILRI', 'International Livestock Research Institute');
+    }
+
+    it('ASC-AC-13 — is false for an admin who is not a Center User of the current centre', () => {
+      rolesService.isAdmin = true;
+      rolesService.getMyCenters.mockReturnValue([]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      expect(component.canUseAi()).toBe(false);
+    });
+
+    it('is true for the Center User of the current centre', () => {
+      rolesService.getMyCenters.mockReturnValue([{ center_id: 'CENTER-12', center_acronym: 'ILRI', role_id: 9 }]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      expect(component.canUseAi()).toBe(true);
+    });
+
+    // Conformance-lens issue 2: a presence-assertion on the signal alone is not behavioral proof —
+    // a template that stopped binding `[canUseAi]` would still pass. Render the real
+    // `app-bilateral-reporting-way-selector` and assert its AI card's rendered disabled state.
+    function aiCard(): HTMLElement {
+      return fixture.nativeElement.querySelectorAll('.brws-card')[0] as HTMLElement;
+    }
+
+    it('renders the wizard AI card enabled for the Center User of the current centre', () => {
+      rolesService.getMyCenters.mockReturnValue([{ center_id: 'CENTER-12', center_acronym: 'ILRI', role_id: 9 }]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      const card = aiCard();
+      expect(card).toBeTruthy();
+      expect(card.getAttribute('aria-disabled')).toBe('false');
+      expect(card.classList.contains('brws-card--disabled')).toBe(false);
+    });
+
+    it('ASC-AC-13 — renders the wizard AI card disabled for an admin who is not a Center User of the current centre', () => {
+      rolesService.isAdmin = true;
+      rolesService.getMyCenters.mockReturnValue([]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      const card = aiCard();
+      expect(card).toBeTruthy();
+      expect(card.getAttribute('aria-disabled')).toBe('true');
+      expect(card.classList.contains('brws-card--disabled')).toBe(true);
+    });
+  });
 });
