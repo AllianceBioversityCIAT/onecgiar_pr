@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { IpsrGeneralInformationComponent } from './ipsr-general-information.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { YesOrNotByBooleanPipe } from '../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
@@ -118,6 +120,9 @@ describe('IpsrGeneralInformationComponent', () => {
       isP22: jest.fn().mockReturnValue(true),
       // P2-3225: gates the Lead Contact Person asterisk and its incomplete-fields entry.
       isLeadContactPersonMandatory2026: jest.fn().mockReturnValue(false),
+      // IPSR-GIS: gates whether the Impact Area guidance renders in the ⓘ tooltip (true) or the
+      // legacy inline box (false, Results parity).
+      isReportingFormGuidance2026: jest.fn().mockReturnValue(false),
       fields: jest.fn().mockReturnValue({})
     };
 
@@ -168,7 +173,12 @@ describe('IpsrGeneralInformationComponent', () => {
           provide: GetImpactAreasScoresService,
           useValue: {}
         }
-      ]
+      ],
+      // IPSR-GIS: `app-pr-radio-button` (variant="segmented") renders `app-field-card` internally,
+      // and the P25 checkbox template renders `app-field-card` / `app-field-group-header` directly.
+      // None of those are declared here (per design, they need no module edit); NO_ERRORS_SCHEMA lets
+      // Ivy render them as plain elements instead of throwing "is not a known element".
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(IpsrGeneralInformationComponent);
@@ -810,6 +820,229 @@ describe('IpsrGeneralInformationComponent', () => {
       component.ipsrGeneralInformationBody.lead_contact_person = 'John Doe';
       component.ipsrGeneralInformationBody.lead_contact_person_data = { mail: 'john.doe@cgiar.org' } as any;
       expect(component.isLeadContactPersonComplete).toBe(true);
+    });
+  });
+
+  /**
+   * IPSR-GIS (`docs/specs/ipsr/gi-impact-area-scores-parity`) — Impact Area block aligned with
+   * Results: group header + counter (P25), segmented rows with guidance in the tooltip, P25
+   * checkboxes inside `app-field-card`.
+   */
+  describe('Impact Area scores parity with Results (IPSR-GIS)', () => {
+    /**
+     * Renders the real template with the given portfolio/body, the way the "on screen" P2-3210
+     * suite already does: through the GET mock, since `ngOnInit` reassigns the body on first CD.
+     */
+    const renderWith = (isP25: boolean, body: any = {}): void => {
+      mockFieldsManagerService.isP25.mockReturnValue(isP25);
+      mockFieldsManagerService.isP22.mockReturnValue(!isP25);
+      const impactAreaLists = component.getImpactAreasScoresComponents as any;
+      ['genderTagScoreList', 'climateTagScoreList', 'nutritionTagScoreList', 'environmentalBiodiversityTagScoreList', 'povertyTagScoreList'].forEach(
+        list => (impactAreaLists[list] = () => [])
+      );
+      mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(
+        of({ response: { ...mockGETInnovationByResultIdResponse, discontinued_options: [], ...body } })
+      );
+      fixture.detectChanges();
+    };
+
+    describe('impactAreasScored / IMPACT_AREA_TAG_FIELDS (R-1)', () => {
+      it('has a total of 5 tags', () => {
+        expect(component.IMPACT_AREAS_TOTAL).toBe(5);
+      });
+
+      it('R-1 falsifier: counts a gender tag scored at 0 (id 1) as present, not falsy', () => {
+        component.ipsrGeneralInformationBody.gender_tag_level_id = 1;
+        component.ipsrGeneralInformationBody.climate_change_tag_level_id = null;
+        component.ipsrGeneralInformationBody.nutrition_tag_level_id = undefined;
+        component.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id = '' as any;
+        component.ipsrGeneralInformationBody.poverty_tag_level_id = null;
+        expect(component.impactAreasScored).toBe(1);
+      });
+
+      it('does not count null, undefined or empty-string tags', () => {
+        component.ipsrGeneralInformationBody.gender_tag_level_id = null;
+        component.ipsrGeneralInformationBody.climate_change_tag_level_id = undefined;
+        component.ipsrGeneralInformationBody.nutrition_tag_level_id = '' as any;
+        component.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id = null;
+        component.ipsrGeneralInformationBody.poverty_tag_level_id = undefined;
+        expect(component.impactAreasScored).toBe(0);
+      });
+
+      it('counts all 5 when every tag has a score', () => {
+        component.ipsrGeneralInformationBody.gender_tag_level_id = 1;
+        component.ipsrGeneralInformationBody.climate_change_tag_level_id = 2;
+        component.ipsrGeneralInformationBody.nutrition_tag_level_id = 3;
+        component.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id = 1;
+        component.ipsrGeneralInformationBody.poverty_tag_level_id = 2;
+        expect(component.impactAreasScored).toBe(5);
+      });
+    });
+
+    describe('guidanceAsTooltip (R-1 guidance placement)', () => {
+      it('is true when the 2026 reporting-guidance flag is on', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+        fixture = TestBed.createComponent(IpsrGeneralInformationComponent);
+        component = fixture.componentInstance;
+        expect(component.guidanceAsTooltip()).toBe(true);
+      });
+
+      it('is false when the 2026 reporting-guidance flag is off (Results parity)', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+        fixture = TestBed.createComponent(IpsrGeneralInformationComponent);
+        component = fixture.componentInstance;
+        expect(component.guidanceAsTooltip()).toBe(false);
+      });
+    });
+
+    describe('Group header (P25-only, DD-3)', () => {
+      it('renders no group header for P22', () => {
+        renderWith(false);
+        expect(fixture.nativeElement.querySelector('app-field-group-header')).toBeNull();
+      });
+
+      it('renders the group header for P25 with the counter bindings', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+        renderWith(true, { gender_tag_level_id: 1 });
+
+        const header = fixture.nativeElement.querySelector('app-field-group-header[data-testid="impact-areas-scored"]');
+        expect(header).not.toBeNull();
+        expect((header as any).completed).toBe(component.impactAreasScored);
+        expect((header as any).total).toBe(5);
+      });
+
+      it('renders the guidance in the tooltip (no inline box) when the 2026 flag is on', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+        renderWith(true);
+
+        const header = fixture.nativeElement.querySelector('app-field-group-header[data-testid="impact-areas-scored"]');
+        expect((header as any).tooltip).toBe(component.impactAreaScoresInfo());
+
+        const groupGuidanceBoxes = fixture.debugElement
+          .queryAll(By.directive(AlertStatusComponent))
+          .filter(el => el.componentInstance.description === component.impactAreaScoresInfo());
+        expect(groupGuidanceBoxes.length).toBe(0);
+      });
+
+      it('renders the inline guidance box (Results parity) when the 2026 flag is off', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+        renderWith(true);
+
+        const groupGuidanceBoxes = fixture.debugElement
+          .queryAll(By.directive(AlertStatusComponent))
+          .filter(el => el.componentInstance.description === component.impactAreaScoresInfo());
+        expect(groupGuidanceBoxes.length).toBe(1);
+      });
+    });
+
+    describe('Segmented tag rows (R-2)', () => {
+      it('renders exactly 5 segmented tracks for P25', () => {
+        renderWith(true);
+        expect(fixture.nativeElement.querySelectorAll('app-pr-radio-button[variant="segmented"]').length).toBe(5);
+      });
+
+      it('renders exactly 5 segmented tracks for P22', () => {
+        renderWith(false);
+        expect(fixture.nativeElement.querySelectorAll('app-pr-radio-button[variant="segmented"]').length).toBe(5);
+      });
+
+      it('renders 0 per-tag guidance boxes bound to the *Information() functions', () => {
+        renderWith(true);
+
+        const guidanceTexts = [
+          component.genderInformation(),
+          component.climateInformation(),
+          component.nutritionInformation(),
+          component.environmentInformation(),
+          component.povertyInformation()
+        ];
+        const orphanGuidanceBoxes = fixture.debugElement
+          .queryAll(By.directive(AlertStatusComponent))
+          .filter(el => guidanceTexts.includes(el.componentInstance.description));
+        expect(orphanGuidanceBoxes.length).toBe(0);
+      });
+
+      it('P25: the gender label matches fields()["[general-info]-gender_tag_id"].label', () => {
+        mockFieldsManagerService.fields.mockReturnValue({
+          '[general-info]-gender_tag_id': { label: 'Gender equality, youth and social inclusion tag' }
+        });
+        renderWith(true);
+
+        const radio = fixture.debugElement.query(By.css('app-pr-radio-button[data-testid="gi-field-gender_tag_id"]'))
+          .componentInstance as PrRadioButtonComponent;
+        expect(radio.label).toBe('Gender equality, youth and social inclusion tag');
+      });
+
+      it('P22: the 5 tag labels stay the current literals, unaffected by fields()', () => {
+        mockFieldsManagerService.fields.mockReturnValue({
+          '[general-info]-gender_tag_id': { label: 'Gender equality, youth and social inclusion tag' }
+        });
+        renderWith(false);
+
+        const expectedLabels: [string, string][] = [
+          ['gender_tag_id', 'Gender equality tag'],
+          ['climate_change_tag_id', 'Climate change tag'],
+          ['nutrition_tag_level_id', 'Nutrition, health and food security tag'],
+          ['environmental_biodiversity_tag_level_id', 'Environmental health and biodiversity tag'],
+          ['poverty_tag_level_id', 'Poverty reduction, livelihoods and jobs tag']
+        ];
+        expectedLabels.forEach(([testid, expectedLabel]) => {
+          const radio = fixture.debugElement.query(By.css(`app-pr-radio-button[data-testid="gi-field-${testid}"]`))
+            .componentInstance as PrRadioButtonComponent;
+          expect(radio.label).toBe(expectedLabel);
+        });
+      });
+    });
+
+    // Every segmented `app-pr-radio-button` wraps ITSELF in an `app-field-card` too (see its own
+    // template), so a plain `querySelector('app-field-card')` picks up the score radio's card, not
+    // our checkbox one. The score radio's inner content is a `[role="radiogroup"]` track; our
+    // checkbox card's content is always a `.radioButtonList` (even with a stubbed, empty options list).
+    const findCheckboxFieldCard = (): HTMLElement =>
+      Array.from(fixture.nativeElement.querySelectorAll('app-field-card')).find((el: HTMLElement) =>
+        el.querySelector('.radioButtonList')
+      ) as HTMLElement;
+
+    describe('P25 checkbox field card (R-3)', () => {
+      it('app-field-card hasValue is true when the impact area array is non-empty', () => {
+        renderWith(true, { gender_tag_level_id: 3, gender_impact_area_id: [1] });
+
+        const card = findCheckboxFieldCard();
+        expect(card).not.toBeUndefined();
+        expect((card as any).hasValue).toBe(true);
+      });
+
+      it('app-field-card hasValue is false when the impact area array is empty', () => {
+        renderWith(true, { gender_tag_level_id: 3, gender_impact_area_id: [] });
+
+        const card = findCheckboxFieldCard();
+        expect(card).not.toBeUndefined();
+        expect((card as any).hasValue).toBe(false);
+      });
+    });
+
+    describe('Validation hooks untouched (R-4)', () => {
+      const alertIds = ['gender_tag_alert', 'climate_change_tag_alert', 'nutrition_tag_alert', 'environment_tag_alert', 'poverty_tag_alert'];
+
+      it('keeps exactly 5 appFeedbackValidation hooks in the Impact Area block, and all 5 alert anchors', () => {
+        renderWith(true);
+
+        const hooks = fixture.nativeElement.querySelectorAll('.block_container [appfeedbackvalidation]');
+        expect(hooks.length).toBe(5);
+
+        alertIds.forEach(id => {
+          expect(fixture.nativeElement.querySelector('#' + id)).not.toBeNull();
+        });
+      });
+
+      it('R-4 BUT: does not add a "mandatory" class to the checkbox wrapper .pr-field', () => {
+        renderWith(true, { gender_tag_level_id: 3, gender_impact_area_id: [] });
+
+        const card = findCheckboxFieldCard();
+        const prField = card.querySelector('.pr-field');
+        expect(prField).not.toBeNull();
+        expect(prField.classList.contains('mandatory')).toBe(false);
+      });
     });
   });
 });

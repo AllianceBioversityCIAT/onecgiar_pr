@@ -1,6 +1,17 @@
+// @akili-spec ipsr/gi-impact-area-scores-parity
+// Page-local overrides copied from rd-general-information (Results), same reasoning: the 5 Impact
+// Area scores read as one row list, not five cards, now that `app-pr-radio-button variant="segmented"`
+// (→ `app-field-card layout="row"`) draws the row and its rule itself. Both classes below are
+// global (styles/, used by other pages) — never edited, only overridden here (design DD-4).
 .radio_grid {
-  display: grid;
-  grid-template-columns: 450px 1fr;
+  display: block;
+}
+
+.block_container {
+  box-shadow: none;
+  padding: 0;
+  margin-top: 0;
+  border-radius: 0;
 }
 
 .radioButtonList {
@@ -13,4 +24,11 @@
     align-items: center;
     gap: 8px;
   }
+}
+
+// `.field_card.fc-row` (styles/field-card.scss, global) draws a border-top on every row, including
+// the first one, which reads as a stray divider under the group header. Kill it only on the gender
+// row (the first of the five) so the rule stays between the other rows.
+::ng-deep [data-testid='gi-field-gender_tag_id'] .field_card.fc-row {
+  border-top: none;
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject } from '@angular/core';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -21,6 +21,36 @@ export class IpsrGeneralInformationComponent implements OnInit {
 
   fieldsManagerSE = inject(FieldsManagerService);
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
+
+  // @akili-spec ipsr/gi-impact-area-scores-parity
+  /** The 5 tags that make up the Impact Area scores block, in render order (IPSR body keys). */
+  private static readonly IMPACT_AREA_TAG_FIELDS: (keyof IpsrGeneralInformationBody)[] = [
+    'gender_tag_level_id',
+    'climate_change_tag_level_id',
+    'nutrition_tag_level_id',
+    'environmental_biodiversity_tag_level_id',
+    'poverty_tag_level_id'
+  ];
+
+  readonly IMPACT_AREAS_TOTAL = IpsrGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.length;
+
+  /**
+   * How many of the 5 Impact Areas have a score. Counted by PRESENCE, not truthiness: a score of
+   * `0 — Not targeted` is a valid, meaningful answer and must count, so `!value` would wrongly
+   * report 4 of 5 the moment one tag is scored 0.
+   */
+  get impactAreasScored(): number {
+    return IpsrGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.filter(field => {
+      const value = this.ipsrGeneralInformationBody[field];
+      return value !== null && value !== undefined && value !== '';
+    }).length;
+  }
+
+  /**
+   * Whether the Impact Area guidance renders inside the ⓘ tooltip (2026 reporting-guidance flag on)
+   * or in the legacy inline box (flag off — Results parity).
+   */
+  readonly guidanceAsTooltip = computed(() => this.fieldsManagerSE.isReportingFormGuidance2026());
 
   /**
    * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
