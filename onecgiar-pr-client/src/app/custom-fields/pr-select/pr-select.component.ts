@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, OnDestroy, output, signal } from '@angular/core';
+import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, OnDestroy, output, signal, ViewChild } from '@angular/core';
+import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -81,6 +82,9 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     const index = this.indexReference();
     return index != null ? `${key}_${index}` : `${key}_${this.instanceId}`;
   }
+
+  /** P2-3678 — see `pr-multi-select.component.ts` (`virtualViewport`) for the why. */
+  @ViewChild(CdkVirtualScrollViewport) private readonly virtualViewport?: CdkVirtualScrollViewport;
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
@@ -232,6 +236,9 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     const trigger = document.getElementById(this.triggerId);
     const panel = trigger?.querySelector<HTMLElement>('.options');
     if (trigger && panel) panel.classList.toggle('options_up', shouldOpenUpward(trigger, panel));
+    // P2-3678: same virtual viewport as `pr-multi-select` — re-measure once the panel is visible, because a
+    // control mounted inside a `[hidden]` parent was measured at 0px and renders only its minimum buffer.
+    requestAnimationFrame(() => this.virtualViewport?.checkViewportSize());
   }
 
   /** Keep wheel events inside the option viewport instead of passing them to the result page. */
