@@ -334,3 +334,138 @@ Green, as listed above.
   - RELIABILITY: no test asserts `[data-guide]` directly while collapsed.
   - RISK: the DoD pattern must include `platform-tour`. The Leader confirmed it did: 2 suites ran.
 - **Runtime events:** none.
+
+## Decision: the admin's Submit for Review on a bilateral result (2026-09-28, user)
+
+- **Finding (Leader, on the user's request "valida si un user admin puede hacer un Submit for Review dentro de un result bilateral"):**
+  - **Server:** `submitForReview` (`bilateral-center.service.ts:2200`) goes through `assertSubmittable` and then `assertCenterPermission` (`:2373`, `:2447`). That check is membership-only (Center User, role 9, on the lead centre) and has no admin bypass. An admin who is not a member gets a 403. `assess` (`:2400`) has the same guard.
+  - **Client:** `canSubmitFromRail` (`bilateral-result-creator.component.ts:764`) checks MDS completeness, whether a submit is already running, and the status. It never checks membership. The form stays editable for admins (`:439-441`, P2-3807). So the button is enabled, and clicking it gets a 403.
+- **Options offered:**
+  1. Hide Submit for a non-member admin.
+  2. Make the whole form read-only for that admin, which reverts P2-3807.
+  3. Leave it as it is.
+- **User decision:** **3, leave it as it is.** No task created, and no change to `ASC-T-5`'s scope.
+
+## Decision revised: the admin CAN submit for review (2026-09-28, user). This supersedes "Decision: … option 3" above.
+
+- **User, verbatim:** "No, el admin si puede hacer submit" … "Un admin puede tanto ver como el botón de Submit for review como accionarlos, es decir, el admin puede someter un resultado. Eso siempre se ha podido entonces te lo estoy confirmando para que así mismo la funcionalidad de que un admin pueda darle clic en Submit for review".
+- **Leader's check of the code:** `assertSubmittable` calls `assertCenterPermission` unconditionally at `:2373` on this branch and on `origin/performance-refactor`, `origin/staging` and `origin/master`. The server has no admin bypass there, so a non-member admin gets a 403. The Leader told the user once and did not argue further. The user stated the requirement, and it is now implemented so it holds by construction.
+- **Spec edits:**
+  - `requirements.md`: `ASC-R-18` and `ASC-AC-18`/`-19` added; NFR *Authorization* amended to two grants.
+  - `design.md`: `ASC-DD-9` added.
+  - `tasks.md`: `ASC-T-7` added; `ASC-T-3` now also depends on it.
+
+### `ASC-T-5`: admin reads a centre's AI drafts but cannot act on them
+
+| Field | Value |
+|---|---|
+| Date | 2026-09-28 |
+| Skills | `nestjs-expert`, `angular-developer`, `tdd` |
+| Effort | xhigh on attempt 1; attempt 2 stays at xhigh, the dial's top for T2 short of `max`, which escalates the tier instead |
+| Review mode | Parallel lens reviewers (security; conformance + test integrity), because this is a security surface |
+
+#### Attempt 1: FAIL (both lenses)
+
+- **Files:**
+  - Server: `bilateral-ai.service.ts` (34), `.spec.ts` (+116).
+  - Client: `bilateral-ai-draft-detail.component.{ts,html,spec.ts}`, `my-draft-results.component.{ts,html,spec.ts}` and `bilateral-result-creator.component.{ts,spec.ts}`.
+  - New: `pages/bilateral/services/bilateral-center-membership.util{,.spec}.ts`.
+- **Server:** `assertCenterEntitlement(userId, centerId, mode: 'read'|'act')` has no default mode. `isUserAdmin` runs only in `'read'` mode, and only after membership fails. `listDrafts` and `getDraft` pass `'read'`. `setFormalEvidence`, `promoteDraft` and `discardDraft` pass `'act'`.
+- **Client:**
+  - `isCenterMember` is a pure util over `getMyCenters()`. It never reads `isAdmin`.
+  - It gates the Create Result and Discard controls in the `my-draft-results` rows and aside footer, and the header actions in `bilateral-ai-draft-detail`.
+  - The creator's `canUseAi` now ANDs `isCenterUserOfLeadCenter()`.
+- **Pre-change red:** `ASC-AC-12` threw `ForbiddenException` at `:481` on `listDrafts` and `getDraft`.
+- **Mutations:**
+  - (a) Admin check applied in every mode: promote, discard and formal evidence resolved for the admin.
+  - (b) Admin branch removed: `ForbiddenException` on the read paths.
+  - Client: OR-ing `isAdmin` into the check made `isCenterMember()` return true.
+- **Implementer `Not Done / Assumptions` (verbatim):**
+  > - The "formal-evidence toggle" named in the task doesn't exist anywhere in the client yet — `PATCH_bilateralAiEvidence` has no caller and no control renders it (already documented as "Coming soon" in that folder's own `CLAUDE.md`). Nothing to hide; flagging rather than fabricating a control.
+  > - `getSignedUrl` (creator-only) and `createJob` (no centre check for anyone) are confirmed pre-existing gaps, out of scope per the brief — not touched.
+  > - Controller unchanged: `user.id` was sufficient for the admin check at every call site.
+
+  The Leader's ruling: none of these is scope still owed. The formal-evidence toggle has no client control, and the conformance reviewer confirmed it (`PATCH_bilateralAiEvidence`, `bilateral-api.service.ts:270`, has no caller). The other two items are recorded out-of-scope gaps.
+- **Implementer verification:**
+  - Server: 228/228, eslint clean, tsc 0.
+  - Client: 248/248 across 6 suites, app tsc 0, lint pass.
+- **Evidence re-run (Leader-inline):** **VERIFIED**, with the same counts. eslint exit 0; `ng lint` exit 0.
+- **Reviewer, security lens (opus): FAIL.**
+  - The server gate is correct and fails closed.
+  - Issue, verbatim in substance: the AI create entry is still offered to an admin who is not a centre member, through `app-bilateral-manual-create-drawer-host`. `[canUseAi]="flow.canUseAi()"` (`drawer-host.html:90`) comes from `BilateralManualCreateFlowService.canUseAi` (`:37-39`), which checks only the project and the primary Science Program. The drawer is reachable from the home page's "+ Create result" (`bilateral-projects-panel`) and from the creator (`goBack()`).
+  - Because `createJob` (`:117-143`) has no centre check, this client gate is the only barrier.
+  - Rules violated: `ASC-R-15`, `ASC-AC-13`, the `ASC-T-5` Falsifier, and `ASC-DD-7`.
+- **Reviewer, conformance + tests lens (opus): FAIL.**
+  - The server tests meet the Disqualifier, and the rendered-DOM proof holds for `my-draft-results` and the draft detail.
+  - Issues:
+    1. The same drawer entry is left ungated. The home-page "Create result" at `bilateral-projects-panel.component.html:340,431` leads to `beginFromProject()`, which opens the drawer, whose `flow.canUseAi()` has no membership check.
+    2. The creator's AI entry is proven only through the signal (`component.canUseAi()`). Nothing asserts the rendered AI option.
+- **ADVISORY (both lenses):**
+  - `isCenterMember` ignores `role_id`, while the server and the creator's `isCenterUserOfLeadCenter` require role 9.
+  - `getDraft`/`listDrafts` return the whole `job` entity (S3 keys, `text_context`, `response_snapshot`) to admins. That is inside the `ASC-R-14` grant, but a projection could be considered.
+  - The creator's `?job=` path sets `selectedReportingWay('ai')` without checking `canUseAi`.
+  - `isUserAdmin` has no `ORDER BY`. This is pre-existing and fails closed.
+  - The `createJob` centre gap is worth a task of its own, out of this spec.
+- **Runtime events:** none.
+
+### `ASC-T-7`: admin can run the quality check and submit a bilateral result for review
+
+#### Attempt 1: FAIL
+
+- **Files:** `bilateral-center.service.ts` (+5/−1) and `.spec.ts` (+78).
+- **Change:** `assertSubmittable` now runs `isUserAdmin` and calls `assertCenterPermission` only when the user is not an admin. The check sits at `:2376-2377`.
+- **Tests added:**
+  - `ASC-AC-18` for submit.
+  - `ASC-AC-18` for assess.
+  - An admin still gets the status precondition.
+  - The existing negatives are tagged `ASC-AC-19`.
+- **Pre-change red:** `ForbiddenException` at `assertCenterPermission (:2460)` ← `assertSubmittable (:2373)`.
+- **Mutations:**
+  - (a) Drop the bypass: `ASC-AC-18` goes red.
+  - (b) `if (false)`: `ASC-AC-19` goes red with "Received promise resolved instead of rejected".
+- **Implementer verification:** 133/133; eslint clean; tsc 0 before and after.
+- **Evidence re-run (Leader-inline):** **VERIFIED**. 133/133, eslint exit 0.
+- **Reviewer (opus): FAIL.**
+  - Confirmed correct:
+    - The bypass location and pattern.
+    - Only `submitForReview` and `assess` are widened.
+    - It fails closed.
+    - The `ASC-AC-19` negatives really reach the guard.
+    - The submitter identity is recorded correctly.
+  - **Issue, verbatim in substance:** the DoD's "admin still gets the status **and owner-SP** preconditions" is not proven.
+    - No admin test covers owner-SP.
+    - The status test runs before `isUserAdmin`, so its `mockResolvedValueOnce(true)` is never consumed. The test is green regardless of the bypass.
+    - An early `return result` in the admin branch would skip owner-SP and MDS with every test still green.
+    - Violated: `tasks.md` DoD, and `ASC-DD-9` "Not touched: the other preconditions".
+    - Remediation: an admin test through `submitForReview` with `getOwnerInitiativeByResult` returning `null`, asserting `BadRequestException /no Science Program assigned/` and that `isUserAdmin` was called; then a mutation that skips the owner check for admins must go red.
+  - **ADVISORY:**
+    - RISK: `getLatest` is not bypassed, so a non-member admin's quality-check polling and the rail's load of the latest assessment get a 403. **The Leader treats this as a spec gap that stops `ASC-R-18` from working, not as an advisory to drop. `ASC-DD-9` was amended (`getLatest` gets the same read-only bypass), and a DoD line was added. This completes R-18's meaning; it does not change it.**
+    - READABILITY: the review-history comment still reads "Submitted for review by the reporting center" when an admin submits.
+- **Runtime events:** none.
+
+#### Attempt 2: PASS
+
+- **Feedback:** the Reviewer's FAIL was relayed verbatim, together with the `ASC-DD-9` amendment for `getLatest`. The worker was resumed by message.
+- **Files (cumulative):** `bilateral-center.service.ts` (+10/−2) and `.spec.ts` (+136).
+- **Changes:**
+  - `getLatest` now has the same admin bypass as the other admin checks (`:2443-2444`).
+  - The status-test comment is corrected. It now states that the test does not prove the bypass.
+- **New tests:**
+  - An admin with no owner Science Program gets `BadRequestException`. The test asserts that `isUserAdmin` was called.
+  - An admin who is not a Center User can read `getLatest`. The test asserts that `validationCenterPermissions` was never called.
+  - `ASC-AC-19` markers are added on the existing non-admin negatives for submit, assess and getLatest.
+- **Mutations:**
+  - Owner-SP skip for admins (`if (isAdmin) return result;`): red, `Received promise resolved instead of rejected … "Result submitted for review successfully"`.
+  - `getLatest` bypass removed: red, `Received promise rejected instead of resolved … ForbiddenException`.
+  - Both were reverted.
+- **Implementer verification:** 135/135 · eslint clean · tsc grep 0.
+- **Evidence re-run (Leader-inline):** **VERIFIED**. 135/135, eslint exit 0.
+- **Reviewer (opus): PASS.**
+  - The owner-SP gap is closed.
+  - The `getLatest` bypass is correct, minimal and fail-closed.
+  - Nothing from attempt 1 regressed.
+- **ADVISORY:**
+  - READABILITY: retitle the `ASC-DD-9` heading at archive time, since it now covers `getLatest` too.
+  - RELIABILITY: mutation (b) was not recorded for `getLatest`. Its `ASC-AC-19` test covers the case structurally.
+- **Requirements covered:** `ASC-R-18`, `ASC-AC-18`, `ASC-AC-19`.
+- **Final status:** **PASS** (attempt 2 of 3).

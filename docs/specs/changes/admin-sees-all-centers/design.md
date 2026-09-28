@@ -169,6 +169,12 @@ Fully backwards compatible for every non-admin: the admin branch is the only new
 - **Supersedes:** the open-by-default and active-only clauses of `ASC-DD-6`. The toggle markup, the URL source and `ASC-R-16` are unchanged.
 - **Consequence:** for a non-admin, every row is assigned, so the open and collapsed lists are identical except when they are on an unassigned centre by URL. The user accepted this.
 
+### `ASC-DD-9` — Admin bypass on `assertSubmittable` only *(added 2026-09-28, user)*
+
+- **Decision:** in `bilateral-center.service.ts` `assertSubmittable` (`:2335`), replace the unconditional `assertCenterPermission` (`:2373`) with the pattern this file already uses at `:172-173` and `:626-627`: `const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id); if (!isAdmin) await this.assertCenterPermission(…)`. Because `assertSubmittable` is shared by `submitForReview` (`:2200`) and `assess` (`:2400`), both gain the bypass. That is intended, since the button runs `assess` first.
+- **Amended 2026-09-28 (Reviewer finding on `ASC-T-7` attempt 1):** `getLatest` (`:2424`/`:2436`) gets the same admin bypass. The client polls it while `assess` is `running` (`bilateral-quality-assessment-ui.service.ts:58-60`) and loads it on open (`bilateral-result-creator.component.ts:412`). Without the bypass, a non-member admin's quality check, and with it their submit, fails. The endpoint is read-only.
+- **Not touched:** the other preconditions, `assertCenterPermission` itself, and the client. The client already enables the button for admins through `canSubmitFromRail`.
+
 ## 13. Open Gaps & Follow-ups
 
 - **Reversion challenge (Step 2.3) — one DD corrected.** `ASC-DD-5`'s first draft used the `role_name` line as the "mine" marker. The challenge asked what removing/relying on it breaks and surfaced `AUTH-R-2`: every assignment is `Center User`, which `shouldShowAssignmentRole()` filters out, so the marker would never have rendered. Corrected in place before `tasks.md`. No other DD reverts delivered behaviour.
@@ -180,7 +186,7 @@ Fully backwards compatible for every non-admin: the admin branch is the only new
 
 | | Expected |
 |---|---|
-| Tasks | **3** → **6** after the 2026-09-28 scope changes (`ASC-T-4` collapse, `ASC-T-5` admin read-only drafts, `ASC-T-6` collapsed-by-default) |
+| Tasks | **3** → **7** after the 2026-09-28 scope changes (`ASC-T-4` collapse, `ASC-T-5` admin read-only drafts, `ASC-T-6` collapsed-by-default, `ASC-T-7` admin submit) |
 | LOC | **~130** (≈50 production, ≈80 test) |
 | Review rounds | **1** |
 

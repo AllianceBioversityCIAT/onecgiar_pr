@@ -183,6 +183,38 @@
 
 ---
 
+### `ASC-T-7` — Admin can run the quality check and submit a bilateral result for review *(added 2026-09-28, user)*
+
+- **Type:** `server`
+- **Description:** apply `ASC-DD-9` in `onecgiar-pr-server/src/api/bilateral/services/bilateral-center.service.ts`. The admin check wraps `assertCenterPermission` inside `assertSubmittable` only.
+- **Implements:** `ASC-R-18`
+- **Design:** `ASC-DD-9`
+- **Files (expected):** `bilateral-center.service.ts` · its spec (`bilateral-center.service.spec.ts` or the nearest existing submit-for-review spec)
+- **Depends on:** `—`
+- **Blocks:** `ASC-T-3`
+- **Size:** `XS`
+- **Skills:** `nestjs-expert`, `tdd`
+- **Review:** `full` — authorization surface (override f)
+- **Verification:**
+  - **Falsifier:** fixtures are an admin (`isUserAdmin` true, `validationCenterPermissions` 0) and a result that satisfies every other precondition.
+    - `submitForReview` and `assess` both get past the guard.
+    - A non-admin non-member still gets `ForbiddenException`.
+    - An admin still gets `BadRequestException` on a result in QA/Submitted status, which proves the other preconditions still hold for admins.
+    - Mutations: (a) drop the bypass → `ASC-AC-18` red with `ForbiddenException`; (b) make the bypass unconditional (skip the check for everyone) → `ASC-AC-19` red.
+  - **Red run:** `cd onecgiar-pr-server && npx jest --silent --forceExit --testPathPattern="bilateral-center"` — `ASC-AC-18` fails on current code with `ForbiddenException`.
+  - **Disqualifier:** mock the repositories, not `assertCenterPermission`/`assertSubmittable`, and call the public `submitForReview`/`assess`. Never run the unscoped server suite.
+  - **Consumers:** `bilateral-center.controller.ts` (`submit-for-review`, `quality-assessment`) · existing bilateral-center specs
+- **Definition of done:**
+  - [x] `ASC-AC-18` — the admin non-member passes the guard on assess and submit
+  - [x] `ASC-AC-19` — the non-admin non-member is still forbidden
+  - [x] The admin still gets the status and owner-SP preconditions (owner-SP proven through the bypass path, `isUserAdmin` asserted called)
+  - [x] *(amended 2026-09-28)* `getLatest` admits the admin non-member and still forbids the non-admin non-member
+  - [x] Both mutations executed and observed **red**
+  - [x] `npx jest --testPathPattern="bilateral-center"` green · eslint `--quiet` on the touched files · no new tsc errors on the touched files
+- **Status:** [x] — PASS attempt 2, 2026-09-28 (`execution.md` → `ASC-T-7`)
+
+---
+
 ### `ASC-T-3` — Confirm on a real admin account and settle the catalogue count
 
 - **Type:** manual verification + docs
@@ -190,7 +222,7 @@
 - **Implements:** `ASC-R-20`, `ASC-AC-1` end to end, `D8`, `D9`; settles `P-10`
 - **Design:** §13, `P-10`
 - **Files (expected):** `…/reporting-nav-sidebar/` has no folder guide today — if the walk changes any documented behaviour, record it in `onecgiar-pr-client/src/CLAUDE.md`; otherwise this task writes no file and reports its findings into `execution.md`
-- **Depends on:** `ASC-T-4`, `ASC-T-5`, `ASC-T-6` *(was `ASC-T-2`; re-pointed 2026-09-28)*
+- **Depends on:** `ASC-T-4`, `ASC-T-5`, `ASC-T-6`, `ASC-T-7` *(was `ASC-T-2`; re-pointed 2026-09-28)*
 - **Blocks:** `—`
 - **Size:** `S`
 - **Skills:** `systematic-debugging` (the walk is the last confirmation); `playwright-cli` **only if installed locally** — otherwise a manual walk in Chrome
@@ -271,6 +303,7 @@ Linear, no cycle. `T-2` cannot precede `T-1` because the marker renders a tag `T
 | `ASC-T-4` | `full` | Touches the `[data-guide]` wrapper the tour pins |
 | `ASC-T-5` | `full` (parallel lenses) | Security surface — grants a read permission |
 | `ASC-T-6` | `full` | Reverts delivered default (override d) |
+| `ASC-T-7` | `full` | Authorization surface |
 | `ASC-T-3` | `checklist` | A manual walk and at most one documentation line |
 
 **No task is `skip-eligible.`** Both code tasks carry non-deterministic or judgment-bearing checks and touch surfaces other code pins; the third is the substitute gate for two defect classes with no automated check.
