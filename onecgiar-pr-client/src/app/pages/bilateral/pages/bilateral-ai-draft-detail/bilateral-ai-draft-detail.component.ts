@@ -1,10 +1,12 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
+import { RolesService } from '../../../../shared/services/global/roles.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { isCenterMember } from '../../services/bilateral-center-membership.util';
 import { DraftResultCardComponent } from './components/draft-result-card/draft-result-card.component';
 import { DraftEvidenceListComponent } from './components/draft-evidence-list/draft-evidence-list.component';
 
@@ -16,11 +18,24 @@ import { DraftEvidenceListComponent } from './components/draft-evidence-list/dra
 })
 export class BilateralAiDraftDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly rolesSE = inject(RolesService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly ctx = inject(BilateralContextService);
 
   showPromoteDialog = signal(false);
   showDiscardDialog = signal(false);
+
+  /**
+   * `ASC-T-5` (`ASC-R-15`) — see the sibling gate's doc in `my-draft-results.component.ts`.
+   * Reads `rolesVersion` first: `RolesService.roles` is a plain property, invisible to the signal
+   * graph on its own, so without this the computed would cache whatever `getMyCenters()` answered
+   * on the FIRST render and never react to a roles payload landing afterwards (the same class of
+   * bug `isCenterUserOfLeadCenter()` guards against, `bilateral-result-creator.component.ts`).
+   */
+  readonly isCenterMember = computed(() => {
+    this.rolesSE.rolesVersion;
+    return isCenterMember(this.rolesSE.getMyCenters(), this.ctx.centerId(), this.ctx.centerAcronym());
+  });
 
   draftId: number | null = null;
   draft: BilateralAiDraft | null = null;

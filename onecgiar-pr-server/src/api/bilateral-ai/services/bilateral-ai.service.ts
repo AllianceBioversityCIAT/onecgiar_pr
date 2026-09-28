@@ -463,10 +463,19 @@ export class BilateralAiService {
    * `centerId` is a client-supplied filter on listDrafts, so this is the sole
    * authorization gate on that path; for the other methods it's derived from the
    * draft's own resolved job.center_id rather than trusted client input.
+   *
+   * `ASC-DD-7` (`docs/specs/changes/admin-sees-all-centers/design.md`): `mode` is required, not
+   * defaulted, so every call site must state its own intent rather than inherit one silently.
+   * `'read'` additionally admits a platform admin (`RoleByUserRepository.isUserAdmin`) who is not
+   * a Center User of this centre; `'act'` never does — `promoteDraft`, `discardDraft` and
+   * `setFormalEvidence` keep the membership-only check for every caller, admins included
+   * (`ASC-R-15`). The admin lookup runs only after membership fails and only for `'read'`, so the
+   * act path is byte-identical to before this pivot.
    */
   private async assertCenterEntitlement(
     userId: number,
     centerId: number,
+    mode: 'read' | 'act',
   ): Promise<void> {
     const center = await this.clarisaCentersRepository.findOne({
       where: { institutionId: centerId },
@@ -477,13 +486,16 @@ export class BilateralAiService {
         userId,
         center.code,
       );
-    if (!isMember) {
-      throw new ForbiddenException('You do not have access to this center.');
+    if (isMember) return;
+    if (mode === 'read') {
+      const isAdmin = await this.roleByUserRepository.isUserAdmin(userId);
+      if (isAdmin) return;
     }
+    throw new ForbiddenException('You do not have access to this center.');
   }
 
   async listDrafts(userId: number, centerId: number) {
-    await this.assertCenterEntitlement(userId, centerId);
+    await this.assertCenterEntitlement(userId, centerId, 'read');
     const drafts = await this.draftRepository.find({
       where: {
         is_discarded: false,
@@ -517,18 +529,22 @@ export class BilateralAiService {
     return drafts;
   }
 
-  private async getDraftRaw(draftId: number, userId: number) {
+  private async getDraftRaw(
+    draftId: number,
+    userId: number,
+    mode: 'read' | 'act',
+  ) {
     const draft = await this.draftRepository.findOne({
       where: { id: draftId, is_discarded: false },
       relations: { job: true, result: true },
     });
     if (!draft) throw new NotFoundException('AI draft not found.');
-    await this.assertCenterEntitlement(userId, draft.job.center_id);
+    await this.assertCenterEntitlement(userId, draft.job.center_id, mode);
     return draft;
   }
 
   async getDraft(draftId: number, userId: number) {
-    const draft = await this.getDraftRaw(draftId, userId);
+    const draft = await this.getDraftRaw(draftId, userId, 'read');
     const evidence = await this.evidenceRepository.find({
       where: { draft_id: draft.id, is_active: true },
       order: { created_date: 'ASC' },
@@ -546,7 +562,7 @@ export class BilateralAiService {
     formal: boolean,
     userId: number,
   ) {
-    const draft = await this.getDraftRaw(draftId, userId);
+    const draft = await this.getDraftRaw(draftId, userId, 'act');
     const evidence = await this.evidenceRepository.findOne({
       where: { id: evidenceId, draft_id: draft.id, is_active: true },
     });
@@ -562,7 +578,7 @@ export class BilateralAiService {
   }
 
   async promoteDraft(draftId: number, userId: number) {
-    const draft = await this.getDraftRaw(draftId, userId);
+    const draft = await this.getDraftRaw(draftId, userId, 'act');
     const evidence = await this.evidenceRepository.find({
       where: { draft_id: draft.id, is_active: true },
       order: { created_date: 'ASC' },
@@ -674,7 +690,7 @@ export class BilateralAiService {
   }
 
   async discardDraft(draftId: number, userId: number) {
-    const draft = await this.getDraftRaw(draftId, userId);
+    const draft = await this.getDraftRaw(draftId, userId, 'act');
     await this.draftRepository.update(draft.id, { is_discarded: true });
     await this.resultRepository.update(draft.result_id, { is_active: false });
     return {

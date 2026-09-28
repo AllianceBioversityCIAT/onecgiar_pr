@@ -357,26 +357,28 @@
                             <i class="material-icons-round" aria-hidden="true">visibility</i>
                             <span class="mdr-btn-label">Review</span>
                           </button>
-                          <button
-                            type="button"
-                            class="mdr-btn mdr-btn--promote"
-                            [prTooltip]="promoteTooltip"
-                            prTooltipPosition="top"
-                            (click)="onPromoteClick(draft)"
-                          >
-                            <i class="material-icons-round">arrow_upward</i>
-                            Create Result
-                          </button>
-                          <button
-                            type="button"
-                            class="mdr-btn mdr-btn--discard"
-                            aria-label="Delete draft"
-                            [prTooltip]="deleteTooltip"
-                            prTooltipPosition="top"
-                            (click)="onDiscardClick(draft)"
-                          >
-                            <i class="material-icons-round" aria-hidden="true">delete</i>
-                          </button>
+                          @if (isCenterMember()) {
+                            <button
+                              type="button"
+                              class="mdr-btn mdr-btn--promote"
+                              [prTooltip]="promoteTooltip"
+                              prTooltipPosition="top"
+                              (click)="onPromoteClick(draft)"
+                            >
+                              <i class="material-icons-round">arrow_upward</i>
+                              Create Result
+                            </button>
+                            <button
+                              type="button"
+                              class="mdr-btn mdr-btn--discard"
+                              aria-label="Delete draft"
+                              [prTooltip]="deleteTooltip"
+                              prTooltipPosition="top"
+                              (click)="onDiscardClick(draft)"
+                            >
+                              <i class="material-icons-round" aria-hidden="true">delete</i>
+                            </button>
+                          }
                         </div>
                       </td>
                     </tr>
@@ -439,16 +441,18 @@
       <app-draft-evidence-list [job]="draft.job" />
     </div>
 
-    <div class="mdr-aside-footer">
-      <button type="button" class="mdr-btn mdr-btn--promote mdr-btn--wide" (click)="onPromoteClick(draft)">
-        <i class="material-icons-round">arrow_upward</i>
-        Create Result
-      </button>
-      <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
-        <i class="material-icons-round">delete_outline</i>
-        Discard
-      </button>
-    </div>
+    @if (isCenterMember()) {
+      <div class="mdr-aside-footer">
+        <button type="button" class="mdr-btn mdr-btn--promote mdr-btn--wide" (click)="onPromoteClick(draft)">
+          <i class="material-icons-round">arrow_upward</i>
+          Create Result
+        </button>
+        <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
+          <i class="material-icons-round">delete_outline</i>
+          Discard
+        </button>
+      </div>
+    }
   </aside>
 }
 

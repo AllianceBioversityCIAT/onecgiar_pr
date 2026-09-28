@@ -396,6 +396,7 @@ hlm-sidebar {
 }
 
 .pr-nav-rail-btn {
+  position: relative; // anchors the "mine" badge (ASC-T-2) — see `.pr-nav-center-check--rail`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -421,6 +422,20 @@ hlm-sidebar {
     background: var(--pr-sidebar-active);
     box-shadow: 0 2px 6px rgba(107, 70, 229, 0.35);
   }
+}
+
+/* "Mine" marker on the collapsed rail (`ASC-T-2`, `ASC-DD-5`) — a small badge overlaid on the
+   32×32 button, since there is no room for a second flex child beside the diamond. Structural,
+   not colour-only (a11y NFR): paired with the button's `aria-label` suffix in the template.
+   Reuses existing tokens only (`--pr-sidebar-accent`, `--pr-sidebar-bg`) — no new design token. */
+.pr-nav-center-check--rail {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  border-radius: 999px;
+  background: var(--pr-sidebar-accent);
+  color: var(--pr-sidebar-bg);
+  box-shadow: 0 0 0 2px var(--pr-sidebar-bg);
 }
 
 .pr-nav-rail-divider {

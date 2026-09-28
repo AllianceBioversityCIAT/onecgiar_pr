@@ -43,6 +43,7 @@ import {
   MyDraftResultsFilterContext,
 } from './utils/draft-filter-helpers';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { isCenterMember } from '../../services/bilateral-center-membership.util';
 
 /**
  * P2-3169 AC2 — the `result` relation the drafts endpoint returns next to every draft.
@@ -168,6 +169,20 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   /** P2-3315: a Center user must explicitly validate an AI draft before it can become an editable result. */
   centerValidationConfirmed = signal(false);
   discardTarget = signal<BilateralAiDraft | null>(null);
+
+  /**
+   * `ASC-T-5` (`ASC-R-15`): a platform admin who is not a Center User of THIS centre must not see
+   * Create Result / Discard — the server (`bilateral-ai.service.ts` `assertCenterEntitlement`,
+   * `mode: 'act'`) would 403 those calls for them anyway; this only keeps them from meeting that
+   * 403 in the first place. Deliberately reads `getMyCenters()` directly, never `rolesSE.isAdmin` —
+   * see `isCenterMember`'s own doc for why that short-circuit is the bug this exists to avoid.
+   */
+  readonly isCenterMember = computed(() => {
+    // `RolesService.roles` is a plain property, invisible to the signal graph on its own — this
+    // read is what makes the computed react to the roles payload landing after first render.
+    this.api.rolesSE.rolesVersion;
+    return isCenterMember(this.api.rolesSE.getMyCenters(), this.ctx.centerId(), this.ctx.centerAcronym());
+  });
   selectedDraft = signal<BilateralAiDraft | null>(null);
 
   readonly resolvedUserNames = signal<Record<number, string>>({});
