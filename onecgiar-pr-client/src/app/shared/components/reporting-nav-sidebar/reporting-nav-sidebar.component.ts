@@ -48,6 +48,7 @@ import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
 import { CentersService } from '../../services/global/centers.service';
 import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
+import { REPORTING_NAV_SIDEBAR_COPY } from '../../../internationalization/reporting-nav-sidebar.copy';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
 
@@ -681,6 +682,28 @@ export class ReportingNavSidebarComponent {
   /** Bilateral home for a centre, falling back to its id when the acronym is missing. */
   centerHomeLink(center: { center_acronym?: string; center_id?: unknown }): unknown[] {
     return ['/bilateral', center?.center_acronym || String(center?.center_id ?? ''), 'home'];
+  }
+
+  // @akili-spec changes/admin-sees-all-centers (ASC-T-2)
+  // Mirrors `shell-topbar.component.ts`'s `shouldShowAssignmentRole` verbatim — copied, not
+  // imported, per ASC-T-2's scope: that symbol must stay untouched and unexported. Generic
+  // "Center User" roles (every assignment, per `AUTH-R-2`) add no information in a tooltip.
+  shouldShowAssignmentRole(role?: string | null): boolean {
+    const normalized = role?.trim();
+    if (!normalized) return false;
+    return normalized.toLowerCase() !== 'center user';
+  }
+
+  /** sr-only + tooltip text for the "mine" marker (`ASC-DD-5`), per requirements.md §7 NFR
+   *  *Internationalization* — `REPORTING_NAV_SIDEBAR_COPY` (`internationalization/`). */
+  readonly assignedMarkerLabel = REPORTING_NAV_SIDEBAR_COPY.assignedMarkerLabel;
+
+  /** Tooltip for a centre card/rail button: the role suffix is gated by `shouldShowAssignmentRole`
+   *  (`ASC-DD-4`) so a catalogue row's absent `role_name` never renders the literal `undefined`
+   *  (`ASC-R-5`, `D3`). */
+  centerTooltip(center: { center_name?: string; role_name?: string }): string {
+    const name = center?.center_name ?? '';
+    return this.shouldShowAssignmentRole(center?.role_name) ? `${name} · ${center.role_name}` : name;
   }
 
   @HostListener('document:keydown.escape')

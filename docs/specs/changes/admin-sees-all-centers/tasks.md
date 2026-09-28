@@ -7,7 +7,7 @@
 - **Ticket:** none — user-originated
 - **Owner / driver:** Juan David Delgado
 - **Branch base:** `performance-refactor` @ `f37e1c728`
-- **Status:** `in-progress` — `ASC-T-1` done; `ASC-T-2`, `ASC-T-3` pending
+- **Status:** `in-progress` — `ASC-T-1`, `ASC-T-2` done; `ASC-T-3` pending (manual walk on TEST)
 - **Budget (`design.md` §14):** 3 tasks · ~130 LOC · 1 review round. `/akili-execute` escalates rather than continuing if any is exceeded.
 
 ---
@@ -76,13 +76,14 @@
   - **Disqualifier:** asserting the **presence of a CSS class** proves the class, not the behaviour — read rendered `textContent` and the resolved `title`/`aria-label`, per the real-artifact lock. A case that renders a hand-built fragment instead of the component's real template is not evidence. Contrast and layout are **not** covered here: jsdom cannot measure either, and a checker returning "incomplete" has evaluated nothing — the a11y colour requirement is confirmed at `ASC-T-3`, not in Jest.
   - **Consumers:** `platform-tour.steps.ts:83` + `platform-tour.steps.spec.ts:28` (`[data-guide="platform-tour-sidebar-centers"]` — must not move or be renamed) · `reporting-nav-sidebar.component.scss:349,353,554,601,765` (the card, diamond and name rules the marker sits beside) · `reporting-nav-sidebar.component.spec.ts`
 - **Definition of done:**
-  - [ ] `ASC-AC-2` — the assigned centre renders its marker; the catalogue-only centre does not
-  - [ ] `ASC-AC-7` — no rendered text contains `undefined`, and each link resolves to `/bilateral/<acronym>/home`
-  - [ ] `ASC-AC-4` — a non-admin with zero assignments still gets **no block at all**
-  - [ ] Both falsifier mutations executed against the post-change code and observed **red**, mutation (b) included
-  - [ ] `track center.center_id` still present on both loops; `[data-guide]` unmoved
-  - [ ] The marker is not carried by colour alone
-  - [ ] `npx jest --testPathPattern="(reporting-nav-sidebar|platform-tour)"` green · `npx tsc --noEmit` clean · `npx ng lint --quiet` clean
+  - [x] `ASC-AC-2` — the assigned centre renders its marker; the catalogue-only centre does not
+  - [x] `ASC-AC-7` — no rendered text contains `undefined`, and each link resolves to `/bilateral/<acronym>/home`
+  - [x] `ASC-AC-4` — a non-admin with zero assignments still gets **no block at all**
+  - [x] Both falsifier mutations executed against the post-change code and observed **red**, mutation (b) included
+  - [x] `track center.center_id` still present on both loops; `[data-guide]` unmoved
+  - [x] The marker is not carried by colour alone
+  - [x] `npx jest --testPathPattern="(reporting-nav-sidebar|platform-tour)"` green · `npx tsc --noEmit` clean · `npx ng lint --quiet` clean
+- **Status:** [x] — PASS attempt 2, 2026-09-28 (`execution.md` → `ASC-T-2`)
 
 ---
 
