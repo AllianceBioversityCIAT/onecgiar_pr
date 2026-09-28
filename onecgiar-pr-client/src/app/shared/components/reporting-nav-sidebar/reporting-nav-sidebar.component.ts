@@ -247,7 +247,9 @@ export class ReportingNavSidebarComponent {
   /** Whether Admin module is expanded to reveal its child pages. */
   readonly adminModuleExpanded = signal(this.router.url.startsWith('/admin-module'));
   /** Which program groups are open. "My programs" starts open, the rest collapsed. */
-  readonly openGroups = signal<Set<string>>(new Set(['mine']));
+  // @akili-spec changes/admin-sees-all-centers (ASC-T-4) — the centres block starts open, same as
+  // the "mine" science-programs group (ASC-R-11).
+  readonly openGroups = signal<Set<string>>(new Set(['mine', 'centers']));
   private otherAutoOpened = false;
   /** Ensures the (lazy) programs fetch is triggered at most once. */
   private rfrLoadTriggered = false;
@@ -682,6 +684,45 @@ export class ReportingNavSidebarComponent {
   /** Bilateral home for a centre, falling back to its id when the acronym is missing. */
   centerHomeLink(center: { center_acronym?: string; center_id?: unknown }): unknown[] {
     return ['/bilateral', center?.center_acronym || String(center?.center_id ?? ''), 'home'];
+  }
+
+  // @akili-spec changes/admin-sees-all-centers (ASC-T-4, ASC-DD-6, ASC-R-16)
+  /** The `/bilateral/<x>/…` segment of the current URL, or `null` outside any centre (`ASC-R-12`).
+   *  Reactive to navigation — same `toSignal` + `NavigationEnd` shape as `activeSpCode` above —
+   *  so the collapsed block and the active state update as the user enters or leaves a centre.
+   *  ANY route under `/bilateral/<acronym>/…` counts (`ASC-R-16`), not just its `/home` link. */
+  readonly activeCenterKey = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.readActiveCenterKey())
+    ),
+    { initialValue: this.readActiveCenterKey() }
+  );
+
+  private readActiveCenterKey(): string | null {
+    // Query string, fragment AND matrix params are all irrelevant to "which centre" — strip at
+    // the first of `?`, `#` or `;` before matching (ASC-R-16: `?phase=36` must not break the match).
+    const path = this.router.url.split(/[?#;]/)[0];
+    const match = /^\/bilateral\/([^/]+)/.exec(path);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  /** Whether `center` is the one the user is currently inside, on ANY route under its
+   *  `/bilateral/<x>/…` prefix (`ASC-R-16`) — by the same acronym-or-id key `centerHomeLink`
+   *  builds its URL from. Drives both the expanded card's active class/`aria-current` and the
+   *  rail's active class directly, instead of `routerLinkActive` on the `/home` link, which only
+   *  matched `/home` and its own children (`ASC-AC-15`). */
+  isActiveCenter(center: { center_acronym?: string; center_id?: unknown }): boolean {
+    const key = this.activeCenterKey();
+    return key != null && key === (center?.center_acronym || String(center?.center_id ?? ''));
+  }
+
+  /** Centres rendered in the expanded block: every centre when the group is open; only the
+   *  active one — or none — when it is collapsed (`ASC-R-11`, `ASC-R-12`, `ASC-DD-6`). */
+  visibleCenters() {
+    const centers = this.getMyCenters();
+    return this.isGroupOpen('centers') ? centers : centers.filter(center => this.isActiveCenter(center));
   }
 
   // @akili-spec changes/admin-sees-all-centers (ASC-T-2)

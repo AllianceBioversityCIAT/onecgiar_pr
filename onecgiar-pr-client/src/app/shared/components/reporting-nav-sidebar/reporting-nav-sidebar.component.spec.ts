@@ -1028,6 +1028,188 @@ describe('ReportingNavSidebarComponent', () => {
     });
   });
 
+  // ------------------------------------------------------------------------ ASC-T-4
+  // Rendered checks for the collapsible "My CGIAR centers" block. Same real-artifact extraction
+  // as ASC-T-2, but with a REAL `Router` that can actually navigate: a `**` catch-all route (the
+  // same pattern `bilateral-overview.component.spec.ts` uses) lets `navigateByUrl` resolve, which
+  // `provideRouter([])` alone cannot — there is no route to match `/bilateral/CIAT/home` against.
+  describe('collapsible centres block (ASC-T-4)', () => {
+    const extractTemplateBlock = (html: string, startMarker: string): string => {
+      const start = html.indexOf(startMarker);
+      if (start === -1) throw new Error(`ASC-T-4 test anchor not found in the real template: ${startMarker}`);
+      let depth = 0;
+      let i = start;
+      for (; i < html.length; i++) {
+        if (html[i] === '{' && html[i + 1] === '{') {
+          i++;
+          continue;
+        }
+        if (html[i] === '}' && html[i + 1] === '}') {
+          i++;
+          continue;
+        }
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            i++;
+            break;
+          }
+        }
+      }
+      return html.slice(start, i);
+    };
+
+    const readTemplateHtml = (): string => readFileSync(join(__dirname, 'reporting-nav-sidebar.component.html'), 'utf8');
+
+    const buildRendered = async (templateHtml: string) => {
+      await TestBed.configureTestingModule({
+        imports: [ReportingNavSidebarComponent],
+        providers: [
+          provideRouter([{ path: '**', children: [] }]),
+          { provide: RolesService, useValue: rolesMock },
+          { provide: DataControlService, useValue: dataControlMock },
+          { provide: ResultFrameworkReportingHomeService, useValue: homeMock },
+          { provide: ApiService, useValue: apiMock },
+          { provide: CentersService, useValue: centersMock },
+          { provide: FontScaleService, useValue: fontScaleMock },
+          { provide: ResultsNotificationsService, useValue: notificationsMock },
+          { provide: HlmSidebarService, useValue: sidebarMock },
+          { provide: ReportingGuideService, useValue: reportingGuideMock }
+        ],
+        schemas: [NO_ERRORS_SCHEMA]
+      })
+        .overrideComponent(ReportingNavSidebarComponent, { set: { template: templateHtml } })
+        .compileComponents();
+
+      const renderedFixture = TestBed.createComponent(ReportingNavSidebarComponent);
+      renderedFixture.detectChanges();
+      return renderedFixture;
+    };
+
+    /** Falsifier fixture (tasks.md `ASC-T-4`): admin assigned to CIAT, catalogue CIAT/IITA/CIP. */
+    const seedThreeCenters = () => {
+      rolesMock.isAdmin = true;
+      apiMock.rolesSE.getMyCenters.mockReturnValue([{ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' }]);
+      centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+    };
+
+    const wholeBlock = () => extractTemplateBlock(readTemplateHtml(), '@if (!isCollapsed() && getMyCenters().length > 0) {');
+
+    it('ASC-AC-10: the toggle collapses and reopens the list; aria-expanded follows', async () => {
+      seedThreeCenters();
+      const renderedFixture = await buildRendered(wholeBlock());
+
+      const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+      // Open by default (ASC-R-11): all three render before any click.
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+
+      toggle.click();
+      renderedFixture.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      // Nobody is "inside" a centre on the default route — a collapsed block with no active
+      // centre lists nothing (ASC-R-12).
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(0);
+
+      toggle.click();
+      renderedFixture.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+    });
+
+    it('ASC-AC-11: collapsed while inside CIAT shows only CIAT, active and marked', async () => {
+      seedThreeCenters();
+      const renderedFixture = await buildRendered(wholeBlock());
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/bilateral/CIAT/home');
+      renderedFixture.detectChanges();
+
+      const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+      toggle.click();
+      renderedFixture.detectChanges();
+
+      const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+      expect(links).toHaveLength(1);
+      expect(links[0].textContent).toContain('CIAT');
+      expect(links[0].classList.contains('pr-nav-program-card--active')).toBe(true);
+      expect(links[0].textContent).toContain(renderedFixture.componentInstance.assignedMarkerLabel);
+
+      toggle.click();
+      renderedFixture.detectChanges();
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+    });
+
+    // ----------------------------------------------------------- ASC-R-16 / ASC-AC-15
+    // The user's own words: on ANY route under a centre — not only its `/home` link — that centre
+    // must read as active. Reviewer's diagnosis: `routerLinkActive` on the `/home` link only
+    // matches `/home` and its children, so `/bilateral/CIAT/result/…` left CIAT unmarked. Fixed by
+    // driving both loops' active state from `isActiveCenter()` — the same URL source the collapsed
+    // filter already uses — instead of `routerLinkActive`.
+    describe('active on any /bilateral/<x>/… route, not only /home (ASC-R-16)', () => {
+      const seedWithAfricaRice = () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        centersMock.centers.set([catalogueCenter('AfricaRice'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+      };
+
+      it('ASC-AC-15 (expanded): active with aria-current="page" on a deep route with a query string', async () => {
+        seedWithAfricaRice();
+        const renderedFixture = await buildRendered(wholeBlock());
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/AfricaRice/result/9652?phase=36');
+        renderedFixture.detectChanges();
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        expect(links).toHaveLength(3);
+        const africaRice = links.find(a => a.textContent?.includes('AfricaRice'))!;
+        const others = links.filter(a => a !== africaRice);
+        expect(africaRice).toBeTruthy();
+
+        expect(africaRice.classList.contains('pr-nav-program-card--active')).toBe(true);
+        expect(africaRice.getAttribute('aria-current')).toBe('page');
+        others.forEach(a => {
+          expect(a.classList.contains('pr-nav-program-card--active')).toBe(false);
+          expect(a.getAttribute('aria-current')).toBeNull();
+        });
+      });
+
+      it('ASC-AC-15 (rail): the rail button is active on the same deep route; the others are not', async () => {
+        seedWithAfricaRice();
+        // Same anchor ASC-T-2's collapsed-rail test uses: the INNER `@if`, so the fragment never
+        // calls the outer rail guard's `homeSE.isLoadingSPLists()` (unstubbed on this mock).
+        const railBlock = extractTemplateBlock(readTemplateHtml(), '@if (getMyCenters().length > 0) {');
+        const renderedFixture = await buildRendered(railBlock);
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/AfricaRice/result/9652?phase=36');
+        renderedFixture.detectChanges();
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        expect(links).toHaveLength(3);
+        const africaRice = links.find(a => a.getAttribute('href') === '/bilateral/AfricaRice/home')!;
+        const others = links.filter(a => a !== africaRice);
+        expect(africaRice).toBeTruthy();
+
+        expect(africaRice.classList.contains('pr-nav-rail-btn--active')).toBe(true);
+        others.forEach(a => expect(a.classList.contains('pr-nav-rail-btn--active')).toBe(false));
+      });
+
+      it('ASC-R-16: a bare fragment (#x) still resolves to the centre', async () => {
+        seedWithAfricaRice();
+        const renderedFixture = await buildRendered(wholeBlock());
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/AfricaRice#x');
+        renderedFixture.detectChanges();
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        const africaRice = links.find(a => a.textContent?.includes('AfricaRice'))!;
+        expect(africaRice).toBeTruthy();
+        expect(africaRice.classList.contains('pr-nav-program-card--active')).toBe(true);
+        expect(africaRice.getAttribute('aria-current')).toBe('page');
+      });
+    });
+  });
+
   // ------------------------------------------------------- SGL-T-2 / SGL-R-1..R-2
   // Parsed-template checks — same rationale as SBAR-T-3 below: the real template trips BrnTooltip
   // under Jest, so markup authorship is asserted from the `.html` file on disk.

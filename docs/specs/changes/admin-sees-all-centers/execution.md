@@ -186,3 +186,107 @@ Green, as listed above.
 #### Final status
 
 **PASS** (attempt 2 of 3).
+
+## Scope change — 2026-09-28 (user, after `ASC-T-2`)
+
+- **User request, verbatim:** "en el aside donde está esta sección, yo creo que debe ser collapsable para que no ocupe tanto espacio … si el usuario quiere colapsarlo, que lo pueda colapsar. Y si, por ejemplo, yo estoy dentro de un center, que ese center se quede como active en el aside, así los demás estén colapsados". Follow-up: "IMplementalo y ya, es facil. ASAP".
+- **This is not a Pivot.** It is new scope the user approved, and it changes no approved requirement's meaning, except where each amendment below says so.
+- **Spec amended (execute-time):**
+  - `requirements.md`:
+    - `ASC-R-11`, `-12`, `-13` added.
+    - `ASC-R-2` amended: the header toggle is the one deliberate markup difference for non-admins.
+    - `ASC-R-20` superseded for collapse.
+    - `ASC-AC-10` and `ASC-AC-11` added.
+  - `design.md`: `ASC-DD-6` added; the budget is now 4 tasks.
+  - `tasks.md`: new `ASC-T-4`, and `ASC-T-3` re-pointed to depend on it.
+- **Assumptions (Leader, stated to the user):**
+  - The block is open by default.
+  - The toggle applies to every user who sees the block.
+  - The open state is not persisted across reloads.
+  - The collapsed rail is untouched.
+  - The label stays "My CGIAR centers".
+
+## Pivot Record: `ASC-T-5` — admin read-only access to a centre's AI drafts (2026-09-28)
+
+- **Trigger:** the user saw `ForbiddenException: You do not have access to this center.` from `BilateralAiService.assertCenterEntitlement` (`bilateral-ai.service.ts:481`) on `GET /api/bilateral/center/ai/drafts?centerId=52`, as an admin inside an unassigned centre. The sidebar now makes that route reachable. It was already reachable by URL before this spec.
+- **Why this is a Pivot:** it overturns an approved non-goal ("No authorization change" in NFR *Authorization* and design §7; "Any server change" in the proposal non-goals).
+- **User decision, verbatim:** "lo mejor sería que el admin pueda ver todo, pero no tener ninguna acción … que pueda ver los drafts, pero que no pueda hacer el promote del result … darle el previo para el preview, pero que no pueda hacer el create del result si no le pertenece". Leader restated the rule; user approved: "Si, dale asi."
+- **Alternatives:**
+  - (1) Client-only: hide drafts for non-member admins. **Rejected by the user**, who wants read access.
+  - (2) **Chosen:** server read bypass for admins plus client action hiding.
+- **Spec amended:**
+  - `requirements.md`: `ASC-R-14`, `ASC-R-15` added; NFR *Authorization* amended; `ASC-AC-12`..`14` added.
+  - `design.md`: `ASC-DD-7` added; budget now 5 tasks.
+  - `tasks.md`: `ASC-T-5` added; `ASC-T-3` now depends on T-4 and T-5.
+- **Correction-closure sweep:** grep of "No authorization change" / "Any server change" / "Unchanged. No permission" across the spec folder.
+  - requirements.md NFR: amended.
+  - design.md §7 and the proposal: superseded by `ASC-DD-7`. The text is kept as history; DD-7 names what it supersedes.
+- **ADR impact:** none in `docs/trd/trd.md`.
+- **Module owner:** `bilateral-ai` (P2-3700) is the user's own module. No notification owed.
+- **Lateral findings (recorded, not folded):**
+  - `getSignedUrl` (`:438`) is creator-only, so an admin, or any other member, cannot open a draft's files. The user accepted this for now.
+  - `createJob` (`:117`) has no centre check at all. It is a pre-existing gap for every user.
+
+### Scope addition folded into `ASC-T-4` — active on any centre route (2026-09-28, user)
+
+- **User, verbatim:** "si estoy dentro de cualquiera de las rutas dentro del center, en el aside, el center debe quedar act /bilateral/AfricaRice/result/9652?phase=36 … Debe ser algo así /bilateral/AfricaRice/*". Then: "Implementa todo asap".
+- **Cause:** the active state came from `routerLinkActive` on `centerHomeLink()` (`/bilateral/<acr>/home`). That only matches the home subtree, so it was already broken before this spec.
+- **Spec edits:** `ASC-R-16` and `ASC-AC-15` added; `ASC-R-13` amended so the rail's active state follows R-16; the T-4 DoD line added.
+- **Handling:** folded into `ASC-T-4` (same files, same "active" concept as `ASC-R-12`) as a rework after its first Reviewer verdict. This is scope growth, not a FAIL.
+
+### `ASC-T-4` — Make the centre block collapsible, keeping the active centre visible
+
+#### Attempt 1: PASS against the pre-`ASC-R-16` scope. The task stays open for `ASC-R-16`.
+
+- **Files:** `reporting-nav-sidebar.component.html` (+19), `.ts` (+36), `.spec.ts` (+113).
+- **Implementation:**
+  - `activeCenterKey` is a `toSignal` over `NavigationEnd` that reads `/^\/bilateral\/([^/]+)/` off `router.url`, with the query string stripped.
+  - `visibleCenters()` returns all centres when the `'centers'` group is open. When it is closed, it returns only the `isActiveCenter` one.
+  - The toggle copies `pr-nav-others-toggle`.
+  - `openGroups` now starts as `['mine','centers']`.
+- **Red run (pre-change):** `ASC-AC-10` and `ASC-AC-11` fail with a `TypeError` on the null toggle button. tasks.md explicitly allows a red on a missing toggle.
+- **Mutations:**
+  - (a) Rendering nothing when closed turns `ASC-AC-11` red with `Expected length: 1, Received length: 0`.
+  - (b) Ignoring the open state turns `ASC-AC-10` red with `Expected length: 0, Received length: 3`.
+  - Both were reverted and the suite is green again.
+- **Implementer verification:** 91/91, app tsc clean, 0 sidebar spec-config errors, lint pass.
+- **Evidence re-run (Leader-inline):** **VERIFIED**. 91/91, tsc clean, 0, lint exit 0.
+- **Reviewer (opus): PASS.** The toggle is an exact copy, the collapsed filter is correct, and `[data-guide]`, `track`, the rail, the T-1 union and the T-2 marker are all unmoved. The tests drive a real `Router` against the real template, and the red run is acceptable.
+- **ADVISORY:**
+  - RELIABILITY: visibility uses the URL prefix, but the active class and `aria-current` still come from `routerLinkActive` on `/home`. On `/bilateral/CIAT/results`, CIAT shows but is not active. **The user raised the same issue independently. It is now `ASC-R-16`, the next attempt of this task.**
+  - READABILITY: strip `#` and `;` as well as `?`. `ASC-R-16` now requires ignoring the fragment.
+  - RISK: the spacing above the block may have changed, now that the label is a button. This goes to the `ASC-T-3` walk.
+- **Runtime events:** none.
+
+#### Attempt 2 (`ASC-R-16`): PASS
+
+- **Why this attempt:** it adds the user's scope (`ASC-R-16`). It is not a FAIL, so no rework attempt was consumed for a defect. The worker was resumed by message.
+- **Files (cumulative vs `fa538a30a`):** `reporting-nav-sidebar.component.html` (29), `.ts` (+43), `.spec.ts` (+182).
+- **Changes:**
+  - Both loops dropped `routerLinkActive` and `#rla…`. The active class, and `aria-current` in the expanded block, now read `isActiveCenter(center)`.
+  - `readActiveCenterKey` splits on `/[?#;]/` before running the regex.
+  - `routerLink` is kept.
+- **Mutation:** restoring `rlaCenter.isActive` on the expanded class turned `ASC-AC-15 (expanded)` red with `Expected: true, Received: false` at `expect(africaRice.classList.contains('pr-nav-program-card--active')).toBe(true)`. It was then reverted, and the suite went green.
+- **Implementer verification:**
+  - Jest: 94/94.
+  - App tsc: clean.
+  - Sidebar spec-config errors: 0.
+  - Lint: pass.
+- **Evidence re-run (Leader-inline):** **VERIFIED**.
+  - Jest: 94/94.
+  - App tsc: 0 errors, with the parallel `ASC-T-5` work-in-progress present in the tree.
+  - Sidebar spec errors: 0.
+  - `ng lint`: exit 0.
+- **Reviewer (opus): PASS.**
+  - `routerLinkActive` is fully removed from the centre bindings, and nothing is left orphaned.
+  - `isActiveCenter` uses the same fallback key as `centerHomeLink`.
+  - `aria-current` is exclusive to the active centre.
+  - The tests use the real router and the real template, and assert on the DOM.
+  - All attempt-1 PASS items still hold.
+  - Visibility and the active state now share one predicate, which closes the attempt-1 advisory.
+- **ADVISORY:**
+  - RELIABILITY: `decodeURIComponent` can throw `URIError` on a malformed `%` escape. The risk is low because the Router normalises URLs.
+  - READABILITY: acronym matching is case-sensitive. Confirm in the `ASC-T-3` walk whether routes accept any casing.
+- **Runtime events:** none.
+- **Requirements covered:** `ASC-R-11`, `-12`, `-13` (amended), `-16`; amended `ASC-R-2`; `ASC-AC-10`, `-11`, `-15`.
+- **Final status:** **PASS**.

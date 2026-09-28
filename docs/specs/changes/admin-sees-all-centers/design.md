@@ -145,6 +145,24 @@ Fully backwards compatible for every non-admin: the admin branch is the only new
 - **🛑 Corrected at the Step 2.3 reversion challenge — the first draft of this DD was wrong.** It proposed reusing the existing `role_name` line as the marker, reasoning that a role is "present for assignments and absent for catalogue rows by construction". That is false in practice: `AUTH-R-2` (`docs/specs/archive/2026-09-18-auth--center-user/requirements.md:66`) auto-sets every centre assignment to **Center User** and forbids the admin from picking another role, and `shouldShowAssignmentRole()` (`shell-topbar.component.ts:219`) returns `false` for exactly `'center user'`. The marker would therefore have rendered for **zero** assignments — implemented correctly, shipped, and discovered only when an admin saw no distinction at all.
 - **Consequence:** the marker must be derived from the row's provenance, which the union already knows, and must not depend on any role string. `shouldShowAssignmentRole()` keeps its narrower job in `ASC-DD-4` — deciding whether to append role *text* — where omitting the uninformative default is correct.
 
+### `ASC-DD-6` — Collapse reuses the existing group toggle; a collapsed block keeps the active centre *(added 2026-09-28, user scope change)*
+
+- **Decision:** the "My CGIAR centers" label becomes the same toggle "Other science programs" uses (`pr-nav-others-toggle`, `toggleGroup()`/`isGroupOpen()` with a `'centers'` key, `lucideChevronDown`). `openGroups` starts with `'centers'` open. When the block is closed, the loop renders only the centre whose home prefix `/bilateral/<acronym || id>` matches the current router URL.
+- **Why:** it is the sidebar's own collapse vocabulary, so there is no new token, component or state mechanism. Keeping the active centre visible is the user's explicit ask: the place you are in should not disappear behind a fold.
+- **Not persisted:** the open state is not saved across reloads, because the user did not ask for that. If it turns out to be needed, the `pr-sidebar-pinned-programs` localStorage pattern is the model, as a follow-up.
+- **Rail untouched** (`ASC-R-13`): the rail has no label to carry a toggle.
+- **`track`:** it stays `center.center_id`. The `[data-guide="platform-tour-sidebar-centers"]` wrapper stays on the block root, outside the toggle's `@if`.
+
+### `ASC-DD-7` — Split the draft guard into read and act; admins pass only the read *(Pivot 2026-09-28, `ASC-T-5`)*
+
+- **Decision:** in `bilateral-ai.service.ts`, `listDrafts` and `getDraft` authorise with "Center User of the centre **or** `isUserAdmin`". `promoteDraft`, `discardDraft` and `setFormalEvidence` keep today's membership-only check. This is implemented by giving `getDraftRaw` / `assertCenterEntitlement` an explicit read-vs-act mode, so no mutating caller can reach the admin branch by accident.
+- **Client:** the bilateral AI-draft UI hides promote, discard, the formal-evidence toggle and the AI create entry for a user who is not a member of the current centre. This uses a **membership** check, not the existing `isAdmin`-short-circuited gates (`api.service.ts:295`, `bilateral-results-list.component.ts:409`), which would let the admin through.
+- **Why:** the user asked for it: an admin sees everything and acts on nothing that is not theirs. The server keeps enforcing, and the client hiding is UX so the admin never meets a 403.
+- **Supersedes:** `§7 Security & Authorization` ("no authorization change") and the proposal's non-goal "Any server change", for this read path only.
+- **Not in scope:**
+  - `getSignedUrl` (`:438`, creator-only). The admin sees the draft preview but cannot open its files; the user accepted this.
+  - `createJob` (`:117`) has **no** centre check for anyone. That is a pre-existing gap, recorded, not fixed here.
+
 ## 13. Open Gaps & Follow-ups
 
 - **Reversion challenge (Step 2.3) — one DD corrected.** `ASC-DD-5`'s first draft used the `role_name` line as the "mine" marker. The challenge asked what removing/relying on it breaks and surfaced `AUTH-R-2`: every assignment is `Center User`, which `shouldShowAssignmentRole()` filters out, so the marker would never have rendered. Corrected in place before `tasks.md`. No other DD reverts delivered behaviour.
@@ -156,7 +174,7 @@ Fully backwards compatible for every non-admin: the admin branch is the only new
 
 | | Expected |
 |---|---|
-| Tasks | **3** (composition + template · regression suite · HITL check) |
+| Tasks | **3** → **5** after the 2026-09-28 scope changes (`ASC-T-4` collapse, `ASC-T-5` admin read-only drafts) |
 | LOC | **~130** (≈50 production, ≈80 test) |
 | Review rounds | **1** |
 

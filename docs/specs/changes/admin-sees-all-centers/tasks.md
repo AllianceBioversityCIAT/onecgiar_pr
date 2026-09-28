@@ -7,7 +7,7 @@
 - **Ticket:** none — user-originated
 - **Owner / driver:** Juan David Delgado
 - **Branch base:** `performance-refactor` @ `f37e1c728`
-- **Status:** `in-progress` — `ASC-T-1`, `ASC-T-2` done; `ASC-T-3` pending (manual walk on TEST)
+- **Status:** `in-progress` — `ASC-T-1`, `ASC-T-2` done; `ASC-T-4` (collapse) done, `ASC-T-5` (admin read-only drafts, Pivot) and `ASC-T-3` pending
 - **Budget (`design.md` §14):** 3 tasks · ~130 LOC · 1 review round. `/akili-execute` escalates rather than continuing if any is exceeded.
 
 ---
@@ -87,6 +87,75 @@
 
 ---
 
+### `ASC-T-4` — Make the centre block collapsible, keeping the active centre visible *(added 2026-09-28, user scope change)*
+
+- **Type:** `client`
+- **Description:** In the expanded block (`reporting-nav-sidebar.component.html` ~`:256`), turn the "My CGIAR centers" label into the existing group toggle (`pr-nav-others-toggle`, label + `getMyCenters().length` count + `lucideChevronDown`, `aria-expanded`), keyed `'centers'` in `openGroups`, which starts open. When the block is closed, render only the centre whose home prefix matches the current URL, marked active as today. Leave the rail, the ASC-T-1 union and the ASC-T-2 marker/tooltip as they are.
+- **Implements:** `ASC-R-11`, `ASC-R-12`, `ASC-R-13`; amended `ASC-R-2`
+- **Design:** `ASC-DD-6`
+- **Files (expected):** `…/reporting-nav-sidebar.component.html` · `.ts` · `.spec.ts` (`.scss` only if the reused class needs a spacing tweak, with no new token)
+- **Depends on:** `ASC-T-2`
+- **Blocks:** `ASC-T-3`
+- **Size:** `S`
+- **Skills:** `angular-developer`
+- **Review:** `full` — touches the `[data-guide]` wrapper the platform tour pins, and a selector/DOM hook (override b)
+- **Verification:**
+  - **Falsifier:** an admin on `/bilateral/CIAT/home` with a catalogue of CIAT, IITA and CIP collapses the block. The rendered block must list **only** CIAT, still carrying its marker and the active state. After reopening, all three must be listed. Two mutations, each red on a named case: (a) render nothing when closed → `ASC-AC-11` red because CIAT disappears; (b) ignore the open state → `ASC-AC-10` red because IITA and CIP are still rendered after collapsing.
+  - **Red run:** `cd onecgiar-pr-client && npx jest --no-coverage --testPathPattern="reporting-nav-sidebar"` — the toggle case fails on current code on its behavioral assertion (no toggle button, or all three still listed), not on a missing method.
+  - **Disqualifier:** assert rendered `a` elements, their `textContent`/`href`, and `aria-expanded`; never the signal alone. Use the real-template extraction already accepted in `ASC-T-2`. Drive the current URL through the real router or the component's own URL source, not a stubbed helper that the template never reads.
+  - **Consumers:** `platform-tour.steps.ts:83` + `platform-tour.steps.spec.ts:28` (`[data-guide="platform-tour-sidebar-centers"]` must stay on the block root, outside the toggle's `@if`) · `reporting-nav-sidebar.component.spec.ts`
+- **Definition of done:**
+  - [x] `ASC-AC-10` — the toggle collapses and reopens the list; `aria-expanded` follows
+  - [x] `ASC-AC-11` — collapsed while inside CIAT shows only CIAT, active and marked; collapsed outside any centre shows no entries
+  - [x] Open by default; the rail unchanged except its active state
+  - [x] `ASC-AC-15` / `ASC-R-16` *(added 2026-09-28)* — active on any `/bilateral/<acronym>/…` route (query ignored), both loops, driven by the same URL source as the collapsed filter, not by `routerLinkActive` on the `/home` link
+  - [x] ASC-T-1/T-2 cases still green; `[data-guide]` unmoved; `track center.center_id` kept
+  - [x] Both falsifier mutations executed and observed **red**
+  - [x] `npx jest --testPathPattern="(reporting-nav-sidebar|platform-tour)"` green · `npx tsc --noEmit -p tsconfig.app.json` clean · `npx ng lint --quiet` clean
+- **Status:** [x] — PASS attempt 2, 2026-09-28 (`execution.md` → `ASC-T-4`)
+
+---
+
+### `ASC-T-5` — Admin reads a centre's AI drafts but cannot act on them *(Pivot 2026-09-28, user-approved)*
+
+- **Type:** `server` + `client`
+- **Description:**
+  - **Server** (`onecgiar-pr-server/src/api/bilateral-ai/services/bilateral-ai.service.ts`): give the centre guard a read-vs-act mode. `listDrafts` and `getDraft` pass for a Center User of the centre **or** a platform admin (`RoleByUserRepository.isUserAdmin`, `RoleByUser.repository.ts:20`). `promoteDraft`, `discardDraft` and `setFormalEvidence` keep the membership-only check (`validationCenterPermissions`, role 9).
+  - **Client** (`onecgiar-pr-client/src/app/pages/bilateral/…`, the AI-draft list, detail and create surfaces): hide promote, discard, the formal-evidence toggle and the AI create entry when the user is **not** a member of the current centre. The membership check MUST NOT short-circuit on `isAdmin`.
+- **Implements:** `ASC-R-14`, `ASC-R-15`; the amended NFR *Authorization*
+- **Design:** `ASC-DD-7`
+- **Files (expected):**
+  - `bilateral-ai.service.ts` + `bilateral-ai.service.spec.ts`
+  - `bilateral-ai.controller.ts` only if the user id is not enough for the admin check
+  - the bilateral AI-draft client component(s) and their specs
+- **Depends on:** `ASC-T-2`
+- **Blocks:** `ASC-T-3`
+- **Size:** `S`–`M`
+- **Skills:** `nestjs-expert`, `angular-developer`, `tdd`
+- **Review:** `full`, parallel lens reviewers (security surface, override f)
+- **Verification:**
+  - **Falsifier:** fixtures are a user who `isUserAdmin` = true and `validationCenterPermissions` = 0 for centre 52, plus a draft of centre 52.
+    - `listDrafts` and `getDraft` resolve.
+    - `promoteDraft`, `discardDraft` and `setFormalEvidence` throw `ForbiddenException`.
+    - A non-admin non-member is still forbidden on all five.
+    - Two mutations, each red on a named case: (a) let the admin branch reach `getDraftRaw` for **every** caller, so `ASC-AC-13` goes red because promote resolves for the admin; (b) drop the admin branch, so `ASC-AC-12` goes red with a `ForbiddenException` on `listDrafts`.
+    - Client side: for an admin non-member the promote/discard/formal/create controls are absent from the rendered DOM; for a member they are present.
+  - **Red run:** `cd onecgiar-pr-server && npx jest --silent --forceExit --testPathPattern="bilateral-ai.service"` — `ASC-AC-12` fails on current code with `ForbiddenException` on `listDrafts`.
+  - **Disqualifier:**
+    - A case that mocks `assertCenterEntitlement` itself proves nothing. Mock the repositories (`isUserAdmin`, `validationCenterPermissions`) and call the public methods.
+    - A client check reading `rolesSE.isAdmin` or an existing `isAdmin`-short-circuited gate would pass the admin, which is the bug, not the fix.
+    - Never run the unscoped server suite.
+  - **Consumers:** `bilateral-ai.controller.ts` (the five routes) · `bilateral-ai.controller.spec.ts` · the client AI-draft components · `RoleByUserRepository.isUserAdmin` (read only, not modified)
+- **Definition of done:**
+  - [ ] `ASC-AC-12` — the admin non-member lists and reads drafts
+  - [ ] `ASC-AC-13` — the admin non-member is forbidden on promote, discard and formal evidence (server), and sees none of those controls (client)
+  - [ ] `ASC-AC-14` — a non-admin non-member is still forbidden everywhere
+  - [ ] Both falsifier mutations executed and observed **red**
+  - [ ] Server: `npx jest --testPathPattern="bilateral-ai"` green · `npx eslint` on the touched files `--quiet` clean · `npx tsc --noEmit` clean on touched files
+  - [ ] Client: the touched specs green · `npx tsc --noEmit -p tsconfig.app.json` clean · `npx ng lint --quiet` clean
+
+---
+
 ### `ASC-T-3` — Confirm on a real admin account and settle the catalogue count
 
 - **Type:** manual verification + docs
@@ -94,7 +163,7 @@
 - **Implements:** `ASC-R-20`, `ASC-AC-1` end to end, `D8`, `D9`; settles `P-10`
 - **Design:** §13, `P-10`
 - **Files (expected):** `…/reporting-nav-sidebar/` has no folder guide today — if the walk changes any documented behaviour, record it in `onecgiar-pr-client/src/CLAUDE.md`; otherwise this task writes no file and reports its findings into `execution.md`
-- **Depends on:** `ASC-T-2`
+- **Depends on:** `ASC-T-4`, `ASC-T-5` *(was `ASC-T-2`; re-pointed 2026-09-28)*
 - **Blocks:** `—`
 - **Size:** `S`
 - **Skills:** `systematic-debugging` (the walk is the last confirmation); `playwright-cli` **only if installed locally** — otherwise a manual walk in Chrome
@@ -131,7 +200,8 @@ Every requirement, scenario clause and acceptance criterion is owned by a named 
 | `ASC-R-8` (catalogue failure degrades) | `T-1` (`ASC-AC-5`) |
 | `ASC-R-9` (rebuilds on late catalogue) | `T-1` (`ASC-AC-6`) |
 | `ASC-R-10` (mine sorts first) | `T-1` |
-| `ASC-R-20` (flat list acceptable) | `T-3` |
+| `ASC-R-20` (flat list acceptable) | superseded by `ASC-R-11` |
+| `ASC-R-11`, `-12`, `-13` (collapse, active kept, rail untouched) | `T-4` + `T-3` (walk) |
 | **Scenario 1** *BUT must NOT issue an HTTP request of its own* | `T-1` — the suite stubs `CentersService`; a real request would fail it |
 | **Scenario 1** *AND IT MUST keep `/bilateral/<acronym>/home`* | `T-2` (`ASC-AC-7`) |
 | **Scenario 2** *BUT must NOT consult the catalogue for this user at all* | `T-1` — the non-admin case runs against a **populated** catalogue and asserts it is ignored |
@@ -146,7 +216,8 @@ Every requirement, scenario clause and acceptance criterion is owned by a named 
 ## 5. Dependency graph
 
 ```
-ASC-T-1  ──▶  ASC-T-2  ──▶  ASC-T-3
+ASC-T-1  ──▶  ASC-T-2  ──┬──▶  ASC-T-4  ──┬──▶  ASC-T-3
+                         └──▶  ASC-T-5  ──┘
 (union in     (marker +      (admin walk on
  the wrapper)  tooltip)       TEST + P-10)
 ```
@@ -170,6 +241,8 @@ Linear, no cycle. `T-2` cannot precede `T-1` because the marker renders a tag `T
 |---|---|---|
 | `ASC-T-1` | `full` | The dominant risk is invisible in the happy path: a non-admin regression (`D1`) and the two permission gates reading the sibling service method (`D2`) |
 | `ASC-T-2` | `full` | Touches DOM hooks a guided-tour step pins by attribute, and must prove the `ASC-DD-5` correction instead of re-introducing the defect Step 2.3 caught |
+| `ASC-T-4` | `full` | Touches the `[data-guide]` wrapper the tour pins |
+| `ASC-T-5` | `full` (parallel lenses) | Security surface — grants a read permission |
 | `ASC-T-3` | `checklist` | A manual walk and at most one documentation line |
 
 **No task is `skip-eligible.`** Both code tasks carry non-deterministic or judgment-bearing checks and touch surfaces other code pins; the third is the substitute gate for two defect classes with no automated check.
