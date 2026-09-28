@@ -314,9 +314,13 @@ describe('IpsrStep3EvidenceListComponent (P2-3824)', () => {
 describe('IpsrStep3EvidenceListComponent markup (P2-3824)', () => {
   const html = readFileSync(join(__dirname, 'ipsr-step3-evidence-list.component.html'), 'utf8');
 
-  it('disables "Add evidence" at the cap and hides it in read only', () => {
-    expect(html).toMatch(/<app-add-button[^>]*\[disabled\]="atCap"/);
-    expect(html).toMatch(/@if \(!readOnly\) \{\s*<div[^>]*>\s*<app-add-button/);
+  it('hides "Add evidence" at the cap (as the Results Evidence section does) and in read only', () => {
+    // P2-3427 (Ángel, 25-Sep-2026): same behaviour as `rd-evidences.component.html:191-195` — at the cap the
+    // button goes away and the note says why, instead of a disabled button next to a note.
+    expect(html).toMatch(/@if \(!atCap\) \{\s*<app-add-button/);
+    expect(html).not.toMatch(/<app-add-button[^>]*\[disabled\]="atCap"/);
+    expect(html).toContain('data-testid="evidence-cap-note"');
+    expect(html).toMatch(/@if \(!readOnly\) \{[\s\S]*<app-add-button/);
   });
 
   it('shows the component counter and feeds the missing-fields scan when required', () => {

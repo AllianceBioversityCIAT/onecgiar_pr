@@ -1,4 +1,5 @@
-import { Component, ElementRef, NgZone, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges, computed, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, NgZone, ViewChild, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges, computed, OnDestroy, OnInit } from '@angular/core';
+import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -94,11 +95,27 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
   private readonly customizedAlertsFeSE = inject(CustomizedAlertsFeService);
   readonly dataControlSE = inject(DataControlService);
 
+  /**
+   * P2-3678 (Ángel, 25-Sep-2026, bilateral 9628): the flat list is a CDK virtual viewport, and CDK measures
+   * its height ONCE, in its `ngOnInit`, and again only on a window resize. A control that mounts inside a
+   * `[hidden]` parent (the bilateral form keeps every section in the DOM and hides the inactive ones) is
+   * measured at 0px, so the viewport renders only its minimum buffer — about 7 rows — and the rest of the
+   * catalogue stays blank until the user scrolls far or resizes the window. Reproduced on prtest: 7 of 14
+   * Science Programs on first open, all 14 after a resize. Re-measuring when the list OPENS fixes it.
+   */
+  @ViewChild(CdkVirtualScrollViewport) private readonly virtualViewport?: CdkVirtualScrollViewport;
+
   constructor() {
     // P2-3737: a NATIVE listener outside the Angular zone — placing a panel changes no Angular state,
     // so it must not cost a change-detection pass. See `placeOptions` for why the measure waits a frame.
     const host = inject(ElementRef<HTMLElement>).nativeElement as HTMLElement;
-    inject(NgZone).runOutsideAngular(() => host.addEventListener('pointerdown', event => this.placeOptions(event)));
+    inject(NgZone).runOutsideAngular(() => {
+      host.addEventListener('pointerdown', event => this.placeOptions(event));
+      // P2-3678: a keyboard user opens the list with Tab/focus and never fires `pointerdown`; the panel must
+      // still be placed and the virtual viewport re-measured (27-Sep-2026 review). Focus moving inside the
+      // open panel is filtered out by `placeOptions` itself.
+      host.addEventListener('focusin', event => this.placeOptions(event));
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -346,6 +363,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges, 
     requestAnimationFrame(() => {
       const panel = trigger.querySelector<HTMLElement>('.options');
       if (panel) panel.classList.toggle('options_up', shouldOpenUpward(trigger, panel));
+      // P2-3678: the panel is visible by now, so the viewport can finally measure its real height.
+      this.virtualViewport?.checkViewportSize();
     });
   }
 
