@@ -44,7 +44,7 @@ export const BULK_UPLOADER_ACCESS_COPY = {
   body:
     'Only users authorized for bulk upload can sign in to the Bulk Results Uploader. ' +
     'If your account is not on that list, the uploader will not let you in — this is not an error in PRMS.',
-  contact: 'To request access, contact the Portfolio Performance Unit (PPU).',
+  contact: 'To request access, contact the PPT administration.',
   continueLabel: 'Continue Anyway',
   cancelLabel: 'Cancel'
 } as const;
