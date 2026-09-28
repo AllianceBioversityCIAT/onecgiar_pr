@@ -124,17 +124,31 @@ export interface BilateralColumnDef {
   minPx: number;
   /** Default visibility when no localStorage preference exists. */
   defaultOn: boolean;
+  /**
+   * `bilateral/results-list-source-column-split` (rework) — overrides `attr` as the SORT field
+   * only. `source`/`fundingSource` deliberately share `attr: 'source'` for skeleton-width parity
+   * and the `rc-td--source`/`rc-th--source` CSS class (`BSC-DD-2`), but sorting on that shared
+   * `attr` made `PrSortableColumnDirective`/`pr-sort-icon` treat both `<th>`s as the SAME sort
+   * field — clicking either one showed BOTH as active. `sortKey` gives a column its own sort
+   * identity without touching `attr`; when absent, sorting falls back to `attr` so every other
+   * column is unaffected. Set on `source` only, to `is_ai_generated` — the real field
+   * `isAiResult()` reads, so sorting `Origin` groups AI-originated rows together.
+   */
+  sortKey?: string;
 }
 
 // Versioned so older preferences cannot leave a newly required column hidden.
 // v4 — Created by column added to the centre dashboard list.
-const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v4';
+// v5 — Source column split into Origin (result-origin only) + Funding source (W3/W1-W2 badge);
+//       without the bump, users with a stored v4 preference would never see the new column.
+const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v5';
 export const BILATERAL_COLUMN_WIDTHS_STORAGE_KEY = 'pr.bilateralResults.columnWidths.v1';
 
 /** Full column set (order = picker + table order). Kept to the fields BilateralCenterResult actually has. */
 export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
   { key: 'code', title: 'Code', attr: 'result_code', width: '100px', minPx: 80, defaultOn: true },
-  { key: 'source', title: 'Source', attr: 'source', width: '100px', minPx: 80, defaultOn: true },
+  { key: 'source', title: 'Origin', attr: 'source', width: '100px', minPx: 80, defaultOn: true, sortKey: 'is_ai_generated' },
+  { key: 'fundingSource', title: 'Funding source', attr: 'source', width: '110px', minPx: 80, defaultOn: true },
   { key: 'title', title: 'Title', attr: 'title', width: '280px', minPx: 160, defaultOn: true },
   // P2-3152 AC6 — Project name and Description are required on the centre dashboard.
   { key: 'project', title: 'Project name', attr: 'project_name', width: '200px', minPx: 120, defaultOn: true },
@@ -1146,6 +1160,12 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     return custom ? `${custom}px` : column.width;
   }
 
+  /** Resolved SORT field for a column — `sortKey` wins over `attr` when present (rework of
+   *  `bilateral/results-list-source-column-split`, see `BilateralColumnDef.sortKey`). */
+  sortField(column: BilateralColumnDef): string {
+    return column.sortKey ?? column.attr;
+  }
+
   // ── Column resizing (Programme Results parity) ───────────────────────────────
   private activeResize: {
     columnKey: string;
@@ -1242,7 +1262,11 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
     const escape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
     const header = cols.map(c => escape(c.title)).join(',');
-    const lines = rows.map(r => cols.map(c => escape(this.cellText(r, c.attr))).join(','));
+    // 'source' and 'fundingSource' share attr: 'source' (BSC-DD-2) — disambiguate by key so the
+    // CSV doesn't duplicate the funding text into the Origin column.
+    const lines = rows.map(r =>
+      cols.map(c => escape(this.cellText(r, c.key === 'fundingSource' ? 'fundingSource' : c.attr))).join(','),
+    );
     const csv = [header, ...lines].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1257,6 +1281,8 @@ export class BilateralResultsListComponent implements OnInit, OnDestroy {
   private cellText(result: BilateralCenterResult, attr: string): string {
     switch (attr) {
       case 'source':
+        return this.isAiResult(result) ? 'AI Result' : 'Manual';
+      case 'fundingSource':
         return result.source === 'API' ? 'W3 Bilateral' : 'W1/W2';
       case 'result_code':
         return result.result_code;

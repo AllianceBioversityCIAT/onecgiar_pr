@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-24 · branch qa-development-2026-ss · 8764605b0 · spec `changes/bilateral-science-program-filter` (`BSF-T-1`/`BSF-T-2`)
+**Verified:** 2026-09-28 · branch qa-development-2026-ss · bf51bece9 · spec `bilateral/results-list-source-column-split` (`BSC-T-1`, reworked)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per
@@ -40,6 +40,30 @@ Skipping 3 renders an empty `<td>`; skipping 4 breaks only the export, silently.
 **Not every field is a column.** `result_type_id` and `submitter` (P2-3653) ride on the payload for
 the "Update result" rule and the confirmation modal, and are deliberately absent from
 `BILATERAL_COLUMNS` — only steps 1 and the server SELECT apply to them.
+
+**`source`/`fundingSource` are a special case (`bilateral/results-list-source-column-split`,
+`BSC-T-1`/`BSC-DD-1`/`BSC-DD-2`).** The old single `Source` cell rendering both the `W3`/`W1/W2`
+funding badge and the `AI Result` origin badge was split into two independently-toggleable
+columns that deliberately **share `attr: 'source'`** (kept only for skeleton-width parity, see the
+`[style.width]` ternaries at `:346`/`:556` in the `.html`, and for the shared `rc-td--source` CSS
+class on both `<td>`s) but have **distinct `key`s** — `source` (title `Origin`) and `fundingSource`
+(title `Funding source`). The template branches that render each cell's actual badge markup key off
+`column.key`, **not** `column.attr` — the two must not be conflated, or the funding badge and the
+origin badge render in the wrong column again. `Origin` shows the `AI Result` badge when
+`isAiResult(result)`, else a plain `rc-plain` "Manual" text label (no badge chrome, per `BSC-DD-1`).
+`Funding source` always shows the `W3`/`W1/W2` badge, unchanged markup, just relocated.
+
+⚠️ **The shared `attr: 'source'` is skeleton-width/CSS-only — never let it drive SORTING too.**
+Because `[prSortableColumn]`/`pr-sort-icon` originally bound directly to `column.attr`, both
+columns fed the sort directive the identical `field` string, so clicking either one's sort control
+showed BOTH as active (real bug found in the browser after `BSC-T-1` shipped, since no live browser
+check had been run). Fixed via `BilateralColumnDef.sortKey?: string` — an optional override read
+through the `sortField(column)` helper (`column.sortKey ?? column.attr`), used at both the
+`[prSortableColumn]` and `<pr-sort-icon [field]>` bindings. Only the `source` (Origin) entry sets
+`sortKey: 'is_ai_generated'` — the real field `isAiResult()` reads — so Origin sorts by AI-origin
+grouping while Funding source keeps sorting by the real `source` field via `attr`, unchanged. Any
+future column that shares an `attr` with another for width/CSS parity MUST also give itself a
+distinct `sortKey` if it is sortable, or the same bug reappears.
 
 ## Project multiselect filter (`changes/project-multiselect-filter`, `PMF-T-1` pivot)
 The Filters popover exposes the shipped `project` URL contract through the same
@@ -123,8 +147,9 @@ found.
   fixtures MUST use string ids.
 - ⚠️ **Bump `BILATERAL_COLUMN_STORAGE_KEY` whenever a new column must be visible by default.**
   Visibility is persisted per browser in `localStorage`, and a stored map from an older version
-  wins over `defaultOn`, so returning users would never see the new column. Currently `…v4`
-  (v4 = Created by column; v3 = P2-3152 AC6 Project name and Description). The spec asserts the key by name.
+  wins over `defaultOn`, so returning users would never see the new column. Currently `…v5`
+  (v5 = Source column split into Origin + Funding source; v4 = Created by column; v3 = P2-3152 AC6
+  Project name and Description). The spec asserts the key by name.
 - ⚠️ **Never widen the project lookup into a `LEFT JOIN` on `results_by_projects`.** A result can
   carry several active project links; the server resolves `project_name` with a correlated
   subquery precisely so the row is not multiplied. `result.repository.spec.ts` pins this.

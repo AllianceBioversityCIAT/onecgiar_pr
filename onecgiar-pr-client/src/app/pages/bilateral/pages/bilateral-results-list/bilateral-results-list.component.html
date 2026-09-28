@@ -377,9 +377,9 @@
           <ng-template prTableHeader>
             <tr>
               @for (column of cols; track column.key) {
-                <th #thEl [prSortableColumn]="column.attr" [style.width]="columnWidth(column)" class="rc-th rc-th--sortable">
+                <th #thEl [prSortableColumn]="sortField(column)" [style.width]="columnWidth(column)" class="rc-th rc-th--sortable">
                   <div class="align-center">
-                    <pr-sort-icon [field]="column.attr"></pr-sort-icon>
+                    <pr-sort-icon [field]="sortField(column)"></pr-sort-icon>
                     {{ column.title }}
                   </div>
                   <div
@@ -406,18 +406,23 @@
               (keydown.enter)="openResult(result)">
               @for (column of cols; track column.key) {
                 <td [class]="'rc-td rc-td--' + column.attr" [style.width]="columnWidth(column)">
-                  @if (column.attr === 'source') {
+                  @if (column.key === 'source') {
                     <div class="rc-cell-link">
-                      @if (result.source === 'API') {
-                        <span class="brl_source_badge brl_source_badge--w3">W3</span>
-                      } @else {
-                        <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
-                      }
                       @if (isAiResult(result)) {
                         <span class="brl_ai_badge" title="AI Result" aria-label="AI Result">
                           <span class="material-icons-round text-[16px]" aria-hidden="true">auto_awesome</span>
                           <span>AI Result</span>
                         </span>
+                      } @else {
+                        <span class="rc-plain">Manual</span>
+                      }
+                    </div>
+                  } @else if (column.key === 'fundingSource') {
+                    <div class="rc-cell-link">
+                      @if (result.source === 'API') {
+                        <span class="brl_source_badge brl_source_badge--w3">W3</span>
+                      } @else {
+                        <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
                       }
                     </div>
                   } @else if (column.attr === 'result_code') {
