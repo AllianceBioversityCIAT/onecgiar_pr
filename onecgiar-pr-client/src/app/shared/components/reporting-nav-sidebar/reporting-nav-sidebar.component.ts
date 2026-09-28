@@ -46,6 +46,7 @@ import { APP_VERSION } from '../../constants/app-version.constants';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
+import { CentersService } from '../../services/global/centers.service';
 import { SpMarkerComponent } from '../sp-marker/sp-marker.component';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
@@ -124,6 +125,7 @@ export class ReportingNavSidebarComponent {
   public readonly router = inject(Router);
   public readonly api = inject(ApiService);
   public readonly sidebarSE = inject(HlmSidebarService);
+  public readonly centersSE = inject(CentersService);
 
   readonly isProduction = environment.production;
   readonly appVersion = APP_VERSION;
@@ -635,12 +637,45 @@ export class ReportingNavSidebarComponent {
     return this.programDotPalette[index % this.programDotPalette.length];
   }
 
+  // @akili-spec changes/admin-sees-all-centers
   getMyCenters() {
     // A centre with no acronym AND no id would build `/bilateral/undefined/home`, which the
     // `:acronym` route happily matches — rendering a bilateral shell for a nonexistent centre.
-    return (this.api.rolesSE.getMyCenters() ?? []).filter((center: { center_acronym?: string; center_id?: unknown }) =>
-      Boolean(center?.center_acronym || center?.center_id)
-    );
+    const isValidCenter = (center: { center_acronym?: string; center_id?: unknown }) =>
+      Boolean(center?.center_acronym || center?.center_id);
+
+    const assignments = this.api.rolesSE.getMyCenters() ?? [];
+
+    // Non-admin: byte-identical to today (ASC-R-2). The catalogue is never consulted.
+    if (!this.rolesSE?.isAdmin) {
+      return assignments.filter(isValidCenter);
+    }
+
+    // Admin (ASC-DD-1..4): assignments ∪ catalogue, deduplicated on acronym (falling back to id),
+    // the assignment winning on a collision, assignments first (ASC-R-10). Every row is tagged with
+    // its provenance (`isAssigned`) so the template can mark "mine" without reading a role string
+    // (ASC-DD-5) — `shouldShowAssignmentRole()` stays the role-TEXT gate only, unrelated to this.
+    const assigned = assignments.map((center: { center_acronym?: string; center_id?: unknown }) => ({
+      ...center,
+      isAssigned: true
+    }));
+    const dedupeKey = (center: { center_acronym?: unknown; center_id?: unknown }) => center?.center_acronym ?? center?.center_id;
+    const assignedKeys = new Set(assigned.map(dedupeKey));
+
+    // Catalogue rows are mapped into the assignment card shape at the boundary (ASC-DD-4). The
+    // catalogue carries no role, so `role_name` is legitimately absent — the template must tolerate
+    // that (ASC-T-2), not this wrapper.
+    const catalogueOnly = this.centersSE.centers()
+      .map(center => ({
+        center_id: center.code,
+        center_name: center.name,
+        center_acronym: center.acronym,
+        role_name: undefined as string | undefined,
+        isAssigned: false
+      }))
+      .filter(center => !assignedKeys.has(dedupeKey(center)));
+
+    return [...assigned, ...catalogueOnly].filter(isValidCenter);
   }
 
   /** Bilateral home for a centre, falling back to its id when the acronym is missing. */

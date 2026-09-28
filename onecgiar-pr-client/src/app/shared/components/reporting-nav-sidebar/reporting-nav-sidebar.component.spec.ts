@@ -10,6 +10,8 @@ import { ReportingNavSidebarComponent } from './reporting-nav-sidebar.component'
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { ApiService } from '../../services/api/api.service';
+import { CentersService } from '../../services/global/centers.service';
+import { CenterDto } from '../../interfaces/center.dto';
 import { FontScaleService } from '../../services/font-scale.service';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
@@ -18,6 +20,18 @@ import { CLARISA_GLOSSARY_URL } from '../../constants/clarisa-links.constants';
 import { ReportingGuideService } from '../../../pages/result-framework-reporting/pages/dashboard-lab/services/reporting-guide.service';
 
 const PLANNED = '/result-framework-reporting/planned-toc';
+
+/** CLARISA catalogue row builder — ASC-T-1 (`CenterDto` has no role field, `P-8`). */
+const catalogueCenter = (acronym: string, overrides: Partial<CenterDto> = {}): CenterDto => ({
+  code: acronym,
+  financial_code: '',
+  institutionId: 0,
+  name: acronym,
+  acronym,
+  lead_center: '',
+  full_name: acronym,
+  ...overrides
+});
 
 describe('ReportingNavSidebarComponent', () => {
   let component: ReportingNavSidebarComponent;
@@ -29,6 +43,7 @@ describe('ReportingNavSidebarComponent', () => {
   let dataControlMock: any;
   let homeMock: any;
   let apiMock: any;
+  let centersMock: { centers: ReturnType<typeof signal<CenterDto[]>> };
   let fontScaleMock: any;
   let notificationsMock: any;
   let sidebarMock: any;
@@ -50,6 +65,7 @@ describe('ReportingNavSidebarComponent', () => {
         { provide: DataControlService, useValue: dataControlMock },
         { provide: ResultFrameworkReportingHomeService, useValue: homeMock },
         { provide: ApiService, useValue: apiMock },
+        { provide: CentersService, useValue: centersMock },
         { provide: FontScaleService, useValue: fontScaleMock },
         { provide: ResultsNotificationsService, useValue: notificationsMock },
         { provide: HlmSidebarService, useValue: sidebarMock },
@@ -95,6 +111,11 @@ describe('ReportingNavSidebarComponent', () => {
       rolesSE: { roles: null as any, getMyCenters: jest.fn().mockReturnValue([{ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Member' }]) },
       dataControlSE: { myInitiativesList: [] as any[] }
     };
+
+    // Populated by default (not just for admin fixtures): the non-admin case MUST run against a
+    // populated catalogue, or dropping the `isAdmin` guard (falsifier mutation (b)) reads the same
+    // as correct code and the ASC-AC-3 gate asserts nothing.
+    centersMock = { centers: signal<CenterDto[]>([catalogueCenter('IITA'), catalogueCenter('CIP')]) };
 
     fontScaleMock = { set: jest.fn(), scale: signal('default') };
     notificationsMock = { updatesPopUpData: [] as any[] };
@@ -725,7 +746,10 @@ describe('ReportingNavSidebarComponent', () => {
       );
     });
 
-    it('getMyCenters delegates to the roles service', async () => {
+    // ASC-T-1: for a non-admin the wrapper still delegates verbatim (ASC-R-2, ASC-AC-3) — the
+    // catalogue (populated by default in `centersMock`, see beforeEach) must be ignored entirely.
+    it('getMyCenters delegates to the roles service for a non-admin, ignoring a populated catalogue (ASC-AC-3)', async () => {
+      rolesMock.isAdmin = false;
       await build();
       expect(component.getMyCenters()).toEqual([
         { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Member' }
@@ -737,6 +761,97 @@ describe('ReportingNavSidebarComponent', () => {
       apiMock.rolesSE.getMyCenters.mockReturnValue([{ center_name: 'Nameless' }, { center_acronym: 'CIP' }]);
       await build();
       expect(component.getMyCenters()).toEqual([{ center_acronym: 'CIP' }]);
+    });
+
+    // ------------------------------------------------------------------------- ASC-T-1
+    // Admin union: assignments ∪ catalogue, deduped on acronym (assignment wins), assignments
+    // first, tagged by provenance. See `docs/specs/changes/admin-sees-all-centers/`.
+    describe('admin centre union (ASC-T-1)', () => {
+      it('ASC-AC-1 / D5: an admin with ZERO assignments gets the whole catalogue, not an empty block', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]); // empty roles.center — the D5 trap
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(3);
+        expect(result.map((c: any) => c.center_acronym)).toEqual(['CIAT', 'IITA', 'CIP']);
+        expect(result.every((c: any) => c.isAssigned === false)).toBe(true);
+      });
+
+      it('ASC-AC-2 / ASC-R-10 / D6: an assigned centre also present in the catalogue appears once, assigned, and sorts first', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([
+          { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' }
+        ]);
+        // The falsifier fixture: CIAT is in BOTH sources, or dedup mutation (a) is inert.
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(3);
+        expect(result.filter((c: any) => c.center_acronym === 'CIAT')).toHaveLength(1);
+        expect(result[0]).toEqual({
+          center_id: 'CIAT',
+          center_name: 'CIAT',
+          center_acronym: 'CIAT',
+          role_name: 'Center User',
+          isAssigned: true
+        });
+        expect(result.map((c: any) => c.center_acronym)).toEqual(['CIAT', 'IITA', 'CIP']);
+      });
+
+      it('ASC-AC-5 / D8-adjacent: an admin with a failed (empty) catalogue still sees their assignments, not an empty block', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([
+          { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' },
+          { center_id: 'IITA', center_name: 'IITA', center_acronym: 'IITA', role_name: 'Center User' }
+        ]);
+        centersMock.centers.set([]); // catalogue fetch failed / empty
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(2);
+        expect(result.map((c: any) => c.center_acronym)).toEqual(['CIAT', 'IITA']);
+      });
+
+      it('ASC-AC-6 / D7: catalogue landing AFTER first render grows the list — no computed(), no stale cache', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        centersMock.centers.set([]); // cold: nothing resolved yet at first render
+        await build();
+
+        expect(component.getMyCenters()).toHaveLength(0);
+
+        // The catalogue resolves later — set AFTER first render/first read (D7's trap).
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA')]);
+        expect(component.getMyCenters()).toHaveLength(2);
+      });
+
+      it('ASC-AC-8: does not mutate what RolesService.getMyCenters() returns while composing the admin union', async () => {
+        rolesMock.isAdmin = true;
+        const originalAssignment = { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' };
+        apiMock.rolesSE.getMyCenters.mockReturnValue([originalAssignment]);
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA')]);
+        await build();
+
+        component.getMyCenters();
+
+        expect(apiMock.rolesSE.getMyCenters()).toEqual([originalAssignment]);
+        expect(originalAssignment).toEqual({ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' });
+        expect((originalAssignment as any).isAssigned).toBeUndefined();
+      });
+
+      it('ASC-AC-9 / D4: a catalogue row with neither acronym nor code is omitted', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        centersMock.centers.set([catalogueCenter('IITA'), { ...catalogueCenter('CIP'), acronym: undefined as any, code: undefined as any }]);
+        await build();
+
+        const result = component.getMyCenters();
+        expect(result).toHaveLength(1);
+        expect(result[0].center_acronym).toBe('IITA');
+      });
     });
 
     it('centerHomeLink falls back to the centre id when the acronym is missing', async () => {
