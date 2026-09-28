@@ -42,7 +42,11 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
    * `reconcileLeadFieldsAfterLateCatalogue()` can compare against it (the tracker keeps only a string).
    */
   private lastDirtySnapshot: Record<string, unknown> | null = null;
-  private readonly onCatalogueDrivenLeadUpdate = (source: 'centers' | 'institutions') => this.reconcileLeadFieldsAfterLateCatalogue(source);
+  private readonly onCatalogueDrivenLeadUpdate = (source: 'centers' | 'institutions') => {
+    this.reconcileLeadFieldsAfterLateCatalogue(source);
+    // P2-3838: a saved project's owner can only be resolved once the centers catalogue exists.
+    if (source === 'centers') this.syncProjectDerivedCentersAfterLoad();
+  };
   disabledOptions = [];
   rdPartnersSE = inject(RdContributorsAndPartnersService);
   centersSE = inject(CentersService);
@@ -126,7 +130,8 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
     // only for p25
     if (this.fieldsManagerSE.isP25()) {
       this.GET_AllWithoutResults();
-      this.rdPartnersSE.loadClarisaProjects();
+      // P2-3838: the projects catalogue carries each project's owner Center; re-derive once it lands.
+      this.rdPartnersSE.loadClarisaProjects(() => this.syncProjectDerivedCentersAfterLoad());
     }
   }
 
@@ -333,6 +338,9 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
     this.rdPartnersSE.setPossibleLeadCenters(true, false);
     this.rdPartnersSE.setLeadCenterOnLoad(true);
     this.rdPartnersSE.runAutoAssignLeads();
+    // P2-3838: saved projects lock (or re-add) their owner Center. Runs BEFORE the load snapshot in
+    // `onSectionInformation`, so whatever it settles is part of the clean baseline.
+    this.rdPartnersSE.syncProjectDerivedCenters({ animate: false });
   }
 
   /**
@@ -529,6 +537,18 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
         toc_progressive_narrative: rest.toc_progressive_narrative ?? ''
       };
     });
+  }
+
+  /**
+   * P2-3838 — project → owner Center sync for data that lands AFTER the load snapshot (projects catalogue,
+   * centers catalogue). Deriving a Center there is not a user edit, so a section that was clean stays clean:
+   * the baseline moves with it. A section the user already edited keeps its baseline, so the edit is not
+   * swallowed (same rule as `reconcileLeadFieldsAfterLateCatalogue`).
+   */
+  private syncProjectDerivedCentersAfterLoad(): void {
+    const wasClean = !!this.lastDirtySnapshot && !this.hasUnsavedChanges();
+    this.rdPartnersSE.syncProjectDerivedCenters({ animate: false });
+    if (wasClean) this.snapshotBaseline();
   }
 
   /** P2-3427 — single write path for the tracker's baseline and its frozen structural copy. */

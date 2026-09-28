@@ -62,6 +62,95 @@
         font-size: 1.5em;
         color: var(--pr-color-accents-6);
       }
+
+      // P2-3838 — Center derived from a contributing W3/bilateral project. Same voice as the locked ★ chip of
+      // the bilateral form (`section-contributors.component.scss` `.sc-chip-readonly`): primary gradient, white
+      // text, star, and no remove control — a lock in its place. It is born with a ripple ring + pop and leaves
+      // with a shrink/fade timed to `DERIVED_CHIP_LEAVE_MS` (260 ms) in the service.
+      &.is_derived {
+        position: relative;
+        background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
+        color: #ffffff;
+        font-weight: 600;
+        gap: 6px;
+        padding-right: 10px;
+        box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+
+        .name {
+          color: inherit;
+        }
+
+        .derived_mark {
+          font-size: 10px;
+          line-height: 1;
+          opacity: 0.95;
+        }
+
+        .derived_tag {
+          font-size: 9.5px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          line-height: 1;
+          padding: 3px 6px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.22);
+          color: #ffffff;
+          white-space: nowrap;
+        }
+
+        i.derived_lock {
+          cursor: default;
+          font-size: 1.1em;
+          color: rgba(255, 255, 255, 0.85);
+        }
+      }
+
+      &.is_entering {
+        animation: ipsr-derived-chip-in 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      &.is_leaving {
+        animation: ipsr-derived-chip-out 260ms cubic-bezier(0.4, 0, 1, 1) both;
+        pointer-events: none;
+      }
+    }
+  }
+}
+
+@keyframes ipsr-derived-chip-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.72);
+    box-shadow: 0 0 0 0 rgba(107, 70, 229, 0.55);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 12px rgba(107, 70, 229, 0);
+  }
+}
+
+@keyframes ipsr-derived-chip-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selected_container .chips_container .pr_chip_selected {
+    &.is_entering,
+    &.is_leaving {
+      animation-duration: 1ms;
     }
   }
 }

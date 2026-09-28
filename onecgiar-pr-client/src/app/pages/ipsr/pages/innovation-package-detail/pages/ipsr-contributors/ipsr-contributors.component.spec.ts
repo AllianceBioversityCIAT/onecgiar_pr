@@ -128,7 +128,15 @@ describe('IpsrContributorsComponent', () => {
       onLeadByPartnerChange: jest.fn(),
       resetState: jest.fn(),
       autoAddedLeadCenterCode: null,
-      loadClarisaProjects: jest.fn()
+      loadClarisaProjects: jest.fn(),
+      // P2-3838 — project → owner Center API read by the template and the load flow.
+      syncProjectDerivedCenters: jest.fn(),
+      isProjectDerivedCenter: jest.fn(() => false),
+      isDerivedCenterEntering: jest.fn(() => false),
+      isDerivedCenterLeaving: jest.fn(() => false),
+      projectDerivedCenterTooltip: jest.fn(() => ''),
+      centersLockedInDropdown: [],
+      projectDerivedCentersTick: jest.fn(() => 0)
     };
 
     mockIpsrCompletenessStatusSE = {
@@ -1209,7 +1217,8 @@ describe('IpsrContributorsComponent', () => {
       expect(lead).toBeGreaterThan(chips);
       expect(lead).toBeLessThan(projects);
       expect(html).not.toContain('#selectLeadCenter');
-      expect(html).toMatch(/\(selectOptionEvent\)="onLeadCenterSelected\(\$event\?\.code \?\? null\)"/);
+      // P2-3838: a Lead swap re-syncs the project-derived Centers right after its own bookkeeping.
+      expect(html).toMatch(/\(selectOptionEvent\)="onLeadCenterSelected\(\$event\?\.code \?\? null\); this\.rdPartnersSE\.syncProjectDerivedCenters\(\)"/);
       expect(html).toMatch(/\(selectOptionEvent\)="this\.rdPartnersSE\.onLeadByPartnerChange\(\$event\)"/);
     });
   });
@@ -1384,6 +1393,70 @@ describe('IpsrContributorsComponent', () => {
       mockRdPartnersSE.leadCenterCode = 'C1-again';
       mockRdPartnersSE.onCatalogueDrivenLeadUpdate('centers');
       expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    // P2-3838 — a late catalogue that derives a Center from a saved project is not a user edit.
+    describe('P2-3838 — project-derived Centers that land after the load snapshot', () => {
+      const deriveCenter = () =>
+        mockRdPartnersSE.syncProjectDerivedCenters.mockImplementation(() => {
+          mockRdPartnersSE.partnersBody.contributing_center = [
+            ...(mockRdPartnersSE.partnersBody.contributing_center || []),
+            { code: 'C7', name: 'Center 7 (owner of a saved project)' }
+          ];
+        });
+      // The P25 load walks `contributing_and_primary_initiative`; the block's `freshResponse()` is the non-P25 shape.
+      beforeEach(() => {
+        mockApiService.resultsSE.GETContributorsByIpsrResultId = jest.fn(() =>
+          of({ response: { ...freshResponse(), contributing_and_primary_initiative: [] } })
+        );
+      });
+
+      const projectsCatalogueCallback = () => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockRdPartnersSE.loadClarisaProjects.mockClear();
+        component.ngOnInit();
+        return mockRdPartnersSE.loadClarisaProjects.mock.calls.at(-1)[0] as () => void;
+      };
+
+      it('runs the derivation at the end of the P25 load, before the clean snapshot', () => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockRdPartnersSE.syncProjectDerivedCenters.mockClear();
+        deriveCenter();
+        component.ngOnInit();
+
+        expect(mockRdPartnersSE.syncProjectDerivedCenters).toHaveBeenCalledWith({ animate: false });
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('late PROJECTS catalogue adds a Center to an untouched section: it stays clean', () => {
+        const onLoaded = projectsCatalogueCallback();
+        expect(component.hasUnsavedChanges()).toBe(false);
+        deriveCenter();
+
+        onLoaded();
+
+        expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toContain('C7');
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('late CENTERS catalogue adds a Center to an untouched section: it stays clean', () => {
+        deriveCenter();
+
+        mockRdPartnersSE.onCatalogueDrivenLeadUpdate('centers');
+
+        expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toContain('C7');
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('a section the reporter already edited stays dirty — the late derivation never swallows the edit', () => {
+        const onLoaded = projectsCatalogueCallback();
+        component.contributorsBody.institutions.push(anotherPartner(11));
+        deriveCenter();
+
+        onLoaded();
+
+        expect(component.hasUnsavedChanges()).toBe(true);
+      });
     });
 
     it('detaches its catalogue callback from the shared service on destroy', () => {
