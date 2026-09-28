@@ -22,6 +22,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { environment } from '../../../../../../../environments/environment';
+import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
 
 describe('IpsrGeneralInformationComponent', () => {
   let component: IpsrGeneralInformationComponent;
@@ -568,6 +569,39 @@ describe('IpsrGeneralInformationComponent', () => {
         component.onSaveSection();
 
         expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+        expect(mockUserSearchService.showContactError).toBe(false);
+      });
+
+      // /akili-test gap: the cases above stub `queryCameFromHydration` and only check that a request
+      // went out. This one runs the field's REAL `acceptTypedNameAnyway()` against the section's own
+      // body and asserts the request CARRIES the accepted name (Scenario 2.1 "THEN ... carrying that
+      // free-text name").
+      it.each([
+        ['P22', true],
+        ['P25', false]
+      ])('%s: the real "use this name anyway" puts the free-text name in the save payload', (_label, isP22) => {
+        mockFieldsManagerService.isP22.mockReturnValue(isP22);
+        mockFieldsManagerService.isP25.mockReturnValue(!isP22);
+        mockUserSearchService.searchQuery = '  External Consultant  ';
+        mockUserSearchService.selectedUser = null;
+        component.ipsrGeneralInformationBody.lead_contact_person = null;
+        const field: any = {
+          userSearchService: mockUserSearchService,
+          body: component.ipsrGeneralInformationBody,
+          queryCameFromHydration: false
+        };
+        LeadContactPersonFieldComponent.prototype.acceptTypedNameAnyway.call(field);
+        (component as any).leadContactPersonField = field;
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalledWith(
+          expect.objectContaining({ lead_contact_person: 'External Consultant', lead_contact_person_data: null }),
+          'mockInnovationId',
+          !isP22
+        );
         expect(mockUserSearchService.showContactError).toBe(false);
       });
     });

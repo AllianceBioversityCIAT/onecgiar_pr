@@ -50,11 +50,11 @@
   - `onecgiar-pr-client/src/app/custom-fields/lead-contact-person-field/CLAUDE.md` — Traps: both section consumers (Results, IPSR) share one save-guard rule; re-stamp `Verified:`
 - **Depends on:** `IPSR-LCG-T-1` · **Blocks:** — · **Estimate:** S · **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] All `IPSR-LCG-T-1` cases GREEN; rest of the IPSR General information spec unchanged and green.
-  - [ ] `lead-contact-person-field.readonly.spec.ts` still green (renders the field template; guards the comment-only edit).
-  - [ ] `npx ng lint --quiet` clean.
-  - [ ] Guard expression is textually the same as `rd-general-information.component.ts:390-394` (diff review).
-  - [ ] **Manual check at the HITL pause (no automated gate — requirements "Defect Classes"):** on a local build, reproductions A (P25, type without picking → Save blocked, contact kept after reload) and B ("use this name anyway" → Save stores the name). Report as not verified if no editable package/phase is available — do not mark as passed.
+  - [x] All `IPSR-LCG-T-1` cases GREEN; rest of the IPSR General information spec unchanged and green. (execution.md T-2: 105/105)
+  - [x] `lead-contact-person-field.readonly.spec.ts` still green (renders the field template; guards the comment-only edit). (execution.md T-2)
+  - [x] `npx ng lint --quiet` clean. (execution.md T-2; re-run in validation-report.md §5)
+  - [x] Guard expression is textually the same as `rd-general-information.component.ts:390-394` (diff review). (Reviewer PASS; validation-report.md §8)
+  - [x] (verified by the user 2026-09-28, execution.md T-2) **Manual check at the HITL pause (no automated gate — requirements "Defect Classes"):** on a local build, reproductions A (P25, type without picking → Save blocked, contact kept after reload) and B ("use this name anyway" → Save stores the name). Report as not verified if no editable package/phase is available — do not mark as passed.
 - **Verification:**
   - `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage --testPathPattern="(ipsr-general-information.component|lead-contact-person-field.readonly).spec"`
   - `cd onecgiar-pr-client && npx ng lint --quiet`

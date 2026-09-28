@@ -76,4 +76,4 @@ Both tasks PASS on attempt 1. IPSR General information now applies the Results W
 
 #### Budget tripwire (design §11)
 
-- Estimate ~60 LOC / tripwire ~120 LOC. Actual: **+196 / −10** across 5 files (spec.ts +160/−2; production ≈ 8 code lines; the rest are rationale comments and docs). Tasks 2/2, review rounds 1 per task — within budget. Overrun is test volume (7 case rows × portfolio variants) and comments, not production scope. Escalated to the user at the gate.
+- Estimate ~60 LOC / tripwire ~120 LOC. Actual: **+196 / −10** across 5 files (spec.ts +160/−2; production ≈ 8 code lines; the rest are rationale comments and docs). Tasks 2/2 and review rounds 1 per task are within budget; **the LOC tripwire fired** (+196 vs ~120). Overrun is test volume (7 case rows × portfolio variants) and comments, not production scope. Escalated to the user at the gate and **accepted** by the user (santiago.sanchez@cgiar.org, 2026-09-28, go-ahead to push). Corrected by `/akili-validate` V-2 — this line previously read "within budget".
