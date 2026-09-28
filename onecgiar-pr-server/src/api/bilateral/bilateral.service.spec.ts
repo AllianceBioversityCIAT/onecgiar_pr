@@ -4,12 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { In } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { BilateralService } from './bilateral.service';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultCreationMethod } from '../../shared/constants/result-creation-method.enum';
 import { SourceEnum } from '../results/entities/result.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultTaggedNotificationService } from '../notification/services/result-tagged-notification.service';
+import { TocMappingDto } from './dto/create-bilateral.dto';
 
 describe('BilateralService (unit)', () => {
   const makeService = (
@@ -429,6 +432,179 @@ describe('BilateralService (unit)', () => {
     await expect(
       service.handleTocMapping(null, [], 1, 1),
     ).resolves.toBeUndefined();
+  });
+
+  describe('handleTocMapping — target_contribution on the push (BTC-T-2)', () => {
+    const baseToc = () => ({
+      science_program_id: 'CLIMATE',
+      aow_compose_code: 'CLIMATE-AGROECOLOGICAL',
+      result_title: 'Climate-resilient crop systems adopted',
+      result_indicator_description:
+        'Number of climate resilient practices documented',
+      result_indicator_type_name: 'Output',
+    });
+
+    /** Arranges a full ToC match (title + indicator + an active target row). */
+    const arrangeFullMatch = (stubs: any, numberTarget: number | null = 50) => {
+      stubs.clarisaInitiatives.findOne.mockResolvedValue({
+        id: 5,
+        official_code: 'CLIMATE',
+        active: true,
+        name: 'Climate',
+      });
+      stubs.resultByInitiativesRepository.findOne.mockResolvedValue({
+        id: 777,
+      });
+      stubs.resultByInitiativesRepository.update = jest
+        .fn()
+        .mockResolvedValue(undefined);
+      stubs.resultsTocResultsRepository.findTocResultsForBilateral = jest
+        .fn()
+        .mockResolvedValue([
+          {
+            toc_result_id: 99,
+            toc_results_indicator_id: 77,
+            category: null,
+            // Disqualifier guard (BTC-T-2): number_target MUST be present here, otherwise the
+            // save-not-reached path would pass this test for the wrong reason.
+            number_target: numberTarget,
+            target_date: 2026,
+          },
+        ]);
+      stubs.resultsTocResultsRepository.findOne = jest
+        .fn()
+        .mockResolvedValue(null);
+      stubs.resultsTocResultsRepository.save = jest
+        .fn()
+        .mockResolvedValue({ result_toc_result_id: 555 });
+      stubs.resultsTocResultsIndicatorsRepository.findOne = jest
+        .fn()
+        .mockResolvedValue(null);
+      stubs.resultsTocResultsIndicatorsRepository.save = jest
+        .fn()
+        .mockResolvedValue({ result_toc_result_indicator_id: 888 });
+      stubs.resultsTocTargetIndicatorRepository.findOne = jest
+        .fn()
+        .mockResolvedValue(null);
+      stubs.resultsTocTargetIndicatorRepository.save = jest
+        .fn()
+        .mockResolvedValue({});
+    };
+
+    it('stores the sent target_contribution on the target row (full match)', async () => {
+      const { service, stubs: stubsTyped } = makeService();
+      const stubs: any = stubsTyped;
+      arrangeFullMatch(stubs);
+
+      await service.handleTocMapping(
+        { ...baseToc(), target_contribution: 12.5 },
+        [],
+        1,
+        42,
+      );
+
+      // Assert the save happened before asserting its argument (disqualifier guard).
+      expect(
+        stubs.resultsTocTargetIndicatorRepository.save,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        stubs.resultsTocTargetIndicatorRepository.save,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ contributing_indicator: 12.5 }),
+      );
+    });
+
+    it('keeps the constant 1 when target_contribution is not sent (full match, backward compatibility)', async () => {
+      const { service, stubs: stubsTyped } = makeService();
+      const stubs: any = stubsTyped;
+      arrangeFullMatch(stubs);
+
+      await service.handleTocMapping(baseToc(), [], 1, 42);
+
+      expect(
+        stubs.resultsTocTargetIndicatorRepository.save,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        stubs.resultsTocTargetIndicatorRepository.save,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ contributing_indicator: 1 }),
+      );
+    });
+
+    it('does not write a target row and logs a warning when the field is sent but the match is initiative-only', async () => {
+      const { service, stubs: stubsTyped } = makeService();
+      const stubs: any = stubsTyped;
+      stubs.clarisaInitiatives.findOne.mockResolvedValue({
+        id: 5,
+        official_code: 'CLIMATE',
+        active: true,
+        name: 'Climate',
+      });
+      stubs.resultByInitiativesRepository.findOne.mockResolvedValue({
+        id: 777,
+      });
+      stubs.resultByInitiativesRepository.update = jest
+        .fn()
+        .mockResolvedValue(undefined);
+      stubs.resultsTocResultsRepository.findOne = jest
+        .fn()
+        .mockResolvedValue(null);
+      stubs.resultsTocResultsRepository.save = jest
+        .fn()
+        .mockResolvedValue({ result_toc_result_id: 555 });
+      stubs.resultsTocTargetIndicatorRepository.save = jest.fn();
+
+      // No result_title → attemptTocSearch is false → initiative-only mapping, no indicator.
+      await service.handleTocMapping(
+        { science_program_id: 'CLIMATE', target_contribution: 12.5 },
+        [],
+        1,
+        42,
+      );
+
+      expect(
+        stubs.resultsTocTargetIndicatorRepository.save,
+      ).not.toHaveBeenCalled();
+      expect(service.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('result 42'),
+      );
+      // The warning names the result and the reason only — never the payload value.
+      const warnCalls = (service.logger.warn as jest.Mock).mock.calls.map(
+        (call) => call[0],
+      );
+      expect(
+        warnCalls.some((message: string) => message.includes('12.5')),
+      ).toBe(false);
+    });
+  });
+
+  describe('TocMappingDto.target_contribution validation (BTC-T-2 scenario: invalid value)', () => {
+    const validateTargetContribution = async (target_contribution: unknown) => {
+      const dto = plainToInstance(TocMappingDto, {
+        science_program_id: 'CLIMATE',
+        target_contribution,
+      });
+      const errors = await validate(dto);
+      return errors.find((error) => error.property === 'target_contribution');
+    };
+
+    it.each([-1, 1.234, '12'])(
+      'rejects %p (negative, >2 decimals, or non-numeric)',
+      async (value) => {
+        expect(await validateTargetContribution(value)).toBeDefined();
+      },
+    );
+
+    it.each([12.5, 12])(
+      'accepts %p (up to 2 decimals, non-negative)',
+      async (value) => {
+        expect(await validateTargetContribution(value)).toBeUndefined();
+      },
+    );
+
+    it('accepts an omitted target_contribution (optional)', async () => {
+      expect(await validateTargetContribution(undefined)).toBeUndefined();
+    });
   });
 
   it('resetTocData should call logicalDelete in repositories', async () => {
