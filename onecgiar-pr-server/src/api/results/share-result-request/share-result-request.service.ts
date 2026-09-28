@@ -616,6 +616,13 @@ export class ShareResultRequestService {
           source_name:
             result.obj_result.source === 'Result' ? 'W1/W2' : 'W3/Bilaterals',
         };
+        // P2-3188 REWORK (NOTIF-T-16 review): `results_by_projects` is soft-deleted
+        // (`is_active: false`), not removed, when a project is unlinked from a result. Strip the
+        // inactive links here so a result never surfaces under a project it is no longer tagged
+        // to — both as a facet option and as a filter match on the client.
+        result.obj_result.obj_result_by_project = (
+          result.obj_result.obj_result_by_project ?? []
+        ).filter((link: any) => link.is_active);
       }
       return result;
     });
@@ -752,6 +759,17 @@ export class ShareResultRequestService {
             },
           },
         },
+        obj_result_by_project: {
+          id: true,
+          project_id: true,
+          is_lead: true,
+          is_active: true,
+          obj_clarisa_project: {
+            id: true,
+            shortName: true,
+            fullName: true,
+          },
+        },
       },
       obj_requested_by: {
         id: true,
@@ -789,6 +807,9 @@ export class ShareResultRequestService {
           clarisa_center_object: {
             clarisa_institution: true,
           },
+        },
+        obj_result_by_project: {
+          obj_clarisa_project: true,
         },
       },
       obj_requested_by: true,

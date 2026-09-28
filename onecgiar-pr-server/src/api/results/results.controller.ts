@@ -519,12 +519,15 @@ export class ResultsController {
   @ApiParam({ name: 'resiltId', type: Number, required: true })
   @ApiBody({ type: CreateResultGeoDto })
   @ApiOkResponse({ description: 'Geographic scope saved.' })
-  saveGeographic(
+  async saveGeographic(
     @Body() createResultGeoDto: CreateResultGeoDto,
     @Param('resiltId') resiltId: number,
     @UserToken() user: TokenDto,
   ) {
     createResultGeoDto.result_id = resiltId;
+    // design §5.1 — Center-write guard, kept out of the shared `saveGeoScope` (also used by
+    // W1/W2). Consults the helper only when the result is bilateral (falsifier case (d)).
+    await this.resultsService.assertGeographyCenterWrite(resiltId, user);
     return this.resultsService.saveGeoScope(createResultGeoDto, user);
   }
 
@@ -1042,7 +1045,9 @@ export class ResultsController {
   @ApiOperation({
     summary: 'Update bilateral result title',
     description:
-      'Updates the title of a W3/bilateral result. The result must be in EDITING status (unless user is Admin). The new title must be unique among active results.',
+      'Updates the title of a W3/bilateral result. A platform admin may update it at any status; ' +
+      'a non-admin may update it at any status except Pending Review (Science Program review), ' +
+      'and gets 403 while the result is under review. The new title must be unique among active results.',
   })
   @ApiParam({
     name: 'resultId',
@@ -1071,7 +1076,9 @@ export class ResultsController {
   @ApiOperation({
     summary: 'Update bilateral result general info',
     description:
-      'Updates the title and/or description of a W3/bilateral result. Each field is optional.',
+      'Updates the title and/or description of a W3/bilateral result. Each field is optional. ' +
+      'A platform admin may update it at any status; a non-admin may update it at any status ' +
+      'except Pending Review (Science Program review), and gets 403 while the result is under review.',
   })
   @ApiParam({ name: 'resultId', type: Number, required: true })
   @ApiBody({ type: UpdateBilateralGeneralInfoDto })

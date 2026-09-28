@@ -2,6 +2,8 @@ import {
   INNOVATION_PACKAGE_TITLE_PREFIX,
   buildInnovationPackageTitle,
   joinGeoScopeNames,
+  INNOVATION_PACKAGE_TITLE_MAX_WORDS,
+  fitCoreTitleToCap,
 } from './innovation-package-title.util';
 
 describe('joinGeoScopeNames', () => {
@@ -80,5 +82,70 @@ describe('buildInnovationPackageTitle', () => {
         regionNames: [],
       }),
     ).toBe(`${INNOVATION_PACKAGE_TITLE_PREFIX} maize.`);
+  });
+});
+
+// P2-3427 (PO review, 25-Sep-2026): the generated title must never exceed the 30-word cap the form enforces.
+describe('buildInnovationPackageTitle — never longer than the form allows (P2-3427)', () => {
+  const words = (s: string) => s.trim().split(/\s+/).length;
+  const longCore =
+    'Using accurate detection tools to develop a successful management strategy for lentil and chickpea viruses in farmers fields in the highlands of Ethiopia and beyond the region';
+
+  it('trims the core innovation part so a country-scoped title fits in 30 words, keeping the country suffix intact', () => {
+    const title = buildInnovationPackageTitle({
+      coreInnovationTitle: longCore,
+      geoScopeId: 4,
+      countryNames: ['Ethiopia'],
+    });
+    expect(words(title)).toBeLessThanOrEqual(
+      INNOVATION_PACKAGE_TITLE_MAX_WORDS,
+    );
+    expect(title.endsWith(' in Ethiopia')).toBe(true);
+    expect(
+      title.startsWith(
+        'Innovation Package and Scaling Readiness assessment for using accurate detection tools',
+      ),
+    ).toBe(true);
+  });
+
+  it('trims a regional title the same way', () => {
+    const title = buildInnovationPackageTitle({
+      coreInnovationTitle: longCore,
+      geoScopeId: 2,
+      regionNames: ['Eastern Africa', 'Southern Asia'],
+    });
+    expect(words(title)).toBeLessThanOrEqual(
+      INNOVATION_PACKAGE_TITLE_MAX_WORDS,
+    );
+    expect(title.endsWith(' in Eastern Africa and Southern Asia')).toBe(true);
+  });
+
+  it('trims a global title and still closes with a period', () => {
+    const title = buildInnovationPackageTitle({
+      coreInnovationTitle: longCore,
+      geoScopeId: 1,
+    });
+    expect(words(title)).toBeLessThanOrEqual(
+      INNOVATION_PACKAGE_TITLE_MAX_WORDS,
+    );
+    expect(title.endsWith('.')).toBe(true);
+  });
+
+  it('negative control: a short core innovation is left untouched', () => {
+    const title = buildInnovationPackageTitle({
+      coreInnovationTitle: 'Drought tolerant maize.',
+      geoScopeId: 4,
+      countryNames: ['Kenya'],
+    });
+    expect(title).toBe(
+      'Innovation Package and Scaling Readiness assessment for drought tolerant maize in Kenya',
+    );
+  });
+
+  it('fitCoreTitleToCap cuts at a word boundary and never returns an empty core', () => {
+    expect(fitCoreTitleToCap('a b', 'one two three four', 'x y', 6)).toBe(
+      'one two',
+    );
+    expect(fitCoreTitleToCap('a b c d e f', 'one two', 'g h', 6)).toBe('one');
   });
 });

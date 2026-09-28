@@ -13,6 +13,9 @@ import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideRefreshCw } from '@ng-icons/lucide';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 interface CenterOption {
   institutionId: number;
@@ -26,13 +29,30 @@ interface ProjectOption {
   id: number;
   shortName: string;
   fullName: string;
+  /**
+   * BCT-DD-4 — the owning Center of this project, additive on `GET clarisa/projects/get/all`
+   * (`owner_center_institution_id`). `null`/`undefined` means the owner could not be resolved and
+   * locks nothing (see `lockedCenterInstitutionIds`).
+   */
+  ownerCenterInstitutionId?: number | null;
 }
 
 const PARTNERS_MDS_GROUP = 'partners';
 
+/**
+ * Result types whose linked/bundled answer is owned by another surface — see
+ * `linkedQuestionOwnedElsewhere()`. Declared here rather than imported from
+ * `qa-innovation-development-results.service.ts` so this section does not depend on a QA service
+ * for two numbers; same idiom as `type-innovation-use.component.ts:56`.
+ */
+const INNOVATION_USE_RESULT_TYPE_ID = 2;
+const INNOVATION_DEVELOPMENT_RESULT_TYPE_ID = 7;
+
 @Component({
   selector: 'app-section-contributors',
-  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
+  imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent, NgIcon],
+  // W12-6 — the projects Retry uses Lucide, the repo's icon set (R37).
+  providers: [provideIcons({ lucideRefreshCw })],
   templateUrl: './section-contributors.component.html',
   styleUrl: './section-contributors.component.scss'
 })
@@ -85,19 +105,87 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     }));
   });
 
+  /**
+   * P2-3228 — the read-only "Lead center" value. The lead project's organisation wins, as before;
+   * a result with no project (API-reported W3/bilateral results often have none) falls back to the
+   * result's own lead Center, the same id `hydrateLeadAndSelection` already selects below.
+   */
+  readonly leadCenterLabel = computed(() => {
+    const projectLead = this.creationService.selectedProject()?.leadCenter;
+    if (projectLead?.acronym || projectLead?.name) {
+      return [projectLead.acronym, projectLead.name].filter(Boolean).join(' - ');
+    }
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    const resultLead = resultLeadCenterId
+      ? this.availableCenters().find(c => c.institutionId === Number(resultLeadCenterId))
+      : null;
+    return resultLead ? `${resultLead.acronym} - ${resultLead.name}` : '-';
+  });
+
   readonly availableCentersComputed = computed(() => {
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
     const leadInstId = leadCenterId ? Number(leadCenterId) : null;
+    const locked = this.lockedCenterInstitutionIds();
     return this.availableCenters().map(c => ({
       ...c,
-      disabled: Number(c.institutionId) === leadInstId
+      disabled: Number(c.institutionId) === leadInstId || locked.has(Number(c.institutionId))
     }));
   });
 
   readonly disabledCenterOptions = computed(() => this.availableCentersComputed().filter(c => c.disabled));
   readonly disabledProjectOptions = computed(() => this.availableProjectsComputed().filter(p => p.disabled));
+
+  /**
+   * BCT-R-1 / BCT-R-3 / BCT-R-4 — Centers owned by a currently-selected, non-lead project.
+   *
+   * Excludes:
+   * - the lead project's own owner (the lead is handled by its own read-only mechanism, and its
+   *   owner must never be treated as "derived" — falsifier: "the lead project's owner is locked");
+   * - the lead Center's own id (it is already disabled as the lead; folding it into this set would
+   *   just make it redundant, and the reporting Center's own project must lock nothing — BCT-R-1
+   *   "reporting Center's project" scenario);
+   * - `null`/unresolved owners (BCT-R-1 "owner cannot be resolved" scenario — locks nothing).
+   */
+  readonly lockedCenterInstitutionIds = computed<Set<number>>(() => {
+    const leadProject = this.creationService.selectedProject();
+    const leadProjectId = leadProject?.id ? Number(leadProject.id) : null;
+
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    const leadCenterId = leadProject?.leadCenter?.id ?? resultLeadCenterId;
+    const leadInstId = leadCenterId ? Number(leadCenterId) : null;
+
+    const projectsById = new Map(this.availableProjects().map(p => [p.id, p]));
+    const locked = new Set<number>();
+    for (const id of this.selectedProjectIds()) {
+      if (leadProjectId != null && id === leadProjectId) continue;
+      const owner = projectsById.get(id)?.ownerCenterInstitutionId;
+      if (owner == null) continue;
+      const ownerId = Number(owner);
+      if (leadInstId != null && ownerId === leadInstId) continue;
+      locked.add(ownerId);
+    }
+    return locked;
+  });
+
+  /** Unions `lockedCenterInstitutionIds()` into the current Center selection, in place. Returns whether anything changed. */
+  private unionLockedCentersIntoSelection(): boolean {
+    const locked = this.lockedCenterInstitutionIds();
+    if (!locked.size) return false;
+    const centerIds = new Set<number>(this.selectedCenterInstitutionIds());
+    let changed = false;
+    for (const id of locked) {
+      if (!centerIds.has(id)) {
+        centerIds.add(id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.selectedCenterInstitutionIds.set(Array.from(centerIds));
+    }
+    return changed;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // P2-3368 · Contributing science programs (optional, multi)
@@ -137,23 +225,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   readonly selectedSecondarySpIds = computed(() => this.creationService.selectedSecondarySps().map(sp => Number(sp.programId)));
 
-  /**
-   * 🛑 HOUSE RULE — a control whose value cannot be stored ships VISIBLE BUT DISABLED with a
-   * `Coming soon` tag, and never tells the user it will be saved.
-   *
-   * Two controls are in that state here: the **linked/bundled question** and the **results
-   * dropdown** it unlocks. Neither has a field on `SaveBilateralContributorsDto` nor a home in the
-   * bilateral detail payload, so answering them wrote to a component signal and nothing else — the
-   * answer was gone on the next reload. Same markup as `result-ai-item.component.html`
-   * (`globalDisabled` + the tag span). Contributing science programs left this list on 2026-09-03:
-   * the DTO now accepts `contributing_programs[]` and the detail payload returns them (role 2).
-   *
-   * The flag is a named member rather than a literal in the template because the spec overrides
-   * the template: an inline `[ngClass]="{ globalDisabled: true }"` would be untestable. Flip it to
-   * `false` — and put the fields back into `hiddenFieldsWithValues()` — the day the DTO accepts
-   * them.
-   */
-  readonly unpersistedFieldsComingSoon: boolean = true;
+  // 🛑 HOUSE RULE — a control whose value cannot be stored ships VISIBLE BUT DISABLED with a
+  // `Coming soon` tag, and never tells the user it will be saved. NOTHING in this section is in
+  // that state any more: the linked/bundled question and its results dropdown were the last two
+  // out, on 2026-09-24 (P2-3368 AC10-AC14), after contributing science programs on 2026-09-03.
+  // Put the tag back — never a silently-dropped value — if a control here ever loses its storage.
 
   // ─────────────────────────────────────────────────────────────────────────
   // P2-3368 · External partners (mandatory: at least one partner OR the "no partners" checkbox)
@@ -178,6 +254,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   private partnersLoadedForResultId: number | null = null;
 
   /**
+   * P2-3368 AC10-AC14 — the linked/bundled twin of `partnersHydrated`, and it is load-bearing for
+   * the same reason: `saveContributors` fires on every centre or project change, so a payload sent
+   * before the stored answer is on screen would PATCH `has_innovation_link: null` over a saved
+   * "Yes" and, with it, drop the links. Omitting the keys is what tells the server to leave the
+   * block alone. Set from the same detail read that hydrates the partners.
+   */
+  readonly linkedHydrated = signal(false);
+
+  /**
    * The read failed and there is NO automatic second chance: `hydrateWhenReady` only re-runs when
    * one of the signals it tracks changes, and after the initial load none of them does. Without a
    * visible error the section became a black hole — the user picked partners, the block went green
@@ -194,6 +279,18 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * above, one call site earlier in the hydration chain. Shown with a Retry, mirroring that pattern.
    */
   readonly centersLoadFailed = signal(false);
+
+  /**
+   * Night sweep 2026-09-23, W12-6 (P2-3648) — the projects-catalogue twin of `centersLoadFailed`.
+   * A failed `GET_ClarisaProjects` used to set `availableProjects = []` AND `projectsReady = true`,
+   * so hydration ran against an empty catalogue: `readonlyLeadProjectId` stayed null ("Lead project"
+   * listed as a missing field the user cannot fill — it is read-only here), and, because the section
+   * then counted as hydrated, the next save sent `contributing_bilateral_projects: []`, which the
+   * server reads as "drop every project, lead included" (see `contributorsHydrated`). Now the failure
+   * is shown with a Retry and hydration waits for a real catalogue, exactly like the centers case.
+   */
+  readonly projectsLoadFailed = signal(false);
+  readonly loadCopy = RESULT_DETAIL_SECTION_LOAD_COPY;
 
   /** AC5/AC7: the field is satisfied by EITHER at least one partner OR the explicit "none" declaration. */
   readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
@@ -220,29 +317,112 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   selectedLinkedResultIds = signal<(number | string)[]>([]);
 
   /**
-   * AC13's message ("N hidden field(s) has values and will be saved.") is a PROMISE, and the only
-   * field behind the toggle is the linked/bundled question — which is `Coming soon` precisely
-   * because nothing persists it (see `unpersistedFieldsComingSoon`). Counting it made the screen
-   * promise a save that never happened: the user answered, read the note, reloaded, and the answer
-   * was gone.
+   * P2-3823 — the linked keys travel only once the user has changed THIS question in this visit.
    *
-   * So the count is 0 while every hidden field is Coming soon, and the note never renders. This
-   * stays a `computed` — not a constant — because it is the template's contract: add the term back
-   * here, one per field, as soon as a hidden field actually reaches the server.
+   * Before, every centre/project/partner autosave re-sent this tab's snapshot of the links, and
+   * the server replaced `linked_result` with it: a link added meanwhile from another tab, user or
+   * section was deactivated by an unrelated centre change.
+   *
+   * 🛑 Why "since touched" and not "only on the click itself": `BilateralAutoSaveService` keeps ONE
+   * pending payload per endpoint and REPLACES it (`schedulePayload` → `_pendingPayloads.set`); the
+   * body only leaves on Save draft / page leave. If the question's PATCH were the only one to carry
+   * the keys, a centre change right after answering would overwrite it in the queue and the
+   * answer would be lost. So once touched, every later payload keeps carrying the user's state.
+   *
+   * Two flags because the list is riskier than the flag: answering Yes must not replace rows the
+   * picker never showed (server contract: Yes without `linked_results` = "flag changed, list did
+   * not"). Both reset on hydration — a fresh read is the new baseline.
+   */
+  private readonly linkedAnswerTouched = signal(false);
+  private readonly linkedListTouched = signal(false);
+
+  /** The results catalogue as a signal; stubs without `resultsListSig` fall back to the array. */
+  private readonly linkedCatalogue = computed<any[]>(() => {
+    const sig = this.innovationUseResultsSE.resultsListSig?.();
+    if (Array.isArray(sig) && sig.length) return sig;
+    return Array.isArray(this.innovationUseResultsSE.resultsList) ? this.innovationUseResultsSE.resultsList : [];
+  });
+
+  /**
+   * P2-3823 — the picker's options: the catalogue PLUS a placeholder for every stored link the
+   * catalogue cannot name.
+   *
+   * 🛑 `app-pr-multi-select.writeValue` maps ids to options and DROPS the misses
+   * (`pr-multi-select.component.ts:295-300`); the next pick then emits the shortened list and the
+   * server deactivates the missing rows. Misses are real: the catalogue only lists QA'd/approved
+   * results (`status_id IN (2, 6)`), and it loads asynchronously. With a placeholder for every
+   * selected id the picker always finds them, and a read-only result (AC14) still shows a chip.
+   */
+  readonly linkedResultOptions = computed<any[]>(() => {
+    const catalogue = this.linkedCatalogue();
+    const known = new Set(catalogue.map((o: any) => Number(o?.id)));
+    const placeholders = this.selectedLinkedResultIds()
+      .map(id => Number(id))
+      .filter(id => Number.isFinite(id) && id > 0 && !known.has(id))
+      .map(id => ({ id, title: `Result not in the list (internal id ${id})`, unlisted: true }));
+    return placeholders.length ? [...catalogue, ...placeholders] : catalogue;
+  });
+
+  /**
+   * The picker's model. A NEW array whenever the options change, so `writeValue` re-maps the ids
+   * against the current options (a late catalogue swaps placeholders for real labels).
+   */
+  readonly linkedResultModel = computed<(number | string)[]>(() => {
+    this.linkedResultOptions();
+    return [...this.selectedLinkedResultIds()];
+  });
+
+  /**
+   * AC13's message ("N hidden field(s) has values and will be saved.") is a PROMISE: it may only
+   * count fields that actually reach the server. It stayed at 0 while the linked/bundled question
+   * was `Coming soon`; since P2-3368 AC10-AC14 the answer persists, so it counts again — one term
+   * per hidden field with a value.
+   *
+   * 🛑 It also stays at 0 for the result types that do not ask the question here at all
+   * (`linkedQuestionOwnedElsewhere()`); otherwise a collapsed block would promise to save a field
+   * this section never renders.
    */
   readonly hiddenFieldsWithValues = computed(() => {
-    if (this.unpersistedFieldsComingSoon) return 0;
+    if (this.linkedQuestionOwnedElsewhere()) return 0;
+    // P2-3823 — unhydrated keys never travel (`buildContributorsPayload`), so after a failed read
+    // the note must not promise to save them.
+    if (!this.linkedHydrated()) return 0;
     return this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0 ? 1 : 0;
   });
 
   readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
 
   /**
-   * The three Block-2 gates are named computeds rather than inline template expressions so the spec
-   * can assert the SAME expression the template renders. The suite overrides the template (see
+   * 🛑 Innovation Use (2) and Innovation Development (7) do NOT ask the linked/bundled question in
+   * this section, and the server ignores both keys for them.
+   *
+   * - Innovation Use asks it in its own type-specific section, which writes the very same
+   *   `result.has_innovation_link` + `linked_result` storage (`type-innovation-use.component.html:332`).
+   *   That is the PO decision Ángel Jarrín took on 2026-09-10 (P2-3424), already implemented this
+   *   way in the pooled form, which drops the whole block for those results
+   *   (`rd-contributors-and-partners.component.html:552-558`). Two editing surfaces over one
+   *   answer is exactly the defect P2-3199 removed.
+   * - Innovation Development mirrors the flag into `results_innovations_dev.has_innovation_link`,
+   *   the row the green-check functions read; only the classic writer maintains that mirror.
+   *
+   * Hidden, not disabled: a disabled control with no tag is unexplained furniture, and for
+   * Innovation Use the question is one section away.
+   */
+  readonly linkedQuestionOwnedElsewhere = computed(() => {
+    // Optional call: hosts and specs stub `BilateralCreationService` field by field, and a stub
+    // without this signal must not crash the section — same guard `showsQaInnovationLink` uses in
+    // the pooled form. An unknown type keeps the question here, which is the reversible side: the
+    // server ignores the keys for types 2 and 7 anyway.
+    const typeId = Number(this.creationService.resultTypeId?.());
+    return typeId === INNOVATION_USE_RESULT_TYPE_ID || typeId === INNOVATION_DEVELOPMENT_RESULT_TYPE_ID;
+  });
+
+  /**
+   * The Block-2 gates are named computeds rather than inline template expressions so the spec can
+   * assert the SAME expression the template renders. The suite overrides the template (see
    * `section-contributors.component.spec.ts`), so an inline `@if` would be untested.
    */
-  readonly showLinkedResultQuestion = computed(() => this.showAllFields());
+  readonly showLinkedResultQuestion = computed(() => this.showAllFields() && !this.linkedQuestionOwnedElsewhere());
   readonly showLinkedResultsDropdown = computed(() => this.showLinkedResultQuestion() && this.hasLinkedResult() === true);
   readonly fullMetadataButtonLabel = computed(() => (this.showAllFields() ? 'Hide full metadata' : 'Complete full metadata'));
 
@@ -314,15 +494,26 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
             id: Number(p.id),
             shortName: p.shortName,
             fullName: p.fullName,
+            // BCT-DD-4: additive field on the catalog. `null` (unresolved owner, or the field
+            // simply absent from an older payload) means "locks nothing".
+            ownerCenterInstitutionId: p.owner_center_institution_id != null ? Number(p.owner_center_institution_id) : null,
           }))
         );
+        this.projectsLoadFailed.set(false);
         this.projectsReady.set(true);
       },
+      // W12-6 — see `projectsLoadFailed`: do NOT mark the catalogue ready on a failure.
       error: () => {
         this.availableProjects.set([]);
-        this.projectsReady.set(true);
+        this.projectsLoadFailed.set(true);
       }
     });
+  }
+
+  /** W12-6 — manual second chance for a failed projects-catalogue read, mirrors `retryLoadCenters()`. */
+  retryLoadProjects(): void {
+    this.projectsLoadFailed.set(false);
+    this.loadProjects();
   }
 
   ngOnDestroy(): void {
@@ -365,6 +556,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   /** One-shot UI hydrate after centers/projects/result data are available. No network. */
   hydrateLeadAndSelection(): void {
+    this.readonlyLeadCenterInstitutionId = null;
+    this.readonlyLeadProjectId = null;
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
@@ -395,6 +588,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     }
     this.selectedProjectIds.set(Array.from(projectIds));
 
+    // BCT-R-1 "appears selected without reload": a legacy result whose contributing project was
+    // saved before Part A shipped may load with its owner Center not yet in
+    // `resultContributingCenterIds()`. Union it in here — no network, no persist (BCT-NFR-4 keeps
+    // the payload guarded by `contributorsHydrated()` regardless).
+    this.unionLockedCentersIntoSelection();
+
     this.updateContributorsMds();
   }
 
@@ -405,6 +604,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     institutions?: { institutions_id: number }[];
     no_external_partners?: boolean;
     is_lead_by_partner?: boolean;
+    has_innovation_link?: boolean | null;
+    linked_results?: number[];
   } {
     const selectedCenters = this.selectedCenterInstitutionIds()
       .map(id => {
@@ -433,6 +634,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       institutions?: { institutions_id: number }[];
       no_external_partners?: boolean;
       is_lead_by_partner?: boolean;
+      has_innovation_link?: boolean | null;
+      linked_results?: number[];
     } = {};
 
     // See `contributorsHydrated`: omitting the keys is the only safe default. The server treats a
@@ -464,6 +667,20 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       payload.is_lead_by_partner = false;
     }
 
+    // P2-3368 AC10-AC14. Guarded by `linkedHydrated` for the same reason as the partner keys, and
+    // skipped entirely for the types that do not ask the question here — the server ignores them
+    // too, but a payload that never carries the keys is the honest contract.
+    // P2-3823 — and only once the user changed the question in this visit (`linkedAnswerTouched`),
+    // so an unrelated centre change never re-sends a stale snapshot of the links.
+    if (this.linkedHydrated() && !this.linkedQuestionOwnedElsewhere() && this.linkedAnswerTouched()) {
+      payload.has_innovation_link = this.hasLinkedResult();
+      if (this.linkedListTouched()) {
+        payload.linked_results = this.selectedLinkedResultIds()
+          .map(id => Number(id))
+          .filter(id => Number.isFinite(id) && id > 0);
+      }
+    }
+
     return payload;
   }
 
@@ -492,11 +709,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
           label: 'Lead center',
           filled: this.readonlyLeadCenterInstitutionId != null,
         },
-        {
-          key: 'lead-project',
-          label: 'Lead project',
-          filled: this.readonlyLeadProjectId != null,
-        },
+        // Manual creation always assigns a lead project before this editor opens. API imports and
+        // versions may legitimately have none, and there is no required lead-project choice here.
+        ...(this.creationService.selectedProject()
+          ? [{
+              key: 'lead-project',
+              label: 'Lead project',
+              filled: this.readonlyLeadProjectId != null,
+            }]
+          : []),
         // P2-3443: restored. It was held out of the tracker only because the answer was not
         // persisted — a reload turned it back to incomplete and Submit stayed blocked with no way
         // out. Now that the partners and the "no external partners" flag round-trip, the mandatory
@@ -601,6 +822,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
         // reads as true — compare numerically (same trap as `is_ai_generated`).
         this.noExternalPartners.set(ids.length === 0 && Number(response?.commonFields?.no_applicable_partner) === 1);
         this.partnersHydrated.set(true);
+        this.hydrateLinkedBundled(response);
         this.updateContributorsMds();
       },
       error: () => {
@@ -609,11 +831,38 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
         // `retryLoadExternalPartners()` fire the GET again — the hydrate effect will not.
         this.partnersLoadedForResultId = null;
         this.partnersLoadFailed.set(true);
+        // Same posture for the linked/bundled keys: unhydrated means "do not send", so a failed
+        // read can never let a blank answer overwrite the stored one.
+        this.linkedHydrated.set(false);
         // Re-publish so `external-partners` drops back to unfilled: the section must not stay
         // green on a selection whose keys the next PATCH will discard.
         this.updateContributorsMds();
       }
     });
+  }
+
+  /**
+   * P2-3368 AC13/AC14 — reads the stored linked/bundled answer out of the detail response the
+   * partner block already fetches.
+   *
+   * 🛑 `has_innovation_link` is a MySQL tinyint and can arrive as the string '0', which `!!` reads
+   * as true — the same trap `no_applicable_partner` documents two lines above. It is compared
+   * numerically, and a NULL stays `null`: "never answered" is not "answered No", and AC13's
+   * counter tells them apart.
+   */
+  private hydrateLinkedBundled(response: any): void {
+    const storedAnswer = response?.commonFields?.has_innovation_link;
+    this.hasLinkedResult.set(storedAnswer === null || storedAnswer === undefined ? null : Number(storedAnswer) === 1);
+
+    const linkedIds = (response?.linkedResults ?? [])
+      .map((id: any) => Number(id))
+      .filter((id: number) => Number.isFinite(id) && id > 0);
+    this.selectedLinkedResultIds.set(Array.from(new Set<number>(linkedIds)));
+
+    // A fresh read is the new baseline: nothing the user did before it may travel.
+    this.linkedAnswerTouched.set(false);
+    this.linkedListTouched.set(false);
+    this.linkedHydrated.set(true);
   }
 
   /** Manual second chance for a failed partner read — the hydrate effect never re-fires by itself. */
@@ -631,22 +880,40 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   /**
    * AC12: answering "No" collapses the results dropdown AND clears whatever was already picked.
-   * Disabled on screen — see `unpersistedFieldsComingSoon`.
+   *
+   * The clearing is not only cosmetic — the payload below carries the emptied list, and the server
+   * turns a "No" that retracts a stored "Yes" into the narrow `linked_result` cleanup (P2-3424).
    */
   onHasLinkedResultChange(value: boolean | null): void {
+    // P2-3823 — belt and braces for the template's `!linkedHydrated()` lock: a click that lands
+    // before the stored answer is on screen would be overwritten by hydration a moment later.
+    if (!this.linkedHydrated()) return;
     this.hasLinkedResult.set(value);
-    if (value !== true) {
+    this.linkedAnswerTouched.set(true);
+    if (value !== true && this.selectedLinkedResultIds().length) {
+      // Clearing IS a list change: if the user comes back to Yes before saving, the payload must
+      // carry the empty list they now see, not leave the old rows alive behind an empty picker.
       this.selectedLinkedResultIds.set([]);
+      this.linkedListTouched.set(true);
     }
-    // ⚠️ UNREACHABLE from the UI while `unpersistedFieldsComingSoon` is true: the question is
-    // rendered disabled with a `Coming soon` tag because the answer and the linked results it
-    // unlocks have no field on SaveBilateralContributorsDto and no home in the detail payload.
-    // Kept so the clearing rule (AC12) is one flag away from working.
+    this.persistContributors();
   }
 
   onLinkedResultsModelChange(selected: any[]): void {
-    const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? item.id : item));
-    this.selectedLinkedResultIds.set(ids);
+    if (!this.linkedHydrated()) return;
+    const pickerIds = (selected ?? [])
+      .map(item => Number(typeof item === 'object' && item !== null ? item.id : item))
+      .filter(id => Number.isFinite(id) && id > 0);
+    // P2-3823 — last line of defence against the picker's silent drop: a stored id that is not
+    // among the options the picker was given can never be removed by omission, only by No (AC12).
+    const offered = new Set(this.linkedResultOptions().map((o: any) => Number(o?.id)));
+    const kept = this.selectedLinkedResultIds()
+      .map(id => Number(id))
+      .filter(id => !offered.has(id) && !pickerIds.includes(id));
+    this.selectedLinkedResultIds.set(Array.from(new Set<number>([...pickerIds, ...kept])));
+    this.linkedAnswerTouched.set(true);
+    this.linkedListTouched.set(true);
+    this.persistContributors();
   }
 
   /** Same label shape W1/W2 shows in its linked-results dropdown (`rd-contributors-and-partners.component.ts:551`). */
@@ -704,6 +971,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     if (this.readonlyLeadCenterInstitutionId && !finalIds.includes(this.readonlyLeadCenterInstitutionId)) {
       finalIds = [this.readonlyLeadCenterInstitutionId, ...finalIds];
     }
+    // BCT-R-3: a locked Center (owner of a currently-selected non-lead project) is refused the same
+    // way the lead Center is — re-added if the multiselect model change tried to drop it.
+    for (const lockedId of this.lockedCenterInstitutionIds()) {
+      if (!finalIds.includes(lockedId)) {
+        finalIds = [...finalIds, lockedId];
+      }
+    }
     this.selectedCenterInstitutionIds.set(finalIds);
     this.persistContributors();
   }
@@ -714,6 +988,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       finalIds = [this.readonlyLeadProjectId, ...finalIds];
     }
     this.selectedProjectIds.set(finalIds);
+
+    // BCT-R-1: fold each newly-derived owner into the Center selection before the single persist
+    // below — never a second `saveContributors` call just for the lock.
+    this.unionLockedCentersIntoSelection();
+
     this.persistContributors();
   }
 
@@ -763,6 +1042,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   removeCenter(id: number): void {
     if (id === this.readonlyLeadCenterInstitutionId) {
+      return;
+    }
+    // BCT-R-3: same refusal as the lead Center, including through the chip's remove action.
+    if (this.lockedCenterInstitutionIds().has(id)) {
       return;
     }
     this.onCentersChange(this.selectedCenterInstitutionIds().filter(i => i !== id));

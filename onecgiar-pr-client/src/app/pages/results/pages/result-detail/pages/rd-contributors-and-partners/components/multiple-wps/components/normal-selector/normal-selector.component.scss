@@ -219,3 +219,155 @@
     transition: none;
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// P2-3839 — IPSR-only look (`<app-normal-selector variant="ipsr">`). Everything below is scoped
+// under `:host(.ipsr-variant)`, so Results W1/W2 (which never set the variant) render exactly the
+// rules above. Same control as the stacked IPSR rows (step-n1-institutions,
+// ipsr-contributors-non-cgiar-partners): Partner role = a segmented group with the geometry of the
+// Impact Area scores (`pr-radio-button` variant="segmented": 36px track, 3px padding, 2px gap,
+// radius 8; 30px segments, radius 6, 14px/500) on a white track with a 1px border, because it sits
+// on a tinted row. Segments share the track width (`flex: 1 1 0`) so picking a role never moves
+// anything. Multi-select, so the chosen ones fill with the brand colour and show a check.
+// The `:host(...)` prefix out-specifies every default rule it overrides (incl. the `!important`
+// ones, which it re-declares with `!important`).
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+:host(.ipsr-variant) {
+  .chips_container .pr_chip_selected {
+    // The role zone fills the rest of the line and right-aligns, so the remove button forms one
+    // column whether the zone shares the line with the name or wraps under it. No vertical
+    // hairline: when the zone wrapped, that rule was left hanging alone on the second line.
+    .role_group {
+      justify-content: flex-end;
+      flex: 1 1 auto;
+      border-left: 0;
+      padding-left: 0;
+      margin-left: 15px;
+    }
+
+    @media (max-width: 900px) {
+      .role_group {
+        margin-left: 0;
+        border-top: 1px solid var(--pr-border);
+      }
+    }
+
+    .deliveries_container {
+      gap: 10px;
+    }
+
+    .deliveries {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      height: 36px;
+      width: 452px;
+      max-width: 100%;
+      padding: 3px;
+      border: 1px solid var(--pr-border);
+      border-radius: 8px;
+      background: var(--pr-color-white);
+
+      .delivery {
+        flex: 1 1 0;
+        min-width: 0;
+        justify-content: center;
+        min-height: 0;
+        height: 30px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--pr-text-secondary);
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+        user-select: none;
+        box-shadow: none;
+        transition: background-color 150ms ease, color 150ms ease;
+
+        // The default look reserves a Material "check" glyph in ::before; here the check is an
+        // inline SVG (`.dlv_check`) that only shows on the active segment.
+        &::before {
+          content: none;
+        }
+
+        .dlv_check {
+          display: none;
+          flex: none;
+        }
+
+        &:not(.active):hover {
+          background: transparent;
+        }
+
+        &:not(.active):not(.blocked):hover {
+          background: var(--pr-surface-sunken);
+          color: var(--pr-text-heading);
+        }
+      }
+
+      .delivery.active {
+        background: var(--pr-color-primary-300) !important;
+        color: var(--pr-color-white) !important;
+        box-shadow: var(--pr-shadow-1);
+
+        // Selection is not signalled by colour alone (a11y): the check shows up.
+        .dlv_check {
+          display: inline-block;
+        }
+      }
+    }
+
+    // Remove = ghost icon button, same height as the track so both sit on one baseline;
+    // danger tint only on hover (same pair as the evidence list of IPSR step 3).
+    .remove_partner {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--pr-text-muted);
+      cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease;
+
+      svg {
+        display: block;
+      }
+
+      &:hover {
+        background: var(--pr-color-red-50);
+        color: var(--pr-color-red-500);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--pr-color-primary-300);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  // Read-only shows only the chosen roles: the track shrinks to them instead of leaving an
+  // empty 452px rail with one segment in it.
+  .readOnly_deliveries {
+    width: auto !important;
+
+    .delivery {
+      flex: 0 0 auto !important;
+      padding: 0 12px !important;
+      border-radius: 6px !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chips_container .pr_chip_selected .remove_partner {
+      transition: none;
+    }
+  }
+}

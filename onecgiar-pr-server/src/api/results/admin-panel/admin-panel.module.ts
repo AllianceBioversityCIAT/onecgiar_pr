@@ -19,6 +19,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PhaseInitiativeReportingAccess } from './entities/phase-initiative-reporting-access.entity';
 import { Version } from '../../versioning/entities/version.entity';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Module({
@@ -45,6 +46,7 @@ import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities
     ResultsCapacityDevelopmentsRepository,
     ResultsInnovationsDevRepository,
     ReturnResponse,
+    RoleByUserRepository,
   ],
   exports: [AdminPanelRepository, AdminPanelService],
 })

@@ -1507,7 +1507,7 @@ export class ProgrammeResultsComponent implements OnDestroy {
 
   /**
    * Destination for one result. Same branching as `results-list.component.ts getResultRoute()`
-   * — Editing W3 opens the center editor; in-review W3 deep-links into `bilateral-review`;
+   * — Editing/Approved W3 with a lead center opens the center editor; in-review W3 deep-links into `bilateral-review`;
    * everything else opens Result Detail with its `?phase=`.
    */
   // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)

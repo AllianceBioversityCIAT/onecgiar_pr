@@ -1,4 +1,9 @@
+import { DataSource } from 'typeorm';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
+import {
+  insertLists,
+  misalignedColumns,
+} from '../../../shared/extendsGlobalDTO/replication-insert-lists.spec-helper';
 
 describe('ResultByIntitutionsRepository', () => {
   let repository: ResultByIntitutionsRepository;
@@ -133,6 +138,56 @@ describe('ResultByIntitutionsRepository', () => {
         [5, expect.anything(), 50],
       );
       expect(result).toEqual(inactiveRow);
+    });
+  });
+
+  /**
+   * P2-3228 — phase replication must carry the lead partner flag.
+   * `docs/specs/bugfix/p2-3228-lead-center-replication/requirements.md` VER-R-2, scenario
+   * VER-S-2.1. Until the fix, `is_leading_result` is absent from both `insertQuery` and
+   * `findQuery`, so a replicated partner institution's new version carries no lead flag.
+   */
+  describe('createQueries — replication carries the lead partner flag (P2-3228)', () => {
+    const repo = new ResultByIntitutionsRepository(
+      {
+        createEntityManager: jest.fn(() => ({}) as any),
+      } as unknown as DataSource,
+      { returnErrorRepository: jest.fn() } as any,
+    );
+    const config = {
+      phase: 5,
+      user: { id: 77 } as any,
+      old_result_id: 1000,
+      new_result_id: 2000,
+    } as any;
+
+    it('writes is_leading_result into its own column in insertQuery, verbatim from the source row', () => {
+      const { columns, values } = insertLists(
+        repo.createQueries(config).insertQuery,
+        'results_by_institution',
+        'rbi',
+      );
+      const index = columns.indexOf('is_leading_result');
+
+      expect(index).toBeGreaterThan(-1);
+      expect(values[index]).toBe('rbi.is_leading_result');
+    });
+
+    it('keeps every INSERT column aligned with the value written into it', () => {
+      const { columns, values } = insertLists(
+        repo.createQueries(config).insertQuery,
+        'results_by_institution',
+        'rbi',
+      );
+
+      expect(values).toHaveLength(columns.length);
+      expect(misalignedColumns(columns, values, 'rbi')).toEqual([]);
+    });
+
+    it('carries is_leading_result in findQuery too (DD-2)', () => {
+      const { findQuery } = repo.createQueries(config);
+
+      expect(findQuery).toContain('rbi.is_leading_result');
     });
   });
 });

@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, OnDestroy, output, signal } from '@angular/core';
+import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, OnDestroy, output, signal, ViewChild } from '@angular/core';
+import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -81,6 +82,9 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     const index = this.indexReference();
     return index != null ? `${key}_${index}` : `${key}_${this.instanceId}`;
   }
+
+  /** P2-3678 — see `pr-multi-select.component.ts` (`virtualViewport`) for the why. */
+  @ViewChild(CdkVirtualScrollViewport) private readonly virtualViewport?: CdkVirtualScrollViewport;
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
@@ -222,6 +226,11 @@ export class PrSelectComponent implements ControlValueAccessor, OnDestroy {
     if (this.expandSpaceOnOpen()) {
       this.isDropdownOpen.set(true); // Only track state if expansion is enabled
     }
+    // P2-3678: same virtual viewport as `pr-multi-select` — re-measure once the panel is visible, because a
+    // control mounted inside a `[hidden]` parent was measured at 0px and renders only its minimum buffer.
+    // Runs for BOTH panel modes: the bilateral ToC dropdowns (`section-toc`) use `overlayToBody` and sit in
+    // the same hidden section (found by the 27-Sep-2026 review — the first cut had it after the early return).
+    requestAnimationFrame(() => this.virtualViewport?.checkViewportSize());
     if (this.overlayToBody()) {
       this.positionOverlay();
       if (this.overlayStyles()) this.attachScrollListener();

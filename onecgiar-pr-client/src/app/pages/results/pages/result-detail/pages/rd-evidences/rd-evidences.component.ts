@@ -10,6 +10,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { SharePointUploadService } from '../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../internationalization/result-detail-section-load.copy';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
@@ -232,6 +233,21 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
    */
   readonly sectionLoading = signal(true);
 
+  /**
+   * Night sweep 2026-09-23, W12-2 — three-state load flag (`null` in flight, `true` loaded, `false`
+   * when the FIRST load failed), same contract as `cap-dev-info` (W12-1) and the bilateral P2-3556
+   * sections. Before this, a failed `GET_evidences` left `evidencesBody.evidences = []` with the
+   * section reading "No evidence added" and "Add evidence" available; adding ONE evidence then
+   * POSTed a one-item list and the server de-activated every stored evidence
+   * (`onecgiar-pr-server/src/api/results/evidences/evidences.service.ts:270-276` →
+   * `evidences.repository.ts:330-339`, `inactiveAll` + re-activate only the ids received).
+   * Measured on prtest (result 8942): 2 saved evidences → only the new one left.
+   *
+   * A failed RE-load after a successful save keeps `true`: the list in hand is what was just stored.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
+
   ngOnInit(): void {
     this.getSectionInformation();
     this.validateCheckBoxes();
@@ -255,6 +271,7 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
         this.isOptional = Boolean(this.readinessLevel === 0);
         this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
         this.isSaving = false;
+        this.loaded.set(true);
         this.sectionLoading.set(false);
         // `UCA-T-8` — the true end of THIS component's load flow. Unlike `rd-general-information`
         // (whose `discontinued_options` catalogue lands via a SECOND async GET that mutates the
@@ -266,6 +283,8 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
       },
       error: () => {
         this.isSaving = false;
+        // W12-2 — see `loaded`. Only the first load leaves the list empty-by-construction.
+        if (this.loaded() !== true) this.loaded.set(false);
         this.sectionLoading.set(false);
       }
     });
@@ -373,6 +392,9 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
    * resolves `false`.
    */
   private performSave(): Observable<boolean> {
+    // W12-2 — the single save pipeline (Save button, modal confirm, delete confirm, unsaved-changes
+    // guard). Without the stored list in hand, whatever it sends replaces every stored evidence.
+    if (this.loaded() !== true) return of(false);
     return from(this.uploadPendingFiles()).pipe(
       switchMap(() => this.api.resultsSE.POST_evidences(this.evidencesBody)),
       tap(() => {
@@ -429,6 +451,8 @@ export class RdEvidencesComponent implements OnInit, OnDestroy, CanComponentDeac
 
   // P2-2935: "Add evidence" opens the modal in create mode with a clean draft.
   addEvidence() {
+    // W12-2 — the modal saves on confirm; it must not open over a list that never loaded.
+    if (this.loaded() !== true) return;
     this.editingIndex = null;
     this.draftEvidence = { is_sharepoint: false };
     this.showCreateModal = true;

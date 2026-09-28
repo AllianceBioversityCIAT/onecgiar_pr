@@ -16,6 +16,8 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { Result } from '../results/entities/result.entity';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
+import { ResultsCenter } from '../results/results-centers/entities/results-center.entity';
+import { ResultsByProjects } from '../results/results_by_projects/entities/results_by_projects.entity';
 
 @Module({
   controllers: [NotificationController],
@@ -39,7 +41,13 @@ import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-pr
     // Entity-level registration on purpose: importing the owning feature modules
     // (results, clarisa) from here would risk a cycle back into the services that
     // emit these notifications.
-    TypeOrmModule.forFeature([Result, ClarisaCenter, ClarisaProject]),
+    TypeOrmModule.forFeature([
+      Result,
+      ClarisaCenter,
+      ClarisaProject,
+      ResultsCenter,
+      ResultsByProjects,
+    ]),
   ],
 })
 export class NotificationModule {}

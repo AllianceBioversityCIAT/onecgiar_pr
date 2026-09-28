@@ -92,3 +92,48 @@ describe('ResultByInitiativesRepository.getOwnerInitiativeByResult — SELECT mu
     expect(params).toEqual([8375]);
   });
 });
+
+/**
+ * Night sweep 2026-09-23, IPSR-8 — an absent new owner must never be written as a removal. An IPSR
+ * Contributors save after a failed GET reached this with `new_primary_submitter` undefined; the owner
+ * was demoted to role 2 and nothing promoted, orphaning the package. Control negative: without the
+ * `new_primary_submitter == null` guard, `update` is called (demotion).
+ */
+describe('ResultByInitiativesRepository.updateIniciativeSubmitter — absent new owner (IPSR-8)', () => {
+  function makeRepository() {
+    const repository: any = Object.create(
+      ResultByInitiativesRepository.prototype,
+    );
+    repository.update = jest.fn().mockResolvedValue({});
+    repository.findOne = jest
+      .fn()
+      .mockResolvedValue({ result_id: 12037, initiative_id: 50 });
+    repository._logger = { warn: jest.fn(), error: jest.fn() };
+    repository._handlersError = { returnErrorRepository: jest.fn() };
+    return repository;
+  }
+
+  it.each([[undefined], [null]])(
+    'leaves the ownership untouched when the new owner is %s',
+    async (newOwner) => {
+      const repository = makeRepository();
+
+      const current = await repository.updateIniciativeSubmitter(
+        12037,
+        50,
+        newOwner,
+      );
+
+      expect(repository.update).not.toHaveBeenCalled();
+      expect(current).toEqual({ result_id: 12037, initiative_id: 50 });
+    },
+  );
+
+  it('still changes the owner when a real new owner is given', async () => {
+    const repository = makeRepository();
+
+    await repository.updateIniciativeSubmitter(12037, 50, 60);
+
+    expect(repository.update).toHaveBeenCalledTimes(2);
+  });
+});

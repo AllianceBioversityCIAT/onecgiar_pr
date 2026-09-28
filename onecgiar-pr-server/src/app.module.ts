@@ -58,6 +58,7 @@ import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module'
 import { ResultImpactAreaScoresModule } from './api/result-impact-area-scores/result-impact-area-scores.module';
 import { GlobalUtilsModule } from './shared/utils/global-utils.module';
 import { WebhookDispatchModule } from './api/results/webhook/webhook-dispatch.module';
+import { ProgressTrackerModule } from './api/progress-tracker/progress-tracker.module';
 
 @Module({
   imports: [
@@ -116,6 +117,7 @@ import { WebhookDispatchModule } from './api/results/webhook/webhook-dispatch.mo
     IpsrFrameworkModule,
     ResultImpactAreaScoresModule,
     GlobalUtilsModule,
+    ProgressTrackerModule,
   ],
   controllers: [AppController],
   providers: [

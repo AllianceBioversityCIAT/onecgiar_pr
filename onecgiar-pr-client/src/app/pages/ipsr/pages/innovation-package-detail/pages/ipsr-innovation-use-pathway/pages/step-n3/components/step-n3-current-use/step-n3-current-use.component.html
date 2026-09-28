@@ -86,7 +86,8 @@
         </div>
     </div>
 </div>
-<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.actors,'result_ip_actors_id')"
+<app-no-data-text
+    *ngIf="!hasElementsWithId(this.body.innovatonUse.actors,'result_ip_actors_id', ['actor_type_id'])"
     title="No actors provided">
 </app-no-data-text>
 <br>
@@ -140,7 +141,8 @@
         </div>
     </div>
 </div>
-<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization,'id')"
+<app-no-data-text
+    *ngIf="!hasElementsWithId(this.body.innovatonUse.organization,'id', ['institution_types_id'])"
     title="No organizations provided">
 </app-no-data-text>
 <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"

@@ -1,11 +1,16 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { StepN3Component } from './step-n3.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Router } from '@angular/router';
+import { UnsavedNavigationIntentService } from '../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
+import { ActorN3 } from './model/Ipsr-step-3-body.model';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { StepN4ReferenceMaterialLinksComponent } from '../step-n4/components/step-n4-reference-material-links/step-n4-reference-material-links.component';
+import { IpsrStep3EvidenceListComponent } from './components/ipsr-step3-evidence-list/ipsr-step3-evidence-list.component';
 
 describe('StepN3Component', () => {
   let component: StepN3Component;
@@ -20,7 +25,7 @@ describe('StepN3Component', () => {
 
     await TestBed.configureTestingModule({
       declarations: [StepN3Component, StepN4ReferenceMaterialLinksComponent],
-      imports: [HttpClientTestingModule, CustomFieldsModule],
+      imports: [HttpClientTestingModule, CustomFieldsModule, IpsrStep3EvidenceListComponent],
       providers: [
         {
           provide: Router,
@@ -169,12 +174,23 @@ describe('StepN3Component', () => {
     expect(isOptionalUseLevel).toBe(false);
   });
 
-  it('should call PATCHInnovationPathwayByRiId and getSectionInformation on onSaveSection', () => {
+  // Night sweep 2026-09-23, IPSR-5 (prtest 12037). Control negative: without `refuseUntypedRows()`
+  // in onSaveSection the PATCH is sent.
+  it('IPSR-5: refuses to save a Current-use actor with figures and no actor type', () => {
+    const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+    const show = jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+    component.ipsrStep3Body.innovatonUse.actors = [{ women: 2, men: 2, evidence_link: 'https://example.org/zz' } as any];
+    component.onSaveSection();
+    expect(patch).not.toHaveBeenCalled();
+    expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'ipsrUntypedRows' }), );
+  });
+
+  it('should call PATCHInnovationPathwayByRiId and getSectionInformation on onSaveSection', async () => {
     const PATCHInnovationPathwayByRiIdSpy = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
-    const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
+    const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation').mockImplementation(() => undefined);
     const convertOrganizationsTosaveSpy = jest.spyOn(component, 'convertOrganizationsTosave');
 
-    component.onSaveSection();
+    await component.onSaveSection();
 
     expect(convertOrganizationsTosaveSpy).toHaveBeenCalled();
     expect(PATCHInnovationPathwayByRiIdSpy).toHaveBeenCalled();
@@ -201,16 +217,16 @@ describe('StepN3Component', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/ipsr/detail/null/ipsr-innovation-use-pathway/step-4'], { queryParams: { phase: '1' } });
   });
 
-  it('it should call convertOrganizationsTosave, PATCHInnovationPathwayByRiIdNextPrevius, getSectionInformation, and navigate on onSaveSectionWithStep if readOnly is false', () => {
+  it('it should call convertOrganizationsTosave, PATCHInnovationPathwayByRiIdNextPrevius, getSectionInformation, and navigate on onSaveSectionWithStep if readOnly is false', async () => {
     component.api.rolesSE.readOnly = false;
     const convertOrganizationsTosaveSpy = jest.spyOn(component, 'convertOrganizationsTosave');
     const PATCHInnovationPathwayByRiIdNextPreviusSpy = jest
       .spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiIdNextPrevius')
       .mockReturnValue(of({}));
-    const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
+    const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation').mockImplementation(() => undefined);
     const navigateSpy = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
 
-    component.onSaveSectionWithStep('next');
+    await component.onSaveSectionWithStep('next');
 
     expect(convertOrganizationsTosaveSpy).toHaveBeenCalled();
     expect(PATCHInnovationPathwayByRiIdNextPreviusSpy).toHaveBeenCalled();
@@ -297,5 +313,244 @@ describe('StepN3Component', () => {
   it('should return the expected url string on resultUrl', () => {
     const url = component.resultUrl('12345', '1');
     expect(url).toBe('/result/result-detail/12345/general-information?phase=1');
+  });
+  /** P2-3824 — multi-evidence per level, score-2 alerts, uploads before the PATCH. */
+  describe('P2-3824 evidence lists', () => {
+    const link = (extra: any = {}) => ({ id: null, link: 'https://example.org', description: null, is_sharepoint: false, is_public_file: null, ...extra });
+    const pendingFile = (name = 'report.pdf') => ({ ...link({ link: null, is_sharepoint: true, is_public_file: true }), file: new File(['x'], name) });
+
+    beforeEach(() => {
+      component.api.rolesSE.readOnly = false;
+      component.ipsrStep3Body = {
+        innovatonUse: { actors: [], organization: [] },
+        principal_impact_areas: [],
+        result_ip_result_core: { readinees_evidence_link: 'legacy', readiness_evidences: [link()], use_evidences: [] },
+        result_ip_result_complementary: [{ use_evidence_link: 'legacy', readiness_evidences: [], use_evidences: [link()] }]
+      } as any;
+    });
+
+    it('normalises the lists and principal areas coming from the GET', () => {
+      const response: any = {
+        innovatonUse: { organization: [], actors: [{}] },
+        result_ip_result_core: { readiness_evidences: [{ id: 1, link: 'x', is_sharepoint: 1, gender_related: 1 }] },
+        result_ip_result_complementary: [{ result_by_innovation_package_id: 9 }],
+        result_core_innovation: null
+      };
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(of({ response }));
+      component.ipsrStep3Body.result_ip_result_complementary = [];
+
+      component.getSectionInformation();
+
+      const core: any = component.ipsrStep3Body.result_ip_result_core;
+      expect(core.readiness_evidences[0]).toEqual(expect.objectContaining({ is_sharepoint: true, gender_related: true }));
+      expect(core.use_evidences).toEqual([]);
+      expect((component.ipsrStep3Body.result_ip_result_complementary[0] as any).readiness_evidences).toEqual([]);
+      expect(component.ipsrStep3Body.principal_impact_areas).toEqual([]);
+    });
+
+    it('shows one alert per Impact Area scored 2 with no tagged evidence, and clears it live when tagged', () => {
+      component.ipsrStep3Body.principal_impact_areas = ['gender', 'nutrition'];
+      expect(component.missingPrincipalImpactAreas()).toEqual(['gender', 'nutrition']);
+      expect(component.principalImpactAreaAlert('gender')).toBe(
+        'A principal contribution score (2) has been recorded for the <strong>Gender equality, youth and social inclusion</strong> Impact Area. Please provide evidence tagged to it in this step.'
+      );
+
+      (component.ipsrStep3Body.result_ip_result_complementary[0] as any).use_evidences[0].nutrition_related = true;
+      expect(component.missingPrincipalImpactAreas()).toEqual(['gender']);
+    });
+
+    it('PATCHes the arrays without the legacy single-link fields', async () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+      jest.spyOn(component, 'getSectionInformation').mockImplementation(() => undefined);
+
+      await component.onSaveSection();
+
+      const body: any = patch.mock.calls[0][0];
+      expect(body.result_ip_result_core.readiness_evidences).toHaveLength(1);
+      expect(body.result_ip_result_core).not.toHaveProperty('readinees_evidence_link');
+      expect(body.result_ip_result_complementary[0].use_evidences).toHaveLength(1);
+      expect(body.result_ip_result_complementary[0]).not.toHaveProperty('use_evidence_link');
+      expect(body).not.toHaveProperty('principal_impact_areas');
+    });
+
+    it('uploads pending files to the PACKAGE result before the PATCH, and sends no File', async () => {
+      component.ipsrDataControlSE.resultInnovationId = 4242 as any;
+      const file = pendingFile();
+      (component.ipsrStep3Body.result_ip_result_complementary[0] as any).readiness_evidences = [file];
+      const upload = jest.spyOn((component as any).sharePointUploadSE, 'uploadPending').mockImplementation(async (items: any[]) => {
+        items.forEach(item => (item.link = 'https://cgiar.sharepoint.com/f'));
+        return [];
+      });
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiIdNextPrevius').mockReturnValue(of({}));
+      jest.spyOn(component, 'getSectionInformation').mockImplementation(() => undefined);
+
+      await component.onSaveSectionWithStep('next');
+
+      expect(upload).toHaveBeenCalledWith([file], expect.objectContaining({ resultId: 4242, flow: 'evidences' }));
+      expect(upload.mock.invocationCallOrder[0]).toBeLessThan(patch.mock.invocationCallOrder[0]);
+      const sent: any = patch.mock.calls[0][0];
+      expect(sent.result_ip_result_complementary[0].readiness_evidences[0].link).toBe('https://cgiar.sharepoint.com/f');
+      expect(sent.result_ip_result_complementary[0].readiness_evidences[0]).not.toHaveProperty('file');
+    });
+
+    it('does not PATCH when an upload fails, and names the file', async () => {
+      component.ipsrDataControlSE.resultInnovationId = 4242 as any;
+      component.ipsrStep3Body.result_ip_result_core.readiness_evidences = [pendingFile('broken.pdf')];
+      jest.spyOn((component as any).sharePointUploadSE, 'uploadPending').mockResolvedValue(['broken.pdf']);
+      const show = jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+
+      await component.onSaveSection();
+
+      expect(patch).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'ipsr-step3-evidence-upload-failed', status: 'error', title: expect.stringContaining('broken.pdf') }));
+    });
+
+    it('does not PATCH a pending file when the package id is unknown (the upload service would skip it silently)', async () => {
+      component.ipsrDataControlSE.resultInnovationId = null;
+      component.ipsrStep3Body.result_ip_result_core.readiness_evidences = [pendingFile('orphan.pdf')];
+      const upload = jest.spyOn((component as any).sharePointUploadSE, 'uploadPending');
+      jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+
+      await component.onSaveSection();
+
+      expect(upload).not.toHaveBeenCalled();
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('skips the upload entirely when no file is pending', async () => {
+      const upload = jest.spyOn((component as any).sharePointUploadSE, 'uploadPending');
+      jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+      jest.spyOn(component, 'getSectionInformation').mockImplementation(() => undefined);
+
+      await component.onSaveSection();
+
+      expect(upload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('P2-3824 markup', () => {
+    const html = readFileSync(join(__dirname, 'step-n3.component.html'), 'utf8');
+
+    it('replaces both core "Evidence link" fields with the evidence lists', () => {
+      expect(html).not.toContain('readinees_evidence_link');
+      expect(html).not.toContain('use_evidence_link');
+      expect(html).not.toContain('details_of_evidence');
+      expect(html).toMatch(/<app-ipsr-step3-evidence-list[^>]*level="readiness"[^>]*\[required\]="this\.updateRangeLevel1/);
+      expect(html).toMatch(/<app-ipsr-step3-evidence-list[^>]*level="use"[^>]*\[required\]="this\.updateRangeLevel2/);
+    });
+
+    it('renders the score-2 alerts at the top of the evidence-based assessment', () => {
+      const alertAt = html.indexOf('missingPrincipalImpactAreas()');
+      expect(alertAt).toBeGreaterThan(html.indexOf('Evidence-based assessment'));
+      expect(alertAt).toBeLessThan(html.indexOf('Core innovation'));
+    });
+  });
+
+  // P2-3427 (Ángel, 28-Sep-2026 review): Step 3 never tracked a dirty snapshot, so switching tabs with
+  // an unsaved edit silently dropped it. Control negative: without the snapshot at the end of
+  // `getSectionInformation()` the mutation test fails; without the snapshot inside the PATCH `tap` the
+  // "reload fails" test fails.
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    const loadedResponse = () => ({
+      result_ip_result_complementary: [{ result_by_innovation_package_id: 1, open: false }],
+      innovatonUse: { organization: [], actors: [] },
+      result_ip_result_core: { readiness_evidences: [], use_evidences: [] },
+      result_core_innovation: null
+    });
+    const drain = (source: any): Promise<boolean[]> =>
+      new Promise(resolve => {
+        const seen: boolean[] = [];
+        source.subscribe({ next: (value: boolean) => seen.push(value, component.hasUnsavedChanges()), complete: () => resolve(seen) });
+      });
+
+    beforeEach(() => {
+      component.api.rolesSE.readOnly = false;
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(of({ response: loadedResponse() }));
+      component.getSectionInformation();
+    });
+
+    it('is clean right after the load flow completes, untouched', () => {
+      expect(component.ipsrStep3Body.innovatonUse.actors).toHaveLength(1);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('is dirty after a bound field of the body changes', () => {
+      component.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('saveSection() emits true and the step is already clean at that instant, even when the reload fails', async () => {
+      component.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+      expect(component.hasUnsavedChanges()).toBe(true);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+      // The follow-up reload dies: the snapshot must NOT depend on it.
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const seen = await drain(component.saveSection());
+
+      expect(patch).toHaveBeenCalledTimes(1);
+      expect(seen).toEqual([true, false]);
+    });
+
+    it('saveSection() resolves false (does not throw) when the PATCH errors', async () => {
+      jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+      const seen = await drain(component.saveSection());
+      expect(seen[0]).toBe(false);
+    });
+
+    it('saveSection() resolves false without calling the PATCH when a Current-use row has figures and no type', async () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+      const show = jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+      component.ipsrStep3Body.innovatonUse.actors = [{ women: 2, men: 2, evidence_link: 'https://example.org/zz' } as any];
+
+      const seen = await drain(component.saveSection());
+
+      expect(seen[0]).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'ipsrUntypedRows' }));
+    });
+
+    it('saveSection() resolves false without calling the PATCH when a pending evidence upload fails', async () => {
+      component.ipsrDataControlSE.resultInnovationId = 4242 as any;
+      (component.ipsrStep3Body.result_ip_result_core as any).readiness_evidences = [
+        { id: null, link: null, description: null, is_sharepoint: true, is_public_file: true, file: new File(['x'], 'broken.pdf') }
+      ];
+      jest.spyOn((component as any).sharePointUploadSE, 'uploadPending').mockResolvedValue(['broken.pdf']);
+      jest.spyOn(component.api.alertsFe, 'show').mockImplementation(() => undefined);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+
+      const seen = await drain(component.saveSection());
+
+      expect(seen[0]).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to next step" marks the navigation silent before navigating, and re-snapshots on PATCH success', async () => {
+      const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+      const navigate = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+      jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiIdNextPrevius').mockReturnValue(of({}));
+      component.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+
+      await component.onSaveSectionWithStep('next');
+
+      expect(markSilent).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('"Save & go to previous step" marks the navigation silent in the read-only branch too', async () => {
+      component.api.rolesSE.readOnly = true;
+      const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+      const navigate = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+
+      await component.onSaveSectionWithStep('previous');
+
+      expect(markSilent).toHaveBeenCalledTimes(1);
+      expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
+    });
   });
 });

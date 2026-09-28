@@ -1,50 +1,72 @@
-@let receivedContributionsPending =
-  this.resultsNotificationsSE?.receivedData.receivedContributionsPending
-    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
-    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+@let receivedContributionsAll =
+  (this.resultsNotificationsSE?.receivedData.receivedContributionsPending ?? []).concat(
+    this.resultsNotificationsSE?.receivedData.receivedContributionsDone ?? []
+  );
 
-@let receivedContributionsDone =
-  this.resultsNotificationsSE?.receivedData.receivedContributionsDone
+@let receivedContributionsFiltered =
+  receivedContributionsAll
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
-    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter
+    | filterNotificationByCenter: this.resultsNotificationsSE.centerIdsFilter
+    | filterNotificationByBilateralProject: this.resultsNotificationsSE.bilateralProjectIdsFilter;
+
+@let receivedContributionsGrouped = receivedContributionsFiltered | groupNotificationsByRecency;
 
 <div class="received_container">
-  <div class="received_container_content">
-    <h1 class="received_container_header_title">Pending</h1>
-
-    @if (this.resultsNotificationsSE.loadingReceived) {
+  @if (this.resultsNotificationsSE.loadingReceived) {
+    <div class="received_container_content">
       <app-skeleton-notification-item></app-skeleton-notification-item>
       <app-skeleton-notification-item></app-skeleton-notification-item>
-    } @else if (receivedContributionsPending?.length > 0) {
-      <div class="received_container_content_item">
-        @for (item of receivedContributionsPending; track $index) {
-          <app-notification-item
-            [notification]="item"
-            (requestEvent)="this.resultsNotificationsSE.get_section_information(this.resultsNotificationsSE.phaseFilter)"></app-notification-item>
-        }
-      </div>
-    } @else {
-      <div class="received_container_content_empty">You have no pending notifications related with the search.</div>
-    }
-  </div>
-
-  <div class="received_container_content">
-    <h1 class="received_container_header_title">Done</h1>
-    @if (this.resultsNotificationsSE.loadingReceived) {
-      <app-skeleton-notification-item></app-skeleton-notification-item>
-      <app-skeleton-notification-item></app-skeleton-notification-item>
-    } @else if (receivedContributionsDone?.length > 0) {
-      <div class="received_container_content_item">
-        @for (item of receivedContributionsDone; track $index) {
-          @defer (on viewport) {
-            <app-notification-item [notification]="item"></app-notification-item>
-          } @placeholder {
-            <app-skeleton-notification-item></app-skeleton-notification-item>
+    </div>
+  } @else if (receivedContributionsFiltered?.length > 0) {
+    @if (receivedContributionsGrouped.today.length > 0) {
+      <div class="received_container_content">
+        <h1 class="received_container_header_title">
+          Today
+          <span hlmBadge variant="secondary">{{ receivedContributionsGrouped.today.length }}</span>
+        </h1>
+        <div class="received_container_content_item">
+          @for (item of receivedContributionsGrouped.today; track $index) {
+            <app-notification-item
+              [notification]="item"
+              (requestEvent)="this.resultsNotificationsSE.get_section_information(this.resultsNotificationsSE.phaseFilter)"></app-notification-item>
           }
-        }
+        </div>
       </div>
-    } @else {
-      <div class="received_container_content_empty">You have no done notifications related with the search.</div>
     }
-  </div>
+
+    @if (receivedContributionsGrouped.thisWeek.length > 0) {
+      <div class="received_container_content">
+        <h1 class="received_container_header_title">
+          This week
+          <span hlmBadge variant="secondary">{{ receivedContributionsGrouped.thisWeek.length }}</span>
+        </h1>
+        <div class="received_container_content_item">
+          @for (item of receivedContributionsGrouped.thisWeek; track $index) {
+            <app-notification-item
+              [notification]="item"
+              (requestEvent)="this.resultsNotificationsSE.get_section_information(this.resultsNotificationsSE.phaseFilter)"></app-notification-item>
+          }
+        </div>
+      </div>
+    }
+
+    @if (receivedContributionsGrouped.earlier.length > 0) {
+      <div class="received_container_content">
+        <h1 class="received_container_header_title">
+          Earlier
+          <span hlmBadge variant="secondary">{{ receivedContributionsGrouped.earlier.length }}</span>
+        </h1>
+        <div class="received_container_content_item">
+          @for (item of receivedContributionsGrouped.earlier; track $index) {
+            <app-notification-item
+              [notification]="item"
+              (requestEvent)="this.resultsNotificationsSE.get_section_information(this.resultsNotificationsSE.phaseFilter)"></app-notification-item>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <div class="received_container_content_empty">You have no notifications related with the search.</div>
+  }
 </div>

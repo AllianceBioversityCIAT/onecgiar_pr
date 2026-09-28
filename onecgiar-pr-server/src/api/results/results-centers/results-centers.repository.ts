@@ -21,7 +21,7 @@ export class ResultsCenterRepository
   ): ConfigCustomQueryInterface {
     return {
       findQuery: `
-      select 
+      select
       null as id,
       rc.is_primary,
       rc.is_active,
@@ -32,7 +32,10 @@ export class ResultsCenterRepository
       ${config.new_result_id} as result_id,
       ${config.user.id} as created_by,
       null as last_updated_by,
-      rc.center_id
+      rc.center_id,
+      rc.is_leading_result,
+      rc.from_toc,
+      rc.from_cgspace
       from results_center rc WHERE rc.result_id = ${
         config.old_result_id
       } and rc.is_active > 0
@@ -46,9 +49,12 @@ export class ResultsCenterRepository
       result_id,
       created_by,
       last_updated_by,
-      center_id
+      center_id,
+      is_leading_result,
+      from_toc,
+      from_cgspace
       )
-      select 
+      select
       rc.is_primary,
       rc.is_active,
       ${predeterminedDateValidation(
@@ -58,7 +64,10 @@ export class ResultsCenterRepository
       ${config.new_result_id} as result_id,
       ${config.user.id} as created_by,
       null as last_updated_by,
-      rc.center_id
+      rc.center_id,
+      rc.is_leading_result,
+      rc.from_toc,
+      rc.from_cgspace
       from results_center rc WHERE rc.result_id = ${
         config.old_result_id
       } and rc.is_active > 0`,

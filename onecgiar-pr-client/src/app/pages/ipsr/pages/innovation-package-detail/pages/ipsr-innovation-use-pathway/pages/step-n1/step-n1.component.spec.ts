@@ -18,10 +18,12 @@ import { StepN1ImpactAreasComponent } from './components/step-n1-impact-areas/st
 import { GeoscopeManagementComponent } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.component';
 import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-button/save-button.component';
 import { FeedbackValidationDirective } from '../../../../../../../../shared/directives/feedback-validation.directive';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
+import { UnsavedNavigationIntentService } from '../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
+import { Actor } from './model/Ipsr-step-1-body.model';
 
 jest.useFakeTimers();
 
@@ -148,6 +150,46 @@ describe('StepN1Component', () => {
 
     fixture = TestBed.createComponent(StepN1Component);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (IPSR-2): the save tests model a loaded step; the gate has its own block.
+    component.loaded.set(true);
+  });
+
+  // Night sweep 2026-09-23, IPSR-3: a row with figures and no type was dropped with a 200.
+  // Control negative: without `refuseUntypedRows()` in onSaveSection the PATCH is sent.
+  it('IPSR-3: refuses to save an actor row with figures and no actor type, and says why', () => {
+    const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
+    const show = jest.fn();
+    mockApiService.alertsFe = { show };
+    component.ipsrStep1Body.innovatonUse.actors = [{ women_youth: 7 } as any];
+    component.onSaveSection();
+    expect(patch).not.toHaveBeenCalled();
+    expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'ipsrUntypedRows', status: 'error' }));
+  });
+
+  // Night sweep 2026-09-23, IPSR-2 (prtest 11172): GET 500 → Save wiped EOI, partners and geo scope.
+  // Control negative: with the gate lines removed the no-PATCH tests fail.
+  describe('IPSR-2 — refuses to save after a failed Step-1 load', () => {
+    beforeEach(() => {
+      component.loaded.set(null);
+      mockApiService.resultsSE.GETInnovationPathwayByStepOneResultId = () => throwError(() => ({ status: 500 }));
+    });
+
+    it('marks the step as not loaded and Save sends nothing', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
+      component.getSectionInformation();
+      component.onSaveSection();
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to next step" only navigates, without saving', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultIdNextStep');
+      const nav = jest.spyOn((component as any).router, 'navigate').mockResolvedValue(true);
+      component.getSectionInformation();
+      component.saveAndNextStep('next');
+      expect(patch).not.toHaveBeenCalled();
+      expect(nav).toHaveBeenCalled();
+    });
   });
 
   afterEach(() => {
@@ -349,6 +391,43 @@ describe('StepN1Component', () => {
     expect(hasElementsWithId).toBe(3);
   });
 
+  it('it should count an unsaved row with no is_active set as present when api.roleSE.readOnly is false', () => {
+    const list = [{}, { is_active: false }];
+    const attr = 'is_active';
+    component.api.rolesSE.readOnly = false;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(1);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.1): a blank auto-pushed placeholder row must NOT
+  // count as present once significantFields is passed, even though is_active != false alone
+  // would count it (that is the Pivot's gap — current 2-arg implementation ignores the 3rd arg).
+  it('it should not count a blank placeholder row as present when significantFields is passed and none are set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{}];
+    const hasElementsWithId = component.hasElementsWithId(list, 'result_ip_expert_workshop_organized_id', [
+      'first_name',
+      'last_name',
+      'email',
+      'workshop_role'
+    ]);
+    expect(hasElementsWithId).toBe(0);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.2): once the user fills in a significant field, the
+  // same row counts as present again.
+  it('it should count a row as present when significantFields is passed and one of them is set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ first_name: 'Ana' }];
+    const hasElementsWithId = component.hasElementsWithId(list, 'result_ip_expert_workshop_organized_id', [
+      'first_name',
+      'last_name',
+      'email',
+      'workshop_role'
+    ]);
+    expect(hasElementsWithId).toBe(1);
+  });
+
   it('should return if is_expert_workshop_organized is true on cleanEvidence', () => {
     component.ipsrStep1Body = {
       result_ip: {
@@ -427,6 +506,144 @@ describe('StepN1Component', () => {
     it('should return true if link_workshop_list is a valid URL with https protocol', () => {
       component.ipsrStep1Body.link_workshop_list = 'https://example.com';
       expect(component.validateParticipantsConsent()).toBe(true);
+    });
+  });
+
+  // P2-3427 (Ángel, 28-Sep-2026 review): Step 1 never tracked a dirty snapshot, so switching tabs with
+  // an unsaved edit silently dropped it. Control negative: without the snapshot at the end of
+  // `onSectionInformation()` the first test reports the fresh step as clean only by accident (no
+  // snapshot at all) and the mutation test fails; without the snapshot inside the PATCH `tap` the
+  // "reload fails" test fails.
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    const loadFresh = () => {
+      // A fresh clone per test: the component keeps the GET response object as its body and mutates it.
+      mockApiService.resultsSE.GETInnovationPathwayByStepOneResultId = () =>
+        of({ response: JSON.parse(JSON.stringify(mockGETInnovationPathwayByStepOneResultIdResponse)) });
+      component.getSectionInformation();
+    };
+
+    it('is clean right after the load flow completes, untouched', () => {
+      loadFresh();
+      expect(component.loaded()).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('is dirty after a bound field of the body changes', () => {
+      loadFresh();
+      component.ipsrStep1Body.link_workshop_list = (component.ipsrStep1Body.link_workshop_list ?? '') + 'https://x.org';
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    // P2-3836 — measured on package 9635: the Step-1 GET replaces the body, so the shared
+    // `app-innovation-use-form` re-runs `initializeComponentProperties()` on the NEW reference AFTER
+    // the load snapshot and seeds `innovation_use_2030`, `pictures`, `*_expected_investment`… The
+    // untouched step then reported dirty and the tab switch opened the Save/Discard dialog.
+    const runInnovationUseFormDefaults = () =>
+      InnovationUseFormComponent.prototype.initializeComponentProperties.call({ body: component.ipsrStep1Body });
+
+    it("stays clean when app-innovation-use-form seeds its defaults after the load snapshot (P2-3836)", () => {
+      loadFresh();
+      expect((component.ipsrStep1Body as any).innovation_use_2030).toBeUndefined();
+      runInnovationUseFormDefaults();
+      expect((component.ipsrStep1Body as any).innovation_use_2030).toEqual({ actors: [], measures: [], organization: [] });
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it("stays clean when app-studies-link adds its blank placeholder row (P2-3836)", () => {
+      loadFresh();
+      runInnovationUseFormDefaults();
+      (component.ipsrStep1Body as any).scaling_studies_urls = [''];
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('is dirty after a real edit to a field the child seeded (2030 projection) (P2-3836)', () => {
+      loadFresh();
+      runInnovationUseFormDefaults();
+      (component.ipsrStep1Body as any).innovation_use_2030.actors.push(new Actor());
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('is dirty after ticking "to be determined" for the 2030 projection (P2-3836)', () => {
+      loadFresh();
+      runInnovationUseFormDefaults();
+      (component.ipsrStep1Body as any).innov_use_2030_to_be_determined = !(component.ipsrStep1Body as any).innov_use_2030_to_be_determined;
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('is dirty after typing a scaling study link (P2-3836)', () => {
+      loadFresh();
+      runInnovationUseFormDefaults();
+      (component.ipsrStep1Body as any).scaling_studies_urls = ['https://study.example.org'];
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('saveSection() emits true and the step is already clean at that instant, even when the reload fails', () => {
+      loadFresh();
+      component.ipsrStep1Body.innovatonUse.actors.push(new Actor());
+      expect(component.hasUnsavedChanges()).toBe(true);
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
+      // The follow-up reload dies: the snapshot must NOT depend on it.
+      mockApiService.resultsSE.GETInnovationPathwayByStepOneResultId = () => throwError(() => ({ status: 500 }));
+
+      const seen: boolean[] = [];
+      component.saveSection().subscribe(result => seen.push(result, component.hasUnsavedChanges()));
+
+      expect(patch).toHaveBeenCalledTimes(1);
+      expect(seen).toEqual([true, false]);
+    });
+
+    it('saveSection() resolves false (does not throw) when the PATCH errors', () => {
+      loadFresh();
+      mockApiService.resultsSE.PATCHInnovationPathwayByStepOneResultId = () => throwError(() => ({ status: 500 }));
+      const seen: boolean[] = [];
+      component.saveSection().subscribe(result => seen.push(result));
+      expect(seen).toEqual([false]);
+    });
+
+    it('saveSection() resolves false without calling the PATCH when the step never loaded', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
+      component.loaded.set(null);
+      const seen: boolean[] = [];
+      component.saveSection().subscribe(result => seen.push(result));
+      expect(seen).toEqual([false]);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('saveSection() resolves false without calling the PATCH when a row has figures and no type', () => {
+      loadFresh();
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
+      mockApiService.alertsFe = { show: jest.fn() };
+      component.ipsrStep1Body.innovatonUse.actors = [{ women_youth: 7 } as any];
+      const seen: boolean[] = [];
+      component.saveSection().subscribe(result => seen.push(result));
+      expect(seen).toEqual([false]);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to next step" marks the navigation silent before navigating, and re-snapshots on PATCH success', () => {
+      loadFresh();
+      const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+      const navigate = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+      component.ipsrStep1Body.link_workshop_list = (component.ipsrStep1Body.link_workshop_list ?? '') + 'https://x.org';
+
+      component.saveAndNextStep('next');
+      jest.clearAllTimers(); // see saveAndNextStep() above: discard the scheduler tick, the flow is synchronous
+
+      expect(markSilent).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('"Save & go to next step" marks the navigation silent in the read-only branch too', () => {
+      mockApiService.rolesSE.readOnly = true;
+      const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+      const navigate = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+
+      component.saveAndNextStep('next');
+
+      expect(markSilent).toHaveBeenCalledTimes(1);
+      expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
     });
   });
 });

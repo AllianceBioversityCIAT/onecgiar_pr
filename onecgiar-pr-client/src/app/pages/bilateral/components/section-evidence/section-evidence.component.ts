@@ -15,6 +15,7 @@ import { SharePointUploadService } from '../../../../shared/services/sharepoint-
 import { BilateralEvidenceItem, BilateralEvidenceBody } from './section-evidence.model';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
   selector: 'app-section-evidence',
@@ -47,6 +48,17 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     poverty_tag_level: ''
   });
   isLoading = signal(false);
+
+  /**
+   * Night sweep 2026-09-23, R-2 — three-state load flag (P2-3556 contract: `null` in flight, `true`
+   * loaded, `false` when the FIRST load failed). Before this, a failed `GET_evidences` only cleared
+   * `isLoading`: the section read "No evidence added" with "Add evidence" available, and confirming
+   * one evidence POSTed a one-item list, which the server takes as the new truth
+   * (`onecgiar-pr-server/src/api/results/evidences/evidences.service.ts:270-276` → `inactiveAll`),
+   * de-activating every stored evidence. A failed re-load after a successful one keeps `true`.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.bilateralLoadErrorNote;
   isSaving = signal(false);
   editingId = signal<number | null>(null);
 
@@ -162,10 +174,13 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
         const body = response ?? { evidences: [] };
         this.evidenceBody.set(body);
         this.sortEvidences();
+        this.loaded.set(true);
         this.isLoading.set(false);
         this.updateTracker();
       },
       error: () => {
+        // R-2 — see `loaded`.
+        if (this.loaded() !== true) this.loaded.set(false);
         this.isLoading.set(false);
       }
     });
@@ -193,6 +208,8 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   // ── Draft / Inline Editing ──────────────────────────────────────────
 
   addNew(): void {
+    // R-2 — the modal saves on confirm; it must not open over a list that never loaded.
+    if (this.loaded() !== true) return;
     this.draftItem.set({ is_sharepoint: false });
     this.editingId.set(null);
     this.showDraft.set(true);
@@ -359,6 +376,9 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   private savePending = false;
 
   async saveSection(): Promise<void> {
+    // R-2 — the single save path (confirm, delete, Save draft). Without the stored list in hand the
+    // POST would replace every stored evidence with whatever is on screen.
+    if (this.loaded() !== true) return;
     if (this.saveInFlight) {
       this.savePending = true;
       return;

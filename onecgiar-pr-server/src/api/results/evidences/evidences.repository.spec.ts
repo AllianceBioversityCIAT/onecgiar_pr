@@ -414,3 +414,105 @@ describe('EvidencesRepository.createQueries (entity parity guard)', () => {
     expect(persistedColumnNames()).not.toContain('zz_guard_probe_related');
   });
 });
+
+/**
+ * P2-3824 — IPSR Step 3 evidence: read for the whole package, deactivate for ONE component and
+ * level. Both parameterised.
+ */
+describe('EvidencesRepository — IPSR Step 3 evidence (P2-3824)', () => {
+  let repo: EvidencesRepository;
+  let query: jest.Mock;
+
+  beforeEach(() => {
+    repo = new EvidencesRepository(
+      {
+        createEntityManager: jest.fn(() => ({}) as any),
+      } as unknown as DataSource,
+      { returnErrorRepository: jest.fn((e) => e) } as any,
+    );
+    query = jest.fn().mockResolvedValue([]);
+    (repo as any).query = query;
+  });
+
+  it('getIpsrStepThreeEvidences reads active type-7 rows with their component, level and SharePoint file, oldest first', async () => {
+    await repo.getIpsrStepThreeEvidences(9001);
+
+    const [sql, params] = query.mock.calls[0];
+    const flat = sql.replace(/\s+/g, ' ');
+    expect(params).toEqual([9001, 7]);
+    // Component and level come from the child table, never from `evidence`.
+    expect(flat).toContain(
+      'INNER JOIN result_ip_step_three_evidence s ON s.evidence_id = e.id AND s.is_active = 1',
+    );
+    expect(flat).toContain('s.result_by_innovation_package_id');
+    expect(flat).toContain('s.ipsr_evidence_level');
+    expect(flat).toContain('es.document_id AS sp_document_id');
+    expect(flat).toContain('e.is_active > 0');
+    expect(flat).toContain('e.evidence_type_id = ?');
+    expect(flat).toContain('ORDER BY e.creation_date ASC, e.id ASC');
+    expect(flat).not.toContain('is_supplementary = ?');
+  });
+
+  it('deactivateIpsrStepThreeEvidences is scoped to result + type 7 + component + level and keeps the listed ids', async () => {
+    await repo.deactivateIpsrStepThreeEvidences(
+      9001,
+      55,
+      'readiness',
+      [3, 0, NaN, 8],
+      10,
+    );
+
+    const [sql, params] = query.mock.calls[0];
+    const flat = sql.replace(/\s+/g, ' ');
+    expect(flat).toContain('INNER JOIN result_ip_step_three_evidence s');
+    expect(flat).toContain('SET e.is_active = 0');
+    expect(flat).toContain('AND s.result_by_innovation_package_id = ?');
+    expect(flat).toContain('AND s.ipsr_evidence_level = ?');
+    expect(flat).toContain('AND e.id NOT IN (?)');
+    expect(params).toEqual([10, 9001, 7, 55, 'readiness', [3, 8]]);
+  });
+
+  it('deactivateIpsrStepThreeEvidences with nothing kept deactivates the whole level (no empty IN list)', async () => {
+    await repo.deactivateIpsrStepThreeEvidences(9001, 55, 'use', [], 10);
+
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).not.toContain('NOT IN');
+    expect(params).toEqual([10, 9001, 7, 55, 'use']);
+  });
+
+  it('findIpsrStepThreeEvidenceId only matches an active type-7 row of this package, component and level', async () => {
+    query.mockResolvedValueOnce([{ id: '41' }]);
+    await expect(
+      repo.findIpsrStepThreeEvidenceId(41, 9001, 55, 'use'),
+    ).resolves.toBe(41);
+    const [sql, params] = query.mock.calls[0];
+    const flat = sql.replace(/\s+/g, ' ');
+    expect(flat).toContain('INNER JOIN result_ip_step_three_evidence s');
+    expect(params).toEqual([41, 9001, 7, 55, 'use']);
+
+    query.mockResolvedValueOnce([]);
+    await expect(
+      repo.findIpsrStepThreeEvidenceId(41, 9001, 56, 'use'),
+    ).resolves.toBeNull();
+  });
+
+  it('linkIpsrStepThreeEvidence writes the child row, parameterised', async () => {
+    await repo.linkIpsrStepThreeEvidence(700, 55, 'readiness');
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toContain('INSERT INTO result_ip_step_three_evidence');
+    expect(params).toEqual([700, 55, 'readiness']);
+  });
+
+  it('the phase replication shared by every result never names a P2-3824 column', () => {
+    const { findQuery, insertQuery } = repo.createQueries({
+      phase: 5,
+      user: { id: 77 },
+      old_result_id: 1000,
+      new_result_id: 2000,
+    } as any);
+    for (const sql of [findQuery, insertQuery]) {
+      expect(sql).not.toContain('result_by_innovation_package_id');
+      expect(sql).not.toContain('ipsr_evidence_level');
+    }
+  });
+});

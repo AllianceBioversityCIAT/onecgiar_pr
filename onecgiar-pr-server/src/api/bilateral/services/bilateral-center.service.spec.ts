@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { BilateralCenterService } from './bilateral-center.service';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
@@ -30,6 +30,8 @@ import { BilateralQualityAssessmentService } from './quality-assessment/bilatera
 import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { AoWBilateralRepository } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
+import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
+import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -41,6 +43,7 @@ describe('BilateralCenterService', () => {
   let bilateralProjectsService: BilateralProjectsService;
   let bilateralService: BilateralService;
   let resultsKnowledgeProductsService: ResultsKnowledgeProductsService;
+  let bilateralAccessService: BilateralAccessService;
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -59,6 +62,17 @@ describe('BilateralCenterService', () => {
             handleLeadCenter: jest.fn().mockResolvedValue(undefined),
             // 2026-09-05: submitForReview announces the arrival to the primary SP post-commit.
             emitBilateralSubmittedNotification: jest
+              .fn()
+              .mockResolvedValue(undefined),
+            // BCT-T-5: `submitForReview` now calls the orchestrator instead of the submitted
+            // emitter directly. Its own behaviour (submitted → tagging, independent try/catch) is
+            // unit-tested against the real `BilateralService` in `bilateral.service.spec.ts`;
+            // here it is a no-op stub.
+            announcePendingReview: jest.fn().mockResolvedValue(undefined),
+            // BCT-T-3: `saveContributors` calls this after the sync* block, only when the DTO
+            // touched `contributing_bilateral_projects`. Its own behaviour is unit-tested against
+            // the real `BilateralService` in `bilateral.service.spec.ts`; here it is a no-op stub.
+            ensureDerivedContributingCenters: jest
               .fn()
               .mockResolvedValue(undefined),
           },
@@ -290,6 +304,25 @@ describe('BilateralCenterService', () => {
             }),
           },
         },
+        // design §5.1, BIL-RTE-T-2 — the Center-write decision consulted by `updatePlannedResult`,
+        // `saveTocMapping` and `saveContributors`. Resolves (allow) by default so every existing
+        // test below keeps exercising its own scenario; the dedicated Center-write tests override
+        // it per case.
+        {
+          provide: BilateralAccessService,
+          useValue: {
+            assertCenterWrite: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        // P2-3368 AC10-AC14 — the NARROW `linked_result` writer. Mocked, never the shared
+        // `createForInnovationUse`: the tests below assert exactly which of the two is asked to
+        // run, because the wrong one wipes the rows of other sections.
+        {
+          provide: ResultsInnovationsUseRepository,
+          useValue: {
+            replaceLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
+          },
+        },
       ],
     }).compile();
 
@@ -308,6 +341,9 @@ describe('BilateralCenterService', () => {
       module.get<ResultsKnowledgeProductsService>(
         ResultsKnowledgeProductsService,
       );
+    bilateralAccessService = module.get<BilateralAccessService>(
+      BilateralAccessService,
+    );
   });
 
   it('should be defined', () => {
@@ -320,6 +356,7 @@ describe('BilateralCenterService', () => {
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
       undefined,
+      undefined,
     );
   });
 
@@ -330,7 +367,103 @@ describe('BilateralCenterService', () => {
     expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
       10,
       2025,
+      undefined,
     );
+  });
+
+  // bilateral/project-overview-metrics (BIL-POM-OQ-1 correction): the optional `versionId`
+  // rides along too, so the catalog service can scope w1w2ContributorCount to this phase.
+  it('should forward the optional versionId to the catalog service', async () => {
+    await service.getProjects(10, 2025, 36);
+    expect(bilateralProjectsService.getProjectsByCenter).toHaveBeenCalledWith(
+      10,
+      2025,
+      36,
+    );
+  });
+
+  // BIL-RTE-T-2 — design §5.1: the Center-write decision, before any write. This wiring test
+  // covers the arguments the helper is called with and reacts to deny/allow; the decision's own
+  // admin/status logic is covered by `bilateral-access.service.spec.ts`.
+  describe('updatePlannedResult (BIL-RTE-T-2, design §5.1)', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'test@cgiar.org',
+      first_name: 'Test',
+      last_name: 'User',
+    };
+
+    it('falsifier (b): a non-admin denial returns 403 (via HttpException) and no repository write runs', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        status_id: ResultStatusData.PendingReview.value,
+      } as any);
+      const resultsTocResultsService = module.get<ResultsTocResultsService>(
+        ResultsTocResultsService,
+      );
+      (
+        bilateralAccessService.assertCenterWrite as jest.Mock
+      ).mockRejectedValueOnce(
+        new ForbiddenException(
+          'Result 10 is under Science Program review (rule: center).',
+        ),
+      );
+
+      await expect(
+        service.updatePlannedResult(10, { planned_result: true }, user),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'center-planned-result',
+        user,
+      );
+      expect(
+        resultsTocResultsService.updatePlannedResult,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('falsifier (c): an admin at status 5 proceeds to write (allow path)', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        status_id: ResultStatusData.PendingReview.value,
+      } as any);
+      const resultsTocResultsService = module.get<ResultsTocResultsService>(
+        ResultsTocResultsService,
+      );
+
+      await service.updatePlannedResult(10, { planned_result: true }, user);
+
+      expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+        }),
+        'center-planned-result',
+        user,
+      );
+      expect(resultsTocResultsService.updatePlannedResult).toHaveBeenCalledWith(
+        10,
+        true,
+        user.id,
+      );
+    });
+
+    it('returns 404 when the bilateral result cannot be found, and never consults the helper', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValueOnce(null);
+
+      const res = await service.updatePlannedResult(
+        999,
+        { planned_result: true },
+        user,
+      );
+
+      expect(res).toMatchObject({ status: 404 });
+      expect(bilateralAccessService.assertCenterWrite).not.toHaveBeenCalled();
+    });
   });
 
   describe('createResultHeader', () => {
@@ -688,6 +821,205 @@ describe('BilateralCenterService', () => {
     // whatever the project maps to. Since 2026-09-04 they are staged as share-request DRAFTS
     // (status 4, the ingest shape) — NOT role-2 rows, which meant "already accepted", skipped the
     // contributor's consent and were wiped by the approval's updateResultByInitiative.
+    /*
+     * P2-3368 AC10-AC14 — "Is this result linked or bundled with another CGIAR-reported result?".
+     *
+     * Every test here exists because of ONE failure mode: `linked_result` is shared with the P22
+     * "Links to results" section, and this endpoint autosaves on every centre or project change.
+     * A write that is not narrow deletes other people's rows on a save the user never associated
+     * with this question.
+     */
+    describe('linked/bundled answer', () => {
+      const arrangeResult = (overrides: Record<string, unknown> = {}) => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          source: SourceEnum.Bilateral,
+          result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          has_innovation_link: null,
+          ...overrides,
+        } as any);
+        const linkedRepo = module.get<ResultsInnovationsUseRepository>(
+          ResultsInnovationsUseRepository,
+        ) as any;
+        linkedRepo.replaceLinkedResultsByOrigin = jest
+          .fn()
+          .mockResolvedValue([]);
+        (resultRepository.update as jest.Mock).mockClear();
+        // P2-3823 — the active-results filter: every id asked about is active unless the test
+        // says otherwise (`inactiveIds`).
+        (resultRepository.query as jest.Mock).mockImplementation(
+          async (_sql: string, ids: number[] = []) =>
+            ids
+              .filter((id) => !activeFilter.inactive.has(Number(id)))
+              .map((id) => ({ id })),
+        );
+        activeFilter.inactive = new Set();
+        return linkedRepo;
+      };
+      const activeFilter: { inactive: Set<number> } = { inactive: new Set() };
+
+      it('stores a Yes with its selection through the narrow writer', async () => {
+        const linkedRepo = arrangeResult();
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: true, linked_results: [11164, 9600] },
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: true }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).toHaveBeenCalledWith(
+          10,
+          [11164, 9600],
+          user.id,
+        );
+      });
+
+      it('clears the links when a stored Yes is retracted to No (AC12)', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: false, linked_results: [] },
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: false }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).toHaveBeenCalledWith(
+          10,
+          [],
+          user.id,
+        );
+      });
+
+      it('leaves the shared table alone on a No that was never a Yes', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: null });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: false, linked_results: [] },
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: false }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing when the question is unanswered (AC10)', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        const response = await service.saveContributors(
+          10,
+          { has_innovation_link: null },
+          user,
+        );
+
+        expect(response.status).toBeUndefined();
+        expect(resultRepository.update).not.toHaveBeenCalled();
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('writes nothing when the key is absent — an autosave of other blocks', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['Innovation Use', ResultTypeEnum.INNOVATION_USE],
+        ['Innovation Development', ResultTypeEnum.INNOVATION_DEVELOPMENT],
+      ])(
+        'ignores both keys for %s, whose answer has another owner',
+        async (_label, resultTypeId) => {
+          const linkedRepo = arrangeResult({ result_type_id: resultTypeId });
+
+          await service.saveContributors(
+            10,
+            { has_innovation_link: true, linked_results: [11164] },
+            user,
+          );
+
+          expect(resultRepository.update).not.toHaveBeenCalled();
+          expect(
+            linkedRepo.replaceLinkedResultsByOrigin,
+          ).not.toHaveBeenCalled();
+        },
+      );
+
+      // ── P2-3823: no ValidationPipe runs on this route, so the service is the only guard ──
+      it('ignores a string flag: "false" must not be stored as Yes', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: false });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: 'false', linked_results: [11164] } as any,
+          user,
+        );
+
+        expect(resultRepository.update).not.toHaveBeenCalled();
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('treats a null list as absent: a Yes never wipes the stored rows', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(
+          10,
+          { has_innovation_link: true, linked_results: null } as any,
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: true }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+
+      it('drops the result itself, inactive results and junk ids before writing', async () => {
+        const linkedRepo = arrangeResult();
+        activeFilter.inactive = new Set([555]);
+
+        await service.saveContributors(
+          10,
+          {
+            has_innovation_link: true,
+            linked_results: [11164, 10, 555, -3, 'x', 11164, 9600] as any,
+          },
+          user,
+        );
+
+        expect(linkedRepo.replaceLinkedResultsByOrigin).toHaveBeenCalledWith(
+          10,
+          [11164, 9600],
+          user.id,
+        );
+      });
+
+      it('keeps the stored list when a Yes arrives without linked_results', async () => {
+        const linkedRepo = arrangeResult({ has_innovation_link: true });
+
+        await service.saveContributors(10, { has_innovation_link: true }, user);
+
+        expect(resultRepository.update).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ has_innovation_link: true }),
+        );
+        expect(linkedRepo.replaceLinkedResultsByOrigin).not.toHaveBeenCalled();
+      });
+    });
+
     describe('contributing_programs', () => {
       const user2: TokenDto = {
         id: 7,
@@ -1029,6 +1361,105 @@ describe('BilateralCenterService', () => {
       expect(result.message).toBe('Contributors saved successfully');
     });
 
+    // BCT-T-3 (design §5.2) — the derivation is only worth its lookup cost when this save
+    // actually touched the projects list; the guard is `dto.contributing_bilateral_projects
+    // !== undefined`, independent of whether centers were also sent.
+    describe('ensureDerivedContributingCenters call site', () => {
+      beforeEach(() => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          source: SourceEnum.Bilateral,
+        } as any);
+        (bilateralService as any).ensureDerivedContributingCenters = jest
+          .fn()
+          .mockResolvedValue(undefined);
+      });
+
+      it('is called when contributing_bilateral_projects is in the DTO', async () => {
+        const resultsByProjectsService = module.get<ResultsByProjectsService>(
+          ResultsByProjectsService,
+        );
+        jest
+          .spyOn(resultsByProjectsService, 'syncBilateralProjects')
+          .mockResolvedValue({
+            status: 200,
+            message: 'ok',
+            response: { set_active: [], deactivated: [] },
+          } as any);
+
+        await service.saveContributors(
+          10,
+          { contributing_bilateral_projects: [] },
+          user,
+        );
+
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).toHaveBeenCalledWith(10, 42);
+      });
+
+      it('is NOT called when the save never mentions contributing_bilateral_projects', async () => {
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).not.toHaveBeenCalled();
+      });
+
+      // Reviewer FAIL (lens: resilience/test), attempt 1: moving the derivation call above
+      // `syncContributingCenters` would let that sync undo the very reactivation derivation just
+      // performed (R-3's "direct PATCH omitting → still active" scenario), and no test caught it.
+      // `syncContributingCenters` is a real, unmocked private method here (spied, not replaced),
+      // so this exercises the actual call order `saveContributors` produces, not a stand-in.
+      it('runs derivation strictly after syncContributingCenters when both keys are sent', async () => {
+        const syncSpy = jest.spyOn(service as any, 'syncContributingCenters');
+
+        await service.saveContributors(
+          10,
+          { contributing_center: [], contributing_bilateral_projects: [] },
+          user,
+        );
+
+        expect(syncSpy).toHaveBeenCalled();
+        expect(
+          bilateralService.ensureDerivedContributingCenters,
+        ).toHaveBeenCalled();
+        const syncOrder = syncSpy.mock.invocationCallOrder[0];
+        const derivedOrder = (
+          bilateralService.ensureDerivedContributingCenters as jest.Mock
+        ).mock.invocationCallOrder[0];
+        expect(derivedOrder).toBeGreaterThan(syncOrder);
+      });
+    });
+
+    // BCT-T-5 falsifier — the Contributors save must never itself trigger a Pending Review
+    // announcement; only `submitForReview` does. A save on an Editing/Draft result (BCT-R-10)
+    // must produce no tagging notification either.
+    it('never calls announcePendingReview from saveContributors', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+      } as any);
+      const resultsByProjectsService = module.get<ResultsByProjectsService>(
+        ResultsByProjectsService,
+      );
+      jest
+        .spyOn(resultsByProjectsService, 'syncBilateralProjects')
+        .mockResolvedValue({
+          status: 200,
+          message: 'ok',
+          response: { set_active: [], deactivated: [] },
+        } as any);
+
+      await service.saveContributors(
+        10,
+        { contributing_center: [], contributing_bilateral_projects: [] },
+        user,
+      );
+
+      expect(bilateralService.announcePendingReview).not.toHaveBeenCalled();
+    });
+
     // P2-3443 — the External partners block. Everything here mirrors what pool funding writes in
     // `ResultsByInstitutionsService.savePartnersInstitutionsByResultV2`, on purpose: same table,
     // same role ids, same two flags on `result`. Diverging would hide bilateral partners from the
@@ -1246,6 +1677,71 @@ describe('BilateralCenterService', () => {
           },
         ]);
         expect(result.message).toContain('1 failed partners');
+      });
+    });
+
+    // BIL-RTE-T-2 — design §5.1: the Center-write decision, before any write. This wiring test
+    // covers the arguments the helper is called with and reacts to deny/allow; the decision's own
+    // admin/status logic is covered by `bilateral-access.service.spec.ts`.
+    describe('Center-write access rule (BIL-RTE-T-2, design §5.1)', () => {
+      it('falsifier (b): a non-admin denial returns 403 (via HttpException) and no repository write runs', async () => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+          source: SourceEnum.Bilateral,
+        } as any);
+        (
+          bilateralAccessService.assertCenterWrite as jest.Mock
+        ).mockRejectedValueOnce(
+          new ForbiddenException(
+            'Result 10 is under Science Program review (rule: center).',
+          ),
+        );
+        const resultsCenterRepository = module.get<ResultsCenterRepository>(
+          ResultsCenterRepository,
+        );
+
+        await expect(
+          service.saveContributors(10, { contributing_center: [] }, user),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 10,
+            status_id: ResultStatusData.PendingReview.value,
+          }),
+          'center-contributors',
+          user,
+        );
+        expect(resultsCenterRepository.updateCenter).not.toHaveBeenCalled();
+      });
+
+      it('falsifier (c): an admin at status 5 proceeds to write', async () => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+          id: 10,
+          status_id: ResultStatusData.PendingReview.value,
+          source: SourceEnum.Bilateral,
+        } as any);
+        const resultsCenterRepository = module.get<ResultsCenterRepository>(
+          ResultsCenterRepository,
+        );
+        jest
+          .spyOn(resultsCenterRepository, 'find')
+          .mockResolvedValue([
+            { center_id: 'LEAD', is_leading_result: true },
+          ] as any);
+
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 10,
+            status_id: ResultStatusData.PendingReview.value,
+          }),
+          'center-contributors',
+          user,
+        );
+        expect(resultsCenterRepository.updateCenter).toHaveBeenCalled();
       });
     });
   });
@@ -1523,6 +2019,61 @@ describe('BilateralCenterService', () => {
       ).rejects.toThrow('not available in the CLARISA catalogue');
       expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
     });
+
+    // P2-3807 — the form lets an admin edit Project Information; the save must not 403.
+    it('lets an admin without the Center User role save the assignment', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+      (
+        bilateralProjectsService.getProjectsByCenter as jest.Mock
+      ).mockResolvedValue({
+        projects: [{ id: 20, sciencePrograms: [primaryProgram] }],
+      });
+      const clarisaInitiatives = module.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      ) as any;
+      clarisaInitiatives.findOne.mockResolvedValue({
+        id: 404,
+        official_code: 'SP04',
+        active: true,
+      });
+      configureTransaction();
+
+      await service.updatePrimaryAssignment(user, 11513, {
+        project_id: 20,
+        primary_science_program_id: 701,
+        contribution_percentage: 42,
+      });
+
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
+      expect(resultRepository.manager.transaction).toHaveBeenCalled();
+    });
+
+    it('still refuses a non-admin without the Center User role on the lead centre', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      await expect(
+        service.updatePrimaryAssignment(user, 11513, {
+          project_id: 20,
+          primary_science_program_id: 701,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(resultRepository.manager.transaction).not.toHaveBeenCalled();
+    });
   });
 
   // P2-3157 — the transition that makes the Science Program review loop reachable.
@@ -1607,16 +2158,29 @@ describe('BilateralCenterService', () => {
     });
 
     // 2026-09-05 — the primary SP's members are told the result is waiting for them, post-commit.
-    it('announces the arrival to the primary Science Program after the transaction', async () => {
+    // BCT-T-5: this now goes through the shared orchestrator, not the submitted emitter directly.
+    it('announces Pending Review (submitted + tagging) to the orchestrator after the transaction', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const bilateral = module.get<BilateralService>(BilateralService) as any;
 
       await service.submitForReview(user, 77, decisionDto);
 
-      expect(bilateral.emitBilateralSubmittedNotification).toHaveBeenCalledWith(
-        77,
-        user.id,
-      );
+      expect(bilateral.announcePendingReview).toHaveBeenCalledWith(77, user.id);
+      // Falsifier: `submitForReview` must no longer emit the submitted notification directly —
+      // that call now lives inside `announcePendingReview` (proved on the real service in
+      // `bilateral.service.spec.ts`).
+      expect(
+        bilateral.emitBilateralSubmittedNotification,
+      ).not.toHaveBeenCalled();
+      // The title's "after the transaction" claim, actually asserted: the transaction call is
+      // always registered on the mock before `announcePendingReview` can be, because the second
+      // line only runs once the `await` on the first resolves.
+      const transactionOrder = (
+        resultRepository.manager.transaction as jest.Mock
+      ).mock.invocationCallOrder[0];
+      const announceOrder = (bilateral.announcePendingReview as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(announceOrder).toBeGreaterThan(transactionOrder);
     });
 
     it('stamps the submission date the review queue shows', async () => {
@@ -1703,6 +2267,8 @@ describe('BilateralCenterService', () => {
       ).rejects.toThrow(/valid positive number/);
     });
 
+    // ASC-AC-19 — this is the non-admin, non-member case: `isUserAdmin` stays at the
+    // suite's default (false), so the bypass added for ASC-T-7 never applies here.
     it('refuses a user without the Center User role on the lead centre', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const roleByUserRepository =
@@ -1714,6 +2280,87 @@ describe('BilateralCenterService', () => {
       await expect(
         service.submitForReview(user, 77, decisionDto),
       ).rejects.toThrow(/do not have permission/);
+    });
+
+    // ASC-T-7 / ASC-R-18 — an admin runs submit-for-review on a result whose lead centre they
+    // are not a Center User of. `validationCenterPermissions` is stubbed at 0 (would 403 a
+    // non-admin) precisely so this proves the admin bypass, not a permissive default.
+    it('ASC-AC-18: lets an admin without the Center User role submit for review', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      const result = await service.submitForReview(user, 77, decisionDto);
+
+      expect((result.response as any).status).toBe(
+        ResultStatusData.PendingReview.value,
+      );
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
+    });
+
+    // ASC-T-7 — the status gate (`:2367`) runs before `isUserAdmin` (`:2376`), so
+    // `isUserAdmin` is never reached on this path and this test proves nothing about the
+    // bypass itself. It only proves the status precondition still exists on an admin call —
+    // the bypass proof for the owner-SP precondition is the test below.
+    it('an admin still gets BadRequestException on a result already under review (status gate, not bypass-proving)', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+
+      let caught: unknown;
+      try {
+        await service.submitForReview(user, 77, decisionDto);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(BadRequestException);
+      expect((caught as BadRequestException).message).toMatch(
+        /Editing or Draft/,
+      );
+    });
+
+    // ASC-T-7 / ASC-DD-9 (Reviewer finding, attempt 1) — the status gate runs before the
+    // bypass, so it cannot prove the bypass path skips only `assertCenterPermission`. The
+    // owner-SP gate runs AFTER the bypass, so this is the case a bug like `return result`
+    // right after the admin branch (skipping owner-SP and MDS for admins) would actually
+    // break. `isUserAdmin` is asserted called so a fixture with the wrong stub can't pass by
+    // accident.
+    it('ASC-AC-18 preconditions: an admin with no Science Program assigned still gets BadRequestException (proves the bypass path, not just the status gate)', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+      const resultByInitiativesRepository =
+        module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        );
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue(null);
+
+      await expect(
+        service.submitForReview(user, 77, decisionDto),
+      ).rejects.toThrow(/no Science Program assigned/);
+      expect(roleByUserRepository.isUserAdmin).toHaveBeenCalledWith(user.id);
     });
 
     it('refuses a result with no lead centre', async () => {
@@ -1850,6 +2497,7 @@ describe('BilateralCenterService', () => {
       );
     });
 
+    // ASC-AC-19 — non-admin, non-member: `isUserAdmin` stays at the suite's default (false).
     it('gate parity: refuses a user without the Center User role, same message as submitForReview', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
       const roleByUserRepository =
@@ -1862,6 +2510,32 @@ describe('BilateralCenterService', () => {
         /do not have permission/,
       );
       expect(qualityAssessmentService.assess).not.toHaveBeenCalled();
+    });
+
+    // ASC-T-7 / ASC-R-18 — the button runs `assess` first, so this half of ASC-AC-18 matters as
+    // much as the submit half: an admin who is not a Center User of the result's lead centre must
+    // still get past the shared `assertSubmittable` guard here too.
+    it('ASC-AC-18: lets an admin without the Center User role run the quality assessment', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      const result = await service.assess(user, 77);
+
+      expect(qualityAssessmentService.assess).toHaveBeenCalledWith(
+        user,
+        editingResult,
+      );
+      expect(result.status).toBe(200);
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
     });
 
     it('gate parity: refuses a result with no Science Program assigned, same message as submitForReview', async () => {
@@ -1941,6 +2615,7 @@ describe('BilateralCenterService', () => {
       expect(qualityAssessmentService.getLatest).toHaveBeenCalledWith(77);
     });
 
+    // ASC-AC-19 — non-admin, non-member: `isUserAdmin` stays at the suite's default (false).
     it('still refuses a user without the Center User role on the lead centre', async () => {
       const roleByUserRepository =
         module.get<RoleByUserRepository>(RoleByUserRepository);
@@ -1951,6 +2626,31 @@ describe('BilateralCenterService', () => {
       await expect(service.getLatest(user, 77)).rejects.toThrow(
         /do not have permission/,
       );
+    });
+
+    // ASC-T-7 / ASC-DD-9 (amended 2026-09-28) — the client polls `getLatest` while `assess`
+    // runs and loads it on open, so an admin non-member needs the same bypass.
+    // `validationCenterPermissions` is stubbed at 0 (would 403 a non-admin) so this proves the
+    // admin bypass, not a permissive default.
+    it('ASC-AC-18: lets an admin without the Center User role read the latest quality assessment', async () => {
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (roleByUserRepository.isUserAdmin as jest.Mock).mockResolvedValueOnce(
+        true,
+      );
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+      const qualityAssessmentService =
+        module.get<BilateralQualityAssessmentService>(
+          BilateralQualityAssessmentService,
+        );
+
+      await expect(service.getLatest(user, 77)).resolves.toBeDefined();
+      expect(qualityAssessmentService.getLatest).toHaveBeenCalledWith(77);
+      expect(
+        roleByUserRepository.validationCenterPermissions,
+      ).not.toHaveBeenCalled();
     });
 
     it('rejects an invalid resultId', async () => {
@@ -2695,6 +3395,62 @@ describe('BilateralCenterService', () => {
       );
 
       expect(resultsTocResultRepository.save).not.toHaveBeenCalled();
+    });
+
+    // BIL-RTE-T-2 — design §5.1: the Center-write decision, before any write.
+    describe('Center-write access rule (BIL-RTE-T-2, design §5.1)', () => {
+      it('falsifier (b): a non-admin denial returns 403 (via HttpException) and no repository write runs', async () => {
+        (
+          bilateralAccessService.assertCenterWrite as jest.Mock
+        ).mockRejectedValueOnce(
+          new ForbiddenException(
+            'Result 10 is under Science Program review (rule: center).',
+          ),
+        );
+
+        const dto = { toc_linkage_mode: 'project_default' as const };
+
+        await expect(
+          service.saveTocMapping(10, dto as any, user),
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 10 }),
+          'center-toc-mapping',
+          user,
+        );
+        expect(resultsTocResultRepository.save).not.toHaveBeenCalled();
+        expect(resultsTocResultRepository.update).not.toHaveBeenCalled();
+        expect(
+          resultsTocResultsService.updateTocResultPartial,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('falsifier (c): an admin at status 5 proceeds to write (allow path)', async () => {
+        (
+          resultsTocResultsService.getTocResultTypologyVerdicts as jest.Mock
+        ).mockResolvedValue(new Map([[2001, true]]));
+        (
+          resultsTocResultsService.updateTocResultPartial as jest.Mock
+        ).mockResolvedValue({ status: 200, response: { result_id: 10 } });
+
+        const dto = {
+          toc_linkage_mode: 'custom' as const,
+          result_toc_result: { result_toc_results: [{ toc_result_id: 2001 }] },
+        };
+
+        const res = await service.saveTocMapping(10, dto as any, user);
+
+        expect(res.status).toBe(200);
+        expect(bilateralAccessService.assertCenterWrite).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 10 }),
+          'center-toc-mapping',
+          user,
+        );
+        expect(
+          resultsTocResultsService.updateTocResultPartial,
+        ).toHaveBeenCalled();
+      });
     });
   });
 });

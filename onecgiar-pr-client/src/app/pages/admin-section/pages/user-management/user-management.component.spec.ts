@@ -7,7 +7,7 @@ import { PrFilterMultiselectComponent } from '../../../../shared/components/pr-f
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
@@ -1004,6 +1004,124 @@ describe('UserManagementComponent', () => {
       expect(fixture.debugElement.query(By.css('#table-filters-panel'))).toBeNull();
       expect(fixture.debugElement.query(By.css('.active-filter-chip__x'))).toBeTruthy();
     });
+  });
+
+  describe('ULR-T-4 - last login report download', () => {
+    const COLUMN_KEYS = ['id', 'first_name', 'last_name', 'email', 'is_cgiar', 'active', 'last_login', 'days_since_last_login'];
+    const SERVER_ROWS = [
+      { id: 1, first_name: 'Ana', last_name: 'Diaz', email: 'ana@cgiar.org', is_cgiar: 1, active: 1, last_login: '2026-03-04 09:15:00', days_since_last_login: 12 },
+      { id: 2, first_name: 'Bo', last_name: 'Li', email: 'bo@example.org', is_cgiar: 0, active: 1, last_login: null, days_since_last_login: null }
+    ];
+    let exportSpy: jest.Mock;
+    let reportSpy: jest.Mock;
+
+    const setApi = (obs: any) => {
+      reportSpy = jest.fn().mockReturnValue(obs);
+      (component.resultsApiService as any).GET_userLastLoginReport = reportSpy;
+    };
+    const lastLoginButton = () =>
+      fixture.debugElement.queryAll(By.css('.export-button app-pr-button'))[1];
+
+    beforeEach(() => {
+      exportSpy = jest.fn();
+      (component.exportTablesSE as any).exportExcel = exportSpy;
+      (mockApiService.alertsFe.show as jest.Mock).mockClear();
+    });
+
+    it('maps null last_login and days to empty string and passes last_login text untouched', async () => {
+      setApi(of({ response: SERVER_ROWS }));
+      await component.downloadLastLoginReport();
+
+      const rows = exportSpy.mock.calls[0][0];
+      expect(rows[0].last_login).toBe('2026-03-04 09:15:00');
+      expect(rows[0].days_since_last_login).toBe(12);
+      expect(rows[1].last_login).toBe('');
+      expect(rows[1].days_since_last_login).toBe('');
+      for (const row of rows) {
+        for (const v of Object.values(row)) {
+          expect(v).not.toBeNull();
+          expect(v).not.toBeUndefined();
+          expect(v).not.toBe('Not provided');
+        }
+      }
+      expect(rows[1].days_since_last_login).not.toBe(0);
+    });
+
+    it('uses base name last_login and the eight column keys and headers', async () => {
+      setApi(of({ response: SERVER_ROWS }));
+      await component.downloadLastLoginReport();
+
+      const [, fileName, columns] = exportSpy.mock.calls[0];
+      expect(fileName).toBe('last_login');
+      expect(columns.map((c: any) => c.key)).toEqual(COLUMN_KEYS);
+      expect(columns.map((c: any) => c.header)).toEqual(COLUMN_KEYS);
+      columns.forEach((c: any) => expect(c.width).toBeGreaterThan(0));
+      expect(Object.keys(exportSpy.mock.calls[0][0][0])).toEqual(COLUMN_KEYS);
+    });
+
+    it('is independent of table filters and the loaded users', async () => {
+      setApi(of({ response: SERVER_ROWS }));
+      await component.downloadLastLoginReport();
+      const baseline = exportSpy.mock.calls[0];
+
+      exportSpy.mockClear();
+      component.users.set([{ firstName: 'X' } as any]);
+      component.searchQuery.set('zzz');
+      component.selectedStatus.set('Inactive');
+      component.selectedCgiar.set('No');
+      component.selectedEntities.set([5]);
+      component.selectedPlatformRoles.set([1]);
+      component.selectedReportingRoles.set([2]);
+      await component.downloadLastLoginReport();
+
+      expect(exportSpy.mock.calls[0]).toEqual(baseline);
+      expect(reportSpy).toHaveBeenCalledWith();
+    });
+
+    it('is single-flight: a second call while pending sends one request', () => {
+      const pending = new Subject<any>();
+      setApi(pending);
+      component.downloadLastLoginReport();
+      expect(component.downloadingLastLogin()).toBe(true);
+      component.downloadLastLoginReport();
+      expect(reportSpy).toHaveBeenCalledTimes(1);
+      pending.next({ response: SERVER_ROWS });
+      pending.complete();
+      expect(component.downloadingLastLogin()).toBe(false);
+      expect(exportSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('on API error exports nothing, clears the flag and shows an alert', async () => {
+      setApi(throwError(() => new Error('boom')));
+      await component.downloadLastLoginReport();
+
+      expect(exportSpy).not.toHaveBeenCalled();
+      expect(component.downloadingLastLogin()).toBe(false);
+      expect((mockApiService.alertsFe.show as jest.Mock)).toHaveBeenCalledTimes(1);
+      expect((mockApiService.alertsFe.show as jest.Mock).mock.calls[0][0].status).toBe('error');
+    });
+
+    it('renders a second button with a plain-English accessible name, enabled at rest and disabled while running', () => {
+      const btn = lastLoginButton();
+      expect(btn).toBeTruthy();
+      expect(btn.nativeElement.textContent).toContain('Download last login report (.xlsx)');
+      expect(btn.componentInstance.disabled).toBe(false);
+
+      component.downloadingLastLogin.set(true);
+      fixture.detectChanges();
+      expect(lastLoginButton().componentInstance.disabled).toBe(true);
+      expect(lastLoginButton().componentInstance.loading).toBe(true);
+      expect(lastLoginButton().componentInstance.blocked).toBe(true);
+    });
+
+    it('keeps the existing Download .xlsx button as the first one', () => {
+      const first = fixture.debugElement.queryAll(By.css('.export-button app-pr-button'))[0];
+      expect(first.nativeElement.textContent).toContain('Download .xlsx');
+    });
+
+    // Gap (ULR-T-4 Disqualifier): a real workbook read-back is not feasible here - exceljs pulls an ESM
+    // build of uuid that this Jest config cannot parse. The cell value is covered only up to the mapper
+    // (''), and the written .xlsx cell is left to the manual file check in ULR-T-6.
   });
 
 });

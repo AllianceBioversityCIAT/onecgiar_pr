@@ -18,7 +18,6 @@ import { MyWorkCardComponent } from '../my-work-card/my-work-card.component';
 import { MY_WORK_EDITING_REORDER_COPY } from '../../my-work-editing-reorder.copy';
 import { MyWorkColumn, readyCount as readyCountOf } from '../../my-work.view-model';
 import { MyWorkEditingOrderService } from '../../services/my-work-editing-order.service';
-import { STATUS_META } from '../../../result-framework-reporting-home/status-meta';
 
 interface MyWorkColumnMeta {
   dotClass: string;
@@ -27,23 +26,29 @@ interface MyWorkColumnMeta {
   headerBorderClass: string;
 }
 
-/** Column visual tokens (design.md §6.3) — aligned with Overview W1/W2 + W3 status meters. */
+/** Column visual tokens (design.md §6.3).
+ *  Night sweep 2026-09-23 (X-3): the dot and count-badge colours are the shared result-status enum's
+ *  pairs (`result-status-tokens.ts`, P2-3786) — the same the Results Center and the review drawer
+ *  use. They used to come from the home widgets' STATUS_META, which paints Pending review grey,
+ *  Submitted violet and Editing with a non-enum yellow; Rejected borrowed the neutral grey. Written
+ *  as literal classes (Tailwind cannot build a class from a runtime value) and pinned to the enum
+ *  by the spec. STATUS_META itself is untouched: it also drives the home charts. */
 const MY_WORK_COLUMN_META: Record<MyWorkColumn['key'], MyWorkColumnMeta> = {
   editing: {
-    dotClass: STATUS_META[1].dotClass,
-    badgeClass: STATUS_META[1].chipClass,
+    dotClass: 'bg-[var(--pr-status-in-progress-fg)]',
+    badgeClass: 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)]',
     surfaceClass: 'bg-[var(--pr-surface-card)] border-[var(--pr-color-primary-200)]',
     headerBorderClass: 'border-[var(--pr-color-primary-100)]'
   },
   pending: {
-    dotClass: STATUS_META[5].dotClass,
-    badgeClass: STATUS_META[5].chipClass,
+    dotClass: 'bg-[var(--pr-status-submitted-fg)]',
+    badgeClass: 'bg-[var(--pr-status-submitted-bg)] text-[var(--pr-status-submitted-fg)]',
     surfaceClass: 'bg-[var(--pr-surface-app)] border-[var(--pr-border)]',
     headerBorderClass: 'border-[var(--pr-border)]'
   },
   submitted: {
-    dotClass: STATUS_META[3].dotClass,
-    badgeClass: STATUS_META[3].chipClass,
+    dotClass: 'bg-[var(--pr-status-submitted-fg)]',
+    badgeClass: 'bg-[var(--pr-status-submitted-bg)] text-[var(--pr-status-submitted-fg)]',
     surfaceClass: 'bg-[var(--pr-surface-app)] border-[var(--pr-border)]',
     headerBorderClass: 'border-[var(--pr-border)]'
   },
@@ -60,14 +65,14 @@ const MY_WORK_COLUMN_META: Record<MyWorkColumn['key'], MyWorkColumnMeta> = {
     headerBorderClass: 'border-[var(--pr-border)]'
   },
   discontinued: {
-    dotClass: STATUS_META[4].dotClass,
-    badgeClass: STATUS_META[4].chipClass,
+    dotClass: 'bg-[var(--pr-status-not-started-fg)]',
+    badgeClass: 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]',
     surfaceClass: 'bg-[var(--pr-surface-app)] border-[var(--pr-border)]',
     headerBorderClass: 'border-[var(--pr-border)]'
   },
   rejected: {
-    dotClass: 'bg-[var(--pr-status-not-started-fg)]',
-    badgeClass: 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]',
+    dotClass: 'bg-[var(--pr-status-rejected-fg)]',
+    badgeClass: 'bg-[var(--pr-status-rejected-bg)] text-[var(--pr-status-rejected-fg)]',
     surfaceClass: 'bg-[var(--pr-surface-app)] border-[var(--pr-border)]',
     headerBorderClass: 'border-[var(--pr-border)]'
   },

@@ -506,6 +506,83 @@ describe('DataControlService', () => {
       expect(service.fieldFeedbackList()).toEqual(['Lead center']);
     });
 
+    describe('offscreen gap sources (SBT-T-1)', () => {
+      beforeEach(() => {
+        dom = parser.parseFromString(
+          `
+        <div class="container">
+          <app-pr-select>
+            <span class="pr_label">Submitter</span>
+            <div class="pr-field mandatory complete"></div>
+          </app-pr-select>
+        </div>`,
+          'text/html'
+        );
+        dom.querySelector('.pr_label').innerText = 'Submitter';
+        jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+        jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+      });
+
+      it('folds a registered off-screen source into fieldFeedbackList and reports incomplete even though the only DOM field is complete', () => {
+        // Falsifier (SBT-T-1): one complete `.pr-field.mandatory` + one registered source returning
+        // `['Outcome N~2: Level']`. Mutation: delete the `feedback.push(...offscreen)` line in
+        // data-control.service.ts → this assertion goes red.
+        const source = () => ['Outcome N~2: Level'];
+        service.registerOffscreenFeedback(source);
+
+        const result = service.someMandatoryFieldIncompleteResultDetail('.container');
+
+        expect(result).toBe(true);
+        expect(service.fieldFeedbackList()).toEqual(['Outcome N~2: Level']);
+        // 1 DOM `.pr-field.mandatory` (complete) + 1 off-screen gap = 2. Denominator grows with the gap.
+        expect(service.mandatoryFieldsTotal()).toBe(2);
+      });
+
+      it('stops folding a source once it has been unregistered (service half of SBT-R-4)', () => {
+        const source = () => ['Outcome N~2: Level'];
+        service.registerOffscreenFeedback(source);
+        service.unregisterOffscreenFeedback(source);
+
+        const result = service.someMandatoryFieldIncompleteResultDetail('.container');
+
+        expect(result).toBe(false);
+        expect(service.fieldFeedbackList()).toEqual([]);
+      });
+
+      it('catches a throwing gap source without swallowing the DOM gaps (SBT-AC-10)', () => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        dom = parser.parseFromString(
+          `
+        <div>
+          <span class="pr_label"></span>
+          <div class="container">
+            <div class="pr-input mandatory">
+              <div class="input-validation"></div>
+            </div>
+          </div>
+        </div>`,
+          'text/html'
+        );
+        dom.querySelector('.pr_label').innerText = 'tag';
+        jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+        jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+
+        const throwingSource = () => {
+          throw new Error('boom');
+        };
+        service.registerOffscreenFeedback(throwingSource);
+
+        const result = service.someMandatoryFieldIncompleteResultDetail('.container');
+
+        expect(result).toBe(true);
+        expect(service.fieldFeedbackList()).toEqual(['tag']);
+      });
+
+      it('keeps fieldFeedbackList a writable signal (SBT-AC-11, gate for D5)', () => {
+        expect(typeof service.fieldFeedbackList.set).toBe('function');
+      });
+    });
+
     it('should set the title and currentSectionName', () => {
       const sectionName = 'Test Section';
       const title = 'Test Title';

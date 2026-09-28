@@ -13,7 +13,10 @@ export class ClarisaProjectsController {
   @ApiOperation({ summary: 'Get all Clarisa projects' })
   @ApiResponse({
     status: 200,
-    description: 'List of all active Clarisa projects',
+    description:
+      'List of all active Clarisa projects. Each row additionally carries ' +
+      '`owner_center_institution_id` (number | null): the CLARISA institution id of the ' +
+      "project's owning Center, or null when it cannot be resolved.",
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findAll() {

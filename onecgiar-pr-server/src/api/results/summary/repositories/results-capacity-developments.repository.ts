@@ -15,6 +15,13 @@ export class ResultsCapacityDevelopmentsRepository
   extends BaseRepository<ResultsCapacityDevelopments>
   implements LogicalDelete<ResultsCapacityDevelopments>
 {
+  /**
+   * Night sweep 2026-09-23, P3 / R2 — phase replication copies the row with hand-written column lists.
+   * `non_binary_using`, `has_unkown_using` and `is_attending_for_organization` were never listed, so a
+   * Capacity Sharing result moved to a new phase lost its non-binary / unknown counts and the
+   * attendance answer (while its organizations DID travel, `versioning.service.ts` replicate), leaving
+   * the copy unable to go green. Purely additive: the three columns are now copied.
+   */
   createQueries(
     config: ReplicableConfigInterface<ResultsCapacityDevelopments>,
   ): ConfigCustomQueryInterface {
@@ -33,7 +40,10 @@ export class ResultsCapacityDevelopmentsRepository
       rcd.male_using,
       rcd.female_using,
       rcd.capdev_delivery_method_id,
-      rcd.capdev_term_id
+      rcd.capdev_term_id,
+      rcd.non_binary_using,
+      rcd.has_unkown_using,
+      rcd.is_attending_for_organization
       from results_capacity_developments rcd where rcd.result_id = ${
         config.old_result_id
       } and rcd.is_active > 0;
@@ -49,7 +59,10 @@ export class ResultsCapacityDevelopmentsRepository
         male_using,
         female_using,
         capdev_delivery_method_id,
-        capdev_term_id
+        capdev_term_id,
+        non_binary_using,
+        has_unkown_using,
+        is_attending_for_organization
         )
         select
         rcd.is_active,
@@ -63,7 +76,10 @@ export class ResultsCapacityDevelopmentsRepository
         rcd.male_using,
         rcd.female_using,
         rcd.capdev_delivery_method_id,
-        rcd.capdev_term_id
+        rcd.capdev_term_id,
+        rcd.non_binary_using,
+        rcd.has_unkown_using,
+        rcd.is_attending_for_organization
         from results_capacity_developments rcd where rcd.result_id = ${
           config.old_result_id
         } and rcd.is_active > 0`,

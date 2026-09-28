@@ -242,6 +242,11 @@ results-outlet/
             └── settings/
 ```
 
+`requests/received` rows open a right-side detail drawer (`components/contribution-request-drawer/`)
+alongside the row's original popup flow (both live, never together — CRD-DD-10). See
+`.../components/contribution-request-drawer/CLAUDE.md` and the sibling
+`.../components/notification-item/CLAUDE.md`.
+
 ### 3.4 Adding a new feature module under `pages/`
 
 1. Create `pages/<feature>/` with the standard layout (§3.1).

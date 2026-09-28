@@ -1,0 +1,528 @@
+
+PRMS ⇄ Progress Tracker — the pull bridge: how it works, getting started, what remains
+Prepared by: Jose Berenguer, Technical Lead – AI, CGIAR System Organization
+For: the PRMS technical team (Alliance Bioversity–CIAT) and the Portfolio Performance & Results team
+Date: 15 September 2026 · Version: 1.0 (draft for review) · Companion to: “Progress Tracker → PRMS on-ramp: the record, the five questions, and a proposed way forward” and the FAQ for Programs and Accelerators
+In five lines
+On 15 September the PRMS technical team and Jose agreed that the minimum product is two-way, and that the more valuable half is the pull: when a user is about to report on a KPI in the PRMS Reporting Tool, PRMS fetches the results the Progress Tracker can propose for that KPI (Héctor, Juan Carlos; Juan David: “the technical challenge is very low”).
+That half now exists end to end as a working prototype: three read-only endpoints are live on the Progress Tracker Interoperability API (dev and staging; production off by flag), and a “Progress Tracker” source sits inside the Report form of an adjusted local copy of the PRMS Reporting Tool, built from the public code with synthetic data, on the current upstream look and feel.
+The operating model is pull → check → confirm → pre-fill → the user presses Create. The API never writes to PRMS; nothing is saved until the user creates; a person finalises every result; PRMS remains the system of record; pooled Window 1/2 programs only — the same story as the FAQ and the on-ramp document.
+Getting started is one GET — …/dev/api/prms/indicators/{indicator_id}/results — with interactive documentation at …/dev/docs. A first draft for a KPI with evidence costs about US$0.01 and 20 seconds; every later call is served from cache in 0.2 s. Sections 4 to 7 give the URLs, real responses, the field table and the numbered port list for the real Reporting Tool.
+What remains is listed as decisions versus work in section 8 (API key, production flag, ownership of the indicator ids, duplicate check, evidence coverage, prompt tuning, TEST before PROD, FAQ co-sign). Hosting the whole PRMS copy in the cloud, should it be useful, is about 1.5–2.5 days and US$60–110 a month (section 9).
+Contents
+	 TOC \o "1-2" \h \z \u In five lines	1
+	1. What was agreed on 15 September	2
+	2. The operating model	3
+	3. Architecture	4
+	4. The endpoints (getting started)	5
+	4.1 GET /api/prms/indicators/{indicator_id}/results — the proposals for one KPI	5
+	4.2 GET /api/prms/indicators/resolve — from PORB texts to the Progress Tracker id	8
+	4.3 GET /api/prms/programs/{program_id}/ready-counts — the “N results ready” badge	8
+	4.4 Errors, edge cases, timing and cost	9
+	5. Mapping the KPI	10
+	6. What it looks like	11
+	7. What the PRMS team would implement	16
+	8. Missing and necessary steps before this is real	17
+	8.1 Alliance side (PRMS Reporting Tool)	17
+	8.2 Progress Tracker side (Interoperability API)	17
+	8.3 Joint	18
+	9. Hosting the PRMS prototype in the cloud	19
+	Annex A — Glossary	20
+	Annex B — Sources and references	20
+List of figures
+	 TOC \h \z \c "Figure" Figure 1 — The pull in six steps: the user starts and ends in PRMS; the Progress Tracker is only read	3
+	Figure 2 — Architecture: the PRMS server proxies one read-only call to the Interoperability API; the…	4
+	Figure 3 — Mapping a PRMS indicator row to the Progress Tracker id: same PORB texts, one deterministic…	10
+	Figure 4 — The Reporting tab (AOW01 Market Intelligence, 22 KPIs, the Report button on every indicator…	11
+	Figure 5 — Left: the existing external-source pattern for knowledge-product KPIs, “Browse repositories |…	12
+	Figure 6 — Left: the Progress Tracker tab lists the proposal fetched live from the Interoperability API…	13
+	Figure 7 — Left: after “Use this result” — the title (8 of 30 words) and description are pre-filled, the…	14
+	Figure 8 — After the user typed the contribution and pressed Create and continue: result 21, Editing,…	15
+	Figure 9 — A demo-grade cloud shape for the adjusted local copy: one instance, one managed database,…	19
+1. What was agreed on 15 September
+The call (31 minutes, recorded, in Spanish; Héctor Tobón, Juan Carlos Cadavid, Juan David Delgado, Ángel Jarrín, Jose Berenguer) closed the loop opened by the 24 August e-mail. Quoted sparingly, the points that shape this prototype:
+Two-way, two APIs. Héctor (14:46): the minimum viable product is (a) adapting the existing bilateral ingestion API to accept W1/W2, which enables the Progress Tracker’s existing “send” button, and (b) “el consumo de la información del Progress Tracker para que cargue dentro del PRMS Reporting Tool” — a module “much like the CGSpace one” (25:14).
+The pull is the valuable half. Juan Carlos (17:50): “no tanto el push… sino el de recuperar, eso va a ser como algo muy positivo para el usuario final”; a person opens the indicator, sees that results are ready to bring, and brings them (25:19). Juan David (24:51): the technical viability is there and “the technical challenge is very low”.
+Shape of the service. Jose (11:39, 19:39–23:54): adjust the Interoperability API so there is an endpoint where you pick the KPI and it returns results — a KPI can have several, so it is not one to one — and PRMS pulls the text into the box; the user presses create or save. Jose builds it as something external and hands it over.
+Scope. Ángel (26:19) asked whether this applies only to programs; Jose: pooled Window 1/2 only, never Centers or bilateral projects.
+A prototype instead of a mock-up. Héctor (29:18) proposed a mock-up for Nicoleta; Jose asked to wait for something tangible built from the transcript. This document and the screenshots in section 6 are that prototype.
+Capacity and dates. The Alliance team is fully on pooled-funding and W3/bilateral deliveries this week and next; Juan Carlos can dedicate time with Juan David after the week of 21–25 September. The 2026 Reporting Tool opened on 14 September; the information session for Programs and Accelerators is on 17 September.
+Duplicates. Ángel (0:06): PRMS already validates duplicate titles and is building a metadata-based check (same metadata, different title); this becomes the natural home of the duplicate rule in section 8.
+Agreed point
+Who
+Where it lands in this prototype
+PRMS pulls results per KPI; the user creates
+Jose, Juan Carlos, Héctor
+Section 2 (operating model), section 6 (the Report form)
+One KPI → one or many results
+Jose
+results[] in the response contract, section 4
+Something external, handed over
+Jose, Juan David
+Three endpoints (section 4) + the numbered port list (section 7)
+Programs, pooled W1/W2 only
+Ángel, Jose
+The Progress Tracker’s reference data is PORB-only; no Center or bilateral indicators exist in it
+“N results ready to bring” on the indicator
+Juan Carlos
+ready-counts endpoint (section 4.3); badge left optional
+Duplicate detection
+Ángel, Juan David
+result_key + evidence_fingerprint on every draft (section 8)
+Mock-up for Nicoleta
+Héctor, Jose
+This document; section 8 (c) proposes the joint sign-off
+
+2. The operating model
+
+Figure 1 — The pull in six steps: the user starts and ends in PRMS; the Progress Tracker is only read
+The user never leaves the PRMS Reporting Tool. On the Reporting tab they open the KPI they want to report and press Report, as today. Inside the Report form, next to the existing entry mode, there is a source called Progress Tracker. Opening it asks the Progress Tracker for the results it can propose for that KPI; the user reads them, opens the details (which evidence supports the draft, why this result type, what is still missing), and presses Use this result. The free-text fields of PRMS’s own create form — title, description and, where the KPI leaves it open, the result type — are pre-filled and left unsaved for review. The result exists only when the user presses PRMS’s own Create and continue; it then lands exactly where any manually created result lands, in Editing, owned by the Science Program, labelled W1/W2.
+Stated plainly, and consistent with the FAQ (questions 3, 6, 9 and 10) and the on-ramp document:
+The API never writes to PRMS. The Interoperability API only answers GET requests. The only thing it stores on its own side is a cache of the drafts it produced, keyed on the evidence it saw.
+Nothing is saved until the user creates. Pre-fill is not creation. A user can look at the proposals, use one, change their mind and choose another, or ignore them all and type by hand.
+A person finalises every result, through the normal PRMS workflow: complete the sections, validate, submit, QA.
+PRMS remains the system of record. The Progress Tracker keeps evidence and drafts; it does not keep a copy of the result.
+Pooled Window 1/2 programs only. The Progress Tracker’s indicators come from the PORBs, which contain only W1/W2 data.
+Because the result is created by PRMS’s own Create action, the question raised on the call — whether pulled results should land in Editing or Pending Review — disappears: they land where PRMS puts a result created by that user. The push door discussed since June (registering the Progress Tracker as a platform with its own key and keep_editing, both shipped by the PRMS team on 27 August and 10 September) remains the Alliance’s item (a); this document is item (b).
+3. Architecture
+
+Figure 2 — Architecture: the PRMS server proxies one read-only call to the Interoperability API; the write to PRMS happens only when the user creates
+Three moving parts, two of which already exist in the real PRMS code base:
+PRMS Reporting Tool, Angular client. The Report form gains one source component (“Progress Tracker”) that lists proposals and pre-fills the form. It talks only to the PRMS server.
+PRMS Reporting Tool, NestJS server. A small progress-tracker module proxies the call server-to-server, exactly like the existing cgspace-discovery module proxies CGSpace, MELSpace and WorldFish: base URL and API key from environment variables, a whitelisted query, a 25 s timeout, and a classified status (ok, not_found, unavailable) so the client never sees an upstream error message or host.
+Progress Tracker Interoperability API (FastAPI on AWS Lambda behind API Gateway, eu-central-1; repository cgiar-ppu/progress-tracker-interoperability-api). A new prms_pull router with three routes reads the Progress Tracker’s reference and evidence tables (DynamoDB), extracts text from the evidence files (S3), asks a small model (Claude Haiku 4.5) for PRMS-shaped drafts, and caches the answer. Feature-flagged: PRMS_PULL_ENABLED is on for dev and staging and off for production.
+Component
+Dev
+Staging / Test
+Production
+Interop API base URL
+https://mrl8hgyyye.execute-api.eu-central-1.amazonaws.com/dev
+https://seyxtu7vha.execute-api.eu-central-1.amazonaws.com/staging
+not enabled (flag off); URL shared when promoted
+Interactive docs (OpenAPI)
+<base>/docs — tag “PRMS Pull”
+<base>/docs
+—
+PRMS_PULL_ENABLED
+on
+on
+off
+Authentication today
+open (AUTH_ENABLED=false)
+open
+X-API-Key once switched on
+Drafting model
+claude-haiku-4-5-20251001
+same
+same
+Progress Tracker web app (deep links)
+https://dev-performance-tracker.synapsis-analytics.com
+https://staging-performance-tracker.synapsis-analytics.com
+https://performance-tracker.synapsis-analytics.com
+PRMS side
+adjusted local copy (this prototype)
+PRMS TEST — the first real target
+PRMS PROD, after TEST
+
+Deployment record: pull requests #101 (feature) and #102 (refinement) on the interop repository, merged to main at 02270e55; CI 649 tests, lint and type checks clean; dev deployed automatically, staging deployed by workflow dispatch on the same commit; the production Lambda was not touched.
+4. The endpoints (getting started)
+All three routes are GET, idempotent and safe to call repeatedly. Interactive documentation, with request and response schemas, is at:
+https://mrl8hgyyye.execute-api.eu-central-1.amazonaws.com/dev/docs
+The staging equivalent is https://seyxtu7vha.execute-api.eu-central-1.amazonaws.com/staging/docs. In the examples below $BASE is either base URL; no header is needed today.
+4.1 GET /api/prms/indicators/{indicator_id}/results — the proposals for one KPI
+Purpose. Given the Progress Tracker’s indicator_id for the KPI being reported, return one to N draft results shaped for PRMS, each citing the evidence it was drafted from.
+Query parameter
+Default
+Meaning
+max_results
+5
+1..10 — upper bound on the number of drafts
+refresh
+false
+ignore the cache and draft again (costs one model call)
+mode
+auto
+auto = AI drafting with a template fallback; template = placeholder only, instant, free
+
+BASE=https://mrl8hgyyye.execute-api.eu-central-1.amazonaws.com/dev
+curl "$BASE/api/prms/indicators/8006329bfd49/results?max_results=3"
+
+Real response from dev (trimmed; the full JSON is in the interop repository’s docs/PRMS-PULL.md and in the OpenAPI schema). This KPI — Food Frontiers and Security, AOW02, “2.1.1 Prevent”, CIAT (Alliance), target 4 — has 13 evidence items in the Progress Tracker; the call took 19.9 s the first time and returned three drafts:
+{
+ "indicator": {
+  "indicator_id": "8006329bfd49", "program_id": "fdb65d1a595c",
+  "program": "Food Frontiers and Security",
+  "aow": "AOW02: Fragile and Conflict-affected Food Systems",
+  "center": "CIAT (Alliance)", "hlo_title": "2.1.1 Prevent",
+  "description": "AW2P3: Fragility and Conflict Sensitivity Hub- Design and roll out …",
+  "kpi_type": "custom", "target": "4", "countries": "Senegal, Egypt, Kenya",
+  "result_type_default": "other_output"
+ },
+ "results": [
+  {
+   "result_key": "8006329bfd49:1",
+   "result_type": "other_output", "result_type_label": "Other output",
+   "title": "Conflict Sensitivity Repository framework and resource extraction completed",
+   "description": "Completed resource extraction process from 11 CGIAR centers and established a taxonomizing framework …",
+   "evidence": [ { "item_key": "E2", "submission_id": "d0ee44fe5fa44519", "kind": "text",
+                   "name": "[Qualitative level: On Track] The evidence target is listed …", "url": null } ],
+   "countries": [],
+   "impact_areas": { "gender": 0, "climate": 1, "environment": 0, "nutrition": 0, "poverty": 1,
+                     "justification": "climate: Climate-security analytics integration embedded …" },
+   "gender_split": { "women": null, "men": null }, "people_trained": null,
+   "knowledge_product_handle": null,
+   "confidence": 0.85,
+   "rationale": "Distinct foundational output: framework and resource extraction for Repository infrastructure. …",
+   "missing_info": [ "Specific countries where center consultations occurred", "Number of resources extracted per center" ]
+  },
+  { "result_key": "8006329bfd49:2", "result_type": "knowledge_product", "…": "…" },
+  { "result_key": "8006329bfd49:3", "result_type": "other_output", "…": "…" }
+ ],
+ "evidence_count": 13,
+ "generated_at": "2026-09-15T16:48:25.851727+00:00",
+ "generated_by": { "mode": "ai", "model": "claude-haiku-4-5-20251001", "prompt_version": "prms-pull-v2",
+                   "input_tokens": 3134, "output_tokens": 1364, "duration_ms": 14115, "files_read": 6,
+                   "fallback_reason": null },
+ "cache": { "hit": false, "evidence_fingerprint": "853894227c38…", "cached_at": "2026-09-15T16:48:25.851727+00:00" },
+ "source": { "system": "progress-tracker", "environment": "dev",
+             "pt_url": "https://dev-performance-tracker.synapsis-analytics.com/program/Food%20Frontiers%20and%20Security?indicator=8006329bfd49" }
+}
+
+The second call to the same URL returned the identical results[] with "cache": {"hit": true} in 0.21 s.
+A KPI with no evidence yet is answered instantly with a placeholder, so the PRMS component always has something to show:
+curl "$BASE/api/prms/indicators/002a9c84e5e0/results"
+
+{
+ "indicator": { "indicator_id": "002a9c84e5e0", "program": "Genebank", "aow": "AOW04: Germplasm Health",
+                "kpi_type": "Number of innovations (innovation development)", "target": "1", "…": "…" },
+ "results": [ { "result_key": "002a9c84e5e0:1", "result_type": "innovation_development",
+                "title": "[Draft — Innovation development] 4.2.2. Improved phytosanitary protocols for clonal and seed germplasm …",
+                "description": "Draft innovation development result proposed by the Progress Tracker for the KPI … No evidence has been attached to this KPI in the Progress Tracker yet. Complete in PRMS: …",
+                "evidence": [], "confidence": 0.1,
+                "missing_info": [ "Replace the placeholder title and description with the real result.", "…" ] } ],
+ "evidence_count": 0,
+ "generated_by": { "mode": "template", "model": null, "fallback_reason": "no_evidence", "…": "…" },
+ "cache": { "hit": false, "cached_at": null, "…": "…" }
+}
+
+The result object, field by field. Everything a PRMS form can use, plus guidance for the person:
+Field
+Type
+Meaning and how PRMS may use it
+result_key
+string
+<indicator_id>:<n> — stable within one generation; keep it on the created result for duplicate detection
+result_type · result_type_label
+slug · label
+one of knowledge_product, capacity_sharing, innovation_development, innovation_use, policy_change, other_output, other_outcome (the vocabulary live-validated on PRMS TEST in July). Default comes from the KPI type (indicator.result_type_default); the model may override per result and says why in rationale
+title
+≤ 30 words
+pre-fills Result title (PRMS’s own 30-word limit)
+description
+≤ 150 words
+pre-fills the result description
+evidence[]
+list
+the Progress Tracker submissions the draft cites: item_key (E1, E1.f2 …), submission_id, kind (file · url · text), name, url (when a link) — shown to the person; not part of the create payload
+countries[]
+list
+guidance for the Geographic location section (filled after creation in PRMS)
+impact_areas
+object
+0/1/2 rubric per impact area + justification — guidance for the Impact-area scores section
+gender_split · people_trained
+object · number
+only for capacity_sharing; PRMS requires an explicit women/men split
+knowledge_product_handle
+url or null
+a DOI or repository handle found in the evidence — pre-fills the repository link for knowledge products
+confidence
+0..1
+the model’s own confidence; shown as a chip
+rationale
+text
+why this result and this type — shown under Details
+missing_info[]
+list
+what the person still has to add in PRMS — shown under Details
+
+The envelope. indicator echoes the KPI’s PORB fields and target; evidence_count is the number of non-deleted submissions on the KPI; generated_by tells the mode (ai or template), model, prompt version, token counts, duration, files read and, when relevant, a fallback_reason; cache carries hit, the evidence_fingerprint (a hash of the evidence the draft was made from) and cached_at; source.pt_url deep-links the KPI in the Progress Tracker so the person can look at the originals.
+4.2 GET /api/prms/indicators/resolve — from PORB texts to the Progress Tracker id
+Purpose. Let PRMS find the Progress Tracker’s indicator_id from the PORB fields it already displays, without computing the hash itself (section 5 explains the formula and why the server-side path is safer). Query: program (name) or program_id; aow, center, hlo_title, description; optional kpi_type as a tie-breaker. At least one of hlo_title or description is required (422 otherwise); 404 when the program is unknown.
+curl -G "$BASE/api/prms/indicators/resolve" \
+  --data-urlencode "program=Food Frontiers and Security" \
+  --data-urlencode "aow=AOW02: Fragile and Conflict-affected Food Systems" \
+  --data-urlencode "center=CIAT (Alliance)" \
+  --data-urlencode "hlo_title=2.1.1 Prevent" \
+  --data-urlencode "description=<the full PORB description of the row>"
+
+{
+ "indicator_id": "8006329bfd49", "match": "exact",
+ "program_id": "fdb65d1a595c", "program": "Food Frontiers and Security",
+ "computed_indicator_id": "8006329bfd49",
+ "candidates": [
+  { "indicator_id": "8006329bfd49", "hlo_title": "2.1.1 Prevent", "aow": "AOW02: Fragile and Conflict-affected Food Systems",
+    "center": "CIAT (Alliance)", "description": "AW2P3: Fragility and Conflict Sensitivity Hub- Design and ro…",
+    "kpi_type": "custom", "score": 1.0 },
+  { "indicator_id": "22ba725f9423", "hlo_title": "2.1.1 Prevent", "center": "CIAT (Alliance)",
+    "description": "AW 2P1: Early Warning and Decision Support Tools for Fragile…", "kpi_type": "Number of knowledge products", "score": 0.668 }
+ ]
+}
+
+match is exact (hash hit), fuzzy (best normalised similarity ≥ 0.82 among the program’s indicators) or none (still returns up to five candidates for a picker). The resolver strips the label prefixes PRMS shows on its rows (5--.-------, ACTIVITY DESCRIPTION: and similar) and scores a truncated description against the full text: the same KPI sent in PRMS row-label style — description=5--.------- CIAT (Alliance) - AW2P3: Fragility and Conflict Sensitivity Hub- Design and roll out a Fr — resolved to 8006329bfd49 as fuzzy with score 0.878.
+4.3 GET /api/prms/programs/{program_id}/ready-counts — the “N results ready” badge
+Purpose. One call per program, one indexed query on the Progress Tracker side (0.20 s measured), returning per indicator how many evidence items exist and how many drafts are already cached. The path accepts the program id or its name; min_evidence (default 1) filters the list.
+curl "$BASE/api/prms/programs/fdb65d1a595c/ready-counts"
+curl "$BASE/api/prms/programs/Food%20Frontiers%20and%20Security/ready-counts"
+
+{
+ "program_id": "fdb65d1a595c",
+ "items": [
+  { "indicator_id": "8006329bfd49", "evidence_count": 13, "cached_results_count": 3, "cached_at": "2026-09-15T16:36:50.057053+00:00" },
+  { "indicator_id": "906bb71c7c54", "evidence_count": 8,  "cached_results_count": 0, "cached_at": null },
+  { "indicator_id": "6ed46cb3da80", "evidence_count": 7,  "cached_results_count": 0, "cached_at": null },
+  { "…": "92 more" }
+ ],
+ "indicators_with_evidence": 95,
+ "generated_at": "2026-09-15T16:36:53.391188+00:00"
+}
+
+cached_results_count is 0 until a KPI has been drafted once; PRMS can show evidence_count > 0 as “evidence available” until then. Program ids (and names) are listed by the existing GET $BASE/api/programs.
+4.4 Errors, edge cases, timing and cost
+Situation
+What happens and what PRMS should do
+Unknown indicator_id, or the flag is off in that environment
+HTTP 404. The prototype’s PRMS module maps it to not_found and the form shows “this KPI is not known to the Progress Tracker” with the Manual entry escape
+Bad query value (e.g. max_results=20)
+HTTP 422 with the validation detail
+KPI without evidence
+HTTP 200, mode=template, fallback_reason="no_evidence", one placeholder per result type, 0.2 s, not cached
+mode=template requested
+HTTP 200 with the placeholder, instant and free — useful to render immediately and upgrade later
+Model failure, time-out or nothing usable
+HTTP 200, mode=template with the error text in fallback_reason; nothing is cached; PRMS can retry (Refresh)
+Cache
+One model call per (indicator, evidence fingerprint). The fingerprint changes when submissions, files, notes, prompt version, model or max_results change; refresh=true bypasses it. No time-to-live
+First call on a rich KPI
+20–22 s measured on the 13-item KPI (cold start ≈ 2 s, file extraction 3–4 s, model 13–15 s). The Lambda keeps the whole call inside the 29 s API Gateway limit (extraction capped at 9 s, model gets the rest, template fallback on time-out). Client time-out ≥ 30 s
+Cached, template, resolve, ready-counts
+0.2–0.7 s
+Cost of a fresh draft
+3,134 input + 1,364 output tokens on the 13-item KPI = US$0.0099 at Claude Haiku 4.5 list price (US$0.0113 with the first prompt version; US$0.0107 on staging). Cached and template calls cost no model tokens
+What the API reads and writes
+Reads the Progress Tracker’s reference and evidence tables and the evidence files (first 3 pages of a PDF, ≤ 6 files, ≤ 8 MB each, images not read, URLs cited not fetched). Writes only its own cache row and one audit row per generation. Never writes to PRMS
+
+5. Mapping the KPI
+
+Figure 3 — Mapping a PRMS indicator row to the Progress Tracker id: same PORB texts, one deterministic hash, two ways to obtain it
+The Progress Tracker keys every KPI as indicator_id = md5("{program}|{aow}|{center}|{hlo_title}|{description}") truncated to 12 hexadecimal characters, computed over the PORB master texts (the same formula the Progress Tracker’s reference seed uses; program id = md5("PROGRAM|{name}")[:12]). The 2026 Reporting tab of PRMS shows the same PORB rows — for Breeding for Tomorrow, AOW01 lists 22 KPIs in both systems and the row texts are the PORB activity descriptions — so the composite key can be rebuilt from what PRMS already holds: the program name, the AoW as "AOW01: <name>", the Center label as written in the PORB (CIAT (Alliance), Bioversity (Alliance), AfricaRice, CIMMYT …), the HLO title and the indicator description.
+Two ways to obtain the id, both supported:
+Compute it locally — deterministic, no call. Caveat: about 16 PORB rows collide on those five fields (same texts, different KPI type); the Progress Tracker re-keys those siblings through a disambiguation table, so a local hash can point at the wrong sibling.
+Call /resolve once per row, server-side, and store the answer — the recommended path. It returns exact when the hash matches, fuzzy when PRMS’s row label differs cosmetically (prefixes, truncation, upper case), and always a short candidates[] list with the KPI type for a picker. The example in section 4.2 resolved a PRMS-style row label with score 0.878.
+Recommendation: PRMS stores the Progress Tracker id on its ToC indicator rows. In the adjusted local copy this is what makes the whole flow need no extra code: the id sits on the indicator row (related_node_id and toc_result_indicator_id of toc_results_indicators), the Report form already carries indicators[0].related_node_id into the create payload, and PRMS’s own framework create stores it in results_toc_result_indicators.toc_results_indicator_id — verified on the result created in section 6, which carries 5d51da6c6916. In the real ToC catalogue that column holds the ToC node identifier, so the PRMS team would add a column (or a side table) for the Progress Tracker id and fill it once per reporting year with /resolve; when PORB texts are refreshed the ids change and the rows must be re-resolved (ownership of that step is a decision in section 8).
+6. What it looks like
+All screenshots in this section come from an adjusted local copy built from the public PRMS code with synthetic data (Breeding for Tomorrow, whose 391 KPIs, 20 high-level outputs and 5 areas of work were loaded from the Progress Tracker’s own reference data — planning data, not PRMS data). The Progress Tracker side is the live dev environment of the Interoperability API.
+
+Figure 4 — The Reporting tab (AOW01 Market Intelligence, 22 KPIs, the Report button on every indicator row) — adjusted local copy built from the public PRMS code with synthetic data
+The walk recorded on 15 September: log in → SP01 Breeding for Tomorrow → Reporting → AOW03 Inclusive Delivery → search “geospatial model” → the IITA row under HLO11.AOW3.IO4 “Position for demand” (Innovation Development, 2026 target 2; Progress Tracker id 5d51da6c6916, two evidence submissions with files) → Report.
+
+Figure 5 — Left: the existing external-source pattern for knowledge-product KPIs, “Browse repositories | Manual entry” (CGSpace, MELSpace, WorldFish). Right: the same place on an innovation-development KPI now offers “Manual entry | Progress Tracker” — adjusted local copy built from the public PRMS code with synthetic data
+
+Figure 6 — Left: the Progress Tracker tab lists the proposal fetched live from the Interoperability API (type chip, confidence, evidence list, “Use this result”, “Open in Progress Tracker”; footer: nothing is saved until you press Create and continue). Right: Details expanded — impact-area guidance, why this result and this type, what is still to add in PRMS — adjusted local copy built from the public PRMS code with synthetic data
+
+Figure 7 — Left: after “Use this result” — the title (8 of 30 words) and description are pre-filled, the banner says nothing has been saved, and the footer still counts one required field (the contribution) before Create is possible. Right: the failure state when the Progress Tracker does not answer — the form stays fully usable by hand — adjusted local copy built from the public PRMS code with synthetic data
+
+Figure 8 — After the user typed the contribution and pressed Create and continue: result 21, Editing, Initiative Output, W1/W2, submitter SP01 Breeding for Tomorrow, five sections still to complete — adjusted local copy built from the public PRMS code with synthetic data
+What the recording proves, in the local copy:
+Exactly one call left the PRMS client for the Progress Tracker (GET /api/progress-tracker/indicators/5d51da6c6916/results?max_results=5, through the PRMS server, with the user’s PRMS session) and exactly one POST /api/results-framework-reporting/create when the user pressed the button — nothing in between.
+The create payload is PRMS’s own: result_name = the pre-filled title, result_type_id 7 (Innovation Development, unchanged because the KPI fixes it), contributing_indicator 1 typed by the user, the indicator context from the row; the draft description travels in toc_progressive_narrative with a provenance tail (“drafted from CGIAR Progress Tracker evidence: 6 items, KPI 5d51da6c6916, model claude-haiku-4-5-20251001, 2026-09-15”).
+In the database: result 21 with status_id 1 (Editing) and source W1/W2; its ToC link carries the narrative; results_toc_result_indicators.toc_results_indicator_id = 5d51da6c6916; result_indicators_targets.contributing_indicator = 1.00.
+Three honest limitations of the prototype, all visible in the figures: the draft description lands in the ToC-link narrative rather than in the visible “Description of Result” box (a three-line server change if the PRMS team prefers the visible box — section 8); for knowledge-product KPIs the pick pre-fills the repository handle and stops at the metadata sync, which cannot run in the local copy; countries, impact-area scores and gender split are shown as guidance only because PRMS captures them in later sections.
+7. What the PRMS team would implement
+Everything below exists in the adjusted local copy, every changed line tagged // PT-BRIDGE, and can be handed over as one PR-shaped diff against the Reporting Tool (nothing has been pushed to any Alliance repository). The numbering follows the order of work.
+Server module — copy src/api/progress-tracker/ (6 files, 607 lines: module, controller, service, two query DTOs, unit tests) and register it in src/api/modules.routes.ts ({ path: 'progress-tracker' }) and src/app.module.ts. It needs only HttpModule and inherits the JWT middleware and the throttler like every /api route. It mirrors cgspace-discovery: base URL and key from environment, whitelisted query DTOs, 25 s time-out, classified status, never forwards an upstream message or host to the client.
+Environment keys — PT_INTEROP_BASE_URL (dev or staging URL from section 3; production to be shared) and PT_INTEROP_API_KEY (empty until authentication is switched on). Server side only, never in the client build.
+Key issuance — when authentication is switched on, one X-API-Key per PRMS environment (TEST, PROD) is issued by the Progress Tracker side; the module already sends the header when the key is set. Optional X-Actor-Email for attributable audit rows (one line).
+Client API methods — two methods in shared/services/api/results-api.service.ts (GET_progressTrackerResults, GET_progressTrackerReadyCounts).
+Browse component — copy pt-results-browse/ (4 files, 810 lines) next to kp-cgspace-browse; standalone, injects only the API service; handles the five states (loading, results, empty, error, pre-filled banner).
+Host form — apply the lab-report-form hunks (≈160 lines TypeScript, ≈116 lines template): the source switch “Manual entry | Progress Tracker” for non-KP indicators, the third tab for KP indicators, the panel, the onPtResultSelected mapping (title cut at 30 words with a notice, description, type only when the KPI leaves it open, handle for knowledge products), the optional description field, and the reset on re-arm. The legacy create modal, where still used, takes the same component in two lines.
+Payload utility — a two-line hunk so toc_progressive_narrative travels in the create payload (the server DTO already accepts and stores it; no server change).
+Where the id lives — add the Progress Tracker id to the ToC indicator rows (section 5), filled by /resolve once per reporting year; read it where the prototype reads indicators[0].related_node_id (one computed property).
+States to handle — all already in the component: loading (up to ≈ 20 s on a cold KPI, or call mode=template first), results, empty, not_found (unknown id or flag off), unavailable (time-out, network, 5xx, unconfigured) with the “use Manual entry” escape, and the post-pick banner. The user still validates and submits as today.
+Optional badge — GET /api/progress-tracker/programs/{program}/ready-counts once per program to show “N results ready” on the KPI rows; the proxy route exists, the badge was not built.
+Duplicate check — keep result_key and cache.evidence_fingerprint on the created result (in the narrative tail today, or a dedicated column) and grey out proposals already used; fold into the metadata-based duplicate rule the PRMS team is already building.
+Effort, honestly. Juan David’s reading on the call — “the technical challenge is very low” — matches what was measured: the PRMS-side integration in the local copy (server module, client component, form hunks, 17 new unit tests, all green with the existing 99 tests of the host form) took about one hour of build time, and the three interop endpoints with tests and two deployments about one and a half hours. A port into the real code base is more than that — review, the team’s lint hooks, a pull request, QA on PRMS TEST, the id column and its fill — and that sizing belongs to the PRMS team; the tagged diff is meant to make it a reading exercise rather than a design one.
+8. Missing and necessary steps before this is real
+Split by who acts; each line is marked as a decision (someone has to choose) or work (someone has to build or run). Nothing here blocks reading or trying the endpoints today.
+8.1 Alliance side (PRMS Reporting Tool)
+#
+Step
+Kind
+Owner
+Notes
+A1
+Port the server module and the two environment keys (items 1–2)
+work
+PRMS team
+server only; open API today, key later
+A2
+Port the browse component, the host-form hunks and the payload utility (items 4–7)
+work
+PRMS team
+the diff is ready to read
+A3
+Choose how the Progress Tracker id is obtained and where it lives (compute vs /resolve; column on the ToC indicator row)
+decision, then work
+PRMS team
+recommendation in section 5
+A4
+Choose where the draft description lands: ToC-link narrative (as built) or the visible “Description of Result” box (small server change to the create DTO)
+decision
+PRMS team
+either is fine for the Progress Tracker
+A5
+Duplicate rule: keep result_key + evidence_fingerprint on created results and grey out used proposals; align with the metadata-based duplicate check already on the PRMS roadmap
+work
+PRMS team
+Ángel, 15 Sep 0:06
+A6
+“N results ready” badge on the KPI rows via ready-counts
+work (optional)
+PRMS team
+one call per program
+A7
+Which Progress Tracker environment each PRMS environment talks to (TEST → staging is the suggestion; PROD → prod)
+decision
+PRMS team with Jose
+section 3
+A8
+Send the PRMS user’s e-mail as X-Actor-Email for attributable audit rows, or not
+decision
+PRMS team
+privacy call; one line
+A9
+QA on PRMS TEST with two or three real programs that have evidence in the Progress Tracker
+work
+PRMS team
+before any PROD switch
+
+8.2 Progress Tracker side (Interoperability API)
+#
+Step
+Kind
+Owner
+Notes
+P1
+Switch authentication on (AUTH_ENABLED) for dev/staging and issue one X-API-Key per PRMS environment; agree rotation
+work
+Jose
+the routes already require a caller when auth is on
+P2
+Production: set PRMS_PULL_ENABLED on and deploy; share the production base URL
+decision, then work
+Jose
+only after TEST is signed off
+P3
+Ownership of the ids when PORB texts are refreshed (the Progress Tracker re-seeds; PRMS re-resolves) — who triggers what, when
+decision
+Jose with PRMS team
+tied to A3
+P4
+Evidence coverage per program: today the two programs checked have 95 and 34 KPIs with evidence respectively; several areas of work have none
+fact to communicate
+Jose, P&R
+the pull is only as good as what Programs put in
+P5
+Prompt tuning per result type: on the sample tested, some evidence-bearing KPIs fell back to the template (“model returned no usable results”); surface the raw answer for debugging and tune the capacity-sharing and custom prompts
+work
+Jose
+cheap; one prompt version bump
+P6
+Rate and cost guard: the cache and the one-call-per-fingerprint rule exist; add a per-caller rate limit and a budget alarm before PROD
+work
+Jose
+at ≈ US$0.01 per fresh draft the exposure is small
+P7
+Refresh policy: drafts differ between generations; the cache keeps them stable until evidence changes. Decide who may press Refresh and how often
+decision
+Jose with PRMS team
+UI has the button today
+P8
+Warm-up for cold KPIs (pre-draft KPIs with evidence, or PRMS calls mode=template first) to stay well inside the 29 s limit
+work (optional)
+Jose
+measured 20–22 s on a 13-item KPI
+
+8.3 Joint
+#
+Step
+Kind
+Owner
+Notes
+J1
+Sign off the operating model of section 2 with Nicoleta Trifa and Julien Colomer: pull, pre-fill, the user creates, PRMS unchanged
+decision
+Jose, Héctor, Ángel
+one message, this document attached
+J2
+Co-sign the FAQ and update its question 10 (“export today, automated hand-off in the future”) once the pull is on TEST
+decision
+both teams, P&R
+wording stays true meanwhile
+J3
+17 September session wording: “the tracker prepares the draft; the result is created, completed and submitted in PRMS” — unchanged; the pull is mentioned as a prototype being evaluated with the PRMS team
+decision
+Nicoleta, Jose
+no promise of a date
+J4
+TEST first, then PROD: a dated plan once the Alliance team is free (after the week of 21–25 September)
+decision, then work
+Héctor, Juan Carlos, Jose
+both APIs of the MVP, in the order the team prefers
+J5
+A 30-minute joint walkthrough of the prototype and the endpoints (Juan David, Juan Carlos, Jose)
+work
+all
+the diff and this guide are the agenda
+
+9. Hosting the PRMS prototype in the cloud
+
+Figure 9 — A demo-grade cloud shape for the adjusted local copy: one instance, one managed database, basic-auth edge, pipeline from GitHub
+For this round no hosted copy is needed: the Alliance receives the endpoints, this guide and the screenshots, and the prototype is demonstrated live from Jose’s own environment. Should a hosted copy become useful (for Nicoleta, or for the PRMS team to click through without a call), the assessment is:
+Shape. What upstream ships is a modular monolith: the server runs either as a Node 20 container or as a Lambda behind API Gateway; the client is a static Angular build served by nginx; the database is managed MySQL. The cheapest faithful shape for a demo is one small EC2 instance (t4g.medium) running docker-compose with four containers — web, API, normalizer, an authentication stub — a single-AZ RDS MySQL 8.0 (db.t4g.small), an nginx or ALB edge with basic authentication and a TLS certificate on a synapsis-analytics.com sub-domain, and GitHub Actions deploying through an OIDC role and CloudFormation.
+Effort. 1.5–2.5 days: half a day for compose, the proxy locations and the production client build; half a day for the CloudFormation, role and pipeline; half a day for the data restore and smoke test; half to one day for surprises.
+Cost bracket (eu-central-1, always on): RDS ≈ US$30, instance ≈ US$27 (Fargate ≈ US$50 if preferred), ALB ≈ US$20 unless the existing edge is reused, logs and egress ≈ US$5 — ≈ US$60–110 a month, ≈ US$30–40 if stopped outside demo hours.
+The three hard bits. (1) The Reporting tab reads a ToC catalogue that is fed by the Alliance’s ToC tooling, not by the code base — our seed for Breeding for Tomorrow is the only source, so any “real-looking” demo beyond that program means extending the seed. (2) The database cannot be rebuilt from migrations alone; it must be restored from the current dump and only new migrations replayed. (3) Everything external is stubbed — single sign-on, CLARISA validation, CGSpace/MELSpace/WorldFish discovery, repository metadata, evidence storage, messaging, e-mail — so each is a network decision and a “this button shows an error state” caveat in the demo script; exposing the copy to Alliance colleagues also needs a governance decision on basic authentication versus single sign-on.
+Does PRMS’s architecture make hand-over easier? Yes on the server side: the discovery-proxy pattern (cgspace-discovery) is a clean, self-contained “external source” module that a progress-tracker module copies one to one, and the framework create endpoint already accepts the indicator context, so no schema change was needed. Less so on the client: the Report form is one large component with the knowledge-product-only tab pair, so adding a source for non-KP result types is a small structural change to that form — kept tagged and hand-over friendly as a single pull request.
+Annex A — Glossary
+Term
+Meaning in this document
+Progress Tracker
+The CGIAR Progress Tracking Solution: optional, year-round evidence capture against PORB KPIs for Programs and Accelerators (pooled W1/W2)
+Interoperability API
+The Progress Tracker’s public API (AWS Lambda + API Gateway, eu-central-1) used by Centers’ MEL systems and, now, by PRMS
+Pull
+PRMS asks the Progress Tracker for proposals when a user reports; nothing is pushed into PRMS
+Push (on-ramp door)
+The Progress Tracker creates a draft result in PRMS through PRMS’s ingestion API with a platform key — the July concept, item (a) of the 15 September MVP
+KPI · indicator
+One PORB row (program, area of work, Center, high-level output, description, type, target); indicator_id is its 12-character key in the Progress Tracker
+PORB
+Plan of Results and Budget — the one-year slice of the Theory of Change from which both systems take their KPIs
+Draft · proposal
+One PRMS-shaped result the API proposes for a KPI, drafted by a small model from the evidence attached to that KPI
+Template
+The placeholder returned when a KPI has no evidence or drafting failed; always available, never cached
+Evidence fingerprint
+A hash of the evidence a draft was made from; the cache key and the duplicate-detection key
+Editing
+PRMS’s status for a result created but not yet submitted; where a result lands when a user presses Create
+Adjusted local copy
+The PRMS Reporting Tool and normalizer run locally from the public repositories, on synthetic and public reference data, with no connection to any CGIAR system
+
+Annex B — Sources and references
+Jose’s two documents already with the Alliance: Progress Tracker → PRMS on-ramp: the record, the five questions, and a proposed way forward (15 September 2026) and The CGIAR Progress Tracking Solution & PRMS — Frequently Asked Questions (July 2026, draft pending endorsement).
+Call of 15 September 2026, “Re: W1/W2 results to PRMS through API” (31 min, recorded and transcribed by Ángel Jarrín): Héctor Tobón, Juan Carlos Cadavid, Juan David Delgado, Ángel Jarrín, Jose Berenguer.
+Interoperability API repository cgiar-ppu/progress-tracker-interoperability-api: pull requests #101 and #102, docs/PRMS-PULL.md (the contract), main at 02270e55.
+Interactive documentation: https://mrl8hgyyye.execute-api.eu-central-1.amazonaws.com/dev/docs and https://seyxtu7vha.execute-api.eu-central-1.amazonaws.com/staging/docs.
+PRMS team’s recent work this prototype relies on: per-tool, per-environment API keys (27 August) and keep_editing (10 September) on the push door; the 2026 Reporting tab and its Report form, on which the Progress Tracker source sits.

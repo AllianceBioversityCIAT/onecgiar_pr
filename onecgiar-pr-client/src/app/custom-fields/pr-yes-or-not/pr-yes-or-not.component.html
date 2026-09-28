@@ -16,6 +16,7 @@
     [showDescription]="!hideDescription"
     [descInlineStyles]="descInlineStyles"
     [labelDescInlineStyles]="this.labelDescInlineStyles"
+    [editLocked]="editable ? false : !!(readOnly || this.rolesSE.readOnly)"
     layout="inline">
     <div class="field_container">
       <div class="choices" *ngIf="!hideOptions">

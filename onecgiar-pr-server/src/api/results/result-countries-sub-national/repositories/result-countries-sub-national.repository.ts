@@ -55,10 +55,12 @@ export class ResultCountriesSubNationalRepository
           is_active = FALSE
         WHERE
           result_countries_id in (${
-            result_countries_id?.length ? result_countries_id.toString() : null
+            result_countries_id?.length
+              ? result_countries_id.map(() => '?').join(', ')
+              : null
           });
         `;
-      await this.query(inactiveQuery);
+      await this.query(inactiveQuery, result_countries_id ?? []);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultCountriesSubNationalRepository.name,

@@ -1046,6 +1046,99 @@ describe('SectionTocComponent template — no why-reported field on "No" (BIL-TO
   });
 });
 
+// BIL-RTE-T-8 / BIL-RTE-R-7 — pins that the Center editor already shows nothing below the ToC
+// question on No for a P25-onward result (design.md §6.2: "section-toc (Center): No change. It
+// already hides detail on No for every phase."). Rendered from the real template (no
+// overrideTemplate), same harness as the two blocks above, so this is a genuine DOM assertion.
+// Per the task's disqualifier this MUST pass before BIL-RTE-T-8's isSubmitting() guard lands too —
+// section-toc is untouched by that change.
+describe('SectionTocComponent template — No shows nothing below the question (BIL-RTE-R-7, P25 result)', () => {
+  let fixture: ComponentFixture<SectionTocComponent>;
+  let component: SectionTocComponent;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [SectionTocComponent],
+      providers: [
+        {
+          provide: BilateralCreationService,
+          useValue: {
+            currentResultId: signal(123),
+            resultLevelId: signal(3),
+            resultTypeId: signal(1),
+            resultInitiativeId: signal(42),
+            // A P25 result: onward-portfolio ownership plays no part in this component's own
+            // logic (R-7 for the Center already held before this task, per DD-2's mitigation note)
+            // — it is here only to document the scenario the test pins.
+            selectedPrimarySp: signal({ programId: 456, programCode: 'SP01', allocation: '40', portfolioAcronym: 'P25' }),
+          },
+        },
+        {
+          provide: BilateralAutoSaveService,
+          useValue: {
+            updateFieldsBatch: jest.fn(),
+            saveTocMapping: jest.fn(),
+            loadTocState: jest.fn().mockResolvedValue({
+              planned_result: null,
+              toc_level_id: null,
+              toc_result_id: null,
+              indicator_id: null,
+              contributing_indicator: null,
+              toc_progressive_narrative: null,
+            }),
+          },
+        },
+        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setSectionFields: jest.fn() } },
+        {
+          provide: ApiService,
+          useValue: {
+            dataControlSE: { myInitiativesList: [{ official_code: 'SP01', id: 42 }] },
+            tocApiSE: {
+              GET_AllTocLevels: jest.fn().mockReturnValue(of({
+                response: [
+                  { toc_level_id: 1, name: 'High Level Output' },
+                  { toc_level_id: 2, name: 'Intermediate Outcome' },
+                  { toc_level_id: 3, name: '2030 Outcome' },
+                ],
+              })),
+              GET_tocLevelsByconfig: jest.fn().mockReturnValue(of({ response: [{ toc_result_id: 1, title: 'Output 1' }] })),
+            },
+          },
+        },
+        {
+          provide: TocLinkageSwitchDialogService,
+          useValue: { openSwitchToDefault: jest.fn().mockReturnValue(of('cancel')) },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SectionTocComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('No shows nothing: no Level select, no ToC result/HLO field, no indicator block, no contribution field', () => {
+    component.onPlannedChange(false);
+    fixture.detectChanges();
+
+    expect(component.showDetailForm()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-testid="toc-planned-question"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Level');
+    expect(fixture.nativeElement.textContent).not.toContain('High Level Output');
+    expect(fixture.nativeElement.textContent).not.toContain('Contribution to indicator target');
+    expect(fixture.nativeElement.querySelector('.st-field--narrative')).toBeNull();
+  });
+
+  it('selecting Yes afterwards still shows the ToC fields, unaffected by the No pin above', () => {
+    component.onPlannedChange(true);
+    fixture.detectChanges();
+
+    expect(component.showDetailForm()).toBe(true);
+  });
+});
+
 describe('SectionTocComponent default linkage integration (BIL-TOC-T-7)', () => {
   let component: SectionTocComponent;
   let fixture: ComponentFixture<SectionTocComponent>;

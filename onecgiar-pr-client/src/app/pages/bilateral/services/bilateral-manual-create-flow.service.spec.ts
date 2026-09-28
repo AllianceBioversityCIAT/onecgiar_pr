@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from './bilateral-context.service';
@@ -15,6 +15,10 @@ describe('BilateralManualCreateFlowService', () => {
   let creationService: BilateralCreationService;
   let router: { navigate: jest.Mock };
   let mockOverviewService: { invalidate: jest.Mock };
+  let rolesSE: { getMyCenters: jest.Mock; rolesVersion: number; isAdmin: boolean };
+
+  /** A Center User assignment for the centre every existing test above opens as (`AfricaRice`). */
+  const AFRICARICE_MEMBER = { center_id: 'AfricaRice', center_acronym: 'AfricaRice', role_id: 9 };
 
   const singleSpProject = {
     id: 101,
@@ -29,6 +33,10 @@ describe('BilateralManualCreateFlowService', () => {
   beforeEach(() => {
     router = { navigate: jest.fn().mockResolvedValue(true) };
     mockOverviewService = { invalidate: jest.fn() };
+    // `ASC-T-5` rework: defaults to a Center User of `AfricaRice`, the centre `ctx.setCenter`
+    // opens as below, so every pre-existing test in this file (none of which touches `canUseAi`)
+    // keeps seeing what it saw before this membership check existed.
+    rolesSE = { getMyCenters: jest.fn().mockReturnValue([AFRICARICE_MEMBER]), rolesVersion: 0, isAdmin: false };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -48,7 +56,9 @@ describe('BilateralManualCreateFlowService', () => {
             alertsFe: { show: jest.fn() },
             resultsSE: {},
             dataControlSE: {},
-            rolesSE: {}
+            get rolesSE() {
+              return rolesSE;
+            }
           }
         }
       ]
@@ -198,5 +208,40 @@ describe('BilateralManualCreateFlowService', () => {
     expect(mockOverviewService.invalidate).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalled();
     expect(service.drawerOpen()).toBe(false);
+  });
+
+  // Night sweep 2026-09-23, C-2: a fast double-click on "Create and continue" created two identical
+  // results. Control negative: without the `isCreating()` re-entry guard createResult is called twice.
+  it('C-2: ignores a second submit while the first create is still in flight', () => {
+    const pending = new Subject<any>();
+    (creationService.createResult as jest.Mock).mockReturnValue(pending.asObservable());
+    creationService.selectProject(singleSpProject);
+    creationService.selectPrimarySp({ programId: 1, programCode: 'SP13', allocation: '100' });
+
+    service.submitCreate({ levelId: 4, typeId: 8, title: 'Manual title' });
+    service.submitCreate({ levelId: 4, typeId: 8, title: 'Manual title' });
+
+    expect(creationService.createResult).toHaveBeenCalledTimes(1);
+  });
+
+  // `ASC-T-5` rework (`ASC-R-15`, `ASC-AC-13`): the reviewer-found gap. This service's `canUseAi`
+  // is the REAL entry point both the bilateral-home "+ Create result" and the in-wizard drawer
+  // read from — hiding only the wizard's own inline selector left this one wide open.
+  describe('canUseAi — membership gate (ASC-T-5 rework)', () => {
+    it('is true for a Center User of the current centre, project and SP selected', () => {
+      service.beginFromProject(singleSpProject);
+      expect(service.canUseAi()).toBe(true);
+    });
+
+    it('ASC-AC-13 — is false for an admin who is not a Center User of the current centre', () => {
+      rolesSE.getMyCenters.mockReturnValue([]);
+      rolesSE.isAdmin = true;
+      service.beginFromProject(singleSpProject);
+      expect(service.canUseAi()).toBe(false);
+    });
+
+    it('is false while no project/SP is selected, even for a member', () => {
+      expect(service.canUseAi()).toBe(false);
+    });
   });
 });

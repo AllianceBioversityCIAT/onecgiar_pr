@@ -79,6 +79,37 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   // gets swapped/removed. Session-only, reset in `resetState()`.
   private _autoAddedSentinel = false;
 
+  // ── P2-3838 (child of P2-3427 · Ángel, 28-Sep-2026 review of IPSR) · Contributing W3/bilateral project → owning CGIAR Center ──
+  // Same rule the bilateral form already applies (`section-contributors.component.ts` BCT-R-1/R-3, spec
+  // `docs/specs/notifications/bilateral-contributor-tagging`): picking a project selects its owner Center in
+  // "Contributing CGIAR Centers" and locks it there. Owner = `owner_center_institution_id` on the projects
+  // catalogue (`clarisa/projects/get/all`, BCT-DD-4) matched against `centersList[].institutionId`.
+  // Difference asked by Yeck for IPSR: removing the project removes the Center this mechanism added — and ONLY
+  // that one; a Center the user picked by hand (or the Lead pick auto-added) is never claimed, locked nor removed.
+  // Everything here is session-only UX bookkeeping keyed by center code: nothing is written on the center
+  // objects, so the PATCH payload is exactly what it was.
+  /** Codes of the Contributing Centers THIS mechanism added on behalf of a selected project. */
+  private readonly _projectDerivedCenterCodes = new Set<string>();
+  /** Center code → labels of the selected projects that own it (tooltip copy). */
+  private readonly _projectDerivedLabels = new Map<string, string[]>();
+  /** Codes whose chip is playing its entrance / exit micro-interaction. */
+  private readonly _derivedEnteringCodes = new Set<string>();
+  private readonly _derivedLeavingCodes = new Set<string>();
+  /** How long the exit animation of a derived chip plays before the row is dropped (mirrors the SCSS keyframe). */
+  static readonly DERIVED_CHIP_LEAVE_MS = 260;
+  /**
+   * Options the Contributing Centers dropdown must refuse to untick: CGSpace-locked ∪ project-derived. Rebuilt
+   * only when the derived set changes so the `[disableOptions]` input keeps a STABLE reference (a fresh array on
+   * every change-detection pass is one of the two NG0103 loop conditions of `pr-multi-select`).
+   */
+  centersLockedInDropdown: any[] = [];
+  /**
+   * Bumped on every derived add/remove. The chips iterate a plain array that this service mutates — partly from
+   * a `setTimeout` (exit animation) — so under zoneless change detection nothing would schedule a render; a
+   * template reading this signal makes each write schedule its own pass (same shape as `_updatingLeadData`).
+   */
+  readonly projectDerivedCentersTick = signal(0);
+
   // P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split in two dropdowns.
   // `tocReferenceCenterInstitutionIds` = institutionIds derived from the selected TOC node
   // (toc_partners ∪ toc_target_center_ids), fed by multiple-wps-content. The first dropdown shows
@@ -145,8 +176,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.catalogueSubs.add(
       this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
         if (loaded) {
-          this.setPossibleLeadPartners(true);
+          // P2-3427 (27-Sep-2026): same order as `getSectionInformation` — read the SAVED lead first and
+          // auto-assign LAST. The old order auto-assigned and then `setLeadPartnerOnLoad` overwrote it with
+          // `undefined` whenever the catalogue landed after the section GET (cold load / deep link).
+          this.setPossibleLeadPartners(true, false);
           this.setLeadPartnerOnLoad(true);
+          this.runAutoAssignLeads();
           this.onCatalogueDrivenLeadUpdate?.('institutions');
         }
       })
@@ -157,8 +192,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           this.nppCenters = this.centersSE.centersList?.map(center => {
             return { ...center, selected: false, disabled: false };
           });
-          this.setPossibleLeadCenters(true);
+          // P2-3427 (27-Sep-2026): saved lead first, auto-assign last — see the institutions branch above. With
+          // a result saved with ONE center and no `is_leading_result`, the old order left the Lead center empty
+          // (the exact defect the PO reported on IPSR) whenever the CLARISA catalogue arrived late.
+          this.setPossibleLeadCenters(true, false);
           this.setLeadCenterOnLoad(true);
+          this.runAutoAssignLeads();
           this.onCatalogueDrivenLeadUpdate?.('centers');
         }
       })
@@ -217,9 +256,20 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     // the next result.
     this._autoAddedLeadCenterCode = null;
     this._autoAddedSentinel = false;
+    // P2-3838: project-derived Centers are per result too.
+    this._projectDerivedCenterCodes.clear();
+    this._projectDerivedLabels.clear();
+    this._derivedEnteringCodes.clear();
+    this._derivedLeavingCodes.clear();
+    this.centersLockedInDropdown = [];
   }
 
-  loadClarisaProjects() {
+  /**
+   * @param onLoaded P2-3838: runs once the catalogue is in `clarisaProjectsList`. IPSR Contributors passes
+   * `syncProjectDerivedCenters` so a saved project whose owner landed after the section GET still derives its
+   * Center; the other callers (step-n4 modal) pass nothing and are unaffected.
+   */
+  loadClarisaProjects(onLoaded?: () => void) {
     // P2-3001: the all-CLARISA list (IPSR surfaces) overwrites clarisaProjectsList → invalidate the by-program cache marker.
     this.loadedBilateralProgramId = null;
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
@@ -228,6 +278,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         response.forEach(project => {
           project.project_id = project.id;
         });
+        onLoaded?.();
       },
       error: err => {
         console.error('Error loading Clarisa projects:', err);
@@ -746,6 +797,156 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     if (changed) {
       this.setPossibleLeadCenters(true);
     }
+  }
+
+  // ── P2-3838 · project → owning Center (IPSR Contributing CGIAR Centers) ──────────────────────────────────
+
+  /**
+   * True while a Contributing Center owns at least one selected project: locked chip (★, no ×, tooltip) and
+   * disabled in the dropdown — the bilateral lock (BCT-R-3), whatever its origin (auto-added, hand-picked, saved).
+   */
+  isProjectDerivedCenter(center: { code?: string } | null | undefined): boolean {
+    return !!center?.code && this._projectDerivedLabels.has(center.code) && !this._derivedLeavingCodes.has(center.code);
+  }
+
+  isDerivedCenterEntering(center: { code?: string } | null | undefined): boolean {
+    return !!center?.code && this._derivedEnteringCodes.has(center.code);
+  }
+
+  isDerivedCenterLeaving(center: { code?: string } | null | undefined): boolean {
+    return !!center?.code && this._derivedLeavingCodes.has(center.code);
+  }
+
+  /** Tooltip of a locked chip: which selected project(s) own this Center, and how to take it out. */
+  projectDerivedCenterTooltip(center: { code?: string } | null | undefined): string {
+    const labels = (center?.code && this._projectDerivedLabels.get(center.code)) || [];
+    if (!labels.length) return '';
+    const noun = labels.length === 1 ? 'the project' : 'the projects';
+    const list = labels.map(l => `<b>${l}</b>`).join(', ');
+    return `Added from ${noun} ${list}: this Center owns it. To remove the Center, remove the project first.`;
+  }
+
+  /**
+   * The CGIAR Center that owns a selected/saved W3-bilateral project, or `null` when it cannot be resolved
+   * (then it derives nothing — BCT-R-1 "owner cannot be resolved"). Owner id, in order: the catalogue row of
+   * the same `project_id` (`owner_center_institution_id`, present on 1210 of the 1211 prtest rows), the field
+   * carried by the selected option itself, and — for a SAVED project whose catalogue row is not here —
+   * `obj_clarisa_project.organizationCode` (the same column the server resolver reads first).
+   */
+  projectOwnerCenter(project: any): CenterDto | null {
+    if (!project) return null;
+    const projectId = project.project_id ?? project.id ?? project.obj_clarisa_project?.id;
+    const catalogRow = projectId != null ? this.clarisaProjectsList?.find(p => (p?.project_id ?? p?.id) == projectId) : null;
+    const institutionId =
+      catalogRow?.owner_center_institution_id ??
+      project.owner_center_institution_id ??
+      project.obj_clarisa_project?.owner_center_institution_id ??
+      project.obj_clarisa_project?.organizationCode ??
+      null;
+    if (institutionId == null) return null;
+    return this.centersSE.centersList?.find(c => Number(c?.institutionId) === Number(institutionId)) ?? null;
+  }
+
+  private projectDisplayLabel(project: any): string {
+    return project?.fullName ?? project?.obj_clarisa_project?.fullName ?? project?.shortName ?? project?.obj_clarisa_project?.shortName ?? '';
+  }
+
+  /**
+   * Reconciles "Contributing CGIAR Centers" with the owners of the selected "Contributing W3 and/or bilateral
+   * projects". Call it after every project pick/removal, after the section body is read (`animate: false`),
+   * and after a Lead-center swap.
+   *
+   *  1. Owner missing from the list → added (entrance highlight) and remembered as ADDED BY US.
+   *  2. Owner already in the list (hand-picked or saved) → only LOCKED while the project stays; never "ours".
+   *     If it is the Center the Lead pick auto-added, ownership moves here so a later Lead swap cannot strip it.
+   *  3. A Center nobody's project owns any more → unlocked; removed (exit fade) ONLY if we added it.
+   *     A hand-picked or saved one stays (sticky, BCT-R-4). The Lead is cleared if it pointed at a removed one.
+   *  4. An exit still playing whose project comes back is cancelled (no flicker, no double row).
+   */
+  syncProjectDerivedCenters(options: { animate?: boolean } = {}): void {
+    const animate = options.animate ?? true;
+    if (!this.partnersBody) return;
+
+    const wanted = new Map<string, { center: CenterDto; labels: string[] }>();
+    for (const project of this.partnersBody.bilateral_projects || []) {
+      const center = this.projectOwnerCenter(project);
+      if (!center?.code) continue;
+      const entry = wanted.get(center.code) ?? { center, labels: [] };
+      const label = this.projectDisplayLabel(project);
+      if (label && !entry.labels.includes(label)) entry.labels.push(label);
+      wanted.set(center.code, entry);
+    }
+
+    let list: any[] = [...(this.partnersBody.contributing_center || [])];
+    let changed = false;
+
+    // 3. locks that no selected project justifies any more
+    for (const code of [...this._projectDerivedLabels.keys()]) {
+      if (wanted.has(code)) continue;
+      this._projectDerivedLabels.delete(code);
+      this._derivedEnteringCodes.delete(code);
+      changed = true;
+      if (!this._projectDerivedCenterCodes.has(code)) continue; // hand-picked / saved: unlock only
+      this._projectDerivedCenterCodes.delete(code);
+      if (!list.some(c => c?.code === code)) continue;
+      if (this.leadCenterCode === code) this.leadCenterCode = null;
+      if (animate) {
+        this._derivedLeavingCodes.add(code);
+        setTimeout(() => {
+          if (!this._derivedLeavingCodes.has(code)) return; // its project came back meanwhile (4.)
+          this._derivedLeavingCodes.delete(code);
+          this.partnersBody.contributing_center = (this.partnersBody.contributing_center || []).filter((c: any) => c?.code !== code);
+          if (this.leadCenterCode === code) this.leadCenterCode = null;
+          this.afterProjectDerivedChange();
+        }, RdContributorsAndPartnersService.DERIVED_CHIP_LEAVE_MS);
+      } else {
+        list = list.filter(c => c?.code !== code);
+      }
+    }
+
+    // 1./2./4. owners of the selected projects
+    for (const [code, { center, labels }] of wanted) {
+      const isNewLock = !this._projectDerivedLabels.has(code);
+      this._projectDerivedLabels.set(code, labels);
+      if (isNewLock) changed = true;
+      if (this._derivedLeavingCodes.has(code)) {
+        this._derivedLeavingCodes.delete(code); // 4.
+        this._projectDerivedCenterCodes.add(code);
+        changed = true;
+        continue;
+      }
+      if (list.some(c => c?.code === code)) {
+        if (this._autoAddedLeadCenterCode === code) {
+          // 2. the Lead pick added it; a project owns it now, so it is ours to manage, not the Lead swap's.
+          this._autoAddedLeadCenterCode = null;
+          this._projectDerivedCenterCodes.add(code);
+        }
+        continue;
+      }
+      list.push({ ...center });
+      this._projectDerivedCenterCodes.add(code);
+      if (animate) {
+        this._derivedEnteringCodes.add(code);
+        setTimeout(() => {
+          this._derivedEnteringCodes.delete(code);
+          this.projectDerivedCentersTick.update(n => n + 1);
+        }, 900);
+      }
+      changed = true;
+    }
+
+    if (changed) {
+      this.partnersBody.contributing_center = list;
+      this.afterProjectDerivedChange();
+    }
+  }
+
+  private afterProjectDerivedChange(): void {
+    const locked = (this.partnersBody?.contributing_center || []).filter((c: any) => this.isProjectDerivedCenter(c));
+    this.centersLockedInDropdown = [...(this.cgspaceDisabledList || []), ...locked];
+    // Same follow-up as a manual pick in the Contributing Centers dropdown: a single contributor becomes the lead.
+    this.setPossibleLeadCenters(true);
+    this.projectDerivedCentersTick.update(n => n + 1);
   }
 
   onLeadByPartnerChange(isPartnerLed: boolean) {

@@ -10,98 +10,102 @@
   </div>
 </div>
 
-<table>
-  <tr>
-    <th>Bilateral</th>
-    @if (!this.api.fieldsManagerSE.isP25()) {
-      <th>
-        Current calendar year <br />
-        (in-kind + in-cash USD value)
-      </th>
-      <th>
-        Next calendar year <br />
-        (in-kind + in-cash USD value)
-      </th>
-    }
-    @if (this.api.fieldsManagerSE.isP25()) {
-      <th>
-        Total USD Value <br />
-        (in-cash + in-kind)
-      </th>
-    }
-    <th></th>
-    <th *ngIf="!this.rolesSE.readOnly"></th>
-  </tr>
-  @for (item of this.body.bilateral_expected_investment; track $index; let i = $index) {
-    <tr [hidden]="item.is_active == false">
-      <td>
-        <div class="editBilateral">
-          <div style="display: flex; align-items: center">
-            {{
-              this.api.fieldsManagerSE.isP25() ? item?.obj_result_project?.obj_clarisa_project?.shortName : item?.obj_non_pooled_projetct?.grant_title
-            }}
-          </div>
-          <div style="margin-top: 0px; margin-right: 0px">
-            @if (!this.api.fieldsManagerSE.isP25()) {
-              <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
-              <app-step-n4-edit-bilateral
-                [body]="item"
-                [isonlyread]="false"
-                *ngIf="isInitiative || this.api.rolesSE.isAdmin"></app-step-n4-edit-bilateral>
-            }
-          </div>
-        </div>
-      </td>
+<div class="ipsr-table-shell">
+  <table class="ipsr-table">
+    <tr>
+      <th>Bilateral</th>
       @if (!this.api.fieldsManagerSE.isP25()) {
-        <td>
-          <app-pr-input
-            placeholder="Enter text"
-            type="currency"
-            [required]="false"
-            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-            [(ngModel)]="item.in_kind">
-          </app-pr-input>
-        </td>
-        <td>
-          <app-pr-input
-            placeholder="Enter text"
-            type="currency"
-            [required]="false"
-            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-            [(ngModel)]="item.in_cash">
-          </app-pr-input>
-        </td>
-      } @else {
-        <td>
-          <app-pr-input
-            placeholder="Enter text"
-            type="currency"
-            [required]="false"
-            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-            [disabled]="!!item.is_determined"
-            [(ngModel)]="item.kind_cash">
-          </app-pr-input>
-        </td>
+        <th>
+          Current calendar year <br />
+          <span class="th_hint">(in-kind + in-cash USD value)</span>
+        </th>
+        <th>
+          Next calendar year <br />
+          <span class="th_hint">(in-kind + in-cash USD value)</span>
+        </th>
       }
-
-      <td>
-        <app-pr-radio-button
-          optionLabel="name"
-          optionValue="id"
-          [options]="[{ name: 'This is yet to be determined', id: true }]"
-          [(ngModel)]="item.is_determined">
-        </app-pr-radio-button>
-      </td>
-      <td *ngIf="!this.rolesSE.readOnly">
-        <div class="flex items-center justify-center w-full">
-          <div class="step-4-delete-button" (click)="deleteBilateral(item)" *ngIf="isInitiative || this.api.rolesSE.isAdmin">
-            <i class="material-icons-round"> delete </i>
-          </div>
-        </div>
-      </td>
+      @if (this.api.fieldsManagerSE.isP25()) {
+        <th>
+          Total USD Value <br />
+          <span class="th_hint">(in-cash + in-kind)</span>
+        </th>
+      }
+      <th></th>
+      <th *ngIf="!this.rolesSE.readOnly"></th>
     </tr>
-  }
-</table>
+    @for (item of this.body.bilateral_expected_investment; track $index; let i = $index) {
+      <tr [hidden]="item.is_active == false">
+        <td>
+          <div class="editBilateral">
+            <div style="display: flex; align-items: center">
+              {{
+                this.api.fieldsManagerSE.isP25()
+                  ? item?.obj_result_project?.obj_clarisa_project?.shortName
+                  : item?.obj_non_pooled_projetct?.grant_title
+              }}
+            </div>
+            <div style="margin-top: 0px; margin-right: 0px">
+              @if (!this.api.fieldsManagerSE.isP25()) {
+                <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
+                <app-step-n4-edit-bilateral
+                  [body]="item"
+                  [isonlyread]="false"
+                  *ngIf="isInitiative || this.api.rolesSE.isAdmin"></app-step-n4-edit-bilateral>
+              }
+            </div>
+          </div>
+        </td>
+        @if (!this.api.fieldsManagerSE.isP25()) {
+          <td>
+            <app-pr-input
+              placeholder="Enter text"
+              type="currency"
+              [required]="false"
+              [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+              [(ngModel)]="item.in_kind">
+            </app-pr-input>
+          </td>
+          <td>
+            <app-pr-input
+              placeholder="Enter text"
+              type="currency"
+              [required]="false"
+              [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+              [(ngModel)]="item.in_cash">
+            </app-pr-input>
+          </td>
+        } @else {
+          <td>
+            <app-pr-input
+              placeholder="Enter text"
+              type="currency"
+              [required]="false"
+              [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+              [disabled]="!!item.is_determined"
+              [(ngModel)]="item.kind_cash">
+            </app-pr-input>
+          </td>
+        }
+
+        <td>
+          <app-pr-radio-button
+            optionLabel="name"
+            optionValue="id"
+            [options]="[{ name: 'This is yet to be determined', id: true }]"
+            [(ngModel)]="item.is_determined">
+          </app-pr-radio-button>
+        </td>
+        <td *ngIf="!this.rolesSE.readOnly">
+          <div class="flex items-center justify-center w-full">
+            <div class="step-4-delete-button" (click)="deleteBilateral(item)" *ngIf="isInitiative || this.api.rolesSE.isAdmin">
+              <i class="material-icons-round"> delete </i>
+            </div>
+          </div>
+        </td>
+      </tr>
+    }
+  </table>
+</div>
 
 <app-no-data-text *ngIf="!hasElementsWithId(this.body.bilateral_expected_investment, 'non_pooled_projetct_budget_id')" title="No bilaterals added">
 </app-no-data-text>

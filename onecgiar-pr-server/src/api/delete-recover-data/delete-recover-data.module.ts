@@ -61,6 +61,7 @@ import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-k
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResultsService } from '../results/results.service';
 import { ResultInnovationMergeSplitModule } from '../results/result-innovation-merge-split/result-innovation-merge-split.module';
+import { BilateralAccessModule } from '../results/bilateral-access/bilateral-access.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypesService } from '../results/result_types/result_types.service';
 import { VersionsService } from '../results/versions/versions.service';
@@ -211,6 +212,9 @@ import { ResultDeletionAuditModule } from '../results/result-deletion-audit/resu
     ResultsTocResultsModule,
     ResultsByInstitutionsModule,
     ResultDeletionAuditModule,
+    // This module declares `ResultsService` directly (below), which takes
+    // `BilateralAccessService` as a required constructor param.
+    BilateralAccessModule,
   ],
   exports: [
     EvidencesService,

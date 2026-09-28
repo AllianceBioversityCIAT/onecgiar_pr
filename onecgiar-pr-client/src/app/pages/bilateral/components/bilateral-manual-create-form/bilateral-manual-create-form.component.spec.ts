@@ -183,6 +183,22 @@ describe('BilateralManualCreateFormComponent', () => {
       expect(component.canCreate()).toBe(false);
     }));
 
+    // Night sweep 2026-09-23, C-1: typing back to the title that was just checked left
+    // "Validating title…" forever (distinctUntilChanged dropped the repeat). Control negative: with
+    // distinctUntilChanged back in the pipe this test fails (loading stays true, Create disabled).
+    it('C-1: re-checks a title equal to the last one checked, so Create re-enables', fakeAsync(() => {
+      fillNonKpForm('Valid bilateral title');
+      completeTitleGate();
+      expect(component.canCreate()).toBe(true);
+
+      component.onTitleInput('Valid bilateral titl');
+      component.onTitleInput('Valid bilateral title');
+      completeTitleGate();
+
+      expect(component.loadingTitleCheck()).toBe(false);
+      expect(component.canCreate()).toBe(true);
+    }));
+
     it('blocks create while title check is in flight', () => {
       fillNonKpForm();
       expect(component.loadingTitleCheck()).toBe(true);

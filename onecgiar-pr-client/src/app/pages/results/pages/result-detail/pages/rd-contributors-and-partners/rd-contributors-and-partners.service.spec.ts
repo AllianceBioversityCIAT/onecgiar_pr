@@ -226,6 +226,56 @@ describe('RdContributorsAndPartnersService', () => {
     });
   });
 
+  // P2-3427 (27-Sep-2026): the CLARISA catalogue can land AFTER the section GET (cold load, deep link). The
+  // constructor's `loadedCenters` handler must then read the SAVED lead first and auto-assign LAST — the old
+  // order auto-assigned and then `setLeadCenterOnLoad` overwrote the pick with `undefined` for a result saved
+  // with ONE center and no `is_leading_result` (the IPSR defect the PO reported: "guardé, no pasó nada").
+  describe('late catalogue — loadedCenters / loadedInstitutions keep the single-center lead (P2-3427)', () => {
+    it('auto-assigns the only center when the catalogue arrives after the section (no saved lead)', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: 'C2', name: 'Center Two', is_leading_result: false } as any];
+      service.leadCenterCode = null;
+
+      mockCentersSE.loadedCenters.next(true);
+
+      expect(service.leadCenterCode).toBe('C2');
+    });
+
+    it('keeps the SAVED lead over the auto-assign when both exist', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [
+        { code: 'C1', name: 'Center One', is_leading_result: false } as any,
+        { code: 'C3', name: 'Center Three', is_leading_result: true } as any
+      ];
+      service.leadCenterCode = null;
+
+      mockCentersSE.loadedCenters.next(true);
+
+      expect(service.leadCenterCode).toBe('C3');
+    });
+
+    it('negative control: with two centers and no saved lead, nothing is auto-assigned', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: 'C1' } as any, { code: 'C2' } as any];
+      service.leadCenterCode = null;
+
+      mockCentersSE.loadedCenters.next(true);
+
+      expect(service.leadCenterCode).toBeFalsy();
+    });
+
+    it('auto-assigns the only partner when the institutions catalogue arrives late and the lead is a partner', () => {
+      service.partnersBody.is_lead_by_partner = true;
+      service.partnersBody.institutions = [{ institutions_id: 10, is_leading_result: false } as any];
+      service.partnersBody.mqap_institutions = [] as any;
+      service.leadPartnerId = null;
+
+      mockInstitutionsSE.loadedInstitutions.next(true);
+
+      expect(service.leadPartnerId).toBe(10);
+    });
+  });
+
   // P2-3115: the ToC prefill must never resurrect a deliberately-emptied, saved selection.
   // These cover the mechanism's foundation (the hydration flag lifecycle). The effect-level guard behavior
   // (cold-load stays empty vs. user-driven selection prefills) is exercised end-to-end in the browser.
@@ -814,6 +864,144 @@ describe('RdContributorsAndPartnersService', () => {
       service.onSelectDeliveryPartners(option, 1);
 
       expect(option.delivery).toEqual([]);
+    });
+  });
+  /**
+   * P2-3838 — IPSR: a Contributing W3/bilateral project selects its owning Center (bilateral BCT-R-1/R-3 rule),
+   * and removing the project removes ONLY a Center this mechanism added. Owner = catalogue
+   * `owner_center_institution_id` ↔ `centersList[].institutionId`.
+   */
+  describe('syncProjectDerivedCenters (P2-3838)', () => {
+    const codes = () => (service.partnersBody.contributing_center || []).map((c: any) => c.code);
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      (mockCentersSE.centersList as any) = [
+        { code: 'C1', full_name: 'Center One', institutionId: 101 },
+        { code: 'C2', full_name: 'Center Two', institutionId: 102 },
+        { code: 'C3', full_name: 'Center Three', institutionId: 103 }
+      ];
+      service.clarisaProjectsList = [
+        { id: 1, project_id: 1, fullName: 'P-1 owned by C1', owner_center_institution_id: 101 },
+        { id: 2, project_id: 2, fullName: 'P-2 owned by C1', owner_center_institution_id: 101 },
+        { id: 3, project_id: 3, fullName: 'P-3 owned by C2', owner_center_institution_id: 102 },
+        { id: 4, project_id: 4, fullName: 'P-4 unknown owner', owner_center_institution_id: null }
+      ];
+      service.partnersBody.contributing_center = [];
+      service.partnersBody.bilateral_projects = [];
+    });
+
+    afterEach(() => jest.useRealTimers());
+
+    it('adds the owner Center when a project is picked, locked and in the dropdown lock list', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1, fullName: 'P-1 owned by C1' }] as any;
+      service.syncProjectDerivedCenters();
+
+      expect(codes()).toEqual(['C1']);
+      const c1 = service.partnersBody.contributing_center[0];
+      expect(service.isProjectDerivedCenter(c1)).toBe(true);
+      expect(service.isDerivedCenterEntering(c1)).toBe(true);
+      expect(service.centersLockedInDropdown.map((c: any) => c.code)).toEqual(['C1']);
+      expect(service.projectDerivedCenterTooltip(c1)).toContain('P-1 owned by C1');
+    });
+
+    it('removes the auto-added Center (after the exit animation) when its project is removed', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+
+      expect(service.isDerivedCenterLeaving(service.partnersBody.contributing_center[0])).toBe(true);
+      jest.advanceTimersByTime(RdContributorsAndPartnersService.DERIVED_CHIP_LEAVE_MS);
+      expect(codes()).toEqual([]);
+      expect(service.centersLockedInDropdown).toEqual([]);
+    });
+
+    it('never removes a Center the user picked by hand — it is only locked while the project stays', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', institutionId: 101 }] as any;
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      expect(codes()).toEqual(['C1']);
+      expect(service.isProjectDerivedCenter(service.partnersBody.contributing_center[0])).toBe(true);
+
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual(['C1']);
+      expect(service.isProjectDerivedCenter(service.partnersBody.contributing_center[0])).toBe(false);
+    });
+
+    it('keeps the Center while ANOTHER selected project still owns it', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }, { project_id: 2 }] as any;
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [{ project_id: 2 }] as any;
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual(['C1']);
+    });
+
+    it('adds one chip per owner, never a duplicate', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }, { project_id: 2 }, { project_id: 3 }] as any;
+      service.syncProjectDerivedCenters();
+      service.syncProjectDerivedCenters(); // double call = same state
+      expect(codes()).toEqual(['C1', 'C2']);
+    });
+
+    it('derives nothing for a project whose owner cannot be resolved', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 4 }] as any;
+      service.syncProjectDerivedCenters();
+      expect(codes()).toEqual([]);
+    });
+
+    it('cancels the exit when the project comes back before the animation ends', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual(['C1']);
+      expect(service.isProjectDerivedCenter(service.partnersBody.contributing_center[0])).toBe(true);
+    });
+
+    it('clears the Lead center when it pointed at the auto-added Center that leaves', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.leadCenterCode = 'C1';
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(service.leadCenterCode).toBeNull();
+    });
+
+    it('takes over a Center the Lead pick auto-added, so a later Lead swap cannot strip it', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', institutionId: 101 }] as any;
+      service.autoAddedLeadCenterCode = 'C1';
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      expect(service.autoAddedLeadCenterCode).toBeNull();
+
+      service.partnersBody.bilateral_projects = [];
+      service.syncProjectDerivedCenters();
+      jest.runAllTimers();
+      expect(codes()).toEqual([]);
+    });
+
+    it('resolves a SAVED project from obj_clarisa_project.organizationCode when the catalogue has no row', () => {
+      service.clarisaProjectsList = [];
+      service.partnersBody.bilateral_projects = [{ project_id: 99, obj_clarisa_project: { id: 99, organizationCode: '102', fullName: 'Saved' } }] as any;
+      service.syncProjectDerivedCenters({ animate: false });
+      expect(codes()).toEqual(['C2']);
+      expect(service.isDerivedCenterEntering(service.partnersBody.contributing_center[0])).toBe(false);
+    });
+
+    it('resetState forgets every derived Center', () => {
+      service.partnersBody.bilateral_projects = [{ project_id: 1 }] as any;
+      service.syncProjectDerivedCenters();
+      service.resetState();
+      expect(service.centersLockedInDropdown).toEqual([]);
+      expect(service.isProjectDerivedCenter({ code: 'C1' })).toBe(false);
     });
   });
 });

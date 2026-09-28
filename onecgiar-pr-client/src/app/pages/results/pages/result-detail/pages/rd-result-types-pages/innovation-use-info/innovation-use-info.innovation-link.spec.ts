@@ -100,6 +100,9 @@ describe('InnovationUseInfoComponent — optional link to a QA’d Innovation De
 
     fixture = TestBed.createComponent(InnovationUseInfoComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (P1 twin): these tests model a section whose GETs already landed;
+    // the load-failure gate has its own describe block.
+    component.loaded.set(true);
   });
 
   describe('the gate', () => {

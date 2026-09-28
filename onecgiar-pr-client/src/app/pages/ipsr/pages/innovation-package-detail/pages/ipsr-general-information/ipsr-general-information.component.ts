@@ -1,4 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, computed, inject } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -9,23 +11,69 @@ import { GetImpactAreasScoresService } from '../../../../../../shared/services/g
 import { environment } from '../../../../../../../environments/environment';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
+import { CanComponentDeactivate } from '../../../../../../shared/guards/unsaved-changes.types';
+import { SectionDirtyTrackerService } from '../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
 
 @Component({
   selector: 'app-ipsr-general-information',
   templateUrl: './ipsr-general-information.component.html',
   styleUrls: ['./ipsr-general-information.component.scss'],
-  standalone: false
+  standalone: false,
+  providers: [SectionDirtyTrackerService]
 })
-export class IpsrGeneralInformationComponent implements OnInit {
+export class IpsrGeneralInformationComponent implements OnInit, CanComponentDeactivate {
+  /** Read only to tell a typed contact name from one loaded with the package — see `refusesUntypedContact`. */
+  @ViewChild(LeadContactPersonFieldComponent) leadContactPersonField?: LeadContactPersonFieldComponent;
+
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
 
   fieldsManagerSE = inject(FieldsManagerService);
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
   /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — component-scoped dirty-diff tracker, the same mechanism the
+   * Results sections use (`rd-general-information.component.ts`). Snapshotted at the true end of the
+   * load flow (`convertChecklistToDiscontinuedOptions()`) and again the instant a save resolves
+   * (`performSave()`), so `UnsavedChangesGuard` can tell an edited section from an untouched one.
+   */
+  private readonly dirtyTracker = inject(SectionDirtyTrackerService);
+
+  // @akili-spec ipsr/gi-impact-area-scores-parity
+  /** The 5 tags that make up the Impact Area scores block, in render order (IPSR body keys). */
+  private static readonly IMPACT_AREA_TAG_FIELDS: (keyof IpsrGeneralInformationBody)[] = [
+    'gender_tag_level_id',
+    'climate_change_tag_level_id',
+    'nutrition_tag_level_id',
+    'environmental_biodiversity_tag_level_id',
+    'poverty_tag_level_id'
+  ];
+
+  readonly IMPACT_AREAS_TOTAL = IpsrGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.length;
+
+  /**
+   * How many of the 5 Impact Areas have a score. Counted by PRESENCE, not truthiness: a score of
+   * `0 — Not targeted` is a valid, meaningful answer and must count, so `!value` would wrongly
+   * report 4 of 5 the moment one tag is scored 0.
+   */
+  get impactAreasScored(): number {
+    return IpsrGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.filter(field => {
+      const value = this.ipsrGeneralInformationBody[field];
+      return value !== null && value !== undefined && value !== '';
+    }).length;
+  }
+
+  /**
+   * Whether the Impact Area guidance renders inside the ⓘ tooltip (2026 reporting-guidance flag on)
+   * or in the legacy inline box (flag off — Results parity).
+   */
+  readonly guidanceAsTooltip = computed(() => this.fieldsManagerSE.isReportingFormGuidance2026());
+
+  /**
    * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
-   * Innovation Packages go through the very same green check as pooled results
-   * (`validation_general_information_P25`), so the form asks for it under the same gate.
+   * This getter only gates the FORM's own required marker (`isLeadContactPersonMandatory2026`).
+   * Whether Innovation Packages' green check enforces the field the same way pooled results do
+   * is a separate, unresolved question — see proposal OQ-1 (`bugfix/ipsr-lead-contact-save-guard`).
    */
   get isLeadContactPersonRequired(): boolean {
     return this.fieldsManagerSE.isLeadContactPersonMandatory2026();
@@ -108,9 +156,14 @@ export class IpsrGeneralInformationComponent implements OnInit {
    *
    * Deliberately NOT a portfolio-year gate: this is "which portfolio", not "from which phase on".
    * The older portfolios keep their own rule, so the two cannot be collapsed into one threshold.
+   *
+   * P2-3824 (25-Sep-2026) supersedes the current-portfolio half: the Impact Area evidence moved to
+   * IPSR Step 3, where every piece of evidence can be tagged with the Impact Areas and a score of 2
+   * raises an alert until one is. So for P25 the field is never shown (and therefore never
+   * required) — the score-2 note keeps pointing to Step 3. Older portfolios: unchanged.
    */
   showImpactAreaEvidenceField(tagLevelId: number | string | null | undefined): boolean {
-    if (this.fieldsManagerSE.isP25()) return Number(tagLevelId) === 3;
+    if (this.fieldsManagerSE.isP25()) return false;
     return tagLevelId != null;
   }
 
@@ -155,6 +208,12 @@ export class IpsrGeneralInformationComponent implements OnInit {
       }
     });
     this.ipsrGeneralInformationBody.discontinued_options = options;
+
+    // P2-3427 — this is the actual END of `getSectionInformation()`'s load flow: the discontinued-options
+    // GET fired from its `next` handler resolves here, asynchronously, and this is the last mutation the
+    // body receives before the section counts as loaded. Snapshotting earlier (back in
+    // `getSectionInformation()`'s `next`) races this assignment and reports a fresh, unedited section as dirty.
+    this.dirtyTracker.snapshot(this.ipsrGeneralInformationBody);
   }
 
   onChangeKrs() {
@@ -170,23 +229,86 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
-    if (this.fieldsManagerSE.isP22() && this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
+    if (this.refusesUntypedContact()) return;
+    this.performSave().subscribe({ error: () => {} });
+  }
+
+  /**
+   * Precondition of the Save action: a contact name typed but never picked from the directory refuses
+   * the save and shows the field error. Shared by `onSaveSection()` and `saveSection()` so both refuse for
+   * the same reason and with the same on-screen explanation.
+   *
+   * @akili-spec bugfix/ipsr-lead-contact-save-guard
+   * The guard blocks a contact name the user TYPED and never picked from the directory list, and
+   * it must not look at the portfolio (mirrors `rd-general-information.component.ts:onSaveSection`).
+   * The `isP22()` carve-out it replaces let P25 silently erase a stored contact (typing without
+   * picking sends `lead_contact_person: null`) and blocked P22 from saving legitimate free-text
+   * names. `queryCameFromHydration` is the same distinction the field already makes in
+   * `onContactBlur`, so both halves now agree: typed and unmatched is an error on every portfolio,
+   * loaded (or accepted via "use this name anyway") is not.
+   */
+  private refusesUntypedContact(): boolean {
+    if (
+      this.userSearchService.searchQuery.trim() &&
+      !this.userSearchService.selectedUser &&
+      !this.leadContactPersonField?.queryCameFromHydration
+    ) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
-      return;
+      return true;
     }
+    return false;
+  }
 
-    this.api.resultsSE
+  /** P2-3427 — `CanComponentDeactivate.hasUnsavedChanges()`. */
+  hasUnsavedChanges(): boolean {
+    return this.dirtyTracker.isDirty(this.ipsrGeneralInformationBody);
+  }
+
+  /**
+   * P2-3427 — `CanComponentDeactivate.saveSection()`. Wraps `performSave()`'s exact PATCH call and error
+   * branch to resolve `true`/`false` instead of void, for `UnsavedChangesGuard`. A refused precondition
+   * resolves `false` without calling the server: the section stays and the field error explains why.
+   */
+  saveSection(): Observable<boolean> {
+    if (this.refusesUntypedContact()) return of(false);
+    return this.performSave().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * P2-3427 — returns the PATCH `Observable` instead of self-subscribing, so the Save button
+   * (`onSaveSection`) and the guard (`saveSection`) drive the exact same call and error branch.
+   */
+  private performSave(): Observable<void> {
+    return this.api.resultsSE
       .PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25())
-      .subscribe({
-        next: resp => {
+      .pipe(
+        tap(() => {
+          // Snapshot HERE, synchronously, the instant the PATCH resolves: the local body at this instant is
+          // exactly what the server just persisted. `saveSection()`'s `map(() => true)` can reach the guard
+          // before the reload below (and its own re-snapshot in `convertChecklistToDiscontinuedOptions()`)
+          // lands — or the reload can fail — and the section must not report dirty after a real save.
+          this.dirtyTracker.snapshot(this.ipsrGeneralInformationBody);
           this.getSectionInformation();
-        },
-        error: err => {
+        }),
+        map(() => undefined),
+        // P2-3427 (Ángel, 25-Sep-2026, "General Information – Bugs" ≈2:45): the error branch used to re-fetch the
+        // section, which OVERWROTE what the reporter had just typed with the stored copy — the corrected title
+        // vanished and the screen looked as if nothing had been saved, while the only trace of the real cause (a
+        // 400 from the server, e.g. a duplicated title) was a toast. The toast still comes from `isSavingPipe`;
+        // the form now keeps the reporter's edits so they can read the message and fix the field.
+        catchError(err => {
           console.error(err);
-          this.getSectionInformation();
-        }
-      });
+          // The save is not transactional on the server (title/tags update first, components and evidences
+          // after): if a later step throws, part of the body IS stored. The form keeps the reporter's edits,
+          // and the section indicators are refreshed so they reflect what the server actually holds.
+          this.ipsrCompletenessStatusSE.updateGreenChecks();
+          return throwError(() => err);
+        })
+      );
   }
 
   climateInformation() {

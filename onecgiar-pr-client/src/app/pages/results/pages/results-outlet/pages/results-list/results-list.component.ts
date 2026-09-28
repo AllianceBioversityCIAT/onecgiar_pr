@@ -465,8 +465,9 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * A W3/Bilaterals result (non-AVISA, not yet Approved) does NOT open Result Detail
-   * — it routes to the reporting framework's bilateral review drawer. Mirrors the
+   * A W3/Bilaterals result (non-AVISA) in review does NOT open Result Detail
+   * — it routes to the reporting framework's bilateral review drawer (Editing/Approved
+   * with a lead center open the center editor instead). Mirrors the
    * branching in navigateToResult() so the list can flag these rows at the code.
    */
   opensInFramework(result: CurrentResult): boolean {

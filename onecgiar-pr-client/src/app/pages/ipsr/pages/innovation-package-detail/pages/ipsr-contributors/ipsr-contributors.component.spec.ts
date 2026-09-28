@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { IpsrContributorsComponent } from './ipsr-contributors.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
@@ -11,6 +13,7 @@ import { IpsrNonPooledProjectsComponent } from './components/ipsr-non-pooled-pro
 import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { IpsrContributorsTocComponent } from './components/ipsr-contributors-toc/ipsr-contributors-toc.component';
 import { of } from 'rxjs';
+import { throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutComponent } from '../../../../../results/pages/result-detail/pages/rd-theory-of-change/components/shared/toc-initiative-out/toc-initiative-out.component';
 import { PrYesOrNotComponent } from '../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
@@ -87,6 +90,7 @@ describe('IpsrContributorsComponent', () => {
     mockFieldsManagerService = {
       isP25: jest.fn().mockReturnValue(false),
       isP22: jest.fn().mockReturnValue(true),
+      isContributorsPartners2026: jest.fn().mockReturnValue(false),
       fields: jest.fn().mockReturnValue({})
     };
 
@@ -120,7 +124,19 @@ describe('IpsrContributorsComponent', () => {
       setLeadPartnerOnLoad: jest.fn(),
       setPossibleLeadCenters: jest.fn(),
       setLeadCenterOnLoad: jest.fn(),
-      loadClarisaProjects: jest.fn()
+      runAutoAssignLeads: jest.fn(),
+      onLeadByPartnerChange: jest.fn(),
+      resetState: jest.fn(),
+      autoAddedLeadCenterCode: null,
+      loadClarisaProjects: jest.fn(),
+      // P2-3838 — project → owner Center API read by the template and the load flow.
+      syncProjectDerivedCenters: jest.fn(),
+      isProjectDerivedCenter: jest.fn(() => false),
+      isDerivedCenterEntering: jest.fn(() => false),
+      isDerivedCenterLeaving: jest.fn(() => false),
+      projectDerivedCenterTooltip: jest.fn(() => ''),
+      centersLockedInDropdown: [],
+      projectDerivedCentersTick: jest.fn(() => 0)
     };
 
     mockIpsrCompletenessStatusSE = {
@@ -284,17 +300,18 @@ describe('IpsrContributorsComponent', () => {
     });
   });
 
-  describe('getMessageLead', () => {
-    it('should return message for partner when is_lead_by_partner is true', () => {
-      mockRdPartnersSE.partnersBody.is_lead_by_partner = true;
+  describe('getMessageLead / getMessageLeadCenter', () => {
+    it('the partner note keeps the "already added" restriction', () => {
       const msg = component.getMessageLead();
       expect(msg).toContain('partner');
+      expect(msg).toContain('already added in this section');
     });
 
-    it('should return message for CG Center when is_lead_by_partner is false', () => {
-      mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
-      const msg = component.getMessageLead();
+    // P2-3427: the Lead center offers the full catalogue (LC-DD-1), so its note carries no restriction.
+    it('the Lead center note has no "already added" restriction', () => {
+      const msg = component.getMessageLeadCenter();
       expect(msg).toContain('CG Center');
+      expect(msg).not.toContain('already added');
     });
   });
 
@@ -510,9 +527,10 @@ describe('IpsrContributorsComponent', () => {
       expect(component.contributors_result_toc_result).not.toBeNull();
       expect(component.disabledOptions.length).toBe(2);
       expect(component.getConsumed()).toBe(true);
-      expect(mockRdPartnersSE.setPossibleLeadPartners).toHaveBeenCalledWith(true);
+      expect(mockRdPartnersSE.setPossibleLeadPartners).toHaveBeenCalledWith(true, false);
       expect(mockRdPartnersSE.setLeadPartnerOnLoad).toHaveBeenCalledWith(true);
-      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+      // P2-3427: auto-assign is OFF here and runs last, in runAutoAssignLeads().
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true, false);
       expect(mockRdPartnersSE.setLeadCenterOnLoad).toHaveBeenCalledWith(true);
     });
 
@@ -692,7 +710,8 @@ describe('IpsrContributorsComponent', () => {
       expect(mockRdPartnersSE.partnersBody.mqap_institutions[1].is_leading_result).toBe(false);
       expect(mockRdPartnersSE.partnersBody.institutions[0].is_leading_result).toBe(true);
       expect(mockRdPartnersSE.partnersBody.institutions[1].is_leading_result).toBe(false);
-      expect(mockRdPartnersSE.partnersBody.contributing_center[0].is_leading_result).toBe(false);
+      // P2-3427: the Lead center is stamped whatever the partner toggle says (decoupled, as W1/W2).
+      expect(mockRdPartnersSE.partnersBody.contributing_center[0].is_leading_result).toBe(true);
     });
 
     it('should map is_leading_result for centers when is_lead_by_partner is false', () => {
@@ -718,7 +737,50 @@ describe('IpsrContributorsComponent', () => {
     });
   });
 
+  // Night sweep 2026-09-23, IPSR-8 (prtest 11172 / 12037): GET 500 → Save stripped the owner SP.
+  // Control negative: with the gate line removed from `onSaveSection()` the no-PATCH test fails.
+  describe('IPSR-8 — refuses to save after a failed section load', () => {
+    it('marks the section as not loaded and does not PATCH', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = () => throwError(() => ({ status: 500 }));
+      component.loaded.set(null);
+      component.getSectionInformation();
+
+      component.onSaveSection();
+
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('does not PATCH while the first GET is still in flight', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      component.loaded.set(null);
+      component.onSaveSection();
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('the template shows the error note and disables Save until loaded', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'ipsr-contributors.component.html'), 'utf8');
+      expect(html).toContain('@if (loaded() === false) {');
+      expect(html).toContain('[disabled]="loaded() !== true"');
+    });
+  });
+
   describe('onSaveSection', () => {
+    beforeEach(() => component.loaded.set(true));
+    // Night sweep 2026-09-23, IPSR-7. Control negative: without the two deletes this test fails.
+    it('IPSR-7: does not echo has_innovation_link / linked_results from the GET body', () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      (component.contributorsBody as any).has_innovation_link = false;
+      (component.contributorsBody as any).linked_results = [11866];
+      component.onSaveSection();
+      const [sent] = patch.mock.calls.at(-1) as any[];
+      expect('has_innovation_link' in sent).toBe(false);
+      expect('linked_results' in sent).toBe(false);
+    });
+
     it('should call PATCHContributorsByIpsrResultId and getSectionInformation on onSaveSection', () => {
       const patchContributorsSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
@@ -1075,6 +1137,443 @@ describe('IpsrContributorsComponent', () => {
       const first = component.contributingInitiativesList;
 
       expect(component.contributingInitiativesList).toBe(first);
+    });
+  });
+
+  // P2-3427 (Ángel, 25-Sep-2026 review of the IPSR flow) — Lead center placement and sync, ToC question wording.
+  describe('P2-3427 — Lead center like W1/W2', () => {
+    const html = readFileSync(join(__dirname, 'ipsr-contributors.component.html'), 'utf8');
+
+    it('loads the saved lead FIRST and runs the auto-assign LAST (the old order lost the single-center lead)', () => {
+      const order: string[] = [];
+      mockRdPartnersSE.setPossibleLeadCenters.mockImplementation((...args: any[]) => order.push('setPossibleLeadCenters:' + JSON.stringify(args)));
+      mockRdPartnersSE.setLeadCenterOnLoad.mockImplementation(() => order.push('setLeadCenterOnLoad'));
+      mockRdPartnersSE.runAutoAssignLeads.mockImplementation(() => order.push('runAutoAssignLeads'));
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockRdPartnersSE.partnersBody.contributing_and_primary_initiative = [];
+      component.contributorsBody = { ...mockResponse, bilateral_projects: [] } as any;
+
+      component.getTocLogicp25({ ...mockResponse, linked_results: [] });
+
+      expect(order).toEqual(['setPossibleLeadCenters:[true,false]', 'setLeadCenterOnLoad', 'runAutoAssignLeads']);
+    });
+
+    it('resets the shared service state before loading (root singleton leaks W1/W2 selections otherwise)', () => {
+      jest.spyOn(component, 'getSectionInformation').mockImplementation();
+      component.ngOnInit();
+      expect(mockRdPartnersSE.resetState).toHaveBeenCalled();
+    });
+
+    it('adds a lead that is not a contributor yet to contributing_center and remembers it as auto-added', () => {
+      component.centersSE.centersList = [{ code: 'C9', name: 'Center 9', full_name: 'C9 - Center 9' }] as any;
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1', name: 'Center 1' }];
+
+      component.onLeadCenterSelected('C9');
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', 'C9']);
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBe('C9');
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+    });
+
+    it('swapping the lead strips only the center the previous pick auto-added', () => {
+      component.centersSE.centersList = [
+        { code: 'C8', name: 'Center 8' },
+        { code: 'C9', name: 'Center 9' }
+      ] as any;
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1', name: 'Center 1' }, { code: 'C9', name: 'Center 9' }];
+      mockRdPartnersSE.autoAddedLeadCenterCode = 'C9';
+
+      component.onLeadCenterSelected('C8');
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', 'C8']);
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBe('C8');
+    });
+
+    it('does nothing when the pick is already a contributor (negative control)', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1', name: 'Center 1' }];
+      mockRdPartnersSE.setPossibleLeadCenters.mockClear();
+
+      component.onLeadCenterSelected('C1');
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+      expect(mockRdPartnersSE.setPossibleLeadCenters).not.toHaveBeenCalled();
+    });
+
+    it('forgets the auto-added code when that center is removed by hand', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1' }, { code: 'C9' }];
+      mockRdPartnersSE.autoAddedLeadCenterCode = 'C9';
+      mockRdPartnersSE.leadCenterCode = 'C9';
+
+      component.deleteContributingCenter(1);
+
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBeNull();
+      expect(mockRdPartnersSE.leadCenterCode).toBeNull();
+    });
+
+    it('markup: the Lead center sits right under the centers chips, before the W3/bilateral projects, and always shows', () => {
+      const lead = html.indexOf('data-testid="ipsr-field-contributing_center~lead"');
+      const chips = html.indexOf('class="centers chips_container"');
+      const projects = html.indexOf('label="Contributing W3 and/or bilateral projects"');
+      expect(lead).toBeGreaterThan(chips);
+      expect(lead).toBeLessThan(projects);
+      expect(html).not.toContain('#selectLeadCenter');
+      // P2-3838: a Lead swap re-syncs the project-derived Centers right after its own bookkeeping.
+      expect(html).toMatch(/\(selectOptionEvent\)="onLeadCenterSelected\(\$event\?\.code \?\? null\); this\.rdPartnersSE\.syncProjectDerivedCenters\(\)"/);
+      expect(html).toMatch(/\(selectOptionEvent\)="this\.rdPartnersSE\.onLeadByPartnerChange\(\$event\)"/);
+    });
+  });
+
+  // P2-3427 (package 9638): no ToC row saved → "Yes" showed only "+", "No" had no row for the financial answer.
+  describe('P2-3427 — a package without ToC rows gets one so the Level and the financial answer have a home', () => {
+    it('ensureTocRow adds exactly one default row when the list is empty and leaves an existing list alone', () => {
+      const item: any = { initiative_id: 7, official_code: 'SP13', short_name: 'Genebank', planned_result: true, result_toc_results: [] };
+      component.ensureTocRow(item);
+      expect(item.result_toc_results).toHaveLength(1);
+      expect(item.result_toc_results[0]).toMatchObject({ initiative_id: 7, official_code: 'SP13', planned_result: true, toc_level_id: null, toc_result_id: null });
+      component.ensureTocRow(item);
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('onPlannedResultChange keeps one row and creates it when there was none', () => {
+      const item: any = { initiative_id: 7, result_toc_results: [] };
+      component.onPlannedResultChange(item);
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('load path (getTocLogicp25) also guarantees the row', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockRdPartnersSE.partnersBody.result_toc_result = { initiative_id: 7, official_code: 'SP13', result_toc_results: [] };
+      mockRdPartnersSE.partnersBody.contributing_and_primary_initiative = [];
+      component.contributorsBody = { ...mockResponse, bilateral_projects: [] } as any;
+      component.getTocLogicp25({ ...mockResponse, linked_results: [] });
+      expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results).toHaveLength(1);
+    });
+  });
+
+  describe('P2-3427 — ToC question reads like W1/W2', () => {
+    const html = readFileSync(join(__dirname, 'ipsr-contributors.component.html'), 'utf8');
+
+    it('2026 phase: KPI label, 2026 note, financial-resources question on No, 50-word justification', () => {
+      mockFieldsManagerService.isContributorsPartners2026.mockReturnValue(true);
+      expect(component.tocQuestionLabel()).toBe('Can this result be mapped to a ToC KPI?');
+      expect(component.tocQuestionInfoNote()).toContain('2026 ToC KPI');
+      expect(html).toContain('[label]="tocQuestionLabel()"');
+      expect(html).toContain('[tooltip]="tocQuestionInfoNote()"');
+      expect(html).toMatch(/@if \(isCP2026\(\) && !this\.rdPartnersSE\.partnersBody\.result_toc_result\.planned_result\) \{\s*<app-pr-yes-or-not\s*label="Did the Program invest financial resources/);
+      expect(html).toContain('[maxWords]="isCP2026() ? 50 : 30"');
+    });
+
+    it('2025 phase keeps the 2025 wording and its alert (phase gate, not portfolio)', () => {
+      mockFieldsManagerService.isContributorsPartners2026.mockReturnValue(false);
+      expect(component.tocQuestionLabel()).toBe("Does this result align with the Program's planned TOC indicators?");
+      expect(component.tocQuestionInfoNote()).toContain('2025 ToC');
+      expect(html).toMatch(/@if \(!isCP2026\(\)\) \{[\s\S]*?<app-alert-status[\s\S]*?\[collapsible\]="false"/);
+    });
+
+    it('the financial-resources radio reads the first ToC row and writes every row', () => {
+      mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results = [{ planned_result: false }, { planned_result: false }];
+      expect(component.programInvestedFinancialResources).toBeNull();
+      component.programInvestedFinancialResources = true;
+      expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results.map((r: any) => r.program_invested_financial_resources)).toEqual([true, true]);
+      expect(component.programInvestedFinancialResources).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — `CanComponentDeactivate` wiring. The mocks are synchronous
+   * (`of(...)`), which matches the component: once the GET resolves nothing in its load flow is async.
+   */
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    // Local literal, never the file-level `mockResponse`: `onSectionInformation()` assigns the response BY
+    // REFERENCE and earlier tests mutate the shared one in place.
+    const freshResponse = () => ({
+      result_toc_result: {
+        initiative_id: 1,
+        planned_result: true,
+        result_toc_results: [
+          { planned_result: true, toc_progressive_narrative: null, indicators: [{ related_node_id: null, toc_results_indicator_id: 42, targets: [] }] }
+        ]
+      },
+      contributors_result_toc_result: [],
+      contributing_initiatives: { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] },
+      contributing_center: [{ code: 'C1', name: 'Center 1', is_leading_result: true }],
+      bilateral_projects: [],
+      institutions: [{ institutions_id: 7, institutions_type_name: '', institutions_name: 'Partner 7' }],
+      mqap_institutions: [],
+      is_lead_by_partner: false,
+      linked_results: []
+    });
+    const anotherPartner = (id: number) => ({ institutions_id: id, institutions_type_name: '', institutions_name: `Partner ${id}` }) as any;
+
+    beforeEach(() => {
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = jest.fn(() => of({ response: freshResponse() }));
+      mockApiService.resultsSE.PATCHContributorsByIpsrResultId = jest.fn(() => of({ response: [] }));
+      component.ngOnInit();
+    });
+
+    it('is false right after the load flow completes (untouched)', () => {
+      expect(component.loaded()).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('stays false when the shared ToC children stamp their client-only fields onto the rows after the load', () => {
+      const row = component.contributorsBody.result_toc_result.result_toc_results[0] as any;
+      // exactly what `CPMultipleWPsComponent.ngOnChanges()` and `multiple-wps-content.getIndicatorsList()` write
+      row.uniqueId = '0';
+      row.indicators[0].related_node_id = row.indicators[0].toc_results_indicator_id;
+      row.toc_progressive_narrative = '';
+
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('is true after editing a bound field of the body', () => {
+      component.contributorsBody.institutions.push(anotherPartner(8));
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('is true after changing ONLY the Lead center, which lives on the shared service and not on the body', () => {
+      mockRdPartnersSE.leadCenterCode = `${mockRdPartnersSE.leadCenterCode}-changed`;
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('is false right when saveSection() emits true, even when the follow-up reload fails', () => {
+      component.contributorsBody.institutions.push(anotherPartner(8));
+      expect(component.hasUnsavedChanges()).toBe(true);
+      mockApiService.resultsSE.GETContributorsByIpsrResultId = jest.fn(() => throwError(() => new Error('reload failed')));
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      expect(sawTrue).toBe(true);
+      expect(patchSpy).toHaveBeenCalledTimes(1);
+      // the failed RE-load keeps the section usable (IPSR-8) and the baseline the save set
+      expect(component.loaded()).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('saveSection() resolves false (not throws) when the PATCH fails, without reloading', () => {
+      jest.spyOn(console, 'error').mockImplementation();
+      mockApiService.resultsSE.PATCHContributorsByIpsrResultId = jest.fn(() => throwError(() => new Error('save failed')));
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({ next: value => (result = value), error: () => (errored = true) });
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    });
+
+    it('saveSection() resolves false without calling the PATCH when the section was never loaded (IPSR-8)', () => {
+      component.loaded.set(null);
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(value => (result = value));
+
+      expect(result).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
+    it('moves the baseline when a late catalogue re-assigns ONLY the lead, and keeps a real edit dirty', () => {
+      // late `loadedCenters` emission: the service recomputed the Lead center and calls us back
+      mockRdPartnersSE.leadCenterCode = 'C1-from-late-catalogue';
+      mockRdPartnersSE.onCatalogueDrivenLeadUpdate('centers');
+      expect(component.hasUnsavedChanges()).toBe(false);
+
+      // the same emission while the reporter already edited the body: the edit must survive as dirty
+      component.contributorsBody.institutions.push(anotherPartner(9));
+      mockRdPartnersSE.leadCenterCode = 'C1-again';
+      mockRdPartnersSE.onCatalogueDrivenLeadUpdate('centers');
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    // P2-3838 — a late catalogue that derives a Center from a saved project is not a user edit.
+    describe('P2-3838 — project-derived Centers that land after the load snapshot', () => {
+      const deriveCenter = () =>
+        mockRdPartnersSE.syncProjectDerivedCenters.mockImplementation(() => {
+          mockRdPartnersSE.partnersBody.contributing_center = [
+            ...(mockRdPartnersSE.partnersBody.contributing_center || []),
+            { code: 'C7', name: 'Center 7 (owner of a saved project)' }
+          ];
+        });
+      // The P25 load walks `contributing_and_primary_initiative`; the block's `freshResponse()` is the non-P25 shape.
+      beforeEach(() => {
+        mockApiService.resultsSE.GETContributorsByIpsrResultId = jest.fn(() =>
+          of({ response: { ...freshResponse(), contributing_and_primary_initiative: [] } })
+        );
+      });
+
+      const projectsCatalogueCallback = () => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockRdPartnersSE.loadClarisaProjects.mockClear();
+        component.ngOnInit();
+        return mockRdPartnersSE.loadClarisaProjects.mock.calls.at(-1)[0] as () => void;
+      };
+
+      it('runs the derivation at the end of the P25 load, before the clean snapshot', () => {
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockRdPartnersSE.syncProjectDerivedCenters.mockClear();
+        deriveCenter();
+        component.ngOnInit();
+
+        expect(mockRdPartnersSE.syncProjectDerivedCenters).toHaveBeenCalledWith({ animate: false });
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('late PROJECTS catalogue adds a Center to an untouched section: it stays clean', () => {
+        const onLoaded = projectsCatalogueCallback();
+        expect(component.hasUnsavedChanges()).toBe(false);
+        deriveCenter();
+
+        onLoaded();
+
+        expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toContain('C7');
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('late CENTERS catalogue adds a Center to an untouched section: it stays clean', () => {
+        deriveCenter();
+
+        mockRdPartnersSE.onCatalogueDrivenLeadUpdate('centers');
+
+        expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toContain('C7');
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      it('a section the reporter already edited stays dirty — the late derivation never swallows the edit', () => {
+        const onLoaded = projectsCatalogueCallback();
+        component.contributorsBody.institutions.push(anotherPartner(11));
+        deriveCenter();
+
+        onLoaded();
+
+        expect(component.hasUnsavedChanges()).toBe(true);
+      });
+    });
+
+    it('detaches its catalogue callback from the shared service on destroy', () => {
+      expect(typeof mockRdPartnersSE.onCatalogueDrivenLeadUpdate).toBe('function');
+
+      component.ngOnDestroy();
+
+      expect(mockRdPartnersSE.onCatalogueDrivenLeadUpdate).toBeUndefined();
+    });
+  });
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review, reproduced in prtest) — saving Contributors with the "Other(s) External
+   * Partners" option open posted the selector's sentinel row (`institutions_id = -999999`) and MySQL refused it
+   * (FK `results_by_institution.institutions_id -> clarisa_institutions.id`); the partners picked under Other(s)
+   * never reached the payload. Same contract as W1/W2 (`rd-contributors-and-partners.component.ts:1142-1151`).
+   */
+  describe('P2-3427 — External Partners "Other(s)" never reach the PATCH as the sentinel (P25)', () => {
+    const OTHER_PARTNERS_CODE = -999999; // `RdContributorsAndPartnersService.OTHER_PARTNERS_CODE`
+    const tocPartner = { institutions_id: 11, institutions_name: 'ToC partner 11', institutions_type_name: '' };
+    const sentinel = { institutions_id: OTHER_PARTNERS_CODE, full_name: '<strong>Other(s) External Partners</strong>' };
+    const otherPartner = { institutions_id: 22, institutions_name: 'Other partner 22', institutions_type_name: '' };
+
+    const lastSent = (patchSpy: jest.SpyInstance) => patchSpy.mock.calls.at(-1)[0];
+
+    beforeEach(() => {
+      component.loaded.set(true);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockFieldsManagerService.isContributorsPartners2026.mockReturnValue(true);
+      mockRdPartnersSE.OTHER_PARTNERS_CODE = OTHER_PARTNERS_CODE;
+      mockRdPartnersSE.partnersBody.institutions = [{ ...tocPartner }, { ...sentinel }];
+      mockRdPartnersSE.partnersBody.mqap_institutions = [{ institutions_id: 33 }];
+      mockRdPartnersSE.otherPartnersSelected = [{ ...otherPartner }];
+      mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
+      mockRdPartnersSE.leadPartnerId = null;
+      component.contributorsBody.contributing_initiatives = { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] };
+      component.contributorsBody.contributingInitiativeNew = [];
+      // These tests are about the PATCH payload only: the follow-up reload would swap `partnersBody` for the GET
+      // response and hide what was sent.
+      jest.spyOn(component, 'getSectionInformation').mockImplementation(() => undefined);
+    });
+
+    it('(a) strips the sentinel: no institutions_id === -999999 travels, the ToC partner stays with from_toc: true', () => {
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      component.onSaveSection();
+
+      const sent = lastSent(patchSpy);
+      expect(sent.institutions.some((p: any) => p.institutions_id === OTHER_PARTNERS_CODE)).toBe(false);
+      expect(sent.institutions).toEqual(expect.arrayContaining([expect.objectContaining({ institutions_id: 11, from_toc: true })]));
+    });
+
+    it('(b) sends the partners picked under Other(s) with from_toc: false', () => {
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      component.onSaveSection();
+
+      const sent = lastSent(patchSpy);
+      expect(sent.institutions).toEqual(expect.arrayContaining([expect.objectContaining({ institutions_id: 22, from_toc: false })]));
+      expect(sent.institutions).toHaveLength(2);
+    });
+
+    it('(c) the lead partner chosen under Other(s) goes out with is_leading_result: true, the rest false', () => {
+      mockRdPartnersSE.partnersBody.is_lead_by_partner = true;
+      mockRdPartnersSE.leadPartnerId = 22;
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      component.onSaveSection();
+
+      const sent = lastSent(patchSpy);
+      expect(sent.institutions.find((p: any) => p.institutions_id === 22).is_leading_result).toBe(true);
+      expect(sent.institutions.find((p: any) => p.institutions_id === 11).is_leading_result).toBe(false);
+    });
+
+    it('(c-control) with the lead NOT by partner nobody is lead, whatever leadPartnerId says', () => {
+      mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
+      mockRdPartnersSE.leadPartnerId = 22;
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      component.onSaveSection();
+
+      expect(lastSent(patchSpy).institutions.every((p: any) => p.is_leading_result === false)).toBe(true);
+    });
+
+    it('leaves mqap_institutions and the rest of the payload as they were', () => {
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      const mqapBefore = mockRdPartnersSE.partnersBody.mqap_institutions;
+      const tocBefore = mockRdPartnersSE.partnersBody.result_toc_result;
+
+      component.onSaveSection();
+
+      const sent = lastSent(patchSpy);
+      expect(sent.mqap_institutions).toBe(mqapBefore);
+      expect(sent.is_lead_by_partner).toBe(false);
+      expect(sent.result_toc_result).toBe(tocBefore);
+    });
+
+    it('outside the 2026 phase (no Other(s) selector) the P25 payload is untouched: institutions travel as the body holds them', () => {
+      mockFieldsManagerService.isContributorsPartners2026.mockReturnValue(false);
+      mockRdPartnersSE.partnersBody.institutions = [{ ...tocPartner }];
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      component.onSaveSection();
+
+      const sent = lastSent(patchSpy);
+      expect(sent.institutions).toBe(mockRdPartnersSE.partnersBody.institutions);
+      expect(sent.institutions[0]).not.toHaveProperty('from_toc');
+    });
+
+    it('does not touch the non-P25 payload (institutions travel as the body holds them)', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(false);
+      component.contributorsBody.institutions = [{ ...tocPartner }] as any;
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+
+      component.onSaveSection();
+
+      expect(lastSent(patchSpy).institutions).toEqual([{ ...tocPartner }]);
     });
   });
 });

@@ -21,6 +21,10 @@ import { EvidenceSharepoint } from './entities/evidence-sharepoint.entity';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
 import { throwServiceError } from '../../../shared/utils/service-error.util';
+import {
+  EvidenceTypeEnum,
+  IpsrEvidenceLevelEnum,
+} from '../../../shared/constants/evidence-type.enum';
 
 @Injectable()
 export class EvidencesService {
@@ -367,6 +371,139 @@ export class EvidencesService {
       }
     }
     await this._evidencesRepository.save(newsEvidencesArray);
+  }
+
+  /**
+   * P2-3824 — saves the evidence list of ONE IPSR Step 3 component (core or enabler) and level.
+   *
+   * Same field copy (`_applyEvidenceInputFields`), CGSpace handle resolution and SharePoint
+   * persistence (`saveSPData`) as a Results evidence, so an uploaded file behaves identically. What
+   * differs is the scope: the rows are `IPSR_STEP_THREE` and keyed by
+   * `(result_id, component, level)` through `result_ip_step_three_evidence`, and only rows of that key
+   * that the reporter removed are deactivated. The Results replace-all is not used on purpose.
+   *
+   * The cap and the duplicate-link check are the caller's (they span both levels of a component).
+   *
+   * Returns the first active evidence after the save (creation order) — what the caller
+   * dual-writes to the legacy single-link columns — and the items that could not be saved. It
+   * does not throw for those: like `_processMainEvidencesOnCreate`, everything that can be saved
+   * IS saved, and the caller reports the rest once the legacy columns are consistent.
+   */
+  async saveIpsrStepThreeEvidences(
+    resultId: number,
+    resultByInnovationPackageId: number,
+    level: IpsrEvidenceLevelEnum,
+    items: EvidencesCreateInterface[],
+    user: TokenDto,
+  ): Promise<{
+    first: { link: string; description: string | null } | null;
+    failures: string[];
+  }> {
+    const evidences = (items ?? []).filter(
+      (e) => !!e?.link?.trim() || !!e?.is_sharepoint,
+    );
+
+    await this._evidencesRepository.deactivateIpsrStepThreeEvidences(
+      resultId,
+      resultByInnovationPackageId,
+      level,
+      evidences
+        .map((e) => Number(e?.id))
+        .filter((id) => Number.isFinite(id) && id > 0),
+      user.id,
+    );
+
+    // Guarded per evidence for the same reason as `_processMainEvidencesOnCreate`: there is no
+    // transaction, so one piece failing must not silently drop the ones after it.
+    const failures: string[] = [];
+    for (const [index, evidence] of evidences.entries()) {
+      try {
+        await this._upsertIpsrStepThreeEvidence(
+          resultId,
+          resultByInnovationPackageId,
+          level,
+          evidence,
+          user,
+        );
+      } catch (error) {
+        const label =
+          evidence?.sp_file_name ?? evidence?.link ?? `evidence ${index + 1}`;
+        this._logger.error(
+          `IPSR: Step 3 ${level} evidence "${label}" of component ${resultByInnovationPackageId} (result ${resultId}) could not be saved: ${error?.message}`,
+        );
+        failures.push(`"${label}": ${error?.message}`);
+      }
+    }
+
+    // Read back rather than trusting the payload: `saveSPData` replaces an uploaded file's link
+    // with its SharePoint sharing url after the row is saved.
+    const saved = (
+      await this._evidencesRepository.getIpsrStepThreeEvidences(resultId)
+    ).find(
+      (e) =>
+        Number(e.result_by_innovation_package_id) ===
+          Number(resultByInnovationPackageId) &&
+        e.ipsr_evidence_level === level &&
+        !!e.link?.trim(),
+    );
+
+    return {
+      first: saved
+        ? { link: saved.link, description: saved.description ?? null }
+        : null,
+      failures,
+    };
+  }
+
+  private async _upsertIpsrStepThreeEvidence(
+    resultId: number,
+    resultByInnovationPackageId: number,
+    level: IpsrEvidenceLevelEnum,
+    evidence: EvidencesCreateInterface,
+    user: TokenDto,
+  ): Promise<void> {
+    const id = Number(evidence?.id);
+    // Only a row of this very component and level can be updated: an id from another package or
+    // list is treated as a new piece of evidence instead of being moved here.
+    const ownedId =
+      Number.isFinite(id) && id > 0
+        ? await this._evidencesRepository.findIpsrStepThreeEvidenceId(
+            id,
+            resultId,
+            resultByInnovationPackageId,
+            level,
+          )
+        : null;
+    const existing = ownedId
+      ? await this._evidencesRepository.findOne({ where: { id: ownedId } })
+      : null;
+
+    const target = existing ?? new Evidence();
+    this._applyEvidenceInputFields(target, evidence);
+    // A file whose sharing link is not created yet arrives with no link; the column is NOT NULL
+    // and `saveSPData` fills it right after.
+    target.link = await this.getHandleFromRegularLink(
+      evidence?.link?.trim() ?? '',
+    );
+    target.last_updated_by = user.id;
+    if (!existing) {
+      target.created_by = user.id;
+      target.result_id = resultId;
+      target.evidence_type_id = EvidenceTypeEnum.IPSR_STEP_THREE;
+      target.is_supplementary = false;
+    }
+
+    const saved = await this._evidencesRepository.save(target);
+    if (saved?.id && !existing) {
+      await this._evidencesRepository.linkIpsrStepThreeEvidence(
+        saved.id,
+        resultByInnovationPackageId,
+        level,
+      );
+    }
+    if (saved?.id) {
+      await this.saveSPData(evidence, saved.id);
+    }
   }
 
   async createV2(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {

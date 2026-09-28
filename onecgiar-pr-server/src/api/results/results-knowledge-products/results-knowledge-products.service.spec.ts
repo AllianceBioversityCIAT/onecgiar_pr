@@ -80,9 +80,9 @@ describe('ResultsKnowledgeProductsService — handle lookup (P2-3534)', () => {
         'https://cgspace.cgiar.org/items/b874412c-c6ba-4f68-b423-c8b785a2ad4e';
 
       expect(service.extractHandleIdentifier(itemUrl)).toBe(itemUrl);
-      expect(
-        service.extractHandleIdentifier(`${itemUrl}?show=full`),
-      ).toBe(itemUrl);
+      expect(service.extractHandleIdentifier(`${itemUrl}?show=full`)).toBe(
+        itemUrl,
+      );
     });
 
     it('passes MELSpace and WorldFish item URLs through intact', () => {
@@ -92,7 +92,9 @@ describe('ResultsKnowledgeProductsService — handle lookup (P2-3534)', () => {
         service.extractHandleIdentifier(
           'https://repo.mel.cgiar.org/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f',
         ),
-      ).toBe('https://repo.mel.cgiar.org/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f');
+      ).toBe(
+        'https://repo.mel.cgiar.org/items/ff1dcfdf-1045-42e6-b552-347dd45f7f1f',
+      );
       expect(
         service.extractHandleIdentifier(
           'https://digitalarchive.worldfishcenter.org/items/85172763-6efc-48a8-8d6b-212b859be972',

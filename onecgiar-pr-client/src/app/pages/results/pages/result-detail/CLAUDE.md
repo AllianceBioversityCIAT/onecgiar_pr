@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-09-16 · performance-refactor · 01891aebd · reserva de 88px bajo la barra y pliegue suspendido con un dropdown abierto; prior: 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
+**Verified:** 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `fieldFeedbackList` pliega gaps de secciones fuera de pantalla (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · reserva de 88px bajo la barra y pliegue suspendido con un dropdown abierto; prior: 2026-09-11 · branch qa-development-2026-ss · changes/unsaved-changes-alert `UCA-T-12` (new "Unsaved-changes guard" section documenting `CanComponentDeactivate`, the routing-node fix, and the recurring child-mutation bug class); prior: 2026-09-11 · branch performance-refactor · 624d4a017 (P2-3659: `Next` guarda antes de navegar); prior: 2026-09-04 · qa-development-2026 · 2b7232fff (adds the one-line pointer to the shared `pr-viewport-page` mixin, spec `changes/sp-shell-app-viewport` SAV-T-6; no code change); prior: 2026-09-03 · 6963df5af
 
 ## Qué es
 
@@ -85,6 +85,17 @@ dueño del componente porque elimina nodos a través del padre **actual**.
 - ⚠️ El `ngOnDestroy` de la barra hace `remove()` a propósito: sin él, al cambiar de sección la
   saliente y la entrante se apilan un instante en el slot.
 - Si no hay slot (IPSR, result creator), la barra se queda donde fue declarada.
+
+## `fieldFeedbackList` ahora también pliega gaps fuera de pantalla (P2-3542)
+
+Desde el 25-sep-2026 el escaneo "N fields missing" (`DataControlService.someMandatoryFieldIncompleteResultDetail`)
+ya no lee solo el DOM: una sección puede registrarse (`registerOffscreenFeedback` /
+`unregisterOffscreenFeedback`) para reportar lo que sabe que falta pero no renderiza — hoy, las
+pestañas ToC de Contributors & Partners que no están activas. El fold entra a `fieldFeedbackList`
+y `mandatoryFieldsTotal` igual que un gap del DOM, así que ningún consumidor de la barra (pill,
+ring, popover, "N alerts" del save button) necesita cambio. El publisher, su gate y sus dos
+excepciones viven en [`pages/rd-contributors-and-partners/CLAUDE.md`](pages/rd-contributors-and-partners/CLAUDE.md)
+— no duplicado aquí.
 
 ## Trampas (⚠️ = ya rompió algo)
 

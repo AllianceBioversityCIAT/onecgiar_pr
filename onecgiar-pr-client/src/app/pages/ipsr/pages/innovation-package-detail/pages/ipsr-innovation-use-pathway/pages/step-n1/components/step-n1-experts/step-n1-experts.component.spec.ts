@@ -75,6 +75,14 @@ describe('StepN1ExpertsComponent', () => {
     expect(component.hasElementsWithId(list, attr)).toBe(2);
   });
 
+  it('should count an unsaved row with no is_active set as present when readonly is false', () => {
+    const list = [{ id: 1 }, { id: 2, is_active: false }];
+    const attr = 'name';
+    component.api.rolesSE.readOnly = false;
+
+    expect(component.hasElementsWithId(list, attr)).toBe(1);
+  });
+
   it('should return the narrative actors as a formatted string when narrativeActors is called', () => {
     const expectedString = `
     <ul>

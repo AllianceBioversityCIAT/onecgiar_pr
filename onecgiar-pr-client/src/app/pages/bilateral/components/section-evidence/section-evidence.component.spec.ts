@@ -31,6 +31,9 @@ describe('SectionEvidenceComponent', () => {
   const build = () => {
     fixture = TestBed.createComponent(SectionEvidenceComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (R-2): the save tests model a section whose GET already landed; the
+    // load-failure gate has its own describe block, which resets this.
+    component.loaded.set(true);
     return component;
   };
 
@@ -224,6 +227,45 @@ describe('SectionEvidenceComponent', () => {
       build();
       fixture.detectChanges();
       expect(component.isLoading()).toBe(false);
+    });
+  });
+
+  // Night sweep 2026-09-23, R-2: GET 500 → "No evidence added" → confirming one evidence POSTed a
+  // one-item list and the server de-activated the stored ones. Control negative: with the `loaded`
+  // gate lines removed from `saveSection()` / `addNew()` the POST / modal tests below fail.
+  describe('R-2 — refuses to add or save after a failed load', () => {
+    const failedLoad = () => {
+      bilateralApi.GET_evidences.mockReturnValue(throwError(() => ({ status: 500 })));
+      build();
+      component.loaded.set(null);
+      fixture.detectChanges();
+    };
+
+    it('marks the section as not loaded; the template shows the note and hides "Add evidence" / "No evidence added"', () => {
+      failedLoad();
+      expect(component.loaded()).toBe(false);
+      // This suite stubs the template (overrideTemplate), so the markup contract is read from the file.
+      const html = readFileSync(join(__dirname, 'section-evidence.component.html'), 'utf8');
+      expect(html).toContain('@if (loaded() === false) {');
+      expect(html).toContain('@if (!evidences.length && loaded() !== false) {');
+      expect(html).toContain('@if (canAddMore && !readOnly() && loaded() === true) {');
+    });
+
+    it('does not open the modal and never POSTs, even when a save is requested', async () => {
+      failedLoad();
+      component.addNew();
+      await component.saveSection();
+      expect(component.showDraft()).toBe(false);
+      expect(bilateralApi.POST_evidences).not.toHaveBeenCalled();
+    });
+
+    it('a failed RE-load after a successful one keeps saving available', async () => {
+      build();
+      fixture.detectChanges();
+      expect(component.loaded()).toBe(true);
+      bilateralApi.GET_evidences.mockReturnValue(throwError(() => ({ status: 500 })));
+      component.loadEvidences();
+      expect(component.loaded()).toBe(true);
     });
   });
 

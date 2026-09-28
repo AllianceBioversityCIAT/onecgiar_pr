@@ -121,7 +121,49 @@ describe('program-overview.charts (OVW-T-3)', () => {
 
     it('returns an empty rows array for an empty model, never throwing', () => {
       const empty: HeatmapModel = { rows: [], cols: [], cells: [], caption: 'x' };
-      expect(heatmapTable(empty)).toEqual({ caption: 'x', headers: [''], rows: [] });
+      expect(heatmapTable(empty)).toEqual({ caption: 'x', headers: [''], rows: [], actions: [] });
+    });
+
+    // P2-3744 — the activation grid that makes the card operable without a mouse.
+    describe('actions (P2-3744)', () => {
+      it('aligns the actions grid index-for-index with rows, header column always null', () => {
+        const table = heatmapTable(model);
+        expect(table.actions).toHaveLength(table.rows.length);
+        table.actions?.forEach((actionRow, r) => {
+          expect(actionRow).toHaveLength(table.rows[r].length);
+          expect(actionRow[0]).toBeNull();
+        });
+      });
+
+      it('registers no action for a cell with no link — the Other column stays plain text', () => {
+        const table = heatmapTable(model);
+        // cols index 3 ("Other") -> rows index 4; both fixture rows carry link: null there.
+        expect(table.actions?.[0][4]).toBeNull();
+        expect(table.actions?.[1][4]).toBeNull();
+      });
+
+      it('labels each control with row, column and count so the value is not announced bare', () => {
+        const table = heatmapTable(model);
+        expect(table.actions?.[0][1]?.label).toBe('Knowledge product, Editing: 1 result. Open in Results.');
+        expect(table.actions?.[0][3]?.label).toBe('Knowledge product, Submitted: 4 results. Open in Results.');
+        expect(table.actions?.[1][1]?.label).toBe('Innovation development, Editing: 0 results. Open in Results.');
+      });
+
+      // The parity oracle: the keyboard payload must resolve through the resolvers the MOUSE path
+      // already uses, in BOTH view modes the card offers, to the very link stored on the cell.
+      it('emits a payload both resolvers map back to the same link as the mouse click', () => {
+        const table = heatmapTable(model);
+        model.cells.forEach(cell => {
+          const action = table.actions?.[cell.r][cell.c + 1];
+          if (!cell.link) {
+            expect(action).toBeNull();
+            return;
+          }
+          expect(action).not.toBeNull();
+          expect(cellLinkFromClick(action!.event, model)).toEqual(cell.link);
+          expect(barLinkFromClick(action!.event, model)).toEqual(cell.link);
+        });
+      });
     });
   });
 
@@ -484,6 +526,37 @@ describe('program-overview.charts radarOption / radarTable / radarLinkFromClick'
         ['Innovation development', 30],
         ['Knowledge product', 0]
       ]);
+    });
+
+    // P2-3744 — the activation grid that makes the card operable without a mouse.
+    describe('actions (P2-3744)', () => {
+      it('aligns with rows, keeps the category column null, and skips rows with no link', () => {
+        const table = radarTable('W3/Bilateral results by indicator category', bars);
+        expect(table.actions).toHaveLength(bars.length);
+        table.actions?.forEach(actionRow => {
+          expect(actionRow).toHaveLength(2);
+          expect(actionRow[0]).toBeNull();
+        });
+        expect(table.actions?.[2][1]).toBeNull();
+      });
+
+      it('labels each control with category and count', () => {
+        const table = radarTable('W3/Bilateral results by indicator category', bars);
+        expect(table.actions?.[0][1]?.label).toBe('Capacity sharing for development: 70 results. Open in Results.');
+        expect(table.actions?.[1][1]?.label).toBe('Innovation development: 30 results. Open in Results.');
+      });
+
+      it('emits a payload radarLinkFromClick maps back to the same link as the mouse click', () => {
+        const table = radarTable('W3/Bilateral results by indicator category', bars);
+        bars.forEach((bar, i) => {
+          const action = table.actions?.[i][1];
+          if (!bar.link) {
+            expect(action).toBeNull();
+            return;
+          }
+          expect(radarLinkFromClick(action!.event, bars)).toEqual(bar.link);
+        });
+      });
     });
   });
 

@@ -44,6 +44,14 @@ function withScope(scopeId: number) {
   });
 }
 
+function withSavedExtra(extra: Record<string, unknown>) {
+  cy.window().then((win: any) => {
+    const geo = win.ng.getComponent(win.document.querySelector('app-section-geography'));
+    geo.extraGeographicLocationBody.update((body: any) => ({ ...body, ...extra }));
+    win.ng.applyChanges?.(geo);
+  });
+}
+
 describe('P2-3370 · bilateral extra geographic scope', () => {
   beforeEach(() => {
     cy.loginByToken('/');
@@ -66,11 +74,10 @@ describe('P2-3370 · bilateral extra geographic scope', () => {
     cy.get('app-section-geography').should('not.contain.text', YES_NO_LABEL);
   });
 
-  it('shows the extra-scope card for Regional, Country and Sub-national (innovations only)', () => {
-    [SCOPE.regional, SCOPE.country, SCOPE.subNational].forEach(id => {
-      withScope(id);
-      cy.get('app-section-geography').should('contain.text', YES_NO_LABEL);
-    });
+  it('keeps empty extra metadata hidden even with a concrete main scope', () => {
+    withScope(SCOPE.country);
+    cy.get('app-section-geography').should('not.contain.text', YES_NO_LABEL);
+    cy.get('app-section-geography').should('not.contain.text', 'Complete full metadata');
   });
 
   it('hides the extra-scope card for non-innovation result types', () => {
@@ -86,17 +93,27 @@ describe('P2-3370 · bilateral extra geographic scope', () => {
 
   it('uses the innovation Yes/No wording for innovation results', () => {
     withScope(SCOPE.country);
+    withSavedExtra({ has_extra_geo_scope: false });
+    cy.contains('button', 'Complete full metadata').click();
     cy.get('app-section-geography').should('contain.text', YES_NO_LABEL);
     cy.get('app-section-geography').should('not.contain.text', LEGACY_OUTPUT_LABEL);
     cy.get('app-section-geography').should('not.contain.text', 'Are there any extra regions or countries');
   });
 
+  it('shows saved children with a null answer without an empty Yes/No prompt', () => {
+    withScope(SCOPE.country);
+    withSavedExtra({ has_extra_geo_scope: null, regions: [{ id: 1, name: 'Africa' }] });
+    cy.contains('button', 'Complete full metadata').click();
+    cy.get('app-section-geography').should('contain.text', 'Select extra regions');
+    cy.get('app-section-geography').should('not.contain.text', YES_NO_LABEL);
+  });
+
   it('uses the same second-selector label as W1/W2, and offers Global there', () => {
     withScope(SCOPE.country);
+    withSavedExtra({ has_extra_geo_scope: true, geo_scope_id: SCOPE.regional });
+    cy.contains('button', 'Complete full metadata').click();
     cy.window().then((win: any) => {
       const geo = win.ng.getComponent(win.document.querySelector('app-section-geography'));
-      geo.extraGeographicLocationBody.update((b: any) => ({ ...b, has_extra_geo_scope: true }));
-      win.ng.applyChanges?.(geo);
       expect(geo.extraGeoscopeOptions.map((o: any) => o.name)).to.deep.equal([
         'Global', 'Regional', 'Country', 'Sub-national',
       ]);

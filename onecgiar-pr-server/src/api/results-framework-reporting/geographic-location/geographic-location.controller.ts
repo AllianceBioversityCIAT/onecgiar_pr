@@ -34,12 +34,19 @@ export class GeographicLocationController {
   @ApiParam({ name: 'resultId', type: Number, required: true })
   @ApiBody({ type: CreateGeographicLocationDto })
   @ApiOkResponse({ description: 'Geographic scope saved.' })
-  saveGeographic(
+  async saveGeographic(
     @Body() createResultGeoDto: CreateGeographicLocationDto,
     @Param('resultId') resultId: number,
     @UserToken() user: TokenDto,
   ) {
     createResultGeoDto.result_id = resultId;
+    // design §5.1 — Center-write guard, kept out of the shared `saveGeoScopeV2` (also called
+    // internally by the admin-only data-standard review path). Consults the helper only when the
+    // result is bilateral (falsifier case (d)).
+    await this.geographicLocationService.assertCenterWriteForBilateral(
+      resultId,
+      user,
+    );
     return this.geographicLocationService.saveGeoScopeV2(
       createResultGeoDto,
       user,

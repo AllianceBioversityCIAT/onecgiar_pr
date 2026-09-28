@@ -10,6 +10,8 @@ import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 import { GeoscopeManagementModule } from '../../../../shared/components/geoscope-management/geoscope-management.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
+import { BilateralExpandableStateService } from '../../services/bilateral-expandable-state.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 /**
  * `result_type_id` values FieldsManagerService treats as "an innovation" (`isAnInnovation()`).
@@ -41,12 +43,50 @@ export class SectionGeographyComponent {
   readonly creationService = inject(BilateralCreationService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
+  private readonly expandableState = inject(BilateralExpandableStateService);
+  readonly showAllFields = signal(false);
+  readonly loadedResultId = signal<number | null>(null);
+  readonly hasSavedExtraMetadata = computed(() => {
+    const extra = this.extraGeographicLocationBody();
+    return extra.has_extra_geo_scope === true || extra.has_extra_geo_scope === false ||
+      !!extra.geo_scope_id || extra.has_regions === true || extra.has_countries === true ||
+      !!extra.regions?.length || !!extra.countries?.length;
+  });
+  readonly showExtraMetadata = computed(() =>
+    this.loadedResultId() === this.creationService.currentResultId() && this.hasSavedExtraMetadata()
+  );
+
+  toggleShowAll(): void {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    this.showAllFields.update(value => !value);
+    this.expandableState.setShowAllFields(resultId, 'geography', this.showAllFields());
+  }
 
   /**
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+  /**
+   * Night sweep 2026-09-23, R-3 / R-4 — three-state load flag (P2-3556 contract: `null` in flight,
+   * `true` loaded, `false` when the FIRST load failed).
+   *
+   * R-3: `GET_geographic` had no error branch, so a failed load left the empty default body on
+   * screen and the next save (e.g. adding one country) replaced every stored country with it.
+   * R-4: the realistic race — the GET arrived ~15 s late, the user had already edited, the late
+   * response was DISCARDED (`!this.hasLocalGeographyChanges`) and the save wiped the stored countries.
+   *
+   * Fix: the controls are locked (`locked`) until the stored geography is on screen, so there is
+   * nothing local to protect when it arrives and it is always applied; and `queueGeographySave`
+   * refuses to stage a body that was never read. A failed re-load after a successful one keeps `true`.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.bilateralLoadErrorNote;
+  readonly loadingNote = RESULT_DETAIL_SECTION_LOAD_COPY.bilateralGeographyLoading;
+  /** What the template binds to `[readOnly]`: the result's own lock, or "the stored geography is not on screen yet". */
+  readonly locked = computed(() => this.readOnly() || this.loaded() !== true);
 
   /**
    * The scope the RADIO is told to show — `null` whenever nothing is chosen.
@@ -89,7 +129,7 @@ export class SectionGeographyComponent {
     has_countries: false,
     regions: [],
     countries: [],
-    /** null = unanswered; required for every non-Global / non-Determined main scope. */
+    /** null = unanswered optional metadata. */
     has_extra_geo_scope: null as boolean | null
   });
 
@@ -154,8 +194,9 @@ export class SectionGeographyComponent {
     return typeId === INNOVATION_USE_TYPE_ID || typeId === INNOVATION_DEVELOPMENT_TYPE_ID;
   });
 
-  /** W1/W2 hides `[geoscope-management]-has_extra_geo_scope` for every non-innovation result. */
-  readonly showExtraGeoScopeQuestion = computed(() => this.isInnovationResult());
+  readonly showExtraGeoScopeQuestion = computed(() =>
+    this.extraGeographicLocationBody().has_extra_geo_scope === true || this.extraGeographicLocationBody().has_extra_geo_scope === false
+  );
 
   readonly extraScopeQuestionLabel = computed(() =>
     this.isInnovationResult()
@@ -182,6 +223,12 @@ export class SectionGeographyComponent {
 
       this.hasLocalGeographyChanges = false;
       this.hydratedResultId = resultId;
+      this.loadedResultId.set(null);
+      this.geographicLocationBody.set({ has_countries: false, has_regions: false, regions: [], countries: [], geo_scope_id: undefined });
+      this.extraGeographicLocationBody.set({ geo_scope_id: undefined, has_regions: false, has_countries: false, regions: [], countries: [], has_extra_geo_scope: null });
+      this.showAllFields.set(this.expandableState.getShowAllFields(resultId, 'geography'));
+      // R-3 / R-4 — a different result: what is in hand belongs to the previous one.
+      this.loaded.set(null);
       this.loadGeographicData();
     });
   }
@@ -192,7 +239,10 @@ export class SectionGeographyComponent {
 
     this.bilateralApi.GET_geographic(resultId).subscribe({
       next: ({ response }) => {
-        if (response && !this.hasLocalGeographyChanges) {
+        // Stale response for a result the user already left (performance-refactor guard).
+        if (resultId !== this.creationService.currentResultId() || resultId !== this.hydratedResultId) return;
+        // R-4 — no longer discarded when the user "already edited": editing is locked until here.
+        if (response) {
           const scopeId = Number(response.geo_scope_id);
           const isCountryOrSubNational =
             scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL;
@@ -222,6 +272,13 @@ export class SectionGeographyComponent {
 
           this.updateTracker();
         }
+        this.loadedResultId.set(resultId);
+        this.loaded.set(true);
+      },
+      // R-3 — see `loaded`.
+      error: () => {
+        if (resultId !== this.hydratedResultId) return;
+        if (this.loaded() !== true) this.loaded.set(false);
       }
     });
   }
@@ -234,27 +291,6 @@ export class SectionGeographyComponent {
   private buildGeographyPayload(): Record<string, unknown> {
     const geo = this.geographicLocationBody();
     const extra = this.extraGeographicLocationBody();
-    const extraScopeHidden =
-      !this.isInnovationResult() ||
-      geo.geo_scope_id === GeoScopeEnum.GLOBAL ||
-      geo.geo_scope_id === GeoScopeEnum.DETERMINED;
-
-    if (extraScopeHidden) {
-      return {
-        has_countries: geo.has_countries,
-        has_regions: geo.has_regions,
-        regions: geo.regions,
-        countries: geo.countries,
-        geo_scope_id: geo.geo_scope_id,
-        extra_geo_scope_id: null,
-        extra_regions: [],
-        extra_countries: [],
-        has_extra_countries: false,
-        has_extra_regions: false,
-        has_extra_geo_scope: false
-      };
-    }
-
     return {
       has_countries: geo.has_countries,
       has_regions: geo.has_regions,
@@ -266,11 +302,13 @@ export class SectionGeographyComponent {
       extra_countries: extra.countries,
       has_extra_countries: extra.has_countries,
       has_extra_regions: extra.has_regions,
-      has_extra_geo_scope: extra.has_extra_geo_scope === true
+      has_extra_geo_scope: extra.has_extra_geo_scope ?? null
     };
   }
 
   queueGeographySave(debounceMs = 500): void {
+    // R-3 / R-4 — never stage a body that was not read from the server (see `loaded`).
+    if (this.loaded() !== true) return;
     this.hasLocalGeographyChanges = true;
     this.autoSaveService.schedulePayload('geography', this.buildGeographyPayload(), {
       debounceMs,
@@ -294,8 +332,6 @@ export class SectionGeographyComponent {
         regions: [],
         countries: []
       }));
-      this.extraGeographicLocationBody.update(b => ({ ...b, has_extra_geo_scope: false }));
-      this.resetExtraScope();
     } else if (scopeId === GeoScopeEnum.REGIONAL) {
       this.geographicLocationBody.update(b => ({
         ...b,
@@ -304,10 +340,6 @@ export class SectionGeographyComponent {
         has_countries: false,
         countries: []
       }));
-      this.extraGeographicLocationBody.update(b => ({
-        ...b,
-        has_extra_geo_scope: this.isInnovationResult() ? null : false
-      }));
     } else if (scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL) {
       this.geographicLocationBody.update(b => ({
         ...b,
@@ -315,10 +347,6 @@ export class SectionGeographyComponent {
         has_countries: true,
         has_regions: false,
         regions: []
-      }));
-      this.extraGeographicLocationBody.update(b => ({
-        ...b,
-        has_extra_geo_scope: this.isInnovationResult() ? null : false
       }));
     } else {
       this.geographicLocationBody.update(b => ({ ...b, geo_scope_id: scopeId }));
@@ -565,14 +593,45 @@ export class SectionGeographyComponent {
     );
   }
 
-  /** Sub-national scope requires ≥1 sub-national unit per selected country. */
+  /**
+   * P2-3832 — iso_alpha_2 of every country whose CLARISA sub-national catalogue came back EMPTY.
+   *
+   * Fed by `app-sub-geoscope`, the only place that reads the catalogue. 48 of the 248 countries
+   * have no sub-national levels at all (American Samoa, Puerto Rico, Hong Kong, Guam…): the picker
+   * never renders, `sub_national` can never be filled, and demanding it kept the `sub-national`
+   * tracker item unfilled forever — which, through `overallStatus`, disabled Submit for the whole
+   * result. The classic form has always exempted them; the rule lives in the green-check SQL
+   * (`results-validation-module.repository.ts`): require a selection only
+   * `if(count(clarisa_subnational_scopes for this iso) > 0, …, true)`. This mirrors it.
+   */
+  private readonly countriesWithoutSubNationalLevels = signal<Set<string>>(new Set<string>());
+
+  onSubNationalCatalogue(event: { iso_alpha_2: string; hasLevels: boolean }): void {
+    const iso = event?.iso_alpha_2;
+    if (!iso) return;
+    const known = this.countriesWithoutSubNationalLevels();
+    if (known.has(iso) === !event.hasLevels) return;
+    const next = new Set(known);
+    if (event.hasLevels) next.delete(iso);
+    else next.add(iso);
+    this.countriesWithoutSubNationalLevels.set(next);
+    // The catalogue lands AFTER the last `updateTracker()`, so the checklist has to be re-published.
+    this.updateTracker();
+  }
+
+  /** False only once the catalogue is known to be empty — while it is in flight the field stays required. */
+  private countryRequiresSubNational(country: any): boolean {
+    return !this.countriesWithoutSubNationalLevels().has(country?.iso_alpha_2);
+  }
+
+  /** Sub-national scope requires ≥1 sub-national unit per selected country that HAS levels (P2-3832). */
   get subNationalSelectionMissing(): boolean {
     if (Number(this.geographicLocationBody().geo_scope_id) !== GeoScopeEnum.SUB_NATIONAL) {
       return false;
     }
     const countries = this.geographicLocationBody().countries ?? [];
     if (!countries.length) return true;
-    return countries.some((c: any) => !(c.sub_national?.length > 0));
+    return countries.some((c: any) => this.countryRequiresSubNational(c) && !(c.sub_national?.length > 0));
   }
 
   get extraSubNationalSelectionMissing(): boolean {
@@ -584,7 +643,7 @@ export class SectionGeographyComponent {
     }
     const countries = this.extraGeographicLocationBody().countries ?? [];
     if (!countries.length) return true;
-    return countries.some((c: any) => !(c.sub_national?.length > 0));
+    return countries.some((c: any) => this.countryRequiresSubNational(c) && !(c.sub_national?.length > 0));
   }
 
   isGeographyComplete(): boolean {
@@ -610,16 +669,6 @@ export class SectionGeographyComponent {
 
     if (this.subNationalSelectionMissing) {
       return false;
-    }
-
-    if (this.extraScopeAnswerMissing) {
-      return false;
-    }
-
-    if (this.isInnovationResult() && this.extraGeographicLocationBody().has_extra_geo_scope) {
-      if (!this.extraGeographicLocationBody().geo_scope_id) return false;
-      if (this.extraRegionsSelectionMissing || this.extraCountriesSelectionMissing) return false;
-      if (this.extraSubNationalSelectionMissing) return false;
     }
 
     return true;
@@ -661,41 +710,6 @@ export class SectionGeographyComponent {
           label: 'Sub-national details',
           filled: !this.subNationalSelectionMissing,
         });
-      }
-      if (this.isInnovationResult()) {
-        items.push({
-          key: 'extra-geo-answer',
-          label: 'Extra geographic areas (Yes/No)',
-          filled: !this.extraScopeAnswerMissing,
-        });
-      }
-      if (this.isInnovationResult() && this.extraGeographicLocationBody().has_extra_geo_scope === true) {
-        items.push({
-          key: 'extra-geo-scope',
-          label: 'Extra geographic scope',
-          filled: !!this.extraGeographicLocationBody().geo_scope_id,
-        });
-        if (this.requiresExtraRegionsSelection) {
-          items.push({
-            key: 'extra-regions',
-            label: 'Extra regions',
-            filled: !this.extraRegionsSelectionMissing,
-          });
-        }
-        if (this.requiresExtraCountriesSelection) {
-          items.push({
-            key: 'extra-countries',
-            label: 'Extra countries',
-            filled: !this.extraCountriesSelectionMissing,
-          });
-        }
-        if (Number(this.extraGeographicLocationBody().geo_scope_id) === GeoScopeEnum.SUB_NATIONAL) {
-          items.push({
-            key: 'extra-sub-national',
-            label: 'Extra sub-national details',
-            filled: !this.extraSubNationalSelectionMissing,
-          });
-        }
       }
     }
 

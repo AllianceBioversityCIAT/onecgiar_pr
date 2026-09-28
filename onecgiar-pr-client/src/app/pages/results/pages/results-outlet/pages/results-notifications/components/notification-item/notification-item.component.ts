@@ -6,6 +6,7 @@ import { ResultLevelService } from '../../../../../result-creator/services/resul
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-review/services/bilateral-results.service';
+import { CONTRIBUTION_REQUEST_DRAWER_COPY } from '../../../../../../../../internationalization/contribution-request-drawer.copy';
 
 // P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
 export interface TocContributionReview {
@@ -26,6 +27,31 @@ export interface TocContributionReview {
   planned_result?: boolean;
 }
 
+// CRD-T-3: pre-built pieces for the drawer header sentence (design.md §6.2). Every fixed English
+// word for it comes from `CONTRIBUTION_REQUEST_DRAWER_COPY.header` (see `drawerHeader()` below).
+export interface DrawerHeaderParts {
+  lead: string;
+  requesterCode: string;
+  verb: string;
+  responderCode?: string;
+  tail: string;
+  resultCode: string;
+  resultTitle: string;
+}
+
+// CRD-T-3: one row of the "Where it contributes" table (design.md §6.2 `reviewRows`).
+export interface DrawerReviewField {
+  label: string;
+  value: string;
+  mono?: boolean;
+}
+
+// CRD-T-1 landed the centralized copy file (CONTRIBUTION_REQUEST_DRAWER_COPY); `drawerHeader()`
+// below reads the drawer header SENTENCE words ("has asked", "to contribute to result", …) directly
+// from its `header` section — the row's own separate, unrelated sentence ("has requested",
+// "submitted by", …) stays hardcoded English in the template, matching this component's own
+// pre-existing precedent there.
+
 @Component({
   selector: 'app-notification-item',
   templateUrl: './notification-item.component.html',
@@ -38,20 +64,43 @@ export class NotificationItemComponent {
   @Output() requestEvent = new EventEmitter<any>();
   requestingAccept = false;
   requestingReject = false;
-  showConfirmRejectDialog = signal(false);
 
   /**
-   * P2-3187 AC4 (Option A, decided 2026-09-04): the optional ToC step for bilateral requests.
-   * `showTocPromptDialog` is the "Would you like to map this to your Theory of Change?" prompt the
-   * Accept button opens; `showTocMappingDialog` is the mapping step itself ("Map it"). Both live in
-   * this card — nothing here reopens `<app-share-request-modal>` (see the trap in ./CLAUDE.md).
+   * CRD-T-7 (pivot, CRD-DD-10): the row's popup flow, restored from `HEAD` alongside the drawer.
+   * `showConfirmRejectDialog` backs the row's Decline button; `showTocPromptDialog` /
+   * `showTocMappingDialog` back the row's bilateral Accept ("Map to your Theory of Change?" prompt,
+   * then the mapping step opened by `openTocMappingStep()`). `openDrawer()` resets all three to
+   * false, and nothing reachable from the drawer sets any of them (CRD-R-11 amended).
    */
+  showConfirmRejectDialog = signal(false);
   showTocPromptDialog = signal(false);
   showTocMappingDialog = signal(false);
+
+  /** CRD-T-4: centralized copy for the row's accessible name and the drawer's Align section. */
+  readonly copy = CONTRIBUTION_REQUEST_DRAWER_COPY;
+
+  /**
+   * P2-3187 AC4 (Option A, decided 2026-09-04): the optional ToC step for bilateral requests, now
+   * rendered inline in the drawer's "Align to your Theory of Change" section (CRD-R-5) instead of
+   * the removed prompt/mapping `app-pr-dialog`s (CRD-T-4, CRD-R-11). Nothing here reopens
+   * `<app-share-request-modal>` (see the trap in ./CLAUDE.md).
+   */
   /** Remount toggle for `app-cp-multiple-wps`, same trick as the review drawer's `tocConsumed`. */
   tocMappingConsumed = signal(true);
   /** The contributor's ToC selection, shaped exactly like the review drawer's `tocInitiative`. */
   tocInitiative: any = null;
+
+  /**
+   * State for `app-contribution-request-drawer` (design.md §6.2), the row's single overlay
+   * (CRD-T-4 removed the three legacy popups). `drawerMode` is the footer state; `drawerFocusAlign`
+   * tells the drawer to scroll the projected Align slot into view right after open (row Accept on a
+   * bilateral request, CRD-R-10).
+   */
+  drawerOpen = signal(false);
+  drawerMode = signal<'decide' | 'confirm-decline'>('decide');
+  drawerFocusAlign = signal(false);
+  /** CRD-DD-3: the global ToC hydration is deferred from "open" to "first answer". */
+  private tocHydrated = false;
 
   constructor(
     public api: ApiService,
@@ -64,6 +113,26 @@ export class NotificationItemComponent {
 
   get isBilateralResult() {
     return this.notification?.obj_result?.source_name === 'W3/Bilaterals';
+  }
+
+  /** CRD-T-3: gates row interactivity for the drawer (CRD-R-1, wired in CRD-T-4). */
+  get isPending(): boolean {
+    return this.notification?.request_status_id === 1 && !this.isSent;
+  }
+
+  /**
+   * CRD-R-1 "Keyboard open": Space on a `role="button"` row scrolls the page by default — the
+   * template can't `preventDefault()` inline on `(keydown.space)` and also read `isPending`, so this
+   * is the one row-interactivity handler that needs its own method. Also guards against Space on a
+   * focused nested control (result link, bilateral link, Accept/Decline) bubbling up to the row and
+   * opening the drawer a second time (CRD-R-1 "no click on those controls also opens the drawer",
+   * which a keyboard activation counts as) — only the row itself being the event target counts.
+   */
+  onRowSpaceKeydown(event: Event): void {
+    if (!this.isPending) return;
+    if (event.target !== event.currentTarget) return;
+    event.preventDefault();
+    this.openDrawer('details');
   }
 
   /**
@@ -152,9 +221,11 @@ export class NotificationItemComponent {
   }
 
   /**
-   * P2-3187 AC1/AC3/AC4: single entry point for the "Accept contribution" button. Bilateral requests
-   * get the optional ToC prompt (AC4, Option A); requests whose ToC mapping already travelled with
-   * them record the decision on the first click; the rest keep the legacy modal-first flow.
+   * P2-3187 AC1/AC3/AC4: single entry point for the row's "Accept" button. Requests whose ToC
+   * mapping already travelled with them record the decision on the first click; a bilateral
+   * request opens the "Map to your Theory of Change?" prompt (CRD-R-10 amended, CRD-DD-10 pivot —
+   * restored from `HEAD`, the row keeps its pre-spec popup flow); the rest keep the legacy
+   * modal-first flow.
    */
   onAcceptContribution() {
     if (this.notification?.is_map_to_toc) {
@@ -172,15 +243,13 @@ export class NotificationItemComponent {
   }
 
   /**
-   * "Map it" — seeds the contributor's ToC selection and swaps the prompt for the mapping step.
-   * The tab shape mirrors the review drawer's `tocInitiative` seed: `app-cp-multiple-wps` mutates
-   * these tab objects in place, and `initiative_id`/`results_id` are what the server's
-   * `saveIndicatorsPrimarySubmitter` later uses to find the rows `mapWorkPackagesToInitiative` wrote.
+   * CRD-T-3: the untouched-mapping seed, extracted from `openTocMappingStep()` so `openDrawer()`
+   * can reuse it WITHOUT the global hydration (CRD-DD-3 — hydration is deferred to the first
+   * planned-result answer, see `onTocPlannedResultChange()`). Shape unchanged from before the
+   * extraction.
    */
-  openTocMappingStep() {
+  private seedTocInitiative() {
     const sharedInitiative = this.notification?.obj_shared_inititiative;
-
-    this.hydrateGlobalTocState(this.notification);
 
     this.tocInitiative = {
       planned_result: null,
@@ -189,9 +258,222 @@ export class NotificationItemComponent {
       short_name: sharedInitiative?.name,
       result_toc_results: [this.buildEmptyTocTab('0')]
     };
+  }
+
+  /** CRD-T-3: has the submitter answered the Align planned-result question at all (CRD-R-5/R-6). */
+  isTocMappingTouched(): boolean {
+    return this.tocInitiative?.planned_result !== null && this.tocInitiative?.planned_result !== undefined;
+  }
+
+  /**
+   * CRD-T-7 (pivot): "Map it" — the row popup's mapping step, restored from `HEAD`. Reuses
+   * `seedTocInitiative()`, the same untouched seed `openDrawer()` uses for the Align section, but —
+   * unlike the drawer path — hydrates the global ToC state immediately on open (CRD-DD-10): the
+   * popup path never defers hydration to the first planned-result answer, only the drawer does
+   * (CRD-DD-3).
+   */
+  openTocMappingStep() {
+    this.hydrateGlobalTocState(this.notification);
+    this.seedTocInitiative();
 
     this.showTocPromptDialog.set(false);
     this.showTocMappingDialog.set(true);
+  }
+
+  /**
+   * Opens the drawer. Sets the footer mode and the Align auto-scroll flag per `entry`, and — for
+   * bilateral requests only — seeds an untouched `tocInitiative` locally, with NO global hydration
+   * (design.md CRD-P-4/CRD-DD-3; `hydrateGlobalTocState` only runs from `onTocPlannedResultChange()`,
+   * on the first answer). CRD-DD-10 (pivot): also resets the row's three popup signals to false —
+   * nothing reachable from the drawer may reopen a popup over it (CRD-R-11 amended).
+   */
+  openDrawer(entry: 'details' | 'align' | 'confirm-decline') {
+    this.drawerMode.set(entry === 'confirm-decline' ? 'confirm-decline' : 'decide');
+    this.drawerFocusAlign.set(entry === 'align');
+    this.tocHydrated = false;
+    this.showConfirmRejectDialog.set(false);
+    this.showTocPromptDialog.set(false);
+    this.showTocMappingDialog.set(false);
+
+    if (this.isBilateralResult) {
+      this.seedTocInitiative();
+    }
+
+    this.drawerOpen.set(true);
+  }
+
+  /** CRD-R-9: closing records nothing — the request stays pending and an in-progress mapping is discarded. */
+  closeDrawer() {
+    this.drawerOpen.set(false);
+    this.drawerMode.set('decide');
+    this.drawerFocusAlign.set(false);
+    this.tocHydrated = false;
+    this.tocInitiative = null;
+  }
+
+  /**
+   * CRD-T-4 (forward pointer 4): the real `BrnDialog`'s `closed` output also fires after a
+   * PROGRAMMATIC close (`acceptOrReject`'s `finalize` → `closeDrawer()`), asynchronously, after the
+   * exit animation. Wired straight to `closeDrawer()` that late signal would run it a SECOND time —
+   * harmless if this instance is still idle, but under `track $index` instance reuse (CRD-P-6) it
+   * could otherwise stack with a drawer already reopened for a different notification. Guarded the
+   * simple way the task names: do nothing once the drawer is already closed.
+   */
+  onDrawerClosedSignal(): void {
+    if (!this.drawerOpen()) return;
+    this.closeDrawer();
+  }
+
+  // @akili-spec changes/contribution-request-drawer
+  /**
+   * CRD-R-6: the drawer's single "Accept contribution" decision table (design.md §2.2).
+   *   - ToC-carried .......... acceptOrReject(true) — inert payload, unchanged AC3 behaviour.
+   *   - Bilateral untouched .. acceptOrReject(true) — same inert payload, one PATCH.
+   *   - Bilateral complete ... acceptOrReject(true, true) — mapping payload, one PATCH.
+   *   - Bilateral incomplete . nothing (the footer already disables Accept; this is the defensive mirror).
+   *   - Legacy ............... closeDrawer() BEFORE mapAndAccept() (CRD-DD-6: never stack the drawer under the modal).
+   */
+  onDrawerAccept() {
+    if (this.notification?.is_map_to_toc) {
+      this.acceptOrReject(true);
+      return;
+    }
+
+    if (this.acceptsWithoutToc) {
+      if (!this.isTocMappingTouched()) {
+        this.acceptOrReject(true);
+        return;
+      }
+      if (this.isTocMappingComplete()) {
+        this.acceptOrReject(true, true);
+      }
+      return;
+    }
+
+    this.closeDrawer();
+    this.mapAndAccept(this.notification);
+  }
+
+  /** CRD-R-5/R-6: the escape hatch — returns the Align section to its untouched state. */
+  clearTocMapping() {
+    this.seedTocInitiative();
+    this.tocHydrated = false;
+
+    this.tocMappingConsumed.set(false);
+    setTimeout(() => this.tocMappingConsumed.set(true), 50);
+  }
+
+  /**
+   * CRD-R-8 "Busy": Clear mapping's `[disabled]` binds through `BrnButton`'s `hostDirectives`-
+   * forwarded input, which under the shared Jest Brain stub (`tests/mocks/spartanBrainMock.ts`)
+   * never reaches the native `disabled` DOM attribute — that stub is out of this task's scope. This
+   * guard makes the busy state provably true regardless: a click while an accept/decline PATCH is
+   * in flight never re-seeds `tocInitiative`, in the real app (defense in depth alongside the real
+   * `BrnButton` host binding) and under Jest alike.
+   */
+  onClearTocMappingActivate(): void {
+    if (this.requestingAccept || this.requestingReject) return;
+    this.clearTocMapping();
+  }
+
+  /**
+   * CRD-R-3: Result card activation. Non-bilateral opens `resultUrl()` in a new tab; bilateral
+   * closes the drawer FIRST so two drawers never stack, then navigates in-app (CRD-DD-6).
+   */
+  onDrawerResult() {
+    if (this.isBilateralResult) {
+      this.closeDrawer();
+      this.navigateToResult(this.notification);
+      return;
+    }
+
+    window.open(this.resultUrl(this.notification), '_blank');
+  }
+
+  /**
+   * CRD-R-2: pure builder for the drawer header sentence, reusing the row's own requester/responder
+   * resolution. CRD-T-4 (forward pointer 5): for a bilateral request `requesterCode` is left EMPTY —
+   * the CRD template's `@if (h.requesterCode)` guard then omits "from X" entirely, so the sentence
+   * never invents a requester name (CRD-R-2 "Bilateral sentence"); the bilateral verb/tail carry
+   * their own "to"/"for" so the sentence still reads naturally with the requester clause gone.
+   */
+  drawerHeader(): DrawerHeaderParts {
+    const header = this.copy.header;
+    const resultCode = this.notification?.obj_result?.result_code ?? '';
+    const resultTitle = this.notification?.obj_result?.title ?? '';
+
+    if (this.isBilateralResult) {
+      const centerName = this.notification?.obj_result?.result_center_array?.[0]?.clarisa_center_object?.clarisa_institution?.acronym ?? '';
+
+      return {
+        lead: `${header.bilateralLeadPrefix} ${centerName}`.trim(),
+        requesterCode: '',
+        verb: header.bilateralVerb,
+        responderCode: this.responderCode,
+        tail: header.bilateralTail,
+        resultCode,
+        resultTitle
+      };
+    }
+
+    const requestedBy = this.notification?.obj_requested_by;
+    const lead = `${requestedBy?.first_name ?? ''} ${requestedBy?.last_name ?? ''}`.trim();
+
+    return {
+      lead,
+      requesterCode: this.requesterCode,
+      verb: header.verb,
+      responderCode: this.responderCode,
+      tail: header.tail,
+      resultCode,
+      resultTitle
+    };
+  }
+
+  /**
+   * CRD-R-4: one table per `toc_contribution_review` entry, in server order; a single all-dash
+   * table when there are none (bilateral / legacy requests never carry review data — CRD-P-1).
+   */
+  drawerReviewTables(): DrawerReviewField[][] {
+    const entries = this.tocReview;
+    if (!entries.length) {
+      return [this.buildDrawerReviewRow(null)];
+    }
+
+    return entries.map(entry => this.buildDrawerReviewRow(entry));
+  }
+
+  private buildDrawerReviewRow(entry: TocContributionReview | null): DrawerReviewField[] {
+    const dash = CONTRIBUTION_REQUEST_DRAWER_COPY.dashValue;
+    const value = (raw: unknown) => (raw === null || raw === undefined || raw === '' ? dash : String(raw));
+    const fieldLabels = CONTRIBUTION_REQUEST_DRAWER_COPY.fieldLabels;
+
+    return [
+      { label: fieldLabels.level, value: value(entry?.level) },
+      { label: fieldLabels.highLevelOutputOutcome, value: value(entry?.outcome_label) },
+      { label: fieldLabels.outcomeStatement, value: value(entry?.outcome_statement) },
+      { label: fieldLabels.indicatorTypology, value: entry ? this.tocTypologyOf(entry) : dash },
+      { label: fieldLabels.unitOfMeasurement, value: value(entry?.unit_of_measurement) },
+      { label: fieldLabels.target, value: value(entry?.target), mono: true },
+      { label: fieldLabels.contributionTarget, value: value(entry?.contribution_target), mono: true }
+    ];
+  }
+
+  /** CRD-R-8 "Blocked": null while busy (the spinner covers that state) or not blocked. */
+  drawerBlockedReason(): string | null {
+    if (this.requestingAccept || this.requestingReject) return null;
+    if (!this.invalidateRequest()) return null;
+
+    return this.isQAed ? CONTRIBUTION_REQUEST_DRAWER_COPY.footer.blockedQAedReason : CONTRIBUTION_REQUEST_DRAWER_COPY.footer.blockedGenericReason;
+  }
+
+  /** CRD-R-6 "Incomplete mapping": only when the Align question is answered but the mapping isn't complete. */
+  drawerAcceptHelper(): string | null {
+    if (!this.acceptsWithoutToc) return null;
+    if (!this.isTocMappingTouched()) return null;
+    if (this.isTocMappingComplete()) return null;
+
+    return CONTRIBUTION_REQUEST_DRAWER_COPY.footer.acceptHelperIncompleteMapping;
   }
 
   private buildEmptyTocTab(uniqueId: string) {
@@ -217,9 +499,18 @@ export class NotificationItemComponent {
     };
   }
 
-  /** Planned/unplanned switches which ToC lists load, so the selection resets and the WPs remount. */
+  /**
+   * Planned/unplanned switches which ToC lists load, so the selection resets and the WPs remount.
+   * CRD-DD-3: the drawer's Align section defers `hydrateGlobalTocState` from "open" to this, the
+   * FIRST answer — merely viewing the drawer must have no global side effects.
+   */
   onTocPlannedResultChange() {
     if (!this.tocInitiative) return;
+
+    if (!this.tocHydrated) {
+      this.hydrateGlobalTocState(this.notification);
+      this.tocHydrated = true;
+    }
 
     this.tocInitiative.result_toc_results = [this.buildEmptyTocTab('0')];
     this.tocInitiative.result_toc_results[0].planned_result = this.tocInitiative.planned_result;
@@ -414,6 +705,13 @@ export class NotificationItemComponent {
       .PATCH_updateRequest(body, this.isP25Request)
       .pipe(
         finalize(() => {
+          // CRD-DD-6 / CRD-R-8 "Outcome closes the drawer": close BEFORE requestEvent.emit(), so
+          // the drawer is never left open across the parent's refetch (the list reuses this
+          // instance under `track $index`, CRD-P-6). The body construction, buildTocMappingPayload(),
+          // isTocMappingComplete() and invalidateRequest() stay untouched (CRD-T-3/T-4/T-7 DoD).
+          // CRD-T-7 (pivot): the three popup dialog resets are back, exactly as `HEAD` did, since
+          // the popup flow (row buttons) coexists with the drawer again (CRD-DD-10).
+          this.closeDrawer();
           this.requestingAccept = false;
           this.requestingReject = false;
           this.showConfirmRejectDialog.set(false);

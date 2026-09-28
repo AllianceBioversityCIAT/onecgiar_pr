@@ -98,7 +98,8 @@ export class CgspaceSearchQueryDto {
     description:
       'W3/bilateral project filter — exact Discovery facet label (`f.project`, cg.identifier.project index)',
     maxLength: 200,
-    example: 'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa',
+    example:
+      'A-AG10156 - Accelerating Impacts of CGIAR Climate Research for Africa',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()

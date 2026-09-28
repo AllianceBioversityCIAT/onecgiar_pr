@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
+**Verified:** 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `CPMultipleWPsComponent` publica al piso los gaps de las pestañas ToC no renderizadas (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
 (removed P2-3235's `tocAlignmentReadOnly()` ToC-alignment lock on the Level/HLO/Outcome/Output
 selects — explicit PO override (santiago.sanchez@cgiar.org, `proposal.md` §11), not a defect fix;
 these selects are now gated only by `editable` + the role read-only handling already inside
@@ -146,6 +146,37 @@ catch a future accidental carve-out.
 ## Dónde se usa
 - Ruta `result/result-detail/:id/contributor-partners?phase=<id>`. La URL con
   `/contributors-and-partners` **no** existe: redirige a `general-information`.
+
+## El piso "N fields missing" ahora ve las pestañas ToC que no están en pantalla (P2-3542, `docs/specs/bugfix/p2-3542-section-bar-toc-tabs`)
+
+`CPMultipleWPsComponent` (`components/multiple-wps/multiple-wps.component.ts`) es el **publisher**
+del registro de gaps off-screen de `DataControlService`: `ngOnInit` registra
+`offscreenFeedbackSource` (una arrow property de una sola instancia — la misma referencia se usa en
+`unregisterOffscreenFeedback` dentro de `ngOnDestroy`, porque el registro es un `Set` clave por
+referencia, no por nombre).
+
+- **Gate:** `!isContributor && !isNotifications && !hidden && !isUnplanned`. 🛑 **`isIpsr` está
+  deliberadamente AUSENTE del gate** (`SBT-DD-2`) — es justo lo que deja hablar a la instancia
+  editable de IPSR (`ipsr-contributors.component.html:21`) mientras las cinco instancias
+  read-only/dialog (los dos mirrors de contribuidor, el modal de share-request, el item de
+  notificación y el drawer de review) se quedan calladas vía `isContributor`/`isNotifications`/
+  `hidden`. Si un futuro lector "corrige" esto añadiendo `isIpsr` al gate, vuelve a silenciar
+  exactamente la superficie que este ticket pidió sacar a la luz.
+- **La pestaña renderizada se salta:** cada pestaña se reporta salvo la activa — la activa ya la
+  cuenta el escaneo DOM, y contarla dos veces infla el total. Excepción: mientras `onActiveTab`
+  deja `showMultipleWPsContent` en `false` para remontar el formulario (ventana de ~50ms), la
+  pestaña activa también se reporta, porque en ese instante tampoco está en el DOM.
+- **La verdad por pestaña se delega, sin regla nueva:** `completnessStatusValidation(tab)` (la
+  misma función que pinta el ícono rojo/verde de la pestaña) decide completo/incompleto; el
+  publisher solo NOMBRA el primer campo que falta (`firstIncompleteTabField`, mismo orden: `Level`
+  → `Outcome`/`Output` → `Contribution to indicator target`), nunca reemplaza esa verdad.
+
+`[advisory-grade]` `ngOnInit` registra la fuente de gaps de forma **incondicional, antes de evaluar
+el gate** — así que un futuro spec que declare el `CPMultipleWPsComponent` real contra un stub de
+`ApiService` sin `registerOffscreenFeedback`/`unregisterOffscreenFeedback` hará `TypeError` en el
+setup. Hoy no existe tal spec (`result-review-drawer.*.spec.ts` vacía el template a `''`;
+`share-request-modal.zoneless.spec.ts` usa `NO_ERRORS_SCHEMA`). Nota para el próximo autor, no un
+defecto ni algo que arreglar.
 
 ## Trampas (⚠️ = ya rompió algo)
 

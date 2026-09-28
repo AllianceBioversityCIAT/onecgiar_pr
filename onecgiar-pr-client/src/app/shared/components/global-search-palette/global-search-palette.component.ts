@@ -6,6 +6,7 @@ import { BrnCommandImports, BrnCommand } from '@spartan-ng/brain/command';
 import { HlmDialogImports } from '@spartan/dialog';
 import { HlmNativeSelectImports } from '@spartan/native-select';
 import { GlobalSearchPaletteService, PaletteProgramRow, PaletteResultRow } from './global-search-palette.service';
+import { resolveBilateralResultOpenRoute } from '../../routing/bilateral-result-open-route.util';
 
 /**
  * Fixed `--pr-status-*` fg/bg PAIRS, copied verbatim from `result-header.component.ts:17` (and its
@@ -209,9 +210,18 @@ export class GlobalSearchPaletteComponent {
   openResult(row: PaletteResultRow): void {
     this.search.recordSearch(this.search.query());
     this.closePalette();
-    this.router.navigate(['/result', 'result-detail', row.code, 'general-information'], {
-      queryParams: { phase: row.versionId }
+    // Same resolver as the results list, so a bilateral result opens where it does from there.
+    const { commands, queryParams } = resolveBilateralResultOpenRoute({
+      sourceOrOrigin: row.sourceName,
+      statusId: row.statusId,
+      statusName: row.statusName,
+      leadCenter: row.leadCenter,
+      resultCode: row.code,
+      versionId: row.versionId,
+      submitterCode: row.submitterCode,
+      resultId: row.id
     });
+    this.router.navigate(commands, { queryParams });
   }
 
   openProgram(row: PaletteProgramRow): void {

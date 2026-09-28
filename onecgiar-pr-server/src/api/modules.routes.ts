@@ -26,6 +26,7 @@ import { GeographicLocationModule } from './results-framework-reporting/geograph
 import { IpsrFrameworkModule } from './ipsr-framework/ipsr-framework.module';
 import { IpsrFrameworkRoutes } from './ipsr-framework/ipsr-framework.routes';
 import { FeedbackModule } from './feedback/feedback.module';
+import { ProgressTrackerModule } from './progress-tracker/progress-tracker.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -123,5 +124,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'feedback',
     module: FeedbackModule,
+  },
+  {
+    path: 'progress-tracker',
+    module: ProgressTrackerModule,
   },
 ];

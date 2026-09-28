@@ -11,8 +11,8 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 /**
  * What this service still owns after the eligibility rules moved to
  * `BilateralVersioningRulesService`: **who may ask** on the API side — a platform, not a user
- * — and the two things the API path does afterwards, which are landing the copy in Draft and
- * refusing to report success when replication left nothing.
+ * — and refusing to report success when replication left nothing. The shared replicator
+ * creates the copy in Editing; this API path must leave it there for Submit for Review.
  *
  * The eligibility rules themselves are tested in the rules service's own spec, once, because
  * the reporting tool path shares them.
@@ -37,10 +37,14 @@ describe('BilateralVersioningService', () => {
     const source = options.source ?? approvedPreviousPhase();
     const created =
       options.created === undefined
-        ? { ...source, id: 99001, version_id: ACTIVE_PHASE.id }
+        ? {
+            ...source,
+            id: 99001,
+            version_id: ACTIVE_PHASE.id,
+            status_id: ResultStatusData.Editing.value,
+          }
         : options.created;
 
-    const resultRepository = { update: jest.fn(async () => ({ affected: 1 })) };
     const rules = {
       getActiveReportingPhase: jest.fn(async () => ACTIVE_PHASE),
       resolveVersionableResult: jest.fn(async () => source),
@@ -61,7 +65,6 @@ describe('BilateralVersioningService', () => {
     };
 
     const service = new BilateralVersioningService(
-      resultRepository as any,
       rules as any,
       versioningService as any,
       resultsCenterRepository as any,
@@ -71,7 +74,7 @@ describe('BilateralVersioningService', () => {
       .spyOn((service as any).logger, 'log')
       .mockImplementation(() => undefined);
 
-    return { service, resultRepository, rules, versioningService };
+    return { service, rules, versioningService };
   };
 
   const run = (service: BilateralVersioningService, body: any = {}) =>
@@ -80,8 +83,8 @@ describe('BilateralVersioningService', () => {
       STAR as any,
     );
 
-  it('carries the result forward and leaves it in Draft', async () => {
-    const { service, versioningService, resultRepository } = makeService();
+  it('carries the result forward in Editing for Submit for Review', async () => {
+    const { service, versioningService } = makeService();
 
     const response = await run(service);
 
@@ -91,10 +94,6 @@ describe('BilateralVersioningService', () => {
       51,
       expect.objectContaining({ id: 1776 }),
     );
-    expect(resultRepository.update).toHaveBeenCalledWith(
-      { id: 99001 },
-      expect.objectContaining({ status_id: ResultStatusData.Draft.value }),
-    );
     expect(response).toEqual(
       expect.objectContaining({
         result_code: '28565',
@@ -102,8 +101,8 @@ describe('BilateralVersioningService', () => {
         current: expect.objectContaining({
           result_id: 99001,
           phase_id: ACTIVE_PHASE.id,
-          status: 'draft',
-          status_id: ResultStatusData.Draft.value,
+          status: 'editing',
+          status_id: ResultStatusData.Editing.value,
         }),
       }),
     );
@@ -134,10 +133,9 @@ describe('BilateralVersioningService', () => {
 
   // A silent no-op would otherwise be reported as a success.
   it('does not report success when replication left no row', async () => {
-    const { service, resultRepository } = makeService({ created: null });
+    const { service } = makeService({ created: null });
 
     await expect(run(service)).rejects.toBeInstanceOf(ConflictException);
-    expect(resultRepository.update).not.toHaveBeenCalled();
   });
 
   describe('ownership — the one check the API path owns', () => {

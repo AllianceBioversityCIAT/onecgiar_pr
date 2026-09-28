@@ -13,7 +13,8 @@
     [hasValue]="!!(optionsIntance() | labelName: this.value : optionValue() : optionLabel())"
     [showDescription]="showDescriptionLabel()"
     [descInlineStyles]="descInlineStyles()"
-    [labelDescInlineStyles]="labelDescInlineStyles()">
+    [labelDescInlineStyles]="labelDescInlineStyles()"
+    [editLocked]="editable() ? false : !!((readOnly() || this.rolesSE.readOnly) && !isStatic())">
     <input type="text" [hidden]="true" [(ngModel)]="this.value" />
   <div
     [ngSwitch]="editable() ? false : (readOnly() || this.rolesSE.readOnly) && !isStatic()"

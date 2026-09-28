@@ -3,7 +3,7 @@ import { join } from 'path';
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import { SectionGeographyComponent } from './section-geography.component';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -25,6 +25,9 @@ describe('SectionGeographyComponent', () => {
   const build = () => {
     fixture = TestBed.createComponent(SectionGeographyComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (R-3 / R-4): the save tests model a section whose GET already landed
+    // (detectChanges re-runs the load and resets this); the load gate has its own describe block.
+    component.loaded.set(true);
     return component;
   };
 
@@ -106,6 +109,25 @@ describe('SectionGeographyComponent', () => {
   });
 
   describe('loadGeographicData', () => {
+    it.each(['A then B', 'B then A'])('keeps active result B when deferred loads resolve %s', order => {
+      const a$ = new Subject<any>();
+      const b$ = new Subject<any>();
+      bilateralApi.GET_geographic.mockImplementation((id: number) => id === 77 ? a$.asObservable() : b$.asObservable());
+      build();
+      fixture.detectChanges();
+      creation.currentResultId.set(78);
+      fixture.detectChanges();
+      const emitA = () => a$.next({ response: { geo_scope_id: GeoScopeEnum.GLOBAL, has_extra_geo_scope: false, extra_geo_scope_id: 1 } });
+      const emitB = () => b$.next({ response: { geo_scope_id: GeoScopeEnum.COUNTRY, has_countries: true, countries: [{ id: 9 }], has_extra_geo_scope: null, extra_regions: [{ id: 1 }] } });
+      if (order === 'A then B') { emitA(); emitB(); } else { emitB(); emitA(); }
+      expect(component.loadedResultId()).toBe(78);
+      expect(component.geographicLocationBody().geo_scope_id).toBe(GeoScopeEnum.COUNTRY);
+      expect(component.extraGeographicLocationBody().regions).toEqual([{ id: 1 }]);
+      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBeNull();
+      expect(component.showExtraMetadata()).toBe(true);
+      component.onScopeChange(GeoScopeEnum.GLOBAL);
+      expect(autoSave.schedulePayload.mock.lastCall[1]).toEqual(expect.objectContaining({ extra_regions: [{ id: 1 }], has_extra_geo_scope: null }));
+    });
     it('does nothing without a result id', () => {
       creation.currentResultId.set(null);
       build();
@@ -183,13 +205,22 @@ describe('SectionGeographyComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenCalledTimes(1);
     });
 
-    it('does not overwrite a local change when the initial GET completes later', () => {
+    // Night sweep 2026-09-23, R-4 — this used to pin the opposite: an edit made before the GET
+    // arrived won and the late response was DISCARDED, so the next save wiped the stored countries
+    // (prtest, GET delayed 15 s). Now the controls are locked until the GET lands, nothing is staged
+    // before it, and the stored geography is always applied. Control negative: with the gate line
+    // removed from `queueGeographySave()` the "nothing staged" assertion fails.
+    it('R-4: stages nothing before the initial GET lands, and applies the late response instead of discarding it', () => {
       const pendingLoad$ = new Subject<any>();
       bilateralApi.GET_geographic.mockReturnValue(pendingLoad$);
 
+      creation.isEditableByCenterUser = signal(true);
       build();
       fixture.detectChanges();
+      expect(component.loaded()).toBeNull();
+      expect(component.locked()).toBe(true);
       component.onScopeChange(GeoScopeEnum.GLOBAL);
+      expect(autoSave.schedulePayload).not.toHaveBeenCalled();
 
       pendingLoad$.next({
         response: {
@@ -199,8 +230,33 @@ describe('SectionGeographyComponent', () => {
         },
       });
 
-      expect(component.geographicLocationBody().geo_scope_id).toBe(GeoScopeEnum.GLOBAL);
-      expect(component.geographicLocationBody().regions).toEqual([]);
+      expect(component.loaded()).toBe(true);
+      expect(component.locked()).toBe(false);
+      expect(component.geographicLocationBody().geo_scope_id).toBe(GeoScopeEnum.REGIONAL);
+      expect(component.geographicLocationBody().regions).toEqual([{ id: 1 }]);
+    });
+
+    // R37: the loading line comes from the copy file. Control negative: re-inlining it fails this.
+    it('R-4: takes the loading line from the copy file', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'section-geography.component.html'), 'utf8');
+      expect(html).toContain('[description]="loadingNote"');
+      expect(html).not.toContain('Loading the geography saved');
+    });
+
+    it('R-3: a failed GET leaves the section locked with the error, and nothing is ever staged', () => {
+      bilateralApi.GET_geographic.mockReturnValue(throwError(() => ({ status: 500 })));
+
+      creation.isEditableByCenterUser = signal(true);
+      build();
+      fixture.detectChanges();
+      component.onScopeChange(GeoScopeEnum.COUNTRY);
+      component.queueGeographySave(0);
+
+      expect(component.loaded()).toBe(false);
+      expect(component.locked()).toBe(true);
+      expect(autoSave.schedulePayload).not.toHaveBeenCalled();
     });
   });
 
@@ -297,8 +353,8 @@ describe('SectionGeographyComponent', () => {
       expect(body.regions).toEqual([]);
       expect(body.countries).toEqual([]);
       expect(body.has_regions).toBe(false);
-      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBe(false);
-      expect(component.extraGeographicLocationBody().regions).toEqual([]);
+      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBe(true);
+      expect(component.extraGeographicLocationBody().regions).toEqual([{ id: 3 }]);
       expect(component.extraGeographicLocationBody().geo_scope_id).toBeUndefined();
     });
 
@@ -508,6 +564,52 @@ describe('SectionGeographyComponent', () => {
     });
   });
 
+  // 🛑 P2-3832 — 48 of the 248 countries in CLARISA have NO sub-national levels (American Samoa,
+  // Puerto Rico, Hong Kong, Guam…). The picker never renders for them, so demanding a selection
+  // kept `sub-national` unfilled forever and, through `overallStatus`, disabled Submit for the whole
+  // result. The classic form exempts them in the green-check SQL; this is the same rule.
+  describe('countries with no sub-national catalogue (P2-3832)', () => {
+    const withAmericanSamoa = () => {
+      build();
+      component.geographicLocationBody.update(b => ({
+        ...b,
+        geo_scope_id: GeoScopeEnum.SUB_NATIONAL,
+        countries: [{ id: 16, name: 'American Samoa', iso_alpha_2: 'AS', sub_national: [] }],
+      }));
+    };
+
+    it('still demands a selection while the catalogue has not come back', () => {
+      withAmericanSamoa();
+      expect(component.subNationalSelectionMissing).toBe(true);
+    });
+
+    it('stops demanding one once the catalogue comes back empty', () => {
+      withAmericanSamoa();
+      component.onSubNationalCatalogue({ iso_alpha_2: 'AS', hasLevels: false });
+      expect(component.subNationalSelectionMissing).toBe(false);
+    });
+
+    it('republishes the checklist with sub-national filled', () => {
+      withAmericanSamoa();
+      component.onSubNationalCatalogue({ iso_alpha_2: 'AS', hasLevels: false });
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith(
+        'geography',
+        expect.arrayContaining([expect.objectContaining({ key: 'sub-national', filled: true })])
+      );
+    });
+
+    it('keeps demanding a selection for a country that DOES have levels', () => {
+      build();
+      component.geographicLocationBody.update(b => ({
+        ...b,
+        geo_scope_id: GeoScopeEnum.SUB_NATIONAL,
+        countries: [{ id: 57, name: 'Colombia', iso_alpha_2: 'CO', sub_national: [] }],
+      }));
+      component.onSubNationalCatalogue({ iso_alpha_2: 'CO', hasLevels: true });
+      expect(component.subNationalSelectionMissing).toBe(true);
+    });
+  });
+
   // Country / Sub-national main scope must match W1/W2: no "regions for this result?" gate — the
   // country multi-select appears directly; the extra-scope card keeps its own Yes/No below.
   describe('main scope Country (W1/W2 parity)', () => {
@@ -556,11 +658,11 @@ describe('SectionGeographyComponent', () => {
       build();
       creation.resultTypeId.set(7);
       component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.COUNTRY }));
-      expect(component.showExtraGeoScopeQuestion()).toBe(true);
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
       expect(component.requiresExtraScopeAnswer).toBe(true);
     });
 
-    it('clears extra-scope data in the payload for non-innovation results', () => {
+    it('preserves extra-scope data in the payload for non-innovation results', () => {
       build();
       creation.resultTypeId.set(8);
       component.geographicLocationBody.set({
@@ -580,13 +682,36 @@ describe('SectionGeographyComponent', () => {
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
         'geography',
         expect.objectContaining({
-          has_extra_geo_scope: false,
-          extra_geo_scope_id: null,
-          extra_regions: [],
+          has_extra_geo_scope: true,
+          extra_geo_scope_id: GeoScopeEnum.REGIONAL,
+          extra_regions: [{ id: 1 }],
           has_extra_regions: false
         }),
         expect.any(Object)
       );
+      // Merge note (night sweep × 74f39d186): extra geography is optional metadata now, so the form
+      // sends the stored answer as-is; the server retires extras only on an explicit "No" (W12-5).
+    });
+  });
+
+  describe('optional bilateral extra geography', () => {
+    it.each([2, 7, 8])('completes valid main geography without an extra answer for type %i', typeId => {
+      build();
+      creation.resultTypeId.set(typeId);
+      component.geographicLocationBody.set({ geo_scope_id: GeoScopeEnum.COUNTRY, has_countries: true, has_regions: false, regions: [], countries: [{ id: 9 }] });
+      component.updateTracker();
+      expect(component.isGeographyComplete()).toBe(true);
+      expect(mdsTracker.setSectionFields.mock.lastCall[1].map((field: any) => field.key)).toEqual(['geo-scope', 'countries']);
+      component.geographicLocationBody.update(b => ({ ...b, countries: [] }));
+      expect(component.isGeographyComplete()).toBe(false);
+    });
+
+    it.each([null, false, true])('preserves %s and saved children when main scope is saved', answer => {
+      build();
+      creation.resultTypeId.set(8);
+      component.extraGeographicLocationBody.set({ geo_scope_id: GeoScopeEnum.REGIONAL, has_regions: true, has_countries: false, regions: [{ id: 1 }], countries: [], has_extra_geo_scope: answer });
+      component.onScopeChange(GeoScopeEnum.GLOBAL);
+      expect(autoSave.schedulePayload.mock.lastCall[1]).toEqual(expect.objectContaining({ has_extra_geo_scope: answer, extra_geo_scope_id: GeoScopeEnum.REGIONAL, extra_regions: [{ id: 1 }], has_extra_regions: true }));
     });
   });
 

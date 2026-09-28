@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-09-14 · P2-3424 AC4 — dropdown moved onto the shared QA catalogue (was P2-3428 worktree implementation, 2026-09-09)
+**Verified:** 2026-09-24 · Innovation Use quantitative measures are optional in the bilateral form, MDS tracker, and server gate.
 
 ## What it is
 Section 5 of the W3/bilateral result creator when the type is **Innovation Use**. Shows the MDS fields
@@ -11,8 +11,8 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 ## Contract
 - No `@Input`/`@Output`: all state travels through services.
 - `BilateralCreationService.currentResultId()` — which result; `reportingYear()` — the phase gate.
-- `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — four entries:
-  `use-actors`, `use-measures`, `use-level`, `use-investment`. The last one is the W3/bilateral-project
+- `BilateralMdsTrackerService.setSectionFields('type-specific', …)` — three entries:
+  `use-actors`, `use-measures` (optional), `use-investment`. The last one is the W3/bilateral-project
   table only; Submit is gated on `overallStatus() === 'complete'`.
 - `BilateralAutoSaveService.schedulePayload('typeSpecific', …)` — autosave, 800 ms debounce.
 - Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
@@ -114,10 +114,25 @@ P2-3556 (load gate), P2-3390 (the three Investment tables).
 - The whole spec uses `overrideTemplate`, so the HTML is not compiled in Jest: template facts are asserted by
   reading the `.html` file as text, and copy that QA quotes lives in a constant (`MDS_INFO_NOTE`,
   `LOAD_ERROR_NOTE`).
-- A quantitative measure only counts for the MDS with **both unit AND quantity** (AC6).
+- Quantitative measures are optional. When a row is added, it only counts as complete with **both unit AND quantity** (AC6).
+- Organizations are optional and remain under the full-metadata toggle; the Fetcher schema and MDS do not require an organization row. Current-use measures are optional and shown only when `innov_use_to_be_determined === false`; they do not count toward the MDS.
+
+- **P2-3785 (4b) — actors use the POOLED meaning of `sex_and_age_disaggregation`**: ticked (`true`) =
+  the breakdown does NOT apply, only "How many". The old "Sex and age disaggregated data available?"
+  Yes/No saved "Yes" as that same `true`, the opposite of every other reader. Rows saved before the fix
+  still carry the inverted answer (no backfill yet); unticking keeps their Women/Men so they are not wiped.
+  "Age disaggregation not available" persists through the legacy writer only when the key travels.
+- **P2-3428 — 2030 Use Projection** (full metadata, optional, not MDS): `body.innovation_use_2030`
+  `{ actors, organization, measures }`, stored under `section_id = 2` — the same key the W1/W2 v2
+  endpoint uses — through the legacy summary endpoint (`SummaryService.saveInnovationUse` →
+  `InnoDevService.saveAnticipatedInnoUser(…, 2)`). "This is yet to be determined" retires the section-2
+  rows server-side. Copy (title, guidance note link, question, tooltip) comes from
+  `internationalization/innovation-use-2030-projection.copy.ts`, shared with W1/W2. The annual-review
+  part of P2-3295 is deliberately absent: bilateral results are never rolled over.
+  ⚠️ Current-use lookups by type/unit now skip section-2 rows, and the legacy GET splits them out; before
+  this, a section-2 row would have shown up (and been re-saved) as current use.
 
 ## Pending / Coming soon
-- **2030 Use Projection**: only "This is yet to be determined" was built; fields redefined by **P2-3295**.
 - **Read-only mode (AC17)**: not implemented and not verified in this section.
 - **P25/W1-W2 validation functions** are intentionally out of scope; the bilateral UI and server submit
   gate implement P2-3428 independently.

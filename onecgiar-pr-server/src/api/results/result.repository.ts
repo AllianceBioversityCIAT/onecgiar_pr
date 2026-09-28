@@ -139,6 +139,7 @@ export class ResultRepository
         r2.external_platform_id,
         r2.external_platform_code,
         r2.external_reference,
+        r2.is_lead_by_partner,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -179,6 +180,7 @@ export class ResultRepository
         external_platform_id,
         external_platform_code,
         external_reference,
+        is_lead_by_partner,
         is_replicated
         ) select
         r2.description,
@@ -219,6 +221,7 @@ export class ResultRepository
         r2.external_platform_id,
         r2.external_platform_code,
         r2.external_reference,
+        r2.is_lead_by_partner,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -3432,13 +3435,23 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         -- declared" apart from "not answered yet", and the checkbox comes back unticked on reload.
         r.no_applicable_partner,
         r.is_lead_by_partner,
-        v.phase_year AS reporting_year
+        -- P2-3368 AC10-AC14: the linked/bundled answer of the same Contributors section. The
+        -- column is the generic one the pooled form writes; the selected results travel apart,
+        -- as linkedResults, because they live in the shared linked_result table.
+        r.has_innovation_link,
+        v.phase_year AS reporting_year,
+        -- BIL-RTE-DD-6: "P25 onward" is the portfolio's own start year, never a portfolio id,
+        -- a phase id, or the phase year — those differ between environments. A version without
+        -- a portfolio (LEFT JOIN) surfaces null, which the client/server both treat as false.
+        cpf.start_date AS portfolio_start_year
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
         AND rt.is_active = 1
       LEFT JOIN version v
         ON v.id = r.version_id
+      LEFT JOIN clarisa_portfolios cpf
+        ON cpf.id = v.portfolio_id
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
         AND rbp.is_active = 1
@@ -3469,6 +3482,74 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const results = await this.query(query, [resultId]);
       return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3368 AC10-AC14 — ids of the results a bilateral result is linked or bundled with, for the
+   * detail GET that rehydrates the Contributors & Partners section.
+   *
+   * 🛑 `linked_results_id IS NOT NULL` is not cosmetic: `linked_result` also stores legacy rows
+   * that carry a free-text `legacy_link` and no id (see `replaceLinkedResultsByOrigin`'s contract
+   * in `summary/repositories/results-innovations-use.repository.ts:262`). Handing those nulls to
+   * the picker would paint an empty chip the user cannot remove.
+   *
+   * Read-only twin of `ResultsInnovationsUseRepository.getLinkedResultsByOrigin`, kept here so the
+   * bilateral detail does not have to inject that repository into `ResultsService` — a service
+   * provided by several modules, where a new dependency is a bootstrap risk.
+   */
+  async getActiveLinkedResultIdsByOrigin(resultId: number): Promise<number[]> {
+    if (!resultId) return [];
+
+    const query = `
+      SELECT linked_results_id
+      FROM linked_result
+      WHERE origin_result_id = ?
+        AND is_active = TRUE
+        AND linked_results_id IS NOT NULL;
+    `;
+
+    try {
+      const rows = await this.query(query, [resultId]);
+      return (rows ?? [])
+        .map((row: any) => Number(row.linked_results_id))
+        .filter((id: number) => Number.isFinite(id));
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * BIL-RTE-DD-6: the portfolio's start year for a version, via `version.portfolio_id ->
+   * clarisa_portfolios.start_date`. Null when the version has no portfolio (T-0 check 2 found a
+   * row like this in prtest) — callers treat null as "not P25-onward", same as today.
+   */
+  async getPortfolioStartYearByVersionId(
+    versionId: number,
+  ): Promise<number | null> {
+    if (!versionId) return null;
+
+    const query = `
+      SELECT cpf.start_date AS portfolio_start_year
+      FROM version v
+      LEFT JOIN clarisa_portfolios cpf ON cpf.id = v.portfolio_id
+      WHERE v.id = ?
+    `;
+
+    try {
+      const rows = await this.query(query, [versionId]);
+      const value = rows?.[0]?.portfolio_start_year;
+      return value === null || value === undefined ? null : Number(value);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
@@ -3727,14 +3808,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
         if (!policyChangeMap.has(policyChangeId)) {
           const implementingOrg = [];
-          if (
-            Number(row.institution_roles_id) === 4 &&
-            row.institution_id &&
-            row.acronym
-          ) {
+          if (Number(row.institution_roles_id) === 4 && row.institution_id) {
             implementingOrg.push({
               institution_id: row.institution_id,
-              acronym: row.acronym,
+              acronym: row.acronym ?? null,
               institution_name: row.institution_name,
             });
           }
@@ -3751,11 +3828,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
         const policyChange = policyChangeMap.get(policyChangeId);
 
-        if (
-          Number(row.institution_roles_id) === 4 &&
-          row.institution_id &&
-          row.acronym
-        ) {
+        if (Number(row.institution_roles_id) === 4 && row.institution_id) {
           const institutionExists = policyChange.implementing_organization.some(
             (inst: any) => inst.institution_id === row.institution_id,
           );
@@ -3763,7 +3836,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           if (!institutionExists) {
             policyChange.implementing_organization.push({
               institution_id: row.institution_id,
-              acronym: row.acronym,
+              acronym: row.acronym ?? null,
               institution_name: row.institution_name,
             });
           }
@@ -4136,6 +4209,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           LIMIT 1
         ) AS submitter,
         r.creation_method,
+        r.is_replicated,
         CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rc.is_leading_result
       FROM result r

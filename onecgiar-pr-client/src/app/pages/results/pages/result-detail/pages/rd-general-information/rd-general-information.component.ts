@@ -720,39 +720,50 @@ export class RdGeneralInformationComponent implements OnInit, CanComponentDeacti
     );
   }
 
+  /**
+   * P2-3824 — the score-2 note must open the Evidence section of THIS result's phase
+   * ("please add the phase dynamically"). Read at call time, like the IPSR twin
+   * (`ipsr-general-information.component.ts` `evidenceSectionUrl`).
+   */
+  get evidenceSectionUrl(): string {
+    const phase = this.api.resultsSE.currentResultPhase;
+    const phaseQueryParam = phase ? `?phase=${phase}` : '';
+    return `${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences${phaseQueryParam}`;
+  }
+
   showAlerts() {
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank' class="open_route">Evidence</a> section `,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag in the <a href="${this.evidenceSectionUrl}" target='_blank' class="open_route">Evidence</a> section `,
       querySelector: '#gender_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
       querySelector: '#climate_change_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
       querySelector: '#nutrition_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
       querySelector: '#environment_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
       querySelector: '#poverty_tag_alert',
       position: 'beforeend'
     });

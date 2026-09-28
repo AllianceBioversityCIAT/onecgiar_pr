@@ -19,6 +19,7 @@ import { EvidencesRepository } from '../../results/evidences/evidences.repositor
 import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { VersioningService } from '../../versioning/versioning.service';
+import { EvidencesService } from '../../results/evidences/evidences.service';
 
 describe('InnovationPathwayStepThreeService', () => {
   let service: InnovationPathwayStepThreeService;
@@ -112,6 +113,7 @@ describe('InnovationPathwayStepThreeService', () => {
         },
         { provide: VersionsService, useValue: mockVersionsService },
         { provide: VersioningService, useValue: mockVersioningService },
+        { provide: EvidencesService, useValue: {} },
       ],
     }).compile();
 
@@ -170,6 +172,51 @@ describe('InnovationPathwayStepThreeService', () => {
       expect(mockWorkshopRepo.update).toHaveBeenCalledWith(
         5,
         expect.objectContaining({ is_active: false }),
+      );
+    });
+
+    /*
+     * Night sweep 2026-09-23, IPSR-1 — after a first "No", no active workshop-list evidence is left;
+     * TypeORM's update(undefined) throws "Empty criteria(s)…", which turned every later Step-1 save
+     * into a 500. The mock reproduces that throw. Control negative: without the `workShopEvidence?.id`
+     * guard this test gets status 500.
+     */
+    // IPSR-1b — unanswered question, no link, no stored evidence: the insert used to fail on the
+    // NOT NULL link column. Control negative: without the `&& lwl` guard save() is called.
+    it('IPSR-1b: an unanswered workshop question with no link inserts no evidence', async () => {
+      (mockEvidenceRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
+      (mockEvidenceRepo.save as jest.Mock).mockClear();
+      (mockWorkshopRepo.find as jest.Mock).mockResolvedValueOnce([]);
+
+      await service.saveWorkshop(11, user, {
+        result_ip: { is_expert_workshop_organized: null },
+        result_ip_expert_workshop_organized: [],
+      } as any);
+
+      expect(mockEvidenceRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('IPSR-1: a second "No" with no workshop evidence left does not fail', async () => {
+      (mockEvidenceRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
+      (mockEvidenceRepo.update as jest.Mock).mockImplementationOnce(
+        async (criteria: unknown) => {
+          if (criteria === undefined || criteria === null)
+            throw new Error(
+              'Empty criteria(s) are not allowed for the update method.',
+            );
+          return {};
+        },
+      );
+      (mockWorkshopRepo.find as jest.Mock).mockResolvedValueOnce([]);
+
+      const res = await service.saveWorkshop(11, user, {
+        result_ip: { is_expert_workshop_organized: false },
+      } as any);
+
+      expect((res as any).status).not.toBe(500);
+      expect(mockEvidenceRepo.update).not.toHaveBeenCalledWith(
+        undefined,
+        expect.anything(),
       );
     });
 

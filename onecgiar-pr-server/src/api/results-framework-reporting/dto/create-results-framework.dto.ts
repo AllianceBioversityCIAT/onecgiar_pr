@@ -4,6 +4,7 @@ import { ResultsKnowledgeProductDto } from '../../results/results-knowledge-prod
 import { ContributorResultTocResult } from '../../results/results-toc-results/dto/create-results-toc-result.dto';
 import { ResultsCenterDto } from '../../results/results-centers/dto/results-center.dto';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { PtResultProvenanceDto } from '../../progress-tracker/dto/pt-result-provenance.dto';
 
 export class ResultsFrameworkTocIndicatorDto {
   @ApiProperty({
@@ -207,4 +208,12 @@ export class CreateResultsFrameworkResultDto {
       'Partner institutions for the result (includes from_toc when prefilled from ToC).',
   })
   institutions?: ResultsByInstitution[];
+
+  // @akili-spec changes/progress-tracker-pull-bridge/progress-tracker-indicator-mapping (PTM-T-7)
+  @ApiPropertyOptional({
+    type: () => PtResultProvenanceDto,
+    description:
+      'Provenance of a result created from a Progress Tracker proposal. Omit it for any other create; when present it is validated before the result is created and stored after associations.',
+  })
+  progress_tracker_provenance?: PtResultProvenanceDto;
 }

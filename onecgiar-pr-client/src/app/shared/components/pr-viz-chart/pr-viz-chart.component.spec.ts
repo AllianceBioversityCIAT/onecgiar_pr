@@ -355,6 +355,94 @@ describe('PrVizChartComponent', () => {
     });
   });
 
+  /**
+   * P2-3744 — the echarts SVG root holds no focusable node, so the chart's activatable controls
+   * live in the visually-hidden data table. These tests pin BOTH halves of the contract: the
+   * controls exist when a consumer registers actions, and the DOM is untouched when it does not.
+   */
+  describe('Keyboard activation of the data table (P2-3744)', () => {
+    const actionableModel: VizChartTableModel = {
+      caption: 'Results by report year',
+      headers: ['Year', 'Count'],
+      rows: [
+        ['2023', 10],
+        ['2024', 25]
+      ],
+      actions: [
+        [null, { label: '2023: 10 results. Open in Results.', event: { dataIndex: 0, seriesIndex: 0 } }],
+        [null, null]
+      ]
+    };
+
+    it('adds NO focusable descendant when the table model registers no actions', () => {
+      fixture.componentRef.setInput('options', sampleOptions);
+      fixture.componentRef.setInput('tableModel', mockTableModel);
+      fixture.detectChanges();
+
+      const wrapper = fixture.nativeElement.querySelector('.pr-viz-chart-wrapper');
+      expect(wrapper.querySelectorAll('button, a[href], input, select, textarea, [tabindex]').length).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('.pr-viz-chart-table-action').length).toBe(0);
+    });
+
+    it('renders a button only for the cells that registered an action, keeping the value as text', () => {
+      fixture.componentRef.setInput('options', sampleOptions);
+      fixture.componentRef.setInput('tableModel', actionableModel);
+      fixture.detectChanges();
+
+      const buttons = fixture.nativeElement.querySelectorAll('.pr-viz-chart-table-action');
+      expect(buttons.length).toBe(1);
+      expect(buttons[0].tagName).toBe('BUTTON');
+      expect(buttons[0].getAttribute('type')).toBe('button');
+      expect(buttons[0].getAttribute('aria-label')).toBe('2023: 10 results. Open in Results.');
+      expect(buttons[0].textContent.trim()).toBe('10');
+
+      // The row whose action is null still prints its figure — as plain text, no control.
+      const secondRowCell = fixture.nativeElement.querySelectorAll('tbody tr')[1].querySelector('td');
+      expect(secondRowCell.querySelector('button')).toBeNull();
+      expect(secondRowCell.textContent.trim()).toBe('25');
+    });
+
+    it('emits the action payload through the SAME chartClick output the mouse path uses', () => {
+      const clickSpy = jest.fn();
+      component.chartClick.subscribe(clickSpy);
+
+      fixture.componentRef.setInput('options', sampleOptions);
+      fixture.componentRef.setInput('tableModel', actionableModel);
+      fixture.detectChanges();
+
+      const button = fixture.nativeElement.querySelector('.pr-viz-chart-table-action');
+      button.click();
+
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(clickSpy).toHaveBeenCalledWith({ dataIndex: 0, seriesIndex: 0 });
+    });
+
+    it('activates on Enter and Space because the control is a real button, not a div', () => {
+      fixture.componentRef.setInput('options', sampleOptions);
+      fixture.componentRef.setInput('tableModel', actionableModel);
+      fixture.detectChanges();
+
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector('.pr-viz-chart-table-action');
+      // Native <button> semantics: focusable without tabindex, and Enter/Space fire `click`.
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.hasAttribute('disabled')).toBe(false);
+      button.focus();
+      expect(document.activeElement).toBe(button);
+    });
+
+    it('degrades to plain text on a ragged or short actions grid instead of throwing', () => {
+      fixture.componentRef.setInput('options', sampleOptions);
+      fixture.componentRef.setInput('tableModel', {
+        ...mockTableModel,
+        actions: [[null]]
+      } as VizChartTableModel);
+
+      expect(() => fixture.detectChanges()).not.toThrow();
+      expect(fixture.nativeElement.querySelectorAll('.pr-viz-chart-table-action').length).toBe(0);
+      expect(component.actionAt(mockTableModel, 5, 5)).toBeNull();
+    });
+  });
+
   describe('Cleanup on Destroy (VCE-R-1)', () => {
     it('disposes echarts instance and disconnects ResizeObserver on ngOnDestroy', () => {
       fixture.detectChanges();

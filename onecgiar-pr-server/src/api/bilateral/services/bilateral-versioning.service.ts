@@ -5,7 +5,6 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { ResultRepository } from '../../results/result.repository';
 import { BilateralVersioningRulesService } from '../versioning-rules/bilateral-versioning-rules.service';
 import { VersioningService } from '../../versioning/versioning.service';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
@@ -24,7 +23,7 @@ import { centerCodesForPlatform } from '../constants/platform-center-scope.const
  * The replication itself is not ours: `VersioningService` already copies a result plus its
  * ~20 association tables inside one transaction, and has done so for the reporting tool for
  * phases. This service is the **gate** — it decides whether this caller may continue this
- * result — plus the two adjustments the bilateral flow needs afterwards.
+ * result — plus the response that identifies the created version.
  *
  * Two things worth knowing before reading on:
  *
@@ -33,16 +32,14 @@ import { centerCodesForPlatform } from '../constants/platform-center-scope.const
  *   So the route is `versionProcessV2`, whose `entity_id` we derive from the result's own
  *   role-1 initiative — the caller sends a result code and nothing else. V2 recognises that
  *   case (`isP25SelfEntity`) and skips the initiative/entity map check.
- * - **The copy lands in Draft**, not Pending review. This operation continues a result; it
- *   does not report on it. Whoever edits it afterwards — through the API later, or in the
- *   reporting tool — is who submits it for review.
+ * - **The copy lands in Editing**, as `versionProcessV2` creates it. A centre user completes
+ *   the result and explicitly submits it for review afterwards.
  */
 @Injectable()
 export class BilateralVersioningService {
   private readonly logger = new Logger(BilateralVersioningService.name);
 
   constructor(
-    private readonly _resultRepository: ResultRepository,
     private readonly _rules: BilateralVersioningRulesService,
     private readonly _versioningService: VersioningService,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
@@ -91,11 +88,6 @@ export class BilateralVersioningService {
       );
     }
 
-    await this._resultRepository.update(
-      { id: created.id },
-      { status_id: ResultStatusData.Draft.value, last_updated_by: user.id },
-    );
-
     return {
       result_code: resultCode,
       external_reference: dto.external_reference ?? null,
@@ -104,8 +96,8 @@ export class BilateralVersioningService {
         result_id: created.id,
         phase_id: activePhase.id,
         phase_name: activePhase.phase_name ?? null,
-        status: ResultStatusData.Draft.name,
-        status_id: ResultStatusData.Draft.value,
+        status: ResultStatusData.Editing.name,
+        status_id: ResultStatusData.Editing.value,
       },
     };
   }

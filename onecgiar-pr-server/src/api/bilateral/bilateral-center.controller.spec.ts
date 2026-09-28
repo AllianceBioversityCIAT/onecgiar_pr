@@ -77,6 +77,7 @@ describe('BilateralCenterController', () => {
     expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(
       10,
       undefined,
+      undefined,
     );
     expect(result).toEqual({ response: { projects: [] } });
   });
@@ -86,12 +87,28 @@ describe('BilateralCenterController', () => {
   // fallback, so a non-numeric value must reach it verbatim, never 5xx at the route.
   it('getProjects should pass the optional year query through to the service', async () => {
     await controller.getProjects(10, 2025);
-    expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(10, 2025);
+    expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(
+      10,
+      2025,
+      undefined,
+    );
 
     await controller.getProjects(10, 'bogus' as any);
     expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(
       10,
       'bogus',
+      undefined,
+    );
+  });
+
+  // bilateral/project-overview-metrics (BIL-POM-OQ-1 correction): the optional `versionId`
+  // query passes through untouched too, so the catalog can scope w1w2ContributorCount.
+  it('getProjects should pass the optional versionId query through to the service', async () => {
+    await controller.getProjects(10, 2025, 36);
+    expect(bilateralCenterService.getProjects).toHaveBeenCalledWith(
+      10,
+      2025,
+      36,
     );
   });
 

@@ -57,6 +57,7 @@ describe('WebhookDispatchService', () => {
       last_error: null,
       next_attempt_at: new Date(),
       alerted_at: null,
+      created_date: new Date('2026-09-23T12:00:00.000Z'),
       ...overrides,
     }) as WebhookDelivery;
 
@@ -78,9 +79,17 @@ describe('WebhookDispatchService', () => {
     };
 
     reviewHistoryRepository = {
-      getReviewHistoryByResultId: jest
-        .fn()
-        .mockResolvedValue([{ comment: '  Missing evidence  ' }]),
+      getReviewHistoryByResultId: jest.fn().mockResolvedValue([
+        {
+          action: 'REJECT',
+          comment: '  Missing evidence  ',
+          created_by: 81,
+          created_at: new Date('2026-09-23T11:59:00.000Z'),
+          first_name: 'Ana',
+          last_name: 'García',
+          email: 'ana@example.org',
+        },
+      ]),
     };
 
     httpService = {
@@ -239,12 +248,106 @@ describe('WebhookDispatchService', () => {
       expect(JSON.parse(body).justification).toBe('Missing evidence');
     });
 
+    it('identifies the reviewer of this decision and preserves the complete result version', async () => {
+      (
+        reviewHistoryRepository.getReviewHistoryByResultId as jest.Mock
+      ).mockResolvedValue([
+        {
+          action: 'REJECT',
+          comment: 'Newer rejection',
+          created_by: 99,
+          created_at: new Date('2026-09-23T12:01:00.000Z'),
+        },
+        {
+          action: 'REJECT',
+          comment: 'Missing evidence',
+          created_by: 81,
+          created_at: new Date('2026-09-23T11:59:00.000Z'),
+          first_name: 'Ana',
+          last_name: 'García',
+          email: 'ana@example.org',
+        },
+      ]);
+      (bilateralService.findOne as jest.Mock).mockResolvedValue({
+        response: {
+          id: 555,
+          result_code: 5521,
+          version_id: 6,
+          reported_year_id: 2026,
+          obj_version: {
+            id: 6,
+            phase_year: 2026,
+            phase_name: 'Reporting 2026',
+          },
+          title: 'A bilateral result',
+        },
+      });
+
+      await service.dispatchDue();
+
+      const [, body] = (httpService.post as jest.Mock).mock.calls[0];
+      const payload = JSON.parse(body);
+      expect(payload.reviewed_by).toEqual({
+        id: 81,
+        first_name: 'Ana',
+        last_name: 'García',
+        email: 'ana@example.org',
+      });
+      expect(payload.justification).toBe('Missing evidence');
+      expect(payload.data).toEqual({
+        id: 555,
+        result_code: 5521,
+        version_id: 6,
+        reported_year_id: 2026,
+        obj_version: { id: 6, phase_year: 2026, phase_name: 'Reporting 2026' },
+        title: 'A bilateral result',
+      });
+    });
+
+    it('identifies the approving user without adding an empty justification', async () => {
+      (deliveryRepository.claimDue as jest.Mock).mockResolvedValue([
+        delivery({ decision: 'APPROVE' }),
+      ]);
+      (
+        reviewHistoryRepository.getReviewHistoryByResultId as jest.Mock
+      ).mockResolvedValue([
+        {
+          action: 'APPROVE',
+          comment: null,
+          created_by: 82,
+          created_at: new Date('2026-09-23T11:59:00.000Z'),
+          first_name: 'Luis',
+          last_name: 'Pérez',
+          email: 'luis@example.org',
+        },
+      ]);
+
+      await service.dispatchDue();
+
+      const [, body] = (httpService.post as jest.Mock).mock.calls[0];
+      const payload = JSON.parse(body);
+      expect(payload.decision).toBe('APPROVE');
+      expect(payload.reviewed_by).toEqual({
+        id: 82,
+        first_name: 'Luis',
+        last_name: 'Pérez',
+        email: 'luis@example.org',
+      });
+      expect(payload).not.toHaveProperty('justification');
+    });
+
     // The contract P2-3157 fixed when it removed the hardcoded 'Approved' literal: no comment means
     // the field is absent, never an empty string.
     it('omits justification entirely when the reviewer left no comment', async () => {
       (
         reviewHistoryRepository.getReviewHistoryByResultId as jest.Mock
-      ).mockResolvedValue([{ comment: '   ' }]);
+      ).mockResolvedValue([
+        {
+          action: 'REJECT',
+          comment: '   ',
+          created_at: new Date('2026-09-23T11:59:00.000Z'),
+        },
+      ]);
 
       await service.dispatchDue();
 
@@ -262,7 +365,9 @@ describe('WebhookDispatchService', () => {
 
       expect(httpService.post).toHaveBeenCalled();
       const [, body] = (httpService.post as jest.Mock).mock.calls[0];
-      expect('justification' in JSON.parse(body)).toBe(false);
+      const payload = JSON.parse(body);
+      expect('justification' in payload).toBe(false);
+      expect(payload.reviewed_by).toBeNull();
     });
   });
 

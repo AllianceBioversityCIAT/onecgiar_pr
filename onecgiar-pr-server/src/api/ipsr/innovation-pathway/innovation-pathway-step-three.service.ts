@@ -12,7 +12,12 @@ import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
-import { SaveStepTwoThree } from './dto/save-step-three.dto';
+import {
+  IpsrPrincipalImpactArea,
+  IpsrStepThreeComponent,
+  IpsrStepThreeEvidence,
+  SaveStepTwoThree,
+} from './dto/save-step-three.dto';
 import { ResultsByIpInnovationUseMeasureRepository } from '../results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
 import { ResultsIpActorRepository } from '../results-ip-actors/results-ip-actor.repository';
 import { ResultsIpInstitutionTypeRepository } from '../results-ip-institution-type/results-ip-institution-type.repository';
@@ -28,6 +33,47 @@ import { ResultIpExpertWorkshopOrganized } from './entities/result-ip-expert-wor
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
+import { EvidencesService } from '../../results/evidences/evidences.service';
+import { EvidencesCreateInterface } from '../../results/evidences/dto/create-evidence.dto';
+import {
+  IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT,
+  IpsrEvidenceLevelEnum,
+} from '../../../shared/constants/evidence-type.enum';
+import { EvidenceWithEvidenceSharepoint } from '../../results/evidences/interfaces/evidence-with-evidence-sharepoint.interface';
+import { Result } from '../../results/entities/result.entity';
+
+/**
+ * P2-3824 — the two Step 3 evidence lists of a component and the legacy single-link columns each
+ * one is dual-written to (the green checks, the bilateral payload and phase replication still
+ * read those columns).
+ */
+const STEP_THREE_EVIDENCE_LEVELS = [
+  {
+    level: IpsrEvidenceLevelEnum.READINESS,
+    listKey: 'readiness_evidences',
+    linkColumn: 'readinees_evidence_link',
+    detailsColumn: 'readiness_details_of_evidence',
+  },
+  {
+    level: IpsrEvidenceLevelEnum.USE,
+    listKey: 'use_evidences',
+    linkColumn: 'use_evidence_link',
+    detailsColumn: 'use_details_of_evidence',
+  },
+] as const;
+
+/** P2-3824 — `gender_tag_level.id = 3` is the (2) Principal score. */
+const PRINCIPAL_TAG_LEVEL_ID = 3;
+
+const PRINCIPAL_IMPACT_AREA_COLUMNS: ReadonlyArray<
+  readonly [keyof Result, IpsrPrincipalImpactArea]
+> = [
+  ['gender_tag_level_id', 'gender'],
+  ['climate_change_tag_level_id', 'climate'],
+  ['nutrition_tag_level_id', 'nutrition'],
+  ['environmental_biodiversity_tag_level_id', 'environment'],
+  ['poverty_tag_level_id', 'poverty'],
+];
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -47,6 +93,7 @@ export class InnovationPathwayStepThreeService {
     protected readonly _resultIpExpertWorkshopRepository: ResultIpExpertWorkshopOrganizedRepostory,
     protected readonly _returnResponse: ReturnResponse,
     protected readonly _versioningService: VersioningService,
+    protected readonly _evidencesService: EvidencesService,
   ) {}
 
   async saveComplementaryinnovation(
@@ -82,6 +129,13 @@ export class InnovationPathwayStepThreeService {
         result_ip_result_complementary: result_ip_complementary,
       } = saveData;
 
+      // P2-3824: refuse an invalid evidence list before anything of the step is written.
+      await this._assertStepThreeEvidences(resultId, [
+        result_ip_core,
+        ...(result_ip_complementary ?? []),
+      ]);
+      const evidenceFailures: string[] = [];
+
       await this._resultInnovationPackageRepository.update(
         result_ip.result_innovation_package_id,
         {
@@ -102,6 +156,9 @@ export class InnovationPathwayStepThreeService {
         result_ip_core,
         result_ip.assessed_during_expert_workshop_id,
       );
+      evidenceFailures.push(
+        ...(await this._saveStepThreeEvidences(resultId, result_ip_core, user)),
+      );
       await this.saveInnovationUse(user, saveData);
 
       if (result_ip_complementary?.length) {
@@ -111,7 +168,19 @@ export class InnovationPathwayStepThreeService {
             ripc,
             result_ip.assessed_during_expert_workshop_id,
           );
+          evidenceFailures.push(
+            ...(await this._saveStepThreeEvidences(resultId, ripc, user)),
+          );
         }
+      }
+
+      // Everything that could be saved IS saved by now; only then say what could not.
+      if (evidenceFailures.length) {
+        this._rejectStepThree(
+          evidenceFailures.length === 1
+            ? `The rest of the step was saved. This piece of evidence was not: ${evidenceFailures[0]}`
+            : `The rest of the step was saved. ${evidenceFailures.length} pieces of evidence were not: ${evidenceFailures.join(' | ')}`,
+        );
       }
 
       const { response } = await this.getStepThree(resultId);
@@ -127,44 +196,64 @@ export class InnovationPathwayStepThreeService {
     }
   }
 
-  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr, data_id: any) {
+  async saveinnovationWorkshop(
+    user: TokenDto,
+    rbi: IpsrStepThreeComponent,
+    data_id: any,
+  ) {
     try {
+      const values: Partial<Ipsr> = {
+        readiness_level_evidence_based: rbi?.readiness_level_evidence_based,
+
+        readinees_evidence_link: rbi?.readinees_evidence_link,
+
+        use_level_evidence_based: rbi?.use_level_evidence_based,
+
+        use_evidence_link: rbi?.use_evidence_link,
+        use_details_of_evidence: rbi?.use_details_of_evidence,
+
+        readiness_details_of_evidence: rbi?.readiness_details_of_evidence,
+
+        potential_innovation_readiness_level: this.validData(
+          rbi?.potential_innovation_readiness_level,
+          data_id,
+          [2],
+        ),
+        potential_innovation_use_level: this.validData(
+          rbi?.potential_innovation_use_level,
+          data_id,
+          [2],
+        ),
+        current_innovation_readiness_level: this.validData(
+          rbi?.current_innovation_readiness_level,
+          data_id,
+          [1, 2],
+        ),
+        current_innovation_use_level: this.validData(
+          rbi?.current_innovation_use_level,
+          data_id,
+          [1, 2],
+        ),
+        last_updated_by: user?.id,
+      };
+
+      // P2-3824: a level that came with its evidence list owns its legacy columns — they are
+      // dual-written from the saved list right after. A stale single link in the same body must
+      // not overwrite them (or blank them, from a client that stopped sending the field).
+      for (const {
+        listKey,
+        linkColumn,
+        detailsColumn,
+      } of STEP_THREE_EVIDENCE_LEVELS) {
+        if (Array.isArray(rbi?.[listKey])) {
+          delete values[linkColumn];
+          delete values[detailsColumn];
+        }
+      }
+
       await this._innovationByResultRepository.update(
         rbi.result_by_innovation_package_id,
-        {
-          readiness_level_evidence_based: rbi?.readiness_level_evidence_based,
-
-          readinees_evidence_link: rbi?.readinees_evidence_link,
-
-          use_level_evidence_based: rbi?.use_level_evidence_based,
-
-          use_evidence_link: rbi?.use_evidence_link,
-          use_details_of_evidence: rbi?.use_details_of_evidence,
-
-          readiness_details_of_evidence: rbi?.readiness_details_of_evidence,
-
-          potential_innovation_readiness_level: this.validData(
-            rbi?.potential_innovation_readiness_level,
-            data_id,
-            [2],
-          ),
-          potential_innovation_use_level: this.validData(
-            rbi?.potential_innovation_use_level,
-            data_id,
-            [2],
-          ),
-          current_innovation_readiness_level: this.validData(
-            rbi?.current_innovation_readiness_level,
-            data_id,
-            [1, 2],
-          ),
-          current_innovation_use_level: this.validData(
-            rbi?.current_innovation_use_level,
-            data_id,
-            [1, 2],
-          ),
-          last_updated_by: user?.id,
-        },
+        values,
       );
       return;
     } catch (error) {
@@ -200,10 +289,17 @@ export class InnovationPathwayStepThreeService {
       } = saveStepTwoThree;
 
       if (rip.is_expert_workshop_organized === false) {
-        await this._evidenceRepository.update(workShopEvidence?.id, {
-          is_active: 0,
-          last_updated_by: user.id,
-        });
+        // Night sweep 2026-09-23, IPSR-1 — once a package has answered "No", there is no active
+        // workshop-list evidence left, and `update(undefined, …)` threw TypeORM's "Empty criteria(s)
+        // are not allowed for the update method" → every later Step-1 save answered 500 (and blocked
+        // "Save & go to next step") although everything before this point was already written
+        // (prtest 11172, 4/4). Nothing to deactivate is not an error.
+        if (workShopEvidence?.id) {
+          await this._evidenceRepository.update(workShopEvidence.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
 
         const expertWorkshopExist: ResultIpExpertWorkshopOrganized[] =
           await this._resultIpExpertWorkshopRepository.find({
@@ -229,7 +325,11 @@ export class InnovationPathwayStepThreeService {
         };
       }
 
-      if (!workShopEvidence) {
+      // Night sweep 2026-09-23, IPSR-1b — an unanswered workshop question (null) reaches here with no
+      // link; inserting a workshop-list evidence without one violated the NOT NULL `link` column
+      // ("Field 'link' doesn't have a default value") and every Step-1 save of a NEW package answered
+      // 500 (prtest 12037 / 12038, 3/3). No link to store is not an error: nothing is inserted.
+      if (!workShopEvidence && lwl) {
         await this._evidenceRepository.save({
           result_id: resultId,
           link: lwl,
@@ -237,7 +337,7 @@ export class InnovationPathwayStepThreeService {
           created_by: user.id,
           last_updated_by: user.id,
         });
-      } else {
+      } else if (workShopEvidence) {
         await this._evidenceRepository.update(workShopEvidence.id, {
           link: lwl,
           last_updated_by: user.id,
@@ -395,6 +495,13 @@ export class InnovationPathwayStepThreeService {
           ],
         });
 
+      // P2-3824: the evidence lists of every component, in one query for the whole package.
+      const stepThreeEvidences =
+        await this._evidenceRepository.getIpsrStepThreeEvidences(resultId);
+      for (const component of [result_core, ...(result_complementary ?? [])]) {
+        this._attachStepThreeEvidences(component, stepThreeEvidences);
+      }
+
       const result_ip_expert_workshop_organized =
         await this._resultIpExpertWorkshopRepository.find({
           where: {
@@ -453,6 +560,9 @@ export class InnovationPathwayStepThreeService {
           core_result_current_phase: core_innovation.version_id,
         },
         result_ip_expert_workshop_organized,
+        principal_impact_areas: this._principalImpactAreas(
+          result_ip.obj_result_innovation_package,
+        ),
       };
 
       return {
@@ -747,6 +857,231 @@ export class InnovationPathwayStepThreeService {
         }
       });
     }
+  }
+
+  /**
+   * P2-3824 — validates the Step 3 evidence lists of every component BEFORE the step writes
+   * anything: at most `IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT` pieces per component (readiness and
+   * use together, stored rows of an omitted level included), no link twice in one list, and the component has to belong to this
+   * package (its rows would otherwise be written under the wrong one).
+   */
+  private async _assertStepThreeEvidences(
+    resultId: number,
+    components: IpsrStepThreeComponent[],
+  ): Promise<void> {
+    const withLists = (components ?? []).filter((component) =>
+      STEP_THREE_EVIDENCE_LEVELS.some(({ listKey }) =>
+        Array.isArray(component?.[listKey]),
+      ),
+    );
+    if (!withLists.length) return;
+
+    const packageComponents = await this._innovationByResultRepository.find({
+      where: { result_innovation_package_id: resultId, is_active: true },
+    });
+    const packageComponentIds = new Set(
+      (packageComponents ?? []).map((c) =>
+        Number(c.result_by_innovation_package_id),
+      ),
+    );
+    const storedEvidences = withLists.some((component) =>
+      STEP_THREE_EVIDENCE_LEVELS.some(
+        ({ listKey }) => !Array.isArray(component?.[listKey]),
+      ),
+    )
+      ? ((await this._evidenceRepository.getIpsrStepThreeEvidences(resultId)) ??
+        [])
+      : [];
+
+    for (const component of withLists) {
+      if (
+        !packageComponentIds.has(
+          Number(component?.result_by_innovation_package_id),
+        )
+      ) {
+        this._rejectStepThree(
+          'The evidence could not be saved: one of the innovations is not part of this package any more. Please reload the page and try again.',
+        );
+      }
+
+      // A level the payload leaves out keeps its stored rows, so they count toward the cap:
+      // otherwise saving readiness and use in two requests would reach 12.
+      const count = STEP_THREE_EVIDENCE_LEVELS.reduce(
+        (total, { level, listKey }) =>
+          total +
+          (Array.isArray(component?.[listKey])
+            ? this._evidenceItems(component[listKey]).length
+            : storedEvidences.filter(
+                (row) =>
+                  Number(row.result_by_innovation_package_id) ===
+                    Number(component.result_by_innovation_package_id) &&
+                  row.ipsr_evidence_level === level,
+              ).length),
+        0,
+      );
+      if (count > IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT) {
+        this._rejectStepThree(
+          `Each innovation accepts at most ${IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT} pieces of evidence (readiness and use together). Please remove ${count - IPSR_STEP3_MAX_EVIDENCE_PER_COMPONENT} before saving.`,
+        );
+      }
+
+      // Duplicates are checked per level: the same document can back both the readiness and the
+      // use level of one innovation.
+      for (const { listKey } of STEP_THREE_EVIDENCE_LEVELS) {
+        const links = this._evidenceItems(component?.[listKey])
+          .map((item) => item?.link?.trim())
+          .filter((link) => !!link);
+        if (new Set(links).size !== links.length) {
+          this._rejectStepThree(
+            'The same evidence link appears more than once in one list. Please keep each link only once.',
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * P2-3824 — saves the lists a component came with and dual-writes the first piece of each level
+   * to its legacy single-link columns (NULL when the list is empty). An absent list is left alone.
+   * Returns the pieces that could not be saved.
+   */
+  private async _saveStepThreeEvidences(
+    resultId: number,
+    component: IpsrStepThreeComponent,
+    user: TokenDto,
+  ): Promise<string[]> {
+    const failures: string[] = [];
+    for (const {
+      level,
+      listKey,
+      linkColumn,
+      detailsColumn,
+    } of STEP_THREE_EVIDENCE_LEVELS) {
+      if (!Array.isArray(component?.[listKey])) continue;
+
+      const { first, failures: levelFailures } =
+        await this._evidencesService.saveIpsrStepThreeEvidences(
+          resultId,
+          component.result_by_innovation_package_id,
+          level,
+          this._evidenceItems(component[listKey]),
+          user,
+        );
+      failures.push(...levelFailures);
+
+      await this._innovationByResultRepository.update(
+        component.result_by_innovation_package_id,
+        {
+          [linkColumn]: first?.link || null,
+          [detailsColumn]: first?.description ?? null,
+          last_updated_by: user.id,
+        },
+      );
+    }
+    return failures;
+  }
+
+  /** Items that carry something to store: a link, or a file in the repository. */
+  private _evidenceItems(list: unknown): EvidencesCreateInterface[] {
+    return (Array.isArray(list) ? list : []).filter(
+      (item) => !!item?.link?.trim() || !!item?.is_sharepoint,
+    ) as EvidencesCreateInterface[];
+  }
+
+  /**
+   * Error that `ReturnResponse.format` turns into a 400 with this message (it reads `statusCode`,
+   * which `throwServiceError` does not set).
+   */
+  private _rejectStepThree(message: string): never {
+    const error = new Error(message) as Error & {
+      statusCode: HttpStatus;
+      response: unknown;
+    };
+    error.statusCode = HttpStatus.BAD_REQUEST;
+    error.response = {};
+    throw error;
+  }
+
+  /**
+   * P2-3824 — puts `readiness_evidences` / `use_evidences` on a component. A level with no evidence
+   * row yet but a legacy single link shows that link as its first piece (`legacy: true`), so a
+   * package saved before the lists existed looks the same and keeps its evidence on the next save.
+   */
+  private _attachStepThreeEvidences(
+    component: IpsrStepThreeComponent,
+    evidences: EvidenceWithEvidenceSharepoint[],
+  ): void {
+    if (!component) return;
+    for (const {
+      level,
+      listKey,
+      linkColumn,
+      detailsColumn,
+    } of STEP_THREE_EVIDENCE_LEVELS) {
+      const list = (evidences ?? [])
+        .filter(
+          (e) =>
+            Number(e.result_by_innovation_package_id) ===
+              Number(component.result_by_innovation_package_id) &&
+            e.ipsr_evidence_level === level,
+        )
+        .map((e) => this._toStepThreeEvidence(e));
+
+      const legacyLink = (component[linkColumn] as string)?.trim();
+      if (!list.length && legacyLink) {
+        list.push({
+          id: null,
+          link: legacyLink,
+          description: (component[detailsColumn] as string) ?? null,
+          is_sharepoint: false,
+          is_public_file: null,
+          sp_document_id: null,
+          sp_evidence_id: null,
+          sp_file_name: null,
+          sp_folder_path: null,
+          gender_related: false,
+          youth_related: false,
+          nutrition_related: false,
+          environmental_biodiversity_related: false,
+          poverty_related: false,
+          innovation_use_related: false,
+          legacy: true,
+        });
+      }
+
+      component[listKey] = list;
+    }
+  }
+
+  private _toStepThreeEvidence(e: any): IpsrStepThreeEvidence {
+    return {
+      id: Number(e.id),
+      link: e.link,
+      description: e.description ?? null,
+      is_sharepoint: !!e.is_sharepoint,
+      is_public_file:
+        e.is_public_file === null || e.is_public_file === undefined
+          ? null
+          : !!e.is_public_file,
+      sp_document_id: e.sp_document_id ?? null,
+      sp_evidence_id: e.sp_evidence_id ?? null,
+      sp_file_name: e.sp_file_name ?? null,
+      sp_folder_path: e.sp_folder_path ?? null,
+      gender_related: !!e.gender_related,
+      youth_related: !!e.youth_related,
+      nutrition_related: !!e.nutrition_related,
+      environmental_biodiversity_related:
+        !!e.environmental_biodiversity_related,
+      poverty_related: !!e.poverty_related,
+      innovation_use_related: !!e.innovation_use_related,
+    };
+  }
+
+  /** P2-3824 — Impact Areas the package scored (2) Principal, for the Step 3 alerts. */
+  private _principalImpactAreas(result: Result): IpsrPrincipalImpactArea[] {
+    return PRINCIPAL_IMPACT_AREA_COLUMNS.filter(
+      ([column]) => Number(result?.[column]) === PRINCIPAL_TAG_LEVEL_ID,
+    ).map(([, area]) => area);
   }
 
   isNullData(data: any) {

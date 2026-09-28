@@ -202,7 +202,11 @@ export class TypeCapacitySharingComponent implements OnInit {
   }
 
   onCapdevTermId1Change(): void {
-    if (this.capdevTermId1 === 3) {
+    // Night sweep 2026-09-23, BIL-6 — the degree only exists under Long-term (4). It was cleared for
+    // Short-term only, so un-ticking Long-term (the radio toggles off → null) left the old degree in
+    // `capdevTermId2` and `syncCapdevTermId()` saved it (prtest 11980: PhD came back after reload).
+    // Juanda's P2-3771 / P2-3382 rule is untouched: under Long-term the degree stays mandatory.
+    if (this.capdevTermId1 !== 4) {
       this.capdevTermId2 = null;
     }
     this.syncCapdevTermId();

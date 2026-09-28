@@ -90,7 +90,9 @@ export class InnovationUseMdsValidator {
     }
 
     if (
-      !Array.isArray(input.measures) ||
+      actorsToBeDetermined === false &&
+      Array.isArray(input.measures) &&
+      input.measures.length > 0 &&
       !input.measures.some((measure) => this.isCompleteMeasure(measure))
     ) {
       errors.push(
@@ -112,10 +114,12 @@ export class InnovationUseMdsValidator {
         // Position captured BEFORE the filter: the fallback label counts rows of the investment
         // table the reporter is looking at, not rows of this error list.
         .map((investment, index) => ({ ...investment, position: index + 1 }))
-        .filter((investment) => !this.isCompleteInvestment(investment));
+        // P2-3819: the contributing project itself remains mandatory, but its
+        // investment amount is optional for Innovation Use.
+        .filter((investment) => !this.hasProject(investment));
       if (incomplete.length) {
         errors.push(
-          `Investment by CGIAR W3 or bilateral projects: every project needs a positive USD amount or "This is yet to be determined" — still missing on ${this.describeInvestments(incomplete)}.`,
+          `Investment by CGIAR W3 or bilateral projects: every project must be identified — still missing on ${this.describeInvestments(incomplete)}.`,
         );
       }
     }
@@ -177,13 +181,8 @@ export class InnovationUseMdsValidator {
     );
   }
 
-  private isCompleteInvestment(investment: {
-    amount: unknown;
-    isDetermined: unknown;
-  }): boolean {
-    const hasAmount = Number(investment.amount) > 0;
-    const isDetermined = investment.isDetermined === true;
-    return hasAmount !== isDetermined;
+  private hasProject(investment: { label?: unknown }): boolean {
+    return `${investment.label ?? ''}`.trim().length > 0;
   }
 
   private throwIfIncomplete(errors: string[]): void {

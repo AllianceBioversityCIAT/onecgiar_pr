@@ -1,6 +1,6 @@
 # global-search-palette
 
-**Verified:** 2026-08-21 · branch performance-refactor · eed5bb706
+**Verified:** 2026-09-24 · branch performance-refactor · c4672034b (BAO-T-2: spec-only change; Approved W3 result rows with `leadCenter` open the center editor via the shared open-route util)
 
 The command palette behind the topbar Search button (P2-3401). Three groups: **Results**
 (server-side `?title=` search), **Indicators** (visible-but-disabled, `Coming soon`, P2-3402) and

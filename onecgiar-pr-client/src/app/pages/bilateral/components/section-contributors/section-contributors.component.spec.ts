@@ -51,6 +51,8 @@ describe('SectionContributorsComponent', () => {
       selectedSecondarySps: signal<any[]>([]),
       currentResultId: signal<number | null>(4242),
       resultLevelId: signal<number | null>(null),
+      // P2-3368: the linked/bundled question is hidden for result types 2 and 7.
+      resultTypeId: signal<number | null>(null),
       isLoadingResult: signal(false)
     };
 
@@ -336,7 +338,11 @@ describe('SectionContributorsComponent', () => {
       );
       build();
       fixture.detectChanges();
-      expect(component.availableProjects()).toEqual([{ id: 11, shortName: 'P11', fullName: 'Project 11' }]);
+      // BCT-DD-4: `owner_center_institution_id` is additive on the catalog; absent (as here) or
+      // unresolved both map to `null`, which locks nothing (`lockedCenterInstitutionIds`).
+      expect(component.availableProjects()).toEqual([
+        { id: 11, shortName: 'P11', fullName: 'Project 11', ownerCenterInstitutionId: null }
+      ]);
     });
 
     it('defaults to an empty list when the projects response is null', () => {
@@ -351,6 +357,63 @@ describe('SectionContributorsComponent', () => {
       build();
       fixture.detectChanges();
       expect(component.availableProjects()).toEqual([]);
+    });
+
+    // Night sweep 2026-09-23, W12-6 (P2-3648): a failed projects catalogue used to count as "ready",
+    // leaving "Lead project" as an unfillable missing field AND letting the next save send
+    // `contributing_bilateral_projects: []` (server: drop every project). Control negative: with the
+    // error branch back to `projectsReady.set(true)` the "does not hydrate" test fails.
+    describe('W12-6 — when the projects catalogue cannot be read', () => {
+      beforeEach(() => {
+        centersService.centersList = [center(1)];
+        api.resultsSE.GET_ClarisaProjects.mockReturnValue(throwError(() => ({ status: 500 })));
+      });
+
+      it('raises the error flag and does not hydrate, so the contributor keys never travel', () => {
+        build();
+        fixture.detectChanges();
+        creation.selectedProject.set({ id: 1 });
+        fixture.detectChanges();
+
+        expect(component.projectsLoadFailed()).toBe(true);
+        expect(component.contributorsHydrated()).toBe(false);
+        component.onProjectsChange([1]);
+        const calls = (autoSave.saveContributors as jest.Mock).mock.calls;
+        for (const [payload] of calls) expect(payload.contributing_bilateral_projects).toBeUndefined();
+      });
+
+      it('retries on demand; a successful read clears the error and restores the lead project', () => {
+        build();
+        fixture.detectChanges();
+        api.resultsSE.GET_ClarisaProjects.mockReturnValue(of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }] }));
+        creation.selectedProject.set({ id: 1 });
+
+        component.retryLoadProjects();
+        fixture.detectChanges();
+
+        expect(component.projectsLoadFailed()).toBe(false);
+        expect(component.contributorsHydrated()).toBe(true);
+        expect(component.readonlyLeadProjectId).toBe(1);
+      });
+
+      it('renders the banner with a Retry button', () => {
+        const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+        expect(html).toContain('@if (projectsLoadFailed()) {');
+        expect(html).toContain('(click)="retryLoadProjects()"');
+      });
+
+      // R37: copy lives in *.copy.ts and icons are Lucide. Control negative: re-inlining the text or
+      // putting back the material icon makes this fail.
+      it('takes its copy from the copy file and its icon from Lucide', () => {
+        const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+        const start = html.indexOf('@if (projectsLoadFailed()) {');
+        const banner = html.slice(start, html.indexOf('</div>', start));
+        expect(banner).toContain('[description]="loadCopy.bilateralProjectsLoadError"');
+        expect(banner).toContain('{{ loadCopy.bilateralProjectsRetry }}');
+        expect(banner).toContain('<ng-icon name="lucideRefreshCw"');
+        expect(banner).not.toContain('material-icons-round');
+        expect(banner).not.toContain('Retry loading projects');
+      });
     });
 
     it('unsubscribes on destroy', () => {
@@ -489,6 +552,24 @@ describe('SectionContributorsComponent', () => {
       fixture.detectChanges();
       expect(component.readonlyLeadProjectId).toBe(2);
       expect(component.selectedProjectIds()).not.toContain(1);
+    });
+
+    it('clears the previous lead when the next loaded result has no lead project', () => {
+      centersService.centersList = [center(1)];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }] })
+      );
+      build();
+      fixture.detectChanges();
+      creation.selectedProject.set({ id: 1 });
+      fixture.detectChanges();
+
+      creation.selectedProject.set(null);
+      creation.resultContributingProjectIds.set([]);
+      fixture.detectChanges();
+
+      expect(component.readonlyLeadProjectId).toBeNull();
+      expect(component.selectedProjectIds()).toEqual([]);
     });
 
     it('drops unknown project ids from the payload via onProjectsChange', () => {
@@ -652,6 +733,193 @@ describe('SectionContributorsComponent', () => {
     });
   });
 
+  // ── BCT-T-6 · lock and auto-select derived Centers (requirements BCT-R-1, R-3, R-4) ──
+  describe('BCT-T-6 · locked derived Centers', () => {
+    const CIP = 2;
+    const AFRICA_RICE = 1;
+
+    /** AfricaRice is the lead (reporting) Center; CIP is a second, non-lead Center. */
+    const setupCatalogues = () => {
+      component.availableCenters.set([center(AFRICA_RICE, 'AR', 'AR'), center(CIP, 'CIP', 'CIP')] as any);
+      creation.resultLeadCenterId.set(AFRICA_RICE);
+    };
+
+    it('maps owner_center_institution_id onto the project catalogue (BCT-DD-4)', () => {
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({
+          response: [
+            { id: '10', shortName: 'P10', fullName: 'Project 10', owner_center_institution_id: CIP },
+            { id: '11', shortName: 'P11', fullName: 'Project 11', owner_center_institution_id: null }
+          ]
+        })
+      );
+      build();
+      fixture.detectChanges();
+      expect(component.availableProjects().find(p => p.id === 10)?.ownerCenterInstitutionId).toBe(CIP);
+      expect(component.availableProjects().find(p => p.id === 11)?.ownerCenterInstitutionId).toBeNull();
+    });
+
+    it('BCT-R-1: adding a CIP-owned project auto-selects CIP without a reload', () => {
+      build();
+      setupCatalogues();
+      component.contributorsHydrated.set(true);
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+    });
+
+    it('BCT-R-1: auto-select UNIONS the derived owner into the existing selection, it does not replace it', () => {
+      const OTHER = 3;
+      build();
+      setupCatalogues();
+      component.availableCenters.set([center(AFRICA_RICE, 'AR', 'AR'), center(CIP, 'CIP', 'CIP'), center(OTHER, 'OTHER', 'OTHER')] as any);
+      component.contributorsHydrated.set(true);
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      // The user had already picked a Center by hand, unrelated to any project.
+      component.selectedCenterInstitutionIds.set([OTHER]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.selectedCenterInstitutionIds()).toEqual(expect.arrayContaining([OTHER, CIP]));
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toEqual(
+        expect.arrayContaining([{ institution_id: OTHER }, { institution_id: CIP }])
+      );
+    });
+
+    it('BCT-R-1: a project owned by the reporting (lead) Center adds no Center', () => {
+      build();
+      setupCatalogues();
+      component.contributorsHydrated.set(true);
+      component.availableProjects.set([{ id: 10, shortName: 'AR proj', fullName: 'AR proj', ownerCenterInstitutionId: AFRICA_RICE }]);
+
+      component.onProjectsChange([10]);
+
+      expect(component.selectedCenterInstitutionIds()).toEqual([]);
+    });
+
+    it("does not lock the lead project's own owner", () => {
+      build();
+      setupCatalogues();
+      creation.selectedProject.set({ id: 10 });
+      component.readonlyLeadProjectId = 10;
+      component.availableProjects.set([{ id: 10, shortName: 'Lead proj', fullName: 'Lead proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+
+      component.onProjectsChange([]);
+
+      expect(component.selectedProjectIds()).toContain(10);
+      expect(component.selectedCenterInstitutionIds()).not.toContain(CIP);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(false);
+    });
+
+    it('BCT-R-3: a locked Center cannot be removed via the multiselect', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      component.onProjectsChange([10]);
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+
+      // The user tries to deselect CIP through the Centers multiselect.
+      component.onCentersChange(component.selectedCenterInstitutionIds().filter(id => id !== CIP));
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(true);
+    });
+
+    it('BCT-R-3: a locked Center cannot be removed via the chip remove action', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      component.onProjectsChange([10]);
+
+      // Pins the guard's own effect: the chip's remove action must not even reach a persist.
+      autoSave.saveContributors.mockClear();
+      component.removeCenter(CIP);
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+
+    it('BCT-R-4: removing the last CIP-owned project keeps CIP selected and enables it', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      component.onProjectsChange([10]);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(true);
+
+      component.onProjectsChange([]);
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(component.availableCentersComputed().find(c => c.institutionId === CIP)?.disabled).toBe(false);
+    });
+
+    it('BCT-R-4: once unlocked, removing CIP deactivates it on the next save (second half of the scenario)', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+      // CIP gets derived, then loses its only owning project — it becomes an ordinary,
+      // removable Center (sticky, but no longer locked).
+      component.onProjectsChange([10]);
+      component.onProjectsChange([]);
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+
+      component.removeCenter(CIP);
+
+      expect(component.selectedCenterInstitutionIds()).not.toContain(CIP);
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).not.toContainEqual({ institution_id: CIP });
+    });
+
+    it('a project change persists exactly once even when it locks a Center', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+      component.contributorsHydrated.set(true);
+
+      autoSave.saveContributors.mockClear();
+      component.onProjectsChange([10]);
+
+      expect(autoSave.saveContributors).toHaveBeenCalledTimes(1);
+    });
+
+    it('never builds contributing keys before contributorsHydrated(), even while locking a Center', () => {
+      build();
+      setupCatalogues();
+      component.availableProjects.set([{ id: 10, shortName: 'CIP proj', fullName: 'CIP proj', ownerCenterInstitutionId: CIP }]);
+
+      component.onProjectsChange([10]);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toBeUndefined();
+      expect(payload.contributing_bilateral_projects).toBeUndefined();
+      // The selection itself is updated even though nothing is sent to the server yet.
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+    });
+
+    it('hydration unions the locked Center without persisting', () => {
+      centersService.centersList = [center(AFRICA_RICE, 'AR', 'AR'), center(CIP, 'CIP', 'CIP')];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '10', shortName: 'CIP proj', fullName: 'CIP proj', owner_center_institution_id: CIP }] })
+      );
+      creation.resultLeadCenterId.set(AFRICA_RICE);
+      creation.resultContributingProjectIds.set([10]);
+      build();
+
+      autoSave.saveContributors.mockClear();
+      fixture.detectChanges();
+
+      expect(component.selectedCenterInstitutionIds()).toContain(CIP);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+  });
+
   // ── small helpers ────────────────────────────────────────────────────
   describe('helpers', () => {
     it('formats allocations', () => {
@@ -751,6 +1019,7 @@ describe('SectionContributorsComponent', () => {
   // with nothing on screen explaining why.
   describe('updateContributorsMds', () => {
     it('tracks only the lead pair, never the optional contributing selection', () => {
+      creation.selectedProject.set({ id: 3 });
       build();
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
       component.readonlyLeadCenterInstitutionId = 7;
@@ -766,7 +1035,7 @@ describe('SectionContributorsComponent', () => {
       expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
     });
 
-    it('leaves the lead pair unfilled when the result has no lead center or project yet', () => {
+    it('does not require a lead project when the loaded result has none', () => {
       build();
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
       component.readonlyLeadCenterInstitutionId = null;
@@ -775,7 +1044,19 @@ describe('SectionContributorsComponent', () => {
       component.updateContributorsMds();
 
       const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'external-partners']);
       expect(items.every((i: any) => i.filled === false)).toBe(true);
+    });
+
+    it('keeps the lead project required when the result has one but its catalogue has not loaded', () => {
+      creation.selectedProject.set({ id: 3 });
+      build();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+
+      component.updateContributorsMds();
+
+      const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items.find((i: any) => i.key === 'lead-project').filled).toBe(false);
     });
   });
 
@@ -875,7 +1156,7 @@ describe('SectionContributorsComponent', () => {
       const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
       expect(section).toBe('contributors');
       expect(group).toBe('partners');
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'external-partners']);
       expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(true);
     });
 
@@ -1098,6 +1379,39 @@ describe('SectionContributorsComponent', () => {
     });
   });
 
+  // P2-3228 — a W3/bilateral result reported by API often has no project at all (7663 on prtest:
+  // `project_id: null`, `contributingProjects: []`). Its lead Center lives only on the result, as
+  // `commonFields.lead_center_id`. The field used to read the lead PROJECT's organisation alone and
+  // rendered a bare "-" although the lead Center was stored and even selected below it.
+  describe('P2-3228 · lead center label', () => {
+    it('shows the project lead center when the result has a lead project', () => {
+      centersService.centersList = [center(5), center(49, 'CENTER-02', 'Bioversity (Alliance)')];
+      creation.selectedProject.set({ id: 1, leadCenter: { id: 5, acronym: 'A5', name: 'Center 5' }, sciencePrograms: [] });
+      build();
+      fixture.detectChanges();
+
+      expect(component.leadCenterLabel()).toBe('A5 - Center 5');
+    });
+
+    it('falls back to the result lead center when there is no project', () => {
+      centersService.centersList = [center(5), center(49, 'CENTER-02', 'Bioversity (Alliance)')];
+      build();
+      fixture.detectChanges();
+      creation.resultLeadCenterId.set(49);
+      fixture.detectChanges();
+
+      expect(component.leadCenterLabel()).toBe('Bioversity (Alliance) - Center 49');
+    });
+
+    it('shows a dash, not " - ", when neither the project nor the result has a lead center', () => {
+      centersService.centersList = [center(5)];
+      build();
+      fixture.detectChanges();
+
+      expect(component.leadCenterLabel()).toBe('-');
+    });
+  });
+
   describe('P2-3368 · read-only lead center and primary science program (AC1)', () => {
     it('never lets the researcher drop the lead center from the contributing list', () => {
       build();
@@ -1184,6 +1498,7 @@ describe('SectionContributorsComponent', () => {
 
     it('shows the results dropdown only on Yes, and never while the block is collapsed (AC11)', () => {
       build();
+      component.linkedHydrated.set(true);
       component.onHasLinkedResultChange(true);
       expect(component.showLinkedResultsDropdown()).toBe(false); // still collapsed
 
@@ -1200,53 +1515,262 @@ describe('SectionContributorsComponent', () => {
       expect(component.selectedLinkedResultIds()).toEqual([]);
     });
 
-    // ── the linked/bundled block is Coming soon ────────────────────────────────────────────
-    // 🛑 HOUSE RULE: a control whose value cannot be stored ships visible-but-DISABLED with the
-    // tag, and the screen never claims it will be saved. The answer has no field on
-    // SaveBilateralContributorsDto and no home in the detail payload — it only ever reached a
-    // component signal. AC13's note used to count it, so the user read "1 hidden field has values
-    // and will be saved.", reloaded, and found it empty. These tests hold that shut.
-    describe('linked/bundled question · Coming soon', () => {
-      it('flags the unpersisted controls so the template disables them and shows the tag', () => {
-        build();
-        expect(component.unpersistedFieldsComingSoon).toBe(true);
-      });
+    // ── the linked/bundled block PERSISTS (P2-3368 AC10-AC14, 2026-09-24) ─────────────────
+    // 🛑 These tests replace the `Coming soon` ones. The answer now travels on the contributors
+    // PATCH (`has_innovation_link` + `linked_results`) and comes back with the detail, so AC13's
+    // note is allowed to count it again. What they guard is the pair of invariants that make the
+    // promise true: nothing is sent before the stored value is on screen, and nothing is sent at
+    // all for the two result types whose answer is owned by another section.
+    describe('linked/bundled question · persistence', () => {
+      const hydrate = () => {
+        component.linkedHydrated.set(true);
+        component.contributorsHydrated.set(true);
+      };
 
-      it('never promises a save: the hidden-field counter stays at zero and the note never shows', () => {
+      /**
+       * The hydrate effect only fires once the centres AND projects catalogues are ready, so the
+       * cached list has to be primed BEFORE the component is built or the detail GET never runs —
+       * and a hydration test whose GET never runs passes on an empty component, proving nothing.
+       * Every test below that reads a stored value asserts the call happened, as its own control.
+       */
+      const buildHydrated = () => {
+        centersService.centersList = [center(1)];
         build();
+        fixture.detectChanges();
+        expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(4242);
+      };
+
+      it('counts the answer in the hidden-field note once it can be saved (AC13)', () => {
+        build();
+        hydrate();
         expect(component.hiddenFieldsWithValues()).toBe(0);
-        expect(component.showHiddenFieldsNote()).toBe(false);
 
-        // Even with the signals populated (only reachable from code while the control is disabled)
-        // there is nothing to announce, because nothing of this leaves the browser.
         component.onHasLinkedResultChange(true);
         component.onLinkedResultsModelChange([{ id: 11 }]);
-        expect(component.hiddenFieldsWithValues()).toBe(0);
-        expect(component.showHiddenFieldsNote()).toBe(false);
+
+        expect(component.hiddenFieldsWithValues()).toBe(1);
+        expect(component.showHiddenFieldsNote()).toBe(true);
 
         component.toggleShowAll();
+        // Expanded, the fields are visible, so there is nothing "hidden" to announce.
         expect(component.showHiddenFieldsNote()).toBe(false);
       });
 
-      it('sends nothing of the answer to the server', () => {
+      it('sends the answer and the selection on the contributors PATCH', () => {
         build();
+        hydrate();
         autoSave.saveContributors.mockClear();
 
         component.onHasLinkedResultChange(true);
         component.onLinkedResultsModelChange([{ id: 11 }, { id: 12 }]);
 
-        expect(autoSave.saveContributors).not.toHaveBeenCalled();
+        expect(autoSave.saveContributors).toHaveBeenCalledTimes(2);
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: true, linked_results: [11, 12] })
+        );
       });
 
-      // Kept green so the wiring is one flag away from working the day the DTO accepts the field.
-      it('still clears the selected results when the answer flips back to No (AC12)', () => {
+      it('clears the selection and reports it when the answer flips back to No (AC12)', () => {
         build();
+        hydrate();
         component.onHasLinkedResultChange(true);
         component.onLinkedResultsModelChange([{ id: 11 }, { id: 12 }]);
         expect(component.selectedLinkedResultIds()).toEqual([11, 12]);
+        autoSave.saveContributors.mockClear();
 
         component.onHasLinkedResultChange(false);
+
         expect(component.selectedLinkedResultIds()).toEqual([]);
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: false, linked_results: [] })
+        );
+      });
+
+      // 🛑 The one that protects stored data: this PATCH is fired by every centre and project
+      // change too, so a payload carrying a blank answer before the read comes back would erase a
+      // saved "Yes" — and the links with it.
+      it('omits both keys until the stored answer has been read back', () => {
+        build();
+        component.contributorsHydrated.set(true);
+        autoSave.saveContributors.mockClear();
+
+        // P2-3823: the click itself is refused before hydration (it would be overwritten a moment
+        // later), and the centre/project autosave that does go out carries neither key.
+        component.onHasLinkedResultChange(true);
+        expect(component.hasLinkedResult()).toBeNull();
+        (component as any).persistContributors();
+
+        expect(autoSave.saveContributors).toHaveBeenCalledTimes(1);
+        expect(autoSave.saveContributors).toHaveBeenCalledWith(
+          expect.not.objectContaining({ has_innovation_link: expect.anything() })
+        );
+      });
+
+      // ── P2-3823: the second pass over the delivered code ───────────────────────────────────
+      const storedYes = (ids: number[]) =>
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({ response: { commonFields: { has_innovation_link: 1 }, contributingInstitutions: [], linkedResults: ids } })
+        );
+
+      // 🛑 The two-tab defect: every centre change used to re-send this tab's snapshot of the
+      // links, and the server replaced `linked_result` with it.
+      it('a centre change after hydration carries NO linked keys while the question is untouched', () => {
+        storedYes([11164, 9600]);
+        buildHydrated();
+        autoSave.saveContributors.mockClear();
+
+        (component as any).persistContributors();
+
+        const payload = autoSave.saveContributors.mock.calls[0][0];
+        expect(payload).not.toHaveProperty('has_innovation_link');
+        expect(payload).not.toHaveProperty('linked_results');
+      });
+
+      // 🛑 The queue trap: `schedulePayload` keeps ONE pending body per endpoint and replaces it. If
+      // only the question's own PATCH carried the keys, a centre change right after answering would
+      // overwrite it in the queue and the answer would never reach the server.
+      it('once answered, a later centre change still carries the answer (the queue replaces bodies)', () => {
+        storedYes([11164]);
+        buildHydrated();
+        component.onLinkedResultsModelChange([{ id: 11164 }, { id: 9600 }]);
+        autoSave.saveContributors.mockClear();
+
+        (component as any).persistContributors();
+
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: true, linked_results: [11164, 9600] })
+        );
+      });
+
+      it('answering Yes sends the flag WITHOUT a list, so stored rows are not replaced', () => {
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({ response: { commonFields: { has_innovation_link: 0 }, contributingInstitutions: [], linkedResults: [] } })
+        );
+        buildHydrated();
+        autoSave.saveContributors.mockClear();
+
+        component.onHasLinkedResultChange(true);
+
+        const payload = autoSave.saveContributors.mock.calls[0][0];
+        expect(payload.has_innovation_link).toBe(true);
+        expect(payload).not.toHaveProperty('linked_results');
+      });
+
+      it('Yes → No → Yes before saving sends the empty list the user now sees', () => {
+        storedYes([11164]);
+        buildHydrated();
+
+        component.onHasLinkedResultChange(false);
+        component.onHasLinkedResultChange(true);
+
+        expect(autoSave.saveContributors).toHaveBeenLastCalledWith(
+          expect.objectContaining({ has_innovation_link: true, linked_results: [] })
+        );
+      });
+
+      // 🛑 The picker drops ids it cannot map to an option (`pr-multi-select.writeValue`). The
+      // catalogue only lists QA'd/approved results and loads late, so a stored link can be missing.
+      it('offers a placeholder for a stored link the catalogue cannot name', () => {
+        innovationUseResults.resultsList = [{ id: 11164, title: 'Listed result' }];
+        storedYes([11164, 777]);
+        buildHydrated();
+
+        const options = component.linkedResultOptions();
+        expect(options.map((o: any) => o.id)).toEqual([11164, 777]);
+        expect(options.find((o: any) => o.id === 777)).toEqual(expect.objectContaining({ unlisted: true }));
+        expect(component.linkedResultModel()).toEqual([11164, 777]);
+      });
+
+      it('swaps the placeholder for the real entry when the catalogue arrives late, with a fresh model', () => {
+        const catalogue = signal<any[]>([]);
+        (innovationUseResults as any).resultsListSig = catalogue;
+        storedYes([11164]);
+        buildHydrated();
+        expect(component.linkedResultOptions()[0]).toEqual(expect.objectContaining({ id: 11164, unlisted: true }));
+        const modelBefore = component.linkedResultModel();
+
+        catalogue.set([{ id: 11164, title: 'Listed result' }]);
+
+        expect(component.linkedResultOptions()).toEqual([{ id: 11164, title: 'Listed result' }]);
+        expect(component.linkedResultModel()).toEqual([11164]);
+        expect(component.linkedResultModel()).not.toBe(modelBefore);
+      });
+
+      it('never loses a stored id the picker was not offered when it emits a new selection', () => {
+        storedYes([11164]);
+        buildHydrated();
+        // Simulate the one path left: the options handed to the picker lack the stored id.
+        jest.spyOn(component, 'linkedResultOptions').mockReturnValue([{ id: 9600, title: 'Other' }]);
+
+        component.onLinkedResultsModelChange([{ id: 9600 }]);
+
+        expect(component.selectedLinkedResultIds()).toEqual([9600, 11164]);
+      });
+
+      it('does not promise to save the answer after the detail read failed (AC13)', () => {
+        centersService.centersList = [center(1)];
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(throwError(() => new Error('boom')));
+        build();
+        fixture.detectChanges();
+        component.hasLinkedResult.set(true);
+
+        expect(component.linkedHydrated()).toBe(false);
+        expect(component.hiddenFieldsWithValues()).toBe(0);
+      });
+
+      it('hydrates the answer and the linked ids from the detail read', () => {
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({
+            response: {
+              commonFields: { has_innovation_link: 1 },
+              contributingInstitutions: [],
+              linkedResults: [11164, 9600]
+            }
+          })
+        );
+        buildHydrated();
+
+        expect(component.hasLinkedResult()).toBe(true);
+        expect(component.selectedLinkedResultIds()).toEqual([11164, 9600]);
+        expect(component.linkedHydrated()).toBe(true);
+      });
+
+      // A tinyint arrives as '0' over JSON often enough that `!!` has burned this section before
+      // (see `no_applicable_partner`). "Never answered" must stay null, not become false.
+      it.each([
+        ['0', false],
+        [0, false],
+        [null, null],
+        [undefined, null]
+      ])('reads a stored %p as %p', (stored, expected) => {
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({ response: { commonFields: { has_innovation_link: stored }, contributingInstitutions: [] } })
+        );
+        buildHydrated();
+
+        expect(component.hasLinkedResult()).toBe(expected);
+        expect(component.linkedHydrated()).toBe(true);
+      });
+
+      it.each([
+        ['Innovation Use', 2],
+        ['Innovation Development', 7]
+      ])('hides the question and sends nothing for %s', (_label, typeId) => {
+        creation.resultTypeId.set(typeId);
+        build();
+        hydrate();
+        component.toggleShowAll();
+        autoSave.saveContributors.mockClear();
+
+        expect(component.linkedQuestionOwnedElsewhere()).toBe(true);
+        expect(component.showLinkedResultQuestion()).toBe(false);
+        expect(component.hiddenFieldsWithValues()).toBe(0);
+
+        component.onHasLinkedResultChange(true);
+
+        expect(autoSave.saveContributors).toHaveBeenCalledWith(
+          expect.not.objectContaining({ has_innovation_link: expect.anything() })
+        );
       });
     });
 

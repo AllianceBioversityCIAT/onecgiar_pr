@@ -17,7 +17,8 @@ import { PrSelectComponent } from '../../../../../../../../custom-fields/pr-sele
 import { LabelNamePipe } from '../../../../../../../../custom-fields/pr-select/label-name.pipe';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { UnsavedNavigationIntentService } from '../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 
 describe('StepN4Component', () => {
   let component: StepN4Component;
@@ -37,6 +38,35 @@ describe('StepN4Component', () => {
     fixture = TestBed.createComponent(StepN4Component);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
+    // Night sweep 2026-09-23 (IPSR-4): the save tests model a loaded step; the gate has its own block.
+    component.loaded.set(true);
+  });
+
+  // Night sweep 2026-09-23, IPSR-4 (prtest 12037): GET 500 → Save deactivated every reference
+  // material. Control negative: with the gate lines removed these tests fail.
+  describe('IPSR-4 — refuses to save after a failed Step-4 load', () => {
+    beforeEach(() => {
+      component.loaded.set(null);
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepFourByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+    });
+
+    it('marks the step as not loaded and Save sends nothing', () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiId').mockReturnValue(of({ response: {} }) as any);
+      component.getSectionInformation();
+      component.onSaveSection();
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to previous step" only navigates, without saving', () => {
+      component.api.rolesSE.readOnly = false;
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiIdPrevious').mockReturnValue(of({ response: {} }) as any);
+      const nav = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+      component.getSectionInformation();
+      component.onSavePrevious('previous');
+      expect(patch).not.toHaveBeenCalled();
+      expect(nav).toHaveBeenCalled();
+    });
   });
 
   it('should create', () => {
@@ -370,6 +400,99 @@ describe('StepN4Component', () => {
       component.ngOnInit();
 
       expect(stepThreeSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  // P2-3427 (Ángel, 28-Sep-2026 review): Step 4 never tracked a dirty snapshot, so switching tabs with
+  // an unsaved edit silently dropped it. Control negative: without the snapshot at the end of
+  // `onSectionInformation()` the mutation test fails; without the snapshot inside the PATCH `tap` the
+  // "reload fails" test fails.
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    const loadedResponse = () => ({
+      institutions_expected_investment: [],
+      ipsr_materials: [{ link: 'https://a.org/material' }],
+      has_scaling_studies: false,
+      scaling_studies_urls: []
+    });
+
+    beforeEach(() => {
+      component.api.rolesSE.readOnly = false;
+      component.loaded.set(null);
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepFourByRiId').mockReturnValue(of({ response: loadedResponse() }) as any);
+      component.getSectionInformation();
+    });
+
+    it('is clean right after the load flow completes, untouched', () => {
+      expect(component.loaded()).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('is dirty after a bound field of the body changes', () => {
+      component.ipsrStep4Body.ipsr_materials.push({ link: 'https://b.org/one-more' } as any);
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('saveSection() emits true and the step is already clean at that instant, even when the reload fails', () => {
+      component.ipsrStep4Body.ipsr_materials.push({ link: 'https://b.org/one-more' } as any);
+      expect(component.hasUnsavedChanges()).toBe(true);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiId').mockReturnValue(of({ response: {} }) as any);
+      // The follow-up reload dies: the snapshot must NOT depend on it.
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepFourByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+
+      const seen: boolean[] = [];
+      component.saveSection().subscribe(result => seen.push(result, component.hasUnsavedChanges()));
+
+      expect(patch).toHaveBeenCalledTimes(1);
+      expect(seen).toEqual([true, false]);
+    });
+
+    it('saveSection() resolves false (does not throw) when the PATCH errors', () => {
+      jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiId').mockReturnValue(throwError(() => ({ status: 500 })));
+      const seen: boolean[] = [];
+      component.saveSection().subscribe(result => seen.push(result));
+      expect(seen).toEqual([false]);
+    });
+
+    it('saveSection() resolves false without calling the PATCH when the step never loaded (IPSR-4)', () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiId').mockReturnValue(of({ response: {} }) as any);
+      component.loaded.set(false);
+      const seen: boolean[] = [];
+      component.saveSection().subscribe(result => seen.push(result));
+      expect(seen).toEqual([false]);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('"Save & go to previous step" re-snapshots on PATCH success and marks the navigation silent right before navigating', () => {
+      jest.useFakeTimers();
+      try {
+        const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+        const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+        jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiIdPrevious').mockReturnValue(of({ response: {} }) as any);
+        component.ipsrStep4Body.ipsr_materials.push({ link: 'https://b.org/one-more' } as any);
+
+        component.onSavePrevious('previous');
+
+        expect(component.hasUnsavedChanges()).toBe(false);
+        expect(navigate).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(1000);
+
+        expect(markSilent).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('"Save & go to previous step" marks the navigation silent in the read-only branch too', () => {
+      component.api.rolesSE.readOnly = true;
+      const markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+      const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      component.onSavePrevious('previous');
+
+      expect(markSilent).toHaveBeenCalledTimes(1);
+      expect(markSilent.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]);
     });
   });
 });

@@ -16,9 +16,9 @@
         }
       }
 
-      <span style="text-decoration: underline; color: var(--pr-color-black)">
-        {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
-      </span>
+      <!-- Attached comma (NDCW-R-2): no whitespace inside the span's tail nor between </span> and the trailer. -->
+      <span style="text-decoration: underline; color: var(--pr-color-black)">{{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}</span
+      >{{ textParts.linkTrailer }}
 
       @if (textParts.suffix) {
         <b> {{ textParts.suffix }} </b>

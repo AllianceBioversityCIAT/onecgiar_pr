@@ -10,6 +10,9 @@ import { ProgrammeResultRow } from '../../../programme-results/services/programm
 import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 import { ResultDeletionService } from '../../../../services/result-deletion.service';
 import { PrToastService } from '../../../../../../shared/components/pr-toast';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { RESULT_STATUS_TOKENS } from '../../../../../../shared/constants/result-status-tokens';
 
 function row(partial: Partial<ProgrammeResultRow> = {}): ProgrammeResultRow {
   return {
@@ -400,5 +403,34 @@ describe('MyWorkCardComponent', () => {
       expect(mockDeletionService.deleteWithConfirmation).not.toHaveBeenCalled();
     });
   });
-});
 
+  describe('X-3 (night sweep 2026-09-23) — the status chip reads the shared result-status enum', () => {
+    it.each([1, 2, 3, 4, 5, 6, 7])('status %i takes its pair from RESULT_STATUS_TOKENS', async (id) => {
+      await build({ row: row({ statusId: id, statusName: 'Any' }) });
+      expect(component.statusTone()).toEqual(RESULT_STATUS_TOKENS[id]);
+    });
+
+    it('Pending review is the enum blue, not the grey accents; Editing is the enum amber, not the yellow', async () => {
+      await build({ row: row({ statusId: 5, statusName: 'Pending review' }) });
+      expect(component.statusTone().bg).toBe('var(--pr-status-submitted-bg)');
+      expect(component.statusTone().bg).not.toContain('accents');
+      fixture.componentRef.setInput('row', row({ statusId: 1, statusName: 'Editing' }));
+      fixture.detectChanges();
+      expect(component.statusTone()).toEqual(RESULT_STATUS_TOKENS[1]);
+      expect(component.statusTone().bg).not.toContain('yellow');
+    });
+
+    it('a missing status id keeps the neutral pair and the label is still the row status name', async () => {
+      await build({ row: row({ statusId: null as any, statusName: 'Editing' }) });
+      expect(component.statusTone()).toEqual({ fg: 'var(--pr-status-not-started-fg)', bg: 'var(--pr-status-not-started-bg)' });
+      expect(text()).toContain('Editing');
+    });
+
+    it('the template binds the enum pair as inline styles (jsdom drops var() styles, so it is pinned here)', () => {
+      const template = readFileSync(join(__dirname, 'my-work-card.component.html'), 'utf8');
+      expect(template).toContain('[style.background-color]="statusTone().bg"');
+      expect(template).toContain('[style.color]="statusTone().fg"');
+      expect(readFileSync(join(__dirname, 'my-work-card.component.ts'), 'utf8')).not.toContain("from '../../../result-framework-reporting-home/status-meta'");
+    });
+  });
+});

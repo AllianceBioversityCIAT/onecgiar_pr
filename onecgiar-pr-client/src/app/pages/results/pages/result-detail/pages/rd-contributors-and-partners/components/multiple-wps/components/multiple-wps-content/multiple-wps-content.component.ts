@@ -87,8 +87,11 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   contributionIsRejected = () => this.contributionCheck()?.status === 'REJECTED';
 
+  // P2-3817 — the story "applies only to new results, using the new forms. Existing results are not
+  // affected". Until the server read the boxes correctly this never fired, so the gate was moot; now
+  // it would reach every 2025 result too.
   showContributionCheck = () =>
-    this.contributionDiffers() || this.contributionIsRejected();
+    this.isCP2026() && (this.contributionDiffers() || this.contributionIsRejected());
 
   /**
    * P2-3608 — a contribution to a target can never be negative.

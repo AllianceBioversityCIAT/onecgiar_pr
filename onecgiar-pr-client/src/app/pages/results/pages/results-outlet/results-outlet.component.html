@@ -1,12 +1,15 @@
-@if (!isResultsList()) {
-  <app-page-header>Results Center</app-page-header>
-}
+<!-- Per user request (2026-09-25): the "Results Center" breadcrumb/page-header used to render here
+     for Notifications (the only route where `!isResultsList()` was ever true — results-list has its
+     own CURRENT chrome and always suppressed it). The mockup has no such breadcrumb on Notifications
+     either, so it's removed outright rather than re-gated to a condition that would never be true. -->
 @if (!isResultsList()) {
   <app-alert-global-info className="section_container"></app-alert-global-info>
 }
-<div
-  class="local_container"
-  [class.section_container]="!isResultsList()"
-  [class.local_container--flush]="isResultsList()">
+<!-- NOTIF-T-17: this outlet only ever hosts results-list + results-notifications, and both now
+     render flush against the page background (no boxed .section_container card) — results-list
+     always did, and notifications lost its card per the mockup. A per-route condition here would
+     be a tautology (see results-outlet.component.ts); if a future child SHOULD keep the card,
+     reintroduce a real condition then. -->
+<div class="local_container local_container--flush">
   <router-outlet></router-outlet>
 </div>

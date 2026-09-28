@@ -1973,6 +1973,32 @@ describe('ProgrammeResultsComponent', () => {
     });
   });
 
+  it('opens an Approved W3/Bilaterals result with a lead center in the center editor, not the review drawer', () => {
+    const row = {
+      ...component.data.rows()[2],
+      statusName: 'Approved',
+      statusId: 6,
+      center: 'CIMMYT',
+      code: '28728',
+      versionId: '6'
+    };
+
+    expect(component.usesBilateralReviewFlow(row)).toBe(false);
+    expect(component.resultRoute(row)).toEqual({
+      commands: ['/bilateral', 'CIMMYT', 'result', '28728'],
+      queryParams: { phase: '6' }
+    });
+
+    const bilateral = TestBed.inject(BilateralResultsService);
+    const drawerSpy = jest.spyOn(bilateral.showReviewDrawer, 'set');
+    component.openResult(row);
+    expect(bilateral.currentResultToReview.set).not.toHaveBeenCalled();
+    expect(drawerSpy).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'CIMMYT', 'result', '28728'], {
+      queryParams: { phase: '6' }
+    });
+  });
+
   it('copies the center-editor url for an Editing W3/Bilaterals result', () => {
     const clipboard = TestBed.inject(Clipboard);
     const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
@@ -1995,8 +2021,8 @@ describe('ProgrammeResultsComponent', () => {
     expect(copied).not.toContain('/bilateral-review');
   });
 
-  it('keeps an Approved or AVISA bilateral on Result Detail', () => {
-    expect(component.usesBilateralReviewFlow({ ...component.data.rows()[2], statusName: 'Approved' })).toBe(false);
+  it('opens an Approved or AVISA bilateral outside the review drawer', () => {
+    expect(component.usesBilateralReviewFlow({ ...component.data.rows()[2], statusName: 'Approved', statusId: 6 })).toBe(false);
     expect(component.usesBilateralReviewFlow({ ...component.data.rows()[2], submitterCode: 'SGP-02' })).toBe(false);
   });
 

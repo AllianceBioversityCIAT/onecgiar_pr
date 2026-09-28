@@ -200,13 +200,22 @@
   </div>
 
   <!-- export button -->
-  <div class="export-button">
+  <div class="export-button gap-3">
     <app-pr-button
       text="Download .xlsx"
       icon="file_download"
       [verticalMargin]="0"
       (clickEvent)="exportExcel(users())"
       (keydown.enter)="exportExcel(users())"></app-pr-button>
+    <app-pr-button
+      text="Download last login report (.xlsx)"
+      loadingText="Preparing report..."
+      icon="file_download"
+      [verticalMargin]="0"
+      [disabled]="downloadingLastLogin()"
+      [loading]="downloadingLastLogin()"
+      (clickEvent)="downloadLastLoginReport()"
+      (keydown.enter)="downloadLastLoginReport()"></app-pr-button>
   </div>
 
   <!-- Users table -->

@@ -1,4 +1,8 @@
-import { BadRequestException, ParseIntPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsController } from './results.controller';
@@ -41,6 +45,7 @@ describe('ResultsController', () => {
       .mockResolvedValue({ status: 200, response: {} }),
     deleteResult: jest.fn().mockResolvedValue({ status: 200 }),
     saveGeoScope: jest.fn().mockResolvedValue({ status: 200 }),
+    assertGeographyCenterWrite: jest.fn().mockResolvedValue(undefined),
     getGeoScope: jest.fn().mockResolvedValue({ status: 200, response: {} }),
     transformResultCode: jest
       .fn()
@@ -248,13 +253,30 @@ describe('ResultsController', () => {
     expect(mockService.deleteResult).toHaveBeenCalledWith(10, user, undefined);
   });
 
-  it('saveGeographic sets result_id and delegates', async () => {
+  it('saveGeographic sets result_id, consults the Center-write guard first, then delegates', async () => {
     const dto = { countries: [] } as any;
     await controller.saveGeographic(dto, 11, user);
+    expect(mockService.assertGeographyCenterWrite).toHaveBeenCalledWith(
+      11,
+      user,
+    );
     expect(mockService.saveGeoScope).toHaveBeenCalledWith(
       { ...dto, result_id: 11 },
       user,
     );
+  });
+
+  // BIL-RTE-T-2 falsifier (b): a denial must stop the write and surface as the thrown exception.
+  it('saveGeographic never calls saveGeoScope when the Center-write guard denies', async () => {
+    mockService.assertGeographyCenterWrite.mockRejectedValueOnce(
+      new ForbiddenException('Result 11 is under Science Program review.'),
+    );
+    const dto = { countries: [] } as any;
+
+    await expect(controller.saveGeographic(dto, 11, user)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(mockService.saveGeoScope).not.toHaveBeenCalled();
   });
 
   it('getGeographic delegates', async () => {

@@ -115,6 +115,30 @@ describe('IpsrRepository (unit)', () => {
     );
   });
 
+  it('P2-3824: the five Impact Area evidence subqueries exclude only Step 3 rows (type 7), keeping NULL and the Apr-2023 type-1 backfill', async () => {
+    dsQuery.mockResolvedValueOnce([
+      { result_id: 10, lead_contact_person_id: null },
+    ]);
+    dsQuery.mockResolvedValue([]);
+
+    await repo.getResultInnovationById(10);
+
+    const [sql] = dsQuery.mock.calls[0];
+    for (const [alias, tag] of [
+      ['e1', 'evidence_gender_tag'],
+      ['e2', 'evidence_climate_tag'],
+      ['e3', 'evidence_nutrition_tag'],
+      ['e4', 'evidence_environment_tag'],
+      ['e5', 'evidence_poverty_tag'],
+    ]) {
+      expect(sql).toMatch(
+        new RegExp(
+          `${alias}\\.is_active = 1\\s+AND \\(${alias}\\.evidence_type_id IS NULL OR ${alias}\\.evidence_type_id <> 7\\)\\s+LIMIT 1\\s+\\) AS ${tag}`,
+        ),
+      );
+    }
+  });
+
   it('getIpsrList builds query with two placeholders and returns list', async () => {
     const rows = [{ id: 1 }];
     dsQuery.mockResolvedValueOnce(rows);

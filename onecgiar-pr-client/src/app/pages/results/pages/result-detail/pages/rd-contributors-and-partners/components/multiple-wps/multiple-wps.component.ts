@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -11,7 +11,7 @@ import { TocTab } from '../../../../../../../../shared/interfaces/toc-tab.interf
   styleUrls: ['./multiple-wps.component.scss'],
   standalone: false
 })
-export class CPMultipleWPsComponent implements OnChanges {
+export class CPMultipleWPsComponent implements OnChanges, OnInit, OnDestroy {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() initiativeId: number | null;
@@ -66,6 +66,82 @@ export class CPMultipleWPsComponent implements OnChanges {
     public api: ApiService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService
   ) {}
+
+  // SBT-DD-1/SBT-DD-2 (P2-3542): this instance's off-screen gap source, kept as one bound
+  // reference so `unregisterOffscreenFeedback` (a Set keyed by reference) can find it again on
+  // destroy. Registered in `ngOnInit`, removed in `ngOnDestroy` — never re-created.
+  private readonly offscreenFeedbackSource = (): string[] => this.collectOffscreenTabGaps();
+
+  ngOnInit(): void {
+    this.api.dataControlSE.registerOffscreenFeedback(this.offscreenFeedbackSource);
+  }
+
+  ngOnDestroy(): void {
+    this.api.dataControlSE.unregisterOffscreenFeedback(this.offscreenFeedbackSource);
+  }
+
+  /**
+   * SBT-DD-2: only the block the submitter can edit reports off-screen gaps. The read-only
+   * contributor mirrors (`isContributor`), the notifications/share-request dialog
+   * (`isNotifications`), a hidden mount (`hidden`) and the "No" scenario (`isUnplanned`, whole ToC
+   * block hidden) all stay silent. `isIpsr` is deliberately NOT in this gate — IPSR's editable
+   * instance must speak too (SBT-R-6).
+   */
+  private collectOffscreenTabGaps(): string[] {
+    if (this.isContributor || this.isNotifications || this.hidden || this.isUnplanned) {
+      return [];
+    }
+
+    const tabs: any[] = this.initiative?.result_toc_results ?? [];
+    const gaps: string[] = [];
+
+    tabs.forEach((tab: any, index: number) => {
+      // Every tab except the one currently rendered is reported — the rendered tab is already
+      // counted by the DOM scan and reporting it too would double-count it (SBT-AC-2). The
+      // exception is the 50ms `onActiveTab` remount window: while `showMultipleWPsContent` is
+      // false the active tab's form is off screen too, so it must be reported there (SBT-AC-4).
+      const isRenderedTab = index === this.activeTabIndex && this.showMultipleWPsContent;
+      if (isRenderedTab) return;
+
+      // Per-tab truth is `completnessStatusValidation` unchanged (SBT-DD-3) — no second
+      // completeness rule, no phase branch of our own.
+      if (this.completnessStatusValidation(tab)) return;
+
+      const missingField = this.firstIncompleteTabField(tab);
+      if (!missingField) return;
+
+      gaps.push(`${this.dynamicTabTitle()} N~${index + 1}: ${missingField}`);
+    });
+
+    return gaps;
+  }
+
+  /**
+   * Names the first thing a tab is missing, in the same order `completnessStatusValidation`
+   * checks it: `Level` -> the ToC node (`Outcome`/`Output`) -> `Contribution to indicator target`.
+   * Mirrors, never overrides, that function's branches (SBT-DD-3) — only called once
+   * `completnessStatusValidation(tab)` has already said the tab is incomplete.
+   */
+  private firstIncompleteTabField(tab: any): string | null {
+    if (!this.isOutput() && (tab?.toc_level_id === null || tab?.toc_level_id === undefined)) {
+      return 'Level';
+    }
+
+    if (tab?.toc_result_id === null || tab?.toc_result_id === undefined) {
+      return this.isOutput() ? 'Output' : 'Outcome';
+    }
+
+    const indicatorSelected = tab?.indicators?.[0]?.related_node_id;
+    if (this.isCP2026() && indicatorSelected) {
+      const contribution = tab?.indicators?.[0]?.targets?.[0]?.contributing_indicator;
+      const contributionFilled = contribution !== null && contribution !== undefined && contribution !== '';
+      if (!contributionFilled) {
+        return 'Contribution to indicator target';
+      }
+    }
+
+    return null;
+  }
 
   private fetchListsForInitiative(): void {
     if (!this.initiativeId) return;

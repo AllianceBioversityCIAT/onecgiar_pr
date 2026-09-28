@@ -28,6 +28,13 @@ export interface BilateralOpenRouteResult {
 
 const EDITING_STATUS_ID = 1;
 const DRAFT_STATUS_ID = 8;
+export const APPROVED_STATUS_ID = 6;
+
+export function isApprovedStatus(input: Pick<BilateralOpenRouteInput, 'statusId' | 'statusName'>): boolean {
+  const id = input.statusId != null && input.statusId !== '' ? Number(input.statusId) : NaN;
+  if (!Number.isNaN(id)) return id === APPROVED_STATUS_ID;
+  return (input.statusName ?? '') === 'Approved';
+}
 
 export function isW3BilateralsAvisa(input: Pick<BilateralOpenRouteInput, 'sourceOrOrigin' | 'submitterCode'>): boolean {
   if (input.sourceOrOrigin !== 'W3/Bilaterals') return false;
@@ -64,20 +71,55 @@ export function usesBilateralReviewFlow(input: BilateralOpenRouteInput): boolean
 }
 
 export function classifyBilateralOpenRoute(input: BilateralOpenRouteInput): BilateralOpenRouteKind {
-  if (!isW3BilateralRow(input) || isW3BilateralsAvisa(input) || input.statusName === 'Approved') {
+  if (!isW3BilateralRow(input) || isW3BilateralsAvisa(input)) {
     return 'result-detail';
   }
 
   const leadCenter = (input.leadCenter ?? '').trim();
-  if (isBilateralCenterEditorStatus(input) && leadCenter) {
-    return 'center-editor';
-  }
-
-  if (isBilateralCenterEditorStatus(input) && !leadCenter) {
-    return 'result-detail';
+  if (isApprovedStatus(input) || isBilateralCenterEditorStatus(input)) {
+    return leadCenter ? 'center-editor' : 'result-detail';
   }
 
   return 'review-drawer';
+}
+
+/** Center editor route: `/bilateral/<center>/result/<code>?phase=`. */
+export function buildCenterEditorRoute(
+  center: string | null | undefined,
+  resultCode: string | number | null | undefined,
+  phase: string | number | null | undefined
+): BilateralOpenRouteResult {
+  return {
+    kind: 'center-editor',
+    commands: ['/bilateral', center, 'result', resultCode ?? ''],
+    queryParams: { phase: phase ?? '' }
+  };
+}
+
+/** Programme review drawer route: `.../<programme>/bilateral-review?reviewResult=&reviewResultId=`. */
+export function buildReviewDrawerRoute(
+  programmeCode: string | null | undefined,
+  resultCode: string | number | null | undefined,
+  resultId: string | number | null | undefined
+): BilateralOpenRouteResult {
+  return {
+    kind: 'review-drawer',
+    commands: ['/result-framework-reporting', 'entity-details', programmeCode || '', 'bilateral-review'],
+    queryParams: {
+      [REVIEW_RESULT_QUERY_PARAM]: resultCode ?? '',
+      [REVIEW_RESULT_ID_QUERY_PARAM]: resultId
+    }
+  };
+}
+
+/** Serializes a route result to a plain URL string (no router needed). */
+export function bilateralRouteToUrl(route: Pick<BilateralOpenRouteResult, 'commands' | 'queryParams'>): string {
+  const path = route.commands.map(segment => String(segment)).join('/');
+  const query = Object.entries(route.queryParams)
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  return query ? `${path}?${query}` : path;
 }
 
 export function resolveBilateralResultOpenRoute(input: BilateralOpenRouteInput): BilateralOpenRouteResult {
@@ -86,23 +128,12 @@ export function resolveBilateralResultOpenRoute(input: BilateralOpenRouteInput):
   const code = input.resultCode ?? '';
 
   if (kind === 'center-editor') {
-    return {
-      kind,
-      commands: ['/bilateral', input.leadCenter, 'result', code],
-      queryParams: { phase }
-    };
+    return buildCenterEditorRoute(input.leadCenter, code, phase);
   }
 
   if (kind === 'review-drawer') {
     const programmeCode = input.submitterCode || input.programmeCodeFallback || '';
-    return {
-      kind,
-      commands: ['/result-framework-reporting', 'entity-details', programmeCode, 'bilateral-review'],
-      queryParams: {
-        [REVIEW_RESULT_QUERY_PARAM]: code,
-        [REVIEW_RESULT_ID_QUERY_PARAM]: input.resultId
-      }
-    };
+    return buildReviewDrawerRoute(programmeCode, code, input.resultId);
   }
 
   return {

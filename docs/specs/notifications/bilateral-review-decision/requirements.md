@@ -74,12 +74,15 @@ Baseline citations:
   notification per recipient and increment the unread badge.
 - **NOTIF-R-2** — Copy MUST follow AC2 of the ticket:
   `✅ Your Result <code> - <title…> has been Approved by the Science Program <SPCode>.` and the ❌ /
-  Rejected counterpart.
+  Rejected counterpart. This wording applies to the submitter only; non-submitter Center Users get
+  the center wording defined in `bugfix/notification-decision-center-wording` (NDCW-R-2).
 - **NOTIF-R-3** — Recipients MUST be the submitter (`Result.external_submitter`, falling back to
   `created_by`) plus every active `role_by_user` row with `center_id = <lead centre>` and
   `role = RoleEnum.CENTER_USER`.
 - **NOTIF-R-4** — Clicking the notification MUST navigate to `/bilateral/:centerAcronym/home` with
   the decided result in focus, and MUST mark the notification read.
+  _Amended 2026-09-24: the click destination is now defined by `bugfix/notification-decision-deeplinks`
+  (NDDL-R-1: `/bilateral/<lead center>/result/<code>?phase=`). Mark-as-read on click still applies._
 - **NOTIF-R-5** — The review trail (including `comment`) MUST be readable over HTTP for a result.
 - **NOTIF-R-6** — Notification types MUST be resolved by NAME, never by database id, on both server
   and client.

@@ -2,12 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormatTimeAgoPipe } from '../../../../pipes/format-time-ago/format-time-ago.pipe';
-import { BilateralApiService } from '../../../../services/api/bilateral-api.service';
+import { catchError, of, timeout } from 'rxjs';
+import { DECISION_URL_TIMEOUT_MS, NotificationNavigationService } from '../../../../services/notification-navigation.service';
 import { ResultsApiService } from '../../../../services/api/results-api.service';
 import {
   buildResultNotificationText,
   getNotificationActionVerb,
-  getProgramCode,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
   isBilateralSubmittedNotification,
@@ -26,7 +26,7 @@ export class PopUpNotificationItemComponent {
   @Output() itemSelected = new EventEmitter<void>();
 
   private readonly router = inject(Router);
-  private readonly bilateralApi = inject(BilateralApiService);
+  private readonly navigation = inject(NotificationNavigationService);
   private readonly resultsApi = inject(ResultsApiService);
 
   generateNotificationTextUpdates(notification) {
@@ -56,22 +56,6 @@ export class PopUpNotificationItemComponent {
     return isContributionDecisionNotification(notification);
   }
 
-  /**
-   * P2-3214 AC4 — the tagged centre is sent to the result itself, not to the filtered notification
-   * list `generateUrlLink` builds. Mirrors `NotificationItemComponent.resultUrl`, including the
-   * IPSR result types, which live under a different route.
-   */
-  private resultDetailUrl(notification): string | null {
-    const resultCode = notification?.obj_result?.result_code;
-    if (!resultCode) return null;
-
-    const phase = notification?.obj_result?.obj_version?.id;
-    const typeId = notification?.obj_result?.obj_result_type?.id;
-    const base = typeId === 10 || typeId === 11 ? '/ipsr/detail' : '/result/result-detail';
-
-    return `${base}/${resultCode}/general-information?phase=${phase}`;
-  }
-
   generateUrlLink(notification) {
     const baseUrl = 'result/results-outlet/results-notifications';
     const versionId = notification?.obj_result?.obj_version?.id;
@@ -96,8 +80,9 @@ export class PopUpNotificationItemComponent {
     // 2026-09-05 — "submitted for your review" takes the SP member straight to their review queue,
     // where the pending result waits. The SP code is the role-1 initiative the payload carries.
     if (isBilateralSubmittedNotification(notification)) {
-      const programCode = getProgramCode(notification);
-      if (!programCode) {
+      // Spec bugfix/notification-decision-deeplinks: opens the review drawer on the result.
+      const url = this.navigation.reviewRequestUrl(notification);
+      if (!url) {
         this.itemSelected.emit();
         return;
       }
@@ -105,13 +90,13 @@ export class PopUpNotificationItemComponent {
       this.markAsRead(notification);
       this.itemSelected.emit();
       // @akili-spec changes/sp-bilateral-review-tab (BRT-T-6, BRT-R-17)
-      this.router.navigateByUrl(`/result-framework-reporting/entity-details/${programCode}/bilateral-review`);
+      this.router.navigateByUrl(url);
       return;
     }
 
     // P2-3214 AC4 + AC5, and P2-3188 which shares the same destination.
     if (this.isResultTagged(notification) || this.isContributionDecision(notification)) {
-      const url = this.resultDetailUrl(notification);
+      const url = this.navigation.resultDetailUrl(notification);
       if (!url) {
         this.itemSelected.emit();
         return;
@@ -131,32 +116,21 @@ export class PopUpNotificationItemComponent {
     event.preventDefault();
     this.markAsRead(notification);
 
-    const resultId = notification?.result_id;
-    const resultCode = notification?.obj_result?.result_code;
-
-    // The lead centre is fetched on click rather than embedded in the notification payload, to keep
-    // the notification list queries free of extra joins.
-    this.bilateralApi.GET_centersByResultId(resultId).subscribe({
-      next: response => {
-        const centers = response?.response ?? [];
-        const leadCenter = centers.find(center => !!center?.is_leading_result) ?? centers[0];
-        const acronym = leadCenter?.acronym || leadCenter?.code;
-
+    // Spec bugfix/notification-decision-deeplinks: the decision lands on the result in the lead
+    // center's editor. The lead center is resolved on click (kept out of the list queries); a hung
+    // or failing lookup falls back to Result Detail, and only a payload with no result code at all
+    // falls back to the filtered notification list.
+    const fallback = this.navigation.resultDetailUrl(notification);
+    this.navigation
+      .decisionUrl$(notification)
+      .pipe(
+        timeout(DECISION_URL_TIMEOUT_MS),
+        catchError(() => of(fallback))
+      )
+      .subscribe(url => {
         this.itemSelected.emit();
-
-        if (acronym) {
-          this.router.navigate(['/bilateral', acronym, 'home'], {
-            queryParams: resultCode ? { result: resultCode } : {}
-          });
-        } else {
-          this.router.navigateByUrl(this.generateUrlLink(notification));
-        }
-      },
-      error: () => {
-        this.itemSelected.emit();
-        this.router.navigateByUrl(this.generateUrlLink(notification));
-      }
-    });
+        this.router.navigateByUrl(url ?? this.generateUrlLink(notification));
+      });
   }
 
   private markAsRead(notification): void {

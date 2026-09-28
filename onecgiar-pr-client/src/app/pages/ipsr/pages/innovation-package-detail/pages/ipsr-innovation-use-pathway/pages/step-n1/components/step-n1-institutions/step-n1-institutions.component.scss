@@ -8,37 +8,167 @@
   position: relative;
 
   .pr_chip_selected {
-    padding: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
     position: relative;
     display: flex;
     flex-direction: column;
 
-    .remove_button {
+    // Same hierarchy as the inline partner row of Contributors: name leads, typology is metadata.
+    // Right padding keeps both lines clear of the remove button in the corner.
+    .name {
+      font-weight: 600;
+      padding-right: 40px;
+    }
+
+    .type {
+      color: var(--pr-text-muted);
+      font-size: 12.5px;
+      margin-top: 2px;
+      padding-right: 40px;
+
+      strong {
+        font-weight: 500;
+      }
+    }
+
+    // Same partner-role control as the External partners block of Contributors
+    // (`rd-contributors-and-partners/.../normal-selector`): one look wherever these four
+    // roles show up. Rows here are stacked, so the track keeps a top margin and the help
+    // icon stays beside it; the remove button sits in the row's top-right corner.
+    .remove_partner {
       position: absolute;
-      right: 0;
-      top: 0;
-      margin-top: 5px;
-      margin-right: 5px;
+      top: 6px;
+      right: 6px;
+      z-index: 1;
+    }
+
+    // Partner role = a segmented group, the same control the Impact Area scores use
+    // (`pr-radio-button` variant="segmented": 36px track, 3px padding, 2px gap, radius 8;
+    // 30px segments, radius 6, 14px/500) and the Yes/No + "Not applicable" of this very
+    // section (`.choices` / `.fc-switch`: white track with a 1px border, because it sits on
+    // a tinted row where the grey rail would go muddy). Segments share the track width
+    // (`flex: 1 1 0`, like the reference) so picking a role never moves anything: the
+    // trash keeps its column and the rows stay aligned.
+    // Multi-select, so the chosen ones fill with the brand colour and show a check —
+    // a white "lift" alone would not tell two active segments from the track.
+    // Caption + track + help icon on one line when the column is wide enough; in the usual
+    // half-width column the caption wraps above the track (the track keeps room for the ⓘ).
+    .deliveries_row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      margin-top: 12px;
+
+      // Overline caption, same as `.role_label` in the inline row (11px/700, tracked, muted).
+      .role_label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--pr-text-muted);
+        white-space: nowrap;
+
+        .role_required {
+          color: var(--pr-color-red-300);
+          margin-left: 2px;
+        }
+      }
     }
 
     .deliveries {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
+      display: inline-flex;
       align-items: center;
+      gap: 2px;
+      height: 36px;
+      width: 452px;
+      max-width: calc(100% - 34px);
+      padding: 3px;
+      border: 1px solid var(--pr-border);
+      border-radius: 8px;
+      background: var(--pr-color-white);
 
       .delivery {
-        padding: 7px 14px;
-        background-color: var(--pr-color-white);
-        color: var(--pr-color-primary-300);
-        cursor: pointer;
-        border-radius: 15px;
+        flex: 1 1 0;
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        height: 30px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--pr-text-secondary);
+        font-size: 14px;
         font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 150ms ease, color 150ms ease;
+
+        .dlv_check {
+          display: none;
+          flex: none;
+        }
+
+        &:not(.active):not(.blocked):hover {
+          background: var(--pr-surface-sunken);
+          color: var(--pr-text-heading);
+        }
       }
 
       .delivery.active {
-        background-color: var(--pr-color-primary-300) !important;
-        color: var(--pr-color-white) !important;
+        background: var(--pr-color-primary-300);
+        color: var(--pr-color-white);
+        box-shadow: var(--pr-shadow-1);
+
+        // Selection is not signalled by colour alone (a11y): the check shows up.
+        .dlv_check {
+          display: inline-block;
+        }
+      }
+
+      // PRL-DD-1 (docs/specs/changes/partner-role-exclusive-selection): dim + click-guard, NOT
+      // `pointer-events: none` — the tooltip explaining the role must keep working on hover.
+      .delivery.blocked {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+    }
+
+    // Remove = ghost icon button, same height as the track so both sit on one baseline;
+    // danger tint only on hover (same pair as the evidence list of IPSR step 3).
+    .remove_partner {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--pr-text-muted);
+      cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease;
+
+      svg {
+        display: block;
+      }
+
+      &:hover {
+        background: var(--pr-color-red-50);
+        color: var(--pr-color-red-500);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--pr-color-primary-300);
+        outline-offset: 2px;
       }
     }
   }
@@ -49,10 +179,14 @@
   padding-bottom: 2px;
 }
 
+// Read-only shows only the chosen roles: the track shrinks to them instead of leaving
+// an empty 452px rail with one segment in it.
 .readOnly_deliveries {
+  width: auto !important;
+
   .delivery {
-    padding: 4px 8px !important;
-    border-radius: 3px !important;
+    flex: 0 0 auto !important;
+    padding: 0 12px !important;
   }
 }
 

@@ -8,7 +8,7 @@ import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { ProgrammeResultRow } from '../../../programme-results/services/programme-results.service';
 import { firstMissingRoute, MY_WORK_SECTION_MAP, sectionLabel } from '../../my-work-section-map';
-import { STATUS_META } from '../../../result-framework-reporting-home/status-meta';
+import { resultStatusToken } from '../../../../../../shared/constants/result-status-tokens';
 import { SmartNavigationService } from '../../../../../../shared/services/smart-navigation.service';
 import { PrToastService } from '../../../../../../shared/components/pr-toast';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
@@ -20,7 +20,6 @@ import { MY_WORK_EDITING_REORDER_COPY } from '../../my-work-editing-reorder.copy
  *  the three Editing-column shapes applies from the row's own `completeness`. */
 export type MyWorkCardVariant = 'editing' | 'ready' | 'unknown' | 'waiting-closed';
 
-const NOT_STARTED_CHIP_CLASS = 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]';
 
 function formatDate(value: string): string {
   if (!value) return '';
@@ -85,7 +84,11 @@ export class MyWorkCardComponent {
   readonly isUnknownVariant = computed(() => this.variant() === 'unknown');
   readonly isWaitingClosed = computed(() => this.variant() === 'waiting-closed');
 
-  readonly statusChipClass = computed(() => STATUS_META[this.row().statusId ?? -1]?.chipClass ?? NOT_STARTED_CHIP_CLASS);
+  /** Night sweep 2026-09-23 (X-3): the chip colours come from the shared result-status enum
+   *  (`result-status-tokens.ts`, P2-3786) as inline styles, like the review drawer — no longer from
+   *  the home widgets' STATUS_META (Pending review grey, Submitted violet, non-enum Editing yellow).
+   *  Unknown / missing ids fall back to the enum's neutral pair, as before. */
+  readonly statusTone = computed(() => resultStatusToken(this.row().statusId));
 
   readonly createdLabel = computed(() => formatDate(this.row().created));
 

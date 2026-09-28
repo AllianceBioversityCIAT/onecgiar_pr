@@ -46,6 +46,7 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 import { InnovationUseMdsValidator } from './innovation-use-mds-validator.service';
 import { BilateralQualityAssessmentService } from './quality-assessment/bilateral-quality-assessment.service';
 import { BilateralQualityAssessmentRepository } from '../repositories/bilateral-quality-assessment.repository';
@@ -62,6 +63,7 @@ import {
   AoWBilateralRepository,
   ProjectTocLinkageNode,
 } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
+import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 
 // Canonical level names, matching result.repository.ts (~L3940) and toc-level.service.ts —
 // never "Work package Output/Outcome" (stale wording fixed 2026-09-18).
@@ -100,6 +102,13 @@ export class BilateralCenterService {
     private readonly qualityAssessmentService: BilateralQualityAssessmentService,
     private readonly qualityAssessmentRepository: BilateralQualityAssessmentRepository,
     private readonly aowBilateralRepository: AoWBilateralRepository,
+    // design §5.1, BIL-RTE-T-2 — resolvable here via `bilateral.module.ts`'s existing import of
+    // `ResultsModule`, which re-exports `BilateralAccessModule` (see that module's comment); no
+    // new module import needed.
+    private readonly bilateralAccessService: BilateralAccessService,
+    // P2-3368 AC10-AC14 — the NARROW linked_result writer (P2-3424). Already a provider of
+    // `bilateral.module.ts` (it backs the Innovation Use summary), so no new module import.
+    private readonly resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
   ) {}
 
   /**
@@ -107,10 +116,15 @@ export class BilateralCenterService {
    * the catalog service untouched — that service owns the active-year fallback and the
    * positive-integer parsing.
    */
-  async getProjects(centerId: number, year?: number | string) {
+  async getProjects(
+    centerId: number,
+    year?: number | string,
+    versionId?: number | string,
+  ) {
     const projects = await this.bilateralProjectsService.getProjectsByCenter(
       centerId,
       year,
+      versionId,
     );
     return { response: projects };
   }
@@ -152,7 +166,11 @@ export class BilateralCenterService {
     }
 
     const leadCenter = await this.getLeadCenter(parsedResultId);
-    await this.assertCenterPermission(user, parsedResultId);
+    // P2-3807 — an admin edits every section of a W3 result (client `rolesSE.readOnly`, and
+    // `BilateralAccessService` D-1), so the Project Information save admits them too, as
+    // `changeResultType` already does.
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) await this.assertCenterPermission(user, parsedResultId);
 
     // The catalogue is the server-side authority for ownership, active phase,
     // confirmed status and positive allocation. The client list is convenience only.
@@ -1078,6 +1096,24 @@ export class BilateralCenterService {
     user: TokenDto,
   ) {
     try {
+      const centerResult = await this.resultRepository.findOne({
+        where: { id: resultId, source: SourceEnum.Bilateral, is_active: true },
+        select: ['id', 'status_id'],
+      });
+      if (!centerResult) {
+        return {
+          response: { resultId },
+          message: 'Bilateral result not found',
+          status: 404,
+        };
+      }
+      // design §5.1, BIL-RTE-T-2 — Center-write decision, before any write (R-2.a).
+      await this.bilateralAccessService.assertCenterWrite(
+        centerResult,
+        'center-planned-result',
+        user,
+      );
+
       let ownerInitiative =
         await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
@@ -1113,6 +1149,11 @@ export class BilateralCenterService {
         user.id,
       );
     } catch (error) {
+      // A 403 from `assertCenterWrite` (or any other HttpException) must reach the client with
+      // its own status — not get flattened into a 500 by the generic handler below.
+      if (error instanceof HttpException) {
+        throw error;
+      }
       return {
         response: {},
         message:
@@ -1130,6 +1171,24 @@ export class BilateralCenterService {
     user: TokenDto,
   ) {
     try {
+      const centerResult = await this.resultRepository.findOne({
+        where: { id: resultId, source: SourceEnum.Bilateral, is_active: true },
+        select: ['id', 'status_id'],
+      });
+      if (!centerResult) {
+        return {
+          response: { resultId },
+          message: 'Bilateral result not found',
+          status: 404,
+        };
+      }
+      // design §5.1, BIL-RTE-T-2 — Center-write decision, before any write (R-2.a).
+      await this.bilateralAccessService.assertCenterWrite(
+        centerResult,
+        'center-toc-mapping',
+        user,
+      );
+
       const ownerInitiative =
         await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
@@ -1362,7 +1421,7 @@ export class BilateralCenterService {
 
     try {
       const bilResult = await this.resultRepository.findOne({
-        where: { id: resultId, source: SourceEnum.Bilateral },
+        where: { id: resultId, source: SourceEnum.Bilateral, is_active: true },
       });
       if (!bilResult) {
         return {
@@ -1371,6 +1430,12 @@ export class BilateralCenterService {
           status: 404,
         };
       }
+      // design §5.1, BIL-RTE-T-2 — Center-write decision, before any write (R-2.a).
+      await this.bilateralAccessService.assertCenterWrite(
+        bilResult,
+        'center-contributors',
+        user,
+      );
 
       if (dto.contributing_center !== undefined) {
         await this.syncContributingCenters(
@@ -1410,6 +1475,22 @@ export class BilateralCenterService {
         );
       }
 
+      // P2-3368 AC10-AC14. Key-presence guard like every block above: a save that never mentions
+      // the question must not touch the answer nor the shared `linked_result` rows.
+      if (dto.has_innovation_link !== undefined) {
+        await this.syncLinkedBundledAnswer(bilResult, dto, user);
+      }
+
+      // BCT-T-3 — derive owner Centers of the just-synced contributing projects, only when this
+      // save actually touched them (a save that never sent the key must not pay the lookup, and
+      // must not re-add anything a caller intentionally left alone).
+      if (dto.contributing_bilateral_projects !== undefined) {
+        await this.bilateralService.ensureDerivedContributingCenters(
+          resultId,
+          user.id,
+        );
+      }
+
       const failedCount =
         result.failedCenters.length +
         result.failedProjects.length +
@@ -1424,6 +1505,11 @@ export class BilateralCenterService {
             : `Contributors saved with ${result.failedCenters.length} failed centers, ${result.failedProjects.length} failed projects, ${result.failedPartners.length} failed partners and ${result.failedPrograms.length} failed programs`,
       };
     } catch (error) {
+      // A 403 from `assertCenterWrite` (or any other HttpException) must reach the client with
+      // its own status — not get flattened into a 500 by the generic handler below.
+      if (error instanceof HttpException) {
+        throw error;
+      }
       return {
         response: {},
         message:
@@ -1433,6 +1519,136 @@ export class BilateralCenterService {
         status: 500,
       };
     }
+  }
+
+  /**
+   * P2-3368 AC10-AC14 — "Is this result linked or bundled with another CGIAR-reported result?"
+   * for the bilateral Contributors & Partners section.
+   *
+   * 🛑 The write is deliberately NARROW, and it is the whole point of this method.
+   * `linked_result` is SHARED: the P22 "Links to results" section writes rows for the same
+   * `origin_result_id`, and legacy rows carry a free-text `legacy_link` with a NULL
+   * `linked_results_id`. The generic writer `LinkedResultsService.createForInnovationUse`
+   * de-activates EVERY active row of the origin when the selection is empty
+   * (`linked-results.service.ts:244-247`) — with this section autosaving on every centre or
+   * project change, delegating to it would wipe those rows on the first save. So this mirrors the
+   * protocol P2-3424 settled on (`summary.service.ts:336-366`):
+   *  - "Yes" + a selection → that selection becomes the stored set;
+   *  - "Yes" without `linked_results` → only the flag changes, the rows stay as they are;
+   *  - "No" AND a stored "Yes" → the retraction clears the links;
+   *  - the question left unanswered (`null`) → nothing is written at all.
+   *
+   * ⚠️ What "narrow" spares, exactly (P2-3823 correction): only the `legacy_link` rows (NULL
+   * `linked_results_id`). Rows the P22 "Links to results" section wrote through the classic
+   * editor carry a real id and ARE replaced by a selection and deactivated by a retraction — the
+   * same contract Innovation Use accepted in P2-3424, because `linked_result` does not record
+   * which section wrote a row.
+   *
+   * 🛑 Input is normalised HERE, not by class-validator: no `ValidationPipe` is registered for
+   * this controller (nor globally), so the DTO decorators never run. A string `"false"` would read
+   * as `true` through `Boolean()`, and a `null` list would reach the writer as "empty" and wipe
+   * every id row. Anything that is not a real boolean / a real array is treated as absent.
+   *
+   * 🛑 Result types 2 and 7 are excluded ON PURPOSE, and the client hides the question for them:
+   *  - Innovation Use asks it in its own type-specific section (PO decision, Ángel Jarrín,
+   *    2026-09-10, P2-3424). Two editing surfaces over one stored answer is the defect P2-3199
+   *    removed.
+   *  - Innovation Development mirrors the flag into `results_innovations_dev.has_innovation_link`
+   *    (`contributors-partners.service.ts:580-618`), the row the green-check functions read.
+   *    Writing the column here without that mirror would leave the validation reading a stale
+   *    value, so the type stays with its current owner until that is decided.
+   */
+  private static readonly LINKED_BUNDLED_EXCLUDED_RESULT_TYPES: number[] = [
+    ResultTypeEnum.INNOVATION_USE,
+    ResultTypeEnum.INNOVATION_DEVELOPMENT,
+  ];
+
+  private async syncLinkedBundledAnswer(
+    bilResult: Result,
+    dto: SaveBilateralContributorsDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (
+      BilateralCenterService.LINKED_BUNDLED_EXCLUDED_RESULT_TYPES.includes(
+        Number(bilResult.result_type_id),
+      )
+    ) {
+      return;
+    }
+
+    const answer =
+      typeof dto.has_innovation_link === 'boolean'
+        ? dto.has_innovation_link
+        : null;
+
+    // Unanswered is not an answer: the radio has no way back to blank once clicked, so a `null`
+    // here means the question was never touched and the stored value must survive.
+    if (answer === null) return;
+
+    // `Number(...) === 1` and not `Boolean(...)`: the column is a tinyint, and a '0' arriving as a
+    // string reads as TRUE through `Boolean` — which here would turn a plain "No" into a
+    // retraction and deactivate `linked_result` rows this section never wrote. The entity maps it
+    // as a boolean today, so this is insurance, not a fix; it is the cheap side of the bet.
+    const previousAnswer = Number(bilResult.has_innovation_link) === 1;
+
+    await this.resultRepository.update(bilResult.id, {
+      has_innovation_link: answer,
+      last_updated_by: user.id,
+    });
+
+    if (answer === true) {
+      // An omitted (or non-array) `linked_results` with a "Yes" means "the flag changed, the list
+      // did not" — never "empty", which would deactivate every id row.
+      if (!Array.isArray(dto.linked_results)) return;
+      const linkedIds = await this.normaliseLinkedResultIds(
+        dto.linked_results,
+        bilResult.id,
+      );
+      await this.resultsInnovationsUseRepository.replaceLinkedResultsByOrigin(
+        bilResult.id,
+        linkedIds,
+        user.id,
+      );
+      return;
+    }
+
+    // AC12 — only a retraction clears. A "No" on a result that never said "Yes" leaves the rows of
+    // the other sections exactly where they are.
+    if (previousAnswer) {
+      await this.resultsInnovationsUseRepository.replaceLinkedResultsByOrigin(
+        bilResult.id,
+        [],
+        user.id,
+      );
+    }
+  }
+
+  /**
+   * P2-3823 — the hygiene the classic writer applies (`ContributorsPartnersService.filterActiveLinkedResults`,
+   * `contributors-partners.service.ts:755-769`) and this path lacked: positive integers only, no
+   * link from a result to itself, no link to an inactive result.
+   */
+  private async normaliseLinkedResultIds(
+    raw: unknown[],
+    originId: number,
+  ): Promise<number[]> {
+    const ids = Array.from(
+      new Set(
+        raw
+          .map((id) => Number(id))
+          .filter(
+            (id) => Number.isInteger(id) && id > 0 && id !== Number(originId),
+          ),
+      ),
+    );
+    if (!ids.length) return [];
+    const placeholders = ids.map(() => '?').join(', ');
+    const rows = await this.resultRepository.query(
+      `SELECT id FROM result WHERE id IN (${placeholders}) AND is_active > 0`,
+      ids,
+    );
+    const active = new Set((rows ?? []).map((row: any) => Number(row?.id)));
+    return ids.filter((id) => active.has(id));
   }
 
   /** Contribution requests the centre form manages: 4 = draft (pre-approval), 1 = pending accept. */
@@ -2036,11 +2252,10 @@ export class BilateralCenterService {
     });
 
     // 2026-09-05: tell the primary Science Program's members the result is waiting for them.
-    // Post-commit and non-blocking (the emitter never throws) — the submit already succeeded.
-    await this.bilateralService.emitBilateralSubmittedNotification(
-      parsedResultId,
-      user.id,
-    );
+    // BCT-T-5: goes through the shared orchestrator (submitted notification, then contributor
+    // tagging) instead of calling the submitted emitter directly. Post-commit and non-blocking
+    // (`announcePendingReview` never throws) — the submit already succeeded.
+    await this.bilateralService.announcePendingReview(parsedResultId, user.id);
 
     return {
       response: {
@@ -2155,7 +2370,11 @@ export class BilateralCenterService {
       );
     }
 
-    await this.assertCenterPermission(user, parsedResultId);
+    // ASC-DD-9 / ASC-R-18 — a platform admin runs the quality check and submits any bilateral
+    // result for review, whether or not they are a Center User of its lead centre. Every other
+    // precondition in this method still applies (status above; owner SP and MDS below).
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) await this.assertCenterPermission(user, parsedResultId);
 
     const owner =
       await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
@@ -2218,7 +2437,11 @@ export class BilateralCenterService {
       );
     }
 
-    await this.assertCenterPermission(user, parsedResultId);
+    // ASC-DD-9 (amended 2026-09-28) — the client polls this endpoint while `assess` runs and
+    // loads it on open, so an admin non-member needs the same bypass `assertSubmittable` gets.
+    // Read-only: no other precondition to preserve here.
+    const isAdmin = await this.roleByUserRepository.isUserAdmin(user.id);
+    if (!isAdmin) await this.assertCenterPermission(user, parsedResultId);
     const dto = await this.qualityAssessmentService.getLatest(parsedResultId);
 
     return {

@@ -9,6 +9,7 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../shared/services/global/institutions.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
 import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -107,6 +108,8 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       selectedSecondarySps: signal<any[]>([]),
       currentResultId: signal<number | null>(9464),
       resultLevelId: signal<number | null>(null),
+      // P2-3368: the linked/bundled question is hidden for result types 2 and 7.
+      resultTypeId: signal<number | null>(null),
       isLoadingResult: signal(false)
     };
 
@@ -259,6 +262,122 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       const retryButton = fixture.nativeElement.querySelector('[data-testid="centers-load-retry"]');
       expect(banner).toBeNull();
       expect(retryButton).toBeNull();
+    });
+  });
+
+  // ── P2-3368 AC14: the linked-results picker is the FIFTH one, and it used to be exempt ────
+  //
+  // While the question was `Coming soon` this picker carried a hard `[isStatic]="true"`, so the
+  // very defect P2-3520 fixed for the other four survived here untested: on a submitted result the
+  // dropdown still opened. Now that the answer persists, AC14 ("read-only view reflects saved
+  // values") makes that visible to real users, so it is measured with the same instrument.
+  describe('linked/bundled results picker (AC14)', () => {
+    const LINKED_PICKER_LABEL = 'Select a result.';
+
+    const buildWithLinkedResults = () => {
+      build();
+      component.showAllFields.set(true);
+      component.hasLinkedResult.set(true);
+      component.selectedLinkedResultIds.set([11164]);
+      fixture.detectChanges();
+    };
+
+    it('stays operable while the result is in Editing (the control case)', () => {
+      editable.set(true);
+      buildWithLinkedResults();
+
+      const { trigger } = interactiveControlsIn(pickerFor(LINKED_PICKER_LABEL));
+      expect(trigger).toBeTruthy();
+    });
+
+    it('offers no interactive control once the result is read-only', () => {
+      editable.set(false);
+      buildWithLinkedResults();
+
+      const { trigger, focusable } = interactiveControlsIn(pickerFor(LINKED_PICKER_LABEL));
+      expect(trigger).toBeNull();
+      expect(focusable).toEqual([]);
+    });
+
+    it('no longer renders the Coming soon tag', () => {
+      editable.set(true);
+      buildWithLinkedResults();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="linked-result-coming-soon"]')).toBeNull();
+    });
+
+    // P2-3823 — a stored link the catalogue cannot name (only QA'd/approved results are listed)
+    // used to vanish from the read-only view: the real `pr-multi-select` drops ids it cannot map.
+    it('shows a chip for every stored link, including one the catalogue does not list (AC14)', async () => {
+      TestBed.inject(InnovationUseResultsService).resultsList = [{ id: 11164, title: 'Listed result' }] as any;
+      editable.set(false);
+      build();
+      component.showAllFields.set(true);
+      component.hasLinkedResult.set(true);
+      component.selectedLinkedResultIds.set([11164, 777]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const text = pickerFor(LINKED_PICKER_LABEL).textContent ?? '';
+      expect(text).toContain('Listed result');
+      expect(text).toContain('internal id 777');
+    });
+
+    // P2-3823 — a click before the stored answer is on screen would be overwritten by hydration.
+    // `[disabled]` next to `[(ngModel)]` is applied by NgModel on a microtask, hence `whenStable`.
+    // `pr-radio-button` also disables itself while the global `RolesService.readOnly` is up, and
+    // that flag starts TRUE until the role request resolves. Lowered here so ONLY this section's
+    // gates decide — otherwise both radio tests would pass on the roles flag and prove nothing.
+    const lowerGlobalRoleLock = () => {
+      TestBed.inject(RolesService).readOnly = false;
+    };
+
+    const settle = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    it('keeps the Yes/No radio locked until the stored answer has been read back', async () => {
+      editable.set(true);
+      lowerGlobalRoleLock();
+      build();
+      component.showAllFields.set(true);
+      component.linkedHydrated.set(false);
+      await settle();
+      const radios = () =>
+        (Array.from(fixture.nativeElement.querySelectorAll('input[type="radio"]')) as HTMLInputElement[]).filter(r =>
+          (r.closest('app-pr-radio-button')?.textContent ?? '').includes('linked or bundled')
+        );
+      expect(radios().length).toBe(2);
+      expect(radios().every(r => r.disabled)).toBe(true);
+
+      component.linkedHydrated.set(true);
+      await settle();
+      expect(radios().every(r => !r.disabled)).toBe(true);
+    });
+
+    it('keeps the Yes/No radio disabled on a read-only result (AC14)', async () => {
+      editable.set(false);
+      lowerGlobalRoleLock();
+      build();
+      component.showAllFields.set(true);
+      component.linkedHydrated.set(true);
+      await settle();
+      const radios = (Array.from(fixture.nativeElement.querySelectorAll('input[type="radio"]')) as HTMLInputElement[]).filter(r =>
+        (r.closest('app-pr-radio-button')?.textContent ?? '').includes('linked or bundled')
+      );
+      expect(radios.length).toBe(2);
+      expect(radios.every(r => r.disabled)).toBe(true);
+    });
+
+    it('drops the whole block for an Innovation Use result, which asks the question elsewhere', () => {
+      editable.set(true);
+      creation.resultTypeId.set(2);
+      buildWithLinkedResults();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
     });
   });
 });

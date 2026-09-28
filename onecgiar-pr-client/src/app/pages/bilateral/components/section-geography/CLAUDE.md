@@ -1,6 +1,6 @@
 # section-geography (bilateral)
 
-**Verified:** 2026-09-22 · P2-3788 · el candado de solo-lectura alcanza a los controles sub-nacionales; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección; prior: 2026-08-28 · performance-refactor · a9e7ae7c4
+**Verified:** 2026-09-25 · P2-3832 · los países sin catálogo sub-nacional ya no bloquean el Submit; prior: 2026-09-22 · P2-3788 · el candado de solo-lectura alcanza a los controles sub-nacionales; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección; prior: 2026-08-28 · performance-refactor · a9e7ae7c4
 
 ## What it is
 Geographic Focus for the W3/Bilateral result form: the main geo scope (Card 1) and the
@@ -39,6 +39,18 @@ solo el submit exige volver a evaluar una fila stale.
   componente. 🛑 El candado está en `section-geography.readonly.spec.ts`, que lee el **markup**
   porque el spec hermano stubea la plantilla con `overrideTemplate(..., '<div></div>')` y no puede
   ver esto. Comprobado con control negativo: reintroducir el `false` pone 3 de sus 4 casos en rojo.
+- ⚠️ **48 de los 248 países de CLARISA no tienen NINGÚN nivel sub-nacional** (American Samoa,
+  Puerto Rico, Hong Kong, Guam, Martinica, Nueva Caledonia… — medido contra
+  `api.clarisa.cgiar.org/api/subnational-scope`, 25-sep-2026: 5020 filas para 200 países). Para ellos
+  `app-sub-geoscope` no pinta el multi-select, `sub_national` queda vacío para siempre y
+  `subNationalSelectionMissing` exigía una selección imposible: el item `sub-national` del tracker se
+  quedaba sin llenar y, vía `overallStatus`, **deshabilitaba el Submit del resultado entero** (P2-3832).
+  El autosave sí guardaba — lo bloqueado era enviar, no escribir. El formulario clásico nunca tuvo el
+  defecto porque su regla vive en el SQL de green-checks
+  (`results-validation-module.repository.ts`, `geographic_scope_id = 5`):
+  `if(count(clarisa_subnational_scopes de ese iso) > 0, exige, true)`. Aquí se replica con el output
+  `catalogueLoaded` del hijo → `onSubNationalCatalogue()` → `countriesWithoutSubNationalLevels`.
+  🛑 Sólo se emite con el catálogo `loaded`: en vuelo o tras fallar, el campo sigue siendo exigido.
 - ⚠️ **The `.sg-block` z-index ladder only holds while panels drop DOWNWARDS.** `--main: 100` /
   `--extra: 50` were written so an open multi-select would overlay the group beneath it. Since
   `P2-3737` the extra-scope select — the last field of the section, so the one nearest the floor —

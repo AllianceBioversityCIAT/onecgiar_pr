@@ -115,6 +115,79 @@ describe('RdEvidencesComponent', () => {
 
     fixture = TestBed.createComponent(RdEvidencesComponent);
     component = fixture.componentInstance;
+    // W12-2: the tests below model a section whose GET already landed; the load-failure gate has
+    // its own describe block (`refuses to save after a failed section load`), which resets this.
+    component.loaded.set(true);
+  });
+
+  describe('W12-2 — refuses to save after a failed section load (night sweep 2026-09-23)', () => {
+    // Measured on prtest (result 8942): GET_evidences 500 → "No evidence added" → adding one
+    // evidence POSTed a one-item list and the server de-activated the 2 stored ones.
+    // Control negative: with the `loaded` gate lines removed from `performSave()` / `addEvidence()`
+    // the POST / modal tests below fail.
+    beforeEach(() => {
+      component.loaded.set(null);
+      mockApiService.resultsSE.GET_evidences = () => throwError(() => ({ status: 500 }));
+    });
+
+    it('marks the section as not loaded when the first GET fails', () => {
+      component.getSectionInformation();
+
+      expect(component.loaded()).toBe(false);
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('confirming a new evidence from the modal does not POST the one-item list', async () => {
+      const postSpy = jest.spyOn(mockApiService.resultsSE, 'POST_evidences');
+      component.getSectionInformation();
+      component.draftEvidence = { link: 'https://example.org/zz-night-sweep-new', is_sharepoint: false } as any;
+
+      component.confirmCreateEvidence();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(postSpy).not.toHaveBeenCalled();
+    });
+
+    it('saveSection() (unsaved-changes guard) resolves false without POSTing', async () => {
+      const postSpy = jest.spyOn(mockApiService.resultsSE, 'POST_evidences');
+      component.getSectionInformation();
+
+      const resolved = await firstValueFrom(component.saveSection());
+
+      expect(resolved).toBe(false);
+      expect(postSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not open the Add evidence modal, and does not POST while the GET is still in flight', async () => {
+      const postSpy = jest.spyOn(mockApiService.resultsSE, 'POST_evidences');
+
+      component.addEvidence();
+      await component.onSaveSection();
+
+      expect(component.showCreateModal).toBe(false);
+      expect(postSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows the load-error note, hides "Add evidence" and "No evidence added" after a failed load', () => {
+      mockApiService.dataControlSE.isKnowledgeProduct = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="section-load-error"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-add-button')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-no-data-text')).toBeNull();
+    });
+
+    it('a failed RE-load after a successful load keeps saving available', async () => {
+      const postSpy = jest.spyOn(mockApiService.resultsSE, 'POST_evidences');
+      component.loaded.set(true);
+      component.getSectionInformation();
+
+      await component.onSaveSection();
+
+      expect(component.loaded()).toBe(true);
+      expect(postSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('sectionLoading (skeleton)', () => {

@@ -246,6 +246,49 @@ describe('InnovationUseFormComponent', () => {
     expect(result).toBe(1);
   });
 
+  // IPSR-ESC-T-5: regression tests for the blank-placeholder-row gap (significantFields)
+  it('should not count an actors placeholder row with no significant field set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{}] as Actor[];
+    const result = component.hasElementsWithId(list, 'result_actors_id', ['actor_type_id']);
+    expect(result).toBe(0);
+  });
+
+  it('should count an actors row once its significant field is filled in', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ actor_type_id: 3 }] as Actor[];
+    const result = component.hasElementsWithId(list, 'result_actors_id', ['actor_type_id']);
+    expect(result).toBe(1);
+  });
+
+  it('should not count an organizations placeholder row with no significant field set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{}] as Organization[];
+    const result = component.hasElementsWithId(list, 'id', ['institution_types_id']);
+    expect(result).toBe(0);
+  });
+
+  it('should count an organizations row once its significant field is filled in', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ institution_types_id: 12 }] as Organization[];
+    const result = component.hasElementsWithId(list, 'id', ['institution_types_id']);
+    expect(result).toBe(1);
+  });
+
+  it('should not count a measures placeholder row whose unit_of_measure is pre-filled but quantity is unset', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ unit_of_measure: '# of hectares' }] as any[];
+    const result = component.hasElementsWithId(list, 'result_ip_measure_id', ['quantity']);
+    expect(result).toBe(0);
+  });
+
+  it('should count a measures row once quantity is filled in', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ unit_of_measure: '# of hectares', quantity: 5 }] as any[];
+    const result = component.hasElementsWithId(list, 'result_ip_measure_id', ['quantity']);
+    expect(result).toBe(1);
+  });
+
   it('should remove organization correctly', () => {
     const organizationItem = { institution_sub_type_id: 1, institution_types_id: 1, is_active: true } as any;
     component.removeOrganization(organizationItem);

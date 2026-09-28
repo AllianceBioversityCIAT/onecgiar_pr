@@ -737,6 +737,24 @@ export class ResultByInitiativesRepository
         );
       }
 
+      // Night sweep 2026-09-23, IPSR-8 — an absent new owner is never a request to remove the owner.
+      // A caller that did not know the owner (e.g. an IPSR Contributors save after a failed GET,
+      // `changePrimaryInit` undefined) used to demote the current one to role 2 and promote nothing:
+      // the package vanished from its list and Contributors answered 404 (prtest 11172 / 12037).
+      // Leave the ownership exactly as it is and hand back the current primary row.
+      if (new_primary_submitter == null) {
+        this._logger.warn(
+          `updateIniciativeSubmitter: no new primary submitter for result ${resultId}; ownership left untouched`,
+        );
+        return this.findOne({
+          where: {
+            result_id: resultId,
+            initiative_role_id: 1,
+            is_active: true,
+          },
+        });
+      }
+
       await this.update(
         {
           result_id: resultId,

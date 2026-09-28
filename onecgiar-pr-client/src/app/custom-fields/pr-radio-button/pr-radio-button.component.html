@@ -8,6 +8,7 @@
     [tooltip]="this.tooltip"
     [required]="this.required"
     [hasValue]="hasValue"
+    [editLocked]="!!((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)"
     [layout]="variant === 'segmented' ? 'row' : 'stack'">
     <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
       @if (variant === 'segmented') {

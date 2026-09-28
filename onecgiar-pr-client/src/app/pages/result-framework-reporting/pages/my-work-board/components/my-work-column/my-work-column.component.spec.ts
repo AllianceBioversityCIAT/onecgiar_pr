@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { RESULT_STATUS_TOKENS } from '../../../../../../shared/constants/result-status-tokens';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -287,5 +290,33 @@ describe('MyWorkColumnComponent', () => {
     await build({ column: column({ rows: [row()] }) });
 
     expect((root().querySelector('section') as HTMLElement).className).toContain('pr-my-work-fade');
+  });
+
+  describe('X-3 (night sweep 2026-09-23) — column dots and count badges are the shared enum pairs', () => {
+    const source = readFileSync(join(__dirname, 'my-work-column.component.ts'), 'utf8');
+    const block = (key: string): string => {
+      const m = source.match(new RegExp(`\\n  ${key}: \\{([\\s\\S]*?)\\n  \\}`));
+      return m ? m[1] : '';
+    };
+
+    it.each([
+      ['editing', 1],
+      ['pending', 5],
+      ['submitted', 3],
+      ['inQa', 2],
+      ['approved', 6],
+      ['discontinued', 4],
+      ['rejected', 7]
+    ])('%s column uses the enum pair of status %i', (key, id) => {
+      const t = RESULT_STATUS_TOKENS[id as number];
+      const b = block(key as string);
+      expect(b).not.toBe('');
+      expect(b).toContain(`dotClass: 'bg-[${t.fg}]'`);
+      expect(b).toContain(`badgeClass: 'bg-[${t.bg}] text-[${t.fg}]'`);
+    });
+
+    it('no longer borrows the home widgets STATUS_META colours', () => {
+      expect(source).not.toContain("from '../../../result-framework-reporting-home/status-meta'");
+    });
   });
 });

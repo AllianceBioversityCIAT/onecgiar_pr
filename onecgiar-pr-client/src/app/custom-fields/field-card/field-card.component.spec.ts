@@ -18,6 +18,8 @@ import { PrInfoIconComponent } from '../pr-info-icon/pr-info-icon.component';
     [showHeader]="showHeader()"
     [showDescription]="showDescription()"
     [pinGuidanceByDefault]="pinByDefault()"
+    [readOnly]="readOnly()"
+    [editLocked]="editLocked()"
     pinKey="my-field">
     <input class="projected-control" />
   </app-field-card>`,
@@ -35,6 +37,8 @@ class HostComponent {
   readonly showDescription = signal(true);
   readonly tooltip = signal('');
   readonly pinByDefault = signal(false);
+  readonly readOnly = signal(false);
+  readonly editLocked = signal(false);
 }
 
 describe('FieldCardComponent', () => {
@@ -330,6 +334,35 @@ describe('FieldCardComponent', () => {
       (q('.projected-control').nativeElement as HTMLElement).click();
       fixture.detectChanges();
       expect(cmp().edited()).toBe(true);
+    });
+
+    /**
+     * P2-3788 — on a result out of Editing the Yes/No and the region chips still render, a click
+     * changes nothing, and the card still said "Unsaved changes". A locked field is never edited.
+     */
+    it.each([
+      ['editLocked', () => host.editLocked.set(true)],
+      ['readOnly', () => host.readOnly.set(true)]
+    ])('does NOT count a click or an input as an edit when %s', (_name, lock) => {
+      lock();
+      fixture.detectChanges();
+
+      const control = q('.projected-control').nativeElement as HTMLElement;
+      control.click();
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      control.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(cmp().edited()).toBe(false);
+      expect(cmp().saveState).toBe('none');
+      expect(card().textContent).not.toContain('Unsaved changes');
+    });
+
+    it('keeps the status tint when only editLocked is set (unlike readOnly)', () => {
+      host.hasValue.set(true);
+      host.editLocked.set(true);
+      fixture.detectChanges();
+      expect(cmp().state).toBe('ok');
     });
   });
 });

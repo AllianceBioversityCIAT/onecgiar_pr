@@ -355,6 +355,21 @@ describe('ResultCreatorComponent', () => {
       expect(spy).toHaveBeenCalledWith('climate', '');
     });
 
+    // Night sweep 2026-09-23, C-1 (W1/W2): typing back to the last-checked title left
+    // "Searching for similar results…" spinning forever and hid the exact-title warning.
+    // Control negative: with distinctUntilChanged back in setupTitleSearch this fails.
+    it('C-1: re-checks a title equal to the last one checked, so the spinner stops', () => {
+      component.getAllPhases();
+      runTitleSearch('climate adaptation');
+      expect(component.loadingDepthSearch()).toBe(false);
+
+      component.depthSearch('climate adaptatio');
+      component.depthSearch('climate adaptation');
+      jest.advanceTimersByTime(500);
+
+      expect(component.loadingDepthSearch()).toBe(false);
+    });
+
     it('should set exactTitleFound when uniqueness check reports conflict', () => {
       jest.spyOn(mockApiService.resultsSE, 'GET_checkTitleUniqueness').mockReturnValue(
         of({

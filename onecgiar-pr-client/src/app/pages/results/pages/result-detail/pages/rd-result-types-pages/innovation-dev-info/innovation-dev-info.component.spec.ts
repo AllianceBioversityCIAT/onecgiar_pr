@@ -455,6 +455,9 @@ describe('InnovationDevInfoComponent', () => {
 
     fixture = TestBed.createComponent(InnovationDevInfoComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (P1 twin): these tests model a section whose GETs already landed;
+    // the load-failure gate has its own describe block.
+    component.loaded.set(true);
   });
 
   describe('initialization behavior', () => {
@@ -582,6 +585,80 @@ describe('InnovationDevInfoComponent', () => {
           addressing_demands: 'yes'
         }
       ]);
+    });
+  });
+
+  describe('P1 twin (night sweep 2026-09-23) — refuses to save after a failed section load', () => {
+    // Control negative: with the `loaded` gate line removed from `performSave()` the PATCH / POST
+    // assertions below fail.
+    beforeEach(() => component.loaded.set(null));
+
+    it('legacy path: a failed body GET marks the section not loaded and Save sends nothing', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationDev').mockReturnValue(throwError(() => ({ status: 500 })));
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev');
+      component.getSectionInformation();
+
+      await component.onSaveSection();
+
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('P25 path: a failed evidence GET blocks the save — the evidence POST takes the list as the new truth', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      jest.spyOn(mockApiService.resultsSE, 'GET_evidenceDemandP25').mockReturnValue(throwError(() => ({ status: 500 })));
+      const post = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
+      component.getSectionInformationp25();
+
+      const resolved = await new Promise<boolean>(done => component.saveSection().subscribe(done));
+
+      expect(component.loaded()).toBe(false);
+      expect(resolved).toBe(false);
+      expect(post).not.toHaveBeenCalled();
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('W12-3: P25 path, a failed body GET blocks the save — the default body would null the readiness level', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationDevP25').mockReturnValue(throwError(() => ({ status: 500 })));
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
+      component.getSectionInformationp25();
+      component.innovationDevInfoBody.short_title = 'zz-fail';
+
+      await component.onSaveSection();
+
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('a failed questions GET also blocks the save', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_questionsInnovationDevelopment').mockReturnValue(throwError(() => ({ status: 500 })));
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev');
+      component.getSectionInformation();
+
+      await component.onSaveSection();
+
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('saves once every GET it sends back has landed', async () => {
+      const patch = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev');
+      component.getSectionInformation();
+
+      await component.onSaveSection();
+
+      expect(component.loaded()).toBe(true);
+      expect(patch).toHaveBeenCalled();
+    });
+
+    it('renders the load-error note only on a failed load, and disables the bottom-bar Save', () => {
+      const { readFileSync } = require('fs');
+      const { join } = require('path');
+      const html = readFileSync(join(__dirname, 'innovation-dev-info.component.html'), 'utf8');
+      expect(html).toContain('@if (loaded() === false) {');
+      expect(html).toContain('[disabled]="savingSection || loaded() !== true"');
     });
   });
 

@@ -134,7 +134,9 @@ describe('GlobalSearchPaletteService', () => {
         submitterCode: 'SP01',
         statusId: 1,
         statusName: 'Editing',
-        versionId: 12
+        versionId: 12,
+        sourceName: null,
+        leadCenter: null
       });
     });
 
@@ -332,6 +334,12 @@ describe('GlobalSearchPaletteService', () => {
       expect(row.code).toBe(5844);
       expect(row.statusId).toBe(1);
       expect(row.versionId).toBe(12);
+    });
+
+    it('carries the source and lead centre the open-route resolver needs', () => {
+      const row = toPaletteResultRow(item({ source_name: 'W3/Bilaterals', lead_center: 'AfricaRice' }));
+      expect(row.sourceName).toBe('W3/Bilaterals');
+      expect(row.leadCenter).toBe('AfricaRice');
     });
 
     it('tolerates a missing payload without throwing', () => {

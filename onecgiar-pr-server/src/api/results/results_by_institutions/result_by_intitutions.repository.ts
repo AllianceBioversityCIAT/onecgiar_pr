@@ -22,7 +22,7 @@ export class ResultByIntitutionsRepository
   ): ConfigCustomQueryInterface {
     return {
       findQuery: `
-      SELECT 
+      SELECT
         null as id,
         rbi.institutions_id,
         rbi.institution_roles_id,
@@ -33,7 +33,8 @@ export class ResultByIntitutionsRepository
         null as last_updated_date,
         ${config.user.id} as created_by,
         ${config.user.id} as last_updated_by,
-        ${config.new_result_id} as result_id
+        ${config.new_result_id} as result_id,
+        rbi.is_leading_result
         from results_by_institution rbi WHERE rbi.result_id = ${
           config.old_result_id
         } and rbi.is_active > 0
@@ -47,8 +48,9 @@ export class ResultByIntitutionsRepository
         last_updated_date,
         created_by,
         last_updated_by,
-        result_id
-        )SELECT 
+        result_id,
+        is_leading_result
+        )SELECT
         rbi.institutions_id,
         rbi.institution_roles_id,
         rbi.is_active,
@@ -58,7 +60,8 @@ export class ResultByIntitutionsRepository
         null as last_updated_date,
         ${config.user.id} as created_by,
         ${config.user.id} as last_updated_by,
-        ${config.new_result_id} as result_id
+        ${config.new_result_id} as result_id,
+        rbi.is_leading_result
         from results_by_institution rbi WHERE rbi.result_id = ${
           config.old_result_id
         } and rbi.is_active > 0`,

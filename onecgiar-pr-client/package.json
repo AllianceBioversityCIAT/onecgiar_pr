@@ -165,6 +165,8 @@
       "^@spartan/skeleton$": "<rootDir>/src/app/spartan/skeleton/src/index.ts",
       "^@spartan/popover$": "<rootDir>/src/app/spartan/popover/src/index.ts",
       "^@spartan/tabs$": "<rootDir>/src/app/spartan/tabs/src/index.ts",
+      "^@spartan/badge$": "<rootDir>/src/app/spartan/badge/src/index.ts",
+      "^@spartan/checkbox$": "<rootDir>/src/app/spartan/checkbox/src/index.ts",
       "^src/(.*)$": "<rootDir>/src/$1"
     },
     "coverageThreshold": {

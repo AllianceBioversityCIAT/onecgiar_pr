@@ -52,13 +52,45 @@ describe('bilateral-result-open-route.util', () => {
     expect(usesBilateralReviewFlow(submittedW3)).toBe(true);
   });
 
-  it('routes Approved and AVISA W3 to Result Detail', () => {
-    expect(
-      classifyBilateralOpenRoute({ ...submittedW3, statusName: 'Approved' })
-    ).toBe('result-detail');
-    expect(
-      classifyBilateralOpenRoute({ ...submittedW3, submitterCode: 'SGP-02' })
-    ).toBe('result-detail');
+  const approvedW3 = {
+    sourceOrOrigin: 'W3/Bilaterals',
+    statusId: 6,
+    statusName: 'Approved',
+    leadCenter: 'CIMMYT',
+    resultCode: 28728,
+    versionId: 6,
+    submitterCode: 'SP01',
+    resultId: 28728
+  };
+  const approvedCenterEditor = {
+    kind: 'center-editor',
+    commands: ['/bilateral', 'CIMMYT', 'result', 28728],
+    queryParams: { phase: 6 }
+  };
+
+  it('routes Approved W3 (name only) with lead center to the center editor', () => {
+    const input = { ...approvedW3, statusId: undefined };
+    expect(classifyBilateralOpenRoute(input)).toBe('center-editor');
+    expect(resolveBilateralResultOpenRoute(input)).toEqual(approvedCenterEditor);
+  });
+
+  it('routes Approved W3 (id only, no name) with lead center to the center editor', () => {
+    const input = { ...approvedW3, statusName: undefined };
+    expect(classifyBilateralOpenRoute(input)).toBe('center-editor');
+    expect(resolveBilateralResultOpenRoute(input)).toEqual(approvedCenterEditor);
+    expect(usesBilateralReviewFlow(input)).toBe(false);
+  });
+
+  it('routes AVISA Approved W3 to Result Detail', () => {
+    expect(classifyBilateralOpenRoute({ ...approvedW3, submitterCode: 'SGP-02' })).toBe('result-detail');
+  });
+
+  it('routes Approved W3 without lead center to Result Detail', () => {
+    expect(classifyBilateralOpenRoute({ ...approvedW3, leadCenter: '  ' })).toBe('result-detail');
+  });
+
+  it('routes non-W3 Approved to Result Detail', () => {
+    expect(classifyBilateralOpenRoute({ ...approvedW3, sourceOrOrigin: 'Results' })).toBe('result-detail');
   });
 
   it('falls back to Result Detail when Editing W3 has no lead center', () => {

@@ -16,6 +16,7 @@ import { BilateralManualCreateFlowService } from '../../services/bilateral-manua
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
+import { RESULT_STATUS_TOKENS } from '../../../../shared/constants/result-status-tokens';
 
 @Injectable()
 class MockBilateralAiService {
@@ -353,6 +354,40 @@ describe('BilateralResultCreatorComponent', () => {
     );
   });
 
+  // Night sweep 2026-09-23 (BIL-3 / BIL-4 follow-up): 4 Policy Change organizations used to get a
+  // green rail check, count as a done section and leave Submit enabled. Control negative: with the
+  // invalid checks removed from `getSectionMdsStatus` / `canSubmitFromRail` these assertions fail.
+  it('a section with an invalid field is not complete on the rail, not counted, and Submit is disabled', () => {
+    const invalidItem = { key: 'policy-institutions', label: 'Whose policy is this?', filled: true, invalid: true, invalidReason: '4 organizations selected; the maximum is 3' };
+    mdsTracker.sectionStatus.set([{ sectionName: 'type-specific', status: 'complete', fields: [invalidItem] }]);
+    mdsTracker.overallStatus.set('complete');
+    mdsTracker.invalidFields.set([invalidItem]);
+
+    expect(component.getSectionMdsStatus('type-specific')).toBe('partial');
+    expect(component.canSubmitFromRail()).toBe(false);
+
+    mdsTracker.sectionStatus.set([{ sectionName: 'type-specific', status: 'complete', fields: [{ ...invalidItem, invalid: false }] }]);
+    mdsTracker.invalidFields.set([]);
+    expect(component.getSectionMdsStatus('type-specific')).toBe('complete');
+  });
+
+  // Night sweep 2026-09-23, BIL-5. Control negative: without `!field.optional` this test fails.
+  it('BIL-5: an optional empty item is not counted as missing', () => {
+    component.openSectionName.set('contributors');
+    mdsTracker.sectionStatus.set([
+      {
+        sectionName: 'contributors',
+        status: 'partial',
+        fields: [
+          { key: 'toc-indicator', label: 'Indicator', filled: false, optional: true },
+          { key: 'external-partners', label: 'External partners', filled: false }
+        ]
+      }
+    ]);
+    expect(component.missingFields()).toEqual(['External partners']);
+    expect(component.missingLabel()).toBe('1 field missing');
+  });
+
   it('should have null reporting way by default', () => {
     expect(component.selectedReportingWay()).toBeNull();
   });
@@ -527,6 +562,31 @@ describe('BilateralResultCreatorComponent', () => {
       );
     });
 
+    it('does not report an unanswered optional measure as missing', async () => {
+      component.openSectionName.set('type-specific');
+      autoSaveService.getEndpointKeys.mockReturnValue(['typeSpecific']);
+      mdsTracker.sectionStatus.set([
+        {
+          sectionName: 'type-specific',
+          status: 'partial',
+          fields: [
+            { key: 'use-measures', label: 'Other quantitative measures of innovation use', filled: false, optional: true },
+            { key: 'use-investment', label: 'Investment by CGIAR W3 or bilateral projects', filled: false },
+          ],
+        },
+      ]);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+
+      await component.triggerManualSave();
+
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Nothing to save yet',
+          description: 'Still missing: Investment by CGIAR W3 or bilateral projects.',
+        }),
+      );
+    });
+
     it('says the section is up to date when nothing was staged and nothing is missing', async () => {
       mdsTracker.sectionStatus.set([{ sectionName: 'general-info', status: 'complete', fields: [] }]);
       autoSaveService.hasPendingFor.mockReturnValue(false);
@@ -572,6 +632,9 @@ describe('BilateralResultCreatorComponent', () => {
         }),
       );
       expect(component.missingLabel()).toBe('1 field to fix');
+      // Night sweep 2026-09-23 (BIL-3 / BIL-4): the footer must not also say "Section complete".
+      // Control negative: without the invalid check in `currentSectionComplete` this line fails.
+      expect(component.currentSectionComplete()).toBe(false);
     });
 
     it('reports a failed request as soon as it fails instead of waiting out the timeout', async () => {
@@ -581,6 +644,64 @@ describe('BilateralResultCreatorComponent', () => {
       await component.triggerManualSave();
       expect(Date.now() - start).toBeLessThan(2000);
       expect(show).toHaveBeenCalledWith(expect.objectContaining({ title: 'Save failed', status: 'error' }));
+    });
+  });
+
+  /**
+   * BIL-RTE-T-8 (design.md §6.2, DD-2's reversion-challenge mitigation): a Center "Save draft" or
+   * section-navigation flush that races the Submit-for-review PATCH used to write silently at
+   * status 5 — now that DD-2 blocks non-admin Center writes at status 5 server-side, the same race
+   * would surface as a 403 "Save failed" instead. Both are no-ops while `isSubmitting()` (the
+   * AI-check-or-submit computed, `qualityAssessment.isBusy()`) is true.
+   */
+  describe('BIL-RTE-T-8: no autosave racing the submit', () => {
+    beforeEach(() => {
+      component.openSectionName.set('general-info');
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      // Pending on the first read (the "is there anything to flush" check), settled by the time
+      // any wait-loop re-checks it — same pattern the pre-existing Save-draft tests use, so a
+      // buggy implementation that still calls flush() resolves fast instead of hanging on the
+      // real 15s `waitForSectionSave` timeout.
+      autoSaveService.hasPendingFor.mockReturnValueOnce(true).mockReturnValue(false);
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+    });
+
+    it('triggerManualSave() is a zero-call no-op while isSubmitting() is true', async () => {
+      qualityAssessment.isBusy.set(true);
+      expect(component.isSubmitting()).toBe(true);
+
+      await component.triggerManualSave();
+
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+      expect(component.isManualSaving()).toBe(false);
+    });
+
+    it('triggerManualSave() proceeds once isSubmitting() is false again', async () => {
+      qualityAssessment.isBusy.set(false);
+      expect(component.isSubmitting()).toBe(false);
+
+      await component.triggerManualSave();
+
+      expect(autoSaveService.flush).toHaveBeenCalledWith(['generalInfo']);
+    });
+
+    it('the section-navigation flush is a no-op while isSubmitting() is true, but the section still switches', async () => {
+      qualityAssessment.isBusy.set(true);
+      expect(component.isSubmitting()).toBe(true);
+
+      await component.selectSection('contributors');
+
+      expect(autoSaveService.flush).not.toHaveBeenCalled();
+      expect(component.openSectionName()).toBe('contributors');
+    });
+
+    it('the section-navigation flush proceeds once isSubmitting() is false again', async () => {
+      qualityAssessment.isBusy.set(false);
+
+      await component.selectSection('contributors');
+
+      expect(autoSaveService.flush).toHaveBeenCalledWith(['generalInfo']);
+      expect(component.openSectionName()).toBe('contributors');
     });
   });
 
@@ -950,6 +1071,30 @@ describe('BilateralResultCreatorComponent', () => {
       expect(submitButton().textContent).toContain('Submit for review');
     });
 
+    it('gates Submit using the real MDS tracker when geography contains only main fields', () => {
+      const tracker = new BilateralMdsTrackerService();
+      for (const section of ['general-info', 'contributors', 'evidence', 'type-specific']) {
+        tracker.setSectionFields(section, [{ key: `${section}-required`, label: section, filled: true }]);
+      }
+      tracker.setSectionFields('geography', [
+        { key: 'geo-scope', label: 'Geographic scope', filled: true },
+        { key: 'countries', label: 'Countries', filled: true },
+      ]);
+
+      creationService.isEditableByCenterUser.set(true);
+      mdsTracker.overallStatus.set(tracker.overallStatus());
+      expect(tracker.overallStatus()).toBe('complete');
+      expect(component.canSubmitFromRail()).toBe(true);
+
+      tracker.setSectionFields('geography', [
+        { key: 'geo-scope', label: 'Geographic scope', filled: false },
+        { key: 'countries', label: 'Countries', filled: true },
+      ]);
+      mdsTracker.overallStatus.set(tracker.overallStatus());
+      expect(tracker.overallStatus()).toBe('partial');
+      expect(component.canSubmitFromRail()).toBe(false);
+    });
+
     it('names the AI check while it runs', () => {
       qualityAssessment.isBusy.set(true);
       fixture.detectChanges();
@@ -1107,8 +1252,10 @@ describe('BilateralResultCreatorComponent', () => {
       fixture.detectChanges();
       statusEl = q('[data-testid="bilateral-rail-status"]');
       expect(statusEl.textContent.trim()).toBe('Pending review');
-      expect(component.statusFg()).toBe('#B45309');
-      expect(component.statusBg()).toBe('#FEF3C7');
+      // X-2: Pending review reads the shared enum (blue), not the private amber.
+      expect(component.statusFg()).toBe(RESULT_STATUS_TOKENS[5].fg);
+      expect(component.statusBg()).toBe(RESULT_STATUS_TOKENS[5].bg);
+      expect(component.statusFg()).not.toBe('#B45309');
 
       // Status 6: Approved
       creationService.resultStatusId.set(6);
@@ -1125,6 +1272,33 @@ describe('BilateralResultCreatorComponent', () => {
       expect(statusEl.textContent.trim()).toBe('Rejected');
       expect(component.statusFg()).toBe('var(--pr-status-rejected-fg)');
       expect(component.statusBg()).toBe('var(--pr-status-rejected-bg)');
+    });
+
+    it('X-2: a Submitted or Quality Assessed result shows its chip from the shared enum (it used to show none)', () => {
+      creationService.resultStatusId.set(3);
+      enterEditor(42);
+      let statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl).not.toBeNull();
+      expect(statusEl.textContent.trim()).toBe('Submitted');
+      expect(component.statusFg()).toBe(RESULT_STATUS_TOKENS[3].fg);
+      expect(component.statusBg()).toBe(RESULT_STATUS_TOKENS[3].bg);
+
+      creationService.resultStatusId.set(2);
+      fixture.detectChanges();
+      statusEl = q('[data-testid="bilateral-rail-status"]');
+      expect(statusEl.textContent.trim()).toBe('Quality Assessed');
+      expect(component.statusBg()).toBe(RESULT_STATUS_TOKENS[2].bg);
+
+      // The wire may send the id as a string.
+      creationService.resultStatusId.set('3' as any);
+      fixture.detectChanges();
+      expect(component.statusLabel()).toBe('Submitted');
+    });
+
+    it('X-2: no status id still renders no chip', () => {
+      creationService.resultStatusId.set(null);
+      enterEditor(42);
+      expect(q('[data-testid="bilateral-rail-status"]')).toBeNull();
     });
 
     it('renders identity skeleton loader when isLoadingResult is true and resultId is null (BRRA-R-2)', () => {
@@ -1345,6 +1519,65 @@ describe('BilateralResultCreatorComponent', () => {
       fixture.detectChanges();
 
       expect(component.isCenterUserOfLeadCenter()).toBe(true);
+    });
+  });
+
+  // `ASC-T-5` (`ASC-R-15`): the AI create entry point must not be offered to a platform admin who
+  // is not a Center User of the current centre — the client-side half of the pivot the server side
+  // enforces in `bilateral-ai.service.ts` (`assertCenterEntitlement`, mode 'act').
+  describe('canUseAi — the AI create entry point (ASC-T-5)', () => {
+    function primeWizardSelection(): void {
+      creationService.selectedProject.set({ id: 1 });
+      creationService.selectedPrimarySp.set({ id: 2 });
+      creationService.resultLeadCenterCode.set(null);
+      TestBed.inject(BilateralContextService).setCenter('ILRI', 'International Livestock Research Institute');
+    }
+
+    it('ASC-AC-13 — is false for an admin who is not a Center User of the current centre', () => {
+      rolesService.isAdmin = true;
+      rolesService.getMyCenters.mockReturnValue([]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      expect(component.canUseAi()).toBe(false);
+    });
+
+    it('is true for the Center User of the current centre', () => {
+      rolesService.getMyCenters.mockReturnValue([{ center_id: 'CENTER-12', center_acronym: 'ILRI', role_id: 9 }]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      expect(component.canUseAi()).toBe(true);
+    });
+
+    // Conformance-lens issue 2: a presence-assertion on the signal alone is not behavioral proof —
+    // a template that stopped binding `[canUseAi]` would still pass. Render the real
+    // `app-bilateral-reporting-way-selector` and assert its AI card's rendered disabled state.
+    function aiCard(): HTMLElement {
+      return fixture.nativeElement.querySelectorAll('.brws-card')[0] as HTMLElement;
+    }
+
+    it('renders the wizard AI card enabled for the Center User of the current centre', () => {
+      rolesService.getMyCenters.mockReturnValue([{ center_id: 'CENTER-12', center_acronym: 'ILRI', role_id: 9 }]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      const card = aiCard();
+      expect(card).toBeTruthy();
+      expect(card.getAttribute('aria-disabled')).toBe('false');
+      expect(card.classList.contains('brws-card--disabled')).toBe(false);
+    });
+
+    it('ASC-AC-13 — renders the wizard AI card disabled for an admin who is not a Center User of the current centre', () => {
+      rolesService.isAdmin = true;
+      rolesService.getMyCenters.mockReturnValue([]);
+      primeWizardSelection();
+      fixture.detectChanges();
+
+      const card = aiCard();
+      expect(card).toBeTruthy();
+      expect(card.getAttribute('aria-disabled')).toBe('true');
+      expect(card.classList.contains('brws-card--disabled')).toBe(true);
     });
   });
 });

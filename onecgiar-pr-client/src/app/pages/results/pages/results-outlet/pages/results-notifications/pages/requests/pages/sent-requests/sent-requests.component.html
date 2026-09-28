@@ -1,50 +1,66 @@
-@let sentContributionsPending =
-  this.resultsNotificationsSE?.sentData.sentContributionsPending
-    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
-    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+@let sentContributionsAll =
+  (this.resultsNotificationsSE?.sentData.sentContributionsPending ?? []).concat(
+    this.resultsNotificationsSE?.sentData.sentContributionsDone ?? []
+  );
 
-@let sentContributionsDone =
-  this.resultsNotificationsSE?.sentData.sentContributionsDone
+@let sentContributionsFiltered =
+  sentContributionsAll
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
-    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter
+    | filterNotificationByCenter: this.resultsNotificationsSE.centerIdsFilter
+    | filterNotificationByBilateralProject: this.resultsNotificationsSE.bilateralProjectIdsFilter;
+
+@let sentContributionsGrouped = sentContributionsFiltered | groupNotificationsByRecency;
 
 <div class="sent_container">
-  <div class="sent_container_content">
-    <h1 class="sent_container_header_title">Pending</h1>
-    @if (this.resultsNotificationsSE.loadingSent) {
+  @if (this.resultsNotificationsSE.loadingSent) {
+    <div class="sent_container_content">
       <app-skeleton-notification-item></app-skeleton-notification-item>
       <app-skeleton-notification-item></app-skeleton-notification-item>
-    } @else if (sentContributionsPending?.length > 0) {
-      <div class="sent_container_content_item">
-        @for (notification of sentContributionsPending; track $index) {
-          <app-notification-item
-            [notification]="notification"
-            [isSent]="true"
-            (requestEvent)="this.resultsNotificationsSE.get_sent_notifications(this.resultsNotificationsSE.phaseFilter)"></app-notification-item>
-        }
-      </div>
-    } @else {
-      <div class="sent_container_content_empty">You have no pending notifications related with the search.</div>
-    }
-  </div>
-
-  <div class="sent_container_content">
-    <h1 class="sent_container_header_title">Done</h1>
-    @if (this.resultsNotificationsSE.loadingSent) {
-      <app-skeleton-notification-item></app-skeleton-notification-item>
-      <app-skeleton-notification-item></app-skeleton-notification-item>
-    } @else if (sentContributionsDone?.length > 0) {
-      <div class="sent_container_content_item">
-        @for (item of sentContributionsDone; track $index) {
-          @defer (on viewport) {
+    </div>
+  } @else if (sentContributionsFiltered?.length > 0) {
+    @if (sentContributionsGrouped.today.length > 0) {
+      <div class="sent_container_content">
+        <h1 class="sent_container_header_title">
+          Today
+          <span hlmBadge variant="secondary">{{ sentContributionsGrouped.today.length }}</span>
+        </h1>
+        <div class="sent_container_content_item">
+          @for (item of sentContributionsGrouped.today; track $index) {
             <app-notification-item [notification]="item" [isSent]="true"></app-notification-item>
-          } @placeholder {
-            <app-skeleton-notification-item></app-skeleton-notification-item>
           }
-        }
+        </div>
       </div>
-    } @else {
-      <div class="sent_container_content_empty">You have no done notifications related with the search.</div>
     }
-  </div>
+
+    @if (sentContributionsGrouped.thisWeek.length > 0) {
+      <div class="sent_container_content">
+        <h1 class="sent_container_header_title">
+          This week
+          <span hlmBadge variant="secondary">{{ sentContributionsGrouped.thisWeek.length }}</span>
+        </h1>
+        <div class="sent_container_content_item">
+          @for (item of sentContributionsGrouped.thisWeek; track $index) {
+            <app-notification-item [notification]="item" [isSent]="true"></app-notification-item>
+          }
+        </div>
+      </div>
+    }
+
+    @if (sentContributionsGrouped.earlier.length > 0) {
+      <div class="sent_container_content">
+        <h1 class="sent_container_header_title">
+          Earlier
+          <span hlmBadge variant="secondary">{{ sentContributionsGrouped.earlier.length }}</span>
+        </h1>
+        <div class="sent_container_content_item">
+          @for (item of sentContributionsGrouped.earlier; track $index) {
+            <app-notification-item [notification]="item" [isSent]="true"></app-notification-item>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <div class="sent_container_content_empty">You have no notifications related with the search.</div>
+  }
 </div>

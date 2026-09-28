@@ -246,7 +246,7 @@
       </div>
     }
   </div>
-  <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.actors, 'result_actors_id')" title="No actors provided"> </app-no-data-text>
+  <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.actors, 'result_actors_id', ['actor_type_id'])" title="No actors provided"> </app-no-data-text>
   <br />
   <app-add-button name=" Add actor" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addActor()"></app-add-button>
   <div class="fragment_section_divider"></div>
@@ -330,7 +330,7 @@
       </div>
     }
   </div>
-  <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization, 'id')" title="No organizations provided"> </app-no-data-text>
+  <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization, 'id', ['institution_types_id'])" title="No organizations provided"> </app-no-data-text>
   <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOrganization()"></app-add-button>
   <div class="fragment_section_divider"></div>
   <div class="title_list">
@@ -366,7 +366,7 @@
       </div>
     }
   </div>
-  <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures, 'result_ip_measure_id')" title="Other quantitative measures not added">
+  <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures, 'result_ip_measure_id', ['quantity'])" title="Other quantitative measures not added">
   </app-no-data-text>
   <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOther()"></app-add-button>
 }

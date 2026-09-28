@@ -11,6 +11,7 @@
   [labelDescInlineStyles]="labelDescInlineStyles()"
   [showDescription]="showDescriptionLabel()"
   [tooltip]="tooltip()"
+  [editLocked]="!!((readOnly() || this.rolesSE.readOnly) && !isStatic())"
   layout="boxed">
 <div class="custom_select">
   <a class="field" tabindex="0" [id]="optionValue()" *ngIf="(!hideSelect() && !(readOnly() || this.rolesSE.readOnly)) || isStatic()">

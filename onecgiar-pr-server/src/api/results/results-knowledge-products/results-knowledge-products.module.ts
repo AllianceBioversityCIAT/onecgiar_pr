@@ -62,6 +62,7 @@ import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/re
 import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
 import { ResultsByInstitutionsModule } from '../results_by_institutions/results_by_institutions.module';
 import { ResultDeletionAuditModule } from '../result-deletion-audit/result-deletion-audit.module';
+import { BilateralAccessModule } from '../bilateral-access/bilateral-access.module';
 
 @Module({
   imports: [
@@ -88,6 +89,9 @@ import { ResultDeletionAuditModule } from '../result-deletion-audit/result-delet
     ResultImpactAreaScoresModule,
     ResultsTocResultsModule,
     ResultsByInstitutionsModule,
+    // This module declares `ResultsService` directly (below), which takes
+    // `BilateralAccessService` as a required constructor param.
+    BilateralAccessModule,
   ],
   controllers: [ResultsKnowledgeProductsController],
   providers: [

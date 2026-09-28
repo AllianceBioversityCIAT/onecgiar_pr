@@ -233,11 +233,27 @@ export class ResultByIntitutionsTypeRepository
     }
   }
 
+  /**
+   * `section` is optional and additive (P2-3428): without it the lookup is exactly what it always
+   * was. `only` restricts the match to one Innovation Use section (e.g. the 2030 projection, 2);
+   * `exclude` keeps a section's rows out, so a current-use save never updates a 2030 row that
+   * happens to share its institution type.
+   */
   async getNewResultByInstitutionTypeExists(
     resultId: number,
     institutionsTypeId: number,
     type: number,
+    section?: { only?: number; exclude?: number },
   ) {
+    let sectionClause = '';
+    const sectionParams: number[] = [];
+    if (section?.only != null) {
+      sectionClause = ' and rbit.section_id = ?';
+      sectionParams.push(section.only);
+    } else if (section?.exclude != null) {
+      sectionClause = ' and (rbit.section_id is null or rbit.section_id <> ?)';
+      sectionParams.push(section.exclude);
+    }
     const queryData = `
     select 
     	rbit.id,
@@ -254,12 +270,12 @@ export class ResultByIntitutionsTypeRepository
     from results_by_institution_type rbit
     where rbit.results_id  = ?
       and institution_roles_id = ?
-      and rbit.institution_types_id = ?;
+      and rbit.institution_types_id = ?${sectionClause};
     `;
     try {
       const completeUser: ResultsByInstitutionType[] = await this.query(
         queryData,
-        [resultId, type, institutionsTypeId],
+        [resultId, type, institutionsTypeId, ...sectionParams],
       );
       return completeUser?.length ? completeUser[0] : null;
     } catch (error) {

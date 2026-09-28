@@ -10,6 +10,7 @@ import { CollapsibleContainerModule } from '../../../../../../../../shared/compo
 import { StepN3AssessedExpertWorkshopComponent } from './components/step-n3-assessed-expert-workshop/step-n3-assessed-expert-workshop.component';
 import { YmzListStructureItemModule } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
+import { IpsrStep3EvidenceListComponent } from './components/ipsr-step3-evidence-list/ipsr-step3-evidence-list.component';
 
 @NgModule({
   declarations: [StepN3Component, StepN3CurrentUseComponent, StepN3ComplementaryInnovationsComponent, StepN3AssessedExpertWorkshopComponent],
@@ -19,7 +20,8 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../../share
     CustomFieldsModule,
     CollapsibleContainerModule,
     YmzListStructureItemModule,
-    FeedbackValidationDirectiveModule
+    FeedbackValidationDirectiveModule,
+    IpsrStep3EvidenceListComponent
   ]
 })
 export class StepN3Module {}

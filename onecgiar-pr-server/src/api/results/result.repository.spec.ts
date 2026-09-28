@@ -4,6 +4,10 @@ import {
   QA_LINKABLE_INNOVATION_STATUS_IDS,
   ResultRepository,
 } from './result.repository';
+import {
+  insertLists,
+  misalignedColumns,
+} from '../../shared/extendsGlobalDTO/replication-insert-lists.spec-helper';
 
 describe('ResultRepository (unit)', () => {
   let repo: ResultRepository;
@@ -311,6 +315,51 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual([8731]);
   });
 
+  // BIL-RTE-T-5 / DD-6 — the drawer's P25-onward rule reads portfolio_start_year, which must
+  // come from the result's own version -> clarisa_portfolios, never a constant or a portfolio id.
+  it('includes portfolio_start_year in the bilateral common-fields query, joined via the version', async () => {
+    queryMock.mockResolvedValueOnce([{ id: 8731, portfolio_start_year: 2025 }]);
+
+    const row = await repo.getCommonFieldsBilateralResultById(8731);
+
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toContain('portfolio_start_year');
+    expect(sql).toContain('clarisa_portfolios');
+    expect(sql).toContain('v.portfolio_id');
+    expect(row.portfolio_start_year).toBe(2025);
+  });
+
+  describe('getPortfolioStartYearByVersionId', () => {
+    it('returns the portfolio start year for the version', async () => {
+      queryMock.mockResolvedValueOnce([{ portfolio_start_year: 2025 }]);
+
+      const result = await repo.getPortfolioStartYearByVersionId(99);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('clarisa_portfolios');
+      expect(sql).toContain('v.portfolio_id');
+      expect(params).toEqual([99]);
+      expect(result).toBe(2025);
+    });
+
+    it('returns null when the version has no portfolio (T-0 check 2, row 4)', async () => {
+      queryMock.mockResolvedValueOnce([{ portfolio_start_year: null }]);
+
+      const result = await repo.getPortfolioStartYearByVersionId(4);
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null without querying when no versionId is given', async () => {
+      const result = await repo.getPortfolioStartYearByVersionId(
+        undefined as any,
+      );
+
+      expect(result).toBeNull();
+      expect(queryMock).not.toHaveBeenCalled();
+    });
+  });
+
   it('returns created_by and created_by_name for the bilateral centre dashboard', async () => {
     queryMock.mockResolvedValueOnce([]);
 
@@ -408,6 +457,19 @@ describe('ResultRepository (unit)', () => {
     expect(
       (sql.match(/ORDER BY rbp\.is_lead DESC, rbp\.id DESC/g) ?? []).length,
     ).toBe(2);
+  });
+
+  // BIL-POM-T-1: the Project Overview metrics need to know whether a result is a replicated
+  // (duplicated-into-phase) row, so the bilateral centre dashboard must select it alongside the
+  // other bare r.* columns. No new join/param — is_replicated already lives on `result`.
+  it('returns r.is_replicated for the bilateral centre dashboard', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.is_replicated');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
@@ -689,6 +751,45 @@ describe('ResultRepository (unit)', () => {
       expect(sql).not.toContain('LEFT JOIN results_policy_changes');
       expect(queryMock).toHaveBeenCalledWith(expect.any(String), [456]);
     });
+
+    // Night sweep 2026-09-23, D-1 (prtest 12039 / 12040): the org without an acronym was skipped, the
+    // review drawer sent the short list back and the writer deactivated it. Control negative: with
+    // `&& row.acronym` back in the two conditions this test fails.
+    it('D-1: returns every implementing organization, including one with no acronym', async () => {
+      const base = {
+        result_policy_change_id: 7,
+        policy_type_id: 2,
+        policy_stage_id: 1,
+        institution_roles_id: 4,
+        policy_stage_name: 'Stage 1',
+        policy_type_name: 'Legal instrument',
+      };
+      queryMock.mockResolvedValue([
+        {
+          ...base,
+          institution_id: 1,
+          acronym: 'WUR',
+          institution_name: 'Wageningen',
+        },
+        {
+          ...base,
+          institution_id: 768,
+          acronym: null,
+          institution_name: 'Mancomunidad La Montañona',
+        },
+      ]);
+
+      const [pc] = await repo.getPolicyChangeBilateralResultById(12039);
+
+      expect(pc.implementing_organization).toEqual([
+        { institution_id: 1, acronym: 'WUR', institution_name: 'Wageningen' },
+        {
+          institution_id: 768,
+          acronym: null,
+          institution_name: 'Mancomunidad La Montañona',
+        },
+      ]);
+    });
   });
 });
 
@@ -933,45 +1034,6 @@ describe('ResultRepository — replication carries the contact directory link (P
     new_result_id: 2000,
   } as any;
 
-  /** Column list and SELECT list of the INSERT, each collapsed to one entry per written column. */
-  const insertLists = (insertQuery: string) => {
-    const match =
-      /insert into `result` \(\s*([\s\S]*?)\s*\) select\s*([\s\S]*?)\s*from `result` r2/.exec(
-        insertQuery,
-      );
-    if (!match)
-      throw new Error(
-        'replication INSERT no longer matches the expected shape',
-      );
-
-    const columns = match[1]
-      .split(/[\n,]/)
-      .map((entry) => entry.trim().replace(/^,/, '').trim())
-      .filter(Boolean);
-
-    // `${...}` expressions span several lines; join them until their delimiters balance out.
-    const values: string[] = [];
-    let buffer = '';
-    for (const line of match[2]
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)) {
-      buffer = buffer ? `${buffer} ${line}` : line;
-      const balanced =
-        (buffer.match(/\(/g) ?? []).length ===
-          (buffer.match(/\)/g) ?? []).length &&
-        (buffer.match(/\{/g) ?? []).length ===
-          (buffer.match(/\}/g) ?? []).length;
-      if (balanced) {
-        values.push(buffer.replace(/,$/, '').trim());
-        buffer = '';
-      }
-    }
-    if (buffer) values.push(buffer.trim());
-
-    return { columns, values };
-  };
-
   it('copies lead_contact_person_id alongside the name in findQuery', () => {
     const { findQuery } = repo.createQueries(config);
 
@@ -982,6 +1044,8 @@ describe('ResultRepository — replication carries the contact directory link (P
   it('writes lead_contact_person_id into its own column in insertQuery', () => {
     const { columns, values } = insertLists(
       repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
     );
     const index = columns.indexOf('lead_contact_person_id');
 
@@ -992,18 +1056,91 @@ describe('ResultRepository — replication carries the contact directory link (P
   it('keeps every INSERT column aligned with the value written into it', () => {
     const { columns, values } = insertLists(
       repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
     );
 
     expect(values).toHaveLength(columns.length);
-    const misaligned = columns.filter((column, i) => {
-      const value = values[i] ?? '';
-      const alias = value.includes(' as ')
-        ? value.slice(value.lastIndexOf(' as ') + 4).trim()
-        : value.replace('r2.', '').trim();
-      return alias !== column;
-    });
+    expect(misalignedColumns(columns, values, 'r2')).toEqual([]);
+  });
+});
 
-    expect(misaligned).toEqual([]);
+/**
+ * P2-3228 — phase replication must carry "led by partner". `docs/specs/bugfix/
+ * p2-3228-lead-center-replication/requirements.md` VER-R-3, scenario VER-S-3.1. Until the fix,
+ * `is_lead_by_partner` is absent from both `insertQuery` and `findQuery`, so a replicated
+ * result's new version loses which partner leads it.
+ *
+ * The BUT clause of VER-S-3.1 says this change must NOT alter the columns the earlier P2-3663 fix
+ * already carries (`source`, `creation_method`, `external_*`), nor `status_id` — checked here by
+ * asserting those columns are still present, aligned and (for `status_id`) still the literal `1`.
+ */
+describe('ResultRepository — replication carries is_lead_by_partner (P2-3228)', () => {
+  const repo = new ResultRepository(
+    {
+      createEntityManager: jest.fn(() => ({}) as any),
+    } as unknown as DataSource,
+    { returnErrorRepository: jest.fn() } as any,
+  );
+  const config = {
+    phase: 5,
+    user: { id: 77 } as any,
+    old_result_id: 1000,
+    new_result_id: 2000,
+  } as any;
+
+  it('copies is_lead_by_partner in findQuery', () => {
+    const { findQuery } = repo.createQueries(config);
+
+    expect(findQuery).toContain('r2.is_lead_by_partner');
+  });
+
+  it('writes is_lead_by_partner into its own column in insertQuery, verbatim from the source row', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
+    );
+    const index = columns.indexOf('is_lead_by_partner');
+
+    expect(index).toBeGreaterThan(-1);
+    expect(values[index]).toBe('r2.is_lead_by_partner');
+  });
+
+  it('does not alter status_id or the P2-3663 provenance columns (source, creation_method, external_*)', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
+    );
+
+    const statusIndex = columns.indexOf('status_id');
+    expect(statusIndex).toBeGreaterThan(-1);
+    expect(values[statusIndex]).toBe('1 as status_id');
+
+    for (const column of [
+      'source',
+      'creation_method',
+      'external_submitter',
+      'external_platform_id',
+      'external_platform_code',
+      'external_reference',
+    ]) {
+      const index = columns.indexOf(column);
+      expect(index).toBeGreaterThan(-1);
+      expect(values[index]).toBe(`r2.${column}`);
+    }
+  });
+
+  it('keeps every INSERT column aligned with the value written into it', () => {
+    const { columns, values } = insertLists(
+      repo.createQueries(config).insertQuery,
+      'result',
+      'r2',
+    );
+
+    expect(values).toHaveLength(columns.length);
+    expect(misalignedColumns(columns, values, 'r2')).toEqual([]);
   });
 });
 

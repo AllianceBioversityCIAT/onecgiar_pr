@@ -41,7 +41,7 @@
         {{ row().category }}
       </span>
     }
-    <span class="inline-flex items-center whitespace-nowrap rounded-full px-[7px] py-[2px] text-[10px] font-medium" [class]="statusChipClass()">
+    <span class="inline-flex items-center whitespace-nowrap rounded-full px-[7px] py-[2px] text-[10px] font-medium" [style.background-color]="statusTone().bg" [style.color]="statusTone().fg">
       {{ row().statusName }}
     </span>
     <div class="ml-auto flex items-center gap-[6px]">

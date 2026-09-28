@@ -120,6 +120,7 @@ function mkRow(overrides: Partial<BilateralCenterResult> & Pick<BilateralCenterR
     creation_method: 'Manual',
     is_ai_generated: 0,
     is_leading_result: 1,
+    is_replicated: false,
     ...overrides,
   };
 }

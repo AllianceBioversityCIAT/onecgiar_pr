@@ -9,6 +9,7 @@ import { BilateralCreationService } from './bilateral-creation.service';
 import { BilateralProject } from './bilateral-creation.interfaces';
 import { BilateralOverviewService } from './bilateral-overview.service';
 import { BILATERAL_MANUAL_CREATE_COPY } from '../../../internationalization/bilateral-manual-create.copy';
+import { isCenterMember } from './bilateral-center-membership.util';
 
 @Injectable({ providedIn: 'root' })
 export class BilateralManualCreateFlowService {
@@ -34,9 +35,26 @@ export class BilateralManualCreateFlowService {
 
   readonly showSpSelectionInDrawer = computed(() => this.hasMultipleSpOptions());
 
-  readonly canUseAi = computed(
-    () => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp()
-  );
+  /**
+   * `ASC-T-5` rework, attempt 2 (`ASC-R-15`, `ASC-DD-7`) — Reviewer-found gap: this is the REAL
+   * AI-create entry point. Both the bilateral-home "+ Create result" (`beginFromProject()`) and
+   * the in-wizard drawer (`openDrawerForManual()`) route through this same drawer-host, whose
+   * `app-bilateral-reporting-way-selector` binds `[canUseAi]="flow.canUseAi()"`
+   * (`bilateral-manual-create-drawer-host.component.html:90`). The server's own `createJob` takes
+   * the client-supplied `center_id` with no entitlement check (`ASC-DD-7`, pre-existing, recorded
+   * — not fixed here), so on THIS path the client gate is the only barrier for a non-member admin.
+   * Reads `rolesVersion` first for the same reason every other `isCenterMember` call site does:
+   * `RolesService.roles` is a plain property, invisible to the signal graph on its own. Deliberately
+   * never reads `isAdmin` — that is the short-circuit this gate exists to not repeat.
+   */
+  readonly canUseAi = computed(() => {
+    this.api.rolesSE.rolesVersion;
+    return (
+      !!this.creationService.selectedProject() &&
+      !!this.creationService.selectedPrimarySp() &&
+      isCenterMember(this.api.rolesSE.getMyCenters(), this.ctx.centerId(), this.ctx.centerAcronym())
+    );
+  });
 
   readonly drawerProjectCode = computed(() => this.creationService.selectedProject()?.shortName ?? '');
 
@@ -130,6 +148,11 @@ export class BilateralManualCreateFlowService {
 
   submitCreate(payload: BilateralManualCreatePayload): void {
     if (!payload.levelId || !payload.typeId) return;
+    // Night sweep 2026-09-23, C-2 — re-entry guard. The form's `canCreate` reads `creating` through an
+    // input that only refreshes on the next change detection, so a fast double-click emitted twice and
+    // two identical results were created (prtest #9573/#9574, #9577/#9578). This signal is set
+    // synchronously below, so the second call returns here.
+    if (this.isCreating()) return;
     this.creationService.resultLevelId.set(payload.levelId);
     this.creationService.resultTypeId.set(payload.typeId);
     this.isCreating.set(true);

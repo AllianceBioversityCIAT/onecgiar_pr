@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { IpsrGeneralInformationComponent } from './ipsr-general-information.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { YesOrNotByBooleanPipe } from '../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
@@ -11,7 +13,8 @@ import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../pages/ipsr/services/ipsr-data-control.service';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -20,6 +23,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { environment } from '../../../../../../../environments/environment';
+import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
 
 describe('IpsrGeneralInformationComponent', () => {
   let component: IpsrGeneralInformationComponent;
@@ -118,6 +122,9 @@ describe('IpsrGeneralInformationComponent', () => {
       isP22: jest.fn().mockReturnValue(true),
       // P2-3225: gates the Lead Contact Person asterisk and its incomplete-fields entry.
       isLeadContactPersonMandatory2026: jest.fn().mockReturnValue(false),
+      // IPSR-GIS: gates whether the Impact Area guidance renders in the ⓘ tooltip (true) or the
+      // legacy inline box (false, Results parity).
+      isReportingFormGuidance2026: jest.fn().mockReturnValue(false),
       fields: jest.fn().mockReturnValue({})
     };
 
@@ -168,7 +175,12 @@ describe('IpsrGeneralInformationComponent', () => {
           provide: GetImpactAreasScoresService,
           useValue: {}
         }
-      ]
+      ],
+      // IPSR-GIS: `app-pr-radio-button` (variant="segmented") renders `app-field-card` internally,
+      // and the P25 checkbox template renders `app-field-card` / `app-field-group-header` directly.
+      // None of those are declared here (per design, they need no module edit); NO_ERRORS_SCHEMA lets
+      // Ivy render them as plain elements instead of throwing "is not a known element".
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(IpsrGeneralInformationComponent);
@@ -453,20 +465,198 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(getSectionInformationSpy).toHaveBeenCalled();
     });
 
-    it('should call PATCHIpsrGeneralInfo and show error alert on onSaveSection error', () => {
+    // P2-3427 (Ángel, 25-Sep-2026): a failed save must NOT re-fetch the section — the re-fetch overwrote the
+    // reporter's corrected title with the stored one and the screen looked as if nothing had been saved.
+    it('keeps the reporter edits when PATCHIpsrGeneralInfo fails (no re-fetch)', () => {
       const mockError = new Error('Error');
       jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo').mockReturnValue(throwError({ error: mockError }));
+      jest.spyOn(console, 'error').mockImplementation();
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
+      component.ipsrGeneralInformationBody.title = '[TEST P2-3427] corrected title';
 
       component.onSaveSection();
 
-      expect(getSectionInformationSpy).toHaveBeenCalled();
+      expect(getSectionInformationSpy).not.toHaveBeenCalled();
+      expect(component.ipsrGeneralInformationBody.title).toBe('[TEST P2-3427] corrected title');
+      // the indicators still follow the server (the save is not transactional there)
+      expect(mockIpsrCompletenessStatusSE.updateGreenChecks).toHaveBeenCalled();
     });
 
-    it('should skip contact validation when isP22 is false', () => {
+    // IPSR-LCG-T-1 — was: "should skip contact validation when isP22 is false". That test PINNED the
+    // defect: with isP22() false (i.e. P25) it asserted the save request WAS sent while a typed,
+    // never-picked name sat in the field — the very data-loss path `docs/specs/bugfix/
+    // ipsr-lead-contact-save-guard/requirements.md` Scenario 1.1 exists to close. Inverted here to
+    // assert the fixed behaviour instead: the guard now runs on every portfolio and blocks. Before:
+    // `expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled()`. After: NOT called, contact flags set,
+    // body untouched. Recorded per `IPSR-LCG-DD-1` reversion note (design.md §10).
+    it('IPSR-LCG-R-1 Scenario 1.1: P25 (isP22 false) blocks save on a typed-unpicked name and does not touch the stored contact', () => {
       mockFieldsManagerService.isP22.mockReturnValue(false);
-      mockUserSearchService.searchQuery = 'invalid user';
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'Juan Per';
       mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
+      component.ipsrGeneralInformationBody.lead_contact_person = 'Original Stored Contact';
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).not.toHaveBeenCalled();
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockUserSearchService.hasValidContact).toBe(false);
+      expect(component.ipsrGeneralInformationBody.lead_contact_person).toBe('Original Stored Contact');
+    });
+
+    it('IPSR-LCG-R-1 Scenario 1.2: P22 blocks save on a typed-unpicked name and does not touch the stored contact', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(true);
+      mockFieldsManagerService.isP25.mockReturnValue(false);
+      mockUserSearchService.searchQuery = 'Juan Per';
+      mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
+      component.ipsrGeneralInformationBody.lead_contact_person = 'Original Stored Contact';
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).not.toHaveBeenCalled();
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockUserSearchService.hasValidContact).toBe(false);
+      expect(component.ipsrGeneralInformationBody.lead_contact_person).toBe('Original Stored Contact');
+    });
+
+    // IPSR-LCG-DD-2 — an unresolved view child counts as "not loaded": fail-safe towards not
+    // erasing data. `leadContactPersonField` is left undefined here, the way it is before T-2 adds
+    // the `@ViewChild`.
+    it('IPSR-LCG-DD-2: an unresolved leadContactPersonField still blocks a typed-unpicked name (P25)', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'Juan Per';
+      mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = undefined;
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).not.toHaveBeenCalled();
+    });
+
+    describe('IPSR-LCG-R-2 Scenario 2.1: accepted name (queryCameFromHydration true) saves, on every portfolio', () => {
+      it('P22', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(true);
+        mockFieldsManagerService.isP25.mockReturnValue(false);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+        expect(mockUserSearchService.showContactError).toBe(false);
+      });
+
+      it('P25', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(false);
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+        expect(mockUserSearchService.showContactError).toBe(false);
+      });
+
+      // /akili-test gap: the cases above stub `queryCameFromHydration` and only check that a request
+      // went out. This one runs the field's REAL `acceptTypedNameAnyway()` against the section's own
+      // body and asserts the request CARRIES the accepted name (Scenario 2.1 "THEN ... carrying that
+      // free-text name").
+      it.each([
+        ['P22', true],
+        ['P25', false]
+      ])('%s: the real "use this name anyway" puts the free-text name in the save payload', (_label, isP22) => {
+        mockFieldsManagerService.isP22.mockReturnValue(isP22);
+        mockFieldsManagerService.isP25.mockReturnValue(!isP22);
+        mockUserSearchService.searchQuery = '  External Consultant  ';
+        mockUserSearchService.selectedUser = null;
+        component.ipsrGeneralInformationBody.lead_contact_person = null;
+        const field: any = {
+          userSearchService: mockUserSearchService,
+          body: component.ipsrGeneralInformationBody,
+          queryCameFromHydration: false
+        };
+        LeadContactPersonFieldComponent.prototype.acceptTypedNameAnyway.call(field);
+        (component as any).leadContactPersonField = field;
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalledWith(
+          expect.objectContaining({ lead_contact_person: 'External Consultant', lead_contact_person_data: null }),
+          'mockInnovationId',
+          !isP22
+        );
+        expect(mockUserSearchService.showContactError).toBe(false);
+      });
+    });
+
+    describe('IPSR-LCG-R-2 Scenario 2.2: loaded free-text name (queryCameFromHydration true) saves, on every portfolio', () => {
+      it('P22', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(true);
+        mockFieldsManagerService.isP25.mockReturnValue(false);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+      });
+
+      it('P25', () => {
+        mockFieldsManagerService.isP22.mockReturnValue(false);
+        mockFieldsManagerService.isP25.mockReturnValue(true);
+        mockUserSearchService.searchQuery = 'External Consultant';
+        mockUserSearchService.selectedUser = null;
+        (component as any).leadContactPersonField = { queryCameFromHydration: true };
+
+        const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+        component.onSaveSection();
+
+        expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+      });
+    });
+
+    it('IPSR-LCG-R-2 Scenario 2.3: a picked contact saves on P25', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'John Doe';
+      mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
+
+      const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      component.onSaveSection();
+
+      expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+    });
+
+    it('IPSR-LCG-R-2 Scenario 2.3: a blank/whitespace-only field saves on P25', () => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockUserSearchService.searchQuery = '   ';
+      mockUserSearchService.selectedUser = null;
+      (component as any).leadContactPersonField = { queryCameFromHydration: false };
 
       const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
 
@@ -485,6 +675,26 @@ describe('IpsrGeneralInformationComponent', () => {
       component.onSaveSection();
 
       expect(spyPATCHIpsrGeneralInfo).toHaveBeenCalled();
+    });
+  });
+
+  describe('IPSR-LCG-R-3 Scenario 3.1: Lead contact person tooltip binding tracks the 2026 reporting-guidance flag', () => {
+    it('binds guidanceAsTooltip=true on the field when the flag is on', () => {
+      mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+      fixture.detectChanges();
+
+      const field = fixture.debugElement.query(By.css('app-lead-contact-person-field'));
+      expect(field).not.toBeNull();
+      expect(field.properties['guidanceAsTooltip']).toBe(true);
+    });
+
+    it('binds guidanceAsTooltip=false on the field when the flag is off', () => {
+      mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+      fixture.detectChanges();
+
+      const field = fixture.debugElement.query(By.css('app-lead-contact-person-field'));
+      expect(field).not.toBeNull();
+      expect(field.properties['guidanceAsTooltip']).toBe(false);
     });
   });
 
@@ -665,17 +875,15 @@ describe('IpsrGeneralInformationComponent', () => {
    * information.
    */
   describe('Impact Area evidence field (P2-3210)', () => {
-    describe('current portfolio', () => {
+    /** P2-3824 — for P25 the Impact Area evidence moved to IPSR Step 3 (tagged evidence + alert). */
+    describe('current portfolio (P2-3824: evidence lives in Step 3)', () => {
       beforeEach(() => {
         mockFieldsManagerService.isP25.mockReturnValue(true);
       });
 
-      it('shows the field when the score is 2 (principal)', () => {
-        expect(component.showImpactAreaEvidenceField(3)).toBe(true);
-      });
-
-      it('accepts the score as a string, which is how the form hands it back', () => {
-        expect(component.showImpactAreaEvidenceField('3')).toBe(true);
+      it('no longer shows the field when the score is 2 (principal)', () => {
+        expect(component.showImpactAreaEvidenceField(3)).toBe(false);
+        expect(component.showImpactAreaEvidenceField('3')).toBe(false);
       });
 
       it('does not ask for evidence at score 0 or 1', () => {
@@ -729,7 +937,7 @@ describe('IpsrGeneralInformationComponent', () => {
         return Array.from(fixture.nativeElement.querySelectorAll('app-pr-input[label="Evidence"]'));
       };
 
-      it('gives the current portfolio one evidence field per score of 2, and none for the other scores', () => {
+      it('P2-3824: gives the current portfolio no evidence field, even for a score of 2', () => {
         const evidenceFields = renderWith(true, {
           gender_tag_level_id: 3,
           poverty_tag_level_id: 3,
@@ -737,7 +945,7 @@ describe('IpsrGeneralInformationComponent', () => {
           nutrition_tag_level_id: 1
         });
 
-        expect(evidenceFields).toHaveLength(2);
+        expect(evidenceFields).toHaveLength(0);
       });
 
       it('asks the current portfolio for nothing while no score is 2', () => {
@@ -813,5 +1021,337 @@ describe('IpsrGeneralInformationComponent', () => {
       component.ipsrGeneralInformationBody.lead_contact_person_data = { mail: 'john.doe@cgiar.org' } as any;
       expect(component.isLeadContactPersonComplete).toBe(true);
     });
+  });
+
+  /**
+   * IPSR-GIS (`docs/specs/ipsr/gi-impact-area-scores-parity`) — Impact Area block aligned with
+   * Results: group header + counter (P25), segmented rows with guidance in the tooltip, P25
+   * checkboxes inside `app-field-card`.
+   */
+  describe('Impact Area scores parity with Results (IPSR-GIS)', () => {
+    /**
+     * Renders the real template with the given portfolio/body, the way the "on screen" P2-3210
+     * suite already does: through the GET mock, since `ngOnInit` reassigns the body on first CD.
+     */
+    const renderWith = (isP25: boolean, body: any = {}): void => {
+      mockFieldsManagerService.isP25.mockReturnValue(isP25);
+      mockFieldsManagerService.isP22.mockReturnValue(!isP25);
+      const impactAreaLists = component.getImpactAreasScoresComponents as any;
+      ['genderTagScoreList', 'climateTagScoreList', 'nutritionTagScoreList', 'environmentalBiodiversityTagScoreList', 'povertyTagScoreList'].forEach(
+        list => (impactAreaLists[list] = () => [])
+      );
+      mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(
+        of({ response: { ...mockGETInnovationByResultIdResponse, discontinued_options: [], ...body } })
+      );
+      fixture.detectChanges();
+    };
+
+    describe('impactAreasScored / IMPACT_AREA_TAG_FIELDS (R-1)', () => {
+      it('has a total of 5 tags', () => {
+        expect(component.IMPACT_AREAS_TOTAL).toBe(5);
+      });
+
+      it('R-1 falsifier: counts a gender tag scored at 0 (id 1) as present, not falsy', () => {
+        component.ipsrGeneralInformationBody.gender_tag_level_id = 1;
+        component.ipsrGeneralInformationBody.climate_change_tag_level_id = null;
+        component.ipsrGeneralInformationBody.nutrition_tag_level_id = undefined;
+        component.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id = '' as any;
+        component.ipsrGeneralInformationBody.poverty_tag_level_id = null;
+        expect(component.impactAreasScored).toBe(1);
+      });
+
+      it('does not count null, undefined or empty-string tags', () => {
+        component.ipsrGeneralInformationBody.gender_tag_level_id = null;
+        component.ipsrGeneralInformationBody.climate_change_tag_level_id = undefined;
+        component.ipsrGeneralInformationBody.nutrition_tag_level_id = '' as any;
+        component.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id = null;
+        component.ipsrGeneralInformationBody.poverty_tag_level_id = undefined;
+        expect(component.impactAreasScored).toBe(0);
+      });
+
+      it('counts all 5 when every tag has a score', () => {
+        component.ipsrGeneralInformationBody.gender_tag_level_id = 1;
+        component.ipsrGeneralInformationBody.climate_change_tag_level_id = 2;
+        component.ipsrGeneralInformationBody.nutrition_tag_level_id = 3;
+        component.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id = 1;
+        component.ipsrGeneralInformationBody.poverty_tag_level_id = 2;
+        expect(component.impactAreasScored).toBe(5);
+      });
+    });
+
+    describe('guidanceAsTooltip (R-1 guidance placement)', () => {
+      it('is true when the 2026 reporting-guidance flag is on', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+        fixture = TestBed.createComponent(IpsrGeneralInformationComponent);
+        component = fixture.componentInstance;
+        expect(component.guidanceAsTooltip()).toBe(true);
+      });
+
+      it('is false when the 2026 reporting-guidance flag is off (Results parity)', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+        fixture = TestBed.createComponent(IpsrGeneralInformationComponent);
+        component = fixture.componentInstance;
+        expect(component.guidanceAsTooltip()).toBe(false);
+      });
+    });
+
+    describe('Group header (P25-only, DD-3)', () => {
+      it('renders no group header for P22', () => {
+        renderWith(false);
+        expect(fixture.nativeElement.querySelector('app-field-group-header')).toBeNull();
+      });
+
+      it('renders the group header for P25 with the counter bindings', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+        renderWith(true, { gender_tag_level_id: 1 });
+
+        const header = fixture.nativeElement.querySelector('app-field-group-header[data-testid="impact-areas-scored"]');
+        expect(header).not.toBeNull();
+        expect((header as any).completed).toBe(component.impactAreasScored);
+        expect((header as any).total).toBe(5);
+      });
+
+      it('renders the guidance in the tooltip (no inline box) when the 2026 flag is on', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+        renderWith(true);
+
+        const header = fixture.nativeElement.querySelector('app-field-group-header[data-testid="impact-areas-scored"]');
+        expect((header as any).tooltip).toBe(component.impactAreaScoresInfo());
+
+        const groupGuidanceBoxes = fixture.debugElement
+          .queryAll(By.directive(AlertStatusComponent))
+          .filter(el => el.componentInstance.description === component.impactAreaScoresInfo());
+        expect(groupGuidanceBoxes.length).toBe(0);
+      });
+
+      it('renders the inline guidance box (Results parity) when the 2026 flag is off', () => {
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+        renderWith(true);
+
+        const groupGuidanceBoxes = fixture.debugElement
+          .queryAll(By.directive(AlertStatusComponent))
+          .filter(el => el.componentInstance.description === component.impactAreaScoresInfo());
+        expect(groupGuidanceBoxes.length).toBe(1);
+      });
+    });
+
+    describe('Segmented tag rows (R-2)', () => {
+      it('renders exactly 5 segmented tracks for P25', () => {
+        renderWith(true);
+        expect(fixture.nativeElement.querySelectorAll('app-pr-radio-button[variant="segmented"]').length).toBe(5);
+      });
+
+      it('renders exactly 5 segmented tracks for P22', () => {
+        renderWith(false);
+        expect(fixture.nativeElement.querySelectorAll('app-pr-radio-button[variant="segmented"]').length).toBe(5);
+      });
+
+      it('renders 0 per-tag guidance boxes bound to the *Information() functions', () => {
+        renderWith(true);
+
+        const guidanceTexts = [
+          component.genderInformation(),
+          component.climateInformation(),
+          component.nutritionInformation(),
+          component.environmentInformation(),
+          component.povertyInformation()
+        ];
+        const orphanGuidanceBoxes = fixture.debugElement
+          .queryAll(By.directive(AlertStatusComponent))
+          .filter(el => guidanceTexts.includes(el.componentInstance.description));
+        expect(orphanGuidanceBoxes.length).toBe(0);
+      });
+
+      it('P25: the gender label matches fields()["[general-info]-gender_tag_id"].label', () => {
+        mockFieldsManagerService.fields.mockReturnValue({
+          '[general-info]-gender_tag_id': { label: 'Gender equality, youth and social inclusion tag' }
+        });
+        renderWith(true);
+
+        const radio = fixture.debugElement.query(By.css('app-pr-radio-button[data-testid="gi-field-gender_tag_id"]'))
+          .componentInstance as PrRadioButtonComponent;
+        expect(radio.label).toBe('Gender equality, youth and social inclusion tag');
+      });
+
+      it('P22: the 5 tag labels stay the current literals, unaffected by fields()', () => {
+        mockFieldsManagerService.fields.mockReturnValue({
+          '[general-info]-gender_tag_id': { label: 'Gender equality, youth and social inclusion tag' }
+        });
+        renderWith(false);
+
+        const expectedLabels: [string, string][] = [
+          ['gender_tag_id', 'Gender equality tag'],
+          ['climate_change_tag_id', 'Climate change tag'],
+          ['nutrition_tag_level_id', 'Nutrition, health and food security tag'],
+          ['environmental_biodiversity_tag_level_id', 'Environmental health and biodiversity tag'],
+          ['poverty_tag_level_id', 'Poverty reduction, livelihoods and jobs tag']
+        ];
+        expectedLabels.forEach(([testid, expectedLabel]) => {
+          const radio = fixture.debugElement.query(By.css(`app-pr-radio-button[data-testid="gi-field-${testid}"]`))
+            .componentInstance as PrRadioButtonComponent;
+          expect(radio.label).toBe(expectedLabel);
+        });
+      });
+    });
+
+    // Every segmented `app-pr-radio-button` wraps ITSELF in an `app-field-card` too (see its own
+    // template), so a plain `querySelector('app-field-card')` picks up the score radio's card, not
+    // our checkbox one. The score radio's inner content is a `[role="radiogroup"]` track; our
+    // checkbox card's content is always a `.radioButtonList` (even with a stubbed, empty options list).
+    const findCheckboxFieldCard = (): HTMLElement =>
+      Array.from(fixture.nativeElement.querySelectorAll('app-field-card')).find((el: HTMLElement) =>
+        el.querySelector('.radioButtonList')
+      ) as HTMLElement;
+
+    describe('P25 checkbox field card (R-3)', () => {
+      it('app-field-card hasValue is true when the impact area array is non-empty', () => {
+        renderWith(true, { gender_tag_level_id: 3, gender_impact_area_id: [1] });
+
+        const card = findCheckboxFieldCard();
+        expect(card).not.toBeUndefined();
+        expect((card as any).hasValue).toBe(true);
+      });
+
+      it('app-field-card hasValue is false when the impact area array is empty', () => {
+        renderWith(true, { gender_tag_level_id: 3, gender_impact_area_id: [] });
+
+        const card = findCheckboxFieldCard();
+        expect(card).not.toBeUndefined();
+        expect((card as any).hasValue).toBe(false);
+      });
+    });
+
+    describe('Validation hooks untouched (R-4)', () => {
+      const alertIds = ['gender_tag_alert', 'climate_change_tag_alert', 'nutrition_tag_alert', 'environment_tag_alert', 'poverty_tag_alert'];
+
+      it('keeps exactly 5 appFeedbackValidation hooks in the Impact Area block, and all 5 alert anchors', () => {
+        renderWith(true);
+
+        const hooks = fixture.nativeElement.querySelectorAll('.block_container [appfeedbackvalidation]');
+        expect(hooks.length).toBe(5);
+
+        alertIds.forEach(id => {
+          expect(fixture.nativeElement.querySelector('#' + id)).not.toBeNull();
+        });
+      });
+
+      it('R-4 BUT: does not add a "mandatory" class to the checkbox wrapper .pr-field', () => {
+        renderWith(true, { gender_tag_level_id: 3, gender_impact_area_id: [] });
+
+        const card = findCheckboxFieldCard();
+        const prField = card.querySelector('.pr-field');
+        expect(prField).not.toBeNull();
+        expect(prField.classList.contains('mandatory')).toBe(false);
+      });
+    });
+  });
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — `CanComponentDeactivate` wiring. `SectionDirtyTrackerService` is
+   * component-scoped, so each spec gets a fresh instance via `TestBed.createComponent`.
+   *
+   * The discontinued-options GET is mocked with a genuine async boundary (`delay(0)` under `fakeAsync`):
+   * a synchronous mock would hide the real race — `getSectionInformation()`'s `next` handler fires that GET,
+   * whose callback (`convertChecklistToDiscontinuedOptions()`) mutates the body asynchronously — and would
+   * pass even if the snapshot were taken too early.
+   */
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    // Local literals, never the file-level consts: `getSectionInformation()` assigns the response BY
+    // REFERENCE and earlier tests mutate the shared consts in place.
+    const loadedBody = () => ({
+      title: '[TEST P2-3427] loaded title',
+      is_krs: false,
+      lead_contact_person: '',
+      lead_contact_person_data: null,
+      result_type_id: 1,
+      discontinued_options: [{ investment_discontinued_option_id: 3, value: true, is_active: true }]
+    });
+    const catalogueOptions = () => [{ investment_discontinued_option_id: 1, value: true, is_active: false, description: 'desc1' }];
+
+    beforeEach(() => {
+      mockFieldsManagerService.isP22.mockReturnValue(false);
+      mockApiService.resultsSE.GETInnovationByResultId = jest.fn(() => of({ response: loadedBody() }));
+      mockApiService.resultsSE.GET_investmentDiscontinuedOptions = jest.fn(() => of({ response: catalogueOptions() }).pipe(delay(0)));
+    });
+
+    it('is false right after the load flow genuinely completes (including the async discontinued-options catalogue)', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      expect(component.ipsrGeneralInformationBody.discontinued_options[0].investment_discontinued_option_id).toBe(1);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    it('is true after editing a bound field', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+
+      component.ipsrGeneralInformationBody.title = `${component.ipsrGeneralInformationBody.title ?? ''} edited`;
+
+      expect(component.hasUnsavedChanges()).toBe(true);
+    }));
+
+    it('is false right when saveSection() emits true, even when the follow-up reload never lands', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      component.ipsrGeneralInformationBody.title = `${component.ipsrGeneralInformationBody.title ?? ''} edited`;
+      expect(component.hasUnsavedChanges()).toBe(true);
+
+      // The reload `performSave()` triggers is forced to never resolve (its subscribe has no error branch, so a
+      // thrown error would only surface as an unhandled timer under fakeAsync). Whatever makes the section
+      // clean at the instant `true` is emitted is therefore the snapshot inside `performSave()` itself.
+      mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(NEVER);
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+      tick();
+
+      expect(sawTrue).toBe(true);
+      expect(reloadSpy).toHaveBeenCalledTimes(1);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    }));
+
+    it('saveSection() resolves false (not throws) when PATCHIpsrGeneralInfo fails, keeps the edits and does not reload', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      component.ipsrGeneralInformationBody.title = '[TEST P2-3427] rejected title';
+      jest.spyOn(console, 'error').mockImplementation();
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+      mockApiService.resultsSE.PATCHIpsrGeneralInfo.mockReturnValue(throwError(() => new Error('save failed')));
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({ next: value => (result = value), error: () => (errored = true) });
+      tick();
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+      expect(component.ipsrGeneralInformationBody.title).toBe('[TEST P2-3427] rejected title');
+      expect(component.hasUnsavedChanges()).toBe(true);
+      // the existing error branch survives the wrapper: indicators refreshed, no re-fetch
+      expect(mockIpsrCompletenessStatusSE.updateGreenChecks).toHaveBeenCalled();
+    }));
+
+    it('saveSection() resolves false without calling the PATCH when the P22 contact precondition refuses', fakeAsync(() => {
+      component.getSectionInformation();
+      tick();
+      mockFieldsManagerService.isP22.mockReturnValue(true);
+      mockUserSearchService.searchQuery = 'typed but never picked';
+      mockUserSearchService.selectedUser = null;
+      mockUserSearchService.showContactError = false;
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(value => (result = value));
+
+      expect(result).toBe(false);
+      expect(patchSpy).not.toHaveBeenCalled();
+      expect(mockUserSearchService.showContactError).toBe(true);
+    }));
   });
 });

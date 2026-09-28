@@ -15,8 +15,9 @@ import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fie
 import { PrFieldValidationsComponent } from '../../../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Router } from '@angular/router';
+import { UnsavedNavigationIntentService } from '../../../../../../../../../../shared/services/unsaved-changes/unsaved-navigation-intent.service';
 jest.useFakeTimers();
 
 describe('ComplementaryInnovationComponent', () => {
@@ -56,6 +57,8 @@ describe('ComplementaryInnovationComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(ComplementaryInnovationComponent);
     component = fixture.componentInstance;
+    // Night sweep 2026-09-23 (IPSR-6): the save tests model a loaded step; the gate has its own tests.
+    component.loaded.set(true);
   });
 
   it('should create', () => {
@@ -490,6 +493,209 @@ describe('ComplementaryInnovationComponent', () => {
       expect(component.complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions).toEqual([
         { complementary_innovation_functions_id: 1, name: 'function 1' }
       ]);
+    });
+  });
+
+  // Night sweep 2026-09-23, IPSR-6 (prtest 12037): selection GET 500 → Save 200 unlinked everything.
+  // Control negative: with the gate lines removed from onSaveSection / onSavePreviousNext these fail.
+  describe('IPSR-6 — refuses to save after a failed load', () => {
+    beforeEach(() => {
+      component.loaded.set(null);
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepTwoInnovationSelect').mockReturnValue(throwError(() => ({ status: 500 })));
+      jest.spyOn(component.api.resultsSE, 'GET_resultsLinked').mockReturnValue(of({ response: { links: [] } }) as any);
+    });
+
+    it('marks the step as not loaded and Save sends nothing', () => {
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of({}) as any);
+      component.loadInnovationPackage();
+      component.loadLinkedResults();
+      component.onSaveSection();
+      expect(component.loaded()).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    it('Previous / Next only navigate, without saving', () => {
+      component.api.rolesSE.readOnly = false;
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(of({}) as any);
+      const nav = jest.spyOn(component as any, 'navigateToStep').mockImplementation(() => undefined);
+      component.loadInnovationPackage();
+      component.loadLinkedResults();
+      component.onSavePreviousNext('next');
+      expect(patch).not.toHaveBeenCalled();
+      expect(nav).toHaveBeenCalledWith('next');
+    });
+
+    it('is loaded only once both GETs landed', () => {
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepTwoInnovationSelect').mockReturnValue(of({ response: [] }) as any);
+      component.loadInnovationPackage();
+      expect(component.loaded()).toBeNull();
+      component.loadLinkedResults();
+      expect(component.loaded()).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3427 (Ángel, 28-Sep-2026 review) — `CanComponentDeactivate` wiring. `SectionDirtyTrackerService`
+   * is component-scoped (`providers: [SectionDirtyTrackerService]`), so each test gets a fresh instance
+   * from `TestBed.createComponent` — no cross-test snapshot leakage.
+   *
+   * The load flow is driven through `ngOnInit()` with all four GETs mocked and a NON-empty selection:
+   * a snapshot taken too early (at construction, or before the selection GET lands) reports a freshly
+   * loaded, untouched step as dirty — that is the control negative of the first test.
+   */
+  describe('CanComponentDeactivate (P2-3427)', () => {
+    const serverSelection = () =>
+      [
+        { result_id: '1', result_code: 'ID-1', title: 'Loaded one', result_type_id: 7, created_date: null },
+        { result_id: '2', result_code: 'CI-2', title: 'Loaded two', result_type_id: 11, created_date: null }
+      ] as any[];
+
+    const loadStep = () => {
+      component.loaded.set(null);
+      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepTwoInnovationSelect').mockReturnValue(of({ response: serverSelection() }) as any);
+      jest.spyOn(component.api.resultsSE, 'GET_resultsLinked').mockReturnValue(of({ response: { links: [] } }) as any);
+      jest.spyOn(component.api.resultsSE, 'GETComplementataryInnovationFunctions').mockReturnValue(of({ response: [] }) as any);
+      jest.spyOn(component.api.resultsSE, 'GETinnovationpathwayStepTwo').mockReturnValue(of({ response: [] }) as any);
+      component.ngOnInit();
+      expect(component.loaded()).toBe(true);
+    };
+
+    it('is false right after the load flow completes (untouched, non-empty selection)', () => {
+      loadStep();
+      expect(component.innovationPackageCreatorBody.length).toBe(2);
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('is true after pushing a row into the selection', () => {
+      loadStep();
+      component.innovationPackageCreatorBody.push({ result_id: '3', result_code: 'ID-3', result_type_id: 7 } as any);
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('is true after removing a row from the selection', () => {
+      loadStep();
+      component.cancelInnovation(component.innovationPackageCreatorBody[0]);
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    /**
+     * The follow-up POST of the linked results is forced to FAIL, so the only thing that can make the
+     * step clean at the instant `saveSection()` emits `true` is the synchronous snapshot inside the
+     * PATCH `tap` — not anything the follow-up does.
+     */
+    it('is false right when saveSection() emits true, even when the follow-up POST fails', () => {
+      loadStep();
+      component.innovationPackageCreatorBody.push({ result_id: '9', result_code: 'ID-9', result_type_id: 7, created_date: '2026-09-28' } as any);
+      expect(component.hasUnsavedChanges()).toBe(true);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of({}) as any);
+      const post = jest.spyOn(component.api.resultsSE, 'POST_resultsLinked').mockReturnValue(throwError(() => new Error('links failed')) as any);
+
+      let sawTrue = false;
+      component.saveSection().subscribe(result => {
+        sawTrue = result === true;
+        expect(component.hasUnsavedChanges()).toBe(false);
+      });
+
+      expect(sawTrue).toBe(true);
+      expect(patch).toHaveBeenCalledWith({ complementaryInovatins: component.body });
+      expect(post).toHaveBeenCalled();
+      // The failing POST is fire-and-forget (as today); RxJS reports its error on a timer — drop it so it
+      // cannot surface inside an unrelated test that runs the fake timers.
+      jest.clearAllTimers();
+    });
+
+    it('saveSection() resolves false (not throws) when the PATCH fails, and the step stays dirty', () => {
+      loadStep();
+      component.innovationPackageCreatorBody.push({ result_id: '9', result_code: 'ID-9', result_type_id: 7 } as any);
+      jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(throwError(() => new Error('save failed')) as any);
+      const post = jest.spyOn(component.api.resultsSE, 'POST_resultsLinked').mockReturnValue(of({}) as any);
+
+      let result: boolean | undefined;
+      let errored = false;
+      component.saveSection().subscribe({ next: value => (result = value), error: () => (errored = true) });
+
+      expect(errored).toBe(false);
+      expect(result).toBe(false);
+      expect(post).not.toHaveBeenCalled();
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    // IPSR-6 precondition: a selection that was never read from the server is not sent — by the guard either.
+    it('saveSection() resolves false without calling the PATCH while the step is not loaded', () => {
+      component.loaded.set(null);
+      const patch = jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of({}) as any);
+
+      let result: boolean | undefined;
+      component.saveSection().subscribe(value => (result = value));
+
+      expect(result).toBe(false);
+      expect(patch).not.toHaveBeenCalled();
+    });
+
+    describe('Save & go to previous/next step', () => {
+      let markSilent: jest.SpyInstance;
+      let markSilentCallsAtNavigate: number[];
+
+      beforeEach(() => {
+        markSilent = jest.spyOn(TestBed.inject(UnsavedNavigationIntentService), 'markSilent');
+        markSilentCallsAtNavigate = [];
+        mockRouter.navigate.mockImplementation(() => {
+          markSilentCallsAtNavigate.push(markSilent.mock.calls.length);
+          return Promise.resolve(true);
+        });
+        component.ipsrDataControlSE.resultInnovationCode = '123';
+        component.ipsrDataControlSE.resultInnovationPhase = 'phase';
+      });
+
+      it.each(['next', 'previous'])('read-only: marks the navigation silent BEFORE router.navigate (%s)', description => {
+        component.api.rolesSE.readOnly = true;
+        component.api.rolesSE.isAdmin = false;
+
+        component.onSavePreviousNext(description);
+
+        expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
+        expect(markSilentCallsAtNavigate).toEqual([1]);
+      });
+
+      it('admin going forward to 2.2 also marks the navigation silent before navigating', () => {
+        component.api.rolesSE.readOnly = true;
+        component.api.rolesSE.isAdmin = true;
+        component.api.isStepTwoTwo = false;
+
+        component.onSavePreviousNext('next');
+
+        expect(mockRouter.navigate).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-2/basic-info'], { queryParams: { phase: 'phase' } });
+        expect(markSilentCallsAtNavigate).toEqual([1]);
+      });
+
+      it('after a successful PATCH the step is clean and the navigation is marked silent before navigating', () => {
+        loadStep();
+        component.api.rolesSE.readOnly = false;
+        component.api.rolesSE.isAdmin = false;
+        component.innovationPackageCreatorBody.push({ result_id: '9', result_code: 'ID-9', result_type_id: 7 } as any);
+        expect(component.hasUnsavedChanges()).toBe(true);
+        const patch = jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(of({}) as any);
+
+        component.onSavePreviousNext('next');
+
+        expect(patch).toHaveBeenCalledWith({ complementaryInovatins: component.body }, 'next');
+        expect(component.hasUnsavedChanges()).toBe(false);
+        expect(mockRouter.navigate).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-3'], { queryParams: { phase: 'phase' } });
+        expect(markSilentCallsAtNavigate).toEqual([1]);
+      });
+
+      it('a failing PATCH neither navigates nor cleans the step', () => {
+        loadStep();
+        component.api.rolesSE.readOnly = false;
+        component.innovationPackageCreatorBody.push({ result_id: '9', result_code: 'ID-9', result_type_id: 7 } as any);
+        jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(throwError(() => new Error('save failed')) as any);
+
+        component.onSavePreviousNext('next');
+
+        expect(mockRouter.navigate).not.toHaveBeenCalled();
+        expect(component.hasUnsavedChanges()).toBe(true);
+        jest.clearAllTimers();
+      });
     });
   });
 });

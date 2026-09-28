@@ -40,6 +40,7 @@ import { ContributorsRoleResolverService } from './application/queries/get-exist
 import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
 import { NotificationModule } from '../notification/notification.module';
 import { VersioningModule } from '../versioning/versioning.module';
+import { ProgressTrackerModule } from '../progress-tracker/progress-tracker.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { VersioningModule } from '../versioning/versioning.module';
     NotificationModule,
     GeographicLocationModule,
     GeoScopeRoleModule,
+    ProgressTrackerModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [

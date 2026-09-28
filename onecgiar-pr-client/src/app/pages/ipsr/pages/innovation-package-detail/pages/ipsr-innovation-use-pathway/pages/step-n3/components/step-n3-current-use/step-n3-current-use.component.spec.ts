@@ -80,6 +80,47 @@ describe('StepN3CurrentUseComponent', () => {
     expect(result).toBe(1);
   });
 
+  it('should count an unsaved row with no is_active set as present when readOnly is false', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ id: 1 }, { id: 2, is_active: false }];
+    const result = component.hasElementsWithId(list, 'id');
+    expect(result).toBe(1);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.1): Actors — a blank auto-pushed placeholder row must
+  // NOT count as present once significantFields is passed, even though is_active != false alone
+  // would count it (the Pivot's gap — current 2-arg implementation ignores the 3rd arg).
+  it('should not count a blank Actors placeholder row as present when significantFields is passed and none are set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{}];
+    const result = component.hasElementsWithId(list, 'result_ip_actors_id', ['actor_type_id']);
+    expect(result).toBe(0);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.2): Actors — once actor_type_id is set, the row counts.
+  it('should count an Actors row as present when significantFields is passed and actor_type_id is set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ actor_type_id: 3 }];
+    const result = component.hasElementsWithId(list, 'result_ip_actors_id', ['actor_type_id']);
+    expect(result).toBe(1);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.1): Organizations — same gap as Actors.
+  it('should not count a blank Organizations placeholder row as present when significantFields is passed and none are set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{}];
+    const result = component.hasElementsWithId(list, 'id', ['institution_types_id']);
+    expect(result).toBe(0);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.2): Organizations — once institution_types_id is set, the row counts.
+  it('should count an Organizations row as present when significantFields is passed and institution_types_id is set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ institution_types_id: 12 }];
+    const result = component.hasElementsWithId(list, 'id', ['institution_types_id']);
+    expect(result).toBe(1);
+  });
+
   it('should return the childrens of the institution_types_id', () => {
     component.institutionsTypeTreeList = [
       { code: 1, childrens: [1, 2] },
@@ -307,5 +348,44 @@ describe('StepN3CurrentUseComponent', () => {
     </li>
     </ul>
     `);
+  });
+});
+
+// False empty state: a freshly added row (no `is_active` yet) is on screen, so the list is not empty.
+describe('StepN3CurrentUseComponent — empty state vs rows on screen', () => {
+  const { readFileSync } = require('fs');
+  const { join } = require('path');
+  const { ActorN3, OrganizationN3, MeasureN3 } = require('../../model/Ipsr-step-3-body.model');
+  const html: string = readFileSync(join(__dirname, 'step-n3-current-use.component.html'), 'utf8');
+  const make = (readOnly: boolean) => {
+    const c = Object.create(StepN3CurrentUseComponent.prototype);
+    c.api = { rolesSE: { readOnly } };
+    return c as StepN3CurrentUseComponent;
+  };
+
+  it('counts a just-added actor, organization and measure (no is_active) in edit mode', () => {
+    const c = make(false);
+    expect(c.hasElementsWithId([new ActorN3()], 'result_ip_actors_id')).toBe(1);
+    expect(c.hasElementsWithId([new OrganizationN3()], 'id')).toBe(1);
+    expect(c.hasElementsWithId([new MeasureN3()], 'result_ip_result_measures_id')).toBe(1);
+  });
+
+  it('still drops a removed row (is_active === false) so the empty state comes back', () => {
+    expect(make(false).hasElementsWithId([{ is_active: false }], 'id')).toBe(0);
+  });
+
+  it('read-only keeps counting only saved rows (the unsaved ones are hidden there)', () => {
+    expect(make(true).hasElementsWithId([new ActorN3(), { result_ip_actors_id: 7 }], 'result_ip_actors_id')).toBe(1);
+  });
+
+  it('each row hides on is_active == false, the same rule the empty-state count uses', () => {
+    for (const v of ['actorItem', 'organizationItem', 'measuresItem']) {
+      expect(html).toContain(`${v}.is_active == false`);
+    }
+    // Actors and Organizations also pass their gating field, so a blank placeholder row does not hide the empty
+    // state until it has data (bugfix/ipsr-empty-state-active-check IPSR-ESC-R-2). Measures keep the P2-3842 rule alone.
+    expect(html).toContain("!hasElementsWithId(this.body.innovatonUse.actors,'result_ip_actors_id', ['actor_type_id'])");
+    expect(html).toContain("!hasElementsWithId(this.body.innovatonUse.organization,'id', ['institution_types_id'])");
+    expect(html).toContain("!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_result_measures_id')");
   });
 });

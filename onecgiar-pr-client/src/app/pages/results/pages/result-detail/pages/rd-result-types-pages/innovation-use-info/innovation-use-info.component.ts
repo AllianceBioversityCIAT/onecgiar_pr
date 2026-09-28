@@ -14,6 +14,7 @@ import {
 } from '../../../../../../../shared/services/global/qa-innovation-development-results.service';
 import { CanComponentDeactivate } from '../../../../../../../shared/guards/unsaved-changes.types';
 import { SectionDirtyTrackerService } from '../../../../../../../shared/services/unsaved-changes/section-dirty-tracker.service';
+import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../../../../internationalization/result-detail-section-load.copy';
 
 @Component({
   selector: 'app-innovation-use-info',
@@ -86,6 +87,21 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
    * mandatory-but-empty form. Released on `next` AND `error`.
    */
   readonly sectionLoading = signal(true);
+
+  /**
+   * Night sweep 2026-09-23 (P1 twin of W12-1 / W12-2) — three-state load flag: `null` while the
+   * section GET is in flight, `true` once the server's body is in hand, `false` when the FIRST load
+   * failed. Before this, `error` only released the skeleton, so the form painted blank with Save
+   * enabled and no message, and saving it sent that blank body over what is stored (actors, organizations, measures and investment lists; effect in the DB not measured).
+   * A failed RE-load after a successful save keeps `true`: the body in hand is what was just stored.
+   */
+  readonly loaded = signal<boolean | null>(null);
+  readonly loadErrorNote = RESULT_DETAIL_SECTION_LOAD_COPY.loadErrorNote;
+
+  private markLoaded(ok: boolean): void {
+    if (ok) this.loaded.set(true);
+    else if (this.loaded() !== true) this.loaded.set(false);
+  }
 
   OnChangePortfolio = effect(() => {
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
@@ -210,10 +226,12 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
         // loaded, unedited section is correctly non-dirty right here. See the `dirtyTracker` field
         // docblock above for the child-mutation hazard this snapshot is normalized against.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.markLoaded(true);
         this.sectionLoading.set(false);
       },
       error: err => {
         console.error(err);
+        this.markLoaded(false);
         this.sectionLoading.set(false);
       }
     });
@@ -276,10 +294,16 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
         this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
         // `UCA-T-11` — true end of this load flow, same rationale as `getSectionInformation()` above.
         this.dirtyTracker.snapshot(this.dirtySnapshotValue());
+        this.markLoaded(true);
         this.sectionLoading.set(false);
       },
       error: err => {
         console.error(err);
+        // A 404 is this endpoint's "no Innovation Use row yet" (`results-framework-reporting/
+        // innovation-use/innovation-use.service.ts` `getInnovationUse` throws NOT_FOUND until the
+        // first save creates the row) — the normal state of a brand-new result, so it counts as
+        // loaded; treating it as a failure would make the section impossible to ever save.
+        this.markLoaded(err?.status === 404);
         this.sectionLoading.set(false);
       }
     });
@@ -369,6 +393,8 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
    * behavior the original `onSaveSection()` had.
    */
   private performSave(): Observable<void> {
+    // P1 twin (night sweep 2026-09-23) — never send a body that was not read from the server.
+    if (this.loaded() !== true) return throwError(() => new Error('Innovation Use section not loaded; save refused'));
     // P2-3199: the innovation link question lives in Contributors and partners (section 2) for every
     // result this section does not ask it for. There it must re-read the current value right before
     // saving — otherwise a stale value loaded on mount would overwrite the section 2 answer and,
@@ -392,6 +418,8 @@ export class InnovationUseInfoComponent implements CanComponentDeactivate {
   }
 
   onSaveSection() {
+    // P1 twin — same gate as `performSave()`, checked first so the refusal stays silent here.
+    if (this.loaded() !== true) return;
     this.savingSection = true;
     this.performSave().subscribe({
       next: () => {

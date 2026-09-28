@@ -258,8 +258,30 @@ describe('ResultSectionsService', () => {
       expect(service.aiReviewDisabled).toBe(false);
     });
 
-    it('hides AI review for knowledge products (type 6)', () => {
+    // P2-2385: the type-6 exclusion is gone. A Knowledge Product reporter cannot edit the title or
+    // the description (both auto-synced from CGSpace) but DOES own the Impact Area tags, so the
+    // button is offered and the restriction moved into `AiReviewService.onAIReviewClick()`.
+    it('shows AI review for knowledge products (type 6)', () => {
       dataControl.currentResult.result_type_id = 6;
+      build();
+
+      expect(service.showAiReview).toBe(true);
+      expect(service.aiReviewDisabled).toBe(false);
+    });
+
+    // The gates that DID survive for a Knowledge Product. Without these two the change above could
+    // be over-applied — e.g. by returning a constant `true` — and nothing would have caught it.
+    it('still hides AI review for a read-only viewer of a knowledge product', () => {
+      dataControl.currentResult.result_type_id = 6;
+      roles.readOnly = true;
+      build();
+
+      expect(service.showAiReview).toBe(false);
+    });
+
+    it('still hides AI review for a knowledge product that left Editing', () => {
+      dataControl.currentResult.result_type_id = 6;
+      dataControl.currentResult.status_id = 3;
       build();
 
       expect(service.showAiReview).toBe(false);

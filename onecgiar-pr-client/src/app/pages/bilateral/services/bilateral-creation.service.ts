@@ -111,6 +111,8 @@ export class BilateralCreationService {
 
   /** Clears editor signals so a previous result cannot leak into a new one. */
   clearEditorState(): void {
+    this.selectedProject.set(null);
+    this.selectedPrimarySp.set(null);
     this.isAiGenerated.set(false);
     this.resultCode.set(null);
     this.isW3Bilateral.set(false);
@@ -272,6 +274,8 @@ export class BilateralCreationService {
                 acronym: proj.obj_organization.acronym,
               } : null,
               sciencePrograms: [],
+              // Not populated on this create-flow read path — this consumer never reads it.
+              w1w2ContributorCount: 0,
             });
             if (proj.obj_organization?.id) {
               this.resultLeadCenterId.set(proj.obj_organization.id);

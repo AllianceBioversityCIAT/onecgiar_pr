@@ -1521,6 +1521,7 @@ describe('VersioningService', () => {
       };
       (service as any)._resultsInnovationsDevRepository = {
         replicate: jest.fn().mockResolvedValue([]),
+        replicateScalingStudyUrls: jest.fn().mockResolvedValue(undefined),
       };
       (service as any)._resultAnswerRepository = {
         replicate: jest.fn().mockResolvedValue([]),
@@ -1529,6 +1530,9 @@ describe('VersioningService', () => {
         replicate: jest.fn().mockResolvedValue([]),
       };
       (service as any)._resultIpMeasureRepository = {
+        replicate: jest.fn().mockResolvedValue([]),
+      };
+      (service as any)._resultCountrySubnationalRepository = {
         replicate: jest.fn().mockResolvedValue([]),
       };
       (service as any)._nonPooledProjectRepository = {
@@ -1582,6 +1586,37 @@ describe('VersioningService', () => {
         mockNewResult.id,
         mockPhase,
         mockUser,
+      );
+
+      // NS-44: the sub-national areas travel too, after the countries they hang from.
+      const countries = (service as any)._resultCountryRepository.replicate;
+      const subnational = (service as any)._resultCountrySubnationalRepository
+        .replicate;
+      expect(subnational).toHaveBeenCalledWith(
+        mockManager,
+        expect.objectContaining({
+          old_result_id: mockResult.id,
+          new_result_id: mockNewResult.id,
+        }),
+      );
+      expect(subnational.mock.invocationCallOrder[0]).toBeGreaterThan(
+        countries.mock.invocationCallOrder[0],
+      );
+
+      // NS-47: the scaling-study links are copied right after the Innovation Development row.
+      const devRow = (service as any)._resultsInnovationsDevRepository
+        .replicate;
+      const devUrls = (service as any)._resultsInnovationsDevRepository
+        .replicateScalingStudyUrls;
+      expect(devUrls).toHaveBeenCalledWith(
+        mockManager,
+        expect.objectContaining({
+          old_result_id: mockResult.id,
+          new_result_id: mockNewResult.id,
+        }),
+      );
+      expect(devUrls.mock.invocationCallOrder[0]).toBeGreaterThan(
+        devRow.mock.invocationCallOrder[0],
       );
     });
   });

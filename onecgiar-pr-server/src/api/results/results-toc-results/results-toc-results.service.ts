@@ -518,6 +518,15 @@ export class ResultsTocResultsService {
         indicator_result_type_id: number | null;
         targets: Array<{
           indicators_targets: number | null;
+          /**
+           * TTD-T-4 (bugfix/toc-target-row-duplication), design.md §6/§9,
+           * TTD-DD-5: the ToC target this row answers. `indicators_targets`
+           * stays the PRMS primary key (or null for a meta with no stored
+           * row yet) — this field is what `applyCatalogTargetsToInitiativesMap`
+           * matches a saved target against a catalog meta on, so the same
+           * meta is never appended a second time (TTD-R-7, TTD-R-10).
+           */
+          toc_indicator_target_id: number | null;
           number_target: number | null;
           contributing_indicator: number | null;
           target_date: number | null;
@@ -654,6 +663,11 @@ export class ResultsTocResultsService {
             if (!existingTarget) {
               indicatorEntry.targets.push({
                 indicators_targets: targetId,
+                toc_indicator_target_id:
+                  row?.toc_indicator_target_id !== null &&
+                  row?.toc_indicator_target_id !== undefined
+                    ? Number(row.toc_indicator_target_id)
+                    : null,
                 number_target:
                   row?.number_target !== null &&
                   row?.number_target !== undefined
@@ -664,10 +678,7 @@ export class ResultsTocResultsService {
                   row?.contributing_indicator !== undefined
                     ? Number(row.contributing_indicator)
                     : null,
-                target_date:
-                  row?.target_date !== null && row?.target_date !== undefined
-                    ? Number(row.target_date)
-                    : null,
+                target_date: this.extractTargetYear(row?.target_date),
                 target_progress_narrative:
                   row?.target_progress_narrative ?? null,
                 indicator_question:
@@ -2246,11 +2257,25 @@ export class ResultsTocResultsService {
       }
 
       const initSubmitter = await this._resultByInitiativesRepository.findOne({
-        where: { result_id: resultId, initiative_role_id: 1 },
+        where: { result_id: resultId, initiative_role_id: 1, is_active: true },
       });
 
-      const primaryInitiativeId = this._normalizeInitiativeId(
+      // savingInitiativeId: the program actually performing this save. It
+      // reads the payload's own initiative_id first (a contributor SP
+      // saving its own ToC), falling back to the owner when the payload is
+      // silent about which program it is.
+      const savingInitiativeId = this._normalizeInitiativeId(
         (resultTocResult as any)?.initiative_id,
+        initSubmitter?.initiative_id,
+        result?.initiative_id,
+      );
+
+      // ownerInitiativeId: the result's actual owner (role_id = 1), NEVER
+      // taken from the payload. DD-4's "primary" means this — a contributor
+      // save must not be able to claim it just by naming itself in the
+      // payload (Reviewer FAIL on attempt 1: that let a contributor save
+      // wipe the owner's legacy null-initiative rows).
+      const ownerInitiativeId = this._normalizeInitiativeId(
         initSubmitter?.initiative_id,
         result?.initiative_id,
       );
@@ -2260,7 +2285,7 @@ export class ResultsTocResultsService {
         const activeRecord = await this._resultsTocResultRepository.findOne({
           where: {
             result_id: resultId,
-            initiative_ids: primaryInitiativeId,
+            initiative_ids: savingInitiativeId,
             is_active: true,
           },
         });
@@ -2273,7 +2298,7 @@ export class ResultsTocResultsService {
       if (resultTocResult?.result_toc_results?.length) {
         for (const t of resultTocResult.result_toc_results) {
           if (t && !(t as any).initiative_id) {
-            (t as any).initiative_id = primaryInitiativeId;
+            (t as any).initiative_id = savingInitiativeId;
           }
           if (t && !t.result_toc_result_id) {
             const activeRecord = await this._resultsTocResultRepository.findOne(
@@ -2292,28 +2317,81 @@ export class ResultsTocResultsService {
         }
       }
 
-      const incomingIds = this._extractIncomingIds(resultTocResult);
-      await this._deactivateMissingRecords(resultId, incomingIds, user);
+      // BIL-RTE-DD-6: "P25 onward" is resolved once here, from THIS result's own
+      // version -> portfolio, never a constant/phase-year/id (R-7.c). A null
+      // portfolio (or no version) counts as false, same as today (design §5.3).
+      // Computed BEFORE the scope set, because the scope build below needs to
+      // know whether payload items must be ignored (DD-5: they always are on
+      // a P25-onward No).
+      const isP25OnwardNo =
+        resultTocResult?.planned_result === false &&
+        (await this._isResultP25Onward(result));
 
+      // BIL-RTE-DD-4: a ToC save only ever touches rows of the program(s) in
+      // scope for this save. On a P25-onward No, payload items are ignored
+      // outright (design §5.2 step 4), so the scope is ONLY the saving
+      // program, plus null when the owner is the one saving — never an
+      // initiative merely NAMED in an item, which would let a stale/forged
+      // payload item widen the deactivation to another program's rows.
+      // Otherwise (Yes, or a pre-P25 No): the saving program, every
+      // initiative_id named in the payload items, and (only when the owner IS
+      // the program saving, or is named in the payload items) legacy rows
+      // left with a null initiative_ids column. Every other program's rows
+      // must survive untouched (R-9), including the owner's own rows when a
+      // contributor is the one saving.
+      const scopeInitiativeIds = this._buildTocScopeInitiativeIds(
+        savingInitiativeId,
+        ownerInitiativeId,
+        resultTocResult,
+        isP25OnwardNo,
+      );
+
+      const incomingIds = this._extractIncomingIds(resultTocResult);
+      const deactivatedByMissing = await this._deactivateMissingRecords(
+        resultId,
+        incomingIds,
+        user,
+        scopeInitiativeIds,
+      );
+
+      let deactivatedByUnplanned: number[] = [];
       if (resultTocResult?.planned_result === true) {
         await this._handlePlannedResult(
           resultId,
           result,
           resultTocResult,
-          primaryInitiativeId,
+          savingInitiativeId,
           user,
         );
       } else if (resultTocResult?.planned_result === false) {
-        await this._handleUnplannedResult(
+        deactivatedByUnplanned = await this._handleUnplannedResult(
           resultId,
           result,
           resultTocResult,
-          primaryInitiativeId,
+          savingInitiativeId,
           user,
+          scopeInitiativeIds,
+          isP25OnwardNo,
         );
       }
 
-      await this._handleIndicators(result, resultId, resultTocResult, user);
+      if (isP25OnwardNo) {
+        // BIL-RTE-DD-5 (R-8.a): the union of everything this save deactivated
+        // (whether caught by the "missing from payload" sweep or by the
+        // unconditional No sweep) is the exact set of in-scope parents that
+        // just went inactive — their children go with them, never re-inserted.
+        const deactivatedParentIds = Array.from(
+          new Set([...deactivatedByMissing, ...deactivatedByUnplanned]),
+        );
+        if (deactivatedParentIds.length) {
+          await this._resultsTocResultRepository.deactivateChildrenForParents(
+            deactivatedParentIds,
+            user.id,
+          );
+        }
+      } else {
+        await this._handleIndicators(result, resultId, resultTocResult, user);
+      }
 
       return {
         response: { result_id: resultId },
@@ -2348,18 +2426,75 @@ export class ResultsTocResultsService {
     return new Set<number>(incomingIdsPrimary);
   }
 
+  /**
+   * BIL-RTE-DD-4 scope set: the program saving, plus every initiative_id
+   * named in the payload items. `null` (legacy rows with no initiative_ids)
+   * is added only when the OWNER is the program in scope — i.e. the owner
+   * is the one saving, or the owner is explicitly named among the payload
+   * items — never merely because *some* program resolved as the saver.
+   * Otherwise a contributor's save (savingInitiativeId = the contributor)
+   * would sweep in the owner's legacy null rows too, breaking R-9
+   * (design.md §5.2 step 1 and §12 DD-4: "a toc-metadata save of a
+   * contributor SP would then touch the owner").
+   *
+   * `ignorePayloadItems` (BIL-RTE-DD-5, T-5 attempt 2 Reviewer remediation):
+   * on a P25-onward No, payload items are ignored outright, so they must
+   * never widen the scope either — only `savingInitiativeId` (plus `null`
+   * when the owner is the one saving) is in scope. Without this, a payload
+   * item naming another program's `initiative_id` would deactivate that
+   * program's rows on a save it never asked for (R-9).
+   */
+  private _buildTocScopeInitiativeIds(
+    savingInitiativeId: number | null,
+    ownerInitiativeId: number | null,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    ignorePayloadItems = false,
+  ): Set<number | null> {
+    const scopeInitiativeIds = new Set<number | null>();
+
+    if (savingInitiativeId != null) {
+      scopeInitiativeIds.add(savingInitiativeId);
+    }
+
+    if (!ignorePayloadItems) {
+      for (const t of resultTocResult?.result_toc_results ?? []) {
+        const itemInitiativeId = this._normalizeInitiativeId(
+          (t as any)?.initiative_id,
+        );
+        if (itemInitiativeId != null) {
+          scopeInitiativeIds.add(itemInitiativeId);
+        }
+      }
+    }
+
+    if (
+      ownerInitiativeId != null &&
+      scopeInitiativeIds.has(ownerInitiativeId)
+    ) {
+      scopeInitiativeIds.add(null);
+    }
+
+    return scopeInitiativeIds;
+  }
+
   private async _deactivateMissingRecords(
     resultId: number,
     keepIds: Set<number>,
     user: TokenDto,
-  ): Promise<void> {
+    scopeInitiativeIds: Set<number | null>,
+  ): Promise<number[]> {
     const existingAll = await this._resultsTocResultRepository.find({
       where: { result_id: resultId },
     });
 
+    const deactivatedIds: number[] = [];
     await Promise.all(
       existingAll.map(async (row) => {
-        if (row.is_active && !keepIds.has(Number(row.result_toc_result_id))) {
+        if (
+          row.is_active &&
+          !keepIds.has(Number(row.result_toc_result_id)) &&
+          scopeInitiativeIds.has(row.initiative_ids ?? null)
+        ) {
           await this._resultsTocResultRepository.update(
             row.result_toc_result_id,
             {
@@ -2367,9 +2502,12 @@ export class ResultsTocResultsService {
               last_updated_by: user.id,
             },
           );
+          deactivatedIds.push(Number(row.result_toc_result_id));
         }
       }),
     );
+
+    return deactivatedIds;
   }
 
   private async _handlePlannedResult(
@@ -2529,16 +2667,36 @@ export class ResultsTocResultsService {
     resultId: number,
     result: any,
     resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
-    primaryInitiativeId: number | null,
+    savingInitiativeId: number | null,
     user: TokenDto,
-  ): Promise<void> {
-    await this._deactivateAllActiveRecords(resultId, user);
+    scopeInitiativeIds: Set<number | null>,
+    isP25Onward: boolean,
+  ): Promise<number[]> {
+    const deactivatedParentIds = await this._deactivateAllActiveRecords(
+      resultId,
+      user,
+      scopeInitiativeIds,
+    );
+
+    if (isP25Onward) {
+      // BIL-RTE-DD-5/R-8.a: on a P25-onward No, payload items are ignored
+      // outright — no level/HLO is re-inserted even if the client still sends
+      // one. Only the existing special-case row (null level/toc_result,
+      // planned_result = false) records the program's answer.
+      await this._handleUnplannedSpecialCase(
+        resultId,
+        result,
+        resultTocResult,
+        user,
+      );
+      return deactivatedParentIds;
+    }
 
     if (resultTocResult?.result_toc_results?.length) {
       await this._processUnplannedTocResults(
         result,
         resultTocResult,
-        primaryInitiativeId,
+        savingInitiativeId,
         user,
       );
     } else {
@@ -2549,17 +2707,24 @@ export class ResultsTocResultsService {
         user,
       );
     }
+
+    return deactivatedParentIds;
   }
 
   private async _deactivateAllActiveRecords(
     resultId: number,
     user: TokenDto,
-  ): Promise<void> {
+    scopeInitiativeIds: Set<number | null>,
+  ): Promise<number[]> {
     const allActiveRecords = await this._resultsTocResultRepository.find({
       where: { result_id: resultId, is_active: true },
     });
 
+    const deactivatedIds: number[] = [];
     for (const record of allActiveRecords ?? []) {
+      if (!scopeInitiativeIds.has(record.initiative_ids ?? null)) {
+        continue;
+      }
       await this._resultsTocResultRepository.update(
         record.result_toc_result_id,
         {
@@ -2567,7 +2732,27 @@ export class ResultsTocResultsService {
           last_updated_by: user.id,
         },
       );
+      deactivatedIds.push(Number(record.result_toc_result_id));
     }
+
+    return deactivatedIds;
+  }
+
+  /**
+   * BIL-RTE-DD-6 (R-7.c): "P25 onward" is resolved from THIS result's own
+   * version -> `clarisa_portfolios.start_date`, never a constant, the phase
+   * year, or a numeric portfolio/phase id (those differ between
+   * environments). A version without a portfolio, or a result without a
+   * version, counts as false — same as today's behaviour.
+   */
+  private async _isResultP25Onward(result: any): Promise<boolean> {
+    const versionId = this.toNumberOrNull(result?.version_id);
+    if (versionId == null) return false;
+
+    const portfolioStartYear =
+      await this._resultRepository.getPortfolioStartYearByVersionId(versionId);
+
+    return portfolioStartYear != null && Number(portfolioStartYear) >= 2025;
   }
 
   private async _processUnplannedTocResults(
@@ -3027,6 +3212,36 @@ export class ResultsTocResultsService {
     }
   }
 
+  /**
+   * TTD-T-4 (bugfix/toc-target-row-duplication), design.md §6/§9 — `trit.target_date`
+   * (and the PRMS `target_date` it is copied onto) holds both a bare year ('2026') and a
+   * full-date form ('2026-01-01'); the write path's catalog read normalises the same column
+   * with a SQL REGEXP (`repositories/results-toc-results.repository.ts` `getIndicatorTargetCatalog`).
+   * Mirrors that normalisation JS-side so the GET merge compares year-to-year on both sides —
+   * a string/integer mismatch here would silently stop the fallback match and re-create the
+   * duplicate this task removes.
+   */
+  private extractTargetYear(value: unknown): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value.getUTCFullYear();
+    }
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+    const date = new Date(value as string);
+    if (!Number.isNaN(date.getTime())) {
+      return date.getUTCFullYear();
+    }
+    return null;
+  }
+
   private groupCatalogTargetsByIndicatorNodeId(
     catalogTargets: Array<{
       toc_result_indicator_id: string;
@@ -3088,6 +3303,7 @@ export class ResultsTocResultsService {
                 toc_results_indicator_id: string | null;
                 targets: Array<{
                   indicators_targets: number | null;
+                  toc_indicator_target_id: number | null;
                   number_target: number | null;
                   contributing_indicator: number | null;
                   target_date: number | null;
@@ -3121,43 +3337,84 @@ export class ResultsTocResultsService {
 
           const catalogRows = catalogByIndicator.get(nodeId) ?? [];
           for (const catalog of catalogRows) {
+            const tocIndicatorTargetId =
+              catalog.toc_indicator_target_id !== null &&
+              catalog.toc_indicator_target_id !== undefined
+                ? Number(catalog.toc_indicator_target_id)
+                : null;
             const numberTarget =
               catalog.number_target !== null &&
               catalog.number_target !== undefined
                 ? Number(catalog.number_target)
                 : null;
-            const targetDate = Number(catalog.target_date);
+            const targetDate = this.extractTargetYear(catalog.target_date);
             const targetValue =
               catalog.target_value !== null &&
               catalog.target_value !== undefined
                 ? Number(catalog.target_value)
                 : null;
 
-            const existing = indicator.targets.find((target) => {
-              const sameNumber =
-                numberTarget === null ||
-                target.number_target === numberTarget ||
-                `${target.number_target}` === `${catalog.number_target}`;
-              const sameYear =
-                !Number.isFinite(targetDate) ||
-                target.target_date === targetDate;
-              return sameNumber && sameYear;
-            });
+            // TTD-T-4 (bugfix/toc-target-row-duplication), design.md §6/§9, TTD-DD-5,
+            // TTD-R-7/TTD-R-10: match on `toc_indicator_target_id` first — the identity
+            // the write path (TTD-T-2) now maintains — never on `number_target` alone,
+            // which the stored, resolved value shares across every meta of one indicator
+            // (TTD-DD-3). Fall back to number_target + year ONLY for a saved target that
+            // predates the column (no `toc_indicator_target_id` of its own), which is what
+            // stops the same meta being appended on top of the row that already answers it.
+            let existing: (typeof indicator.targets)[number] | undefined =
+              tocIndicatorTargetId !== null
+                ? indicator.targets.find(
+                    (target) =>
+                      target.toc_indicator_target_id === tocIndicatorTargetId,
+                  )
+                : undefined;
+
+            if (!existing) {
+              existing = indicator.targets.find((target) => {
+                const predatesColumn =
+                  target.toc_indicator_target_id === null ||
+                  target.toc_indicator_target_id === undefined;
+                if (!predatesColumn) {
+                  return false;
+                }
+                const sameNumber =
+                  numberTarget === null ||
+                  target.number_target === numberTarget ||
+                  `${target.number_target}` === `${catalog.number_target}`;
+                const sameYear =
+                  targetDate === null || target.target_date === targetDate;
+                return sameNumber && sameYear;
+              });
+            }
 
             if (existing) {
               if (existing.target_value == null && targetValue != null) {
                 existing.target_value = targetValue;
               }
+              // Backfill the new field on a legacy match so a second catalog meta sharing
+              // the same canonical number + year in this same call cannot match this row
+              // again through the fallback (TTD-R-10) — never touches `indicators_targets`,
+              // which stays the row's real PK (TTD-T-2 lookup (b) resolves on it).
+              if (
+                (existing.toc_indicator_target_id === null ||
+                  existing.toc_indicator_target_id === undefined) &&
+                tocIndicatorTargetId !== null
+              ) {
+                existing.toc_indicator_target_id = tocIndicatorTargetId;
+              }
               continue;
             }
 
+            // TTD-R-7: a meta with no stored row yet reports `indicators_targets: null`,
+            // never a ToC-namespace id in the PK field — the ToC id lives in the new field.
             indicator.targets.push({
-              indicators_targets: catalog.toc_indicator_target_id ?? null,
+              indicators_targets: null,
+              toc_indicator_target_id: tocIndicatorTargetId,
               number_target: Number.isFinite(numberTarget)
                 ? numberTarget
                 : null,
               contributing_indicator: null,
-              target_date: Number.isFinite(targetDate) ? targetDate : null,
+              target_date: targetDate,
               target_progress_narrative: null,
               indicator_question: null,
               target_value: targetValue,

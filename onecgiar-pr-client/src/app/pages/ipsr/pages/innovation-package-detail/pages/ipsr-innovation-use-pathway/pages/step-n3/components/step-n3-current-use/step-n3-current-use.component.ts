@@ -36,8 +36,14 @@ export class StepN3CurrentUseComponent implements OnInit {
     });
   }
 
-  hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
+  hasElementsWithId(list, attr, significantFields?: string[]) {
+    // A row the user just added (`new ActorN3()` / `OrganizationN3` / `MeasureN3`) has no `is_active` yet but is
+    // already on screen; only an explicitly removed row (`is_active === false`) is hidden (P2-3842). When
+    // `significantFields` is given, a blank placeholder row does not count until one of those fields has data
+    // (bugfix/ipsr-empty-state-active-check).
+    const finalList = this.api.rolesSE.readOnly
+      ? list.filter(item => item[attr])
+      : list.filter(item => item.is_active != false && (!significantFields || significantFields.some(f => !!item[f])));
     return finalList.length;
   }
 

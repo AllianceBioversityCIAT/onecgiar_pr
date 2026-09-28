@@ -378,6 +378,11 @@ export class VersioningService {
             manager,
             config,
           );
+          // NS-47 — the scaling-study links hang from the row replicated just above.
+          await this._resultsInnovationsDevRepository.replicateScalingStudyUrls(
+            manager,
+            config,
+          );
           await this._resultAnswerRepository.replicate(manager, config);
           await this.transformInnovationDevAnswersFor2026(
             manager,
@@ -407,6 +412,11 @@ export class VersioningService {
       }
 
       await this._resultCountryRepository.replicate(manager, config);
+      // Night sweep 2026-09-23, P3 / R3 (NS-44): the sub-national areas were never copied in this
+      // flow (the IPSR flow below already does it), so a Sub-national result reached the new phase
+      // with its countries but none of their areas. Must run after the countries: the areas hang
+      // from the NEW result_country rows.
+      await this._resultCountrySubnationalRepository.replicate(manager, config);
       await this._resultRegionRepository.replicate(manager, config);
       await this._linkedResultRepository.replicate(manager, config);
       await this._evidencesRepository.replicate(manager, config);

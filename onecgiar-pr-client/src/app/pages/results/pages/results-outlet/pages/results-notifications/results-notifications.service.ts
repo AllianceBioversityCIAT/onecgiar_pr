@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -32,8 +33,21 @@ export class ResultsNotificationsService {
   phaseFilter = null;
   initiativeIdFilter = null;
   searchFilter = null;
+  // NOTIF-T-6: Filter popover facets (Center / Bilateral project), multi-select. Live here (not on
+  // the component) so received-requests/sent-requests templates can read them without prop-drilling,
+  // the same reason initiativeIdFilter/searchFilter already live here.
+  centerIdsFilter: (string | number)[] = [];
+  bilateralProjectIdsFilter: string[] = [];
 
-  hideInitFilter = true;
+  // NOTIF-T-11 (rework attempt 2): Phase/Program state moved here from `ResultsNotificationsComponent`
+  // AND `RequestsComponent` — those two components each had their OWN copy, which meant switching
+  // phase on Requests then clicking over to Updates left Updates' Program dropdown showing the OLD
+  // phase's initiatives under the OLD portfolio label (`NOTIF-AC-5` violation). Single owner now:
+  // both components read `phaseList`/`filteredInitiatives`/`entityLabel` straight off this service,
+  // same reasoning as `phaseFilter`/`initiativeIdFilter` above.
+  phaseList = [];
+  filteredInitiatives = [];
+  entityLabel = 'Entity';
 
   constructor(
     private readonly api: ApiService,
@@ -239,6 +253,60 @@ export class ResultsNotificationsService {
     });
   }
 
+  // ---------------------------------------------------------------------
+  // NOTIF-T-11 (rework attempt 2) — Phase/Program state, single owner
+  // ---------------------------------------------------------------------
+
+  onPhaseChange(phaseId) {
+    this.get_updates_notifications(phaseId);
+    this.get_section_information(phaseId);
+    this.get_sent_notifications(phaseId);
+    this.filterInitiativesByPhase(phaseId);
+  }
+
+  filterInitiativesByPhase(phaseId) {
+    const selectedPhase = this.phaseList.find(p => p.id == phaseId);
+    if (!selectedPhase) return;
+
+    const portfolioId = selectedPhase.obj_portfolio?.id;
+    const portfolioAcronym = selectedPhase.obj_portfolio?.acronym?.toLowerCase();
+
+    this.entityLabel = portfolioId === 2 ? 'Initiative' : 'Entity';
+
+    if (this.api.rolesSE.isAdmin) {
+      this.api.resultsSE.GET_AllInitiatives(portfolioAcronym).subscribe(({ response }) => {
+        this.filteredInitiatives = response;
+      });
+    } else {
+      this.filteredInitiatives = this.api.dataControlSE.myInitiativesList.filter(init => init.portfolio_id === portfolioId);
+    }
+  }
+
+  getAllPhases() {
+    // NOTIF-T-11 (rework attempt 3): NO re-fetch guard here — restored to the original,
+    // pre-NOTIF-T-11 behavior. `RequestsComponent` has no `ngOnInit` at all (see its class-level
+    // doc comment) and never calls this; only `ResultsNotificationsComponent.ngOnInit()` calls it, exactly once per
+    // navigation into `results-notifications`, so there is no double-fetch to guard against. A
+    // length-based "already populated" guard was tried in attempt 2 and caused a real regression:
+    // since this service is `providedIn: 'root'` and `phaseList` is never cleared, the guard made
+    // every subsequent entry a silent no-op (`onPhaseChange()` never re-ran), so Updates showed
+    // stale data on a second visit and `?phase=` deep-linking stopped re-deriving state.
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
+      this.phaseList = response;
+      // P2-3106 (AC2): default the Phases dropdown to the current active reporting phase when none is set
+      // (a phase from query params, applied in ResultsNotificationsComponent.setQueryParams, takes precedence).
+      if (!this.phaseFilter) {
+        const activePhaseId = this.api.dataControlSE.reportingCurrentPhase?.phaseId;
+        if (activePhaseId && this.phaseList.some(p => p.id == activePhaseId)) {
+          this.phaseFilter = activePhaseId;
+        }
+      }
+      if (this.phaseFilter) {
+        this.onPhaseChange(this.phaseFilter);
+      }
+    });
+  }
+
   resetNotificationInformation() {
     this.receivedData = {
       receivedContributionsPending: null,
@@ -253,12 +321,10 @@ export class ResultsNotificationsService {
   }
 
   resetFilters() {
-    this.hideInitFilter = false;
     this.initiativeIdFilter = null;
     this.searchFilter = null;
-
-    setTimeout(() => {
-      this.hideInitFilter = true;
-    }, 0);
+    // NOTIF-T-6 (NOTIF-AC-4): "Clear all" resets every facet, including these two.
+    this.centerIdsFilter = [];
+    this.bilateralProjectIdsFilter = [];
   }
 }

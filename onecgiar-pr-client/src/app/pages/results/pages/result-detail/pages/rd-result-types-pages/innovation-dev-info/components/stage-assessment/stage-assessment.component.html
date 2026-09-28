@@ -11,13 +11,16 @@
     [description]="question?.question_description"
     [useColon]="false"></app-pr-field-header>
 
+  <!-- Night sweep 2026-09-23, W12B-3: `(ngModelChange)`, not `(selectOptionEvent)` — the shared radio
+       emits selectOptionEvent BEFORE it writes the new value, so the clean-up ran against the old
+       selection and the "Why?" of Not applicable survived a change of answer. -->
   <app-pr-radio-button
-    (selectOptionEvent)="handleSelectionChange()"
     [verticalAlignment]="true"
     [options]="question?.options"
     optionLabel="question_text"
     optionValue="result_question_id"
-    [(ngModel)]="question['radioButtonValue']">
+    [ngModel]="question['radioButtonValue']"
+    (ngModelChange)="onSelected($event)">
   </app-pr-radio-button>
 
   <div *ngIf="isNotApplicableSelected" style="margin-top: 18px; max-width: 300px;">

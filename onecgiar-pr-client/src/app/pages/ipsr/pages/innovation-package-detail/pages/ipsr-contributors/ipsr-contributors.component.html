@@ -1,17 +1,45 @@
 <div class="partnersindex">
+  <!-- Night sweep 2026-09-23, IPSR-8: the section GET failed; Save is off until a reload. -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [collapsible]="false" [description]="loadErrorNote" data-testid="section-load-error"></app-alert-status>
+  }
   @if (this.fieldsManagerSE.isP25()) {
+    <!-- P2-3427 (Ángel, 25-Sep-2026 review): same question, tooltip and gates as W1/W2 Contributors and
+         Partners (`rd-contributors-and-partners.component.html:38-66`). The label and the note follow the
+         PHASE year (`isCP2026()`), never the portfolio: a 2025 package keeps the 2025 wording. -->
     <app-pr-yes-or-not
-      label="Does this result align with the Program's planned TOC indicators?"
+      [label]="tocQuestionLabel()"
       [required]="true"
       [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
-      (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)">
+      (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
+      [tooltip]="tocQuestionInfoNote()">
     </app-pr-yes-or-not>
 
-    <app-alert-status
-      description="If your response to this question is <strong>YES</strong>, then please return to the Program's main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.">
-    </app-alert-status>
+    @if (!isCP2026()) {
+      <!-- P2-3427: full note, not the collapsed "(i)" badge — W1/W2 uses [collapsible]="false" on every note. -->
+      <app-alert-status
+        [collapsible]="false"
+        description="If your response to this question is <strong>YES</strong>, then please return to the Program's main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.">
+      </app-alert-status>
+    }
 
     @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+      <!-- 2026 + No: the same mandatory "financial resources" question W1/W2 asks (P2-3063 / P2-3036 AC6). -->
+      @if (isCP2026() && !this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+        <app-pr-yes-or-not
+          label="Did the Program invest financial resources in the achievement of this result?"
+          [required]="true"
+          [hideDescription]="true"
+          [(ngModel)]="programInvestedFinancialResources"
+          [tooltip]="financialResourcesInfoNote">
+        </app-pr-yes-or-not>
+
+        <div
+          appFeedbackValidation
+          labelText="Did the Program invest financial resources in the achievement of this result?"
+          [isComplete]="programInvestedFinancialResources !== null"></div>
+      }
+
       @if (this.tocConsumed) {
         <div style="z-index: 1; position: relative">
           <app-cp-multiple-wps
@@ -33,7 +61,7 @@
           label="Why is the result being reported?"
           type="text"
           [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
-          [maxWords]="30"
+          [maxWords]="isCP2026() ? 50 : 30"
           [rows]="2"
           [autogenerate]="true">
         </app-pr-textarea>
@@ -52,26 +80,71 @@
       optionValue="code"
       [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
       placeholder="Select center(s)"
-      [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+      [disableOptions]="this.rdPartnersSE.centersLockedInDropdown"
       (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
     </app-pr-multi-select>
 
+    <!-- P2-3838 (Ángel, 28-Sep-2026): a Center that owns a selected W3/bilateral project is added here on its
+         own, as the bilateral form does (`section-contributors.component.html:96-104`), and shown as a locked
+         chip: ★, no ×, tooltip naming the project. It enters with a short highlight and leaves with a fade
+         when its project is removed — keeping its derived skin while it leaves, so it never flashes back to a plain chip. `data-derived-tick` only READS the tick signal so the timer-driven
+         writes of the service schedule a render under zoneless CD. -->
     <div class="medal_selector selected_container">
-      <div class="centers chips_container">
+      <div class="centers chips_container" [attr.data-derived-tick]="this.rdPartnersSE.projectDerivedCentersTick()">
         <div
           class="center pr_chip_selected"
-          [prTooltip]="this.disabledText"
-          [prTooltipDisabled]="!center.from_cgspace"
+          [class.is_derived]="this.rdPartnersSE.isProjectDerivedCenter(center) || this.rdPartnersSE.isDerivedCenterLeaving(center)"
+          [class.is_entering]="this.rdPartnersSE.isDerivedCenterEntering(center)"
+          [class.is_leaving]="this.rdPartnersSE.isDerivedCenterLeaving(center)"
+          [attr.data-testid]="this.rdPartnersSE.isProjectDerivedCenter(center) ? 'ipsr-derived-center-chip' : null"
+          [prTooltip]="this.rdPartnersSE.isProjectDerivedCenter(center) ? this.rdPartnersSE.projectDerivedCenterTooltip(center) : this.disabledText"
+          [prTooltipDisabled]="!center.from_cgspace && !this.rdPartnersSE.isProjectDerivedCenter(center)"
           *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+          @if (this.rdPartnersSE.isProjectDerivedCenter(center) || this.rdPartnersSE.isDerivedCenterLeaving(center)) {
+            <span class="derived_mark" aria-hidden="true">★</span>
+          }
           <div class="name" [innerHtml]="center?.name"></div>
+          @if (this.rdPartnersSE.isProjectDerivedCenter(center) || this.rdPartnersSE.isDerivedCenterLeaving(center)) {
+            <span class="derived_tag">from project</span>
+            <i class="material-icons-round derived_lock" aria-label="Added from a contributing project">lock</i>
+          }
           <i
-            *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+            *ngIf="
+              !this.api.rolesSE.readOnly &&
+              !this.api.dataControlSE?.currentResult?.status &&
+              !center.from_cgspace &&
+              !this.rdPartnersSE.isProjectDerivedCenter(center) &&
+              !this.rdPartnersSE.isDerivedCenterLeaving(center)
+            "
             class="material-icons-round"
             (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
             >cancel</i
           >
         </div>
       </div>
+    </div>
+
+    <!-- P2-3427 (Ángel, 25-Sep-2026): Lead center sits right under the Contributing CGIAR Centers, as in
+         W1/W2 since LCD-DD-1 (`rd-contributors-and-partners.component.html:244-267`), and it always shows.
+         Picking a center that is not yet a contributor adds it (`onLeadCenterSelected`); a single contributor
+         becomes the lead on its own (`tryAutoAssignLeadCenter`, run last on load). -->
+    <div class="mt-16" style="position: relative; z-index: 3">
+      @if (!this.rdPartnersSE.updatingLeadData) {
+        <app-pr-select
+          data-testid="ipsr-field-contributing_center~lead"
+          label="Lead center"
+          [required]="true"
+          [options]="this.rdPartnersSE.possibleLeadCenters"
+          [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+          (selectOptionEvent)="onLeadCenterSelected($event?.code ?? null); this.rdPartnersSE.syncProjectDerivedCenters()"
+          optionLabel="full_name"
+          optionValue="code"
+          placeholder="Select a lead center..."
+          [showClear]="true"
+          [readOnly]="this.api.rolesSE.readOnly"
+          [tooltip]="getMessageLeadCenter()">
+        </app-pr-select>
+      }
     </div>
 
     @if (this.rdPartnersSE.clarisaProjectsList.length > 0) {
@@ -84,7 +157,9 @@
         label="Contributing W3 and/or bilateral projects"
         selectedLabel="Projects selected"
         selectedOptionLabel="fullName"
-        placeholder="Select project">
+        placeholder="Select project"
+        (selectOptionEvent)="this.rdPartnersSE.syncProjectDerivedCenters()"
+        (removeOptionEvent)="this.rdPartnersSE.syncProjectDerivedCenters()">
       </app-pr-multi-select>
     }
     <app-pr-multi-select
@@ -206,44 +281,35 @@
     </div>
 
     <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
-    <app-normal-selector></app-normal-selector>
+    <app-normal-selector variant="ipsr"></app-normal-selector>
 
-    <!-- Lead partner/center start -->
+    <!-- Lead partner start. P2-3427: the Lead center lives above, next to the centers; the partner
+         toggle no longer wipes it (`onLeadByPartnerChange`, decoupled in W1/W2 by 268cbc622). -->
     <app-pr-yes-or-not
       label="Is this result being led by an external partner?"
       [required]="true"
       [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
-      (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)"
+      (selectOptionEvent)="this.rdPartnersSE.onLeadByPartnerChange($event)"
       [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
     </app-pr-yes-or-not>
-    <app-alert-status [description]="getMessageLead()"></app-alert-status>
-    <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner; else selectLeadCenter">
-      <app-pr-select
-        label="Lead partner"
-        [options]="this.rdPartnersSE.possibleLeadPartners"
-        optionLabel="full_name"
-        optionValue="institutions_id"
-        placeholder="Select a lead partner..."
-        [required]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
-        [(ngModel)]="this.rdPartnersSE.leadPartnerId"
-        *ngIf="!this.rdPartnersSE.updatingLeadData">
-      </app-pr-select>
-    </div>
-    <ng-template #selectLeadCenter>
-      <app-pr-select
-        label="Lead center"
-        [options]="this.rdPartnersSE.possibleLeadCenters"
-        optionLabel="full_name"
-        optionValue="code"
-        placeholder="Select a lead center..."
-        [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
-        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
-        *ngIf="!this.rdPartnersSE.updatingLeadData">
-      </app-pr-select>
-    </ng-template>
+    @if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
+      <app-alert-status [collapsible]="false" [description]="getMessageLead()"></app-alert-status>
+      @if (!this.rdPartnersSE.updatingLeadData) {
+        <app-pr-select
+          label="Lead partner"
+          [options]="this.rdPartnersSE.possibleLeadPartners"
+          optionLabel="full_name"
+          optionValue="institutions_id"
+          placeholder="Select a lead partner..."
+          [required]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+          [(ngModel)]="this.rdPartnersSE.leadPartnerId">
+        </app-pr-select>
+      }
+    }
 
     <app-alert-status
       *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+      [collapsible]="false"
       description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
     </app-alert-status>
     <br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
@@ -258,4 +324,4 @@
 @if (this.fieldsManagerSE.isP22()) {
   <app-ipsr-contributors-centers [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-centers>
 }
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"> </app-save-button>
+<app-save-button class="position_sticky" [disabled]="loaded() !== true" (clickSave)="onSaveSection()"> </app-save-button>

@@ -12,24 +12,55 @@ p {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 15px;
   margin: 20px 0;
-
-  .requests_header_item {
-    font-weight: 500;
-    padding: 5px 15px;
-    border-radius: 10px;
-    background-color: var(--pr-color-neutral-1000);
-    color: var(--pr-color-secondary-400);
-    transition: all ease-in-out 0.2s;
-
-    &:hover {
-      opacity: 0.75;
-    }
-  }
 }
 
-.active {
-  background-color: var(--pr-color-primary-800) !important;
-  color: var(--pr-color-white) !important;
+// NOTIF-T-9's Filter popover panel width, relocated here by NOTIF-T-11 alongside the popover markup
+// itself. 280px matches the mockup source exactly (`PRMS Reporting.dc.html`, `showNotifications`,
+// the `ntFilterOpen` panel: `width:280px`). Kept off Tailwind arbitrary-value utilities per the
+// codebase's own defensive precedent against Tailwind-JIT-timing risk (`notification-item/CLAUDE.md`'s
+// NOTIF-T-7 rework).
+//
+// NOTIF-T-13 (defect fix): `max-height`/`overflow-y` were missing from the very start — the mockup's
+// `ntFilterOpen` panel specifies `width:280px;max-height:420px;overflow-y:auto` as ONE rule and only
+// the width ever made it over here. Capping the panel's own height at 420px (with its own scrollbar)
+// is what the mockup does and is enough for it to fit "below the trigger" in the vast majority of
+// layouts. Restoring both properties verbatim, matching the mockup exactly.
+//
+// NOTIF-DD-7: was `hlm-popover-content` (a CDK `flexibleConnectedTo` overlay) — replaced with a
+// plain, self-positioned panel per the design decision (four rounds of real CDK-popover defects:
+// `NOTIF-T-6`/`NOTIF-T-9`/`NOTIF-T-12`/`NOTIF-T-13`). Positioning is now plain CSS on THIS class
+// (`position:absolute`, matching the mockup's own `ntFilterOpen` panel: `top:44px` there is this
+// button's own height + the `sideOffset="6"` gap the old CDK popover used — `calc(100% + 6px)`
+// reproduces the same 6px gap regardless of the trigger's actual rendered height). Visual values
+// (background/border/shadow/radius) are read off `HlmPopoverContent`'s own base Tailwind classes
+// (`hlm-popover-content.ts`: `bg-popover` / `ring-foreground/10 ring-1` / `rounded-md` / `shadow-md`)
+// and mapped onto this app's own tokens so the plain panel looks the same as the CDK one did:
+// `--pr-color-white` (this button's own `bg-[var(--pr-color-white)]`, same as the trigger),
+// `--pr-color-accents-2` (this button's own border color), `--pr-shadow-2` (this codebase's
+// `0 8px 24px rgb(25 21 36 / 0.1)` token — the same shadow weight class already used elsewhere for a
+// plain absolutely-positioned dropdown panel, e.g. `bilateral-page-header`/`reporting-program-band`'s
+// `shadow-[0_12px_32px_rgba(25,21,36,0.12)]`), `12px` radius matching the mockup's own
+// `border-radius:12px` on `ntFilterOpen`. `z-index: 50` matches the same two components' own
+// absolutely-positioned dropdown panels (`z-50`) — the highest overlay z-index already in use for
+// this exact UI pattern in this codebase.
+.notifications-filter-popover-content {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 280px !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: 420px !important;
+  overflow-y: auto !important;
+  display: flex;
+  background: var(--pr-color-white);
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 12px;
+  box-shadow: var(--pr-shadow-2);
+
+  &.filter-popover--align-end {
+    left: auto;
+    right: 0;
+  }
 }

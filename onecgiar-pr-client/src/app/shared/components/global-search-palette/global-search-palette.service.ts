@@ -49,6 +49,9 @@ export interface PaletteResultRow {
   statusId: number;
   statusName: string;
   versionId: number;
+  /** `W3/Bilaterals` rows open in the centre editor or review drawer, not in result-detail. */
+  sourceName: string | null;
+  leadCenter: string | null;
 }
 
 export interface PaletteProgramRow {
@@ -220,6 +223,8 @@ export function toPaletteResultRow(item: any): PaletteResultRow {
     submitterCode: item?.submitter ?? '',
     statusId: Number(item?.status_id),
     statusName: item?.status_name ?? '',
-    versionId: Number(item?.version_id)
+    versionId: Number(item?.version_id),
+    sourceName: item?.source_name ?? null,
+    leadCenter: item?.lead_center ?? null
   };
 }

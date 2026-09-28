@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { BilateralQualityAssessmentAiStatus } from '../../entities/bilateral-quality-assessment.entity';
 import {
   AiAssessmentResponse,
+  QualityEvidenceItem,
   QualityPayload,
   QualitySectionKey,
   QualitySectionResult,
@@ -290,6 +291,30 @@ const HOST_PATTERN =
 const REDACTED_PLACEHOLDER = '[redacted]';
 
 /**
+ * Patterns that identify a per-evidence `reason` as a raw tool/browser error rather than an
+ * AI-authored assessment (`QEL-R-3`) — the literal set requirements.md names, taken verbatim
+ * from the observed Playwright failure. `Timeout … exceeded` allows anything in between (the
+ * duration and unit Playwright reports).
+ */
+const TOOL_ERROR_PATTERNS: ReadonlyArray<RegExp> = [
+  /Page\.goto/,
+  /Page\.navigate/,
+  /Protocol error/,
+  /Call log/,
+  /net::ERR_/,
+  /Navigation failed/,
+  /Timeout[\s\S]*exceeded/,
+  /ERR_NAME_NOT_RESOLVED/,
+];
+
+/**
+ * Plain-language replacement for a technical tool error reached via {@link TOOL_ERROR_PATTERNS}
+ * (`QEL-R-3`). Copy lives here, beside the redaction patterns it stands in for.
+ */
+const EVIDENCE_LINK_UNREADABLE_REASON =
+  "We couldn't open this link, so it was not reviewed. Check that it is a complete, public URL (starting with https://).";
+
+/**
  * Sanitises the AI's plain-language `degraded_reason` before it leaves the client
  * (design.md §4.5, NFR *Privacy / secrets*, `BIL-QAI-AC-9`): strips anything URL- or
  * host-shaped (so a careless AI-side message naming its own host cannot leak it), then
@@ -322,6 +347,45 @@ function sanitizeDegradedReason(reason: string | null): string | null {
   return withoutHosts.length > MAX_DEGRADED_REASON_LENGTH
     ? withoutHosts.slice(0, MAX_DEGRADED_REASON_LENGTH)
     : withoutHosts;
+}
+
+/**
+ * Sanitises one per-evidence `reason` (`QEL-R-2`, `QEL-R-3`, design.md `QEL-DD-2`): detect a
+ * technical tool error on the raw text first — a raw Playwright error also contains a URL, and
+ * redacting it before checking would still leave the rest of the tool's internal message on
+ * screen — and only when it is not one, redact URL/host tokens the same way
+ * {@link sanitizeDegradedReason} does. Never truncated: that cap belongs to `degraded_reason`
+ * alone (design.md `QEL-DD-2`).
+ *
+ * **Defensive (Reviewer, `QEL-T-1` attempt 2):** `isValidEvidenceItem` (above) only checks
+ * `index`/`verdict` — `reason` is never checked, despite `QualityEvidenceItem.reason`'s
+ * declared `string` type. A 2xx body can still carry a missing or `null` `reason`; `.replace`
+ * on that would throw inside `assess()`'s `try`, which `classify()` then mis-files as
+ * `http_error` — the same "checked shallower than its type promises" gap this file's own
+ * `isValidAiResponse` doc comment already warns callers about. A non-string value is returned
+ * unchanged rather than risking that crash — `QEL-R-4` bars changing anything else about it.
+ */
+function sanitizeEvidenceReason(reason: unknown): unknown {
+  if (typeof reason !== 'string') {
+    return reason;
+  }
+  if (TOOL_ERROR_PATTERNS.some((pattern) => pattern.test(reason))) {
+    return EVIDENCE_LINK_UNREADABLE_REASON;
+  }
+  const withoutUrls = reason.replace(URL_PATTERN, REDACTED_PLACEHOLDER);
+  return withoutUrls.replace(HOST_PATTERN, REDACTED_PLACEHOLDER);
+}
+
+/** Applies {@link sanitizeEvidenceReason} to every evidence item, without mutating the input. */
+function sanitizeEvidenceReasons(
+  evidence: QualityEvidenceItem[],
+): QualityEvidenceItem[] {
+  return evidence.map((item) => ({
+    ...item,
+    reason: sanitizeEvidenceReason(
+      item.reason,
+    ) as QualityEvidenceItem['reason'],
+  }));
 }
 
 const MIN_SCORE = 0;
@@ -487,7 +551,13 @@ export class BilateralQualityAssessmentClient {
         };
       }
 
-      const sanitized = sanitizeScores(toAiAssessmentResponse(body));
+      const scoresSanitized = sanitizeScores(toAiAssessmentResponse(body));
+      // `status === 'partial'` reaches this same path (only `'unavailable'` returned earlier),
+      // so it gets the identical evidence-reason treatment (`QEL-R-2`/`QEL-R-3`) as `'completed'`.
+      const sanitized: AiAssessmentResponse = {
+        ...scoresSanitized,
+        evidence: sanitizeEvidenceReasons(scoresSanitized.evidence),
+      };
 
       this.logger.log(
         `event=bilateral_quality_assessment_client result_id=${ctx.resultId} request_id=${requestId} outcome=ok http_status=${response.status} elapsed_ms=${elapsedMs}`,

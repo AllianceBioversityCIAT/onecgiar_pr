@@ -163,6 +163,22 @@
                 (changed)="onProjectFilterChange($event)"></app-pr-filter-multiselect>
             </div>
 
+            <!-- BSF-R-1/BSF-R-10/DD-1 — Science Program multiselect mirrors the Project field:
+                 options from the portfolio-wide CLARISA initiatives catalog, existing `program`
+                 URL/chip contract, no new styles. -->
+            <div class="brl-filter-field" aria-label="Filter by science program">
+              <label class="brl_filter_group_label">Science Program</label>
+              <app-pr-filter-multiselect
+                [options]="programSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Science Program"
+                countLabel="programs"
+                [filter]="true"
+                [ngModel]="programFilter()"
+                (changed)="onProgramFilterChange($event)"></app-pr-filter-multiselect>
+            </div>
+
             <div class="brl-filter-field" aria-label="Filter by created by">
               <label class="brl_filter_group_label">Created by</label>
               <app-pr-filter-multiselect

@@ -1,0 +1,163 @@
+<hlm-sheet side="right" [state]="open() ? 'open' : 'closed'" (closed)="closed.emit()">
+  <hlm-sheet-content
+    *hlmSheetPortal="let ctx"
+    [showCloseButton]="false"
+    class="!w-[720px] sm:!max-w-[720px] max-[639px]:!w-screen flex flex-col gap-0 p-0 bg-surface-card motion-reduce:transition-none motion-reduce:animate-none"
+    data-testid="crd-panel"
+  >
+    <hlm-sheet-header class="gap-1 border-b border-[var(--pr-border-divider)] px-6 py-5">
+      <div class="flex items-start justify-between gap-4">
+        <h2 hlmSheetTitle class="text-[16px] font-bold tracking-[-0.01em] text-ink-heading">{{ copy.title }}</h2>
+        <button
+          type="button"
+          hlmSheetClose
+          class="rounded-md p-1 text-ink-muted hover:text-ink-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
+          [attr.aria-label]="copy.closeAriaLabel"
+          data-testid="crd-close-btn"
+        >
+          <ng-icon name="lucideX" aria-hidden="true" />
+        </button>
+      </div>
+      <p hlmSheetDescription class="text-[13px] leading-[1.5] text-ink-secondary" data-testid="crd-header-sentence">
+        @if (headerParts(); as h) {
+          {{ h.lead }}
+          <!-- CRD-R-2 "Bilateral sentence" (CRD-T-4): no invented requester name — omit "from X"
+               entirely when the caller (notification-item's drawerHeader()) leaves requesterCode empty. -->
+          @if (h.requesterCode) {
+            {{ copy.header.from }} <span class="font-mono font-semibold">{{ h.requesterCode }}</span>
+          }
+          {{ h.verb }}
+          @if (h.responderCode) {
+            <span class="font-mono font-semibold">{{ h.responderCode }}</span>
+          }
+          {{ h.tail }} <span class="font-mono font-semibold">{{ h.resultCode }}</span> – {{ h.resultTitle }}
+        }
+      </p>
+    </hlm-sheet-header>
+
+    <div class="flex-1 min-h-0 overflow-y-auto p-6 flex flex-col gap-6" data-testid="crd-body">
+      <section class="flex flex-col gap-2">
+        <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.result }}</h3>
+        <button
+          type="button"
+          class="flex flex-col items-start gap-1 rounded-lg border border-[var(--pr-border)] bg-surface-subtle px-4 py-3 text-left hover:border-[var(--pr-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
+          data-testid="crd-result-card"
+          (click)="resultActivated.emit()"
+        >
+          <span class="font-mono font-semibold text-[14px] text-brand-300">{{ resultCode() }}</span>
+          <span class="text-[14px] leading-[1.5] text-ink-heading">{{ resultTitle() }}</span>
+        </button>
+      </section>
+
+      <section class="flex flex-col gap-3" data-testid="crd-review-section">
+        <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ copy.sections.whereItContributes }}</h3>
+        @for (table of displayReviewRows(); track $index; let tableIndex = $index) {
+          <div class="grid grid-cols-1 min-[640px]:grid-cols-[200px_minmax(0,1fr)] rounded-lg border border-[var(--pr-border)]" data-testid="crd-review-table">
+            @for (field of table; track field.label; let rowIndex = $index) {
+              <span
+                class="px-[18px] py-3 text-[13px] font-medium text-ink-secondary"
+                [class.border-t]="rowIndex > 0"
+                [class.border-[var(--pr-border)]]="rowIndex > 0"
+                data-testid="crd-review-label"
+                >{{ field.label }}</span
+              >
+              <div class="px-[18px] py-3 flex flex-col items-start gap-1" [class.border-t]="rowIndex > 0" [class.border-[var(--pr-border)]]="rowIndex > 0">
+                <span
+                  class="text-[14px] leading-[1.5] text-ink-body"
+                  [class.font-mono]="field.mono"
+                  [class.tabular-nums]="field.mono"
+                  [class.text-ink-muted]="field.value === copy.dashValue"
+                  [class.line-clamp-3]="needsMore(field.value) && !isExpanded(tableIndex, rowIndex)"
+                  data-testid="crd-review-value"
+                  >{{ field.value }}</span
+                >
+                @if (needsMore(field.value)) {
+                  <button
+                    type="button"
+                    class="self-start text-[12px] font-medium text-brand-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-focus-ring)]"
+                    data-testid="crd-review-toggle"
+                    (click)="toggleExpand(tableIndex, rowIndex)"
+                  >
+                    {{ isExpanded(tableIndex, rowIndex) ? copy.showLess : copy.showMore }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <ng-content select="[crdAlign]" />
+    </div>
+
+    <hlm-sheet-footer class="border-t border-[var(--pr-border-divider)] px-6 py-4" data-testid="crd-footer">
+      @if (mode() === 'decide') {
+        <div class="flex w-full flex-col gap-2">
+          @if (blockedReason()) {
+            <p id="crd-blocked-reason" data-testid="crd-blocked-reason" class="text-[13px] leading-[1.5] text-ink-secondary">{{ blockedReason() }}</p>
+          }
+          @if (acceptHelper()) {
+            <p id="crd-accept-helper" data-testid="crd-accept-helper" class="text-[13px] leading-[1.5] text-ink-secondary">{{ acceptHelper() }}</p>
+          }
+          <div class="flex justify-end gap-3">
+            <button
+              hlmBtn
+              variant="outline"
+              type="button"
+              class="min-h-[36px] text-[14px]"
+              data-testid="crd-decline-btn"
+              [disabled]="isDeclineDisabled()"
+              [attr.aria-describedby]="declineDescribedBy()"
+              (click)="onDeclineActivate()"
+            >
+              @if (declineBusy()) {
+                <ng-icon name="lucideLoaderCircle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              }
+              {{ copy.footer.decline }}
+            </button>
+            <button
+              hlmBtn
+              variant="brand"
+              type="button"
+              class="min-h-[36px] text-[14px]"
+              data-testid="crd-accept-btn"
+              [disabled]="isAcceptDisabled()"
+              [attr.aria-describedby]="acceptDescribedBy()"
+              (click)="onAcceptActivate()"
+            >
+              @if (acceptBusy()) {
+                <ng-icon name="lucideLoaderCircle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              }
+              {{ copy.footer.acceptContribution }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="flex w-full flex-col gap-3">
+          <p class="text-[13px] leading-[1.5] font-medium text-ink-heading" data-testid="crd-decline-confirm-title">
+            {{ copy.footer.declineConfirmTitle }}
+          </p>
+          <div class="flex justify-end gap-3">
+            <button hlmBtn variant="outline" type="button" class="min-h-[36px] text-[14px]" data-testid="crd-cancel-btn" (click)="declineCancelled.emit()">
+              {{ copy.footer.cancel }}
+            </button>
+            <button
+              hlmBtn
+              variant="brand"
+              type="button"
+              class="min-h-[36px] text-[14px]"
+              data-testid="crd-confirm-decline-btn"
+              [disabled]="declineDisabled()"
+              (click)="onConfirmDeclineActivate()"
+            >
+              @if (declineBusy()) {
+                <ng-icon name="lucideLoaderCircle" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              }
+              {{ copy.footer.confirmDecline }}
+            </button>
+          </div>
+        </div>
+      }
+    </hlm-sheet-footer>
+  </hlm-sheet-content>
+</hlm-sheet>
