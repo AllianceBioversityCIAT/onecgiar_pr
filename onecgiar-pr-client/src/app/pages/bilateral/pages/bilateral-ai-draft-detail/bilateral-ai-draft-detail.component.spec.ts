@@ -8,6 +8,10 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { BilateralAiDraftDetailComponent } from './bilateral-ai-draft-detail.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
+
+/** A Center User assignment for ILRI — the centre every test below is opened as. */
+const ILRI_MEMBER = { center_id: 'CENTER-ILRI', center_acronym: 'ILRI', role_id: 9 };
 
 const draftStub = {
   id: 42,
@@ -40,6 +44,7 @@ describe('BilateralAiDraftDetailComponent', () => {
     discardDraft: jest.Mock;
     projectNameMap: ReturnType<typeof signal<Record<number, string>>>;
   };
+  let rolesServiceStub: { getMyCenters: jest.Mock; publishCenters: (centers: unknown[]) => void };
 
   beforeEach(async () => {
     aiServiceStub = {
@@ -49,6 +54,24 @@ describe('BilateralAiDraftDetailComponent', () => {
       discardDraft: jest.fn(),
       projectNameMap: signal<Record<number, string>>({}),
     };
+    // `ASC-T-5`: defaults to a Center User of the centre every existing test below opens as
+    // (`ILRI`, set right after), so the pre-existing promote/discard assertions keep seeing the
+    // controls rendered. The admin-non-member case overrides this per test via `publishCenters`,
+    // which — like the real `RolesService` — bumps a signal-backed `rolesVersion` so the
+    // component's computed actually recomputes (`roles` is a plain, non-reactive property on the
+    // real service; a bare `mockReturnValue` alone would leave the computed's cached answer stale).
+    const rolesVersionSignal = signal(0);
+    const centersMock = jest.fn().mockReturnValue([ILRI_MEMBER]);
+    rolesServiceStub = {
+      getMyCenters: centersMock,
+      get rolesVersion() {
+        return rolesVersionSignal();
+      },
+      publishCenters(centers: unknown[]) {
+        centersMock.mockReturnValue(centers);
+        rolesVersionSignal.update(v => v + 1);
+      },
+    } as never;
 
     await TestBed.configureTestingModule({
       imports: [BilateralAiDraftDetailComponent, NoopAnimationsModule],
@@ -58,11 +81,13 @@ describe('BilateralAiDraftDetailComponent', () => {
         provideRouter([]),
         BilateralContextService,
         { provide: BilateralAiService, useValue: aiServiceStub },
+        { provide: RolesService, useValue: rolesServiceStub },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BilateralAiDraftDetailComponent);
     component = fixture.componentInstance;
+    TestBed.inject(BilateralContextService).setCenter('ILRI', 'International Livestock Research Institute');
     fixture.detectChanges();
   });
 
@@ -109,5 +134,42 @@ describe('BilateralAiDraftDetailComponent', () => {
     expect(promote.disabled).toBe(true);
     expect(discard.disabled).toBe(true);
     expect(promote.textContent).toContain('Creating');
+  });
+
+  // `ASC-T-5` (`ASC-AC-13`, `ASC-R-15`): a platform admin who is not a Center User of the current
+  // centre must never be offered Create Result / Discard here — the server 403s both anyway.
+  describe('ASC-T-5 — Create Result / Discard hidden for a non-member admin', () => {
+    /**
+     * A real signal transition (not a same-value no-op) settles the FIRST transition off the
+     * `beforeEach` "loading" render into the "draft" render — an existing framework quirk of this
+     * exact component's plain (non-signal) `draft`/`error` fields, reproduced identically on the
+     * unmodified pre-`ASC-T-5` component/template with no `isCenterMember` involved at all. Every
+     * pre-existing test that renders the "draft" branch after construction already does this
+     * (`aiServiceStub.isPromoting.set(true)`, see `disables the promote and discard buttons…`
+     * above); these new cases just make that settle explicit and self-contained.
+     */
+    function settleDraftRender(): void {
+      component.draft = draftStub;
+      aiServiceStub.isPromoting.set(true);
+      aiServiceStub.isPromoting.set(false);
+      fixture.detectChanges();
+    }
+
+    it('renders both actions for a Center User of this centre (the default fixture)', () => {
+      settleDraftRender();
+
+      const actions = fixture.nativeElement.querySelector('.badd-actions');
+      expect(actions).toBeTruthy();
+      expect(actions.querySelector('.badd-btn--promote')).toBeTruthy();
+      expect(actions.querySelector('.badd-btn--discard')).toBeTruthy();
+    });
+
+    it('ASC-AC-13 — hides both actions for an admin who is not a Center User of this centre', () => {
+      rolesServiceStub.publishCenters([]);
+      settleDraftRender();
+
+      expect(component.isCenterMember()).toBe(false);
+      expect(fixture.nativeElement.querySelector('.badd-actions')).toBeNull();
+    });
   });
 });

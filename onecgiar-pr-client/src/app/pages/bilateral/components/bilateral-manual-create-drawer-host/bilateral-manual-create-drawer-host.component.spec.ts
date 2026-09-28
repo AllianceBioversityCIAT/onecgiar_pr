@@ -5,6 +5,8 @@ import { BilateralManualCreateDrawerHostComponent } from './bilateral-manual-cre
 import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
+import { BilateralContextService } from '../../services/bilateral-context.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
 
 describe('BilateralManualCreateDrawerHostComponent', () => {
   let fixture: ComponentFixture<BilateralManualCreateDrawerHostComponent>;
@@ -116,5 +118,56 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
     expect(fixture.componentInstance.highlightSp()).toBe(false);
 
     jest.useRealTimers();
+  });
+
+  // `ASC-T-5` rework (`ASC-R-15`, `ASC-AC-13`): the reviewer-found gap. `[canUseAi]="flow.canUseAi()"`
+  // is bound here, on the REAL drawer-host template, reachable from both the bilateral-home
+  // "+ Create result" (`beginFromProject`) and the in-wizard drawer (`openDrawerForManual`) — proven
+  // through the RENDERED AI card's disabled state, not the signal alone (Conformance issue 2).
+  describe('ASC-T-5 — AI option gated by centre membership', () => {
+    function pickPrimarySp(): void {
+      flow.beginFromProject(multiSpProject);
+      fixture.detectChanges();
+      const primaryOption = fixture.nativeElement.querySelector('.sps-option--list') as HTMLElement;
+      primaryOption.click();
+      fixture.detectChanges();
+    }
+
+    function aiCard(): HTMLElement {
+      // `options[0]` is the AI-Assisted card (`bilateral-reporting-way-selector.component.ts`).
+      return fixture.nativeElement.querySelectorAll('.brws-card')[0] as HTMLElement;
+    }
+
+    it('renders the AI card enabled for a Center User of this centre', () => {
+      TestBed.inject(BilateralContextService).setCenter('Bioversity', 'Bioversity International');
+      TestBed.inject(RolesService).roles = {
+        center: [{ center_id: 'Bioversity', center_acronym: 'Bioversity', role_id: 9 }]
+      };
+      pickPrimarySp();
+
+      expect(flow.canUseAi()).toBe(true);
+      const card = aiCard();
+      expect(card.getAttribute('aria-disabled')).toBe('false');
+      expect(card.classList.contains('brws-card--disabled')).toBe(false);
+    });
+
+    it('ASC-AC-13 — renders the AI card disabled for an admin who is not a Center User of this centre', () => {
+      TestBed.inject(BilateralContextService).setCenter('Bioversity', 'Bioversity International');
+      const roles = TestBed.inject(RolesService);
+      roles.roles = { center: [] };
+      roles.isAdmin = true;
+      pickPrimarySp();
+
+      expect(flow.canUseAi()).toBe(false);
+      const card = aiCard();
+      expect(card.getAttribute('aria-disabled')).toBe('true');
+      expect(card.classList.contains('brws-card--disabled')).toBe(true);
+
+      // Clicking the disabled card must not select the AI way (`isOptionDisabled` short-circuits
+      // `selectWay`) — the rendered proof that the gate isn't cosmetic only.
+      card.click();
+      fixture.detectChanges();
+      expect(flow.selectedReportingWay()).not.toBe('ai');
+    });
   });
 });
