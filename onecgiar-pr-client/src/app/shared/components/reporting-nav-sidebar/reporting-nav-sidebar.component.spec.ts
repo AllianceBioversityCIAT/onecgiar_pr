@@ -949,6 +949,11 @@ describe('ReportingNavSidebarComponent', () => {
       const block = extractTemplateBlock(readTemplateHtml(), '@if (!isCollapsed() && getMyCenters().length > 0) {');
       const renderedFixture = await buildRendered(block);
 
+      // ASC-T-6 (ASC-R-17): the block now starts CLOSED for everyone, so a collapsed render would
+      // only carry the assigned CIAT — open it to see the full list this case is about.
+      (renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement).click();
+      renderedFixture.detectChanges();
+
       const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
       expect(links).toHaveLength(2);
 
@@ -1101,21 +1106,20 @@ describe('ReportingNavSidebarComponent', () => {
       const renderedFixture = await buildRendered(wholeBlock());
 
       const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
-      // Open by default (ASC-R-11): all three render before any click.
+      // ASC-T-6 (ASC-R-17): closed by default for everyone now — only the assigned CIAT shows,
+      // nobody being "inside" a centre on the default route.
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(1);
+
+      toggle.click();
+      renderedFixture.detectChanges();
       expect(toggle.getAttribute('aria-expanded')).toBe('true');
       expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
 
       toggle.click();
       renderedFixture.detectChanges();
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
-      // Nobody is "inside" a centre on the default route — a collapsed block with no active
-      // centre lists nothing (ASC-R-12).
-      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(0);
-
-      toggle.click();
-      renderedFixture.detectChanges();
-      expect(toggle.getAttribute('aria-expanded')).toBe('true');
-      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+      expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(1);
     });
 
     it('ASC-AC-11: collapsed while inside CIAT shows only CIAT, active and marked', async () => {
@@ -1125,9 +1129,9 @@ describe('ReportingNavSidebarComponent', () => {
       await router.navigateByUrl('/bilateral/CIAT/home');
       renderedFixture.detectChanges();
 
+      // ASC-T-6 (ASC-R-17): already collapsed on first render — no click needed to get here.
       const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
-      toggle.click();
-      renderedFixture.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
 
       const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
       expect(links).toHaveLength(1);
@@ -1158,6 +1162,11 @@ describe('ReportingNavSidebarComponent', () => {
         const renderedFixture = await buildRendered(wholeBlock());
         const router = TestBed.inject(Router);
         await router.navigateByUrl('/bilateral/AfricaRice/result/9652?phase=36');
+        renderedFixture.detectChanges();
+
+        // ASC-T-6 (ASC-R-17): closed by default; none of these three are assigned, so a collapsed
+        // render would only carry the active AfricaRice — open it to see all three and their state.
+        (renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement).click();
         renderedFixture.detectChanges();
 
         const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
@@ -1206,6 +1215,57 @@ describe('ReportingNavSidebarComponent', () => {
         expect(africaRice).toBeTruthy();
         expect(africaRice.classList.contains('pr-nav-program-card--active')).toBe(true);
         expect(africaRice.getAttribute('aria-current')).toBe('page');
+      });
+    });
+
+    // ----------------------------------------------------------- ASC-T-6 / ASC-R-17 / ASC-DD-8
+    // Supersedes ASC-T-4's open-by-default and active-only-when-closed: the block now starts
+    // CLOSED for everyone, and while closed it shows the rows the user is assigned to PLUS
+    // wherever they currently are, in `getMyCenters()` order.
+    describe('closed by default; mine plus the current centre (ASC-T-6)', () => {
+      it('ASC-AC-16: first render is collapsed, lists CIAT (mine) and IITA (active), not CIP; opening shows all three', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([
+          { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Center User' }
+        ]);
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+
+        const renderedFixture = await buildRendered(wholeBlock());
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/bilateral/IITA/home');
+        renderedFixture.detectChanges();
+
+        const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+        // First render, no click: collapsed.
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+        const links = Array.from(renderedFixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+        expect(links).toHaveLength(2);
+        expect(links[0].textContent).toContain('CIAT');
+        expect(links[1].textContent).toContain('IITA');
+        expect(links[0].textContent).toContain(renderedFixture.componentInstance.assignedMarkerLabel);
+        expect(links[1].classList.contains('pr-nav-program-card--active')).toBe(true);
+
+        toggle.click();
+        renderedFixture.detectChanges();
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(3);
+      });
+
+      it('ASC-AC-17: zero assignments and outside any centre — first render is collapsed and empty, toggle visible', async () => {
+        rolesMock.isAdmin = true;
+        apiMock.rolesSE.getMyCenters.mockReturnValue([]);
+        // Populated catalogue (ASC-AC-1: an admin with zero assignments still gets it), so the
+        // block itself renders and the toggle is there to be seen — only its CONTENT is empty.
+        centersMock.centers.set([catalogueCenter('CIAT'), catalogueCenter('IITA'), catalogueCenter('CIP')]);
+
+        const renderedFixture = await buildRendered(wholeBlock());
+        renderedFixture.detectChanges();
+
+        const toggle = renderedFixture.nativeElement.querySelector('.pr-nav-others-toggle') as HTMLButtonElement;
+        expect(toggle).toBeTruthy();
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(renderedFixture.nativeElement.querySelectorAll('a')).toHaveLength(0);
       });
     });
   });

@@ -247,9 +247,9 @@ export class ReportingNavSidebarComponent {
   /** Whether Admin module is expanded to reveal its child pages. */
   readonly adminModuleExpanded = signal(this.router.url.startsWith('/admin-module'));
   /** Which program groups are open. "My programs" starts open, the rest collapsed. */
-  // @akili-spec changes/admin-sees-all-centers (ASC-T-4) — the centres block starts open, same as
-  // the "mine" science-programs group (ASC-R-11).
-  readonly openGroups = signal<Set<string>>(new Set(['mine', 'centers']));
+  // @akili-spec changes/admin-sees-all-centers (ASC-T-6, ASC-DD-8) — the centres block starts
+  // CLOSED for everyone, superseding ASC-T-4's open-by-default (ASC-R-17).
+  readonly openGroups = signal<Set<string>>(new Set(['mine']));
   private otherAutoOpened = false;
   /** Ensures the (lazy) programs fetch is triggered at most once. */
   private rfrLoadTriggered = false;
@@ -718,11 +718,15 @@ export class ReportingNavSidebarComponent {
     return key != null && key === (center?.center_acronym || String(center?.center_id ?? ''));
   }
 
-  /** Centres rendered in the expanded block: every centre when the group is open; only the
-   *  active one — or none — when it is collapsed (`ASC-R-11`, `ASC-R-12`, `ASC-DD-6`). */
+  /** Centres rendered in the expanded block: every centre when the group is open; while closed
+   *  (the default — `ASC-R-17`, `ASC-DD-8`), the assigned ones plus wherever the user currently is,
+   *  in `getMyCenters()` order (assignments first, `ASC-R-10`). Supersedes ASC-T-4's
+   *  active-only closed list. */
   visibleCenters() {
     const centers = this.getMyCenters();
-    return this.isGroupOpen('centers') ? centers : centers.filter(center => this.isActiveCenter(center));
+    return this.isGroupOpen('centers')
+      ? centers
+      : centers.filter(center => center.isAssigned || this.isActiveCenter(center));
   }
 
   // @akili-spec changes/admin-sees-all-centers (ASC-T-2)

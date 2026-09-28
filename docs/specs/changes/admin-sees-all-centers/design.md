@@ -163,6 +163,12 @@ Fully backwards compatible for every non-admin: the admin branch is the only new
   - `getSignedUrl` (`:438`, creator-only). The admin sees the draft preview but cannot open its files; the user accepted this.
   - `createJob` (`:117`) has **no** centre check for anyone. That is a pre-existing gap, recorded, not fixed here.
 
+### `ASC-DD-8` — Collapsed by default, and collapsed means "mine + where I am" *(added 2026-09-28, user)*
+
+- **Decision:** `openGroups` no longer starts with `'centers'`. `visibleCenters()`, while closed, returns the rows with `isAssigned` plus the `isActiveCenter` row, in the order `getMyCenters()` already gives them. That order is assignments first (`ASC-R-10`), so the active catalogue row lands after them.
+- **Supersedes:** the open-by-default and active-only clauses of `ASC-DD-6`. The toggle markup, the URL source and `ASC-R-16` are unchanged.
+- **Consequence:** for a non-admin, every row is assigned, so the open and collapsed lists are identical except when they are on an unassigned centre by URL. The user accepted this.
+
 ## 13. Open Gaps & Follow-ups
 
 - **Reversion challenge (Step 2.3) — one DD corrected.** `ASC-DD-5`'s first draft used the `role_name` line as the "mine" marker. The challenge asked what removing/relying on it breaks and surfaced `AUTH-R-2`: every assignment is `Center User`, which `shouldShowAssignmentRole()` filters out, so the marker would never have rendered. Corrected in place before `tasks.md`. No other DD reverts delivered behaviour.
@@ -174,7 +180,7 @@ Fully backwards compatible for every non-admin: the admin branch is the only new
 
 | | Expected |
 |---|---|
-| Tasks | **3** → **5** after the 2026-09-28 scope changes (`ASC-T-4` collapse, `ASC-T-5` admin read-only drafts) |
+| Tasks | **3** → **6** after the 2026-09-28 scope changes (`ASC-T-4` collapse, `ASC-T-5` admin read-only drafts, `ASC-T-6` collapsed-by-default) |
 | LOC | **~130** (≈50 production, ≈80 test) |
 | Review rounds | **1** |
 

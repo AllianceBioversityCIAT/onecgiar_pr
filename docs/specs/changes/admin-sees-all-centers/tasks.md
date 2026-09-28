@@ -156,6 +156,33 @@
 
 ---
 
+### `ASC-T-6` — Start collapsed; collapsed shows my centres plus the current one *(added 2026-09-28, user)*
+
+- **Type:** `client`
+- **Description:** in `reporting-nav-sidebar.component.ts`, drop `'centers'` from the initial `openGroups`. Change the closed branch of `visibleCenters()` from "active only" to "`isAssigned` **or** `isActiveCenter`", keeping the `getMyCenters()` order. Do not touch the template, the rail, the T-1 union, the T-2 marker or the R-16 active rule.
+- **Implements:** `ASC-R-17` (supersedes parts of `ASC-R-11` / `ASC-R-12`)
+- **Design:** `ASC-DD-8`
+- **Files (expected):** `…/reporting-nav-sidebar.component.ts` · `.spec.ts`
+- **Depends on:** `ASC-T-4`
+- **Blocks:** `ASC-T-3`
+- **Size:** `XS`
+- **Skills:** `angular-developer`
+- **Review:** `full` — it reverts delivered behaviour (open by default, active-only when collapsed; override d)
+- **Verification:**
+  - **Falsifier:** with the `ASC-AC-16` fixture, the first render is collapsed and lists exactly CIAT and IITA, in that order. With the `ASC-AC-17` fixture, it lists nothing. Two mutations, each red on a named case: (a) start open → `ASC-AC-16` red, because CIP is listed and `aria-expanded="true"`; (b) collapsed shows the active centre only → `ASC-AC-16` red, because CIAT is missing.
+  - **Red run:** `cd onecgiar-pr-client && npx jest --no-coverage --testPathPattern="reporting-nav-sidebar"` — `ASC-AC-16` fails on current code because the block starts open.
+  - **Disqualifier:** assert on rendered `a` elements and on `aria-expanded` on the first render, with no click beforehand. Existing tests that assumed open-by-default must be updated deliberately (click to open first), never deleted.
+  - **Consumers:** `reporting-nav-sidebar.component.spec.ts` (the T-1/T-2/T-4 render cases that assume an open block) · `platform-tour.steps.ts:83` (the `[data-guide]` root is still rendered while collapsed)
+- **Definition of done:**
+  - [x] `ASC-AC-16` — collapsed on first render; mine plus the current centre; opening shows all
+  - [x] `ASC-AC-17` — zero assignments and outside any centre: collapsed and empty, toggle visible
+  - [x] Earlier cases updated to open first where they need the full list; none deleted
+  - [x] Both falsifier mutations executed and observed **red**
+  - [x] `npx jest --testPathPattern="(reporting-nav-sidebar|platform-tour)"` green · `npx tsc --noEmit -p tsconfig.app.json` clean · `npx ng lint --quiet` clean
+- **Status:** [x] — PASS attempt 1, 2026-09-28 (`execution.md` → `ASC-T-6`)
+
+---
+
 ### `ASC-T-3` — Confirm on a real admin account and settle the catalogue count
 
 - **Type:** manual verification + docs
@@ -163,7 +190,7 @@
 - **Implements:** `ASC-R-20`, `ASC-AC-1` end to end, `D8`, `D9`; settles `P-10`
 - **Design:** §13, `P-10`
 - **Files (expected):** `…/reporting-nav-sidebar/` has no folder guide today — if the walk changes any documented behaviour, record it in `onecgiar-pr-client/src/CLAUDE.md`; otherwise this task writes no file and reports its findings into `execution.md`
-- **Depends on:** `ASC-T-4`, `ASC-T-5` *(was `ASC-T-2`; re-pointed 2026-09-28)*
+- **Depends on:** `ASC-T-4`, `ASC-T-5`, `ASC-T-6` *(was `ASC-T-2`; re-pointed 2026-09-28)*
 - **Blocks:** `—`
 - **Size:** `S`
 - **Skills:** `systematic-debugging` (the walk is the last confirmation); `playwright-cli` **only if installed locally** — otherwise a manual walk in Chrome
@@ -243,6 +270,7 @@ Linear, no cycle. `T-2` cannot precede `T-1` because the marker renders a tag `T
 | `ASC-T-2` | `full` | Touches DOM hooks a guided-tour step pins by attribute, and must prove the `ASC-DD-5` correction instead of re-introducing the defect Step 2.3 caught |
 | `ASC-T-4` | `full` | Touches the `[data-guide]` wrapper the tour pins |
 | `ASC-T-5` | `full` (parallel lenses) | Security surface — grants a read permission |
+| `ASC-T-6` | `full` | Reverts delivered default (override d) |
 | `ASC-T-3` | `checklist` | A manual walk and at most one documentation line |
 
 **No task is `skip-eligible.`** Both code tasks carry non-deterministic or judgment-bearing checks and touch surfaces other code pins; the third is the substitute gate for two defect classes with no automated check.

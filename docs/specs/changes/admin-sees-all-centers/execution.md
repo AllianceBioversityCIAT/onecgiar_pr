@@ -290,3 +290,47 @@ Green, as listed above.
 - **Runtime events:** none.
 - **Requirements covered:** `ASC-R-11`, `-12`, `-13` (amended), `-16`; amended `ASC-R-2`; `ASC-AC-10`, `-11`, `-15`.
 - **Final status:** **PASS**.
+
+## Scope change: `ASC-T-6`, collapsed by default (2026-09-28, user)
+
+- **User's question, verbatim:** "Por default los centers salen colapsados y se muestran unicamente los que tengo asignados? Si no tengo asignados igual debe salir colapsado siempre los centers. Es asi?"
+- **Leader's answer:** no. The block opens by default, and when collapsed it shows only the current centre. The Leader restated the desired rule, and the user approved it: "Si, adelante."
+- **Spec edits:**
+  - `requirements.md`: `ASC-R-17` added, superseding the open-by-default and active-only clauses of `ASC-R-11`/`-12`; `ASC-AC-16` and `ASC-AC-17` added.
+  - `design.md`: `ASC-DD-8` added; the budget is now 6 tasks.
+  - `tasks.md`: `ASC-T-6` added; `ASC-T-3` now depends on it.
+
+### `ASC-T-6` — Start collapsed; collapsed shows my centres plus the current one
+
+| Field | Value |
+|---|---|
+| Final status | **PASS** (attempt 1) |
+| Date | 2026-09-28 |
+| Skills | `angular-developer` |
+
+- **Files:** `reporting-nav-sidebar.component.ts` (16) and `.spec.ts` (+82/−17). No template change.
+- **Changes:**
+  - `openGroups` now starts as `['mine']`, so the block starts collapsed.
+  - The closed branch of `visibleCenters()` now filters on `isAssigned || isActiveCenter`, in `getMyCenters()` order.
+- **Existing tests updated (none deleted):**
+  - The T-2 expanded case now opens the block first.
+  - `ASC-AC-10` was rewritten for the new default: closed 1 → open 3 → closed 1.
+  - `ASC-AC-11` lost its initial click.
+  - The `ASC-AC-15` expanded case now opens the block first.
+- **New tests:** `ASC-AC-16` and `ASC-AC-17`, both asserting on first render.
+- **Mutations:**
+  - (a) Start open: red, `Expected: "false", Received: "true"` on `aria-expanded`.
+  - (b) Collapsed shows the active centre only: red, `Expected length: 2, Received length: 1`.
+  - Both were reverted and the suite is green again.
+- **Implementer verification:** 96/96 · app tsc clean · 0 sidebar spec-config errors · lint pass.
+- **Evidence re-run (Leader-inline):** **VERIFIED**. `Test Suites: 2 passed` (reporting-nav-sidebar and platform-tour both ran), 96/96, app tsc 0 errors, sidebar spec-config errors 0, lint exit 0.
+- **Reviewer (opus): PASS.**
+  - The change matches `ASC-R-17` and `ASC-DD-8`.
+  - Each rewritten case still proves what it proved before, and no case was removed.
+  - The tour anchor still renders while collapsed.
+  - The first-render assertions use the real router and the real template.
+- **ADVISORY:**
+  - READABILITY: the template comment at `html:254-255` still describes the open-by-default / active-only rule. It was out of this task's file scope; recorded for `ASC-T-3`/follow-up.
+  - RELIABILITY: no test asserts `[data-guide]` directly while collapsed.
+  - RISK: the DoD pattern must include `platform-tour`. The Leader confirmed it did: 2 suites ran.
+- **Runtime events:** none.
