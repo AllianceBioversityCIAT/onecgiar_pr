@@ -21,7 +21,7 @@
 
 ## 3. Task list
 
-### [~] `BTC-T-1` — `indicators[]` on each ToC mapping (read)
+### [x] `BTC-T-1` — `indicators[]` on each ToC mapping (read)
 
 - **Type:** `server`
 - **Description:** In `ResultRepository.getTocMappingsByResultId`, add an `indicators` key to the per-mapping `JSON_OBJECT`, filled by a correlated sub-select over `results_toc_result_indicators` → ToC catalogue → `result_indicators_targets`, using P-6's join and activity conditions verbatim (`BTC-DD-1`). Keys per `design.md` §4.1. In the existing TS `.map`, normalise each mapping's `indicators` (JSON string → parse; `null`/absent → `[]`).

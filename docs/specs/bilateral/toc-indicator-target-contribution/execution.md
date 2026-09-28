@@ -22,7 +22,7 @@
 
 | Field | Value |
 |---|---|
-| Final status | **PASS (Reviewer)** — task held at `[~]`: DoD item *TEST-DB row-count check recorded* is still owed (HITL, `requirements.md` §5; task Disqualifier) |
+| Final status | **PASS** — Reviewer PASS + manual TEST-DB check passed (held `[~]` until the check came back) |
 | Date | 2026-09-28 |
 | Attempts | 1 |
 | Skills / effort | `nestjs-expert` (as listed) · Implementer `medium` · Reviewer `high`, lens checklist |
@@ -50,7 +50,17 @@
 - READABILITY: the `CAST` comment overstates the cause (MySQL 8.0 already emits DECIMAL as a JSON number inside `JSON_OBJECT`); harmless.
 - RESILIENCE: `JSON_ARRAYAGG` has no `ORDER BY` → `indicators[]` order unspecified; worth stating in the BTC-T-3 change-log row.
 
-**Manual TEST-DB check (owed)** — SQL prepared at the session scratchpad `btc-t1-testdb-check.sql` (candidate finder by `result.id` + old query + new query). Pending: both row counts and the `indicators` content.
+**Manual TEST-DB check (HITL, `requirements.md` §5) — PASS, 2026-09-28, run by Juan David on TEST** with the scratchpad `btc-t1-testdb-check.sql` (candidate finder by `result.id` + old query + new query; the `@rid` used was not stated in the pasted output).
+
+| | OLD query (`dbd3f3b5f`) | NEW query (BTC-T-1) |
+|---|---|---|
+| Outer rows | 2 — SP04 *Primary submitter*, SP07 *Contributor* | 2 — same |
+| `toc_mappings[]` length per row | 2 / 2 | 2 / 2 |
+| Collation / SQL error | — | none |
+| `indicators` | — | populated, one element per mapping: SP04 `toc_results_indicator_id 5fdeea84-…`, `number_target 6`, `target_date 2026`, `target_contribution 4444.0`; SP07 `e35f2047-…`, `number_target 6`, `target_date 2026`, `target_contribution 55.0`; `indicator_description` and `indicator_type` non-null on both |
+
+- Row count equal and no mapping added/removed → the Disqualifier does not fire. Non-null description/type → the P22/P25 schema advisory does not materialise for this result. `target_contribution` arrives as a JSON number.
+- **Side finding (pre-existing, not introduced, no action in this spec):** the OLD query already returns two identical `toc_mappings[]` entries per initiative for this result (`toc_result_id` 7190 twice for SP04, 7311 twice for SP07) — most likely two active `results_toc_result` rows for the same initiative + ToC result. The new query carries the same duplication, no more. Belongs in the ticket comment, not a new task.
 
 ### `BTC-T-2` — `target_contribution` on the push (write)
 
