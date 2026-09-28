@@ -389,6 +389,43 @@ describe('StepN1Component', () => {
     expect(hasElementsWithId).toBe(3);
   });
 
+  it('it should count an unsaved row with no is_active set as present when api.roleSE.readOnly is false', () => {
+    const list = [{}, { is_active: false }];
+    const attr = 'is_active';
+    component.api.rolesSE.readOnly = false;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(1);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.1): a blank auto-pushed placeholder row must NOT
+  // count as present once significantFields is passed, even though is_active != false alone
+  // would count it (that is the Pivot's gap — current 2-arg implementation ignores the 3rd arg).
+  it('it should not count a blank placeholder row as present when significantFields is passed and none are set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{}];
+    const hasElementsWithId = component.hasElementsWithId(list, 'result_ip_expert_workshop_organized_id', [
+      'first_name',
+      'last_name',
+      'email',
+      'workshop_role'
+    ]);
+    expect(hasElementsWithId).toBe(0);
+  });
+
+  // IPSR-ESC-T-3 (IPSR-ESC-R-2, scenario 2.2): once the user fills in a significant field, the
+  // same row counts as present again.
+  it('it should count a row as present when significantFields is passed and one of them is set', () => {
+    component.api.rolesSE.readOnly = false;
+    const list = [{ first_name: 'Ana' }];
+    const hasElementsWithId = component.hasElementsWithId(list, 'result_ip_expert_workshop_organized_id', [
+      'first_name',
+      'last_name',
+      'email',
+      'workshop_role'
+    ]);
+    expect(hasElementsWithId).toBe(1);
+  });
+
   it('should return if is_expert_workshop_organized is true on cleanEvidence', () => {
     component.ipsrStep1Body = {
       result_ip: {

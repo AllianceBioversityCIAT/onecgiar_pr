@@ -71,7 +71,7 @@
 
   <div *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true">
     <app-no-data-text
-      *ngIf="!hasElementsWithId(this.ipsrStep1Body.result_ip_expert_workshop_organized, 'result_ip_expert_workshop_organized_id')"
+      *ngIf="!hasElementsWithId(this.ipsrStep1Body.result_ip_expert_workshop_organized, 'result_ip_expert_workshop_organized_id', ['first_name', 'last_name', 'email', 'workshop_role'])"
       title="No facilitators provided">
     </app-no-data-text>
     <app-add-button *ngIf="!this.api.rolesSE.readOnly" name="Add Lead/Co-Lead" (clickEvent)="addExpert()"></app-add-button>

@@ -57,8 +57,10 @@ export class StepN1Component implements OnInit {
     this.ipsrStep1Body.result_ip.use_level_evidence_based = null;
   }
 
-  hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
+  hasElementsWithId(list, attr, significantFields?: string[]) {
+    const finalList = this.api.rolesSE.readOnly
+      ? list.filter(item => item[attr])
+      : list.filter(item => item.is_active != false && (!significantFields || significantFields.some(f => !!item[f])));
     return finalList.length;
   }
 

@@ -36,8 +36,10 @@ export class StepN3CurrentUseComponent implements OnInit {
     });
   }
 
-  hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
+  hasElementsWithId(list, attr, significantFields?: string[]) {
+    const finalList = this.api.rolesSE.readOnly
+      ? list.filter(item => item[attr])
+      : list.filter(item => item.is_active != false && (!significantFields || significantFields.some(f => !!item[f])));
     return finalList.length;
   }
 

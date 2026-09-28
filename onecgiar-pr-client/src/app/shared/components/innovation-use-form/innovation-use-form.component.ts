@@ -504,9 +504,11 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return list;
   }
 
-  hasElementsWithId(list, attr) {
+  hasElementsWithId(list, attr, significantFields?: string[]) {
     if (!Array.isArray(list)) return 0;
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item && item[attr]) : list.filter(item => item && item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly
+      ? list.filter(item => item && item[attr])
+      : list.filter(item => item && item.is_active != false && (!significantFields || significantFields.some(f => !!item[f])));
     return finalList.length;
   }
 
