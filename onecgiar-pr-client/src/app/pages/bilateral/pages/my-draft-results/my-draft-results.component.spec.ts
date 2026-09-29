@@ -855,6 +855,56 @@ describe('MyDraftResultsComponent', () => {
     });
   });
 
+  // `AIQ-R-9` D / P-19: the drafts deep link from the drawer's "View N drafts" / the completion
+  // toast. `?job=` names a session, never a filter — it is read separately from
+  // `parseBilateralQueryParams` (COV-T-7's contract has no `job` key).
+  describe('AIQ-T-7: `?job=` highlights and scrolls to the matching session group (P-19)', () => {
+    let originalScrollIntoView: unknown;
+
+    beforeEach(() => {
+      originalScrollIntoView = (Element.prototype as any).scrollIntoView;
+      (Element.prototype as any).scrollIntoView = jest.fn();
+    });
+
+    afterEach(() => {
+      (Element.prototype as any).scrollIntoView = originalScrollIntoView;
+    });
+
+    it('gives the matching session group an id and scrolls it into view once drafts load', async () => {
+      // Drafts load asynchronously (`bilateralAiService.loadAllDrafts()`), so `ngOnInit` runs with
+      // no session groups on screen yet — the highlight has to apply once the matching group
+      // appears, not only at init.
+      (component as any).activatedRoute = { snapshot: { queryParamMap: convertToParamMap({ job: draftStub.job_id }) } };
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector(`#mdr-session-${draftStub.job_id}`)).toBeNull();
+
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+      TestBed.flushEffects();
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const group = fixture.nativeElement.querySelector(`#mdr-session-${draftStub.job_id}`);
+      expect(group).toBeTruthy();
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+      expect(component.highlightedSessionId()).toBe(draftStub.job_id);
+    });
+
+    it('does nothing when `job` is absent from the URL', async () => {
+      bilateralAiService.draftList.set([draftStub]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+      TestBed.flushEffects();
+      await Promise.resolve();
+
+      expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+      expect(component.highlightedSessionId()).toBeNull();
+    });
+  });
+
   describe('Creator identification and guidance UX (quick/draft-results-creator-ux)', () => {
     afterEach(() => {
       localStorage.removeItem('user');

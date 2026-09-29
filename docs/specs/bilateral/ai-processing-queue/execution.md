@@ -434,3 +434,81 @@
   - → Ticket comment: the keyless error toasts at `bilateral-ai.service.ts:505,519`.
 - **Final verification:** 2101/2101 green, build and lint clean, 4 mutations go red.
 - **Budget:** 10 review rounds for 6 tasks, which is 91 % of the spec-wide 11.
+
+### Budget tripwire — decision (2026-09-29)
+
+- **State after T-5:** 10 review rounds for 6 tasks, against the design §14 budget of 11 total (≤ 1 per task). With 5 tasks remaining, the projection is at least 15 rounds (≥ 36 % over), and about 20 (~80 % over) at the observed ~2 rounds per task. That crosses the > 50 % tripwire.
+- **Cause:** every extra round came from a real defect a Reviewer caught (env-dependent test, missed redirect, un-acked message on a decide failure, untested wake path, missing toast), not from review noise.
+- **Decision:** the user replied "Continue" at the tripwire gate, so execution continues past the tripwire. `design.md` §14 was not edited; the overrun is recorded here for `/akili-archive`'s kaizen.
+- **Ordering:** T-7 before T-8, serialized. Both write `internationalization/bilateral-ai-processes.copy.ts` and share the client build output and `node_modules`.
+
+### `AIQ-T-7` — Never-blocking upload, unlocked wizard, `?job=` routing, drafts highlight
+
+- **Status:** in progress (`[~]`) · **Date:** 2026-09-29
+- **Skills:** `angular-developer`, `tailwind-design-system` (as listed) · **Effort:** high → xhigh on retry
+- **Forward pointers carried:** never call `openDrawer` from an `effect()`; create `bilateral-ai-processes.copy.ts`.
+
+**Attempt 1**
+- **Files changed:**
+  - `bilateral-ai-upload/*`: component, html, spec, `CLAUDE.md`
+  - `bilateral-result-creator/*`: ts, html, spec
+  - `my-draft-results/*`: ts, html, spec
+  - new `internationalization/bilateral-ai-processes.copy.ts`
+- **What changed:**
+  - The upload form is always rendered.
+  - On 202: `addSubmittedJob`, form reset, `clearUploadState()`, the confirmation card, and a toast with a View action that calls `openDrawer()`.
+  - `?job=` calls `openDrawer`. The upload component does this in `ngOnInit`; the creator does it in its `queryParams.subscribe`.
+  - My Drafts puts `?job=` into a signal. A constructor effect then applies the highlight and `scrollIntoView` once, and never calls `openDrawer`.
+  - The creator's `isAiProcessing` reads only `uploading`.
+  - New `chooseAnotherProject` output.
+- **Falsifiers:**
+  1. Restoring the `@if` wrapper gave 6 assertion reds (`input[type=file]` Received null).
+  2. Restoring the `isAiProcessing` statuses gave 3 reds (Expected false, Received true).
+- **Green:** 255 in the 3 folders. Build and lint clean.
+- **Evidence re-run (Leader-inline):** `npx jest src/app/pages/bilateral` gave 2091 passed. `ng build` had 0 errors. **VERIFIED**.
+- **Reviewer: FAIL**, 3 issues:
+  1. No test shows the manual-create drawer host still hosting the upload. It was checked by inspection only. The Reviewer ruled the test is owed: it violates the tasks.md T-7 Tests line "Manual-create drawer host still hosts the upload (P-13)", and P-13 is rated High.
+  2. Resubmittable after a 202 is asserted only through `disabled === false`. `canSubmit()` is checked only before the first submit, and no test runs a second submit. This violates the T-7 Disqualifier ("enabled and submittable") and `AIQ-R-7` A.
+  3. The `my-draft-results/CLAUDE.md` and creator `CLAUDE.md` guides were not updated. This violates `onecgiar-pr-client/CLAUDE.md` §10.
+- **Reviewer confirmed:**
+  - The form is always mounted.
+  - The 202 path is correct.
+  - Both `?job=` paths are correct.
+  - The drafts effect cannot loop or re-scroll, and never calls `openDrawer`.
+  - No hex, `rgba(` or `pi-` in the templates, and every token exists.
+- **ADVISORY:**
+  - Reliability: `/create?job=X` calls `openDrawer` twice (the creator subscription plus the upload `ngOnInit`), which sends two list GETs at once because there is no in-flight guard. The spec literally asks for both call sites. Fix it by making `openDrawer` a no-op when the drawer is already open on the same job, or by having only one side read `?job=`.
+  - In the drawer host, "Choose another project" only hides the card.
+  - The creator spec's mock has no `jobs` signal.
+  - The drafts test does not assert the ring class.
+  - `hover:bg-white` on the secondary button breaks the fg/bg pair rule.
+  - The subtitle copy differs from the mockup.
+- **Leader adjudication:** all 3 issues are in scope. The double `openDrawer` advisory is recorded as a **forward pointer → `AIQ-T-10`/`AIQ-T-11`**: watch for duplicate list GETs on `/create?job=` and consider an idempotent `openDrawer` as a follow-up.
+- **runtime events:** none
+
+**Attempt 2** (rework: the FAIL report was relayed verbatim, with the attempt history)
+- **Files changed:**
+  - `bilateral-manual-create-drawer-host.component.spec.ts`: new host test and an `ActivatedRoute` stub.
+  - `bilateral-ai-upload.component.spec.ts`: resubmit after a 202.
+  - `my-draft-results/CLAUDE.md` and `bilateral-result-creator/CLAUDE.md`: updated and re-stamped.
+- **Mutations:**
+  - Removing the host `<app-bilateral-ai-upload />` turns the host test red.
+  - Removing `isUploading.set(false)` on success turns the resubmit test red (`canSubmit` expected true, got false).
+- **Green:** 515 tests (12 suites). Build and lint are clean.
+- **Evidence re-run (Leader-inline):** `npx jest src/app/pages/bilateral` gave 2092 passed. `ng build` had 0 errors. **VERIFIED**.
+- **Reviewer: PASS.** All 3 issues are fixed and were verified in the files. The attempt-1 conformance findings stand.
+- **ADVISORY (final):**
+  - The double `openDrawer` on `/create?job=` is carried forward (the pointer to T-10/T-11 is already recorded).
+  - "Choose another project" in the drawer host only hides the card.
+  - The creator-spec mock has no `jobs` signal.
+  - `my-draft-results/CLAUDE.md` is 121 lines, one over the 120-line cap.
+  - The `hover:bg-white` fg/bg pair on the secondary button.
+- **runtime events:** none
+
+- **Final status:** PASS on attempt 2 · **Date:** 2026-09-29
+- **Requirements covered:** `AIQ-R-7` A, B (form resets, confirmation, toast, wizard unlocked, no panel), C · `AIQ-R-8` D (routing half) · `AIQ-R-9` D (drafts target).
+- **Decisions made:**
+  - "Choose another project" resets project, SP and way in the creator. It has no listener in the drawer host.
+  - The copy file was created for T-8 to extend.
+- **Final verification:** 2092/2092 green, build and lint clean, 4 mutations red.
+- **Budget:** 12 rounds / 7 tasks (past the tripwire, continuing per the user's decision).

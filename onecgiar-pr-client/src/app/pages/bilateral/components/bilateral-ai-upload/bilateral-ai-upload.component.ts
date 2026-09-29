@@ -1,17 +1,13 @@
-import { Component, DestroyRef, inject, signal, computed, effect, OnDestroy } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
+import { Component, EventEmitter, Output, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
-import { BilateralContextService } from '../../services/bilateral-context.service';
-import { AiProcessingPanelComponent } from '../ai-processing-panel/ai-processing-panel.component';
-import { BilateralAiExpectations, BilateralAiMixClass, NormalizedBilateralAiJob, mixClass } from '../../bilateral-ai-job.model';
+import { BILATERAL_AI_PROCESSES_COPY } from '../../../../internationalization/bilateral-ai-processes.copy';
 
 interface UploadFileEntry {
   id: string;
@@ -40,18 +36,25 @@ const MAX_TEXT_LENGTH = 50_000;
 
 @Component({
   selector: 'app-bilateral-ai-upload',
-  imports: [CommonModule, FormsModule, AiProcessingPanelComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './bilateral-ai-upload.component.html',
   styleUrl: './bilateral-ai-upload.component.scss',
 })
-export class BilateralAiUploadComponent implements OnDestroy {
+export class BilateralAiUploadComponent implements OnInit, OnDestroy {
   private readonly creationService = inject(BilateralCreationService);
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly bilateralAiService = inject(BilateralAiService);
   private readonly messageService = inject(PrToastService);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly ctx = inject(BilateralContextService);
+
+  /**
+   * `AIQ-R-7` B: emitted when the reporter dismisses the post-submit confirmation card via
+   * "Choose another project". The host decides what that means for its own wizard/drawer state —
+   * this component only knows it just finished with the project it had.
+   */
+  @Output() readonly chooseAnotherProject = new EventEmitter<void>();
+
+  readonly copy = BILATERAL_AI_PROCESSES_COPY;
 
   files = signal<UploadFileEntry[]>([]);
   contextText = signal('');
@@ -63,21 +66,11 @@ export class BilateralAiUploadComponent implements OnDestroy {
   uploadState = this.bilateralAiService.uploadState;
 
   /**
-   * `AIQ-T-5` compile-level stub: `BilateralAiService.currentJob` is removed (design §6.2) — the
-   * single-job panel this feeds is retired by `AIQ-DD-8`/`AIQ-T-7`, which owns this component's
-   * real rewrite (never-blocking upload). Left as an always-`null` local signal so the template's
-   * `<app-ai-processing-panel [job]="currentJob()">` binding keeps compiling.
+   * `AIQ-R-7` B: set on a 202, cleared by either confirmation-card action. The form itself is
+   * ALWAYS rendered underneath (`AIQ-R-7` A/B "must NOT replace the upload form with a processing
+   * panel") — this only toggles the confirmation banner above it.
    */
-  currentJob = signal<NormalizedBilateralAiJob | null>(null);
-  /** 1 s tick for the panel's elapsed clock — runs only while a job is alive (`APF-R-6`). */
-  now = signal(Date.now());
-  /** `APF-R-6` D: served by the API, cached per mix by the service — never computed client-side. */
-  expectation = signal<BilateralAiExpectations | null>(null);
-  /** `AIQ-T-5` compile-level stub: `getActiveJobSnapshot()` is removed; see `currentJob` above. */
-  readonly startedAt = computed<number | null>(() => null);
-
-  private tickTimer: ReturnType<typeof setInterval> | null = null;
-  private lastExpectationMix: BilateralAiMixClass | null = null;
+  justSubmittedProjectName = signal<string | null>(null);
 
   private mediaRecorder: MediaRecorder | null = null;
   private currentStream: MediaStream | null = null;
@@ -122,56 +115,18 @@ export class BilateralAiUploadComponent implements OnDestroy {
       !this.isUploading(),
   );
 
-  constructor() {
-    // The panel owns no timer of its own (`APF-R-6` A AND-IT-MUST) — this host ticks it, and only
-    // while a job is actually alive, so nothing spins once the outcome is terminal.
-    effect(() => {
-      const status = this.uploadState().status;
-      const isLive = status === 'pending' || status === 'processing' || status === 'still_running';
-      if (isLive) {
-        this.startTick();
-      } else {
-        this.stopTick();
-      }
-    });
-
-    // `APF-R-6` D: the expected range is served by the API per mix class; re-subscribing on every
-    // poll would leak subscriptions on the `shareReplay(1)` cache, so this only calls out when the
-    // mix actually changes (a job's source mix never changes mid-flight, so in practice: once).
-    // `takeUntilDestroyed` (captured here, in the constructor's own injection context — not
-    // inside the effect callback, which is not one) stops it with the component; `catchError`
-    // keeps a failed call from ever reaching the service's `completionNotice`/toast machinery —
-    // this is a soft "no range today" outcome, not a job failure — and resets `lastExpectationMix`
-    // so a later poll for the SAME mix retries instead of being permanently skipped.
-    const destroyRef = inject(DestroyRef);
-    effect(() => {
-      const job = this.currentJob();
-      if (!job) return;
-      const mix = mixClass(job);
-      if (mix === this.lastExpectationMix) return;
-      this.lastExpectationMix = mix;
-      this.bilateralAiService
-        .expectations(mix)
-        .pipe(
-          catchError(() => {
-            if (this.lastExpectationMix === mix) this.lastExpectationMix = null;
-            return of(null);
-          }),
-          takeUntilDestroyed(destroyRef),
-        )
-        .subscribe(exp => this.expectation.set(exp));
-    });
+  /**
+   * `AIQ-T-7`: the `?job=` email-failure deep link (P-23, producer at
+   * `bilateral-ai-notifications.service.ts:183-186`). Wherever this component is mounted, landing
+   * with `?job=` opens the drawer highlighting that job — `startJob` (single-job polling) is gone;
+   * the list service is the only source of truth now (design §6.1/§6.2).
+   */
+  ngOnInit(): void {
+    const jobId = this.route.snapshot?.queryParams?.['job'];
+    if (jobId) this.bilateralAiService.openDrawer(jobId);
   }
 
-  // `AIQ-T-5`: `ngOnInit` used to call `setPanelVisible(true)` and read `?job=` to call
-  // `startJob(jobId)` — both removed from `BilateralAiService` (design §6.2). The single-outcome-
-  // surface gate and the `?job=` deep link both move to `AIQ-T-7` ("Never-blocking upload, unlocked
-  // wizard, `?job=` routing"), which owns this component's real rewrite. `this.route` stays
-  // injected for that task to pick up; the lifecycle hook itself is dropped rather than left empty
-  // (`@angular-eslint/no-empty-lifecycle-method`).
-
   ngOnDestroy(): void {
-    this.stopTick();
     this.cancelRecording();
     this.stopAudio();
     this.files().forEach(f => this.revokeUrl(f));
@@ -190,31 +145,17 @@ export class BilateralAiUploadComponent implements OnDestroy {
     this.recordingError.set(null);
   }
 
-  private startTick(): void {
-    if (this.tickTimer) return;
-    this.tickTimer = setInterval(() => this.now.set(Date.now()), 1000);
+  /** `AIQ-R-7` B: "Open AI processes" — dismiss the confirmation and open the drawer. */
+  onOpenAiProcesses(): void {
+    this.justSubmittedProjectName.set(null);
+    this.bilateralAiService.openDrawer();
   }
 
-  private stopTick(): void {
-    if (this.tickTimer) {
-      clearInterval(this.tickTimer);
-      this.tickTimer = null;
-    }
-  }
-
-  // ── Processing panel integration (APF-T-6) ─────────────────────────
-
-  onPanelRetry(): void {
-    const jobId = this.uploadState().jobId;
-    if (jobId) this.bilateralAiService.retryJob(jobId);
-  }
-
-  onPanelReset(): void {
-    this.onReset();
-  }
-
-  onPanelOpenDrafts(): void {
-    void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
+  /** `AIQ-R-7` B: "Choose another project" — dismiss the confirmation; the host (wizard/drawer)
+   *  decides what picking a different project means for its own state. */
+  onChooseAnotherProject(): void {
+    this.justSubmittedProjectName.set(null);
+    this.chooseAnotherProject.emit();
   }
 
   // ── File Handling ───────────────────────────────────────────────────
@@ -610,14 +551,31 @@ export class BilateralAiUploadComponent implements OnDestroy {
       }
     }
 
+    // `AIQ-R-7` B: read before the form resets below, or the confirmation card would name whatever
+    // project the reporter has selected AFTER the reset (none).
+    const projectLabel = project.shortName || project.fullName || this.reportingCenterName() || 'Your project';
+
     this.bilateralApi.POST_bilateralAiJob(formData).subscribe({
       next: ({ response }) => {
         this.isUploading.set(false);
-        // `AIQ-T-5`: `startJob(jobId)` is removed — `addSubmittedJob(response)` is its multi-job
-        // replacement (design §6.2, `AIQ-R-7` B "the new job appears in the drawer at once"). The
-        // never-blocking submit UX itself (form reset, confirmation card, `openDrawer`) is
-        // `AIQ-T-7`'s job, not this task's.
+        // `addSubmittedJob(response)` is `startJob`'s multi-job replacement (design §6.2, `AIQ-R-7`
+        // B "the new job appears in the drawer at once").
         this.bilateralAiService.addSubmittedJob(response);
+        // Never-blocking submit (`AIQ-R-7` B): the form resets to empty — the panel this used to
+        // hand off to is retired (`AIQ-DD-8`) — and a dismissible confirmation + a toast with a
+        // View action point at the drawer instead. `clearUploadState()` only narrows this
+        // component's own idle/uploading status now (DD-11); it no longer touches any job state.
+        this.files.set([]);
+        this.contextText.set('');
+        this.bilateralAiService.clearUploadState();
+        this.justSubmittedProjectName.set(projectLabel);
+        this.messageService.add({
+          key: 'globalUserNotification',
+          severity: 'success',
+          summary: this.copy.toast.summary(projectLabel),
+          detail: this.copy.toast.detail,
+          action: { label: this.copy.toast.viewAction, run: () => this.bilateralAiService.openDrawer() },
+        });
       },
       error: (err: HttpErrorResponse) => {
         this.isUploading.set(false);

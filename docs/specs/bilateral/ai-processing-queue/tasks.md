@@ -202,7 +202,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** tests green; `ng build` green; falsifiers red when mutated.
 - **Skills:** `angular-developer`, `tailwind-design-system`.
 
-### `AIQ-T-7` — Never-blocking upload, unlocked wizard, `?job=` routing, drafts highlight
+### [x] `AIQ-T-7` — Never-blocking upload, unlocked wizard, `?job=` routing, drafts highlight
 
 - **Type:** client · **Estimate:** M · **Depends on:** `AIQ-T-5` · **Blocks:** `AIQ-T-10`, `AIQ-T-11`
 - **Description:**

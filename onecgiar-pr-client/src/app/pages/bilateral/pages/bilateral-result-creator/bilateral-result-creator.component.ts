@@ -381,12 +381,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       this.isCenterUserOfLeadCenter()
   );
 
-  isAiProcessing = computed(() => {
-    const status = this.bilateralAiService.uploadState().status;
-    // `still_running` (`APF-R-7`) is still an alive job past the client's old polling ceiling —
-    // the host step must stay locked exactly as it does for `pending`/`processing`.
-    return status === 'uploading' || status === 'pending' || status === 'processing' || status === 'still_running';
-  });
+  /**
+   * `AIQ-DD-11` (reversion, challenged — see design.md §12A): reads ONLY the upload's own
+   * `uploading` status, never a job's. The service is now a job LIST — other jobs (this project's
+   * or another's) stay running well past this component's lifetime, so gating the wizard steps on
+   * any of them would lock the form for a reason the reporter can no longer see (`AIQ-R-7` A: the
+   * form must stay available and submittable for a different project while another job runs).
+   */
+  isAiProcessing = computed(() => this.bilateralAiService.uploadState().status === 'uploading');
 
   overallPct = this.mdsTracker.overallPercentage;
   sectionStatuses = this.mdsTracker.sectionStatus;
@@ -626,6 +628,10 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
           this.qualityAssessment.reset();
           this.selectedReportingWay.set('ai');
           this.manualCreateFlow.closeDrawer();
+          // `AIQ-R-8` D / P-23 (failure-email link): opening the drawer itself is left to the
+          // `route.queryParams` subscription below — it fires once for this very same `?job=` too,
+          // and calling `openDrawer` from two places would fire two immediate list polls for one
+          // page load (forward pointer 1, design.md).
         } else {
           // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
           const preselected = this.creationService.selectedProject();
@@ -649,6 +655,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       const jobId = queryParams?.['job'];
       if (jobId && this.isCreating()) {
         this.selectedReportingWay.set('ai');
+        this.bilateralAiService.openDrawer(jobId);
       }
     });
   }
@@ -663,6 +670,18 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   onPrimarySelected(): void {
     this.scrollToSection('bcr-reporting-way');
+  }
+
+  /**
+   * `AIQ-R-7` B: "Choose another project" on the post-submit confirmation — restarts the 3-step
+   * picker (project → Science Program → reporting way) from the top, the same reset shape
+   * `onProjectSelected` already applies to the two later steps.
+   */
+  onChooseAnotherProject(): void {
+    this.creationService.selectedProject.set(null);
+    this.creationService.selectedPrimarySp.set(null);
+    this.selectedReportingWay.set(null);
+    this.manualCreateFlow.closeDrawer();
   }
 
   onReportingWaySelected(way: 'manual' | 'ai' | 'bulk'): void {

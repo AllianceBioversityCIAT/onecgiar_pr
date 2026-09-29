@@ -1,14 +1,16 @@
 # my-draft-results
 
-**Verified:** 2026-09-09 · branch performance-refactor · uncommitted
+**Verified:** 2026-09-29 · branch JuanGuzman-io/p2-3853-jira-understanding · `AIQ-T-7`
 
 ## What it is
 The **Draft Results** tab of the bilateral center dashboard (P2-3169, P2-3315). Lists every AI-generated
 result suggestion the center still has to decide on, and offers Review (read-only aside), Create Result
 (creates the real result) and Delete on each one. P2-3319 added a **filter by project** on top of the list.
+`AIQ-T-7` (2026-09-29) added the `?job=` deep link (see below).
 
 ## Contract
-- Route: `/bilateral/:centerAcronym/drafts`. No inputs — everything comes from services.
+- Route: `/bilateral/:centerAcronym/drafts`. No component inputs — everything comes from services
+  and `?job=` (read-only, own deep link, see below).
 - State: `BilateralAiService` owns it. `draftList()` = source of truth for the list,
   `isDraftListLoaded()` = loading gate, `isPromoting()` = full-screen overlay,
   `projectNameMap()` / `initiativeNameMap()` = id → label lookups.
@@ -16,6 +18,19 @@ result suggestion the center still has to decide on, and offers Review (read-onl
 - Endpoint: `GET /api/bilateral/center/ai/drafts?centerId=` via
   `BilateralApiService.GET_bilateralAiDrafts`, plus `POST …/drafts/:id/promote` and
   `DELETE …/drafts/:id`. All three are wrapped by `BilateralAiService`, never called from here.
+- **`?job=<id>` deep link (`AIQ-R-9` D / P-19), from the "AI processes" drawer's "View N drafts" and
+  the completion toast — NOT part of the `COV-T-7`/`parseBilateralQueryParams` contract, read
+  separately in `ngOnInit` via `activatedRoute.snapshot.queryParamMap.get('job')`.** The matching
+  `sessionGroups()` entry (grouped by `job_id`, same id) gets `[id]="'mdr-session-'+group.sessionId"`,
+  is scrolled into view (`scrollIntoView({behavior:'smooth',block:'center'})`) and highlighted with
+  Tailwind `ring-2 ring-inset ring-[var(--pr-color-primary-300)]` for 4 s
+  (`highlightedSessionId` signal), once. Drafts load asynchronously
+  (`bilateralAiService.loadAllDrafts()`), so the job usually is not on screen yet at `ngOnInit` —
+  a constructor `effect()` applies the highlight the first time a matching group appears in
+  `sessionGroups()`. **That effect reads `pendingHighlightJobId()` (a signal, not a plain field) AND
+  `sessionGroups()` unconditionally on every run, before any early return** — the very first run
+  (before `ngOnInit` sets the job id) would otherwise register zero tracked dependencies and never
+  fire again once a job id and a matching group show up later.
 - Children reused from the detail page: `app-draft-result-card`, `app-draft-evidence-list`
   (`../bilateral-ai-draft-detail/components/…`).
 - Filter state: `services/my-draft-results-filter.service.ts`, **provided on the component**, not in
@@ -66,6 +81,14 @@ and the promote dialog print through `BilateralAiService.projectNameMap()`. No n
   (pure state + pure predicate + `clearAll()`), so a second dimension is a signal plus a branch.
 
 ## Traps (⚠️ = already broke something)
+- ⚠️ **The highlight effect must read its two signals unconditionally, before any `if`/early
+  return.** `pendingHighlightJobId` used to be set as a plain instance field from `ngOnInit`, with
+  the effect checking it (and `!highlightApplied`) BEFORE calling `sessionGroups()`. On its very
+  first run (the default, job-less `ActivatedRoute`), both guards were true, so the effect returned
+  without ever reading `sessionGroups()` — registering it as a dependency the effect would react to.
+  Angular then had nothing to re-run it on when `sessionGroups()` later got real data with a
+  matching job. Fixed by making `pendingHighlightJobId` a signal AND reading it plus
+  `sessionGroups()` at the very top of the effect body, every run.
 - ⚠️ `BilateralAiDraft` (`../../services/bilateral-ai.interfaces.ts`) **does not model the `result`
   relation** even though the endpoint always returns it. This component reads it through a local
   `DraftResultRelation` cast. Model it on the shared interface the next time that file is touched,

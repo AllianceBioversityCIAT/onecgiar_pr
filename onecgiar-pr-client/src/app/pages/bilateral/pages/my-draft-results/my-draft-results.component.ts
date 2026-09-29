@@ -193,9 +193,44 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly SEARCH_DEBOUNCE_MS = 300;
 
+  /**
+   * `AIQ-R-9` D / P-19: the session group carrying this job gets a scroll+highlight, once, the
+   * first time it appears in `sessionGroups()` — drafts load asynchronously, so the job named by
+   * `?job=` usually is not on screen yet when `ngOnInit` runs.
+   *
+   * `pendingHighlightJobId` is a SIGNAL (not a plain field) on purpose: the effect below must read
+   * it — and `sessionGroups()` — UNCONDITIONALLY on every run, before any early return, or its very
+   * first run (`pendingHighlightJobId` still null, before `ngOnInit`'s own `.set()`) registers zero
+   * dependencies and Angular never schedules it to run again once a job id and a matching group
+   * both show up later. `highlightApplied` stays a plain flag — it only gates behaviour inside the
+   * effect, it is never itself a reason to re-run one.
+   */
+  private readonly pendingHighlightJobId = signal<string | null>(null);
+  private highlightApplied = false;
+  readonly highlightedSessionId = signal<string | null>(null);
+  private highlightClearTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly HIGHLIGHT_MS = 4000;
+
   constructor() {
     effect(() => {
       document.body.style.overflow = this.selectedDraft() ? 'hidden' : '';
+    });
+
+    effect(() => {
+      const jobId = this.pendingHighlightJobId();
+      const groups = this.sessionGroups();
+      if (this.highlightApplied || !jobId) return;
+      const match = groups.find(group => group.sessionId === jobId);
+      if (!match) return;
+      this.highlightApplied = true;
+      this.highlightedSessionId.set(match.sessionId);
+      // Deferred: the group's element mounts from this very `sessionGroups()` change, so it is not
+      // yet in the DOM on this synchronous pass.
+      queueMicrotask(() => {
+        document.getElementById(`mdr-session-${match.sessionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      if (this.highlightClearTimer) clearTimeout(this.highlightClearTimer);
+      this.highlightClearTimer = setTimeout(() => this.highlightedSessionId.set(null), MyDraftResultsComponent.HIGHLIGHT_MS);
     });
 
     effect(() => {
@@ -238,6 +273,15 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     const { params } = parseBilateralQueryParams(this.activatedRoute.snapshot.queryParamMap);
     if (params.project.length) {
       this.filter.setProjects(params.project.map(id => String(id)));
+    }
+
+    // `AIQ-R-9` D / P-19: `?job=<id>` (not part of the shared contract above — it is the AI queue's
+    // own deep link, not a filter) — the matching session group is highlighted and scrolled into
+    // view once it appears (see the constructor's effect).
+    const jobId = this.activatedRoute.snapshot.queryParamMap.get('job');
+    if (jobId) {
+      this.highlightApplied = false;
+      this.pendingHighlightJobId.set(jobId);
     }
   }
 
@@ -674,5 +718,6 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     document.body.style.overflow = '';
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    if (this.highlightClearTimer) clearTimeout(this.highlightClearTimer);
   }
 }
