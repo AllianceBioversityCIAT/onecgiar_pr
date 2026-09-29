@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { EntityManager, In, LessThan, Repository } from 'typeorm';
+import { EntityManager, In, LessThan, Not, Repository } from 'typeorm';
 import { selectManager } from '../../../shared/utils/orm.util';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
@@ -39,8 +39,11 @@ import {
 import { CreateBilateralAiJobDto } from '../dto/create-bilateral-ai-job.dto';
 import { BilateralService } from '../../bilateral/bilateral.service';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ClarisaProjectsRepository } from '../../../clarisa/clarisa-projects/clarisa-projects.repository';
 import {
   getBilateralAiMaxAttempts,
+  getBilateralAiMaxConcurrent,
+  getBilateralAiMaxPerUser,
   bilateralAiDbNow,
 } from '../bilateral-ai.config';
 import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
@@ -114,6 +117,10 @@ export class BilateralAiService {
     private readonly roleByUserRepository: RoleByUserRepository,
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+    // `AIQ-T-4`: `design.md` §4.1 list item `project_name` — already resolvable here via
+    // `ClarisaProjectsModule`, imported by `bilateral.module.ts` for `BilateralService`'s own use
+    // (`findProjectByGrantTitle`), so no new module import is needed.
+    private readonly clarisaProjectsRepository: ClarisaProjectsRepository,
     private readonly notificationsService: BilateralAiNotificationsService,
     private readonly evidenceTransferService: BilateralAiEvidenceTransferService,
     // `AIQ-T-3`: `BilateralAiDispatchService` already depends on this service (`attemptStart`,
@@ -188,11 +195,50 @@ export class BilateralAiService {
   }
 
   /**
-   * `APF-R-1` A: `queue_position` is computed at read time from `bilateral_ai_jobs` — never
-   * stored — and is meaningful only while this job itself is `PENDING` (`design.md` §4.1). It
-   * counts non-terminal jobs (`PENDING`/`PROCESSING`) whose queue-entry clock is older than this
-   * job's own `queue_entry_date = COALESCE(retried_date, created_date)`, so a retried job takes
-   * its place at the back of the queue instead of ranking by `created_date`.
+   * `AIQ-T-4` — `design.md` §5.5, `AIQ-DD-4`: `jobs_ahead` counts only `PENDING` jobs whose
+   * queue-entry clock is older than this one (a running job is never "ahead" in a lane model, so
+   * older `PROCESSING` rows no longer count — this narrows the pre-`AIQ` `queue_position`
+   * definition). `wait_reason` is `own_job_running` when the owner is already at the per-user
+   * cap, else `no_free_lane` when the global lane cap is full, else `starting`. One helper feeds
+   * both `getJob` and `listJobs` so the two reads cannot drift (`AIQ-R-6` B).
+   */
+  private async computeQueueWait(
+    ownerId: number,
+    queueEntryDate: Date,
+  ): Promise<{
+    jobs_ahead: number;
+    wait_reason: 'own_job_running' | 'no_free_lane' | 'starting';
+  }> {
+    const [jobs_ahead, ownerProcessingCount] = await Promise.all([
+      this.jobRepository.count({
+        where: {
+          status: BilateralAiJobStatus.PENDING,
+          queue_entry_date: LessThan(queueEntryDate),
+        },
+      }),
+      this.jobRepository.count({
+        where: { status: BilateralAiJobStatus.PROCESSING, user_id: ownerId },
+      }),
+    ]);
+
+    if (ownerProcessingCount >= getBilateralAiMaxPerUser()) {
+      return { jobs_ahead, wait_reason: 'own_job_running' };
+    }
+
+    const globalProcessingCount = await this.jobRepository.count({
+      where: { status: BilateralAiJobStatus.PROCESSING },
+    });
+    const wait_reason =
+      globalProcessingCount >= getBilateralAiMaxConcurrent()
+        ? 'no_free_lane'
+        : 'starting';
+    return { jobs_ahead, wait_reason };
+  }
+
+  /**
+   * `APF-R-1` A / `AIQ-DD-4`: `queue_position` (kept, `AIQ-R-6` B) is now defined as `jobs_ahead`
+   * — computed at read time, never stored, meaningful only while this job is `PENDING`
+   * (`design.md` §4.1, §4.2). `wait_reason` is additive, also `PENDING`-only.
    */
   async getJob(jobId: string, userId: number) {
     const job = await this.jobRepository.findOne({
@@ -200,26 +246,160 @@ export class BilateralAiService {
     });
     if (!job) throw new NotFoundException('AI job not found.');
 
-    let queue_position: number | null = null;
+    let jobs_ahead: number | null = null;
+    let wait_reason: string | null = null;
     if (job.status === BilateralAiJobStatus.PENDING) {
-      queue_position = await this.jobRepository.count({
-        where: {
-          status: In([
-            BilateralAiJobStatus.PENDING,
-            BilateralAiJobStatus.PROCESSING,
-          ]),
-          queue_entry_date: LessThan(job.queue_entry_date),
-        },
-      });
+      const wait = await this.computeQueueWait(
+        job.user_id,
+        job.queue_entry_date,
+      );
+      jobs_ahead = wait.jobs_ahead;
+      wait_reason = wait.wait_reason;
     }
 
     return {
       response: {
         ...job,
-        queue_position,
+        queue_position: jobs_ahead,
+        jobs_ahead,
+        wait_reason,
         max_attempts: getBilateralAiMaxAttempts(),
       },
       message: 'AI job found',
+      status: 200,
+    };
+  }
+
+  /**
+   * `AIQ-T-4` — `GET /api/bilateral/center/ai/jobs` (`design.md` §4.1): the caller's active jobs
+   * (`PENDING`/`PROCESSING`, unbounded) plus jobs finished in the last 24 h (max 10, newest
+   * first), each carrying exactly the §4.1 key set plus a `summary` of global lane usage.
+   *
+   * The 24 h cutoff and the finished-job ordering run in SQL (`DATE_SUB(NOW(), INTERVAL 24
+   * HOUR)`) — never a JS `Date` (`bilateral-ai.config.ts`'s timezone-skew note: `completed_date`
+   * is written in the DB's session time zone, `NOW()` is evaluated there too, but a JS `Date`
+   * instant is process-zone).
+   *
+   * `bucket_name`, `document_keys`, `audio_keys`, `text_context`, `response_snapshot`,
+   * `error_message` and `user_id` are deliberately excluded from every item (§4.1 "Excluded from
+   * the list on purpose") — the explicit key set below, never an entity spread, is what keeps
+   * them out.
+   */
+  async listJobs(user: TokenDto) {
+    const userId = user.id;
+
+    const activeJobs = await this.jobRepository.find({
+      where: {
+        user_id: userId,
+        status: In([
+          BilateralAiJobStatus.PENDING,
+          BilateralAiJobStatus.PROCESSING,
+        ]),
+      },
+      order: { queue_entry_date: 'DESC' },
+    });
+
+    const finishedJobs = await this.jobRepository
+      .createQueryBuilder('job')
+      .where('job.user_id = :userId', { userId })
+      .andWhere('job.status IN (:...statuses)', {
+        statuses: [BilateralAiJobStatus.COMPLETED, BilateralAiJobStatus.FAILED],
+      })
+      .andWhere('job.completed_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)')
+      .orderBy('job.completed_date', 'DESC')
+      .limit(10)
+      .getMany();
+
+    const jobs = [...activeJobs, ...finishedJobs].sort(
+      (a, b) =>
+        new Date(b.queue_entry_date).getTime() -
+        new Date(a.queue_entry_date).getTime(),
+    );
+
+    const lanesBusy = await this.jobRepository.count({
+      where: { status: BilateralAiJobStatus.PROCESSING },
+    });
+    const othersWaiting = await this.jobRepository.count({
+      where: { status: BilateralAiJobStatus.PENDING, user_id: Not(userId) },
+    });
+
+    const projectIds = [...new Set(jobs.map((job) => job.project_id))];
+    const centerIds = [...new Set(jobs.map((job) => job.center_id))];
+    const [projects, institutions] = await Promise.all([
+      projectIds.length
+        ? this.clarisaProjectsRepository.find({ where: { id: In(projectIds) } })
+        : Promise.resolve([]),
+      centerIds.length
+        ? this.clarisaInstitutionsRepository.find({
+            where: { id: In(centerIds) },
+          })
+        : Promise.resolve([]),
+    ]);
+    const projectNameById = new Map(
+      projects.map((project) => [
+        Number(project.id),
+        project.fullName?.trim() || project.shortName || null,
+      ]),
+    );
+    const centerAcronymById = new Map(
+      institutions.map((institution) => [
+        Number(institution.id),
+        institution.acronym ?? null,
+      ]),
+    );
+
+    const items = await Promise.all(
+      jobs.map(async (job) => {
+        let jobs_ahead: number | null = null;
+        let wait_reason: string | null = null;
+        if (job.status === BilateralAiJobStatus.PENDING) {
+          const wait = await this.computeQueueWait(
+            job.user_id,
+            job.queue_entry_date,
+          );
+          jobs_ahead = wait.jobs_ahead;
+          wait_reason = wait.wait_reason;
+        }
+
+        return {
+          job_id: job.job_id,
+          status: job.status,
+          stage: job.stage,
+          stage_updated_date: job.stage_updated_date,
+          project_id: job.project_id,
+          project_name: projectNameById.get(Number(job.project_id)) ?? null,
+          program_code: job.program_code,
+          center_id: job.center_id,
+          center_acronym: centerAcronymById.get(Number(job.center_id)) ?? null,
+          document_count: job.document_keys?.length ?? 0,
+          audio_count: job.audio_keys?.length ?? 0,
+          has_text: Boolean(
+            job.text_context && job.text_context.trim().length > 0,
+          ),
+          queue_entry_date: job.queue_entry_date,
+          started_date: job.started_date,
+          completed_date: job.completed_date,
+          result_count: job.result_count,
+          error_code: job.error_code,
+          attempts: job.attempts,
+          max_attempts: getBilateralAiMaxAttempts(),
+          retrying: job.retrying,
+          jobs_ahead,
+          wait_reason,
+        };
+      }),
+    );
+
+    return {
+      response: {
+        jobs: items,
+        summary: {
+          lanes_total: getBilateralAiMaxConcurrent(),
+          lanes_busy: lanesBusy,
+          others_waiting: othersWaiting,
+        },
+      },
+      message: 'AI jobs found',
       status: 200,
     };
   }

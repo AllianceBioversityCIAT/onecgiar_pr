@@ -115,7 +115,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** specs green; `tsc --noEmit` clean; both falsifiers red when mutated; `grep -n "new Date(" bilateral-ai-sweeper.cron.ts` shows no new hits versus baseline (enumerate the baseline hits first).
 - **Skills:** `nestjs-expert`, `tdd`.
 
-### `AIQ-T-4` — `GET center/ai/jobs`, `jobs_ahead` / `wait_reason`, contract doc
+### [x] `AIQ-T-4` — `GET center/ai/jobs`, `jobs_ahead` / `wait_reason`, contract doc
 
 - **Type:** server · **Estimate:** M · **Depends on:** `AIQ-T-2` · **Blocks:** `AIQ-T-5`
 - **Description:**

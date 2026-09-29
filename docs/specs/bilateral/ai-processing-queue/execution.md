@@ -276,3 +276,72 @@
 - **Forward pointer → `AIQ-T-11`:** smoke-test server boot (real Nest DI with the `BilateralAiService` ↔ `BilateralAiDispatchService` forwardRef) before the HITL.
 - **Final verification:** 288/288 green; tsc and lint clean; 4 wake mutations and the owner-exemption mutation go red.
 - **Budget:** review rounds are now T-6 1, T-1 2, T-2 2, T-3 2 = 7 rounds for 4 tasks, 64 % of the spec-wide 11.
+
+### Merge: `origin/performance-refactor` → spec branch (2026-09-29, at the user's request)
+
+- **Commit:** `4f740ffc2`. It brought in 16 commits, including P2-3854 `be208ead2` (JWT verified on `/api/bilateral/center/*`) and P2-3848 (QA AI text suggestions).
+- **Conflicts:** none. `bilateral.module.ts` auto-merged: our `BilateralAiDispatchService` plus their `ResultFieldRevision` entity.
+- **Checks after the merge:**
+  - Server `tsc` clean.
+  - Server `jest --testPathPattern="bilateral-ai|bilateral-center|jwt.middleware|bilateral-quality"`: 698 passed.
+  - Client `jest` for pr-toast, bilateral-result-creator and bilateral-quality-assessment-dialog: 230 passed.
+
+### `AIQ-T-4` — `GET center/ai/jobs`, `jobs_ahead` / `wait_reason`, contract doc
+
+- **Final status:** PASS · **Date:** 2026-09-29 · **Attempts:** 1
+- **Skills:** `nestjs-expert`, `api-design-principles` (as listed) + `tdd` (Leader-added: the key-set and privacy falsifiers are contract tests) · **Effort:** high
+- **Review mode:** parallel lenses (privacy/auth, contract/correctness). The task carries privacy (override f) and an external contract.
+
+**Attempt 1**
+- **Files changed:** `bilateral-ai.controller.ts` (+spec), `services/bilateral-ai.service.ts` (+spec), `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`.
+- **What was added:**
+  - `@Get('jobs')`, declared before `jobs/:jobId`.
+  - `listJobs(user)`: active jobs plus up to 10 finished in the last 24 h (the cutoff is computed in SQL), plus a `summary`.
+  - A private helper, `computeQueueWait`, shared by `listJobs` and `getJob`. `getJob` adds `jobs_ahead`/`wait_reason` and sets `queue_position = jobs_ahead`.
+  - A new `ClarisaProjectsRepository` injection. The constructor grows from 18 to 19 parameters; the only hand-built spec is `bilateral-ai.service.spec.ts`, confirmed by grep.
+- **Auth finding (after P2-3854):**
+  - `app.module.ts:143-150` does not exclude `api/bilateral/center/ai/jobs`, so `JwtMiddleware` verifies the token (`jwt.middleware.ts:134,153`).
+  - `@UserToken()` returns `request.user` first (`user-token.decorator.ts:7-9`).
+  - Design §7 already describes this post-P2-3854 state, so there was no Pivot.
+- **Key set:**
+  - Item: `job_id, status, stage, stage_updated_date, project_id, project_name, program_code, center_id, center_acronym, document_count, audio_count, has_text, queue_entry_date, started_date, completed_date, result_count, error_code, attempts, max_attempts, retrying, jobs_ahead, wait_reason`.
+  - Summary: `lanes_total, lanes_busy, others_waiting`.
+- **Red:** both spec files failed to compile before the change (missing `listJobs`/`jobs_ahead`, constructor arity).
+- **Green:** 296 passed (12 suites).
+- **Falsifiers:**
+  1. A `{...job}` spread leaked `bucket_name`, `document_keys`, `audio_keys` and `document_keys_raw`; the key-set test went red.
+  2. Dropping the `user_id` filter leaked user 99's rows into caller 42's list (`Expected length 1, Received 3`).
+- **Change-log row:** dated 2026-09-29, at the top of `bilateral-result-summaries.en.md`. It cites AIQ-T-4/AIQ-D-15 and records the new endpoint, the key set, the summary, the additive fields and the `queue_position` redefinition.
+- **tsc / eslint:** clean.
+- **Evidence re-run (Leader-inline):** `npx jest --testPathPattern="bilateral-ai"` gave 296 passed, tsc clean. **VERIFIED**.
+- **Reviewer, privacy/auth lens: PASS.**
+  - The route is signature-verified; the new route is declared before `:jobId` (proved by supertest).
+  - Both reads are scoped to the caller, and all SQL is parameterized.
+  - `summary` contains counts only; there is no entity spread.
+  - `getJob` still filters on `{job_id, user_id}`.
+  - The privacy fixture mixes in user 99's rows; the `id: 0` case returns an empty list.
+  - No log lines were added.
+- **Reviewer, contract lens: PASS.**
+  - The key set matches §4.1 exactly.
+  - `wait_reason` precedence follows §5.5 and never contradicts dispatch.
+  - `jobs_ahead` counts older PENDING jobs only, so it is monotonic.
+  - The helper is shared; the 24 h cutoff is in SQL without timezone skew.
+  - The change-log row matches the diff.
+  - All six listed tests exist; the updated `:296-351` spec is stricter.
+- **ADVISORY (recorded, not scope):**
+  - **Privacy risk:** if `user.id` were ever `undefined`, TypeORM would drop the `user_id` key from `find({where})` and return every user's active jobs. The middleware (`jwt.middleware.ts:134`) prevents this today. A one-line guard `if (!userId) return empty` would close it. `getJob` has the same older pattern.
+  - **Evidence gap:** no app-level test shows `/api/bilateral/center/ai/jobs` answers 401 without `auth`. It was verified by reading the code only.
+  - **Spec drift:** `requirements.md:217` (R-5 C, "no header → empty list") predates P2-3854; the middleware now returns 401. Align it at archive.
+  - **Contract drift:** `dto/bilateral-ai-job-response.dto.ts:88-96` still describes the old `queue_position` and lacks `jobs_ahead`/`wait_reason`. It is not wired in (P-11) and not in the T-4 Files list. Follow-up.
+  - **Ties:** `jobs_ahead` uses a strict `LessThan` on a one-second `queue_entry_date`, while dispatch breaks ties by `job_id`, so same-second jobs under-count by one. The count is still monotonic.
+  - **Performance (NFR, measured in T-11):** `listJobs` runs 2–3 counts per PENDING item (N+1). With about 10 PENDING jobs that is around 30 counts per poll, above §8's "two counts". Suggest computing the owner and global counts once. The Clarisa lookup loads every column.
+  - **Test gap:** there is no fixture with a job finished 1 h ago or 25 h ago.
+  - **Readability:** R-6 A says "has a PROCESSING job" where the code (and §5.5) says "at cap". The two differ only when the per-user cap is above 1.
+- **runtime events:** none
+- **Requirements covered:** `AIQ-R-5` A, B, C, D; `AIQ-R-6` A, B, C (server); NFR performance deferred to `AIQ-T-11`.
+- **Decisions made:** `tdd` added. No spec edits.
+- **Forward pointers:**
+  - → `AIQ-T-5`: the list shape above is the contract. `dto/bilateral-ai-job-response.dto.ts` is stale; do not model the client on it.
+  - → `AIQ-T-11`: measure the `GET center/ai/jobs` p95 with about 10 PENDING items (the N+1 advisory), and add an app-level 401 probe.
+- **Final verification:** 296/296 green; tsc and lint clean; both falsifiers red when mutated.
+- **Budget:** T-4 took 1 round. The spec now stands at 8 rounds for 5 tasks (73 % of the spec-wide 11).
