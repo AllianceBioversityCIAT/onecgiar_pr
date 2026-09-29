@@ -828,7 +828,7 @@ describe('IpsrContributorsComponent', () => {
       mockRdPartnersSE.partnersBody.result_toc_result = {
         initiative_id: 1,
         planned_result: false,
-        result_toc_results: [{ planned_result: true }]
+        result_toc_results: [{ result_toc_result_id: 55, planned_result: true }]
       };
       mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
       mockRdPartnersSE.partnersBody.institutions = [];
@@ -846,7 +846,7 @@ describe('IpsrContributorsComponent', () => {
       component.onSaveSection();
 
       const sentData = patchSpy.mock.calls[0][0];
-      expect(sentData.result_toc_result.result_toc_results).toEqual([{ planned_result: true }]);
+      expect(sentData.result_toc_result.result_toc_results).toEqual([{ result_toc_result_id: 55, planned_result: true }]);
     });
 
     it('should call updateGreenChecks after save', () => {
@@ -1331,6 +1331,50 @@ describe('IpsrContributorsComponent', () => {
       component.contributorsBody = { ...mockResponse, bilateral_projects: [] } as any;
       component.getTocLogicp25({ ...mockResponse, linked_results: [] });
       expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results).toHaveLength(1);
+    });
+  });
+
+  describe('P2-3843 — a "No" on a package whose only ToC row is the blank default survives the save', () => {
+    const saveWith = (tocResult: any) => {
+      component.loaded.set(true);
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      mockRdPartnersSE.partnersBody.result_toc_result = tocResult;
+      mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
+      mockRdPartnersSE.partnersBody.institutions = [];
+      mockRdPartnersSE.partnersBody.mqap_institutions = [];
+      mockRdPartnersSE.contributingInitiativeNew = [];
+      component.contributorsBody.contributing_initiatives = { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] };
+      component.contributorsBody.contributingInitiativeNew = [];
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHContributorsByIpsrResultId');
+      component.onSaveSection();
+      return patchSpy.mock.calls[0][0].result_toc_result;
+    };
+
+    it('drops the blank row so the server records the bare answer, and lifts the financial answer to the block', () => {
+      const item: any = { initiative_id: 7, planned_result: false, toc_progressive_narrative: 'Outside the 2026 ToC', result_toc_results: [] };
+      component.ensureTocRow(item);
+      item.result_toc_results[0].program_invested_financial_resources = false;
+
+      const sent = saveWith(item);
+
+      expect(sent.planned_result).toBe(false);
+      expect(sent.initiative_id).toBe(7);
+      expect(sent.result_toc_results).toEqual([]);
+      expect(sent.program_invested_financial_resources).toBe(false);
+      expect(sent.toc_progressive_narrative).toBe('Outside the 2026 ToC');
+      // the on-screen body keeps its row: only the payload copy changes
+      expect(item.result_toc_results).toHaveLength(1);
+    });
+
+    it('keeps rows that point at a saved record or a ToC node', () => {
+      const rows = [{ result_toc_result_id: 55 }, { toc_result_id: 9 }, { toc_result_id: null }];
+      const sent = saveWith({ initiative_id: 7, planned_result: false, result_toc_results: rows });
+      expect(sent.result_toc_results).toEqual([{ result_toc_result_id: 55 }, { toc_result_id: 9 }]);
+    });
+
+    it('leaves a "Yes" payload exactly as it was', () => {
+      const tocResult = { initiative_id: 7, planned_result: true, result_toc_results: [{ toc_result_id: null }] };
+      expect(saveWith(tocResult)).toBe(tocResult);
     });
   });
 

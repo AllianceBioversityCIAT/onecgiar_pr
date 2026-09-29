@@ -379,6 +379,29 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
     });
   }
 
+  /**
+   * P2-3843 — "Can this result be mapped to a ToC KPI? No" was lost on save. `ensureTocRow` (P2-3427) gives a
+   * never-saved package a blank row so the form can render; on a "No" the server's `createTocMappingV2`
+   * deactivates every active row and then re-writes only the rows that carry a `result_toc_result_id` or a
+   * `toc_result_id` (`results-toc-results.service.ts` ~1889). A blank row is skipped, and because the array is
+   * not empty the "no rows" branch that records the bare answer never runs — nothing is written, and the
+   * reload comes back unanswered. Sending the "No" without the blank rows sends it down that branch, which
+   * reads the financial-resources answer from the block, so it is lifted there from the row the radio wrote.
+   * The on-screen body is left untouched: only the payload copy changes.
+   */
+  buildUnplannedSafeTocPayload(tocResult: any) {
+    if (tocResult?.planned_result !== false || !Array.isArray(tocResult.result_toc_results)) return tocResult;
+    const anchoredRows = tocResult.result_toc_results.filter((row: any) => row?.result_toc_result_id || row?.toc_result_id);
+    if (anchoredRows.length === tocResult.result_toc_results.length) return tocResult;
+
+    const payload: any = { ...tocResult, result_toc_results: anchoredRows };
+    const financialResources = tocResult.result_toc_results[0]?.program_invested_financial_resources;
+    if (financialResources !== undefined && payload.program_invested_financial_resources === undefined) {
+      payload.program_invested_financial_resources = financialResources;
+    }
+    return payload;
+  }
+
   onPlannedResultChange(item: any) {
     if (item?.result_toc_results?.length > 1) {
       item.result_toc_results = [item.result_toc_results[0]];
@@ -610,7 +633,7 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
         ...this.rdPartnersSE.contributingInitiativeNew,
         ...this.contributorsBody.contributing_initiatives.pending_contributing_initiatives
       ];
-      sendedData.result_toc_result = this.rdPartnersSE.partnersBody.result_toc_result;
+      sendedData.result_toc_result = this.buildUnplannedSafeTocPayload(this.rdPartnersSE.partnersBody.result_toc_result);
       sendedData.is_lead_by_partner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
       // P2-3427 (Ángel, 28-Sep-2026 review, prtest) — the shared External Partners selector (`normal-selector`,
       // P2-3066) keeps the "Other(s)" SENTINEL (`institutions_id = OTHER_PARTNERS_CODE`, -999999) inside
