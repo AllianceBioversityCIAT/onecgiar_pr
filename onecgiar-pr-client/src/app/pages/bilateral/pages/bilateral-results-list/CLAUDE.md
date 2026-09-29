@@ -1,6 +1,6 @@
 # bilateral-results-list
 
-**Verified:** 2026-09-28 · branch qa-development-2026-ss · bf51bece9 · spec `bilateral/results-list-source-column-split` (`BSC-T-1`, reworked)
+**Verified:** 2026-09-29 · branch qa-development-2026-ss · 0d67e1f02 · `quick/bilateral-results-default-100-rows` (default page size 10 → 100; options unchanged `[10, 25, 50, 100]`)
 
 ## What it is
 The W3/Bilateral results table a Centre user lands on at `/bilateral/:centerAcronym`. One row per

@@ -1586,9 +1586,9 @@ describe('BilateralResultsListComponent', () => {
       const tableCmp = component.table!;
       expect(tableCmp.paginator).toBe(true);
       expect(tableCmp.showPaginatorAlways).toBe(true);
-      expect(tableCmp.effectiveRows()).toBe(10);
+      expect(tableCmp.effectiveRows()).toBe(100);
       expect(tableCmp.rowsPerPageOptions).toEqual([10, 25, 50, 100]);
-      expect(tableCmp.pagedValue()).toHaveLength(10);
+      expect(tableCmp.pagedValue()).toHaveLength(12);
       expect(tableCmp.showPaginator()).toBe(true);
     });
 
