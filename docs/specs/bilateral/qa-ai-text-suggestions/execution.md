@@ -277,3 +277,13 @@
 **Open for T-6 (owner):** the drawer reappears in the running state right after close (DD-8, intended) — owner to confirm the UX.
 
 **Final verification:** PASS.
+
+### `BIL-QTS-T-6` — Manual verification (in progress)
+
+**Defect D-1 (owner, browser, 2026-09-29):** drawer Description empty with literal placeholder "undefined" and an "Unsaved changes" pill while the form showed "Test". Leader reproduced the sync part in Chrome on result 9581 (form edit not reaching the drawer until reload).
+- Root causes (confirmed by the Implementer with red specs): (1) `section-general-info.component.ts` `onDescriptionChange` never wrote `creationService.resultDescription` (title did) — the drawer prefill source (design §6.1); (2) shared `custom-fields/pr-textarea` `effectivePlaceholder` lacked the `?? ''` fallback `pr-input` has; (3) the pill came from `app-field-card`'s ancestor `(input)/(change)/(click)` listeners driving the page-wide `SaveButtonService`, not from the drawer's `descriptionDirty()`.
+- Fix: mirror `onTitleChange`; `?? ''` in `pr-textarea`; drawer placeholders "Enter result title" / "Describe the result"; `stopPropagation()` on the drawer's own `<input>/<textarea>` (re-applied when the edit block re-renders).
+- Files: `section-general-info.component.{ts,spec.ts}`, `custom-fields/pr-textarea/pr-textarea.component.ts`, `bilateral-quality-assessment-dialog.component.{ts,html,spec.ts}`.
+- Implementer verification: 5 suites / 301. Evidence re-run (Leader-inline) **VERIFIED**: + `pr-textarea field-card` → 8 suites / 334 passed, tsc 0, lint pass.
+- Reviewer: **PASS** — no loop/extra autosave from the new write; nothing the drawer needs relies on the bubbled events; no consumer depends on an "undefined" placeholder.
+- ADVISORY: a spec comment wrongly says the pill is hidden via stylesheet; the guard does not re-run when `RolesService.readOnly` rebuilds the controls — an additive `editLocked` pass-through on pr-input/pr-textarea would be cleaner; stopped `click` hides the event from document-level outside-click listeners (no tooltips in the GI block today); `old_value` in `result_field_revision` is the form's current (possibly unsaved) text, not the last server value — R-13 does not define which; placeholders are hard-coded English.

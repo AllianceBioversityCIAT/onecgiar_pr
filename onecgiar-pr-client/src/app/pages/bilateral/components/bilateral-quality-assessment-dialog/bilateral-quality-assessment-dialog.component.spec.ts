@@ -4,6 +4,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { BrnButton } from '@spartan-ng/brain/button';
 import { BilateralQualityAssessmentDialogComponent } from './bilateral-quality-assessment-dialog.component';
 import { BilateralQualityAssessmentView } from '../../services/bilateral-quality-assessment-ui.service';
+import { RolesService } from '../../../../shared/services/global/roles.service';
 
 function view(sections: BilateralQualityAssessmentView['sections'] = {}): BilateralQualityAssessmentView {
   return {
@@ -1401,6 +1402,100 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.pendingExit()).toBeNull();
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+  // BIL-QTS-T-6 — manual-verification defect: empty GI fields showed a literal "undefined"
+  // placeholder and a stray "Unsaved changes" pill unrelated to this drawer's own dirty tracking.
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+
+  // `RolesService.readOnly` defaults to true (see `cypress/support/ct-utils.ts`'s own note on the
+  // same default), which routes `app-pr-input`/`app-pr-textarea` through their read-only
+  // `*ngSwitchCase` branch — a static "Not provided" string, not the real control — so the bug
+  // (and its fix) are invisible unless the flag is lowered first, same as the Cypress CT specs do.
+  function openGiEditable(overrides: { currentTitle?: string; currentDescription?: string } = {}) {
+    TestBed.inject(RolesService).readOnly = false;
+    fixture.componentRef.setInput('visible', true);
+    fixture.componentRef.setInput('editable', true);
+    fixture.componentRef.setInput('currentTitle', overrides.currentTitle ?? '');
+    fixture.componentRef.setInput('currentDescription', overrides.currentDescription ?? '');
+    fixture.componentRef.setInput('assessment', giView());
+    fixture.detectChanges();
+  }
+
+  describe('BIL-QTS-T-6 — GI edit fields never render a literal "undefined" placeholder', () => {
+    it('renders placeholders matching the form copy on an empty title and description', () => {
+      openGiEditable();
+
+      const titleInput = host().querySelector('[data-testid="bqa-dialog-gi-edit"] input') as HTMLInputElement;
+      const descriptionTextarea = host().querySelector('[data-testid="bqa-dialog-gi-edit"] textarea') as HTMLTextAreaElement;
+
+      expect(titleInput.placeholder).toBe('Enter result title');
+      expect(titleInput.placeholder).not.toBe('undefined');
+      expect(descriptionTextarea.placeholder).toBe('Describe the result');
+      expect(descriptionTextarea.placeholder).not.toBe('undefined');
+    });
+  });
+
+  describe('BIL-QTS-T-6 — the GI fields never show the form field-card\'s own "Unsaved changes" pill', () => {
+    // Root cause: `app-pr-textarea`/`app-pr-input` wrap `app-field-card`, whose OWN `(input)`/
+    // `(change)`/`(click)` listeners mark it `edited` and render a "Saved"/"Saving…"/"Unsaved
+    // changes" pill driven by the shared `SaveButtonService` — a mechanism built for the ordinary
+    // form flow. This drawer has its own, correct dirty tracker (`titleDirty()`/`descriptionDirty()`,
+    // rendered as the "This change hasn't been saved yet…" `app-alert-status` below the field) and
+    // never touches `SaveButtonService`, so a `field-card` pill here is never accurate: a bare click
+    // into an untouched field marks it `edited` with no value change, and nothing the drawer does
+    // (including a successful `giFieldSaveRequested` save) ever clears it. Fixed by hiding the
+    // pill in this drawer's own stylesheet — `field-card`/`pr-textarea`/`pr-input` are shared
+    // components used correctly elsewhere and are left untouched.
+    it('a bare click into the empty description field does not show "Unsaved changes"', () => {
+      openGiEditable();
+      const wrap = host().querySelector('[data-testid="bqa-dialog-gi-edit"]') as HTMLElement;
+      const textarea = wrap.querySelector('textarea') as HTMLTextAreaElement;
+
+      textarea.dispatchEvent(new Event('click', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(wrap.textContent).not.toContain('Unsaved changes');
+      // The drawer's own tracker is unaffected either way — this is the mechanism that must own
+      // "unsaved" here, and a bare click (no value change) must not trip it.
+      expect(fixture.componentInstance.descriptionDirty()).toBe(false);
+    });
+
+    it('a bare click into the empty title field does not show "Unsaved changes"', () => {
+      openGiEditable();
+      const wrap = host().querySelector('[data-testid="bqa-dialog-gi-edit"]') as HTMLElement;
+      const input = wrap.querySelector('input') as HTMLInputElement;
+
+      input.dispatchEvent(new Event('click', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(wrap.textContent).not.toContain('Unsaved changes');
+      expect(fixture.componentInstance.titleDirty()).toBe(false);
+    });
+
+    it('still shows the drawer\'s own unsaved notice when a field is genuinely dirty', () => {
+      openGiEditable({ currentTitle: 'Saved title' });
+      fixture.componentInstance.draftTitle.set('Edited title');
+      fixture.detectChanges();
+
+      const wrap = host().querySelector('[data-testid="bqa-dialog-gi-edit"]') as HTMLElement;
+      expect(wrap.textContent).toContain("This change hasn't been saved yet");
+    });
+
+    // Guards against the fix itself breaking typing: the description textarea's own `ngModel`
+    // wiring is a listener on the SAME element the guard is attached to, so it must keep firing —
+    // only the event's further bubbling up to `field-card`'s ancestor div is stopped.
+    it('typing into the description field still updates the draft (real DOM input, not a signal set)', () => {
+      openGiEditable();
+      const textarea = host().querySelector('[data-testid="bqa-dialog-gi-edit"] textarea') as HTMLTextAreaElement;
+
+      textarea.value = 'Typed via the DOM';
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.draftDescription()).toBe('Typed via the DOM');
     });
   });
 });

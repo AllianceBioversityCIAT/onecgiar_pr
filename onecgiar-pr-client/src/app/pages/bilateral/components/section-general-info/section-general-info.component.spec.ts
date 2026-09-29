@@ -549,6 +549,18 @@ describe('SectionGeneralInfoComponent', () => {
       expect(autoSave.notifyBlur).toHaveBeenCalledWith('description', 'New desc');
     });
 
+    // BIL-QTS-T-6 regression: `onTitleChange` already mirrors its edit into
+    // `creationService.resultTitle` (test above) so the quality-assessment drawer's
+    // `currentTitle` input follows the form; `onDescriptionChange` never did the same for
+    // `resultDescription`, so the drawer kept showing whatever description was loaded at check
+    // time — empty on a brand-new draft — even after the reporter typed one into the form.
+    it('publishes the description to the creation service so the quality-assessment drawer follows the edit', () => {
+      build();
+      creation.resultDescription.set('');
+      component.onDescriptionChange('Test');
+      expect(creation.resultDescription()).toBe('Test');
+    });
+
     it('exposes the field statuses, defaulting to idle', () => {
       build();
       expect(component.titleStatus).toBe('idle');

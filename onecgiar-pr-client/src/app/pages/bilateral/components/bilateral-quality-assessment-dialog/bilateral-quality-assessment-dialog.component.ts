@@ -568,6 +568,52 @@ export class BilateralQualityAssessmentDialogComponent implements OnDestroy {
   }
 
   /**
+   * BIL-QTS-T-6: `app-pr-input`/`app-pr-textarea` (used for the GI Title/Description fields below)
+   * wrap `app-field-card`, whose OWN `(input)`/`(change)`/`(click)` listeners — bound on
+   * `field-card`'s root div, an ANCESTOR of the projected native control in the rendered DOM — mark
+   * it "edited" and render a "Saved"/"Saving…"/"Unsaved changes" pill driven by the shared
+   * `SaveButtonService`. That mechanism is built for the ordinary form flow; this drawer has its
+   * own, correct dirty tracker (`titleDirty()`/`descriptionDirty()`, surfaced via the "This change
+   * hasn't been saved yet…" notice right below each field) and never touches `SaveButtonService`,
+   * so `field-card`'s pill is never accurate here: a bare click into an untouched field (no value
+   * change at all) marks it "edited", and nothing this drawer does — including a successful
+   * `giFieldSaveRequested` save — ever clears it.
+   *
+   * Fixed by stopping those events from bubbling PAST the control itself — a listener added
+   * directly on the `<input>`/`<textarea>` element. Same-node listeners (Angular's own `ngModel`
+   * wiring, also attached on that exact element) still run: `stopPropagation()` only blocks the
+   * event from reaching ANCESTOR nodes (here, `field-card`'s root div), never sibling listeners on
+   * the node where it is called. A listener on an ancestor (e.g. the panel root, or this drawer's
+   * own `[data-testid="bqa-dialog-gi-edit"]` wrapper) would be too late/too broad: bubble-phase
+   * listeners fire target-outward, so `field-card`'s div (closer to the target) would already have
+   * run by the time an ancestor's handler saw the event, and a CAPTURE-phase listener on an
+   * ancestor would stop the event before it ever reached the control, breaking typing itself.
+   * Never fixed by editing `field-card`/`pr-input`/`pr-textarea` themselves — shared components
+   * used correctly (and which need this exact pill) everywhere else.
+   *
+   * Idempotent via the `data-gi-edit-guarded` marker: the GI edit block is destroyed and recreated
+   * whenever `canEditGi()` toggles (its own `@if`), so this reruns on every such transition, and
+   * must not double-attach when it reruns for an unrelated reason while the same controls persist.
+   */
+  private readonly guardGiFieldControls = effect(() => {
+    if (!this.visible() || !this.canEditGi()) return;
+    afterNextRender(
+      () => {
+        const wrap = this.panel()?.nativeElement.querySelector('[data-testid="bqa-dialog-gi-edit"]');
+        const stop = (event: Event) => event.stopPropagation();
+        wrap?.querySelectorAll<HTMLElement>('input, textarea').forEach((control) => {
+          if (control.dataset['giEditGuarded']) return;
+          control.dataset['giEditGuarded'] = 'true';
+          control.addEventListener('input', stop);
+          control.addEventListener('change', stop);
+          control.addEventListener('click', stop);
+        });
+      },
+      { injector: this.injector },
+    );
+  });
+
+  /**
    * BIL-QAD-DD-3: restore the value captured on open, never blank-and-reset. `app-pr-dialog`'s
    * own lock is ref-counted for stacked dialogs — a naive `overflow = ''` here would unlock the
    * page out from under another dialog still mounted over the creator.
