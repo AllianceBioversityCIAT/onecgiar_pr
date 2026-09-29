@@ -1788,4 +1788,163 @@ describe('BilateralResultCreatorComponent', () => {
       expect(dialog.componentInstance.editable()).toBe(true);
     });
   });
+
+  // BIL-QTS-T-9 (design.md §2.2 "Close after save" / "Provenance", `BIL-QTS-DD-8`/`DD-9`): closing
+  // the drawer after a successful save re-runs the check once, and every ok save records its
+  // provenance through the new field-revisions endpoint.
+  describe('BIL-QTS-T-9 — re-run on close and provenance call', () => {
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      autoSaveService.hasErrorFor.mockReturnValue(false);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      mdsTracker.overallStatus.set('complete');
+      mdsTracker.invalidFields.set([]);
+      qualityAssessment.run.mockClear();
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      // Assigned directly, not `jest.spyOn`, since the method is this task's own addition to
+      // `BilateralApiService` — `spyOn` would throw "does not exist" pre-implementation, which is
+      // a setup failure, not the assertion-level red falsifiers (a)/(f) call for.
+      (component as any).api.bilateralSE.POST_bilateralQualityFieldRevision = jest
+        .fn()
+        .mockReturnValue(of({ response: { provenance: 'USER_EDIT' } }));
+    });
+
+    it('(a) an ok save then dismiss reruns the check once; two ok saves before dismiss still rerun only once', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+      expect(qualityAssessment.run).toHaveBeenCalledWith(42);
+
+      qualityAssessment.run.mockClear();
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'First' });
+      await component.handleGiFieldSaveRequested({ field: 'description', value: 'Second' });
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('(b) dismiss with no drawer save runs nothing', () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    it('(c) a failed save only means dismiss runs nothing', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    it('(d) ok save, Check again, then dismiss runs the check once total', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+      component.handleGiRecheckRequested();
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+
+      component.dismissQualityAssessment();
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('(e) a read-only result runs nothing on dismiss even with an ok save recorded', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      creationService.isEditableByCenterUser.set(false);
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    it('(f) an ok save calls the revision endpoint once with the pre-save value, fire-and-forget (still pending when the save resolves); a failed save does not call it', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: true });
+      creationService.resultTitle.set('Old title');
+      // Deferred: proves the call is fire-and-forget, not something the save awaits. A synchronous
+      // `of(...)` settles inside `subscribe()` before `handleGiFieldSaveRequested` resolves and
+      // can't tell "fired and moved on" apart from "waited for it".
+      const revision$ = new Subject<{ response: { provenance: string } }>();
+      const spy = ((component as any).api.bilateralSE.POST_bilateralQualityFieldRevision = jest
+        .fn()
+        .mockReturnValue(revision$));
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+      // The save already resolved above; the revision call was made but is still unsettled.
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(42, { field: 'title', assessment_id: 9, old_value: 'Old title' });
+      expect(revision$.observed).toBe(true);
+
+      spy.mockClear();
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'Another' });
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('(g) a revision call error arriving after the save has resolved shows no alert and leaves lastGiSaveResult.ok true', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: true });
+      const show = (component as any).api.alertsFe.show as jest.Mock;
+      const revision$ = new Subject<{ response: { provenance: string } }>();
+      (component as any).api.bilateralSE.POST_bilateralQualityFieldRevision = jest.fn().mockReturnValue(revision$);
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+      // The save has already settled ok while the revision call is still in flight — only now do
+      // we make it error, which is the case a synchronous `throwError` could never exercise.
+      expect(component.lastGiSaveResult()).toEqual({ field: 'title', ok: true, seq: expect.any(Number) });
+      revision$.error(new Error('boom'));
+
+      expect(component.lastGiSaveResult()).toEqual({ field: 'title', ok: true, seq: expect.any(Number) });
+      expect(show).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }));
+    });
+
+    // DD-8: navigation happens before the re-run so the reporter sees the section land, then the
+    // drawer reopening in its running state on top of it.
+    it('goToQualitySection also reruns the check once, after navigating', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      component.goToQualitySection('geographic_location');
+
+      expect(component.openSectionName()).toBe('geography');
+      expect(qualityAssessment.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('opening the drawer via "View AI assessment" clears the flag, so a later dismiss with no new save reruns nothing', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: false });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      component.openQualityAssessment({ currentTarget: document.createElement('button') } as unknown as MouseEvent);
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+
+    // Advisory (reviewer, 2026-09-29): `giSavedSinceOpen` must mean "since this drawer opened" even
+    // on a close that skips the re-run — an assessment already current means Check again already
+    // ran since the last save, so the flag is stale information and dismiss must consume it, not
+    // leave it sitting `true` for a later window.
+    it('a close with the assessment already current runs nothing but still clears giSavedSinceOpen', async () => {
+      qualityAssessment.assessment.set({ id: 9, result_id: 42, is_current: true });
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+      expect(component.giSavedSinceOpen()).toBe(true);
+
+      component.dismissQualityAssessment();
+
+      expect(qualityAssessment.run).not.toHaveBeenCalled();
+      expect(component.giSavedSinceOpen()).toBe(false);
+    });
+  });
 });

@@ -229,7 +229,7 @@
   - [x] Falsifiers green; existing dialog specs updated only where they asserted Apply
   - [x] Lint + type-check clean
 
-### `BIL-QTS-T-9` — Client: re-run on close and provenance call *(amendment 2026-09-29, P2-3848 AC3/AC11)*
+### [x] `BIL-QTS-T-9` — Client: re-run on close and provenance call *(amendment 2026-09-29, P2-3848 AC3/AC11)*
 
 - **Type:** `client`
 - **Description:** In `bilateral-result-creator` (DD-8, DD-9): (1) add `giSavedSinceOpen`, set on each ok drawer save, cleared on drawer open and when Check again runs; in `dismissQualityAssessment()` and `goToQualitySection()` call `submitResult()` once when it is set, the held assessment is stale and the form is editable, then clear it. (2) After a successful drawer save, call the T-7 endpoint through a new API-service method (`POST_bilateralQualityFieldRevision`, client naming rule) with `{field, assessment_id, old_value}`; catch and swallow errors (no alert, no text logged); never change `lastGiSaveResult` because of it.
@@ -246,8 +246,8 @@
   - **Disqualifier:** the running drawer reappearing on close is rejected by the owner at T-6 → re-specify DD-8 (background run), don't patch.
   - **Consumers:** creator spec, API service spec, `bilateral-quality-assessment-ui.service.spec.ts`
 - **Definition of done:**
-  - [ ] Falsifiers (a)–(g) green; (a), (f) observed red first
-  - [ ] Lint + type-check clean; folder `CLAUDE.md` re-stamped
+  - [x] Falsifiers (a)–(g) green; (a), (f) observed red first
+  - [x] Lint + type-check clean; folder `CLAUDE.md` re-stamped
 
 ### `BIL-QTS-T-6` — Manual verification at the HITL pause (layout and cross-component)
 

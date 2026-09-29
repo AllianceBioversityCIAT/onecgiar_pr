@@ -246,3 +246,34 @@
 **Open for T-6:** "Accept & save" fit beside the suggestion at 520 px not verified in a browser.
 
 **Final verification:** PASS.
+
+**Owner decision (2026-09-29):** the pre-existing `/api/bilateral/center/*` JWT/`@UserToken` finding (T-7 advisory) goes to a **separate ticket and branch**, outside this spec: [P2-3854](https://cgiarmel.atlassian.net/browse/P2-3854) (Bug, High, created 2026-09-29). Planned: reproduce locally with an unsigned token first, then narrow `JwtMiddleware.publicRoutes` so `center/*` gets normal JWT verification, after checking no headless caller (Bulk Uploader, jobs) uses those routes.
+
+### `BIL-QTS-T-9` — Client: re-run on close and provenance call
+
+- **Final status:** PASS (attempt 2)
+- **Date:** 2026-09-29
+- **Attempts:** 2
+- **Requirements covered:** `BIL-QTS-R-12`, `BIL-QTS-R-13` (client half)
+- **Budget:** amendment already over its +2 review rounds; owner approved starting T-9 knowing it would add rounds ("Si", 2026-09-29).
+
+**Attempt 1** — Reviewer **FAIL**
+- Files changed: `onecgiar-pr-client/src/app/pages/bilateral/pages/bilateral-result-creator/{bilateral-result-creator.component.ts, .spec.ts, CLAUDE.md}`, `onecgiar-pr-client/src/app/shared/services/api/bilateral-api.service{,.spec}.ts` — `giSavedSinceOpen`; pre-save `old_value` capture; `recordGiFieldRevision()` fire-and-forget on ok; `rerunOnCloseIfNeeded()` from `dismissQualityAssessment` / `goToQualitySection` (navigate first); flag cleared on `openQualityAssessment` and Check again; `POST_bilateralQualityFieldRevision`.
+- Red: (a) `run` toHaveBeenCalledTimes(1) received 0; (f) spy toHaveBeenCalledTimes(1) received 0.
+- Implementer verification: creator 117/117; consumers 5 suites / 258; tsc, lint clean. Leader re-run VERIFIED (258).
+- FAIL: (f)/(g) stubbed the revision call with synchronous `of`/`throwError`, violating T-9 "Use deferred observables" — cannot prove fire-and-forget. Reviewer confirmed the stale-flag assumptions were unreachable in practice.
+- runtime events: none
+
+**Attempt 2** (effort high) — Reviewer **PASS**
+- Files changed: spec (Subject-based (f)/(g), new "close with current assessment clears the flag" test), component (`[advisory-grade]` flag cleared on every close before the stale/read-only check), API docstring, folder `CLAUDE.md` re-stamped.
+- Red: revision error handler mutated to set ok:false + alert → (g) red on the `lastGiSaveResult` assertion. An "await the revision call" mutation shows only as a Jest timeout (recorded honestly, accepted by the Reviewer as red).
+- Implementer verification: creator 118/118; consumers 5 suites / 259; tsc, lint clean.
+- Evidence re-run (Leader-inline): **VERIFIED** — `bilateral-quality-assessment bilateral-result-creator bilateral-field-quality-flag bilateral-api` 5 suites / 259 passed, tsc 0, lint pass.
+- Reviewer: **PASS** — revision call after ok, never awaited, errors swallowed; one run per drawer window; R-12/R-13/DD-8/DD-9 conform.
+- runtime events: none
+
+**ADVISORY (non-gating):** turn the "waits for the revision call" regression into an assertion-level red (settled flag + `revision$.observed`); cosmetic `mockReturnValue` in (f).
+
+**Open for T-6 (owner):** the drawer reappears in the running state right after close (DD-8, intended) — owner to confirm the UX.
+
+**Final verification:** PASS.
