@@ -96,6 +96,10 @@ import { InnovationUseMdsValidator } from './services/innovation-use-mds-validat
 import { BilateralHandoffService } from './services/bilateral-handoff.service';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
+// @akili-spec bilateral/qa-ai-text-suggestions (BIL-QTS-T-7) — the audit row a drawer field
+// save writes. Entity owned by `api/ai` (do not edit it here); only registered for this
+// module's own `TypeOrmModule.forFeature` so `BilateralCenterService` can inject its repository.
+import { ResultFieldRevision } from '../ai/entities/result-field-revision.entity';
 
 @Module({
   imports: [
@@ -110,6 +114,7 @@ import { AoWBilateralRepository } from '../results/results-toc-results/repositor
       DraftEvidence,
       BilateralHandoffCode,
       BilateralQualityAssessment,
+      ResultFieldRevision,
     ]),
     ResultsModule,
     VersioningModule,

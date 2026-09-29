@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BilateralCenterController } from './bilateral-center.controller';
 import { BilateralCenterService } from './services/bilateral-center.service';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResultFieldRevisionFieldName } from '../ai/entities/result-field-revision.entity';
+import { CreateBilateralFieldRevisionDto } from './dto/create-bilateral-field-revision.dto';
 
 describe('BilateralCenterController', () => {
   let controller: BilateralCenterController;
@@ -56,6 +58,11 @@ describe('BilateralCenterController', () => {
               response: { latest: null },
               message: 'Latest quality assessment retrieved successfully',
               status: 200,
+            }),
+            recordFieldRevision: jest.fn().mockResolvedValue({
+              response: { provenance: 'USER_EDIT' },
+              message: 'Field revision recorded successfully',
+              status: 201,
             }),
           },
         },
@@ -207,5 +214,20 @@ describe('BilateralCenterController', () => {
   it('getLatestQualityAssessment should delegate to service', async () => {
     await controller.getLatestQualityAssessment(user, 77);
     expect(bilateralCenterService.getLatest).toHaveBeenCalledWith(user, 77);
+  });
+
+  // @akili-spec bilateral/qa-ai-text-suggestions (BIL-QTS-T-7)
+  it('recordQualityFieldRevision should delegate to service', async () => {
+    const dto: CreateBilateralFieldRevisionDto = {
+      field: ResultFieldRevisionFieldName.TITLE,
+      assessment_id: 1,
+      old_value: 'Old title',
+    };
+    await controller.recordQualityFieldRevision(user, 77, dto);
+    expect(bilateralCenterService.recordFieldRevision).toHaveBeenCalledWith(
+      user,
+      77,
+      dto,
+    );
   });
 });

@@ -30,6 +30,7 @@ import { BilateralQualityAssessmentUiService } from '../../services/bilateral-qu
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -74,6 +75,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(BilateralContextService);
   private readonly smartNav = inject(SmartNavigationService);
   readonly qualityAssessment = inject(BilateralQualityAssessmentUiService);
+  private readonly saveButtonSE = inject(SaveButtonService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
@@ -851,6 +853,157 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Which GI field a drawer-initiated save (`BIL-QTS-T-5`) is currently persisting, if any. Feeds
+   * the dialog's `savingField` input — its Save button busy state and its aria-live announcement
+   * key off this, never a local flag inside the dialog itself (design.md §6.1).
+   */
+  savingGiField = signal<'title' | 'description' | null>(null);
+
+  /**
+   * How the most recent drawer-initiated GI save settled (design.md §6.1, `BIL-QTS-DD-3`/`DD-5`).
+   * `seq` increments on every save so two saves that settle the same way in a row still count as a
+   * fresh event for the dialog — it moves its saved baseline only when this object changes, never
+   * merely because `currentTitle`/`currentDescription` changed.
+   */
+  lastGiSaveResult = signal<{ field: 'title' | 'description'; ok: boolean; seq: number } | null>(null);
+  private giSaveSeq = 0;
+
+  /**
+   * `BIL-QTS-T-9` (design.md §2.2 "Close after save", `BIL-QTS-DD-8`, `BIL-QTS-R-12`): true once at
+   * least one drawer save has settled ok since the drawer last opened. Consumed by
+   * {@link dismissQualityAssessment} / {@link goToQualitySection} to re-run the check once on
+   * close, and cleared the moment either a fresh drawer open ({@link openQualityAssessment}) or
+   * Check again ({@link handleGiRecheckRequested}) makes it stale information.
+   */
+  giSavedSinceOpen = signal(false);
+
+  /**
+   * `BIL-QTS-T-5` (design.md §2.2 "Save from the drawer", `BIL-QTS-DD-3`): persists a GI drawer
+   * edit through the SAME general-info save the form uses — never a direct PATCH. A direct PATCH
+   * would leave whatever was already staged in the autosave map (P-2) untouched, and the next Save
+   * draft on General information would write that older value back over the one just saved
+   * (`BIL-QTS-R-2`'s `BUT`). Order matters: `creationService` is written first so the header and
+   * the General information section reflect the new value immediately (P-1), the field is then
+   * staged — which overwrites any older staged value for the same key — and only then flushed,
+   * scoped to `general-info` (P-4's settle sequence, reused rather than duplicated).
+   */
+  async handleGiFieldSaveRequested({ field, value }: { field: 'title' | 'description'; value: string }): Promise<void> {
+    // `BIL-QTS-T-9`/`BIL-QTS-R-13`: the pre-save value is what the revision row needs as
+    // `old_value` — captured before `creationService` is overwritten below, or it would already
+    // read the new value by the time the save settles.
+    const oldValue = field === 'title' ? this.creationService.resultTitle() : this.creationService.resultDescription();
+
+    if (field === 'title') this.creationService.resultTitle.set(value);
+    else this.creationService.resultDescription.set(value);
+
+    this.autoSaveService.updateField(field, value, 'text');
+    this.savingGiField.set(field);
+
+    try {
+      await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys('general-info'));
+      await this.waitForSectionSave('general-info');
+
+      if (this.autoSaveService.hasErrorFor('general-info')) {
+        const detail = this.autoSaveService.lastErrorMessageFor('general-info');
+        this.api.alertsFe.show({
+          id: 'bilateralGiDrawerSave',
+          title: 'Save failed',
+          description: detail ?? 'This field could not be saved. Please try again.',
+          status: 'error',
+          closeIn: 8000,
+        });
+        this.lastGiSaveResult.set({ field, ok: false, seq: ++this.giSaveSeq });
+        return;
+      }
+
+      // BIL-QTS-T-6 (owner-approved 2026-09-29): finishes like an ordinary Save draft —
+      // `manualSave$('general-info')` is what `section-general-info.component.ts:265` listens for
+      // (Innovation Developer prefill), never skipped. Never reached on the error/catch paths above.
+      this.autoSaveService.manualSave$.next('general-info');
+
+      // Rework, item 1 (attempt 2, owner-approved 2026-09-29): `savedTick` clears EVERY field-card's
+      // "Unsaved changes" pill (`field-card.component.ts:112-131`), not just general-info's — every
+      // section stays mounted under `[hidden]` (`bilateral-result-creator.component.html:269-293`).
+      // Bumping it unconditionally therefore cleared the pill in whichever section the reporter had
+      // open, even with real unsaved edits sitting there untouched by this save.
+      //
+      // Navigating away always flushes the section being left first (BIL-T-2's `selectSection()`),
+      // so a genuinely staged edit can only exist in the section still open. Safe to bump when that
+      // section is general-info (the one this save actually reaches) or it provably has nothing
+      // staged. Evidence is excluded outright: its own draft-item state (`showDraft()` in
+      // `section-evidence.component.ts`) never surfaces through `hasPendingFor('evidence')` — a
+      // reporter can have an evidence draft open, with that field-card already marked "edited" from
+      // the click that opened it, while `hasPendingFor` reads clean.
+      const openSection = this.openSectionName();
+      const safeToBumpSavedTick =
+        openSection === 'general-info' ||
+        (openSection !== 'evidence' && !this.autoSaveService.hasPendingFor(openSection));
+      if (safeToBumpSavedTick) this.saveButtonSE.savedTick.update(count => count + 1);
+
+      // P-6/DD-5: the server is the authority on `is_current`, but it only answers on the NEXT
+      // read — without this the submit button would stay visible until a reload, and pressing it
+      // would earn the server's own stale 400 (P-7).
+      this.qualityAssessment.markStale();
+      this.api.alertsFe.show({
+        id: 'bilateralGiDrawerSave',
+        title: 'Saved',
+        description: 'General information saved successfully.',
+        status: 'success',
+        closeIn: 2000,
+      });
+      this.lastGiSaveResult.set({ field, ok: true, seq: ++this.giSaveSeq });
+      this.giSavedSinceOpen.set(true);
+      this.recordGiFieldRevision(field, oldValue);
+    } catch {
+      // Mirrors `triggerManualSave()`'s catch: a REJECTED flush (thrown, not merely settled with
+      // `hasErrorFor`) still has to reach the reporter and the dialog's `lastGiSaveResult` baseline
+      // — otherwise the Save button spins forever and the drawer never learns the save failed.
+      this.api.alertsFe.show({
+        id: 'bilateralGiDrawerSave',
+        title: 'Save failed',
+        description: 'This field could not be saved. Please try again.',
+        status: 'error',
+        closeIn: 8000,
+      });
+      this.lastGiSaveResult.set({ field, ok: false, seq: ++this.giSaveSeq });
+    } finally {
+      this.savingGiField.set(null);
+    }
+  }
+
+  /**
+   * `BIL-QTS-T-9` (design.md §4 API Surface, `BIL-QTS-R-13`, `BIL-QTS-DD-9`): fire-and-forget after
+   * a successful drawer save. The server decides `AI_SUGGESTED` vs `USER_EDIT` by comparing the
+   * saved value to the assessment's kept suggestion — the client sends only what it already knows
+   * (the field, the held assessment id, and the pre-save value) and never a provenance flag.
+   * Swallowed on error (R-13 "Recording fails"): this is an audit trail, never something that may
+   * alter the save outcome, and no field text is ever logged for it.
+   */
+  private recordGiFieldRevision(field: 'title' | 'description', oldValue: string | null): void {
+    const rid = this.resultId();
+    const assessmentId = this.qualityAssessment.assessment()?.id;
+    if (!rid || !assessmentId) return;
+    this.api.bilateralSE.POST_bilateralQualityFieldRevision(rid, {
+      field,
+      assessment_id: assessmentId,
+      old_value: oldValue,
+    }).subscribe({ next: () => undefined, error: () => undefined });
+  }
+
+  /**
+   * `BIL-QTS-DD-4`: Check again reuses the rail's Submit-for-review guard chain (read-only,
+   * unsaved sections, invalid fields) and the AI check itself — never the actual submit PATCH,
+   * which only ever leaves from `submitAfterQualityDecision()`. Named for what the dialog output
+   * means (`recheckRequested`), not for what it happens to call.
+   */
+  handleGiRecheckRequested(): void {
+    // `BIL-QTS-T-9`: Check again is the OTHER place `giSavedSinceOpen` is cleared (design.md
+    // §2.2) — a fresh, explicit re-check makes any earlier save moot for the close-time re-run.
+    this.giSavedSinceOpen.set(false);
+    this.submitResult();
+  }
+
+  /**
    * The five AI section keys onto the editor's own section names. Closed set — these are the five
    * of P2-3150 AC2 and the AI does not invent others; an unknown key is ignored rather than
    * navigating somewhere arbitrary.
@@ -883,9 +1036,16 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       const column = document.querySelector('.bcr-scroll');
       column?.scrollTo({ top: 0, behavior: 'smooth' });
     }, 50);
+    // `BIL-QTS-DD-8`: the navigation above happens BEFORE this — the reporter lands on the section
+    // first, and only then (if a save is owed a re-run) does `run()` put the drawer back in its
+    // running state on top of it.
+    this.rerunOnCloseIfNeeded();
   }
 
   openQualityAssessment(event: MouseEvent): void {
+    // `BIL-QTS-T-9`: a fresh open starts a fresh "since the drawer opened" window — nothing saved
+    // here yet.
+    this.giSavedSinceOpen.set(false);
     this.qualityAssessmentTrigger = event.currentTarget as HTMLElement;
     this.qualityAssessment.openStored();
   }
@@ -895,6 +1055,30 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     const trigger = this.qualityAssessmentTrigger;
     this.qualityAssessmentTrigger = null;
     queueMicrotask(() => trigger?.focus());
+    this.rerunOnCloseIfNeeded();
+  }
+
+  /**
+   * `BIL-QTS-R-12` / `BIL-QTS-DD-8`: closing the drawer (✕, Escape, scrim, Make adjustments, Go
+   * to…) after at least one drawer save re-runs the check once, through `submitResult()` — the same
+   * guarded path as Check again, so a section with unsaved changes still gets the existing "Save
+   * your changes before submitting" alert instead of a silent re-run. Never when the result is no
+   * longer editable, and never when the held assessment is already current (Check again already
+   * ran since the last save, which is also where the flag was cleared).
+   *
+   * The flag is cleared unconditionally, before either check, on every close — a close always
+   * consumes "since this drawer opened", whether or not it actually re-ran the check. Clearing it
+   * only on the re-run branch left it stuck `true` across a close that skipped the run (read-only,
+   * or the assessment already current), so the NEXT open's close could re-run on a save that
+   * belonged to a window that already closed.
+   */
+  private rerunOnCloseIfNeeded(): void {
+    const shouldRerun = this.giSavedSinceOpen();
+    this.giSavedSinceOpen.set(false);
+    if (!shouldRerun) return;
+    const isStale = this.qualityAssessment.assessment()?.is_current === false;
+    if (!isStale || this.isFormReadOnly()) return;
+    this.submitResult();
   }
 
   /** Upper bound for the manual-save wait so a stuck request can never freeze the button. */

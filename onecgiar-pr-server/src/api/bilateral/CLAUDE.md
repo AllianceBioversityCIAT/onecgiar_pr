@@ -10,7 +10,7 @@ This is the **module-level guide** for `api/bilateral`. It complements:
 >
 > `AGENTS.md` covers **what the module does** (ingestion flow, handlers, review workflow). This `CLAUDE.md` covers **how the code is laid out**, the security/contract rules that apply, and what to touch (or not) when extending it.
 
-**Verified:** 2026-09-10 · P2-3233 bilateral-safe promoted-draft type conversion
+**Verified:** 2026-09-29 · BIL-QTS-T-7 field-revision endpoint dto tree entry
 
 ---
 
@@ -53,7 +53,8 @@ api/bilateral/
 │   ├── create-center-result.dto.ts              # POST /center/create-header
 │   ├── save-bilateral-contributors.dto.ts       # PATCH /center/contributors/:id
 │   ├── save-bilateral-toc-mapping.dto.ts        # PATCH /center/toc-mapping/:id
-│   └── list-results-query.dto.ts                # Filters for GET /list
+│   ├── list-results-query.dto.ts                # Filters for GET /list
+│   └── create-bilateral-field-revision.dto.ts   # POST /center/quality-assessment/:resultId/field-revisions
 └── handlers/                                    # Strategy pattern, one per ingestion-capable result type
     ├── bilateral-result-type-handler.interface.ts
     ├── knowledge-product.handler.ts             # CGSpace-driven; ignores title/description in payload

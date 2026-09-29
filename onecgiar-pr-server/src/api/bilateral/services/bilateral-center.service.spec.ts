@@ -1,5 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { BilateralCenterService } from './bilateral-center.service';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
@@ -32,6 +38,11 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { AoWBilateralRepository } from '../../results/results-toc-results/repositories/aow-bilateral.repository';
 import { BilateralAccessService } from '../../results/bilateral-access/bilateral-access.service';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
+import {
+  ResultFieldRevision,
+  ResultFieldRevisionFieldName,
+  ResultFieldRevisionProvenance,
+} from '../../ai/entities/result-field-revision.entity';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -321,6 +332,13 @@ describe('BilateralCenterService', () => {
           provide: ResultsInnovationsUseRepository,
           useValue: {
             replaceLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
+          },
+        },
+        // `BIL-QTS-T-7` — the audit row a drawer field save writes.
+        {
+          provide: getRepositoryToken(ResultFieldRevision),
+          useValue: {
+            save: jest.fn().mockResolvedValue({}),
           },
         },
       ],
@@ -2657,6 +2675,326 @@ describe('BilateralCenterService', () => {
       await expect(service.getLatest(user, 0 as any)).rejects.toThrow(
         /valid positive number/,
       );
+    });
+  });
+
+  // @akili-spec bilateral/qa-ai-text-suggestions (BIL-QTS-T-7)
+  describe('recordFieldRevision', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    const editingResult = {
+      id: 77,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      status_id: ResultStatusData.Editing.value,
+      result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      title: 'A perfectly good title',
+      description: 'A perfectly good description',
+    };
+
+    /** `n` space-separated words — enough to trip the 30-word title / 300-word description limit. */
+    const words = (n: number) => Array.from({ length: n }, () => 'w').join(' ');
+
+    let resultFieldRevisionRepository: {
+      save: jest.Mock;
+    };
+
+    beforeEach(() => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      resultFieldRevisionRepository = module.get(
+        getRepositoryToken(ResultFieldRevision),
+      );
+      resultFieldRevisionRepository.save.mockClear();
+    });
+
+    // Falsifier (a): saved value equals the stored suggestion after trim → AI_SUGGESTED. The
+    // stored title carries padding whitespace the suggestion does not, so a correct
+    // implementation only matches because of `.trim()` — removing it would go red here.
+    it('falsifier (a): records AI_SUGGESTED when the saved value equals the kept suggestion after trim', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        title: '  A perfectly good title  ',
+      });
+      const qualityAssessmentRepository =
+        module.get<BilateralQualityAssessmentRepository>(
+          BilateralQualityAssessmentRepository,
+        );
+      (qualityAssessmentRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 5,
+        result_id: 77,
+        sections: {
+          general_information: {
+            verdict: 'amber',
+            suggestions: { title: 'A perfectly good title' },
+          },
+        },
+      });
+
+      const result = await service.recordFieldRevision(user, 77, {
+        field: ResultFieldRevisionFieldName.TITLE,
+        assessment_id: 5,
+        old_value: 'An old title',
+      });
+
+      expect(result.response.provenance).toBe(
+        ResultFieldRevisionProvenance.AI_SUGGESTED,
+      );
+      expect(resultFieldRevisionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 77,
+          user_id: 42,
+          field_name: ResultFieldRevisionFieldName.TITLE,
+          old_value: 'An old title',
+          new_value: '  A perfectly good title  ',
+          change_reason: 'bilateral_qa_drawer:assessment=5',
+          provenance: ResultFieldRevisionProvenance.AI_SUGGESTED,
+          proposal_id: null,
+        }),
+      );
+    });
+
+    // Falsifier (b): saved value differs from the suggestion → USER_EDIT.
+    it('falsifier (b): records USER_EDIT when the saved value differs from the kept suggestion', async () => {
+      const qualityAssessmentRepository =
+        module.get<BilateralQualityAssessmentRepository>(
+          BilateralQualityAssessmentRepository,
+        );
+      (qualityAssessmentRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 5,
+        result_id: 77,
+        sections: {
+          general_information: {
+            verdict: 'amber',
+            suggestions: { title: 'A different suggested title' },
+          },
+        },
+      });
+
+      const result = await service.recordFieldRevision(user, 77, {
+        field: ResultFieldRevisionFieldName.TITLE,
+        assessment_id: 5,
+        old_value: 'An old title',
+      });
+
+      expect(result.response.provenance).toBe(
+        ResultFieldRevisionProvenance.USER_EDIT,
+      );
+    });
+
+    // Falsifier (c): a client-sent `provenance` never overrides the server's own comparison —
+    // the DTO declares no such property, and even handed a wider object the service never
+    // reads it.
+    it('falsifier (c): ignores a client-sent provenance and decides USER_EDIT on its own comparison', async () => {
+      const qualityAssessmentRepository =
+        module.get<BilateralQualityAssessmentRepository>(
+          BilateralQualityAssessmentRepository,
+        );
+      (qualityAssessmentRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 5,
+        result_id: 77,
+        sections: {
+          general_information: {
+            verdict: 'amber',
+            suggestions: { title: 'A different suggested title' },
+          },
+        },
+      });
+
+      const forgedDto = {
+        field: ResultFieldRevisionFieldName.TITLE,
+        assessment_id: 5,
+        old_value: 'An old title',
+        provenance: ResultFieldRevisionProvenance.AI_SUGGESTED,
+      } as any;
+
+      const result = await service.recordFieldRevision(user, 77, forgedDto);
+
+      expect(result.response.provenance).toBe(
+        ResultFieldRevisionProvenance.USER_EDIT,
+      );
+      expect(resultFieldRevisionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provenance: ResultFieldRevisionProvenance.USER_EDIT,
+        }),
+      );
+    });
+
+    // Falsifier (d): an assessment that belongs to another result → 404, no row written. The
+    // mock behaves like a real WHERE clause — it emulates matching each key of the `where`
+    // object independently, only treating a key as satisfied when it is either absent from the
+    // query or equal to the row's own value. Assessment 999 is a REAL row, but it belongs to
+    // result 88, never to 77. So dropping `result_id` from the service's `where` clause (attempt
+    // 1's bug) would make this mock incorrectly return the row instead of 404ing — the exact
+    // regression this falsifier exists to catch (attempt 1's mock returned null unconditionally,
+    // which could not tell the two apart).
+    it('falsifier (d): 404s on an assessment that does not belong to this result, and writes no row', async () => {
+      const qualityAssessmentRepository =
+        module.get<BilateralQualityAssessmentRepository>(
+          BilateralQualityAssessmentRepository,
+        );
+      const foreignAssessment = { id: 999, result_id: 88, sections: {} };
+      (qualityAssessmentRepository.findOne as jest.Mock).mockImplementationOnce(
+        ({ where }: any) => {
+          const idOk =
+            where?.id === undefined || where.id === foreignAssessment.id;
+          const resultIdOk =
+            where?.result_id === undefined ||
+            where.result_id === foreignAssessment.result_id;
+          return Promise.resolve(idOk && resultIdOk ? foreignAssessment : null);
+        },
+      );
+
+      await expect(
+        service.recordFieldRevision(user, 77, {
+          field: ResultFieldRevisionFieldName.TITLE,
+          assessment_id: 999,
+          old_value: null,
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(qualityAssessmentRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 999, result_id: 77 },
+      });
+      expect(resultFieldRevisionRepository.save).not.toHaveBeenCalled();
+    });
+
+    // Falsifier (e): a stored suggestion the read-side normalizer would drop (over the 30-word
+    // title limit) can never be claimed as AI_SUGGESTED, even when the value matches it verbatim.
+    it('falsifier (e): a suggestion the read-side normalizer drops still records USER_EDIT', async () => {
+      const longTitle = words(31);
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        title: longTitle,
+      });
+      const qualityAssessmentRepository =
+        module.get<BilateralQualityAssessmentRepository>(
+          BilateralQualityAssessmentRepository,
+        );
+      (qualityAssessmentRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 5,
+        result_id: 77,
+        sections: {
+          general_information: {
+            verdict: 'amber',
+            suggestions: { title: longTitle },
+          },
+        },
+      });
+
+      const result = await service.recordFieldRevision(user, 77, {
+        field: ResultFieldRevisionFieldName.TITLE,
+        assessment_id: 5,
+        old_value: 'An old title',
+      });
+
+      expect(result.response.provenance).toBe(
+        ResultFieldRevisionProvenance.USER_EDIT,
+      );
+    });
+
+    // Falsifier (f): no log line carries the field text.
+    it('falsifier (f): no logged argument contains the field text', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      const qualityAssessmentRepository =
+        module.get<BilateralQualityAssessmentRepository>(
+          BilateralQualityAssessmentRepository,
+        );
+      const secretTitle = 'Do not log this exact secret title text';
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        title: secretTitle,
+      });
+      (qualityAssessmentRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 5,
+        result_id: 77,
+        sections: {
+          general_information: {
+            verdict: 'amber',
+            suggestions: { title: secretTitle },
+          },
+        },
+      });
+
+      try {
+        await service.recordFieldRevision(user, 77, {
+          field: ResultFieldRevisionFieldName.TITLE,
+          assessment_id: 5,
+          old_value: 'An old title',
+        });
+
+        for (const call of logSpy.mock.calls) {
+          for (const arg of call) {
+            expect(String(arg)).not.toContain(secretTitle);
+          }
+        }
+      } finally {
+        logSpy.mockRestore();
+      }
+    });
+
+    // Falsifier (g): a user without edit rights gets the same refusal as `assess`, and no row
+    // is written.
+    it('falsifier (g): refuses a user without the Center User role, same as assess, and writes no row', async () => {
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValueOnce(0);
+
+      await expect(
+        service.recordFieldRevision(user, 77, {
+          field: ResultFieldRevisionFieldName.TITLE,
+          assessment_id: 5,
+          old_value: null,
+        }),
+      ).rejects.toThrow(/do not have permission/);
+      expect(resultFieldRevisionRepository.save).not.toHaveBeenCalled();
+    });
+
+    // Advisory: a TypeORM write failure (e.g. a utf8mb3 "Incorrect string value" QueryFailedError
+    // on an emoji, whose `parameters` carry the field text) must never reach the caller verbatim —
+    // only a generic message, per .cursorrules. Also proves the log line moved after the
+    // `await save`: a save that throws must never have already logged success.
+    it('advisory: wraps a repository save failure in a generic InternalServerErrorException, and never logs first', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      try {
+        const qualityAssessmentRepository =
+          module.get<BilateralQualityAssessmentRepository>(
+            BilateralQualityAssessmentRepository,
+          );
+        (
+          qualityAssessmentRepository.findOne as jest.Mock
+        ).mockResolvedValueOnce({
+          id: 5,
+          result_id: 77,
+          sections: {
+            general_information: {
+              verdict: 'amber',
+              suggestions: { title: 'A different suggested title' },
+            },
+          },
+        });
+        resultFieldRevisionRepository.save.mockRejectedValueOnce(
+          new Error(
+            "QueryFailedError: Incorrect string value: '\\xF0\\x9F\\x98\\x80' for column 'new_value'",
+          ),
+        );
+
+        await expect(
+          service.recordFieldRevision(user, 77, {
+            field: ResultFieldRevisionFieldName.TITLE,
+            assessment_id: 5,
+            old_value: 'An old title',
+          }),
+        ).rejects.toThrow('Could not record the field revision');
+        expect(logSpy).not.toHaveBeenCalled();
+      } finally {
+        logSpy.mockRestore();
+      }
     });
   });
 

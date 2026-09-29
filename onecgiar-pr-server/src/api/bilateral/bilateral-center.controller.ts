@@ -7,6 +7,7 @@ import {
   Body,
   Query,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { BilateralCenterService } from './services/bilateral-center.service';
@@ -19,6 +20,7 @@ import { SaveBilateralContributorsDto } from './dto/save-bilateral-contributors.
 import { ChangeCenterResultTypeDto } from './dto/change-center-result-type.dto';
 import { UpdateBilateralPrimaryAssignmentDto } from './dto/update-bilateral-primary-assignment.dto';
 import { SubmitForReviewDto } from './dto/submit-for-review.dto';
+import { CreateBilateralFieldRevisionDto } from './dto/create-bilateral-field-revision.dto';
 
 @Controller('center')
 @ApiTags('Bilateral Center')
@@ -151,6 +153,31 @@ export class BilateralCenterController {
     @Param('resultId') resultId: number,
   ) {
     return this.bilateralCenterService.getLatest(user, resultId);
+  }
+
+  // @akili-spec bilateral/qa-ai-text-suggestions (BIL-QTS-T-7)
+  @Post('quality-assessment/:resultId/field-revisions')
+  @ApiOperation({
+    summary: 'Record the provenance of a drawer field save',
+    description:
+      "Server-decided (never trusts a client-sent provenance): compares the field's current " +
+      "value against the assessment's kept suggestion (re-derived through the read-side " +
+      'normalizer) and writes one result_field_revision row — AI_SUGGESTED or USER_EDIT. Same ' +
+      'auth/edit guard as POST quality-assessment/:resultId. Never logs field text.',
+  })
+  async recordQualityFieldRevision(
+    @UserToken() user: TokenDto,
+    @Param('resultId') resultId: number,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    )
+    dto: CreateBilateralFieldRevisionDto,
+  ) {
+    return this.bilateralCenterService.recordFieldRevision(user, resultId, dto);
   }
 
   @Get('initiative/:resultId')

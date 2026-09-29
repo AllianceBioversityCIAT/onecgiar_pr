@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-29 · el diálogo de calidad IA recibe `[readOnly]="isFormReadOnly()"` (QSG-T-2, `creator.html:44-51`): un resultado ya no editable (p. ej. Pending Review tras Submit) reabre el drawer sin footer y sin la línea de stale, ✕/Escape/scrim siguen cerrando; prior: 2026-09-24 · los mensajes de guardado excluyen campos MDS opcionales al calcular faltantes; prior: 2026-09-22 · el flag global de solo-lectura ahora responde a la pertenencia al centro líder (un Center User ya puede editar); prior: 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
+**Verified:** 2026-09-29 · rework (attempt 2, reviewer FAIL): subir `SaveButtonService.savedTick` en el guardado del drawer ya NO es incondicional — `savedTick` es de página completa (todas las secciones montadas bajo `[hidden]`), así que el bump sin condición limpiaba la píldora "Unsaved changes" de OTRA sección con cambios de verdad sin guardar. Ahora sólo sube si la sección abierta (`openSectionName()`) es `general-info` (la que este guardado alcanza) o `!autoSaveService.hasPendingFor(openSectionName())` — Evidence queda excluida sin condición porque su borrador (`showDraft()` en `section-evidence.component.ts`) nunca llega a `hasPendingFor('evidence')`. La premisa que lo sostiene: Next/Back/riel siempre flushean la sección que se deja (BIL-T-2), así que un staged de verdad sólo puede vivir en la sección todavía abierta. `manualSave$('general-info')` se sigue emitiendo siempre, sin el guard; prior: 2026-09-29 · el guardado del drawer de calidad ya termina como Save draft: emite `manualSave$('general-info')` y sube `SaveButtonService.savedTick` sólo en el ok (nunca en error/catch) — antes ningún camino de bilateral tocaba ese signal, así que el `field-card` de Description del formulario se quedaba en "Unsaved changes" hasta recargar aunque el valor ya estuviera guardado; `triggerManualSave()` (Save draft ordinario) sigue sin tocarlo (verificado, no arreglado — fuera de este alcance); prior: 2026-09-29 · `giSavedSinceOpen` se limpia en TODO cierre, no sólo cuando re-corre (BIL-QTS-T-9 rework); prior: 2026-09-29 · cerrar el drawer tras un guardado ok re-corre el chequeo una vez y cada guardado ok registra su provenance en el servidor (BIL-QTS-T-9, `giSavedSinceOpen`/`recordGiFieldRevision`); prior: 2026-09-29 · el drawer de GI guarda por autosave (`updateField` + `flush('general-info')`), marca stale sólo si el flush no termina en error, y Check again = `submitResult()` (BIL-QTS-T-5); el diálogo de calidad IA recibe `[readOnly]="isFormReadOnly()"` (QSG-T-2, `creator.html:44-51`): un resultado ya no editable (p. ej. Pending Review tras Submit) reabre el drawer sin footer y sin la línea de stale, ✕/Escape/scrim siguen cerrando; prior: 2026-09-24 · los mensajes de guardado excluyen campos MDS opcionales al calcular faltantes; prior: 2026-09-22 · el flag global de solo-lectura ahora responde a la pertenencia al centro líder (un Center User ya puede editar); prior: 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -67,6 +67,32 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   frases del revisor. La directiva abre en hover **y** fija en clic/Enter, así que la línea no necesita
   ser un botón propio. ⚠️ La nota es la única pieza que promete "podés seguir editando": si algún día
   `submitResult()` enviara directo sin pasar por el diálogo, la nota queda mintiendo.
+- **Guardado desde el drawer de GI (BIL-QTS-T-5, `handleGiFieldSaveRequested`).** Nunca un PATCH
+  directo: escribe primero en `creationService` (título/descripción se reflejan de inmediato), luego
+  `autoSaveService.updateField(field, value, 'text')` (pisa cualquier valor ya stageado para esa
+  clave) y sólo entonces `flush(getEndpointKeys('general-info'))` — en ese orden, o el próximo Save
+  draft de General information reescribiría el valor viejo que seguía stageado (`BIL-QTS-R-2`). Si el
+  flush termina en `hasErrorFor`, no marca stale y muestra el error del server; si termina bien, llama
+  `qualityAssessment.markStale()` una vez (el servidor sólo contesta `is_current` en la SIGUIENTE
+  lectura) y registra el resultado en `lastGiSaveResult` (`{ field, ok, seq }`, `seq` incremental para
+  que dos saves seguidos igual de "ok"/"error" cuenten como eventos distintos para el diálogo). Un
+  `catch` adicional cubre un flush que RECHAZA en vez de sólo settear con error — mismo patrón que el
+  `catch` de `triggerManualSave()` — para que el botón de guardar del drawer no quede girando para
+  siempre.
+- **Check again = `submitResult()` (`BIL-QTS-DD-4`, `handleGiRecheckRequested`).** Reutiliza toda la
+  cadena de guardas del riel (solo lectura, secciones sin guardar, campos inválidos) y el chequeo IA
+  en sí — nunca el PATCH real de envío, que sólo sale de `submitAfterQualityDecision()`.
+- **Cierre re-corre y provenance (`BIL-QTS-T-9`).** `giSavedSinceOpen` (true en cada guardado ok,
+  limpio al abrir el drawer o al correr Check again — **y también en TODO cierre**, antes de mirar
+  si estaba stale o read-only: así el flag siempre significa "desde que este drawer se abrió", nunca
+  algo que sobrevive read-only a una ventana futura) hace que `dismissQualityAssessment()` y
+  `goToQualitySection()` (ésta navega primero) llamen `submitResult()` una vez si además el
+  assessment quedó stale y el form es editable; cada guardado ok también llama
+  `POST .../field-revisions` con el valor previo, **fire-and-forget** (nunca `await`ado ni parte de
+  la transacción del save) — provenance la decide el servidor comparando el valor actual (recién
+  guardado) contra la sugerencia guardada, y un error ahí no muestra alerta ni toca
+  `lastGiSaveResult`. Probado con `Subject` (no `of`/`throwError` síncronos): un stub síncrono no
+  distingue "fire-and-forget" de "el handler espera la respuesta antes de resolver".
 
 - **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
   única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo

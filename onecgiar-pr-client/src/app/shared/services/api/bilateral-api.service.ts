@@ -248,6 +248,18 @@ export class BilateralApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}/latest`);
   }
 
+  /**
+   * `BIL-QTS-T-9` (design.md §4 API Surface, `BIL-QTS-R-13`): records the provenance of one drawer
+   * field save. The server — never the client — decides `AI_SUGGESTED` vs `USER_EDIT` by comparing
+   * the result's current (just-saved) value against the kept suggestion.
+   */
+  POST_bilateralQualityFieldRevision(
+    resultId: number,
+    body: { field: 'title' | 'description'; assessment_id: number; old_value: string | null },
+  ) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/quality-assessment/${resultId}/field-revisions`, body);
+  }
+
   PATCH_bilateralSubmitForReview(
     resultId: number,
     body: { assessment_id: number; decision: 'submitted_anyway' | 'submitted_without_check' },

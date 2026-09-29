@@ -21,7 +21,12 @@ export class JwtMiddleware implements NestMiddleware {
     '/login/provider',
     '/login/custom',
     '/validate/code',
-    '/api/bilateral',
+    // Only the genuinely external bilateral path is public here. The ingestion
+    // routes (create/list/results/:id) are already excluded from this middleware
+    // in app.module.ts and guard themselves with the CLARISA API key. `center/*`
+    // is a session-authenticated surface and MUST go through normal JWT
+    // verification, so it is deliberately NOT matched by this prefix.
+    '/api/bilateral/handoff/exchange',
   ];
 
   constructor(

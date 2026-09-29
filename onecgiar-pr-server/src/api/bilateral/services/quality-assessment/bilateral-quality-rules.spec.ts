@@ -3,8 +3,10 @@ import * as path from 'path';
 import {
   applyGreyRule,
   contentHash,
+  countWordsLikeClient,
   evaluateKpRule,
   hasOutstandingFlags,
+  normalizeSuggestions,
   AiAssessmentResponse,
   QualityPayload,
   KpMetadataRow,
@@ -769,5 +771,127 @@ describe('hasOutstandingFlags', () => {
     expect(
       hasOutstandingFlags({ overall_verdict: 'green', sections: {} }),
     ).toBe(false);
+  });
+});
+
+/**
+ * BIL-QTS-T-2 — suggestion normalizer + word counter parity.
+ *
+ * Expected values below are taken literally from design.md §5 "steps 1-7" and
+ * requirements.md BIL-QTS-R-6/R-7/R-8, never recomputed by calling the functions under test.
+ */
+describe('countWordsLikeClient (P-10 parity, BIL-QTS-T-2 fixture h)', () => {
+  it('counts "a\\nb c" as 2 — the literal split-on-space, never a whitespace regex', () => {
+    // "a\nb c".split(' ') -> ["a\nb", "c"]: 2 tokens, neither the standalone '\n'/'\t' markers
+    // the client also skips. A naive /\s+/ split would report 3 ("a", "b", "c").
+    expect(countWordsLikeClient('a\nb c')).toBe(2);
+  });
+
+  it('returns 0 for an empty string', () => {
+    expect(countWordsLikeClient('')).toBe(0);
+  });
+
+  it('strips <p>/</p> and &nbsp; to a space, and every other tag entirely', () => {
+    expect(countWordsLikeClient('<p>one</p>&nbsp;two <b>three</b>')).toBe(3);
+  });
+});
+
+describe('normalizeSuggestions (BIL-QTS-T-2, design.md §5 steps 1-7)', () => {
+  const words = (count: number) =>
+    Array.from({ length: count }, (_, i) => `w${i}`).join(' ');
+
+  it('(a) drops a title over the 30-word limit', () => {
+    expect(normalizeSuggestions({ title: words(31) }, 'amber')).toBeUndefined();
+  });
+
+  it('keeps a title at exactly the 30-word limit', () => {
+    expect(normalizeSuggestions({ title: words(30) }, 'amber')).toEqual({
+      title: words(30),
+    });
+  });
+
+  it('drops a description over the 300-word limit', () => {
+    expect(
+      normalizeSuggestions({ description: words(301) }, 'red'),
+    ).toBeUndefined();
+  });
+
+  it('(b) drops every suggestion when GI verdict is green', () => {
+    expect(
+      normalizeSuggestions({ title: 'A perfectly good title' }, 'green'),
+    ).toBeUndefined();
+  });
+
+  it('drops every suggestion when GI verdict is grey', () => {
+    expect(
+      normalizeSuggestions({ title: 'A perfectly good title' }, 'grey'),
+    ).toBeUndefined();
+  });
+
+  it('(c) drops a title identical to the sent value after trimming both sides (novelty, write path)', () => {
+    expect(
+      normalizeSuggestions({ title: '  Same title  ' }, 'amber', {
+        title: 'Same title',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('keeps a title that differs from the sent value', () => {
+    expect(
+      normalizeSuggestions({ title: 'A new title' }, 'amber', {
+        title: 'The old title',
+      }),
+    ).toEqual({ title: 'A new title' });
+  });
+
+  it('never drops for novelty on the read path (no `sent` given)', () => {
+    expect(
+      normalizeSuggestions({ title: 'Same title as before' }, 'amber'),
+    ).toEqual({ title: 'Same title as before' });
+  });
+
+  it('drops a non-string title', () => {
+    expect(normalizeSuggestions({ title: ['x'] }, 'amber')).toBeUndefined();
+  });
+
+  it('drops a title that is empty or whitespace-only after trimming', () => {
+    expect(normalizeSuggestions({ title: '   ' }, 'amber')).toBeUndefined();
+  });
+
+  it('trims a kept value but never truncates it', () => {
+    expect(normalizeSuggestions({ title: '  Hello world  ' }, 'amber')).toEqual(
+      { title: 'Hello world' },
+    );
+  });
+
+  it('ignores an unrelated key inside suggestions', () => {
+    const result = normalizeSuggestions(
+      { title: 'Valid title', short_title: 'nope' },
+      'amber',
+    );
+    expect(result).toEqual({ title: 'Valid title' });
+    expect(result).not.toHaveProperty('short_title');
+  });
+
+  it('drops one key and keeps the other independently', () => {
+    expect(
+      normalizeSuggestions(
+        { title: words(40), description: 'A fine description' },
+        'red',
+      ),
+    ).toEqual({ description: 'A fine description' });
+  });
+
+  it('omits the key entirely rather than storing {} when both are dropped', () => {
+    expect(
+      normalizeSuggestions({ title: '', description: null }, 'amber'),
+    ).toBeUndefined();
+  });
+
+  it('treats a non-object raw value as no suggestion (garbage suggestions, BIL-QTS-R-6)', () => {
+    expect(normalizeSuggestions(42, 'amber')).toBeUndefined();
+    expect(normalizeSuggestions(['x'], 'amber')).toBeUndefined();
+    expect(normalizeSuggestions(null, 'amber')).toBeUndefined();
+    expect(normalizeSuggestions(undefined, 'amber')).toBeUndefined();
   });
 });
