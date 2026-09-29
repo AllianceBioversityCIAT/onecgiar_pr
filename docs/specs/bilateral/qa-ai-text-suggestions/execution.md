@@ -306,3 +306,5 @@
   - Pre-existing, out of scope (follow-up): the ordinary Save draft (`triggerManualSave`) never bumps `savedTick`, so pills in bilateral sections can stay "Unsaved changes" until reload.
 - **F-2 — enabled Save contrast.** Drawer Save buttons use `brandSoft` when enabled, `outline` when disabled (Hard UI rule 7). Reviewer **PASS** (attempt 1).
 - runtime events: none
+
+**Leader browser re-check after `2d9cb6079` (Chrome, result 9581):** F-2 — enabled drawer Save computes violet border/text (`brandSoft`), disabled stays grey — ✅. F-1 — form description edited ("…v2", its field-card shows "Unsaved changes"), drawer title saved from the drawer (open section General information) → form pill cleared, drawer shows "Test - edited in form v2", Check again shown — ✅. Close-after-save re-run observed again — ✅.
