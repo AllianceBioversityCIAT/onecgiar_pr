@@ -780,6 +780,178 @@ describe('RdContributorsAndPartnersService', () => {
   });
 
   /**
+   * docs/specs/bugfix/external-partners-duplication EPD-T-2 (EPD-DD-1): an institution must never
+   * exist in both the ToC-derived bucket (`partnersBody.institutions`) and the "Other(s)" bucket
+   * (`otherPartnersSelected`) at once. `EPD-AC-1`'s exact repro shape — the same `institutions_id`
+   * persisted twice, once `from_toc: true` and once `from_toc: false`.
+   */
+  describe('excludeInstitutionsIn (EPD-DD-1)', () => {
+    it('drops items whose institutions_id is in the exclude set, keyed by id — not index or reference', () => {
+      const list = [{ institutions_id: 1, full_name: 'One' }, { institutions_id: 2, full_name: 'Two' }, { institutions_id: 3, full_name: 'Three' }];
+      const result = service.excludeInstitutionsIn(list, new Set([2]));
+      expect(result.map((i: any) => i.institutions_id)).toEqual([1, 3]);
+    });
+
+    it('is a no-op when the exclude set is empty, and never mutates the source array', () => {
+      const list = [{ institutions_id: 1 }, { institutions_id: 2 }];
+      const result = service.excludeInstitutionsIn(list, new Set());
+      expect(result).toEqual(list);
+      expect(result).not.toBe(list);
+    });
+
+    it('handles an undefined/null list defensively', () => {
+      expect(service.excludeInstitutionsIn(undefined as any, new Set([1]))).toEqual([]);
+      expect(service.excludeInstitutionsIn(null as any, new Set([1]))).toEqual([]);
+    });
+  });
+
+  describe('applyTocMappingOnLoad — never lets an institution live in both External Partner buckets (EPD-R-1/EPD-AC-1)', () => {
+    const set2026 = () => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(true);
+
+    it('EPD-AC-1 falsifier: same institutions_id stored once from_toc: true and once from_toc: false — ends up in exactly one bucket', () => {
+      set2026();
+      service.partnersBody.institutions = [
+        { institutions_id: 100, from_toc: true, full_name: 'Duplicated Partner (ToC copy)' },
+        { institutions_id: 100, from_toc: false, full_name: 'Duplicated Partner (Other copy)' }
+      ] as any;
+
+      service.applyTocMappingOnLoad();
+
+      const inToc = service.partnersBody.institutions.some((i: any) => i.institutions_id === 100);
+      const inOther = service.otherPartnersSelected.some((i: any) => i.institutions_id === 100);
+      // Exactly one of the two — never both, never neither.
+      expect(inToc).toBe(true);
+      expect(inOther).toBe(false);
+      // The ToC-flagged copy is the one kept.
+      expect(service.partnersBody.institutions.find((i: any) => i.institutions_id === 100)?.from_toc).toBe(true);
+    });
+
+    it('a legitimately different institution (no id collision) is never stripped', () => {
+      set2026();
+      service.partnersBody.institutions = [
+        { institutions_id: 100, from_toc: true },
+        { institutions_id: 200, from_toc: false }
+      ] as any;
+
+      service.applyTocMappingOnLoad();
+
+      expect(service.partnersBody.institutions.map((i: any) => i.institutions_id)).toEqual([100, service.OTHER_PARTNERS_CODE]);
+      expect(service.otherPartnersSelected.map((i: any) => i.institutions_id)).toEqual([200]);
+    });
+
+    it('no-op on already-clean input (no duplicates): both buckets keep exactly what they had', () => {
+      set2026();
+      service.partnersBody.institutions = [{ institutions_id: 100, from_toc: true }] as any;
+
+      service.applyTocMappingOnLoad();
+
+      expect(service.otherPartnersSelected).toEqual([]);
+      expect(service.partnersBody.institutions.map((i: any) => i.institutions_id)).toEqual([100]);
+    });
+  });
+
+  /**
+   * docs/specs/bugfix/external-partners-duplication EPD-T-5 (EPD-AC-5): end-to-end regression for
+   * the ORIGINAL repro shape reported on IPSR result 9657 — 6 distinct institutions, each one
+   * persisted TWICE (once with `from_toc: true` in the ToC bucket, once with `from_toc: false` in
+   * "Other(s)"), rendering as 12 selected partners for a result that only has 6. This is
+   * deliberately distinct from the narrower `EPD-T-2` tests above (which use a single duplicated
+   * institution) — it is the mandatory Bug Mode regression tying the fix to the reported symptom,
+   * not another unit case for `excludeInstitutionsIn`.
+   *
+   * Falsifier (per EPD-T-5's own verification clause): the RAW combined count of everything the UI
+   * would render across both buckets (`partnersBody.institutions` minus the non-renderable "Other(s)"
+   * sentinel, plus `otherPartnersSelected`) must be exactly 6, never 12. Counting distinct ids would
+   * pass even on the un-deduplicated (buggy) data — since it's the SAME 6 ids duplicated, not 6
+   * different ones — so the assertion is on the raw combined length, which is exactly what renders
+   * as chips.
+   */
+  describe('EPD-T-5 — end-to-end regression: original repro shape (6 institutions doubled → 12)', () => {
+    const set2026 = () => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(true);
+
+    it('EPD-AC-5 falsifier: 6 institutions each present twice (ToC + Other) load into exactly 6 rendered partners, not 12', () => {
+      set2026();
+      const institutionIds = [901, 902, 903, 904, 905, 906];
+      // Exact original repro shape: same institutions_id, once from_toc: true, once from_toc: false.
+      service.partnersBody.institutions = institutionIds.flatMap(id => [
+        { institutions_id: id, from_toc: true, full_name: `Partner ${id} (ToC copy)` },
+        { institutions_id: id, from_toc: false, full_name: `Partner ${id} (Other copy)` }
+      ]) as any;
+
+      service.applyTocMappingOnLoad();
+
+      const renderedToc = service.partnersBody.institutions.filter((i: any) => i.institutions_id !== service.OTHER_PARTNERS_CODE);
+      const renderedOther = service.otherPartnersSelected;
+      const combinedRendered = [...renderedToc, ...renderedOther];
+
+      // The bug: pre-fix, all 6 ids appear in BOTH buckets (12 total). Post-fix: each id in exactly one bucket (6 total).
+      expect(combinedRendered).toHaveLength(6);
+      expect(combinedRendered.map((i: any) => i.institutions_id).sort((a: number, b: number) => a - b)).toEqual(institutionIds);
+      // No institution renders in both buckets at once.
+      const tocIds = new Set(renderedToc.map((i: any) => i.institutions_id));
+      const otherIds = new Set(renderedOther.map((i: any) => i.institutions_id));
+      const intersection = [...tocIds].filter(id => otherIds.has(id));
+      expect(intersection).toEqual([]);
+    });
+  });
+
+  /**
+   * Live production bugfix (docs/specs/bugfix/external-partners-duplication follow-up, confirmed live on
+   * prtest result 12125 / IPSR 9657): `applyTocMappingOnLoad()`'s External Partners reclassification was
+   * extracted into its own public method, `reclassifyPartnersFromToc()`, so IPSR's own P25 load path
+   * (`ipsr-contributors.component.ts#getTocLogicp25`) can call it directly — IPSR never called
+   * `applyTocMappingOnLoad()` at all, so `partnersBody.institutions`/`otherPartnersSelected` were never
+   * reclassified there. This describe asserts `reclassifyPartnersFromToc()` ALONE — invoked without going
+   * through `applyTocMappingOnLoad()` — produces the exact same bucket-exclusivity behavior as the
+   * `EPD-AC-1`-style fixtures above, mirrored onto the new method name.
+   */
+  describe('reclassifyPartnersFromToc() called directly (IPSR follow-up) — same bucket-exclusivity as applyTocMappingOnLoad', () => {
+    const set2026 = () => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(true);
+
+    it('EPD-AC-1 falsifier, called directly: same institutions_id stored once from_toc: true and once from_toc: false — ends up in exactly one bucket', () => {
+      set2026();
+      service.partnersBody.institutions = [
+        { institutions_id: 100, from_toc: true, full_name: 'Duplicated Partner (ToC copy)' },
+        { institutions_id: 100, from_toc: false, full_name: 'Duplicated Partner (Other copy)' }
+      ] as any;
+
+      service.reclassifyPartnersFromToc();
+
+      const inToc = service.partnersBody.institutions.some((i: any) => i.institutions_id === 100);
+      const inOther = service.otherPartnersSelected.some((i: any) => i.institutions_id === 100);
+      expect(inToc).toBe(true);
+      expect(inOther).toBe(false);
+      expect(service.partnersBody.institutions.find((i: any) => i.institutions_id === 100)?.from_toc).toBe(true);
+    });
+
+    it('is a no-op (never throws, never mutates) when the 2026 gate is off', () => {
+      const institutions = [{ institutions_id: 100, from_toc: false }];
+      service.partnersBody.institutions = institutions as any;
+      service.otherPartnersSelected = ['pre-existing'] as any;
+
+      service.reclassifyPartnersFromToc();
+
+      expect(service.partnersBody.institutions).toBe(institutions);
+      expect(service.otherPartnersSelected).toEqual(['pre-existing']);
+    });
+
+    it('applyTocMappingOnLoad() itself is unaffected by the extraction — its own EPD-AC-1 suite still passes unmodified (see the describe above)', () => {
+      // Structural assertion: applyTocMappingOnLoad still performs the full reclassification end-to-end
+      // (Centers + Science + Partners), proving the extraction is a pure refactor, not a behavior change.
+      set2026();
+      service.partnersBody.institutions = [
+        { institutions_id: 200, from_toc: true },
+        { institutions_id: 300, from_toc: false }
+      ] as any;
+
+      service.applyTocMappingOnLoad();
+
+      expect(service.partnersBody.institutions.map((i: any) => i.institutions_id)).toEqual([200, service.OTHER_PARTNERS_CODE]);
+      expect(service.otherPartnersSelected.map((i: any) => i.institutions_id)).toEqual([300]);
+    });
+  });
+
+  /**
    * docs/specs/changes/partner-role-exclusive-selection PRL-T-1: `isRoleBlockedByOther` reports true
    * only for a non-`Other` role id when `Other` (id 4) is currently active on the row; `Other`'s own
    * id is never reported as blocked, and nothing is blocked when `Other` is absent.

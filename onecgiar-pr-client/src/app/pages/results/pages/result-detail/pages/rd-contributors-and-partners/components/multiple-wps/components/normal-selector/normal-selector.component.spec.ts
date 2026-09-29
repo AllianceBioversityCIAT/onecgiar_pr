@@ -407,6 +407,73 @@ describe('CPNormalSelectorComponent — partner cards need every role (P2-3738)'
 });
 
 /**
+ * docs/specs/bugfix/external-partners-duplication EPD-T-2 (EPD-R-2/EPD-AC-2): picking an
+ * institution already selected in the SIBLING bucket must be a no-op, never a second entry.
+ * `pr-multi-select.onSelectOption` mutates its bound ngModel BEFORE emitting `selectOptionEvent`
+ * (verified in `pr-multi-select.component.ts`), so by the time these handlers run the duplicate is
+ * already sitting in the array — the handler's job is to undo that add.
+ */
+describe('onPartnerSelect / onOtherPartnerSelect never leave a duplicate across buckets (EPD-R-2/EPD-AC-2)', () => {
+  const OTHER_PARTNERS_CODE = -1;
+
+  const makeComponent = (institutions: any[], otherPartnersSelected: any[]) => {
+    const component = Object.create(CPNormalSelectorComponent.prototype);
+    component.OTHER_PARTNERS_CODE = OTHER_PARTNERS_CODE;
+    component.userTouchedPartners = false;
+    component.rdPartnersSE = {
+      OTHER_PARTNERS_CODE,
+      partnersBody: { institutions, no_applicable_partner: false },
+      otherPartnersSelected,
+      leadPartnerId: null,
+      setPossibleLeadPartners: jest.fn(),
+      // Real filter-by-institutions_id semantics, mirroring RdContributorsAndPartnersService.excludeInstitutionsIn.
+      excludeInstitutionsIn: (list: any[], excludeIds: Set<number>) => (list || []).filter((i: any) => !excludeIds.has(i?.institutions_id))
+    };
+    return component as CPNormalSelectorComponent;
+  };
+
+  it('EPD-AC-2: picking (via the ToC dropdown) an institution already in "Other(s)" undoes the just-applied add', () => {
+    // pr-multi-select already pushed 200 into `institutions` before this handler runs; the sentinel
+    // (-1) is present so the unrelated "Other deselected" clearing branch does not fire.
+    const institutions = [{ institutions_id: OTHER_PARTNERS_CODE }, { institutions_id: 100 }, { institutions_id: 200 }];
+    const otherPartnersSelected = [{ institutions_id: 200 }];
+    const component = makeComponent(institutions, otherPartnersSelected);
+
+    component.onPartnerSelect({ option: { institutions_id: 200 } });
+
+    const rdPartnersSE: any = (component as any).rdPartnersSE;
+    expect(rdPartnersSE.partnersBody.institutions.map((i: any) => i.institutions_id)).toEqual([OTHER_PARTNERS_CODE, 100]);
+    // The sibling bucket is untouched — the ToC copy is the one removed, not the Other(s) one.
+    expect(rdPartnersSE.otherPartnersSelected.map((i: any) => i.institutions_id)).toEqual([200]);
+  });
+
+  it('EPD-AC-2: picking (via the "Other(s)" dropdown) an institution already in the ToC bucket undoes the just-applied add', () => {
+    const institutions = [{ institutions_id: 100 }];
+    // pr-multi-select already pushed 100 into `otherPartnersSelected` before this handler runs.
+    const otherPartnersSelected = [{ institutions_id: 300 }, { institutions_id: 100 }];
+    const component = makeComponent(institutions, otherPartnersSelected);
+
+    component.onOtherPartnerSelect({ option: { institutions_id: 100 } });
+
+    const rdPartnersSE: any = (component as any).rdPartnersSE;
+    expect(rdPartnersSE.otherPartnersSelected.map((i: any) => i.institutions_id)).toEqual([300]);
+    expect(rdPartnersSE.partnersBody.institutions.map((i: any) => i.institutions_id)).toEqual([100]);
+  });
+
+  it('disqualifier check: a genuinely different institution (no institutions_id collision) is never stripped', () => {
+    const institutions = [{ institutions_id: OTHER_PARTNERS_CODE }, { institutions_id: 100 }];
+    const otherPartnersSelected = [{ institutions_id: 300 }];
+    const component = makeComponent(institutions, otherPartnersSelected);
+
+    component.onPartnerSelect({ option: { institutions_id: 100 } });
+
+    const rdPartnersSE: any = (component as any).rdPartnersSE;
+    expect(rdPartnersSE.partnersBody.institutions.map((i: any) => i.institutions_id)).toEqual([OTHER_PARTNERS_CODE, 100]);
+    expect(rdPartnersSE.otherPartnersSelected.map((i: any) => i.institutions_id)).toEqual([300]);
+  });
+});
+
+/**
  * P2-3839 — the segmented Partner role look is opt-in for IPSR (`variant="ipsr"`). Results W1/W2
  * never set the variant, so they must keep the old markup: pills without the inline check SVG and
  * the Material `delete` icon. The IPSR variant renders the check SVG in every pill and a real
@@ -520,5 +587,142 @@ describe('CPNormalSelectorComponent — Partner role variant (P2-3839)', () => {
     expect(removeSpy).toHaveBeenCalledWith(0);
     (otherRow.querySelector('button.remove_partner') as HTMLButtonElement).click();
     expect(deleteOtherSpy).toHaveBeenCalledWith(0);
+  });
+});
+
+/**
+ * `EPD-T-5` rework (docs/specs/bugfix/external-partners-duplication), Reviewer FAIL remediation
+ * option (a): the original repro shape — 6 institutions each present TWICE (once in the ToC
+ * bucket, once in "Other(s)") — driven through the REAL `onPartnerSelect`/`onOtherPartnerSelect`
+ * handlers, under BOTH the plain (`setup()`) and IPSR (`setup('ipsr')`) hosts. `EPD-T-2`'s own task
+ * explicitly assigned this end-to-end confirmation to `EPD-T-5` (`tasks.md` "EPD-T-2 Consumers");
+ * the narrower per-institution unit tests above (`onPartnerSelect / onOtherPartnerSelect never
+ * leave a duplicate across buckets`) construct the component via `Object.create` and never render
+ * `variant="ipsr"` at all, so the IPSR host path was previously exercised by nobody.
+ *
+ * Uses the REAL `RdContributorsAndPartnersService` (same pattern as the `PRL-T-1` / `P2-3839`
+ * suites above) so `excludeInstitutionsIn` runs for real, not a mock re-implementation of it.
+ *
+ * Falsifier: revert the sibling-bucket exclusion in `onPartnerSelect`/`onOtherPartnerSelect`
+ * (`normal-selector.component.ts`) and both `it`s below fail — the removed duplicate id stays in
+ * BOTH buckets and `allSelectedPartners.length` reports 9 (6 untouched + 3 genuinely resolved)
+ * instead of 6.
+ */
+describe('CPNormalSelectorComponent — EPD-T-5 rework: 6-institutions-doubled repro via real handlers, both variants', () => {
+  let fixture: ComponentFixture<CPNormalSelectorComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+
+  @Pipe({ name: 'countInstitutionsTypes', standalone: false })
+  class CountInstitutionsTypesStubPipe implements PipeTransform {
+    transform(value: any[]): any[] {
+      return value || [];
+    }
+  }
+
+  const partner = (id: number, fromToc: boolean) => ({
+    institutions_id: id,
+    institutions_name: `Partner ${id}`,
+    full_name: `Partner ${id}`,
+    from_toc: fromToc,
+    obj_institutions: { name: `Partner ${id}`, obj_institution_type_code: { name: 'NGO', id: 1 } }
+  });
+
+  // The exact original repro shape: 6 institutions, each present once in the ToC bucket
+  // (`partnersBody.institutions`, `from_toc: true`) and once more in "Other(s)"
+  // (`otherPartnersSelected`, `from_toc: false`) — mirroring attempt 1's 6-institutions-doubled
+  // fixture shape (`rd-contributors-and-partners.service.spec.ts` / `results_by_institutions.service.spec.ts`).
+  const SIX_IDS = [101, 102, 103, 104, 105, 106];
+
+  const setup = (variant?: 'default' | 'ipsr') => {
+    TestBed.configureTestingModule({
+      declarations: [CPNormalSelectorComponent, CountInstitutionsTypesStubPipe],
+      imports: [CommonModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        {
+          provide: ApiService,
+          useValue: { dataControlSE: { currentResult: { result_code: 'R-1', version_id: 1 } }, rolesSE: { readOnly: false } }
+        },
+        { provide: RolesService, useValue: { readOnly: false } },
+        // Real service (not a mock) — exercises the actual `excludeInstitutionsIn` implementation.
+        RdContributorsAndPartnersService,
+        {
+          provide: InstitutionsService,
+          useValue: {
+            institutionsList: [],
+            institutionsWithoutCentersListPartners: [],
+            institutionsWithoutCentersPartners: signal<any[]>([])
+          }
+        },
+        { provide: GreenChecksService, useValue: {} },
+        { provide: DataControlService, useValue: { isKnowledgeProduct: false } },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    });
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    // The "Other(s)" sentinel must be present in the ToC bucket, or `onPartnerSelect` treats it as
+    // "Other was just deselected" and wipes `otherPartnersSelected` before the exclusion logic runs
+    // (see `onPartnerSelect`'s `if (!this.otherSentinelSelected) ... = []` guard) — that branch is
+    // unrelated to EPD-2/EPD-AC-2 and must not fire here.
+    rdPartnersSE.partnersBody = {
+      institutions: [rdPartnersSE.buildOtherPartnersSentinel(), ...SIX_IDS.map(id => partner(id, true))],
+      no_applicable_partner: false
+    } as any;
+    rdPartnersSE.otherPartnersSelected = SIX_IDS.map(id => partner(id, false));
+
+    fixture = TestBed.createComponent(CPNormalSelectorComponent);
+    if (variant) fixture.componentRef.setInput('variant', variant);
+    fixture.detectChanges();
+  };
+
+  /**
+   * Resolves all 6 duplicated institutions by re-driving the real selection handlers, exactly as
+   * `pr-multi-select`'s `(selectOptionEvent)` would after the user re-picks an already-doubled
+   * institution from either dropdown. Half go through `onPartnerSelect` (ToC dropdown re-pick —
+   * drops the ToC copy since it's already in "Other(s)"); half through `onOtherPartnerSelect`
+   * ("Other(s)" dropdown re-pick — drops the "Other(s)" copy since it's already in the ToC bucket).
+   * Both handlers are exercised, per the Reviewer's remediation.
+   */
+  const resolveAllSixViaHandlers = () => {
+    const component = fixture.componentInstance;
+    const [viaToc, viaOther] = [SIX_IDS.slice(0, 3), SIX_IDS.slice(3)];
+    viaToc.forEach(id => component.onPartnerSelect({ option: { institutions_id: id } }));
+    viaOther.forEach(id => component.onOtherPartnerSelect({ option: { institutions_id: id } }));
+  };
+
+  const assertNoCrossBucketDuplicateAndSixTotal = () => {
+    const tocIds: number[] = rdPartnersSE.partnersBody.institutions
+      .filter((i: any) => i.institutions_id !== rdPartnersSE.OTHER_PARTNERS_CODE)
+      .map((i: any) => i.institutions_id);
+    const otherIds: number[] = rdPartnersSE.otherPartnersSelected.map((i: any) => i.institutions_id);
+
+    // No institution ends up selected in both buckets.
+    const intersection = tocIds.filter(id => otherIds.includes(id));
+    expect(intersection).toEqual([]);
+
+    // The combined selected count stays 6, not 12.
+    expect(tocIds.length + otherIds.length).toBe(6);
+    expect(fixture.componentInstance.allSelectedPartners.length).toBe(6);
+    expect(new Set([...tocIds, ...otherIds])).toEqual(new Set(SIX_IDS));
+  };
+
+  it('setup() (default/W1-W2 host): resolves the 6-doubled repro to 6 uniquely-bucketed institutions', () => {
+    setup();
+    expect(fixture.componentInstance.variant).toBe('default');
+
+    resolveAllSixViaHandlers();
+
+    assertNoCrossBucketDuplicateAndSixTotal();
+  });
+
+  it("setup('ipsr') (IPSR host, ipsr-contributors.component.html:284): resolves the same repro identically", () => {
+    setup('ipsr');
+    expect(fixture.nativeElement.classList.contains('ipsr-variant')).toBe(true);
+
+    resolveAllSixViaHandlers();
+
+    assertNoCrossBucketDuplicateAndSixTotal();
   });
 });

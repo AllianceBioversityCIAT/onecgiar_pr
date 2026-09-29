@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `CPMultipleWPsComponent` publica al piso los gaps de las pestañas ToC no renderizadas (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
+**Verified:** 2026-09-28 · qa-development-2026-ss · (uncommitted) · `applyTocMappingOnLoad()`'s External Partners split extracted into public `reclassifyPartnersFromToc()` so IPSR's own load path can call it (see note below); prior: 2026-09-25 · bugfix/p2-3542-section-bar-toc-tabs · b0d320f5d · `CPMultipleWPsComponent` publica al piso los gaps de las pestañas ToC no renderizadas (P2-3542); prior: 2026-09-16 · performance-refactor · 01891aebd · el color de las tarjetas sigue al contador (P2-3738); prior: 2026-09-11 · branch qa-development-2026-ss · bugfix/toc-hlo-outcome-locked BUG-T-1
 (removed P2-3235's `tocAlignmentReadOnly()` ToC-alignment lock on the Level/HLO/Outcome/Output
 selects — explicit PO override (santiago.sanchez@cgiar.org, `proposal.md` §11), not a defect fix;
 these selects are now gated only by `editable` + the role read-only handling already inside
@@ -179,6 +179,11 @@ setup. Hoy no existe tal spec (`result-review-drawer.*.spec.ts` vacía el templa
 defecto ni algo que arreglar.
 
 ## Trampas (⚠️ = ya rompió algo)
+
+- ⚠️ **IPSR tiene su PROPIO load flow paralelo que no llamaba a `applyTocMappingOnLoad()` — bug real, confirmado en vivo (28-sep-2026, `docs/specs/bugfix/external-partners-duplication` follow-up).**
+  `ipsr-contributors.component.ts`'s `getTocLogicp25()` asigna `partnersBody = response` pero nunca reclasificaba `institutions`/`otherPartnersSelected` por `from_toc` — a diferencia de `RdContributorsAndPartnersService.getSectionInformation()` (W1/W2), que sí llama `applyTocMappingOnLoad()`. Consecuencia: tras un save+reload, `partnersBody.institutions` quedaba con la respuesta cruda del GET (sin clasificar) Y `otherPartnersSelected` **nunca se reseteaba desde el servidor** — se quedaba con lo que tuviera de la sesión (p.ej. partners elegidos por el dropdown "Other(s)" antes de guardar). El mismo institution terminaba en las dos listas (8 en vez de 4, reproducido en vivo con `window.ng.getComponent(...)` en el resultado IPSR 9657 / result_id 12125).
+  Fix: la parte de External Partners de `applyTocMappingOnLoad()` se extrajo a un método público, `reclassifyPartnersFromToc()` (mismo cuerpo, sin cambio de comportamiento para W1/W2 — Centers y Science Programs siguen solo en `applyTocMappingOnLoad()`), y `getTocLogicp25()` ahora lo llama, **antes** de `setPossibleLeadPartners`/`setLeadPartnerOnLoad`/`runAutoAssignLeads` (esas leen los buckets ya divididos para decidir elegibilidad de lead). No se llama desde `getTocLogic()` (P22 — el split ToC/Other(s) nunca existió ahí).
+  Si tocas cualquiera de los dos load flows, recuerda que comparten el mismo `RdContributorsAndPartnersService` (`partnersBody`, `otherPartnersSelected`) pero NO el mismo código de carga — un fix en uno no se propaga automáticamente al otro.
 
 - ⚠️ **`isCP2026()` y `isP22()` NO son complementarios.** `isCP2026` = `phase_year >= 2026`
   (`fields-manager.service.ts:26`); `isP22` = **portafolio**, no año (`:20`). En prtest hay
