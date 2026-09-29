@@ -596,14 +596,50 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       this.scienceSelected = tocSP;
     }
 
-    // P2-3066 (2026): External Partners — split partnersBody.institutions by from_toc. ToC partners stay in
-    // institutions (+ sentinel option when there are Other partners); Other move to otherPartnersSelected.
-    // from_toc null/undefined (legacy rows) → fall back to live ToC partner membership.
+    // P2-3066 (2026): External Partners — split partnersBody.institutions by from_toc. Extracted below into
+    // `reclassifyPartnersFromToc()` (bugfix/external-partners-duplication, IPSR follow-up) so IPSR's own P25
+    // load path (`ipsr-contributors.component.ts#getTocLogicp25`) can invoke the SAME reclassification —
+    // pure extraction, no behavior change to this method.
+    this.reclassifyPartnersFromToc();
+
+    // P2-3115 (2026): the section is now hydrated from the persisted GET. After this point the persisted selection
+    // (even empty) is authoritative — the on-empty ToC prefill must NOT resurrect it unless the user drives a new
+    // HLO/KPI selection (tocSelectionTouched). Set last so it reflects a completed hydration.
+    this.sectionHydratedFromToc.set(true);
+  }
+
+  /**
+   * Live production bugfix (docs/specs/bugfix/external-partners-duplication follow-up, confirmed live on
+   * prtest result 12125 / IPSR 9657 via browser diagnostics): split `partnersBody.institutions` by
+   * `from_toc` — ToC partners stay in `institutions` (+ sentinel option when there are Other partners);
+   * Other partners move to `otherPartnersSelected`. `from_toc` null/undefined (legacy rows) falls back to
+   * live ToC partner membership.
+   *
+   * Extracted out of `applyTocMappingOnLoad()` so IPSR's OWN parallel load flow
+   * (`ipsr-contributors.component.ts#getTocLogicp25`) can call it directly. IPSR never called
+   * `applyTocMappingOnLoad()` at all — it re-implements its own field mapping on load and simply never
+   * reclassified `partnersBody.institutions`/`otherPartnersSelected`, so after a save+reload the raw,
+   * unclassified GET response sat in `institutions` AND the STALE in-session `otherPartnersSelected` (from
+   * picks made via the "Other(s)" dropdown before the save) was never reset — the same institution rendered
+   * in both buckets (e.g. 8 instead of 4 selected partners).
+   *
+   * Public (not private) for the same reason `excludeInstitutionsIn` is public: a sibling component, not
+   * this service, is the caller. Independently safe to call on its own — carries its own
+   * `isContributorsPartners2026()` guard — so IPSR does not need to check that gate itself before calling.
+   */
+  reclassifyPartnersFromToc(): void {
+    if (!this.fieldsManagerSE.isContributorsPartners2026()) return;
+
     const allPartners: any[] = (this.partnersBody?.institutions || []).filter((p: any) => p?.institutions_id !== this.OTHER_PARTNERS_CODE);
     const isPartnerFromToc = (p: any): boolean =>
       p?.from_toc == null ? this.tocReferencePartnerInstitutionIds().includes(p?.institutions_id) : !!p?.from_toc;
     const tocPartners = allPartners.filter((p: any) => isPartnerFromToc(p));
-    const otherPartners = allPartners.filter((p: any) => !isPartnerFromToc(p));
+    const rawOtherPartners = allPartners.filter((p: any) => !isPartnerFromToc(p));
+    // EPD-R-1/EPD-AC-1 (docs/specs/bugfix/external-partners-duplication): the same institution must never
+    // live in both buckets at once. When persisted data has it stored once with from_toc: true and once
+    // with from_toc: false, keep the ToC-flagged copy and drop the "other" copy — keyed by institutions_id,
+    // never by array index or object identity.
+    const otherPartners = this.excludeInstitutionsIn(rawOtherPartners, new Set(tocPartners.map((p: any) => p?.institutions_id)));
     if (otherPartners.length) {
       this.otherPartnersSelected = otherPartners;
       this.partnersBody.institutions = [...tocPartners, this.buildOtherPartnersSentinel()];
@@ -611,11 +647,20 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       this.otherPartnersSelected = [];
       this.partnersBody.institutions = tocPartners;
     }
+  }
 
-    // P2-3115 (2026): the section is now hydrated from the persisted GET. After this point the persisted selection
-    // (even empty) is authoritative — the on-empty ToC prefill must NOT resurrect it unless the user drives a new
-    // HLO/KPI selection (tocSelectionTouched). Set last so it reflects a completed hydration.
-    this.sectionHydratedFromToc.set(true);
+  /**
+   * EPD-DD-1 (docs/specs/bugfix/external-partners-duplication): single exclusion rule shared by every
+   * mutation point of the ToC / "Other(s)" External Partners buckets — `reclassifyPartnersFromToc()`
+   * (called by both `applyTocMappingOnLoad()` for W1/W2 and `ipsr-contributors.component.ts#getTocLogicp25`
+   * for IPSR) and both `normal-selector.component.ts` selection handlers
+   * (`onPartnerSelect`/`onOtherPartnerSelect`). Not
+   * `private`: the selection handlers live on the child component, not on this service.
+   * Keyed strictly by `institutions_id` — never by array index or object identity, so a legitimately
+   * different institution that happens to share no id collision is never stripped.
+   */
+  excludeInstitutionsIn(list: any[], excludeIds: Set<number>): any[] {
+    return (list || []).filter((item: any) => !excludeIds.has(item?.institutions_id));
   }
 
   // P2-3066 (2026): non-renderable sentinel for the "Other(s)" option inside the External Partners dropdown.

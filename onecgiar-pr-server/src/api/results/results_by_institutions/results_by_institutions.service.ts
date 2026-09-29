@@ -34,6 +34,14 @@ import { ResultTaggedNotificationService } from '../../notification/services/res
 export class ResultsByInstitutionsService {
   private readonly _logger = new Logger(ResultsByInstitutionsService.name);
 
+  // EPD-T-4 (docs/specs/bugfix/external-partners-duplication, EPD-DD-3):
+  // known MySQL errnos for constraint classes worth translating to a
+  // plain-language message — ER_BAD_NULL_ERROR (NOT NULL) and
+  // ER_NO_REFERENCED_ROW / ER_NO_REFERENCED_ROW_2 (FK violations).
+  private static readonly CONSTRAINT_FAILURE_ERRNOS = new Set<number>([
+    1048, 1216, 1452,
+  ]);
+
   constructor(
     private readonly _dataSource: DataSource,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
@@ -351,6 +359,11 @@ export class ResultsByInstitutionsService {
     user: TokenDto,
     options: { preserveCentersWhenAbsent?: boolean } = {},
   ) {
+    // EPD-T-3 (docs/specs/bugfix/external-partners-duplication): collapse any
+    // duplicate `institutions_id` entries in the incoming payload before any
+    // downstream consumer (oldPartners, handleInstitutions,
+    // syncInstitutionFromTocFlags) sees the array — see design.md §5 / EPD-DD-2.
+    data.institutions = this.dedupeIncomingInstitutions(data.institutions);
     try {
       return await this._dataSource.transaction(async () => {
         const incomingResult = await this._resultRepository.findOne({
@@ -529,8 +542,45 @@ export class ResultsByInstitutionsService {
         };
       });
     } catch (error) {
+      // EPD-T-4 (docs/specs/bugfix/external-partners-duplication, EPD-DD-3): a
+      // known DB constraint failure (NOT NULL / FK) must never reach the
+      // client as a raw driver string (e.g. "Column 'result_institution_id'
+      // cannot be null") — translate it to a plain-language message, after
+      // logging the original for diagnosability. Any other error (including
+      // the already-specific 'Result Not Found' / 'User Not Found' throws
+      // above) keeps the existing returnErrorRes behaviour unchanged.
+      if (this.isKnownConstraintFailure(error)) {
+        this._logger.error(
+          `savePartnersInstitutionsByResultV2: DB constraint failure for result_id=${data.result_id}: ${
+            (error as Error)?.message
+          }`,
+        );
+        throwServiceError(
+          'There was a problem saving the selected partners. Please review your External Partners selection and try again.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * EPD-T-4 (docs/specs/bugfix/external-partners-duplication, EPD-DD-3):
+   * detects a `QueryFailedError`-shaped driver error whose MySQL errno
+   * matches a known constraint class — NOT NULL (`ER_BAD_NULL_ERROR`,
+   * errno 1048) or an FK violation (`ER_NO_REFERENCED_ROW*`, errno 1216 /
+   * 1452). Deliberately narrow: a generic catch-all would also swallow
+   * already-specific errors thrown earlier in this method (e.g.
+   * 'Result Not Found', 'User Not Found'), which must keep surfacing via
+   * the existing `returnErrorRes` path unchanged.
+   */
+  private isKnownConstraintFailure(error: unknown): boolean {
+    const errno = (error as { driverError?: { errno?: number } })?.driverError
+      ?.errno;
+    return (
+      typeof errno === 'number' &&
+      ResultsByInstitutionsService.CONSTRAINT_FAILURE_ERRNOS.has(errno)
+    );
   }
 
   /**
@@ -1044,6 +1094,56 @@ export class ResultsByInstitutionsService {
       { result_by_institution_id: In(removedIds) },
       { is_active: false, last_updated_by: userId },
     );
+  }
+
+  /**
+   * EPD-T-3 (docs/specs/bugfix/external-partners-duplication, EPD-DD-2):
+   * collapse duplicate `institutions_id` entries in the raw incoming payload
+   * into a single logical entry per institution, before create-vs-reactivate
+   * logic (`_upsertAddedPartnerInstitutions`) ever sees the array. Strict
+   * no-op on input with no duplicates — never reorders or drops a legitimate
+   * single entry.
+   */
+  private dedupeIncomingInstitutions(
+    institutions: ResultsByInstitution[] | undefined,
+  ): ResultsByInstitution[] {
+    if (!institutions?.length) {
+      return institutions ?? [];
+    }
+
+    const groups = new Map<number | string, ResultsByInstitution[]>();
+    const order: (number | string)[] = [];
+    let syntheticKeySeq = 0;
+
+    for (const institution of institutions) {
+      const groupKey =
+        institution?.institutions_id != null
+          ? institution.institutions_id
+          : `__no-institutions-id-${syntheticKeySeq++}`;
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, []);
+        order.push(groupKey);
+      }
+      groups.get(groupKey).push(institution);
+    }
+
+    return order.map((key) => {
+      const group = groups.get(key);
+      if (group.length === 1) {
+        return group[0];
+      }
+
+      const base = group.find((entry) => entry.id != null) ?? group[0];
+      return {
+        ...base,
+        delivery: group.reduce(
+          (allDeliveries, entry) => allDeliveries.concat(entry.delivery ?? []),
+          [],
+        ),
+        from_toc: group.some((entry) => !!entry.from_toc),
+      };
+    });
   }
 
   private async _upsertAddedPartnerInstitutions(

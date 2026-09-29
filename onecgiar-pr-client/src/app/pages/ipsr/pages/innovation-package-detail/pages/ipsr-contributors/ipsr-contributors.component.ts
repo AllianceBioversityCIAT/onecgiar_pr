@@ -329,6 +329,15 @@ export class IpsrContributorsComponent implements OnInit, OnDestroy, CanComponen
       project.fullName = project.obj_clarisa_project.fullName;
     });
 
+    // Live production bugfix (docs/specs/bugfix/external-partners-duplication follow-up): unlike W1/W2's
+    // own load flow (`RdContributorsAndPartnersService.getSectionInformation()` → `applyTocMappingOnLoad()`),
+    // this P25 load path never reclassified `partnersBody.institutions` by `from_toc` nor reset
+    // `otherPartnersSelected` from the fresh GET — after a save+reload the same institution could render in
+    // BOTH buckets at once (a stale, never-cleared `otherPartnersSelected` from in-session "Other(s)" picks
+    // PLUS the raw unclassified GET response in `institutions`). MUST run BEFORE the lead-partner/lead-center
+    // calls below: they read the (now correctly split) partner/center buckets to decide lead eligibility.
+    this.rdPartnersSE.reclassifyPartnersFromToc();
+
     // Lead center/partner mapping on load — same order as W1/W2 (`rd-contributors-and-partners.service.ts:436-438`):
     // the saved lead is read FIRST and the auto-assign runs LAST. P2-3427: the previous order ran the auto-assign
     // inside `setPossibleLeadCenters(true)` and then `setLeadCenterOnLoad` overwrote it with `undefined`, so a
