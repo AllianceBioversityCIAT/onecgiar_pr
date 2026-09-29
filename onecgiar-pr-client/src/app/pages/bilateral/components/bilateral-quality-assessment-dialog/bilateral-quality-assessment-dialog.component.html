@@ -102,7 +102,7 @@
                     <button
                       type="button"
                       class="bqa-dialog__goto"
-                      (click)="sectionSelected.emit(section.key)">
+                      (click)="requestGoTo(section.key)">
                       Go to {{ section.label }}
                       <i class="material-icons-round" aria-hidden="true">arrow_forward</i>
                     </button>
@@ -145,6 +145,144 @@
                       </div>
                     </div>
                   }
+                  <!-- BIL-QTS-T-4: only ever on the general_information card, and only when
+                       `canEditGi()` — never on any other section card, whatever its verdict
+                       (BIL-QTS-R-1 "Not flagged" · `BUT it must NOT render an edit affordance for
+                       any other section card"). -->
+                  @if (section.key === 'general_information' && canEditGi()) {
+                    <div class="grid gap-[16px] mt-[12px] pt-[12px] border-t border-dashed border-[var(--pr-border)]" data-testid="bqa-dialog-gi-edit">
+                      <div class="grid gap-[6px]">
+                        @if (titleSuggestion(); as suggestion) {
+                          <div
+                            class="grid grid-cols-[auto_1fr_auto] items-start gap-[8px] rounded-[10px] bg-[var(--pr-surface-app)] px-[12px] py-[10px] text-[12px] text-[var(--pr-text-secondary)]"
+                            data-testid="gi-suggestion-title">
+                            <i class="material-icons-round text-[16px]" aria-hidden="true">lightbulb</i>
+                            <div class="grid gap-[2px]">
+                              <span class="text-[11px] font-bold uppercase tracking-[0.04em]">AI suggestion</span>
+                              <p class="m-0 whitespace-pre-line leading-[1.45]">{{ suggestion }}</p>
+                            </div>
+                            @if (titleApplied()) {
+                              <span class="inline-flex items-center gap-[4px] font-bold text-[var(--pr-color-green-700)]" data-testid="gi-suggestion-title-applied">
+                                <i class="material-icons-round text-[15px]" aria-hidden="true">check</i>Applied
+                              </span>
+                            } @else {
+                              <button
+                                hlmBtn
+                                variant="brandSoft"
+                                size="sm"
+                                type="button"
+                                data-testid="gi-suggestion-title-apply"
+                                aria-label="Apply suggested title"
+                                (click)="applyTitleSuggestion()">
+                                Apply
+                              </button>
+                            }
+                          </div>
+                        }
+                        <app-pr-input
+                          label="Title"
+                          type="text"
+                          [maxWords]="30"
+                          [required]="true"
+                          [valueValid]="titleValid()"
+                          [readOnly]="false"
+                          [ngModel]="draftTitle()"
+                          (ngModelChange)="draftTitle.set($event)">
+                        </app-pr-input>
+                        @if (titleDirty()) {
+                          <app-alert-status
+                            status="warning"
+                            [collapsible]="false"
+                            description="This change hasn't been saved yet — it will be lost if you close this window.">
+                          </app-alert-status>
+                        }
+                        <div class="flex justify-end">
+                          <button
+                            hlmBtn
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            [disabled]="!canSaveTitle()"
+                            [attr.aria-busy]="savingField() === 'title'"
+                            data-testid="bqa-dialog-save-title"
+                            aria-label="Save title"
+                            (click)="saveTitle()">
+                            @if (savingField() === 'title') {
+                              <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
+                              <span>Saving…</span>
+                            } @else {
+                              <span>Save</span>
+                            }
+                          </button>
+                        </div>
+                      </div>
+                      <div class="grid gap-[6px]">
+                        @if (descriptionSuggestion(); as suggestion) {
+                          <div
+                            class="grid grid-cols-[auto_1fr_auto] items-start gap-[8px] rounded-[10px] bg-[var(--pr-surface-app)] px-[12px] py-[10px] text-[12px] text-[var(--pr-text-secondary)]"
+                            data-testid="gi-suggestion-description">
+                            <i class="material-icons-round text-[16px]" aria-hidden="true">lightbulb</i>
+                            <div class="grid gap-[2px]">
+                              <span class="text-[11px] font-bold uppercase tracking-[0.04em]">AI suggestion</span>
+                              <p class="m-0 whitespace-pre-line leading-[1.45]">{{ suggestion }}</p>
+                            </div>
+                            @if (descriptionApplied()) {
+                              <span class="inline-flex items-center gap-[4px] font-bold text-[var(--pr-color-green-700)]" data-testid="gi-suggestion-description-applied">
+                                <i class="material-icons-round text-[15px]" aria-hidden="true">check</i>Applied
+                              </span>
+                            } @else {
+                              <button
+                                hlmBtn
+                                variant="brandSoft"
+                                size="sm"
+                                type="button"
+                                data-testid="gi-suggestion-description-apply"
+                                aria-label="Apply suggested description"
+                                (click)="applyDescriptionSuggestion()">
+                                Apply
+                              </button>
+                            }
+                          </div>
+                        }
+                        <app-pr-textarea
+                          label="Description"
+                          [maxWords]="300"
+                          [required]="false"
+                          [rows]="4"
+                          [readOnly]="false"
+                          [ngModel]="draftDescription()"
+                          (ngModelChange)="draftDescription.set($event)">
+                        </app-pr-textarea>
+                        @if (descriptionDirty()) {
+                          <app-alert-status
+                            status="warning"
+                            [collapsible]="false"
+                            description="This change hasn't been saved yet — it will be lost if you close this window.">
+                          </app-alert-status>
+                        }
+                        <div class="flex justify-end">
+                          <button
+                            hlmBtn
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            [disabled]="!canSaveDescription()"
+                            [attr.aria-busy]="savingField() === 'description'"
+                            data-testid="bqa-dialog-save-description"
+                            aria-label="Save description"
+                            (click)="saveDescription()">
+                            @if (savingField() === 'description') {
+                              <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
+                              <span>Saving…</span>
+                            } @else {
+                              <span>Save</span>
+                            }
+                          </button>
+                        </div>
+                      </div>
+                      <div class="sr-only" aria-live="polite" data-testid="bqa-dialog-gi-save-status">{{ saveStatusAnnouncement() }}</div>
+                    </div>
+                  }
                 </article>
               }
             </div>
@@ -165,21 +303,44 @@
          a Cancel here could undo. -->
     @if (!running()) {
     <div class="pr-dialog-footer shrink-0">
-      <button hlmBtn variant="outline" type="button" [disabled]="submitting()" (click)="dismissed.emit()">Make adjustments</button>
-      @if (!stale()) {
-        <button
-          hlmBtn
-          type="button"
-          [disabled]="submitting()"
-          [attr.aria-busy]="submitting()"
-          (click)="decisionChosen.emit(unavailable() ? 'submitted_without_check' : 'submitted_anyway')">
-          @if (submitting()) {
-            <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
-            <span>Submitting…</span>
-          } @else {
-            <span>{{ primaryLabel() }}</span>
-          }
-        </button>
+      <!-- BIL-QTS-R-5 / design.md §6.3: a dirty GI field intercepts every exit door (Make
+           adjustments, Go to…, ✕, Escape, scrim click, Check again) into this strip instead of
+           acting immediately. `dismissed`/`sectionSelected`/`recheckRequested` are held until the
+           user chooses Discard. -->
+      @if (pendingExit(); as exit) {
+        <div
+          class="flex w-full flex-wrap items-center justify-between gap-[12px] text-[13px] text-[var(--pr-text)]"
+          role="alert"
+          data-testid="bqa-dialog-unsaved-strip">
+          <span>You have unsaved changes to {{ dirtyFieldLabel() }}. Discard them?</span>
+          <div class="flex gap-[8px]">
+            <button hlmBtn variant="outline" type="button" #keepEditingBtn data-testid="bqa-dialog-keep-editing" (click)="keepEditing()">Keep editing</button>
+            <button hlmBtn variant="destructive" type="button" data-testid="bqa-dialog-discard" (click)="discardPendingExit()">Discard</button>
+          </div>
+        </div>
+      } @else {
+        <button hlmBtn variant="outline" type="button" [disabled]="submitting()" (click)="requestClose()">Make adjustments</button>
+        @if (!stale()) {
+          <button
+            hlmBtn
+            type="button"
+            [disabled]="submitting()"
+            [attr.aria-busy]="submitting()"
+            (click)="decisionChosen.emit(unavailable() ? 'submitted_without_check' : 'submitted_anyway')">
+            @if (submitting()) {
+              <i class="material-icons-round animate-spin" aria-hidden="true">autorenew</i>
+              <span>Submitting…</span>
+            } @else {
+              <span>{{ primaryLabel() }}</span>
+            }
+          </button>
+        } @else {
+          <!-- BIL-QTS-R-4: replaces the hidden submit button in the same slot and style
+               (design.md §6.2) — Check again never submits (BIL-QTS-DD-4). -->
+          <button hlmBtn type="button" [disabled]="submitting()" data-testid="bqa-dialog-recheck" (click)="requestRecheck()">
+            Check again
+          </button>
+        }
       }
     </div>
     }

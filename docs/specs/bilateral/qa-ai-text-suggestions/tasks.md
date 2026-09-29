@@ -104,11 +104,11 @@
 - **Definition of done:**
   - [x] Tests green, `npx ng lint --quiet` clean, type-check clean
 
-### `BIL-QTS-T-4` — Client: GI edit block in the drawer
+### [x] `BIL-QTS-T-4` — Client: GI edit block in the drawer
 
 - **Type:** `client`
 - **Description:** In `bilateral-quality-assessment-dialog`:
-  - **New inputs:** `editable`, `currentTitle`, `currentDescription`, `savingField`, `resultTypeId`.
+  - **New inputs:** `editable`, `currentTitle`, `currentDescription`, `savingField`, `resultTypeId`, `lastSaveResult` (design §6.1, added 2026-09-29).
   - **New outputs:** `giFieldSaveRequested`, `recheckRequested`.
   - **Draft signals:** `draftTitle`/`draftDescription`, seeded from the inputs.
   - **`canEditGi`** computed per design §6.1.
@@ -146,15 +146,15 @@
   - **Presence ≠ behaviour:** these specs prove the conditions and outputs, not the layout. Layout goes to T-6 (jsdom cannot measure it).
   - **Consumers:** `bilateral-result-creator.component.html:44-51` (the only host of the dialog), `bilateral-result-creator.component.spec.ts`, `bilateral-quality-assessment-dialog.component.spec.ts`. Grep the CSS hooks `bqa-dialog__` in `onecgiar-pr-client/cypress` before renaming any
 - **Definition of done:**
-  - [ ] Every scenario/clause above has a named spec
-  - [ ] Existing dialog specs still green (content parity with `qa-ai-verdict-drawer`)
-  - [ ] Lint + type-check clean; no new colour tokens
+  - [x] Every scenario/clause above has a named spec
+  - [x] Existing dialog specs still green (content parity with `qa-ai-verdict-drawer`)
+  - [x] Lint + type-check clean; no new colour tokens
 
 ### `BIL-QTS-T-5` — Client: creator wiring (save through autosave, stale on success, Check again)
 
 - **Type:** `client`
 - **Description:** In `bilateral-result-creator`:
-  - **Bind** the new dialog inputs: `editable` = `!isFormReadOnly()`, the current values from `creationService`, `savingField`, `resultTypeId`.
+  - **Bind** the new dialog inputs: `editable` = `!isFormReadOnly()`, the current values from `creationService`, `savingField`, `resultTypeId`, and `lastSaveResult` (`{field, ok, seq}` set when each drawer save settles, design §6.1).
   - **Handle `giFieldSaveRequested`** per DD-3:
     1. write `creationService.resultTitle/Description`;
     2. `autoSaveService.updateField(field, value, 'text')`;

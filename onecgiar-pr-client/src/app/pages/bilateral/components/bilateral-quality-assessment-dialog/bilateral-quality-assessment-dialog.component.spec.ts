@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { BilateralQualityAssessmentDialogComponent } from './bilateral-quality-assessment-dialog.component';
 import { BilateralQualityAssessmentView } from '../../services/bilateral-quality-assessment-ui.service';
 
@@ -74,7 +75,9 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BilateralQualityAssessmentDialogComponent],
+      // HttpClientTestingModule: BIL-QTS-T-4 pulls in CustomFieldsModule for `app-pr-input` /
+      // `app-pr-textarea`, whose dependency chain (RolesService -> AuthService) injects HttpClient.
+      imports: [BilateralQualityAssessmentDialogComponent, HttpClientTestingModule],
     }).compileComponents();
     fixture = TestBed.createComponent(BilateralQualityAssessmentDialogComponent);
   });
@@ -508,6 +511,730 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
       fixture.detectChanges();
 
       expect(document.body.style.overflow).toBe('');
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+  // BIL-QTS-T-4 — GI edit block in the drawer
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+
+  /** A GI-flagged, fully-editable, idle assessment — the one happy-path row every other row in
+   * the truth table below deviates from by exactly one dimension. */
+  function giView(overrides: {
+    verdict?: 'green' | 'amber' | 'red' | 'grey';
+    status?: 'completed' | 'unavailable' | 'skipped_kp_rule';
+    isCurrent?: boolean;
+    suggestions?: { title?: string; description?: string };
+    comments?: string | null;
+    issues?: string[];
+  } = {}): BilateralQualityAssessmentView {
+    return {
+      ...view({
+        general_information: {
+          verdict: overrides.verdict ?? 'amber',
+          comments: overrides.comments ?? null,
+          issues: overrides.issues ?? [],
+          strengths: [],
+          ...(overrides.suggestions ? { suggestions: overrides.suggestions } : {}),
+        },
+      }),
+      status: overrides.status ?? 'completed',
+      is_current: overrides.isCurrent ?? true,
+    };
+  }
+
+  describe('BIL-QTS-T-4 — canEditGi truth table (BIL-QTS-R-1)', () => {
+    function open(input: {
+      verdict?: 'green' | 'amber' | 'red' | 'grey';
+      status?: 'completed' | 'unavailable' | 'skipped_kp_rule';
+      editable?: boolean;
+      running?: boolean;
+      submitting?: boolean;
+      resultTypeId?: number | null;
+      suggestions?: { title?: string };
+    }) {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('running', input.running ?? false);
+      fixture.componentRef.setInput('submitting', input.submitting ?? false);
+      fixture.componentRef.setInput('editable', input.editable ?? true);
+      fixture.componentRef.setInput('resultTypeId', input.resultTypeId ?? 1);
+      fixture.componentRef.setInput(
+        'assessment',
+        giView({ verdict: input.verdict, status: input.status, suggestions: input.suggestions }),
+      );
+      fixture.detectChanges();
+    }
+
+    it('shows the fields: amber + completed + editable + idle + non-KP', () => {
+      open({ verdict: 'amber' });
+      expect(fixture.componentInstance.canEditGi()).toBe(true);
+    });
+
+    it('shows the fields for red too', () => {
+      open({ verdict: 'red' });
+      expect(fixture.componentInstance.canEditGi()).toBe(true);
+    });
+
+    // The mutation-sensitivity row: otherwise identical to the amber happy path, but with a
+    // green GI verdict AND a valid suggestion attached. Mutating the verdict condition inside
+    // `canEditGi` to also accept 'green' flips this row's `canEditGi()` to `true` AND makes
+    // `titleSuggestion()` non-null — either assertion below turns red on that mutation.
+    it('hides the fields — and any suggestion — for a green GI verdict, even with a valid suggestion attached', () => {
+      open({ verdict: 'green', suggestions: { title: 'A perfectly valid suggested title' } });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+      expect(fixture.componentInstance.titleSuggestion()).toBeNull();
+    });
+
+    it('hides the fields for a grey GI verdict', () => {
+      open({ verdict: 'grey' });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+    });
+
+    it('hides the fields when the assessment status is unavailable', () => {
+      open({ status: 'unavailable' });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+    });
+
+    it('hides the fields when the assessment status is skipped_kp_rule', () => {
+      open({ status: 'skipped_kp_rule' });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+    });
+
+    it('hides the fields when the result is not editable', () => {
+      open({ editable: false });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+    });
+
+    it('hides the fields while the check is running', () => {
+      open({ running: true });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+    });
+
+    it('hides the fields while a submit is in flight', () => {
+      open({ submitting: true });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+    });
+
+    it('hides the fields for a Knowledge Product result', () => {
+      open({ resultTypeId: 6 });
+      expect(fixture.componentInstance.canEditGi()).toBe(false);
+    });
+  });
+
+  describe('BIL-QTS-T-4 — Amber GI keeps the existing card content (BIL-QTS-R-1)', () => {
+    it('Amber GI: renders the edit fields alongside the unchanged pill, comments, See feedback and Go to General information', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput(
+        'assessment',
+        giView({ comments: 'Needs a stronger title.', issues: ['Say what changed.'] }),
+      );
+      fixture.detectChanges();
+
+      const card = host().querySelector('.bqa-dialog__section')!;
+      expect(card.querySelector('.bqa-dialog__pill')?.textContent?.trim()).toBe('amber');
+      expect(card.textContent).toContain('Needs a stronger title.');
+      expect(card.querySelector('.bqa-dialog__goto')?.textContent).toContain('Go to General information');
+      expect(card.querySelector('.bqa-dialog__details-trigger')).toBeTruthy();
+      expect(card.querySelector('[data-testid="bqa-dialog-gi-edit"]')).toBeTruthy();
+    });
+
+    it('Not flagged: no edit affordance on any section card when GI is green — including a red non-GI card', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', view({
+        general_information: { verdict: 'green', comments: null, issues: [], strengths: [] },
+        contributors_and_partners: { verdict: 'red', comments: null, issues: [], strengths: [] },
+      }));
+      fixture.detectChanges();
+
+      expect(host().querySelector('[data-testid="bqa-dialog-gi-edit"]')).toBeNull();
+      const contributorsCard = Array.from(host().querySelectorAll('.bqa-dialog__section'))
+        .find((c) => c.textContent?.includes('Contributors'));
+      expect(contributorsCard?.querySelector('[data-testid="bqa-dialog-gi-edit"]')).toBeFalsy();
+    });
+  });
+
+  describe('BIL-QTS-T-4 — usable suggestions render with Apply (BIL-QTS-R-3)', () => {
+    function open(overrides: { suggestions?: { title?: string; description?: string }; currentTitle?: string } = {}) {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('currentTitle', overrides.currentTitle ?? 'Existing title');
+      fixture.componentRef.setInput('assessment', giView({ suggestions: overrides.suggestions }));
+      fixture.detectChanges();
+    }
+
+    it('No suggestion: shows no suggestion block and no placeholder text for either field', () => {
+      open();
+      expect(host().querySelector('[data-testid="gi-suggestion-title"]')).toBeNull();
+      expect(host().querySelector('[data-testid="gi-suggestion-description"]')).toBeNull();
+      expect(text().toLowerCase()).not.toContain('no suggestion available');
+    });
+
+    it('Apply: sets the draft to the suggestion text and emits nothing', () => {
+      open({ suggestions: { title: 'AI suggested title' } });
+      let emitted = 0;
+      fixture.componentInstance.giFieldSaveRequested.subscribe(() => emitted++);
+
+      (host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.draftTitle()).toBe('AI suggested title');
+      expect(emitted).toBe(0);
+    });
+
+    it('Already applied: shows the Applied state, not the Apply action, once the draft equals the suggestion', () => {
+      open({ suggestions: { title: 'AI suggested title' } });
+
+      (host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(host().querySelector('[data-testid="gi-suggestion-title-applied"]')).toBeTruthy();
+      expect(host().querySelector('[data-testid="gi-suggestion-title-apply"]')).toBeNull();
+    });
+
+    it('renders a suggestion containing markup as literal text, never as an element', () => {
+      open({ suggestions: { title: 'A <b>bold</b> title' } });
+
+      const node = host().querySelector('[data-testid="gi-suggestion-title"] p')!;
+      expect(node.querySelector('b')).toBeNull();
+      expect(node.textContent).toContain('<b>bold</b>');
+    });
+
+    it('BIL-QTS-R-10: preserves "\\n" as-is in the rendered suggestion text (white-space: pre-line handles the visual break)', () => {
+      open({ suggestions: { title: 'Line one\nLine two' } });
+
+      const node = host().querySelector('[data-testid="gi-suggestion-title"] p')!;
+      expect(node.textContent).toBe('Line one\nLine two');
+    });
+
+    // Reviewer FAIL issue 3: the block's only marker was an `aria-hidden` lightbulb, and two
+    // fields each had a button named only "Apply" / only "Save" — indistinguishable to a screen
+    // reader user tabbing through the drawer's controls.
+    it('labels the block as an AI suggestion, and gives Apply/Save field-specific accessible names', () => {
+      open({ suggestions: { title: 'AI suggested title' } });
+
+      expect(host().querySelector('[data-testid="gi-suggestion-title"]')?.textContent).toContain('AI suggestion');
+
+      const applyTitle = host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement;
+      expect(applyTitle.getAttribute('aria-label')).toBe('Apply suggested title');
+
+      const saveTitle = host().querySelector('[data-testid="bqa-dialog-save-title"]') as HTMLButtonElement;
+      expect(saveTitle.getAttribute('aria-label')).toBe('Save title');
+
+      const saveDescription = host().querySelector('[data-testid="bqa-dialog-save-description"]') as HTMLButtonElement;
+      expect(saveDescription.getAttribute('aria-label')).toBe('Save description');
+    });
+  });
+
+  describe('BIL-QTS-T-4 — Save (BIL-QTS-R-2)', () => {
+    function open(currentTitle = 'Saved title') {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('currentTitle', currentTitle);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.detectChanges();
+    }
+
+    it('Save emits giFieldSaveRequested with the field and the current draft when valid and dirty', () => {
+      open();
+      fixture.componentInstance.draftTitle.set('A corrected title');
+      fixture.detectChanges();
+
+      const emitted: Array<{ field: string; value: string }> = [];
+      fixture.componentInstance.giFieldSaveRequested.subscribe((e) => emitted.push(e));
+      (host().querySelector('[data-testid="bqa-dialog-save-title"]') as HTMLButtonElement).click();
+
+      expect(emitted).toEqual([{ field: 'title', value: 'A corrected title' }]);
+    });
+
+    it('Invalid value: an empty/whitespace-only title disables Save and does not send the request', () => {
+      open();
+      fixture.componentInstance.draftTitle.set('   ');
+      fixture.detectChanges();
+
+      let emitted = 0;
+      fixture.componentInstance.giFieldSaveRequested.subscribe(() => emitted++);
+      (host().querySelector('[data-testid="bqa-dialog-save-title"]') as HTMLButtonElement).click();
+
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+      expect(emitted).toBe(0);
+    });
+
+    it('Invalid value: a title over 30 words disables Save and does not send the request', () => {
+      open();
+      const thirtyOneWords = Array.from({ length: 31 }, (_, i) => `word${i}`).join(' ');
+      fixture.componentInstance.draftTitle.set(thirtyOneWords);
+      fixture.detectChanges();
+
+      let emitted = 0;
+      fixture.componentInstance.giFieldSaveRequested.subscribe(() => emitted++);
+      (host().querySelector('[data-testid="bqa-dialog-save-title"]') as HTMLButtonElement).click();
+
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+      expect(emitted).toBe(0);
+    });
+
+    it('Invalid value: a description over 300 words disables Save and does not send the request', () => {
+      open();
+      const threeHundredOneWords = Array.from({ length: 301 }, (_, i) => `word${i}`).join(' ');
+      fixture.componentInstance.draftDescription.set(threeHundredOneWords);
+      fixture.detectChanges();
+
+      let emitted = 0;
+      fixture.componentInstance.giFieldSaveRequested.subscribe(() => emitted++);
+      (host().querySelector('[data-testid="bqa-dialog-save-description"]') as HTMLButtonElement).click();
+
+      expect(fixture.componentInstance.canSaveDescription()).toBe(false);
+      expect(emitted).toBe(0);
+    });
+
+    // Field-side half of "Save fails" — rewritten per the Reviewer's remediation (issue 1) in
+    // T-5's OWN order: DD-3 has the creator write `creationService.resultTitle` (→ `currentTitle`)
+    // BEFORE the flush settles, for a failed save exactly as much as for a successful one. Attempt
+    // 1's version asserted the opposite ("a failed save never changes currentTitle"), which
+    // contradicted T-5 and let `canSaveTitle` go permanently false the instant Save was pressed.
+    // This fixture reproduces that exact order and proves `canSaveTitle()` survives it: mutating
+    // `titleDirty`/`savedTitle` back to comparing against `currentTitle()` turns this red, because
+    // `currentTitle` already equals the draft by the time `savingField` clears.
+    it('Save fails (field-side half): Save stays enabled even though the creator already wrote the draft into currentTitle before the flush (DD-3)', () => {
+      open();
+      fixture.componentInstance.draftTitle.set('Retry this title');
+      fixture.detectChanges();
+
+      // T-5 step 1 (design.md §6.2 flow): the creator writes the draft into `creationService`
+      // — and so into this component's `currentTitle` input — BEFORE it even starts the flush.
+      fixture.componentRef.setInput('currentTitle', 'Retry this title');
+      fixture.componentRef.setInput('savingField', 'title');
+      fixture.detectChanges();
+
+      // The flush fails: `savingField` clears, but no `lastSaveResult.ok` ever arrives for this
+      // attempt — the saved baseline never moves, so the field stays dirty against it.
+      fixture.componentRef.setInput('savingField', null);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.draftTitle()).toBe('Retry this title');
+      expect(fixture.componentInstance.canSaveTitle()).toBe(true);
+    });
+
+    // The three prefill claims the Reviewer found unproven (issue 2): deleting the seeding effect
+    // leaves every OTHER spec in this file green, because they either set the draft by hand or
+    // leave `currentTitle` at its default `''`. These three fail without it.
+    it('R-1 prefill: the draft holds the form current value on open, and Save starts disabled', () => {
+      fixture.componentRef.setInput('currentTitle', 'Existing form title');
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.draftTitle()).toBe('Existing form title');
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+    });
+
+    it('reseeds the draft from the current value when the drawer is closed and reopened over a dirty, unsaved edit', () => {
+      fixture.componentRef.setInput('currentTitle', 'Saved title');
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.detectChanges();
+
+      fixture.componentInstance.draftTitle.set('Unsaved edit, never sent');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.canSaveTitle()).toBe(true); // sanity: it really was dirty
+
+      fixture.componentRef.setInput('visible', false);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('visible', true);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.draftTitle()).toBe('Saved title');
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+    });
+
+    it('R-3 Apply: once the suggestion becomes the draft, Save enables', () => {
+      fixture.componentRef.setInput('currentTitle', 'Existing title');
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView({ suggestions: { title: 'AI suggested title' } }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+
+      (host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canSaveTitle()).toBe(true);
+    });
+  });
+
+  // Reviewer FAIL (attempt 2), issue 1: `settleSaveResult` read `draftTitle()`/`draftDescription()`
+  // TRACKED inside the effect, so once `lastSaveResult` was `{ok:true}` for a field, every later
+  // keystroke on that field re-ran the effect and dragged the saved baseline along with it — Save
+  // could never re-enable and the unsaved-changes guard could never fire again. design.md §6.1
+  // (amended 2026-09-29, T-4 attempt 3): the baseline moves only on `lastSaveResult.ok`, to the
+  // value THAT SAVE EMITTED (`saveTitle()`/`saveDescription()` record it), never to whatever the
+  // draft happens to hold when the effect settles.
+  describe('BIL-QTS-T-4 — save-result baseline settle is insensitive to later keystrokes (Reviewer FAIL issue 1)', () => {
+    function openGi() {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('currentTitle', 'Saved title');
+      fixture.componentRef.setInput('currentDescription', 'Saved description');
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.detectChanges();
+    }
+
+    it('title (a): after Save "A" settles ok, Save disables', () => {
+      openGi();
+      fixture.componentInstance.draftTitle.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveTitle();
+      fixture.componentRef.setInput('lastSaveResult', { field: 'title', ok: true, seq: 1 });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+    });
+
+    it('title (b): a further edit to "B" re-enables Save and requestClose() shows the unsaved strip', () => {
+      openGi();
+      fixture.componentInstance.draftTitle.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveTitle();
+      fixture.componentRef.setInput('lastSaveResult', { field: 'title', ok: true, seq: 1 });
+      fixture.detectChanges();
+
+      fixture.componentInstance.draftTitle.set('B');
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canSaveTitle()).toBe(true);
+
+      fixture.componentInstance.requestClose();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.pendingExit()).toEqual({ kind: 'dismiss' });
+    });
+
+    it('title (c): a keystroke while the save is still in flight is not adopted as the baseline once it settles ok', () => {
+      openGi();
+      fixture.componentInstance.draftTitle.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveTitle(); // records the emitted value ('A') for this save
+      fixture.componentRef.setInput('savingField', 'title');
+      fixture.detectChanges();
+
+      fixture.componentInstance.draftTitle.set('B'); // typed while the save is in flight
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('savingField', null);
+      fixture.componentRef.setInput('lastSaveResult', { field: 'title', ok: true, seq: 2 });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.savedTitle()).toBe('A');
+      expect(fixture.componentInstance.titleDirty()).toBe(true);
+      expect(fixture.componentInstance.canSaveTitle()).toBe(true);
+    });
+
+    it('title (d): a failed save leaves the baseline untouched and Save enabled', () => {
+      openGi();
+      fixture.componentInstance.draftTitle.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveTitle();
+      fixture.componentRef.setInput('lastSaveResult', { field: 'title', ok: false, seq: 1 });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.savedTitle()).toBe('Saved title');
+      expect(fixture.componentInstance.canSaveTitle()).toBe(true);
+    });
+
+    it('description (a): after Save "A" settles ok, Save disables', () => {
+      openGi();
+      fixture.componentInstance.draftDescription.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveDescription();
+      fixture.componentRef.setInput('lastSaveResult', { field: 'description', ok: true, seq: 1 });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canSaveDescription()).toBe(false);
+    });
+
+    it('description (b): a further edit to "B" re-enables Save and requestClose() shows the unsaved strip', () => {
+      openGi();
+      fixture.componentInstance.draftDescription.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveDescription();
+      fixture.componentRef.setInput('lastSaveResult', { field: 'description', ok: true, seq: 1 });
+      fixture.detectChanges();
+
+      fixture.componentInstance.draftDescription.set('B');
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canSaveDescription()).toBe(true);
+
+      fixture.componentInstance.requestClose();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.pendingExit()).toEqual({ kind: 'dismiss' });
+    });
+
+    it('description (c): a keystroke while the save is still in flight is not adopted as the baseline once it settles ok', () => {
+      openGi();
+      fixture.componentInstance.draftDescription.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveDescription(); // records the emitted value ('A') for this save
+      fixture.componentRef.setInput('savingField', 'description');
+      fixture.detectChanges();
+
+      fixture.componentInstance.draftDescription.set('B'); // typed while the save is in flight
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('savingField', null);
+      fixture.componentRef.setInput('lastSaveResult', { field: 'description', ok: true, seq: 2 });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.savedDescription()).toBe('A');
+      expect(fixture.componentInstance.descriptionDirty()).toBe(true);
+      expect(fixture.componentInstance.canSaveDescription()).toBe(true);
+    });
+
+    it('description (d): a failed save leaves the baseline untouched and Save enabled', () => {
+      openGi();
+      fixture.componentInstance.draftDescription.set('A');
+      fixture.detectChanges();
+      fixture.componentInstance.saveDescription();
+      fixture.componentRef.setInput('lastSaveResult', { field: 'description', ok: false, seq: 1 });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.savedDescription()).toBe('Saved description');
+      expect(fixture.componentInstance.canSaveDescription()).toBe(true);
+    });
+  });
+
+  describe('BIL-QTS-T-4 — stale footer offers Check again, never Submit (BIL-QTS-R-4)', () => {
+    it('After a save / Stale for another reason: renders Check again and no submit action while stale', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('assessment', giView({ isCurrent: false }));
+      fixture.detectChanges();
+
+      expect(host().querySelector('[data-testid="bqa-dialog-recheck"]')).toBeTruthy();
+      const footerButtons = Array.from(host().querySelectorAll('.pr-dialog-footer button')) as HTMLButtonElement[];
+      expect(footerButtons.some((b) => b.textContent?.includes('Submit for review'))).toBe(false);
+    });
+
+    it('while stale, the GI fields stay editable so the user can still edit and save the other field', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView({ isCurrent: false }));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canEditGi()).toBe(true);
+      expect(host().querySelector('[data-testid="bqa-dialog-gi-edit"]')).toBeTruthy();
+    });
+
+    it('Check again emits recheckRequested — never a submission — when nothing is unsaved', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('assessment', giView({ isCurrent: false }));
+      fixture.detectChanges();
+
+      let recheckCount = 0;
+      let decisionCount = 0;
+      fixture.componentInstance.recheckRequested.subscribe(() => recheckCount++);
+      fixture.componentInstance.decisionChosen.subscribe(() => decisionCount++);
+
+      (host().querySelector('[data-testid="bqa-dialog-recheck"]') as HTMLButtonElement).click();
+
+      expect(recheckCount).toBe(1);
+      expect(decisionCount).toBe(0);
+    });
+  });
+
+  describe('BIL-QTS-T-4 — unsaved-changes guard on every exit door (BIL-QTS-R-5)', () => {
+    function openWithDirtyTitle(stale = false) {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('currentTitle', 'Saved title');
+      fixture.componentRef.setInput('assessment', giView({ isCurrent: !stale }));
+      fixture.detectChanges();
+      fixture.componentInstance.draftTitle.set('Edited title');
+      fixture.detectChanges();
+    }
+
+    it('dirty field + Make adjustments: the strip shows and dismissed is not emitted until Discard', () => {
+      openWithDirtyTitle();
+      let dismissedCount = 0;
+      fixture.componentInstance.dismissed.subscribe(() => dismissedCount++);
+
+      const buttons = Array.from(host().querySelectorAll('.pr-dialog-footer button')) as HTMLButtonElement[];
+      buttons[0].click(); // Make adjustments
+      fixture.detectChanges();
+
+      expect(host().querySelector('[data-testid="bqa-dialog-unsaved-strip"]')).toBeTruthy();
+      expect(dismissedCount).toBe(0);
+
+      (host().querySelector('[data-testid="bqa-dialog-discard"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(dismissedCount).toBe(1);
+    });
+
+    it('Keep editing dismisses the strip without discarding the draft or emitting anything', () => {
+      openWithDirtyTitle();
+      let dismissedCount = 0;
+      fixture.componentInstance.dismissed.subscribe(() => dismissedCount++);
+
+      const buttons = Array.from(host().querySelectorAll('.pr-dialog-footer button')) as HTMLButtonElement[];
+      buttons[0].click();
+      fixture.detectChanges();
+
+      (host().querySelector('[data-testid="bqa-dialog-keep-editing"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(host().querySelector('[data-testid="bqa-dialog-unsaved-strip"]')).toBeNull();
+      expect(dismissedCount).toBe(0);
+      expect(fixture.componentInstance.draftTitle()).toBe('Edited title');
+    });
+
+    it('Escape routes through the same guard as Make adjustments', () => {
+      openWithDirtyTitle();
+      let dismissedCount = 0;
+      fixture.componentInstance.dismissed.subscribe(() => dismissedCount++);
+
+      const panel = host().querySelector('[data-testid="bqa-dialog-panel"]') as HTMLElement;
+      panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+
+      expect(dismissedCount).toBe(0);
+      expect(host().querySelector('[data-testid="bqa-dialog-unsaved-strip"]')).toBeTruthy();
+    });
+
+    it('Go to <section> routes through the guard too, and sectionSelected is withheld', () => {
+      openWithDirtyTitle();
+      const keys: string[] = [];
+      fixture.componentInstance.sectionSelected.subscribe((k) => keys.push(k));
+
+      (host().querySelector('.bqa-dialog__goto') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(keys.length).toBe(0);
+      expect(host().querySelector('[data-testid="bqa-dialog-unsaved-strip"]')).toBeTruthy();
+    });
+
+    it('Check again on a stale, dirty drawer shows the strip first; recheckRequested only fires after Discard', () => {
+      openWithDirtyTitle(true);
+      let count = 0;
+      fixture.componentInstance.recheckRequested.subscribe(() => count++);
+
+      (host().querySelector('[data-testid="bqa-dialog-recheck"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(count).toBe(0);
+      expect(host().querySelector('[data-testid="bqa-dialog-unsaved-strip"]')).toBeTruthy();
+
+      (host().querySelector('[data-testid="bqa-dialog-discard"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(count).toBe(1);
+    });
+  });
+
+  describe('BIL-QTS-T-4 — accessibility', () => {
+    it('announces the drawer-initiated save state via an aria-live region', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.componentRef.setInput('savingField', 'title');
+      fixture.detectChanges();
+
+      const region = host().querySelector('[data-testid="bqa-dialog-gi-save-status"]');
+      expect(region?.getAttribute('aria-live')).toBe('polite');
+      expect(region?.textContent).toContain('Saving title');
+    });
+
+    // Reviewer FAIL issue 4: save OUTCOMES (not just the busy state) were never announced — the
+    // live region only ever said "Saving…". Leader adjudication: the drawer announces the outcome
+    // itself, driven by `lastSaveResult` (design.md §6.1's amended input).
+    it('announces a successful drawer save via the aria-live region', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.componentRef.setInput('lastSaveResult', { field: 'title', ok: true, seq: 1 });
+      fixture.detectChanges();
+
+      const region = host().querySelector('[data-testid="bqa-dialog-gi-save-status"]');
+      expect(region?.getAttribute('aria-live')).toBe('polite');
+      expect(region?.textContent).toContain('Title saved');
+    });
+
+    it('announces a failed drawer save via the aria-live region', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.componentRef.setInput('lastSaveResult', { field: 'description', ok: false, seq: 1 });
+      fixture.detectChanges();
+
+      const region = host().querySelector('[data-testid="bqa-dialog-gi-save-status"]');
+      expect(region?.textContent).toContain('Description not saved');
+    });
+
+    // Reviewer advisory: pressing the same busy Save button again mid-flight should not disturb
+    // the outcome the region already reported for a DIFFERENT settled attempt.
+    it('a busy save takes over the region even after a prior outcome was announced', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.componentRef.setInput('lastSaveResult', { field: 'title', ok: false, seq: 1 });
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('savingField', 'title');
+      fixture.detectChanges();
+
+      const region = host().querySelector('[data-testid="bqa-dialog-gi-save-status"]');
+      expect(region?.textContent).toContain('Saving title');
+    });
+  });
+
+  describe('BIL-QTS-T-4 — advisory: strip focus and re-entrancy', () => {
+    function openDirty() {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('currentTitle', 'Saved title');
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.detectChanges();
+      fixture.componentInstance.draftTitle.set('Edited title');
+      fixture.detectChanges();
+    }
+
+    it('moves focus onto Keep editing the moment the unsaved strip replaces the footer', async () => {
+      openDirty();
+
+      (host().querySelector('[data-testid="bqa-dialog-panel"] .pr-dialog-footer button') as HTMLButtonElement).click(); // Make adjustments
+      fixture.detectChanges();
+      await fixture.whenStable(); // `afterNextRender` fires on the next render, not synchronously
+
+      expect(document.activeElement).toBe(host().querySelector('[data-testid="bqa-dialog-keep-editing"]'));
+    });
+
+    it('ignores a second exit request (Go to) while the unsaved strip is already showing', () => {
+      openDirty();
+      const keys: string[] = [];
+      fixture.componentInstance.sectionSelected.subscribe((k) => keys.push(k));
+
+      fixture.componentInstance.requestClose(); // shows the strip
+      fixture.detectChanges();
+      fixture.componentInstance.requestGoTo('general_information'); // must no-op, not overwrite it
+      fixture.detectChanges();
+
+      expect(keys.length).toBe(0);
+      expect(fixture.componentInstance.pendingExit()?.kind).toBe('dismiss');
+    });
+
+    it('clears a captured exit intent when the drawer closes from the host side', () => {
+      openDirty();
+      fixture.componentInstance.requestClose();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.pendingExit()).not.toBeNull();
+
+      fixture.componentRef.setInput('visible', false);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.pendingExit()).toBeNull();
     });
   });
 });

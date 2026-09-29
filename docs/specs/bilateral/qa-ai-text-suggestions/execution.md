@@ -92,3 +92,49 @@
 - Skills: `angular-developer` (as listed). Effort `low`–`medium`. Client `npm ci` run in the worktree.
 
 **Final verification:** PASS.
+
+### `BIL-QTS-T-4` — Client: GI edit block in the drawer
+
+- **Final status:** PASS (attempt 3)
+- **Date:** 2026-09-29
+- **Attempts:** 3
+- **Requirements covered:** `BIL-QTS-R-1`, `R-2` (field side), `R-3`, `R-4` (footer/UI), `R-5`, `R-10` (rendered), NFR accessibility
+- **Budget tripwire:** design budgets 2 review rounds; T-4 took 3. Escalated to the owner after attempt 2 FAIL; owner approved attempt 3 ("Continue", 2026-09-29).
+
+**Attempt 1** — Reviewer **FAIL**
+- Files changed: `onecgiar-pr-client/src/app/pages/bilateral/components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component.{ts,html,scss,spec.ts}`
+- Implementer verification: 29/33 new specs red before; dialog 62/62, consumers 185/185 green; tsc and ng lint clean. Leader re-run VERIFIED.
+- FAIL findings: (1) Save disabled after a failed save — `dirty` used `draft ≠ currentTitle` while T-5 writes `creationService` before the flush; (2) prefill / reopen reseed / Apply-enables-Save untested; (3) no visible "AI suggestion" label, buttons not named per field; (4) save outcome not announced via `aria-live`; (5) new SCSS blocks with hard px and a violet content surface instead of Tailwind utilities with violet on Apply only.
+- runtime events: none
+
+**Decision (execute-time spec edit, 2026-09-29):** `design.md` §6.1 amended — new input `lastSaveResult {field, ok, seq}`, `savedTitle`/`savedDescription` baselines moved only on `ok`, `dirty` = draft ≠ baseline, outcome announced in `aria-live`. `tasks.md` T-4 inputs and T-5 bind list amended. Requirement meaning unchanged (implements R-2 *Save fails* and NFR Accessibility). Rejected alternative: reordering T-5 (conflicts with DD-3).
+
+**Attempt 2** (effort xhigh) — Reviewer **FAIL**
+- Files changed: same four files; SCSS blocks removed in favour of Tailwind utilities; `lastSaveResult`, baselines, `saveStatusAnnouncement`, AI-suggestion caption, per-field `aria-label`s; all five advisory-grade items done.
+- Implementer verification: new specs for issues 1/3/4 red against attempt-1 code; dialog 72/72, consumers 195/195; tsc and ng lint clean. Leader re-run VERIFIED (195 passed, tsc 0, lint clean).
+- FAIL findings: (1) `settleSaveResult` effect reads `draftTitle()` tracked, so after a successful save the baseline follows every keystroke and the field never becomes dirty again (Save stays disabled, unsaved strip never shows) — violates §6.1 "moved … **only** on `lastSaveResult.ok`", R-2 "until the next change", R-5; remediation `untracked()` + specs. (2) Lightbulb icon and "AI suggestion" eyebrow coloured `--pr-color-primary-400` — violates client Hard UI rules 7/12 and §6.2 (violet on Apply only).
+- ADVISORY: baseline should move to the value emitted by Save, not the draft at settle time (typing during an in-flight save); identical repeat announcements rely on `savingField` toggling; §6.1 "or the saved value changes" wording vs open-only seeding; Material icons vs Lucide rule 21 (pre-existing).
+- runtime events: none
+
+**Decision (execute-time spec edit, 2026-09-29, owner-approved):** `design.md` §6.1 baselines move only on `lastSaveResult.ok`, **to the value that field's Save emitted** (not the draft at settle time), so text typed during an in-flight save stays dirty. Carries into T-5's Reviewer brief.
+
+**Attempt 3** (effort xhigh) — Reviewer **PASS**
+- Files changed: `bilateral-quality-assessment-dialog.component.{ts,html,spec.ts}` (`.scss` unchanged from attempt 2).
+- Changes: `pendingSavedTitle`/`pendingSavedDescription` recorded before emit; `settleSaveResult` tracks only `lastSaveResult()`, other reads `untracked()`; violet removed from the decorative lightbulb and "AI suggestion" eyebrow (Apply keeps `brandSoft`).
+- Red run: 8 new specs `save-result baseline settle` title/description (a)–(d); on attempt-2 code (b) `canSaveTitle()` expected true got false and (c) `savedTitle()` expected 'A' got 'B', for both fields.
+- Implementer verification: dialog 80/80; consumers `bilateral-quality-assessment bilateral-result-creator bilateral-field-quality-flag` → 4 suites / 203 passed; `npx tsc -p tsconfig.app.json --noEmit` clean; `npx ng lint --quiet` pass.
+- Evidence re-run (Leader-inline): **VERIFIED** — 203 passed, tsc 0, lint pass.
+- Reviewer: **PASS** — amended §6.1 conforms; both attempt-2 issues closed; violet only on Apply.
+- runtime events: none
+
+**ADVISORY (final Reviewer, non-gating):**
+- Reliability: clear `pendingSavedTitle`/`pendingSavedDescription` on drawer open to remove the ordering dependency on the creator.
+- Readability: the 13-line doc comment on `settleSaveResult` narrates the attempt-2 bug; two lines would do.
+
+**Forward pointers to T-5 (carry in its brief):**
+- Bind `lastSaveResult` as a **new object per save** with incrementing `seq`, and toggle `savingField` around each save (identical repeat announcements rely on it — attempt-2 advisory).
+- Set `lastSaveResult` only after a drawer Save settles.
+
+**Implementer assumptions accepted:** Description has no required rule (only word limit); Title named first when both dirty; KP id 6 as a local constant; placeholder-title regex copied from `section-general-info.component.ts`.
+
+**Final verification:** PASS.

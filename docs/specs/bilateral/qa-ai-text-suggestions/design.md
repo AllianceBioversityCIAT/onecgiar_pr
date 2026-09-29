@@ -112,9 +112,9 @@ No `/api/bilateral/*` consumer payload (`bilateral-result-summaries.en.md`) chan
 
 | Unit | Responsibility |
 |---|---|
-| Dialog inputs | `+ editable: boolean` (creator passes `!isFormReadOnly()` from the same computed that locks the form, `bilateral-result-creator.component.ts:452,478`) · `+ currentTitle`, `currentDescription` (from `creationService`) · `+ savingField: 'title' \| 'description' \| null` |
+| Dialog inputs | `+ editable: boolean` (creator passes `!isFormReadOnly()` from the same computed that locks the form, `bilateral-result-creator.component.ts:452,478`) · `+ currentTitle`, `currentDescription` (from `creationService`) · `+ savingField: 'title' \| 'description' \| null` · `+ lastSaveResult: { field: 'title' \| 'description'; ok: boolean; seq: number } \| null` (set by the creator when each drawer save settles; `seq` increments per save so two equal outcomes still register) |
 | Dialog outputs | `+ giFieldSaveRequested({field, value})` · `+ recheckRequested()` |
-| Dialog local state | `draftTitle`, `draftDescription` signals, seeded from the inputs when the drawer opens or the saved value changes · `dirty(field)` = draft ≠ current |
+| Dialog local state | `draftTitle`, `draftDescription` signals, seeded from the inputs when the drawer opens or the saved value changes · `savedTitle`, `savedDescription` baselines, seeded with the drafts and moved **only** on `lastSaveResult.ok`, to the value that field's Save emitted (not the draft at settle time, so text typed while a save is in flight stays dirty — amended 2026-09-29, T-4 attempt 3, owner-approved) · `dirty(field)` = draft ≠ saved baseline (not ≠ `currentTitle`: the creator writes `creationService` before the flush, DD-3, so `current` already equals the draft when a save fails — execute-time correction 2026-09-29, T-4 attempt 1) · the outcome is announced in the `aria-live` region (NFR Accessibility) |
 | `canEditGi` computed | `editable && status === 'completed' && GI verdict ∈ {amber, red} && !running && !submitting && resultType ≠ KP` |
 | Validation | `WordCounterService` (P-10), limits 30/300. Title required and not the draft placeholder (`isPlaceholderTitle` logic in `section-general-info.component.ts:304`) |
 | UI service | `suggestions` on the view type · `markStale()` sets `is_current = false` on the held view (server stays the authority, P-7) |
