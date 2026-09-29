@@ -40,3 +40,35 @@
 - Implementer set P-11 "Settled by" to `—` and updated the ledger Count line to keep the ledger consistent; accepted.
 
 **Final verification:** PASS.
+
+### `BIL-QTS-T-2` — Server: allow-list rebuild and suggestion normalizer (write + read)
+
+- **Final status:** PASS
+- **Date:** 2026-09-29
+- **Attempts:** 1
+- **Requirements covered:** `BIL-QTS-R-6`, `BIL-QTS-R-8`, `BIL-QTS-R-9`, `BIL-QTS-R-10` (served half)
+
+**Attempt 1**
+- Files changed: `onecgiar-pr-server/src/api/bilateral/services/quality-assessment/bilateral-quality-rules.ts` (`QualitySuggestions`, optional `suggestions` on `QualitySectionResult`, `countWordsLikeClient`, `normalizeSuggestions`), `bilateral-quality-assessment.client.ts` (`sanitizeScores` allow-list rebuild, normalizer with `sent`, `event=bilateral_quality_assessment_suggestions` count-only log line), `bilateral-quality-assessment.service.ts` (`serveSections` in `toDto`, normalizer without `sent`), and the three matching `*.spec.ts`. `isValidAiResponse` untouched.
+- Red run (production files set aside, specs kept): (a) 31-word title kept, (d) `suggestions: 42` kept, (e) `evidence.debug` persisted, (g) DTO served a 40-word title — assertion failures, not compile errors.
+- Implementer verification: `npx jest --silent --reporters=summary --forceExit --testPathPattern="quality-assessment"` → 5 suites / 252 tests passed; tsc red demo (`suggestions: { title: 1 }` → TS2322) then clean; eslint on changed files clean (5 pre-existing errors in unrelated `src/api/results/result.repository.spec.ts`).
+- Evidence re-run (Leader-inline): **VERIFIED** — 252 passed, `npx tsc --noEmit` exit 0, eslint on the folder exit 0.
+- Reviewer: **PASS** — normalizer follows §5 steps 1–7, every R-8 row covered, counter bit-for-bit with the client (fixture (h) is a real falsifier), `fields` kept, read path normalizes without `sent`, no suggestion text in any log call.
+- runtime events: none
+
+**ADVISORY (Reviewer, non-gating):**
+1. Reliability: no fixture pins R-8's "Section" row (`suggestions` on `evidence` must be absent).
+2. Readability: `client.spec.ts` "logs one line naming only the drop/keep counts" asserts `not.toContain('description text')`, which the fixture never contains; assert against `'A fine description'` / `'w0'`.
+3. Resilience: `countSuggestionDrops` counts nothing for a non-object `suggestions` (e.g. `42`), so no log line fires for that garbage.
+4. Readability: `normalizeSuggestionField` doc names `toDto`; `serveSections` is the direct caller.
+5. Risk (low): allow-list writes absent keys as `undefined`; JSON serialization drops them, stored shape unchanged.
+
+**Decisions made:**
+- Skills: `nestjs-expert`, `tdd` (as listed). Effort `high` (stored/served shape).
+- Log line event name `bilateral_quality_assessment_suggestions` chosen by the Implementer (spec pins only its content); accepted.
+
+**Issues encountered:**
+- The Implementer produced the red run with a tagged `git stash` of the three production files (applied by SHA, dropped by tag). No other session's stash was touched; stash list verified afterwards.
+- Pre-flight: `.env` and `environment*.ts` copied from the sibling worktree `pipefish`; server `npm ci` run.
+
+**Final verification:** PASS.

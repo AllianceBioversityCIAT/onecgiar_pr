@@ -537,6 +537,206 @@ describe('BilateralQualityAssessmentClient', () => {
     });
   });
 
+  /**
+   * BIL-QTS-T-2 — the allow-list rebuild (`sanitizeScores`) and the GI suggestion normalizer,
+   * exercised end to end through `assess()`. Letters (a)/(b)/(c)/(d)/(e)/(i) match the
+   * falsifier fixtures named in `docs/specs/bilateral/qa-ai-text-suggestions/tasks.md` T-2.
+   */
+  describe('suggestions and allow-list rebuild (BIL-QTS-T-2)', () => {
+    const words = (count: number) =>
+      Array.from({ length: count }, (_, i) => `w${i}`).join(' ');
+
+    it('keeps a usable suggestion on an amber GI section that differs from the sent title', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.general_information.verdict = 'amber';
+      body.sections.general_information.suggestions = {
+        title: 'A much better title',
+        description: null,
+      };
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(
+        buildPayload({ title: 'A sample bilateral result' }),
+        { resultId: 1 },
+      );
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information).toHaveProperty(
+          'suggestions',
+          { title: 'A much better title' },
+        );
+      }
+    });
+
+    it('(a) drops a 31-word title while leaving the section verdict intact', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.general_information.verdict = 'amber';
+      body.sections.general_information.suggestions = { title: words(31) };
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information).not.toHaveProperty(
+          'suggestions',
+        );
+        expect(result.response.sections.general_information?.verdict).toBe(
+          'amber',
+        );
+      }
+    });
+
+    it('(b) drops the suggestion when GI verdict is green (default fixture verdict)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.general_information.suggestions = {
+        title: 'A perfectly usable title',
+      };
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information).not.toHaveProperty(
+          'suggestions',
+        );
+      }
+    });
+
+    it('(c) drops a title equal to the sent title after trimming (novelty, write path)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.general_information.verdict = 'amber';
+      body.sections.general_information.suggestions = {
+        title: '  A sample bilateral result  ',
+      };
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(
+        buildPayload({ title: 'A sample bilateral result' }),
+        { resultId: 1 },
+      );
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information).not.toHaveProperty(
+          'suggestions',
+        );
+      }
+    });
+
+    it('(d) garbage `suggestions: 42` never invalidates the response (BIL-QTS-R-6)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.general_information.verdict = 'amber';
+      body.sections.general_information.suggestions = 42;
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.general_information).not.toHaveProperty(
+          'suggestions',
+        );
+        expect(result.response.overall.verdict).toBe('amber');
+        expect(result.response.sections.general_information?.verdict).toBe(
+          'amber',
+        );
+      }
+    });
+
+    it('(e) drops an unknown key on a non-GI section without touching its verdict (BIL-QTS-R-9)', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const body = readV02Fixture();
+      body.sections.evidence.debug = 'x';
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      if (result.outcome === 'ok') {
+        expect(result.response.sections.evidence).not.toHaveProperty('debug');
+        expect(result.response.sections.evidence?.verdict).toBe('red');
+      }
+    });
+
+    it('(i) never logs the suggestion text, even when it is dropped for being over the limit', async () => {
+      const LEAK_SUGGESTION = 'LEAK-SUGGESTION-4d2';
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const logSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+      const warnSpy = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      const body = readV02Fixture();
+      body.sections.general_information.verdict = 'amber';
+      body.sections.general_information.suggestions = {
+        title: `${LEAK_SUGGESTION} ${words(30)}`,
+      };
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      const result = await client.assess(buildPayload(), { resultId: 1 });
+
+      expect(result.outcome).toBe('ok');
+      for (const call of [...logSpy.mock.calls, ...warnSpy.mock.calls]) {
+        expect(call.map(String).join(' ')).not.toContain(LEAK_SUGGESTION);
+      }
+    });
+
+    it('logs one line naming only the drop/keep counts when a suggestion is dropped', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const logSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+      const body = readV02Fixture();
+      body.sections.general_information.verdict = 'amber';
+      body.sections.general_information.suggestions = {
+        title: words(31), // dropped (over the 30-word limit)
+        description: 'A fine description', // kept
+      };
+      const client = makeClient(jest.fn(() => of({ data: body, status: 200 })));
+
+      await client.assess(buildPayload(), { resultId: 9 });
+
+      const suggestionLog = logSpy.mock.calls
+        .map((call) => call.map(String).join(' '))
+        .find((line) =>
+          line.includes('bilateral_quality_assessment_suggestions'),
+        );
+      expect(suggestionLog).toBeDefined();
+      expect(suggestionLog).toContain('dropped=1');
+      expect(suggestionLog).toContain('kept=1');
+      expect(suggestionLog).toContain('request_id=');
+      expect(suggestionLog).not.toContain('description text');
+    });
+
+    it('never logs a suggestions line when nothing was dropped', async () => {
+      configureEnv({ url: 'https://ai.example.test', key: 'k' });
+      const logSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+      const client = makeClient(
+        jest.fn(() => of({ data: readV02Fixture(), status: 200 })),
+      );
+
+      await client.assess(buildPayload(), { resultId: 1 });
+
+      const suggestionLog = logSpy.mock.calls
+        .map((call) => call.map(String).join(' '))
+        .find((line) =>
+          line.includes('bilateral_quality_assessment_suggestions'),
+        );
+      expect(suggestionLog).toBeUndefined();
+    });
+  });
+
   describe('evidence reason sanitisation (QEL-R-2, QEL-R-3)', () => {
     const EVIDENCE_LINK_UNREADABLE_REASON =
       "We couldn't open this link, so it was not reviewed. Check that it is a complete, public URL (starting with https://).";

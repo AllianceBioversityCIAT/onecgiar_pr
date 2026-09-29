@@ -16,7 +16,7 @@
 - ✅ Open questions resolved (OQ-1…OQ-4)
 - ✅ No migration (design §3)
 - [x] `P-11` settled: `JSON_KEYS` over `bilateral_quality_assessments.sections` on prtest + prod (T-1 first step, owner)
-- [ ] `environment.ts` (client) and `.env` (server) present in the worktree before any suite runs
+- [x] `environment.ts` (client) and `.env` (server) present in the worktree before any suite runs
 
 ## 3. Task list
 
@@ -48,7 +48,7 @@
   - [x] Contract section, table, *For the AI team* block and change-log row present; `contract_version` literal unchanged (`0.2`)
   - [x] No secret/host in the doc
 
-### `BIL-QTS-T-2` — Server: allow-list rebuild and suggestion normalizer (write + read)
+### [x] `BIL-QTS-T-2` — Server: allow-list rebuild and suggestion normalizer (write + read)
 
 - **Type:** `server`
 - **Description:**
@@ -81,9 +81,9 @@
   - **Disqualifier:** any existing `quality-assessment` spec breaks because a fixture relies on an unknown section key being persisted → stop; that is a P-11/P-13 refutation (Pivot), not a fixture to patch.
   - **Consumers:** `bilateral-quality-assessment.client.spec.ts`, `bilateral-quality-assessment.service.spec.ts`, `bilateral-quality-rules.spec.ts`, `bilateral-quality-payload.builder.spec.ts` (P-14). Served-shape readers: dialog, UI service and `bilateral-field-quality-flag` (P-13; optional field, no break)
 - **Definition of done:**
-  - [ ] All nine falsifier fixtures present and green; each of (a), (d), (e), (g) observed red before the change
-  - [ ] `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` and `npx tsc --noEmit` clean
-  - [ ] No suggestion text in any log call
+  - [x] All nine falsifier fixtures present and green; each of (a), (d), (e), (g) observed red before the change
+  - [x] `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` and `npx tsc --noEmit` clean
+  - [x] No suggestion text in any log call
 
 ### `BIL-QTS-T-3` — Client: view type and `markStale()`
 
