@@ -18,15 +18,14 @@ import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-f
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 
 /**
- * `result_type_id` values whose Evidence section is complete by default. Local constants because the
- * client has no shared ResultTypeEnum (same idiom as `section-geography`).
+ * `result_type_id` values with their own Evidence rule (P2-3847). Local constants because the client has
+ * no shared ResultTypeEnum (same idiom as `section-geography`).
  *
- * - Capacity sharing for development: W1/W2 already says it "does not currently require evidence
- *   submission" (`rd-evidences.component.ts` → `alertStatus`).
- * - Knowledge Product: its evidence IS the CGSpace handle, which the server attaches on its own
- *   (`populateKPFromCGSpace`).
- *
- * Nicoleta Trifa (email, 2026-09-29): bulk-uploaded CapDev and KP results were being asked for evidence.
+ * - Capacity sharing for development: evidence is optional, so the section is complete by default.
+ *   W1/W2 already says it "does not currently require evidence submission" (`rd-evidences` → `alertStatus`).
+ * - Knowledge Product: evidence stays REQUIRED — a KP cannot exist without its CGSpace handle, which the
+ *   server attaches as evidence (`populateKPFromCGSpace`). `hasValidLink` already accepts CGSpace and
+ *   hdl.handle.net links; the KP only gets guidance copy saying so.
  */
 const CAP_DEV_TYPE_ID = 5;
 const KNOWLEDGE_PRODUCT_TYPE_ID = 6;
@@ -51,10 +50,17 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
 
-  /** CapDev and KP: evidence may still be added, but the section never counts as missing. */
-  readonly isEvidenceOptional = computed(() => {
-    const typeId = Number(this.creationService.resultTypeId());
-    return typeId === CAP_DEV_TYPE_ID || typeId === KNOWLEDGE_PRODUCT_TYPE_ID;
+  /** CapDev: evidence may still be added, but the section never counts as missing. */
+  readonly isEvidenceOptional = computed(() => Number(this.creationService.resultTypeId()) === CAP_DEV_TYPE_ID);
+
+  readonly isKnowledgeProduct = computed(() => Number(this.creationService.resultTypeId()) === KNOWLEDGE_PRODUCT_TYPE_ID);
+
+  readonly evidenceCardDescription = computed(() => {
+    if (this.isEvidenceOptional()) return 'Evidence is optional for this result type.';
+    if (this.isKnowledgeProduct()) {
+      return 'At least one evidence with a valid link is required to complete this section. For Knowledge Products, the CGSpace handle or link is accepted as evidence.';
+    }
+    return 'At least one evidence with a valid link is required to complete this section.';
   });
 
   constructor() {
