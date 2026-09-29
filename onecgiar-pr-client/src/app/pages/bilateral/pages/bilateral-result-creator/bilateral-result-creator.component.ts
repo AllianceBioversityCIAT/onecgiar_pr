@@ -30,6 +30,7 @@ import { BilateralQualityAssessmentUiService } from '../../services/bilateral-qu
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { resultStatusBg, resultStatusFg, resultStatusLabel } from '../../../../shared/constants/result-status-tokens';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Component({
   selector: 'app-bilateral-result-creator',
@@ -74,6 +75,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly ctx = inject(BilateralContextService);
   private readonly smartNav = inject(SmartNavigationService);
   readonly qualityAssessment = inject(BilateralQualityAssessmentUiService);
+  private readonly saveButtonSE = inject(SaveButtonService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
@@ -913,6 +915,30 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.lastGiSaveResult.set({ field, ok: false, seq: ++this.giSaveSeq });
         return;
       }
+
+      // BIL-QTS-T-6 (owner-approved 2026-09-29): finishes like an ordinary Save draft —
+      // `manualSave$('general-info')` is what `section-general-info.component.ts:265` listens for
+      // (Innovation Developer prefill), never skipped. Never reached on the error/catch paths above.
+      this.autoSaveService.manualSave$.next('general-info');
+
+      // Rework, item 1 (attempt 2, owner-approved 2026-09-29): `savedTick` clears EVERY field-card's
+      // "Unsaved changes" pill (`field-card.component.ts:112-131`), not just general-info's — every
+      // section stays mounted under `[hidden]` (`bilateral-result-creator.component.html:269-293`).
+      // Bumping it unconditionally therefore cleared the pill in whichever section the reporter had
+      // open, even with real unsaved edits sitting there untouched by this save.
+      //
+      // Navigating away always flushes the section being left first (BIL-T-2's `selectSection()`),
+      // so a genuinely staged edit can only exist in the section still open. Safe to bump when that
+      // section is general-info (the one this save actually reaches) or it provably has nothing
+      // staged. Evidence is excluded outright: its own draft-item state (`showDraft()` in
+      // `section-evidence.component.ts`) never surfaces through `hasPendingFor('evidence')` — a
+      // reporter can have an evidence draft open, with that field-card already marked "edited" from
+      // the click that opened it, while `hasPendingFor` reads clean.
+      const openSection = this.openSectionName();
+      const safeToBumpSavedTick =
+        openSection === 'general-info' ||
+        (openSection !== 'evidence' && !this.autoSaveService.hasPendingFor(openSection));
+      if (safeToBumpSavedTick) this.saveButtonSE.savedTick.update(count => count + 1);
 
       // P-6/DD-5: the server is the authority on `is_current`, but it only answers on the NEXT
       // read — without this the submit button would stay visible until a reload, and pressing it

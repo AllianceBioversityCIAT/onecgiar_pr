@@ -19,7 +19,7 @@ import { SmartNavigationService } from '../../../../shared/services/smart-naviga
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
 import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 import { RESULT_STATUS_TOKENS } from '../../../../shared/constants/result-status-tokens';
-import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Injectable()
 class MockBilateralAiService {
@@ -1786,6 +1786,116 @@ describe('BilateralResultCreatorComponent', () => {
       fixture.detectChanges();
 
       expect(dialog.componentInstance.editable()).toBe(true);
+    });
+  });
+
+  // BIL-QTS-T-6 manual-verification follow-up, item 1 (owner-approved 2026-09-29): the drawer save
+  // must finish exactly like the section's own Save draft (`triggerManualSave`) — emitting
+  // `manualSave$('general-info')` (so `section-general-info`'s Innovation Developer prefill
+  // listener still fires) and bumping `SaveButtonService.savedTick` (the only thing that clears the
+  // form's `field-card` "Unsaved changes" pill — see `field-card.component.ts:112-131` and
+  // `save-button.service.ts:77,262`). Both only on the OK path; never on `hasErrorFor` or on a
+  // rejected flush.
+  describe('BIL-QTS-T-6 follow-up — drawer save finishes like Save draft (manualSave$ + savedTick)', () => {
+    let saveButtonSE: SaveButtonService;
+
+    beforeEach(() => {
+      component.isCreating.set(false);
+      component.resultId.set(42);
+      autoSaveService.hasPendingFor.mockReturnValue(false);
+      autoSaveService.hasErrorFor.mockReturnValue(false);
+      autoSaveService.getEndpointKeys.mockReturnValue(['generalInfo']);
+      mdsTracker.overallStatus.set('complete');
+      mdsTracker.invalidFields.set([]);
+      jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+      saveButtonSE = TestBed.inject(SaveButtonService);
+    });
+
+    it('an ok drawer save emits manualSave$ once with general-info and bumps savedTick', async () => {
+      const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+      const before = saveButtonSE.savedTick();
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+      expect(emit).toHaveBeenCalledTimes(1);
+      expect(emit).toHaveBeenCalledWith('general-info');
+      expect(saveButtonSE.savedTick()).toBe(before + 1);
+    });
+
+    it('a failed drawer save (hasErrorFor) emits neither manualSave$ nor bumps savedTick', async () => {
+      autoSaveService.hasErrorFor.mockReturnValue(true);
+      const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+      const before = saveButtonSE.savedTick();
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: '' });
+
+      expect(emit).not.toHaveBeenCalled();
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    it('a rejected flush (thrown, not merely settled with an error) also emits neither manualSave$ nor bumps savedTick', async () => {
+      autoSaveService.flush.mockRejectedValueOnce(new Error('network down'));
+      const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+      const before = saveButtonSE.savedTick();
+
+      await component.handleGiFieldSaveRequested({ field: 'title', value: 'New' });
+
+      expect(emit).not.toHaveBeenCalled();
+      expect(saveButtonSE.savedTick()).toBe(before);
+    });
+
+    // Attempt 2 rework (reviewer FAIL, 2026-09-29): `savedTick` is page-wide — every section stays
+    // mounted under `[hidden]`, so bumping it unconditionally cleared the "Unsaved changes" pill on
+    // whatever OTHER section the reporter had open with real staged edits. `manualSave$` must still
+    // fire every time regardless (design.md DD-3's side effect) — only the `savedTick` bump is guarded.
+    describe('savedTick is scoped to the section actually reached by this save', () => {
+      it('open section evidence: savedTick unchanged even though `hasPendingFor` reads clean (its own draft-item state never surfaces there), manualSave$ still emitted', async () => {
+        component.openSectionName.set('evidence');
+        // Evidence's `showDraft()` open-draft state is local to `section-evidence.component.ts` and
+        // never reaches `BilateralAutoSaveService` — this mock mirrors that real gap, not a stub of
+        // convenience: the guard for Evidence must NOT depend on `hasPendingFor` reading dirty.
+        autoSaveService.hasPendingFor.mockReturnValue(false);
+        const emit = jest.spyOn(autoSaveService.manualSave$, 'next');
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(emit).toHaveBeenCalledWith('general-info');
+        expect(saveButtonSE.savedTick()).toBe(before);
+      });
+
+      it('open section general-info: savedTick bumped', async () => {
+        component.openSectionName.set('general-info');
+        // `hasPendingFor` is irrelevant here — the guard bumps on `openSection === 'general-info'`
+        // alone — but it must stay `false` or `waitForSectionSave('general-info')` (same key) spins.
+        autoSaveService.hasPendingFor.mockReturnValue(false);
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(saveButtonSE.savedTick()).toBe(before + 1);
+      });
+
+      it('open section other than general-info with nothing pending there: savedTick bumped', async () => {
+        component.openSectionName.set('contributors');
+        autoSaveService.hasPendingFor.mockReturnValue(false);
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(autoSaveService.hasPendingFor).toHaveBeenCalledWith('contributors');
+        expect(saveButtonSE.savedTick()).toBe(before + 1);
+      });
+
+      it('open section other than general-info WITH something genuinely pending there: savedTick unchanged', async () => {
+        component.openSectionName.set('geography');
+        autoSaveService.hasPendingFor.mockImplementation((section: string) => section === 'geography');
+        const before = saveButtonSE.savedTick();
+
+        await component.handleGiFieldSaveRequested({ field: 'title', value: 'New title' });
+
+        expect(saveButtonSE.savedTick()).toBe(before);
+      });
     });
   });
 

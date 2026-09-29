@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { BrnButton } from '@spartan-ng/brain/button';
+import { HlmButton } from '@spartan/button';
 import { BilateralQualityAssessmentDialogComponent } from './bilateral-quality-assessment-dialog.component';
 import { BilateralQualityAssessmentView } from '../../services/bilateral-quality-assessment-ui.service';
 import { RolesService } from '../../../../shared/services/global/roles.service';
@@ -1031,6 +1032,73 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
 
       expect(emitted).toEqual([{ field: 'title', value: 'AI suggested title' }]);
       expect(fixture.componentInstance.canSaveTitle()).toBe(true);
+    });
+  });
+
+  // Manual verification follow-up (BIL-QTS-T-6, owner-approved 2026-09-29), item 2: `outline` reads
+  // almost like a disabled button — barely distinguishable at a glance. The enabled state now uses
+  // `brandSoft`, the same in-card secondary-action variant `Accept & save` already uses; disabled
+  // stays `outline` (neutral). `HlmButton` is real under Jest (`@spartan/button` maps to the local
+  // file, not a stub), so its `variant` input is read directly off the directive instance.
+  describe('BIL-QTS-T-6 follow-up — Save button variant reflects enabled state (item 2)', () => {
+    function open(currentTitle = 'Saved title', currentDescription = 'Saved description') {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('editable', true);
+      fixture.componentRef.setInput('currentTitle', currentTitle);
+      fixture.componentRef.setInput('currentDescription', currentDescription);
+      fixture.componentRef.setInput('assessment', giView());
+      fixture.detectChanges();
+    }
+
+    function variantOf(testId: string): string | undefined {
+      return fixture.debugElement
+        .query(By.css(`[data-testid="${testId}"]`))
+        .injector.get(HlmButton).variant();
+    }
+
+    it('Save title is neutral (outline) while disabled', () => {
+      open();
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+
+      expect(variantOf('bqa-dialog-save-title')).toBe('outline');
+    });
+
+    it('Save title switches to brandSoft once dirty and valid (enabled)', () => {
+      open();
+      fixture.componentInstance.draftTitle.set('A corrected title');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.canSaveTitle()).toBe(true);
+
+      expect(variantOf('bqa-dialog-save-title')).toBe('brandSoft');
+    });
+
+    it('Save description is neutral (outline) while disabled', () => {
+      open();
+      expect(fixture.componentInstance.canSaveDescription()).toBe(false);
+
+      expect(variantOf('bqa-dialog-save-description')).toBe('outline');
+    });
+
+    it('Save description switches to brandSoft once dirty and valid (enabled)', () => {
+      open();
+      fixture.componentInstance.draftDescription.set('A corrected description');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.canSaveDescription()).toBe(true);
+
+      expect(variantOf('bqa-dialog-save-description')).toBe('brandSoft');
+    });
+
+    it('Save title reverts to outline once an in-flight save disables it again', () => {
+      open();
+      fixture.componentInstance.draftTitle.set('A corrected title');
+      fixture.detectChanges();
+      expect(variantOf('bqa-dialog-save-title')).toBe('brandSoft');
+
+      fixture.componentRef.setInput('savingField', 'title');
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.canSaveTitle()).toBe(false);
+      expect(variantOf('bqa-dialog-save-title')).toBe('outline');
     });
   });
 

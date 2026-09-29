@@ -201,7 +201,7 @@
                         <div class="flex justify-end">
                           <button
                             hlmBtn
-                            variant="outline"
+                            [variant]="canSaveTitle() ? 'brandSoft' : 'outline'"
                             size="sm"
                             type="button"
                             [disabled]="!canSaveTitle()"
@@ -267,7 +267,7 @@
                         <div class="flex justify-end">
                           <button
                             hlmBtn
-                            variant="outline"
+                            [variant]="canSaveDescription() ? 'brandSoft' : 'outline'"
                             size="sm"
                             type="button"
                             [disabled]="!canSaveDescription()"

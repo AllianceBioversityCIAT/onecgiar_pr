@@ -287,3 +287,22 @@
 - Implementer verification: 5 suites / 301. Evidence re-run (Leader-inline) **VERIFIED**: + `pr-textarea field-card` → 8 suites / 334 passed, tsc 0, lint pass.
 - Reviewer: **PASS** — no loop/extra autosave from the new write; nothing the drawer needs relies on the bubbled events; no consumer depends on an "undefined" placeholder.
 - ADVISORY: a spec comment wrongly says the pill is hidden via stylesheet; the guard does not re-run when `RolesService.readOnly` rebuilds the controls — an additive `editLocked` pass-through on pr-input/pr-textarea would be cleaner; stopped `click` hides the event from document-level outside-click listeners (no tooltips in the GI block today); `old_value` in `result_field_revision` is the form's current (possibly unsaved) text, not the last server value — R-13 does not define which; placeholders are hard-coded English.
+
+**Leader browser walkthrough (Chrome, localhost, result 9581 / id 12049, admin user, after D-1 fix `08c4bb5cd`):**
+1. Form description edited without reload → drawer shows it — ✅ (D-1 fixed).
+2. Drawer title edited + Save → "General information saved successfully", form title and page header updated, footer shows Check again — ✅. Server log: `Recorded field revision … field=title assessment_id=136 provenance=USER_EDIT`, `POST …/field-revisions 201` — ✅.
+3. Close after save → drawer reopened in "Checking quality", new verdict (Red 32) arrived, Submit for review back — ✅ (DD-8 behaviour as designed; owner to confirm UX).
+4. Close again with no save → no re-run — ✅.
+5. Save draft on General information → title not reverted; reload → title and description persisted — ✅.
+6. AI sent no `suggestions` → no suggestion block, fields editable — ✅ (Accept & save not exercised: needs a stubbed AI response).
+7. Widths 520/900/375 — **not measured**: the Chrome window ignored `resize_window` (innerWidth stayed 1824). At that width the drawer (~630 px) holds the fields without overflow.
+- Observations: (a) the form's Description `field-card` "Unsaved changes" pill stays on after a drawer save that flushed the staged description (footer shows "Section complete"; the pill clears on reload) — stale page-wide `SaveButtonService` flag; (b) the enabled outline Save button reads almost like a disabled one (low contrast); (c) server log shows `JwtMiddleware Public route accessed` on `center/*` — consistent with P2-3854.
+
+**Follow-ups F-1 / F-2 (owner-approved 2026-09-29, from the walkthrough observations):**
+- **F-1 — drawer save finishes like Save draft.** On an ok drawer save the creator now emits `manualSave$('general-info')` (Innovation Developer lead-contact prefill, the earlier T-5 advisory) and bumps `SaveButtonService.savedTick` so the form's field-card pill clears.
+  - Attempt 1 — Reviewer **FAIL**: `savedTick` is page-wide and every editor section stays mounted (`[hidden]`), so an unconditional bump marked unsaved cards in other sections as saved (violates DD-3 "Save draft — General information" semantics, R-2).
+  - Attempt 2 — Reviewer **PASS**: bump only when the open section is `general-info`, or another section except `evidence` with nothing pending (`selectSection` flushes the outgoing section; Evidence's draft modal is local state). 4 specs, 3 red against the unconditional bump. Leader re-run **VERIFIED**: 10 suites / 426 passed, tsc 0, lint pass.
+  - ADVISORY: check `hasPendingFor` over every section (like `submitResult`) instead of relying on the flush-on-leave premise (`isSubmitting` skip, `waitForSectionSave` timeout); tighten the Evidence comment.
+  - Pre-existing, out of scope (follow-up): the ordinary Save draft (`triggerManualSave`) never bumps `savedTick`, so pills in bilateral sections can stay "Unsaved changes" until reload.
+- **F-2 — enabled Save contrast.** Drawer Save buttons use `brandSoft` when enabled, `outline` when disabled (Hard UI rule 7). Reviewer **PASS** (attempt 1).
+- runtime events: none
