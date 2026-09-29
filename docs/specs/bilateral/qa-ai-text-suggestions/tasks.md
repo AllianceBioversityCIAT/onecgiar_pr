@@ -189,7 +189,7 @@
   - [x] Falsifiers (a)–(e) green; (a) and (c) observed red first
   - [x] Lint + type-check clean
 
-### `BIL-QTS-T-7` — Server: field-revision endpoint with server-decided provenance *(amendment 2026-09-29, P2-3848 AC11)*
+### [x] `BIL-QTS-T-7` — Server: field-revision endpoint with server-decided provenance *(amendment 2026-09-29, P2-3848 AC11)*
 
 - **Type:** `server`
 - **Description:** Add `POST /api/bilateral/center/quality-assessment/:resultId/field-revisions` (design §4, DD-9) in `bilateral-center.controller.ts` → a service method that: applies the same user/edit guard as `assess`; validates `field ∈ {title, description}`; loads the assessment by id and requires it to belong to `resultId`; reads the result's current value for the field as `new_value`; runs the read-side normalizer on the stored `general_information.suggestions`; writes one `result_field_revision` row (`AI_SUGGESTED` if `trim(new_value)` equals the kept suggestion for that field, else `USER_EDIT`; `proposal_id` null; `change_reason 'bilateral_qa_drawer:assessment=<id>'`); returns `{ provenance }`. Register `ResultFieldRevision` in the bilateral module's `TypeOrmModule.forFeature`. No text in any log.
@@ -206,8 +206,8 @@
   - **Disqualifier:** `result_field_revision.result_id` cannot reference bilateral results, or the entity's enum lacks `title`/`description` in the target DB → stop (would need a migration; re-specify DD-9).
   - **Consumers:** `bilateral-center.controller.spec.ts`, `bilateral-center.service.spec.ts`, `api/ai` specs that build `ResultFieldRevision` (entity unchanged), `bilateral.module` DI graph (grep specs that construct the service)
 - **Definition of done:**
-  - [ ] Falsifiers (a)–(g) green; (a), (c), (d) observed red first
-  - [ ] eslint + `tsc --noEmit` clean; `onecgiar-pr-server/src/api/bilateral/CLAUDE.md` / `AGENTS.md` updated if they list center endpoints
+  - [x] Falsifiers (a)–(g) green; (a), (c), (d) observed red first
+  - [x] eslint + `tsc --noEmit` clean; `onecgiar-pr-server/src/api/bilateral/CLAUDE.md` / `AGENTS.md` updated if they list center endpoints
 
 ### `BIL-QTS-T-8` — Client: dialog Accept & save and suggestion labels *(amendment 2026-09-29, P2-3848 AC6–AC8)*
 

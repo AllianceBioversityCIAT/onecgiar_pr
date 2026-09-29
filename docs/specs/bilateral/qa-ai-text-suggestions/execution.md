@@ -178,3 +178,39 @@
 - **Owner decisions (2026-09-29):** AC1/AC2 beyond Title/Description out of scope (PO notified on Slack); AC5 under owner validation, no technical dependency; build AC3 (re-run on drawer close), AC6/7 (labels), AC8 (Accept & save, Apply removed), AC11 (provenance in the existing `result_field_revision`, no migration — owner pointed at `api/ai/entities`).
 - **Spec edits:** `requirements.md` R-3 amended, R-12 and R-13 added, OQ-3 reversed, out-of-scope updated; `design.md` §4 new endpoint, §2.2/§6.2 amended, DD-7…DD-9, budget amendment row; `tasks.md` T-7…T-9 added, T-6 now depends on T-9 with a step 7a. Correction-closure sweep for `Apply` / OQ-3 done (T-4's historical text left as delivered).
 - **Budget:** original 6 tasks / 2 review rounds; after T-5 the run stood at 6 → now 9 tasks, rounds re-estimated +2. Approved by the owner ("Si, adelante").
+
+### `BIL-QTS-T-7` — Server: field-revision endpoint with server-decided provenance
+
+- **Final status:** PASS (attempt 2)
+- **Date:** 2026-09-29
+- **Attempts:** 2
+- **Requirements covered:** `BIL-QTS-R-13` (server half)
+
+**Attempt 1** — Reviewers (parallel lens mode, security surface): security lens **PASS**, conformance lens **FAIL**
+- Files changed: `onecgiar-pr-server/src/api/bilateral/{bilateral-center.controller.ts, bilateral-center.controller.spec.ts, bilateral.module.ts, services/bilateral-center.service.ts, services/bilateral-center.service.spec.ts}`, new `dto/create-bilateral-field-revision.dto.ts`. `recordFieldRevision` reuses `assertSubmittable`, scopes the assessment to the result, re-runs `normalizeSuggestions`, writes one `ResultFieldRevision` (`proposal_id` null, `change_reason 'bilateral_qa_drawer:assessment=<id>'`); route-level `ValidationPipe({ whitelist: true })`; `ResultFieldRevision` registered in the bilateral module (entity unchanged, no migration).
+- Red evidence: mutation-based after implementation — (a) comparison forced false, (c) trusting client provenance, (d) exception type swap.
+- Implementer verification: `bilateral-center|quality-assessment` 7 suites / 395; `api/ai` 30; tsc and eslint clean. Leader re-run VERIFIED: 9 suites / 425 (= 395 + 30).
+- FAIL findings (conformance): (1) falsifier (d) mock returned null for any query, so removing the `result_id` scoping stayed green; (2) `onecgiar-pr-server/src/api/bilateral/CLAUDE.md` dto tree lists `/center/*` routes but the new one was missing.
+- runtime events: none
+
+**Decision (execute-time spec edit, 2026-09-29):** `design.md` §4 error codes amended to `400` invalid/unknown result or refused state (same refusal as `assess`) · `404` unknown or foreign assessment · `400` bad field — the row contradicted itself ("same guard" vs "404 unknown result").
+
+**Attempt 2** (effort high) — Reviewer **PASS**
+- Files changed: service + spec, DTO (`@MaxLength(10000)` on `old_value`) + new `dto/create-bilateral-field-revision.dto.spec.ts`, `api/bilateral/CLAUDE.md` (dto tree line, Verified re-stamped). `[advisory-grade]`: save wrapped → generic `InternalServerErrorException` (no `QueryFailedError` parameters reach the filter/logs); success log after `await save`; trim padding in (a); `mockResolvedValueOnce` in (g); `finally` in (f).
+- Mutation red: `result_id` stripped from the where → (d) red; MaxLength removed → boundary test red; try/catch removed → raw QueryFailedError leaks, test red; trim removed → (a) red. All restored.
+- Implementer verification: 9 suites / 426 + DTO spec 3/3; tsc, eslint clean.
+- Evidence re-run (Leader-inline): **VERIFIED** — `bilateral-center|quality-assessment|api/ai|create-bilateral-field-revision` 10 suites / 429 passed, tsc 0, eslint 0.
+- Reviewer: **PASS** — both issues closed; §4 as amended conforms; forged provenance impossible; no text in logs.
+- runtime events: none
+
+**ADVISORY (non-gating):**
+- **Security, pre-existing, out of scope (owner informed 2026-09-29):** `JwtMiddleware.publicRoutes` includes `'/api/bilateral'` matched with `req.path.includes`, so every `/api/bilateral/center/*` route is treated as public and invalid tokens are ignored; `@UserToken()` then decodes the `auth` payload without verifying the signature (`auth/Middlewares/jwt.middleware.ts:20-58`, `shared/decorators/user-token.decorator.ts:23-34`). Confirmed by the Leader reading the code; not exercised against a server.
+- The throttler skips `/api/bilateral/*`; `old_value` now capped at 10000.
+- `result_field_revision` text columns are `utf8mb3`: a 4-byte character makes the insert fail → fail-soft 500, row lost. Pre-existing schema; known gap.
+- Reusing `assertSubmittable` refuses when the owner SP is missing or Innovation Use MDS is incomplete, so a drawer save in that state records no row (fail-soft).
+- `assessment_id` may be any assessment of the same result, not only the latest.
+- Bare `catch {}` drops the error; logging only `err.code` would aid diagnosis.
+
+**Decisions made:** skills `nestjs-expert`, `api-design-principles`, `tdd`; `bilateral-result-summaries.en.md` not updated (design §4: no `/api/bilateral/*` consumer payload change).
+
+**Final verification:** PASS.
