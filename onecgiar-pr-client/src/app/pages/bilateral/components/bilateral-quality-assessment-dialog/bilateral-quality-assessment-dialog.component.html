@@ -71,7 +71,7 @@
       @if (unavailable()) {
         <p class="pr-dialog-text">{{ assessment.degraded_reason || 'The quality service could not complete this check. You may submit without it.' }}</p>
       } @else {
-        @if (stale()) {
+        @if (stale() && !readOnly()) {
           <p class="bqa-dialog__stale">This assessment predates your latest edits. It remains available as history, but you must run it again before submitting.</p>
         }
         <section class="bqa-dialog__overall rounded-[12px] py-[16px] px-[18px]" [attr.data-verdict]="verdict()">
@@ -162,8 +162,9 @@
       }
     </div>
     <!-- No exits while the check runs: the row is already claimed server-side, so there is nothing
-         a Cancel here could undo. -->
-    @if (!running()) {
+         a Cancel here could undo. QSG-R-5: a submitted result is read-only, so no footer action —
+         ✕ / Escape / scrim above are untouched, they do not live inside this @if. -->
+    @if (!running() && !readOnly()) {
     <div class="pr-dialog-footer shrink-0">
       <button hlmBtn variant="outline" type="button" [disabled]="submitting()" (click)="dismissed.emit()">Make adjustments</button>
       @if (!stale()) {

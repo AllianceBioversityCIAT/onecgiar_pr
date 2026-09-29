@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError, Subject } from 'rxjs';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
@@ -17,6 +18,7 @@ import { BilateralContextService } from '../../services/bilateral-context.servic
 import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralQualityAssessmentUiService } from '../../services/bilateral-quality-assessment-ui.service';
 import { RESULT_STATUS_TOKENS } from '../../../../shared/constants/result-status-tokens';
+import { BilateralQualityAssessmentDialogComponent } from '../../components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component';
 
 @Injectable()
 class MockBilateralAiService {
@@ -525,6 +527,34 @@ describe('BilateralResultCreatorComponent', () => {
       component.submitResult();
 
       expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * QSG-T-2 (`QSG-R-5`) — the dialog does not derive its own read-only rule; it renders whatever
+   * the creator hands it. This pins the wiring at `bilateral-result-creator.component.html:44-51`:
+   * the SAME gate `isFormReadOnly()` already computes, not a second copy of the editability rule.
+   * The dialog's own read-only rendering (no footer, no stale line) is covered in its own spec.
+   */
+  describe('quality assessment dialog readOnly binding (QSG-T-2)', () => {
+    function dialogInstance(): BilateralQualityAssessmentDialogComponent {
+      return fixture.debugElement.query(By.directive(BilateralQualityAssessmentDialogComponent))
+        .componentInstance as BilateralQualityAssessmentDialogComponent;
+    }
+
+    it('binds the dialog readOnly input from isFormReadOnly()', () => {
+      component.isCreating.set(false);
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(true);
+      expect(dialogInstance().readOnly()).toBe(true);
+
+      creationService.isEditableByCenterUser.set(true);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(false);
+      expect(dialogInstance().readOnly()).toBe(false);
     });
   });
 
