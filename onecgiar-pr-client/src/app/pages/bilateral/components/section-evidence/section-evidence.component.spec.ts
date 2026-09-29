@@ -222,15 +222,37 @@ describe('SectionEvidenceComponent', () => {
       ]);
     });
 
-    // Nicoleta Trifa, 2026-09-29: CapDev and KP are not asked for evidence.
-    it.each([
-      [5, 'Capacity sharing for development'],
-      [6, 'Knowledge Product']
-    ])('counts the Evidence item as filled with no evidence for result type %i (%s)', typeId => {
-      creation.resultTypeId.set(typeId);
+    // P2-3847: CapDev is not asked for evidence.
+    it('counts the Evidence item as filled with no evidence for Capacity sharing for development', () => {
+      creation.resultTypeId.set(5);
       build();
       fixture.detectChanges();
       expect(component.isEvidenceOptional()).toBe(true);
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('evidence', [
+        { key: 'valid-link', label: 'Evidence', filled: true }
+      ]);
+    });
+
+    // P2-3847: a KP still needs evidence, and its CGSpace handle is that evidence.
+    it('keeps Evidence required for a Knowledge Product with no evidence', () => {
+      creation.resultTypeId.set(6);
+      build();
+      fixture.detectChanges();
+      expect(component.isEvidenceOptional()).toBe(false);
+      expect(component.evidenceCardDescription()).toContain('CGSpace handle or link is accepted');
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('evidence', [
+        { key: 'valid-link', label: 'Evidence', filled: false }
+      ]);
+    });
+
+    it.each([
+      'https://hdl.handle.net/10568/123456',
+      'https://cgspace.cgiar.org/handle/10568/123456'
+    ])('accepts the CGSpace link %s as the evidence of a Knowledge Product', link => {
+      creation.resultTypeId.set(6);
+      bilateralApi.GET_evidences.mockReturnValue(of({ response: { evidences: [{ id: 1, link }] } }));
+      build();
+      fixture.detectChanges();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('evidence', [
         { key: 'valid-link', label: 'Evidence', filled: true }
       ]);

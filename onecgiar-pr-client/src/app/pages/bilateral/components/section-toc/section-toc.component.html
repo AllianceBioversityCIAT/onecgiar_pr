@@ -149,6 +149,7 @@
             [required]="false"
             [rows]="4"
             [maxWords]="150"
+            [readOnly]="readOnly()"
             [ngModel]="narrative()"
             (ngModelChange)="onNarrativeInput($event)">
           </app-pr-textarea>

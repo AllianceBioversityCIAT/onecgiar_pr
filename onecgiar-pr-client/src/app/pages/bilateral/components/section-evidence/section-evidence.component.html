@@ -30,11 +30,7 @@
       [required]="!isEvidenceOptional()"
       [hasValue]="hasValidLink"
       [readOnly]="readOnly()"
-      [description]="
-        isEvidenceOptional()
-          ? 'Evidence is optional for this result type.'
-          : 'At least one evidence with a valid link is required to complete this section.'
-      ">
+      [description]="evidenceCardDescription()">
       <div class="evidences">
       @for (evidence of evidences; track $index) {
         <div class="evidence_card" data-testid="evidence-card">

@@ -22,7 +22,7 @@
       </div>
       <div class="sc-helper">Assigned from the project's mapping; it cannot be changed here.</div>
 
-      <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
+      <app-section-toc [resultLevelId]="creationService.resultLevelId()" [readOnly]="readOnly()"></app-section-toc>
     </div>
 
     <div class="sc-block sc-block--programs">
