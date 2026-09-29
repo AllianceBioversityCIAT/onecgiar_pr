@@ -462,6 +462,45 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
     });
   });
 
+  // QSG-T-2 — QSG-R-5, `QSG-DD-5`. A submitted result (status outside Editing/Draft) reopens the
+  // drawer read-only: no footer, no stale line; ✕ still closes. Falsifier per tasks.md `QSG-T-2`:
+  // renders the real template with a completed assessment and `readOnly: true`.
+  describe('read-only — QSG-R-5', () => {
+    function open(overrides: Partial<{ readOnly: boolean; assessment: BilateralQualityAssessmentView }> = {}) {
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('running', false);
+      fixture.componentRef.setInput('readOnly', overrides.readOnly ?? true);
+      fixture.componentRef.setInput('assessment', overrides.assessment ?? fullView());
+      fixture.detectChanges();
+    }
+
+    it('renders no footer action buttons when read-only, but keeps the ✕ close control', () => {
+      open();
+
+      const buttons = Array.from(host().querySelectorAll('button')) as HTMLButtonElement[];
+      expect(buttons.some((b) => b.textContent?.trim() === 'Make adjustments')).toBe(false);
+      expect(buttons.some((b) => b.textContent?.includes('Submit for review'))).toBe(false);
+      expect(host().querySelector('.pr-dialog-footer')).toBeNull();
+      expect(host().querySelector('[data-testid="bqa-dialog-close"]')).toBeTruthy();
+    });
+
+    it('renders no stale line when read-only, even on a non-current row', () => {
+      open({ assessment: { ...fullView(), is_current: false } });
+
+      expect(host().querySelector('.bqa-dialog__stale')).toBeNull();
+    });
+
+    // Regression for `dialog.component.spec.ts:336-340` (now shifted by this describe block) — the
+    // new input's default (`false`) must not affect the editable case.
+    it('still renders both footer buttons when not read-only', () => {
+      open({ readOnly: false, assessment: view() });
+
+      const buttons = Array.from(host().querySelectorAll('.pr-dialog-footer button')) as HTMLButtonElement[];
+      expect(buttons[0].textContent?.trim()).toBe('Make adjustments');
+      expect(buttons[1].textContent?.trim()).toContain('Submit for review');
+    });
+  });
+
   // BIL-QAD-T-3 — D-6, BIL-QAD-DD-3. The component is mounted by the creator under
   // `@if (!isCreating())`, not under `visible()` — open/close is a signal transition on a
   // persisting instance, not a construct/destroy cycle, so the fixture exercises that same

@@ -81,6 +81,12 @@ export class BilateralQualityAssessmentDialogComponent implements OnDestroy {
   readonly running = input(false);
   /** The dialog stays open through the submit PATCH, so it owns the busy state of its own buttons. */
   readonly submitting = input(false);
+  /**
+   * QSG-R-5 — the creator already knows whether the result is editable (`isFormReadOnly()`); the
+   * dialog does not derive its own copy of that rule. True hides the footer and the stale line;
+   * ✕ / Escape / scrim stay untouched.
+   */
+  readonly readOnly = input(false);
   readonly dismissed = output<void>();
   /** The AI section key the reporter wants to go and fix. The creator owns the navigation. */
   readonly sectionSelected = output<string>();

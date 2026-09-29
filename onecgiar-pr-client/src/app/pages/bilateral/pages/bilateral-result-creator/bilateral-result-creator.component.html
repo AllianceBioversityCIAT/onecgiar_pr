@@ -46,6 +46,7 @@
     [assessment]="qualityAssessment.assessment()"
     [submitting]="qualityAssessment.isSubmitting()"
     [running]="qualityAssessment.isRunning()"
+    [readOnly]="isFormReadOnly()"
     (dismissed)="dismissQualityAssessment()"
     (sectionSelected)="goToQualitySection($event)"
     (decisionChosen)="submitAfterQualityDecision($event)" />
