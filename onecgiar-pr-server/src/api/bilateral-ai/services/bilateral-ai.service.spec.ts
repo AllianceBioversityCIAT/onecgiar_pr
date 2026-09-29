@@ -2103,6 +2103,124 @@ describe('BilateralAiService (unit)', () => {
       );
     });
   });
+
+  // `AIQ-T-2` attempt 2, Reviewer B (error-path lens) item 2: the `skipClaim` branch had no
+  // coverage — `attemptNumber = job.attempts` (no +1, since `BilateralAiDispatchService.decide`
+  // already incremented it via `attemptStart`) drives retry-vs-final, and an off-by-one here
+  // would silently add or drop an attempt while every other test stayed green.
+  describe('processJob — skipClaim:true (dispatch already claimed the job)', () => {
+    it('does not call attemptStart', async () => {
+      const { service, stubs } = makeService();
+      const attemptStartSpy = jest.spyOn(service, 'attemptStart');
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PROCESSING,
+        attempts: 1,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: null,
+      });
+
+      await service.processJob('j1', { skipClaim: true });
+
+      expect(attemptStartSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns before calling text mining when the row is not PROCESSING (claim did not actually land)', async () => {
+      const { service, stubs } = makeService();
+      const attemptStartSpy = jest.spyOn(service, 'attemptStart');
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+
+      await service.processJob('j1', { skipClaim: true });
+
+      expect(attemptStartSpy).not.toHaveBeenCalled();
+      expect(stubs.textMining.extract).not.toHaveBeenCalled();
+      expect(stubs.jobRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('at attempts = max_attempts - 1 (already incremented by the claim), a retryable error rethrows with retrying=true', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PROCESSING,
+        attempts: 2, // default max_attempts = 3 → this IS attempt 2 of 3, not a fresh 0
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      const error = new Error('Service down');
+      (error as any).status = undefined;
+      stubs.textMining.extract.mockRejectedValue(error);
+
+      await expect(
+        service.processJob('j1', { skipClaim: true }),
+      ).rejects.toThrow('Service down');
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PROCESSING },
+        {
+          retrying: true,
+          stage: 'queued',
+          stage_updated_date: expect.any(Function),
+          error_code: 'PROCESSING_ERROR',
+          error_message: 'Service down',
+        },
+      );
+      expect(stubs.jobRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: BilateralAiJobStatus.FAILED }),
+      );
+    });
+
+    it('at attempts = max_attempts (already incremented by the claim), a retryable error writes FAILED', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PROCESSING,
+        attempts: 3, // default max_attempts = 3 → this IS the final attempt, not one past it
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      const error = new Error('Service down again');
+      (error as any).status = 503;
+      stubs.textMining.extract.mockRejectedValue(error);
+
+      await expect(
+        service.processJob('j1', { skipClaim: true }),
+      ).rejects.toThrow('Service down again');
+
+      expect(stubs.jobRepository.update).toHaveBeenCalledWith(
+        { job_id: 'j1', status: BilateralAiJobStatus.PROCESSING },
+        {
+          status: BilateralAiJobStatus.FAILED,
+          error_code: 'HTTP_503',
+          error_message: 'Service down again',
+          completed_date: expect.any(Function),
+        },
+      );
+    });
+  });
+
   describe('timezone skew regression: lifecycle timestamps are written in DB time, never from the process clock', () => {
     /**
      * Post-archive bug on `bilateral/ai-processing-feedback`. `created_date` and the STORED

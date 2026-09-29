@@ -49,7 +49,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** tests green; `npx tsc --noEmit` clean; the falsifier executed and observed red.
 - **Skills:** `nestjs-expert`.
 
-### `AIQ-T-2` — Dispatch service: claim-or-redirect under a named lock
+### [x] `AIQ-T-2` — Dispatch service: claim-or-redirect under a named lock
 
 - **Type:** server · **Estimate:** L · **Depends on:** `AIQ-T-1` · **Blocks:** `AIQ-T-3`, `AIQ-T-4`
 - **First step (settles P-25, High):** read `@nestjs/microservices` `client/client-proxy.js` (`emit`) in the main checkout's `node_modules` and record whether `emit` dispatches without a subscriber. If it does not, `wake`/redirect publishing subscribes (fire-and-forget with an error log). Record the outcome in Done criteria. If the finding contradicts the design in any other way → Pivot Protocol.

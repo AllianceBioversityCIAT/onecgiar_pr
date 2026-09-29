@@ -10,7 +10,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { In, LessThan, Repository } from 'typeorm';
+import { EntityManager, In, LessThan, Repository } from 'typeorm';
+import { selectManager } from '../../../shared/utils/orm.util';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -713,8 +714,23 @@ export class BilateralAiService {
    * skips the write entirely and reports "not started".
    *
    * @akili-spec bilateral/ai-processing-feedback
+   *
+   * `AIQ-T-2`: no longer `private` — `BilateralAiDispatchService.decide` calls this directly, as
+   * the claim, while holding the named lock (`design.md` §5.2, `AIQ-DD-1`). The WHERE clauses
+   * below are unchanged from the original private method (P-2 disqualifier).
+   *
+   * Attempt 2 (Reviewer A, concurrency lens): `manager` is optional, `selectManager` pattern
+   * (`src/CLAUDE.md` §11.2) — the dispatch service passes its lock-holding `queryRunner.manager`
+   * so the claim runs on the SAME connection as `GET_LOCK`/`RELEASE_LOCK` (`design.md` §5.2:
+   * "acquire, decide, claim and release must share that connection"), instead of borrowing a
+   * second pool connection while the lock is held. Omitted, this defaults to the service's own
+   * pooled `jobRepository` — today's unchanged path for every other caller.
    */
-  private async attemptStart(job: BilateralAiJob): Promise<boolean> {
+  async attemptStart(
+    job: BilateralAiJob,
+    manager?: EntityManager,
+  ): Promise<boolean> {
+    const repo = selectManager(manager, BilateralAiJob, this.jobRepository);
     // `stage_updated_date` and `started_date` share `bilateralAiDbNow` — one `CURRENT_TIMESTAMP`
     // evaluation per UPDATE statement keeps them identical, as a shared JS `now` did before.
     const set = {
@@ -727,12 +743,12 @@ export class BilateralAiService {
     };
     let result: { affected?: number } | undefined;
     if (job.status === BilateralAiJobStatus.PENDING) {
-      result = await this.jobRepository.update(
+      result = await repo.update(
         { job_id: job.job_id, status: BilateralAiJobStatus.PENDING },
         set,
       );
     } else if (job.status === BilateralAiJobStatus.PROCESSING && job.retrying) {
-      result = await this.jobRepository.update(
+      result = await repo.update(
         {
           job_id: job.job_id,
           status: BilateralAiJobStatus.PROCESSING,
@@ -784,11 +800,32 @@ export class BilateralAiService {
     this.logger.log(`Bilateral AI job ${jobId} stage -> ${stage}.`);
   }
 
-  async processJob(jobId: string): Promise<void> {
+  /**
+   * `options.skipClaim` (`AIQ-T-2`): set by `BilateralAiConsumer` when
+   * `BilateralAiDispatchService.decide` already claimed this job (the `run` outcome) under the
+   * named lock. `attemptStart`'s own conditional update would find the row already `PROCESSING`
+   * and not `retrying`, return 0 rows affected, and wrongly abort — so this path trusts the
+   * dispatch service's claim instead of re-running it. The `resume-retry` outcome (and any other
+   * caller) omits the option and gets today's unchanged path: this method performs the claim
+   * itself, exactly as before `AIQ-T-2`.
+   */
+  async processJob(
+    jobId: string,
+    options?: { skipClaim?: boolean },
+  ): Promise<void> {
     const job = await this.jobRepository.findOne({ where: { job_id: jobId } });
     if (!job || job.status === BilateralAiJobStatus.COMPLETED) return;
 
-    const started = await this.attemptStart(job);
+    let started: boolean;
+    let attemptNumber: number;
+    if (options?.skipClaim) {
+      started = job.status === BilateralAiJobStatus.PROCESSING;
+      // The dispatch service's `attemptStart` call already incremented `attempts`.
+      attemptNumber = job.attempts;
+    } else {
+      started = await this.attemptStart(job);
+      attemptNumber = job.attempts + 1;
+    }
     if (!started) {
       // The sweeper or another consumer already owns/terminated this job — calling mining for a
       // terminated job would burn a 10-minute request and could resurrect a FAILED row
@@ -798,7 +835,6 @@ export class BilateralAiService {
       );
       return;
     }
-    const attemptNumber = job.attempts + 1;
 
     try {
       const user = await this.userRepository.findOne({
