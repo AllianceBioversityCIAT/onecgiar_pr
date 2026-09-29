@@ -48,6 +48,29 @@
     word-break: break-word;
   }
 
+  &__action {
+    @include fonts.pr-typography('body-2');
+    display: inline-block;
+    margin-top: 6px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--pr-color-primary-300);
+    text-decoration: underline;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--pr-color-primary-400);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--pr-color-primary-300);
+      outline-offset: 2px;
+    }
+  }
+
   &__close {
     background: none;
     border: none;

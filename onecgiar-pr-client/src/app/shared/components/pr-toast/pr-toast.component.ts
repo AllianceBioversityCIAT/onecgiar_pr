@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, computed, inject } from '@angular/core';
-import { PrToastService, PrToastSeverity } from './pr-toast.service';
+import { PrToastMessage, PrToastService, PrToastSeverity } from './pr-toast.service';
 
 /**
  * app-pr-toast — PRMS toast host (PrimeNG p-toast replacement).
@@ -37,5 +37,10 @@ export class PrToastComponent {
 
   remove(id: number): void {
     this.svc.remove(id);
+  }
+
+  runAction(toast: PrToastMessage & { id: number }): void {
+    toast.action?.run();
+    this.remove(toast.id);
   }
 }

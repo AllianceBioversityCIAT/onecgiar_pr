@@ -32,7 +32,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 
 ## 3. Task list
 
-### `AIQ-T-1` — Lane-cap config and prefetch from the global cap
+### [x] `AIQ-T-1` — Lane-cap config and prefetch from the global cap
 
 - **Type:** server · **Estimate:** S · **Depends on:** — · **Blocks:** `AIQ-T-2`
 - **Description:** Add `getBilateralAiMaxConcurrent()` (default 2) and `getBilateralAiMaxPerUser()` (default 1) to `bilateral-ai.config.ts`. They are read at call time and clamp values that are non-integer, `NaN` or `< 1` back to the default. `main.ts` sets the AI-queue `prefetchCount` from the global-cap getter; the reporting-export block keeps its literal `1`.
@@ -181,7 +181,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** service spec green; `npx ng build --configuration development` green (compile gate `AIQ-D-14`: assigning a wrong-shaped item into `jobs` must fail the build); falsifiers red when mutated.
 - **Skills:** `angular-developer`, `tdd`.
 
-### `AIQ-T-6` — `PrToastService`: optional action and sticky
+### [x] `AIQ-T-6` — `PrToastService`: optional action and sticky
 
 - **Type:** client · **Estimate:** S · **Depends on:** — · **Blocks:** `AIQ-T-5`
 - **Description:** `add()` accepts optional `action { label, run }` and `sticky`. `pr-toast.component` renders the action as a focusable button that runs and then dismisses. A sticky toast is not auto-removed. Without the new fields, behavior is identical: 4 s life, same markup.
