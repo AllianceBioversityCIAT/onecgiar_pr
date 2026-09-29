@@ -1,8 +1,14 @@
 # rd-annual-updating
 
-**Verified:** 2026-09-16 · branch qa-development-2026-ss (SIP-T-5: wired the merge/split catalogue to
-the broadened, server-searchable picker); prior: 2026-09-08 · branch performance-refactor (P2-3292 QA
-findings A/B: the stored flag is a `tinyint`, not a boolean); prior: 2026-09-03
+**Verified:** 2026-09-29 · branch qa-development-2026-ss (`BIL-RAU-T-4`: `context` input +
+`answerChange` output, so a caller with no `dataControlSE.currentResult` can drive the block);
+prior: 2026-09-29 · branch qa-development-2026-ss (`BIL-RAU-T-3`: relocated from
+`pages/results/pages/result-detail/pages/rd-general-information/components/rd-annual-updating/` to
+`shared/components/annual-updating/` so bilateral can mount it without importing from
+`pages/results/` — pure move, no behavior change, DD-1); prior: 2026-09-16 · branch
+qa-development-2026-ss (SIP-T-5: wired the merge/split catalogue to the broadened,
+server-searchable picker); prior: 2026-09-08 · branch performance-refactor (P2-3292 QA findings A/B:
+the stored flag is a `tinyint`, not a boolean); prior: 2026-09-03
 
 ## What it is
 
@@ -14,25 +20,81 @@ render exactly as they always did.
 
 ## Contract
 
-- `@Input() generalInfoBody: GeneralInfoBody` — two-way bound to `is_discontinued` (the stored
-  answer) and `discontinued_options[]` (the reasons). The component never persists; the parent saves.
-- `@Input() isPhaseOpen = false` — mirrors the parent's phase gate.
-- `usesStatusTriggerWording: boolean` (readonly) — P2-3292 wording switch, resolved **once at
-  construction**, same as `options` always was.
-- `headerLabel` / `options` — derived from `usesStatusTriggerWording`.
+- `@Input() generalInfoBody: AnnualUpdatingGeneralInfoBody` — a **local structural interface**
+  (`is_discontinued`, `discontinued_options`, `merge_split_targets`), not the `pages/results`
+  `GeneralInfoBody` page model (moved here by `BIL-RAU-T-3` precisely so this component never
+  imports from `pages/results/` — bilateral needs it too). W1/W2's `GeneralInfoBody` satisfies it
+  structurally; no change to that class. Two-way bound to `is_discontinued` (the stored answer) and
+  `discontinued_options[]` (the reasons). The component never persists; the parent saves.
+- `@Input() isPhaseOpen = false` — mirrors the parent's phase gate; read only when `context` is
+  absent (see "Context input" below).
+- `usesStatusTriggerWording: boolean` — **no longer `readonly`** (`BIL-RAU-T-4`). P2-3292 wording
+  switch, resolved once at construction like `options` always was, and RE-resolved by
+  `ngOnChanges` the moment `context` is bound (see "Context input" below) — W1/W2, which never
+  binds `context`, never triggers that re-resolution, so its construction-time value still stands.
+- `headerLabel` / `options` — derived from `usesStatusTriggerWording`; also re-resolved in
+  `ngOnChanges` alongside it.
 - `reasonsHeaderLabel` / `reasonsHeaderHint` (readonly) — P2-3292 Step 2 prompt above the reason
   checklist. Rendered only on the 2026 branch (template gate), never on the legacy one.
-- `annualUpdatingEditable` getter = `isPhaseOpen && rolesSE.access?.canDdit`; feeds every
-  `[isStatic]` / `[disabled]` in the template (P2-2923).
+- `annualUpdatingEditable` getter = `resolveEditableBase() && !lockedByDiscontinuation`, where
+  `resolveEditableBase()` is `context.editable` when `context` is bound, else the original
+  `isPhaseOpen && rolesSE.access?.canDdit`; feeds every `[isStatic]` / `[disabled]` in the template
+  (P2-2923).
+- The radio, the reason checkboxes and the "Other" description are bound `[ngModel]` +
+  `(ngModelChange)="onXxx(...)"` (split from two-way `[(ngModel)]` by `BIL-RAU-T-4` so each handler
+  can also emit `answerChange`) — see "Context input" below.
 - Endpoint: `GET_globalNarratives('updated_innodev_guidance')` via `ResultsApiService`, in `ngOnInit`,
   fills `alertText` (the blue info note shown when the answer is "active").
 - State owner: `DataControlService.currentResult` is the source of truth for result type and phase year.
 
+## Context input (BIL-RAU-T-4)
+
+- **`@Input() context?: AnnualUpdatingContext`** — `{ resultId, resultTypeId, phaseYear,
+  storedIsDiscontinued, isAdmin, editable }`. Bilateral's substitute for
+  `dataControlSE.currentResult.*`, `rolesSE.isAdmin`, `rolesSE.access.canDdit` and `isPhaseOpen`,
+  all at once. W1/W2 never binds it.
+- **One resolver per read, context first, current source as fallback** — `resolveResultId()`,
+  `resolveIsAdmin()`, `resolveEditableBase()`, `resolveStatusTriggerWording()`'s inline reads, the
+  `storedIsDiscontinued` getter, and the public `resolvedResultTypeId` getter the template's outer
+  `*ngIf` reads. Every one of them checks `this.context` first and only reads `currentResult` /
+  `rolesSE` when `context` is `undefined` — never a per-field "is this key present on context"
+  check, which would let a caller supply a half-populated context and silently fall through to
+  W1/W2 state mid-object.
+- **`context.editable` replaces the COMBINATION `isPhaseOpen && rolesSE.access?.canDdit`, not
+  either alone** — the bilateral wrapper computes one "can this reporter write right now" boolean
+  and has no separate phase gate to mirror `isPhaseOpen` against.
+- 🛑 **Construction-time resolution stays construction-time (DD-2) — `ngOnChanges` exists for this
+  reason.** `@Input()`s land AFTER the constructor, so `usesStatusTriggerWording` / `headerLabel` /
+  `options` (field initializers) can never see `context` on their first evaluation. `ngOnChanges`
+  re-resolves those three whenever `changes['context']` fires, including the first time. Scoped to
+  `context` specifically, so W1/W2 (which never binds it) never re-resolves and its
+  construction-time value stands, unchanged (R-9). See the code comment on `usesStatusTriggerWording`
+  for why `ngOnInit` was rejected as the resolution point instead.
+- **`@Output() answerChange = new EventEmitter<void>()`** — emits once per mutation: the radio
+  (`onAnswerChange`), a reason checkbox (`onReasonToggle`), the "Other" description
+  (`onDescriptionChange`), a merge/split selection (`onTargetsChange`, already its own handler —
+  the emit was added inside it), and Reopen (`reopenDiscontinuation`). Carries no payload on
+  purpose: every consumer already owns `generalInfoBody` by reference (two-way binding never
+  existed for `context`-driven callers — see next point), so the event is purely "something
+  changed, go persist/stage it," not "here is the new value."
+- 🛑 **The template split every `[(ngModel)]` on a field this component now emits for into
+  `[ngModel]` + `(ngModelChange)="onXxx(...)"`.** Two-way banana-in-a-box syntax has nowhere to run
+  a side effect; the split is what lets `answerChange.emit()` fire alongside the assignment without
+  changing what gets assigned or when. `onTargetsChange` needed no split — its two dropdowns were
+  already wired through separate `(ngModelChange)` handlers before this task.
+- **Falsifier** (full cases + the conflicting-`currentResult` seeds that prove `context` actually
+  wins over it): `rd-annual-updating.context.spec.ts`.
+- **Not covered here (owned by T-9, the wrapper's own test suite)**: the rendered radio and the
+  NG0103 merge/split loop under a REAL context-driven mount — jsdom cannot see either, same
+  limitation the merge/split NG0103 notes above already document for the W1/W2 path.
+
 ## Where it is used
 
-- `rd-general-information.component.html:1` — rendered only when `generalInfoBody.is_replicated`
-  is known, which is what makes the construction-time resolution safe.
-- Declared in `rd-general-information.module.ts:22` (the component itself is standalone).
+- `pages/results/pages/result-detail/pages/rd-general-information/rd-general-information.component.html:1`
+  — rendered only when `generalInfoBody.is_replicated` is known, which is what makes the
+  construction-time resolution safe.
+- Declared in `pages/results/pages/result-detail/pages/rd-general-information/rd-general-information.module.ts`
+  (the component itself is standalone).
 
 ## The reason checklist is ONE phase generation (P2-3292 Step 2)
 
@@ -72,10 +134,11 @@ ticked reason (the parent still owns the save).
   because people who closed an innovation by mistake were trapped with no way back — which is why
   `is_discontinued` deliberately does NOT lock result types 7 and 2 in `CurrentResultService`.
   Locking with no way out puts that trap back on purpose. Decision: Yeck, 3 Sep 2026.
-- 🥇 **`lockedByDiscontinuation` reads the STORED flag** (`dataControlSE.currentResult.is_discontinued`),
-  never `generalInfoBody.is_discontinued`, which is the value being edited. Reading the form would
+- 🥇 **`lockedByDiscontinuation` reads the STORED flag** — `context.storedIsDiscontinued` when
+  `context` is bound (BIL-RAU-T-4), else `dataControlSE.currentResult.is_discontinued` — never
+  `generalInfoBody.is_discontinued`, which is the value being edited. Reading the form would
   lock the block the instant somebody picked "No" — before confirming — and they could never tick a
-  single reason. A spec pins that case.
+  single reason. A spec pins that case (`rd-annual-updating.context.spec.ts` for the `context` path).
 - 🛑 **The lock has to close TWO doors.** `[isStatic]` is the escape hatch that forces editability
   despite the global read-only, so `[disabled]` alone does nothing while `annualUpdatingEditable` is
   true. Both are wired, and a spec pins that the hatch closes.

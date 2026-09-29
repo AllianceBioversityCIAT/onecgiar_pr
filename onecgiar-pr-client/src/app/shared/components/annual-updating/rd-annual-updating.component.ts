@@ -1,11 +1,48 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { GeneralInfoBody } from '../../models/generalInfoBody';
-import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
-import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
-import { toNullableBoolean } from '../../../../../../../../shared/utils/nullable-boolean.util';
+import { ApiService } from '../../services/api/api.service';
+import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
+import { FeedbackValidationDirectiveModule } from '../../directives/feedback-validation-directive.module';
+import { toNullableBoolean } from '../../utils/nullable-boolean.util';
+
+/**
+ * Structural replacement for the `GeneralInfoBody` page-model import (BIL-RAU-T-3, DD-1): this
+ * component is shared with bilateral, which must never import from `pages/results/`. Only the
+ * three fields this component actually reads/writes are declared; W1/W2's `GeneralInfoBody`
+ * satisfies this structurally, with no change to its own declaration.
+ */
+export interface AnnualUpdatingGeneralInfoBody {
+  is_discontinued?: boolean;
+  discontinued_options: any[];
+  merge_split_targets: { target_result_id: number; transition_type: 'merge' | 'split' }[];
+}
+
+/**
+ * BIL-RAU-T-4 (design.md §6.2, DD-2) — the bilateral wrapper's substitute for
+ * `dataControlSE.currentResult` / `rolesSE.isAdmin` / `rolesSE.access.canDdit` / `isPhaseOpen`.
+ *
+ * Every field is optional and read through a private resolver that prefers `context` and falls
+ * back to the W1/W2 sources below ONLY when `context` itself is undefined — never per field. A
+ * resolver never mixes sources: once `context` is bound it is read as a whole object, even for a
+ * field that is itself `undefined`/`null` on it (e.g. `storedIsDiscontinued: null` must resolve to
+ * "not locked", not fall through to a stale `currentResult.is_discontinued`). This is what lets
+ * W1/W2, which never binds this input, stay completely unaffected.
+ *
+ * `editable` stands in for the COMBINATION `isPhaseOpen && rolesSE.access?.canDdit`, not for either
+ * one alone: the bilateral wrapper computes its own single "can this reporter write right now"
+ * boolean (`isEditableByCenterUser() || (isAdmin && status === 4)`) and there is no bilateral
+ * equivalent of a phase gate separate from that.
+ */
+export interface AnnualUpdatingContext {
+  resultId?: number;
+  resultTypeId?: number;
+  phaseYear?: number;
+  /** Same tinyint/boolean/null shape as `currentResult.is_discontinued` — normalized with `toNullableBoolean`. */
+  storedIsDiscontinued?: boolean | number | null;
+  isAdmin?: boolean;
+  editable?: boolean;
+}
 
 /** `result_type.id` of Innovation Development — the only result type P2-3292 Step 1 scopes. */
 const INNOVATION_DEVELOPMENT_RESULT_TYPE_ID = 7;
@@ -61,10 +98,25 @@ const REASONS_HEADER_HINT = '(select all that apply)';
   standalone: true,
   imports: [CommonModule, FormsModule, CustomFieldsModule, FeedbackValidationDirectiveModule]
 })
-export class RdAnnualUpdatingComponent implements OnInit {
-  @Input() generalInfoBody: GeneralInfoBody = new GeneralInfoBody();
+export class RdAnnualUpdatingComponent implements OnInit, OnChanges {
+  @Input() generalInfoBody: AnnualUpdatingGeneralInfoBody = { discontinued_options: [], merge_split_targets: [] };
   /** Mirrors parent general-information phase gate so controls stay editable when discontinuation can be corrected (types 7 & 2). */
   @Input() isPhaseOpen = false;
+
+  /**
+   * BIL-RAU-T-4 — bilateral's substitute for `currentResult` / `rolesSE.*` / `isPhaseOpen`.
+   * Undefined for W1/W2 (never bound), so every resolver below falls through to today's sources.
+   * See `AnnualUpdatingContext` for what each field replaces.
+   */
+  @Input() context?: AnnualUpdatingContext;
+
+  /**
+   * BIL-RAU-T-4 — fires once after every user mutation that changes the answer: the radio, a
+   * reason checkbox, the "Other" description, a merge/split selection, and Reopen. W1/W2 never
+   * binds it, so emitting is a no-op there (no subscriber).
+   */
+  @Output() answerChange = new EventEmitter<void>();
+
   discontinuedOptions = [];
 
   /**
@@ -78,8 +130,15 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * Resolved once at construction, like `options` already was: `currentResult` is loaded by
    * `CurrentResultService` before result-detail renders this block, and the block itself only
    * mounts once `generalInfoBody.is_replicated` is known (rd-general-information.component.html:2).
+   *
+   * 🛑 NOT `readonly` any more (BIL-RAU-T-4, DD-2): `@Input() context` is set by Angular AFTER this
+   * field initializer already ran (inputs land after the constructor, before `ngOnChanges`), so the
+   * very first resolution here can never see `context` — it reads `currentResult`, exactly as
+   * before. `ngOnChanges` re-resolves this (and `headerLabel` / `options`) the moment `context`
+   * actually arrives. W1/W2 never binds `context`, so `ngOnChanges` never touches these fields for
+   * it — the construction-time value stands, unchanged.
    */
-  readonly usesStatusTriggerWording: boolean = this.resolveStatusTriggerWording();
+  usesStatusTriggerWording: boolean = this.resolveStatusTriggerWording();
 
   headerLabel: string = this.usesStatusTriggerWording ? STATUS_TRIGGER_HEADER_LABEL : LEGACY_HEADER_LABEL;
 
@@ -91,21 +150,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
 
   readonly reasonsHeaderHint: string = REASONS_HEADER_HINT;
 
-  options = this.usesStatusTriggerWording
-    ? [
-        { name: 'Yes', value: false },
-        { name: 'No', value: true }
-      ]
-    : [
-        {
-          name: `Innovation ${this.api.dataControlSE.currentResult?.result_type_id == 7 ? 'development' : 'use'} is active/investment was continued`,
-          value: false
-        },
-        {
-          name: `Innovation ${this.api.dataControlSE.currentResult?.result_type_id == 7 ? 'development' : 'use'} is inactive/investment was discontinued, because:`,
-          value: true
-        }
-      ];
+  options = this.buildOptions();
 
   alertText: string = '';
 
@@ -140,6 +185,51 @@ export class RdAnnualUpdatingComponent implements OnInit {
     // en resultados ya marcados como inactivos; el `(click)` sigue cubriendo al reportero que tilda
     // la razón durante la visita.
     if (this.generalInfoBody.is_discontinued) this.loadMergeSplitCatalogue();
+  }
+
+  /**
+   * BIL-RAU-T-4 (design.md DD-2) — re-resolves the three CONSTRUCTION-TIME fields once `context`
+   * actually arrives. Inputs land after the constructor ran, so the field initializers above always
+   * resolved against `currentResult` (context was still `undefined`); this is what lets a caller
+   * that binds `context` see the right wording without waiting for `ngOnInit`.
+   *
+   * Scoped to `changes['context']` only: W1/W2 never binds `context`, so this never runs for it and
+   * the construction-time value is what stands — no behavior change there (R-9).
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!changes['context']) return;
+
+    this.usesStatusTriggerWording = this.resolveStatusTriggerWording();
+    this.headerLabel = this.usesStatusTriggerWording ? STATUS_TRIGGER_HEADER_LABEL : LEGACY_HEADER_LABEL;
+    this.options = this.buildOptions();
+  }
+
+  /**
+   * BIL-RAU-T-4 — the `result_type_id` the outer `*ngIf` and the option labels gate on. Public
+   * (read from the template) because the outer block's visibility must resolve the same way as
+   * every other context-aware read: `context` first, `currentResult` as the W1/W2 fallback.
+   */
+  get resolvedResultTypeId(): number | undefined {
+    return this.context ? this.context.resultTypeId : this.api.dataControlSE.currentResult?.result_type_id;
+  }
+
+  /** BIL-RAU-T-4 — the result id the merge/split catalogue fetches are scoped to. */
+  private resolveResultId(): number | string | undefined {
+    return this.context ? this.context.resultId : this.api.dataControlSE.currentResult?.id;
+  }
+
+  /** BIL-RAU-T-4 — replaces every direct read of `rolesSE.isAdmin` in the lock / reopen gates. */
+  private resolveIsAdmin(): boolean {
+    return this.context ? !!this.context.isAdmin : !!this.api.rolesSE.isAdmin;
+  }
+
+  /**
+   * BIL-RAU-T-4 — replaces the combined `isPhaseOpen && rolesSE.access?.canDdit` read.
+   * `context.editable` stands in for BOTH at once (see `AnnualUpdatingContext` doc): the bilateral
+   * wrapper has no separate phase gate to mirror `isPhaseOpen` against.
+   */
+  private resolveEditableBase(): boolean {
+    return this.context ? !!this.context.editable : this.isPhaseOpen && !!this.api.rolesSE.access?.canDdit;
   }
 
   /**
@@ -182,7 +272,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
   private loadMergeSplitCatalogue(): void {
     if (this.mergeSplitCatalogueRequested) return;
 
-    const resultId = Number(this.api.dataControlSE.currentResult?.id);
+    const resultId = Number(this.resolveResultId());
     if (!Number.isInteger(resultId) || resultId <= 0) return;
 
     this.mergeSplitCatalogueRequested = true;
@@ -219,7 +309,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
    *   `[options]` binding.
    */
   searchMergeSplitCatalogue(term: string): void {
-    const resultId = Number(this.api.dataControlSE.currentResult?.id);
+    const resultId = Number(this.resolveResultId());
     if (!Number.isInteger(resultId) || resultId <= 0) return;
 
     this.mergeSplitCatalogueLoading = true;
@@ -377,6 +467,9 @@ export class RdAnnualUpdatingComponent implements OnInit {
       .filter(id => Number.isFinite(id) && id > 0);
 
     this.generalInfoBody.merge_split_targets = [...others, ...ids.map(id => ({ target_result_id: id, transition_type: type }))];
+
+    // BIL-RAU-T-4: one mutation, one `answerChange` — the reporter changed a merge/split target.
+    this.answerChange.emit();
   }
 
   /**
@@ -395,7 +488,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
 
   /** When true, pr-radio / pr-checkbox treat the field as editable despite global read-only (see P2-2923). */
   get annualUpdatingEditable(): boolean {
-    return this.isPhaseOpen && !!this.api.rolesSE.access?.canDdit && !this.lockedByDiscontinuation;
+    return this.resolveEditableBase() && !this.lockedByDiscontinuation;
   }
 
   /**
@@ -429,7 +522,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
       return false;
     }
 
-    if (this.api.rolesSE.isAdmin) {
+    if (this.resolveIsAdmin()) {
       return false;
     }
 
@@ -447,9 +540,12 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * the blank Yes/No radio, one layer up.
    *
    * 🥇 Still `=== true` at the call sites, deliberately: `null` (never answered) must NOT lock.
+   *
+   * BIL-RAU-T-4: reads `context.storedIsDiscontinued` first (same tinyint/boolean/null shape,
+   * normalized the same way), falling back to `currentResult.is_discontinued` for W1/W2.
    */
   private get storedIsDiscontinued(): boolean | null {
-    return toNullableBoolean(this.api.dataControlSE.currentResult?.is_discontinued);
+    return toNullableBoolean(this.context ? this.context.storedIsDiscontinued : this.api.dataControlSE.currentResult?.is_discontinued);
   }
 
   /**
@@ -466,7 +562,7 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * stored as inactive, in the 2026 phase or later.
    */
   get canReopenDiscontinuation(): boolean {
-    return this.usesStatusTriggerWording && this.api.rolesSE.isAdmin && this.storedIsDiscontinued === true;
+    return this.usesStatusTriggerWording && this.resolveIsAdmin() && this.storedIsDiscontinued === true;
   }
 
   /**
@@ -483,6 +579,27 @@ export class RdAnnualUpdatingComponent implements OnInit {
       option.value = false;
       option.description = null;
     });
+
+    // BIL-RAU-T-4: reopening is a mutation of the answer like any other.
+    this.answerChange.emit();
+  }
+
+  /** BIL-RAU-T-4 — the radio's handler: assigns the answer, then emits exactly once. */
+  onAnswerChange(value: boolean): void {
+    this.generalInfoBody.is_discontinued = value;
+    this.answerChange.emit();
+  }
+
+  /** BIL-RAU-T-4 — a reason checkbox's handler: assigns the tick, then emits exactly once. */
+  onReasonToggle(option: any, value: boolean): void {
+    option.value = value;
+    this.answerChange.emit();
+  }
+
+  /** BIL-RAU-T-4 — the "Other" free-text box's handler: assigns the text, then emits exactly once. */
+  onDescriptionChange(option: any, value: string): void {
+    option.description = value;
+    this.answerChange.emit();
   }
 
   getAlertNarrative(): void {
@@ -528,11 +645,40 @@ export class RdAnnualUpdatingComponent implements OnInit {
    * uses — and its own reachability was not measured under this ticket, so it was left as-is on
    * purpose rather than changed unverified. Do not cite it as the reference shape; the reference is
    * `FieldsManagerService.isPhaseYearAtLeast`.
+   *
+   * BIL-RAU-T-4: when `context` is set, `resultTypeId` / `phaseYear` come from it directly — no
+   * open-phase fallback, because the caller (bilateral) hands over its own resolved phase year. The
+   * fallback above is preserved only on the `currentResult` path, unchanged for W1/W2.
    */
   private resolveStatusTriggerWording(): boolean {
-    const currentResult = this.api.dataControlSE.currentResult;
-    if (Number(currentResult?.result_type_id) !== INNOVATION_DEVELOPMENT_RESULT_TYPE_ID) return false;
-    const phaseYear = currentResult?.phase_year ?? this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
+    const resultTypeId = this.context ? this.context.resultTypeId : this.api.dataControlSE.currentResult?.result_type_id;
+    if (Number(resultTypeId) !== INNOVATION_DEVELOPMENT_RESULT_TYPE_ID) return false;
+
+    const phaseYear = this.context
+      ? this.context.phaseYear
+      : (this.api.dataControlSE.currentResult?.phase_year ?? this.api.dataControlSE.reportingCurrentPhase?.phaseYear);
     return typeof phaseYear === 'number' && phaseYear >= STATUS_TRIGGER_QUESTION_FROM_PHASE_YEAR;
+  }
+
+  /**
+   * BIL-RAU-T-4 — extracted so `ngOnChanges` can re-run the same rule that built `options` at
+   * construction. Reads `resultTypeId` the same way `resolveStatusTriggerWording` does (context
+   * first, `currentResult` fallback) so the legacy option labels ("Innovation development is …" vs
+   * "Innovation use is …") stay correct under either source.
+   */
+  private buildOptions(): { name: string; value: boolean }[] {
+    if (this.usesStatusTriggerWording) {
+      return [
+        { name: 'Yes', value: false },
+        { name: 'No', value: true }
+      ];
+    }
+
+    const resultTypeId = Number(this.context ? this.context.resultTypeId : this.api.dataControlSE.currentResult?.result_type_id);
+    const noun = resultTypeId == INNOVATION_DEVELOPMENT_RESULT_TYPE_ID ? 'development' : 'use';
+    return [
+      { name: `Innovation ${noun} is active/investment was continued`, value: false },
+      { name: `Innovation ${noun} is inactive/investment was discontinued, because:`, value: true }
+    ];
   }
 }

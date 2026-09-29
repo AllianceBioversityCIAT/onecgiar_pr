@@ -5,7 +5,7 @@ import { RdGeneralInformationRoutingModule } from './rd-general-information-rout
 import { RdGeneralInformationComponent } from './rd-general-information.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { InstitutionsPipesModule } from './pipes/institutions-pipes.module';
-import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-annual-updating.component';
+import { RdAnnualUpdatingComponent } from '../../../../../../shared/components/annual-updating/rd-annual-updating.component';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';

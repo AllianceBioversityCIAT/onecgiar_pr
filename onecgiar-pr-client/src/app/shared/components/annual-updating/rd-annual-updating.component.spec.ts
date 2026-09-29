@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { RdAnnualUpdatingComponent } from './rd-annual-updating.component';
-import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
+import { DataControlService } from '../../services/data-control.service';
 import { of } from 'rxjs';
 
 const INNOVATION_DEVELOPMENT = 7;

@@ -3,8 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { RdAnnualUpdatingComponent } from './rd-annual-updating.component';
-import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
-import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { DataControlService } from '../../services/data-control.service';
+import { ApiService } from '../../services/api/api.service';
 
 /**
  * P2-3292 Steps 3A / 3B — the "where did this innovation continue" dropdowns.

@@ -1,6 +1,4 @@
-<div
-  class="local_container"
-  *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7 || this.api.dataControlSE.currentResult?.result_type_id == 2">
+<div class="local_container" *ngIf="resolvedResultTypeId == 7 || resolvedResultTypeId == 2">
   <div class="annual_updating">
     <div class="title">
       <strong>Annual updating</strong>
@@ -16,7 +14,8 @@
          escape hatch that forces editability despite the global read-only, so the lock has to close
          BOTH: turn the hatch off (annualUpdatingEditable) and disable the control. -->
     <app-pr-radio-button
-      [(ngModel)]="this.generalInfoBody.is_discontinued"
+      [ngModel]="this.generalInfoBody.is_discontinued"
+      (ngModelChange)="onAnswerChange($event)"
       [verticalAlignment]="true"
       [options]="this.options"
       optionLabel="name"
@@ -68,7 +67,8 @@
         <div class="discontinued_option">
           <app-pr-checkbox
             [label]="discontinuedOption?.option"
-            [(ngModel)]="discontinuedOption.value"
+            [ngModel]="discontinuedOption.value"
+            (ngModelChange)="onReasonToggle(discontinuedOption, $event)"
             [readOnly]="lockedByDiscontinuation"
             [isStatic]="annualUpdatingEditable">
           </app-pr-checkbox>
@@ -82,7 +82,8 @@
             placeholder="Enter text"
             type="text"
             [required]="false"
-            [(ngModel)]="discontinuedOption.description"
+            [ngModel]="discontinuedOption.description"
+            (ngModelChange)="onDescriptionChange(discontinuedOption, $event)"
             [disabled]="lockedByDiscontinuation || !annualUpdatingEditable">
           </app-pr-input>
         </div>
