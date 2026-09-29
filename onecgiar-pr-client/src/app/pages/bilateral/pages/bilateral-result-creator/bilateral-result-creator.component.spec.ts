@@ -94,6 +94,14 @@ describe('BilateralResultCreatorComponent', () => {
       isW3Bilateral: signal(false) as any,
       // P2-3352: status badge in the header.
       resultStatusId: signal(null) as any,
+      // BIL-RAU-T-7: replication flag driving the narrow admin escape.
+      isReplicated: signal(false) as any,
+      // Mirrors the real service's BILATERAL_STATUS rule (isEditableByCenterUser is a `computed` off
+      // resultStatusId there) so a component-level test can assert the read-only gate really flips.
+      setResultStatus: jest.fn((id: number) => {
+        creationService.resultStatusId.set(id);
+        creationService.isEditableByCenterUser.set(id == null || id === 1 || id === 8);
+      }),
       // P2-3520: the read-only gate the editor now consumes. Writable here so a test can flip the
       // result out of Editing and assert the lock.
       isEditableByCenterUser: signal(true) as any,
@@ -143,6 +151,7 @@ describe('BilateralResultCreatorComponent', () => {
       globalSaveState: signal('idle'),
       setResultId: jest.fn(),
       setReadOnly: jest.fn(),
+      setReadOnlyExemptions: jest.fn(),
       registerField: jest.fn(),
       updateField: jest.fn(),
       updateFieldsBatch: jest.fn(),
@@ -525,6 +534,99 @@ describe('BilateralResultCreatorComponent', () => {
       component.submitResult();
 
       expect(qualityAssessment.run).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * BIL-RAU-T-7 (design.md §6.2, DD-5) — the narrow admin escape: an admin looking at a bilateral
+   * result stuck at Discontinued (4) must still be able to change and save the Annual updating
+   * answer, and nothing else. The exemption is scoped to exactly the three keys the block writes.
+   */
+  describe('read-only exemptions for the admin annual-updating escape (BIL-RAU-T-7, DD-5)', () => {
+    const THE_THREE_KEYS = ['is_discontinued', 'discontinued_options', 'merge_split_targets'];
+
+    beforeEach(() => {
+      autoSaveService.setReadOnlyExemptions.mockClear();
+    });
+
+    it('sets the three-key exemption for an admin on a replicated type-7 result at status 4', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith(THE_THREE_KEYS);
+    });
+
+    it('also grants the exemption for a replicated type-2 result (Innovation Use)', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(2);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith(THE_THREE_KEYS);
+    });
+
+    it('clears the exemption for a non-admin, even at status 4 replicated type 7', () => {
+      rolesService.isAdmin = false;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('clears the exemption for an admin on a non-replicated result at status 4', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(false);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('clears the exemption for an admin on a replicated result of a type other than 7/2', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(4);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(5);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('clears the exemption for an admin on a replicated type-7 result NOT at status 4', () => {
+      rolesService.isAdmin = true;
+      creationService.resultStatusId.set(1);
+      creationService.isReplicated.set(true);
+      creationService.resultTypeId.set(7);
+
+      fixture.detectChanges();
+
+      expect(autoSaveService.setReadOnlyExemptions).toHaveBeenCalledWith([]);
+    });
+
+    it('setResultStatus(1) from 4 flips the read-only gate to editable with no reload (D9/DD-9)', () => {
+      rolesService.isAdmin = false;
+      creationService.resultStatusId.set(4);
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+      expect(component.isFormReadOnly()).toBe(true);
+
+      creationService.setResultStatus(1);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(false);
+      expect(autoSaveService.setReadOnly).toHaveBeenCalledWith(false);
     });
   });
 

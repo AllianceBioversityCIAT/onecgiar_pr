@@ -432,6 +432,26 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     });
 
     /**
+     * BIL-RAU-T-7 (design.md §6.2, DD-5) — the narrow admin escape. Status 4 (Discontinued) locks
+     * `isEditableByCenterUser()` for everyone, admins included (P-9), so an admin who needs to
+     * change the Annual updating answer on a replicated type-7/2 innovation gets an exemption
+     * scoped to exactly the three keys the block writes — never the whole editor (S-6.3). Cleared
+     * the moment any of the four conditions stops holding, including the moment the status itself
+     * moves off 4 (Reopen, or a fresh Yes) — this effect re-runs on the same `resultStatusId`
+     * dependency the read-only gate above reacts to, so both flip together without a reload.
+     */
+    effect(() => {
+      const isAdmin = this.api.rolesSE.isAdmin;
+      const status = this.creationService.resultStatusId();
+      const isReplicated = this.creationService.isReplicated();
+      const typeId = this.creationService.resultTypeId();
+      const grantExemption = isAdmin && status === 4 && isReplicated && (typeId === 7 || typeId === 2);
+      this.autoSaveService.setReadOnlyExemptions(
+        grantExemption ? ['is_discontinued', 'discontinued_options', 'merge_split_targets'] : []
+      );
+    });
+
+    /**
      * The custom-fields (`app-pr-input`, `app-pr-select`, `app-pr-multi-select`, …) hide their
      * control when the GLOBAL `RolesService.readOnly` is up — see
      * `pr-multi-select.component.html:16`. That flag is a W1/W2 mechanism: it starts TRUE for

@@ -3,6 +3,10 @@
 **Verified:** 2026-09-24 · Innovation Use quantitative measures are optional in the bilateral form, MDS tracker, and server gate.
 
 ## What it is
+BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
+(`app-bilateral-annual-updating`) above the Title field for **replicated** results of this type —
+see `../../bilateral-annual-updating/CLAUDE.md`. Nothing in this section changes.
+
 Section 5 of the W3/bilateral result creator when the type is **Innovation Use**. Shows the MDS fields
 always, and hides the rest of the pooled-funding form behind **"Complete full metadata"**.
 Stories: P2-3428 (build), P2-3424 (link to a QA'd Innovation Development), P2-3331 (QA twin),

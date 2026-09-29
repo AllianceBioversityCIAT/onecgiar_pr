@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-24 · los mensajes de guardado excluyen campos MDS opcionales al calcular faltantes; prior: 2026-09-22 · el flag global de solo-lectura ahora responde a la pertenencia al centro líder (un Center User ya puede editar); prior: 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
+**Verified:** 2026-09-29 · BIL-RAU-T-7: exención de solo-lectura de 3 claves para el admin en status 4 (annual updating); prior: 2026-09-24 · los mensajes de guardado excluyen campos MDS opcionales al calcular faltantes; prior: 2026-09-22 · el flag global de solo-lectura ahora responde a la pertenencia al centro líder (un Center User ya puede editar); prior: 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -116,6 +116,18 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   es la visible; `autoSaveService.setReadOnly()` es la que impide que Save draft llegue a la base.
   Con solo la primera, cualquier control que se quede interactivo podría persistir mientras el
   Science Program revisa — que es el fallo que P2-3520 arregló.
+- **BIL-RAU-T-7 (design.md §6.2, DD-5): la excepción del admin en status 4 es de TRES CLAVES, no del
+  editor entero.** Un `effect` del constructor lee `rolesSE.isAdmin`, `resultStatusId()`,
+  `isReplicated()` y `resultTypeId()` y llama `autoSaveService.setReadOnlyExemptions([...])` con
+  exactamente `is_discontinued` / `discontinued_options` / `merge_split_targets` cuando las CUATRO
+  condiciones se cumplen a la vez (admin **y** status 4 **y** replicado **y** tipo 7 o 2) — y con `[]`
+  en cualquier otro caso, incluido el admin sobre un resultado no replicado o de otro tipo. El
+  `BilateralAutoSaveService` deja pasar solo esas claves mientras `isReadOnly()`; el resto del
+  `updateFieldsBatch` de la misma llamada se descarta igual que hoy. P-10 (design.md, asumido) quedó
+  **confirmado**: el gate de solo lectura (`autoSaveService.setReadOnly(!isEditableByCenterUser())`,
+  el `effect` inmediatamente anterior a este) YA era un `effect` reactivo a `resultStatusId` antes de
+  este ticket — T-7 no tuvo que convertirlo, solo sumar `setResultStatus()` en `BilateralCreationService`
+  para que un Reopen (4→1) sin recarga manual mueva ambos gates a la vez.
 - ⚠️ El shell W1/W2 es propiedad de Bilateral. No importar componentes de `pages/results/`: esa
   superficie tiene servicios, rutas y green checks de W1/W2. Sólo se pueden reutilizar primitivas
   compartidas y tokens visuales.

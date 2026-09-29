@@ -3,6 +3,10 @@
 **Verified:** 2026-09-21 · branch `JuanGuzman-io/p2-3778-restore-innovation-developers` — **P2-3778 reversed**: Innovation developers rendered again, prefilled from the Lead contact person and editable (Nicoleta Trifa's email, confirmed by Ángel Jarrín); prior: 2026-09-18 · QA batch `P2-3778` / `P2-3779` / `P2-3780` — Innovation developers unrendered, false REQUIRED markers cleared, collaborators placeholder; prior: 2026-09-18 spec `bugfix/innovation-developer-prefill-stale-lead-contact` `BIL-IDP-T-4` — prefill is re-evaluable, fed by General information's save; prior: 2026-09-16 spec `bilateral/qa-ai-traffic-light` `BIL-QAI-T-12` rework — key-presence prefill gate; prior: 2026-09-16 (field restored) · 2026-09-09 · branch feat/P2-3390-bilateral-investment-tables · 7d0215b13
 
 ## What it is
+BIL-RAU-T-8 pointer: Section 1 (`section-general-info`) now renders the Annual updating block
+(`app-bilateral-annual-updating`) above the Title field for **replicated** results of this type —
+see `../../bilateral-annual-updating/CLAUDE.md`. Nothing in this section changes.
+
 Section 5 of the bilateral form: Innovation Development, rendered by
 `../section-type-specific.component.html` for that result type. Shows the **MDS** — typology +
 readiness, the only two that feed the green check — plus the optional **Innovation developers**

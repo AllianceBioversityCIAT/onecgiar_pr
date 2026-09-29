@@ -1,4 +1,9 @@
 <div class="sgi-fields">
+  <!-- BIL-RAU-T-8 (design.md §6.2, S-1.1): replicated Innovation Development (7) / Innovation Use
+       (2) only, first thing in Section 1, above the Title field. -->
+  @if (isReplicatedInnovation()) {
+    <app-bilateral-annual-updating />
+  }
   <!-- The AI finding, where "Go to <section>" from the verdict window drops the reporter. -->
   <app-bilateral-field-quality-flag section="general_information" />
   <!-- P2-3286 UAT: the standard MDS note goes at the TOP, like Contributors, Geography and Evidence.
