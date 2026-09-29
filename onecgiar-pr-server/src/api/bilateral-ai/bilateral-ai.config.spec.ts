@@ -2,9 +2,13 @@ import {
   BILATERAL_AI_MAX_ATTEMPTS_DEFAULT,
   BILATERAL_AI_ATTEMPT_TIMEOUT_MS_DEFAULT,
   BILATERAL_AI_QUEUE_STALL_MS_DEFAULT,
+  BILATERAL_AI_MAX_CONCURRENT_DEFAULT,
+  BILATERAL_AI_MAX_PER_USER_DEFAULT,
   getBilateralAiMaxAttempts,
   getBilateralAiAttemptTimeoutMs,
   getBilateralAiQueueStallMs,
+  getBilateralAiMaxConcurrent,
+  getBilateralAiMaxPerUser,
   bilateralAiDbNow,
 } from './bilateral-ai.config';
 
@@ -13,6 +17,8 @@ describe('bilateral-ai.config', () => {
     'BILATERAL_AI_MAX_ATTEMPTS',
     'BILATERAL_AI_ATTEMPT_TIMEOUT_MS',
     'BILATERAL_AI_QUEUE_STALL_MS',
+    'BILATERAL_AI_MAX_CONCURRENT',
+    'BILATERAL_AI_MAX_PER_USER',
   ] as const;
   let originalEnv: Record<string, string | undefined>;
 
@@ -87,6 +93,75 @@ describe('bilateral-ai.config', () => {
       process.env.BILATERAL_AI_MAX_ATTEMPTS = '';
       expect(getBilateralAiMaxAttempts()).toBe(
         BILATERAL_AI_MAX_ATTEMPTS_DEFAULT,
+      );
+    });
+  });
+
+  describe('lane caps (`AIQ-R-21`)', () => {
+    it('BILATERAL_AI_MAX_CONCURRENT_DEFAULT is 2', () => {
+      expect(BILATERAL_AI_MAX_CONCURRENT_DEFAULT).toBe(2);
+    });
+
+    it('BILATERAL_AI_MAX_PER_USER_DEFAULT is 1', () => {
+      expect(BILATERAL_AI_MAX_PER_USER_DEFAULT).toBe(1);
+    });
+
+    it('getBilateralAiMaxConcurrent() falls back to the default when unset', () => {
+      expect(getBilateralAiMaxConcurrent()).toBe(
+        BILATERAL_AI_MAX_CONCURRENT_DEFAULT,
+      );
+    });
+
+    it('getBilateralAiMaxPerUser() falls back to the default when unset', () => {
+      expect(getBilateralAiMaxPerUser()).toBe(
+        BILATERAL_AI_MAX_PER_USER_DEFAULT,
+      );
+    });
+
+    it('getBilateralAiMaxConcurrent() reads a valid override, "3" -> 3', () => {
+      process.env.BILATERAL_AI_MAX_CONCURRENT = '3';
+      expect(getBilateralAiMaxConcurrent()).toBe(3);
+    });
+
+    it.each([
+      ['0', 'zero'],
+      ['-1', 'negative'],
+      ['abc', 'non-numeric'],
+      ['1.5', 'non-integer'],
+    ])(
+      'getBilateralAiMaxConcurrent() clamps %s (%s) back to the default',
+      (rawValue) => {
+        process.env.BILATERAL_AI_MAX_CONCURRENT = rawValue;
+        expect(getBilateralAiMaxConcurrent()).toBe(
+          BILATERAL_AI_MAX_CONCURRENT_DEFAULT,
+        );
+      },
+    );
+
+    it('getBilateralAiMaxPerUser() reads a valid override, "3" -> 3', () => {
+      process.env.BILATERAL_AI_MAX_PER_USER = '3';
+      expect(getBilateralAiMaxPerUser()).toBe(3);
+    });
+
+    it.each([
+      ['0', 'zero'],
+      ['-1', 'negative'],
+      ['abc', 'non-numeric'],
+      ['1.5', 'non-integer'],
+    ])(
+      'getBilateralAiMaxPerUser() clamps %s (%s) back to the default',
+      (rawValue) => {
+        process.env.BILATERAL_AI_MAX_PER_USER = rawValue;
+        expect(getBilateralAiMaxPerUser()).toBe(
+          BILATERAL_AI_MAX_PER_USER_DEFAULT,
+        );
+      },
+    );
+
+    it('treats an empty-string env var as unset (falls back to default)', () => {
+      process.env.BILATERAL_AI_MAX_CONCURRENT = '';
+      expect(getBilateralAiMaxConcurrent()).toBe(
+        BILATERAL_AI_MAX_CONCURRENT_DEFAULT,
       );
     });
   });
