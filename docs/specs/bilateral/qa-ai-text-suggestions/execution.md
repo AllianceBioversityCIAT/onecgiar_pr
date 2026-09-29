@@ -171,3 +171,10 @@
 **Decisions made:** skills `angular-developer`, `tdd`; effort `high` → `xhigh` on rework. `manualSave$` deliberately not added.
 
 **Final verification:** PASS.
+
+## Spec Amendment — 2026-09-29 (P2-3848)
+
+- **Trigger:** P2-3848 (Enhancement, epic P2-2338; INC-163884 insumo 5) linked by the owner. Gap review against its AC1–AC11.
+- **Owner decisions (2026-09-29):** AC1/AC2 beyond Title/Description out of scope (PO notified on Slack); AC5 under owner validation, no technical dependency; build AC3 (re-run on drawer close), AC6/7 (labels), AC8 (Accept & save, Apply removed), AC11 (provenance in the existing `result_field_revision`, no migration — owner pointed at `api/ai/entities`).
+- **Spec edits:** `requirements.md` R-3 amended, R-12 and R-13 added, OQ-3 reversed, out-of-scope updated; `design.md` §4 new endpoint, §2.2/§6.2 amended, DD-7…DD-9, budget amendment row; `tasks.md` T-7…T-9 added, T-6 now depends on T-9 with a step 7a. Correction-closure sweep for `Apply` / OQ-3 done (T-4's historical text left as delivered).
+- **Budget:** original 6 tasks / 2 review rounds; after T-5 the run stood at 6 → now 9 tasks, rounds re-estimated +2. Approved by the owner ("Si, adelante").

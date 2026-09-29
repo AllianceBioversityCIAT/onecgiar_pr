@@ -6,7 +6,7 @@
 - **Linked spec:** `requirements.md` + `design.md` (this folder)
 - **Ticket:** [P2-3848](https://cgiarmel.atlassian.net/browse/P2-3848) (Enhancement under epic P2-2338; INC-163884 insumo 5). Commits from here on use `[P2-3848]`
 - **Owner / driver:** Juan David Delgado
-- **Status:** `in-progress`
+- **Status:** `in-progress` — amended 2026-09-29 for P2-3848 (T-7…T-9 added, owner-approved 2026-09-29)
 - **Branch:** based on `performance-refactor` (bilateral work never on `staging`)
 
 ## 2. Pre-flight checklist
@@ -189,21 +189,82 @@
   - [x] Falsifiers (a)–(e) green; (a) and (c) observed red first
   - [x] Lint + type-check clean
 
+### `BIL-QTS-T-7` — Server: field-revision endpoint with server-decided provenance *(amendment 2026-09-29, P2-3848 AC11)*
+
+- **Type:** `server`
+- **Description:** Add `POST /api/bilateral/center/quality-assessment/:resultId/field-revisions` (design §4, DD-9) in `bilateral-center.controller.ts` → a service method that: applies the same user/edit guard as `assess`; validates `field ∈ {title, description}`; loads the assessment by id and requires it to belong to `resultId`; reads the result's current value for the field as `new_value`; runs the read-side normalizer on the stored `general_information.suggestions`; writes one `result_field_revision` row (`AI_SUGGESTED` if `trim(new_value)` equals the kept suggestion for that field, else `USER_EDIT`; `proposal_id` null; `change_reason 'bilateral_qa_drawer:assessment=<id>'`); returns `{ provenance }`. Register `ResultFieldRevision` in the bilateral module's `TypeOrmModule.forFeature`. No text in any log.
+- **Implements:** `BIL-QTS-R-13` (all scenarios, server half)
+- **Files (expected):** `onecgiar-pr-server/src/api/bilateral/bilateral-center.controller.ts`, `…/services/bilateral-center.service.ts` (or the quality-assessment service), a DTO, `bilateral.module.ts`, specs
+- **Depends on:** T-2
+- **Blocks:** T-9
+- **Estimate:** S–M
+- **Review:** `full`. New endpoint writing a stored audit row; authorization surface
+- **Skills:** `nestjs-expert`, `api-design-principles`, `tdd`
+- **Verification:**
+  - **Falsifier:** (a) saved value equals the stored suggestion after trim → row `AI_SUGGESTED`; mutating the comparison to always `USER_EDIT` → red. (b) saved value differs → `USER_EDIT`. (c) client body carries an extra `provenance: 'AI_SUGGESTED'` with a non-matching value → row is `USER_EDIT` (DTO whitelist). (d) assessment of another result → 404 and no row. (e) a stored suggestion that the read-side normalizer drops (e.g. 40-word title) → `USER_EDIT` even if the value matches it. (f) logger spy: no argument contains the field text. (g) user without edit rights → same refusal as `assess`, no row.
+  - **Red run:** `cd onecgiar-pr-server && npx jest --silent --reporters=summary --forceExit --testPathPattern="bilateral-center|quality-assessment"` red on (a), (c), (d) before, green after; `npx tsc --noEmit` clean.
+  - **Disqualifier:** `result_field_revision.result_id` cannot reference bilateral results, or the entity's enum lacks `title`/`description` in the target DB → stop (would need a migration; re-specify DD-9).
+  - **Consumers:** `bilateral-center.controller.spec.ts`, `bilateral-center.service.spec.ts`, `api/ai` specs that build `ResultFieldRevision` (entity unchanged), `bilateral.module` DI graph (grep specs that construct the service)
+- **Definition of done:**
+  - [ ] Falsifiers (a)–(g) green; (a), (c), (d) observed red first
+  - [ ] eslint + `tsc --noEmit` clean; `onecgiar-pr-server/src/api/bilateral/CLAUDE.md` / `AGENTS.md` updated if they list center endpoints
+
+### `BIL-QTS-T-8` — Client: dialog Accept & save and suggestion labels *(amendment 2026-09-29, P2-3848 AC6–AC8)*
+
+- **Type:** `client`
+- **Description:** In `bilateral-quality-assessment-dialog`, replace **Apply** with **Accept & save** (DD-7: set the draft to the suggestion, then call the existing `saveTitle()` / `saveDescription()`); relabel the suggestion caption to **Suggested title** / **Suggested description**; keep the *Applied* state; `aria-label`s "Accept and save suggested title/description". No new outputs.
+- **Implements:** `BIL-QTS-R-3` as amended (all scenarios, UI half)
+- **Files (expected):** `onecgiar-pr-client/src/app/pages/bilateral/components/bilateral-quality-assessment-dialog/*`
+- **Depends on:** T-4
+- **Blocks:** T-9
+- **Estimate:** S
+- **Review:** `full`. Changes an existing action's behaviour and its selector
+- **Skills:** `angular-developer`, `tdd`
+- **Verification:**
+  - **Falsifier:** (a) Accept & save → `giFieldSaveRequested` emitted once with the suggestion text; mutating it back to copy-only → red. (b) a suggestion the drawer's validation would block (e.g. the draft placeholder) → no emit. (c) caption text is "Suggested title" / "Suggested description". (d) while `savingField` is set the button is disabled. (e) after `lastSaveResult {ok:true}` the block shows *Applied*.
+  - **Red run:** `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage bilateral-quality-assessment-dialog` — (a), (c) red on assertions first; `npx tsc -p tsconfig.app.json --noEmit` clean.
+  - **Disqualifier:** "Accept & save" does not fit beside the suggestion at 520 px → report for T-6, don't shrink fonts.
+  - **Consumers:** dialog spec, creator spec (host), `onecgiar-pr-client/cypress` (grep the old `Apply` test ids before renaming)
+- **Definition of done:**
+  - [ ] Falsifiers green; existing dialog specs updated only where they asserted Apply
+  - [ ] Lint + type-check clean
+
+### `BIL-QTS-T-9` — Client: re-run on close and provenance call *(amendment 2026-09-29, P2-3848 AC3/AC11)*
+
+- **Type:** `client`
+- **Description:** In `bilateral-result-creator` (DD-8, DD-9): (1) add `giSavedSinceOpen`, set on each ok drawer save, cleared on drawer open and when Check again runs; in `dismissQualityAssessment()` and `goToQualitySection()` call `submitResult()` once when it is set, the held assessment is stale and the form is editable, then clear it. (2) After a successful drawer save, call the T-7 endpoint through a new API-service method (`POST_bilateralQualityFieldRevision`, client naming rule) with `{field, assessment_id, old_value}`; catch and swallow errors (no alert, no text logged); never change `lastGiSaveResult` because of it.
+- **Implements:** `BIL-QTS-R-12` (all scenarios), `BIL-QTS-R-13` (client half)
+- **Files (expected):** `onecgiar-pr-client/src/app/pages/bilateral/pages/bilateral-result-creator/*` (+ folder `CLAUDE.md` re-stamp), the bilateral API service file that holds `quality-assessment` calls + its spec
+- **Depends on:** T-5, T-7, T-8
+- **Blocks:** T-6
+- **Estimate:** M
+- **Review:** `full`. Submit/run path and a new outbound call
+- **Skills:** `angular-developer`, `tdd`
+- **Verification:**
+  - **Falsifier:** (a) ok save then dismiss → `qualityAssessment.run` once; two ok saves then dismiss → still once. (b) no ok save → dismiss runs nothing. (c) failed save only → nothing runs. (d) ok save, Check again, dismiss → `run` once total. (e) read-only → nothing runs. (f) ok save → revision endpoint called once with `{field, assessment_id, old_value}` where `old_value` is the value before the save; failed save → not called. (g) revision call errors → no alert, `lastGiSaveResult.ok` stays true. Use deferred observables.
+  - **Red run:** `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage bilateral-result-creator` — (a), (f) red on assertions first (not TypeError); type-check clean.
+  - **Disqualifier:** the running drawer reappearing on close is rejected by the owner at T-6 → re-specify DD-8 (background run), don't patch.
+  - **Consumers:** creator spec, API service spec, `bilateral-quality-assessment-ui.service.spec.ts`
+- **Definition of done:**
+  - [ ] Falsifiers (a)–(g) green; (a), (f) observed red first
+  - [ ] Lint + type-check clean; folder `CLAUDE.md` re-stamped
+
 ### `BIL-QTS-T-6` — Manual verification at the HITL pause (layout and cross-component)
 
 - **Type:** `rollout`
 - **Description:** On a local stack (`docs/infrastructure.md` §6), stub or record an AI response with GI `amber` and a valid `suggestions.title`, then walk through:
   1. open the drawer;
-  2. Apply → Save;
+  2. Accept & save;
   3. the header and General information section show the new title;
   4. press Save draft on General information → the title does not revert;
   5. the stale notice and Check again appear;
   6. Check again → running state → new verdict;
   7. repeat with no `suggestions` at all → fields editable, no suggestion block;
+  7a. *(amendment)* Accept & save on a suggestion → saved in one click, labelled "Suggested title"; close the drawer → the check re-runs once and a new verdict shows; confirm one `result_field_revision` row with `AI_SUGGESTED` (and `USER_EDIT` for an adjusted save);
   8. check layout at the drawer's 520 px minimum, at 900 px, and at 375 px phone width. Fields, buttons and the suggestion block must sit inside the card with no horizontal scroll or clipping.
 - **Implements:** the manual gates in requirements §7 (drawer ↔ form sync, layout); NFR *Layout*
 - **Files (expected):** `docs/specs/bilateral/qa-ai-text-suggestions/execution.md` (evidence only)
-- **Depends on:** T-5
+- **Depends on:** T-5, T-9 (amended 2026-09-29)
 - **Blocks:** —
 - **Estimate:** S
 - **Review:** `checklist`. Human evidence, recorded with screenshots
@@ -252,6 +313,9 @@ Linear on purpose. T-3/T-4 could start from a stubbed type, but T-4's specs pin 
 | R-11 AI-team block | T-1 |
 | NFR accessibility | T-4 |
 | NFR layout (520 px / phone) | T-6 |
+| R-3 as amended (Accept & save, labels) | T-8 |
+| R-12 re-run on close | T-9 (+ T-6 manual) |
+| R-13 provenance row | T-7 (server) + T-9 (client call) |
 
 ## 6. Test plan
 

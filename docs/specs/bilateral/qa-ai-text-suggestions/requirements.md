@@ -22,7 +22,7 @@
 
 ## 2. Executive Summary
 
-When the AI grades **General information** amber or red, the Centre user can fix **Title** and **Description** inside the verdict drawer, next to the feedback, and save them without closing the drawer. If the AI sent a suggested title or description, it appears above the field with **Apply**. The suggestions are **optional** contract keys: today the AI sends none, and the feature is useful without them. Saving makes the verdict outdated, so the drawer offers **Check again**, and **Submit anyway** stays unavailable until a current check exists. No other field is editable or suggestible.
+When the AI grades **General information** amber or red, the Centre user can fix **Title** and **Description** inside the verdict drawer, next to the feedback, and save them without closing the drawer. If the AI sent a suggested title or description, it appears above the field with **Accept & save** (amended 2026-09-29, P2-3848). The suggestions are **optional** contract keys: today the AI sends none, and the feature is useful without them. Saving makes the verdict outdated, so the drawer offers **Check again**, and **Submit anyway** stays unavailable until a current check exists. No other field is editable or suggestible.
 
 ## 3. Glossary
 
@@ -50,7 +50,8 @@ When the AI grades **General information** amber or red, the Centre user can fix
 ### In scope
 
 - Editing and saving Title and Description in the GI card when flagged.
-- Rendering usable AI suggestions for those two fields with **Apply**.
+- Rendering usable AI suggestions for those two fields with **Accept & save** (amended 2026-09-29).
+- Re-running the check once when the drawer closes after a save (`BIL-QTS-R-12`) and recording each drawer save's provenance (`BIL-QTS-R-13`) — added 2026-09-29 for P2-3848.
 - **Check again** in the drawer whenever the assessment is stale.
 - Server: validate/sanitize `suggestions`; allow-list the section keys that reach the database.
 - Contract copy + change log, and a hand-off section for the AI team.
@@ -59,7 +60,9 @@ When the AI grades **General information** amber or red, the Centre user can fix
 
 - Any field other than Title and Description, including Short title, ToC, partners, geography, evidence and type-specific fields (owner, 2026-09-29).
 - Editing when GI is `green` or `grey` (owner decision OQ-2).
-- Recording whether saved text came from the AI (owner decision OQ-3).
+- ~~Recording whether saved text came from the AI (owner decision OQ-3).~~ Reversed 2026-09-29 by the owner for P2-3848 AC11 → `BIL-QTS-R-13`.
+- P2-3848 AC1/AC2 beyond Title and Description (inline editing of every flagged field): out of scope, owner 2026-09-29 (Nicoleta's request names only title and description; the PO was notified on Slack the same day).
+- P2-3848 AC5 (parity with the Bulk Uploader's inline editing): being validated by the owner; not a technical dependency of any task here.
 - Implementing suggestion generation on the AI side.
 - A request-payload change or a `contract_version` bump.
 - The reference drawer's counter, per-field re-run, *Keep my version* and *Finish review*.
@@ -135,16 +138,22 @@ Saving MUST persist the value through the same general-info save the form uses, 
 - THEN an error alert shows, the typed value stays in the field and Save stays enabled
 - AND IT MUST NOT mark the assessment stale on the client
 
-#### `BIL-QTS-R-3` — Usable suggestions render with Apply
+#### `BIL-QTS-R-3` — Usable suggestions render with Accept & save *(amended 2026-09-29, P2-3848 AC6–AC9)*
 
-When the assessment carries a usable suggestion for Title or Description and GI is flagged, the GI card MUST show it above that field as an **AI suggestion** with **Apply**.
+When the assessment carries a usable suggestion for Title or Description and GI is flagged, the GI card MUST show it above that field labelled **Suggested title** / **Suggested description**, with **Accept & save**. *(Superseded: "AI suggestion" label and an Apply action that only copied the text.)*
 
-##### Scenario: Apply
+##### Scenario: Accept & save
 
 - GIVEN a usable `suggestions.title`
-- WHEN the user presses Apply
-- THEN the Title field takes the suggested text, Save enables, and nothing is persisted yet
-- AND the user can edit the text before saving
+- WHEN the user presses Accept & save
+- THEN the Title field takes the suggested text and it is saved through the `BIL-QTS-R-2` path in the same action (same confirmation, same failure handling, same stale mark)
+- AND IT MUST NOT save when the drawer's own validation would block a manual Save
+
+##### Scenario: Adjust before saving
+
+- GIVEN a usable suggestion
+- WHEN the user copies or types a variant into the field and presses Save
+- THEN it saves as a manual edit (`BIL-QTS-R-13` records it as such)
 
 ##### Scenario: No suggestion
 
@@ -157,7 +166,7 @@ When the assessment carries a usable suggestion for Title or Description and GI 
 
 - GIVEN the field's current value equals the suggestion
 - WHEN the card renders
-- THEN the suggestion block shows an *Applied* state instead of the Apply action
+- THEN the suggestion block shows an *Applied* state instead of the Accept & save action
 
 #### `BIL-QTS-R-4` — Saving makes the verdict outdated; Check again re-runs it
 
@@ -233,6 +242,42 @@ The server MUST persist each section with only `verdict`, `score`, `comments`, `
 
 The existing assessment reads (`POST quality-assessment/:resultId`, `GET …/latest`) MUST return the stored `suggestions` inside `sections.general_information`. The client MUST render them as plain text, preserving `\n` line breaks, never as HTML or markdown.
 
+#### `BIL-QTS-R-12` — Closing the drawer after a save re-runs the check *(added 2026-09-29, P2-3848 AC3)*
+
+##### Scenario: Close after a successful save
+
+- GIVEN at least one drawer save succeeded since the drawer opened, and the held assessment is stale
+- WHEN the user closes the drawer (✕, Escape, scrim, Make adjustments, Go to…) and nothing unsaved remains in the drawer
+- THEN the quality check runs once through the same path and guards as Check again (`BIL-QTS-R-4`), and the drawer shows the running state and then the new verdict
+- AND IT MUST run at most once per close, however many fields were saved
+- BUT it MUST NOT run when no drawer save succeeded, when the result is not editable, or when Check again already ran after the last save
+
+##### Scenario: Guards refuse
+
+- GIVEN a form section has unsaved changes
+- WHEN the close would trigger the re-run
+- THEN the existing "Save your changes before submitting" alert shows, the drawer closes, and nothing runs
+
+#### `BIL-QTS-R-13` — Drawer saves are recorded with their provenance *(added 2026-09-29, P2-3848 AC11)*
+
+After each successful drawer save of Title or Description, PRMS MUST write one `result_field_revision` row (`old_value`, `new_value`, user, field) with `provenance = AI_SUGGESTED` when the saved value equals, after trimming, the usable suggestion served for that field in the held assessment, and `USER_EDIT` otherwise. The server decides the provenance; the client never asserts it.
+
+##### Scenario: Accepted verbatim
+
+- GIVEN the user pressed Accept & save and the save succeeded
+- THEN one row is written with `AI_SUGGESTED` and `change_reason` naming the assessment id
+
+##### Scenario: Adjusted or typed
+
+- GIVEN the saved value differs from the suggestion, or there was none
+- THEN one row is written with `USER_EDIT`
+
+##### Scenario: Recording fails
+
+- GIVEN the save succeeded but writing the row fails
+- THEN the save stands, the user sees no error, and PRMS logs the failure without any field text
+- AND IT MUST NOT write a row for a failed save
+
 ### Should (SHOULD)
 
 - **`BIL-QTS-R-11`** The contract copy SHOULD carry a self-contained *For the AI team* block (the proposal's §12), so the hand-off can be sent without the spec.
@@ -244,7 +289,7 @@ The existing assessment reads (`POST quality-assessment/:resultId`, `GET …/lat
 | Performance | No extra request on drawer open. Check again costs one AI call bounded by `BILATERAL_AI_QUALITY_TIMEOUT_MS` (60 s default), same as Submit for review |
 | Security / Privacy | Suggestion text and request bodies never logged (W8, AC-9). Text rendered through Angular interpolation only |
 | Backwards compatibility | Additive contract change. No `/api/bilateral/*` read-shape change (AC-4). Stored pre-change rows render as "no suggestion" |
-| Accessibility | New fields and buttons labelled. Apply/Save/Check again keyboard-operable with visible focus. Save results announced (`aria-live`), per `docs/ux-ui/design.md` §10 |
+| Accessibility | New fields and buttons labelled. Accept & save/Save/Check again keyboard-operable with visible focus. Save results announced (`aria-live`), per `docs/ux-ui/design.md` §10 |
 | Layout | Fields usable in the drawer from 520 px (its minimum width) and at the phone breakpoint, per §9 |
 
 ### Defect classes and their gates
@@ -265,7 +310,7 @@ The existing assessment reads (`POST quality-assessment/:resultId`, `GET …/lat
 |---|---|---|
 | `BIL-QTS-R-1` | Flagged GI card offers Title/Description edits | MUST |
 | `BIL-QTS-R-2` | Save persists through the normal path | MUST |
-| `BIL-QTS-R-3` | Usable suggestions render with Apply | MUST |
+| `BIL-QTS-R-3` | Usable suggestions render with Accept & save (amended 2026-09-29) | MUST |
 | `BIL-QTS-R-4` | Save → stale → Check again | MUST |
 | `BIL-QTS-R-5` | Unsaved drawer edits warned | MUST |
 | `BIL-QTS-R-6` | Suggestions never invalidate a response | MUST |
@@ -274,6 +319,8 @@ The existing assessment reads (`POST quality-assessment/:resultId`, `GET …/lat
 | `BIL-QTS-R-9` | Section key allow-list | MUST |
 | `BIL-QTS-R-10` | Served and rendered as text | MUST |
 | `BIL-QTS-R-11` | AI-team hand-off block in the contract copy | SHOULD |
+| `BIL-QTS-R-12` | Closing after a save re-runs the check once | MUST |
+| `BIL-QTS-R-13` | Drawer saves recorded with provenance (`result_field_revision`) | MUST |
 
 ## 9. Dependencies & Assumptions
 
@@ -287,7 +334,7 @@ The existing assessment reads (`POST quality-assessment/:resultId`, `GET …/lat
 |---|---|
 | `BIL-QTS-OQ-1` | Explicit **Check again**; Submit anyway disabled until the check is current → `R-4` |
 | `BIL-QTS-OQ-2` | No editing on green/grey → `R-1` |
-| `BIL-QTS-OQ-3` | No AI-provenance tracking → out of scope |
+| `BIL-QTS-OQ-3` | No AI-provenance tracking → out of scope — **reversed 2026-09-29** (P2-3848 AC11) → `BIL-QTS-R-13` |
 | `BIL-QTS-OQ-4` | Sub-task under P2-3150 |
 
 ## Required cross-references

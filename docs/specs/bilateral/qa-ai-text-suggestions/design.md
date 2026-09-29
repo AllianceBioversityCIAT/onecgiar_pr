@@ -25,7 +25,7 @@ The feature has three layers, none of which adds a migration or an endpoint.
 ## 1A. Premise Ledger
 
 **Count:** 14 rows, 14 verified, 0 `UNVERIFIED` (0 High, 0 Low).
-**Blast-radius triggers:** `live-path` (user actions Save / Apply / Check again), `shared-state` (the GI title/description state and the GI autosave group are shared by the form and the drawer), `consumer` (stored and served `sections` shape; the client `BilateralQualityAssessmentView` interface).
+**Blast-radius triggers:** `live-path` (user actions Save / Accept & save / Check again / close), `shared-state` (the GI title/description state and the GI autosave group are shared by the form and the drawer), `consumer` (stored and served `sections` shape; the client `BilateralQualityAssessmentView` interface).
 
 | # | Claim | Class | Citation (as run) | Verified at | If false | Settled by |
 |---|---|---|---|---|---|---|
@@ -68,7 +68,9 @@ The feature has three layers, none of which adds a migration or an endpoint.
 3. It then runs the P-4 settle sequence scoped to `general-info` (flush `generalInfo` → wait → error check).
 4. On success the creator calls `qualityAssessment.markStale()` and shows the saved confirmation. On error it shows the server reason and **does not** mark stale.
 
-**Apply (R-3):** local to the dialog. The field's draft value becomes the suggestion text, and nothing is emitted.
+**Accept & save (R-3, amended 2026-09-29):** the draft becomes the suggestion text and the ordinary Save path runs (DD-7). *(Was: Apply, local only, nothing emitted.)*
+
+**Close after save (R-12):** the creator re-runs the check once on dismiss (DD-8). **Provenance (R-13):** after an ok save the creator calls the field-revisions endpoint; the server writes the row (DD-9).
 
 **Check again (R-4):** the dialog emits `recheckRequested` and the creator calls `submitResult()` (P-5). The existing guards, running state, polling, error alerts and the new verdict all come for free.
 
@@ -84,6 +86,7 @@ No entity or migration change. `suggestions` lives inside the existing `sections
 |---|---|
 | `POST /api/bilateral/center/quality-assessment/:resultId` · `GET …/:resultId/latest` | Response `sections.general_information.suggestions?: { title?: string, description?: string }`, present only when a usable suggestion exists. Additive (AC-4) |
 | `PATCH api/results/bilateral/general-info/:resultId` | Unchanged, reused |
+| **New** `POST /api/bilateral/center/quality-assessment/:resultId/field-revisions` *(2026-09-29, R-13)* | Body `{ field: 'title' \| 'description', assessment_id: number, old_value: string \| null }`. Same auth/edit guard as `POST quality-assessment/:resultId`. Server reads `new_value` from the result, loads the assessment (must belong to the result), runs the read-side normalizer on it, and writes one `result_field_revision` row: `AI_SUGGESTED` when `trim(new_value) === suggestion`, else `USER_EDIT`; `proposal_id` null; `change_reason = 'bilateral_qa_drawer:assessment=<id>'`. Returns `{ provenance }`. `201`; `404` unknown result/assessment; `400` bad field. Text never logged |
 | Outbound AI response | + optional `sections.general_information.suggestions` (requirements `R-7`; contract copy in T-1) |
 
 No `/api/bilateral/*` consumer payload (`bilateral-result-summaries.en.md`) changes, so that change log gets no row.
@@ -125,14 +128,14 @@ No `/api/bilateral/*` consumer payload (`bilateral-result-summaries.en.md`) chan
 
 1. For each of Title, Description:
    - an eyebrow label;
-   - an optional **AI suggestion** sub-block (lightbulb icon, text, **Apply** or *Applied*);
+   - an optional suggestion sub-block labelled **Suggested title** / **Suggested description** (lightbulb icon, text, **Accept & save** or *Applied*) — *amended 2026-09-29 (P2-3848 AC6–AC8); was "AI suggestion" + Apply*;
    - the field (`app-pr-input` for Title, `app-pr-textarea` for Description, the same components the form uses);
    - an inline word-count/limit message;
    - a right-aligned **Save** button (`hlmBtn` outline, disabled unless dirty and valid).
 2. The unsaved reminder (`app-alert-status` warning, the W1/W2 copy) shows under a dirty field.
 3. Footer when stale: **Check again** replaces the hidden submit button, in the same slot and style. **Make adjustments** stays.
 
-Tokens: the existing `bqa-dialog__*` classes and the `--pr-*` vars; no new colours (DD-12, `docs/ux-ui/design.md` §7). Violet accent for Apply.
+Tokens: the existing `bqa-dialog__*` classes and the `--pr-*` vars; no new colours (DD-12, `docs/ux-ui/design.md` §7). Violet accent for Accept & save.
 
 ### 6.3 Unsaved-changes guard (R-5)
 
@@ -201,6 +204,18 @@ It reuses the rail action that runs the guards and the check and never submits (
 
 The client renders what it receives. This keeps one rule set, the server's (R-8). The client only compares the suggestion to the current field value, for the *Applied* state.
 
+### `BIL-QTS-DD-7` — Accept & save reuses the drawer Save path *(2026-09-29, P2-3848 AC8)*
+
+Accept & save sets the draft to the suggestion and calls the same `saveTitle()` / `saveDescription()` the Save button calls — same validation, `giFieldSaveRequested`, `lastSaveResult` baseline and stale mark. No second save path. AC9 (adjust first) is the ordinary field + Save. **Rejected:** keeping Apply beside it (two actions in a 520 px card; owner chose one).
+
+### `BIL-QTS-DD-8` — Re-run on close lives in the creator, not the dialog *(2026-09-29, P2-3848 AC3)*
+
+The creator tracks `giSavedSinceOpen` (set on each `lastGiSaveResult.ok`, cleared when the drawer opens and when Check again runs). `dismissQualityAssessment()` — and `goToQualitySection()`, which closes the drawer — call `submitResult()` once when the flag is set, the held assessment is stale and `!isFormReadOnly()`, then clear it. `run()` puts the drawer back in its running state (`isDialogOpen` includes `isRunning`), so the user sees the new verdict arrive; for *Go to…* the navigation happens first. The dialog's unsaved guard already resolves before `dismissed` is emitted, so R-12's "nothing unsaved remains" holds by construction. **Rejected:** running after each Save (two AI calls for title + description); a background run with the drawer shut (changes `isDialogOpen` semantics shared with the submit flow).
+
+### `BIL-QTS-DD-9` — Provenance is decided server-side, recorded fail-soft after the save *(2026-09-29, P2-3848 AC11)*
+
+The existing `result_field_revision` table (`api/ai/entities/result-field-revision.entity.ts`: `provenance AI_SUGGESTED | USER_EDIT`, `field_name` includes `title`/`description`, `proposal_id` nullable) already models this, so there is **no migration**. The client calls the new endpoint after `waitForSectionSave` reports success; the server compares the saved value with the normalized stored suggestion, so a client cannot claim `AI_SUGGESTED` for text the AI did not suggest. A failure is caught and logged (no text) and never alters the save outcome. **Rejected:** a new table (duplicates this one); a column on `bilateral_quality_assessments` (no user, no old value); a client-sent provenance flag (forgeable).
+
 ## Budget (Step 2.4)
 
 | Metric | Estimate |
@@ -208,6 +223,7 @@ The client renders what it receives. This keeps one rule set, the server's (R-8)
 | Tasks | **6** (contract doc · server normalizer + allow-list · client types/UI service · dialog GI block · creator wiring + unsaved guard · manual HITL check) |
 | LOC | **≈ 420 production + ≈ 480 tests** (server ~120 / 220 · client ~260 / 260 · docs ~40) |
 | Review rounds | **2** |
+| **Amendment 2026-09-29 (P2-3848)** | **+3 tasks** (T-7 server revisions endpoint · T-8 dialog Accept & save + labels · T-9 creator re-run on close + revision call), **≈ +180 production / +260 tests**, **+2 review rounds**. No migration. T-6 now depends on T-9 |
 
 This matches **Standard**, and no depth change is needed.
 
