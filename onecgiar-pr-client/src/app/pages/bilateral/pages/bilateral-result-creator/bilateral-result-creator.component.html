@@ -46,6 +46,7 @@
     [assessment]="qualityAssessment.assessment()"
     [submitting]="qualityAssessment.isSubmitting()"
     [running]="qualityAssessment.isRunning()"
+    [readOnly]="isFormReadOnly()"
     [editable]="!isFormReadOnly()"
     [currentTitle]="creationService.resultTitle()"
     [currentDescription]="creationService.resultDescription()"

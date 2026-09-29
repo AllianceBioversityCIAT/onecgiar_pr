@@ -164,6 +164,10 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     beforeEach(() => {
       editable.set(true);
       build();
+      // P2-3821: "External partners" moved into Full metadata (BIL-R-1) — expand it so this
+      // describe's shared `it.each` over all four pickers can still find the picker by label.
+      component.showAllFields.set(true);
+      fixture.detectChanges();
     });
 
     it('exposes readOnly() === false', () => {
@@ -183,6 +187,10 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
     beforeEach(() => {
       editable.set(false);
       build();
+      // P2-3821: "External partners" moved into Full metadata (BIL-R-1) — expand it so this
+      // describe's shared `it.each` over all four pickers can still find the picker by label.
+      component.showAllFields.set(true);
+      fixture.detectChanges();
     });
 
     it('exposes readOnly() === true', () => {
@@ -262,6 +270,81 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       const retryButton = fixture.nativeElement.querySelector('[data-testid="centers-load-retry"]');
       expect(banner).toBeNull();
       expect(retryButton).toBeNull();
+    });
+
+    // BIL-AC-8 / BIL-R-5 / BIL-DD-3 — the centres banner reports a Block 1 failure and must stay
+    // visible while Full metadata is collapsed. `build()` leaves `showAllFields` at its default
+    // (false); asserting that here on purpose is what BIL-AC-8 requires.
+    it('renders the centers-load-error banner while Full metadata is collapsed', () => {
+      expect(component.showFullMetadata()).toBe(false);
+      component.centersLoadFailed.set(true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="centers-load-error"]')).toBeTruthy();
+    });
+  });
+
+  // ── P2-3821: External partners moved into Full metadata (BIL-R-1, BIL-AC-3, BIL-AC-4, BIL-AC-9) ──
+  //
+  // These specs render the REAL template — `overrideTemplate` is not evidence for a placement gate
+  // (only a static read of the shipped `.html`, or a rendered measurement like this one, can prove
+  // it). Every case here must expand/collapse `showAllFields` through the component's own signal
+  // and re-render; `pickerFor` throws "is not rendered at all" only when that IS the assertion.
+  describe('External partners lives in Full metadata (P2-3821)', () => {
+    const EXTERNAL_PARTNERS_LABEL = 'External partners';
+
+    it('is absent for type 1 (Policy) while Full metadata is collapsed', () => {
+      editable.set(true);
+      creation.resultTypeId.set(1);
+      build();
+      component.showAllFields.set(false);
+      fixture.detectChanges();
+
+      expect(() => pickerFor(EXTERNAL_PARTNERS_LABEL)).toThrow();
+    });
+
+    it('is absent for type 2 (Innovation Use) while Full metadata is collapsed', () => {
+      editable.set(true);
+      creation.resultTypeId.set(2);
+      build();
+      component.showAllFields.set(false);
+      fixture.detectChanges();
+
+      expect(() => pickerFor(EXTERNAL_PARTNERS_LABEL)).toThrow();
+    });
+
+    it('is present for type 1 (Policy) once Full metadata is expanded', () => {
+      editable.set(true);
+      creation.resultTypeId.set(1);
+      build();
+      component.showAllFields.set(true);
+      fixture.detectChanges();
+
+      expect(pickerFor(EXTERNAL_PARTNERS_LABEL)).toBeTruthy();
+    });
+
+    it('is present for type 2 (Innovation Use) once Full metadata is expanded, but the linked question is absent (BIL-AC-4, BIL-R-6)', () => {
+      editable.set(true);
+      creation.resultTypeId.set(2);
+      build();
+      component.showAllFields.set(true);
+      fixture.detectChanges();
+
+      expect(pickerFor(EXTERNAL_PARTNERS_LABEL)).toBeTruthy();
+      expect(fixture.nativeElement.textContent).not.toContain('Is this result linked or bundled');
+    });
+
+    it('carries no required marker on the multi-select and shows no red hint (BIL-AC-9, BIL-R-2)', () => {
+      editable.set(true);
+      build();
+      component.showAllFields.set(true);
+      component.noExternalPartners.set(false);
+      component.selectedPartnerInstitutionIds.set([]);
+      fixture.detectChanges();
+
+      const host = pickerFor(EXTERNAL_PARTNERS_LABEL);
+      expect(host.querySelector('.fch_required')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Add at least one external partner');
     });
   });
 

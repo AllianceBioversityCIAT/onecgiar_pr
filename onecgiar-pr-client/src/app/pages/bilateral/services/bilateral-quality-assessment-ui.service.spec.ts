@@ -204,15 +204,76 @@ describe('BilateralQualityAssessmentUiService', () => {
     });
   });
 
-  it('openStored reopens the persisted verdict without issuing a single request', () => {
-    service.assessment.set(view());
+  // @akili-spec changes/qa-submit-stale-guard (QSG-T-1, QSG-R-1, QSG-R-3)
+  describe('openStored', () => {
+    it('goes busy while re-reading the latest row, and the dialog itself does not open until it lands', () => {
+      service.assessment.set(view());
 
-    service.openStored();
+      service.openStored();
 
-    expect(service.state()).toBe('deciding');
-    expect(service.isDialogOpen()).toBe(true);
-    httpMock.expectNone(postUrl(42));
-    httpMock.expectNone(latestUrl(42));
+      // Refreshing is busy (rail stays disabled) but is deliberately NOT "the dialog is open" —
+      // the drawer must not appear until the corrected row is in hand.
+      expect(service.state()).toBe('refreshing');
+      expect(service.isBusy()).toBe(true);
+      expect(service.isDialogOpen()).toBe(false);
+      httpMock.expectNone(postUrl(42));
+
+      httpMock.expectOne(latestUrl(42)).flush({ response: view() });
+
+      expect(service.state()).toBe('deciding');
+      expect(service.isDialogOpen()).toBe(true);
+    });
+
+    // Falsifier (QSG-R-1): the held row is current; the server's fresh read of the SAME id is not.
+    // Mutation (a) — skip the re-read — leaves `is_current` at the stale `true` and goes red here.
+    it('reflects the server-fresh is_current for the SAME id it holds, hiding Submit on reopen', () => {
+      service.assessment.set(view()); // id 9, is_current: true
+
+      service.openStored();
+      httpMock.expectOne(latestUrl(42)).flush({ response: view({ is_current: false }) }); // same id 9
+
+      expect(service.assessment()?.id).toBe(9);
+      expect(service.assessment()?.is_current).toBe(false);
+      expect(service.state()).toBe('deciding');
+    });
+
+    // Regression: nothing changed server-side — Submit must still be offered exactly as today.
+    it('regression: a current row still opens with Submit available', () => {
+      service.assessment.set(view());
+
+      service.openStored();
+      httpMock.expectOne(latestUrl(42)).flush({ response: view() });
+
+      expect(service.assessment()?.is_current).toBe(true);
+      expect(service.state()).toBe('deciding');
+      expect(service.isDialogOpen()).toBe(true);
+    });
+
+    // Falsifier (QSG-R-3): the re-read errors outright. Mutation (c) — on error, keep the row
+    // as-is instead of marking it stale — leaves `is_current` at `true` and goes red here.
+    it('fails closed when the re-read itself errors', () => {
+      service.assessment.set(view()); // id 9, is_current: true
+
+      service.openStored();
+      httpMock.expectOne(latestUrl(42)).flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+      expect(service.assessment()?.id).toBe(9);
+      expect(service.assessment()?.is_current).toBe(false);
+      expect(service.state()).toBe('deciding');
+    });
+
+    // QSG-R-3, DD-3: an empty `{ latest: null }` envelope is fail-closed the same as an error —
+    // there is no fresh row to trust, so the held one is kept but marked stale.
+    it('fails closed when the server has nothing to report (`latest: null`)', () => {
+      service.assessment.set(view());
+
+      service.openStored();
+      httpMock.expectOne(latestUrl(42)).flush({ response: { latest: null } });
+
+      expect(service.assessment()?.id).toBe(9);
+      expect(service.assessment()?.is_current).toBe(false);
+      expect(service.state()).toBe('deciding');
+    });
   });
 
   it('openStored and close are no-ops while a request is in flight', () => {
@@ -264,15 +325,60 @@ describe('BilateralQualityAssessmentUiService', () => {
       expect(service.assessment()).not.toBeNull();
     });
 
-    it('returns to the verdict when the submit fails, so the decision is still on screen', () => {
-      service.assessment.set(view());
-      service.state.set('deciding');
+    // @akili-spec changes/qa-submit-stale-guard (QSG-T-1, QSG-R-2, QSG-R-3)
+    describe('a rejected Submit', () => {
+      // Falsifier (QSG-R-2): the re-read of the SAME id comes back not current. Mutation (b) —
+      // skip the re-read on this path — leaves `is_current` at the stale `true` and goes red here.
+      it('re-reads the latest row and hides Submit when it is not current', () => {
+        let error: unknown = null;
+        service.assessment.set(view()); // id 9
+        service.state.set('deciding');
 
-      service.submit(42, 'submitted_anyway').subscribe({ error: () => undefined });
-      httpMock.expectOne(submitUrl(42)).flush({ message: 'nope' }, { status: 400, statusText: 'Bad Request' });
+        service.submit(42, 'submitted_anyway').subscribe({ error: (e) => (error = e) });
+        // Busy (dialog open, Submit disabled) through the WHOLE re-read, not only the PATCH.
+        httpMock.expectOne(submitUrl(42)).flush({ message: 'stale' }, { status: 400, statusText: 'Bad Request' });
+        expect(service.state()).toBe('submitting');
+        expect(service.isDialogOpen()).toBe(true);
 
-      expect(service.state()).toBe('deciding');
-      expect(service.isDialogOpen()).toBe(true);
+        httpMock.expectOne(latestUrl(42)).flush({ response: view({ is_current: false }) });
+
+        expect(service.assessment()?.id).toBe(9);
+        expect(service.assessment()?.is_current).toBe(false);
+        expect(service.state()).toBe('deciding');
+        expect(service.isDialogOpen()).toBe(true);
+        // The caller (the "Submit failed" toast) still gets the ORIGINAL server error.
+        expect((error as { status?: number })?.status).toBe(400);
+      });
+
+      // Regression side of QSG-R-2: a newer row that IS current is offered — the guard hides
+      // Submit only when it must, never unconditionally after a rejection.
+      it('re-reads and offers Submit again when a newer row is current', () => {
+        service.assessment.set(view()); // id 9
+        service.state.set('deciding');
+
+        service.submit(42, 'submitted_anyway').subscribe({ error: () => undefined });
+        httpMock.expectOne(submitUrl(42)).flush({ message: 'stale' }, { status: 400, statusText: 'Bad Request' });
+        httpMock.expectOne(latestUrl(42)).flush({ response: view({ id: 11, is_current: true }) });
+
+        expect(service.assessment()?.id).toBe(11);
+        expect(service.assessment()?.is_current).toBe(true);
+        expect(service.state()).toBe('deciding');
+      });
+
+      // Falsifier (QSG-R-3): the re-read itself errors. Mutation (c) applies here too — keeping
+      // the row as-is instead of marking it stale goes red on the `is_current` assertion.
+      it('fails closed when the re-read itself errors', () => {
+        service.assessment.set(view()); // id 9, is_current: true
+
+        service.submit(42, 'submitted_anyway').subscribe({ error: () => undefined });
+        httpMock.expectOne(submitUrl(42)).flush({ message: 'nope' }, { status: 400, statusText: 'Bad Request' });
+        httpMock.expectOne(latestUrl(42)).flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+        expect(service.assessment()?.id).toBe(9);
+        expect(service.assessment()?.is_current).toBe(false);
+        expect(service.state()).toBe('deciding');
+        expect(service.isDialogOpen()).toBe(true);
+      });
     });
 
     it('refuses to submit with no assessment in hand', () => {

@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-09-29 · el drawer de GI guarda por autosave (`updateField` + `flush('general-info')`), marca stale sólo si el flush no termina en error, y Check again = `submitResult()` (BIL-QTS-T-5); prior: 2026-09-24 · los mensajes de guardado excluyen campos MDS opcionales al calcular faltantes; prior: 2026-09-22 · el flag global de solo-lectura ahora responde a la pertenencia al centro líder (un Center User ya puede editar); prior: 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
+**Verified:** 2026-09-29 · el drawer de GI guarda por autosave (`updateField` + `flush('general-info')`), marca stale sólo si el flush no termina en error, y Check again = `submitResult()` (BIL-QTS-T-5); el diálogo de calidad IA recibe `[readOnly]="isFormReadOnly()"` (QSG-T-2, `creator.html:44-51`): un resultado ya no editable (p. ej. Pending Review tras Submit) reabre el drawer sin footer y sin la línea de stale, ✕/Escape/scrim siguen cerrando; prior: 2026-09-24 · los mensajes de guardado excluyen campos MDS opcionales al calcular faltantes; prior: 2026-09-22 · el flag global de solo-lectura ahora responde a la pertenencia al centro líder (un Center User ya puede editar); prior: 2026-09-21 · nota bajo Submit for review que avisa que primero corre el chequeo IA (JuanGuzman-io/bilateral-submit-review-flow); prior: 2026-09-18 · Next/Back/side-rail flushean antes de navegar (bugfix/bilateral-section-autosave-on-navigate); prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA navegable y por campo (P2-3698); prior: 2026-09-17 · semáforo de calidad IA en el riel y el Submit
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -86,6 +86,12 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
 - **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
   única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo
   recibe por input, y un `effect` del constructor llama `autoSaveService.setReadOnly()` con él.
+  **Y también el diálogo de calidad IA (QSG-T-2, 2026-09-29):** `app-bilateral-quality-assessment-dialog`
+  recibe `[readOnly]="isFormReadOnly()"`. El diálogo no deriva su propia copia de la regla — solo
+  esconde su footer ("Make adjustments" / Submit) y la línea de stale cuando `readOnly()` es true;
+  ✕ / Escape / scrim quedan fuera de ese gate y siguen cerrando. Sin esto, un resultado que ya salió
+  de Editing (p. ej. Pending Review tras un Submit) seguía ofreciendo ambos botones al reabrir
+  "View AI assessment" desde el riel.
 - **Y hay una TERCERA puerta, global y ajena: `RolesService.readOnly`** (22-sep-2026). Todos los
   `custom-fields` esconden su control mientras ese flag esté arriba (`pr-multi-select.component.html:16`
   y la misma línea en `pr-input`, `pr-select`, `pr-textarea`…). Es un mecanismo de W1/W2: arranca en

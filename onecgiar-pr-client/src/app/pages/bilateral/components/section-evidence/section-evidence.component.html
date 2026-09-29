@@ -27,10 +27,14 @@
          mientras no haya una evidencia con enlace válido, verde en cuanto la haya. -->
     <app-field-card
       label="Evidence"
-      [required]="true"
+      [required]="!isEvidenceOptional()"
       [hasValue]="hasValidLink"
       [readOnly]="readOnly()"
-      description="At least one evidence with a valid link is required to complete this section.">
+      [description]="
+        isEvidenceOptional()
+          ? 'Evidence is optional for this result type.'
+          : 'At least one evidence with a valid link is required to complete this section.'
+      ">
       <div class="evidences">
       @for (evidence of evidences; track $index) {
         <div class="evidence_card" data-testid="evidence-card">

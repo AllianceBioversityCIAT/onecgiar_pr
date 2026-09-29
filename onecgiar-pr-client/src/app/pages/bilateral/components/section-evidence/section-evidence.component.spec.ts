@@ -38,7 +38,7 @@ describe('SectionEvidenceComponent', () => {
   };
 
   beforeEach(async () => {
-    creation = { currentResultId: signal<number | null>(101) };
+    creation = { currentResultId: signal<number | null>(101), resultTypeId: signal<number | null>(1) };
     mdsTracker = { setSectionFields: jest.fn() };
 
     api = {
@@ -219,6 +219,33 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences).toEqual([]);
       expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('evidence', [
         { key: 'valid-link', label: 'Evidence', filled: false }
+      ]);
+    });
+
+    // Nicoleta Trifa, 2026-09-29: CapDev and KP are not asked for evidence.
+    it.each([
+      [5, 'Capacity sharing for development'],
+      [6, 'Knowledge Product']
+    ])('counts the Evidence item as filled with no evidence for result type %i (%s)', typeId => {
+      creation.resultTypeId.set(typeId);
+      build();
+      fixture.detectChanges();
+      expect(component.isEvidenceOptional()).toBe(true);
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('evidence', [
+        { key: 'valid-link', label: 'Evidence', filled: true }
+      ]);
+    });
+
+    it('re-publishes the Evidence item when the result type changes after load', () => {
+      build();
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('evidence', [
+        { key: 'valid-link', label: 'Evidence', filled: false }
+      ]);
+      creation.resultTypeId.set(5);
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('evidence', [
+        { key: 'valid-link', label: 'Evidence', filled: true }
       ]);
     });
 

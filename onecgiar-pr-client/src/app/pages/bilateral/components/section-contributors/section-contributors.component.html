@@ -79,6 +79,32 @@
   <div class="sc-block sc-block--centers">
     <!-- P2-3368 asks for an ⓘ tooltip here but never supplies the guidance text, and W1/W2 has
          none to reuse. Icon left out rather than shipped empty — see this folder's CLAUDE.md. -->
+
+    <!--
+      ── Failed read of the centers catalogue (BIL-T-1) ───────────────────────────────────
+      `loadCenters()` used to swallow a `CentersService.getData()` rejection: `centersReady` never
+      became true, `hydrateWhenReady` never ran, and every PATCH permanently omitted the partner
+      keys with zero visible error. Same banner + Retry pattern as the partners block.
+      P2-3821: moved here, next to the centres picker it is actually about (BIL-R-5/BIL-DD-3) — it
+      reports a Block 1 failure and must stay visible even while Full metadata is collapsed.
+    -->
+    @if (centersLoadFailed()) {
+      <div class="flex flex-col items-start gap-[8px]" data-testid="centers-load-error">
+        <app-alert-status
+          status="error"
+          description="We could not load the centers catalogue needed for this section, so nothing here can be saved right now. Please retry.">
+        </app-alert-status>
+        <button
+          type="button"
+          class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+          data-testid="centers-load-retry"
+          (click)="retryLoadCenters()">
+          <i class="material-icons-round text-[14px]">refresh</i>
+          Retry loading centers
+        </button>
+      </div>
+    }
+
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing CGIAR centers"
@@ -153,102 +179,6 @@
     }
   </div>
 
-  <!--
-    P2-3368 · External partners. Mandatory, satisfied either way (AC5/AC7). No partner-type / nature
-    attributes: the story puts them explicitly OUT of scope for bilateral results (AC6).
-  -->
-  <div class="sc-block sc-block--partners">
-    <!--
-      ── Failed read of the centers catalogue (BIL-T-1) ───────────────────────────────────
-      `loadCenters()` used to swallow a `CentersService.getData()` rejection: `centersReady` never
-      became true, `hydrateWhenReady` never ran, and every PATCH permanently omitted the partner
-      keys with zero visible error. Same banner + Retry pattern as the partners block below.
-    -->
-    @if (centersLoadFailed()) {
-      <div class="flex flex-col items-start gap-[8px]" data-testid="centers-load-error">
-        <app-alert-status
-          status="error"
-          description="We could not load the centers catalogue needed for this section, so nothing here can be saved right now. Please retry.">
-        </app-alert-status>
-        <button
-          type="button"
-          class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
-          data-testid="centers-load-retry"
-          (click)="retryLoadCenters()">
-          <i class="material-icons-round text-[14px]">refresh</i>
-          Retry loading centers
-        </button>
-      </div>
-    }
-
-    <!--
-      ── Failed read of the stored partner block ──────────────────────────────────────────
-      The hydrate effect fires once and never re-runs on its own, so without this the section
-      became a silent black hole: every PATCH dropped the partner keys while the block still
-      looked complete. The banner says it in plain words and the button is the only way back.
-    -->
-    @if (partnersLoadFailed()) {
-      <div class="flex flex-col items-start gap-[8px]" data-testid="partners-load-error">
-        <app-alert-status
-          status="error"
-          description="We could not load the partners already saved for this result, so nothing you choose here can be saved right now. Please retry.">
-        </app-alert-status>
-        <button
-          type="button"
-          class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
-          data-testid="partners-load-retry"
-          (click)="retryLoadExternalPartners()">
-          <i class="material-icons-round text-[14px]">refresh</i>
-          Retry loading partners
-        </button>
-      </div>
-    }
-
-    <!-- P2-3520: same `isStatic` trap as the four pickers above — pr-checkbox only honours
-         `readOnly` when `isStatic` is false (pr-checkbox.component.html:6), so a submitted
-         result kept this box clickable. -->
-    <app-pr-checkbox
-      [readOnly]="readOnly()"
-      label="This result has no external partners"
-      [isStatic]="!readOnly()"
-      [required]="false"
-      [ngModel]="noExternalPartners()"
-      (ngModelChange)="noExternalPartners.set($event)"
-      (selectOptionEvent)="onNoExternalPartnersChange()">
-    </app-pr-checkbox>
-
-    @if (!noExternalPartners()) {
-      <app-pr-multi-select
-        [readOnly]="readOnly()"
-        label="External partners"
-        [options]="availablePartners()"
-        [ngModel]="selectedPartnerInstitutionIds()"
-        (ngModelChange)="onPartnersModelChange($event)"
-        optionLabel="full_name"
-        optionValue="institutions_id"
-        selectedOptionLabel="institutions_name"
-        placeholder="Select the partners that contributed to this result"
-        [required]="true"
-        [isStatic]="!readOnly()">
-      </app-pr-multi-select>
-
-      @if (selectedPartnerInstitutionIds().length) {
-        <div class="sc-selected-chips">
-          @for (id of selectedPartnerInstitutionIds(); track id) {
-            <span class="sc-chip">
-              {{ getPartnerDisplayName(id) }}
-              <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removePartner(id)">×</button>
-            </span>
-          }
-        </div>
-      } @else {
-        <span class="text-[12px] font-normal text-[var(--pr-color-red-300)]">
-          Add at least one external partner, or tick “This result has no external partners”.
-        </span>
-      }
-    }
-  </div>
-
   <!-- P2-3368 · Minimum-data banner + Full Metadata toggle, below Block 1. -->
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
     <app-alert-status
@@ -272,56 +202,137 @@
     </span>
   }
 
-  @if (showLinkedResultQuestion()) {
+  <!--
+    ── Full metadata (P2-3821, BIL-DD-2) ──────────────────────────────────────────────────
+    Its own gate — `showFullMetadata()` = `showAllFields()` — so it no longer shares the linked
+    question's type exclusion (`showLinkedResultQuestion()` was `false` for Innovation Use / Innovation
+    Development, which would have hidden External partners for those two types, violating BIL-R-1).
+    Holds, in order: the intro line, the External partners block (every type), then the linked
+    question nested under its OWN gate (unchanged type rule, BIL-R-6).
+  -->
+  @if (showFullMetadata()) {
     <div class="sc-block flex flex-col gap-[18px]">
         <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">You are completing the full metadata for this section. These fields are optional.</span>
 
         <!--
-          ── Linked / bundled question ───────────────────────────────────────────────────────
-          P2-3358 wording: one question for every typology. No mandatory indicator (AC10).
-          P2-3368 AC10-AC14: the answer now reaches the server (`has_innovation_link` +
-          `linked_results` on SaveBilateralContributorsDto) and comes back with the detail, so the
-          `Coming soon` marker this block used to carry is gone.
-          🛑 `showLinkedResultQuestion()` also hides the whole block for Innovation Use and
-          Innovation Development: for those two types the same stored answer has another owner
-          (the Innovation Use section / the `results_innovations_dev` mirror), and two editing
-          surfaces over one answer is the defect P2-3199 removed.
+          P2-3821 (supersedes P2-3368 AC5/AC7): External partners is now OPTIONAL, satisfied by
+          EITHER a selected partner or the "no partners" checkbox — see BIL-DD-1. No partner-type /
+          nature attributes: the story puts them explicitly OUT of scope for bilateral results (AC6).
         -->
-        <div class="flex items-start gap-[8px]">
-          <div class="flex-1">
-            <app-pr-radio-button
-              [label]="linkedResultQuestionLabel"
-              [required]="false"
-              [disabled]="readOnly() || !linkedHydrated()"
-              [options]="yesNoOptions"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="hasLinkedResult()"
-              (ngModelChange)="onHasLinkedResultChange($event)">
-            </app-pr-radio-button>
-          </div>
-        </div>
+        <div class="sc-block sc-block--partners">
+          <!--
+            ── Failed read of the stored partner block ──────────────────────────────────────────
+            The hydrate effect fires once and never re-runs on its own, so without this the section
+            became a silent black hole: every PATCH dropped the partner keys while the block still
+            looked complete. The banner says it in plain words and the button is the only way back.
+          -->
+          @if (partnersLoadFailed()) {
+            <div class="flex flex-col items-start gap-[8px]" data-testid="partners-load-error">
+              <app-alert-status
+                status="error"
+                description="We could not load the partners already saved for this result, so nothing you choose here can be saved right now. Please retry.">
+              </app-alert-status>
+              <button
+                type="button"
+                class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+                data-testid="partners-load-retry"
+                (click)="retryLoadExternalPartners()">
+                <i class="material-icons-round text-[14px]">refresh</i>
+                Retry loading partners
+              </button>
+            </div>
+          }
 
-        @if (showLinkedResultsDropdown()) {
-          <div class="w-full max-w-[480px]">
+          <!-- P2-3520: same `isStatic` trap as the four pickers above — pr-checkbox only honours
+               `readOnly` when `isStatic` is false (pr-checkbox.component.html:6), so a submitted
+               result kept this box clickable. -->
+          <app-pr-checkbox
+            [readOnly]="readOnly()"
+            label="This result has no external partners"
+            [isStatic]="!readOnly()"
+            [required]="false"
+            [ngModel]="noExternalPartners()"
+            (ngModelChange)="noExternalPartners.set($event)"
+            (selectOptionEvent)="onNoExternalPartnersChange()">
+          </app-pr-checkbox>
+
+          @if (!noExternalPartners()) {
             <app-pr-multi-select
               [readOnly]="readOnly()"
-              label="Select a result."
-              [options]="linkedResultOptions()"
-              [ngModel]="linkedResultModel()"
-              (ngModelChange)="onLinkedResultsModelChange($event)"
-              optionLabel="title"
-              optionValue="id"
-              optionGroupLabel="name"
-              optionGroupChildren="options"
-              selectedLabel="Results selected"
-              selectedOptionLabel="title"
-              placeholder="Please select a result"
-              [displayLabelFormatter]="formatResultLabel"
+              label="External partners"
+              [options]="availablePartners()"
+              [ngModel]="selectedPartnerInstitutionIds()"
+              (ngModelChange)="onPartnersModelChange($event)"
+              optionLabel="full_name"
+              optionValue="institutions_id"
+              selectedOptionLabel="institutions_name"
+              placeholder="Select the partners that contributed to this result"
               [required]="false"
               [isStatic]="!readOnly()">
             </app-pr-multi-select>
+
+            @if (selectedPartnerInstitutionIds().length) {
+              <div class="sc-selected-chips">
+                @for (id of selectedPartnerInstitutionIds(); track id) {
+                  <span class="sc-chip">
+                    {{ getPartnerDisplayName(id) }}
+                    <button type="button" class="sc-chip-remove" [disabled]="readOnly()" (click)="removePartner(id)">×</button>
+                  </span>
+                }
+              </div>
+            }
+          }
+        </div>
+
+        @if (showLinkedResultQuestion()) {
+          <!--
+            ── Linked / bundled question ───────────────────────────────────────────────────────
+            P2-3358 wording: one question for every typology. No mandatory indicator (AC10).
+            P2-3368 AC10-AC14: the answer now reaches the server (`has_innovation_link` +
+            `linked_results` on SaveBilateralContributorsDto) and comes back with the detail, so the
+            `Coming soon` marker this block used to carry is gone.
+            🛑 `showLinkedResultQuestion()` hides only THIS question for Innovation Use and Innovation
+            Development (P2-3821: it no longer gates the whole Full metadata container, see above):
+            for those two types the same stored answer has another owner (the Innovation Use section /
+            the `results_innovations_dev` mirror), and two editing surfaces over one answer is the
+            defect P2-3199 removed.
+          -->
+          <div class="flex items-start gap-[8px]">
+            <div class="flex-1">
+              <app-pr-radio-button
+                [label]="linkedResultQuestionLabel"
+                [required]="false"
+                [disabled]="readOnly() || !linkedHydrated()"
+                [options]="yesNoOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="hasLinkedResult()"
+                (ngModelChange)="onHasLinkedResultChange($event)">
+              </app-pr-radio-button>
+            </div>
           </div>
+
+          @if (showLinkedResultsDropdown()) {
+            <div class="w-full max-w-[480px]">
+              <app-pr-multi-select
+                [readOnly]="readOnly()"
+                label="Select a result."
+                [options]="linkedResultOptions()"
+                [ngModel]="linkedResultModel()"
+                (ngModelChange)="onLinkedResultsModelChange($event)"
+                optionLabel="title"
+                optionValue="id"
+                optionGroupLabel="name"
+                optionGroupChildren="options"
+                selectedLabel="Results selected"
+                selectedOptionLabel="title"
+                placeholder="Please select a result"
+                [displayLabelFormatter]="formatResultLabel"
+                [required]="false"
+                [isStatic]="!readOnly()">
+              </app-pr-multi-select>
+            </div>
+          }
         }
     </div>
   }
