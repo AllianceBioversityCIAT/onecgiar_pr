@@ -158,7 +158,7 @@
                             data-testid="gi-suggestion-title">
                             <i class="material-icons-round text-[16px]" aria-hidden="true">lightbulb</i>
                             <div class="grid gap-[2px]">
-                              <span class="text-[11px] font-bold uppercase tracking-[0.04em]">AI suggestion</span>
+                              <span class="text-[11px] font-bold uppercase tracking-[0.04em]">Suggested title</span>
                               <p class="m-0 whitespace-pre-line leading-[1.45]">{{ suggestion }}</p>
                             </div>
                             @if (titleApplied()) {
@@ -171,10 +171,11 @@
                                 variant="brandSoft"
                                 size="sm"
                                 type="button"
-                                data-testid="gi-suggestion-title-apply"
-                                aria-label="Apply suggested title"
-                                (click)="applyTitleSuggestion()">
-                                Apply
+                                [disabled]="savingField() === 'title'"
+                                data-testid="gi-suggestion-title-accept-save"
+                                aria-label="Accept and save suggested title"
+                                (click)="acceptAndSaveTitle()">
+                                Accept &amp; save
                               </button>
                             }
                           </div>
@@ -223,7 +224,7 @@
                             data-testid="gi-suggestion-description">
                             <i class="material-icons-round text-[16px]" aria-hidden="true">lightbulb</i>
                             <div class="grid gap-[2px]">
-                              <span class="text-[11px] font-bold uppercase tracking-[0.04em]">AI suggestion</span>
+                              <span class="text-[11px] font-bold uppercase tracking-[0.04em]">Suggested description</span>
                               <p class="m-0 whitespace-pre-line leading-[1.45]">{{ suggestion }}</p>
                             </div>
                             @if (descriptionApplied()) {
@@ -236,10 +237,11 @@
                                 variant="brandSoft"
                                 size="sm"
                                 type="button"
-                                data-testid="gi-suggestion-description-apply"
-                                aria-label="Apply suggested description"
-                                (click)="applyDescriptionSuggestion()">
-                                Apply
+                                [disabled]="savingField() === 'description'"
+                                data-testid="gi-suggestion-description-accept-save"
+                                aria-label="Accept and save suggested description"
+                                (click)="acceptAndSaveDescription()">
+                                Accept &amp; save
                               </button>
                             }
                           </div>

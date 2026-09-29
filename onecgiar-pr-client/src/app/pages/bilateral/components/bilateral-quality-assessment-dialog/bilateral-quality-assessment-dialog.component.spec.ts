@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { BrnButton } from '@spartan-ng/brain/button';
 import { BilateralQualityAssessmentDialogComponent } from './bilateral-quality-assessment-dialog.component';
 import { BilateralQualityAssessmentView } from '../../services/bilateral-quality-assessment-ui.service';
 
@@ -694,7 +696,7 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
     });
   });
 
-  describe('BIL-QTS-T-4 — usable suggestions render with Apply (BIL-QTS-R-3)', () => {
+  describe('BIL-QTS-T-8 — usable suggestions render with Accept & save (BIL-QTS-R-3, amended 2026-09-29)', () => {
     function open(overrides: { suggestions?: { title?: string; description?: string }; currentTitle?: string } = {}) {
       fixture.componentRef.setInput('visible', true);
       fixture.componentRef.setInput('editable', true);
@@ -710,26 +712,135 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
       expect(text().toLowerCase()).not.toContain('no suggestion available');
     });
 
-    it('Apply: sets the draft to the suggestion text and emits nothing', () => {
+    // Falsifier (a): mutating `acceptAndSaveTitle` back to copy-only (no `saveTitle()` call) turns
+    // this red — `emitted` stays 0 and the assertion on `toEqual` fails.
+    it('Accept & save: sets the draft to the suggestion and emits giFieldSaveRequested once with the suggestion text', () => {
       open({ suggestions: { title: 'AI suggested title' } });
-      let emitted = 0;
-      fixture.componentInstance.giFieldSaveRequested.subscribe(() => emitted++);
+      const emitted: Array<{ field: string; value: string }> = [];
+      fixture.componentInstance.giFieldSaveRequested.subscribe((e) => emitted.push(e));
 
-      (host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement).click();
+      (host().querySelector('[data-testid="gi-suggestion-title-accept-save"]') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       expect(fixture.componentInstance.draftTitle()).toBe('AI suggested title');
+      expect(emitted).toEqual([{ field: 'title', value: 'AI suggested title' }]);
+    });
+
+    // Falsifier (b): a suggestion the drawer's OWN validation would block a manual Save for (here,
+    // the draft-placeholder pattern `isPlaceholderTitle` checks) must not save either — no second,
+    // looser validation path for Accept & save (`BIL-QTS-DD-7`). Reviewer advisory (attempt 2): the
+    // draft is reverted to what it held before the click, not left holding the blocked suggestion —
+    // otherwise the field would silently display unsaved suggestion text with no way to tell it
+    // apart from a real (saved) value.
+    it('Accept & save does not emit, and reverts the draft, when the suggestion itself would fail the drawer\'s own validation', () => {
+      open({ suggestions: { title: 'Bilateral Draft #42' } });
+      fixture.componentInstance.draftTitle.set('My edit');
+      fixture.detectChanges();
+      let emitted = 0;
+      fixture.componentInstance.giFieldSaveRequested.subscribe(() => emitted++);
+
+      (host().querySelector('[data-testid="gi-suggestion-title-accept-save"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.draftTitle()).toBe('My edit');
       expect(emitted).toBe(0);
     });
 
-    it('Already applied: shows the Applied state, not the Apply action, once the draft equals the suggestion', () => {
+    // Reviewer FAIL (T-8 attempt 2): `acceptAndSaveTitle` reverted whenever `!canSaveTitle()`, and
+    // `canSaveTitle` is also false when the field is not dirty — so re-accepting a suggestion that
+    // is already the saved value did nothing (no draft change, no emit, no `Applied`). The fix
+    // reverts only on `!titleValid()`; a valid suggestion equal to the saved value must still land
+    // in the draft and read as Applied, with `saveTitle()`'s own `canSaveTitle()` guard (not this
+    // method) accounting for the missing emit.
+    it('re-accepting a suggestion that already equals the saved value re-applies it instead of doing nothing', () => {
+      open({ suggestions: { title: 'AI suggested title' } });
+      fixture.componentInstance.savedTitle.set('AI suggested title');
+      fixture.componentInstance.draftTitle.set('My edit');
+      fixture.detectChanges();
+
+      const emitted: Array<{ field: string; value: string }> = [];
+      fixture.componentInstance.giFieldSaveRequested.subscribe((e) => emitted.push(e));
+
+      (host().querySelector('[data-testid="gi-suggestion-title-accept-save"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.draftTitle()).toBe('AI suggested title');
+      expect(emitted).toEqual([]);
+      expect(host().querySelector('[data-testid="gi-suggestion-title-applied"]')).toBeTruthy();
+    });
+
+    // Falsifier (d): the button is disabled while THIS field's drawer-initiated save is in flight.
+    // Attempt 1 proved this only at the emission boundary ("does not emit while savingField is
+    // set"), which the Reviewer FAILed: that test stays green even with `[disabled]` deleted from
+    // the template, because `saveTitle()`'s own `canSaveTitle()` guard already blocks the emit for
+    // an unrelated reason. This version asserts the BOUND VALUE ITSELF, per the Reviewer's
+    // remediation: `hlmBtn`'s `hostDirectives` forwards `[disabled]` onto `BrnButton` (real
+    // directive in production; the shared Jest Brain stub — `tests/mocks/spartanBrainMock.ts` — in
+    // this suite), so `fixture.debugElement.query(...).injector.get(BrnButton).disabled` reads the
+    // exact value the template bound, independent of whether the stub reflects it onto the DOM
+    // attribute (it does not — see the `.pr-dialog-footer` note above for that separate, still-open
+    // gap). Confirmed red when `[disabled]="savingField() === 'title'"` is deleted from the
+    // template (the property then reads `undefined`, not `false`/`true`).
+    it('binds [disabled] on Accept & save to this field\'s own savingField state, not the other field\'s', () => {
+      open({ suggestions: { title: 'AI suggested title', description: 'AI suggested description' } });
+      const titleDisabled = () =>
+        fixture.debugElement.query(By.css('[data-testid="gi-suggestion-title-accept-save"]')).injector.get(BrnButton).disabled;
+      const descriptionDisabled = () =>
+        fixture.debugElement.query(By.css('[data-testid="gi-suggestion-description-accept-save"]')).injector.get(BrnButton).disabled;
+
+      expect(titleDisabled()).toBe(false);
+      expect(descriptionDisabled()).toBe(false);
+
+      fixture.componentRef.setInput('savingField', 'title');
+      fixture.detectChanges();
+      expect(titleDisabled()).toBe(true);
+      expect(descriptionDisabled()).toBe(false);
+
+      fixture.componentRef.setInput('savingField', 'description');
+      fixture.detectChanges();
+      expect(titleDisabled()).toBe(false);
+      expect(descriptionDisabled()).toBe(true);
+
+      fixture.componentRef.setInput('savingField', null);
+      fixture.detectChanges();
+      expect(titleDisabled()).toBe(false);
+      expect(descriptionDisabled()).toBe(false);
+    });
+
+    // The emission-boundary half kept alongside the property assertion above: `saveTitle()`'s own
+    // `canSaveTitle()` guard blocks the emit too, and the Reviewer advisory calls for the draft
+    // itself to stay untouched while a save is already in flight for that field (attempt 1 wrote
+    // the suggestion into the draft here before the guard ran).
+    it('Accept & save does not emit or touch the draft while savingField is set for that field', () => {
+      open({ suggestions: { title: 'AI suggested title' } });
+      fixture.componentRef.setInput('savingField', 'title');
+      fixture.detectChanges();
+
+      let emitted = 0;
+      fixture.componentInstance.giFieldSaveRequested.subscribe(() => emitted++);
+      (host().querySelector('[data-testid="gi-suggestion-title-accept-save"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(emitted).toBe(0);
+      expect(fixture.componentInstance.draftTitle()).toBe('Existing title');
+    });
+
+    // Falsifier (e): the Applied state shows once the field's current value equals the suggestion —
+    // proven here specifically after a `lastSaveResult.ok` settles, not merely on click. The
+    // `titleDirty()` assertion is what actually proves the SAVED BASELINE moved (design.md §6.1) —
+    // without it this test would pass identically whether or not `settleSaveResult` ever ran, since
+    // `titleApplied()` only compares the draft to the suggestion and the draft was already set to
+    // the suggestion by the click itself.
+    it('Already applied: once lastSaveResult reports the save ok, the block shows Applied, not Accept & save, and the saved baseline moved', () => {
       open({ suggestions: { title: 'AI suggested title' } });
 
-      (host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement).click();
+      (host().querySelector('[data-testid="gi-suggestion-title-accept-save"]') as HTMLButtonElement).click();
+      fixture.componentRef.setInput('lastSaveResult', { field: 'title', ok: true, seq: 1 });
       fixture.detectChanges();
 
       expect(host().querySelector('[data-testid="gi-suggestion-title-applied"]')).toBeTruthy();
-      expect(host().querySelector('[data-testid="gi-suggestion-title-apply"]')).toBeNull();
+      expect(host().querySelector('[data-testid="gi-suggestion-title-accept-save"]')).toBeNull();
+      expect(fixture.componentInstance.titleDirty()).toBe(false);
     });
 
     it('renders a suggestion containing markup as literal text, never as an element', () => {
@@ -747,16 +858,29 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
       expect(node.textContent).toBe('Line one\nLine two');
     });
 
-    // Reviewer FAIL issue 3: the block's only marker was an `aria-hidden` lightbulb, and two
-    // fields each had a button named only "Apply" / only "Save" — indistinguishable to a screen
-    // reader user tabbing through the drawer's controls.
-    it('labels the block as an AI suggestion, and gives Apply/Save field-specific accessible names', () => {
-      open({ suggestions: { title: 'AI suggested title' } });
+    // Falsifier (c): the caption reads "Suggested title" / "Suggested description" — the amended
+    // R-3 label, replacing "AI suggestion". Mutating the caption back turns this red.
+    it('captions the block "Suggested title" / "Suggested description", never "AI suggestion"', () => {
+      open({ suggestions: { title: 'AI suggested title', description: 'AI suggested description' } });
 
-      expect(host().querySelector('[data-testid="gi-suggestion-title"]')?.textContent).toContain('AI suggestion');
+      expect(host().querySelector('[data-testid="gi-suggestion-title"]')?.textContent).toContain('Suggested title');
+      expect(host().querySelector('[data-testid="gi-suggestion-description"]')?.textContent).toContain('Suggested description');
+      expect(text()).not.toContain('AI suggestion');
+    });
 
-      const applyTitle = host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement;
-      expect(applyTitle.getAttribute('aria-label')).toBe('Apply suggested title');
+    // Reviewer FAIL issue 3 (carried over): the block's only marker was an `aria-hidden` lightbulb,
+    // and two fields each had a button named only "Apply" / only "Save" — indistinguishable to a
+    // screen reader user tabbing through the drawer's controls. The amendment keeps the same
+    // discipline under the new name.
+    it('gives Accept & save / Save field-specific accessible names', () => {
+      open({ suggestions: { title: 'AI suggested title', description: 'AI suggested description' } });
+
+      const acceptTitle = host().querySelector('[data-testid="gi-suggestion-title-accept-save"]') as HTMLButtonElement;
+      expect(acceptTitle.getAttribute('aria-label')).toBe('Accept and save suggested title');
+      expect(acceptTitle.textContent).toContain('Accept & save');
+
+      const acceptDescription = host().querySelector('[data-testid="gi-suggestion-description-accept-save"]') as HTMLButtonElement;
+      expect(acceptDescription.getAttribute('aria-label')).toBe('Accept and save suggested description');
 
       const saveTitle = host().querySelector('[data-testid="bqa-dialog-save-title"]') as HTMLButtonElement;
       expect(saveTitle.getAttribute('aria-label')).toBe('Save title');
@@ -890,7 +1014,7 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
       expect(fixture.componentInstance.canSaveTitle()).toBe(false);
     });
 
-    it('R-3 Apply: once the suggestion becomes the draft, Save enables', () => {
+    it('R-3 Accept & save: reuses the Save path directly — the field is dirty/valid the instant the suggestion becomes the draft', () => {
       fixture.componentRef.setInput('currentTitle', 'Existing title');
       fixture.componentRef.setInput('visible', true);
       fixture.componentRef.setInput('editable', true);
@@ -899,9 +1023,12 @@ describe('BilateralQualityAssessmentDialogComponent', () => {
 
       expect(fixture.componentInstance.canSaveTitle()).toBe(false);
 
-      (host().querySelector('[data-testid="gi-suggestion-title-apply"]') as HTMLButtonElement).click();
+      const emitted: Array<{ field: string; value: string }> = [];
+      fixture.componentInstance.giFieldSaveRequested.subscribe((e) => emitted.push(e));
+      (host().querySelector('[data-testid="gi-suggestion-title-accept-save"]') as HTMLButtonElement).click();
       fixture.detectChanges();
 
+      expect(emitted).toEqual([{ field: 'title', value: 'AI suggested title' }]);
       expect(fixture.componentInstance.canSaveTitle()).toBe(true);
     });
   });

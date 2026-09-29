@@ -299,16 +299,39 @@ export class BilateralQualityAssessmentDialogComponent implements OnDestroy {
     return /^Bilateral Draft #\d+$/.test(title);
   }
 
-  applyTitleSuggestion(): void {
+  /**
+   * `BIL-QTS-DD-7` (P2-3848 AC8): sets the draft to the suggestion, then calls `saveTitle()` —
+   * same validation, same emission, same baseline move as a manual Save. Reverts to the prior
+   * draft only when the suggestion itself is invalid (`!titleValid()`); a valid suggestion that
+   * merely equals the saved value must still land in the draft and read as Applied — that case is
+   * `saveTitle()`'s own `canSaveTitle()` guard skipping the emit, not a reason to revert here.
+   * Short-circuits while this field's own save is already in flight.
+   */
+  acceptAndSaveTitle(): void {
     const suggestion = this.titleSuggestion();
     if (suggestion === null) return;
+    if (this.savingField() === 'title') return;
+    const previousDraft = this.draftTitle();
     this.draftTitle.set(suggestion);
+    if (!this.titleValid()) {
+      this.draftTitle.set(previousDraft);
+      return;
+    }
+    this.saveTitle();
   }
 
-  applyDescriptionSuggestion(): void {
+  /** Description half of `acceptAndSaveTitle` above — see its doc comment. */
+  acceptAndSaveDescription(): void {
     const suggestion = this.descriptionSuggestion();
     if (suggestion === null) return;
+    if (this.savingField() === 'description') return;
+    const previousDraft = this.draftDescription();
     this.draftDescription.set(suggestion);
+    if (!this.descriptionValid()) {
+      this.draftDescription.set(previousDraft);
+      return;
+    }
+    this.saveDescription();
   }
 
   saveTitle(): void {

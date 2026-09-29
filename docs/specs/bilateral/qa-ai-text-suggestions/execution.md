@@ -214,3 +214,35 @@
 **Decisions made:** skills `nestjs-expert`, `api-design-principles`, `tdd`; `bilateral-result-summaries.en.md` not updated (design §4: no `/api/bilateral/*` consumer payload change).
 
 **Final verification:** PASS.
+
+### `BIL-QTS-T-8` — Client: dialog Accept & save and suggestion labels
+
+- **Final status:** PASS (attempt 3)
+- **Date:** 2026-09-29
+- **Attempts:** 3
+- **Requirements covered:** `BIL-QTS-R-3` as amended (UI half)
+- **Budget tripwire:** amendment budget +2 review rounds; after T-8 attempt 2 the amendment stood at 5 rounds (T-8: 3, T-7: 2 incl. one parallel-lens round). Escalated; owner approved attempt 3 ("Si adelante con el tercer intento", 2026-09-29).
+
+**Attempt 1** — Reviewer **FAIL**
+- Files changed: `onecgiar-pr-client/src/app/pages/bilateral/components/bilateral-quality-assessment-dialog/bilateral-quality-assessment-dialog.component.{ts,html,spec.ts}` — `acceptAndSaveTitle/Description` (set draft, call `saveTitle/saveDescription`), captions "Suggested title/description", aria-labels, testids `*-accept-save`, `[disabled]` while saving.
+- Red: (a) `toEqual` [] vs emit, (c) `toContain('Suggested title')`. Green: dialog 86/86; tsc, lint clean. Leader re-run VERIFIED: 4 suites / 224 (Implementer reported consumer counts garbled as "114 / 110").
+- FAIL: falsifier (d) "disabled while savingField is set" stayed green with the `[disabled]` binding deleted.
+- runtime events: none
+
+**Attempt 2** (effort high) — Reviewer **FAIL**
+- (d) now asserts `BrnButton.disabled` via the injector (red with the binding removed). `[advisory-grade]` added by the Leader: accept* skip while saving and revert the draft when `!canSave*()`; (e) asserts `titleDirty()` false after ok. Green: dialog 87/87, consumers 225; Leader re-run VERIFIED 225, tsc 0, lint pass.
+- FAIL: the revert fires on `!canSaveTitle()`, which is also false when the field is not dirty — so re-accepting a suggestion that equals the saved value (after the user edited away from it) does nothing, violating R-3 *Accept & save* "the Title field takes the suggested text". Root cause: the Leader's advisory-grade item was specified as `!canSave*` instead of `!valid`. Remediation: revert only on `!titleValid()` / `!descriptionValid()` + a test.
+- ADVISORY: (b) should start from user-typed text to prove it survives a revert; shrink the accept* doc comment.
+- runtime events: none
+
+**Attempt 3** (effort xhigh) — Reviewer **PASS**
+- Files changed: `bilateral-quality-assessment-dialog.component.{ts,spec.ts}` — revert only on `!titleValid()` / `!descriptionValid()`; doc comments shrunk; (b) starts from 'My edit'; new regression test (saved = suggestion, draft 'My edit', click → draft = suggestion, 0 emits, *Applied*).
+- Red: new test on attempt-2 code → Expected "AI suggested title", Received "My edit".
+- Implementer verification: dialog 88/88; consumers 4 suites / 226; tsc clean; ng lint pass.
+- Evidence re-run (Leader-inline): **VERIFIED** — 226 passed, tsc 0, lint pass.
+- Reviewer: **PASS** — one save path (DD-7); R-3 *Accept & save*, *Already applied* hold; typed text restored on an invalid suggestion.
+- runtime events: none
+
+**Open for T-6:** "Accept & save" fit beside the suggestion at 520 px not verified in a browser.
+
+**Final verification:** PASS.

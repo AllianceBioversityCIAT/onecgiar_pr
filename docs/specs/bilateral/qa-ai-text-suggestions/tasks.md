@@ -209,7 +209,7 @@
   - [x] Falsifiers (a)–(g) green; (a), (c), (d) observed red first
   - [x] eslint + `tsc --noEmit` clean; `onecgiar-pr-server/src/api/bilateral/CLAUDE.md` / `AGENTS.md` updated if they list center endpoints
 
-### `BIL-QTS-T-8` — Client: dialog Accept & save and suggestion labels *(amendment 2026-09-29, P2-3848 AC6–AC8)*
+### [x] `BIL-QTS-T-8` — Client: dialog Accept & save and suggestion labels *(amendment 2026-09-29, P2-3848 AC6–AC8)*
 
 - **Type:** `client`
 - **Description:** In `bilateral-quality-assessment-dialog`, replace **Apply** with **Accept & save** (DD-7: set the draft to the suggestion, then call the existing `saveTitle()` / `saveDescription()`); relabel the suggestion caption to **Suggested title** / **Suggested description**; keep the *Applied* state; `aria-label`s "Accept and save suggested title/description". No new outputs.
@@ -226,8 +226,8 @@
   - **Disqualifier:** "Accept & save" does not fit beside the suggestion at 520 px → report for T-6, don't shrink fonts.
   - **Consumers:** dialog spec, creator spec (host), `onecgiar-pr-client/cypress` (grep the old `Apply` test ids before renaming)
 - **Definition of done:**
-  - [ ] Falsifiers green; existing dialog specs updated only where they asserted Apply
-  - [ ] Lint + type-check clean
+  - [x] Falsifiers green; existing dialog specs updated only where they asserted Apply
+  - [x] Lint + type-check clean
 
 ### `BIL-QTS-T-9` — Client: re-run on close and provenance call *(amendment 2026-09-29, P2-3848 AC3/AC11)*
 
