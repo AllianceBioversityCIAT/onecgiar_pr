@@ -2,11 +2,27 @@
 
 **What this owns:** the center Overview tab (`/bilateral/:acronym/overview`) — a KPI deck plus six
 cards (Reporting status, Needs attention, Results by project, Science Program contribution, Results
-by result type, Reporting pace) computed from the center's filtered result set for the selected
-phase.
+by result type, Reporting pace) computed from the center's filtered result set for the selected phase.
 
 ## Invariants
 
+- **The Total results card's `newCount` is unconditional, NOT status-gated — deliberately
+  different from the Reporting tab's per-project "new for review" (`BOV-DD-1`).** The Reporting
+  tab's `bilateral-projects-panel` "new for review" count additionally requires `status_id ===
+  pending`; this card's `newCount` is simply "not replicated" (`Number(row.is_replicated) !== 1`),
+  regardless of status, so `replicatedCount + newCount` always equals `totalResults.count`
+  (`BOV-R-2`/`BOV-R-2.1`). **Do not "fix" one to match the other** — intentionally different numbers
+  for the same center/phase. Badges are non-interactive `<span>`s (whole card is one `<a>`, `BOV-DD-4`);
+  tokens copied from `bilateral-projects-panel.component.html:265-299`, all counts computed in one
+  loop (`BOV-DD-2`).
+- **`w1w2ContributorCount`/`w1w2LeadCount` (`BOV2-R-1`) render INLINE next to `w1w2Count`** —
+  `"N W1/W2 (X contributing · Y lead)"` — not as a standalone badge. A standalone "N of M W1/W2"
+  pill shipped first and confused users twice (lived apart from the number it explained, reused
+  words already on the line above); moved inline as a direct UX fix. Filter: `source !== 'API'`
+  AND `is_leading_result !== 1` = contributing; `w1w2LeadCount = w1w2Count - w1w2ContributorCount`.
+  **A progress-bar-panel redesign of this card was tried and reverted same-day** (`overview-total-
+  results-progress-bars` spec, task `OTR-T-1`) — user preferred the plain-text card once seeing it
+  next to the deck's other plain-white cards. Don't re-attempt without re-confirming visual direction.
 - **The page computes no figure itself** (`COV-DD-1`). Every number rendered comes out of
   `bilateral-overview.aggregate.ts`'s `buildOverviewModel` — the component only wires signals and
   renders. If a card shows a wrong number, the bug is in `aggregate.ts` or in the row set fed to it,
@@ -30,10 +46,8 @@ phase.
   used to treat `activeTab === 'overview'` as Reporting; that branch is gone (`COV-R-1` B) and the
   only caller passes `'reporting'` explicitly. Don't reintroduce the alias to "activate two tabs at
   once" — pass `activeTab="overview"` and let the Overview tab alone go active.
-- **Chart colors only through `ResolvedChartTokens`** (`COV-DD-5`). `bilateral-overview.charts.ts`
-  never calls `resolveChartTokens()` itself (it resolves to `''` under jsdom); the component's
-  `chartTokens` computed calls it once in the browser and passes the result into every option
-  builder. Status meaning lives in tile pills and the a11y table, never in a chart series color.
+- **Chart colors only through `ResolvedChartTokens`** (`COV-DD-5`). `bilateral-overview.charts.ts` never calls `resolveChartTokens()` itself (`''` under jsdom);
+  the component's `chartTokens` computed calls it once and passes the result into every option builder — status meaning lives in tile pills and the a11y table, never in a chart series color.
 - **Controls row is `sticky top-0` inside the REAL `#workArea` scroller**, not the sticky band
   (`COV-DD-7`) — the phase selector must render only here, same reason the SP shell kept it out of
   the band. `bilateral-overview.cy.ts` measures this against the actual scroller at two heights,
@@ -46,9 +60,8 @@ phase.
 resolution, `resolvedCenterId`) and `effectiveVersionId` (`selectedPhase`, defaulting to Open), reads
 `overviewService.entry(centerKey, versionId)`, runs the row set through `filterCenterResults`, and
 feeds `buildOverviewModel` (`bilateral-overview.aggregate.ts:220`). Chart options/tables come from
-`bilateral-overview.charts.ts`, fed `model()` + `chartTokens()` + `chartOptions()` (limit, labels,
-`today`). URL ↔ state sync lives in `applyUrlParams`/`writeUrl`; phase and center context live in
-`BilateralContextService` (shell scope), not here.
+`bilateral-overview.charts.ts`, fed `model()` + `chartTokens()` + `chartOptions()`. URL ↔ state sync
+lives in `applyUrlParams`/`writeUrl`; phase and center context live in `BilateralContextService`.
 
 ## Gotchas
 
@@ -76,16 +89,13 @@ feeds `buildOverviewModel` (`bilateral-overview.aggregate.ts:220`). Chart option
   immediately after `cy.viewport(...)` catches the SVG mid-resize (still the previous width) and
   reports a false horizontal-overflow positive — wait one frame/tick before measuring.
 - **Rule: never mix a named Tailwind breakpoint (`sm:`/`md:`/`lg:`/`xl:`) with an arbitrary
-  `min-[Npx]:`/`max-[Npx]:` variant on the SAME CSS property.** Found by `bilateral-overview.cy.ts`
-  and fixed in this spec: the KPI deck's grid used to mix `sm:grid-cols-2` with
-  `min-[900px]:grid-cols-3`/`min-[1280px]:grid-cols-5` (same for the error state's
-  `col-span`); in the compiled CSS, `sm:`'s rule was emitted AFTER both arbitrary-breakpoint rules,
-  so at ≥640px width `sm:grid-cols-2` won the cascade tie and the deck never shed past 2 columns.
-  Root cause is Tailwind v4 sorting named and arbitrary-bracket breakpoints into separate groups
-  rather than one ascending-px order. Fix: express every breakpoint on that property the same way —
-  here, `sm:` became `min-[640px]:` (Tailwind's own `sm` value) so all three sort together. The same
-  risk applies anywhere else in the codebase `sm:`/`md:`/`lg:` and `min-[Npx]:` co-occur on one
-  property (not audited beyond this file — see "Not verified").
+  `min-[Npx]:`/`max-[Npx]:` variant on the SAME CSS property.** Found by `bilateral-overview.cy.ts`:
+  the KPI deck's grid mixed `sm:grid-cols-2` with `min-[900px]:grid-cols-3`/`min-[1280px]:grid-cols-5`
+  (same for the error state's `col-span`); Tailwind v4 sorts named and arbitrary-bracket breakpoints
+  into separate groups rather than one ascending-px order, so `sm:`'s rule compiled AFTER both and
+  won the cascade tie at ≥640px — the deck never shed past 2 columns. Fix: express every breakpoint
+  on that property the same way (`sm:` → `min-[640px]:`). Same risk anywhere else `sm:`/`md:`/`lg:`
+  and `min-[Npx]:` co-occur on one property (not audited beyond this file — see "Not verified").
 
 ## Test map
 
@@ -99,7 +109,8 @@ feeds `buildOverviewModel` (`bilateral-overview.aggregate.ts:220`). Chart option
 
 ## Not verified
 
-- Whether the `sm:`/arbitrary-breakpoint cascade defect above also affects other pages using the
-  same mixed-breakpoint pattern — not audited beyond this folder.
+- Whether the `sm:`/arbitrary-breakpoint cascade defect above also affects other mixed-breakpoint
+  pages — not audited beyond this folder.
+- Visual-parity vs `bilateral-projects-panel`'s badges: human check at browser-verification (`BOV-T-1`).
 
-**Verified:** 2026-09-14 · qa-development-2026 · 576167f86 (spec: `docs/specs/archive/2026-09-14-bilateral--center-overview-tab/`, `COV-T-8` H-1/H-2)
+**Verified:** 2026-09-29 · qa-development-2026-ss · bd37a0f31 (specs: `changes/overview-replicated-new-badges`, `changes/overview-w1w2-contributor-badge`, `quick/overview-w1w2-breakdown-inline`)

@@ -10,6 +10,7 @@ import {
   buildOverviewModel,
   buildOverviewPaceModel,
   buildStatusModel,
+  buildTotalResultsKpi,
   resolveResultTypeGroup,
 } from './bilateral-overview.aggregate';
 import {
@@ -43,18 +44,94 @@ describe('bilateral-overview.aggregate', () => {
   describe('KPI deck (COV-R-6)', () => {
     const kpis = buildOverviewKpis(FIXTURE_D1_ROWS, FIXTURE_PROJECTS, FIXTURE_DRAFTS, FIXTURE_TODAY);
 
-    it('Total results: counts, W3/W1W2 split, lead/contributing split', () => {
+    it('Total results: counts, W3/W1W2 split, lead/contributing split, replicated/new split', () => {
       expect(kpis.totalResults).toEqual({
         count: 10,
         w3Count: 9,
         w1w2Count: 1,
         leadCount: 6,
         contributingCount: 4,
+        // FIXTURE_D1_ROWS carries no replicated rows (all default `is_replicated: false`, BOV-R-2.1).
+        replicatedCount: 0,
+        newCount: 10,
+        // Only row id 6 is W1/W2 (`source: 'Result'`), and it is lead (`is_leading_result: 1`), so
+        // no row in this fixture is both W1/W2 AND contributing (BOV2-R-1).
+        w1w2ContributorCount: 0,
+        w1w2LeadCount: 1,
+      });
+    });
+
+    // @akili-spec bilateral/overview-w1w2-contributor-badge (BOV2-R-1)
+    describe('Total results: w1w2ContributorCount (BOV2-T-1)', () => {
+      const CREATED = '2026-09-10';
+
+      it('counts only rows that are BOTH W1/W2 AND contributing, across all 4 combinations', () => {
+        const rows: BilateralCenterResult[] = [
+          // W3 (source === 'API'), lead — never counted
+          { created_date: CREATED, source: 'API', is_leading_result: 1 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, source: 'API', is_leading_result: 1 } as unknown as BilateralCenterResult,
+          // W3, contributor — never counted (wrong filter class: counts a W3 row)
+          { created_date: CREATED, source: 'API', is_leading_result: 0 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, source: 'API', is_leading_result: 0 } as unknown as BilateralCenterResult,
+          // W1/W2 (source !== 'API'), lead — never counted (wrong filter class: counts a lead row)
+          { created_date: CREATED, source: 'Result', is_leading_result: 1 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, source: 'Result', is_leading_result: 1 } as unknown as BilateralCenterResult,
+          // W1/W2, contributor — the only rows that count
+          { created_date: CREATED, source: 'Result', is_leading_result: 0 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, source: 'Result', is_leading_result: 0 } as unknown as BilateralCenterResult,
+        ];
+
+        const totalResults = buildTotalResultsKpi(rows);
+        expect(totalResults.w1w2ContributorCount).toBe(2);
+        // w1w2LeadCount is the complement within W1/W2: 4 W1/W2 rows total (2 lead + 2 contributor).
+        expect(totalResults.w1w2LeadCount).toBe(2);
+        expect(totalResults.w1w2ContributorCount + totalResults.w1w2LeadCount).toBe(totalResults.w1w2Count);
+      });
+
+      it('is 0 on the empty-rows case', () => {
+        const totalResults = buildTotalResultsKpi([]);
+        expect(totalResults.w1w2ContributorCount).toBe(0);
+        expect(totalResults.w1w2LeadCount).toBe(0);
       });
     });
 
     it('Pending review: count, oldest age, over-14 count — age 14 not counted, age 15 counted', () => {
       expect(kpis.pendingReview).toEqual({ count: 2, oldestAgeDays: 15, overAgeCount: 1 });
+    });
+
+    // @akili-spec bilateral/overview-replicated-new-badges (BOV-R-1, BOV-R-2, BOV-R-2.1, BOV-AC-1)
+    describe('Total results: replicated/new split (BOV-T-1)', () => {
+      const CREATED = '2026-09-10';
+
+      it('normalizes mixed is_replicated wire shapes (1, "1", true → replicated; 0, undefined → new) and sums to count', () => {
+        const rows: BilateralCenterResult[] = [
+          { created_date: CREATED, is_replicated: 1 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, is_replicated: '1' } as unknown as BilateralCenterResult,
+          { created_date: CREATED, is_replicated: true } as unknown as BilateralCenterResult,
+          { created_date: CREATED, is_replicated: 1 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, is_replicated: 1 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, is_replicated: 0 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, is_replicated: 0 } as unknown as BilateralCenterResult,
+          { created_date: CREATED, is_replicated: undefined } as unknown as BilateralCenterResult,
+        ];
+
+        const totalResults = buildTotalResultsKpi(rows);
+
+        expect(totalResults.replicatedCount).toBe(5);
+        expect(totalResults.newCount).toBe(3);
+        expect(totalResults.replicatedCount + totalResults.newCount).toBe(totalResults.count);
+      });
+
+      it('a boolean `true` (not just numeric 1) counts as replicated — guards against a strict `=== 1` regression', () => {
+        const rows: BilateralCenterResult[] = [{ created_date: CREATED, is_replicated: true } as unknown as BilateralCenterResult];
+        expect(buildTotalResultsKpi(rows).replicatedCount).toBe(1);
+      });
+
+      it('sum invariant holds on the empty-rows case (0 + 0 === 0)', () => {
+        const totalResults = buildTotalResultsKpi([]);
+        expect(totalResults.replicatedCount + totalResults.newCount).toBe(totalResults.count);
+        expect(totalResults).toMatchObject({ count: 0, replicatedCount: 0, newCount: 0 });
+      });
     });
 
     it('Approved: count, approval rate, rejected count', () => {

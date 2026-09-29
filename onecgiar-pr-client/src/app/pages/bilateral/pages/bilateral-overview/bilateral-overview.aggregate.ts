@@ -99,6 +99,27 @@ export interface OverviewTotalResultsKpi {
   w1w2Count: number;
   leadCount: number;
   contributingCount: number;
+  /** `BOV-R-1` — center-wide count of results where `Number(row.is_replicated) === 1`. */
+  replicatedCount: number;
+  /**
+   * `BOV-R-2`/`BOV-R-2.1` — center-wide count of results NOT replicated, unconditional (no status
+   * gate, unlike the Reporting tab's per-project "new for review"). `replicatedCount + newCount`
+   * always equals `count` (`BOV-DD-1`).
+   */
+  newCount: number;
+  /**
+   * `BOV2-R-1` — center-wide count of rows that are BOTH W1/W2 (`row.source !== 'API'`) AND
+   * contributing (`Number(row.is_leading_result) !== 1`), computed in the same single loop as the
+   * fields above (`BOV2-DD-1`, reusing `BOV-DD-2`'s single-loop extension pattern).
+   */
+  w1w2ContributorCount: number;
+  /**
+   * `w1w2Count - w1w2ContributorCount` — the complement within W1/W2 (W1/W2 AND lead). Shown
+   * inline next to `w1w2Count` so the split reads without a separate badge or tooltip (see this
+   * folder's `CLAUDE.md` — the standalone "N of M W1/W2" badge confused users; the breakdown now
+   * lives on the number it explains).
+   */
+  w1w2LeadCount: number;
 }
 
 export interface OverviewPendingReviewKpi {
@@ -139,9 +160,15 @@ export interface OverviewKpisModel {
 export function buildTotalResultsKpi(rows: readonly BilateralCenterResult[]): OverviewTotalResultsKpi {
   let w3Count = 0;
   let leadCount = 0;
+  let replicatedCount = 0;
+  let w1w2ContributorCount = 0;
   for (const row of rows) {
-    if (row.source === 'API') w3Count++;
-    if (Number(row.is_leading_result) === 1) leadCount++;
+    const isW3 = row.source === 'API';
+    const isLead = Number(row.is_leading_result) === 1;
+    if (isW3) w3Count++;
+    if (isLead) leadCount++;
+    if (Number(row.is_replicated) === 1) replicatedCount++;
+    if (!isW3 && !isLead) w1w2ContributorCount++;
   }
   return {
     count: rows.length,
@@ -149,6 +176,10 @@ export function buildTotalResultsKpi(rows: readonly BilateralCenterResult[]): Ov
     w1w2Count: rows.length - w3Count,
     leadCount,
     contributingCount: rows.length - leadCount,
+    replicatedCount,
+    newCount: rows.length - replicatedCount,
+    w1w2ContributorCount,
+    w1w2LeadCount: rows.length - w3Count - w1w2ContributorCount,
   };
 }
 
