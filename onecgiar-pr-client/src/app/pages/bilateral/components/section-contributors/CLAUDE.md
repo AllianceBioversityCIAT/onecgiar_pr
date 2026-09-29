@@ -1,11 +1,15 @@
 # section-contributors
 
-**Verified:** 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3823 blindaje (claves solo al tocar la pregunta, selector sin pérdida, entrada normalizada) + P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
+**Verified:** 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
+del tracker MDS y se muda a Full metadata, opcional para todo tipo (se retiran el marcador
+`required` y el hint rojo; el banner de centros se muda a Block 1, junto al selector de centros);
+prior: 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3823 blindaje (claves solo al tocar la pregunta, selector sin pérdida, entrada normalizada) + P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
-centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, socios externos, y
-—detrás del toggle Full Metadata— la pregunta de resultado enlazado/agrupado. Historia: **P2-3368**.
+centros CGIAR contribuyentes, proyectos W3/bilaterales y programas científicos en Block 1, y
+—detrás del toggle Full Metadata— los socios externos (opcionales desde P2-3821) y la pregunta de
+resultado enlazado/agrupado. Historia: **P2-3368**, **P2-3821**.
 
 Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de campo específica,
 `app-bilateral-field-quality-flag` muestra el feedback de Contributors & Partners.
@@ -25,15 +29,20 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   (**signal**), `InnovationUseResultsService.resultsList`. Que carguen tarde es el origen de la
   primera trampa.
 - **Progreso / Submit:** `BilateralMdsTrackerService.setSectionFields('contributors', […],
-  'partners')` incluye `lead-center` y `external-partners`; `lead-project` cuenta solo si el resultado
-  cargado tiene proyecto líder. Los resultados de API o versionados pueden no tenerlo. Este último va
-  `filled: partnersHydrated() && externalPartnersSatisfied()` — ver la invariante abajo.
+  'partners')` incluye `lead-center`; `lead-project` cuenta solo si el resultado cargado tiene
+  proyecto líder (los resultados de API o versionados pueden no tenerlo). 🛑 **`external-partners`
+  YA NO se publica al tracker desde P2-3821** (el PO alineó el cliente con el Fetcher, que nunca
+  exigió `contributing_partners`): el campo se movió a Full metadata y es opcional para **todos**
+  los tipos, así que ya no puede bloquear Submit ni la completitud de la sección. Ver la trampa más
+  abajo — la invariante de no reportar satisfecho lo que el payload descarta sigue viva, sólo que
+  ahora vive en `hiddenFieldsWithValues()`, no en el tracker.
   ⚠️ **El grupo `toc` que publica `<app-section-toc>` en este mismo bucket va todo
   `optional: true` desde el 9-sep-2026** (decisión del PO): se lista en el checklist pero **no
   cuenta** para el porcentaje ni para `overallStatus()`, que es el único gate del "Submit for
   review". Con el Primary Science Program elegido ya se puede pasar a Pending Review; el servidor
   nunca pidió más (`bilateral-center.service.ts → submitForReview`: centro líder del que el usuario
-  es miembro + Science Program asignado). Los tres ítems de `partners` **sí** siguen contando.
+  es miembro + Science Program asignado). Los ítems de `partners` (`lead-center`, y `lead-project`
+  cuando hay proyecto líder) **sí** siguen contando; `external-partners` ya no (P2-3821).
 - **Coming soon:** ya **no queda ningún control** en ese estado. El último en salir fue
   enlazado/agrupado el 24-sep-2026 (P2-3368 AC10-AC14); los contributing science programs habían
   salido el 3-sep. La regla sigue viva: un control sin storage va **visible pero deshabilitado con
@@ -90,10 +99,13 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 - ⚠️ **Rol de socio como en pool funding:** `8` si hay fila en `results_knowledge_product`, `2` si
   no. Elegirlo mal **no revienta**: esconde los socios del GET y del green check (`IN (2,8)`).
 - 🛑 **INVARIANTE: nada se reporta como satisfecho mientras el payload descarta sus claves.**
-  `external-partners` sólo va `filled: true` si `partnersHydrated()`. Antes, si el GET de detalle
-  fallaba, el usuario elegía socios, la sección se ponía verde, Submit se desbloqueaba y **cada
-  PATCH tiraba `institutions`**: no se escribía nada. Si tocas `buildContributorsPayload()`, toca
-  también `updateContributorsMds()`.
+  Antes vivía en el tracker (`external-partners` sólo iba `filled: true` si `partnersHydrated()`);
+  **desde P2-3821 el campo ya no está en el tracker**, así que la invariante se mudó a
+  `hiddenFieldsWithValues()`: el conteo de socios sólo suma 1 cuando `partnersHydrated() &&
+  externalPartnersSatisfied()`, nunca antes. Sin esto, el GET de detalle podía fallar, el usuario
+  elegía socios, la nota de "N campos ocultos" prometía guardarlos y **cada PATCH tiraba
+  `institutions`**: no se escribía nada. Si tocas `buildContributorsPayload()`, toca también
+  `hiddenFieldsWithValues()`.
 - ⚠️ **El efecto de hidratación NO se reintenta solo.** `hydrateWhenReady` sólo corre cuando cambia
   una de sus señales, y tras la carga inicial ninguna cambia. Por eso el fallo se muestra:
   `partnersLoadFailed()` pinta un `app-alert-status status="error"` con el botón
@@ -104,9 +116,13 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   para siempre, `hydrateWhenReady` nunca corría, y por tanto `loadExternalPartnersState()` tampoco
   — `partnersHydrated()` nunca llegaba a evaluarse, con cero error visible (la causa raíz original
   de "External partners" atascado). Ahora `centersLoadFailed()` pinta el mismo patrón
-  `app-alert-status status="error"` + botón **Retry loading centers** →
-  `retryLoadCenters()`, justo antes del bloque de `partnersLoadFailed()` en el template. No se tocó
-  `CentersService` (fuera de alcance, ~25 pantallas consumidoras — Option C rechazada).
+  `app-alert-status status="error"` + botón **Retry loading centers** → `retryLoadCenters()`.
+  🛑 **Desde P2-3821 este banner vive en Block 1** (`sc-block--centers`, junto al selector de
+  centros, BIL-R-5/BIL-DD-3), **no** junto a `partnersLoadFailed()`: reporta un fallo de catálogo
+  que bloquea todo el guardado, y debe seguir visible aunque Full metadata esté colapsado — el
+  banner de socios (`partnersLoadFailed()`) sí se movió dentro de Full metadata, porque es sobre un
+  campo que ahora vive ahí. No se tocó `CentersService` (fuera de alcance, ~25 pantallas
+  consumidoras — Option C rechazada).
 - ⚠️ Mismo mecanismo para los socios: `saveContributors` se dispara con cada cambio de
   centro/proyecto, así que un `institutions: []` prematuro **borraría los socios guardados**. El
   `error` del GET deja `partnersHydrated` en `false` a propósito.
@@ -114,11 +130,22 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
   control de "lo lidera un socio" y el centro líder es de solo lectura, así que el valor es
   derivable. Se manda explícito porque la validación trata `NULL` como "sin contestar" y nunca
   pondría la sección en verde. Si bilateral admite lead partner algún día, este es el punto a tocar.
-- 🛑 **`external-partners` SÍ se publica al tracker desde P2-3443** (se revirtió la decisión del
-  25-ago: se había sacado porque el dato no se guardaba y Submit quedaba bloqueado sin salida).
-  **Si la persistencia se rompe, saca el ítem otra vez — no aflojes la UI.** Centros y proyectos
-  siguen fuera por otro motivo (P2-3348: van `[required]="false"`, y trackear un campo que la UI
-  llama Optional bloquea Submit sin explicación).
+- ✅ **`external-partners` YA NO se publica al tracker — decisión P2-3821, no un descuido.**
+  Historia completa: se sacó el 25-ago (el dato no se guardaba y Submit quedaba bloqueado sin
+  salida), se **restauró** con P2-3443 una vez la persistencia se arregló, y el 29-sep-2026 el PO
+  la sacó por tercera vez y esta vez **a propósito y para quedarse**: alineó el formulario con el
+  Fetcher, que nunca exigió `contributing_partners` (`common_fields.json`, ver
+  `docs/specs/bilateral/contributors-partners-optional/requirements.md`). El campo se movió a Full
+  metadata y es opcional para todo tipo de resultado — ya no bloquea Submit ni cuenta para la
+  completitud de la sección.
+  🛑 **Si la persistencia vuelve a romperse, la reparación es arreglar `partnersHydrated()` /
+  `buildContributorsPayload()` — NO restaurar el ítem del tracker.** Restaurarlo revertiría la
+  decisión P2-3821 sin que nadie lo pidiera: la UI ya no llama obligatorio a este campo (sin
+  marcador `required`, sin hint rojo), y un ítem de tracker detrás de eso volvería a bloquear
+  Submit sin que la pantalla explique por qué — el mismo defecto que motivó sacarlo la primera vez.
+  Centros y proyectos siguen fuera del tracker por otro motivo (P2-3348: van
+  `[required]="false"`, y trackear un campo que la UI llama Optional bloquea Submit sin
+  explicación) — misma razón, ahora también la de socios.
 - ✅ **Enlazado/agrupado ya se persiste** (P2-3368 AC10-AC14, 24-sep-2026): `has_innovation_link` +
   `linked_results` en `SaveBilateralContributorsDto`, y de vuelta en el detalle como
   `commonFields.has_innovation_link` + `linkedResults`. `hiddenFieldsWithValues()` vuelve a contarlo.
@@ -208,15 +235,21 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 | Green check de partners en bilateral | La función MySQL exige un delivery type por socio y bilateral no los captura (AC6). | Producto + BACK |
 
 ## Tests
-`section-contributors.component.spec.ts` — 126 casos (P2-3228 añadió 3: etiqueta del Lead center sin proyecto; BCT-T-6 añadió 12: lock/auto-select de centros
-derivados; BIL-T-1 añadió 7: centers-load-failure regression). El template se sobreescribe con
+`section-contributors.component.spec.ts` — 157 casos (P2-3228 añadió 3: etiqueta del Lead center sin proyecto; BCT-T-6 añadió 12: lock/auto-select de centros
+derivados; BIL-T-1 añadió 7: centers-load-failure regression; P2-3821/BCP-T-1 reescribió los casos
+del tracker y de `hiddenFieldsWithValues()` para que ninguno espere `external-partners`, y añadió los
+de `showFullMetadata`). El template se sobreescribe con
 `<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds — y eso es justo lo que
 dejó pasar el hueco de P2-3520 (ver la trampa de `isStatic`).
 
-`section-contributors.readonly.spec.ts` — 16 casos (BIL-T-1 añadió 3: banner/Retry de centers
-renderizado en el DOM real), y **sí renderiza el template real** (stubea solo
-`<app-section-toc>`, que arrastra el diálogo de Spartan). Mide, por cada uno de los cuatro
-selectores, cuántos nodos enfocables no deshabilitados quedan: 0 en solo-lectura, >0 en editable.
+`section-contributors.readonly.spec.ts` — 29 casos (BIL-T-1 añadió 3: banner/Retry de centers
+renderizado en el DOM real; P2-3821/BCP-T-2 añadió 6: el picker "External partners" ausente/presente
+según `showAllFields()` para tipo 1 y tipo 2, sin marcador `required` ni hint rojo, y el banner de
+centros renderizado con Full metadata colapsado — y reescribió los casos de `PARTNER_PICKER_LABELS`
+para expandir Full metadata antes de buscar "External partners"), y **sí renderiza el template
+real** (stubea solo `<app-section-toc>`, que arrastra el diálogo de Spartan). Mide, por cada uno de
+los cuatro selectores, cuántos nodos enfocables no deshabilitados quedan: 0 en solo-lectura, >0 en
+editable.
 Si añades un control nuevo a la sección, este spec lo cuenta solo.
 
 ## 2026-09-03 — Contributing science programs ya se guardan y salen siempre

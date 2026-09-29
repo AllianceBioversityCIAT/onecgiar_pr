@@ -232,7 +232,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   // Put the tag back — never a silently-dropped value — if a control here ever loses its storage.
 
   // ─────────────────────────────────────────────────────────────────────────
-  // P2-3368 · External partners (mandatory: at least one partner OR the "no partners" checkbox)
+  // P2-3821 · External partners (optional; the Fetcher never required it — see BIL-DD-1).
+  // Answer it with at least one partner OR the "no partners" checkbox, in Full metadata.
   // ─────────────────────────────────────────────────────────────────────────
   /**
    * Same catalogue W1/W2 uses for External partners (`InstitutionsService`), read through the SIGNAL
@@ -265,9 +266,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   /**
    * The read failed and there is NO automatic second chance: `hydrateWhenReady` only re-runs when
    * one of the signals it tracks changes, and after the initial load none of them does. Without a
-   * visible error the section became a black hole — the user picked partners, the block went green
-   * and Submit unlocked, while every PATCH silently dropped `institutions`. So the failure is shown
-   * with a Retry, and `updateContributorsMds()` keeps `external-partners` unfilled meanwhile.
+   * visible error the section became a black hole: before P2-3821, the user picked partners, the
+   * (then-mandatory) block went green and Submit unlocked, while every PATCH silently dropped
+   * `institutions`. So the failure is shown with a Retry; the hidden-fields note (BIL-R-4) is what
+   * now signals whether the answer can actually be saved, since the field is no longer tracked.
    */
   readonly partnersLoadFailed = signal(false);
 
@@ -292,7 +294,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly projectsLoadFailed = signal(false);
   readonly loadCopy = RESULT_DETAIL_SECTION_LOAD_COPY;
 
-  /** AC5/AC7: the field is satisfied by EITHER at least one partner OR the explicit "none" declaration. */
+  /**
+   * BIL-AC-5/BIL-AC-7 (P2-3821, supersedes P2-3368 AC5/AC7) — the field is satisfied by EITHER at
+   * least one partner OR the explicit "none" declaration. Kept for the payload (`is_lead_by_partner`
+   * companion keys) and the hidden-fields count; it no longer gates Submit or the tracker.
+   */
   readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -383,11 +389,20 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * this section never renders.
    */
   readonly hiddenFieldsWithValues = computed(() => {
-    if (this.linkedQuestionOwnedElsewhere()) return 0;
     // P2-3823 — unhydrated keys never travel (`buildContributorsPayload`), so after a failed read
-    // the note must not promise to save them.
-    if (!this.linkedHydrated()) return 0;
-    return this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0 ? 1 : 0;
+    // the note must not promise to save them. Also 0 for the result types that do not ask the
+    // question here at all (`linkedQuestionOwnedElsewhere()`).
+    const linkedCount =
+      this.linkedQuestionOwnedElsewhere() || !this.linkedHydrated()
+        ? 0
+        : this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0
+          ? 1
+          : 0;
+    // P2-3821 — External partners moved into Full metadata and became optional, but the note still
+    // promises to save it once it actually can: `partnersHydrated()` is the same payload guard
+    // `buildContributorsPayload()` reads, so this never promises a key the next PATCH would omit.
+    const partnerCount = this.partnersHydrated() && this.externalPartnersSatisfied() ? 1 : 0;
+    return linkedCount + partnerCount;
   });
 
   readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
@@ -425,6 +440,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly showLinkedResultQuestion = computed(() => this.showAllFields() && !this.linkedQuestionOwnedElsewhere());
   readonly showLinkedResultsDropdown = computed(() => this.showLinkedResultQuestion() && this.hasLinkedResult() === true);
   readonly fullMetadataButtonLabel = computed(() => (this.showAllFields() ? 'Hide full metadata' : 'Complete full metadata'));
+
+  /**
+   * BIL-DD-2 (P2-3821) — the Full metadata container's own gate, holding the intro line and the
+   * External partners block. It must NOT share `showLinkedResultQuestion`'s type exclusion: that
+   * gate is `false` for Innovation Use (2) and Innovation Development (7), which would hide the
+   * partner block for those two types (BIL-R-1 requires it for every type). The linked question
+   * stays nested under its own, narrower gate.
+   */
+  readonly showFullMetadata = computed(() => this.showAllFields());
 
   readonlyLeadCenterInstitutionId: number | null = null;
   readonlyLeadProjectId: number | null = null;
@@ -699,6 +723,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    * affordance the user actually sees. Contributing centers and projects are genuinely optional
    * additions beyond the lead pair, so they are no longer counted. If product wants them mandatory,
    * flip `[required]` in the template and re-add the item here — not the other way round.
+   *
+   * 🛑 P2-3821 (supersedes P2-3443/P2-3368 AC5/AC7): External partners is NOT in this list. The PO
+   * decision aligned the client with the Fetcher, which never required `contributing_partners` —
+   * the field moved into Full metadata and became optional, so it can no longer block Submit or
+   * count toward the section's completion. If the tracker item is ever restored, the invariant that
+   * used to guard it still applies: never report it `filled` while `buildContributorsPayload()` is
+   * omitting its keys (`partnersHydrated()` gates that).
    */
   updateContributorsMds(): void {
     this.mdsTracker.setSectionFields(
@@ -718,21 +749,6 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
               filled: this.readonlyLeadProjectId != null,
             }]
           : []),
-        // P2-3443: restored. It was held out of the tracker only because the answer was not
-        // persisted — a reload turned it back to incomplete and Submit stayed blocked with no way
-        // out. Now that the partners and the "no external partners" flag round-trip, the mandatory
-        // affordance the user sees (red asterisk + inline hint) matches what gates Submit again.
-        {
-          key: 'external-partners',
-          label: 'External partners',
-          // 🛑 INVARIANT: a field is never reported as satisfied while the payload is throwing its
-          // keys away. `buildContributorsPayload()` omits `institutions`, `no_external_partners`
-          // and `is_lead_by_partner` until `partnersHydrated()` is true (and a failed read leaves
-          // it false forever), so a selection made in that window reaches no server. Reporting it
-          // `filled` turned the green tick and the Submit gate into a lie — the user chose
-          // partners, the section went green, and nothing was ever written.
-          filled: this.partnersHydrated() && this.externalPartnersSatisfied(),
-        },
       ],
       PARTNERS_MDS_GROUP
     );
@@ -834,8 +850,9 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
         // Same posture for the linked/bundled keys: unhydrated means "do not send", so a failed
         // read can never let a blank answer overwrite the stored one.
         this.linkedHydrated.set(false);
-        // Re-publish so `external-partners` drops back to unfilled: the section must not stay
-        // green on a selection whose keys the next PATCH will discard.
+        // P2-3821: External partners is no longer tracked here, so there is nothing to re-publish
+        // for it — but `updateContributorsMds()` still owns `lead-center` / `lead-project`, and
+        // this failure does not change either of those.
         this.updateContributorsMds();
       }
     });
