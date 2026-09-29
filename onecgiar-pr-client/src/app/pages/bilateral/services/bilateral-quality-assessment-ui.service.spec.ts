@@ -318,4 +318,22 @@ describe('BilateralQualityAssessmentUiService', () => {
       expect(service.assessment()).toBeNull();
     });
   });
+
+  describe('markStale', () => {
+    it('replaces the held view with a copy where is_current is false', () => {
+      service.assessment.set(view({ is_current: true }));
+
+      (service as any).markStale?.();
+
+      expect(service.assessment()?.is_current).toBe(false);
+    });
+
+    it('is a no-op when no view is held', () => {
+      expect(service.assessment()).toBeNull();
+
+      expect(() => (service as any).markStale?.()).not.toThrow();
+
+      expect(service.assessment()).toBeNull();
+    });
+  });
 });

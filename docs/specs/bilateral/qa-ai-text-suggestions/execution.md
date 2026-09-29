@@ -72,3 +72,23 @@
 - Pre-flight: `.env` and `environment*.ts` copied from the sibling worktree `pipefish`; server `npm ci` run.
 
 **Final verification:** PASS.
+
+### `BIL-QTS-T-3` — Client: view type and `markStale()`
+
+- **Final status:** PASS
+- **Date:** 2026-09-29
+- **Attempts:** 1
+- **Requirements covered:** `BIL-QTS-R-4` (client stale state), `BIL-QTS-R-10` (typed read)
+
+**Attempt 1**
+- Files changed: `onecgiar-pr-client/src/app/pages/bilateral/services/bilateral-quality-assessment-ui.service.ts` (optional `suggestions` on the section type, `markStale()`), `…/bilateral-quality-assessment-ui.service.spec.ts` (`describe('markStale')`, two specs).
+- Red run: `npx jest --no-coverage bilateral-quality-assessment-ui.service -t "markStale"` → 1 failed on `expect(service.assessment()?.is_current).toBe(false)`, Received `true` (guarded call, no TypeError).
+- Implementer verification: target suite 22/22; consumers `bilateral-quality-assessment bilateral-result-creator bilateral-field-quality-flag` → 4 suites / 154 passed; `npx tsc -p tsconfig.app.json --noEmit` clean; `npx ng lint --quiet` → All files pass linting.
+- Evidence re-run (Leader-inline): **VERIFIED** — 4 suites / 154 passed, tsc exit 0.
+- Reviewer: **PASS** — shape matches server `QualitySuggestions`; `markStale()` writes a new object (P-13 disqualifier not triggered); nothing else in the service changed.
+- runtime events: none
+
+**Decisions made:**
+- Skills: `angular-developer` (as listed). Effort `low`–`medium`. Client `npm ci` run in the worktree.
+
+**Final verification:** PASS.

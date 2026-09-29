@@ -85,7 +85,7 @@
   - [x] `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` and `npx tsc --noEmit` clean
   - [x] No suggestion text in any log call
 
-### `BIL-QTS-T-3` — Client: view type and `markStale()`
+### [x] `BIL-QTS-T-3` — Client: view type and `markStale()`
 
 - **Type:** `client`
 - **Description:** In `BilateralQualityAssessmentView` (`bilateral-quality-assessment-ui.service.ts:21`), add the optional `suggestions?: { title?: string; description?: string }` to the section type. Add `markStale()`, which replaces the held view with `is_current: false` and is a no-op when none is held. Nothing else in the service changes.
@@ -102,7 +102,7 @@
   - **Disqualifier:** the view is shared by reference with another holder that must stay current → re-specify (currently only the UI service holds it, P-13).
   - **Consumers:** `bilateral-quality-assessment-ui.service.spec.ts`, `bilateral-quality-assessment-dialog.component.spec.ts`, `bilateral-result-creator.component.spec.ts`, `bilateral-field-quality-flag.component.ts` (reads `sections`)
 - **Definition of done:**
-  - [ ] Tests green, `npx ng lint --quiet` clean, type-check clean
+  - [x] Tests green, `npx ng lint --quiet` clean, type-check clean
 
 ### `BIL-QTS-T-4` — Client: GI edit block in the drawer
 

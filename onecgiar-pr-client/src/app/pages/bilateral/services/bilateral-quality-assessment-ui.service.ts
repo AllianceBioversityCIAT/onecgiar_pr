@@ -26,6 +26,12 @@ export interface BilateralQualityAssessmentView {
     /** AI-side field names the issues point at. Stored and carried; nothing renders them yet. */
     fields?: string[];
     issues?: string[];
+    /**
+     * AI-suggested full-replacement title/description for `general_information` only
+     * (contract v0.2, additive; `BIL-QTS-R-7`). Both keys optional and independently droppable —
+     * the server's normalizer may keep only one of them.
+     */
+    suggestions?: { title?: string; description?: string };
   }>;
   evidence: Array<{ index: number; verdict: QualityVerdict; reason: string }>;
 }
@@ -166,6 +172,17 @@ export class BilateralQualityAssessmentUiService {
 
   openStored(): void {
     if (this.assessment() && !this.isBusy()) this.state.set('deciding');
+  }
+
+  /**
+   * Marks the held assessment stale optimistically after a successful drawer save
+   * (`BIL-QTS-DD-5`): the server only reports `is_current` on read, so without this the submit
+   * button would stay visible until the next reload. No-op with nothing held.
+   */
+  markStale(): void {
+    const assessment = this.assessment();
+    if (!assessment) return;
+    this.assessment.set({ ...assessment, is_current: false });
   }
 
   reset(): void {
