@@ -177,4 +177,76 @@ describe('ResultInnovationMergeSplitRepository.replaceForResult (P2-3292)', () =
     expect(repo.save).toHaveBeenCalledTimes(1);
     expect(repo.save.mock.calls[0][0].target_result_id).toBe(900);
   });
+
+  /**
+   * BIL-RAU-T-1 — optional trailing `manager` (DD-6). Without it, behavior above is unchanged
+   * (still `this.find`/`this.update`/`this.save`). With it, the same find/update/save path runs
+   * on `manager.getRepository(...)` instead, never on `this`.
+   */
+  describe('optional manager (BIL-RAU-T-1)', () => {
+    it('without a manager, runs on this.find/this.save as today (insert case)', async () => {
+      const repo = makeRepo([]);
+
+      await repo.replaceForResult(ORIGIN, [merge(700)], USER);
+
+      expect(repo.find).toHaveBeenCalled();
+      expect(repo.save).toHaveBeenCalled();
+    });
+
+    it('with a manager, an insert runs on manager.getRepository(...), not this', async () => {
+      const repo = makeRepo([]);
+      const managerFind = jest.fn().mockResolvedValue([]);
+      const managerSave = jest
+        .fn()
+        .mockImplementation((row: any) => Promise.resolve(row));
+      const managerUpdate = jest.fn().mockResolvedValue(undefined);
+      const manager: any = {
+        getRepository: jest.fn().mockReturnValue({
+          find: managerFind,
+          save: managerSave,
+          update: managerUpdate,
+        }),
+      };
+
+      await repo.replaceForResult(ORIGIN, [merge(700)], USER, manager);
+
+      expect(manager.getRepository).toHaveBeenCalled();
+      expect(managerFind).toHaveBeenCalled();
+      expect(managerSave).toHaveBeenCalledWith({
+        origin_result_id: ORIGIN,
+        target_result_id: 700,
+        transition_type: 'merge',
+        is_active: true,
+        created_by: USER,
+        last_updated_by: USER,
+      });
+      expect(repo.find).not.toHaveBeenCalled();
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('with a manager, a reactivation runs update on manager.getRepository(...), not this', async () => {
+      const repo = makeRepo([row(11, 700, 'merge', false)]);
+      const managerFind = jest
+        .fn()
+        .mockResolvedValue([row(11, 700, 'merge', false)]);
+      const managerSave = jest.fn();
+      const managerUpdate = jest.fn().mockResolvedValue(undefined);
+      const manager: any = {
+        getRepository: jest.fn().mockReturnValue({
+          find: managerFind,
+          save: managerSave,
+          update: managerUpdate,
+        }),
+      };
+
+      await repo.replaceForResult(ORIGIN, [merge(700)], USER, manager);
+
+      expect(managerUpdate).toHaveBeenCalledWith(11, {
+        is_active: true,
+        last_updated_by: USER,
+      });
+      expect(repo.update).not.toHaveBeenCalled();
+      expect(repo.find).not.toHaveBeenCalled();
+    });
+  });
 });

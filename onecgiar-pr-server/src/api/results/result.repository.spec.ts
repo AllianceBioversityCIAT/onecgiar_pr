@@ -315,6 +315,23 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual([8731]);
   });
 
+  // BIL-RAU-T-5 (DD-8) — the Annual updating block needs the raw replication flag and stored
+  // answer straight from the row, not a constant, so the client can gate the block (types 7/2)
+  // and pre-select "No" on reload.
+  it('includes is_replicated and is_discontinued in the bilateral common-fields query', async () => {
+    queryMock.mockResolvedValueOnce([
+      { id: 8731, is_replicated: 1, is_discontinued: 0 },
+    ]);
+
+    const row = await repo.getCommonFieldsBilateralResultById(8731);
+
+    const [sql] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.is_replicated');
+    expect(sql).toContain('r.is_discontinued');
+    expect(row.is_replicated).toBe(1);
+    expect(row.is_discontinued).toBe(0);
+  });
+
   // BIL-RTE-T-5 / DD-6 — the drawer's P25-onward rule reads portfolio_start_year, which must
   // come from the result's own version -> clarisa_portfolios, never a constant or a portfolio id.
   it('includes portfolio_start_year in the bilateral common-fields query, joined via the version', async () => {

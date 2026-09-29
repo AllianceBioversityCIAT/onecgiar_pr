@@ -3429,6 +3429,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.nutrition_tag_level_id,
         r.environmental_biodiversity_tag_level_id,
         r.poverty_tag_level_id,
+        -- BIL-RAU-T-5: raw tinyint, additive. The Annual updating block (types 7/2 only) needs to
+        -- know whether this result was replicated into the phase and its stored answer, straight
+        -- from the DB — no boolean coercion here, the client normalizes it (design §4.1).
+        r.is_replicated,
+        r.is_discontinued,
         -- P2-3443: the External partners block of the bilateral Contributors section is stored as
         -- results_by_institution rows (returned by the detail GET as contributingInstitutions)
         -- plus these two flags on result. Without them the client cannot tell "no partners
