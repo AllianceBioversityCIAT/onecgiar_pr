@@ -138,3 +138,36 @@
 **Implementer assumptions accepted:** Description has no required rule (only word limit); Title named first when both dirty; KP id 6 as a local constant; placeholder-title regex copied from `section-general-info.component.ts`.
 
 **Final verification:** PASS.
+
+### `BIL-QTS-T-5` — Client: creator wiring (save through autosave, stale on success, Check again)
+
+- **Final status:** PASS (attempt 2)
+- **Date:** 2026-09-29
+- **Attempts:** 2
+- **Requirements covered:** `BIL-QTS-R-1` *Not editable* (source), `R-2` *Save a new title* / *Save fails*, `R-4` *After a save* / *Check again*
+
+**Attempt 1** — Reviewer **FAIL**
+- Files changed: `onecgiar-pr-client/src/app/pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component.{ts,html,spec.ts}` — `savingGiField`, `lastGiSaveResult`, `handleGiFieldSaveRequested()` (write `creationService` → `updateField` → flush `generalInfo` → `waitForSectionSave` → error alert / `markStale()` + success alert), `handleGiRecheckRequested()` = `submitResult()`; dialog inputs/outputs bound.
+- Red run: handlers removed → (a)/(c) failed with `TypeError: … is not a function` (not assertion-level, as tasks.md asks).
+- Implementer verification: creator 106/106; consumers 221; tsc and ng lint clean. Leader re-run VERIFIED: 5 suites / 222 passed (one-test count difference vs the report on the same command; both fully green), tsc 0, lint pass.
+- FAIL findings: (1) falsifier (a)'s flush mock snapshotted `staged` when the gate opened, not at `flush` call time (real flush takes its batch synchronously, `bilateral-auto-save.service.ts:214-218`), so flush-before-updateField passed — violates T-5 Timing rule / P-2. (2) Folder `bilateral-result-creator/CLAUDE.md` not updated or re-stamped (client CLAUDE.md §10, src/CLAUDE.md §22). Leader's convention-file lookup missed this folder guide.
+- runtime events: none
+
+**Attempt 2** (effort xhigh) — Reviewer **PASS**
+- Files changed: same three + `bilateral-result-creator/CLAUDE.md` (re-stamped 2026-09-29, two entries). Mock snapshots+clears at call time; `invocationCallOrder` assertion; `[advisory-grade]` `catch` on the drawer save handler (rejected flush → error alert, `ok:false`).
+- Mutation red: flush-before-updateField → (a) red on `invocationCallOrder` (Expected < 9, Received 10); Check again → `submitAfterQualityDecision` → (c) red on `run` toHaveBeenCalledTimes(1) (Received 0); catch removed → new test fails with uncaught rejection. All reverted.
+- Implementer verification: creator 107/107; consumers 5 suites / 223; tsc clean; ng lint pass.
+- Evidence re-run (Leader-inline): **VERIFIED** — 223 passed, tsc 0, lint pass.
+- Reviewer: **PASS** — ordering matches DD-3; `ok:true` only after `markStale()`; both error paths `ok:false` without stale; §6.1 amendment conforms.
+- runtime events: none
+
+**ADVISORY (non-gating):**
+- `bilateral-result-creator/CLAUDE.md` is 154 lines vs the 120-line cap in `onecgiar-pr-client/docs/COMPONENT-DOCS.md` §4 (was ~139 before this task) — trim at archive.
+- The new `catch` logs nothing; consider `LoggerService` without the error body.
+- `invocationCallOrder[0]` relies on per-test mock reset; `.at(-1)` would be sturdier.
+- (attempt 1) The drawer save does not emit `manualSave$`, which `section-general-info` uses to push the saved lead contact into `creationService` for the Innovation Developer prefill. DD-3 is silent on it. **Owner to decide at T-6.**
+- (attempt 1) A `waitForSectionSave` 15 s timeout with no error reports success (same as `triggerManualSave`).
+
+**Decisions made:** skills `angular-developer`, `tdd`; effort `high` → `xhigh` on rework. `manualSave$` deliberately not added.
+
+**Final verification:** PASS.

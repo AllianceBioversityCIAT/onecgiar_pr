@@ -851,6 +851,95 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Which GI field a drawer-initiated save (`BIL-QTS-T-5`) is currently persisting, if any. Feeds
+   * the dialog's `savingField` input — its Save button busy state and its aria-live announcement
+   * key off this, never a local flag inside the dialog itself (design.md §6.1).
+   */
+  savingGiField = signal<'title' | 'description' | null>(null);
+
+  /**
+   * How the most recent drawer-initiated GI save settled (design.md §6.1, `BIL-QTS-DD-3`/`DD-5`).
+   * `seq` increments on every save so two saves that settle the same way in a row still count as a
+   * fresh event for the dialog — it moves its saved baseline only when this object changes, never
+   * merely because `currentTitle`/`currentDescription` changed.
+   */
+  lastGiSaveResult = signal<{ field: 'title' | 'description'; ok: boolean; seq: number } | null>(null);
+  private giSaveSeq = 0;
+
+  /**
+   * `BIL-QTS-T-5` (design.md §2.2 "Save from the drawer", `BIL-QTS-DD-3`): persists a GI drawer
+   * edit through the SAME general-info save the form uses — never a direct PATCH. A direct PATCH
+   * would leave whatever was already staged in the autosave map (P-2) untouched, and the next Save
+   * draft on General information would write that older value back over the one just saved
+   * (`BIL-QTS-R-2`'s `BUT`). Order matters: `creationService` is written first so the header and
+   * the General information section reflect the new value immediately (P-1), the field is then
+   * staged — which overwrites any older staged value for the same key — and only then flushed,
+   * scoped to `general-info` (P-4's settle sequence, reused rather than duplicated).
+   */
+  async handleGiFieldSaveRequested({ field, value }: { field: 'title' | 'description'; value: string }): Promise<void> {
+    if (field === 'title') this.creationService.resultTitle.set(value);
+    else this.creationService.resultDescription.set(value);
+
+    this.autoSaveService.updateField(field, value, 'text');
+    this.savingGiField.set(field);
+
+    try {
+      await this.autoSaveService.flush(this.autoSaveService.getEndpointKeys('general-info'));
+      await this.waitForSectionSave('general-info');
+
+      if (this.autoSaveService.hasErrorFor('general-info')) {
+        const detail = this.autoSaveService.lastErrorMessageFor('general-info');
+        this.api.alertsFe.show({
+          id: 'bilateralGiDrawerSave',
+          title: 'Save failed',
+          description: detail ?? 'This field could not be saved. Please try again.',
+          status: 'error',
+          closeIn: 8000,
+        });
+        this.lastGiSaveResult.set({ field, ok: false, seq: ++this.giSaveSeq });
+        return;
+      }
+
+      // P-6/DD-5: the server is the authority on `is_current`, but it only answers on the NEXT
+      // read — without this the submit button would stay visible until a reload, and pressing it
+      // would earn the server's own stale 400 (P-7).
+      this.qualityAssessment.markStale();
+      this.api.alertsFe.show({
+        id: 'bilateralGiDrawerSave',
+        title: 'Saved',
+        description: 'General information saved successfully.',
+        status: 'success',
+        closeIn: 2000,
+      });
+      this.lastGiSaveResult.set({ field, ok: true, seq: ++this.giSaveSeq });
+    } catch {
+      // Mirrors `triggerManualSave()`'s catch: a REJECTED flush (thrown, not merely settled with
+      // `hasErrorFor`) still has to reach the reporter and the dialog's `lastGiSaveResult` baseline
+      // — otherwise the Save button spins forever and the drawer never learns the save failed.
+      this.api.alertsFe.show({
+        id: 'bilateralGiDrawerSave',
+        title: 'Save failed',
+        description: 'This field could not be saved. Please try again.',
+        status: 'error',
+        closeIn: 8000,
+      });
+      this.lastGiSaveResult.set({ field, ok: false, seq: ++this.giSaveSeq });
+    } finally {
+      this.savingGiField.set(null);
+    }
+  }
+
+  /**
+   * `BIL-QTS-DD-4`: Check again reuses the rail's Submit-for-review guard chain (read-only,
+   * unsaved sections, invalid fields) and the AI check itself — never the actual submit PATCH,
+   * which only ever leaves from `submitAfterQualityDecision()`. Named for what the dialog output
+   * means (`recheckRequested`), not for what it happens to call.
+   */
+  handleGiRecheckRequested(): void {
+    this.submitResult();
+  }
+
+  /**
    * The five AI section keys onto the editor's own section names. Closed set — these are the five
    * of P2-3150 AC2 and the AI does not invent others; an unknown key is ignored rather than
    * navigating somewhere arbitrary.

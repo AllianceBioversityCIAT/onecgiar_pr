@@ -46,9 +46,17 @@
     [assessment]="qualityAssessment.assessment()"
     [submitting]="qualityAssessment.isSubmitting()"
     [running]="qualityAssessment.isRunning()"
+    [editable]="!isFormReadOnly()"
+    [currentTitle]="creationService.resultTitle()"
+    [currentDescription]="creationService.resultDescription()"
+    [savingField]="savingGiField()"
+    [resultTypeId]="creationService.resultTypeId()"
+    [lastSaveResult]="lastGiSaveResult()"
     (dismissed)="dismissQualityAssessment()"
     (sectionSelected)="goToQualitySection($event)"
-    (decisionChosen)="submitAfterQualityDecision($event)" />
+    (decisionChosen)="submitAfterQualityDecision($event)"
+    (giFieldSaveRequested)="handleGiFieldSaveRequested($event)"
+    (recheckRequested)="handleGiRecheckRequested()" />
   <div class="bcr-layout" data-testid="bilateral-editor-layout">
     <!-- Sections rail: 240px, white, own scroll, right rule to the floor. -->
     <aside class="bcr-rail pr-light-scroll" data-testid="bilateral-sections-rail">

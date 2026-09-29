@@ -150,7 +150,7 @@
   - [x] Existing dialog specs still green (content parity with `qa-ai-verdict-drawer`)
   - [x] Lint + type-check clean; no new colour tokens
 
-### `BIL-QTS-T-5` — Client: creator wiring (save through autosave, stale on success, Check again)
+### [x] `BIL-QTS-T-5` — Client: creator wiring (save through autosave, stale on success, Check again)
 
 - **Type:** `client`
 - **Description:** In `bilateral-result-creator`:
@@ -186,8 +186,8 @@
   - **Disqualifier:** if `flush` of `generalInfo` sends fields the user did not intend in a way the owner rejects at T-6 → re-specify DD-3 (per-field flush), don't hack around it.
   - **Consumers:** `bilateral-result-creator.component.spec.ts`, `bilateral-auto-save.service` (called, not changed), `bilateral-quality-assessment-ui.service.spec.ts`
 - **Definition of done:**
-  - [ ] Falsifiers (a)–(e) green; (a) and (c) observed red first
-  - [ ] Lint + type-check clean
+  - [x] Falsifiers (a)–(e) green; (a) and (c) observed red first
+  - [x] Lint + type-check clean
 
 ### `BIL-QTS-T-6` — Manual verification at the HITL pause (layout and cross-component)
 
