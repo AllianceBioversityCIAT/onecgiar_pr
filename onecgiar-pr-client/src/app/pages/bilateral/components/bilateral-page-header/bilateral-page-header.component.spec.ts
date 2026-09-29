@@ -9,8 +9,6 @@ import { environment } from '../../../../../environments/environment';
 import { BilateralPageHeaderComponent } from './bilateral-page-header.component';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
-import { normalizeJob } from '../../bilateral-ai-job.model';
-import { rawJob } from '../../bilateral-ai-job.fixtures';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { BilateralTourService } from '../../services/bilateral-tour.service';
 import {
@@ -829,137 +827,21 @@ describe('BilateralPageHeaderComponent', () => {
     });
   });
 
-  describe('"AI job running" chip (APF-R-10)', () => {
+  // `AIQ-T-5`: `BilateralAiService.currentJob`/`getActiveJobSnapshot` are removed (design §6.2),
+  // so `aliveJobForThisCenter` is now an inert stub that always returns `null` (see the component)
+  // — this whole per-center chip is retired for real by `AIQ-DD-9`/`AIQ-T-9`, which replaces it
+  // with the trigger in all three slots and owns this describe block's full rewrite/removal. Kept
+  // here only as a compile-safe proof that the (now dead) chip never renders.
+  describe('"AI job running" chip (APF-R-10) — retired by AIQ-T-9, compile-level stub only', () => {
     const chip = () => fixture.debugElement.query(By.css('[data-testid="bilateral-ai-job-chip"]'));
 
-    it('renders with the elapsed time in the accessible name when the service reports an alive job for the current center', () => {
+    it('never renders — the per-center chip is inert pending AIQ-T-9', () => {
       ctx.setCenter('AfricaRice', 'Africa Rice Center');
       fixture.componentRef.setInput('activeTab', 'reporting');
       aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now() - (4 * 60_000 + 12_000),
-      };
-      fixture.detectChanges();
-
-      const el = chip();
-      expect(el).not.toBeNull();
-      expect(el.nativeElement.textContent).toContain('AI job running');
-      expect(el.nativeElement.textContent).toContain('04:12');
-      expect(el.nativeElement.getAttribute('aria-label')).toContain('4 minutes');
-      expect(el.nativeElement.getAttribute('aria-label')).toContain('12 seconds');
-    });
-
-    it('is absent when the tracked job belongs to a different center (CIMMYT)', () => {
-      ctx.setCenter('CIMMYT', 'International Maize and Wheat Improvement Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now(),
-      };
       fixture.detectChanges();
 
       expect(chip()).toBeNull();
-    });
-
-    it('is absent once the job reaches a terminal state', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'completed', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now(),
-      };
-      fixture.detectChanges();
-
-      expect(chip()).toBeNull();
-    });
-
-    it('is absent while idle (no tracked job)', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      fixture.detectChanges();
-
-      expect(chip()).toBeNull();
-    });
-
-    it('links to the upload step with the job id as a query param', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-9', status: 'pending', uploadProgress: 100 });
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-9',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now(),
-      };
-      fixture.detectChanges();
-
-      expect(chip().nativeElement.getAttribute('href')).toBe('/bilateral/AfricaRice/create?job=job-9');
-    });
-
-    it('uses the elapsed value from the queue-entry clock once a poll has landed, not the resume record', () => {
-      ctx.setCenter('AfricaRice', 'Africa Rice Center');
-      fixture.componentRef.setInput('activeTab', 'reporting');
-      aiService.uploadState.set({ jobId: 'job-1', status: 'still_running', uploadProgress: 100 });
-      // The resume record's startedAt is stale (would read as ~10 min) — the freshly-polled job's
-      // queueEntryDate (~90 s ago) must win.
-      (aiService as unknown as { activeJob: unknown }).activeJob = {
-        jobId: 'job-1',
-        centerAcronym: 'AfricaRice',
-        startedAt: Date.now() - 600_000,
-      };
-      aiService.currentJob.set(
-        normalizeJob(rawJob({ job_id: 'job-1', created_date: new Date(Date.now() - 90_500).toISOString(), retried_date: null })),
-      );
-      fixture.detectChanges();
-
-      expect(chip().nativeElement.textContent).toContain('01:30');
-    });
-
-    describe('tick gating (rework addendum, Reviewer-advisory)', () => {
-      afterEach(() => {
-        jest.useRealTimers();
-      });
-
-      it('does not schedule the 1 s tick while there is no alive job for this center', () => {
-        jest.useFakeTimers();
-        const setIntervalSpy = jest.spyOn(globalThis, 'setInterval');
-
-        ctx.setCenter('AfricaRice', 'Africa Rice Center');
-        fixture.componentRef.setInput('activeTab', 'reporting');
-        fixture.detectChanges();
-
-        setIntervalSpy.mockClear();
-        jest.advanceTimersByTime(5000);
-
-        expect(setIntervalSpy).not.toHaveBeenCalled();
-        expect(chip()).toBeNull();
-      });
-
-      it('advances the chip elapsed label once a second while the job stays alive for this center', () => {
-        jest.useFakeTimers();
-
-        ctx.setCenter('AfricaRice', 'Africa Rice Center');
-        fixture.componentRef.setInput('activeTab', 'reporting');
-        aiService.uploadState.set({ jobId: 'job-1', status: 'processing', uploadProgress: 100 });
-        (aiService as unknown as { activeJob: unknown }).activeJob = {
-          jobId: 'job-1',
-          centerAcronym: 'AfricaRice',
-          startedAt: Date.now(),
-        };
-        fixture.detectChanges();
-
-        expect(chip().nativeElement.textContent).toContain('00:00');
-
-        jest.advanceTimersByTime(1000);
-        fixture.detectChanges();
-
-        expect(chip().nativeElement.textContent).toContain('00:01');
-      });
     });
   });
 

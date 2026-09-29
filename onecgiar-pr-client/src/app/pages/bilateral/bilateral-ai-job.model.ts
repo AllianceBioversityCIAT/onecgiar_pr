@@ -154,6 +154,120 @@ export function normalizeJob(raw: RawBilateralAiJob): NormalizedBilateralAiJob {
   };
 }
 
+// ── Raw list-item payload contract (AIQ-T-5) ──────────────────────────────
+
+/**
+ * The shape one item of `GET /api/bilateral/center/ai/jobs` sends on the wire
+ * (`docs/specs/bilateral/ai-processing-queue/design.md` §4.1). A deliberately narrower key set
+ * than `RawBilateralAiJob` — `bucket_name`, `document_keys`, `audio_keys`, `text_context`,
+ * `response_snapshot`, `error_message` and `user_id` are excluded from the list on purpose.
+ */
+export interface RawBilateralAiListJob {
+  job_id: string;
+  status: string;
+  stage?: string | null;
+  stage_updated_date?: string | null;
+  project_id?: string | number | null;
+  project_name?: string | null;
+  program_code?: string | null;
+  center_id?: string | number | null;
+  center_acronym?: string | null;
+  document_count?: string | number | null;
+  audio_count?: string | number | null;
+  has_text?: string | number | boolean | null;
+  queue_entry_date: string;
+  started_date?: string | null;
+  completed_date?: string | null;
+  result_count?: string | number | null;
+  error_code?: string | null;
+  attempts?: string | number | null;
+  max_attempts?: string | number | null;
+  retrying?: string | number | boolean | null;
+  jobs_ahead?: string | number | null;
+  wait_reason?: BilateralAiWaitReason | null;
+}
+
+/** `AIQ-R-6` B — PENDING-only; `null` for every other status. */
+export type BilateralAiWaitReason = 'own_job_running' | 'no_free_lane' | 'starting';
+
+/** The normalized list item the drawer/trigger/cards work with after `normalizeListJob`. */
+export interface NormalizedBilateralAiListJob {
+  jobId: string;
+  status: BilateralAiJobStatus;
+  stage: BilateralAiStage;
+  stageUpdatedDate: Date | null;
+  projectId: number | null;
+  projectName: string | null;
+  programCode: string;
+  centerId: number | null;
+  centerAcronym: string | null;
+  documentCount: number;
+  audioCount: number;
+  hasText: boolean;
+  queueEntryDate: Date;
+  startedDate: Date | null;
+  completedDate: Date | null;
+  resultCount: number;
+  errorCode: string | null;
+  attempts: number;
+  maxAttempts: number;
+  retrying: boolean;
+  jobsAhead: number | null;
+  waitReason: BilateralAiWaitReason | null;
+}
+
+/**
+ * `P-20`: reuses the same coercion helpers as `normalizeJob` — the list endpoint carries the same
+ * string-id / `0`-`1`-boolean wire quirks as the single-job endpoint (same entity, different
+ * projection).
+ */
+export function normalizeListJob(raw: RawBilateralAiListJob): NormalizedBilateralAiListJob {
+  return {
+    jobId: String(raw.job_id),
+    status: (raw.status as BilateralAiJobStatus) ?? 'PENDING',
+    stage: (raw.stage as BilateralAiStage) ?? 'queued',
+    stageUpdatedDate: toDate(raw.stage_updated_date),
+    projectId: toNullableNumber(raw.project_id),
+    projectName: raw.project_name ?? null,
+    programCode: raw.program_code ?? '',
+    centerId: toNullableNumber(raw.center_id),
+    centerAcronym: raw.center_acronym ?? null,
+    documentCount: toNumberOr(raw.document_count, 0),
+    audioCount: toNumberOr(raw.audio_count, 0),
+    hasText: toBoolean(raw.has_text),
+    queueEntryDate: toDateOr(raw.queue_entry_date, new Date(0)),
+    startedDate: toDate(raw.started_date),
+    completedDate: toDate(raw.completed_date),
+    resultCount: toNumberOr(raw.result_count, 0),
+    errorCode: raw.error_code ?? null,
+    attempts: toNumberOr(raw.attempts, 0),
+    maxAttempts: toNumberOr(raw.max_attempts, 3),
+    retrying: toBoolean(raw.retrying),
+    jobsAhead: toNullableNumber(raw.jobs_ahead),
+    waitReason: raw.wait_reason ?? null,
+  };
+}
+
+// ── waitReasonCopy ───────────────────────────────────────────────────────
+
+/**
+ * Plain-language copy for a `PENDING` job's wait reason (`AIQ-R-9` Scenario C). Deliberately
+ * generic for `own_job_running` — the fuller "Starts when your job for <project> finishes" needs
+ * the *other* job's project name, which is a cross-job lookup the card (`AIQ-T-8`) makes over the
+ * full `jobs()` list, not something this pure, single-job function can resolve.
+ */
+export function waitReasonCopy(reason: BilateralAiWaitReason | null | undefined): string {
+  switch (reason) {
+    case 'own_job_running':
+      return 'Starts when your other job finishes';
+    case 'no_free_lane':
+      return 'Waiting for a free lane';
+    case 'starting':
+    default:
+      return 'Starting soon';
+  }
+}
+
 // ── buildStepperModel ────────────────────────────────────────────────────
 
 /** The 6 UI steps — the server's `reading` / `transcribing` / `reading_transcribing` collapse to one. */

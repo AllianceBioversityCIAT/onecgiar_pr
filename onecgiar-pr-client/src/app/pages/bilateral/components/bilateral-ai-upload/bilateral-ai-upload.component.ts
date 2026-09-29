@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal, computed, effect, OnDestroy, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, signal, computed, effect, OnDestroy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -11,7 +11,7 @@ import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { AiProcessingPanelComponent } from '../ai-processing-panel/ai-processing-panel.component';
-import { BilateralAiExpectations, BilateralAiMixClass, mixClass } from '../../bilateral-ai-job.model';
+import { BilateralAiExpectations, BilateralAiMixClass, NormalizedBilateralAiJob, mixClass } from '../../bilateral-ai-job.model';
 
 interface UploadFileEntry {
   id: string;
@@ -44,7 +44,7 @@ const MAX_TEXT_LENGTH = 50_000;
   templateUrl: './bilateral-ai-upload.component.html',
   styleUrl: './bilateral-ai-upload.component.scss',
 })
-export class BilateralAiUploadComponent implements OnInit, OnDestroy {
+export class BilateralAiUploadComponent implements OnDestroy {
   private readonly creationService = inject(BilateralCreationService);
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly bilateralAiService = inject(BilateralAiService);
@@ -62,13 +62,19 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
 
   uploadState = this.bilateralAiService.uploadState;
 
-  /** `APF-T-6`: fed straight into `<app-ai-processing-panel>`, never read/computed by this file. */
-  currentJob = this.bilateralAiService.currentJob;
+  /**
+   * `AIQ-T-5` compile-level stub: `BilateralAiService.currentJob` is removed (design §6.2) — the
+   * single-job panel this feeds is retired by `AIQ-DD-8`/`AIQ-T-7`, which owns this component's
+   * real rewrite (never-blocking upload). Left as an always-`null` local signal so the template's
+   * `<app-ai-processing-panel [job]="currentJob()">` binding keeps compiling.
+   */
+  currentJob = signal<NormalizedBilateralAiJob | null>(null);
   /** 1 s tick for the panel's elapsed clock — runs only while a job is alive (`APF-R-6`). */
   now = signal(Date.now());
   /** `APF-R-6` D: served by the API, cached per mix by the service — never computed client-side. */
   expectation = signal<BilateralAiExpectations | null>(null);
-  readonly startedAt = computed(() => this.bilateralAiService.getActiveJobSnapshot()?.startedAt ?? null);
+  /** `AIQ-T-5` compile-level stub: `getActiveJobSnapshot()` is removed; see `currentJob` above. */
+  readonly startedAt = computed<number | null>(() => null);
 
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private lastExpectationMix: BilateralAiMixClass | null = null;
@@ -157,21 +163,14 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnInit(): void {
-    // `APF-DD-7`: registers this host as the live outcome surface so the app-wide completion
-    // dialog stays silent while the panel is mounted (`APF-R-8` A/B).
-    this.bilateralAiService.setPanelVisible(true);
-
-    // `design.md` §6.1 / §2.3: a notification or the header chip deep-links here with `?job=<id>`
-    // to open the panel for that specific job.
-    const jobId = this.route.snapshot.queryParams['job'];
-    if (jobId && this.bilateralAiService.currentJobId() !== jobId) {
-      this.bilateralAiService.startJob(jobId);
-    }
-  }
+  // `AIQ-T-5`: `ngOnInit` used to call `setPanelVisible(true)` and read `?job=` to call
+  // `startJob(jobId)` — both removed from `BilateralAiService` (design §6.2). The single-outcome-
+  // surface gate and the `?job=` deep link both move to `AIQ-T-7` ("Never-blocking upload, unlocked
+  // wizard, `?job=` routing"), which owns this component's real rewrite. `this.route` stays
+  // injected for that task to pick up; the lifecycle hook itself is dropped rather than left empty
+  // (`@angular-eslint/no-empty-lifecycle-method`).
 
   ngOnDestroy(): void {
-    this.bilateralAiService.setPanelVisible(false);
     this.stopTick();
     this.cancelRecording();
     this.stopAudio();
@@ -614,10 +613,11 @@ export class BilateralAiUploadComponent implements OnInit, OnDestroy {
     this.bilateralApi.POST_bilateralAiJob(formData).subscribe({
       next: ({ response }) => {
         this.isUploading.set(false);
-        const jobId = response?.jobId;
-        if (jobId) {
-          this.bilateralAiService.startJob(jobId);
-        }
+        // `AIQ-T-5`: `startJob(jobId)` is removed — `addSubmittedJob(response)` is its multi-job
+        // replacement (design §6.2, `AIQ-R-7` B "the new job appears in the drawer at once"). The
+        // never-blocking submit UX itself (form reset, confirmation card, `openDrawer`) is
+        // `AIQ-T-7`'s job, not this task's.
+        this.bilateralAiService.addSubmittedJob(response);
       },
       error: (err: HttpErrorResponse) => {
         this.isUploading.set(false);

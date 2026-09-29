@@ -9,13 +9,14 @@ import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
-import { RawBilateralAiJob, normalizeJob } from '../../bilateral-ai-job.model';
+import { RawBilateralAiJob } from '../../bilateral-ai-job.model';
 
 describe('BilateralAiUploadComponent', () => {
   let component: BilateralAiUploadComponent;
   let fixture: ComponentFixture<BilateralAiUploadComponent>;
   let activatedRouteStub: { snapshot: { queryParams: Record<string, string> } };
   let bilateralApi: {
+    GET_bilateralAiJobs: jest.Mock;
     GET_bilateralAiJob: jest.Mock;
     GET_bilateralAiDrafts: jest.Mock;
     GET_bilateralAiDraft: jest.Mock;
@@ -78,6 +79,7 @@ describe('BilateralAiUploadComponent', () => {
     activatedRouteStub = { snapshot: { queryParams: {} } };
     router = { navigate: jest.fn().mockResolvedValue(true) };
     bilateralApi = {
+      GET_bilateralAiJobs: jest.fn().mockReturnValue(of({ response: { jobs: [], summary: { lanes_total: 2, lanes_busy: 0, others_waiting: 0 } } })),
       GET_bilateralAiJob: jest.fn().mockReturnValue(of({ response: job() })),
       GET_bilateralAiDrafts: jest.fn().mockReturnValue(of([])),
       GET_bilateralAiDraft: jest.fn().mockReturnValue(of({ response: null })),
@@ -244,32 +246,12 @@ describe('BilateralAiUploadComponent', () => {
   // ── APF-T-6: processing panel integration ──────────────────────────────
 
   describe('processing panel integration', () => {
-    it('APF-DD-7: registers as the live outcome surface on mount and clears it on destroy', () => {
-      const aiService = TestBed.inject(BilateralAiService);
-      expect(aiService.panelVisible()).toBe(true);
-
-      fixture.destroy();
-      expect(aiService.panelVisible()).toBe(false);
-    });
-
-    it('APF-R-8 A / APF-AC-12: a terminal state reached while mounted renders inline and never raises the completion dialog notice', async () => {
-      const aiService = TestBed.inject(BilateralAiService);
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(
-        of({ response: job({ status: 'COMPLETED', result_count: '2', completed_date: '2026-09-15T10:05:00.000Z' }) }),
-      );
-
-      aiService.startJob('job-1');
-      await flush();
-      fixture.detectChanges();
-
-      expect(aiService.completionNotice()).toBeNull();
-      const panel = fixture.nativeElement.querySelector('app-ai-processing-panel');
-      expect(panel).toBeTruthy();
-      expect(panel.textContent).toContain('result drafts are ready');
-      // The old inline blocks are gone entirely, not just hidden.
-      expect(fixture.nativeElement.querySelector('.aiu-error')).toBeNull();
-      expect(fixture.nativeElement.querySelector('.aiu-processing')).toBeNull();
-    });
+    // `AIQ-T-5`: `BilateralAiService.panelVisible`/`completionNotice`/`startJob` are removed
+    // (design §6.2) — the single-job outcome surface these two tests pinned is retired by
+    // `AIQ-DD-6`/`AIQ-DD-8`, and `AIQ-T-7` rewrites this whole describe block ("Upload after a
+    // mocked 202: the form element is present and empty, the confirmation text is present, and
+    // `querySelector('app-ai-processing-panel')` is null" — `tasks.md` `AIQ-T-7`, which cites this
+    // file's old `:266,297,343`). Compile-level cut only.
 
     it('APF-R-9: "Try again" on the panel calls the retry endpoint through the real service', () => {
       const aiService = TestBed.inject(BilateralAiService);
@@ -297,29 +279,10 @@ describe('BilateralAiUploadComponent', () => {
       expect(fixture.nativeElement.querySelector('app-ai-processing-panel')).toBeNull();
     });
 
-    it('Leader addendum (APF-T-6 attempt 2): a failed expectations lookup does not permanently block a retry for the same mix', () => {
-      const aiService = TestBed.inject(BilateralAiService);
-      const expectationsSpy = jest
-        .spyOn(aiService, 'expectations')
-        .mockReturnValueOnce(throwError(() => new Error('network')))
-        .mockReturnValueOnce(of({ mix: 'documents', sampleSize: 12, p25Minutes: 3, p75Minutes: 8 }));
-
-      // First poll for a 'documents' mix: the call fails — no toast, no job-failure path, just no range.
-      aiService.currentJob.set(normalizeJob(job({ document_keys: ['a.pdf'] })));
-      fixture.detectChanges();
-
-      expect(expectationsSpy).toHaveBeenCalledTimes(1);
-      expect(expectationsSpy).toHaveBeenCalledWith('documents');
-      expect(component.expectation()).toBeNull();
-
-      // A later poll for the SAME mix must retry — lastExpectationMix was reset on error, not left
-      // pinned at 'documents' forever (which would silently skip every future call.expectations()).
-      aiService.currentJob.set(normalizeJob(job({ document_keys: ['a.pdf'], stage: 'validating' })));
-      fixture.detectChanges();
-
-      expect(expectationsSpy).toHaveBeenCalledTimes(2);
-      expect(component.expectation()).toEqual({ mix: 'documents', sampleSize: 12, p25Minutes: 3, p75Minutes: 8 });
-    });
+    // `AIQ-T-5`: this component's `currentJob` is now a local, always-`null` stub (the service no
+    // longer has one — design §6.2), so the expectations-per-mix effect this test drove is inert
+    // until `AIQ-T-7` rewires it. Compile-level cut only (the old assertion used the now-removed
+    // `aiService.currentJob.set(...)`).
 
     it('"Review drafts" navigates to this center\'s Drafts tab', () => {
       const ctx = TestBed.inject(BilateralContextService);
@@ -330,32 +293,9 @@ describe('BilateralAiUploadComponent', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'AllianceX', 'drafts']);
     });
 
-    it('?job=<id>: opens the panel for the job named in the query param', async () => {
-      activatedRouteStub.snapshot.queryParams = { job: 'deep-linked-job' };
-      bilateralApi.GET_bilateralAiJob.mockReturnValue(of({ response: job({ job_id: 'deep-linked-job', status: 'FAILED', error_code: 'TIMED_OUT' }) }));
-
-      const deepLinkedFixture = TestBed.createComponent(BilateralAiUploadComponent);
-      deepLinkedFixture.detectChanges();
-      await flush();
-      deepLinkedFixture.detectChanges();
-
-      expect(bilateralApi.GET_bilateralAiJob).toHaveBeenCalledWith('deep-linked-job');
-      const panel = deepLinkedFixture.nativeElement.querySelector('app-ai-processing-panel');
-      expect(panel).toBeTruthy();
-      expect(panel.textContent).toContain('Processing did not finish');
-    });
-
-    it('?job=<id> is a no-op when that job is already the active one — no redundant restart', () => {
-      const aiService = TestBed.inject(BilateralAiService);
-      aiService.currentJobId.set('already-active');
-      activatedRouteStub.snapshot.queryParams = { job: 'already-active' };
-      jest.spyOn(aiService, 'startJob');
-
-      const deepLinkedFixture = TestBed.createComponent(BilateralAiUploadComponent);
-      deepLinkedFixture.detectChanges();
-
-      expect(aiService.startJob).not.toHaveBeenCalled();
-    });
+    // `AIQ-T-5`: the `?job=` deep link (`startJob`/`currentJobId`) moves to `AIQ-T-7` ("Never-
+    // blocking upload, unlocked wizard, `?job=` routing, drafts highlight") — this component's
+    // `ngOnInit` no longer reads the query param at all (design §6.2). Compile-level cut only.
   });
 
   describe('Audio voice recording & error handling', () => {

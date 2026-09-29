@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
-import { BilateralAiService } from '../../services/bilateral-ai.service';
+import { BilateralAiCompletionNotice } from '../../services/bilateral-ai.interfaces';
 import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenance-notice.component';
 
 /**
@@ -25,9 +25,14 @@ import { AiProvenanceNoticeComponent } from '../ai-provenance-notice/ai-provenan
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BilateralAiCompletionDialogComponent {
-  private readonly ai = inject(BilateralAiService);
-
-  readonly notice = this.ai.completionNotice;
+  /**
+   * `AIQ-T-5` compile-level stub: `BilateralAiService.completionNotice` /
+   * `dismissCompletionNotice` / `openDraftsFromNotice` are removed (design §6.2, `AIQ-DD-6`) — this
+   * whole dialog is retired for real by `AIQ-T-10` (deleted alongside its mount in
+   * `app.component.html`, replaced by the headless watcher). Kept as an inert, always-`null` local
+   * signal so this task's diff stays a compile fix rather than the dialog's actual removal.
+   */
+  readonly notice = signal<BilateralAiCompletionNotice | null>(null);
 
   readonly title = computed(() => {
     switch (this.notice()?.status) {
@@ -111,10 +116,10 @@ export class BilateralAiCompletionDialogComponent {
   readonly showProvenanceNotice = computed(() => this.canReview());
 
   close(): void {
-    this.ai.dismissCompletionNotice();
+    this.notice.set(null);
   }
 
   reviewDrafts(): void {
-    this.ai.openDraftsFromNotice();
+    this.notice.set(null);
   }
 }

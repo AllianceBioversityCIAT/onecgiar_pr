@@ -345,3 +345,92 @@
   - → `AIQ-T-11`: measure the `GET center/ai/jobs` p95 with about 10 PENDING items (the N+1 advisory), and add an app-level 401 probe.
 - **Final verification:** 296/296 green; tsc and lint clean; both falsifiers red when mutated.
 - **Budget:** T-4 took 1 round. The spec now stands at 8 rounds for 5 tasks (73 % of the spec-wide 11).
+
+### `AIQ-T-5` — Client job list: model, API method, service store and poller
+
+- **Status:** in progress (`[~]`) · **Date:** 2026-09-29
+- **Skills:** `angular-developer`, `tdd` (as listed) · **Effort:** high, raised to xhigh on the retry
+
+**Attempt 1**
+- **Files changed** (all under `onecgiar-pr-client/src/app/`):
+  - Model and API:
+    - `shared/services/api/bilateral-api.service.ts`: `GET_bilateralAiJobs()`.
+    - `pages/bilateral/bilateral-ai-job.model.ts` (+spec) and `bilateral-ai-job.fixtures.ts`: `RawBilateralAiListJob`, `NormalizedBilateralAiListJob`, `normalizeListJob`, `waitReasonCopy`, and the `rawListJob()` fixture.
+  - Service:
+    - `pages/bilateral/services/bilateral-ai.service.ts` (+spec): full rewrite. It keeps the list store and a single poller on the APF-R-7 cadence, diffs terminal states into sticky action toasts (one grouped toast when more than 2 finish), migrates the legacy key, and manages the hint key.
+  - Compile-level adaptations to other readers:
+    - Header (+spec): the chip becomes inert stubs.
+    - Upload (+spec): the panel and `?job=` block are removed, `onSubmit` calls `addSubmittedJob`, and 5 specs were cut.
+    - Completion dialog (+spec): `notice` is always null, and the spec is reduced to a smoke test.
+    - The creator and `bilateral-page-header.cy.ts` needed no changes.
+- **Contract unwrap:** confirmed at source. The server `ResponseInterceptor` returns `{response: {jobs, summary}}`.
+- **Red:** the new spec failed to **compile** before the implementation, not on the call-count assertion the task names. The Reviewer accepted falsifier 1's post-change red as a substitute. This is recorded as a procedural deviation.
+- **Falsifiers:**
+  1. A per-job `GET_bilateralAiJob` inside the poll: `not.toHaveBeenCalled` received 6.
+  2. Without the diff guard: Expected 1 toast, Received 3.
+- **401 test:** a 401 stops the poll; a 500 or a network error keeps polling.
+- **AIQ-D-14:** a `// @ts-expect-error` probe `jobs.set([{notAField:true}])` fails with TS2353 once the comment is removed.
+- **Build and lint:** green.
+- **Keyless error toasts** (now at `bilateral-ai.service.ts:505,519`): not touched, so they go on the ticket comment (§13).
+- **Evidence re-run (Leader-inline):** `npx jest src/app/pages/bilateral src/app/shared/services/api/bilateral-api.service` gave 2098 passed (58 suites). `ng build --configuration development` exit 0, 0 errors. **VERIFIED**.
+- **Reviewer: FAIL**
+  - **Issue:** `addSubmittedJob` does not seed `previousJobsById`, and `ensurePolling()` returns early when a timer exists. A submitted job that finishes before the next poll therefore gets **no toast and no unseen badge**, and the cadence stays at 15 or 30 s. This is the multi-job case (R-7 A).
+  - **Violated rules:** `AIQ-R-11` A ("tracked job reaches a terminal state → sticky toast … badge updates") and `AIQ-R-8` A (adaptive cadence measured from the most recent active job).
+  - **Remediation:** seed the placeholder into `previousJobsById`, carry placeholders forward, restart the timer at the initial interval with an immediate poll, and add a test.
+- **Reviewer rulings on the Implementer's judgment calls:** all conforming.
+  1. The placeholder is `{jobId, jobStatus}` (state-level "at once").
+  2. The generic `own_job_running` copy is fine because R-9 C belongs to T-8.
+  3. The toast copy and actions match R-11 A/B and §6.4.
+  4. Restart on drawer open is implemented and tested.
+  5. The cut chip and dialog tests are fine because T-7, T-9 and T-10 restore or delete those surfaces in the same PR 2.
+- **ADVISORY:**
+  - Reliability: `openDraftsForJob` does nothing when `centerAcronym` is null. Fall back to `openDrawer`, and consider `?job=`.
+  - Resilience: `setInterval` can overlap in-flight polls, so a late stale response can cause a second toast.
+  - Readability: the toast label falls back to the raw UUID, and the toast strings are hardcoded English. Move them to `bilateral-ai-processes.copy.ts` in T-7 or T-8.
+  - Risk: add an optional `projectName` parameter to `waitReasonCopy` for T-8.
+  - Risk: the `bilateral-page-header.cy.ts:33-41` chip CT now fails at runtime. It is local-only; **T-9 owns it**.
+- **Forward pointers:**
+  - → `AIQ-T-8`: `waitReasonCopy(projectName?)`; move the toast strings into the copy file.
+  - → `AIQ-T-9`: rewrite `bilateral-page-header.cy.ts` (the chip CT is broken at runtime since T-5).
+- **runtime events:** none
+
+**Attempt 2** (rework: the FAIL report was relayed verbatim along with the attempt history)
+- **Files changed:** `pages/bilateral/services/bilateral-ai.service.ts` and `.spec.ts`.
+- **What changed:**
+  - `addSubmittedJob` seeds `previousJobsById`.
+  - `ensurePolling()` always restarts at `POLL_INTERVAL_INITIAL` and polls immediately.
+  - `pollList` carries forward placeholders the server has not listed yet.
+  - `hasPolledOnce` was removed as redundant.
+  - Three new tests: the Reviewer's exact scenario, carry-forward, and the cadence restart.
+- **Mutations:**
+  - Removing the seed turns the toast test red (0 vs 1).
+  - Restoring the early return turns the cadence test red (0 vs 1).
+  - Both original falsifiers still go red.
+- **Evidence re-run (Leader-inline):** jest on `pages/bilateral` and the API service gives 2101 passed. `ng build` has 0 errors. **VERIFIED**.
+- **Reviewer: PASS.**
+  - The fast-terminal toast and the unseen badge are both covered, with a test at spec `:424`.
+  - The cadence restart is covered at `:287`.
+  - Removing `hasPolledOnce` is safe: the first poll after a reload toasts nothing, and `:392` still covers that.
+  - Repeated `openDrawer` calls replace the timer and make one request per call, so they cannot cause a request storm.
+  - Carry-forward is bounded in practice, because the server lists every active row of the caller.
+- **ADVISORY (final):**
+  - Carry-forward has no cap: a phantom placeholder could stay if the tab's user changes without a reload. Track placeholder ids and drop them after about 3 misses.
+  - `pollList` has no in-flight guard, so a stale late response can re-toast. T-7 and T-8 must not call `openDrawer` from an `effect`.
+  - The attempt-1 readability advisories still stand.
+- **runtime events:** none
+
+- **Final status:** PASS on attempt 2 · **Date:** 2026-09-29
+- **Requirements covered:**
+  - `AIQ-R-8` A, B, C, D (service half)
+  - `AIQ-R-11` A (toast and badge logic, service half), B
+  - `AIQ-R-7` B ("appears in the drawer at once")
+- **Decisions made:**
+  - The red-run deviation was accepted: the red was a compile failure, and falsifier 1 stands in for it.
+  - All five Implementer judgment calls were ruled conforming.
+- **Forward pointers:**
+  - → `AIQ-T-7` and `AIQ-T-8`: never call `openDrawer` from an `effect`, because there is no in-flight guard.
+  - → `AIQ-T-8`: add an optional `projectName` to `waitReasonCopy`, and move the toast strings into `bilateral-ai-processes.copy.ts`.
+  - → `AIQ-T-9`: `bilateral-page-header.cy.ts` is stale.
+  - → Ticket comment: the keyless error toasts at `bilateral-ai.service.ts:505,519`.
+- **Final verification:** 2101/2101 green, build and lint clean, 4 mutations go red.
+- **Budget:** 10 review rounds for 6 tasks, which is 91 % of the spec-wide 11.

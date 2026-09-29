@@ -145,7 +145,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** specs green; `tsc --noEmit`; change-log row present and matching the diff (`AIQ-D-15`); falsifiers red when mutated.
 - **Skills:** `nestjs-expert`, `api-design-principles`.
 
-### `AIQ-T-5` — Client job list: model, API method, service store and poller
+### [x] `AIQ-T-5` — Client job list: model, API method, service store and poller
 
 - **Type:** client · **Estimate:** L · **Depends on:** `AIQ-T-4` (contract), `AIQ-T-6` (toast action) · **Blocks:** `AIQ-T-7`, `AIQ-T-8`, `AIQ-T-9`, `AIQ-T-10`
 - **Description:**

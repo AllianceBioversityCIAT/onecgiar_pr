@@ -55,15 +55,15 @@ export class BilateralPageHeaderComponent {
    * (`pending`/`processing`/`still_running`) AND the record's center matches this header's center
    * — a job started for another center is not "here".
    */
-  private readonly aliveJobForThisCenter = computed(() => {
-    const state = this.bilateralAiService.uploadState();
-    if (!state.jobId || !BilateralPageHeaderComponent.AI_JOB_ALIVE_STATUSES.has(state.status)) return null;
-
-    const snapshot = this.bilateralAiService.getActiveJobSnapshot();
-    if (!snapshot || snapshot.centerAcronym !== this.ctx.centerAcronym()) return null;
-
-    return { jobId: state.jobId, snapshot };
-  });
+  /**
+   * `AIQ-T-5` compile-level stub: `BilateralAiService.getActiveJobSnapshot()` is removed
+   * (`design.md` §6.2) — the whole per-center chip this powers is retired by `AIQ-DD-9`/`AIQ-T-9`
+   * (the trigger replaces it in all three slots). Left as an inert `null` here rather than deleted
+   * so this task's diff stays a compile fix; `AIQ-T-9` owns removing the chip markup/logic for real.
+   */
+  private readonly aliveJobForThisCenter = computed<{ jobId: string; snapshot: { centerAcronym: string; startedAt: number } } | null>(
+    () => null,
+  );
 
   constructor() {
     // Gate the 1 s tick on an alive job for this center — an unconditional interval schedules
@@ -101,9 +101,9 @@ export class BilateralPageHeaderComponent {
     const active = this.aliveJobForThisCenter();
     if (!active) return null;
 
-    const job = this.bilateralAiService.currentJob();
-    const serverEntryMs = job && job.jobId === active.jobId ? job.queueEntryDate.getTime() : active.snapshot.startedAt;
-    const startMs = serverEntryMs > Date.now() ? active.snapshot.startedAt : serverEntryMs;
+    // `AIQ-T-5`: `BilateralAiService.currentJob` is removed — `active` is always `null` above, so
+    // this branch is inert until `AIQ-T-9` deletes it outright.
+    const startMs = active.snapshot.startedAt;
     const elapsed = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
