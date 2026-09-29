@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import {
@@ -67,6 +67,11 @@ export class BilateralAiDispatchService {
     private readonly dataSource: DataSource,
     @InjectRepository(BilateralAiJob)
     private readonly jobRepository: Repository<BilateralAiJob>,
+    // `AIQ-T-3`: `BilateralAiService.processJob` now calls `wake` from its terminal paths, so this
+    // service and `BilateralAiService` are mutually dependent within `bilateral.module.ts`.
+    // `forwardRef` on both sides is the standard Nest resolution for two same-module providers
+    // depending on each other.
+    @Inject(forwardRef(() => BilateralAiService))
     private readonly bilateralAiService: BilateralAiService,
     private readonly queue: BilateralAiProcessingQueuePublisherService,
   ) {}
@@ -177,10 +182,16 @@ export class BilateralAiDispatchService {
    */
   async wake(reason: string): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
     let locked = false;
+    let connected = false;
     let published = 0;
     try {
+      // `AIQ-T-3` forward pointer (from `AIQ-T-2`): `connect()` moved inside the `try` so a DB
+      // outage at connect time is caught by the same catch as every other failure here, keeping
+      // this method's documented "never throws" true once `processJob`'s terminal paths depend on
+      // it — a throw at wake time must never turn a just-completed job into a consumer retry.
+      await queryRunner.connect();
+      connected = true;
       locked = await this.acquireLock(queryRunner);
       if (!locked) {
         this.logger.warn(
@@ -224,7 +235,9 @@ export class BilateralAiDispatchService {
       );
     } finally {
       if (locked) await this.releaseLock(queryRunner);
-      await this.releaseRunner(queryRunner);
+      // Only release a runner that actually connected — releasing one that never connected (the
+      // `connect()` failure this fix guards against) has nothing to release.
+      if (connected) await this.releaseRunner(queryRunner);
       this.logger.log(
         `Bilateral AI dispatch: wake(${reason}, published ${published}).`,
       );

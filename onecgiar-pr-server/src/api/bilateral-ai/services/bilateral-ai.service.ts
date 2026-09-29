@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -43,6 +45,7 @@ import {
 } from '../bilateral-ai.config';
 import { BilateralAiNotificationsService } from './bilateral-ai-notifications.service';
 import { BilateralAiEvidenceTransferService } from './bilateral-ai-evidence-transfer.service';
+import { BilateralAiDispatchService } from './bilateral-ai-dispatch.service';
 import {
   BilateralAiExpectationsMix,
   BilateralAiExpectationsResponseDto,
@@ -113,6 +116,13 @@ export class BilateralAiService {
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly notificationsService: BilateralAiNotificationsService,
     private readonly evidenceTransferService: BilateralAiEvidenceTransferService,
+    // `AIQ-T-3`: `BilateralAiDispatchService` already depends on this service (`attemptStart`,
+    // `AIQ-T-2`), so the reverse edge needed to call `wake` from `processJob`'s terminal paths
+    // makes the two providers mutually dependent within `bilateral.module.ts`. `forwardRef` on
+    // this side (and the matching one in `bilateral-ai-dispatch.service.ts`) is the standard Nest
+    // resolution for two providers in the same module depending on each other.
+    @Inject(forwardRef(() => BilateralAiDispatchService))
+    private readonly dispatchService: BilateralAiDispatchService,
   ) {}
 
   async createJob(
@@ -909,6 +919,10 @@ export class BilateralAiService {
         },
       );
 
+      // `AIQ-T-3` (`design.md` §5.3 P-5): this write just freed a lane — wake the next eligible
+      // parked job under the lock instead of waiting for the sweeper's next tick.
+      await this.wakeDispatch('completed');
+
       // Processing can take minutes and the uploader has usually moved on; the client no longer
       // force-redirects on completion (2026-09-04), so this is what tells them the outcome. After
       // the status update and never blocking: a notification failure must not fail the job
@@ -959,8 +973,32 @@ export class BilateralAiService {
           { ...job, error_code: errorCode },
           'failed',
         );
+        // `AIQ-T-3` (`design.md` §5.3 P-5): the final FAILED write just freed a lane too — same
+        // guard as the COMPLETED path, scoped to an actual affected write so a lost race (another
+        // actor already moved the row) never wakes on someone else's behalf.
+        await this.wakeDispatch('failed');
       }
       if (retryable) throw error;
+    }
+  }
+
+  /**
+   * `AIQ-T-3` (`design.md` §5.3, `AIQ-DD-2`): wakes the dispatch service after a `processJob`
+   * write that just freed a lane (`COMPLETED` or the final `FAILED`). `BilateralAiDispatchService
+   * .wake` documents itself as never-throwing (it catches and logs internally around its own
+   * `GET_LOCK`/publish work), but this call site adds its own try/catch as defense in depth —
+   * mirroring `promoteDraft`'s evidence-transfer step — so a fault at wake time (e.g. the DB being
+   * down when `wake` tries to `connect()`) can never rethrow from here and turn a job that just
+   * terminated successfully into a consumer retry. The sweeper's next tick recovers regardless.
+   */
+  private async wakeDispatch(reason: string): Promise<void> {
+    try {
+      await this.dispatchService.wake(reason);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Bilateral AI dispatch wake(${reason}) failed after processJob: ${message}`,
+      );
     }
   }
 

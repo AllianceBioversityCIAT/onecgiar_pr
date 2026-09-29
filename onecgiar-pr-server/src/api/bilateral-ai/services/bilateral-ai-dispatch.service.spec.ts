@@ -381,6 +381,98 @@ describe('BilateralAiDispatchService', () => {
     });
   });
 
+  // `AIQ-R-2` Scenario D / `AIQ-AC-10` (`tasks.md` AIQ-T-3 Tests: "Retry re-entry: `retryJob` →
+  // `decide` sees it as the newest"). `design.md` §5.3's row for this is "no code change there,
+  // only a test" — `retryJob` (unchanged) writes a fresh `retried_date`, and the STORED generated
+  // column `queue_entry_date = COALESCE(retried_date, created_date)` picks it up, which is what
+  // this test proves at `decide`'s seam: a retried job's fresh (newer) `queue_entry_date` puts it
+  // BEHIND an older `PENDING` job in fair order, exactly like any other `queue_entry_date`
+  // comparison (`AIQ-DD-1`). This is a real filter/sort over the underlying rows — driven by the
+  // actual `andWhere`/`orderBy` calls `oldestEligible` issues — not a canned return value, so a
+  // source mutation that dropped ordering would change this result (same technique as the "worked
+  // example" suite above). The complementary half (retryJob itself sets a fresh `retried_date` via
+  // the DB-time escape hatch, never a JS `Date`) is proven in `bilateral-ai.service.spec.ts`
+  // ("AIQ-R-2 D / AIQ-AC-10: retryJob sets a fresh retried_date...").
+  describe('retry re-entry — a retried job goes to the back of fair order (AIQ-R-2 D / AIQ-AC-10)', () => {
+    const retryPendingRows = [
+      {
+        job_id: 'old-job',
+        user_id: 5,
+        queue_entry_date: '2026-01-01T00:00:00Z',
+      },
+      // Simulates `retryJob`'s write: `retried_date = now` moved this job's `queue_entry_date` to
+      // the back — newer than `old-job`'s, even though `old-job` has been PENDING for longer.
+      {
+        job_id: 'retried-job',
+        user_id: 6,
+        queue_entry_date: '2026-01-02T00:00:00Z',
+      },
+    ];
+
+    function wireRetryExample() {
+      const repo: any = { count: jest.fn().mockResolvedValue(0) }; // a lane is free
+      let qbCall = 0;
+      repo.createQueryBuilder = jest.fn().mockImplementation(() => {
+        qbCall += 1;
+        if (qbCall === 1) return makeQueryBuilder([]); // ownersAtCap: nobody at cap
+        // oldestEligible: real filter/sort over retryPendingRows, driven by the real predicates —
+        // an ordering regression here (e.g. sorting by insertion order instead of
+        // `queue_entry_date`) would change which job this returns.
+        let excludedOwners: number[] = [];
+        let excludedJobIds: string[] = [];
+        const qb: any = {};
+        const passthrough = ['select', 'where', 'orderBy', 'addOrderBy'];
+        for (const m of passthrough) qb[m] = jest.fn().mockReturnValue(qb);
+        qb.andWhere = jest
+          .fn()
+          .mockImplementation((sql: string, params: any) => {
+            if (sql.includes('ownersAtCap'))
+              excludedOwners = params.ownersAtCap;
+            if (sql.includes('excludeJobIds'))
+              excludedJobIds = params.excludeJobIds;
+            return qb;
+          });
+        qb.getOne = jest.fn().mockImplementation(async () => {
+          const remaining = retryPendingRows
+            .filter((r) => !excludedOwners.includes(r.user_id))
+            .filter((r) => !excludedJobIds.includes(r.job_id))
+            .sort((a, b) =>
+              a.queue_entry_date.localeCompare(b.queue_entry_date),
+            );
+          return remaining[0] ?? null;
+        });
+        return qb;
+      });
+      queryRunner.manager.getRepository.mockReturnValue(repo);
+    }
+
+    it("decide(retried-job) redirects to the older job instead of claiming — the retry's fresh queue_entry_date lost fair order, not won it", async () => {
+      const retriedJob = makeJob({ job_id: 'retried-job', user_id: 6 });
+      jobRepository.findOne.mockResolvedValue(retriedJob);
+      wireRetryExample();
+
+      const decision = await service.decide('retried-job');
+
+      expect(decision).toEqual({ kind: 'redirect', jobId: 'old-job' });
+      expect(queue.publish).toHaveBeenCalledWith({ jobId: 'old-job' });
+      expect(bilateralAiService.attemptStart).not.toHaveBeenCalled();
+    });
+
+    it('decide(old-job) runs — it is still the oldest eligible job, ahead of the retried one', async () => {
+      const oldJob = makeJob({ job_id: 'old-job', user_id: 5 });
+      jobRepository.findOne.mockResolvedValue(oldJob);
+      wireRetryExample();
+
+      const decision = await service.decide('old-job');
+
+      expect(decision).toEqual({ kind: 'run' });
+      expect(bilateralAiService.attemptStart).toHaveBeenCalledWith(
+        oldJob,
+        queryRunner.manager,
+      );
+    });
+  });
+
   describe('lock release on a thrown error (second falsifier)', () => {
     it('still releases the named lock when the critical section throws', async () => {
       jobRepository.findOne.mockResolvedValue(makeJob({ job_id: 'x' }));
@@ -451,6 +543,19 @@ describe('BilateralAiDispatchService', () => {
         expect.stringContaining('RELEASE_LOCK'),
         ['prms_bilateral_ai_dispatch'],
       );
+    });
+
+    // `AIQ-T-3` forward pointer (from `AIQ-T-2`): `connect()` moved inside the `try` so a DB
+    // outage at connect time is caught like every other failure here — `wake`'s documented
+    // "never throws" must hold even before the lock is ever attempted, since `processJob`'s
+    // terminal paths now depend on that contract.
+    it('never throws when queryRunner.connect() itself rejects, and never tries to release', async () => {
+      queryRunner.connect.mockRejectedValue(new Error('DB down'));
+
+      await expect(service.wake('terminal')).resolves.toBeUndefined();
+
+      expect(queryRunner.query).not.toHaveBeenCalled();
+      expect(queryRunner.release).not.toHaveBeenCalled();
     });
   });
 

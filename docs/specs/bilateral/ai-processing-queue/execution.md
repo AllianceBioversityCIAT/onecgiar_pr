@@ -196,3 +196,83 @@
 - **Budget check:**
   - Review rounds so far: T-6 1, T-1 2, T-2 2 (each round ran 2 parallel lens verdicts). That is 5 rounds for 3 tasks, against the design §14 budget of ≤ 1 per task, so 67 % over pro-rata and 45 % of the spec-wide 11-round budget spent.
   - LOC is within the task's L estimate. **Surfaced to the user at the continue gate.**
+
+### `AIQ-T-3` — Wake on every lane-freeing path; sweeper safety net and stall rule
+
+- **Status:** in progress (`[~]`) · **Date:** 2026-09-29
+- **Skills:** `nestjs-expert`, `tdd` (as listed) · **Effort:** high → xhigh on the retry
+- **Forward pointers carried from T-2** (`[advisory-grade]` in the brief): `connect()` moved inside `wake()`'s try; a wake failure can never change a job's outcome.
+
+**Attempt 1**
+- **Files changed:** `services/bilateral-ai.service.ts` (+spec), `services/bilateral-ai-dispatch.service.ts` (+spec), `bilateral-ai-sweeper.cron.ts` (+spec).
+- **What changed:**
+  - `wakeDispatch()` helper with try/catch, called after the COMPLETED write and after the final FAILED write.
+  - Sweeper: a wake after each TIMED_OUT flip, the DD-5 owner exemption with a wake before the flip, and `wake('sweep')` always at the end of the tick. The stale prefetch-1 comment is updated.
+- **Deviation:** `BilateralAiService` and `BilateralAiDispatchService` now depend on each other, resolved with `forwardRef()` on both constructors. That touches the dispatch service file, which is not in the Files list. **The Reviewer accepted it**: nothing uses the other service at construction time, and the only cross-call happens at request time.
+- **First report had a `Not Done` gap:** the retry re-entry test (listed in Tests) was skipped, and falsifier 2's red was a mock `TypeError` instead of an assertion. I sent the task back for the remainder (not counted as an attempt):
+  - Added: a `retried_date` via raw CURRENT_TIMESTAMP test and a dispatch ordering test.
+  - The sweeper mocks now classify builders by SQL fragment.
+  - Falsifier 2 now goes red on an assertion (`update` not called: Expected 0, Received 1).
+  - Added a dedicated AC-11 timeout test.
+- **`new Date(` in the sweeper:** 3 baseline hits, all in comments. After the change, the same 3, shifted.
+- **Falsifier 1:** removing the wake after COMPLETED gives `Expected 1, Received 0`.
+- **Green:** 284 passed. **tsc / eslint:** clean.
+- **Evidence re-run (Leader-inline):** 284 passed, tsc clean. **VERIFIED**.
+- **Reviewer: FAIL**:
+  - **Issue:** no test covers the wake after a TIMED_OUT flip (`bilateral-ai-sweeper.cron.ts:135`). Deleting that line leaves the suite green, because the tick-end `wake('sweep')` satisfies every assertion.
+  - **Violated rule:** tasks.md T-3 Tests ("`wake` is called exactly once on each §5.3 path") and design §5.3, row "Sweeper `TIMED_OUT` after each flip".
+  - **Remediation:** a two-stale-attempts test (3 wakes, checked with invocationCallOrder), an affected: 0 case, and a mutation run.
+- **Reviewer checks that held:**
+  - COMPLETED, final FAILED and TIMED_OUT each wake once; the tick always wakes; the retryable path does not wake.
+  - All cutoffs are in SQL.
+  - `queue_entry_date` is a STORED generated column, `COALESCE(retried_date, created_date)` (`bilateral-ai-job.entity.ts:128-137`).
+  - The mock rework maps 1:1 onto the old tests.
+- **ADVISORY:**
+  - **Spec gap (Leader to surface):** under the defaults (timeout 15 min, stall window 30 min), the owner exemption can almost never trigger. A job still PROCESSING always has a `started_date` inside the stall window, so the existing liveness check already returns first. AIQ-R-4 A is met through liveness. The T-3 Disqualifier's "fresh activity **and** discriminating" cannot both hold; the only fixture that discriminates models a state the defaults rule out. Recorded as a spec defect, not rework.
+  - **Resilience:** the wake before the flip cannot actually save the job. The PENDING-scoped UPDATE runs milliseconds later, before any consumer can claim, so DD-5's "flip only if still PENDING" is nominal.
+  - **Tests:** the per-branch catch in `sweep()` can swallow a mock throw for an unclassified query. Assert `logger.error` was not called in the stall cases.
+  - **Readability:** the timeout wake and the tick wake both log `reason='sweep'`.
+  - AC-11 is proven by SQL shape only; the live proof is T-11.
+  - **Risk:** the forwardRef cycle has never been resolved in a real Nest DI graph. **Smoke-test app boot before T-11.**
+- **Leader adjudication:** the issue is in scope. I also added one item to the rework as task conformance (not new scope): the task Description asks for a wake "after each sweeper `TIMED_OUT` and `QUEUE_STALLED` flip", and the Reviewer found only the tick wake follows a QUEUE_STALLED flip.
+- **runtime events:** none
+
+**Attempt 2** (rework: the FAIL report was relayed verbatim along with the attempt history and the Leader's task-conformance addition)
+- **Files changed:** `bilateral-ai-sweeper.cron.ts` and `.spec.ts`.
+- **What changed:**
+  - Discriminating tests for the TIMED_OUT per-flip wake: two affected flips give 3 wakes, one of them strictly between the updates; affected 0 gives 1 wake.
+  - A new wake after the QUEUE_STALLED flip (placed after `notifyTerminal`, separate from the §5.4 pre-flip wake), with tests: affected gives 3 wakes; affected 0 gives 2.
+- **Mutations:**
+  - Deleting the TIMED_OUT post-flip wake: `Expected 3, Received 1`.
+  - Deleting the QUEUE_STALLED post-flip wake: `Expected 3, Received 2`.
+- **Green:** 288 passed. tsc and eslint are clean.
+- **Evidence re-run (Leader-inline):** 288 passed, tsc clean. **VERIFIED**.
+- **Reviewer: PASS.** Every §5.3 path has a wake, and deleting any one of them turns a test red:
+  - COMPLETED: 1.
+  - Final FAILED: 1 (only if the write was affected).
+  - TIMED_OUT: 1 per affected flip.
+  - QUEUE_STALLED: 1 pre-flip plus 1 post-flip when affected.
+  - Tick: always 1.
+  - Retryable: none.
+  - The forwardRef cycle is safe, and wake failures are swallowed.
+- **ADVISORY (final):**
+  - Resilience: the DD-5 pre-flip wake cannot rescue the job.
+  - Tests: assert that `logger.error` was not called in the stall cases (the catch can hide mock throws).
+  - Readability: all four sweeper wakes log `reason='sweep'`. Distinct reasons would help.
+  - Risk: **smoke-test app boot (real DI graph with the forwardRef cycle) before T-11**.
+- **runtime events:** none
+
+- **Final status:** PASS on attempt 2 · **Date:** 2026-09-29
+- **Requirements covered:**
+  - `AIQ-R-2` A, B, D
+  - `AIQ-R-3` A, including DB time
+  - `AIQ-R-4` A, B (A in practice through the liveness check; see the spec defect below)
+  - `AIQ-R-20` (wake lines)
+- **Decisions made:**
+  - Accepted the forwardRef deviation (dispatch service file touched).
+  - Implemented the T-2 forward pointers.
+  - The task-conformance QUEUE_STALLED post-flip wake was added by the Leader from the task Description.
+- **Spec defect (surfaced to the user, not reworked):** with the default timeout (15 min) and stall window (30 min), the DD-5 owner exemption almost never triggers, because the liveness check returns first. The T-3 Disqualifier ("fresh activity **and** discriminating") cannot both hold.
+- **Forward pointer → `AIQ-T-11`:** smoke-test server boot (real Nest DI with the `BilateralAiService` ↔ `BilateralAiDispatchService` forwardRef) before the HITL.
+- **Final verification:** 288/288 green; tsc and lint clean; 4 wake mutations and the owner-exemption mutation go red.
+- **Budget:** review rounds are now T-6 1, T-1 2, T-2 2, T-3 2 = 7 rounds for 4 tasks, 64 % of the spec-wide 11.

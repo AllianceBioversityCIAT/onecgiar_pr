@@ -88,7 +88,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** all listed specs green; `npx tsc --noEmit` clean; both falsifiers executed red; P-25 outcome recorded; no `new Date(` in the new service (`grep -n "new Date(" services/bilateral-ai-dispatch.service.ts` → 0).
 - **Skills:** `nestjs-expert`, `error-handling-patterns`, `tdd`.
 
-### `AIQ-T-3` — Wake on every lane-freeing path; sweeper safety net and stall rule
+### [x] `AIQ-T-3` — Wake on every lane-freeing path; sweeper safety net and stall rule
 
 - **Type:** server · **Estimate:** M · **Depends on:** `AIQ-T-2` · **Blocks:** `AIQ-T-11`
 - **Description:**

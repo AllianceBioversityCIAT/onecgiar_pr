@@ -109,6 +109,11 @@ describe('BilateralAiService (unit)', () => {
     const evidenceTransferService = {
       transferForDraft: jest.fn().mockResolvedValue([]),
     };
+    // `AIQ-T-3`: `wake` is documented as never-throwing on the real class; the default here mirrors
+    // that so every existing test keeps behaving exactly as before this pivot.
+    const dispatchService = {
+      wake: jest.fn().mockResolvedValue(undefined),
+    };
 
     const service = new BilateralAiService(
       jobRepository as any,
@@ -128,6 +133,7 @@ describe('BilateralAiService (unit)', () => {
       clarisaInstitutionsRepository as any,
       notificationsService as any,
       evidenceTransferService as any,
+      dispatchService as any,
     );
 
     Object.assign(service, overrides);
@@ -153,6 +159,7 @@ describe('BilateralAiService (unit)', () => {
         clarisaInstitutionsRepository,
         notificationsService,
         evidenceTransferService,
+        dispatchService,
       },
     };
   };
@@ -520,6 +527,32 @@ describe('BilateralAiService (unit)', () => {
       );
       const [, setPayload] = stubs.jobRepository.update.mock.calls[0];
       expect(setPayload).not.toHaveProperty('created_date');
+    });
+
+    // `AIQ-R-2` D / `AIQ-AC-10` (`tasks.md` AIQ-T-3 Tests: "Retry re-entry: retryJob → decide sees
+    // it as the newest"; `design.md` §5.3's row for this is "no code change there, only a test").
+    // This is the "fresh queue_entry_date" half of that scenario: `queue_entry_date` is a STORED
+    // generated column `COALESCE(retried_date, created_date)` (`design.md` P-7), never written
+    // directly, so proving `retried_date` is set to the DB-time escape hatch (never a JS `Date`,
+    // per the timezone-skew fix `bilateral-ai.config.ts`'s `bilateralAiDbNow`) is what makes the
+    // generated column pick up "now" as this job's new fair-order position. The complementary
+    // "ordering behind an older PENDING job" half is proven at `decide`'s seam in
+    // `bilateral-ai-dispatch.service.spec.ts` ("retry re-entry — a retried job goes to the back of
+    // fair order").
+    it('AIQ-R-2 D / AIQ-AC-10: retryJob sets a fresh retried_date via CURRENT_TIMESTAMP (never a JS Date), which the generated queue_entry_date column picks up as the new fair-order position', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(failedJob());
+
+      await service.retryJob('job-1', user);
+
+      const [, setPayload] = stubs.jobRepository.update.mock.calls[0];
+      expect(setPayload.retried_date).toBeInstanceOf(Function);
+      expect(setPayload.retried_date()).toBe('CURRENT_TIMESTAMP');
+      expect(setPayload.retried_date).not.toBeInstanceOf(Date);
+      // `design.md` §5.2/P-7: `queue_entry_date` itself is never in this write's SET clause — it
+      // is a STORED generated column derived from `retried_date`, not a column this write ever
+      // touches directly.
+      expect(setPayload).not.toHaveProperty('queue_entry_date');
     });
 
     it('should throw 409 JOB_ALIVE when the conditional reset affects 0 rows (lost the race)', async () => {
@@ -1792,6 +1825,59 @@ describe('BilateralAiService (unit)', () => {
       expect(options).toMatchObject({ resultCount: 0, late: false });
     });
 
+    // `AIQ-T-3` (`design.md` §5.3 P-5): the COMPLETED write just freed a lane — `processJob` must
+    // wake the dispatch service so a parked job doesn't wait for the sweeper's next tick.
+    it('wakes the dispatch service exactly once after the COMPLETED write (AIQ-T-3)', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: 'int-123',
+      });
+
+      await service.processJob('j1');
+
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(1);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('completed');
+    });
+
+    // `AIQ-T-3` forward pointer (from `AIQ-T-2`): a wake-time fault must never turn a job that just
+    // completed successfully into a consumer retry — `processJob` must still resolve and still
+    // have notified the uploader.
+    it('does not rethrow when dispatch.wake rejects after the COMPLETED write', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [],
+        interactionId: 'int-123',
+      });
+      stubs.dispatchService.wake.mockRejectedValue(new Error('DB down'));
+
+      await expect(service.processJob('j1')).resolves.toBeUndefined();
+
+      expect(stubs.notificationsService.notifyTerminal).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
     // `APF-R-2` A "AND IT MUST accept a late mining response... idempotently": a re-run for the
     // same (job_id, candidate_index) — the mining response arriving after the sweeper already
     // flipped the row, or a redelivered message — must reuse the existing draft/result instead of
@@ -2033,6 +2119,8 @@ describe('BilateralAiService (unit)', () => {
       // Not terminal yet — the retry keeps `PROCESSING`, so `APF-R-4`'s "exactly once per terminal
       // state" must not fire here.
       expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+      // `AIQ-T-3` negative case: a mid-attempt retry never frees a lane, so it must not wake.
+      expect(stubs.dispatchService.wake).not.toHaveBeenCalled();
     });
 
     // `APF-R-3` "AND IT MUST set FAILED with the last error_code after attempt max_attempts".
@@ -2072,6 +2160,9 @@ describe('BilateralAiService (unit)', () => {
         stubs.notificationsService.notifyTerminal.mock.calls[0];
       expect(notifiedJob.error_code).toBe('HTTP_503');
       expect(outcome).toBe('failed');
+      // `AIQ-T-3`: the final FAILED write just freed a lane, exactly like COMPLETED.
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(1);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('failed');
     });
 
     it('should mark job as FAILED without throwing on 4xx errors', async () => {
@@ -2101,6 +2192,41 @@ describe('BilateralAiService (unit)', () => {
           completed_date: expect.any(Function), // was: expect.any(Date)
         },
       );
+      // `AIQ-T-3`: a 4xx final failure is still "the final FAILED write" (design.md §5.3 P-5
+      // explicitly includes "incl. 4xx").
+      expect(stubs.dispatchService.wake).toHaveBeenCalledTimes(1);
+      expect(stubs.dispatchService.wake).toHaveBeenCalledWith('failed');
+    });
+
+    // `AIQ-T-3` (`design.md` §5.3 P-5): the write is scoped to `status = PROCESSING`, so a lost
+    // race (the sweeper or another consumer already moved the row) must not wake on someone else's
+    // behalf — the same guard that already gates `notifyTerminal` on this path.
+    it('does not wake when the final FAILED write affects 0 rows (lost the race)', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+      });
+      const error = new Error('Bad request');
+      (error as any).status = 400;
+      stubs.textMining.extract.mockRejectedValue(error);
+      // Update call order for this fixture (no docs/audio, so no intermediate stage write):
+      // [1] attemptStart's claim, [2] setStage(EXTRACTING), [3] the final FAILED write — only the
+      // third is the one this test targets.
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 1 });
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 1 });
+      stubs.jobRepository.update.mockResolvedValueOnce({ affected: 0 });
+
+      await service.processJob('j1');
+
+      expect(stubs.notificationsService.notifyTerminal).not.toHaveBeenCalled();
+      expect(stubs.dispatchService.wake).not.toHaveBeenCalled();
     });
   });
 
