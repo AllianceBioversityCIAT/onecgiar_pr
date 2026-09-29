@@ -4,7 +4,7 @@
 
 - **Module / feature:** `bilateral` · `qa-ai-text-suggestions` (`BIL-QTS`)
 - **Linked spec:** `requirements.md` + `design.md` (this folder)
-- **Ticket:** sub-task under P2-3150 (to be created). Commits use `[P2-XXXX]` once it exists
+- **Ticket:** [P2-3848](https://cgiarmel.atlassian.net/browse/P2-3848) (Enhancement under epic P2-2338; INC-163884 insumo 5). Commits from here on use `[P2-3848]`
 - **Owner / driver:** Juan David Delgado
 - **Status:** `in-progress`
 - **Branch:** based on `performance-refactor` (bilateral work never on `staging`)

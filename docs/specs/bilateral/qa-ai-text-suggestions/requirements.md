@@ -12,7 +12,7 @@
 | Status | **approved** 2026-09-29 (Phase 1) |
 | Owner | Juan David Delgado |
 | Date | 2026-09-29 |
-| Ticket(s) | Sub-task under [P2-3150](https://cgiarmel.atlassian.net/browse/P2-3150), epic [P2-3482](https://cgiarmel.atlassian.net/browse/P2-3482) (owner decision OQ-4, 2026-09-29). The sub-task is not created yet |
+| Ticket(s) | [P2-3848](https://cgiarmel.atlassian.net/browse/P2-3848) (Enhancement, epic P2-2338 *Enhancements 2026*; INC-163884 insumo 5) — replaces the planned sub-task under P2-3150 |
 | Proposal | `proposal.md` (this folder), approved 2026-09-29 with OQ-1…OQ-4 resolved (§10) |
 | Parent specs | `bilateral/qa-ai-traffic-light` (flow, contract v0.2, `BIL-QAI-R-6` freshness) · `bilateral/qa-ai-verdict-drawer` (drawer; `BIL-QAD-R-8` narrowed here) |
 | Baseline | `docs/prd.md` **US-S1**, **US-S4**, **AC-2**, **AC-4**, **AC-9** · `docs/ux-ui/design.md` **§6** (drawers for side-by-side review/edit), §7 + DD-12, §8, **§10** a11y · `docs/trd/trd.md` **W1**, **W8** · `docs/bilateral-module/integration-contracts.md` §Quality assessment |
