@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed} from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -16,6 +16,20 @@ import { BilateralEvidenceItem, BilateralEvidenceBody } from './section-evidence
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
+
+/**
+ * `result_type_id` values whose Evidence section is complete by default. Local constants because the
+ * client has no shared ResultTypeEnum (same idiom as `section-geography`).
+ *
+ * - Capacity sharing for development: W1/W2 already says it "does not currently require evidence
+ *   submission" (`rd-evidences.component.ts` → `alertStatus`).
+ * - Knowledge Product: its evidence IS the CGSpace handle, which the server attaches on its own
+ *   (`populateKPFromCGSpace`).
+ *
+ * Nicoleta Trifa (email, 2026-09-29): bulk-uploaded CapDev and KP results were being asked for evidence.
+ */
+const CAP_DEV_TYPE_ID = 5;
+const KNOWLEDGE_PRODUCT_TYPE_ID = 6;
 
 @Component({
   selector: 'app-section-evidence',
@@ -36,6 +50,21 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
    * Read straight from the service, the way this section already reads the rest of the result state.
    */
   readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+  /** CapDev and KP: evidence may still be added, but the section never counts as missing. */
+  readonly isEvidenceOptional = computed(() => {
+    const typeId = Number(this.creationService.resultTypeId());
+    return typeId === CAP_DEV_TYPE_ID || typeId === KNOWLEDGE_PRODUCT_TYPE_ID;
+  });
+
+  constructor() {
+    // The type can land after the evidences (deep link) or change under them (change-result-type
+    // dialog); re-publish so the checklist never keeps the other type's answer.
+    effect(() => {
+      this.isEvidenceOptional();
+      if (this.loaded() === true) this.updateTracker();
+    });
+  }
 
   private manualSaveSub?: Subscription;
 
@@ -568,7 +597,9 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
         // "Still missing" se ancla al campo por ese texto, y un nombre que no está en pantalla deja
         // la fila sin su botón `Go`. El requisito completo lo explica la descripción de la tarjeta.
         label: 'Evidence',
-        filled: this.hasValidLink,
+        // Counted as filled rather than flagged `optional`: an optional-only section has zero counted
+        // fields and reads as `empty`, and the request was for the section to be green by default.
+        filled: this.isEvidenceOptional() || this.hasValidLink,
       },
     ]);
   }
