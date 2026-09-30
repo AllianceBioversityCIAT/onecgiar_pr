@@ -41,6 +41,13 @@ describe('AiProcessesTriggerComponent', () => {
     expect(button().getAttribute('aria-label')).toBe('AI processes');
   });
 
+  it('hides the visible word below 640px but keeps the full accessible name', () => {
+    const label = fixture.nativeElement.querySelector('[data-testid="ai-processes-trigger-label"]') as HTMLElement;
+    expect(label.classList).toContain('hidden');
+    expect(label.classList).toContain('min-[640px]:inline');
+    expect(button().getAttribute('aria-label')).toBe('AI processes');
+  });
+
   it('working: badge = active (running + waiting) count, aria-label carries both counts', () => {
     service.jobs.set([
       normalizeListJob(rawListJob({ job_id: 'job-1', status: 'PROCESSING' })),

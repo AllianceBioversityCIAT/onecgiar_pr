@@ -1,6 +1,6 @@
 <button
   type="button"
-  class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[6px] pr-[12px] text-[12px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-200)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
+  class="inline-flex h-[32px] shrink-0 cursor-pointer items-center gap-[6px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[6px] pr-[6px] min-[640px]:pr-[12px] text-[12px] font-semibold text-[var(--pr-text-heading)] no-underline transition-colors hover:border-[var(--pr-color-primary-200)] focus-visible:outline-none focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:border-[var(--pr-color-primary-300)]"
   [class.border-[var(--pr-color-primary-300)]]="isExpanded()"
   [class.bg-[var(--pr-color-primary-50)]]="isExpanded()"
   data-testid="ai-processes-trigger"
@@ -33,7 +33,9 @@
       }
     }
   </span>
-  <span>{{ copy.label }}</span>
+  <!-- Below 640 px only the icon + badge show (the wizard title slot has no room for the word);
+       the accessible name stays complete through aria-label. -->
+  <span class="hidden min-[640px]:inline" data-testid="ai-processes-trigger-label">{{ copy.label }}</span>
   @if (badgeCount() > 0) {
     <span
       class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-[5px] text-[10.5px] font-bold tabular-nums text-white"
