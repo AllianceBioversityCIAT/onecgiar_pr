@@ -2150,36 +2150,31 @@ describe('SectionContributorsComponent', () => {
     };
     const optionIds = () => component.filteredProjectOptions().map(p => p.id);
 
-    it("AC2: starts on the page's Center and lists only that Center's projects", () => {
+    it("AC2: starts on the page's Center pill and lists only that Center's projects", () => {
       setup();
       expect(component.projectCenterFilter()).toBe(IFPRI);
       expect(optionIds()).toEqual([1, 2]);
-      expect(component.projectFilterCountLabel()).toBe('2 of 4 projects');
-      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of the selected Center');
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of IFPRI');
     });
 
-    it('AC1: offers "All centers" plus every Center that owns projects, with its count', () => {
+    it('offers exactly two pills — the page Center (active) and "All centers" — with their counts', () => {
       setup();
-      expect(component.projectCenterFilterOptions()).toEqual([
-        { value: ALL_PROJECT_CENTERS, label: 'All centers', badge: '4' },
-        { value: CIP, label: 'CIP - Center 21', badge: '1' },
-        { value: IFPRI, label: 'IFPRI - Center 20', badge: '2' }
+      expect(component.projectCenterPills()).toEqual([
+        { mode: 'center', label: 'IFPRI', count: 2, active: true },
+        { mode: 'all', label: 'All centers', count: 4, active: false }
       ]);
     });
 
-    it('changing to "All centers" lists every project, including those with no owner Center', () => {
+    it('"All centers" lists every project, including those with no owner Center, and flips the active pill', () => {
       setup();
-      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      component.setProjectCenterFilter('all');
       expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
       expect(optionIds()).toEqual([1, 2, 3, 4]);
       expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
-    });
+      expect(component.projectCenterPills().map(p => p.active)).toEqual([false, true]);
 
-    it('can switch to another Center, and a project with no owner is only reachable through "All centers"', () => {
-      setup();
-      component.onProjectCenterFilterChange(CIP);
-      expect(optionIds()).toEqual([3]);
-      expect(optionIds()).not.toContain(4);
+      component.setProjectCenterFilter('center');
+      expect(optionIds()).toEqual([1, 2]);
     });
 
     it("AC4: a saved project from another Center stays in the options and in the PATCH", () => {
@@ -2202,59 +2197,63 @@ describe('SectionContributorsComponent', () => {
       creation.resultLeadCenterId.set(CIP);
       setup(null);
       expect(component.projectCenterFilter()).toBe(CIP);
+      expect(component.projectCenterPills()[0]).toEqual({ mode: 'center', label: 'CIP', count: 1, active: true });
     });
 
-    it('starts on "All centers" when the page Center owns no project (no empty dropdown)', () => {
+    it('shows no pills and lists every project when the page Center owns no project (no empty dropdown)', () => {
       setup(EMPTY);
       expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
       expect(optionIds()).toEqual([1, 2, 3, 4]);
+      expect(component.showProjectCenterPills()).toBe(false);
+      expect(component.projectCenterPills()).toEqual([]);
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
     });
 
-    it('a user choice wins over a page Center that resolves later', () => {
+    it('a user "All centers" choice wins over a page Center that resolves later', () => {
+      creation.resultLeadCenterId.set(CIP);
       setup(null);
-      component.onProjectCenterFilterChange(CIP);
+      component.setProjectCenterFilter('all');
       TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', IFPRI);
-      expect(component.projectCenterFilter()).toBe(CIP);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
     });
 
-    it('ignores an empty emission from the select', () => {
+    it('toggling the pills never saves anything', () => {
       setup();
-      component.onProjectCenterFilterChange(null);
-      component.onProjectCenterFilterChange('');
-      expect(component.projectCenterFilterChoice()).toBeNull();
-      expect(component.projectCenterFilter()).toBe(IFPRI);
-    });
-
-    it('changing the filter never saves anything', () => {
-      setup();
+      component.contributorsHydrated.set(true);
       autoSave.saveContributors.mockClear();
-      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      component.setProjectCenterFilter('all');
+      component.setProjectCenterFilter('center');
       expect(autoSave.saveContributors).not.toHaveBeenCalled();
     });
 
-    it('is shown on an editable result with projects, hidden with an empty catalogue', () => {
+    it('pills are shown on an editable result with a Center that owns projects, hidden with an empty catalogue', () => {
       setup();
-      expect(component.showProjectCenterFilter()).toBe(true);
+      expect(component.showProjectCenterPills()).toBe(true);
       component.availableProjects.set([]);
-      expect(component.showProjectCenterFilter()).toBe(false);
+      expect(component.showProjectCenterPills()).toBe(false);
     });
 
-    it('sits right above the projects picker and feeds it the filtered options (markup contract)', () => {
+    it('lives inside the projects picker, in its [util] slot, and the old strip is gone (markup contract)', () => {
       const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
-      const filter = html.indexOf('@if (showProjectCenterFilter()) {');
       const picker = html.indexOf('label="Contributing W3/bilateral projects"');
-      expect(filter).toBeGreaterThan(html.indexOf('sc-block--projects'));
-      expect(filter).toBeLessThan(picker);
-      const pickerTag = html.slice(picker, html.indexOf('</app-pr-multi-select>', picker));
+      const pickerEnd = html.indexOf('</app-pr-multi-select>', picker);
+      const pickerTag = html.slice(picker, pickerEnd);
       expect(pickerTag).toContain('[options]="filteredProjectOptions()"');
       expect(pickerTag).toContain('[placeholder]="projectsPickerPlaceholder()"');
       expect(pickerTag).not.toContain('[options]="availableProjectsComputed()"');
-      const filterBlock = html.slice(filter, picker);
-      expect(filterBlock).toContain('<app-pr-select');
-      expect(filterBlock).toContain('[options]="projectCenterFilterOptions()"');
-      expect(filterBlock).toContain('{{ contributorsCopy.projectFilter.label }}');
-      expect(filterBlock).toContain('<ng-icon name="lucideListFilter"');
-      expect(filterBlock).not.toContain('<select');
+      // Projected into the slot under the search box.
+      expect(pickerTag).toContain('<div util>');
+      expect(pickerTag).toContain('@if (showProjectCenterPills()) {');
+      expect(pickerTag).toContain('data-testid="projects-center-pills"');
+      expect(pickerTag).toContain('[attr.aria-pressed]="pill.active"');
+      expect(pickerTag).toContain('type="button"');
+      // The panel stays open: focus is kept and the click does not bubble to the trigger.
+      expect(pickerTag).toContain('(mousedown)="$event.preventDefault()"');
+      expect(pickerTag).toContain('(click)="$event.stopPropagation()"');
+      // The strip (label + pr-select + "N of M projects") is gone.
+      expect(html).not.toContain('projects-center-filter');
+      expect(html).not.toContain('<app-pr-select');
+      expect(html).not.toContain('lucideListFilter');
     });
   });
 

@@ -175,41 +175,6 @@
       </div>
     }
 
-    <!--
-      P2-3859: Center filter for the projects picker, starting on the page's Center (911 projects
-      otherwise). View-only: it narrows the OPTIONS, never the selection — `filteredProjectOptions()`
-      keeps every already-selected project in the list so `pr-multi-select.writeValue` cannot drop
-      it (AC4). Hidden when read-only (the picker cannot open) or when the catalogue is empty.
-      Label-less `app-pr-select` = bare control, so it does not grow its own field card.
-    -->
-    @if (showProjectCenterFilter()) {
-      <div
-        class="flex flex-wrap items-center gap-x-[12px] gap-y-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[12px] py-[8px]"
-        data-testid="projects-center-filter">
-        <span class="inline-flex shrink-0 items-center gap-[6px] text-[13px] font-semibold text-[var(--pr-color-primary-600)]">
-          <ng-icon name="lucideListFilter" class="text-[15px]" aria-hidden="true" />
-          {{ contributorsCopy.projectFilter.label }}
-        </span>
-        <div class="min-w-[220px] flex-1 sm:max-w-[380px]">
-          <app-pr-select
-            [options]="projectCenterFilterOptions()"
-            optionLabel="label"
-            optionValue="value"
-            optionBadgeLabel="badge"
-            [ngModel]="projectCenterFilter()"
-            (ngModelChange)="onProjectCenterFilterChange($event)"
-            [placeholder]="contributorsCopy.projectFilter.placeholder"
-            [required]="false"
-            [editable]="true"
-            idKey="sc-projects-center-filter">
-          </app-pr-select>
-        </div>
-        <span class="ml-auto text-[12px] font-medium text-[var(--pr-text-secondary)]" data-testid="projects-center-filter-count">
-          {{ projectFilterCountLabel() }}
-        </span>
-      </div>
-    }
-
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing W3/bilateral projects"
@@ -222,6 +187,48 @@
       [placeholder]="projectsPickerPlaceholder()"
       [required]="false"
       [isStatic]="!readOnly()">
+      <!--
+        P2-3859: Center pills inside the panel, right under its search box (`[util]` slot of
+        pr-multi-select). QA found the old strip above the picker too invasive. View-only: they swap
+        the OPTIONS, never the selection — `filteredProjectOptions()` keeps every already-selected
+        project in the list so `pr-multi-select.writeValue` cannot drop it (AC4).
+        🛑 The panel is open only while focus is inside `a.field` (`:focus-within`,
+        custom-fields.scss). `mousedown.preventDefault` keeps focus where it was (the search box), so
+        a pill click can never close the panel — Safari does not focus a clicked button, which would
+        otherwise drop focus-within. `click.stopPropagation` keeps the click out of the trigger.
+        Keyboard: Tab reaches the pills inside the panel, so focus-within holds too.
+      -->
+      <div util>
+        @if (showProjectCenterPills()) {
+          <div
+            role="group"
+            class="flex flex-wrap items-center gap-[6px]"
+            data-testid="projects-center-pills"
+            [attr.aria-label]="contributorsCopy.projectFilter.groupLabel"
+            (mousedown)="$event.preventDefault()"
+            (click)="$event.stopPropagation()">
+            @for (pill of projectCenterPills(); track pill.mode) {
+              <button
+                type="button"
+                class="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[12px] font-semibold leading-[18px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pr-color-primary-300)]"
+                [class]="
+                  pill.active
+                    ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-600)] text-[var(--pr-color-white)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]'
+                    : 'border-[var(--pr-border)] bg-[var(--pr-color-white)] text-[var(--pr-color-primary-600)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)]'
+                "
+                [attr.aria-pressed]="pill.active"
+                [attr.data-testid]="'projects-center-pill-' + pill.mode"
+                (click)="setProjectCenterFilter(pill.mode)">
+                @if (pill.active) {
+                  <span class="h-[6px] w-[6px] rounded-full bg-current" aria-hidden="true"></span>
+                }
+                <span>{{ pill.label }}</span>
+                <span class="font-medium opacity-80">{{ contributorsCopy.projectFilter.count(pill.count) }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
     </app-pr-multi-select>
     @if (selectedProjectIds().length) {
       <div class="sc-selected-chips">
