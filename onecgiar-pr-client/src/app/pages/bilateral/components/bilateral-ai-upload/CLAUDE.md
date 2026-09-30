@@ -27,8 +27,8 @@ sustituye.** El job pasa a vivir en la lista de `BilateralAiService`
     ningún campo de job (`AIQ-DD-11`).
 - **El formulario se renderiza SIEMPRE** (`AIQ-R-7` A/B) — nunca hay un
   `@if` que lo sustituya por un panel de progreso. El panel de un solo job
-  (`app-ai-processing-panel`) YA NO se usa aquí; sigue existiendo hasta que
-  `AIQ-T-10` lo borre, pero ningún componente vivo lo importa.
+  (`app-ai-processing-panel`) fue borrado por `AIQ-T-10` (`AIQ-DD-8`); el
+  drawer "AI processes" (`ai-job-card`, `AIQ-T-8`) es la única superficie hoy.
 - **Al enviar (202):** `addSubmittedJob(response)`, el formulario se resetea
   (ficheros + texto vacíos), se muestra una tarjeta de confirmación
   ("`<project>` was added to the AI queue" + **Open AI processes** + **Choose

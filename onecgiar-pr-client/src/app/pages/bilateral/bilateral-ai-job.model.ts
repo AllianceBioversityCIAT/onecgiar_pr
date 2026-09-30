@@ -5,7 +5,9 @@ import { BilateralAiJobStatus } from './services/bilateral-ai.interfaces';
  * (`APF-T-5`, `docs/specs/bilateral/ai-processing-feedback/design.md` §6.2).
  *
  * Every function here is a plain data transform: no HTTP, no signals, no DOM. `BilateralAiService`
- * calls these on each poll; `AiProcessingPanelComponent` (a later task) renders the result.
+ * calls these on each poll; the "AI processes" drawer's job cards (`AIQ-T-8`, `ai-job-card`,
+ * `ai-processes-drawer`) render the result — the single-job `ai-processing-panel` that used to be
+ * the sole consumer was retired by `AIQ-T-10` (design §6.2, `AIQ-DD-8`).
  */
 
 // ── Raw payload contract ────────────────────────────────────────────────

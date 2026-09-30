@@ -61,8 +61,10 @@
 
 <app-external-tools></app-external-tools>
 <app-share-request-modal></app-share-request-modal>
-<!-- Outcome of an AI-assisted bilateral job, wherever the user is when it lands (2026-09-07). -->
-<app-bilateral-ai-completion-dialog />
+<!-- Headless: keeps BilateralAiService (job polling) and AiProcessesDrawerLauncherService (the
+     "AI processes" dialog) instantiated app-wide, wherever the user is when a job lands
+     (AIQ-T-10, AIQ-DD-6 — replaces the retired app-wide completion dialog). -->
+<app-bilateral-ai-job-watcher />
 <app-pr-dialog
   [(visible)]="this.footerSE.displayContactUs"
   [modal]="true"

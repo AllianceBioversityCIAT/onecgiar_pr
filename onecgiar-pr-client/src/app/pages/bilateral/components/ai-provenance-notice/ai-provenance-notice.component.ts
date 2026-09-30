@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 /**
  * `APF-R-12` / `APF-DD-10` — the single AI-transparency copy constant. Every one of the five
- * provenance surfaces (drafts list header, draft card, promoted result editor, result detail,
+ * provenance surfaces (drafts list header, draft card, promoted result editor, result detail, the
+ * "AI processes" drawer's completed job card — `AIQ-DD-6` moved this surface off the retired
  * completion dialog) renders this exact sentence — as visible text (banner/line) or as the
  * accessible name of the badge — so the wording can never drift surface to surface.
  *

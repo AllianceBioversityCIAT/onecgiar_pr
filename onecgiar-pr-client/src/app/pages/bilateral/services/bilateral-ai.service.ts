@@ -209,7 +209,8 @@ export class BilateralAiService implements OnDestroy {
 
   /**
    * `APF-R-6` D / `APF-R-21`: the expected-duration range for a source mix, cached per mix for the
-   * session so the panel and any other caller share one HTTP call.
+   * session so the "AI processes" drawer's running cards (`ai-processes-drawer-host`, `AIQ-T-8`)
+   * and any other caller share one HTTP call.
    */
   expectations(mix: BilateralAiMixClass): Observable<BilateralAiExpectations> {
     let cached = this.expectationsCache.get(mix);
