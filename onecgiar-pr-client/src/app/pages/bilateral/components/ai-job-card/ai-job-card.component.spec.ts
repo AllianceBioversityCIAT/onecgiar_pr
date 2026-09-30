@@ -40,6 +40,14 @@ describe('AiJobCardComponent', () => {
     expect(text()).not.toMatch(/\b(in|starts in|about)\s+~?\d+\s*(s|sec|min)/i);
   });
 
+  it('a running card keeps the same neutral border as other cards — no accent rail (AIQ-T-8 fix)', () => {
+    mount({ status: 'PROCESSING', stage: 'extracting' });
+
+    const card = query('ai-job-card-running') as HTMLElement;
+    expect(card.classList.contains('border-[var(--pr-color-primary-200)]')).toBe(false);
+    expect(card.querySelector('[aria-hidden="true"].bg-gradient-to-b')).toBeNull();
+  });
+
   it('AIQ-R-9 B: running elapsed reads from started_date, not queue_entry_date, once the server has set it', () => {
     // queue_entry_date is 10 min before started_date — if elapsed used queue_entry_date it would
     // read 15:00 here instead of 05:00.

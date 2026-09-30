@@ -18,10 +18,14 @@ service injection, no timer of its own.
 - The completed-with-drafts card mounts `app-ai-provenance-notice` (`variant="line"`) — this is the
   fifth-to-sixth-surface move `AIQ-DD-6` describes; never hand-roll the sentence here.
 - `highlighted()` (`AIQ-R-8` D) is NOT color-only (a11y review, WCAG 1.4.1): it adds a
-  `ring-2 ring-offset-2` (a shape cue distinct from a running card's `border-primary-200`), a
-  visually-hidden `copy.highlightedSrText` span, and `aria-current="true"`. A highlighted RUNNING
-  card must still read as visually different from a plain running card — attempt 1 reused the same
-  border class for both and was rightly flagged.
+  `ring-2 ring-offset-2` (a shape cue), a visually-hidden `copy.highlightedSrText` span, and
+  `aria-current="true"`. A highlighted RUNNING card must still read as visually different from a
+  plain running card — attempt 1 reused the same border class for both and was rightly flagged.
+- The running-variant accent rail (a left-edge gradient bar plus a `border-primary-200` override,
+  both keyed off `isRunningLike()`) was removed 2026-09-29 — a running card now renders the same
+  neutral `--pr-border` as every other variant. It still reads as RUNNING via `shadow-md`, the
+  5-segment progress rail (`stageSegments()`) and the stage/elapsed copy — never re-add a color-only
+  cue here without an a11y review.
 - Every user-readable text color is `--pr-text-muted` or darker — never `--pr-text-subtle` (a11y
   review: ~3.0:1 on white, below WCAG AA at 10-11px). `--pr-text-subtle` is not used anywhere in this
   template, including decorative dot separators (kept consistent rather than split by "is this text
@@ -52,4 +56,4 @@ service injection, no timer of its own.
   owns the full job list and every cross-job computation; a second consumer of the service would
   duplicate the diffing/expectations-cache logic `BilateralAiService` already does.
 
-**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · 0771414d6
+**Verified:** 2026-09-29 · JuanGuzman-io/p2-3853-jira-understanding · 710c50506

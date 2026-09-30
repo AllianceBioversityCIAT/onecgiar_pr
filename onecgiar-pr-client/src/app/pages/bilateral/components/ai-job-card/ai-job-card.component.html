@@ -1,7 +1,6 @@
 <!-- @akili-spec bilateral/ai-processing-queue (AIQ-R-9 B-H, AIQ-DD-8 parity) -->
 <article
   class="relative rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_14px] transition-[opacity,transform] duration-450 ease-out starting:opacity-0 starting:-translate-y-1.5 motion-reduce:transition-none motion-reduce:starting:opacity-100 motion-reduce:starting:translate-y-0"
-  [class.border-[var(--pr-color-primary-200)]]="isRunningLike()"
   [class.shadow-md]="isRunningLike()"
   [class.ring-2]="highlighted()"
   [class.ring-offset-2]="highlighted()"
@@ -9,11 +8,6 @@
   [class.ring-offset-[var(--pr-surface-card)]]="highlighted()"
   [attr.aria-current]="highlighted() ? 'true' : null"
   [attr.data-testid]="'ai-job-card-' + variant()">
-  @if (isRunningLike()) {
-    <span
-      class="absolute left-[-1px] top-[12px] bottom-[12px] w-[3px] rounded-r-[3px] bg-gradient-to-b from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)]"
-      aria-hidden="true"></span>
-  }
   @if (highlighted()) {
     <span class="sr-only" data-testid="ai-job-card-highlight-text">{{ copy.highlightedSrText }}</span>
   }
