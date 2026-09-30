@@ -1318,9 +1318,10 @@ describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)',
     (repo as any).query = queryMock;
   });
 
-  const sqlOf = () => (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+  const sqlOf = () =>
+    (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
 
-  it('builds the indicators[] sub-select reusing P-6\'s join and activity conditions verbatim', async () => {
+  it("builds the indicators[] sub-select reusing P-6's join and activity conditions verbatim", async () => {
     queryMock.mockResolvedValue([]);
 
     await repo.getTocMappingsByResultId(42);
@@ -1344,7 +1345,9 @@ describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)',
       'ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id AND rit.is_active = 1',
     );
     // Design §4.1 key names, in order.
-    expect(sql).toContain("'toc_results_indicator_id', rtri.toc_results_indicator_id");
+    expect(sql).toContain(
+      "'toc_results_indicator_id', rtri.toc_results_indicator_id",
+    );
     expect(sql).toContain("'indicator_description', tri.indicator_description");
     expect(sql).toContain("'indicator_type', tri.type_value");
     expect(sql).toContain("'number_target', rit.number_target");
@@ -1363,7 +1366,7 @@ describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)',
     const [sql, params] = queryMock.mock.calls[0];
     expect(params).toEqual([42]);
     expect(sql).toContain('GROUP BY ci.official_code, ci.name, ir.name');
-    expect(sql).toContain("ir.name AS initiative_role");
+    expect(sql).toContain('ir.name AS initiative_role');
   });
 
   it('normalises a null indicators aggregate to [] (mapped indicator without any active row)', async () => {
@@ -1446,7 +1449,9 @@ describe('ResultRepository — getTocMappingsByResultId indicators[] (BTC-T-1)',
       target_date: 2026,
       target_contribution: 12.5,
     });
-    expect(result[0].toc_mappings[0].indicators[1].target_contribution).toBeNull();
+    expect(
+      result[0].toc_mappings[0].indicators[1].target_contribution,
+    ).toBeNull();
   });
 
   it('normalises indicators to [] on the all-null LEFT JOIN mapping (initiative with no active ToC row)', async () => {
