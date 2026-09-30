@@ -816,3 +816,21 @@
   - CT: 5/6 on the first run, then 6/6 on an immediate rerun. The failure was a 375 px full-screen assertion off by about 9 px, and it happened once. **Forward pointer → `AIQ-T-11`:** treat that 375 px sheet assertion as flaky and investigate before trusting CT as a gate.
   - **Spec text still says 440 px.** Amend `requirements.md` `AIQ-R-12` B and design §6.5 at `/akili-archive`.
 - **Drawer header** (`e4c755a00`): single header block, icon tile removed, subtitle at full width, lanes strip inside the header.
+- **Drawer actions close the drawer** (`7a58fcae3`): View drafts, Upload different files, Report manually and Start with evidence now set `drawerOpen(false)` before navigating.
+- **Drafts `?job=` deep link** (`50aa877c5`). Before this fix, the highlight never scrolled into view live. Four root causes, all fixed:
+  1. `ngOnInit` read the `snapshot` once, and route reuse kept the component alive, so the query param was never read again. It now subscribes to `queryParamMap`.
+  2. `queueMicrotask` ran before render. It is replaced by `afterNextRender`.
+  3. The scroll container detection picked `div.mdr`, which is `overflow-y: auto` but never overflows. It now prefers the ancestor that actually overflows (`#workArea`).
+  4. `scrollIntoView` scrolled the `overflow: hidden` page host and hid the Center header. Only the real scroller is scrolled now.
+  - Plus: a second instant pass after 600 ms. The highlight now **persists while `?job=` is in the URL** (user decision; the old version cleared after 4 s).
+  - Verified live in Chrome after a hard reload: the card is in view (top 573 within 306–994), the ring stays on after 6 s, and the host scrollTop is 0.
+- **Trigger below 640 px shows only the icon and badge** (`7fa0c5a8e`, Leader-inline at the user's request). At 375 px the wizard title now ends at x 219 with an ellipsis, and the trigger starts at x 223. `aria-label` is unchanged.
+- **Findings from local testing, not fixed:**
+  - The local server runs in America/Bogota, so mysql2 reads UTC `DATETIME` values 5 h ahead. The drawer shows `00:00` elapsed and wrong finish times. Expected to be correct on prtest (UTC); check there.
+  - Two `PROCESSING` jobs for the same user (Admin PRMS: P-1639 and P-1560) were seen at the same time while a third waited with `own_job_running`. Unconfirmed whether the old deployed consumer on the shared `dev_bilateral_ai_processing` queue took one of them. **Check in T-11**, where only new-code consumers run.
+  - Mojibake in CLARISA project names (`Identificaciï¿½n`, `â€œSTDF`). This is a data issue and predates this work.
+  - `bilateral-overview.component.ts:628` has the same `scrollIntoView`-on-`pr-viewport-page` pattern. Out of scope.
+- **Final verification before merge (Leader):**
+  - Server: `jest --testPathPattern="bilateral-ai|main.spec|bilateral-center|jwt.middleware"` gives 460 passed. `tsc` and eslint are clean.
+  - Client: `jest src/app/pages/bilateral src/app/shared/components/pr-toast src/app/app.component` gives 2160 passed. `ng build --configuration development` has 0 errors, and `ng lint` is clean.
+- **Env:** no new required variables. There are two new optional server variables: `BILATERAL_AI_MAX_CONCURRENT` (default 2) and `BILATERAL_AI_MAX_PER_USER` (default 1). The client needs no new `environment.ts` keys.
