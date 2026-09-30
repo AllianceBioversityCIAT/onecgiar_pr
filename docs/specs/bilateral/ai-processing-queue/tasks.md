@@ -229,7 +229,7 @@ Delivers `AIQ-R-1..22` as designed in `design.md`: DB-arbitrated two-lane dispat
 - **Done criteria:** specs green; `ng build` green; falsifiers red when mutated; `CLAUDE.md` updated.
 - **Skills:** `angular-developer`, `tailwind-design-system`.
 
-### `AIQ-T-8` — "AI processes" drawer, job card, copy file
+### [x] `AIQ-T-8` — "AI processes" drawer, job card, copy file
 
 - **Type:** client · **Estimate:** L · **Depends on:** `AIQ-T-5` · **Blocks:** `AIQ-T-9`, `AIQ-T-10`, `AIQ-T-11`
 - **First step (settles P-18):** prototype `HlmDialogService.open` with a right-sheet `contentClass`. Measure in a browser that the panel is right-anchored and full height, is 440 px at 1280, is full-screen at 375, traps focus and restores it. If not, use the quality-assessment shell pattern (DD-7 fallback). Record the outcome in Done criteria.

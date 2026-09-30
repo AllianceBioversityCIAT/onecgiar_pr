@@ -1,0 +1,205 @@
+<!-- @akili-spec bilateral/ai-processing-queue (AIQ-R-9 B-H, AIQ-DD-8 parity) -->
+<article
+  class="relative rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px_14px] transition-[opacity,transform] duration-450 ease-out starting:opacity-0 starting:-translate-y-1.5 motion-reduce:transition-none motion-reduce:starting:opacity-100 motion-reduce:starting:translate-y-0"
+  [class.border-[var(--pr-color-primary-200)]]="isRunningLike()"
+  [class.shadow-md]="isRunningLike()"
+  [class.ring-2]="highlighted()"
+  [class.ring-offset-2]="highlighted()"
+  [class.ring-[var(--pr-color-primary-300)]]="highlighted()"
+  [class.ring-offset-[var(--pr-surface-card)]]="highlighted()"
+  [attr.aria-current]="highlighted() ? 'true' : null"
+  [attr.data-testid]="'ai-job-card-' + variant()">
+  @if (isRunningLike()) {
+    <span
+      class="absolute left-[-1px] top-[12px] bottom-[12px] w-[3px] rounded-r-[3px] bg-gradient-to-b from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)]"
+      aria-hidden="true"></span>
+  }
+  @if (highlighted()) {
+    <span class="sr-only" data-testid="ai-job-card-highlight-text">{{ copy.highlightedSrText }}</span>
+  }
+
+  <div class="flex items-start gap-[10px]">
+    <span
+      class="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[9px]"
+      [class.bg-[var(--pr-color-primary-50)]]="isRunningLike()"
+      [class.text-[var(--pr-color-primary-400)]]="isRunningLike()"
+      [class.bg-[var(--pr-surface-sunken)]]="variant() === 'waiting'"
+      [class.text-[var(--pr-text-muted)]]="variant() === 'waiting'"
+      [class.bg-[var(--pr-status-approved-bg)]]="variant() === 'completed'"
+      [class.text-[var(--pr-status-approved-fg)]]="variant() === 'completed'"
+      [class.bg-[var(--pr-danger-soft)]]="variant() === 'failed'"
+      [class.text-[var(--pr-danger)]]="variant() === 'failed'"
+      [class.bg-[var(--pr-status-in-progress-bg)]]="variant() === 'no_candidates'"
+      [class.text-[var(--pr-status-in-progress-fg)]]="variant() === 'no_candidates'">
+      <i class="material-icons-round text-[16px]" aria-hidden="true">
+        @switch (variant()) {
+          @case ('waiting') { hourglass_top }
+          @case ('completed') { check_circle }
+          @case ('no_candidates') { search_off }
+          @case ('failed') { error_outline }
+          @default { {{ job().audioCount > 0 ? 'graphic_eq' : 'description' }} }
+        }
+      </i>
+    </span>
+
+    <div class="min-w-0 flex-1">
+      <p class="m-0 truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)]" data-testid="ai-job-card-title">
+        {{ job().projectName || job().programCode || job().jobId }}
+      </p>
+      <p class="m-0 mt-[2px] flex flex-wrap items-center gap-[6px] text-[11px] text-[var(--pr-text-muted)]">
+        @if (job().programCode) {
+          <span>{{ job().programCode }}</span>
+        }
+        @if (variant() === 'completed') {
+          @if (job().centerAcronym) {
+            <span data-testid="ai-job-card-center-acronym">{{ job().centerAcronym }}</span>
+            <span class="h-[3px] w-[3px] rounded-full bg-[var(--pr-text-muted)]" aria-hidden="true"></span>
+          }
+          <span>{{ draftsReadyLine() }}</span>
+          @if (tookLine()) {
+            <span class="h-[3px] w-[3px] rounded-full bg-[var(--pr-text-muted)]" aria-hidden="true"></span>
+            <span data-testid="ai-job-card-took">{{ tookLine() }}</span>
+          }
+        } @else if (variant() === 'no_candidates') {
+          <span>{{ copy.noCandidatesTitle }}</span>
+        } @else if (variant() === 'failed') {
+          <span data-testid="ai-job-card-failure-message">{{ failureCopy().message }}</span>
+        } @else if (sourceMixLine()) {
+          <span class="h-[3px] w-[3px] rounded-full bg-[var(--pr-text-muted)]" aria-hidden="true"></span>
+          <span data-testid="ai-job-card-mix">{{ sourceMixLine() }}</span>
+        }
+      </p>
+    </div>
+
+    @if (isRunningLike()) {
+      <div class="flex-none text-right font-mono text-[var(--pr-text-secondary)]" data-testid="ai-job-card-elapsed">
+        <span class="text-[12px] font-semibold tabular-nums">{{ elapsedLabel() }}</span>
+        <small class="block text-[10px] font-medium text-[var(--pr-text-muted)]">{{ copy.elapsedLabel }}</small>
+      </div>
+    } @else if (variant() === 'waiting') {
+      <div class="flex-none text-right font-mono text-[var(--pr-text-secondary)]" data-testid="ai-job-card-elapsed">
+        <span class="text-[12px] font-semibold tabular-nums">{{ waitingElapsedLabel() }}</span>
+        <small class="block text-[10px] font-medium text-[var(--pr-text-muted)]">{{ copy.inQueueLabel }}</small>
+      </div>
+    } @else if (finishedAtLabel()) {
+      <div class="flex-none text-right text-[var(--pr-text-secondary)]" data-testid="ai-job-card-finished-at">
+        <span class="text-[12px] font-semibold tabular-nums">{{ finishedAtLabel() }}</span>
+        <small class="block text-[10px] font-medium text-[var(--pr-text-muted)]">{{ copy.finishedLabel }}</small>
+      </div>
+    }
+  </div>
+
+  @if (showAttemptBadge()) {
+    <span
+      class="mt-[8px] inline-flex h-[20px] items-center rounded-full bg-[var(--pr-status-submitted-bg)] px-[8px] text-[10.5px] font-semibold text-[var(--pr-status-submitted-fg)]"
+      data-testid="ai-job-card-attempt-badge">
+      {{ attemptBadgeLabel() }}
+    </span>
+  }
+
+  @if (isRunningLike()) {
+    <div class="mt-[12px] flex gap-[4px]" aria-hidden="true" data-testid="ai-job-card-stepper">
+      @for (state of stageSegments(); track $index) {
+        <span
+          class="relative h-[4px] flex-1 overflow-hidden rounded-[2px]"
+          [class.bg-[var(--pr-color-primary-300)]]="state === 'done'"
+          [class.bg-[var(--pr-color-primary-100)]]="state !== 'done'">
+          @if (state === 'active') {
+            <span
+              class="absolute inset-0 w-[45%] rounded-[2px] bg-[var(--pr-color-primary-300)] motion-reduce:animate-none animate-[pr-ai-indeterminate_1.6s_linear_infinite]"
+              data-testid="ai-job-card-stepper-indeterminate"></span>
+          }
+        </span>
+      }
+    </div>
+    <div class="mt-[6px] flex items-center justify-between gap-[8px] text-[11.5px]">
+      <span class="flex items-center gap-[6px] font-semibold text-[var(--pr-color-primary-400)]">
+        <span class="h-[7px] w-[7px] rounded-full bg-[var(--pr-color-primary-300)] motion-reduce:animate-none animate-pulse" aria-hidden="true"></span>
+        @if (isRetrying()) {
+          <span data-testid="ai-job-card-retrying-explanation">{{ copy.retryingExplanation }}</span>
+        } @else {
+          <span data-testid="ai-job-card-stage">{{ stageLabel() }}@if (stageEstimated()) { {{ copy.estimatedSuffix }} }</span>
+        }
+      </span>
+      <span class="text-[var(--pr-text-muted)]" data-testid="ai-job-card-expected-range">{{ expectedRangeLine() }}</span>
+    </div>
+    @if (retryingErrorLine()) {
+      <p class="m-0 mt-[6px] text-[11px] text-[var(--pr-text-muted)]" data-testid="ai-job-card-last-error">
+        <em>{{ retryingErrorLine() }}</em>
+      </p>
+    }
+  }
+
+  @if (variant() === 'still_running') {
+    <p class="m-0 mt-[8px] flex items-start gap-[6px] text-[11.5px] leading-[1.45] text-[var(--pr-text-secondary)]" data-testid="ai-job-card-still-running-notice">
+      <i class="material-icons-round mt-[1px] text-[15px] text-[var(--pr-color-primary-300)]" aria-hidden="true">schedule</i>
+      <span>
+        <strong class="text-[var(--pr-text-heading)]">{{ copy.stillWorkingTitle }}.</strong> {{ copy.stillWorkingBody }}
+        <span class="block text-[var(--pr-text-muted)]" data-testid="ai-job-card-checking-interval">{{ copy.checkingEvery30Seconds }}</span>
+      </span>
+    </p>
+  }
+
+  @if (variant() === 'waiting') {
+    <div class="mt-[10px] flex items-center gap-[8px] rounded-[9px] bg-[var(--pr-surface-sunken)] px-[10px] py-[7px] text-[11.5px] text-[var(--pr-text-secondary)]" data-testid="ai-job-card-wait-reason">
+      <i class="material-icons-round text-[15px] text-[var(--pr-text-muted)]" aria-hidden="true">
+        {{ job().waitReason === 'own_job_running' ? 'person' : 'group' }}
+      </i>
+      <span data-testid="ai-job-card-wait-reason-text">{{ waitReasonText() }}</span>
+      <span class="ml-auto font-semibold whitespace-nowrap text-[var(--pr-text-heading)]" data-testid="ai-job-card-position">{{ positionLabel() }}</span>
+    </div>
+  }
+
+  @if (variant() === 'completed') {
+    <div class="mt-[10px]">
+      <app-ai-provenance-notice variant="line" />
+    </div>
+    <div class="mt-[10px]">
+      <button
+        type="button"
+        class="inline-flex h-[28px] cursor-pointer items-center gap-[5px] rounded-[8px] border border-transparent bg-gradient-to-br from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-400)] px-[11px] text-[11.5px] font-semibold text-white focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        data-testid="ai-job-card-view-drafts"
+        (click)="onViewDrafts()">
+        <i class="material-icons-round text-[15px]" aria-hidden="true">arrow_forward</i>
+        {{ viewDraftsLabel() }}
+      </button>
+    </div>
+  }
+
+  @if (variant() === 'no_candidates') {
+    <div class="mt-[10px] flex flex-wrap items-center gap-[8px]">
+      <button
+        type="button"
+        class="inline-flex h-[28px] cursor-pointer items-center gap-[5px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[11px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        data-testid="ai-job-card-report-manually"
+        (click)="onReportManually()">
+        <i class="material-icons-round text-[15px]" aria-hidden="true">edit_note</i>
+        {{ copy.reportManually }}
+      </button>
+      <span class="ml-auto text-[11px] text-[var(--pr-text-muted)]">{{ copy.noCandidatesHint }}</span>
+    </div>
+  }
+
+  @if (variant() === 'failed') {
+    <p class="m-0 mt-[8px] text-[11px] text-[var(--pr-text-muted)]" data-testid="ai-job-card-failure-action">{{ failureCopy().actionLabel }}</p>
+    <div class="mt-[10px] flex flex-wrap items-center gap-[8px]">
+      <button
+        type="button"
+        class="inline-flex h-[28px] cursor-pointer items-center gap-[5px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[11px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+        data-testid="ai-job-card-retry"
+        [disabled]="isJobAlive()"
+        (click)="onRetry()">
+        <i class="material-icons-round text-[15px]" aria-hidden="true">refresh</i>
+        {{ copy.tryAgain }}
+      </button>
+      <span class="text-[11px] text-[var(--pr-text-muted)]">{{ copy.tryAgainHint }}</span>
+      <button
+        type="button"
+        class="ml-auto inline-flex h-[28px] cursor-pointer items-center gap-[5px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[11px] text-[11.5px] font-semibold text-[var(--pr-text-heading)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        data-testid="ai-job-card-upload-different-files"
+        (click)="onUploadDifferentFiles()">
+        {{ copy.uploadDifferentFiles }}
+      </button>
+    </div>
+  }
+</article>

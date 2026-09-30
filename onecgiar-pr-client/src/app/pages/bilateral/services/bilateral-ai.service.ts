@@ -67,6 +67,14 @@ export class BilateralAiService implements OnDestroy {
   drawerOpen = signal(false);
   /** The job the drawer should scroll to and highlight once open (`AIQ-R-8` D, deep link/legacy). */
   highlightJobId = signal<string | null>(null);
+  /** `AIQ-R-9` G: flips `true` once the first `pollList()` attempt has settled (success OR
+   * failure) — the drawer host reads this to know when to stop showing the skeleton. */
+  hasPolledOnce = signal(false);
+  /** `AIQ-R-9` G: `true` while the MOST RECENT poll failed, cleared on the next success. The
+   * drawer host derives its "Couldn't refresh. Retrying…" notice from this AND `jobs().length > 0`
+   * — a failure on the very first poll ever (no "last known list" to keep) reads as the empty
+   * state instead, not the refresh-error notice; that distinction is the host's, not this flag's. */
+  lastPollFailed = signal(false);
   /** Session memory of finished jobs the trigger badge has not been shown yet (`AIQ-R-10` B). */
   unseenFinishedIds = signal<ReadonlySet<string>>(new Set());
 
@@ -302,8 +310,12 @@ export class BilateralAiService implements OnDestroy {
       });
       this.adjustPollInterval(normalized);
       this.reconcileHintKey(normalized);
+      this.lastPollFailed.set(false);
+      this.hasPolledOnce.set(true);
     } catch (err: unknown) {
       this.handlePollError(err);
+      this.lastPollFailed.set(true);
+      this.hasPolledOnce.set(true);
     }
   }
 

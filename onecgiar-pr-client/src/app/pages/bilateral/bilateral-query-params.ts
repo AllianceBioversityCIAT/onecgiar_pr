@@ -340,3 +340,30 @@ export function applyResultsTabDefaults(
     present: parsed.present,
   };
 }
+
+// ── AI queue deep link (AIQ-T-8, AIQ-R-9 D) ────────────────────────────────
+/**
+ * `bilateral-result-creator`'s "Upload different files"/"Report manually" deep link
+ * (`?project=<id>&way=ai|manual`) — deliberately SEPARATE from `BILATERAL_PROJECT_QUERY_PARAM`
+ * above: same param NAME, different semantics (one numeric id to preselect vs a multi-value
+ * result-list filter), and scoped to this one consumer, not the four-tab COV contract.
+ */
+export const AI_QUEUE_PROJECT_QUERY_PARAM = 'project';
+export const AI_QUEUE_WAY_QUERY_PARAM = 'way';
+
+/** The creator's own reporting-way values it actually accepts (`selectedReportingWay`,
+ * `bilateral-result-creator.component.ts`) — confirmed at source, not guessed. */
+export type AiQueueWay = 'ai' | 'manual';
+
+/** A bare positive integer, or `null` for anything else (missing, non-numeric, zero, negative) —
+ * never throws. */
+export function parseAiQueueProjectIdParam(raw: string | null | undefined): number | null {
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/** `'ai'` / `'manual'`, or `null` for anything else — never throws. */
+export function parseAiQueueWayParam(raw: string | null | undefined): AiQueueWay | null {
+  return raw === 'ai' || raw === 'manual' ? raw : null;
+}

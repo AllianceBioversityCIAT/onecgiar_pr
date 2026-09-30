@@ -52,6 +52,10 @@ function makeManualCreateFlowMock() {
     canShowCreateForm: computed(() => true),
     drawerProjectCode: computed(() => ''),
     drawerProjectTitle: computed(() => ''),
+    drawerProjectSummary: computed(() => ''),
+    drawerProjectDescription: computed(() => ''),
+    drawerLeadCenterAcronym: computed(() => ''),
+    showSpSelectionInDrawer: computed(() => false),
     selectedReportingWay: signal<'manual' | 'ai' | null>(null),
     canUseAi: computed(() => true),
     drawerProgramCode: computed(() => ''),
@@ -454,6 +458,86 @@ describe('BilateralResultCreatorComponent', () => {
       component.ngOnInit();
 
       expect(mockAiService.openDrawer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('AI queue deep link — `?project=`/`?way=` (AIQ-R-9 D, AIQ-T-8 attempt 3)', () => {
+    const project = { id: 501, shortName: 'P-501', fullName: 'Project 501' } as any;
+
+    beforeEach(() => {
+      creationService.projects.set([project]);
+      // The real `BilateralCreationService.selectProject` sets `selectedProject` — mirror that one
+      // effect here so the END STATE (not the call) is what the assertions below check.
+      creationService.selectProject = jest.fn((p: any) => creationService.selectedProject.set(p));
+    });
+
+    it("selects the project by id from the creator's own loaded list, then activates the ai way", () => {
+      mockRoute.snapshot = { queryParams: { project: '501', way: 'ai' } };
+      mockRoute.queryParams = of({ project: '501', way: 'ai' });
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      expect(creationService.selectedProject()).toBe(project);
+      expect(component.selectedReportingWay()).toBe('ai');
+    });
+
+    it("selects the project by id, then activates the manual way (the creator's real 'manual' value)", () => {
+      mockRoute.snapshot = { queryParams: { project: '501', way: 'manual' } };
+      mockRoute.queryParams = of({ project: '501', way: 'manual' });
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      expect(creationService.selectedProject()).toBe(project);
+      expect(component.selectedReportingWay()).toBe('manual');
+    });
+
+    it('ignores a project id that is not in the loaded list — no error, no selection, no way', () => {
+      mockRoute.snapshot = { queryParams: { project: '999', way: 'ai' } };
+      mockRoute.queryParams = of({ project: '999', way: 'ai' });
+
+      expect(() => component.ngOnInit()).not.toThrow();
+      TestBed.flushEffects();
+      expect(creationService.selectedProject()).toBeNull();
+      expect(component.selectedReportingWay()).toBeNull();
+    });
+
+    it('a job id still wins over `?project=` and keeps `?job=`\'s own behavior intact (AIQ-T-7)', () => {
+      mockRoute.snapshot = { queryParams: { job: 'job-77', project: '501', way: 'ai' } };
+      mockRoute.queryParams = of({ job: 'job-77', project: '501', way: 'ai' });
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      expect(component.selectedReportingWay()).toBe('ai');
+      expect(mockAiService.openDrawer).toHaveBeenCalledWith('job-77');
+      expect(creationService.selectedProject()).toBeNull(); // the `?project=` branch never ran
+    });
+
+    // AIQ-T-8 attempt 4: a cold creator load has `creationService.projects()` still `[]` at
+    // `ngOnInit` time — only the child `bilateral-project-selector`'s own constructor effect
+    // fetches it, asynchronously. Falsifier: applying the link only synchronously inside
+    // `ngOnInit` (attempt 3's mistake) never re-checks once `projects()` fills, so this must go
+    // red under that implementation and green under the pending-signal + effect one.
+    it('applies a cold `?project=`/`?way=` link once creationService.projects() loads it asynchronously', () => {
+      creationService.projects.set([]); // cold load: nothing loaded yet, unlike this describe's own beforeEach
+      mockRoute.snapshot = { queryParams: { project: '501', way: 'ai' } };
+      mockRoute.queryParams = of({ project: '501', way: 'ai' });
+
+      component.ngOnInit();
+      TestBed.flushEffects();
+
+      // Not yet: the id is not in the (still empty) list.
+      expect(creationService.selectedProject()).toBeNull();
+      expect(component.selectedReportingWay()).toBeNull();
+
+      // The catalogue arrives later, the way `BilateralCreationService.getProjects` really does.
+      creationService.isLoadingProjects.set(true);
+      TestBed.flushEffects();
+      creationService.projects.set([project]);
+      creationService.isLoadingProjects.set(false);
+      fixture.detectChanges();
+
+      expect(creationService.selectedProject()?.id).toBe(501);
+      expect(component.selectedReportingWay()).toBe('ai');
     });
   });
 

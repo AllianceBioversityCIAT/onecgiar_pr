@@ -512,3 +512,170 @@
   - The copy file was created for T-8 to extend.
 - **Final verification:** 2092/2092 green, build and lint clean, 4 mutations red.
 - **Budget:** 12 rounds / 7 tasks (past the tripwire, continuing per the user's decision).
+
+### `AIQ-T-8` — "AI processes" drawer, job card, copy file
+
+- **Status:** in progress (`[~]`) · **Date:** 2026-09-29
+- **Skills:** `angular-developer`, `tailwind-design-system`, `onecgiar-pr-client:spartan` (the client-scoped variant of the listed `spartan`), `frontend-design` · **Effort:** high → xhigh on retry
+- **Review mode:** parallel lenses: spec+visual, and a11y (task `Review: lenses`)
+
+**Attempt 1**
+- **P-18: CONFIRMED** via Cypress CT (`ai-processes-drawer.cy.ts`, real Chromium/Electron). Cypress was downloaded with `npx cypress install`.
+  - At 1280×800: right-anchored, full height, 440 px.
+  - At 375×800: full-screen.
+  - The CDK trap holds initial focus, `Esc` closes, and focus returns to the trigger.
+  - No DD-7 fallback was needed.
+  - Limits found:
+    - `HlmDialogService`'s `NgComponentOutlet` cannot bind `@Input`s.
+    - A `TemplateRef` passed as the first argument throws.
+    - The host needs `display:contents`, otherwise its height collapses to about 511 px.
+- **Files changed:**
+  - New `ai-processes-drawer/*` (component, html, spec, cy, `CLAUDE.md`) and `ai-job-card/*` (component, html, spec, `CLAUDE.md`).
+  - Extended `bilateral-ai-processes.copy.ts`.
+  - `bilateral-ai-job.model.ts`: `waitReasonCopy(reason, projectName?)`.
+- **Falsifiers:**
+  1. An ETA string turns the no-ETA assertion red.
+  2. Dropping the provenance notice turns the completed case red.
+- **Green:** 24 new tests. Token grep clean. Build and lint clean. R-22 (MAY) not done.
+- **Red-before was not reported.**
+- **Evidence re-run (Leader-inline):** `npx jest src/app/pages/bilateral` gave 2116 passed. `ng build` had 0 errors. **VERIFIED**.
+- **Reviewer, spec+visual lens: FAIL**, 8 issues (verbatim in `scratchpad/t8-rework.md`, relayed to the Implementer):
+  1. No DD-7 shell or wrapper, so nothing opens the drawer and the elapsed tick has no owner (§6.2, DD-7, DD-9, R-9 B).
+  2. A self-owned `onTabKey` trap sits on top of CDK's (DD-7).
+  3. No indeterminate indicator on running cards, and elapsed time is measured from `queueEntryDate` (R-9 B, §6.3).
+  4. Motion is inert, and the skeleton `animate-pulse` has no `motion-reduce` (R-9 H, §6.3).
+  5. Parity gaps: "Checking every 30 seconds", the error action label, the retry explanation and last error, and the Center acronym (R-9 D, §12A).
+  6. The highlight looks the same as a running card and has no test (R-8 D).
+  7. Strings sit outside the copy file, and `waitReasonCopy` is not called (T-8, client CLAUDE.md §10).
+  8. Visual gaps against the mockup: lane bars, finish time, gradient.
+- **Reviewer, a11y lens: FAIL**, 6 issues:
+  1. The self-owned trap ships to production and shrinks CDK's. The default Hlm close button cannot be reached with Tab, the scrim does not close, and the Tab wrap is never tested in a browser (DD-7, R-12 C).
+  2. The dialog has no accessible name: Brain's `aria-labelledby` points at a missing id, and a second nested `role=dialog` exists (R-12 A).
+  3. The skeleton `animate-pulse` has no `motion-reduce`.
+  4. The highlight is color-only (R-8 D, WCAG 1.4.1).
+  5. `--pr-text-subtle` (≈3.0:1) is used on readable text (design §10 AA).
+  6. Hardcoded strings.
+- **Leader adjudication:** all issues are in scope; overlapping items become one fix each.
+  - **Spec gap resolved (execute-time decision, requirement meaning unchanged):** no task named the component that opens the dialog when `drawerOpen` is set from `?job=`, a toast **View** or **Open AI processes**. **T-8 owns the whole DD-7 shell**:
+    - a no-input wrapper bound to `BilateralAiService`, with a 1 s tick while open and wired outputs;
+    - a launcher that opens `HlmDialogService` on `drawerOpen()` (an effect is allowed, since opening does not poll), with `showCloseButton: false`, `closeOnOutsidePointerEvents: true` and a resolved `aria-labelledby`, and that syncs `drawerOpen(false)` on close.
+  - **T-10 mounts the launcher app-wide**; T-9's trigger calls `openDrawer()`. **Forward pointer → `AIQ-T-10`:** mount the T-8 launcher next to the watcher.
+- **runtime events:** none
+
+**Attempt 2** (rework: combined verbatim FAILs plus adjudication in `scratchpad/t8-rework.md`)
+- **Files changed:**
+  - New `ai-processes-drawer-host.component.ts` (no-input wrapper) and `ai-processes-drawer-launcher.service.ts` (`providedIn: 'root'`; opens on `drawerOpen()` via an effect with `AI_PROCESSES_DRAWER_DIALOG_OPTIONS`; guarded against double opens; syncs `closed$` → `drawerOpen(false)`).
+  - The drawer and card were changed for all 14 issues.
+  - `src/styles/transitions.scss`: `@keyframes pr-ai-indeterminate`.
+  - `bilateral-ai.service.ts`: additive `hasPolledOnce` and `lastPollFailed` signals for R-9 G.
+- **Mutations:**
+  - Removing the highlight cue turns its test red.
+  - Removing the launcher close-sync turns 2 tests red.
+  - The original falsifiers still go red.
+- **Green:** 318 scoped Jest tests. CT 6/6: geometry ×2, a single close control, accessible name "AI processes", Tab and Shift+Tab wrap with Esc and focus restore, and scrim close.
+- **Evidence re-run (Leader-inline):** `npx jest src/app/pages/bilateral` gave 2133 passed. `ng build` had 0 errors. **VERIFIED**.
+- **Reviewer (a11y): PASS.** All 6 issues are fixed. There is a single CDK trap, and the name resolves. Motion-reduce covers the keyframes, the pulse and `starting:`. The highlight has a ring, sr-only text and `aria-current`. The contrast token is muted. The launcher does not re-open on Esc or scrim.
+  - **ADVISORY:** a launcher race on a re-open during the close delay after the drawer's own close button; the fix is a ref-match guard. The CT mounts the probe host, not the real host. `[disabled]` in the failed branch is inert. Forced-colors focus is a repo-wide issue.
+- **Reviewer (spec+visual): FAIL.** 6 of the 8 issues are fixed and L1-1 is partly fixed. The out-of-list files (the service signals and the keyframes) were accepted. Two issues remain:
+  1. The wrapper never binds `expectations`, so the expected range never shows (R-9 B; adjudication (a)).
+  2. **Upload different files** navigates with `{project}` only, and the creator reads neither `?project=` nor `?way=` (R-9 D "opens the creator's AI way for that project"; §12A DD-8). The Reviewer ruled this owed by T-8 and needing a scope extension.
+  - **ADVISORY:** no service-spec case covers `hasPolledOnce`/`lastPollFailed`. CT is non-author in T-11 only. The empty-state CTA and title tile have no gradient.
+- **Leader adjudication:**
+  - Both issues are in scope.
+  - **Scope extension approved** (execute-time, requirement meaning unchanged): T-8 may edit the `bilateral-result-creator/*` ts, spec and `CLAUDE.md` so the creator reads `?project=` and `?way=`. The creator was already touched in T-7.
+  - The a11y launcher race is added as `[advisory-grade]`, since it is a bug in T-8's own new code.
+- **runtime events:** none
+
+**Attempt 3** (final; FAIL relayed verbatim; Leader-approved scope extension into the creator; `[advisory-grade]` launcher race)
+- **Files changed:**
+  - `ai-processes-drawer-host.component.ts` (+spec): `expectations('documents'|'audio')` with `shareReplay(1)`, bound to the drawer; navigation now passes `{project, way:'ai'|'manual'}`.
+  - `ai-processes-drawer-launcher.service.ts` (+spec): ref-match guard on `closed$`.
+  - `bilateral-query-params.ts`: `parseAiQueueProjectIdParam` / `parseAiQueueWayParam`.
+  - `bilateral-result-creator.component.ts` (+spec, `CLAUDE.md`): `selectProjectFromAiQueueDeepLink` in the `?job=` branch; `job` wins when both are present.
+- **Mutations:**
+  - Removing `[expectations]` turns the range test red.
+  - Removing the `?way=` handling turns the end-state tests red.
+  - Removing the ref guard turns the two-cycle test red.
+- **Green:** 2141 Jest tests (61 suites); CT 6/6 as reported by the Implementer; build and lint clean.
+- **Evidence re-run (Leader-inline):** `npx jest src/app/pages/bilateral` gave 2141 passed; `ng build` had 0 errors. **VERIFIED**.
+- **Reviewer (spec+visual): FAIL.**
+  - Fixed: expectations, the navigation parameters, the launcher guard. The manual side effect (opening the manual-create drawer) is accepted.
+  - **Remaining issue:** on a cold creator load, `?project=&way=` is silently dropped.
+    - Why: `creationService.projects()` starts as `[]` (`bilateral-creation.service.ts:31`). Only the child `bilateral-project-selector` fills it, asynchronously, from its constructor effect (`bilateral-project-selector.component.ts:46-57`). The parent's `ngOnInit` runs first (`creator.ts:702-703`), so it finds no projects.
+    - The end-state tests seed `projects()` before `ngOnInit`, so they cover only the warm case.
+    - **Violated rules:** `AIQ-R-9` D ("opens the creator's AI way for that project"), §12A DD-8, and `AIQ-R-8` C (reloading and opening a second tab are normal paths).
+    - **Remediation:** keep the parsed `{projectId, way}` as a pending one-shot value and apply it from an effect on `projects()`/`isLoadingProjects()` once the id is present. The effect must not call `openDrawer`. Add a test where `projects` is empty at init and filled later.
+  - **ADVISORY:** compare ids with `Number(p.id)`; the `expectations` subscribe has no error handler; CT is still reported only by the Implementer.
+- **runtime events:** none
+
+## HALT: AIQ-T-8
+
+- **Date:** 2026-09-29. **Trigger:** third Reviewer FAIL (3-attempt ceiling).
+- **Reviewer FAIL reports:**
+  - Attempt 1: spec+visual 8 issues and a11y 6 issues. Verbatim in `scratchpad/t8-rework.md`, summarized above.
+  - Attempt 2: spec+visual 2 issues (expectations not bound; deep link not wired). a11y PASS.
+  - Attempt 3: spec+visual 1 issue (the deep link is dropped on a cold creator load).
+- **Implementer summaries:** see the attempt entries above.
+  1. Built the drawer and card without a shell, with a self-owned trap.
+  2. Built the shell (host and launcher) and fixed 13 of the 14 issues.
+  3. Bound expectations, added the creator deep link and the race guard.
+- **Final-attempt verification:** 2141/2141 Jest, build and lint clean, CT 6/6 (Implementer-reported).
+- **Leader root-cause hypothesis:**
+  - **Spec gap in the task boundary, not an implementation failure.**
+    - T-8's Files and Description never included the create wizard.
+    - R-9 D's "opens the creator's AI way for that project" depends on the creator restoring a project from the URL, and no task owned that. The project list is loaded lazily by a child component.
+    - Each attempt converged; the findings went from 14 to 2 to 1, and the last one is narrow and well specified.
+  - The tripwire budget was already passed with the user's approval.
+- **Tree state and rollback:**
+  - T-1..T-7 are committed. The working tree holds only T-8's uncommitted changes, plus `execution.md`, `tasks.md` and the pre-existing `package-lock.json`. That is the "clean — only the halted task's changes" branch of the table.
+  - **The blanket restore was NOT run.** The Leader held it for the user's decision: running it would discard about 2000 reviewed lines that satisfy 13 of the 14 findings, and deleting reviewed work is an irreversible action that needs the user's confirmation.
+  - No unattributed paths were found.
+- **Question to the user:** authorize a 4th attempt (the pending one-shot deep link, a small fix), or accept R-9 D's cold-load case as a follow-up with the clause marked unmet, or roll back T-8.
+
+**HALT decision (2026-09-29):** the user replied "Adelante con el intento 4". A 4th attempt was **explicitly authorized** past the 3-attempt ceiling. No rollback. Scope: only the cold-load deep link, plus an `[advisory-grade]` fix for `Number(p.id)`.
+
+**Attempt 4** (user-authorized after the HALT)
+- **Files changed:** `bilateral-result-creator.component.ts` (+spec, `CLAUDE.md` line).
+- **Fix:**
+  - `ngOnInit` now only parses `?project=&way=` into a one-shot `pendingAiQueueDeepLink` signal.
+  - A constructor effect reads `pending`, `projects()` and `isLoadingProjects()` unconditionally. On a `Number(p.id)` match it applies `selectProject` → `onProjectSelected` → `onReportingWaySelected`.
+  - If there is no match, it clears the pending value only after loading is seen to start and then finish.
+  - The effect never calls `openDrawer`, and `?job=` still wins.
+  - Four missing mock properties were added to the spec's `manualCreateFlow` mock.
+- **Mutation:** reverting to the sync-only apply turns the cold test red (`Expected: 501, Received: undefined`).
+- **Green:** creator 132; `pages/bilateral` 2142. Build and lint clean.
+- **Evidence re-run (Leader-inline):** `npx jest src/app/pages/bilateral` → 2142 passed. `ng build` → 0 errors. **VERIFIED**.
+- **Reviewer (spec+visual): PASS.**
+  - A cold load now waits for the project list, so reload, second tab and cross-Center all work.
+  - Apply order is correct: `onProjectSelected` resets the way, so the way is set after it.
+  - The effect cannot loop.
+  - The project selector is mounted on the `?project=` path (`creator.html:12-14`), so `getProjects` runs.
+- **ADVISORY:**
+  - The no-match give-up depends on observing `isLoadingProjects()` go true. If a load is batched, the pending value could stay stale. Fix: clear on the first non-empty list with no match.
+  - T-11 end-to-end should include one reload → **Upload different files** case.
+- **runtime events:** none
+
+- **Final status:** PASS on attempt 4. The attempt past the ceiling was authorized by the user after the HALT. · **Date:** 2026-09-29
+- **Requirements covered:**
+  - `AIQ-R-9` A–G and H (announce; class half)
+  - `AIQ-R-12` A, B (sizes, via the P-18 CT), C
+  - `AIQ-R-8` D (highlight rendering)
+  - `AIQ-R-6` C (client: no ETA)
+  - `AIQ-R-22` (MAY): **not done**
+- **Decisions made:**
+  - P-18 CONFIRMED, so `HlmDialogService` is used and the DD-7 fallback was not needed.
+  - T-8 owns the DD-7 shell (host + launcher).
+  - Scope extended into the creator for R-9 D.
+  - `bilateral-ai.service.ts` gained additive `hasPolledOnce` / `lastPollFailed` (R-9 G).
+  - `transitions.scss` gained the `pr-ai-indeterminate` keyframes.
+- **Forward pointers:**
+  - → `AIQ-T-10`: inject `AiProcessesDrawerLauncherService` once, app-wide, next to the watcher. This is what makes `?job=`, toast **View** and **Open AI processes** open the dialog.
+  - → `AIQ-T-9`: the trigger calls `openDrawer()`; nothing else is needed.
+  - → `AIQ-T-11`:
+    - CT mounts only the probe host; mount the real launcher once.
+    - Run CT as a non-author.
+    - Add a reload → **Upload different files** e2e case.
+    - Check the base vs conditional border CSS order.
+    - Record the brand-button-per-card deviation.
+- **Final verification:** 2142/2142 Jest; build and lint clean; CT 6/6 (Implementer-run).
+- **Budget:** 16 rounds / 8 tasks.

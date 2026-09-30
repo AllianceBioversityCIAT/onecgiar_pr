@@ -251,15 +251,15 @@ export function normalizeListJob(raw: RawBilateralAiListJob): NormalizedBilatera
 // ── waitReasonCopy ───────────────────────────────────────────────────────
 
 /**
- * Plain-language copy for a `PENDING` job's wait reason (`AIQ-R-9` Scenario C). Deliberately
- * generic for `own_job_running` — the fuller "Starts when your job for <project> finishes" needs
- * the *other* job's project name, which is a cross-job lookup the card (`AIQ-T-8`) makes over the
- * full `jobs()` list, not something this pure, single-job function can resolve.
+ * Plain-language copy for a `PENDING` job's wait reason (`AIQ-R-9` Scenario C). `projectName` is
+ * the *other* job's project name — a cross-job lookup the drawer (`AIQ-T-8`) makes over the full
+ * `jobs()` list before calling this, since this pure, single-job function cannot resolve it on its
+ * own; when it is unavailable (or the reason is not `own_job_running`) the generic copy is used.
  */
-export function waitReasonCopy(reason: BilateralAiWaitReason | null | undefined): string {
+export function waitReasonCopy(reason: BilateralAiWaitReason | null | undefined, projectName?: string | null): string {
   switch (reason) {
     case 'own_job_running':
-      return 'Starts when your other job finishes';
+      return projectName ? `Starts when your job for ${projectName} finishes` : 'Starts when your other job finishes';
     case 'no_free_lane':
       return 'Waiting for a free lane';
     case 'starting':
