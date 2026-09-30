@@ -668,4 +668,403 @@ describe('ShareResultRequestService', () => {
       ).toBe(51);
     });
   });
+
+  // PERF-T-3 (bugfix/notifications-inbox-slow-load): mandatory Bug Mode regression test for
+  // PERF-R-4 / PERF-AC-1 — content-parity across Received/Sent/Popup once PERF-T-1 + PERF-T-2 are
+  // both applied. Leader ruling: a pure content-parity assertion necessarily passes on pre-fix code
+  // too, so each scenario asserts BOTH (a) response content deep-equals a hand-authored fixture,
+  // and (b) total `ShareResultRequestRepository.find` calls + total
+  // `getContributionReviewTocByResultAndInitiative` calls per feed. Red run = (b) fails on pre-fix
+  // code while (a) passes; green = both pass on current code. NOTIF-BUG-1's unscoped admin `done`
+  // is treated as intended (per Leader ruling) — this suite never asserts on the `done` where-shape,
+  // only on response content and call counts, both of which are independent of that where-shape
+  // change under a mocked repository.
+  describe('PERF-T-3 — content-parity regression across Received/Sent/Popup', () => {
+    /**
+     * Routes `ShareResultRequestRepository.find` by the STRUCTURAL shape of its `where` argument,
+     * not by call order/count — this lets the exact same fixture and test body run unmodified
+     * whether the code issues 2 or 3 calls (admin dedupe) and regardless of call ordering
+     * (concurrent vs sequential). Bucket identity is structural and endpoint-agnostic:
+     *   - `Array.isArray(where)`            -> the `done` bucket (2- or 1-part OR array).
+     *   - `'shared_inititiative_id' in where` -> whichever pending bucket scopes on it
+     *     (`pendingOwner` for Received, `pendingShared` for Sent).
+     *   - `'owner_initiative_id' in where`     -> the other pending bucket.
+     *   - neither key present                 -> the admin (`role===1`) shared `commonConditions`
+     *     bucket, reused verbatim for both `pendingOwner`/`pendingShared` positions.
+     */
+    function installRoutedFind(routes: {
+      sharedKey?: any[];
+      ownerKey?: any[];
+      done?: any[];
+      admin?: any[];
+    }) {
+      mockShareResultRequestRepository.find.mockImplementation(
+        async ({ where }: any) => {
+          if (Array.isArray(where)) return routes.done ?? [];
+          if ('shared_inititiative_id' in where) return routes.sharedKey ?? [];
+          if ('owner_initiative_id' in where) return routes.ownerKey ?? [];
+          return routes.admin ?? [];
+        },
+      );
+    }
+
+    /** Mirrors `getRequest`'s fetch-and-map step so expected fixtures aren't duplicating it. */
+    function mapExpectedRow(row: any, toc?: any[]) {
+      const mapped = {
+        ...row,
+        obj_result: {
+          ...row.obj_result,
+          source_name:
+            row.obj_result.source === 'Result' ? 'W1/W2' : 'W3/Bilaterals',
+          obj_result_by_project: (
+            row.obj_result.obj_result_by_project ?? []
+          ).filter((l: any) => l.is_active),
+        },
+      };
+      return toc !== undefined
+        ? { ...mapped, toc_contribution_review: toc }
+        : mapped;
+    }
+
+    beforeEach(() => {
+      mockUserRepository.findOne.mockResolvedValue({
+        last_pop_up_viewed: null,
+      });
+      mockVersioningService.$_findActivePhase.mockResolvedValue({ id: 99 });
+    });
+
+    // Scenario 1 — non-admin user with both owner-side and shared-side pending/done rows.
+    describe('Scenario 1 — non-admin, owner-side + shared-side pending/done rows', () => {
+      const tocReviewS1 = [
+        {
+          level: 'Scenario1 Outcome',
+          outcome_label: 'O1',
+          outcome_statement: 'S1',
+          indicator_typology: 'T1',
+          unit_of_measurement: 'U1',
+          target: 100,
+          contribution_target: 10,
+        },
+      ];
+      const sharedKeyRow = {
+        share_result_request_id: 1001,
+        result_id: 6001,
+        shared_inititiative_id: 310,
+        request_status_id: 1,
+        is_map_to_toc: false,
+        obj_result: { source: 'Result' },
+      };
+      const ownerKeyRow = {
+        share_result_request_id: 1002,
+        result_id: 6002,
+        shared_inititiative_id: 311,
+        request_status_id: 1,
+        is_map_to_toc: true,
+        obj_result: { source: 'Result' },
+      };
+      const doneRow = {
+        share_result_request_id: 1003,
+        result_id: 6003,
+        shared_inititiative_id: 312,
+        request_status_id: 2,
+        is_map_to_toc: false,
+        obj_result: { source: 'Result' },
+      };
+
+      beforeEach(() => {
+        mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3);
+        mockRoleByUserRepository.find.mockResolvedValue([
+          { initiative_id: 400 },
+        ]);
+        mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative.mockResolvedValue(
+          tocReviewS1,
+        );
+        installRoutedFind({
+          sharedKey: [sharedKeyRow],
+          ownerKey: [ownerKeyRow],
+          done: [doneRow],
+        });
+      });
+
+      it('getReceivedResultRequest: content matches the pre-fix fixture; find=3, toc lookups=1', async () => {
+        const response: any = await service.getReceivedResultRequest(user);
+
+        expect(response.response.receivedContributionsPending).toEqual([
+          mapExpectedRow(sharedKeyRow),
+          mapExpectedRow(ownerKeyRow, tocReviewS1),
+        ]);
+        expect(response.response.receivedContributionsDone).toEqual([
+          mapExpectedRow(doneRow),
+        ]);
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(3);
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('getSentResultRequest: content matches the pre-fix fixture; find=3, toc lookups=1', async () => {
+        const response: any = await service.getSentResultRequest(user);
+
+        // buildWhereSentConditions swaps which key each pending position scopes on: pendingOwner
+        // -> owner_initiative_id, pendingShared -> shared_inititiative_id.
+        expect(response.response.sentContributionsPending).toEqual([
+          mapExpectedRow(ownerKeyRow, tocReviewS1),
+          mapExpectedRow(sharedKeyRow),
+        ]);
+        expect(response.response.sentContributionsDone).toEqual([
+          mapExpectedRow(doneRow),
+        ]);
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(3);
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('getReceivedResultRequestPopUp: content matches the pre-fix fixture; find=2, toc lookups=1', async () => {
+        const response: any = await service.getReceivedResultRequestPopUp(user);
+
+        // Order is deterministic both pre- and post-fix: combineAndDistinct(pendingOwner,
+        // pendingShared) flattens in that positional order, and pendingOwner here scopes on
+        // `shared_inititiative_id` -> sharedKeyRow first, then pendingShared's ownerKeyRow.
+        expect(response).toEqual([
+          mapExpectedRow(sharedKeyRow),
+          mapExpectedRow(ownerKeyRow, tocReviewS1),
+        ]);
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(2);
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    // Scenario 2 — admin user (role === 1). Also has no initiative-level role row (NOTIF-BUG-1's
+    // trigger), but this suite intentionally asserts only content + call counts, never the `done`
+    // where-shape (Leader ruling 3).
+    describe('Scenario 2 — admin user (role === 1)', () => {
+      const tocReviewS2 = [
+        {
+          level: 'Scenario2 Outcome',
+          outcome_label: 'O2',
+          outcome_statement: 'S2',
+          indicator_typology: 'T2',
+          unit_of_measurement: 'U2',
+          target: 200,
+          contribution_target: 20,
+        },
+      ];
+      const adminRow = {
+        share_result_request_id: 2001,
+        result_id: 7001,
+        shared_inititiative_id: 320,
+        request_status_id: 1,
+        is_map_to_toc: true,
+        obj_result: { source: 'Result' },
+      };
+      const adminDoneRow = {
+        share_result_request_id: 2002,
+        result_id: 7002,
+        shared_inititiative_id: 321,
+        request_status_id: 2,
+        is_map_to_toc: false,
+        obj_result: { source: 'Result' },
+      };
+
+      beforeEach(() => {
+        mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(1);
+        mockRoleByUserRepository.find.mockResolvedValue([]);
+        mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative.mockResolvedValue(
+          tocReviewS2,
+        );
+        installRoutedFind({
+          admin: [adminRow],
+          done: [adminDoneRow],
+        });
+      });
+
+      it('getReceivedResultRequest: content matches the pre-fix fixture; find count and toc lookups drop with the admin dedupe', async () => {
+        const response: any = await service.getReceivedResultRequest(user);
+
+        expect(response.response.receivedContributionsPending).toEqual([
+          mapExpectedRow(adminRow, tocReviewS2),
+        ]);
+        expect(response.response.receivedContributionsDone).toEqual([
+          mapExpectedRow(adminDoneRow),
+        ]);
+        // Pre-fix: 3 (no dedupe, 2 identical pending awaits + done). Post-fix: 2 (shared fetch
+        // reused for pendingShared, + done).
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(2);
+        // Pre-fix: 2 (each of the 2 identical pending fetches enriches its own copy separately).
+        // Post-fix: 1 (enrichBucketsOnce dedupes the shared array by reference before enriching).
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('getSentResultRequest: content matches the pre-fix fixture; find count and toc lookups drop with the admin dedupe', async () => {
+        const response: any = await service.getSentResultRequest(user);
+
+        expect(response.response.sentContributionsPending).toEqual([
+          mapExpectedRow(adminRow, tocReviewS2),
+        ]);
+        expect(response.response.sentContributionsDone).toEqual([
+          mapExpectedRow(adminDoneRow),
+        ]);
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(2);
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('getReceivedResultRequestPopUp: content matches the pre-fix fixture; find count and toc lookups drop with the admin dedupe', async () => {
+        const response: any = await service.getReceivedResultRequestPopUp(user);
+
+        expect(response).toEqual([mapExpectedRow(adminRow, tocReviewS2)]);
+        // Pre-fix: 2 (pendingOwner + pendingShared, both identical, no dedupe). Post-fix: 1
+        // (fetchTwoBucketsDeduped reuses the single fetch).
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(1);
+        // Pre-fix: 2 (each of the 2 identical fetches enriches separately). Post-fix: 1.
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    // Scenario 3 — a user whose `is_map_to_toc` rows span more than one bucket for the SAME
+    // (result_id, initiative_id) pair. Exercises PERF-R-3's cross-bucket dedupe on top of content
+    // parity: PERF-T-2's own tests already cover the isolated behaviour; this scenario re-asserts
+    // it as part of the combined PERF-T-1+PERF-T-2 regression, with full content deep-equality.
+    describe('Scenario 3 — is_map_to_toc rows spanning multiple buckets (non-admin)', () => {
+      const tocReviewS3 = [
+        {
+          level: 'Scenario3 Outcome',
+          outcome_label: 'O3',
+          outcome_statement: 'S3',
+          indicator_typology: 'T3',
+          unit_of_measurement: 'U3',
+          target: 300,
+          contribution_target: 30,
+        },
+      ];
+
+      beforeEach(() => {
+        mockRoleByUserRepository.$_getMaxRoleByUser.mockResolvedValue(3);
+        mockRoleByUserRepository.find.mockResolvedValue([
+          { initiative_id: 500 },
+        ]);
+        mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative.mockResolvedValue(
+          tocReviewS3,
+        );
+      });
+
+      it('getReceivedResultRequest: pair spans pendingOwner + done — content matches the pre-fix fixture, toc lookups collapse to 1', async () => {
+        const pendingRow = {
+          share_result_request_id: 3001,
+          result_id: 8001,
+          shared_inititiative_id: 330,
+          request_status_id: 1,
+          is_map_to_toc: true,
+          obj_result: { source: 'Result' },
+        };
+        const doneRow = {
+          share_result_request_id: 3002,
+          result_id: 8001,
+          shared_inititiative_id: 330,
+          request_status_id: 2,
+          is_map_to_toc: true,
+          obj_result: { source: 'Result' },
+        };
+        installRoutedFind({ sharedKey: [pendingRow], done: [doneRow] });
+
+        const response: any = await service.getReceivedResultRequest(user);
+
+        expect(response.response.receivedContributionsPending).toEqual([
+          mapExpectedRow(pendingRow, tocReviewS3),
+        ]);
+        expect(response.response.receivedContributionsDone).toEqual([
+          mapExpectedRow(doneRow, tocReviewS3),
+        ]);
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(3);
+        // Pre-fix: 2 (pendingOwner enriches its row; done enriches its row, separately).
+        // Post-fix: 1 (enrichBucketsOnce resolves the shared (result_id, initiative_id) pair once
+        // across the combined union).
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('getSentResultRequest: pair spans pendingOwner + done — content matches the pre-fix fixture, toc lookups collapse to 1', async () => {
+        const pendingRow = {
+          share_result_request_id: 3011,
+          result_id: 8011,
+          shared_inititiative_id: 331,
+          request_status_id: 1,
+          is_map_to_toc: true,
+          obj_result: { source: 'Result' },
+        };
+        const doneRow = {
+          share_result_request_id: 3012,
+          result_id: 8011,
+          shared_inititiative_id: 331,
+          request_status_id: 2,
+          is_map_to_toc: true,
+          obj_result: { source: 'Result' },
+        };
+        // buildWhereSentConditions: pendingOwner scopes on owner_initiative_id.
+        installRoutedFind({ ownerKey: [pendingRow], done: [doneRow] });
+
+        const response: any = await service.getSentResultRequest(user);
+
+        expect(response.response.sentContributionsPending).toEqual([
+          mapExpectedRow(pendingRow, tocReviewS3),
+        ]);
+        expect(response.response.sentContributionsDone).toEqual([
+          mapExpectedRow(doneRow, tocReviewS3),
+        ]);
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(3);
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('getReceivedResultRequestPopUp: pair spans pendingOwner + pendingShared — content matches the pre-fix fixture, toc lookups collapse to 1', async () => {
+        const ownerSideRow = {
+          share_result_request_id: 3101,
+          result_id: 8101,
+          shared_inititiative_id: 340,
+          request_status_id: 1,
+          is_map_to_toc: true,
+          obj_result: { source: 'Result' },
+        };
+        const sharedSideRow = {
+          share_result_request_id: 3102,
+          result_id: 8101,
+          shared_inititiative_id: 340,
+          request_status_id: 1,
+          is_map_to_toc: true,
+          obj_result: { source: 'Result' },
+        };
+        installRoutedFind({
+          sharedKey: [ownerSideRow],
+          ownerKey: [sharedSideRow],
+        });
+
+        const response: any = await service.getReceivedResultRequestPopUp(user);
+
+        // Order is deterministic both pre- and post-fix: combineAndDistinct(pendingOwner,
+        // pendingShared) flattens positionally, and pendingOwner here is routed via the
+        // `shared_inititiative_id` key (ownerSideRow), pendingShared via `owner_initiative_id`
+        // (sharedSideRow).
+        expect(response).toEqual([
+          mapExpectedRow(ownerSideRow, tocReviewS3),
+          mapExpectedRow(sharedSideRow, tocReviewS3),
+        ]);
+        expect(mockShareResultRequestRepository.find).toHaveBeenCalledTimes(2);
+        // Pre-fix: 2 (each bucket enriches its own row separately). Post-fix: 1 (both rows share
+        // the same (result_id, initiative_id) key in the merged pairMap).
+        expect(
+          mockResultsTocResultRepository.getContributionReviewTocByResultAndInitiative,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
 });

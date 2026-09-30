@@ -7,7 +7,7 @@ Linked spec: `docs/specs/bugfix/notifications-inbox-slow-load/requirements.md` +
 - **Module / feature:** `results/share-result-request` performance fix (surfaced via `notifications`)
 - **Linked spec:** `docs/specs/bugfix/notifications-inbox-slow-load/requirements.md` + `design.md`
 - **Owner / driver:** Santiago Sanchez
-- **Status:** in-progress (PERF-T-1 done)
+- **Status:** implemented (PERF-T-1..T-3 PASS; manual QA pending)
 
 ## 2. Pre-flight checklist
 
@@ -45,7 +45,7 @@ Linked spec: `docs/specs/bugfix/notifications-inbox-slow-load/requirements.md` +
   - [ ] No UX change — no i18n update needed.
   - [ ] Not a bilateral/platform-report surface — no change-log entry needed.
 
-### [~] `PERF-T-2` — Batch ToC contribution-review enrichment once per feed across all buckets
+### [x] `PERF-T-2` — Batch ToC contribution-review enrichment once per feed across all buckets
 
 - **Type:** `server`
 - **Description:** Remove the internal `enrichRequestsWithTocContributionReview` call from inside `getRequest` (which becomes fetch-and-map only). Add an orchestration step in `getReceivedResultRequest`, `getSentResultRequest`, and `getReceivedResultRequestPopUp` that concatenates all fetched buckets, enriches once, then re-splits the enriched rows back into their original per-bucket arrays by `share_result_request_id`. All 3 call sites MUST land together in this task — per PERF-DD-3's reversion challenge, a partial rollout that updates only 2 of the 3 call sites would silently drop `toc_contribution_review` data from the third. Implements PERF-DD-3.
@@ -70,7 +70,7 @@ Linked spec: `docs/specs/bugfix/notifications-inbox-slow-load/requirements.md` +
   - [ ] No UX change — no i18n update needed.
   - [ ] Not a bilateral/platform-report surface — no change-log entry needed.
 
-### `PERF-T-3` — Content-parity regression test across Received/Sent/Popup
+### [x] `PERF-T-3` — Content-parity regression test across Received/Sent/Popup
 
 - **Type:** `tests`
 - **Description:** Add a fixture-based test asserting that, for a representative dataset (non-admin user with both owner-side and shared-side pending/done rows; an admin user; a user with `is_map_to_toc` rows spanning multiple buckets), the row content and count returned by `getReceivedResultRequest`, `getSentResultRequest`, and `getReceivedResultRequestPopUp` after `PERF-T-1`+`PERF-T-2` are identical to a captured pre-fix snapshot. This is the mandatory Bug Mode regression test proving PERF-R-4 (no behavior change) holds across both optimizations together, not just per-task in isolation.
