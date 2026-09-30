@@ -16,6 +16,8 @@ import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-f
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideRefreshCw } from '@ng-icons/lucide';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
+import { BILATERAL_CONTRIBUTORS_COPY } from '../../../../internationalization/bilateral-contributors.copy';
+import { CLARISA_GLOSSARY_URL } from '../../../../shared/constants/clarisa-links.constants';
 
 interface CenterOption {
   institutionId: number;
@@ -328,6 +330,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
    */
   readonly projectsLoadFailed = signal(false);
   readonly loadCopy = RESULT_DETAIL_SECTION_LOAD_COPY;
+
+  /**
+   * P2-3865 — what a contributor is (CLARISA glossary definition) and the reminder to pick entities
+   * other than the reporting one. Informative only: nothing reads it, so it can never block a save.
+   */
+  readonly contributorsCopy = BILATERAL_CONTRIBUTORS_COPY;
+  readonly contributorNoteHtml = BILATERAL_CONTRIBUTORS_COPY.contributorNote.html(CLARISA_GLOSSARY_URL);
 
   /**
    * BIL-AC-5/BIL-AC-7 (P2-3821, supersedes P2-3368 AC5/AC7) — the field is satisfied by EITHER at

@@ -6,6 +6,14 @@
     [collapsible]="false"
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
+  <!-- P2-3865: CLARISA's definition of "contributor" + "pick entities other than the reporting one".
+       Informative only (AC3): nothing reads it and it never gates saving; shown in read-only too. -->
+  <app-alert-status
+    status="info"
+    [collapsible]="false"
+    data-testid="contributor-definition-note"
+    [description]="contributorNoteHtml">
+  </app-alert-status>
 
   @if (primarySpData(); as sp) {
     <!-- Same shape as the W1/W2 "Submitter" block: a read-only field with the standard header and a

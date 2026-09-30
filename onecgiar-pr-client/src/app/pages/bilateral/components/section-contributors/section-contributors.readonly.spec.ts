@@ -479,4 +479,20 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       expect(fixture.nativeElement.querySelector('.sc-block--centers .sc-chip-readonly')).toBeNull();
     });
   });
+
+  // P2-3865 — the definition note renders in the REAL template, editable and read-only alike.
+  describe('P2-3865 · contributor definition note', () => {
+    it.each([true, false])('shows the CLARISA definition (editable=%s)', isEditable => {
+      editable.set(isEditable);
+      build();
+      const note = fixture.nativeElement.querySelector('[data-testid="contributor-definition-note"]') as HTMLElement;
+      expect(note).toBeTruthy();
+      expect(note.textContent).toContain('What is a contributor?');
+      expect(note.textContent).toContain('would not have been achieved or reported in its current form without their support');
+      expect(note.textContent).toContain('a different CGIAR Center');
+      const link = note.querySelector('a') as HTMLAnchorElement;
+      expect(link?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
+      expect(link?.getAttribute('target')).toBe('_blank');
+    });
+  });
 });

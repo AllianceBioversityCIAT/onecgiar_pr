@@ -2063,6 +2063,47 @@ describe('SectionContributorsComponent', () => {
     });
   });
 
+  /** P2-3865 — the CLARISA definition of "contributor" and the "different entities" reminder. */
+  describe('P2-3865 · what a contributor is', () => {
+    const DEFINITION =
+      'Partners that made a significant contribution to the achievement of a result. This could take many forms and the ' +
+      'threshold for inclusion is that the result would not have been achieved or reported in its current form without their support.';
+
+    it('AC1/AC2: the note carries the CLARISA definition, the glossary link and the different-entities rule', () => {
+      build();
+      const html = component.contributorNoteHtml;
+      expect(html).toContain('What is a contributor?');
+      expect(html).toContain(DEFINITION);
+      expect(html).toContain('href="https://clarisa.cgiar.org/landing-page/glossary"');
+      expect(html).toContain('rel="noopener noreferrer"');
+      expect(html).toContain(
+        'Only select contributors that are different from the one reporting this result: a different Program/Accelerator, ' +
+          'a different W3/bilateral project and a different CGIAR Center.'
+      );
+      expect(component.contributorsCopy.contributorNote.definition).toBe(DEFINITION);
+    });
+
+    it('is rendered at the top of the section from the copy file, not typed into the template (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const note = html.indexOf('data-testid="contributor-definition-note"');
+      expect(note).toBeGreaterThan(-1);
+      // Top of the section: before the first field block.
+      expect(note).toBeLessThan(html.indexOf('class="sc-block'));
+      expect(html).toContain('[description]="contributorNoteHtml"');
+      expect(html).not.toContain('significant contribution to the achievement');
+    });
+
+    it('AC3: informative only — it adds nothing to the tracker and never blocks the payload', () => {
+      build();
+      component.contributorsHydrated.set(true);
+      component.onCentersChange([]);
+      expect(autoSave.saveContributors).toHaveBeenCalled();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+      const keys = tracker.setSectionFields.mock.calls.flatMap((c: any[]) => c[1].map((f: any) => f.key));
+      expect(keys.every((k: string) => ['lead-center', 'lead-project'].includes(k))).toBe(true);
+    });
+  });
+
   /**
    * P2-3776. The `.sc-block` z-index ladder assumes every multi-select drops DOWNWARDS, so each
    * block outranks the one after it. Since P2-3737 a field close to the floor opens its panel

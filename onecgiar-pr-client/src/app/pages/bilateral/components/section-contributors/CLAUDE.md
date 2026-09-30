@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-09-30 · feat/bilateral-contributors-nicoleta-sep29 · P2-3864 el centro líder ya no se repite como chip ★ ni como opción en Contributing CGIAR centers (solo vista; el payload lo sigue mandando); prior: 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
+**Verified:** 2026-09-30 · feat/bilateral-contributors-nicoleta-sep29 · P2-3865 nota "What is a contributor?" (definición CLARISA + "elige entidades distintas a la que reporta") arriba de la sección; P2-3864 el centro líder ya no se repite como chip ★ ni como opción en Contributing CGIAR centers (solo vista; el payload lo sigue mandando); prior: 2026-09-29 · JuanGuzman-io/p2-3821-us-understanding · P2-3821 External partners sale
 del tracker MDS y se muda a Full metadata, opcional para todo tipo (se retiran el marcador
 `required` y el hint rojo; el banner de centros se muda a Block 1, junto al selector de centros);
 prior: 2026-09-24 · yzuniga/p2-3368-linked-bundled · P2-3823 blindaje (claves solo al tocar la pregunta, selector sin pérdida, entrada normalizada) + P2-3368 AC10-AC14 la pregunta enlazado/agrupado ya se guarda (se retira el `Coming soon`); prior: 2026-09-23 · JuanGuzman-io/fix-p2-3228-result · P2-3228 Lead center cae al centro líder del resultado sin proyecto; prior: 2026-09-22 · JuanGuzman-io/review-p2-3793-understanding · BCT-T-6 lock + auto-select derived Centers; prior: 2026-09-21 · santiago.sanchez/qa-development-2026-ss · BIL-T-1 `centersLoadFailed` + Retry banner for a failed centers-catalogue load; prior: 2026-09-18 · yzuniga/qa-batch-2026-09-18 · P2-3520 los cuatro selectores ya no se abren en solo-lectura; prior: 2026-09-18 · JuanGuzman-io/feature-p2-3150-bilateral · feedback IA por sección
@@ -58,6 +58,11 @@ Si la evaluación IA devuelve un veredicto ámbar/rojo y no hay una marca de cam
 
 ## Trampas
 
+- ✅ **P2-3865 (30-sep-2026): nota informativa arriba de la sección** — `app-alert-status` info no
+  colapsable con la definición de *contributor* del glosario CLARISA (verbatim) + link
+  (`CLARISA_GLOSSARY_URL`) + "select only contributors different from the reporting one". Copy en
+  `internationalization/bilateral-contributors.copy.ts` (`BILATERAL_CONTRIBUTORS_COPY`); nada la lee,
+  así que nunca bloquea el guardado. Visible también en solo-lectura.
 - 🛑 **P2-3864 (30-sep-2026): el centro líder NO se pinta en "Contributing CGIAR centers"** — ni chip
   ★ ni opción (Nicoleta Trifa). **Es solo vista**: `selectedCenterInstitutionIds()` lo sigue llevando,
   `onCentersChange` lo re-añade y `buildContributorsPayload()` lo sigue mandando (AC3; y el server lo
