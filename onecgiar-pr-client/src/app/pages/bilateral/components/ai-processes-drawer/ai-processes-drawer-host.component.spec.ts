@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { AiProcessesDrawerHostComponent } from './ai-processes-drawer-host.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { BilateralAiExpectations, normalizeListJob } from '../../bilateral-ai-job.model';
 import { rawListJob } from '../../bilateral-ai-job.fixtures';
 
@@ -31,6 +32,7 @@ describe('AiProcessesDrawerHostComponent', () => {
     expectations: jest.Mock;
   };
   let navigateSpy: jest.Mock;
+  let flowStub: { beginFromJob: jest.Mock };
 
   function mount(): void {
     serviceStub = {
@@ -45,12 +47,14 @@ describe('AiProcessesDrawerHostComponent', () => {
       expectations: jest.fn(mix => of(mix === 'documents' ? DOCS_EXPECTATION : AUDIO_EXPECTATION)),
     };
     navigateSpy = jest.fn().mockResolvedValue(true);
+    flowStub = { beginFromJob: jest.fn() };
 
     TestBed.configureTestingModule({
       imports: [AiProcessesDrawerHostComponent],
       providers: [
         { provide: BilateralAiService, useValue: serviceStub },
         { provide: Router, useValue: { navigate: navigateSpy } },
+        { provide: BilateralManualCreateFlowService, useValue: flowStub },
         BilateralContextService,
       ],
     });
@@ -141,12 +145,15 @@ describe('AiProcessesDrawerHostComponent', () => {
     expect(serviceStub.drawerOpen()).toBe(false);
   });
 
-  it("AIQ-R-9 D: reportManually navigates with the project AND way: 'manual', and closes the drawer", () => {
+  it('ARM-DD-3: reportManually closes the drawer and delegates to beginFromJob without navigating', () => {
     mount();
-    const job = normalizeListJob(rawListJob({ status: 'COMPLETED', result_count: '0', center_acronym: 'ALLIANCE', project_id: '88' }));
+    const job = normalizeListJob(
+      rawListJob({ status: 'COMPLETED', result_count: '0', center_acronym: 'ALLIANCE', center_id: '4', project_id: '88' })
+    );
     fixture.componentInstance.onReportManually(job);
-    expect(navigateSpy).toHaveBeenCalledWith(['/bilateral', 'ALLIANCE', 'create'], { queryParams: { project: 88, way: 'manual' } });
+    expect(navigateSpy).not.toHaveBeenCalled();
     expect(serviceStub.drawerOpen()).toBe(false);
+    expect(flowStub.beginFromJob).toHaveBeenCalledWith({ projectId: 88, centerId: 4, centerAcronym: 'ALLIANCE' });
   });
 
   it('viewDrafts navigates to the drafts tab with ?job=, refreshes the draft list, and closes the drawer', () => {

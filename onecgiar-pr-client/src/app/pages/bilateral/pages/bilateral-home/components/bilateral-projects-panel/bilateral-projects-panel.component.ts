@@ -6,7 +6,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
 import { BilateralManualCreateFlowService } from '../../../../services/bilateral-manual-create-flow.service';
-import { BilateralManualCreateDrawerHostComponent } from '../../../../components/bilateral-manual-create-drawer-host/bilateral-manual-create-drawer-host.component';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
 import { BilateralCenterResult } from '../../../../services/bilateral-center-result.interface';
 import { BilateralOverviewService } from '../../../../services/bilateral-overview.service';
@@ -50,7 +49,7 @@ function getInitialViewMode(): 'grid' | 'list' {
 @Component({
   selector: 'app-bilateral-projects-panel',
   standalone: true,
-  imports: [DecimalPipe, BilateralManualCreateDrawerHostComponent],
+  imports: [DecimalPipe],
   templateUrl: './bilateral-projects-panel.component.html',
   styleUrl: './bilateral-projects-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

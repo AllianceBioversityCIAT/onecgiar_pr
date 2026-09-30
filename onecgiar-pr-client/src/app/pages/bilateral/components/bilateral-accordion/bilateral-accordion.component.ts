@@ -27,13 +27,13 @@ export class BilateralAccordionComponent {
   /**
    * `APF-T-7` rework: optional. `BilateralAutoSaveService` is `@Injectable()` with **no**
    * `providedIn: 'root'` — its only provider in the tree is component-level on
-   * `bilateral-result-creator.component.ts`. This accordion is also reused by
-   * `app-bilateral-sp-selector`'s "Contributing Science Programs" disclosure (`APF-DD-11`), which
-   * is mounted from `bilateral-manual-create-drawer-host` → `bilateral-projects-panel` — outside
-   * that provider's scope. A required `inject()` there threw `NullInjectorError` the moment a user
-   * picked a primary SP with secondary SPs available, taking the drawer down. `{ optional: true }`
-   * keeps every existing (result-creator) host's autosave-then-close behaviour unchanged and makes
-   * `toggle()` null-safe for hosts with no autosave scope.
+   * `bilateral-result-creator.component.ts`. This accordion is rendered by
+   * `app-bilateral-sp-selector`'s "Contributing Science Programs" disclosure (`APF-DD-11`) only in
+   * the `dropdown` layout. The create-drawer host (mounted once in the bilateral shell, `ARM-DD-1`)
+   * uses the `list` layout, which renders an inline block instead, so the drawer never instantiates
+   * this accordion. `{ optional: true }` keeps the result-creator's autosave-then-close behaviour
+   * and makes `toggle()` null-safe for any host without an autosave scope; its guard is
+   * `bilateral-sp-selector.component.spec.ts` (dropdown-mode DI regression).
    */
   private readonly autoSaveService = inject(BilateralAutoSaveService, { optional: true });
   readonly creationService = inject(BilateralCreationService);

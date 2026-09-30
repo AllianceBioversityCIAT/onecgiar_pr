@@ -67,8 +67,8 @@ sustituye.** El job pasa a vivir en la lista de `BilateralAiService`
   `selectedReportingWay() === 'ai'`; escucha `(chooseAnotherProject)` para
   reiniciar el wizard.
 - `bilateral-manual-create-drawer-host.component.html:99-101` — montado dentro
-  del drawer de creación manual, a su vez usado por el creador y por
-  `bilateral-projects-panel.component.html:448` (home). **P2-3853 (post-execution
+  del drawer de creación manual, montado una sola vez en el shell bilateral
+  (`bilateral.component.html`, `ARM-T-2` / `ARM-DD-1`). **P2-3853 (post-execution
   fix):** aquí `chooseAnotherProject` SÍ tiene listener, `flow.closeDrawer()` —
   el proyecto del drawer es fijo (lo pone la tarjeta que lo abrió), así que
   "Choose another project" cierra el drawer entero para volver al catálogo de

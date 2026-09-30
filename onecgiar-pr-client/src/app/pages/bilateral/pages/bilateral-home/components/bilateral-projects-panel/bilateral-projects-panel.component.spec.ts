@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { BilateralProjectsPanelComponent } from './bilateral-projects-panel.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
@@ -18,7 +18,7 @@ describe('BilateralProjectsPanelComponent', () => {
   let ctx: BilateralContextService;
   let manualCreateFlow: BilateralManualCreateFlowService;
   let activatedRouteStub: { snapshot: { queryParamMap: ParamMap } };
-  let mockRouter: { navigate: jest.Mock };
+  let mockRouter: { navigate: jest.Mock; events: Subject<unknown>; url: string };
 
   const mockProjects: BilateralProject[] = [
     {
@@ -97,8 +97,14 @@ describe('BilateralProjectsPanelComponent', () => {
   ];
 
   beforeEach(async () => {
+    // `events`/`url`: fixture-only additions (ARM-T-1 rework, Reviewer issue 1) — the real
+    // `BilateralManualCreateFlowService` now wires a `NavigationEnd` subscription unconditionally
+    // in its constructor and reads `router.url` from every drawer-opening entry, not only from
+    // `beginFromJob`. No assertion in this file changes.
     mockRouter = {
-      navigate: jest.fn().mockResolvedValue(true)
+      navigate: jest.fn().mockResolvedValue(true),
+      events: new Subject<unknown>(),
+      url: '/bilateral/test'
     };
 
     const mockApiService = {
@@ -238,35 +244,23 @@ describe('BilateralProjectsPanelComponent', () => {
   });
 
   /**
-   * `APF-T-7` rework, DI regression (Reviewer FAIL, issue 1): this panel unconditionally mounts
-   * `<app-bilateral-manual-create-drawer-host>`, which mounts `app-bilateral-sp-selector`, whose
-   * "Contributing Science Programs" disclosure (`APF-DD-11`) is `app-bilateral-accordion`. None of
-   * this test file's providers supply `BilateralAutoSaveService` — the same production DI shape as
-   * the real app (that service is only provided component-locally on `bilateral-result-creator`).
-   * Before the fix, picking a primary SP on a project with secondary SPs threw `NullInjectorError`
-   * the moment the accordion instantiated, taking the whole drawer down.
+   * `ARM-T-2` (bilateral/ai-queue-report-manually): this panel no longer mounts
+   * `<app-bilateral-manual-create-drawer-host>` — it moved to a single mount in the bilateral
+   * shell (`bilateral.component.html`, `ARM-DD-1`), reachable from every bilateral route. This
+   * panel only drives the flow's signals (`openManualCreate` → `beginFromProject`, tested above).
    */
-  it('lets a primary SP pick with secondary SPs render the inline contributing section in the manual-create drawer without throwing', () => {
-    const event = { preventDefault: jest.fn() } as unknown as Event;
-    // B-A1368 (mockProjects[1]) carries 2 sciencePrograms — Breeding (primary pick) + Genebank
-    // (left over as a secondary chip), so `showSpSelectionInDrawer()` is true and no SP is
-    // auto-selected.
-    component.openManualCreate(mockProjects[1], event);
+  it('ARM-T-2: does not render the manual create drawer host directly (single shell mount)', () => {
     fixture.detectChanges();
-
-    expect(manualCreateFlow.drawerOpen()).toBe(true);
-    expect(manualCreateFlow.showSpSelectionInDrawer()).toBe(true);
-
-    const primaryOption = fixture.nativeElement.querySelector('.sps-option--list') as HTMLElement | null;
-    expect(primaryOption).toBeTruthy();
-
-    expect(() => {
-      primaryOption!.click();
-      fixture.detectChanges();
-    }).not.toThrow();
-
-    expect(fixture.nativeElement.querySelector('[data-testid="sps-contributing-inline"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelectorAll('app-bilateral-manual-create-drawer-host').length).toBe(0);
   });
+
+  /**
+   * `ARM-T-2`: the DI-regression test that used to live here (a primary SP pick with secondary
+   * SPs left behind, no `BilateralAutoSaveService` provider) duplicated the existing one in
+   * `bilateral-manual-create-drawer-host.component.spec.ts` ("lets a primary SP pick with secondary
+   * SPs render the inline contributing section without throwing"), which renders the host with the
+   * same no-autosave-provider shape. It was removed here since this panel no longer mounts the host.
+   */
 
   it('should set error state if API fails', () => {
     bilateralApiService.GET_bilateralProjects.mockReturnValue(throwError(() => new Error('API error')));
