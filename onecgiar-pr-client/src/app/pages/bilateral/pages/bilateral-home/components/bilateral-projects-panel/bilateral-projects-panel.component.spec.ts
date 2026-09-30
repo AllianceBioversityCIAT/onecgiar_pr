@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { BilateralProjectsPanelComponent } from './bilateral-projects-panel.component';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
@@ -18,7 +18,7 @@ describe('BilateralProjectsPanelComponent', () => {
   let ctx: BilateralContextService;
   let manualCreateFlow: BilateralManualCreateFlowService;
   let activatedRouteStub: { snapshot: { queryParamMap: ParamMap } };
-  let mockRouter: { navigate: jest.Mock };
+  let mockRouter: { navigate: jest.Mock; events: Subject<unknown>; url: string };
 
   const mockProjects: BilateralProject[] = [
     {
@@ -97,8 +97,14 @@ describe('BilateralProjectsPanelComponent', () => {
   ];
 
   beforeEach(async () => {
+    // `events`/`url`: fixture-only additions (ARM-T-1 rework, Reviewer issue 1) — the real
+    // `BilateralManualCreateFlowService` now wires a `NavigationEnd` subscription unconditionally
+    // in its constructor and reads `router.url` from every drawer-opening entry, not only from
+    // `beginFromJob`. No assertion in this file changes.
     mockRouter = {
-      navigate: jest.fn().mockResolvedValue(true)
+      navigate: jest.fn().mockResolvedValue(true),
+      events: new Subject<unknown>(),
+      url: '/bilateral/test'
     };
 
     const mockApiService = {

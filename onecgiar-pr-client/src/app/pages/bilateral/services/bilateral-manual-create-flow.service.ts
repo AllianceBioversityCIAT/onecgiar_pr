@@ -1,8 +1,10 @@
 // @akili-spec bilateral/manual-create-drawer — shared manual-create drawer orchestration
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
+import { Observable, Subject, filter } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { BilateralManualCreatePayload } from '../components/bilateral-manual-create-form/bilateral-manual-create-form.component';
 import { BilateralContextService } from './bilateral-context.service';
 import { BilateralCreationService } from './bilateral-creation.service';
@@ -11,6 +13,19 @@ import { BilateralOverviewService } from './bilateral-overview.service';
 import { BILATERAL_MANUAL_CREATE_COPY } from '../../../internationalization/bilateral-manual-create.copy';
 import { isCenterMember } from './bilateral-center-membership.util';
 
+/**
+ * `ARM-T-1` (P2-3853, `docs/specs/bilateral/ai-queue-report-manually`) — the narrow argument
+ * `beginFromJob` needs from an AI job. Deliberately NOT `NormalizedBilateralAiListJob` (design.md
+ * §8): this service must not import the AI job model. Fields are nullable because R-4 C ("job
+ * without a project or Center") is a no-op the method itself detects, not a precondition callers
+ * must satisfy first.
+ */
+export interface BilateralJobEntryPoint {
+  readonly projectId: number | null;
+  readonly centerId: number | string | null;
+  readonly centerAcronym: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BilateralManualCreateFlowService {
   private readonly router = inject(Router);
@@ -18,10 +33,36 @@ export class BilateralManualCreateFlowService {
   private readonly ctx = inject(BilateralContextService);
   private readonly creationService = inject(BilateralCreationService);
   private readonly overviewService = inject(BilateralOverviewService);
+  private readonly bilateralApi = inject(BilateralApiService);
 
   readonly drawerOpen = signal(false);
   readonly isCreating = signal(false);
   readonly selectedReportingWay = signal<'manual' | 'ai' | null>(null);
+
+  /** `ARM-T-1` — no replay: a `create` visit that mounts AFTER the entry fired must see nothing. */
+  private readonly externalEntrySource = new Subject<void>();
+  readonly externalEntry: Observable<void> = this.externalEntrySource.asObservable();
+
+  /** Guards against a superseded call opening the drawer with a stale response (`ARM-R-4` A). */
+  private jobRequestToken = 0;
+  /** The path (no query/fragment) recorded by every opener — `beginFromProject`,
+   * `openDrawerForManual` — the instant it opens the drawer, and cleared on `closeDrawer()`. Not
+   * scoped to `beginFromJob`: the host now outlives pages regardless of which entry opened it
+   * (design §7.1, `ARM-DD-6`), so a "+ Create result" or wizard Manual-entry open must close on a
+   * later route change exactly like a job-driven open does. */
+  private openPathAtEntry: string | null = null;
+
+  constructor() {
+    // design §7.1 "Close on path change" — wired unconditionally for the service's whole lifetime,
+    // not only once a job has opened the drawer (Reviewer FAIL, attempt 1: a lazy, first-call-only
+    // wire left every panel/wizard open unguarded until a job ran once). Query-only changes keep
+    // the drawer open.
+    this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe(() => {
+      if (this.openPathAtEntry !== null && this.currentPath() !== this.openPathAtEntry) {
+        this.closeDrawer();
+      }
+    });
+  }
 
   readonly canShowCreateForm = computed(() => !!this.creationService.selectedPrimarySp());
 
@@ -123,12 +164,105 @@ export class BilateralManualCreateFlowService {
     this.selectedReportingWay.set(null);
     this.autoSelectPrimarySpIfSingle();
     this.drawerOpen.set(true);
+    this.recordOpenPath();
+  }
+
+  /**
+   * `ARM-T-1` — the AI drawer's "Report manually" entry (`ai-processes-drawer-host`'s
+   * `onReportManually`, wired by `ARM-T-3`). No-op when the job is missing a field it needs
+   * (`ARM-R-4` C). Otherwise: stays in place on a bilateral route of the job's OWN Center that
+   * isn't a result editor (design §7.2), or navigates to that Center's home first (`ARM-R-2`).
+   * Either way, it fetches that Center's catalogue exactly once (`ARM-NFR-2`, `ARM-DD-2` — never
+   * `creationService.getProjects()`, so `creationService.projects()` is left untouched), finds the
+   * job's project and opens through the existing `beginFromProject` (`ARM-R-1`). Not found, or the
+   * request errors, shows a toast and leaves the drawer closed (`ARM-R-4` B). A request token
+   * makes a later call supersede an earlier one still in flight, so a stale response never opens
+   * the drawer (`ARM-R-4` A).
+   */
+  beginFromJob(job: BilateralJobEntryPoint): void {
+    const { projectId, centerId, centerAcronym } = job;
+    if (projectId == null || centerId == null || !centerAcronym) return;
+
+    const token = ++this.jobRequestToken;
+
+    if (this.isInPlace(centerAcronym)) {
+      this.resolveJobProject(token, centerId, projectId, this.currentPath());
+      return;
+    }
+
+    void this.router.navigate(['/bilateral', centerAcronym, 'home']).then(navigated => {
+      if (!navigated || token !== this.jobRequestToken) return;
+      this.resolveJobProject(token, centerId, projectId, this.currentPath());
+    });
+  }
+
+  /** design §7.2 "in-place" rule: seg1 `bilateral`, seg2 the job's OWN center, seg3 not `result`.
+   * Reads the router URL, not `BilateralContextService` (`ctx` keeps the last Center after the
+   * user leaves bilateral, design P-6). */
+  private isInPlace(centerAcronym: string): boolean {
+    const segments = this.currentPath().split('/').filter(Boolean);
+    return segments[0] === 'bilateral' && segments[1] === centerAcronym && segments[2] !== 'result';
+  }
+
+  private currentPath(): string {
+    return this.router.url.split('?')[0].split('#')[0];
+  }
+
+  /**
+   * `pathAtClick` is the path `beginFromJob` resolved in-place against, or the path right after
+   * its own navigation resolved — captured BEFORE this HTTP call, so a further navigation while
+   * the catalogue is still in flight is caught here even though it also supersedes via
+   * `NavigationEnd` + `closeDrawer()` (design §7.1): that only closes a drawer already open, it
+   * does not stop this response from opening one on the page the user has since left.
+   */
+  private resolveJobProject(
+    token: number,
+    centerId: number | string,
+    projectId: number,
+    pathAtClick: string
+  ): void {
+    this.bilateralApi.GET_bilateralProjects(centerId).subscribe({
+      next: ({ response }) => {
+        if (token !== this.jobRequestToken) return; // superseded — a newer call already decided
+        if (this.currentPath() !== pathAtClick) return; // navigated away while the request was in flight
+        const projects: BilateralProject[] = response?.projects ?? [];
+        const project = projects.find(p => Number(p.id) === projectId);
+        if (!project) {
+          this.closeDrawer();
+          this.showJobProjectUnavailableToast();
+          return;
+        }
+        this.beginFromProject(project);
+        this.externalEntrySource.next();
+      },
+      error: () => {
+        if (token !== this.jobRequestToken) return;
+        this.closeDrawer();
+        this.showJobProjectUnavailableToast();
+      }
+    });
+  }
+
+  private showJobProjectUnavailableToast(): void {
+    this.api.alertsFe.show({
+      id: 'bilateralManualCreateJobProjectUnavailable',
+      title: BILATERAL_MANUAL_CREATE_COPY.externalEntry.projectUnavailableTitle,
+      description: BILATERAL_MANUAL_CREATE_COPY.externalEntry.projectUnavailableDescription,
+      status: 'error'
+    });
+  }
+
+  /** design §7.1 — the path every opener records the instant it opens the drawer; `closeDrawer()`
+   * clears it back to `null`. */
+  private recordOpenPath(): void {
+    this.openPathAtEntry = this.currentPath();
   }
 
   /** Wizard entry: reporting way already chosen as manual on the page. */
   openDrawerForManual(): void {
     this.selectedReportingWay.set('manual');
     this.drawerOpen.set(true);
+    this.recordOpenPath();
   }
 
   selectReportingWay(way: 'manual' | 'ai'): void {
@@ -144,6 +278,7 @@ export class BilateralManualCreateFlowService {
   closeDrawer(): void {
     this.drawerOpen.set(false);
     this.selectedReportingWay.set(null);
+    this.openPathAtEntry = null;
   }
 
   submitCreate(payload: BilateralManualCreatePayload): void {
