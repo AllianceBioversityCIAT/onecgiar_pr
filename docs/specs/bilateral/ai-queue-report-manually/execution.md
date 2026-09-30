@@ -195,3 +195,30 @@
 | verification that stood in | Scoped Jest 163/163 and 47/47; red run plus falsifiers A and B observed red; app tsc exit 0; lint passes. All run by the Leader, who is the author. |
 | models | Author: Leader, Opus 5.5 · Reviewer: akili-reviewer (T3) |
 
+### ARM-T-4 — HITL live check (`ARM-D-1`): PASS (user-reported)
+
+- **Performed by:** the user, on the local stack, 2026-09-30. The user's report, verbatim: "ya probe y todo good". The Leader did not drive the browser, and the user did not report per-item route, viewport or pass/fail detail. The only record is the user's overall pass for items 1–7.
+- **Review:** `skip-eligible`. The claim holds: the task changed no file.
+
+## REVIEW_SKIPPED: ARM-T-4
+
+| Field | Content |
+|---|---|
+| predicate evidence | Manual task that changes no file (`git status` is clean apart from the pre-existing `package-lock.json`). The falsifier (not-found toast) and checklist items 1–7 were reported as passing by the user. |
+| overrides checked | (a) through (g): none apply. There is no code, contract, derived evidence consumed by a later gate, or security surface. |
+| evidence re-run | Not applicable to a manual check. Instead, the Leader ran the post-run gates below. |
+| models | none (human check) |
+
+## Summary
+
+- **Status:** all 4 tasks are `[x]`. The commits are `55c3835f5` (T-1), `0d68408df` (T-2) and `941e22859` (T-3).
+- **Final gates (Leader, 2026-09-30, on `941e22859`):**
+  - Jest over `src/app/pages/bilateral`: 61 suites, 2172/2172.
+  - `ng lint --quiet`: all files pass.
+  - `ng build`: succeeded. The only output was the usual CommonJS optimization warning.
+- **Deviations:**
+  - The LOC budget was exceeded, and the user accepted it after T-1.
+  - A fixture-only Router mock was changed in the panel spec.
+  - The ARM-T-2 falsifier 2 and the `ARM-DD-1` item 1 reason were amended during execute.
+  - T-2 (post-review edits only) and T-3 (evidence re-run only) have `REVIEW_WAIVED` records for Leader-inline work, authorized by the user.
+- **Pending for `/akili-archive`:** a CodeGraph re-index, because the create-drawer host mount moved (a consumer-visible DOM hook).

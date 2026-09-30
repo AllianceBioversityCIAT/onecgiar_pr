@@ -6,7 +6,7 @@
 - **Linked spec:** `requirements.md` + `design.md` (same folder)
 - **Ticket:** P2-3853 · commits `<emoji> <type>(<scope>) [P2-3853] [SPEC:bilateral/ai-queue-report-manually]: …`
 - **Owner / driver:** Juan David Delgado
-- **Status:** in-progress (T-1..T-3 done; T-4 HITL pending)
+- **Status:** done
 - **Budget (design §10):** 4 tasks · ~220 LOC · 1–2 review rounds per code task. Exceeding it → the Leader stops and escalates.
 
 ## 2. Pre-flight checklist
@@ -106,7 +106,7 @@
 - **Done:** tests green, falsifiers observed red, and the grep `grep -rn "'manual'" onecgiar-pr-client/src/app/pages/bilateral/components/ai-processes-drawer --include='*.ts' | grep -v spec` returns 0.
 - **Skills:** `angular-developer`
 
-### [ ] `ARM-T-4` — HITL live check (`ARM-D-1`)
+### [x] `ARM-T-4` — HITL live check (`ARM-D-1`)
 
 - **Type:** tests (manual, at the HITL pause)
 - **Description:** on the local stack (`docs/infrastructure.md` §6), with a job in `no_candidates` state:
