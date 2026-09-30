@@ -6,7 +6,7 @@ import { signal } from '@angular/core';
 import { EventEmitter } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
-import { SectionContributorsComponent } from './section-contributors.component';
+import { ALL_PROJECT_CENTERS, SectionContributorsComponent } from './section-contributors.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -15,6 +15,7 @@ import { InstitutionsService } from '../../../../shared/services/global/institut
 import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 
 const center = (institutionId: number, code = `C${institutionId}`, acronym: string | undefined = `A${institutionId}`) => ({
   institutionId,
@@ -2101,6 +2102,138 @@ describe('SectionContributorsComponent', () => {
       const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
       const keys = tracker.setSectionFields.mock.calls.flatMap((c: any[]) => c[1].map((f: any) => f.key));
       expect(keys.every((k: string) => ['lead-center', 'lead-project'].includes(k))).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3859 (Nicoleta Trifa): a Center filter on "Contributing W3/bilateral projects", starting on
+   * the page's Center, so an IFPRI reporter sees IFPRI's projects instead of all 911.
+   */
+  describe('P2-3859 · Center filter on the projects picker', () => {
+    const IFPRI = 20;
+    const CIP = 21;
+    const EMPTY = 22;
+    const catalogue = [
+      { id: 1, shortName: 'I1', fullName: 'IFPRI one', ownerCenterInstitutionId: IFPRI },
+      { id: 2, shortName: 'I2', fullName: 'IFPRI two', ownerCenterInstitutionId: IFPRI },
+      { id: 3, shortName: 'C3', fullName: 'CIP three', ownerCenterInstitutionId: CIP },
+      { id: 4, shortName: 'N4', fullName: 'No owner four', ownerCenterInstitutionId: null }
+    ];
+
+    const setup = (pageCenter: number | null = IFPRI) => {
+      creation.isEditableByCenterUser = () => true;
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', pageCenter);
+      build();
+      component.availableCenters.set([center(IFPRI, 'IFPRI', 'IFPRI'), center(CIP, 'CIP', 'CIP'), center(EMPTY, 'EM', 'EM')] as any);
+      component.availableProjects.set(catalogue);
+    };
+    const optionIds = () => component.filteredProjectOptions().map(p => p.id);
+
+    it("AC2: starts on the page's Center and lists only that Center's projects", () => {
+      setup();
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      expect(optionIds()).toEqual([1, 2]);
+      expect(component.projectFilterCountLabel()).toBe('2 of 4 projects');
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes the projects of the selected Center');
+    });
+
+    it('AC1: offers "All centers" plus every Center that owns projects, with its count', () => {
+      setup();
+      expect(component.projectCenterFilterOptions()).toEqual([
+        { value: ALL_PROJECT_CENTERS, label: 'All centers', badge: '4' },
+        { value: CIP, label: 'CIP - Center 21', badge: '1' },
+        { value: IFPRI, label: 'IFPRI - Center 20', badge: '2' }
+      ]);
+    });
+
+    it('changing to "All centers" lists every project, including those with no owner Center', () => {
+      setup();
+      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+      expect(optionIds()).toEqual([1, 2, 3, 4]);
+      expect(component.projectsPickerPlaceholder()).toBe('The drop-down list includes all bilateral projects');
+    });
+
+    it('can switch to another Center, and a project with no owner is only reachable through "All centers"', () => {
+      setup();
+      component.onProjectCenterFilterChange(CIP);
+      expect(optionIds()).toEqual([3]);
+      expect(optionIds()).not.toContain(4);
+    });
+
+    it("AC4: a saved project from another Center stays in the options and in the PATCH", () => {
+      creation.resultContributingProjectIds.set([3]);
+      setup();
+      component.selectedProjectIds.set([3]);
+      component.contributorsHydrated.set(true);
+
+      // Still offered (so pr-multi-select.writeValue cannot drop it) while the filter is IFPRI.
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+      expect(optionIds()).toEqual([1, 2, 3]);
+
+      // The user adds an IFPRI project: the CIP one travels too.
+      component.onProjectsModelChange([{ id: 3 }, { id: 1 }]);
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_bilateral_projects.map((p: any) => p.project_id)).toEqual([3, 1]);
+    });
+
+    it("falls back to the result's lead Center while the page Center is unresolved", () => {
+      creation.resultLeadCenterId.set(CIP);
+      setup(null);
+      expect(component.projectCenterFilter()).toBe(CIP);
+    });
+
+    it('starts on "All centers" when the page Center owns no project (no empty dropdown)', () => {
+      setup(EMPTY);
+      expect(component.projectCenterFilter()).toBe(ALL_PROJECT_CENTERS);
+      expect(optionIds()).toEqual([1, 2, 3, 4]);
+    });
+
+    it('a user choice wins over a page Center that resolves later', () => {
+      setup(null);
+      component.onProjectCenterFilterChange(CIP);
+      TestBed.inject(BilateralContextService).setCenter('IFPRI', 'IFPRI', 'IFPRI', IFPRI);
+      expect(component.projectCenterFilter()).toBe(CIP);
+    });
+
+    it('ignores an empty emission from the select', () => {
+      setup();
+      component.onProjectCenterFilterChange(null);
+      component.onProjectCenterFilterChange('');
+      expect(component.projectCenterFilterChoice()).toBeNull();
+      expect(component.projectCenterFilter()).toBe(IFPRI);
+    });
+
+    it('changing the filter never saves anything', () => {
+      setup();
+      autoSave.saveContributors.mockClear();
+      component.onProjectCenterFilterChange(ALL_PROJECT_CENTERS);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+
+    it('is shown on an editable result with projects, hidden with an empty catalogue', () => {
+      setup();
+      expect(component.showProjectCenterFilter()).toBe(true);
+      component.availableProjects.set([]);
+      expect(component.showProjectCenterFilter()).toBe(false);
+    });
+
+    it('sits right above the projects picker and feeds it the filtered options (markup contract)', () => {
+      const html = readFileSync(join(__dirname, 'section-contributors.component.html'), 'utf8');
+      const filter = html.indexOf('@if (showProjectCenterFilter()) {');
+      const picker = html.indexOf('label="Contributing W3/bilateral projects"');
+      expect(filter).toBeGreaterThan(html.indexOf('sc-block--projects'));
+      expect(filter).toBeLessThan(picker);
+      const pickerTag = html.slice(picker, html.indexOf('</app-pr-multi-select>', picker));
+      expect(pickerTag).toContain('[options]="filteredProjectOptions()"');
+      expect(pickerTag).toContain('[placeholder]="projectsPickerPlaceholder()"');
+      expect(pickerTag).not.toContain('[options]="availableProjectsComputed()"');
+      const filterBlock = html.slice(filter, picker);
+      expect(filterBlock).toContain('<app-pr-select');
+      expect(filterBlock).toContain('[options]="projectCenterFilterOptions()"');
+      expect(filterBlock).toContain('{{ contributorsCopy.projectFilter.label }}');
+      expect(filterBlock).toContain('<ng-icon name="lucideListFilter"');
+      expect(filterBlock).not.toContain('<select');
     });
   });
 

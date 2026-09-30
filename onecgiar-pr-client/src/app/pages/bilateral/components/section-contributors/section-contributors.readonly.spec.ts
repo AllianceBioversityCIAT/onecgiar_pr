@@ -495,4 +495,29 @@ describe('SectionContributorsComponent · P2-3520 read-only chrome', () => {
       expect(link?.getAttribute('target')).toBe('_blank');
     });
   });
+
+  // P2-3859 — the Center filter above the projects picker, in the REAL template.
+  describe('P2-3859 · projects Center filter', () => {
+    it('renders the filter with its label and count on an editable result', () => {
+      editable.set(true);
+      build();
+      // `ngOnInit` reloads the (stubbed, empty) catalogue over what `build()` seeded; seed it again.
+      component.availableProjects.set([
+        { id: 501, fullName: 'Project 501', ownerCenterInstitutionId: 11 },
+        { id: 502, fullName: 'Project 502', ownerCenterInstitutionId: 12 }
+      ] as any);
+      fixture.detectChanges();
+      const filter = fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]') as HTMLElement;
+      expect(filter).toBeTruthy();
+      expect(filter.textContent).toContain('Filter projects by Center');
+      expect(filter.querySelector('app-pr-select')).toBeTruthy();
+      expect(filter.querySelector('[data-testid="projects-center-filter-count"]')?.textContent?.trim()).toBe('1 of 2 projects');
+    });
+
+    it('is not rendered on a read-only result (the picker cannot open)', () => {
+      editable.set(false);
+      build();
+      expect(fixture.nativeElement.querySelector('[data-testid="projects-center-filter"]')).toBeNull();
+    });
+  });
 });

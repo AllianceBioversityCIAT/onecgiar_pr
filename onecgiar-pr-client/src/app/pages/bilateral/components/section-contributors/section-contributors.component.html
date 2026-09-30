@@ -165,16 +165,51 @@
       </div>
     }
 
+    <!--
+      P2-3859: Center filter for the projects picker, starting on the page's Center (911 projects
+      otherwise). View-only: it narrows the OPTIONS, never the selection — `filteredProjectOptions()`
+      keeps every already-selected project in the list so `pr-multi-select.writeValue` cannot drop
+      it (AC4). Hidden when read-only (the picker cannot open) or when the catalogue is empty.
+      Label-less `app-pr-select` = bare control, so it does not grow its own field card.
+    -->
+    @if (showProjectCenterFilter()) {
+      <div
+        class="flex flex-wrap items-center gap-x-[12px] gap-y-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-app)] px-[12px] py-[8px]"
+        data-testid="projects-center-filter">
+        <span class="inline-flex shrink-0 items-center gap-[6px] text-[13px] font-semibold text-[var(--pr-color-primary-600)]">
+          <ng-icon name="lucideListFilter" class="text-[15px]" aria-hidden="true" />
+          {{ contributorsCopy.projectFilter.label }}
+        </span>
+        <div class="min-w-[220px] flex-1 sm:max-w-[380px]">
+          <app-pr-select
+            [options]="projectCenterFilterOptions()"
+            optionLabel="label"
+            optionValue="value"
+            optionBadgeLabel="badge"
+            [ngModel]="projectCenterFilter()"
+            (ngModelChange)="onProjectCenterFilterChange($event)"
+            [placeholder]="contributorsCopy.projectFilter.placeholder"
+            [required]="false"
+            [editable]="true"
+            idKey="sc-projects-center-filter">
+          </app-pr-select>
+        </div>
+        <span class="ml-auto text-[12px] font-medium text-[var(--pr-text-secondary)]" data-testid="projects-center-filter-count">
+          {{ projectFilterCountLabel() }}
+        </span>
+      </div>
+    }
+
     <app-pr-multi-select
       [readOnly]="readOnly()"
       label="Contributing W3/bilateral projects"
-      [options]="availableProjectsComputed()"
+      [options]="filteredProjectOptions()"
       [disableOptions]="disabledProjectOptions()"
       [ngModel]="selectedProjectIds()"
       (ngModelChange)="onProjectsModelChange($event)"
       optionLabel="fullName"
       optionValue="id"
-      placeholder="The drop-down list includes all bilateral projects"
+      [placeholder]="projectsPickerPlaceholder()"
       [required]="false"
       [isStatic]="!readOnly()">
     </app-pr-multi-select>

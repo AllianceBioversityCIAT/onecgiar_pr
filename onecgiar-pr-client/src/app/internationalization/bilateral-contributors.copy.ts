@@ -32,5 +32,15 @@ export const BILATERAL_CONTRIBUTORS_COPY = {
       `<strong>${NOTE_TITLE}</strong> ${CONTRIBUTOR_DEFINITION} ` +
       `(<a href="${glossaryUrl}" target="_blank" rel="noopener noreferrer">${GLOSSARY_LINK_LABEL}</a>)<br />` +
       DIFFERENT_ENTITIES_NOTE
+  },
+  /** P2-3859 — Center filter above "Contributing W3/bilateral projects". */
+  projectFilter: {
+    label: 'Filter projects by Center',
+    allCenters: 'All centers',
+    placeholder: 'Select a Center',
+    count: (shown: number, total: number): string => `${shown} of ${total} projects`,
+    /** The projects picker placeholder, which used to promise "all" projects even when filtered. */
+    pickerPlaceholderAll: 'The drop-down list includes all bilateral projects',
+    pickerPlaceholderFiltered: 'The drop-down list includes the projects of the selected Center'
   }
 } as const;

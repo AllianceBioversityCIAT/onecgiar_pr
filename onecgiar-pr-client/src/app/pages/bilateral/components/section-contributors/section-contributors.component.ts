@@ -12,9 +12,10 @@ import { InnovationUseResultsService } from '../../../../shared/services/global/
 import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralFieldQualityFlagComponent } from '../bilateral-field-quality-flag/bilateral-field-quality-flag.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideRefreshCw } from '@ng-icons/lucide';
+import { lucideListFilter, lucideRefreshCw } from '@ng-icons/lucide';
 import { RESULT_DETAIL_SECTION_LOAD_COPY } from '../../../../internationalization/result-detail-section-load.copy';
 import { BILATERAL_CONTRIBUTORS_COPY } from '../../../../internationalization/bilateral-contributors.copy';
 import { CLARISA_GLOSSARY_URL } from '../../../../shared/constants/clarisa-links.constants';
@@ -41,6 +42,17 @@ interface ProjectOption {
 
 const PARTNERS_MDS_GROUP = 'partners';
 
+/** P2-3859 — the "All centers" value of the projects' Center filter. */
+export const ALL_PROJECT_CENTERS = 'all';
+type ProjectCenterFilter = number | typeof ALL_PROJECT_CENTERS;
+
+interface ProjectCenterFilterOption {
+  value: ProjectCenterFilter;
+  label: string;
+  /** Project count, drawn by `app-pr-select` as the option's right-hand badge. */
+  badge: string;
+}
+
 /**
  * Result types whose linked/bundled answer is owned by another surface — see
  * `linkedQuestionOwnedElsewhere()`. Declared here rather than imported from
@@ -54,7 +66,7 @@ const INNOVATION_DEVELOPMENT_RESULT_TYPE_ID = 7;
   selector: 'app-section-contributors',
   imports: [BilateralFieldQualityFlagComponent, CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent, NgIcon],
   // W12-6 — the projects Retry uses Lucide, the repo's icon set (R37).
-  providers: [provideIcons({ lucideRefreshCw })],
+  providers: [provideIcons({ lucideRefreshCw, lucideListFilter })],
   templateUrl: './section-contributors.component.html',
   styleUrl: './section-contributors.component.scss'
 })
@@ -67,6 +79,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly innovationUseResultsSE = inject(InnovationUseResultsService);
   readonly api = inject(ApiService);
   readonly bilateralApi = inject(BilateralApiService);
+  readonly bilateralContext = inject(BilateralContextService);
 
   /**
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
@@ -138,6 +151,112 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   readonly disabledCenterOptions = computed(() => this.availableCentersComputed().filter(c => c.disabled));
   readonly disabledProjectOptions = computed(() => this.availableProjectsComputed().filter(p => p.disabled));
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3859 · Center filter on "Contributing W3/bilateral projects"
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Nicoleta Trifa (P2-3859): "users navigate a list of 911 projects… a user from IFPRI would see
+   * IFPRI selected by default as the Center and only projects mapped to IFPRI". Client-side only,
+   * over `owner_center_institution_id` (the same catalogue field BCT-T-6 locks Centers with).
+   *
+   * `null` = the user has not touched the filter, so it follows `defaultProjectCenterFilter()` —
+   * which matters because the page's Center (`BilateralContextService`) and the catalogues all
+   * arrive asynchronously. Once the user picks something, that choice wins.
+   */
+  readonly projectCenterFilterChoice = signal<ProjectCenterFilter | null>(null);
+
+  /** How many catalogue projects each owner Center has. Projects with no resolved owner count nowhere. */
+  private readonly projectCountByOwnerCenter = computed(() => {
+    const counts = new Map<number, number>();
+    for (const p of this.availableProjects()) {
+      if (p.ownerCenterInstitutionId == null) continue;
+      const owner = Number(p.ownerCenterInstitutionId);
+      counts.set(owner, (counts.get(owner) ?? 0) + 1);
+    }
+    return counts;
+  });
+
+  /**
+   * "All centers" first, then every catalogue Center that owns at least one project, by name.
+   * Projects with no resolved owner are only reachable through "All centers" (decision recorded in
+   * this folder's CLAUDE.md): there is no Center to file them under.
+   */
+  readonly projectCenterFilterOptions = computed<ProjectCenterFilterOption[]>(() => {
+    const counts = this.projectCountByOwnerCenter();
+    const centers = this.availableCenters()
+      .filter(c => (counts.get(Number(c.institutionId)) ?? 0) > 0)
+      .map(c => ({
+        value: Number(c.institutionId),
+        label: c.full_name || [c.acronym || c.code, c.name].filter(Boolean).join(' - '),
+        badge: String(counts.get(Number(c.institutionId)))
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return [
+      { value: ALL_PROJECT_CENTERS, label: BILATERAL_CONTRIBUTORS_COPY.projectFilter.allCenters, badge: String(this.availableProjects().length) },
+      ...centers
+    ];
+  });
+
+  /**
+   * AC2 — the page's Center (`/bilateral/:acronym/...`), falling back to the result's lead Center
+   * while the context has not resolved its institution id. "All centers" when that Center owns no
+   * project in the catalogue: starting on an empty dropdown would read as "no projects exist".
+   */
+  readonly defaultProjectCenterFilter = computed<ProjectCenterFilter>(() => {
+    const pageCenter = this.bilateralContext.centerInstitutionId() ?? this.leadCenterInstitutionIdSig();
+    if (pageCenter == null) return ALL_PROJECT_CENTERS;
+    const id = Number(pageCenter);
+    return this.projectCenterFilterOptions().some(o => o.value === id) ? id : ALL_PROJECT_CENTERS;
+  });
+
+  readonly projectCenterFilter = computed<ProjectCenterFilter>(() => {
+    const choice = this.projectCenterFilterChoice();
+    // A choice that no longer names an option (catalogue reloaded) falls back to the default.
+    if (choice != null && this.projectCenterFilterOptions().some(o => o.value === choice)) return choice;
+    return this.defaultProjectCenterFilter();
+  });
+
+  /**
+   * The projects picker's options: the Center's own projects PLUS every project already selected,
+   * whatever its Center (AC4).
+   *
+   * 🛑 The union is load-bearing, not cosmetic: `app-pr-multi-select.writeValue` maps the id model
+   * against `[options]` and DROPS the misses (`pr-multi-select.component.ts` `writeValue`), and the
+   * next tick then emits the shortened list — a saved IFPRI result's CIP project would be removed
+   * from the PATCH just by opening the dropdown. Keeping every selected id in the options means the
+   * picker always finds them. Catalogue order is kept so the list does not jump.
+   */
+  readonly filteredProjectOptions = computed(() => {
+    const filter = this.projectCenterFilter();
+    const all = this.availableProjectsComputed();
+    if (filter === ALL_PROJECT_CENTERS) return all;
+    const selected = new Set(this.selectedProjectIds().map(Number));
+    return all.filter(p => Number(p.ownerCenterInstitutionId) === filter || selected.has(Number(p.id)));
+  });
+
+  /** "N of M projects" next to the filter — the Center's own projects, not the kept selections. */
+  readonly projectFilterCountLabel = computed(() => {
+    const filter = this.projectCenterFilter();
+    const total = this.availableProjects().length;
+    const shown =
+      filter === ALL_PROJECT_CENTERS ? total : this.availableProjects().filter(p => Number(p.ownerCenterInstitutionId) === filter).length;
+    return BILATERAL_CONTRIBUTORS_COPY.projectFilter.count(shown, total);
+  });
+
+  readonly projectsPickerPlaceholder = computed(() =>
+    this.projectCenterFilter() === ALL_PROJECT_CENTERS
+      ? BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderAll
+      : BILATERAL_CONTRIBUTORS_COPY.projectFilter.pickerPlaceholderFiltered
+  );
+
+  /** Gate as a computed (the spec overrides the template). Nothing to filter when read-only or empty. */
+  readonly showProjectCenterFilter = computed(() => !this.readOnly() && this.availableProjects().length > 0);
+
+  onProjectCenterFilterChange(value: ProjectCenterFilter | string | null): void {
+    if (value === null || value === undefined || value === '') return;
+    this.projectCenterFilterChoice.set(value === ALL_PROJECT_CENTERS ? ALL_PROJECT_CENTERS : Number(value));
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // P2-3864 · the lead Center is not repeated under "Contributing CGIAR centers"
