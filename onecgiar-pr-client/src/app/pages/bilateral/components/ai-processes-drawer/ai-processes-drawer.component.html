@@ -1,0 +1,149 @@
+<!-- @akili-spec bilateral/ai-processing-queue (AIQ-R-9, AIQ-R-12) -->
+<div class="border-b border-[var(--pr-border-divider)] px-[20px] pt-[20px] pb-[18px]">
+  <div class="flex items-center gap-[10px]">
+    <h4 id="ai-processes-drawer-title" class="m-0 flex-1 text-[15px] font-bold text-[var(--pr-text-heading)]">{{ copy.title }}</h4>
+    <button
+      type="button"
+      class="flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-400)] focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+      [attr.aria-label]="copy.closeLabel"
+      data-testid="ai-processes-drawer-close"
+      (click)="onClose()">
+      <i class="material-icons-round text-[18px]" aria-hidden="true">close</i>
+    </button>
+  </div>
+  <p class="m-0 mt-[6px] text-[13px] leading-[1.6] text-[var(--pr-text-secondary)]">{{ copy.subtitle }}</p>
+  <div
+    class="mt-[14px] flex items-center gap-[10px] rounded-[12px] border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-25)] px-[12px] py-[10px]"
+    data-testid="ai-processes-drawer-lanes">
+    @if (laneBars().length > 0) {
+      <div class="flex flex-none items-center gap-[4px]" aria-hidden="true" data-testid="ai-processes-drawer-lane-bars">
+        @for (lane of laneBars(); track $index) {
+          <span
+            class="relative h-[8px] w-[34px] overflow-hidden rounded-[4px]"
+            [class.bg-[var(--pr-color-primary-100)]]="lane === 'idle'"
+            [class.bg-[var(--pr-color-primary-200)]]="lane === 'busy'">
+            @if (lane === 'busy') {
+              <span class="absolute inset-0 w-[40%] rounded-[4px] bg-[var(--pr-color-primary-300)] motion-reduce:animate-none animate-[pr-ai-indeterminate_1.6s_ease-out_infinite]"></span>
+            }
+          </span>
+        }
+      </div>
+    }
+    <p class="m-0 text-[11.5px] leading-[1.4] text-[var(--pr-text-secondary)]">
+      <strong class="font-semibold text-[var(--pr-text-heading)]">{{ lanesInUseLine() }}</strong> · {{ othersWaitingLine() }}
+    </p>
+  </div>
+</div>
+
+<div class="min-h-0 flex-1 overflow-auto px-[20px] pt-[6px] pb-[20px]">
+  <div class="sr-only" aria-live="polite" data-testid="ai-processes-drawer-live-region">{{ announcement() }}</div>
+
+  @if (refreshError()) {
+    <p
+      class="m-0 mt-[10px] rounded-[9px] bg-[var(--pr-status-in-progress-bg)] px-[10px] py-[7px] text-[11.5px] text-[var(--pr-status-in-progress-fg)]"
+      data-testid="ai-processes-drawer-refresh-error">
+      {{ copy.refreshError }}
+    </p>
+  }
+
+  @if (loading()) {
+    <div class="mt-[16px] flex flex-col gap-[8px]" data-testid="ai-processes-drawer-skeleton" role="status" [attr.aria-label]="copy.skeletonLabel">
+      @for (i of [0, 1, 2]; track i) {
+        <div class="h-[76px] animate-pulse rounded-[14px] border border-[var(--pr-border)] bg-[var(--pr-surface-sunken)] motion-reduce:animate-none"></div>
+      }
+    </div>
+  } @else if (isEmpty()) {
+    <div class="py-[28px] text-center" data-testid="ai-processes-drawer-empty">
+      <div class="mx-auto mb-[10px] flex h-[56px] w-[56px] items-center justify-center rounded-[16px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-300)]">
+        <i class="material-icons-round text-[28px]" aria-hidden="true">auto_awesome</i>
+      </div>
+      <h5 class="m-0 text-[13px] font-bold text-[var(--pr-text-heading)]">{{ copy.emptyTitle }}</h5>
+      <p class="mx-auto my-[4px] max-w-[260px] text-[12px] leading-[1.5] text-[var(--pr-text-secondary)]">{{ copy.emptyBody }}</p>
+      <button
+        type="button"
+        class="mt-[8px] inline-flex h-[30px] cursor-pointer items-center gap-[6px] rounded-[8px] border border-transparent bg-[var(--pr-color-primary-300)] px-[13px] text-[12px] font-semibold text-white focus:outline-none focus-visible:shadow-[var(--pr-focus-ring)]"
+        data-testid="ai-processes-drawer-start-with-evidence"
+        (click)="onStartWithEvidence()">
+        <i class="material-icons-round text-[16px]" aria-hidden="true">upload_file</i>
+        {{ copy.emptyCta }}
+      </button>
+    </div>
+  } @else {
+    @if (runningJobs().length > 0) {
+      <section class="mt-[16px]" data-testid="ai-processes-drawer-group-running">
+        <h5 class="m-0 mb-[8px] flex items-center gap-[8px] text-[11px] font-semibold tracking-[0.07em] text-[var(--pr-text-muted)] uppercase">
+          {{ copy.groupRunning }}
+          <span class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-50)] px-[5px] text-[10.5px] font-bold text-[var(--pr-color-primary-400)] normal-case tracking-normal">
+            {{ runningJobs().length }}
+          </span>
+        </h5>
+        <div class="flex flex-col gap-[8px]">
+          @for (job of runningJobs(); track job.jobId) {
+            <app-ai-job-card
+              [job]="job"
+              [now]="now()"
+              [expectation]="expectationFor(job)"
+              [highlighted]="job.jobId === highlightJobId()"
+              (retry)="onRetry(job)"
+              (uploadDifferentFiles)="onUploadDifferentFiles(job)"
+              (viewDrafts)="onViewDrafts(job)"
+              (reportManually)="onReportManually(job)" />
+          }
+        </div>
+      </section>
+    }
+
+    @if (waitingJobs().length > 0) {
+      <section class="mt-[16px]" data-testid="ai-processes-drawer-group-waiting">
+        <h5 class="m-0 mb-[8px] flex items-center gap-[8px] text-[11px] font-semibold tracking-[0.07em] text-[var(--pr-text-muted)] uppercase">
+          {{ copy.groupWaiting }}
+          <span class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-50)] px-[5px] text-[10.5px] font-bold text-[var(--pr-color-primary-400)] normal-case tracking-normal">
+            {{ waitingJobs().length }}
+          </span>
+        </h5>
+        <div class="flex flex-col gap-[8px]">
+          @for (job of waitingJobs(); track job.jobId) {
+            <app-ai-job-card
+              [job]="job"
+              [now]="now()"
+              [expectation]="expectationFor(job)"
+              [waitReasonText]="waitReasonTextFor(job)"
+              [highlighted]="job.jobId === highlightJobId()"
+              (retry)="onRetry(job)"
+              (uploadDifferentFiles)="onUploadDifferentFiles(job)"
+              (viewDrafts)="onViewDrafts(job)"
+              (reportManually)="onReportManually(job)" />
+          }
+        </div>
+      </section>
+    }
+
+    @if (finishedJobs().length > 0) {
+      <section class="mt-[16px]" data-testid="ai-processes-drawer-group-finished">
+        <h5 class="m-0 mb-[8px] flex items-center gap-[8px] text-[11px] font-semibold tracking-[0.07em] text-[var(--pr-text-muted)] uppercase">
+          {{ copy.groupFinished }}
+          <span class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--pr-color-primary-50)] px-[5px] text-[10.5px] font-bold text-[var(--pr-color-primary-400)] normal-case tracking-normal">
+            {{ finishedJobs().length }}
+          </span>
+        </h5>
+        <div class="flex flex-col gap-[8px]">
+          @for (job of finishedJobs(); track job.jobId) {
+            <app-ai-job-card
+              [job]="job"
+              [now]="now()"
+              [highlighted]="job.jobId === highlightJobId()"
+              (retry)="onRetry(job)"
+              (uploadDifferentFiles)="onUploadDifferentFiles(job)"
+              (viewDrafts)="onViewDrafts(job)"
+              (reportManually)="onReportManually(job)" />
+          }
+        </div>
+      </section>
+    }
+  }
+</div>
+
+<div class="flex items-start gap-[10px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-color-primary-25)] px-[20px] py-[12px] text-[11.5px] leading-[1.5] text-[var(--pr-text-muted)]">
+  <i class="material-icons-round mt-[1px] text-[16px] text-[var(--pr-color-primary-300)]" aria-hidden="true">schedule</i>
+  <span>{{ copy.footer }}</span>
+</div>

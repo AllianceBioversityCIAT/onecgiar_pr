@@ -56,6 +56,18 @@ export class BilateralAiController {
     return this.bilateralAiService.getSignedUrl(key, user);
   }
 
+  // `AIQ-T-4` — declared before `jobs/:jobId` (`design.md` §4.1). The two never actually collide
+  // (`jobs` is one path segment, `jobs/:jobId` is two), but this ordering mirrors the
+  // `expectations` note below and keeps the literal-before-parameter convention explicit.
+  @Get('jobs')
+  @ApiOperation({
+    summary:
+      "Caller's active AI jobs plus jobs finished in the last 24h (max 10), with a lane-usage summary.",
+  })
+  listJobs(@UserToken() user: TokenDto) {
+    return this.bilateralAiService.listJobs(user);
+  }
+
   @Get('jobs/:jobId')
   getJob(@Param('jobId') jobId: string, @UserToken() user: TokenDto) {
     return this.bilateralAiService.getJob(jobId, user.id);

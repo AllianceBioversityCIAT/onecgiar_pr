@@ -75,6 +75,7 @@ import { DraftEvidence } from '../bilateral-ai/entities/draft-evidence.entity';
 import { BilateralAiController } from '../bilateral-ai/bilateral-ai.controller';
 import { BilateralAiConsumer } from '../bilateral-ai/bilateral-ai.consumer';
 import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.service';
+import { BilateralAiDispatchService } from '../bilateral-ai/services/bilateral-ai-dispatch.service';
 import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
 import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
 import { BilateralAiNotificationsService } from '../bilateral-ai/services/bilateral-ai-notifications.service';
@@ -207,6 +208,11 @@ import { ResultFieldRevision } from '../ai/entities/result-field-revision.entity
     TemplateRepository,
     BilateralVersioningService,
     BilateralAiService,
+    // `AIQ-T-2`: claim-or-redirect under `GET_LOCK('prms_bilateral_ai_dispatch')`. Consumed by
+    // `BilateralAiConsumer` (`decide`) and `BilateralAiSweeperCron`/terminal paths (`wake`,
+    // `AIQ-T-3`). Needs `@InjectDataSource()`, already resolvable via `TypeOrmModule.forRoot` in
+    // `app.module.ts` — no new module import.
+    BilateralAiDispatchService,
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
     // `APF-T-3`: the terminal-notification writer (in-app row + mail) shared by `processJob`'s

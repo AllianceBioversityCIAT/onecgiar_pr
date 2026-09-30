@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Processes Drawer</title>
+<!--
+  Self-contained mockup for docs/specs/bilateral/ai-processing-queue (generated 2026-09-29, /akili-propose).
+  Purpose: agree the DRAWER layout, the JOB CARD states, the HEADER TRIGGER and the SUBMIT CONFIRMATION
+  before /akili-specify. Tokens mirror onecgiar-pr-client/src/styles/colors.scss (light values).
+  Not part of the build. Open directly in a browser (file://). "Play queue" simulates the two-lane flow.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Material+Icons+Round&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --pr-color-primary-25:#faf9fe; --pr-color-primary-50:#f5f3ff; --pr-color-primary-100:#ede9fe; --pr-color-primary-200:#ddd6fe;
+    --pr-color-primary-300:#6b46e5; --pr-color-primary-400:#5733c4; --pr-color-primary-500:#4a2bb8; --pr-color-primary-600:#3f2499;
+    --pr-color-secondary-400:#2b2838;
+    --pr-chrome-a:#1e202f; --pr-chrome-b:#1f2235;
+    --pr-surface-page:#fafafa; --pr-surface-card:#ffffff; --pr-surface-band:#f7f4fd;
+    --pr-border:#e3e3e8; --pr-border-divider:#eeeef1; --pr-border-band:#e4e0ef;
+    --pr-text-heading:#191524; --pr-text-secondary:#5d5872; --pr-text-muted:#6b6580; --pr-text-subtle:#8a849c;
+    --pr-ok-fg:#047857; --pr-ok-bg:#d1fae5; --pr-ok-soft:#ecfdf5;
+    --pr-warn-fg:#92400e; --pr-warn-bg:#fef3c7;
+    --pr-danger:#b91c1c; --pr-danger-soft:#fee2e2; --pr-danger-bg:#fef2f2;
+    --pr-info-fg:#1d4ed8; --pr-info-bg:#dbeafe;
+    --pr-focus-ring:0 0 0 3px rgba(107,70,229,.28);
+    --pr-accent-gradient:linear-gradient(135deg,#6b46e5 0%,#5733c4 100%);
+    --pr-shadow-drawer:-24px 0 48px -12px rgba(25,21,36,.18), -2px 0 6px rgba(25,21,36,.05);
+    --ease-out:cubic-bezier(.2,.8,.2,1);
+  }
+  *{box-sizing:border-box}
+  html{font-size:12px}
+  body{margin:0;font-family:Poppins,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--pr-surface-page);color:var(--pr-text-heading);-webkit-font-smoothing:antialiased}
+  .mi{font-family:'Material Icons Round';font-weight:normal;font-style:normal;font-size:18px;line-height:1;display:inline-block;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';font-feature-settings:'liga'}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:none;box-shadow:var(--pr-focus-ring)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+
+  /* ---------- doc chrome (not product UI) ---------- */
+  .doc{max-width:1280px;margin:0 auto;padding:28px 24px 64px}
+  .doc h1{font-size:20px;margin:0 0 4px;font-weight:700}
+  .doc .lead{color:var(--pr-text-secondary);margin:0 0 8px;font-size:13px;max-width:880px;line-height:1.55}
+  .doc h2{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--pr-text-subtle);margin:40px 0 12px;font-weight:600}
+  .note{font-size:11.5px;color:var(--pr-text-muted);line-height:1.55;border-left:3px solid var(--pr-color-primary-200);padding:2px 0 2px 10px;margin:10px 0 0;max-width:880px}
+  .note b{color:var(--pr-text-secondary)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}
+  .ctl{height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--pr-border);background:#fff;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .ctl.primary{background:var(--pr-accent-gradient);color:#fff;border-color:transparent}
+
+  /* ---------- app stage ---------- */
+  .stage{position:relative;height:900px;border:1px solid var(--pr-border);border-radius:16px;overflow:hidden;background:var(--pr-surface-page)}
+  .nav{height:52px;background:linear-gradient(90deg,var(--pr-chrome-a),var(--pr-chrome-b));display:flex;align-items:center;padding:0 20px;gap:18px;color:#fff}
+  .nav .logo{font-weight:700;letter-spacing:.02em}
+  .nav .item{font-size:12.5px;color:rgba(255,255,255,.72)} .nav .item.on{color:#fff}
+  .nav .sp{flex:1} .nav .mi{color:rgba(255,255,255,.8)}
+  .band{background:var(--pr-surface-band);border-bottom:1px solid var(--pr-border-band)}
+  .band-top{display:flex;align-items:center;gap:12px;padding:16px 24px 10px}
+  .center-av{width:36px;height:36px;border-radius:10px;background:var(--pr-accent-gradient);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px}
+  .band-top h3{margin:0;font-size:16px} .band-top p{margin:2px 0 0;color:var(--pr-text-secondary);font-size:12px}
+  .tabs{display:flex;align-items:center;gap:22px;height:44px;padding:0 24px}
+  .tab{font-size:13px;font-weight:500;color:var(--pr-text-secondary);height:44px;display:flex;align-items:center}
+  .tab.on{color:var(--pr-text-heading);font-weight:600;box-shadow:inset 0 -2px 0 var(--pr-color-primary-300)}
+  .tabs .sp{flex:1}
+
+  /* header trigger */
+  .trigger{position:relative;display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 6px;border-radius:999px;border:1px solid var(--pr-border);background:#fff;font-size:12px;font-weight:600;transition:border-color .2s,box-shadow .2s}
+  .trigger:hover{border-color:var(--pr-color-primary-200);box-shadow:0 2px 8px -2px rgba(107,70,229,.25)}
+  .trigger[aria-expanded="true"]{border-color:var(--pr-color-primary-300);background:var(--pr-color-primary-50)}
+  .ring{position:relative;width:22px;height:22px;display:grid;place-items:center}
+  .ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+  .ring .track{stroke:var(--pr-color-primary-100)} .ring .arc{stroke:var(--pr-color-primary-300);stroke-linecap:round;stroke-dasharray:18 60;animation:spin 1.4s linear infinite;transform-origin:11px 11px}
+  .ring .mi{font-size:13px;color:var(--pr-color-primary-300)}
+  .count{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--pr-color-primary-600);color:#fff;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+  .count.ok{background:var(--pr-ok-fg)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* page body behind drawer */
+  .page{padding:22px 24px;display:grid;grid-template-columns:1fr;gap:14px;max-width:720px}
+  .skel{height:14px;border-radius:6px;background:linear-gradient(90deg,#efedf5,#f7f6fb,#efedf5);background-size:200% 100%}
+  .card{background:#fff;border:1px solid var(--pr-border);border-radius:14px;padding:16px 18px}
+
+  /* ---------- drawer ---------- */
+  .scrim{position:absolute;inset:52px 0 0 0;background:rgba(25,21,36,.22);backdrop-filter:blur(1px);opacity:1;transition:opacity .25s}
+  .drawer{position:absolute;top:52px;right:0;bottom:0;width:440px;background:#fff;box-shadow:var(--pr-shadow-drawer);display:flex;flex-direction:column;transform:translateX(0);transition:transform .32s var(--ease-out)}
+  .stage.closed .drawer{transform:translateX(104%)} .stage.closed .scrim{opacity:0;pointer-events:none}
+  .d-head{padding:18px 20px 14px;border-bottom:1px solid var(--pr-border-divider)}
+  .d-title{display:flex;align-items:center;gap:10px}
+  .d-title .ico{width:32px;height:32px;border-radius:10px;background:var(--pr-accent-gradient);display:grid;place-items:center;color:#fff}
+  .d-title h4{margin:0;font-size:15px;font-weight:700;flex:1}
+  .icon-btn{width:32px;height:32px;border-radius:8px;border:0;background:transparent;display:grid;place-items:center;color:var(--pr-text-secondary)}
+  .icon-btn:hover{background:var(--pr-color-primary-50);color:var(--pr-color-primary-400)}
+  .d-sub{margin:8px 0 0;font-size:12px;color:var(--pr-text-secondary);line-height:1.5}
+
+  .lanes{margin:14px 0 0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--pr-color-primary-25);border:1px solid var(--pr-color-primary-100)}
+  .lane{flex:0 0 auto;width:34px;height:8px;border-radius:4px;background:var(--pr-color-primary-100);position:relative;overflow:hidden}
+  .lane.busy{background:var(--pr-color-primary-200)}
+  .lane.busy::after{content:"";position:absolute;inset:0;width:40%;background:var(--pr-color-primary-300);border-radius:4px;animation:slide 1.6s var(--ease-out) infinite}
+  @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+  .lanes .txt{font-size:11.5px;color:var(--pr-text-secondary);line-height:1.4}
+  .lanes .txt b{color:var(--pr-text-heading);font-weight:600}
+
+  .d-body{flex:1;overflow:auto;padding:6px 20px 20px}
+  .grp{margin-top:16px}
+  .grp-h{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--pr-text-subtle);font-weight:600;margin:0 0 8px}
+  .grp-h .n{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--pr-color-primary-50);color:var(--pr-color-primary-400);font-size:10.5px;display:inline-flex;align-items:center;justify-content:center;letter-spacing:0}
+  .list{display:flex;flex-direction:column;gap:8px}
+
+  .job{position:relative;border:1px solid var(--pr-border);border-radius:14px;padding:12px 14px;background:#fff;transition:transform .35s var(--ease-out),opacity .35s,border-color .2s,box-shadow .2s}
+  .job:hover{border-color:var(--pr-color-primary-200)}
+  .job.running{border-color:var(--pr-color-primary-200);box-shadow:0 6px 18px -10px rgba(107,70,229,.45)}
+  .job.running::before{content:"";position:absolute;left:-1px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--pr-accent-gradient)}
+  .job.enter{animation:enter .45s var(--ease-out)}
+  @keyframes enter{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+  .j-top{display:flex;align-items:flex-start;gap:10px}
+  .j-ico{flex:0 0 30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--pr-color-primary-50);color:var(--pr-color-primary-400)}
+  .j-ico.wait{background:#f3f2f7;color:var(--pr-text-muted)}
+  .j-ico.ok{background:var(--pr-ok-bg);color:var(--pr-ok-fg)}
+  .j-ico.bad{background:var(--pr-danger-soft);color:var(--pr-danger)}
+  .j-ico.none{background:var(--pr-warn-bg);color:var(--pr-warn-fg)}
+  .j-main{flex:1;min-width:0}
+  .j-title{font-size:12.5px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .j-meta{margin:2px 0 0;font-size:11px;color:var(--pr-text-muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .dot-sep{width:3px;height:3px;border-radius:50%;background:var(--pr-text-subtle)}
+  .j-time{font-size:12px;font-weight:600;color:var(--pr-text-secondary);text-align:right;white-space:nowrap}
+  .j-time small{display:block;font-family:Poppins,system-ui;font-weight:500;font-size:10px;color:var(--pr-text-subtle)}
+
+  .stepper{display:flex;gap:4px;margin:12px 0 6px}
+  .seg{flex:1;height:4px;border-radius:2px;background:var(--pr-color-primary-100);position:relative;overflow:hidden}
+  .seg.done{background:var(--pr-color-primary-300)}
+  .seg.now{background:var(--pr-color-primary-100)}
+  .seg.now::after{content:"";position:absolute;inset:0;width:45%;background:var(--pr-color-primary-300);border-radius:2px;animation:slide 1.8s var(--ease-out) infinite}
+  .stage-row{display:flex;justify-content:space-between;align-items:center;font-size:11.5px}
+  .stage-row .now-l{font-weight:600;color:var(--pr-color-primary-400);display:flex;align-items:center;gap:6px}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--pr-color-primary-300);box-shadow:0 0 0 0 rgba(107,70,229,.5);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(107,70,229,.45)}70%{box-shadow:0 0 0 6px rgba(107,70,229,0)}100%{box-shadow:0 0 0 0 rgba(107,70,229,0)}}
+  .expect{color:var(--pr-text-subtle)}
+
+  .reason{margin:10px 0 0;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--pr-text-secondary);background:#f7f6fa;border-radius:9px;padding:7px 10px}
+  .reason .mi{font-size:15px;color:var(--pr-text-muted)}
+  .pos{margin-left:auto;font-weight:600;color:var(--pr-text-heading);white-space:nowrap}
+
+  .j-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0;align-items:center}
+  .btn{white-space:nowrap;height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--pr-border);background:#fff;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:var(--pr-color-primary-200);background:var(--pr-color-primary-25)}
+  .btn.primary{background:var(--pr-accent-gradient);border-color:transparent;color:#fff}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn .mi{font-size:15px}
+  .j-actions .muted{font-size:11px;color:var(--pr-text-subtle);margin-left:auto}
+  .calm{margin:8px 0 0;font-size:11.5px;color:var(--pr-text-secondary);display:flex;gap:6px;align-items:flex-start;line-height:1.45}
+  .calm .mi{font-size:15px;color:var(--pr-color-primary-300);margin-top:1px}
+
+  .d-foot{border-top:1px solid var(--pr-border-divider);padding:12px 20px;display:flex;gap:10px;align-items:flex-start;font-size:11.5px;color:var(--pr-text-muted);line-height:1.5;background:var(--pr-color-primary-25)}
+  .d-foot .mi{font-size:16px;color:var(--pr-color-primary-300);margin-top:1px}
+
+  /* ---------- gallery frames ---------- */
+  .frames{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
+  .frame{background:#fff;border:1px solid var(--pr-border);border-radius:16px;padding:18px}
+  .frame .lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--pr-text-subtle);margin:0 0 12px;font-weight:600}
+  .confirm{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;border:1px solid var(--pr-color-primary-200);background:linear-gradient(180deg,var(--pr-color-primary-25),#fff)}
+  .confirm .j-ico{background:var(--pr-accent-gradient);color:#fff}
+  .confirm h5{margin:0;font-size:13px} .confirm p{margin:3px 0 0;font-size:12px;color:var(--pr-text-secondary);line-height:1.5}
+  .dropzone{margin-top:12px;border:1.5px dashed var(--pr-color-primary-200);border-radius:12px;padding:18px;text-align:center;color:var(--pr-text-muted);font-size:12px;background:var(--pr-color-primary-25)}
+  .dropzone .mi{font-size:26px;color:var(--pr-color-primary-300);display:block;margin:0 auto 6px}
+  .toast{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--pr-color-secondary-400);color:#fff;font-size:12px;box-shadow:0 12px 28px -12px rgba(0,0,0,.4);max-width:360px}
+  .toast .mi{color:#c4b5fd} .toast a{color:#c4b5fd;font-weight:600;margin-left:auto;text-decoration:none;white-space:nowrap}
+  .toast.ok .mi{color:#6ee7b7}
+  .trig-row{display:flex;flex-direction:column;gap:12px}
+  .trig-row .r{display:flex;align-items:center;gap:12px;font-size:11.5px;color:var(--pr-text-muted)}
+  .trig-row .r .trigger{flex:0 0 auto}
+  .empty{text-align:center;padding:28px 12px}
+  .empty .big{width:56px;height:56px;border-radius:16px;margin:0 auto 10px;display:grid;place-items:center;background:var(--pr-color-primary-50);color:var(--pr-color-primary-300)}
+  .empty .big .mi{font-size:28px}
+  .empty h5{margin:0;font-size:13px} .empty p{margin:4px auto 12px;font-size:12px;color:var(--pr-text-secondary);max-width:260px;line-height:1.5}
+
+  /* phone */
+  .phone{width:375px;height:700px;border-radius:28px;border:8px solid #1e202f;overflow:hidden;position:relative;background:#fff;margin:0 auto}
+  .phone .drawer{position:absolute;inset:0;width:auto;top:0;box-shadow:none}
+  .phone .grab{width:36px;height:4px;border-radius:2px;background:var(--pr-border);margin:8px auto 0}
+
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  @media (max-width:760px){ .drawer{width:100%} .page{display:none} }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>AI processes: drawer, header trigger and submit confirmation</h1>
+  <p class="lead">Mockup for <b>P2-3853</b> · <code>docs/specs/bilateral/ai-processing-queue</code>. The user can queue AI text mining for several projects; two jobs run at a time, one per user. This drawer is the single place to see every job, why it is waiting, and where its results end up. Copy is draft and will move to <code>src/app/internationalization/</code>.</p>
+  <div class="controls">
+    <button class="ctl primary" id="play"><span class="mi">play_arrow</span>Play queue</button>
+    <button class="ctl" id="reset"><span class="mi">restart_alt</span>Reset</button>
+    <button class="ctl" id="toggle"><span class="mi">view_sidebar</span>Open / close drawer</button>
+  </div>
+  <p class="note"><b>Play queue</b> runs the proposal’s worked example: your running job finishes and moves to <i>Finished</i>, your waiting job is promoted to <i>Running</i>, and the <i>lanes</i> strip and header badge update. Timers tick live (the product polls at 5 s → 15 s → 30 s, <code>APF-R-7</code>).</p>
+
+  <h2>1 · Desktop, drawer open over a bilateral page</h2>
+  <div class="stage" id="stage">
+    <div class="nav"><span class="logo">PRMS</span><span class="item">Home</span><span class="item on">Bilateral</span><span class="item">Results</span><span class="sp"></span><span class="mi">search</span><span class="mi">notifications</span><span class="mi">account_circle</span></div>
+    <div class="band">
+      <div class="band-top"><div class="center-av">IF</div><div><h3>IFPRI</h3><p>International Food Policy Research Institute · 2026 reporting</p></div></div>
+      <div class="tabs">
+        <span class="tab">Overview</span><span class="tab on">Projects</span><span class="tab">My drafts</span>
+        <span class="sp"></span>
+        <button class="trigger" id="trigger" aria-expanded="true" aria-controls="drawer" aria-label="AI processes: 1 running, 2 waiting">
+          <span class="ring" id="ring"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle class="track" cx="11" cy="11" r="9" fill="none" stroke-width="2.5"/><circle class="arc" cx="11" cy="11" r="9" fill="none" stroke-width="2.5"/></svg><span class="mi" aria-hidden="true">auto_awesome</span></span>
+          AI processes <span class="count" id="trigCount">3</span>
+        </button>
+      </div>
+    </div>
+    <div class="page" aria-hidden="true">
+      <div class="card"><div class="skel" style="width:40%"></div><div class="skel" style="width:85%;margin-top:10px"></div><div class="skel" style="width:70%;margin-top:8px"></div></div>
+      <div class="card"><div class="skel" style="width:30%"></div><div class="skel" style="width:90%;margin-top:10px"></div><div class="skel" style="width:60%;margin-top:8px"></div></div>
+    </div>
+
+    <div class="scrim" id="scrim"></div>
+    <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+      <div class="d-head">
+        <div class="d-title">
+          <span class="ico"><span class="mi" aria-hidden="true">auto_awesome</span></span>
+          <h4 id="dTitle">AI processes</h4>
+          <button class="icon-btn" id="close" aria-label="Close AI processes"><span class="mi">close</span></button>
+        </div>
+        <p class="d-sub">You can keep working or leave this page. Each job finishes on its own and its results go to <b>My drafts</b>.</p>
+        <div class="lanes" id="lanes" aria-live="polite">
+          <span class="lane busy"></span><span class="lane busy"></span>
+          <span class="txt"><b>2 of 2 lanes in use</b> · 3 jobs from other users are waiting</span>
+        </div>
+      </div>
+
+      <div class="d-body">
+        <div class="sr-only" aria-live="polite" id="live"></div>
+
+        <section class="grp" aria-labelledby="gRun">
+          <h5 class="grp-h" id="gRun">Running <span class="n" id="nRun">1</span></h5>
+          <div class="list" id="listRun">
+            <article class="job running" id="j1">
+              <div class="j-top">
+                <span class="j-ico"><span class="mi" aria-hidden="true">description</span></span>
+                <div class="j-main">
+                  <p class="j-title">P-1941 · Green input subsidies in developing countries</p>
+                  <p class="j-meta"><span>SP13</span><span class="dot-sep"></span><span>1 PDF</span></p>
+                </div>
+                <div class="j-time mono"><span data-tick="84">01:24</span><small>elapsed</small></div>
+              </div>
+              <div class="stepper" aria-hidden="true"><span class="seg done"></span><span class="seg done"></span><span class="seg now"></span><span class="seg"></span><span class="seg"></span></div>
+              <div class="stage-row"><span class="now-l"><span class="pulse"></span>Reading the evidence</span><span class="expect">Usually 1–3 min</span></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="grp" aria-labelledby="gWait">
+          <h5 class="grp-h" id="gWait">Waiting <span class="n" id="nWait">2</span></h5>
+          <div class="list" id="listWait">
+            <article class="job" id="j2">
+              <div class="j-top">
+                <span class="j-ico wait"><span class="mi" aria-hidden="true">hourglass_top</span></span>
+                <div class="j-main">
+                  <p class="j-title">P-1942 · Climate resilience workshop report</p>
+                  <p class="j-meta"><span>SP10</span><span class="dot-sep"></span><span>1 PDF</span><span class="dot-sep"></span><span>1 audio</span></p>
+                </div>
+                <div class="j-time mono"><span data-tick="41">00:41</span><small>in queue</small></div>
+              </div>
+              <div class="reason"><span class="mi" aria-hidden="true">person</span>Starts when your job for P-1941 finishes<span class="pos">Next</span></div>
+            </article>
+            <article class="job" id="j3">
+              <div class="j-top">
+                <span class="j-ico wait"><span class="mi" aria-hidden="true">hourglass_top</span></span>
+                <div class="j-main">
+                  <p class="j-title">P-1815 · Seed systems scaling, Ethiopia</p>
+                  <p class="j-meta"><span>SP08</span><span class="dot-sep"></span><span>2 PDFs</span></p>
+                </div>
+                <div class="j-time mono"><span data-tick="12">00:12</span><small>in queue</small></div>
+              </div>
+              <div class="reason"><span class="mi" aria-hidden="true">group</span>Waiting for a free lane<span class="pos">4 ahead</span></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="grp" aria-labelledby="gDone">
+          <h5 class="grp-h" id="gDone">Finished today <span class="n" id="nDone">3</span></h5>
+          <div class="list" id="listDone">
+            <article class="job">
+              <div class="j-top">
+                <span class="j-ico ok"><span class="mi" aria-hidden="true">check_circle</span></span>
+                <div class="j-main">
+                  <p class="j-title">P-1760 · Nutrition-sensitive value chains</p>
+                  <p class="j-meta"><span>4 drafts ready</span><span class="dot-sep"></span><span>took 1 min 52 s</span></p>
+                </div>
+                <div class="j-time"><span>10:42</span><small>finished</small></div>
+              </div>
+              <div class="j-actions"><button class="btn primary"><span class="mi" aria-hidden="true">arrow_forward</span>View 4 drafts</button></div>
+            </article>
+            <article class="job">
+              <div class="j-top">
+                <span class="j-ico none"><span class="mi" aria-hidden="true">search_off</span></span>
+                <div class="j-main">
+                  <p class="j-title">P-1759 · Center engagement slides</p>
+                  <p class="j-meta"><span>No results found in this evidence</span></p>
+                </div>
+                <div class="j-time"><span>10:05</span><small>finished</small></div>
+              </div>
+              <div class="j-actions"><button class="btn"><span class="mi" aria-hidden="true">edit_note</span>Report manually</button><span class="muted">Try evidence that describes outputs or outcomes</span></div>
+            </article>
+            <article class="job">
+              <div class="j-top">
+                <span class="j-ico bad"><span class="mi" aria-hidden="true">error_outline</span></span>
+                <div class="j-main">
+                  <p class="j-title">P-1679 · Kenya county climate risk profiles</p>
+                  <p class="j-meta"><span>Couldn’t finish, the AI service didn’t respond</span></p>
+                </div>
+                <div class="j-time"><span>09:31</span><small>stopped</small></div>
+              </div>
+              <div class="j-actions"><button class="btn"><span class="mi" aria-hidden="true">refresh</span>Try again</button><span class="muted">Uses the same files, no re-upload</span></div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <div class="d-foot"><span class="mi" aria-hidden="true">schedule</span><span>Time depends on the evidence: from about 30 seconds to a few minutes, longer with audio. You’ll get a notification in the bell when each job finishes.</span></div>
+    </aside>
+  </div>
+  <p class="note"><b>Decisions shown.</b> Grouping Running → Waiting → Finished puts the thing the user is waiting for first. Every waiting card says <i>why</i> it is waiting (your own job vs. a free lane) and shows a <b>position, never an ETA</b>; the spike showed the same document taking 115–183 s. Running cards show the stage from the server and the per-mix expected range (<code>APF-R-6</code> D). The progress is indeterminate on purpose: no invented percentages (<code>APF</code> D4). Other users appear only as a count. The header trigger sits under the open drawer here; the drawer’s close button (and <kbd>Esc</kbd>) returns focus to it; see its states in §2. The drawer is <code>role="dialog"</code>, traps focus, closes with <kbd>Esc</kbd>, returns focus to the trigger, and announces state changes through <code>aria-live</code>.</p>
+
+  <h2>2 · Supporting states</h2>
+  <div class="frames">
+    <div class="frame">
+      <p class="lbl">After submitting: the form resets, nothing blocks</p>
+      <div class="confirm">
+        <span class="j-ico"><span class="mi" aria-hidden="true">playlist_add_check</span></span>
+        <div><h5>P-1815 was added to the AI queue</h5><p>It will start in turn. You can add evidence for another project right away.</p>
+          <div class="j-actions"><button class="btn primary"><span class="mi" aria-hidden="true">view_sidebar</span>Open AI processes</button><button class="btn">Choose another project</button></div></div>
+      </div>
+      <div class="dropzone"><span class="mi" aria-hidden="true">upload_file</span>Drop evidence for the next project, or <b style="color:var(--pr-color-primary-400)">browse</b></div>
+      <p class="note">Replaces today’s behavior, where the processing panel <b>replaces</b> the upload form until the job ends (the reported block).</p>
+    </div>
+
+    <div class="frame">
+      <p class="lbl">Toasts (bottom-right, polite live region)</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="toast"><span class="mi" aria-hidden="true">playlist_add</span>Added to the queue · 2nd in line<a href="#">View</a></div>
+        <div class="toast ok"><span class="mi" aria-hidden="true">check_circle</span>P-1941 is ready: 4 drafts<a href="#">Open drafts</a></div>
+      </div>
+      <p class="note">Completion is a toast, plus the badge and the bell. It no longer opens a blocking modal once per job (<code>APF-R-8</code> modified).</p>
+    </div>
+
+    <div class="frame">
+      <p class="lbl">Header trigger states</p>
+      <div class="trig-row">
+        <div class="r"><button class="trigger" aria-label="AI processes"><span class="ring"><span class="mi" aria-hidden="true" style="color:var(--pr-text-subtle)">auto_awesome</span></span>AI processes</button>No jobs today: quiet, still reachable</div>
+        <div class="r"><button class="trigger"><span class="ring"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle class="track" cx="11" cy="11" r="9" fill="none" stroke-width="2.5"/><circle class="arc" cx="11" cy="11" r="9" fill="none" stroke-width="2.5"/></svg><span class="mi" aria-hidden="true">auto_awesome</span></span>AI processes <span class="count">3</span></button>Working: spinning ring, badge = active jobs</div>
+        <div class="r"><button class="trigger"><span class="ring"><span class="mi" aria-hidden="true" style="color:var(--pr-ok-fg)">task_alt</span></span>AI processes <span class="count ok">2</span></button>All done: green badge = unseen results</div>
+      </div>
+      <p class="note">Visible on every bilateral page and for every Center (today’s chip only shows for the job’s own Center, <code>APF-R-10</code>). Keeps the ≥ 640 px tab-strip / &lt; 640 px identity-row placement (kaizen L1).</p>
+    </div>
+
+    <div class="frame">
+      <p class="lbl">Taking longer than usual (calm, not an error)</p>
+      <article class="job running">
+        <div class="j-top">
+          <span class="j-ico"><span class="mi" aria-hidden="true">graphic_eq</span></span>
+          <div class="j-main"><p class="j-title">P-1948 · Farmer interviews, Malawi</p><p class="j-meta"><span>1 PDF</span><span class="dot-sep"></span><span>2 audio</span></p></div>
+          <div class="j-time mono"><span>07:18</span><small>elapsed</small></div>
+        </div>
+        <div class="stepper" aria-hidden="true"><span class="seg done"></span><span class="seg done"></span><span class="seg done"></span><span class="seg now"></span><span class="seg"></span></div>
+        <div class="stage-row"><span class="now-l"><span class="pulse"></span>Transcribing audio</span><span class="expect">Usually 4–8 min</span></div>
+        <p class="calm"><span class="mi" aria-hidden="true">spa</span>Still working, audio takes longer. You don’t need to do anything; we’ll notify you.</p>
+      </article>
+    </div>
+
+    <div class="frame">
+      <p class="lbl">Empty drawer</p>
+      <div class="empty">
+        <div class="big"><span class="mi" aria-hidden="true">auto_awesome</span></div>
+        <h5>No AI processes yet</h5>
+        <p>Upload evidence for a project and the AI will draft results for you. Jobs you start will show up here.</p>
+        <button class="btn primary"><span class="mi" aria-hidden="true">upload_file</span>Start with evidence</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>3 · Mobile (375 px): the drawer becomes a full-screen sheet</h2>
+  <div class="phone">
+    <aside class="drawer" aria-label="AI processes (mobile preview)">
+      <div class="grab" aria-hidden="true"></div>
+      <div class="d-head">
+        <div class="d-title"><span class="ico"><span class="mi" aria-hidden="true">auto_awesome</span></span><h4>AI processes</h4><button class="icon-btn" aria-label="Close"><span class="mi">close</span></button></div>
+        <div class="lanes"><span class="lane busy"></span><span class="lane busy"></span><span class="txt"><b>2 of 2 lanes in use</b> · 3 waiting</span></div>
+      </div>
+      <div class="d-body">
+        <section class="grp"><h5 class="grp-h">Running <span class="n">1</span></h5>
+          <article class="job running"><div class="j-top"><span class="j-ico"><span class="mi" aria-hidden="true">description</span></span><div class="j-main"><p class="j-title">P-1941 · Green input subsidies</p><p class="j-meta"><span>1 PDF</span></p></div><div class="j-time mono"><span>01:24</span><small>elapsed</small></div></div>
+            <div class="stepper" aria-hidden="true"><span class="seg done"></span><span class="seg done"></span><span class="seg now"></span><span class="seg"></span><span class="seg"></span></div>
+            <div class="stage-row"><span class="now-l"><span class="pulse"></span>Reading</span><span class="expect">1–3 min</span></div></article>
+        </section>
+        <section class="grp"><h5 class="grp-h">Waiting <span class="n">2</span></h5>
+          <div class="list">
+            <article class="job"><div class="j-top"><span class="j-ico wait"><span class="mi" aria-hidden="true">hourglass_top</span></span><div class="j-main"><p class="j-title">P-1942 · Climate resilience report</p><p class="j-meta"><span>1 PDF · 1 audio</span></p></div></div><div class="reason"><span class="mi" aria-hidden="true">person</span>After your P-1941 job<span class="pos">Next</span></div></article>
+            <article class="job"><div class="j-top"><span class="j-ico wait"><span class="mi" aria-hidden="true">hourglass_top</span></span><div class="j-main"><p class="j-title">P-1815 · Seed systems scaling</p><p class="j-meta"><span>2 PDFs</span></p></div></div><div class="reason"><span class="mi" aria-hidden="true">group</span>Free lane<span class="pos">4 ahead</span></div></article>
+          </div>
+        </section>
+      </div>
+      <div class="d-foot"><span class="mi" aria-hidden="true">schedule</span><span>From ~30 s to a few minutes, longer with audio.</span></div>
+    </aside>
+  </div>
+  <p class="note">Below <code>sm</code> drawers become full-screen sheets (design.md §9). Wait reasons shorten; the lanes strip stays so the user always sees <i>why</i>.</p>
+</div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const trigger = document.getElementById('trigger');
+  const live = document.getElementById('live');
+  const $ = id => document.getElementById(id);
+  const fmt = s => String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+  const initial = $('drawer').innerHTML;
+
+  function setOpen(open){
+    stage.classList.toggle('closed', !open);
+    trigger.setAttribute('aria-expanded', String(open));
+    if (open) $('close').focus(); else trigger.focus();
+  }
+  function bind(){
+    $('close').onclick = () => setOpen(false);
+    $('scrim').onclick = () => setOpen(false);
+  }
+  trigger.onclick = () => setOpen(stage.classList.contains('closed'));
+  $('toggle').onclick = () => setOpen(stage.classList.contains('closed'));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !stage.classList.contains('closed')) setOpen(false); });
+  bind();
+
+  // live timers
+  setInterval(() => {
+    document.querySelectorAll('[data-tick]').forEach(el => { const v = +el.dataset.tick + 1; el.dataset.tick = v; el.textContent = fmt(v); });
+  }, 1000);
+
+  let playing = false;
+  $('play').onclick = () => {
+    if (playing) return; playing = true;
+    const j1 = $('j1'), j2 = $('j2'), j3 = $('j3');
+    // step 1: running job finishes
+    setTimeout(() => {
+      j1.style.opacity = '0'; j1.style.transform = 'translateX(24px)';
+      setTimeout(() => {
+        j1.remove();
+        const done = document.createElement('article');
+        done.className = 'job enter';
+        done.innerHTML = '<div class="j-top"><span class="j-ico ok"><span class="mi" aria-hidden="true">check_circle</span></span><div class="j-main"><p class="j-title">P-1941 · Green input subsidies in developing countries</p><p class="j-meta"><span>4 drafts ready</span><span class="dot-sep"></span><span>took 1 min 55 s</span></p></div><div class="j-time"><span>now</span><small>finished</small></div></div><div class="j-actions"><button class="btn primary"><span class="mi" aria-hidden="true">arrow_forward</span>View 4 drafts</button></div>';
+        $('listDone').prepend(done);
+        $('nDone').textContent = '4';
+        live.textContent = 'P-1941 finished: 4 drafts ready.';
+      }, 350);
+    }, 600);
+    // step 2: your waiting job is promoted
+    setTimeout(() => {
+      j2.style.opacity = '0'; j2.style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        j2.remove();
+        const run = document.createElement('article');
+        run.className = 'job running enter';
+        run.innerHTML = '<div class="j-top"><span class="j-ico"><span class="mi" aria-hidden="true">graphic_eq</span></span><div class="j-main"><p class="j-title">P-1942 · Climate resilience workshop report</p><p class="j-meta"><span>SP10</span><span class="dot-sep"></span><span>1 PDF</span><span class="dot-sep"></span><span>1 audio</span></p></div><div class="j-time mono"><span data-tick="0">00:00</span><small>elapsed</small></div></div><div class="stepper" aria-hidden="true"><span class="seg done"></span><span class="seg now"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span></div><div class="stage-row"><span class="now-l"><span class="pulse"></span>Uploading to the AI service</span><span class="expect">Usually 4–8 min</span></div>';
+        $('listRun').append(run);
+        $('nWait').textContent = '1';
+        j3.querySelector('.pos').textContent = '3 ahead';
+        $('trigCount').textContent = '2';
+        trigger.setAttribute('aria-label','AI processes: 1 running, 1 waiting');
+        live.textContent = 'P-1942 started. P-1815 is now 3rd in line.';
+      }, 350);
+    }, 1900);
+  };
+  $('reset').onclick = () => {
+    $('drawer').innerHTML = initial; bind(); playing = false;
+    $('trigCount').textContent = '3'; setOpen(true);
+  };
+})();
+</script>
+</body>
+</html>

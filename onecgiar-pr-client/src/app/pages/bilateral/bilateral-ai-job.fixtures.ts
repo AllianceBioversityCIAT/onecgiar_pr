@@ -1,4 +1,4 @@
-import { RawBilateralAiJob } from './bilateral-ai-job.model';
+import { RawBilateralAiJob, RawBilateralAiListJob } from './bilateral-ai-job.model';
 
 /**
  * Captured-shape `getJob` fixtures (`KZ-changes--bilateral-review-center-strip-and-phase-1`):
@@ -183,3 +183,38 @@ export const FIXTURE_FAILED_QUEUE_STALLED = failedFixture('QUEUE_STALLED');
 export const FIXTURE_FAILED_QUEUE_NOT_AVAILABLE = failedFixture('QUEUE_NOT_AVAILABLE');
 /** A code the server can emit that the client's `errorCopy` table does not map — the default arm. */
 export const FIXTURE_FAILED_UNMAPPED = failedFixture('HTTP_418');
+
+// ── List-item fixtures (`AIQ-T-5`, `design.md` §4.1) ──────────────────────
+
+/**
+ * `GET /api/bilateral/center/ai/jobs` item shape, no captured prtest response available yet (the
+ * server is not deployed) — the task explicitly allows the §4.1 shape with string ids and
+ * `retrying: 1` as the fallback (`tasks.md` `AIQ-T-5` Tests bullet).
+ */
+export function rawListJob(overrides: Partial<RawBilateralAiListJob> = {}): RawBilateralAiListJob {
+  return {
+    job_id: 'a1b2c3d4-0000-0000-0000-000000000001',
+    status: 'PENDING',
+    stage: 'queued',
+    stage_updated_date: null,
+    project_id: '77',
+    project_name: 'A Test Project',
+    program_code: 'SP-01',
+    center_id: '12',
+    center_acronym: 'ALLIANCE',
+    document_count: '1',
+    audio_count: '0',
+    has_text: 0,
+    queue_entry_date: BASE_DATE,
+    started_date: null,
+    completed_date: null,
+    result_count: '0',
+    error_code: null,
+    attempts: '0',
+    max_attempts: '3',
+    retrying: 1,
+    jobs_ahead: '2',
+    wait_reason: 'starting',
+    ...overrides,
+  };
+}

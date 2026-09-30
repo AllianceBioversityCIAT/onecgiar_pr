@@ -2,6 +2,13 @@ import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDe
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import {
+  AI_QUEUE_PROJECT_QUERY_PARAM,
+  AI_QUEUE_WAY_QUERY_PARAM,
+  AiQueueWay,
+  parseAiQueueProjectIdParam,
+  parseAiQueueWayParam,
+} from '../../bilateral-query-params';
 import { BILATERAL_STATUS, BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService, BilateralEditorSection } from '../../services/bilateral-auto-save.service';
@@ -100,6 +107,22 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private isPageUnloading = false;
   private qualityAssessmentResultId: number | null = null;
   private qualityAssessmentTrigger: HTMLElement | null = null;
+
+  /**
+   * `AIQ-R-9` D (AIQ-T-8 attempt 4) — one-shot pending value for the `?project=`/`?way=` deep
+   * link, parsed in `ngOnInit` but applied by the constructor effect below once
+   * `creationService.projects()` actually contains the id. Kept as a signal (not a plain field) so
+   * the effect can react when it changes AND so its own read counts as a tracked dependency.
+   */
+  private readonly pendingAiQueueDeepLink = signal<{ projectId: number; way: AiQueueWay | null } | null>(null);
+
+  /**
+   * Plain field, not a signal: only used to tell "the fetch never started" apart from "the fetch
+   * finished and the id was not in the list" inside the effect above. It does not need to be
+   * tracked — it is only ever read from inside that same effect, right after `isLoadingProjects()`
+   * already made the effect re-run.
+   */
+  private aiQueueDeepLinkSawLoadingStart = false;
 
   /**
    * P2-3387: Other Output (8) and Other Outcome (4) have no type-specific fields, and the story is
@@ -381,12 +404,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       this.isCenterUserOfLeadCenter()
   );
 
-  isAiProcessing = computed(() => {
-    const status = this.bilateralAiService.uploadState().status;
-    // `still_running` (`APF-R-7`) is still an alive job past the client's old polling ceiling —
-    // the host step must stay locked exactly as it does for `pending`/`processing`.
-    return status === 'uploading' || status === 'pending' || status === 'processing' || status === 'still_running';
-  });
+  /**
+   * `AIQ-DD-11` (reversion, challenged — see design.md §12A): reads ONLY the upload's own
+   * `uploading` status, never a job's. The service is now a job LIST — other jobs (this project's
+   * or another's) stay running well past this component's lifetime, so gating the wizard steps on
+   * any of them would lock the form for a reason the reporter can no longer see (`AIQ-R-7` A: the
+   * form must stay available and submittable for a different project while another job runs).
+   */
+  isAiProcessing = computed(() => this.bilateralAiService.uploadState().status === 'uploading');
 
   overallPct = this.mdsTracker.overallPercentage;
   sectionStatuses = this.mdsTracker.sectionStatus;
@@ -473,6 +498,46 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         // sessionStorage unavailable — treat as not dismissed.
       }
       this.provenanceBannerDismissed.set(dismissed);
+    });
+
+    /**
+     * `AIQ-R-9` D (AIQ-T-8 attempt 4) — applies the `?project=`/`?way=` deep link once
+     * `creationService.projects()` actually contains the id, instead of the attempt-3 synchronous
+     * read that silently dropped the link on a cold load (`projects()` is still `[]` at that point;
+     * only the child `bilateral-project-selector`'s own constructor effect fetches it).
+     *
+     * ⚠️ Reads `pendingAiQueueDeepLink()`, `projects()` AND `isLoadingProjects()` UNCONDITIONALLY,
+     * before any early return — the exact trap already fixed once in
+     * `my-draft-results.component.ts`'s `pendingHighlightJobId` effect (see that file's `CLAUDE.md`).
+     * On the very first run there is usually no pending value yet, so an early `if (!pending) return`
+     * placed before reading the other two signals would register zero tracked dependencies on that
+     * run and never re-run once a value and a matching project show up later.
+     *
+     * Never calls `openDrawer` — T-7's `?job=` branch is the only one that does.
+     */
+    effect(() => {
+      const pending = this.pendingAiQueueDeepLink();
+      const projects = this.creationService.projects();
+      const isLoading = this.creationService.isLoadingProjects();
+      if (isLoading) this.aiQueueDeepLinkSawLoadingStart = true;
+      if (!pending) return;
+
+      const match = projects.find(p => Number(p.id) === pending.projectId);
+      if (match) {
+        this.creationService.selectProject(match);
+        this.onProjectSelected(match);
+        if (pending.way) this.onReportingWaySelected(pending.way);
+        this.pendingAiQueueDeepLink.set(null);
+        return;
+      }
+
+      // Loading genuinely finished (it was seen `true` and is now `false`) without a match: give
+      // up silently, same as attempt 3's "ignored, never an error" contract. Until loading is
+      // observed to have started, `projects()` being `[]` is ambiguous (not started yet vs. a
+      // center with no projects) and the pending value is kept for the next run.
+      if (this.aiQueueDeepLinkSawLoadingStart && !isLoading) {
+        this.pendingAiQueueDeepLink.set(null);
+      }
     });
   }
 
@@ -619,6 +684,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.creationService.loadResult(resultCode, versionId);
       } else {
         const jobId = this.route.snapshot?.queryParams?.['job'];
+        const aiQueueProjectIdRaw = this.route.snapshot?.queryParams?.[AI_QUEUE_PROJECT_QUERY_PARAM];
         if (jobId) {
           this.isCreating.set(true);
           this.resultId.set(null);
@@ -626,6 +692,28 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
           this.qualityAssessment.reset();
           this.selectedReportingWay.set('ai');
           this.manualCreateFlow.closeDrawer();
+          // `AIQ-R-8` D / P-23 (failure-email link): opening the drawer itself is left to the
+          // `route.queryParams` subscription below — it fires once for this very same `?job=` too,
+          // and calling `openDrawer` from two places would fire two immediate list polls for one
+          // page load (forward pointer 1, design.md).
+        } else if (aiQueueProjectIdRaw) {
+          // `AIQ-R-9` D (AIQ-T-8 attempt 4): "Upload different files"/"Report manually" deep link
+          // from the AI processes drawer — `?project=<id>&way=ai|manual`, read in this SAME branch
+          // as `?job=` (never together: a job id always wins, matching T-7's own path above). Only
+          // PARSES here and stores it as a one-shot pending value; the constructor effect above
+          // applies it once `creationService.projects()` actually contains the id, which on a cold
+          // load is still `[]` at this exact point in `ngOnInit`.
+          this.isCreating.set(true);
+          this.resultId.set(null);
+          this.qualityAssessmentResultId = null;
+          this.qualityAssessment.reset();
+          const aiQueueProjectId = parseAiQueueProjectIdParam(aiQueueProjectIdRaw);
+          if (aiQueueProjectId !== null) {
+            this.pendingAiQueueDeepLink.set({
+              projectId: aiQueueProjectId,
+              way: parseAiQueueWayParam(this.route.snapshot?.queryParams?.[AI_QUEUE_WAY_QUERY_PARAM]),
+            });
+          }
         } else {
           // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
           const preselected = this.creationService.selectedProject();
@@ -649,6 +737,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       const jobId = queryParams?.['job'];
       if (jobId && this.isCreating()) {
         this.selectedReportingWay.set('ai');
+        this.bilateralAiService.openDrawer(jobId);
       }
     });
   }
@@ -663,6 +752,18 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   onPrimarySelected(): void {
     this.scrollToSection('bcr-reporting-way');
+  }
+
+  /**
+   * `AIQ-R-7` B: "Choose another project" on the post-submit confirmation — restarts the 3-step
+   * picker (project → Science Program → reporting way) from the top, the same reset shape
+   * `onProjectSelected` already applies to the two later steps.
+   */
+  onChooseAnotherProject(): void {
+    this.creationService.selectedProject.set(null);
+    this.creationService.selectedPrimarySp.set(null);
+    this.selectedReportingWay.set(null);
+    this.manualCreateFlow.closeDrawer();
   }
 
   onReportingWaySelected(way: 'manual' | 'ai' | 'bulk'): void {

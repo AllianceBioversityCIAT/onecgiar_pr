@@ -1,5 +1,39 @@
-@if (uploadState().status === 'idle' || uploadState().status === 'uploading') {
-  <div class="aiu-card">
+@if (justSubmittedProjectName(); as justSubmittedProject) {
+  <!-- `AIQ-R-7` B: shown on top of the (now-empty) form after a 202 — never in place of it. -->
+  <div
+    class="mb-[16px] flex flex-col gap-[10px] rounded-[14px] border border-[var(--pr-status-approved-fg)] bg-[var(--pr-status-approved-bg)] px-[20px] py-[16px] sm:flex-row sm:items-center sm:justify-between"
+    role="status"
+    data-testid="aiu-confirmation-card">
+    <div class="flex items-start gap-[10px]">
+      <i class="material-icons-round text-[20px] text-[var(--pr-status-approved-fg)]" aria-hidden="true">task_alt</i>
+      <div class="min-w-0">
+        <p class="m-0 text-[13.5px] font-semibold text-[var(--pr-status-approved-fg)]">{{ copy.confirmation.title(justSubmittedProject) }}</p>
+        <p class="m-0 mt-[2px] text-[12px] text-[var(--pr-text-secondary)]">{{ copy.confirmation.subtitle }}</p>
+      </div>
+    </div>
+    <div class="flex flex-none flex-wrap items-center gap-[8px]">
+      <button
+        type="button"
+        class="inline-flex items-center gap-[6px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] py-[8px] text-[12.5px] font-semibold text-white transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pr-color-primary-300)]"
+        data-testid="aiu-confirmation-open-drawer"
+        (click)="onOpenAiProcesses()">
+        <i class="material-icons-round text-[16px]" aria-hidden="true">auto_awesome</i>
+        {{ copy.confirmation.openAiProcesses }}
+      </button>
+      <button
+        type="button"
+        class="inline-flex items-center gap-[6px] rounded-[8px] border border-[var(--pr-status-approved-fg)] bg-transparent px-[14px] py-[8px] text-[12.5px] font-semibold text-[var(--pr-status-approved-fg)] transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pr-color-primary-300)]"
+        data-testid="aiu-confirmation-choose-another"
+        (click)="onChooseAnotherProject()">
+        {{ copy.confirmation.chooseAnotherProject }}
+      </button>
+    </div>
+  </div>
+}
+
+<!-- `AIQ-R-7` A/B: the form is ALWAYS rendered and submittable, regardless of any job's status —
+     never replaced by a processing panel (`AIQ-DD-8`). -->
+<div class="aiu-card">
     @if (uploadState().errorMessage) {
       <div
         class="mb-[16px] flex items-center gap-[8px] rounded-[10px] border border-[var(--pr-danger-soft)] bg-[var(--pr-danger-bg)] px-[12px] py-[10px] text-[12.5px] text-[var(--pr-danger)]"
@@ -323,25 +357,4 @@
         </span>
       }
     </div>
-  </div>
-}
-
-@if (
-  uploadState().status === 'pending' ||
-  uploadState().status === 'processing' ||
-  uploadState().status === 'still_running' ||
-  uploadState().status === 'failed' ||
-  uploadState().status === 'completed' ||
-  uploadState().status === 'completed_no_candidates'
-) {
-  <app-ai-processing-panel
-    [job]="currentJob()"
-    [status]="uploadState().status"
-    [expectation]="expectation()"
-    [now]="now()"
-    [startedAt]="startedAt()"
-    (retry)="onPanelRetry()"
-    (resetUpload)="onPanelReset()"
-    (openDrafts)="onPanelOpenDrafts()">
-  </app-ai-processing-panel>
-}
+</div>

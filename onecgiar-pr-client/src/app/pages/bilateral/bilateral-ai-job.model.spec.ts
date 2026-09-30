@@ -1,4 +1,4 @@
-import { buildStepperModel, elapsedSeconds, errorCopy, mixClass, normalizeJob } from './bilateral-ai-job.model';
+import { buildStepperModel, elapsedSeconds, errorCopy, mixClass, normalizeJob, normalizeListJob, waitReasonCopy } from './bilateral-ai-job.model';
 import {
   FIXTURE_COMPLETED,
   FIXTURE_FAILED_HTTP_413,
@@ -22,6 +22,7 @@ import {
   FIXTURE_RETRIED,
   FIXTURE_RETRYING,
   rawJob,
+  rawListJob,
 } from './bilateral-ai-job.fixtures';
 
 describe('bilateral-ai-job.model', () => {
@@ -238,6 +239,73 @@ describe('bilateral-ai-job.model', () => {
     it('renders the default arm for a null/undefined code, without throwing', () => {
       expect(() => errorCopy(null)).not.toThrow();
       expect(() => errorCopy(undefined)).not.toThrow();
+    });
+  });
+
+  // ── normalizeListJob (`AIQ-T-5`) ───────────────────────────────────────
+
+  describe('normalizeListJob', () => {
+    it('normalizes the §4.1 list shape (string ids, retrying: 1) without throwing', () => {
+      expect(() => normalizeListJob(rawListJob())).not.toThrow();
+      const job = normalizeListJob(rawListJob());
+      expect(job.jobId).toBe('a1b2c3d4-0000-0000-0000-000000000001');
+      expect(typeof job.jobId).toBe('string');
+      expect(job.retrying).toBe(true);
+      expect(job.queueEntryDate).toBeInstanceOf(Date);
+    });
+
+    it('converts string counts/ids to numbers', () => {
+      const job = normalizeListJob(rawListJob({ project_id: '77', document_count: '3', audio_count: '1', jobs_ahead: '4' }));
+      expect(job.projectId).toBe(77);
+      expect(job.documentCount).toBe(3);
+      expect(job.audioCount).toBe(1);
+      expect(job.jobsAhead).toBe(4);
+    });
+
+    it('does not collapse a null jobs_ahead to 0 (Number(null)===0 trap)', () => {
+      const job = normalizeListJob(rawListJob({ jobs_ahead: null, wait_reason: null }));
+      expect(job.jobsAhead).toBeNull();
+      expect(job.waitReason).toBeNull();
+    });
+
+    it('converts has_text 0/1 to boolean', () => {
+      expect(normalizeListJob(rawListJob({ has_text: 0 })).hasText).toBe(false);
+      expect(normalizeListJob(rawListJob({ has_text: 1 })).hasText).toBe(true);
+    });
+
+    it('excludes bucket_name/document_keys/audio_keys/text_context/error_message/user_id — the list item never carries them', () => {
+      const job = normalizeListJob(rawListJob());
+      expect(job).not.toHaveProperty('bucketName');
+      expect(job).not.toHaveProperty('documentKeys');
+      expect(job).not.toHaveProperty('textContext');
+      expect(job).not.toHaveProperty('errorMessage');
+      expect(job).not.toHaveProperty('userId');
+    });
+
+    it('carries project_name/center_acronym straight through (null when the join misses)', () => {
+      expect(normalizeListJob(rawListJob({ project_name: 'My Project' })).projectName).toBe('My Project');
+      expect(normalizeListJob(rawListJob({ project_name: null })).projectName).toBeNull();
+      expect(normalizeListJob(rawListJob({ center_acronym: null })).centerAcronym).toBeNull();
+    });
+  });
+
+  // ── waitReasonCopy (`AIQ-R-9` Scenario C) ──────────────────────────────
+
+  describe('waitReasonCopy', () => {
+    it('renders plain words for each PENDING-only reason', () => {
+      expect(waitReasonCopy('own_job_running')).toMatch(/finishes/i);
+      expect(waitReasonCopy('no_free_lane')).toMatch(/free lane/i);
+      expect(waitReasonCopy('starting')).toMatch(/starting/i);
+    });
+
+    it('never returns the raw reason string itself', () => {
+      expect(waitReasonCopy('own_job_running')).not.toBe('own_job_running');
+      expect(waitReasonCopy('no_free_lane')).not.toBe('no_free_lane');
+    });
+
+    it('falls back to the "starting" copy for a null/undefined reason, without throwing', () => {
+      expect(() => waitReasonCopy(null)).not.toThrow();
+      expect(() => waitReasonCopy(undefined)).not.toThrow();
     });
   });
 });

@@ -32,7 +32,7 @@
 
   @if (isCreating() && selectedReportingWay() === 'ai') {
     <div id="bcr-ai-upload" class="bcr-ai-section">
-      <app-bilateral-ai-upload></app-bilateral-ai-upload>
+      <app-bilateral-ai-upload (chooseAnotherProject)="onChooseAnotherProject()"></app-bilateral-ai-upload>
     </div>
   }
 

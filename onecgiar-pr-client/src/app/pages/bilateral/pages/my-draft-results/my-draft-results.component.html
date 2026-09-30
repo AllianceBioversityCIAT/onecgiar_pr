@@ -236,8 +236,13 @@
       <div class="mdr-session-list flex flex-col gap-[20px]">
         @for (group of sessionGroups(); track group.sessionId) {
           <div
+            [id]="'mdr-session-' + group.sessionId"
             class="mdr-session-card bg-[var(--pr-surface-card)] border border-[var(--pr-border-divider)] rounded-[12px] overflow-hidden shadow-sm transition-all"
-            [class.mdr-session-card--me]="group.isCurrentUser">
+            [class.mdr-session-card--me]="group.isCurrentUser"
+            [class.ring-2]="highlightedSessionId() === group.sessionId"
+            [class.ring-inset]="highlightedSessionId() === group.sessionId"
+            [class.ring-[var(--pr-color-primary-300)]]="highlightedSessionId() === group.sessionId"
+            data-testid="mdr-session-card">
             <!-- Session Header -->
             <div class="mdr-session-header flex flex-col gap-[10px] px-[20px] py-[12px] bg-[var(--pr-surface-page)] border-b border-[var(--pr-border-divider)] xl:flex-row xl:items-center xl:justify-between xl:gap-[12px]">
               <div class="flex flex-wrap items-center gap-[10px] min-w-0 w-full xl:w-auto">
