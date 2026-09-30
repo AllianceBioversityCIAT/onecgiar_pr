@@ -151,3 +151,47 @@
 | verification that stood in | amended falsifier 2 observed red (`NullInjectorError`) then restored; scoped Jest 226/226; `ng lint --quiet` passes; run by the Leader |
 | models | Implementer Sonnet (T2) / Reviewer Opus (T3) for the code diff; Leader Opus 5.5 for the post-review edits |
 
+### ARM-T-3 — AI drawer host delegates; the creator reacts to the external entry — PASS (attempt 1)
+
+- **Author:** the Leader, working inline. The user authorized this fallback on 2026-09-30 by picking option 1, "lo implemento yo directo", for speed. The Reviewer was kept independent.
+- **Skills:** `angular-developer` (as listed).
+- **Files changed (+40 / −7):**
+  - `components/ai-processes-drawer/ai-processes-drawer-host.component.ts` and its spec
+  - `pages/bilateral-result-creator/bilateral-result-creator.component.ts` and its spec
+- **Change:**
+  - `onReportManually` now sets `drawerOpen(false)` and calls `manualCreateFlow.beginFromJob({ projectId, centerId, centerAcronym })`. It no longer calls `router.navigate`.
+  - The creator subscribes to `externalEntry` with `takeUntilDestroyed()`. On each event it resets autosave, resets MDS and sets `selectedReportingWay(null)`. It does not call `closeDrawer()`.
+  - The host spec mocks `BilateralManualCreateFlowService`. This settles the T-1 forward pointer (the Router mock has no `events`), and the Router mock is unchanged.
+  - The creator flow mock gains `externalEntry: new Subject<void>()`.
+- **Verification (run by the Leader):**
+  - Scoped Jest over `ai-processes-drawer` and `bilateral-result-creator`: 163/163.
+  - Red run with the host implementation reverted to HEAD: `ARM-DD-3: reportManually closes the drawer and delegates…` fails; 162 pass.
+  - Falsifier A (keep `router.navigate` next to the new call): the same test is red.
+  - Falsifier B (drop `selectedReportingWay.set(null)` from the subscription): `ARM-DD-5: an external entry drops the wizard reporting way…` is red. The fixture starts at `'ai'`, per the Disqualifier.
+  - Both falsifier edits were restored, and the final run is 163/163.
+  - `tsc -p tsconfig.app.json` exits 0. `tsc -p tsconfig.spec.json` shows no errors in the touched files. `ng lint --quiet` passes.
+  - The Done grep for `'manual'` in the non-spec `ai-processes-drawer` `*.ts` files returns 0.
+  - The `ai-processes-drawer` and `ai-job-card` suites: 47/47.
+- **Evidence re-run:** this was **not** done by a non-author. The Leader authored the change and ran the verification. The Reviewer has read-only tools and stated that it relied on the Leader's reported results, which it found consistent with the code it read. This is recorded under the `REVIEW_WAIVED` block below.
+- **Reviewer:** `PASS`, no issues.
+  - Conforms to `ARM-DD-3`, `ARM-DD-5`, `ARM-DD-7` and §8.
+  - Covers `ARM-R-1` A and C, `ARM-R-5` A and `ARM-R-6` A.
+  - Named conformance checks against the T-2 execute-time spec edits (tasks.md ARM-T-2 bullet 3 and Falsifier; `ARM-DD-1` item 1): no conflict.
+- **ADVISORY:** none.
+- **runtime events:** none.
+- **Requirements covered:**
+  - `ARM-R-1` A: the AI drawer closes and the URL is unchanged.
+  - `ARM-R-1` C: parity, since the call reuses `beginFromProject` through `beginFromJob`.
+  - `ARM-R-5` A.
+  - `ARM-R-6` A.
+
+## REVIEW_WAIVED: ARM-T-3 (evidence re-run only)
+
+| Field | Content |
+|---|---|
+| flag | `inline` (applies to the evidence re-run; the conformance review was independent) |
+| cause | The user chose the Leader-inline implementation for speed. The Leader is the author, so the non-author re-run of the verification could not be performed by the Leader, and the read-only Reviewer cannot execute commands. |
+| approved by | user, 2026-09-30 (answer "1" to "lo implemento yo directo") |
+| verification that stood in | Scoped Jest 163/163 and 47/47; red run plus falsifiers A and B observed red; app tsc exit 0; lint passes. All run by the Leader, who is the author. |
+| models | Author: Leader, Opus 5.5 · Reviewer: akili-reviewer (T3) |
+

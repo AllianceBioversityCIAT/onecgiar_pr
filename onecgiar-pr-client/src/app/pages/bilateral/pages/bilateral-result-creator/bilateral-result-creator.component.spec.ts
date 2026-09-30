@@ -74,7 +74,8 @@ function makeManualCreateFlowMock() {
     canGoBack: computed(() => false),
     backLabel: computed(() => 'Back'),
     beginFromProject: jest.fn(),
-    submitCreate: jest.fn()
+    submitCreate: jest.fn(),
+    externalEntry: new Subject<void>()
   };
 }
 
@@ -428,6 +429,18 @@ describe('BilateralResultCreatorComponent', () => {
     component.onReportingWaySelected('manual');
     expect(manualCreateFlow.openDrawerForManual).toHaveBeenCalled();
     expect(manualCreateFlow.drawerOpen()).toBe(true);
+  });
+
+  it('ARM-DD-5: an external entry drops the wizard reporting way without closing the drawer', () => {
+    component.selectedReportingWay.set('ai');
+    manualCreateFlow.closeDrawer.mockClear();
+    autoSaveService.reset.mockClear();
+    mdsTracker.reset.mockClear();
+    manualCreateFlow.externalEntry.next();
+    expect(component.selectedReportingWay()).toBeNull();
+    expect(manualCreateFlow.closeDrawer).not.toHaveBeenCalled();
+    expect(autoSaveService.reset).toHaveBeenCalled();
+    expect(mdsTracker.reset).toHaveBeenCalled();
   });
 
   it('should close the manual drawer when switching reporting ways', () => {

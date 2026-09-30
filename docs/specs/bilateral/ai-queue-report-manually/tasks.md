@@ -6,7 +6,7 @@
 - **Linked spec:** `requirements.md` + `design.md` (same folder)
 - **Ticket:** P2-3853 · commits `<emoji> <type>(<scope>) [P2-3853] [SPEC:bilateral/ai-queue-report-manually]: …`
 - **Owner / driver:** Juan David Delgado
-- **Status:** in-progress (T-1, T-2 done)
+- **Status:** in-progress (T-1..T-3 done; T-4 HITL pending)
 - **Budget (design §10):** 4 tasks · ~220 LOC · 1–2 review rounds per code task. Exceeding it → the Leader stops and escalates.
 
 ## 2. Pre-flight checklist
@@ -82,7 +82,7 @@
 - **Done:** tests green, grep = 1, falsifiers observed red, `CLAUDE.md` files updated.
 - **Skills:** `angular-developer`
 
-### [ ] `ARM-T-3` — AI drawer host delegates; the creator reacts to the external entry
+### [x] `ARM-T-3` — AI drawer host delegates; the creator reacts to the external entry
 
 - **Type:** client
 - **Description:**

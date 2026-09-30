@@ -1,6 +1,7 @@
 import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import {
   AI_QUEUE_PROJECT_QUERY_PARAM,
@@ -77,6 +78,15 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly autoSaveService = inject(BilateralAutoSaveService);
   readonly bilateralAiService = inject(BilateralAiService);
   readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
+  /** `ARM-DD-5`: "Report manually" opened the drawer for another project; drop the wizard's own
+   * reporting way (and its AI upload) so it never mixes two selections. The drawer stays open. */
+  private readonly externalEntrySub = this.manualCreateFlow.externalEntry
+    .pipe(takeUntilDestroyed())
+    .subscribe(() => {
+      this.autoSaveService.reset();
+      this.mdsTracker.reset();
+      this.selectedReportingWay.set(null);
+    });
   private readonly ctx = inject(BilateralContextService);
   private readonly smartNav = inject(SmartNavigationService);
   readonly qualityAssessment = inject(BilateralQualityAssessmentUiService);

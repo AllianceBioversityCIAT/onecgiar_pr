@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AiProcessesDrawerComponent } from './ai-processes-drawer.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
+import { BilateralManualCreateFlowService } from '../../services/bilateral-manual-create-flow.service';
 import { BilateralAiExpectations, BilateralAiMixClass, NormalizedBilateralAiListJob } from '../../bilateral-ai-job.model';
 import { AI_QUEUE_PROJECT_QUERY_PARAM, AI_QUEUE_WAY_QUERY_PARAM } from '../../bilateral-query-params';
 
@@ -50,6 +51,7 @@ export class AiProcessesDrawerHostComponent implements OnDestroy {
   readonly service = inject(BilateralAiService);
   private readonly ctx = inject(BilateralContextService);
   private readonly router = inject(Router);
+  private readonly manualCreateFlow = inject(BilateralManualCreateFlowService);
 
   /** `AIQ-R-9` G: skeleton until the first `pollList()` attempt (success or failure) settles. */
   readonly loading = computed(() => !this.service.hasPolledOnce());
@@ -106,12 +108,13 @@ export class AiProcessesDrawerHostComponent implements OnDestroy {
     void this.router.navigate(['/bilateral', job.centerAcronym, 'drafts'], { queryParams: { job: job.jobId } });
   }
 
+  /** `ARM-DD-3` (bilateral/ai-queue-report-manually): closes this drawer and opens the normal
+   * create drawer through the flow, which decides in place vs. the Job Center's home (`ARM-R-1`,
+   * `ARM-R-2`). No router call here, and no `way` param. */
   onReportManually(job: NormalizedBilateralAiListJob): void {
     if (!job.centerAcronym) return;
     this.service.drawerOpen.set(false);
-    void this.router.navigate(['/bilateral', job.centerAcronym, 'create'], {
-      queryParams: { [AI_QUEUE_PROJECT_QUERY_PARAM]: job.projectId, [AI_QUEUE_WAY_QUERY_PARAM]: 'manual' },
-    });
+    this.manualCreateFlow.beginFromJob({ projectId: job.projectId, centerId: job.centerId, centerAcronym: job.centerAcronym });
   }
 
   /** No specific job to return to — sends the user to the CURRENT center's creator (`ctx`, the
