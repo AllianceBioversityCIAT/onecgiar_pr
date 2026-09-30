@@ -66,14 +66,20 @@ sustituye.** El job pasa a vivir en la lista de `BilateralAiService`
 - `bilateral-result-creator.component.html:35` — sólo cuando
   `selectedReportingWay() === 'ai'`; escucha `(chooseAnotherProject)` para
   reiniciar el wizard.
-- `bilateral-manual-create-drawer-host.component.html:99` — montado dentro del
-  drawer de creación manual, a su vez usado por el creador y por
-  `bilateral-projects-panel.component.html:448` (home). Aquí
-  `chooseAnotherProject` no tiene listener: descartar la tarjeta sólo cierra
-  la confirmación, el proyecto del drawer es fijo. **P2-3853:** sí escucha
+- `bilateral-manual-create-drawer-host.component.html:99-101` — montado dentro
+  del drawer de creación manual, a su vez usado por el creador y por
+  `bilateral-projects-panel.component.html:448` (home). **P2-3853 (post-execution
+  fix):** aquí `chooseAnotherProject` SÍ tiene listener, `flow.closeDrawer()` —
+  el proyecto del drawer es fijo (lo pone la tarjeta que lo abrió), así que
+  "Choose another project" cierra el drawer entero para volver al catálogo de
+  proyectos, en vez de solo descartar la confirmación. Mismo listener que
   `(openedAiProcesses)="flow.closeDrawer()"` — `closeDrawer()` es el método de
   cierre ya existente de `BilateralManualCreateFlowService` (el mismo que usa
-  `onDrawerClosed()`); no se inventó un mecanismo nuevo.
+  `onDrawerClosed()`, el botón X del drawer); no se inventó un mecanismo nuevo.
+  `closeDrawer()` no toca `BilateralCreationService.selectedProject()` —
+  igual que el botón X, así que no queda selección obsoleta: la próxima vez
+  que se abra el drawer viene de `beginFromProject()`, que llama
+  `selectProject()` con el proyecto nuevo.
 - `…/bilateral-result-creator.component.ts` — al elegir la vía "ai" llama
   `clearUploadState()`. **Ese es el único reset explícito del estado del envío.**
 

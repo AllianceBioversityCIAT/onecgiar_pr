@@ -101,6 +101,25 @@ describe('BilateralManualCreateDrawerHostComponent', () => {
     expect(flow.drawerOpen()).toBe(false);
   });
 
+  // P2-3853 post-execution fix: "Choose another project" on the post-submit confirmation card
+  // must close this drawer too — the drawer's project is fixed by the card that opened it, so
+  // picking another project means going back to the project catalog, i.e. closing the drawer.
+  it('P2-3853: closes the drawer when the upload component emits chooseAnotherProject', () => {
+    flow.beginFromProject(multiSpProject);
+    flow.selectReportingWay('ai');
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(true);
+
+    const uploadDebugEl = fixture.debugElement.query(By.css('app-bilateral-ai-upload'));
+    expect(uploadDebugEl).toBeTruthy();
+
+    uploadDebugEl.componentInstance.chooseAnotherProject.emit();
+    fixture.detectChanges();
+
+    expect(flow.drawerOpen()).toBe(false);
+  });
+
   /**
    * The regression itself: `app-bilateral-sp-selector` (mounted here with `primaryLayout="list"`)
    * hosts the "Contributing Science Programs" disclosure (`APF-DD-11`) as `app-bilateral-accordion`.

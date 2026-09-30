@@ -791,3 +791,16 @@
   - The per-user cap looked breached in the user's screenshot (P-1502 and P-1440 both Running). The source is unconfirmed: another user or server, or the old deployed consumer sharing `dev_bilateral_ai_processing`.
   - The local-server timezone shows times 5 h ahead (mysql2 running in America/Bogota).
   - At 375 px the wizard trigger overlaps the title.
+
+## Post-execution fix: "Choose another project" in the create drawer (user report, 2026-09-29)
+
+- **Report:** in the manual-create drawer, **Choose another project** only hid the confirmation card, and there was no way to pick another project.
+- **User decision:** close the drawer so the user returns to the catalog. The drawer's project is fixed by the card that opened it.
+- **Fix:** added `(chooseAnotherProject)="flow.closeDrawer()"` on the hosted upload. This is the same path the drawer's X button takes via `onDrawerClosed()`.
+  - `closeDrawer()` resets only `drawerOpen` and `selectedReportingWay`.
+  - The next open goes through `beginFromProject()`, so no stale project carries over.
+- **Test:** the drawer-host spec checks that emitting closes `flow.drawerOpen()`. Mutation: without the binding, `Expected: false, Received: true`.
+- **Verification:**
+  - Implementer: 41 passed, lint clean.
+  - Leader re-run: 41 passed. **VERIFIED**.
+- **Review:** no independent Reviewer (a user-directed one-line fix). It is covered by the PR 2 review.
